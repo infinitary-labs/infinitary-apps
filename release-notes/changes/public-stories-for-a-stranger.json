@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "public-stories-for-a-stranger",
+      "kind": "fix",
+      "title": "Crewmates keep your setup out of what they publish",
+      "body": "Crewmates write pull request descriptions, commit messages, comments and releases for anyone who can see the project. They no longer name your computers, accounts, keys, clock times or other projects there. Your reports and cards still carry those details. A project that lives only on your computer is unchanged.",
+      "area": "crewmates",
+      "noPicture": "This changes the words crewmates write where the project lives, with no changed screen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

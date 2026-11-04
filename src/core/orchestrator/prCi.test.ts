@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { ChangePresentation } from "@shared/changePresentation";
 import { fixedHoldWords, softHoldWords } from "@shared/holds";
 import type { MergeReview } from "@shared/mergeReview";
+import type { HostedPresentationDestination } from "@shared/presentationDestination";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
@@ -3844,6 +3845,36 @@ describe("shared story delivery boundaries", () => {
       "predates saved stories",
     );
   });
+
+  it.each([
+    ["public", "is public: anyone can read this story"],
+    [
+      "private",
+      "is private: everyone with access can read this story, and the project can turn public",
+    ],
+  ] as const)(
+    "tells the crewmate who reads a story prepared for a %s project (INF-2142's approved plan)",
+    async (visibility, said) => {
+      const at = await saved();
+      const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+      seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: undefined });
+      at.forge.change = null;
+      const hosted = story.destination as HostedPresentationDestination;
+      const destination = { ...hosted, visibility };
+      Object.assign(at.forge, {
+        attachments: {
+          destination: async () => destination,
+          upload: async () => {
+            throw new Error("No upload expected");
+          },
+        },
+      });
+      at.readHead.mockResolvedValue(story.head);
+      const answer = await at.service.preparePresentation("ab12cd34", story);
+      expect(answer).toContain("Prepared presentation");
+      expect(answer).toContain(`${hosted.fullName} ${said}`);
+    },
+  );
 
   it("stops, opening nothing, when the recorded pre-story PR merged outside the app (INF-92 F3)", async () => {
     const at = await saved();

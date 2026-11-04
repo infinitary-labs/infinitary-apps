@@ -797,6 +797,10 @@ The app cannot intercept a raw push from a terminal; this is not a hosted requir
 
 Every new branch-based change and its completion card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`), including GitHub Enterprise, self-hosted GitLab, plain Git and local-only delivery.
 `prepare_change` validates the crewmate's publishable prose and selected inspected files without displaying a card, uploading bytes or opening a PR.
+A hosted story is read by everyone who can see the project, and by anyone when the project is public, so the crewmate writes it for a stranger (INF-2142).
+`PUBLIC_WRITING` (`src/core/prompts/publicWriting.ts`) is that rule's one home in the crewmate core, served once on Pi and on Claude, and covers everything sent where the project lives: stories, descriptions, commit messages, comments and releases.
+It keeps out the captain's own setup by name, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys and the captain's words; a local-only project's story, shown only on its completion card, is exempt.
+`publishable: true` is the author's declaration that it read the story once as that stranger, and the prepare answer names the destination's visibility it read (`storyAudience`, `src/core/orchestrator/prCi.ts`).
 The saved story is a soft hold (`story`): when the captain's recorded override passes it, a new pull request takes `body` instead.
 The same override passes the story at the merge, ordinary or past the branch rules, at the version it covers (INF-1365): the merge goes without a current published story, while its checks, review, approval, version and the host's rules still hold.
 It marks no story published, uploads, refreshes and rewrites nothing, and is read after the merge's last wait, so an override taken back before the send holds the merge.
@@ -804,7 +808,7 @@ A completion card that names a story revision still needs its destination's curr
 New stories use version 2: the same conventional title on the card and pull request, up to two short Why sentences, five change bullets, one Before and After sentence, and six typed `checked` facts (`check`, `result`).
 Aim for 150 open words on the card and 250 on the pull request.
 The zod schema carries the captain’s selected item counts and refuses past them; the author owns sentence length and word targets, with no invented per-sentence character refusal.
-The `story` parameter's own description (`PREPARE_CHANGE_STORY_DESCRIPTION`, `src/core/pi/forgeTools.ts`) says the item counts, that `base`, `head` and every `captureHead` are full commit ids, that a later revision keeps the first base, which version Before and After media name, and when `layout` adjacent applies, because no served schema carries those relationships or counts: the served `story` leaves its lengths and item counts to the parse (`zodParameter`, `docs/orchestrator-contract.md`).
+The `story` parameter's own description (`PREPARE_CHANGE_STORY_DESCRIPTION`, `src/core/pi/forgeTools.ts`) says the item counts, that `base`, `head` and every `captureHead` are full commit ids, that a later revision keeps the first base, which version Before and After media name, when `layout` adjacent applies, and who reads the story and what `publishable` declares, because no served schema carries those relationships or counts: the served `story` leaves its lengths and item counts to the parse (`zodParameter`, `docs/orchestrator-contract.md`).
 `verification` keeps commands, file names and counts behind How it was checked on both surfaces; nonempty unfinished work folds under Not done.
 The card keeps its risk radar; the pull request gives one line naming dimensions above low and folds the seven-row assessment.
 Empty required-action and unfinished sections, a frozen checks status and story/version stamps are absent.

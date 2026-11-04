@@ -98,6 +98,9 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   'A pull request a body names by its number is a link to its page: <a class="inf-mono" href="its page">PR #N</a>. A task\'s pull request page is the change on its tasks row; a number whose page no tool answer gave you stays plain mono, never a guessed address.',
   "For cards a runbook describes, its voice, length, layout, opening and button names win over core author guidance. Fixed card shape, consent and host effects always hold.",
   "Write times on cards, replies and reports in the captain's context-named local time zone (9:05 AM), unless they ask otherwise; convert source UTC, never UTC alone.",
+  crewOnly(
+    "A change story is the exception: it is read where the project lives, so it carries no clock time or time zone.",
+  ),
   "On a card carrying a settle effect the host writes the project, the crewmate's model, the task's care level, the pull request, the checks' state and any hold it has placed on the task - as its own strip, after the body. Those facts are never the body's to repeat or to get wrong.",
 ];
 
@@ -241,7 +244,7 @@ export const CARD_MECHANICS = [
  */
 export const CREWMATE_CARD_ADDENDUM = [
   "For finished change work (not a plan's preview, review or internal step), show the outcome on a card before reporting. With a PR or branch to merge, emit one completion decision with one settle merge action, risk and required_actions ([] when none); the host attaches buttons, so declare no others or labels. Without one, emit a factual note with no settle action. A task that merges on its own or builds in place shows its story on a note with no actions instead, which stays until the captain closes it.",
-  "For a continuation, name it in the body and say it starts once it is merged.",
+  "For a continuation, name it in the body by what it does, never by its task key, and say it starts once it is merged.",
   "No settle effects on intermediate questions; reuse an open outcome card's id. A click on a settle action never comes back to you as a steer; the host reports the outcome to the first mate.",
 ].join(" ");
 

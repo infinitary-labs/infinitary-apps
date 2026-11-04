@@ -386,6 +386,10 @@ describe("what the Claude client serves equals the source", () => {
       ?.description;
     expect(storyHelp).toBeTruthy();
     expect(prepare?.input_schema?.properties?.story?.description).toBe(storyHelp);
+    // INF-2142's approved plan: the story's own help says who reads it and
+    // what publishable declares, on Claude as on Pi.
+    expect(storyHelp).toContain("write it for a stranger");
+    expect(storyHelp).toContain("publishable true is your declaration");
 
     // INF-744: each tool's schema arrives as the source declares it, so every
     // limit on it - an integer, a minimum or maximum, a pattern, an item
@@ -405,7 +409,7 @@ describe("what the Claude client serves equals the source", () => {
     // these; since v4.59 no nested parameter is described at all.
     const emitCard = ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}emit_card`);
     expect(emitCard?.description).toContain(
-      "name it in the body and say it starts once it is merged",
+      "name it in the body by what it does, never by its task key, and say it starts once it is merged",
     );
     expect(
       ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}file_followup`)?.description,

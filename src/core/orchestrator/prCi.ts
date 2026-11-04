@@ -20,7 +20,11 @@ import {
   type SkippedRule,
 } from "@shared/mergeReview";
 import { isMergeConflict } from "@shared/plainProblem";
-import type { LocalPresentationDestination } from "@shared/presentationDestination";
+import {
+  hostedPresentation,
+  type LocalPresentationDestination,
+  type PresentationDestination,
+} from "@shared/presentationDestination";
 import { deliveryForRecord, type RepoView } from "@shared/repos";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { NEVER_SENT_AGAIN } from "@shared/writeAsk";
@@ -1608,7 +1612,10 @@ export class PrCiService {
         const merged = await this.mergedBeforeStories(located.record, located.forge);
         if (merged) return merged;
         const revision = await this.options.presentations.prepare(taskId, staged, located.forge);
-        return `Prepared presentation ${revision} for ${staged.head}. No file was uploaded and no card was shown. Pass presentation: ${revision} to open_change after review and pushing; pass the same current published revision to emit_card after checks pass.`;
+        const destination = this.options.tasks
+          .changePresentation(taskId)
+          ?.revisions.find((saved) => saved.revision === revision)?.destination;
+        return `Prepared presentation ${revision} for ${staged.head}. ${destination ? `${storyAudience(destination)} ` : ""}No file was uploaded and no card was shown. Pass presentation: ${revision} to open_change after review and pushing; pass the same current published revision to emit_card after checks pass.`;
       } catch (caught) {
         if (isSignInForgeFailure(caught))
           return crewSignInText(this.signInFact(located.forge, located.record.repoId));
@@ -3319,4 +3326,18 @@ async function lineageFacts(dir: string, question: LineageQuestion): Promise<Lin
 /** What a crewmate hears when the project's host needs the captain's sign-in. */
 function crewSignInText(fact: SignInFact): string {
   return `${notSignedInText(fact.name, fact.host)}. Report this as a blocker: the captain signs in to ${fact.name} in the app's Settings. Do not sign in yourself, and do not look for another way in.`;
+}
+
+/**
+ * Who reads a story, from the visibility the host read when it was prepared
+ * (INF-2142's approved plan): the crewmate is told the audience it writes for.
+ */
+export function storyAudience(destination: PresentationDestination): string {
+  if (hostedPresentation(destination))
+    return destination.visibility === "public"
+      ? `${destination.fullName} is public: anyone can read this story, so it names nothing personal or local.`
+      : `${destination.fullName} is ${destination.visibility}: everyone with access can read this story, and the project can turn public, so it names nothing personal or local.`;
+  return destination.kind === "branch"
+    ? "Everyone who can reach the branch where the project lives can read its commits; write them for a stranger."
+    : "";
 }

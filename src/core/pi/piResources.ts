@@ -18,6 +18,7 @@ import {
   FIRSTMATE_HANDOFF,
 } from "../prompts/cardContract";
 import { FLEET_WORK } from "../prompts/fleetWork";
+import { PUBLIC_WRITING } from "../prompts/publicWriting";
 import { RIGOR_SAFETY } from "../prompts/validationResources";
 import { deliveryGuide, namingGuide, testingGuide } from "../runbooks/fallback.generated";
 
@@ -245,6 +246,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
   return [
     core,
     FLEET_WORK,
+    PUBLIC_WRITING,
     ...(runbookText === undefined
       ? [
           ...careGuideFor(procedure),

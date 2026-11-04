@@ -45,7 +45,11 @@ export const presentationCheckSchema = z.strictObject({
 });
 const checked = z.array(presentationCheckSchema).min(1).max(6);
 
-/** Typed publication intent: the author, not a prose classifier, decides what is safe to share. */
+/**
+ * Typed publication intent: the author, not a prose classifier, decides what is safe to share.
+ * `publishable` is the author's declaration that it read the story once as a stranger who
+ * can see the project would, and it names nothing personal or local (INF-2142).
+ */
 export const changePresentationDraftSchema = z
   .strictObject({
     title: z.string().trim().min(1).max(200),

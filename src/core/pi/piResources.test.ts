@@ -25,6 +25,7 @@ import {
   handoffSentences,
 } from "../prompts/cardContract";
 import { FLEET_WORK } from "../prompts/fleetWork";
+import { PUBLIC_WRITING } from "../prompts/publicWriting";
 import { CREWMATE_TOOLS } from "./crewmateTaskTools";
 import { createCrewTools, SHAPE_GROUP_DESCRIPTION } from "./crewTools";
 import { CHECK_CHANGE_TOOL_DESCRIPTION } from "./forgeTools";
@@ -75,7 +76,7 @@ describe("where a crewmate keeps its evidence", () => {
     const prompt = buildCrewmateSystemPrompt("claude", evidenceDir);
     expect(prompt).toContain(`Your evidence folder is ${evidenceDir}`);
     expect(prompt).toContain("never inside your working copy");
-    expect(prompt).toContain("no local path or private thread enters the description");
+    expect(prompt).toContain("no local path, private thread or personal detail enters it");
     expect(buildCrewmateSystemPrompt("pi")).not.toContain("Your evidence folder is");
   });
 
@@ -1256,6 +1257,62 @@ describe("asking before sensitive keychain access (INF-880, submitted answer 9)"
   });
 });
 
+describe("the audience rule (INF-2142's approved plan)", () => {
+  it("reaches every crewmate once, whatever its backend, delivery, care or runbook", () => {
+    // The captain's choices: every project but a local-only one, and every
+    // kind of writing sent where the project lives, so no procedure fact or
+    // runbook selection may drop it.
+    const procedures: (CrewmateProcedureFacts | undefined)[] = [
+      undefined,
+      { delivery: "direct-pr", rigor: "standard" },
+      { delivery: "direct-pr", rigor: "quick" },
+      { delivery: "local-only", rigor: "reviewed" },
+      { delivery: "none", rigor: "none" },
+    ];
+    for (const backend of [undefined, "pi", "claude"] as const) {
+      for (const procedure of procedures) {
+        for (const runbookText of [undefined, "# A selected runbook"]) {
+          const prompt = buildCrewmateSystemPrompt(
+            backend,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            procedure,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            runbookText,
+          );
+          const label = `${backend}: ${JSON.stringify(procedure)} ${runbookText ?? ""}`;
+          expect(prompt.split(PUBLIC_WRITING).length - 1, label).toBe(1);
+        }
+      }
+    }
+    // The firstmate writes no story, so it is not served there.
+    expect(buildFirstmateSystemPrompt()).not.toContain(PUBLIC_WRITING);
+  });
+
+  it("names what a story leaves out, its exemption and what publishable means", () => {
+    for (const part of [
+      "a pull request's story or description, a commit message, a comment and a release",
+      "Write it for a stranger",
+      "computer, host, user and account names",
+      "clock times, time zones, other projects, task keys",
+      "the captain's words to you",
+      "A project that lives only on this computer sends nothing",
+      "Set a story's publishable only after reading it once as that stranger.",
+    ])
+      expect(PUBLIC_WRITING, part).toContain(part);
+    // A story carries no clock time, while cards, replies and reports keep them.
+    const prompt = buildCrewmateSystemPrompt("claude");
+    expect(prompt).toContain("Write times on cards, replies and reports");
+    expect(prompt).toContain("A change story is the exception");
+    expect(buildFirstmateSystemPrompt()).not.toContain("A change story is the exception");
+  });
+});
+
 describe("the default rule on tests (FI3-1756, the captain's approved plan)", () => {
   it("reaches every crewmate once, whatever its backend, delivery or care", () => {
     // A test is written on every task that writes code, so no procedure
@@ -1580,7 +1637,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // that cannot run is named, never dropped. No spec or command is named -
     // the repository's own instructions own those.
     expect(prompt).toContain(
-      "Demonstrate the intent end-to-end: list the concrete actions an end user would take and their expected results; gather evidence for each: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, outside the working copy, and never add one to the working copy or a commit; no local path or private thread enters the description. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder.",
+      "Demonstrate the intent end-to-end: list the concrete actions an end user would take and their expected results; gather evidence for each: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, outside the working copy, and never add one to the working copy or a commit; the description is written for a stranger under the rule for everything you send where the project lives, so no local path, private thread or personal detail enters it. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder.",
     );
     expect(prompt.match(/unit tests passing/gi)).toHaveLength(1);
     expect(prompt).toContain(
@@ -1679,9 +1736,10 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
 // INF-490 drops the sentences its refusals and the tool answers already say.
 it("keeps the full authoring and handoff sources word for word", () => {
   // INF-1177 moves lesson voice into its runbook; fixed card mechanics and runbook precedence stay.
+  // INF-2142's approved plan adds the crewmate's sentence keeping clock times out of a change story.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "d2b564d6bb5375dc7a353924d7aa1fdf709c9ac611751b5a813e595920d6cd6d",
+    "9b66a862d6effcc70eed589602e5043a8f361555051b4d022a8912e9e28f8f5f",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

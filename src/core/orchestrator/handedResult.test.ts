@@ -30,6 +30,8 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
   });
   seedTask(tasks, { id: "builder", title: "Fix the clipped card", status: "idle" });
   const cards: unknown[] = [];
+  // What a close does to the task's cards, in order.
+  const cardCloses: unknown[][] = [];
   const workStatus = vi.fn(async () => ({ dirty: false, unlandedCommits: 0 }));
   const host = {
     tasks,
@@ -39,7 +41,9 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
     deliverableOf: () => deliverable,
     cards: {
       snapshot: () => cards,
-      retireTaskCards: () => {},
+      retireTaskCards: (...args: unknown[]) => cardCloses.push(["retire", ...args]),
+      // A close shows a note still waiting on its crewmate (INF-2533).
+      releaseNotes: (taskId: string) => cardCloses.push(["release", taskId]),
       // Every close takes down a clicked merge's pending note (INF-1275).
       withdrawHostCard: () => {},
       scheduleBroadcast: () => {},
@@ -52,12 +56,20 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
     workspace: { taskWorkStatus: workStatus },
   } as unknown as SettleServiceHost;
   const service = new SettleService(host);
-  return { tasks, service, cards, workStatus };
+  return { tasks, service, cards, cardCloses, workStatus };
 }
+
+// A handed-on result closes done as answered: its notes stay, and a note
+// still waiting on its crewmate shows after the close wrote its outcome
+// on it (INF-2533).
+const ANSWERED_CLOSE = [
+  ["retire", "finder", "answered", { keepNotes: true }],
+  ["release", "finder"],
+];
 
 describe("handed-on result completion", () => {
   it("delivers a real screenshot before closing the source as done, and keeps the successor's copy", async () => {
-    const { tasks, service } = fixture("change");
+    const { tasks, service, cardCloses } = fixture("change");
     const paths = { crewmatesDir: scratchDir("infinitary-handed-result-") } as AppPaths;
     const original = fileURLToPath(
       new URL("../../../release-notes/pictures/action-reply-line-dark.webp", import.meta.url),
@@ -71,6 +83,7 @@ describe("handed-on result completion", () => {
     expect(await readFile(delivered)).toEqual(await readFile(original));
     expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: true });
     expect(tasks.get("finder")).toMatchObject({ status: "done", closedReason: "answered" });
+    expect(cardCloses).toEqual(ANSWERED_CLOSE);
     expect(await readFile(delivered)).toEqual(await readFile(original));
   });
 
@@ -87,10 +100,11 @@ describe("handed-on result completion", () => {
   it.each(["answer", "change"] as const)(
     "closes a reported %s handed to another task without an internal-step declaration",
     async (kind) => {
-      const { tasks, service } = fixture(kind);
+      const { tasks, service, cardCloses } = fixture(kind);
       tasks.recordResultHandoff("finder", { taskId: "builder" });
       expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: true });
       expect(tasks.get("finder")).toMatchObject({ status: "done", closedReason: "answered" });
+      expect(cardCloses).toEqual(ANSWERED_CLOSE);
       expect(tasks.timeline("finder")).toContainEqual(
         expect.objectContaining({
           data: expect.objectContaining({ resultHandoff: { taskId: "builder" } }),
@@ -100,7 +114,7 @@ describe("handed-on result completion", () => {
   );
 
   it("records a captain result choice on a change without closing it mid-turn, then finishes it as answered", async () => {
-    const { tasks, service } = fixture("change");
+    const { tasks, service, cardCloses } = fixture("change");
     const card = {
       id: "card-finder-result",
       taskId: "finder",
@@ -109,8 +123,10 @@ describe("handed-on result completion", () => {
     } as Card;
     expect(service.closeAnsweredTask(card, "use", "captain")).toBe(false);
     expect(tasks.resultHandoffOf("finder")).toBe(true);
+    expect(cardCloses).toEqual([]);
     expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: true });
     expect(tasks.get("finder")?.status).toBe("done");
+    expect(cardCloses).toEqual(ANSWERED_CLOSE);
   });
 
   it.each(["dismissed", "closed", "invented"])("does not count %s as a result choice", (action) => {

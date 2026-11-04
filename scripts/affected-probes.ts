@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
  * command-line runs. They run as vitest's `probe` project, never in the
  * integration shards. This local chooser runs only affected probes; CI runs
  * every probe on main and on request, never on pull requests. The
- * verify.yml linux-checks lane runs them all before every alpha and on demand.
+ * verify.yml probe groups run them all before every alpha and on demand.
  *
  *   node scripts/affected-probes.ts [--base <ref>] [--head <ref>] [--run]
  *

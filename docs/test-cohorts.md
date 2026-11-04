@@ -5,16 +5,18 @@ A test that spawns real work carries a budget sized to that work; an in-memory t
 
 ## The cohorts and projects
 
-`pnpm test` runs every project, and so does `verify.yml`'s `linux-checks` lane.
+`pnpm test` runs every project, and so do `verify.yml`'s Linux test groups (`linux-tests`) together.
 The full check's Mac unit stage runs only the reviewed files in `scripts/mac-unit-tests.ts`, through the same runner and cohorts.
 Those files contain native Mac cases, Mac-only branches or real Mac readings that Linux cannot cover; mixed files stay whole.
 Mock-only macOS tests need no additional Mac full-check coverage.
 The captain's INF-2273 exception still requires three total local rounds for every edited unit file, including portable or mock-only files; the native list does not exclude those local rounds.
-Linux keeps the unfiltered `pnpm test`, including every probe: no unit file moves off Linux or disappears from the full check.
+Linux keeps every file, including every probe, in test groups that name only projects and shards: no unit file moves off Linux or disappears from the full check.
 When adding a case that needs macOS, add its file to that list; the scratch Keychain probes retain their existing opt-in gates.
 `tests/release-workflows.test.ts` uses real Vitest file discovery to check the Mac selection, its cohort assignments and its inclusion in the complete Linux suite.
 
-Requested runs (`ci.yml`) run the same projects on separate machines, and a push to `main` runs them once in the full check's `linux-checks` lane (`verify.yml`); PRs omit the full unit, integration and probe sweeps: `unit-tests` runs `pure`, `unit`, `unit-isolated` and `browser`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs every file of `probe` ("Probes" below, `docs/testing.md`).
+Requested runs (`ci.yml`) run the same projects on separate machines, and so does a push to `main`, once, in the full check's Linux test groups (`verify.yml`); PRs omit the full unit, integration and probe sweeps: `unit-tests` runs `pure`, `unit`, `unit-isolated` and `browser`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs every file of `probe` ("Probes" below, `docs/testing.md`).
+The full check's `linux-tests` job splits them across eight machines with vitest's own `--shard`: `pure`, `unit` and `unit-isolated` in three groups, `integration` in two, `probe` in two and `browser` in one, each a machine of its own (INF-2646).
+`tests/release-workflows.test.ts` holds both layouts to every project, each in one job or in shards of one count that cover it, and the alpha's proof requires every group's complete set (`scripts/main-alpha-proof.mjs`).
 
 | Project | Files | Rule |
 | --- | --- | --- |
@@ -37,12 +39,12 @@ New unit files default to guarded sharing; add state-mutating files to the isola
 A probe is an integration file that can fail with no code change, because it leans on what the runner has: SSH and Remote Login stand-ins, dns-sd, release rehearsals, the connection listener, real Playwright runs, the Claude client against a stand-in API, whole-core command-line runs and a Linux Secret Service.
 Such a file fails on the runner's state as well as on the code, and catches a real problem mostly when its own subject changes (FI3-1756).
 Main's full check and requested runs execute every probe; pull requests omit this job.
-`verify.yml`'s `linux-checks` lane, inside every alpha and on demand, also runs them all.
+`verify.yml`'s Linux test groups, inside every alpha and on demand, also run them all, across two machines.
 
 `scripts/affected-probes.ts` owns the list: `PROBES` groups the probe files by what they reach outside the code, each group with the paths it watches, and `PROBE_FILES` is every file of it.
 The local chooser runs a probe when the change edits the probe itself, a path its group names (a directory ending in `/` matches what is under it), or a path of the lane itself (`LANE`: the chooser, `vitest.config.ts`, the packages and the shared test setup), which runs every probe.
 A base the chooser cannot read runs every probe, and a group naming a path that no longer exists is refused, so a moved subject cannot silently stop its probes running before the release.
-`ci.yml`'s `probe-tests` runs the unfiltered `pnpm test --project probe` on request, and the full check's `linux-checks` lane runs every probe on main.
+`ci.yml`'s `probe-tests` runs the unfiltered `pnpm test --project probe` on request, and the full check's two probe groups run every probe on main.
 Locally, `pnpm test:probes` runs the probes the working copy's commits reach from `origin/main`, and `node scripts/affected-probes.ts` only lists them.
 
 A probe stays on the integration list below, so the unit fence still exempts it, and `vitest.config.ts` refuses a probe that is not on it.
@@ -93,7 +95,7 @@ A budget lives in the file, as `vi.setConfig({ testTimeout })` for the whole fil
 A budget holds only on a run that grades budgets, `INFINITARY_PERF_BUDGETS=1` on a quiet host (`verify.yml` with `perf`), as journeys' durations do (captain's B1, and his INF-857 choice to grade durations only on a quiet run).
 On every other run a busy Mac can freeze a test's processes for seconds at a time, so a test's and a hook's limit and an `expect.poll` or `vi.waitFor` window run on the load clock, as a journey's waits do (INF-1083, the captain's choice for unit tests: "Yes, as a third piece after these two: today a stuck unit test waits with no clock until GitHub's six-hour limit").
 `tests/helpers/waitWindow.ts`, a setup file of every project, starts the clock in each worker with `startUnitLoadClock` (`tests/helpers/budgets.ts`), before any test can fake the timers, and our patches to `@vitest/runner` and `vitest` read it at each limit and window.
-A frozen worker's limits stop with it, and each ends by its wall cap, 20 times its budget and at most 10 minutes, so a stuck test fails by its own message; each test step in `ci.yml` ends at 30 minutes, and each `pnpm test` step in `verify.yml` at 60.
+A frozen worker's limits stop with it, and each ends by its wall cap, 20 times its budget and at most 10 minutes, so a stuck test fails by its own message; each test step in `ci.yml` ends at 30 minutes, and each `pnpm test` step in `verify.yml` at 60, which each Linux test group finishes well inside on GitHub's hosted two-processor machine.
 The unit clock is not `budgetTimer`'s: a helper's failure timer that a unit test drives with fake timers stays on the time it fakes.
 A wait keeps a `timeout` it names, and one that names none waits for its test's budget, not vitest's one second, ending just before it so a stuck wait reports its own mismatch; a graded run gives it what is left of the budget on the wall clock.
 A file sets no default window for its polls.

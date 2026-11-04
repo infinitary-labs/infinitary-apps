@@ -327,11 +327,20 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
     const source = "a".repeat(40);
     const names = runJobNames("main.yml", SCENARIOS[2]!.scenario);
     expect(names.filter((name) => name.includes("Linux journeys"))).toEqual([]);
-    expect(names).toContain(
-      "Main push · Desktop checks / Main push · Code, build and all test groups (Linux)",
-    );
-    expect(names).toContain(
-      "Main push · Desktop checks / Main push · Native tests, journeys, replay and package (Mac)",
+    // INF-2646: the Linux checks are the code checks and build and the test groups beside them.
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "Main push · Desktop checks / Main push · Code checks and build (Linux)",
+        "Main push · Desktop checks / Main push · Unit tests (Linux; group 1/3)",
+        "Main push · Desktop checks / Main push · Unit tests (Linux; group 2/3)",
+        "Main push · Desktop checks / Main push · Unit tests (Linux; group 3/3)",
+        "Main push · Desktop checks / Main push · Integration tests (Linux; group 1/2)",
+        "Main push · Desktop checks / Main push · Integration tests (Linux; group 2/2)",
+        "Main push · Desktop checks / Main push · Environment checks (Linux; group 1/2)",
+        "Main push · Desktop checks / Main push · Environment checks (Linux; group 2/2)",
+        "Main push · Desktop checks / Main push · Browser tests (Linux)",
+        "Main push · Desktop checks / Main push · Native tests, journeys, replay and package (Mac)",
+      ]),
     );
     const run = {
       id: 1,
@@ -363,6 +372,37 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
     expect(() => verifyMainEvidence(run, short, "infinitary-labs/infinitary", source)).toThrow(
       "every full-check owner",
     );
+    // So is any Linux test group missing a part, or one part that did not
+    // pass: a skipped part counts for nothing (INF-2646).
+    const linux = names.filter((name) =>
+      /^Main push · Desktop checks \/ .* \(Linux(; group \d+\/\d+)?\)$/.test(name),
+    );
+    expect(linux).toHaveLength(9);
+    for (const name of linux) {
+      const without = jobs.filter((job) => job.name !== name);
+      expect(
+        () => verifyMainEvidence(run, without, "infinitary-labs/infinitary", source),
+        name,
+      ).toThrow("every full-check owner");
+      const skipped = jobs.map((job) =>
+        job.name === name ? { ...job, conclusion: "skipped" } : job,
+      );
+      expect(
+        () => verifyMainEvidence(run, skipped, "infinitary-labs/infinitary", source),
+        name,
+      ).toThrow("every full-check owner");
+    }
+    // A run from before the split, its Linux checks in one job, still proves them.
+    const before = [
+      ...jobs.filter((job) => !linux.includes(job.name)),
+      {
+        ...jobs[0]!,
+        name: "Main push · Desktop checks / Main push · Code, build and all test groups (Linux)",
+      },
+    ];
+    expect(verifyMainEvidence(run, before, "infinitary-labs/infinitary", source)).toMatchObject({
+      runId: 1,
+    });
   });
 
   it("names a covered push and the batch's sweep so the alpha follows them to the batch run", () => {

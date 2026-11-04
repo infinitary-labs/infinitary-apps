@@ -5,7 +5,8 @@ name: ci
 # three total rounds locally, never in extra PR repeat jobs. Full unit,
 # integration and probe sweeps run here only on request, never on PRs.
 # A push to main starts none of these jobs (INF-2340): main.yml's full check
-# runs the same commands in verify.yml's linux-checks lane, every probe included.
+# runs the same commands in verify.yml's linux-checks lane and its Linux test
+# groups, every probe included.
 # Which Linux machines (INI-9's plan, approved by the captain): every job
 # runs on the label the repository variable LINUX_RUNNER names - the
 # placement service's shell-pc-linux, a fresh VM per job on the Windows PC,

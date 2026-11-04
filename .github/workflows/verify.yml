@@ -22,7 +22,7 @@ name: verify
 # The e2e paint and latency budgets are graded only on request, on a quiet
 # host (captain's B1, 2026-09-24; tests/e2e/perf.ts): every e2e run prints
 # them, and `-f perf=true` adds a run of the @perf-tagged specs that holds
-# them to their budgets. The same input holds linux-checks' vitest tests to
+# them to their budgets. The same input holds linux-tests' vitest tests to
 # their time limits, which no other run keeps (INF-857, docs/test-cohorts.md
 # "Budgets").
 #
@@ -205,12 +205,6 @@ jobs:
       suite: full
       batch: ${{ inputs.batch || '' }}
       batch_tree: ${{ inputs.batch_tree || '' }}
-  # The profile's lanes, as one matrix: an omitted lane is absent from the
-  # run, never a skipped job that reads as green. linux-checks is the main
-  # checks' commands in one job; mac is the full macOS verification. Each step names
-  # the lane it belongs to. The journeys part runs the mac lane alone, and
-  # there only the stages the journeys need: the install, the build, the
-  # recorder and the suite.
   installer:
     needs: request
     name: ${{ format('{0} · Signed installer checks', inputs.trigger || 'Manual request') }}
@@ -226,10 +220,17 @@ jobs:
       chip: ${{ inputs.installer_chip || 'both' }}
     secrets: inherit
 
+  # The profile's lanes, as one matrix: an omitted lane is absent from the
+  # run, never a skipped job that reads as green. linux-checks is the main
+  # checks' typecheck, lints and build in one job, beside linux-tests below,
+  # which runs every vitest project; mac is the full macOS verification. Each step names
+  # the lane it belongs to. The journeys part runs the mac lane alone, and
+  # there only the stages the journeys need: the install, the build, the
+  # recorder and the suite.
   lane:
     needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
-    name: ${{ format(matrix.lane == 'mac' && (inputs.part == 'journeys' && '{0} · Every app journey (Mac)' || '{0} · Native tests, journeys, replay and package (Mac)') || '{0} · Code, build and all test groups (Linux)', inputs.trigger || 'Manual request') }}
+    name: ${{ format(matrix.lane == 'mac' && (inputs.part == 'journeys' && '{0} · Every app journey (Mac)' || '{0} · Native tests, journeys, replay and package (Mac)') || '{0} · Code checks and build (Linux)', inputs.trigger || 'Manual request') }}
     strategy:
       fail-fast: false
       matrix:
@@ -297,28 +298,16 @@ jobs:
       # red stage leaves every independent stage's result on the run, and the
       # job still ends red on any failure, which keeps release.yml from signing.
       #
-      # linux-checks: the commands of ci.yml's jobs, in one job on hosted Linux.
-      # Its `pnpm test` runs every probe (docs/test-cohorts.md, "Probes"), as
-      # ci.yml's requested sweeps do; a push to main runs them only here. Each needs only the install; its build is the shared one below.
+      # linux-checks: the typecheck, lints and build of ci.yml's jobs, in one
+      # job on hosted Linux; linux-tests runs their tests. Each needs only the
+      # install; its build is the shared one below.
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm typecheck
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm check
       - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
         run: pnpm lint:adherence
-      # The browser project's Chromium (docs/testing.md, "The browser layer").
-      - uses: ./Application Support/firstmate/.github/actions/browser-chromium
-        if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
-        with:
-          working-directory: Application Support/firstmate
-      - if: ${{ !cancelled() && matrix.lane == 'linux-checks' && steps.install.outcome == 'success' }}
-        run: pnpm test
-        # Every probe as well as the full unit and integration sweeps; a stuck one ends by its own cap (ci.yml says why).
-        timeout-minutes: 60
-        env:
-          # Test time limits run on the load clock, and on the wall clock only on a graded run (docs/test-cohorts.md, "Budgets").
-          INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '' }}
-      # Linux above runs every Vitest file, including every probe. Mac repeats
+      # linux-tests runs every Vitest file on Linux, every probe included. Mac repeats
       # only files with Mac-specific cases/readings; keep mixed files whole so
       # none of their Mac-only cases is lost (scripts/mac-unit-tests.ts).
       - name: Read the temporary volume's filesystem type
@@ -590,3 +579,103 @@ jobs:
             console.log(`\nOutside any test: ${plain(error.message).split("\n")[0]}`);
           SUMMARY
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # linux-tests: every vitest project on Linux, in test groups on machines of
+  # their own, each a numbered set of vitest's own --shard (a hash of each
+  # file's path) or one whole group (INF-2646, the captain's approved split:
+  # on GitHub's hosted two-processor Ubuntu the whole suite ran past its
+  # limit in one job). Together the groups run every project and every
+  # probe, the projects ci.yml's requested sweeps run (docs/test-cohorts.md);
+  # the alpha's proof requires every group's complete set
+  # (scripts/main-alpha-proof.mjs). Each group reports even when another
+  # fails, and the journeys part leaves them out, as linux-checks.
+  linux-tests:
+    needs: request
+    if: ${{ !inputs.installer_only && !inputs.installer_reuse && inputs.part != 'journeys' }}
+    name: ${{ format(matrix.shards > 1 && '{0} · {1} (Linux; group {2}/{3})' || '{0} · {1} (Linux)', inputs.trigger || 'Manual request', matrix.tests, matrix.shard, matrix.shards) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tests: Unit tests
+            projects: --project pure --project unit --project unit-isolated
+            shard: 1
+            shards: 3
+          - tests: Unit tests
+            projects: --project pure --project unit --project unit-isolated
+            shard: 2
+            shards: 3
+          - tests: Unit tests
+            projects: --project pure --project unit --project unit-isolated
+            shard: 3
+            shards: 3
+          - tests: Integration tests
+            projects: --project integration
+            shard: 1
+            shards: 2
+          - tests: Integration tests
+            projects: --project integration
+            shard: 2
+            shards: 2
+          # Probes can fail with no code change (docs/test-cohorts.md, "Probes"):
+          # every one runs, across both groups, never a changed-path selection.
+          - tests: Environment checks
+            projects: --project probe
+            shard: 1
+            shards: 2
+          - tests: Environment checks
+            projects: --project probe
+            shard: 2
+            shards: 2
+          # The browser layer, on the Chromium it installs (docs/testing.md, "The browser layer").
+          - tests: Browser tests
+            projects: --project browser
+            shard: 1
+            shards: 1
+            chromium: true
+    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').checks || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    # Under "Application Support", as the lanes above (FI3-152).
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          path: Application Support/firstmate
+      - name: Compose the swept batch
+        if: inputs.batch != ''
+        env:
+          HEADS: ${{ inputs.batch }}
+          TREE: ${{ inputs.batch_tree }}
+        # shellcheck disable=SC2086 # one word per change
+        run: scripts/batch-compose.sh apply "$TREE" $HEADS
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+          package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - uses: ./Application Support/firstmate/.github/actions/node-headers
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      - uses: ./Application Support/firstmate/.github/actions/browser-chromium
+        if: matrix.chromium
+        with:
+          working-directory: Application Support/firstmate
+      # A stuck test ends sooner, by its own cap (ci.yml says why); the longest
+      # group takes about a fifth of this limit on a hosted machine.
+      - run: pnpm test $PROJECTS --shard="$SHARD/$SHARDS"
+        # shellcheck disable=SC2086 # one word per project flag
+        timeout-minutes: 60
+        env:
+          PROJECTS: ${{ matrix.projects }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ matrix.shards }}
+          # Test time limits run on the load clock, and on the wall clock only on a graded run (docs/test-cohorts.md, "Budgets").
+          INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '' }}

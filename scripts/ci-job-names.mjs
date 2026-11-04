@@ -45,6 +45,9 @@ export function splitLevel(level) {
 }
 
 // The purposes whose jobs a reader judges, each with the name it had before.
+// A job added since keeps its purpose as its name: verify.yml's Linux code
+// checks and build and its test groups (INF-2646), which together check what
+// its one `linux-checks` job did, so no new name reads as that one.
 const LEGACY = new Map([
   ["Desktop checks", "verify"],
   ["Code, build and all test groups (Linux)", "linux-checks"],

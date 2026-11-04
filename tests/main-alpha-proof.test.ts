@@ -4,6 +4,7 @@ import { compileFunction, constants } from "node:vm";
 import { describe, expect, it } from "vitest";
 import {
   alphaVerification,
+  linuxChecksPassed,
   proveMain,
   verifyBatchEvidence,
   verifyMainEvidence,
@@ -368,6 +369,60 @@ describe("an alpha's own verification (INF-2480)", () => {
         ["verify / linux-checks", { conclusion: "failure" }],
       ),
     ).toBeNull();
+  });
+
+  // INF-2646 (the captain approved INF-2641's split): the Linux checks are
+  // the code checks and build and every test group's complete set, each
+  // passed; one missing, red or skipped part leaves them unproven.
+  it("reads the split Linux checks only when every test group's complete set passed", () => {
+    const split = [
+      "verify / Code checks and build (Linux)",
+      ...[1, 2, 3].map((part) => `verify / Unit tests (Linux; group ${part}/3)`),
+      ...[1, 2].map((part) => `verify / Integration tests (Linux; group ${part}/2)`),
+      ...[1, 2].map((part) => `verify / Environment checks (Linux; group ${part}/2)`),
+      "verify / Browser tests (Linux)",
+    ];
+    const whole = [
+      "verify / Validate verification selection",
+      ...split,
+      "verify / mac",
+      ...linuxJourneys,
+    ];
+    const run = (names: string[], change?: [string, Record<string, string>]) =>
+      alphaVerification([
+        ...releaseJobs.map((name) => named(name)),
+        ...names.map((name) => ({ ...named(name), ...(change?.[0] === name ? change[1] : {}) })),
+        named(installer, "skipped"),
+      ]);
+    expect(run(whole)).toBe("all");
+    expect(linuxChecksPassed(split.map((name) => named(name)))).toBe(true);
+    for (const name of split) {
+      expect(run(whole.filter((each) => each !== name)), name).toBeNull();
+      for (const conclusion of ["failure", "skipped", "cancelled"])
+        expect(run(whole, [name, { conclusion }]), `${name} ${conclusion}`).toBeNull();
+      expect(run(whole, [name, { status: "in_progress", conclusion: "" }]), name).toBeNull();
+    }
+    // A part listed twice in place of another, or one of another count, is not the set.
+    const third = "verify / Unit tests (Linux; group 3/3)";
+    expect(
+      run([...whole.filter((name) => name !== third), "verify / Unit tests (Linux; group 2/3)"]),
+    ).toBeNull();
+    expect(run([...whole, "verify / Integration tests (Linux; group 3/3)"])).toBeNull();
+    // Main's checks read the same way, a run from before the split by its one job.
+    const main = completedMain();
+    const splitMain = [
+      ...main.jobs.filter(({ name }) => name !== "verify / linux-checks"),
+      ...split.map((name) => ({ ...main.jobs[0]!, name })),
+    ];
+    expect(verifyMainEvidence(main.run, splitMain, repository, source).runId).toBe(main.run.id);
+    expect(() =>
+      verifyMainEvidence(
+        main.run,
+        splitMain.filter(({ name }) => name !== "verify / Browser tests (Linux)"),
+        repository,
+        source,
+      ),
+    ).toThrow("every full-check owner");
   });
 });
 

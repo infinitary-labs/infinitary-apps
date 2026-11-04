@@ -194,7 +194,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
 - **Full alpha checks, inherited stable checks (FI3-482).**
   Every alpha needs every Playwright journey passed on its exact files, on Linux in shards (`docs/testing.md`, "The Linux source desktop") and on the Mac, since main runs none of the old journey set (INF-2480, the captain: "old set at the release check only, from the first piece on").
   An automatic alpha whose files a green swept batch checked with every journey reuses that batch's run and runs no lane itself (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them"; `docs/testing.md`, "The swept batch").
-  Any other automatic alpha calls `verify.yml` with `part: journeys` for them, and reuses the rest of the completed rolling-main run's full check without running it again: its `linux-checks` lane, with Linux typecheck, lint, adherence lint, unit tests and build, and its `mac` lane's macOS unit tests, tests tagged `MAC_ONLY_TAG`, installed Claude client check, replay gate, and development package with its signature, data-folder and bundled-git checks.
+  Any other automatic alpha calls `verify.yml` with `part: journeys` for them, and reuses the rest of the completed rolling-main run's full check without running it again: its Linux checks, the `linux-checks` lane's typecheck, lint, adherence lint and build and every Linux test group's unit, integration, probe and browser tests, and its `mac` lane's macOS unit tests, tests tagged `MAC_ONLY_TAG`, installed Claude client check, replay gate, and development package with its signature, data-folder and bundled-git checks.
   The journeys part's Mac lane runs only the install, the build, the recorder and the suite.
   The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: the real update from the signing job's handoff, once every check passed, before publication.
   There is no Linux-only bypass.
@@ -202,9 +202,10 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   A stable omits verify and inherits its alpha's checks: the resolve job reads the published alpha's release run, found by its run number (the alpha's suffix), because a run dispatched from main records main's commit rather than the candidate it built.
   The stable's source is the alpha tag's own commit, so nothing differs from what that run checked.
   The run must have succeeded with every lane's latest execution completed successfully, each Linux journey shard included.
-  An alpha that ran only the journeys part, with no `linux-checks` job, needs complete Linux shard sets and also validated exact-source main proof for the rest.
+  An alpha that ran only the journeys part, with no Linux checks job, needs complete Linux shard sets and also validated exact-source main proof for the rest.
   An automatic alpha that ran no lane reused every one, so it is promoted only when the run it reused also holds complete Linux shard sets: its swept batch's, or a main run from before INF-2480, which carried every journey (`scripts/main-alpha-proof.mjs`).
-  Reuse reads GitHub's run and latest per-job executions, requires the trusted main-push identity and both full-check owners, `linux-checks` and `mac`, and refuses skipped required owners, partial, cancelled, failed or other-source results.
+  Reuse reads GitHub's run and latest per-job executions, requires the trusted main-push identity and the full-check owners, the Linux checks and `mac`, and refuses skipped required owners, partial, cancelled, failed or other-source results.
+  The Linux checks are the `linux-checks` lane and every Linux test group's complete set, or, in a run from before INF-2646 split them, the one `linux-checks` job that ran them all (`scripts/main-alpha-proof.mjs`).
   A manual alpha without reusable main proof, including a rehearsal, still runs full verification.
   A stable is refused without its alpha's proof, never verified again on its own.
   A promoted alpha must also have a passing update check on Apple silicon, or, for an alpha released before the update check, passing five-copy signed installer and updater jobs for both architectures.
@@ -330,7 +331,7 @@ A failed, cancelled or incomplete main run cuts nothing; main's waiting-version 
 
 1. **Validate the completed run.**
    The resolver reads the completed successful trusted main-push run and every latest per-job execution from GitHub.
-   It requires both full-check owners, `linux-checks` and `mac`, at exactly the source being released.
+   It requires the full-check owners, the Linux checks (the `linux-checks` lane and every Linux test group) and `mac`, at exactly the source being released.
    A covered main run, whose files a green swept batch already checked, names that batch run instead; the resolver then reads the batch run's two owners and requires its verdict's tree to be the source's tree (`docs/testing.md`, "The swept batch").
 2. **Keep the same source.**
    The notes check validates committed declarations without a separate notes-review commit.

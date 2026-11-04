@@ -12,7 +12,7 @@ import { legacyJobName } from "./ci-job-names.mjs";
 // Main runs no old journey set either (INF-2480, the captain: "old set at the
 // release check only, from the first piece on"): its full check is the Linux
 // checks and the Mac lane with only the tests that need a Mac, so what an
-// alpha reuses from it is those two owners, and the alpha runs every journey
+// alpha reuses from it is those owners, and the alpha runs every journey
 // itself (release.yml's verify call with part journeys). A swept batch runs
 // every journey on the alpha source's files, so an alpha it proves reuses
 // them too and runs no lane (the captain on INF-2508: "Keep every journey in
@@ -25,6 +25,14 @@ const legacy = (jobs) => jobs.map((job) => ({ ...job, name: legacyJobName(job.na
 const green = (job) => job.status === "completed" && job.conclusion === "success";
 const skipped = (job) => job.status === "completed" && job.conclusion === "skipped";
 
+/** Whether numbered parts make one complete set: each of 1 to its total once. */
+const completeSet = (parts) => {
+  const total = parts[0]?.total;
+  return total > 0 && parts.length === total &&
+    new Set(parts.map((part) => part?.index)).size === total &&
+    parts.every((part) => part && part.total === total && part.index >= 1 && part.index <= total);
+};
+
 /** Whether `jobs` hold every Linux journey of a full suite under verify.yml
  * called as job `prefix`, each job passed: the parallel and desktop shards,
  * each lane a complete numbered set (`journeys (<lane> <n>/<total>)`).
@@ -32,15 +40,49 @@ const skipped = (job) => job.status === "completed" && job.conclusion === "skipp
  * must still be green. */
 export function everyLinuxJourney(jobs, prefix = "verify / ") {
   const journeys = jobs.filter((job) => job.name.startsWith(`${prefix}linux-e2e / `));
-  return journeys.length > 0 && journeys.every(green) && ["parallel", "desktop"].every((lane) => {
-    const shards = journeys.filter((job) => job.name.includes(`(${lane} `)).map((job) => {
+  return journeys.length > 0 && journeys.every(green) && ["parallel", "desktop"].every((lane) =>
+    completeSet(journeys.filter((job) => job.name.includes(`(${lane} `)).map((job) => {
       const match = / (\d+)\/(\d+)\)$/.exec(job.name);
       return match ? { index: Number(match[1]), total: Number(match[2]) } : null;
-    });
-    const total = shards[0]?.total;
-    return total > 0 && shards.length === total &&
-      new Set(shards.map((shard) => shard?.index)).size === total &&
-      shards.every((shard) => shard && shard.total === total && shard.index >= 1 && shard.index <= total);
+    })));
+}
+
+// verify.yml's Linux checks since INF-2646: its typecheck, lints and build in
+// one job, and every vitest project in test groups on machines of their own,
+// each group a complete numbered set (`<group> (Linux; group <n>/<total>)`) or
+// one job (`<group> (Linux)`). A run from before then ran them all in its one
+// `linux-checks` job.
+const LINUX_CODE = "Code checks and build (Linux)";
+const LINUX_TEST_GROUPS = ["Unit tests", "Integration tests", "Environment checks", "Browser tests"];
+
+/** The test group a job of verify.yml, called as job `prefix`, belongs to, with its part, or null. */
+function linuxTestPart(name, prefix) {
+  for (const group of LINUX_TEST_GROUPS) {
+    if (name === `${prefix}${group} (Linux)`) return { group, index: 1, total: 1 };
+    const match = / \(Linux; group (\d+)\/(\d+)\)$/.exec(name);
+    if (match && name === `${prefix}${group}${match[0]}`)
+      return { group, index: Number(match[1]), total: Number(match[2]) };
+  }
+  return null;
+}
+
+/** Whether a job of verify.yml, called as job `prefix`, is one of its Linux checks. */
+const linuxCheck = (name, prefix) =>
+  name === `${prefix}linux-checks` || name === `${prefix}${LINUX_CODE}` || linuxTestPart(name, prefix) !== null;
+
+/** Whether `jobs` hold verify.yml's Linux checks, called as job `prefix`, each
+ * passed: the code checks and build and every test group's complete set, or
+ * the one `linux-checks` job of a run from before INF-2646. */
+export function linuxChecksPassed(jobs, prefix = "verify / ") {
+  const passed = (name) => jobs.some((job) => job.name === name && green(job));
+  if (passed(`${prefix}linux-checks`)) return true;
+  const parts = jobs.flatMap((job) => {
+    const part = linuxTestPart(job.name, prefix);
+    return part ? [{ ...part, job }] : [];
+  });
+  return passed(`${prefix}${LINUX_CODE}`) && LINUX_TEST_GROUPS.every((group) => {
+    const own = parts.filter((part) => part.group === group);
+    return own.every((part) => green(part.job)) && completeSet(own);
   });
 }
 
@@ -49,8 +91,8 @@ export function everyLinuxJourney(jobs, prefix = "verify / ") {
 function checksPassed(jobs, prefix) {
   const passed = (name) => jobs.some((job) => job.name === name && green(job));
   // All jobs of the successful run must be completed; an optional lane may
-  // skip, but neither full-check owner may be skipped or merely absent.
-  return passed(`${prefix}linux-checks`) && passed(`${prefix}mac`) &&
+  // skip, but no full-check owner may be skipped or merely absent.
+  return linuxChecksPassed(jobs, prefix) && passed(`${prefix}mac`) &&
     jobs.every((job) => job.status === "completed" && ["success", "skipped"].includes(job.conclusion));
 }
 
@@ -137,8 +179,9 @@ export async function proveMain(github, repo, run, source) {
 
 /** What a published alpha's release run proved itself, from its latest job
  * executions, for a stable that promotes it:
- * - "all": linux-checks, every Linux journey shard and mac passed in it;
- * - "journeys": it ran only the journey part, with no linux-checks job, and
+ * - "all": the Linux checks (linuxChecksPassed), every Linux journey shard
+ *   and mac passed in it;
+ * - "journeys": it ran only the journey part, with no Linux checks job, and
  *   every Linux journey shard and mac passed (an alpha that reused main's
  *   checks, INF-2480);
  * - "none": its verify call skipped, so it ran no lane (an automatic alpha
@@ -155,8 +198,8 @@ export function alphaVerification(named) {
   const passed = (name) => jobs.some((job) => job.name === name && green(job));
   const shards = lanes.filter((job) => job.name.startsWith("verify / linux-e2e / "));
   const linux = shards.length > 0 && shards.every(green);
-  if (passed("verify / linux-checks") && linux && passed("verify / mac")) return "all";
-  if (!lanes.some((job) => job.name === "verify / linux-checks") && everyLinuxJourney(lanes) &&
+  if (linuxChecksPassed(lanes) && linux && passed("verify / mac")) return "all";
+  if (!lanes.some((job) => linuxCheck(job.name, "verify / ")) && everyLinuxJourney(lanes) &&
       passed("verify / mac") && lanes.every((job) => green(job) || skipped(job)))
     return "journeys";
   return null;

@@ -24,6 +24,8 @@ export type MainJob = {
 export type NamedJob = Pick<MainJob, "name" | "status" | "conclusion">;
 /** Every Linux journey shard of verify.yml, called as job `prefix` (default `verify / `), passed. */
 export function everyLinuxJourney(jobs: readonly NamedJob[], prefix?: string): boolean;
+/** verify.yml's Linux checks, called as job `prefix` (default `verify / `), passed: the code checks and build and every test group's complete set, or one `linux-checks` job from before INF-2646. */
+export function linuxChecksPassed(jobs: readonly NamedJob[], prefix?: string): boolean;
 /** What an alpha reuses: the checks passed, and whether the same run also ran every Linux journey. */
 export type MainProof = { source: string; runId: number; attempt: number; url: string; journeys: boolean };
 export function verifyMainEvidence(

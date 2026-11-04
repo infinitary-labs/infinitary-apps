@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "split-hosted-linux-tests",
+      "reason": "Internal CI work: main's full check runs its Linux tests in eight groups on GitHub's hosted machines, beside the typecheck, lint and build, so each finishes inside its time limit. Nothing in the app changes."
+    }
+  ]
+}

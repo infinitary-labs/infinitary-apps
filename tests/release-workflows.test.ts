@@ -1095,6 +1095,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         "ci.yml:probe-tests",
         "replay.yml:replay-gate",
         "verify.yml:lane",
+        "verify.yml:linux-tests",
         "linux-packages.yml:build",
         "linux-packages.yml:check",
         "source-journeys.yml:source-desktop",
@@ -1109,7 +1110,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * job, or in shards of one count that together cover it. The captain
    * explicitly includes every probe, not just affected files.
    */
-  it("runs every vitest project once across ci.yml's sweep jobs, a sharded one in shards that cover it", () => {
+  const vitestProjects = () => {
     const projects = (vitestConfig.test?.projects ?? []).map((project) => {
       const name =
         typeof project === "object" && "test" in project ? project.test?.name : undefined;
@@ -1119,8 +1120,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(projects).toEqual(
       expect.arrayContaining(["pure", "unit", "unit-isolated", "integration", "probe"]),
     );
+    return projects;
+  };
+  /** Each vitest project's shards across the jobs' `pnpm test` commands, "whole" for an unsharded run. */
+  const vitestShards = (jobs: { name: string; runs: string[] }[], projects: string[]) => {
     const shardsOf = new Map<string, string[]>();
-    for (const { name, runs } of ciJobs("workflow_dispatch")) {
+    for (const { name, runs } of jobs) {
       for (const run of runs) {
         const [tool, script, ...args] = run.split(/\s+/);
         if (tool !== "pnpm" || script !== "test") continue;
@@ -1137,13 +1142,69 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         }
       }
     }
+    return shardsOf;
+  };
+  /** Whether a project's shards are one whole run, or each part of one count once. */
+  const coversOnce = (shards: string[]) => {
+    const whole = shards.length === 1 && shards[0] === "whole";
+    const cover = shards.map((_, index) => `${index + 1}/${shards.length}`);
+    return whole || shards.toSorted().join() === cover.toSorted().join();
+  };
+
+  it("runs every vitest project once across ci.yml's sweep jobs, a sharded one in shards that cover it", () => {
+    const projects = vitestProjects();
+    const shardsOf = vitestShards(ciJobs("workflow_dispatch"), projects);
     expect([...shardsOf.keys()].toSorted()).toEqual(projects.toSorted());
     expect(shardsOf.get("probe")).toEqual(["whole"]);
-    for (const [project, shards] of shardsOf) {
-      const whole = shards.length === 1 && shards[0] === "whole";
-      const cover = shards.map((_, index) => `${index + 1}/${shards.length}`);
-      expect(whole || shards.toSorted().join() === cover.toSorted().join(), project).toBe(true);
+    for (const [project, shards] of shardsOf) expect(coversOnce(shards), project).toBe(true);
+  });
+
+  /**
+   * INF-2646 (the captain approved INF-2641's split of main's Linux tests
+   * across GitHub's hosted machines): verify.yml's Linux test groups run every
+   * vitest project, each in one group or in shards of one count that
+   * together cover it, every probe included, so the split loses no file.
+   * Each group is a machine of its own, and one red group skips no other.
+   */
+  it("runs every vitest project once across verify.yml's Linux test groups, a sharded one in shards that cover it", () => {
+    const projects = vitestProjects();
+    for (const inputs of [{}, { part: "checks", hosted: true, all_journeys: false }]) {
+      const groups = verifyLinuxTests(inputs);
+      expect(groups.map(({ name }) => name)).toEqual([
+        "Manual request · Unit tests (Linux; group 1/3)",
+        "Manual request · Unit tests (Linux; group 2/3)",
+        "Manual request · Unit tests (Linux; group 3/3)",
+        "Manual request · Integration tests (Linux; group 1/2)",
+        "Manual request · Integration tests (Linux; group 2/2)",
+        "Manual request · Environment checks (Linux; group 1/2)",
+        "Manual request · Environment checks (Linux; group 2/2)",
+        "Manual request · Browser tests (Linux)",
+      ]);
+      const shardsOf = vitestShards(groups, projects);
+      expect([...shardsOf.keys()].toSorted()).toEqual(projects.toSorted());
+      for (const [project, shards] of shardsOf) expect(coversOnce(shards), project).toBe(true);
+      // Every probe, in two groups that cover them, never a changed-path selection.
+      expect(shardsOf.get("probe")?.toSorted()).toEqual(["1/2", "2/2"]);
+      // The browser group installs its Chromium before its tests.
+      const browser = groups.find(({ name }) => name.includes("Browser tests"))?.steps ?? [];
+      const chromium = browser.findIndex(({ uses }) =>
+        uses?.endsWith("/.github/actions/browser-chromium"),
+      );
+      expect(chromium).toBeGreaterThanOrEqual(0);
+      expect(browser.findIndex(({ run }) => run?.startsWith("pnpm test "))).toBeGreaterThan(
+        chromium,
+      );
     }
+    // The journeys part, and an installer check, run none of them.
+    expect(verifyLinuxTests({ part: "journeys" })).toEqual([]);
+    expect(verifyLinuxTests({ installer_only: true })).toEqual([]);
+    expect(verifyLinuxTests({ installer_reuse: "reviewed declaration" })).toEqual([]);
+    const job = (loadYamlFile(".github/workflows/verify.yml") as { jobs: Record<string, CiJob> })
+      .jobs["linux-tests"];
+    expect(job?.strategy?.["fail-fast"]).toBe(false);
+    // Each group's test step keeps the full check's 60-minute limit.
+    const test = job?.steps.find((step) => step.run?.startsWith("pnpm test "));
+    expect(test?.["timeout-minutes"]).toBe(60);
   });
 
   type Step = {
@@ -1512,11 +1573,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const linux = steps.filter(
       (step) => step.run?.startsWith("pnpm ") && step.if?.includes("linux-checks"),
     );
+    // Its tests run in verify.yml's Linux test groups, each a machine of its own.
     expect(linux.map((step) => step.run)).toEqual([
       "pnpm typecheck",
       "pnpm check",
       "pnpm lint:adherence",
-      "pnpm test",
     ]);
     for (const step of [...linux, stage("build")]) {
       const afterRed = { install: "success", "an earlier check": "failure" };
@@ -1853,7 +1914,7 @@ type CiJob = {
   needs?: unknown;
   "runs-on": string;
   "continue-on-error"?: boolean;
-  strategy?: { matrix: Record<string, unknown[]> };
+  strategy?: { matrix: Record<string, unknown[]>; "fail-fast"?: boolean };
   steps: Array<{
     id?: string;
     run?: string;
@@ -1862,6 +1923,7 @@ type CiJob = {
     env?: Record<string, string>;
     if?: string;
     "continue-on-error"?: boolean;
+    "timeout-minutes"?: number;
   }>;
 };
 
@@ -1919,6 +1981,55 @@ function ciJobs(
         ),
       };
     });
+  });
+}
+
+/** A step's run line with the step's environment read in, as its shell reads it (INF-2539: the matrix values reach a script only through its environment). */
+function interpolated(step: CiJob["steps"][number], contexts: Record<string, unknown>): string {
+  return workflowString(step.run ?? "", contexts)
+    .replace(/"?\$\{?(\w+)\}?"?/g, (whole, name: string) =>
+      step.env?.[name] === undefined ? whole : workflowString(step.env[name], contexts),
+    )
+    .trim();
+}
+
+/**
+ * The machines verify.yml's Linux test groups start for a call's inputs
+ * (INF-2646), verify.yml's own defaults filling the inputs it leaves out:
+ * one per matrix entry when the job's condition holds, each with its name,
+ * the steps that run on a passing run, in order, and their commands.
+ */
+function verifyLinuxTests(given: Record<string, unknown>): {
+  name: string;
+  steps: { uses?: string; run?: string }[];
+  runs: string[];
+}[] {
+  const verify = loadYamlFile(".github/workflows/verify.yml") as {
+    on: { workflow_call: { inputs: Record<string, { default?: unknown }> } };
+    jobs: Record<string, CiJob>;
+  };
+  const inputs = {
+    ...Object.fromEntries(
+      Object.entries(verify.on.workflow_call.inputs).flatMap(([name, input]) =>
+        "default" in input ? [[name, input.default]] : [],
+      ),
+    ),
+    ...given,
+  };
+  const job = verify.jobs["linux-tests"];
+  if (!job) throw new Error("verify.yml has no linux-tests job");
+  if (job.if !== undefined && workflowValue(job.if, { inputs }) !== true) return [];
+  const entries = (job.strategy?.matrix.include ?? []) as Record<string, unknown>[];
+  return entries.map((matrix) => {
+    const contexts = { inputs, matrix };
+    const steps = job.steps
+      .filter((step) => step.if === undefined || workflowValue(step.if, contexts) === true)
+      .map((step) => (step.run ? { run: interpolated(step, contexts) } : { uses: step.uses }));
+    return {
+      name: workflowString(job.name ?? "linux-tests", contexts),
+      steps,
+      runs: steps.flatMap(({ run }) => (run ? [run] : [])),
+    };
   });
 }
 
@@ -2453,36 +2564,34 @@ describe("the signed channel workflow", () => {
     expect(runner("mac", "", "mini-mac")).toBe("mini-mac");
     expect(runner("mac", "", "")).toBe("macos-15");
     expect(runner("linux-checks", "mini-mac-inf621-proof", "mini-mac")).toBe("ubuntu-24.04");
+    // The Linux test groups keep Linux's placement too.
+    expect(
+      workflowValue(jobOf(verify, "linux-tests")["runs-on"] ?? "", {
+        inputs: { mac_runner: "mini-mac-inf621-proof" },
+        vars: { MAC_RUNNER: "mini-mac" },
+      }),
+    ).toBe("ubuntu-24.04");
   });
 
   // The captain's end state, under INF-2508's card: "the e2e journey +
   // browser tests should all run during the sweep batch" (INF-2505). The
-  // swept batch's sweep is this full check, whose linux-checks lane installs
-  // the browser layer's Chromium and then runs every vitest project.
+  // swept batch's sweep is this full check, whose browser test group
+  // installs the browser layer's Chromium and then runs every browser file.
   it("runs every browser file in the swept batch's check", () => {
     const batch = loadYamlFile(".github/workflows/batch.yml") as Workflow;
     const sweep = jobOf(batch, "sweep");
     expect(sweep.uses).toBe("./.github/workflows/verify.yml");
-    const passed = Object.fromEntries(
-      (lane.steps ?? []).flatMap(({ id }) => (id ? [[id, { outcome: "success" }]] : [])),
+    const groups = verifyLinuxTests((sweep.with ?? {}) as Record<string, unknown>);
+    const steps = groups.find(({ name }) => name.includes("Browser tests"))?.steps ?? [];
+    const chromium = steps.findIndex(({ uses }) =>
+      uses?.endsWith("/.github/actions/browser-chromium"),
     );
-    const ran = (lane.steps ?? []).filter(
-      (candidate) =>
-        candidate.if === undefined ||
-        workflowValue(candidate.if, {
-          matrix: { lane: "linux-checks" },
-          inputs: sweep.with ?? {},
-          steps: passed,
-        }) === true,
+    // The whole browser project, in one group of one part.
+    const everyBrowserFile = steps.findIndex(
+      ({ run }) => run === "pnpm test --project browser --shard=1/1",
     );
-    expect(lanes(sweep.with?.profile)).toContain("linux-checks");
-    const chromium = ran.findIndex((candidate) =>
-      candidate.uses?.endsWith("/.github/actions/browser-chromium"),
-    );
-    // No project named, so vitest runs every one, the browser layer's among them.
-    const everyProject = ran.findIndex((candidate) => candidate.run === "pnpm test");
     expect(chromium).toBeGreaterThanOrEqual(0);
-    expect(everyProject).toBeGreaterThan(chromium);
+    expect(everyBrowserFile).toBeGreaterThan(chromium);
     const projects = (vitestConfig.test?.projects ?? []).map((project) =>
       typeof project === "object" && "test" in project ? project.test?.name : undefined,
     );
@@ -2490,7 +2599,13 @@ describe("the signed channel workflow", () => {
   });
 
   it("runs each profile's lanes as one matrix, so an omitted lane is absent from the run, never skipped", () => {
-    expect(Object.keys(verify.jobs)).toEqual(["request", "linux-e2e", "installer", "lane"]);
+    expect(Object.keys(verify.jobs)).toEqual([
+      "request",
+      "linux-e2e",
+      "installer",
+      "lane",
+      "linux-tests",
+    ]);
     expect(verify.jobs["linux-e2e"]).toMatchObject({
       uses: "./.github/workflows/source-journeys.yml",
       with: { ref: "${{ inputs.ref || github.ref }}", suite: "full" },
@@ -2551,10 +2666,15 @@ describe("the signed channel workflow", () => {
         .map((candidate) => candidate.run);
     // The requested full sweep's commands: a pull request's notes step has no
     // pull request to compare on main.
-    const mainGate = ciJobs("workflow_dispatch").flatMap(({ runs }) =>
-      runs.map((run) => (/^pnpm test(:probes|:repeats)? /.test(run) ? "pnpm test" : run)),
+    const tests = (run: string) => (/^pnpm test(:probes|:repeats)? /.test(run) ? "pnpm test" : run);
+    const mainGate = ciJobs("workflow_dispatch").flatMap(({ runs }) => runs.map(tests));
+    // INF-2646: linux-checks and the Linux test groups beside it run them
+    // together, the tests in the groups alone.
+    const linuxTests = verifyLinuxTests({}).flatMap(({ runs }) => runs.map(tests));
+    expect([...new Set([...runsIn("linux-checks"), ...linuxTests])].toSorted()).toEqual(
+      [...new Set(mainGate)].toSorted(),
     );
-    expect(runsIn("linux-checks").toSorted()).toEqual([...new Set(mainGate)].toSorted());
+    expect(runsIn("linux-checks").filter((run) => run?.startsWith("pnpm test"))).toEqual([]);
     expect(runsIn("mac")).toEqual(
       expect.arrayContaining([
         'mac_tests="$(node scripts/mac-unit-tests.ts)"\npnpm test $mac_tests\n',
@@ -2667,12 +2787,18 @@ describe("the signed channel workflow", () => {
     ]);
     expect(ran("mac", checks)).toEqual(whole);
     expect(ran("linux-checks", checks)).toEqual(ran("linux-checks", called({})));
+    // Every Linux test group, as in the whole check (INF-2646).
+    const groupSteps = (inputs: Record<string, unknown>) =>
+      verifyLinuxTests(inputs).map(({ steps }) => steps);
+    expect(groupSteps(checks)).toEqual(groupSteps(called({})));
+    expect(verifyLinuxTests(checks)).not.toEqual([]);
     expect(only(checks)).toBe(MAC_ONLY_TAG);
 
     // The journeys part: every Linux journey, and on the Mac every journey and what it needs.
     const journeys = called({ part: "journeys" });
     expect(linuxJourneys(journeys)).toBe(true);
     expect(workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: journeys })).toEqual(["mac"]);
+    expect(verifyLinuxTests(journeys)).toEqual([]);
     expect(only(journeys)).toBe("");
     expect(ran("mac", journeys)).toEqual([
       "install",
@@ -2701,15 +2827,14 @@ describe("the signed channel workflow", () => {
   it("keeps the complete Linux suite and selects only the reviewed Mac files", () => {
     const unit = (lane.steps ?? []).find((candidate) => candidate.id === "unit");
     expect(unit?.run).toBe('mac_tests="$(node scripts/mac-unit-tests.ts)"\npnpm test $mac_tests\n');
-    const linuxTests = (lane.steps ?? []).filter(
-      (candidate) =>
-        candidate.run === "pnpm test" &&
-        workflowValue(candidate.if ?? "", {
-          matrix: { lane: "linux-checks" },
-          steps: { install: { outcome: "success" } },
-        }) === true,
+    // Linux runs its tests in groups that name projects and shards alone,
+    // never a file (INF-2646; their coverage is held above).
+    const linuxTests = verifyLinuxTests({}).flatMap(({ runs }) =>
+      runs.filter((run) => run.startsWith("pnpm test ")),
     );
-    expect(linuxTests).toHaveLength(1);
+    expect(linuxTests).toHaveLength(8);
+    for (const run of linuxTests)
+      expect(run).toMatch(/^pnpm test( --project [\w-]+)+ --shard=\d+\/\d+$/);
     const filters = execFileSync(process.execPath, ["scripts/mac-unit-tests.ts"], {
       cwd: root,
       encoding: "utf8",
@@ -4050,7 +4175,10 @@ describe("the signed channel workflow", () => {
       with: { ref: "${{ needs.resolve.outputs.source_commit }}" },
     });
     // Both profiles run the hosted Linux checks, which publication waits for.
-    for (const profile of ["stable", "alpha"]) expect(lanes(profile)).toContain("linux-checks");
+    for (const profile of ["stable", "alpha"]) {
+      expect(lanes(profile)).toContain("linux-checks");
+      expect(verifyLinuxTests({ profile })).toHaveLength(8);
+    }
     // The signing job repeats none of the checks the lanes beside it run:
     // after the install, and the live alpha's read of the tap, it builds.
     const commands = steps.flatMap((candidate) => (candidate.run ? [candidate] : []));
@@ -4895,7 +5023,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
       "replay.yml:replay-gate",
     ],
     gate: ["journeys.yml:choose-journeys"],
-    checks: ["verify.yml:lane"],
+    checks: ["verify.yml:lane", "verify.yml:linux-tests"],
     typecheck: ["ci.yml:typecheck-lint-build"],
     // DOP-268's plan: the startup fixtures need systemd and Docker, so this
     // kind names only a PC queue (docs/testing.md, "Linux automatic startup fixtures").
@@ -4978,6 +5106,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "source-journeys.yml:source-desktop",
     "verify.yml:request",
     "verify.yml:lane",
+    "verify.yml:linux-tests",
     "replay.yml:replay-gate",
     "linux-startup.yml:runtime-facts",
     "linux-packages.yml:build",
@@ -5047,6 +5176,7 @@ describe("a release's hosted machines", () => {
     return {
       request: runsOn(verify.request, { inputs: { hosted }, vars }),
       checks: runsOn(verify.lane, { matrix: { lane: "linux-checks" }, inputs: { hosted }, vars }),
+      tests: runsOn(verify["linux-tests"], { inputs: { hosted }, vars }),
       journeys: runsOn(journeys, { inputs: { hosted: journeysHosted }, vars }),
     };
   };
@@ -5067,6 +5197,7 @@ describe("a release's hosted machines", () => {
   const hostedRelease = {
     request: "ubuntu-24.04",
     checks: "ubuntu-24.04",
+    tests: "ubuntu-24.04",
     journeys: "ubuntu-24.04",
     build: "ubuntu-24.04",
     packages: everyCheck((runner) => runner),
@@ -5098,6 +5229,7 @@ describe("a release's hosted machines", () => {
       expect(verified(passed(call("verify.yml"), "hosted", { vars }), vars)).toEqual({
         request: "ubuntu-24.04",
         checks: "ubuntu-24.04",
+        tests: "ubuntu-24.04",
         journeys: "ubuntu-24.04",
       });
     }
@@ -5122,6 +5254,7 @@ describe("a release's hosted machines", () => {
     expect(requested(pc)).toEqual({
       request: "shell-pc-linux",
       checks: "shell-pc-linux",
+      tests: "shell-pc-linux",
       journeys: "shell-pc-linux",
       build: "shell-pc-linux",
       packages: everyCheck((runner) =>
@@ -5131,6 +5264,7 @@ describe("a release's hosted machines", () => {
     expect(requested({})).toEqual({
       request: "ubuntu-24.04",
       checks: "ubuntu-24.04",
+      tests: "ubuntu-24.04",
       journeys: "ubuntu-24.04",
       build: "ubuntu-24.04",
       packages: everyCheck((runner) => runner),
@@ -5332,7 +5466,7 @@ it("selects only the complete installed checks for reuse, without a signing job"
     const reused = {
       inputs: { installer_only, installer_reuse: "reviewed declaration", ref: "reviewed source" },
     };
-    for (const name of ["lane", "linux-e2e"])
+    for (const name of ["lane", "linux-tests", "linux-e2e"])
       expect(selected(verify.jobs[name], reused)).toBe(false);
     expect(selected(verify.jobs.installer, reused)).toBe(true);
     expect(workflowValue(verify.jobs.installer?.with?.reuse ?? "", reused)).toBe(
@@ -5986,7 +6120,7 @@ describe("explicit manual verification scope (INF-2374)", () => {
 
   it("stops absent or contradictory manual selections before dependent work, preserving installer modes", () => {
     expect(request).toBeDefined();
-    for (const id of ["linux-e2e", "lane", "installer"])
+    for (const id of ["linux-e2e", "lane", "linux-tests", "installer"])
       expect(verify.jobs[id]?.needs).toBe("request");
     for (const inputs of [
       {},

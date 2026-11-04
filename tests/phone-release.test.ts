@@ -435,7 +435,7 @@ describe("the dispatched workflow's gate", () => {
     expect(call.uses).toBe("./.github/workflows/phone.yml");
     expect(call.secrets).toBeUndefined();
     expect(call.environment).toBeUndefined();
-    expect(call.permissions).toEqual({ contents: "read" });
+    expect(call.permissions).toEqual({ contents: "read", actions: "read" });
     const phone = yaml.load(readFileSync(call.uses, "utf8"));
     // A real merged source; a later main ref must not change the checked or signed tree.
     const source = "3835224557b6764d4455b13c1cee359fbb09b5f1";

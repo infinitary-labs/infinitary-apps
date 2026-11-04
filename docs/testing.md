@@ -511,6 +511,7 @@ Workflow names and files, job ids, run titles, concurrency groups and artifact n
 A reader that judges a run by its jobs (the alpha's proof, stable promotion, the phone's order and cancellation, installer reuse and journey timing) compares `legacyJobName(name)`, which reads a job named before or after the scheme alike; a name that does not lead with a known trigger on every level stays as it is and never passes for a known job.
 `tests/ci-job-names.test.ts` evaluates every job's name in every workflow for each trigger that can start it and holds each to the scheme.
 `tests/workflow-hygiene.test.ts` holds every workflow to a top-level `permissions` block and every shell step, composite actions included, to reading values through its environment rather than an expression pasted into the script.
+It also holds every caller of one of the project's workflows to granting at least the permissions each called job asks for, since GitHub starts no job of a run whose called job asks for more, even one its condition would skip (INF-2548).
 
 ## A release's hosted machines
 

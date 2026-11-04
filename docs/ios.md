@@ -423,7 +423,7 @@ The captain's one-time Apple setup is:
 
 After preflight, `ios-release.yml` calls the same-source reusable `phone.yml` with the resolved `source_commit`.
 That unsigned job runs every part on both devices through the required `MAC_QUEUES.phone` queue, without affected-part filtering or edited-part repeats.
-It receives only contents-read, actions-write and pull-requests-read permissions for checkout, replacement checks and evidence; no signing secrets or release environment pass to the guest.
+It receives only contents-read and actions-read permissions, for checkout and the Export phone pictures job's download, because GitHub starts no job of a called workflow that asks for more than its caller grants; no signing secrets or release environment pass to the guest.
 Both devices run even if one fails; any failure, cancellation or skipped phone job prevents the host signing job from starting.
 The host signing job then uses the `testflight` kind's queue (`docs/testing.md`, "Each Mac job's kind and size"), otherwise `REAL_MAC_RUNNER`, then `MAC_RUNNER`, falling back only to `mini-mac`.
 Xcode signs the upload with the captain's certificates, so that job asks for the real Mac, never a virtual one.

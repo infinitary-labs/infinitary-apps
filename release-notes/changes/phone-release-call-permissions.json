@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-release-call-permissions",
+      "reason": "CI work: the TestFlight release workflow grants its phone checks the read access their picture export asks for again, so a release starts its jobs, with no change to the app."
+    }
+  ]
+}

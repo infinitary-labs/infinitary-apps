@@ -62,8 +62,12 @@ jobs:
     # No release environment or signing secrets cross into the disposable guest.
     name: Requested TestFlight · Phone checks
     uses: ./.github/workflows/phone.yml
+    # GitHub starts no job of a called workflow that asks for more than this
+    # grant, even one its condition skips: phone.yml's Export phone pictures
+    # job asks for actions: read (tests/workflow-hygiene.test.ts).
     permissions:
       contents: read
+      actions: read
     with:
       trigger: Requested TestFlight
       source_commit: ${{ needs.resolve.outputs.source_commit }}

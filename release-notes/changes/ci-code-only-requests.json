@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "ci-code-only-requests",
+      "reason": "Pull request lint prints errors, a requested ci.yml run checks code and build unless asked for the sweep, and the Linux packages check no longer starts on its own workflow file alone. These are CI changes only; the shipped app is unchanged."
+    }
+  ]
+}

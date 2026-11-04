@@ -20,6 +20,12 @@ name: ci
 on:
   # Linux-only branch validation; edited unit-file rounds belong locally.
   workflow_dispatch:
+    inputs:
+      sweep:
+        description: Also run the unit, integration and probe sweeps (default - code and build only)
+        required: false
+        type: boolean
+        default: false
   pull_request:
 
 permissions:
@@ -131,7 +137,7 @@ jobs:
 
   # The in-memory cohorts and the browser layer (docs/test-cohorts.md).
   unit-tests:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && inputs.sweep
     name: Manual request · Unit tests (Linux)
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     steps:
@@ -155,7 +161,7 @@ jobs:
   # file's path), on machines of their own so nothing else loads the host
   # its budgets measure. Each shard reports even when the other fails.
   integration-tests:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && inputs.sweep
     name: ${{ format('Manual request · Integration tests (Linux; group {0}/{1})', matrix.shard, strategy.job-total) }}
     strategy:
       fail-fast: false
@@ -183,7 +189,7 @@ jobs:
   # Probes can fail with no code change (docs/test-cohorts.md, "Probes").
   # Run every probe on request, never a changed-path selection.
   probe-tests:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && inputs.sweep
     name: Manual request · Environment checks (Linux)
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     steps:

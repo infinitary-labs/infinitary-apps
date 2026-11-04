@@ -744,6 +744,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * including a release's own notes pull request, rather than looking for a
    * string. No upstream jobs: the implicit success() condition is true here.
    */
+  // Captain's pick from INF-2588: a request checks code and build only unless
+  // it asks for the sweep, so a lint before a pull request costs no sweep.
+  it("starts no test sweep on a request that does not ask for it", () => {
+    const names = ciJobs("workflow_dispatch", false).map((job) => job.id);
+    expect(names).toEqual(["typecheck-lint-build"]);
+  });
+
   it.each([
     ["requested full sweep", "workflow_dispatch", "", "refs/heads/fm/task-ci-contract"],
     ["ordinary proposal", "pull_request", "fm/task-ci-contract", "refs/pull/42/merge"],
@@ -796,8 +803,20 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     for (const [id, job] of Object.entries(ci.jobs)) {
       expect(job.needs, id).toBeUndefined();
       const expression = (job.if ?? "true").replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-      const ast = new Parser(new Lexer(expression).lex().tokens, ["github"], []).parse();
-      const eligible = new Evaluator(ast, new data.Dictionary({ key: "github", value: github }));
+      const ast = new Parser(new Lexer(expression).lex().tokens, ["github", "inputs"], []).parse();
+      const eligible = new Evaluator(
+        ast,
+        new data.Dictionary(
+          { key: "github", value: github },
+          {
+            key: "inputs",
+            value: new data.Dictionary({
+              key: "sweep",
+              value: new data.BooleanData(_name === "requested full sweep"),
+            }),
+          },
+        ),
+      );
       const fullSweep = id === "unit-tests" || id === "integration-tests" || id === "probe-tests";
       // DOP-251's plan: the startup fixtures are a pull request's own job.
       const pullOnly = id === "linux-startup";
@@ -1854,11 +1873,16 @@ type CiJob = {
  * main.yml's full check repeats; a pull request adds its own notes and
  * changed-file reader steps.
  */
-function ciJobs(eventName: string): { id: string; name: string; runs: string[] }[] {
+function ciJobs(
+  eventName: string,
+  sweep = eventName === "workflow_dispatch",
+): { id: string; name: string; runs: string[] }[] {
   const ci = loadCi();
   const github = { event_name: eventName };
+  // A request asks for the sweep through ci.yml's `sweep` input.
+  const inputs = { sweep };
   return Object.entries(ci.jobs).flatMap(([id, job]) => {
-    if (job.if !== undefined && workflowValue(job.if, { github }) !== true) return [];
+    if (job.if !== undefined && workflowValue(job.if, { github, inputs }) !== true) return [];
     const matrix = Object.entries(job.strategy?.matrix ?? {});
     if (matrix.some(([, values]) => !Array.isArray(values))) {
       throw new Error(`${id}: only a matrix of plain lists is read here`);

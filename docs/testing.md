@@ -375,7 +375,7 @@ A crewmate on a CI-mode computer lints before it pushes with `pnpm check:changed
 It is not gated by CI mode, takes seconds, and prints every error; the full lint stays in the pull request's `typecheck-lint-build` check as INF-2074 set it.
 Crewmates start each route the way they start a full verification: `github_write` to `POST /repos/{owner}/{repo}/actions/workflows/<workflow>/dispatches` with `{"ref":"<branch>"}` and the route's inputs (`docs/forge.md`, "Verification workflow requests").
 An accepted request is not a passing check: find the run, confirm its version, then read it.
-The pull request's own `typecheck-lint-build` check stands in for a local typecheck and lint, so only `ci.yml` started on a branch with no pull request adds Linux work for them.
+The pull request's own `typecheck-lint-build` check stands in for a local typecheck and lint, so only `ci.yml` started on a branch with no pull request adds Linux work for them; a request runs code and build only, and the test sweeps need the `sweep` input set to `true`.
 Every edited unit file gets three total local runs in both modes ("This project's rulings on tests"); PR CI has no unit-repeat job.
 Pictures and demos for a card stay local too: they are evidence, not checks.
 A throwaway picture or demo script is never committed, so the journey guard lets it run; an existing spec cannot take pictures in CI mode.
@@ -1369,4 +1369,4 @@ The fixture removes its disposable user and manager; it changes no person's star
 ## Linux-only branch checks
 
 `ci.yml` accepts `workflow_dispatch` for branch validation without triggering any Mac job.
-It runs the same Linux gate and cohorts as a pull request; a successful unit job can be rerun individually to collect required consecutive passes without starting unrelated Mac workflows.
+It runs the same Linux gate as a pull request, and the unit, integration and probe cohorts only with the `sweep` input set to `true`; a successful unit job can be rerun individually to collect required consecutive passes without starting unrelated Mac workflows.

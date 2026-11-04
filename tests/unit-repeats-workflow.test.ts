@@ -3,11 +3,13 @@ import { loadYamlFile, workflowValue } from "./helpers/releaseWorkflows.ts";
 
 type Job = { if?: string; strategy?: { matrix?: { shard?: number[] } } };
 const jobs = loadYamlFile(".github/workflows/ci.yml").jobs as Record<string, Job>;
-const selected = (event: string) =>
+// A request runs the sweeps only when it sets ci.yml's `sweep` input.
+const selected = (event: string, sweep = event !== "pull_request") =>
   Object.entries(jobs)
     .filter(
       ([, job]) =>
-        job.if === undefined || workflowValue(job.if, { github: { event_name: event } }) === true,
+        job.if === undefined ||
+        workflowValue(job.if, { github: { event_name: event }, inputs: { sweep } }) === true,
     )
     .map(([name]) => name)
     .sort();
@@ -26,6 +28,10 @@ describe("PR CI leaves edited-unit rounds to local proof", () => {
       "linux-startup",
       "typecheck-lint-build",
     ]);
+  });
+
+  it("selects only the code and build job for a request that does not ask for the sweep", () => {
+    expect(selected("workflow_dispatch", false)).toEqual(["typecheck-lint-build"]);
   });
 
   it.each(["push", "workflow_dispatch"])(

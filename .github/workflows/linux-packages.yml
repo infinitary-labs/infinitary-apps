@@ -8,7 +8,8 @@ name: linux-packages
 # packages stay on the run; nothing here uploads them anywhere else.
 #
 # It runs on demand and on a pull request that changes how the packages are
-# made, for the captain to try, and inside every release (release.yml), at
+# made (not this file alone: a change to only this workflow is requested once,
+# at its final version), for the captain to try, and inside every release (release.yml), at
 # the release's version from its one source commit: there the publication
 # job records and publishes exactly the files this run checked.
 
@@ -48,7 +49,6 @@ on:
       - src/main/linuxStartup.ts
       - tests/installed/**
       - playwright.installed.config.ts
-      - .github/workflows/linux-packages.yml
 
 # Inside a release the packages belong to that run and are never cancelled
 # from outside it; otherwise a newer run of the same ref replaces an older.

@@ -579,7 +579,8 @@ export class SessionHost {
       }
       case "inf:session:detach":
         if (!held.session) return { ok: true };
-        if (!held.state.running) await held.session.detach();
+        // A conversation in a turn, or carrying on by itself, keeps its client.
+        if (!this.busy(held)) await held.session.detach();
         answer = { ok: true };
         break;
       case "inf:session:close":
@@ -763,8 +764,7 @@ export class SessionHost {
           // task"): only between turns, with nothing it started still
           // running, and the conversation let go, never closed, so the task
           // can run here again if the move does not finish.
-          if (held.opening || held.state.running || held.state.continuing)
-            throw new Error("This task's conversation is in a turn here.");
+          if (this.busy(held)) throw new Error("This task's conversation is in a turn here.");
           if (this.options.tasks.jobs(held.task).some((job) => !job.exit && !job.stoppedAt))
             throw new Error("A command this task started is still running here.");
           await this.releaseConversation(held);
@@ -813,11 +813,15 @@ export class SessionHost {
     held.speed = spec.speed === true;
     if (held.opening) await held.opening;
     if (held.session) {
-      // A turn in progress keeps the tools it started with. An idle
-      // conversation whose named tools or instructions changed, because the
-      // home reopened it for a contract this computer now speaks, lets go
-      // and opens again, so a version-gated tool arrives without a restart here.
-      if (held.state.running || !this.contractMoved(held, spec, sourceFacts)) {
+      // An idle conversation whose named tools or instructions changed,
+      // because the home reopened it for a contract this computer now
+      // speaks, lets go and opens again, so a version-gated tool arrives
+      // without a restart here. A turn in progress keeps the tools it
+      // started with, and so does one its crewmate carries on by itself:
+      // closing it would cut that turn and lose what it still sends, such
+      // as a report waiting for the home. Its answer says it still streams,
+      // and the home asks again once the turn ends (INF-2332).
+      if (this.busy(held) || !this.contractMoved(held, spec, sourceFacts)) {
         this.recordJobs(held, true);
         return this.stateOf(held);
       }
@@ -1048,18 +1052,28 @@ export class SessionHost {
     };
   }
 
-  /** In a turn, opening, carrying on by itself, or with work of its client's own running. */
-  private working(held: Held): boolean {
+  /**
+   * Whether the conversation is working, as its live session says
+   * (INF-2332): the session follows Claude's or Pi's own start and stop
+   * signals, so it answers for a prompt's turn and for a turn the crewmate
+   * carries on by itself alike. A prompt's turn this computer started counts
+   * from its start until its end is written (`running`), which covers the
+   * moment between the session settling and that end; an opening counts,
+   * since what it opens is not known yet. No other note decides it.
+   */
+  private busy(held: Held): boolean {
     return (
       held.opening !== null ||
       held.state.running !== undefined ||
-      held.state.continuing === true ||
-      held.clientTasks.size > 0 ||
       held.session?.isStreaming() === true
     );
   }
 
-  /** Lets an idle conversation go so a later open can bind the tools this spec names. */
+  /** Working, or with work of its client's own running. */
+  private working(held: Held): boolean {
+    return this.busy(held) || held.clientTasks.size > 0;
+  }
+
   /** The task's own folders a move carries, here (`workMove.ts`). */
   private movedFolders(task: string): MovedFolders {
     const folders = this.options.tasks.ensure(task);
@@ -1075,6 +1089,9 @@ export class SessionHost {
   private async releaseConversation(held: Held): Promise<void> {
     await held.unsubscribe?.();
     held.unsubscribe = null;
+    // A carried-on turn the home was told of ends with the session, after
+    // this stopped listening: the home hears that end from here.
+    this.interruptContinuation(held);
     const session = held.session;
     held.session = null;
     held.opened = undefined;
@@ -1636,7 +1653,12 @@ export class SessionHost {
     return held;
   }
 
-  /** This computer owns the terminal boundary when its client cannot send one. */
+  /**
+   * This computer owns the terminal boundary when its client cannot send
+   * one: at a start after a quit or crash, at its own stop, and when it lets
+   * the session go. A home on this contract also reads the roster's live
+   * answer and ends such a turn itself; an older home reads only this end.
+   */
   private interruptContinuation(held: Held): void {
     if (held.state.closed || !held.state.continuing) return;
     this.record(held, {

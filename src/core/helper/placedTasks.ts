@@ -62,7 +62,11 @@ const taskStateSchema = z.object({
   closed: z.boolean(),
   /** The turn running when it was written, and the order that started it. */
   running: z.object({ turn: z.number().int().positive(), orderId: z.string() }).optional(),
-  /** A client-owned continuation has started but has not ended yet. */
+  /**
+   * The home was told a client-owned continuation started and not yet that
+   * it ended: a boundary owed to the home, never whether the conversation
+   * works, which only its live session says (INF-2332).
+   */
   continuing: z.literal(true).optional(),
 });
 export type PlacedTaskState = z.infer<typeof taskStateSchema>;

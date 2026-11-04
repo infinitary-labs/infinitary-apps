@@ -58,6 +58,8 @@ export type PlacedSessionLink = {
   copy(state: PlacedState): Promise<void>;
   /** What a turn the computer quit in the middle of failed with, in the person's words. */
   interrupted(retry?: boolean): string;
+  /** What a prompt's turn whose end never arrived failed with, in the person's words. */
+  unheard(): string;
   /** The session let go here. */
   released(session: PlacedSession): void;
 };
@@ -90,8 +92,14 @@ export class PlacedSession implements ModelSession {
   private retire!: () => void;
   /** Prompts asked here whose turn has not ended, by order id. */
   private readonly prompts = new Map<string, Asked>();
-  /** The turn the computer runs now, and whether this session started it. */
-  private running: { turn: number; orderId: string; adopted: boolean } | undefined;
+  /**
+   * The turn the computer runs now, whether this session started it, and
+   * whether its start event was taken here yet (`seen`); a prompt's answer
+   * can name its turn before that event arrives.
+   */
+  private running: { turn: number; orderId: string; adopted: boolean; seen: boolean } | undefined;
+  /** The crewmate carries on by itself there: its start was taken here, its end not yet. */
+  private continuing = false;
   /** The newest turn that ended there. */
   private lastEnded = 0;
   private undelivered: string[] = [];
@@ -150,8 +158,14 @@ export class PlacedSession implements ModelSession {
     return this.state.accountId;
   }
 
+  /**
+   * Working there, as far as the events taken here and the computer's
+   * answers say: a prompt asked here, a turn it runs, or a turn its crewmate
+   * carries on by itself. A turn whose end never arrives is ended once the
+   * computer answers that it no longer works (`endedThere`).
+   */
   isStreaming(): boolean {
-    return this.running !== undefined || this.prompts.size > 0;
+    return this.running !== undefined || this.prompts.size > 0 || this.continuing;
   }
 
   subscribe(listener: (event: SessionEvent) => void): () => void {
@@ -185,7 +199,7 @@ export class PlacedSession implements ModelSession {
             resolve();
             return;
           }
-          if (!this.running) this.running = { turn, orderId, adopted: false };
+          if (!this.running) this.running = { turn, orderId, adopted: false, seen: false };
         },
         (error: unknown) => {
           if (this.prompts.get(orderId) !== asked) return;
@@ -269,9 +283,9 @@ export class PlacedSession implements ModelSession {
     this.prompts.clear();
     for (const waiting of this.waiting.splice(0)) waiting.reject(new Error(ENDED_TEXT));
     // Idle there, its client lets go too, and the record's copy takes its
-    // last words; a running turn is never stopped.
-    const running = this.running !== undefined;
-    void (running ? Promise.resolve() : this.detachThere())
+    // last words. The computer reads its live session for that: a turn in
+    // progress or carried on by itself is never stopped.
+    void this.detachThere()
       .then(() => (this.link.inReach() ? this.link.copy(this.state) : undefined))
       .catch(() => undefined)
       .finally(() => this.retire());
@@ -300,7 +314,12 @@ export class PlacedSession implements ModelSession {
           ...(event.job ? { job: event.job } : {}),
         });
         return;
+      case "continuation_started":
+        this.continuing = true;
+        this.emit(event);
+        return;
       case "continuation_ended": {
+        this.continuing = false;
         const { interrupted, ...ended } = event;
         this.emit(interrupted ? { ...ended, error: this.link.interrupted(false) } : ended);
         return;
@@ -349,12 +368,45 @@ export class PlacedSession implements ModelSession {
     else this.afterHeard.push(run);
   }
 
-  /** The computer's roster: a turn running there that this session does not follow yet is followed now. */
-  adopt(entry: PlacedRosterTask): void {
+  /**
+   * The computer's roster: a turn running there that this session does not
+   * follow yet is followed now - a prompt's, or one its crewmate carries on
+   * by itself, whose start a restart here left untaken (INF-2332). A
+   * carried-on turn is read only from a row no event taken here has passed
+   * (`current`), since its end has no turn number to compare.
+   */
+  adopt(entry: PlacedRosterTask, current: boolean): void {
     if (entry.state) this.state = entry.state;
     const running = entry.running;
-    if (!running || running.turn <= this.lastEnded || this.running?.turn === running.turn) return;
+    if (!running) {
+      if (current && entry.state?.streaming && !this.isStreaming()) {
+        this.continuing = true;
+        this.emit({ type: "continuation_started" });
+      }
+      return;
+    }
+    if (running.turn <= this.lastEnded || this.running?.turn === running.turn) return;
     this.started(running.turn, running.orderId);
+  }
+
+  /**
+   * The computer answered that this conversation is not working, with every
+   * event it had counted taken here (INF-2332): a turn this session still
+   * holds as running there, which began by an event taken here, ended out of
+   * sight. It ends as interrupted. A prompt not started there yet is left to
+   * its own answer.
+   */
+  async endedThere(): Promise<void> {
+    if (this.continuing) {
+      this.continuing = false;
+      this.emit({ type: "continuation_ended", unheard: true });
+    }
+    const running = this.running;
+    if (running?.seen)
+      await this.ended(
+        { type: "turn_ended", turn: running.turn, outcome: "interrupted", undelivered: [] },
+        true,
+      );
   }
 
   /** The computer is back: what it could not be asked goes now, in order. */
@@ -369,18 +421,25 @@ export class PlacedSession implements ModelSession {
   }
 
   private started(turn: number, orderId: string): void {
-    if (this.running?.turn === turn || turn <= this.lastEnded) return;
+    if (this.running?.turn === turn) {
+      this.running.seen = true;
+      return;
+    }
+    if (turn <= this.lastEnded) return;
     const asked = this.prompts.get(orderId);
     if (asked) {
       asked.turn = turn;
-      this.running = { turn, orderId, adopted: false };
+      this.running = { turn, orderId, adopted: false, seen: true };
       return;
     }
-    this.running = { turn, orderId, adopted: true };
+    this.running = { turn, orderId, adopted: true, seen: true };
     this.emit({ type: "continuation_started", order: orderId });
   }
 
-  private async ended(event: Extract<PlacedEvent, { type: "turn_ended" }>): Promise<void> {
+  private async ended(
+    event: Extract<PlacedEvent, { type: "turn_ended" }>,
+    unheard = false,
+  ): Promise<void> {
     if (event.state) this.state = event.state;
     // What the turn there never took in, then the steers that came after it ended.
     this.undelivered = [...event.undelivered, ...this.undelivered];
@@ -393,8 +452,9 @@ export class PlacedSession implements ModelSession {
     const asked =
       (running && !running.adopted ? this.prompts.get(running.orderId) : undefined) ??
       [...this.prompts.values()].find((prompt) => prompt.turn === event.turn);
-    const error =
-      event.outcome === "interrupted"
+    const error = unheard
+      ? this.link.unheard()
+      : event.outcome === "interrupted"
         ? this.link.interrupted()
         : event.outcome === "failed"
           ? (event.error ?? "The turn failed there.")
@@ -412,7 +472,11 @@ export class PlacedSession implements ModelSession {
       return;
     }
     if (running?.adopted)
-      this.emit({ type: "continuation_ended", ...(error !== undefined ? { error } : {}) });
+      this.emit(
+        unheard
+          ? { type: "continuation_ended", unheard: true }
+          : { type: "continuation_ended", ...(error !== undefined ? { error } : {}) },
+      );
   }
 
   private emit(event: SessionEvent): void {

@@ -31,7 +31,12 @@ import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { outsideDataDeletedNote } from "@shared/savedOutsideData";
 import type { ComputerForges } from "@shared/signIns";
-import { type PlacedSpec, placedTaskFolders, workOrders } from "@shared/work";
+import {
+  type PlacedEventRecord,
+  type PlacedSpec,
+  placedTaskFolders,
+  workOrders,
+} from "@shared/work";
 import {
   afterAll,
   afterEach,
@@ -95,6 +100,7 @@ import { READ_HOUR_MS } from "../integrations/outsideReads";
 import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
+import { QUIET_CARD_MS, UNHEARD_END_NOTE } from "../orchestrator/crewSupervisor";
 import { JOB_BOUND_MS } from "../orchestrator/idleLadder";
 import { renderWake, unnamedBackgroundWork } from "../orchestrator/wakes";
 import { initOverflowDir, type MessageFile, withPastedFiles } from "../overflow";
@@ -594,14 +600,19 @@ async function world(
     },
     /**
      * Firstmate on the home quits and starts again over the same folder and
-     * port, after `whileStopped` runs on what it left.
+     * port, after `whileStopped` runs on what it left; `beforeListen` sees
+     * the new home before the computer can reach it.
      */
-    restartHome: async (whileStopped?: () => void | Promise<void>) => {
+    restartHome: async (
+      whileStopped?: () => void | Promise<void>,
+      beforeListen?: (home: PlacedHome) => void,
+    ) => {
       await home.quit();
       pairing?.dispose();
       pairing = undefined;
       await whileStopped?.();
       home = startHome(userData, port, pairingNow, forgeFor, options);
+      beforeListen?.(home);
       await home.listen();
     },
     /**
@@ -1695,6 +1706,353 @@ describe("a task that runs on a computer that runs work", () => {
       }
     },
   );
+
+  // INF-2332, FIRS-6: a Claude crewmate carried on by itself on the Mac mini
+  // while the home was away, and its report waited for the home. The home came
+  // back with updated instructions, the Mac mini closed that conversation for
+  // them, the report was lost and the task showed working for a day. Now the
+  // computer keeps the turn - a carried-on one, or a prompt's - and the home
+  // asks again once it ends, so the conversation starts over for the new
+  // instructions as INF-296 carries one: the record names it, the timeline
+  // says why, and the next turn hears its brief and earlier transcript.
+  it.each(["carried-on", "prompt"] as const)(
+    "keeps a %s turn through the home's return with new instructions, so its report arrives and the task leaves working with no stop, then starts over for them once it ends (INF-2332, FIRS-6)",
+    async (turn) => {
+      const claude = await scriptedClaudeWorld();
+      stops.push(scriptedClaudeCleanup);
+      const at = await world(undefined, { claude });
+      const taskId = `t-firs6-${turn}`;
+      const reported = "All 29 tests passed.";
+      const told = (type: string, tool?: string) =>
+        new PlacedTasks(at.dataDir)
+          .outbox(taskId, 0)
+          .some(
+            ({ event }) =>
+              event.type === type &&
+              (tool === undefined || ("toolName" in event && event.toolName === tool)),
+          );
+      const report = { tool: "report" as const, args: { text: reported }, answer: "Reported." };
+      try {
+        // The home stops answering the report, as one out of reach does.
+        let waiting: { mockRestore(): void; mock: { calls: unknown[][] } } | undefined;
+        const holdReports = () => {
+          const away = at.home();
+          const answer = away.placed.answer.bind(away.placed);
+          waiting = vi
+            .spyOn(away.placed, "answer")
+            .mockImplementation(((device, channel, request) =>
+              channel === "inf:work:report"
+                ? new Promise(() => {})
+                : answer(device, channel, request)) as typeof away.placed.answer);
+        };
+        if (turn === "carried-on") {
+          claude.answer({ text: "Running 29 tests; I will check back in 30 minutes." });
+          await at.start(taskId);
+          await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+          // The tests finish, the crewmate carries on by itself there and
+          // calls report, which waits.
+          holdReports();
+          claude.answer(report);
+          claude.continueTurn();
+        } else {
+          holdReports();
+          claude.answer(report);
+          await at.start(taskId, "Run the 29 tests and report them.");
+        }
+        await expect.poll(() => told("tool_start", "report")).toBe(true);
+        await expect
+          .poll(() => waiting?.mock.calls.some(([, channel]) => channel === "inf:work:report"))
+          .toBe(true);
+        const earlier = at.home().tasks.get(taskId)?.sessionFile ?? "";
+        expect(earlier).not.toBe("");
+        const opens: PlacedSpec[] = [];
+        await at.restartHome(
+          () => {
+            waiting?.mockRestore();
+          },
+          (home) => {
+            // The home comes back updated: the instructions it opens with changed.
+            const ask = home.devices.ask.bind(home.devices);
+            vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+              if (channel !== "inf:session:open") return ask(device, channel, args);
+              const [open] = args as [{ spec: PlacedSpec }];
+              const updated = open.spec.instructions.endsWith(" Updated.")
+                ? open.spec.instructions
+                : `${open.spec.instructions} Updated.`;
+              const spec = { ...open.spec, instructions: updated };
+              opens.push(spec);
+              return ask(device, channel, [{ ...open, spec }]);
+            });
+          },
+        );
+        const home = at.home();
+        await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe(reported);
+        await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+        if (turn === "carried-on") expect(told("continuation_ended")).toBe(true);
+        expect(home.tasks.timeline(taskId).some((event) => event.kind === "failed")).toBe(false);
+        expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
+
+        // The turn over, the home asked again: the conversation started over
+        // for the new instructions, and the home heard it.
+        await expect.poll(() => opens.length).toBeGreaterThan(1);
+        await expect.poll(() => home.tasks.get(taskId)?.sessionFile).not.toBe(earlier);
+        const renewal = { from: earlier, changed: ["prompt" as const] };
+        expect(
+          home.tasks
+            .timeline(taskId)
+            .filter(
+              (event) => event.kind === "note" && event.text === crewmateRenewedNote(renewal),
+            ),
+        ).toHaveLength(1);
+        const asked = claude.served().length;
+        claude.answer({ text: "Carrying on." });
+        await home.supervisor.steerCrewmate(taskId, "Now the header.");
+        await expect.poll(() => claude.served().length).toBeGreaterThan(asked);
+        const said = claude.served().at(-1)?.said ?? "";
+        expect(said).toContain(join(at.folders(taskId).sessions, `${earlier}.jsonl`));
+        expect(said).toContain("Now the header.");
+        expect(claude.served().at(-1)?.system).toContain("Updated.");
+        // The open owed during the turn went again only once it ended, so no
+        // answer read to the supervisor as its computer reopening mid-turn,
+        // and the steer after it stopped no recovery.
+        const recovery = home.tasks
+          .timeline(taskId)
+          .map((event) => (event.data?.restartOutcome as { outcome?: string } | undefined)?.outcome)
+          .filter((outcome) => outcome !== undefined);
+        expect(
+          recovery.filter((outcome) => outcome === "waiting" || outcome === "stopped"),
+        ).toEqual([]);
+      } finally {
+        claude.endClient();
+      }
+    },
+  );
+
+  // INF-2332: whether a turn is working comes from the live session on the
+  // computer that runs it. A turn whose end never reaches the home ends here
+  // as interrupted once that computer says it is not working with every event
+  // in - when the computer comes back, after twenty quiet minutes, or right
+  // after a stop - and the idle ladder takes the task from there.
+  it.each(["return", "quiet", "stop"] as const)(
+    "ends a turn whose end never arrived once its computer says it is not working: %s (INF-2332)",
+    async (trigger) => {
+      const claude = await scriptedClaudeWorld();
+      stops.push(scriptedClaudeCleanup);
+      const at = await world(undefined, { claude });
+      const home = at.home();
+      const taskId = `t-unheard-${trigger}`;
+      // The end of the crewmate's carried-on turn is lost on its way home,
+      // while every other event arrives, as FIRS-6's end never did.
+      const answer = home.placed.answer.bind(home.placed);
+      /** Whether the home has taken the events up to the one in place of the lost end. */
+      let tookLostEnd = false;
+      const lost = vi.spyOn(home.placed, "answer").mockImplementation(((
+        device,
+        channel,
+        request,
+      ) => {
+        if (channel !== "inf:work:events") return answer(device, channel, request);
+        const { events, ...rest } = request as { task: string; events: PlacedEventRecord[] };
+        const losing = events.some(({ event }) => event.type === "continuation_ended");
+        const taken = answer(device, channel, {
+          ...rest,
+          events: events.map((record) =>
+            record.event.type === "continuation_ended"
+              ? { ...record, event: { type: "request_started" } }
+              : record,
+          ),
+        } as never);
+        return losing
+          ? taken.then((answered) => {
+              tookLostEnd = true;
+              return answered;
+            })
+          : taken;
+      }) as typeof home.placed.answer);
+      claude.answer({ text: "The background check started." });
+      try {
+        await at.start(taskId);
+        await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+        const wakes = home.wakes.length;
+        claude.answer({ text: "The check is done." });
+        claude.continueTurn();
+        // The home took every event of the carried-on turn but its end: the
+        // roster it read before the turn says nothing of these events.
+        await expect.poll(() => tookLostEnd).toBe(true);
+        // The computer is done, but the home never heard it.
+        expect(home.tasks.get(taskId)?.activity).toBe("running");
+        if (trigger === "return") {
+          await at.stopComputer();
+          await at.restartComputer();
+          await at.inReach(taskId);
+        } else if (trigger === "quiet") {
+          home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
+        } else {
+          await home.supervisor.interruptCrewmate(taskId, "interrupt");
+        }
+        await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+        expect(home.tasks.timeline(taskId).map((event) => event.text)).toContain(UNHEARD_END_NOTE);
+        // Ended as interrupted, never as a failure the first mate is woken for.
+        expect(home.tasks.timeline(taskId).some((event) => event.kind === "failed")).toBe(false);
+        expect(
+          home.wakes
+            .slice(wakes)
+            .some(
+              (wake) => wake.facts?.kind === "turn-failed" || wake.facts?.kind === "outage-failed",
+            ),
+        ).toBe(false);
+        // The captain's "Ask first, then alert": an answer that the turn is
+        // over raises no quiet alert.
+        expect(home.wakes.slice(wakes).some((wake) => wake.facts?.kind === "quiet")).toBe(false);
+        expect(
+          home.tasks.timeline(taskId).some((event) => event.text?.includes("may be stuck")),
+        ).toBe(false);
+      } finally {
+        lost.mockRestore();
+        claude.endClient();
+      }
+    },
+  );
+
+  // INF-2332 leaves alone: a turn that is really running is never stopped.
+  // The captain's "Ask first, then alert": the twenty-minute pass asks the
+  // computer first, and raises the quiet alert only on its answer that the
+  // turn still works, or on no answer.
+  it.each(["working", "no answer"] as const)(
+    "keeps a quiet turn its crewmate really carries on by itself, alerting only after the computer's answer (%s), and its words arrive when it ends (INF-2332)",
+    async (answer) => {
+      const heldCall = gate();
+      const claude = await scriptedClaudeWorld({ beforeToolRecord: () => heldCall.held });
+      stops.push(scriptedClaudeCleanup);
+      const at = await world(undefined, { claude });
+      const home = at.home();
+      const taskId = "t-really-running";
+      claude.answer({ text: "The background check started." });
+      try {
+        await at.start(taskId);
+        await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+        claude.answer({
+          tool: "note_progress",
+          args: { text: "Reading the results." },
+          answer: "The check passed.",
+        });
+        claude.continueTurn();
+        await expect
+          .poll(() =>
+            home.events.some((event) => event.type === "tool_start" && event.taskId === taskId),
+          )
+          .toBe(true);
+        const wakes = home.wakes.length;
+        const alerted = () =>
+          home.wakes.slice(wakes).some((wake) => wake.facts?.kind === "quiet") &&
+          home.tasks.timeline(taskId).some((event) => event.text?.includes("may be stuck"));
+        // The computer's answer is held until the home has looked.
+        const roster = gate();
+        const ask = home.devices.ask.bind(home.devices);
+        const asked = vi
+          .spyOn(home.devices, "ask")
+          .mockImplementation(async (device, channel, args) => {
+            if (channel !== "inf:session:roster") return ask(device, channel, args);
+            await roster.held;
+            if (answer === "no answer") throw new Error("The computer did not answer.");
+            return ask(device, channel, args);
+          });
+        home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
+        await expect
+          .poll(() => asked.mock.calls.some(([, channel]) => channel === "inf:session:roster"))
+          .toBe(true);
+        expect(alerted()).toBe(false);
+        roster.open();
+        await expect.poll(alerted).toBe(true);
+        asked.mockRestore();
+        expect(home.tasks.get(taskId)?.activity).toBe("running");
+        heldCall.open();
+        await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("The check passed.");
+        expect(home.tasks.timeline(taskId).map((event) => event.text)).not.toContain(
+          UNHEARD_END_NOTE,
+        );
+      } finally {
+        claude.endClient();
+        heldCall.open();
+      }
+    },
+  );
+
+  // The captain's "Ask first, then alert": the alert is held back only when
+  // the computer's answer ends the turn here. An answer that it is not
+  // working while the home is still behind its events ends nothing yet, so
+  // the twenty-minute alert goes as before.
+  it("raises the quiet alert at twenty minutes when the computer's answer ends nothing here (INF-2332)", async () => {
+    const heldCall = gate();
+    const claude = await scriptedClaudeWorld({ beforeToolRecord: () => heldCall.held });
+    stops.push(scriptedClaudeCleanup);
+    const at = await world(undefined, { claude });
+    const home = at.home();
+    const taskId = "t-answer-ends-nothing";
+    claude.answer({ text: "The background check started." });
+    const events = gate();
+    let holding = false;
+    const answer = home.placed.answer.bind(home.placed);
+    const held = vi.spyOn(home.placed, "answer").mockImplementation((async (
+      device,
+      channel,
+      request,
+    ) => {
+      if (holding && channel === "inf:work:events") await events.held;
+      return answer(device, channel, request);
+    }) as typeof home.placed.answer);
+    try {
+      await at.start(taskId);
+      await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+      claude.answer({
+        tool: "note_progress",
+        args: { text: "Reading the results." },
+        answer: "The check passed.",
+      });
+      claude.continueTurn();
+      await expect
+        .poll(() =>
+          home.events.some((event) => event.type === "tool_start" && event.taskId === taskId),
+        )
+        .toBe(true);
+      // The turn ends there, but its last events have not reached the home.
+      holding = true;
+      heldCall.open();
+      await expect
+        .poll(() =>
+          new PlacedTasks(at.dataDir)
+            .outbox(taskId, 0)
+            .some(({ event }) => event.type === "continuation_ended"),
+        )
+        .toBe(true);
+      expect(home.tasks.get(taskId)?.activity).toBe("running");
+      const wakes = home.wakes.length;
+      const asked = vi.spyOn(home.devices, "ask");
+      home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
+      await expect
+        .poll(() => asked.mock.calls.some(([, channel]) => channel === "inf:session:roster"))
+        .toBe(true);
+      asked.mockRestore();
+      await expect
+        .poll(
+          () =>
+            home.wakes.slice(wakes).some((wake) => wake.facts?.kind === "quiet") &&
+            home.tasks.timeline(taskId).some((event) => event.text?.includes("may be stuck")),
+        )
+        .toBe(true);
+      // Its events arrive, and the turn ends as it really did.
+      events.open();
+      await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("The check passed.");
+      expect(home.tasks.timeline(taskId).map((event) => event.text)).not.toContain(
+        UNHEARD_END_NOTE,
+      );
+    } finally {
+      events.open();
+      held.mockRestore();
+      claude.endClient();
+      heldCall.open();
+    }
+  });
 
   it("gives a crewmate prepare_change after its computer restarts with that tool available (INF-398, INF-416 L)", async () => {
     const project = await gitProject();

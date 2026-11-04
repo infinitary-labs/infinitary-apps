@@ -283,7 +283,12 @@ export type SessionEvent =
    * id the owner gave its prompt.
    */
   | { type: "continuation_started"; order?: string }
-  | { type: "continuation_ended"; error?: string; cutOff?: CutOff }
+  /**
+   * That work ended. `unheard`: its end never arrived, and the live session
+   * that ran it says it no longer works, so its owner ends it as interrupted
+   * (INF-2332).
+   */
+  | { type: "continuation_ended"; error?: string; cutOff?: CutOff; unheard?: true }
   /**
    * The model answering for the conversation, as the backend reports it:
    * its first report and every change after it. `fallback` says the backend

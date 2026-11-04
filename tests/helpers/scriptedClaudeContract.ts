@@ -307,6 +307,7 @@ export async function scriptedClaudeWorld(
     turn: NonNullable<PlayedClient["turn"]>,
     mcp: Client,
     tool: string,
+    args: Record<string, unknown> = {},
   ): Promise<void> => {
     const { emit } = client.attachment;
     if (controls.beforeTool) {
@@ -317,7 +318,7 @@ export async function scriptedClaudeWorld(
     const id = `toolu_${toolCalls}`;
     const call = {
       role: "assistant",
-      content: [{ type: "tool_use", id, name: `${CLAUDE_SEAT_TOOL_PREFIX}${tool}`, input: {} }],
+      content: [{ type: "tool_use", id, name: `${CLAUDE_SEAT_TOOL_PREFIX}${tool}`, input: args }],
     };
     emit({ type: "assistant", parent_tool_use_id: null, message: call });
     if (controls.beforeToolRecord) {
@@ -329,7 +330,7 @@ export async function scriptedClaudeWorld(
     if (client.turn !== turn || client.attachment.closed()) return;
     let content: string;
     if (refusal === undefined) {
-      const called = await mcp.callTool({ name: tool, arguments: {} });
+      const called = await mcp.callTool({ name: tool, arguments: args });
       if (client.turn !== turn || client.attachment.closed()) return;
       content = (called.content as { type: string; text?: string }[])
         .map((block) => block.text ?? "")
@@ -442,7 +443,7 @@ export async function scriptedClaudeWorld(
     }
     if ("tool" in playing && turn && !turn.toolDone && mcp) {
       turn.toolDone = true;
-      await callTool(client, turn, mcp, playing.tool);
+      await callTool(client, turn, mcp, playing.tool, playing.args);
       // An interrupt ended the turn while its tool ran: the rest of it is dropped.
       if (client.turn !== turn || client.attachment.closed()) return;
       await request(client);

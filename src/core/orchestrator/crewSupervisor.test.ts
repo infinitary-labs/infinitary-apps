@@ -212,6 +212,7 @@ import {
   QUIET_CARD_MS,
   QUEUED_GUIDANCE_LINE,
   QUIT_SETTLE_MS,
+  UNHEARD_END_NOTE,
 } from "./crewSupervisor";
 import { crewHoldWays } from "./holds";
 import { type AccountServeability, JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } from "./idleLadder";
@@ -1007,6 +1008,64 @@ describe("CrewSupervisor", () => {
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
     expect(ops.at(-1)).toContain("Background command failed");
+  });
+
+  // INF-2332, captain: "make sure we delete unnecessary state tracking to
+  // honor the source of truth principle". A crewmate on this computer that
+  // carried on by itself is checked against its own live session: one whose
+  // session no longer works ends as interrupted after a quiet stretch or a
+  // stop, and one whose session still works is left alone.
+  it.each(["quiet", "stop"] as const)(
+    "ends a carried-on turn its live session no longer runs, on a %s (INF-2332)",
+    async (trigger) => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks } = setup(crewmate);
+      const { taskId } = await supervisor.commission({
+        title: "Finish background checks",
+        intent: intentOf("finish the background checks"),
+      });
+      await tick();
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      // The crewmate carries on, and its end is lost: the session stops
+      // working without a continuation_ended.
+      crewmate.emit({ type: "continuation_started" });
+      expect(legacyStateOf(tasks.get(taskId))).toBe("running");
+      expect(crewmate.isStreaming()).toBe(false);
+
+      if (trigger === "quiet") supervisor.checkQuietTasks(Date.now() + QUIET_CARD_MS);
+      else await supervisor.interruptCrewmate(taskId, "interrupt");
+      await tick();
+
+      expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
+      const timeline = tasks.timeline(taskId);
+      expect(timeline.some((event) => event.text === UNHEARD_END_NOTE)).toBe(true);
+      expect(timeline.some((event) => event.kind === "failed")).toBe(false);
+    },
+  );
+
+  it("leaves a carried-on turn its live session still runs (INF-2332)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, ops } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "Finish background checks",
+      intent: intentOf("finish the background checks"),
+    });
+    await tick();
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    crewmate.emit({ type: "continuation_started" });
+    crewmate.isStreaming = () => true;
+
+    supervisor.checkQuietTasks(Date.now() + QUIET_CARD_MS);
+    await tick();
+
+    // Still running, and the quiet watchdog's own step goes on as before.
+    expect(legacyStateOf(tasks.get(taskId))).toBe("running");
+    expect(tasks.timeline(taskId).some((event) => event.text === UNHEARD_END_NOTE)).toBe(false);
+    expect(ops.some((line) => line.includes("may be stuck"))).toBe(true);
   });
 
   it("rejects an unknown repo id loudly instead of defaulting", async () => {

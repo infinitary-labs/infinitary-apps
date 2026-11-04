@@ -77,8 +77,8 @@ export type ContractReply =
   | { refuse: 401 | 403 }
   /** The API goes quiet mid-answer and never finishes. */
   | "hang"
-  /** The model calls the named tool, and answers once it has the tool's result. */
-  | { tool: string; answer: string }
+  /** The model calls the named tool, with `args` or none, and answers once it has the tool's result. */
+  | { tool: string; answer: string; args?: Record<string, unknown> }
   /** The model calls the contract tool on every request and never answers. */
   | "loop";
 
@@ -260,7 +260,7 @@ export function stubReply(reply: ContractReply): Reply {
         request.body.tools?.find(
           (tool) => tool.name === reply.tool || tool.name.endsWith(`__${reply.tool}`),
         )?.name ?? reply.tool;
-      writeAnthropicToolUse(res, 0, { id: `toolu_${request.n}`, name, args: {} });
+      writeAnthropicToolUse(res, 0, { id: `toolu_${request.n}`, name, args: reply.args ?? {} });
       finishAnthropicStream(res, "tool_use", 7);
       return;
     }

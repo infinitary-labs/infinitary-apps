@@ -1147,6 +1147,14 @@ type TaskRuntime = {
   turnStartedAt: number;
   /** 0 = active, 1 = quiet feed line sent, 2 = quiet card raised. */
   quietLevel: 0 | 1 | 2;
+  /** When the watchdog last asked the live session whether this quiet turn still works (INF-2332). */
+  confirmedAt?: number;
+  /**
+   * The quiet pass's question to the task's computer is out: its quiet
+   * alert waits for the answer, and goes unless that answer ended the turn
+   * here (INF-2332).
+   */
+  quietAsk?: true;
   /** The 2h wall-clock escalation fired for this turn. */
   wallClockEscalated: boolean;
   /**
@@ -1218,17 +1226,25 @@ const UPDATE_PAUSE_NOTE = "paused while Infinitary is updated";
 /**
  * The quiet-crewmate watchdog (P4): conservative thresholds, no settings
  * surface. Ten silent minutes on a streaming turn earns one feed line,
- * twenty a wake to the Firstmate; the generous wall-clock bound escalates a
- * turn that never ends. Escalation only - the watchdog never interrupts by
- * itself (firstmate's rule: the bound demands inspection, never an
- * automatic kill). Exported for the Firstmate agent's own-turn watchdog,
- * which mirrors them.
+ * twenty a check with the live session that runs it and a wake to the
+ * Firstmate unless that check ended the turn; the generous wall-clock bound
+ * escalates a turn that never ends. The watchdog never stops a turn that
+ * still runs (firstmate's rule: the bound demands inspection, never an
+ * automatic kill); it ends only one its live session says is already over
+ * (INF-2332). Exported for the Firstmate agent's own-turn watchdog, which
+ * mirrors them.
  */
 export const QUIET_FEED_MS = 10 * 60 * 1000;
 export const QUIET_CARD_MS = 20 * 60 * 1000;
 /** A turn's wall-clock bound; a background job counts as moving for the same (idleLadder.ts). */
 const TURN_WALL_CLOCK_MS = JOB_BOUND_MS;
 const WATCHDOG_TICK_MS = 60 * 1000;
+/**
+ * The task timeline's line for a turn whose end never arrived, ended once
+ * the live session that ran it said it no longer works (INF-2332).
+ */
+export const UNHEARD_END_NOTE =
+  "its turn had already ended where it ran, but that end never arrived; ended here as interrupted";
 /**
  * How long a quit waits for the crewmates it cut mid-turn to settle, so each
  * interrupted turn's usage reaches the ledger. An answered interrupt takes
@@ -6538,7 +6554,7 @@ export class CrewSupervisor {
           return;
         }
         if (event.type === "continuation_ended") {
-          this.endAutonomousTurn(task, event.error, event.cutOff);
+          this.endAutonomousTurn(task, event.error, event.cutOff, event.unheard);
           return;
         }
         if (event.type === "model_served") {
@@ -7476,17 +7492,51 @@ export class CrewSupervisor {
   /**
    * Complete an autonomous boundary exactly once, using the normal report
    * path; an interrupt the host asked for ends it the way it ends a prompt.
+   * One whose end never arrived (`unheard`), because the live session that
+   * ran it says it no longer works, ends as interrupted too, so the idle
+   * ladder takes the task from there (INF-2332).
    */
-  private endAutonomousTurn(task: TaskRuntime, error?: string, cutOff?: CutOff): void {
+  private endAutonomousTurn(
+    task: TaskRuntime,
+    error?: string,
+    cutOff?: CutOff,
+    unheard?: boolean,
+  ): void {
     if (!task.autonomousTurn || this.tasks.get(task.id) !== task) return;
     task.autonomousTurn = false;
     if (error && !task.lastTurnError) {
       task.lastTurnError = error;
       task.lastTurnCutOff = cutOff;
     }
-    const interrupted = task.interruptRequested;
+    if (unheard) this.options.tasks.note(task.id, UNHEARD_END_NOTE, { news: true });
+    const interrupted = task.interruptRequested || unheard === true;
     task.interruptRequested = false;
     this.turnComplete(task, { interrupted });
+  }
+
+  /**
+   * Asks the live session whether a turn the supervisor holds as working
+   * still works (INF-2332). A crewmate here is read from its own session:
+   * a turn it carried on by itself, which that session no longer runs, ends
+   * as interrupted, while a prompt's turn ends with its own prompt. One on
+   * another computer is asked of that computer, which ends such a turn once
+   * every event it counted is in. Nothing that still runs is stopped.
+   */
+  private confirmTurn(task: TaskRuntime, answered?: (ended: boolean) => void): void {
+    if (task.state !== "streaming" && task.state !== "starting") return;
+    if (this.machineOf(task.id) === LOCAL_MACHINE_ID) {
+      if (task.autonomousTurn && task.session && !task.session.isStreaming())
+        this.endAutonomousTurn(task, undefined, undefined, true);
+      return;
+    }
+    const asked = this.options.machines?.confirm?.(task.id) ?? Promise.resolve(false);
+    void asked
+      .catch((caught: unknown) => {
+        const error = caught instanceof Error ? caught.message : String(caught);
+        console.warn(`[crew] could not ask whether ${task.id}'s turn still works: ${error}`);
+        return false;
+      })
+      .then((ended) => answered?.(ended));
   }
 
   /**
@@ -9887,6 +9937,9 @@ export class CrewSupervisor {
       try {
         await task.session.abort();
         this.recordInterrupt(taskId, mode, source, "aborted-turn");
+        // A stop that found nothing running leaves no end to wait for: the
+        // live session is asked at once (INF-2332).
+        this.confirmTurn(task);
       } catch (caught) {
         task.interruptRequested = false;
         const error = caught instanceof Error ? caught.message : String(caught);
@@ -12657,10 +12710,11 @@ export class CrewSupervisor {
   }
 
   /**
-   * One watchdog pass. Escalation only, never an automatic interrupt: a
-   * quiet streaming task earns a feed line at ten minutes and a wake with
-   * the choices at twenty; a turn past the wall-clock bound escalates once
-   * more. The Firstmate holds interrupt_crewmate, so the wake is the whole
+   * One watchdog pass, which never stops a turn that still runs: a quiet
+   * streaming task earns a feed line at ten minutes, and at twenty its live
+   * session is asked whether the turn still works - one already over ends
+   * as interrupted - and otherwise a wake with the choices; a turn past the
+   * wall-clock bound escalates once more. The Firstmate holds interrupt_crewmate, so the wake is the whole
    * escalation - no host card (cards/tasks/agents P0, WI-3).
    */
   checkQuietTasks(now: number): void {
@@ -12668,52 +12722,73 @@ export class CrewSupervisor {
       if (task.state !== "streaming" && task.state !== "starting") continue;
       // A turn on a computer out of reach goes on there, unseen here: not stuck.
       if (this.outOfReach(task.id)) continue;
-      // A running background job is proof of life (R2): a quiet turn that
-      // is waiting on its own build is not stuck.
-      if (this.options.hasRunningJobs?.(task.id)) continue;
-      const quietFor = now - task.lastEventAt;
-      const minutes = Math.round(quietFor / 60_000);
-      if (quietFor >= QUIET_CARD_MS && task.quietLevel < 2) {
-        task.quietLevel = 2;
-        this.options.tasks.note(task.id, `quiet for ${minutes} minutes; may be stuck`, {
-          news: true,
+      // Quiet this long, the live session is asked whether the turn still
+      // works, again after each such quiet stretch, whatever jobs run: a job
+      // can outlive the turn that started it (INF-2332). A task on another
+      // computer asks first and alerts after: its quiet alert goes once that
+      // computer answers, unless the answer ended the turn here.
+      if (now - Math.max(task.lastEventAt, task.confirmedAt ?? 0) >= QUIET_CARD_MS) {
+        task.confirmedAt = now;
+        if (this.machineOf(task.id) !== LOCAL_MACHINE_ID) task.quietAsk = true;
+        this.confirmTurn(task, (ended) => {
+          if (!task.quietAsk || task.confirmedAt !== now) return;
+          task.quietAsk = undefined;
+          if (!ended) this.quietAlerts(task, now);
         });
-        this.routeCrewEvent(
-          task.id,
-          {
-            facts: {
-              kind: "quiet",
-              task: { id: task.id, title: task.title },
-              crewmate: task.crewmate,
-              minutes,
-            },
-          },
-          "agent",
-        );
-      } else if (quietFor >= QUIET_FEED_MS && task.quietLevel < 1) {
-        task.quietLevel = 1;
-        this.options.tasks.note(task.id, `quiet for ${minutes} minutes`, { news: true });
-        this.options.broadcastEvent({
-          type: "firstmate_note",
-          text: `Task ${task.title} quiet: ${minutes} minutes without an update`,
-        });
+        if (task.state !== "streaming" && task.state !== "starting") continue;
       }
-      if (now - task.turnStartedAt >= TURN_WALL_CLOCK_MS && !task.wallClockEscalated) {
-        task.wallClockEscalated = true;
-        const hours = Math.round(((now - task.turnStartedAt) / 3_600_000) * 10) / 10;
-        this.routeCrewEvent(
-          task.id,
-          {
-            facts: {
-              kind: "long-turn",
-              task: { id: task.id, title: task.title },
-              crewmate: task.crewmate,
-              hours,
-            },
+      this.quietAlerts(task, now);
+    }
+  }
+
+  /** The quiet watchdog's alerts for one turn, as quiet as it is at `now`. */
+  private quietAlerts(task: TaskRuntime, now: number): void {
+    if (task.state !== "streaming" && task.state !== "starting") return;
+    // A running background job is proof of life (R2): a quiet turn that
+    // is waiting on its own build is not stuck.
+    if (this.options.hasRunningJobs?.(task.id)) return;
+    const quietFor = now - task.lastEventAt;
+    const minutes = Math.round(quietFor / 60_000);
+    if (quietFor >= QUIET_CARD_MS && task.quietLevel < 2 && !task.quietAsk) {
+      task.quietLevel = 2;
+      this.options.tasks.note(task.id, `quiet for ${minutes} minutes; may be stuck`, {
+        news: true,
+      });
+      this.routeCrewEvent(
+        task.id,
+        {
+          facts: {
+            kind: "quiet",
+            task: { id: task.id, title: task.title },
+            crewmate: task.crewmate,
+            minutes,
           },
-          "agent",
-        );
-      }
+        },
+        "agent",
+      );
+    } else if (quietFor >= QUIET_FEED_MS && task.quietLevel < 1) {
+      task.quietLevel = 1;
+      this.options.tasks.note(task.id, `quiet for ${minutes} minutes`, { news: true });
+      this.options.broadcastEvent({
+        type: "firstmate_note",
+        text: `Task ${task.title} quiet: ${minutes} minutes without an update`,
+      });
+    }
+    if (now - task.turnStartedAt >= TURN_WALL_CLOCK_MS && !task.wallClockEscalated) {
+      task.wallClockEscalated = true;
+      const hours = Math.round(((now - task.turnStartedAt) / 3_600_000) * 10) / 10;
+      this.routeCrewEvent(
+        task.id,
+        {
+          facts: {
+            kind: "long-turn",
+            task: { id: task.id, title: task.title },
+            crewmate: task.crewmate,
+            hours,
+          },
+        },
+        "agent",
+      );
     }
   }
 

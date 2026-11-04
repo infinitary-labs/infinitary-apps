@@ -177,6 +177,14 @@ export type CrewMachines = {
   /** The task's computer is in reach and caught up, so its lane may go on. */
   ready(machine: string, taskId: string): boolean;
   /**
+   * Asks the task's computer, while in reach, whether its conversation is
+   * working, and ends a turn the home still holds as running there once that
+   * computer says it is not and every event it counted is in (INF-2332).
+   * Answers whether that answer ended the turn here; false when it says the
+   * turn works, ends nothing here, or never comes.
+   */
+  confirm?(taskId: string): Promise<boolean>;
+  /**
    * Whether the computer's crewmates can report a typed result
    * (`report-result.md`); false while the home cannot tell.
    */
@@ -517,6 +525,18 @@ type Placed = {
   recordDir: string;
   /** What its session was opened with, to open it there again after that computer restarts. */
   spec: PlacedSpec | undefined;
+  /**
+   * The computer's newest answer about this conversation (INF-2332): whether
+   * its live session works, and how many events it had counted then. It is
+   * compared once the home has taken exactly that many, then dropped.
+   */
+  said: { seq: number; working: boolean } | undefined;
+  /**
+   * An open asked there while its conversation worked: that computer kept
+   * the conversation as it was, so the home asks again once the turn ends
+   * here (INF-2332).
+   */
+  reopenOwed: boolean;
 };
 
 const keptStateSchema = z.object({
@@ -1021,6 +1041,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const recordDir = spec.shape.record.dir;
     placed.recordDir = recordDir;
     placed.spec = placedSpec;
+    placed.reopenOwed = state.streaming;
     const session: PlacedSession = new PlacedSession(
       {
         task,
@@ -1033,6 +1054,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         copy: () => this.copy(placed),
         interrupted: (retry = true) =>
           `${this.nameOf(deviceId)} quit before this turn finished${retry ? ", so its messages go again." : "."}`,
+        unheard: () =>
+          `${this.nameOf(deviceId)} no longer runs this turn, and its end never arrived here, so its messages go again.`,
         released: (released) => {
           if (placed.session === released) {
             placed.session = undefined;
@@ -1047,7 +1070,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     placed.session = session;
     // A turn the computer runs now, which this Mac does not follow yet.
     const there = device.roster.tasks.get(task);
-    if (there) session.adopt(there);
+    if (there) session.adopt(there, there.seq >= placed.through);
     // A report its turn already gave before this Mac restarted, once its owner listens.
     const replays = placed.replays.filter((replay) => replay.after <= placed.through);
     placed.replays = placed.replays.filter((replay) => replay.after > placed.through);
@@ -1119,9 +1142,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       const session = placed.session && !placed.session.letGo ? placed.session : undefined;
       // That computer restarted: the conversation this Mac holds opens there again.
       if (session && !entry.open) adopting.push(this.reopen(placed, session, device.id));
-      else if (session) session.adopt(entry);
+      else if (session) session.adopt(entry, entry.seq >= placed.through);
       // A turn this Mac does not follow: a restart here left it running there.
       else if (entry.running) adopting.push(this.live(placed).catch(() => undefined));
+      this.heard(placed, entry);
     }
     for (const placed of this.placed.values()) {
       if (placed.deviceId !== device.id || !placed.session || placed.session.letGo) continue;
@@ -1151,7 +1175,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * computer allows now, not the ones it allowed when the conversation
    * opened, so a version-gated tool arrives without this Mac restarting.
    */
-  private reopen(placed: Placed, session: PlacedSession, deviceId: string): Promise<void> {
+  private reopen(
+    placed: Placed,
+    session: PlacedSession,
+    deviceId: string,
+    owed = false,
+  ): Promise<void> {
     const spec = this.specForReopen(placed);
     if (!spec) return Promise.resolve();
     const resume = session.resumeToken();
@@ -1164,12 +1193,16 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         },
       ])
       .then((raw) => {
-        session.reopened(openAnswerSchema.parse(raw).state);
+        const { state } = openAnswerSchema.parse(raw);
+        placed.reopenOwed = state.streaming;
+        session.reopened(state);
         if (!session.letGo) this.host?.reopened(placed.task);
       })
-      .catch((caught: unknown) =>
-        this.log(`could not open ${placed.task} there again: ${messageOf(caught)}`),
-      );
+      .catch((caught: unknown) => {
+        // An owed open that failed stays owed, asked again at the next end.
+        if (owed) placed.reopenOwed = true;
+        this.log(`could not open ${placed.task} there again: ${messageOf(caught)}`);
+      });
     placed.adopting = reopening.finally(() => {
       placed.adopting = undefined;
     });
@@ -1290,6 +1323,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       }
       await session.take(event);
       placed.through = record.seq;
+      await this.settleSaid(placed);
+      if (type === "turn_ended" || type === "continuation_ended") this.reopenIfOwed(placed);
       if (
         type === "request_started" ||
         type === "tool_start" ||
@@ -1311,6 +1346,72 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     }
     if (!placed.released) this.release(placed.deviceId);
     return { through: placed.through, kept: placed.kept };
+  }
+
+  // ---- what the computer says is working ------------------------------------------
+
+  async confirm(taskId: string): Promise<boolean> {
+    const record = this.options.tasks.get(taskId);
+    const deviceId = record?.deviceId;
+    if (!deviceId || !this.options.devices.inReach(deviceId)) return false;
+    const device = this.device(deviceId);
+    const contact = device.contact;
+    const roster = rosterSchema.parse(
+      await this.options.devices.ask(deviceId, "inf:session:roster", []),
+    );
+    if (device.contact !== contact) return false;
+    const entry = roster.tasks.find((each) => each.task === taskId);
+    if (!entry) return false;
+    const placed = this.load(taskId, deviceId);
+    placed.said = { seq: entry.seq, working: working(entry) };
+    return this.settleSaid(placed);
+  }
+
+  /**
+   * One roster row, the computer's own answer from its live session: a turn
+   * it runs for a prompt, or a session that says it works (INF-2332).
+   */
+  private heard(placed: Placed, entry: PlacedRosterTask): void {
+    placed.said = { seq: entry.seq, working: working(entry) };
+    void this.settleSaid(placed).catch((caught: unknown) =>
+      this.log(`could not end ${placed.task}'s turn here: ${messageOf(caught)}`),
+    );
+  }
+
+  /**
+   * Compares the computer's answer once the home has taken every event it
+   * had counted, and no later one: then a turn the home still holds as
+   * running there, which that computer says is over, ended out of sight and
+   * ends here as interrupted, and an open owed goes again. An answer the
+   * events have already passed says nothing new, and one still ahead of
+   * them waits for them.
+   */
+  private async settleSaid(placed: Placed): Promise<boolean> {
+    const said = placed.said;
+    if (!said || placed.through < said.seq) return false;
+    placed.said = undefined;
+    if (said.working || placed.through > said.seq) return false;
+    const session = placed.session;
+    if (!session || session.letGo) return false;
+    const following = session.isStreaming();
+    if (following) await session.endedThere();
+    // Nothing runs there with every event in: an open owed goes now.
+    this.reopenIfOwed(placed);
+    return following && !session.isStreaming();
+  }
+
+  /**
+   * The turn an open found working there has ended here - its end taken, or
+   * ended out of sight (`settleSaid`) - with nothing else running: that open
+   * goes again, so a contract that moved meanwhile is applied and its answer
+   * - a conversation that started over - reaches the supervisor (INF-2332).
+   * Called only at such an end, never on an event mid-turn.
+   */
+  private reopenIfOwed(placed: Placed): void {
+    const session = placed.session;
+    if (!placed.reopenOwed || !session || session.letGo || session.isStreaming()) return;
+    placed.reopenOwed = false;
+    void this.reopen(placed, session, placed.deviceId, true);
   }
 
   // ---- callbacks ----------------------------------------------------------------
@@ -1975,6 +2076,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ended: kept.ended,
       session: undefined,
       adopting: undefined,
+      said: undefined,
+      reopenOwed: false,
       ledger: undefined,
       begun: undefined,
       calling: new Map(),
@@ -2190,6 +2293,11 @@ function writeAt(
   } finally {
     closeSync(handle);
   }
+}
+
+/** Whether a roster row says its conversation works there: a prompt's turn, or a session that streams. */
+function working(entry: PlacedRosterTask): boolean {
+  return entry.running !== undefined || entry.state?.streaming === true;
 }
 
 function messageOf(error: unknown): string {

@@ -232,7 +232,8 @@ The order is the rule's own:
    So does a wait its crewmate declared while any card of the task, a note included, is up (FI3-435), and work its crewmate declared finished while a card of its own is up (INF-731), or with none once the first mate acted on it (INF-1428): a nudge would ask a crewmate with nothing left to do.
    So does a task whose own browser is in the captain's hands - paused for the captain's help, being taken, or the captain's (`browserWithCaptain`, counted in `decisionCardOpen`; `docs/task-browser.md`, "Taking control"): the captain's Return control is the crewmate's one wake, so the card behind it may already be answered.
 5. Moving, nothing: guidance that will still be delivered (including a row waiting out its backoff, `InboxStore.hasDeliverable`), a background job inside its bound, a captured settle, a timed wait on its gate (a due one is the sweep's, on the same tick).
-   A streaming turn never reaches the reconciler; the quiet watchdog owns it.
+   A streaming turn never reaches the reconciler; the quiet watchdog owns it, and after twenty quiet minutes it first asks the crewmate's live session whether the turn still works, ending one that no longer does as interrupted so it reaches the reconciler (`docs/helper.md`, "Whether a turn works there").
+   For a crewmate on another computer the question goes first and the alert after: the "may be stuck" note and the first mate's quiet wake wait for that computer's answer, and go unless the answer ended the turn here.
 6. The gate holds it for the captain and no card is up - a wait its crewmate declared with no card of the task up (INF-11): the first mate's turn.
    The clock is read, but the nudge never fires (the crewmate cannot act): the first wake comes at the nudge's time plus ten and carries the gate's own reason (`held: captain-gate`).
    The repeat and the host's card follow as below.

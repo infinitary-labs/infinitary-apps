@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "carried-on-turns",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate that carries on by itself no longer looks stuck",
+      "body": "A crewmate that carried on by itself after a background check, on another of your computers, could lose its report when Infinitary restarted or updated on this Mac, and its task kept saying it was working. Infinitary now asks the crewmate's own conversation whether it is still working: one that is keeps going and its report arrives, and one that already finished without its end arriving here stops saying it is working, so the task moves on.",
+      "noPicture": "The fix changes when a task stops saying it is working; its look stays the same.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

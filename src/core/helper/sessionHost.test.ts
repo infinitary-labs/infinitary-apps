@@ -2292,6 +2292,87 @@ describe("a conversation held on a computer that runs work", () => {
     }
   });
 
+  // INF-2332 (FIRS-6), captain: "make sure we delete unnecessary state
+  // tracking to honor the source of truth principle". Whether the
+  // conversation works is read from the live session, so a turn - a
+  // prompt's, or one Claude carries on by itself - keeps its conversation
+  // through a reopen for new instructions and a home's detach, and the open's
+  // answer says it still streams. The home asks again once the turn ends,
+  // and that answer carries the conversation that started over for them.
+  it.each(["carried-on", "prompt"] as const)(
+    "keeps a conversation in a %s turn through a reopen and a detach, answering that it streams, and starts over for the reopen asked again once it ends (INF-2332)",
+    async (turn) => {
+      const claude = await scriptedClaudeWorld();
+      const at = await placed({ claude });
+      const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
+      const reports = at.home.hold("inf:work:report");
+      const report = {
+        tool: "report" as const,
+        args: { text: "All 29 tests passed." },
+        answer: "Reported.",
+      };
+      try {
+        await at.order("inf:session:open", [{ orderId: "open:1", task: TASK, spec }]);
+        if (turn === "carried-on") {
+          claude.answer({ text: "The check runs in the background." });
+          await at.order("inf:session:prompt", [
+            { orderId: "prompt:1", task: TASK, text: "Run the check in the background." },
+          ]);
+          await at.ended(1);
+          // The background check finishes and Claude carries on to report
+          // it, waiting on the home's answer.
+          claude.answer(report);
+          claude.continueTurn();
+        } else {
+          claude.answer(report);
+          await at.order("inf:session:prompt", [
+            { orderId: "prompt:1", task: TASK, text: "Run the check and report it." },
+          ]);
+        }
+        await reports.reached;
+
+        const moved = { ...spec, instructions: `${spec.instructions} Updated.` };
+        const kept = await at.order("inf:session:open", [
+          { orderId: "open:2", task: TASK, spec: moved },
+        ]);
+        expect(kept.state.streaming).toBe(true);
+        expect(kept.state.renewal).toBeUndefined();
+        await at.order("inf:session:detach", [{ orderId: "detach:1", task: TASK }]);
+        expect(claude.released()).toBe(false);
+
+        reports.open();
+        const end = turn === "carried-on" ? "continuation_ended" : "turn_ended";
+        await expect.poll(() => at.home.events.some(({ event }) => event.type === end)).toBe(true);
+        expect(
+          at.home.effects.filter((effect) => effect.channel === "inf:work:report"),
+        ).toHaveLength(1);
+        if (turn === "carried-on")
+          expect(at.home.events.find(({ event }) => event.type === end)?.event).toEqual({
+            type: end,
+          });
+
+        // Ended, the home's open asked again starts over for the moved
+        // instructions, and its answer says so.
+        const again = await at.order("inf:session:open", [
+          { orderId: "open:3", task: TASK, spec: { ...moved, resume: kept.state.resume } },
+        ]);
+        expect(claude.released()).toBe(true);
+        expect(again.state.streaming).toBe(false);
+        expect(again.state.renewal).toMatchObject({ from: kept.state.sessionId });
+        claude.answer({ text: "Under the new instructions." });
+        await at.order("inf:session:prompt", [
+          { orderId: "prompt:2", task: TASK, text: "Carry on." },
+        ]);
+        await expect
+          .poll(() => claude.served().at(-1)?.system)
+          .toContain(`${spec.instructions} Updated.`);
+      } finally {
+        reports.open();
+        claude.endClient();
+      }
+    },
+  );
+
   // INF-405: a Claude client this computer lets go of while it runs on - for
   // the home's detach (its quit or restart), or to reopen the conversation
   // for a contract it now speaks - ends with the background tasks it still

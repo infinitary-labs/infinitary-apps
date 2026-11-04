@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "move-disposal-test-holds-quit-bound",
+      "reason": "Internal test repair: the test that disposal waits for a computer move no longer races the quit's two-second bound against real git on a loaded machine. Nothing in the app changes."
+    }
+  ]
+}

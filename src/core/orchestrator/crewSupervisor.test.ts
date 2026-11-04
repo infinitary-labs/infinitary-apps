@@ -32305,7 +32305,17 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
       h.crewmate.finishPrompt();
       await entered.promise;
-      const disposal = h.supervisor.disposeAll();
+      // The quit's bound is wall-clock time, and the real git the released
+      // move still runs can outlast it on a loaded runner (INF-2649). Its
+      // expiry is the next test's subject, so this one holds the bound
+      // still: disposal ends only when the move does.
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      let disposal: Promise<void>;
+      try {
+        disposal = h.supervisor.disposeAll();
+      } finally {
+        vi.useRealTimers();
+      }
       let retiredAtDisposal = false;
       try {
         // A microtask checkpoint, not a timing window: the blocked operation

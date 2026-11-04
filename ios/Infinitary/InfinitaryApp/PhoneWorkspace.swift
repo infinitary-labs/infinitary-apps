@@ -14,6 +14,10 @@ import Observation
     var openTask: String?
     /// INF-1524: a card's draft button, for the message box to take its words, unsent.
     var draft: String?
+    /// INF-2568: the software keyboard is up, and a card's reply field holds its focus; a phone on its side then has no
+    /// room for the pager or, while a reply types, the message box beside the field (`PhoneCards`, `PhoneWorkspace.home`).
+    var keyboardUp = false
+    var replyFocused = false
     var fields: [String: String] {
         if let taskID { return ["taskId": taskID] }
         guard cardsVisible else { return [:] }
@@ -127,6 +131,12 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         .onChange(of: shown == .home, initial: true) { _, visible in messageContext.cardsVisible = visible }
         // The message box is Home's alone, so a keyboard typing into it closes with the tab it leaves.
         .onChange(of: shown) { _, tab in if tab != .home { dismissPhoneKeyboard() } }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            messageContext.keyboardUp = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            messageContext.keyboardUp = false
+        }
         .onChange(of: messageContext.restoring) { _, id in if id != nil { selection = .home } }
         // INF-1524: a card's task key opens its record on Tasks, or in the sidebar beside the stage.
         .onChange(of: messageContext.openTask) { _, key in
@@ -190,12 +200,22 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                 if let composer {
                     composer
                         .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityElement(children: .contain).accessibilityIdentifier("phone-composer")
+                        // Stepped aside, it answers to its own name, so a reading of the message box never finds it undrawn.
+                        .accessibilityElement(children: .contain)
+                        .accessibilityIdentifier(composerAside ? "phone-composer-aside" : "phone-composer")
                         .padding(.horizontal, PhoneTheme.space4)
                         .padding(.bottom, PhoneTheme.space2)
+                        // INF-2568: on a phone on its side the keyboard leaves about two lines of room, so while a card's
+                        // reply types the message box steps aside for it, kept in place so its draft stays.
+                        .frame(height: composerAside ? 0 : nil, alignment: .top)
+                        .opacity(composerAside ? 0 : 1).allowsHitTesting(!composerAside).accessibilityHidden(composerAside)
                 }
             }
         }.background(PhoneTheme.background)
+    }
+
+    private var composerAside: Bool {
+        phoneOnItsSide(verticalSize) && messageContext.keyboardUp && messageContext.replyFocused
     }
 
     /// INF-1062, the captain's pick: the computer's name left the bar, so one line under it on every tab says the reach

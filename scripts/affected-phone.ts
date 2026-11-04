@@ -99,6 +99,12 @@ export const PART_OWNERS: Record<string, readonly string[]> = {
   ],
   // INF-2095: the pager's menu and the test hook its journey reads.
   pick: ["ios/Infinitary/InfinitaryApp/PhoneCards.swift", "ios/Infinitary/InfinitaryApp/PhoneMenuTapProbe.swift"],
+  // INF-2568: Home's column and the card's frame, which the keyboard shortens.
+  keyboard: [
+    "ios/Infinitary/InfinitaryApp/PhoneCards.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneWorkspace.swift",
+    "ios/Infinitary/InfinitaryApp/MessageComposer.swift",
+  ],
   rest: ["ios/Infinitary/InfinitaryApp/PhoneCharacter.swift"],
 };
 

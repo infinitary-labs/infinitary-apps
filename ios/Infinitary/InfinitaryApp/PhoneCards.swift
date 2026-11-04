@@ -5,6 +5,7 @@ import SwiftUI
 struct PhoneCards: View {
     let session: ReadOnlySession
     @Environment(PhoneMessageContext.self) private var messageContext
+    @Environment(\.verticalSizeClass) private var verticalSize
     @State private var selected: String?
     @State private var past: PhoneCard?
     @State private var drafts: [String: PhoneJSON] = [:]
@@ -43,7 +44,8 @@ struct PhoneCards: View {
             }
             // INF-589 item 11: with no card to page, the pager hides. INF-1517: cards put aside wait in Tasks, as on the Mac.
             // INF-2095: the pager shows once its menu holds the stack, so it never draws a count its menu lacks.
-            if !session.stack.isEmpty && !pagerMenu.items.isEmpty { pager }
+            // INF-2568: on a phone on its side the keyboard leaves about two lines of room, which the field typed in needs.
+            if !session.stack.isEmpty && !pagerMenu.items.isEmpty && !(phoneOnItsSide(verticalSize) && messageContext.keyboardUp) { pager }
         }
         .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: card == nil || maximized ? .infinity : PhoneColumn.width).frame(maxWidth: .infinity)
         .background(PhoneTheme.background)
@@ -274,10 +276,16 @@ private struct PhoneCardPane: View {
     @State private var libraryOpen = false
     @State private var cameraOpen = false
     @Environment(\.scenePhase) private var phase
+    @Environment(PhoneMessageContext.self) private var messageContext
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The field has the focus on this side; a turn carries it to the field on the other.
     @FocusState private var replyFocus: CardSide?
+    /// INF-2568: where the face's field sits in the pane, read in the pane's own space before the lift moves it.
+    @State private var faceReplyFrame: CGRect?
+    /// Counts the moments the face's scroller follows its focused field's caret: the field taking the focus or growing,
+    /// and the keyboard shortening the scroller.
+    @State private var replyGrew = 0
 
     enum CardSide { case face, back }
 
@@ -381,10 +389,17 @@ private struct PhoneCardPane: View {
             front.modifier(PhoneCardTurn(angle: turnAngle, back: false))
             if backMounted && !messages.isEmpty { back.modifier(PhoneCardTurn(angle: turnAngle, back: true)) }
         }
-        .frame(maxHeight: .infinity, alignment: .top)
+        .coordinateSpace(.named(Self.paneSpace))
+        .offset(y: -lift)
+        // INF-2568: the pane is the room the stage offers, never the card's own height, so a card taller than the room the
+        // keyboard leaves stays inside it rather than pushing the pager and the message box down behind the keyboard.
+        .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
+        .clipShape(PhonePaneClip(clips: (showsBack ? backHeight : surfaceHeight) > paneHeight + 0.5))
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { paneHeight = $0 }
         .onChange(of: [paneHeight, headHeight, footHeight]) { shapeFrame() }
         .onChange(of: replyFocus == nil) { _, unfocused in if unfocused { shapeFrame() } }
+        .onChange(of: replyFocus != nil, initial: true) { _, focused in messageContext.replyFocused = focused }
+        .onDisappear { if replyFocus != nil { messageContext.replyFocused = false } }
         .background(alignment: .topTrailing) {
             if showsNext {
                 // The stack follows the card's frame, which never reaches the pager; the sliver is raised as the card is.
@@ -438,6 +453,28 @@ private struct PhoneCardPane: View {
 
     private var turnAngle: Double { flipped ? 180 : 0 }
 
+    private static let paneSpace = "card-pane"
+    private static let replyAnchor = "card-reply-row"
+
+    /// INF-2568: how far the face rises in its pane while its pinned reply types and the card stands taller than the room
+    /// the keyboard leaves. It rises as far as shows the card's foot, the choices under the field, but never so far that
+    /// the field's top leaves the pane, and always far enough that the field's foot, where the caret types, stays in it.
+    /// The head the rise hides comes back as the keyboard closes.
+    private var lift: CGFloat {
+        guard replyFocus == .face, pinsFrame, paneHeight > 0, let field = faceReplyFrame else { return 0 }
+        let overflow = surfaceHeight - paneHeight
+        guard overflow > 0 else { return 0 }
+        return min(max(min(overflow, field.minY), field.maxY - paneHeight, 0), overflow)
+    }
+
+    private func followCaret() { if replyFocus == .face { replyGrew += 1 } }
+
+    /// A card's scroller closes the keyboard as a person starts to scroll it, never as the scroller follows the caret.
+    private func scrolled(_ phase: ScrollPhase) {
+        // INF-2568, the captain: "scrolling a card should dismiss the keyboard if keyboard is up".
+        if phase == .interacting && messageContext.keyboardUp { dismissPhoneKeyboard() }
+    }
+
     /// The latest line and Card turn the card over, carrying a typing captain's focus to the other side's field; a send
     /// turns it too, but drops the keyboard, as it did before, so the whole card shows above where the keyboard was.
     private func turnOver(back: Bool) {
@@ -464,22 +501,31 @@ private struct PhoneCardPane: View {
         // between them in this one native scroller. The body's web view never scrolls on its own.
         return VStack(alignment: .leading, spacing: 0) {
             if pinsFrame { measuredHead }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if !pinsFrame { measuredHead }
-                    content.padding([.horizontal], PhoneTheme.space4).padding(.bottom, PhoneTheme.space4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if hasFoot && !pinsFrame { measuredFoot }
+            ScrollViewReader { scroller in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if !pinsFrame { measuredHead }
+                        content.padding([.horizontal], PhoneTheme.space4).padding(.bottom, PhoneTheme.space4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if hasFoot && !pinsFrame { measuredFoot }
+                    }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
                 }
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+                .frame(maxHeight: contentHeight > 0 ? contentHeight : nil)
+                .scrollBounceBehavior(.basedOnSize)
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.y + geometry.containerSize.height < geometry.contentSize.height - 1
+                } action: { _, below in runsOn = below }
+                .accessibilityIdentifier("card-scroll")
+                .scrollDismissesKeyboard(.interactively)
+                .onScrollPhaseChange { _, phase in scrolled(phase) }
+                // INF-2568: SwiftUI scrolls a field into view as it takes the focus, but only its top line, and not as it
+                // grows or as the keyboard shortens the scroller, so a reply inside the scroller keeps its foot, where the
+                // caret types, in view.
+                .onScrollGeometryChange(for: CGFloat.self) { $0.containerSize.height } action: { _, _ in followCaret() }
+                .onChange(of: replyFocus) { followCaret() }
+                .onChange(of: replyGrew) { if !pinsFrame { scroller.scrollTo(Self.replyAnchor, anchor: .bottom) } }
             }
-            .frame(maxHeight: contentHeight > 0 ? contentHeight : nil)
-            .scrollBounceBehavior(.basedOnSize)
-            .onScrollGeometryChange(for: Bool.self) { geometry in
-                geometry.contentOffset.y + geometry.containerSize.height < geometry.contentSize.height - 1
-            } action: { _, below in runsOn = below }
-            .accessibilityIdentifier("card-scroll")
-            .scrollDismissesKeyboard(.interactively)
             if hasFoot && pinsFrame { measuredFoot }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -539,13 +585,15 @@ private struct PhoneCardPane: View {
             .defaultScrollAnchor(.bottom)
             .scrollBounceBehavior(.basedOnSize)
             .scrollDismissesKeyboard(.interactively)
+            .onScrollPhaseChange { _, phase in scrolled(phase) }
             .accessibilityIdentifier("card-thread")
             Spacer(minLength: 0)
             backFoot.fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { backFootHeight = $0 }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: height.isFinite && height > 0 ? height : nil)
+        // INF-2568: a back taller than the room the keyboard leaves keeps its foot, with the field, in view.
+        .frame(height: height.isFinite && height > 0 ? height : nil, alignment: .bottom)
         .clipShape(shape)
         .phoneCardSurface()
         .accessibilityElement(children: .contain).accessibilityIdentifier("card-back")
@@ -735,7 +783,13 @@ private struct PhoneCardPane: View {
             if let problem { Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-error") }
             // INF-2565: a pane built again while its back shows starts turned, and its latest line gives way as the field does.
             if !messages.isEmpty { latestLine.modifier(PhoneFaceOnly(angle: turnAngle)) }
-            if takesReply { replyField(.face).modifier(PhoneFaceOnly(angle: turnAngle)) }
+            if takesReply {
+                replyField(.face).modifier(PhoneFaceOnly(angle: turnAngle)).id(Self.replyAnchor)
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.paneSpace)) } action: { frame in
+                        if pinsFrame { faceReplyFrame = frame }
+                    }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { _ in followCaret() }
+            }
             if card.isPast, let words = sentWords {
                 Text("\(PhoneCardWords.sentWithChoice) \(words)").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                     .accessibilityIdentifier("past-sent-words")
@@ -1017,5 +1071,15 @@ private struct PhoneAskedLine: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("card-asked")
+    }
+}
+
+/// INF-2568: a card taller than its pane is cut at the pane's top and foot, where the bar and the pager or the keyboard
+/// stand, while its shadow still reaches past the pane's sides; a card that fits keeps its whole shadow.
+private struct PhonePaneClip: Shape {
+    var clips: Bool
+
+    func path(in rect: CGRect) -> Path {
+        Path(clips ? rect.insetBy(dx: -rect.width, dy: 0) : rect.insetBy(dx: -rect.width, dy: -max(rect.width, rect.height)))
     }
 }

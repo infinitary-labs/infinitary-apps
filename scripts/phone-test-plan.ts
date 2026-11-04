@@ -53,6 +53,9 @@ export const PHONE_PARTS = [
   { name: "pick", test: "testMenuPickSurvivesAWorkspaceRedraw", photos: false },
   // INF-2565: a revision while the thread shows keeps the card on its back.
   { name: "cards-revise", test: "testRevisionKeepsTheThreadShowing", photos: false },
+  // INF-2568: the message box and a card's reply with the keyboard up; each launches fresh and the merge fixture runs once a home.
+  { name: "keyboard-pinned", test: "testKeyboardOverPinnedCard", photos: false },
+  { name: "keyboard-scrolling", test: "testKeyboardOverScrollingCard", photos: false },
   { name: "talk-compose", test: "testComposeAndSend", photos: true },
   // The last part runs every test no other part names: the app-hosted tests and any new one that
   // needs no fresh app, since its simulator already holds the character journey's join.

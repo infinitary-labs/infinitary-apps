@@ -855,6 +855,190 @@ import XCTest
     }
 
     /// INF-2125 direction C, the third cards test: pictures, a recording, a thread, a body's choice, out of reach and large type.
+    /// INF-2568, the captain: "both the main chat input and a card's reply input don't always stay in viewport when ios
+    /// keyboard is up. that makes typing very difficult". Data: the hero card, whose head and choices stay pinned around
+    /// its body. Completion: with the keyboard up on the message box or the card's reply, upright, on its side and turned
+    /// with the keyboard up, at one line and five, the field and the message box stay between the bar and the keyboard
+    /// (KeyboardViewportProbe). Platform: either device's simulator with its software keyboard. Resources: this test's
+    /// own fresh app and test home; no photo, signing material or real account.
+    func testKeyboardOverPinnedCard() async throws {
+        try await launchJoined()
+        _ = try await home("empty-cards")
+        let hero = try await home("hero-card")
+        XCTAssertTrue(cardHeading(try XCTUnwrap(hero["title"] as? String)).waitForPresence(timeout: 10), app.debugDescription)
+        waitForShownBodyRevealed()
+        var failures: [String] = []
+        let box = keyboardInput("message-box"), reply = keyboardInput("card-reply")
+        focusForPhoneTyping(box, in: app); keyboardViewportProbe("message box, hero card", box, into: &failures)
+        try await dismissKeyboardForProbe()
+        turnForProbe(.landscapeLeft)
+        focusForPhoneTyping(box, in: app); keyboardViewportProbe("message box, hero card, on its side", box, into: &failures)
+        try await dismissKeyboardForProbe()
+        // On a short stage the whole card scrolls, its reply inside.
+        revealForProbe(reply, in: app.scrollViews["card-scroll"].firstMatch)
+        focusForPhoneTyping(reply, in: app); keyboardViewportProbe("reply, hero card, on its side", reply, into: &failures)
+        try await dismissKeyboardForProbe()
+        turnForProbe(.portrait)
+        revealForProbe(reply, in: app.scrollViews["card-scroll"].firstMatch)
+        focusForPhoneTyping(reply, in: app); keyboardViewportProbe("reply, hero card", reply, into: &failures)
+        turnForProbe(.landscapeLeft)
+        keyboardViewportProbe("reply, hero card, turned on its side with the keyboard up", reply, into: &failures)
+        turnForProbe(.portrait)
+        keyboardViewportProbe("reply, hero card, turned upright again", reply, into: &failures)
+        reply.typeText("\ntwo\nthree\nfour\nfive")
+        keyboardViewportProbe("reply, hero card, five lines", reply, into: &failures)
+        try await dismissKeyboardForProbe()
+        focusForPhoneTyping(box, in: app); keyboardViewportProbe("message box, hero card, five-line reply draft", box, into: &failures)
+        try await dismissKeyboardForProbe()
+        finishKeyboardChecks(failures)
+    }
+
+    /// INF-2568, the same report and the captain's added ask: "scrolling a card should dismiss the keyboard if keyboard is
+    /// up". Data: the merge card, whose facts and required actions make the whole card scroll with its reply inside.
+    /// Completion: a reply growing to three lines stays above the card's lower edge, upright and on its side, and on the
+    /// iPad's maximized card; a flick of the card with the keyboard up, from the reply or the message box, closes the
+    /// keyboard. Platform and resources as testKeyboardOverPinnedCard; the merge fixture runs once per home.
+    func testKeyboardOverScrollingCard() async throws {
+        try await launchJoined()
+        _ = try await home("empty-cards")
+        let merge = try await home("merge-card")
+        XCTAssertTrue(cardHeading(try XCTUnwrap(merge["title"] as? String)).waitForPresence(timeout: 10), app.debugDescription)
+        waitForShownBodyRevealed()
+        var failures: [String] = []
+        let box = keyboardInput("message-box"), reply = keyboardInput("card-reply")
+        let scroll = app.scrollViews["card-scroll"].firstMatch
+        revealForProbe(reply, in: scroll)
+        focusForPhoneTyping(reply, in: app); keyboardViewportProbe("reply, merge card", reply, into: &failures)
+        reply.typeText("one\ntwo\nthree")
+        keyboardViewportProbe("reply, merge card, three lines", reply, into: &failures)
+        keyboardAfterScroll("reply focused, flick the card up", into: &failures) { flickForProbe(scroll) }
+        focusForPhoneTyping(box, in: app)
+        keyboardAfterScroll("message box focused, flick the card up", into: &failures) { flickForProbe(scroll) }
+        turnForProbe(.landscapeLeft)
+        revealForProbe(reply, in: scroll)
+        focusForPhoneTyping(reply, in: app); keyboardViewportProbe("reply, merge card, three lines, on its side", reply, into: &failures)
+        try await dismissKeyboardForProbe()
+        turnForProbe(.portrait)
+        let maximize = app.buttons["maximize-card"]
+        if maximize.exists {
+            tapOnPhone(maximize)
+            turnForProbe(.landscapeLeft)
+            revealForProbe(reply, in: scroll)
+            focusForPhoneTyping(reply, in: app); keyboardViewportProbe("reply, maximized merge card, three lines, on its side", reply, into: &failures)
+            try await dismissKeyboardForProbe()
+            turnForProbe(.portrait)
+        }
+        finishKeyboardChecks(failures)
+    }
+
+    /// INF-2568's KeyboardViewportProbe, for the captain's report: "both the main chat input and a card's reply input don't
+    /// always stay in viewport when ios keyboard is up. that makes typing very difficult". With the keyboard up on one
+    /// field, it records each way that field is not wholly between the top bar's foot and the keyboard's drawn top: a
+    /// card's scroller clipping it, the message box or the pager covering it, or the message box itself behind the
+    /// keyboard. Every situation is checked before the test fails, so one run reports each one that leaves the room.
+    /// Platform: the gate's pinned simulators (scripts/phone-pin.json), whose keyboard INF-2568 measured.
+    private func keyboardViewportProbe(_ situation: String, _ field: XCUIElement, into failures: inout [String]) {
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForPresence(timeout: 10), "\(situation): no keyboard")
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "hasKeyboardFocus == true"), object: field, timeout: 10),
+                       .completed, "\(situation): the field lost the keyboard's focus")
+        let any = { (id: String) in self.app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        let composer = any("phone-composer")
+        // The keyboard and the layout animate in: read once the keyboard, the field and the message box each hold still.
+        var steady = PhoneSteadyReading<[CGRect]>()
+        let still = NSPredicate { _, _ in
+            steady.read(keyboard.exists && field.exists ? [keyboard.frame, field.frame, composer.exists ? composer.frame : .null] : nil)
+        }
+        XCTAssertEqual(waitForPhonePredicate(still, object: nil, timeout: 10), .completed, "\(situation): the keyboard and the field never held still")
+        // XCUITest's keyboard frame leaves out the suggestion row drawn above the keys. INF-2568's screenshots on the pinned
+        // iOS 27.0 simulators put the drawn top 44 pt above that frame on the iPhone 16 and 55 pt above it on the iPad Pro
+        // 11-inch (M4), upright and on its side.
+        let suggestionRow: CGFloat = UIDevice.current.userInterfaceIdiom == .pad ? 55 : 44
+        let f = field.frame, keyTop = keyboard.frame.minY - suggestionRow
+        let bar = app.navigationBars.firstMatch
+        let barFoot = bar.exists ? bar.frame.maxY : app.windows.firstMatch.frame.minY
+        var problems: [String] = []
+        if f.maxY > keyTop + 0.5 { problems.append(String(format: "its foot is %.0f pt behind the keyboard", f.maxY - keyTop)) }
+        if f.minY < barFoot - 0.5 { problems.append(String(format: "its top is %.0f pt above the bar's foot", barFoot - f.minY)) }
+        if field.identifier == "card-reply" {
+            // A reply inside the scroller of a card whose whole frame scrolls is clipped at the scroller's foot.
+            let scroll = app.scrollViews["card-scroll"].firstMatch
+            if scroll.exists, !any("card-frame").exists, !any("card-back").exists, f.maxY > scroll.frame.maxY + 0.5 {
+                problems.append(String(format: "its foot is %.0f pt past the card's lower edge", f.maxY - scroll.frame.maxY))
+            }
+            for cover in [composer, any("card-pager")] where cover.exists && cover.frame.intersects(f) {
+                problems.append("\(cover.identifier) covers it at \(cover.frame)")
+            }
+        }
+        // INF-2568: only on an iPhone on its side, while a card's reply holds the keyboard, does the message box step
+        // aside, undrawn and under its own name; anywhere else it stays in view.
+        let window = app.windows.firstMatch.frame
+        let phoneOnItsSide = UIDevice.current.userInterfaceIdiom == .phone && window.width > window.height
+        if any("phone-composer-aside").exists, !(phoneOnItsSide && field.identifier == "card-reply") {
+            problems.append("the message box stepped aside")
+        }
+        // The captain named both fields: whichever one holds the keyboard, the message box stays above it too.
+        if composer.exists, composer.frame.maxY > keyTop + 0.5 {
+            problems.append(String(format: "the message box is %.0f pt behind the keyboard", composer.frame.maxY - keyTop))
+        }
+        let frame = { (id: String) in any(id).exists ? "\(any(id).frame)" : "absent" }
+        let line = "KEYBOARD VIEWPORT \(situation): field \(f) keyboard \(keyboard.frame) drawn-top \(keyTop) bar-foot \(barFoot)"
+            + " card-frame \(frame("card-frame")) card-scroll \(frame("card-scroll")) card-back \(frame("card-back"))"
+            + " pager \(frame("card-pager")) composer \(any("phone-composer-aside").exists ? "aside" : frame("phone-composer")) -> "
+            + (problems.isEmpty ? "in view" : problems.joined(separator: "; "))
+        print(line)
+        picture("keyboard " + situation)
+        if !problems.isEmpty { failures.append(line) }
+    }
+
+    /// The captain's added ask: "scrolling a card should dismiss the keyboard if keyboard is up". Records the scroll that
+    /// leaves the keyboard up.
+    private func keyboardAfterScroll(_ situation: String, into failures: inout [String], scroll: () -> Void) {
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForPresence(timeout: 10), "\(situation): no keyboard before the scroll")
+        scroll()
+        let closed = keyboard.waitForAbsence(timeout: 5)
+        let line = "KEYBOARD SCROLL \(situation): keyboard " + (closed ? "closed" : "stayed up")
+        print(line)
+        picture("keyboard scroll " + situation)
+        if !closed { failures.append(line) }
+    }
+
+    /// Fails the test with every situation the keyboard checks recorded.
+    private func finishKeyboardChecks(_ failures: [String]) {
+        if !failures.isEmpty { XCTFail("\(failures.count) keyboard situations failed:\n" + failures.joined(separator: "\n")) }
+    }
+
+    /// The field reads as a text field or, once it holds lines, a text view.
+    private func keyboardInput(_ id: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@ AND (elementType == %d OR elementType == %d)",
+            id, XCUIElement.ElementType.textField.rawValue, XCUIElement.ElementType.textView.rawValue)).firstMatch
+    }
+
+    /// Turns the device and waits until the bar's computer button has moved with it and holds still.
+    private func turnForProbe(_ orientation: UIDeviceOrientation) {
+        turnPhone(to: orientation, in: app, moving: app.buttons["computer-details"])
+    }
+
+    private func dismissKeyboardForProbe() async throws {
+        let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
+        XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(done)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
+    }
+
+    /// The whole merge card scrolls, so its reply may start below the stage's foot: swipe the card until it can be pressed.
+    private func revealForProbe(_ element: XCUIElement, in scroll: XCUIElement) {
+        for _ in 0..<6 where !element.isHittable { scroll.swipeUp(); waitForSteadyTarget(scroll) }
+        XCTAssertTrue(waitForPhonePress(element), "\(element) never came into view: \(app.debugDescription)")
+    }
+
+    /// One short flick up from the card's lower part, as a person scrolls to read on; it ends above the keyboard.
+    private func flickForProbe(_ scroll: XCUIElement) {
+        let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+        start.press(forDuration: 0.05, thenDragTo: scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)))
+    }
+
     func testCardMediaAndBody() async throws {
         app.launchEnvironment["INFINITARY_TEST_RETRIED_CARD_LAG"] = "3"
         try await launchJoined()

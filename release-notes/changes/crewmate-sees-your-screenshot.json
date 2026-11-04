@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-sees-your-screenshot",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate sees the picture you sent with your message",
+      "body": "When your project runs on Automatic, the crewmate that takes your message now gets the pictures and files you attached, as it already did elsewhere. When a picture cannot be opened, the crewmate says so and asks for it instead of answering without seeing it.",
+      "noPicture": "The change is what a crewmate receives with its first message, which no view of the app shows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

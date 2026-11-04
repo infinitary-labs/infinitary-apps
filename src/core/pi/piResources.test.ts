@@ -1410,6 +1410,10 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       "A file, folder, program or action on another of these computers is out of your reach: report it with needs_firstmate",
     );
     expect(atHome).toContain("never ask the captain to move it");
+    // INF-2422: a screenshot on another computer is said plainly, never answered as if seen.
+    expect(atHome).toContain(
+      "Until it reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer is such a file.",
+    );
     expect(atHome).toContain("never print, quote or paste its content");
     expect(prompt({ here: mini.name, workers: [mini] })).toContain(
       "This task runs on Kun's Mac mini, so a project folder's path names nothing on Kun's Mac mini.",

@@ -103,9 +103,10 @@ function workerWords(worker: CrewmateComputers["workers"][number]): string {
  * The paragraph every crewmate reads once a computer that runs work is
  * listed (INF-992, direction B; it grew from INF-567's one line): the
  * captain's computers by name and role, the one this task runs on, the
- * rule that a need on another of them goes to the first mate, and that a
- * file handed between tasks is never printed. Names and roles only, never
- * reach: the prompt is stamped, so a change starts a new conversation.
+ * rule that a need on another of them goes to the first mate and is never
+ * answered as if seen (INF-2422), and that a file handed between tasks is
+ * never printed. Names and roles only, never reach: the prompt is stamped,
+ * so a change starts a new conversation.
  */
 export function crewmateComputersNote(computers: CrewmateComputers): string {
   const listed = [
@@ -115,7 +116,7 @@ export function crewmateComputersNote(computers: CrewmateComputers): string {
   const here = computers.here
     ? `This task runs on ${computers.here}, so a project folder's path names nothing on ${computers.here}.`
     : `This task runs on ${HOME.the}.`;
-  return `The captain's computers: ${listed.join("; ")}. ${here} A file, folder, program or action on another of these computers is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. The first mate coordinates it, and a file another task finds reaches you as a steer naming its verified copy in your hand-over folder. To hand files to another task, pass their paths in report files. A handed file may hold secrets: never print, quote or paste its content in a report, card, note, commit, command line or output, and read only what your work needs.`;
+  return `The captain's computers: ${listed.join("; ")}. ${here} A file, folder, program or action on another of these computers is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. Until it reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer is such a file. The first mate coordinates it, and a file another task finds reaches you as a steer naming its verified copy in your hand-over folder. To hand files to another task, pass their paths in report files. A handed file may hold secrets: never print, quote or paste its content in a report, card, note, commit, command line or output, and read only what your work needs.`;
 }
 
 export function crewmateCardBodiesNote(cardBodiesDir: string): string {

@@ -895,13 +895,22 @@ describe("renderPicturesSection", () => {
     );
   });
 
-  it("counts copies that are gone, and says so when none is left", () => {
+  it("counts copies that are gone, says so when none is left, and asks for them (INF-2422)", () => {
     expect(renderPicturesSection({ riding: [], more: [], missing: 2 })).toBe(
       [
         "Pictures: the captain attached 2 pictures to the messages this task came from.",
         "2 pictures could not be found among the app's copies.",
+        "Where your work depends on a picture you cannot see, say so plainly and ask the captain on a card to send it again, rather than answering without it.",
       ].join("\n"),
     );
+    // Every copy found: nothing to ask for.
+    expect(
+      renderPicturesSection({
+        riding: [{ name: "only.png", path: "/h/only.png" }],
+        more: [],
+        missing: 0,
+      }),
+    ).not.toContain("send it again");
   });
 });
 

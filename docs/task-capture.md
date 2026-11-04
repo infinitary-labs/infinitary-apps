@@ -158,8 +158,10 @@ The `tasks` query by key lists them by name and copy (`pictures`).
 
 The crewmate that takes the task is briefed with them (`CrewSupervisor.briefPictures`): the task's own pictures, then those of the work its brief carries forward - its basis, the task it was discovered or escalated from, the attempt it replaces - each picture once by digest.
 As many as one message may carry (`TURN_IMAGES_MAX`) ride the first turn as images; the brief's pictures section, right under the captain's words, names every copy by its path in the task’s `temp/handover/` folder on the computer running it, says how many did not fit, and counts a copy that is gone instead of sending its name as if it were there.
+When a copy is gone, the section tells the crewmate to say so plainly and ask the captain to send it again, rather than answer without it.
 The brief's inbox row keeps the riding copies (`attachments-kept`), so a retried or re-presented first turn carries them again (`docs/inbox.md`, "Pictures ride the row by reference").
 `spawn_crewmate` hands the action's selected message's pictures to the brief directly, because the brief goes out before the message attaches to the new task; a planned task reads them from its record whenever it starts, after a relaunch too.
+A spawn on a project that runs on Automatic starts through the queued start at once, so that start carries the message's pictures and files too (`dispatchQueuedTask`'s `message`, INF-2422); one that waits for room reads them from its record when it starts.
 Supported text attachments also keep typed references to their complete overflow copies (name, path, size and digest) on the ask, alongside the picture references in `images_json`.
 A task reads those references from its asks and the same source tasks at dispatch; an immediate spawn also receives the selected ask’s references before capture attaches it.
 Both pictures and complete text files go through the existing verified hand-over writer here or the source-file order there, with private file permissions and digest-qualified names.

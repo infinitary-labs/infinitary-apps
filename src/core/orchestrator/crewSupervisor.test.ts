@@ -24633,6 +24633,61 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     ).toContain("dialog.png");
   });
 
+  // INF-2422: INF-2421 was spawned on a project that runs on Automatic, and
+  // its crewmate's brief carried no picture, so it answered without seeing
+  // the captain's screenshot. The message attaches only after the spawn
+  // returns, so the start Automatic makes at once must carry it itself.
+  it("briefs a crewmate that Automatic starts at once with its message's pictures and files", async () => {
+    vi.useRealTimers();
+    initOverflowDir(scratchDir("infinitary-automatic-text-"));
+    const dir = scratchDir("infinitary-automatic-pictures-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/ledger.git"]);
+    const crewmate = fakeCrewmate();
+    const { supervisor, repos, tasks, inbox } = setup(crewmate, {
+      automatic: {
+        choose: async () => ({
+          computerId: null,
+          routed: { choice: { provider: "fm-mock", id: "mock-1" }, bucket: "high", rule: "R8" },
+        }),
+      },
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "ledger" });
+    repos.setRunsOn(repo.id, AUTOMATIC_COMPUTER);
+    const attachments = keepImages(randomUUID(), [{ ...pngImage, name: "ring.png" }]);
+    const messageFiles: MessageFile[] = [];
+    const content = "Crewmate,Ring\r\n3a9542a5,orphan\r\n".repeat(100);
+    withPastedFiles("Read this", [{ name: "ring.csv", text: content }], messageFiles);
+
+    const { taskId } = await supervisor.commission({
+      title: "Identify the orphan on the ring",
+      intent: intentOf("which crewmate is the orange one at the bottom of this ring?"),
+      repoId: repo.id,
+      attachments,
+      messageFiles,
+    });
+    await tick();
+
+    expect(tasks.get(taskId)?.status).toBe("active");
+    const brief = crewmate.promptCalls[0] ?? "";
+    expect(brief).toContain(
+      "Pictures: the captain attached 1 picture to the messages this task came from.\nIt rides with this brief.",
+    );
+    const delivered = /^- ring\.png: (.+)$/m.exec(brief)?.[1] ?? "";
+    expect(delivered).toContain(`/crewmates/${taskId}/temp/handover/`);
+    expect(readFileSync(delivered)).toEqual(
+      readFileSync(attachmentPath(attachments[0] as AttachmentRef)),
+    );
+    expect(crewmate.promptImageCalls[0]).toEqual([pngImage]);
+    const file = /Attached file ring\.csv: (.+) \(the full copy/.exec(brief)?.[1] ?? "";
+    expect(readFileSync(file).equals(Buffer.from(content))).toBe(true);
+    // A retried first turn carries the picture again.
+    expect(inbox.inFlight(taskId)[0]?.facts).toMatchObject({
+      kind: "attachments-kept",
+      attachments,
+    });
+  });
+
   it("hands a planned task the complete text file from its message, not just its preview", async () => {
     // INF-1389 friction 3: a complete text attachment follows the started task.
     vi.useRealTimers();

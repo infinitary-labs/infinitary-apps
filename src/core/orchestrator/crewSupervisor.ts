@@ -3478,7 +3478,12 @@ export class CrewSupervisor {
       this.insertQueuedWork(taskId, title, brief, input.intent, boundRepoId, classified, graph);
       if (escalation) await this.applyEscalation(escalation, taskId);
       this.announcePlanSkip(classified);
-      await this.dispatchQueuedTask(taskId, { requested: { by: "firstmate" } });
+      // The message attaches to the task only once this returns, so a start
+      // made now carries its pictures and files itself (INF-2422).
+      await this.dispatchQueuedTask(taskId, {
+        requested: { by: "firstmate" },
+        message: { attachments: input.attachments ?? [], files: input.messageFiles ?? [] },
+      });
       const started = this.options.tasks.get(taskId);
       return this.withNamedModel({ taskId, crewmate: started?.assignee ?? "queued" }, input.shape);
     }
@@ -14048,12 +14053,16 @@ export class CrewSupervisor {
    * start someone asked for (`startQueuedNow`): its asker already knows, so
    * no queued-started wake follows, and a failure says who asked. `from`
    * writes the start on the history as the captain's task card click.
+   * `message` is the spawning message's pictures and files, for a start
+   * made before that message attaches to the task; a later start reads
+   * them from the record.
    */
   async dispatchQueuedTask(
     taskId: string,
     options: {
       ignoreAsk?: boolean;
       requested?: { by: "firstmate" | "captain"; from?: typeof TASK_CARD_VIA; panel?: string };
+      message?: { attachments: readonly AttachmentRef[]; files: readonly MessageFile[] };
     } = {},
   ): Promise<void> {
     // The quit starts nothing; the next launch's sweep starts it.
@@ -14211,6 +14220,10 @@ export class CrewSupervisor {
         routed,
         placementAccount: selected?.accountId,
         fresh: false,
+        ...(options.message?.attachments.length
+          ? { attachments: options.message.attachments }
+          : {}),
+        ...(options.message?.files.length ? { messageFiles: options.message.files } : {}),
       });
       if (start.crewmate === "queued") return;
       this.sayPlacedStarted(taskId);

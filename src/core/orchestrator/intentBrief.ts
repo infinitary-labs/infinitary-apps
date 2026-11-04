@@ -507,6 +507,10 @@ export function renderPicturesSection(pictures: BriefPictures): string {
   }
   if (pictures.missing > 0) {
     lines.push(`${pictureWords(pictures.missing)} could not be found among the app's copies.`);
+    // INF-2422: say it and ask, never answer as if the picture had been seen.
+    lines.push(
+      "Where your work depends on a picture you cannot see, say so plainly and ask the captain on a card to send it again, rather than answering without it.",
+    );
   }
   const paths = listed.every((picture) => picture.path);
   if (listed.length > 0 && paths) {

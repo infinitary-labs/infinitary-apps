@@ -9,7 +9,6 @@ import {
   readFileSync,
   rmSync,
   statSync,
-  watch,
   writeFileSync,
 } from "node:fs";
 import { connect } from "node:net";
@@ -32,7 +31,9 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { connectClient } from "../../../tests/helpers/connectionClient";
+import { churnDisk } from "../../../tests/helpers/diskChurn";
 import { macRelease } from "../../../tests/helpers/macRelease";
+import { reachMark } from "../../../tests/helpers/reachMark";
 import { scratchDir, socketScratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   SSH_SERVER_AVAILABLE,
@@ -806,6 +807,8 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
 
   // INF-325: "Could not reach kunchen@mac-home." after the 30-minute limit
   // stopped an update; SSH exits 255 once stopped, which is not why.
+  // INF-2578: other unit rounds churning the disk beside it once kept the
+  // step that computer reached from being seen, and it ran out its budget.
   it("says the time limit stopped an update before it started there, never that it could not reach that computer", async () => {
     const sshd = await server();
     const them = otherUser();
@@ -818,20 +821,14 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     const ssh = sshd.ssh({
       remote: them.env,
       programs: {
-        [marker]: `touch "${ready}"; while [ ! -f "${resume}" ]; do sleep 1; done; ${marker}`,
+        [marker]: `printf reached >> "${ready}"; while [ ! -f "${resume}" ]; do sleep 1; done; ${marker}`,
       },
     });
     const at = await home({ ssh, bundle: standInBundle(record) });
     const device = await addChecked(at.remote, sshd.address);
     at.said.splice(0);
-    const checking = new Promise<void>((resolve) => {
-      const watcher = watch(held, () => {
-        if (existsSync(ready)) {
-          watcher.close();
-          resolve();
-        }
-      });
-    });
+    const churn = await churnDisk();
+    const checking = reachMark(ready);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       const updating = at.remote.update(device.id).catch((error: unknown) => error);
@@ -846,6 +843,7 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     } finally {
       vi.useRealTimers();
       writeFileSync(resume, "resume");
+      await churn.stop();
     }
   });
 
@@ -866,14 +864,7 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
       startGate: gate,
     });
     const at = await home({ ssh: sshd.ssh({ remote: them.env }), bundle });
-    const joining = new Promise<void>((resolve) => {
-      const watcher = watch(held, () => {
-        if (existsSync(gate.ready)) {
-          watcher.close();
-          resolve();
-        }
-      });
-    });
+    const joining = reachMark(gate.ready);
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       const adding = addChecked(at.remote, sshd.address).catch((error: unknown) => error);
@@ -2027,14 +2018,7 @@ process.exit(ran.status ?? 1);
         const get = vi
           .spyOn(PublishedBuilds.prototype, "get")
           .mockResolvedValue({ path: release.zip, sha256: release.sha256 });
-        const ready = new Promise<void>((resolve) => {
-          const watcher = watch(release.dir, () => {
-            if (existsSync(release.verificationReady)) {
-              watcher.close();
-              resolve();
-            }
-          });
-        });
+        const ready = reachMark(release.verificationReady);
         try {
           const operation = at.remote.update(device.id).catch((error: unknown) => error);
           await ready;
@@ -2076,14 +2060,7 @@ process.exit(ran.status ?? 1);
             backstopMs: 30 * 60_000,
           });
           const device = when === "update" ? await addChecked(at.remote, address) : undefined;
-          const ready = new Promise<void>((resolve) => {
-            const watcher = watch(dir, () => {
-              if (existsSync(gate.ready)) {
-                watcher.close();
-                resolve();
-              }
-            });
-          });
+          const ready = reachMark(gate.ready);
           vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
           try {
             let ended = false;
@@ -2126,14 +2103,7 @@ process.exit(ran.status ?? 1);
       });
       const device = await addChecked(at.remote, address);
       at.said.splice(0);
-      const ready = new Promise<void>((resolve) => {
-        const watcher = watch(dir, () => {
-          if (existsSync(gate.ready)) {
-            watcher.close();
-            resolve();
-          }
-        });
-      });
+      const ready = reachMark(gate.ready);
       vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
       try {
         const operation = at.remote.update(device.id).catch((error: unknown) => error);

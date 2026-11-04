@@ -58,7 +58,11 @@ export function standInFirstmate(
      * stand-in speaks the controller's side itself.
      */
     connect?: string;
-    /** Pause external start work until the test permits its real completion. */
+    /**
+     * Pause external start work until the test permits its real completion:
+     * it appends to `ready` (a `reachMark`) on reaching the gate, then waits
+     * for `resume` to exist.
+     */
     startGate?: { when: "update" | "join"; ready: string; resume: string };
     /** An external app crash before it claims a join or returns an update result. */
     startExit?: { when: "update" | "join"; code: number };
@@ -103,7 +107,7 @@ export function standInFirstmate(
       ...(background.startGate
         ? [
             `if [ "$2" = ${shellWord(background.startGate.when)} ]; then`,
-            `  touch ${shellWord(background.startGate.ready)}`,
+            `  printf reached >> ${shellWord(background.startGate.ready)}`,
             `  while [ ! -f ${shellWord(background.startGate.resume)} ]; do sleep 1; done`,
             "fi",
           ]

@@ -46,6 +46,7 @@ export async function macRelease(bundle: string, version = "0.13.0", paceMs = 0)
   const verification = join(dir, "verification.jsonl");
   writeFileSync(signature, "valid");
   const verifier = join(dir, "verify-release");
+  // Appended to once a held verification starts, so a test may make it a `reachMark` first.
   const verificationReady = join(dir, "verification-ready");
   writeFileSync(
     verifier,
@@ -56,7 +57,7 @@ fs.appendFileSync(${JSON.stringify(verification)}, JSON.stringify(args) + '\\n')
 const expected = ${JSON.stringify(["--verify", "--deep", "--strict", "-R", "=" + RELEASE_REQUIREMENT])};
 const finish = () => process.exit(args.slice(0, -1).every((arg, index) => arg === expected[index]) && args.length === expected.length + 1 && fs.readFileSync(${JSON.stringify(signature)}, 'utf8') === 'valid' ? 0 : 1);
 if (fs.readFileSync(${JSON.stringify(signature)}, 'utf8') === 'hold') {
-  fs.writeFileSync(${JSON.stringify(verificationReady)}, 'ready');
+  fs.appendFileSync(${JSON.stringify(verificationReady)}, 'ready');
   const timer = setInterval(() => { if (fs.readFileSync(${JSON.stringify(signature)}, 'utf8') !== 'hold') { clearInterval(timer); finish(); } }, 10);
 } else finish();
 `,

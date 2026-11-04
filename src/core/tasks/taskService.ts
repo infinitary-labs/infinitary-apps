@@ -1152,6 +1152,11 @@ export class TaskService {
     return this.store.listByStatus("open", "active");
   }
 
+  /** How many active rows each computer that runs work holds, by its id, counted without composing task records. */
+  activeCountsByDevice(): Map<string, number> {
+    return this.store.countActiveByDevice();
+  }
+
   /** Recorded overrides standing on this computer, read without composing task records. */
   passingOverridesForComputer(computerId: string, kind: OverridableHold): string[] {
     return this.store.passingOverridesForComputer(computerId, kind);

@@ -3,8 +3,8 @@ import type { IncomingMessage } from "node:http";
 import type { NetworkInterfaceInfo } from "node:os";
 import { join } from "node:path";
 import { computerPresenceOf, type DeviceView, parsePairingLink } from "@shared/devices";
-import { afterEach, describe, expect, it } from "vitest";
-import { freshDatabase } from "../../../tests/helpers/database";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { freshDatabase, rowsRead } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   DeviceOutOfReachError,
@@ -12,6 +12,7 @@ import {
   type WorkDeviceContact,
 } from "../connection/connection";
 import { type WorkDeviceLink, WorkDevices } from "../placed/workDevices";
+import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { Computers } from "./computers";
@@ -149,10 +150,11 @@ function homeAt(address: string) {
   const connection = connectionAt([`127.0.0.1:${PORT}`, `${address}:${PORT}`]);
   stops.push(work.attach(connection.link));
   const pushed: DeviceView[][] = [];
+  const tasks = new TaskService({ db, now: clock.now });
   const computers = new Computers({
     pairing,
     work,
-    tasks: new TaskService({ db, now: clock.now }),
+    tasks,
     repos: new RepoRegistry(db, join(userData, "fleet")),
     stopTasks: async () => {},
     bringHome: async () => {},
@@ -180,6 +182,8 @@ function homeAt(address: string) {
     connection,
     computers,
     pushed,
+    db,
+    tasks,
     key,
     deviceId: joined.grant.deviceId,
     /** This Mac moves to another network. */
@@ -279,5 +283,65 @@ describe("your devices while this Mac's network moves", () => {
     connection.tell({ deviceId, contact: "gone" });
     expect(mini()).toMatchObject({ inReach: false });
     expect(mini()).not.toHaveProperty("heldOnLocalNetwork");
+  });
+});
+
+describe("your devices after a task changes", () => {
+  // INF-2240: every task write refreshes this list. Each computer's count
+  // comes from where its running tasks run, never from composing their records.
+  it("counts each computer's running tasks from where they run, without composing a task record", () => {
+    const { computers, pushed, db, tasks, deviceId } = homeAt("192.168.65.2");
+    const tasksOn = (list: DeviceView[] | undefined) =>
+      list?.find((device) => device.id === deviceId)?.tasks;
+    const measured = () => {
+      const parse = vi.spyOn(JSON, "parse");
+      try {
+        let list: DeviceView[] = [];
+        const rows = rowsRead(db, () => {
+          list = computers.list();
+        });
+        return { rows, parses: parse.mock.calls.length, tasks: tasksOn(list) };
+      } finally {
+        parse.mockRestore();
+      }
+    };
+    // Each record keeps what it was asked, as a real one does.
+    const seed = (id: string, status: "idle" | "running" | "queued" | "cancelled", on?: string) =>
+      seedTask(tasks, {
+        id,
+        title: "Fix the footer",
+        status,
+        intent: { goal: "Fix the footer", userWords: "the footer is broken" },
+        ...(on ? { deviceId: on } : {}),
+      });
+    seed("there-0", "idle", deviceId);
+    seed("there-1", "running", deviceId);
+    const before = measured();
+    expect(before.tasks).toBe(2);
+
+    // Twenty more run there and twenty here; ten wait there and ten closed there.
+    for (let index = 0; index < 20; index += 1) {
+      seed(`more-${index}`, "idle", deviceId);
+      seed(`here-${index}`, "idle");
+    }
+    for (let index = 0; index < 10; index += 1) {
+      seed(`waits-${index}`, "queued", deviceId);
+      seed(`closed-${index}`, "cancelled", deviceId);
+    }
+    const after = measured();
+    console.info(JSON.stringify({ intent: "INF-2240 device task counts", before, after }));
+    expect(after.tasks).toBe(22);
+    // One row for each task running there, and no record composed for any of them.
+    expect(after.rows - before.rows).toBe(20);
+    expect(after.parses).toBe(before.parses);
+
+    // A task change pushes the list with the count it moved to.
+    seed("started", "idle", deviceId);
+    expect(tasksOn(pushed.at(-1))).toBe(23);
+    tasks.setDevice("more-0", null);
+    expect(tasksOn(pushed.at(-1))).toBe(22);
+    tasks.close("there-0", { status: "dropped", reason: "cancelled", actor: "host" });
+    expect(tasksOn(pushed.at(-1))).toBe(21);
+    expect(computers.list().find((device) => device.id === deviceId)?.tasks).toBe(21);
   });
 });

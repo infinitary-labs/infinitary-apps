@@ -196,9 +196,11 @@ export class Computers {
     const { pairing, work, tasks, repos } = this.options;
     const devices = pairing.list();
     if (devices.length === 0) return devices;
-    // Tasks and projects are read only when a computer runs work.
+    // Tasks and projects are read only when a computer runs work. Every task
+    // write reads this list again, so it counts running tasks by where they
+    // run and never composes their records (INF-2240).
     const working = devices.some((device) => deviceRunsWork(device.kind));
-    const running = working ? tasks.listActive() : [];
+    const running = working ? tasks.activeCountsByDevice() : new Map<string, number>();
     const projects = working ? repos.list() : [];
     const booted = this.options.bootedAt();
     const listening = work.listening();
@@ -242,7 +244,7 @@ export class Computers {
         ...(!inReach && !version && !stranded && pairing.heldOnLocalNetwork(device.id)
           ? { heldOnLocalNetwork: true }
           : {}),
-        tasks: running.filter((record) => record.deviceId === device.id).length,
+        tasks: running.get(device.id) ?? 0,
         runs:
           removing?.runs ??
           projects.filter((repo) => repo.runsOn === device.id).map((repo) => repo.name),

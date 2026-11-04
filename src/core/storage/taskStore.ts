@@ -1547,6 +1547,27 @@ export class TaskStore {
       .map((row) => row.task_id);
   }
 
+  /**
+   * How many active rows each computer that runs work holds, by its device
+   * id, read from `task_execution` without composing a record: Settings ->
+   * Devices counts them again after every task write (`Computers.list`).
+   * CROSS JOIN keeps the status index first, never a walk of execution rows.
+   */
+  countActiveByDevice(): Map<string, number> {
+    const devices = this.execution.exists()
+      ? (prepared(
+          this.db,
+          `SELECT x.device_id FROM tasks t CROSS JOIN task_execution x ON x.task_id = t.id
+           WHERE t.status = 'active' AND x.device_id IS NOT NULL`,
+        )
+          .pluck()
+          .all() as string[])
+      : this.listByStatus("active").flatMap((record) => record.deviceId ?? []);
+    const counts = new Map<string, number>();
+    for (const device of devices) counts.set(device, (counts.get(device) ?? 0) + 1);
+    return counts;
+  }
+
   /** Whether any row holds this status, answered without reading or composing one. */
   hasStatus(status: TaskStatus): boolean {
     return (

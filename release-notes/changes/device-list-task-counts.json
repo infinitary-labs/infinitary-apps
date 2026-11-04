@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "device-list-task-counts",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Fewer pauses as tasks change when another computer runs your work",
+      "body": "With a computer that runs work on your list, the window could stop answering for a moment each time a task changed, while Infinitary recounted the tasks running on each computer. It now counts them from where each task runs, without rereading every running task in full.",
+      "noPicture": "Your devices and the task counts look the same; this removes repeated reading behind each computer's count.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

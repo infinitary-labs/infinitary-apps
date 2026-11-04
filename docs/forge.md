@@ -999,7 +999,7 @@ A plain branch records its origin as its destination and confirms the pushed hea
 If the branch is not yet on the host, the existing plain forge sends it from the home computer after the story, retained files and publication permission pass; an already-pushed branch needs no write.
 Local-only routing reads the task's delivery policy even when the project has an origin; `prepare_change` verifies the committed head and retained files without locating a forge or requiring its sign-in.
 Both keep a completion binding of revision, head and content hash, separate from a hosted publication.
-Their cards use the same story renderer, radar, facts, required actions and merge line; self-merging notes use the same story and update in place after merging.
+Their cards use the same story renderer, radar, facts, required actions and merge line; self-merging notes use the same story and stay off the stack until their merge, then show once saying it merged (`docs/card-authoring.md`).
 A newer revision or moved head invalidates the prior completion.
 The offer and final merge boundary bind that exact story, and the local land checks its retained files and committed head before dispatch.
 A branch or local attempt waiting for its turn keeps the binding on its existing pending-settle record, so a restart never recaptures a newer story as approved.

@@ -10,7 +10,6 @@ import {
 } from "../../src/core/orchestrator/settleWords";
 import { openDatabase } from "../../src/core/storage/db";
 import type { RiskDimension } from "../../src/shared/cards";
-import { POLICY_MERGING_WORDS } from "../../src/shared/taskPolicies";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -41,7 +40,8 @@ import { cardScroller, factsStrip, riskChart, shownCard, stageAtRest } from "./s
  * Each journey owns a disposable git project and host readings, then commissions a real
  * task through the app, publishes its story and merges only through the existing consent.
  * Hosted descriptions must read back the story; branches and local work must merge the
- * committed change without a fabricated request number. Self-merging notes update in place.
+ * committed change without a fabricated request number. A self-merging note stays off the
+ * stack until its merge has a result, then shows once with its story and merged line (INF-2533).
  * The hermetic launcher and disposable GitHub/GitLab services are its only prerequisites;
  * no sign-in, account, keychain or resource is shared with another journey.
  */
@@ -116,9 +116,6 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
           name: MERGE_WORDS[kind === "local" ? "land" : "merge-pr"],
           exact: true,
         });
-        await expect(card).toBeVisible({ timeout: 45_000 });
-        const body = frame.locator("body");
-        await expect(body).toContainText(why);
         const risk = riskChart(page);
         const showStoryTop = async () => {
           await stageAtRest(page);
@@ -130,21 +127,39 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
           await expect(risk.dot("blast")).toBeInViewport();
           await readyRegion(risk.chart);
         };
-        await expect(risk.chart).toBeVisible();
-        for (const [dimension, rating] of Object.entries(MOCK_RISK))
-          await expect(risk.dot(dimension as RiskDimension)).toHaveAttribute(
-            "data-risk-level",
-            rating.level,
-          );
-        await expect(factsStrip(frame).project).toHaveText("meterlab");
+        // The story as a merge card draws it: the reason, the crewmate's radar and the facts.
+        const showsStory = async () => {
+          await expect(frame.locator("body")).toContainText(why);
+          await expect(risk.chart).toBeVisible();
+          for (const [dimension, rating] of Object.entries(MOCK_RISK))
+            await expect(risk.dot(dimension as RiskDimension)).toHaveAttribute(
+              "data-risk-level",
+              rating.level,
+            );
+          await expect(factsStrip(frame).project).toHaveText("meterlab");
+        };
         if (note) {
-          await expect(frame.locator(`[${MERGE_LINE_MARK}]`)).toContainText(
-            POLICY_MERGING_WORDS.on,
-          );
-          await expect(frame.locator(`[${MERGE_LINE_MARK}]`)).toContainText(
-            MERGE_SETTING_WORDS.project,
-          );
-          await expect(merge).toHaveCount(0);
+          // INF-2533: a task that merges on its own keeps its story note in its
+          // close-out wait, off the stack, once its crewmate's turn is over.
+          await expect
+            .poll(
+              async () => {
+                const board = await page.evaluate(() => window.infinitary.tasks.board());
+                const saved = await page.evaluate(() => window.infinitary.cards.list());
+                return {
+                  activity: board.tasks.find((row) => row.title === title)?.activity,
+                  held: saved
+                    .filter((entry) => entry.title === DESTINATION_STORY_TITLE)
+                    .map((entry) => entry.awaiting),
+                };
+              },
+              { timeout: 45_000 },
+            )
+            .toEqual({ activity: "idle", held: ["close-out"] });
+          await expect(card).toHaveCount(0);
+        } else {
+          await expect(card).toBeVisible({ timeout: 45_000 });
+          await showsStory();
         }
         const cards = await page.evaluate(() => window.infinitary.cards.list());
         const savedCard = cards.find((entry) => entry.title === DESTINATION_STORY_TITLE);
@@ -165,19 +180,17 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
           description = ((await response.json()) as { body: string }).body;
         }
         if (stub) expect(description).toContain(presentationMarkdownText(why));
-        // A shown completion grants nothing: the remote main still has only the seed.
+        // A saved completion grants nothing: the remote main still has only the seed.
         expect(git("-C", bare, "rev-parse", "main")).toBe(initial);
-        await showStoryTop();
+        if (!note) await showStoryTop();
         const evidence =
           test.info().repeatEachIndex === 0 ? process.env.INFINITARY_TASK_EVIDENCE_DIR : undefined;
         if (evidence) {
-          await regionShot(card, join(evidence, `${kind}-${note ? "note" : "offer"}-after.png`));
+          if (!note) await regionShot(card, join(evidence, `${kind}-offer-after.png`));
           writeFileSync(
             join(evidence, `${kind}-${note ? "note" : "offer"}-after.json`),
             JSON.stringify({ card: savedCard, description: description ?? null }, null, 2),
           );
-          if (kind === "local" && note)
-            await heroShot(launched.app, page, { region: card, name: "saved-story-everywhere" });
         }
         if (note) {
           await input.fill(
@@ -199,13 +212,16 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
           if (kind === "local") expect(git("-C", bare, "rev-parse", "main")).toBe(initial);
         }
         if (note) {
+          // The merge has a result: the held note shows once, already saying it merged.
           await expect(card).toBeVisible();
-          await expect(frame.locator(`[${MERGE_LINE_MARK}]`)).toContainText(
-            mergedWords("", true).trim(),
-          );
-          await expect(frame.locator(`[${MERGE_LINE_MARK}]`)).toContainText(
+          await showsStory();
+          await expect(merge).toHaveCount(0);
+          const line = frame.locator(`[${MERGE_LINE_MARK}]`);
+          await expect(line).toContainText(mergedWords("", true).trim());
+          await expect(line).toContainText(
             MOCK_CLOSING_SENTENCES[kind === "local" ? "land" : "merge-pr"],
           );
+          await expect(line).not.toContainText(MERGE_SETTING_WORDS.project);
           expect(
             (await page.evaluate(() => window.infinitary.cards.list())).filter(
               (entry) => entry.title === DESTINATION_STORY_TITLE,
@@ -213,6 +229,8 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
           ).toHaveLength(1);
           await showStoryTop();
           if (evidence) await regionShot(card, join(evidence, `${kind}-note-merged-after.png`));
+          if (evidence && kind === "local")
+            await heroShot(launched.app, page, { region: card, name: "saved-story-everywhere" });
         }
         if (evidence)
           writeFileSync(

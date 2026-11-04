@@ -500,12 +500,11 @@ public struct PhoneNotice: Equatable, Sendable {
             while !Task.isCancelled {
                 let message = try await socket.receive()
                 guard current == generation, !Task.isCancelled else { break }
-                let data: Data
-                switch message {
-                case .string(let text): data = Data(text.utf8)
-                default: throw PhoneError.invalidReply
-                }
-                try await receive(data, on: socket)
+                guard case .string(let text) = message else { throw PhoneError.invalidReply }
+                // INF-2566: the frame is parsed and its payload decoded off the main thread, then read here in order.
+                let frame = try await PhoneFrame.decode(text, reads: pending)
+                guard current == generation, !Task.isCancelled else { break }
+                try await receive(frame, on: socket)
                 guard current == generation, !Task.isCancelled else { break }
                 if contact == "in-reach" {
                     reached = true; refused = 0
@@ -535,9 +534,9 @@ public struct PhoneNotice: Equatable, Sendable {
         return reached
     }
 
-    private func receive(_ data: Data, on socket: URLSessionWebSocketTask) async throws {
-        guard let frame = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let kind = frame["t"] as? String else { throw PhoneError.invalidReply }
+    private func receive(_ decoded: PhoneFrame, on socket: URLSessionWebSocketTask) async throws {
+        let frame = decoded.frame
+        guard let kind = frame["t"] as? String else { throw PhoneError.invalidReply }
         heardAt = Date()
         switch kind {
         case "welcome":
@@ -580,26 +579,26 @@ public struct PhoneNotice: Equatable, Sendable {
             guard seq == sequence + 1 else { epoch = nil; throw PhoneError.invalidReply }
             sequence = seq
             if frame["channel"] as? String == "inf:cards" {
-                guard let snapshot = frame["payload"] else { throw PhoneError.invalidReply }
-                let updated = try JSONDecoder().decode([PhoneCard].self, from: JSONSerialization.data(withJSONObject: snapshot))
+                guard frame["payload"] != nil else { throw PhoneError.invalidReply }
+                let updated = try decoded.cards()
                 let departed = cards.filter { old in !updated.contains { $0.id == old.id } }.map(\.id)
                 cards = updated
                 for id in departed { Task { try? await self.readPast(id) } }
                 observeCards(cards)
                 supersede(PhoneContract.cards)
             }
-            if frame["channel"] as? String == "inf:computers:presence", let payload = frame["payload"], sceneObservations {
-                computers = try JSONDecoder().decode([PhoneComputerPresence].self, from: JSONSerialization.data(withJSONObject: payload))
+            if frame["channel"] as? String == "inf:computers:presence", frame["payload"] != nil, sceneObservations {
+                computers = try decoded.computers()
                 supersede(PhoneRequest.computers.rawValue)
             }
-            if frame["channel"] as? String == "inf:tasks", let payload = frame["payload"] {
-                board = try JSONDecoder().decode(PhoneBoard.self, from: JSONSerialization.data(withJSONObject: payload))
+            if frame["channel"] as? String == "inf:tasks", frame["payload"] != nil {
+                board = try decoded.board()
                 supersede(PhoneRequest.board.rawValue); workRevision += 1
             }
             // A delta folds onto the board held, as on the Mac (INF-1854); a full read is the contract's resync path
             // for a delta with no base to apply to.
-            if frame["channel"] as? String == "inf:tasks:delta", let payload = frame["payload"] {
-                let delta = try JSONDecoder().decode(PhoneBoardDelta.self, from: JSONSerialization.data(withJSONObject: payload))
+            if frame["channel"] as? String == "inf:tasks:delta", frame["payload"] != nil {
+                let delta = try decoded.delta()
                 if let held = board, let next = held.applying(delta) {
                     if next.seq != held.seq { board = next; supersede(PhoneRequest.board.rawValue); workRevision += 1 }
                 } else {
@@ -642,9 +641,9 @@ public struct PhoneNotice: Equatable, Sendable {
             guard let id = frame["id"] as? Int else { throw PhoneError.invalidReply }
             if let (_, continuation) = calls.removeValue(forKey: id) {
                 waitingSince.removeValue(forKey: id)
-                if frame["ok"] as? Bool == true, let value = frame["value"] {
-                    do { continuation.resume(returning: try JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed)) }
-                    catch { continuation.resume(throwing: PhoneError.invalidReply) }
+                if frame["ok"] as? Bool == true, frame["value"] != nil {
+                    if let answer = decoded.answer { continuation.resume(returning: answer) }
+                    else { continuation.resume(throwing: PhoneError.invalidReply) }
                 } else {
                     continuation.resume(throwing: PhoneError.refused((frame["error"] as? [String: Any])?["message"] as? String ?? frame["error"] as? String ?? "Your computer refused this request."))
                 }
@@ -652,19 +651,18 @@ public struct PhoneNotice: Equatable, Sendable {
             }
             guard let channel = pending.removeValue(forKey: id) else { return }
             waitingSince.removeValue(forKey: id)
-            guard frame["ok"] as? Bool == true, let value = frame["value"] else {
+            guard frame["ok"] as? Bool == true, frame["value"] != nil else {
                 throw PhoneError.invalidReply
             }
-            let bytes = try JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed)
             switch channel {
-            case PhoneContract.cards: cards = try JSONDecoder().decode([PhoneCard].self, from: bytes); observeCards(cards)
-            case PhoneContract.feed: activity = try JSONDecoder().decode([ActivityLine].self, from: bytes)
-            case PhoneRequest.board.rawValue: board = try JSONDecoder().decode(PhoneBoard.self, from: bytes); workRevision += 1
+            case PhoneContract.cards: cards = try decoded.cards(); observeCards(cards)
+            case PhoneContract.feed: activity = try decoded.feed()
+            case PhoneRequest.board.rawValue: board = try decoded.board(); workRevision += 1
             case PhoneRequest.conversationState.rawValue:
-                firstmateBusy = try JSONDecoder().decode(PhoneConversationState.self, from: bytes).busy
+                firstmateBusy = try decoded.conversation().busy
                 firstmateObserved = true
-            case PhoneRequest.computers.rawValue: computers = try JSONDecoder().decode([PhoneComputerPresence].self, from: bytes)
-            case PhoneRequest.lastTurn.rawValue: lastTurn = try JSONDecoder().decode(PhoneLastTurn?.self, from: bytes)
+            case PhoneRequest.computers.rawValue: computers = try decoded.computers()
+            case PhoneRequest.lastTurn.rawValue: lastTurn = try decoded.lastTurn()
             default: break
             }
             markReady(channel)

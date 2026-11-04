@@ -90,6 +90,8 @@ A return consumes numbered replay pushes, or reads fresh snapshots after a reloa
 All four initial snapshots must arrive before the app says **In reach**.
 A card or task-board push supplies the new snapshot directly and supersedes any older initial read still in flight.
 A task-board delta folds onto the board the app holds, as the Mac’s `applyTaskBoardDelta` does (`PhoneBoard.applying`), because a full read of a large board on every task change stalled the crew scene on the main thread (INF-1854).
+Each frame from the computer is parsed, and its board, delta, card, feed and presence payloads decoded, off the main thread (`PhoneFrame.decode`, INF-2566); the session then reads the decoded frames on the main actor in the order they arrived.
+A payload that cannot decode fails only where the session reads it, as decoding in place did.
 Only a delta whose base is not the board held requests a coalesced full board, the published resynchronization path.
 Only a closed list of non-streaming events that can change the feed requests a coalesced feed refresh; assistant and thinking deltas cause no reads.
 The feed owner exports `FEED_EVENT_TYPES`, with its authoring switch checked exhaustively against that list, and the contract generator derives the Swift `FeedChange` enum from it.
@@ -266,7 +268,7 @@ The message capsule's glass takes corners concentric with the screen's.
 It also holds `SensoryFeedback.phone`, the one soft tap played when the computer accepts a message, a card's answer or reply, or a task's start, continue, interrupt or steer, and when `returns` counts the computer back; a page turn plays none.
 Join, Leave and Forget ask in alerts, which keep the cancel choice in view; on iOS 26 a confirmation dialog becomes a popover that hides it, and the Join request has no button to anchor to.
 
-`PhoneCharacter` draws the Mac's character in a native Canvas with the numbers of the Mac's own character code (`src/renderer/src/character`), so the two move alike.
+`PhoneCharacter` draws the Mac's character natively with the numbers of the Mac's own character code (`src/renderer/src/character`), so the two move alike.
 At rest the tesseract drifts slowly and the eyes blink every few seconds and wander; listening breathes as two counter-rotating hexagons; working speeds up with the Mac's ember, shimmer and halo, with white-hot cores.
 It plays the desktop repertoire natively: greet, celebrate, ponder, confused and the five reply reactions, with the roll, yawn, orbit, constellation, Saturn, galaxy, Algol and black-hole fidgets.
 The first character a person sees after opening or joining greets once (`CharacterCues.greetOnNextSight`).
@@ -275,11 +277,14 @@ A character that leaves mid-greeting, such as the empty stage a join shows befor
 A live `firstmate_emote` reaches the characters on screen; reply reactions wait for the turn to finish, with the first request winning as on the desktop.
 A reaction replayed while reconnecting is not played, and a character off screen does not keep one for later.
 The wire and halo boosts come from the design skill's tokens through `scripts/generate-phone-theme.ts`, like its colours.
-Its isolated display clock requests the permitted screen cadence up to 120 frames per second, with the iPhone ProMotion opt-in; iOS still chooses the delivered cadence under power and thermal constraints.
+The crew scene draws on its own render thread, never the main thread (INF-2566, the captain's approved direction B): `PhoneSceneRenderer` runs a display link on that thread's run loop, paints the first mate, the crew, the warp and the selection and summary marks through Core Graphics (`ScenePen`), and presents each frame on a Metal layer, so a busy main thread no longer drops the scene's frames.
+The painters draw through `ScenePen`, which a SwiftUI Canvas also uses through `withCGContext`, so the character elsewhere in the app draws with the same code; the scene's halo is a three-pass box blur standing in for SwiftUI's Gaussian blur.
+The main thread only hands the renderer what it shows (the roster, the state, the palette, the pan and the marks) and never waits for a frame.
+That display link requests the permitted screen cadence up to 120 frames per second, with the iPhone ProMotion opt-in; iOS still chooses the delivered cadence under power and thermal constraints.
 The clock advances by elapsed time, excludes hidden/background time and stops callbacks while hidden, inactive or under Reduce Motion, which shows a settled pose without emotes.
 `scripts/generate-phone-scene.ts` generates native geometry, targets, timing and reply comparison traces from the desktop owners; the phone gate checks that they are current.
 Simulator callback timings measure that run, not physical ProMotion delivery, battery use or thermal behavior.
-The DEBUG-only cadence observer identifies its target Canvas and records its mode, warmed heat and rotation so another window cannot contaminate a sample.
+The DEBUG-only cadence observer identifies its target drawing and records its mode, warmed heat and rotation so another window cannot contaminate a sample.
 The same display-tick sample measures the isolated first mate and the production crowded scene with its real task roster, retaining drawing work, interval tails and the delivered display intervals separately.
 A main-run-loop observer retains its actual before-sources, before-waiting and after-waiting timestamps for both warmup and sampling, without adding a wait or moving the 60-callback warmup, 240-callback sample or their deadlines.
 The warmup and the sample each have 20 seconds on the load clock, read on the main thread that receives the callbacks, never a wall-clock XCTest wait (INF-1506).
@@ -308,6 +313,8 @@ A re-spaced or resized orbit glides its crew around it, and neither orbits nor a
 Its native Browse crew command, Shift-Command-C, enters app-owned browsing with an accent viewport outline; arrow keys pan it, Tab selects a real crewmate and Space opens that crewmate's preview.
 While browsing, a scene-owned responder holds first-responder status and offers those unmodified keys as priority key commands, because SwiftUI shortcuts for them lose to the system's focus and text handling.
 Each crewmate and program answers touch across its 44-point square, not only the drawn circle.
+One UIKit view under the scene (`PhoneSceneTouches`) answers touch and accessibility from the frame the render thread last drew, read only when a touch or an accessibility query arrives, rather than a SwiftUI button laid out for each crewmate on every frame.
+A tap opens the crewmate the frame on screen at touch-down drew under the finger, from the last half second of drawn frames, because the crew keep moving on the render thread before the tap is recognized as the finger lifts.
 Where two squares overlap, each point belongs to the nearer center (`PhoneTouchCell`), so a tap on a crewmate's own center always reaches it.
 Selection has an accent outline and an accessibility value; Tab brings it into view without relying on SwiftUI's platform-focus reporting.
 Escape, editing, a preview, a task record, leaving Home or backgrounding stops browsing and releases that responder, so the unmodified commands do not take over other controls.

@@ -256,13 +256,18 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
             now: facts.now?.text ?? null,
             plan: current?.label ?? null,
             model: facts.model,
-            reasoning: facts.reasoning ? reasoningWord(facts.reasoning) : null,
             change: facts.delivery?.change
               ? (facts.delivery.change.label ?? facts.delivery.change.noun)
               : null,
-            checks: facts.delivery?.checks?.words ?? null,
+            // INF-2528: the summary's footer says the checks as one state; the counts and the footnote are the record's.
+            checks: facts.delivery?.checks?.state ?? null,
             review: facts.delivery?.review?.words ?? null,
-            reason: facts.reason,
+            // INF-2528: what the summary leaves out, as the task record shows it.
+            record: {
+              checks: facts.delivery?.checks?.words ?? null,
+              reasoning: facts.reasoning ? reasoningWord(facts.reasoning) : null,
+              recorded: Object.keys(row.blockedSince ?? {}),
+            },
             blocked: row.blockedBy,
           };
         }

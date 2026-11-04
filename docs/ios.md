@@ -311,6 +311,8 @@ Escape, editing, a preview, a task record, leaving Home or backgrounding stops b
 Each crewmate retains the published tier, work posture, computer and review identity; programs draw only their live parts, with their actual dependency branches.
 A crewmate whose task is in the phone's Waiting on you group wears the desktop's beacon, the ring that breathes round it, from the same generated numbers (`captain`), and holds it whole at mid light on a still frame (`docs/crew-orbits.md`, INF-1543).
 A crewmate's summary opens in the system's standard sheet (INF-1926): it is the desktop's crew summary in its words, order and marks at 14 points, the board row at once and then the task record's own read, polled each second while it is open.
+Like the desktop's, it stays short (INF-2528): the status keeps its short reason, Blocked by names keys only, and the footer is one row, the model with its intelligence badge, then the change with its checks as one state and its time (`#813 running for 11m`); a long model name ends in an ellipsis, and a review takes a second row.
+What it leaves out is on the native task record's Info: Waiting for with when each wait was recorded, the reasoning level with its note, and the checks with their counts and any reason they could not all be read.
 `PhoneTaskFacts` in the shared package ports the desktop's facts (`taskFactsOf`, its status, checks and plan), and `PhoneTaskFactsTests` replays the desktop's own readings, recorded by `scripts/generate-phone-scene.ts`.
 The sheet closes the standard way, by a tap beside it, a swipe down or Escape, with no close mark; while it is open the scene stands still where it is, and the crewmate it describes wears the desktop's corner brackets.
 A running part, a blocker, the task a review checks or a part's program shows its own summary in the same sheet, and Open task swaps the sheet for the existing native task record.
@@ -352,7 +354,7 @@ A tap on such a row brings its cards back on every Mac and shows them on Home; a
 The search waits above the list until the list is pulled down from its top, as the Mac's waits behind its icon.
 Find a task (Shift-Command-F, the Mac's key) opens it with the caret in the field; Close search, or Escape on an empty field, puts it away.
 VoiceOver cannot pull past the top of a list, so the search is always shown while it runs.
-A record shows the goal, captain’s words, progress, latest report, model and timeline; its Crewmate section reads the redacted session and live words from their Mac owners.
+A record shows the goal, captain’s words, progress, latest report, what it waits for, model, reasoning, checks and timeline; its Crewmate section reads the redacted session and live words from their Mac owners.
 The timeline's events sit on a hairline rail in caption size, each time right-aligned.
 The open record refreshes once a second, as the desktop transcript does, and no hidden record polls.
 Start and Continue come only from the Mac’s `moves`; Steer and Interrupt use the existing captain-owned task channels, never a phone worker.

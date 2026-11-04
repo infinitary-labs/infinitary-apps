@@ -296,8 +296,23 @@ struct PhoneTaskRecord: View {
             }
             if let outcome = task.outcome { section("Latest report", outcome) }
             if let problem = task.problem { section("What happened", problem) }
-            if !task.blockedBy.isEmpty { section("Waiting for", task.blockedBy.joined(separator: ", ")) }
+            // INF-2528: the details the crew summary leaves out live here - when each wait was recorded, the reasoning
+            // level with its note, and the check counts with any reason they could not all be read.
+            if !task.blockedBy.isEmpty {
+                section("Waiting for", task.blockedBy.map { key in
+                    task.blockedSince?[key].map { "\(key) recorded \(Self.time(Date(timeIntervalSince1970: $0 / 1000), now: .now))" } ?? key
+                }.joined(separator: ", "), id: "task-record-waiting")
+            }
+            let facts = PhoneTaskFacts(task, modelName: { model in task.modelLabel ?? PhoneCrewSummary.modelTail(model) })
             if let model = task.modelLabel { section("Crewmate", "\(task.assignee ?? "Crewmate") · \(model)") }
+            if let reasoning = facts.reasoning {
+                section("Reasoning", [reasoning, facts.reason].compactMap { $0 }.joined(separator: ". "), id: "task-record-reasoning")
+            }
+            if let checks = facts.delivery?.checks {
+                let change = facts.delivery?.change.map { $0.label ?? $0.noun }
+                section("Checks", [change, checks.spanWords(now: Date.now.timeIntervalSince1970 * 1000)].compactMap { $0 }
+                    .joined(separator: " · "), id: "task-record-checks")
+            }
             Text("Timeline").font(PhoneFont.headline)
             timeline
         }
@@ -404,8 +419,11 @@ struct PhoneTaskRecord: View {
         }.buttonStyle(PhoneChoiceStyle(primary: primary)).accessibilityIdentifier(id)
     }
 
-    private func section(_ title: String, _ text: String) -> some View {
-        VStack(alignment: .leading, spacing: PhoneTheme.space2) { Text(title).font(PhoneFont.headline); Text(text).textSelection(.enabled) }
+    private func section(_ title: String, _ text: String, id: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            Text(title).font(PhoneFont.headline)
+            if let id { Text(text).textSelection(.enabled).accessibilityIdentifier(id) } else { Text(text).textSelection(.enabled) }
+        }
     }
 
     private func refresh() async {

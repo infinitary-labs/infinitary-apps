@@ -260,7 +260,8 @@
             "state": "next"
           }
         ],
-        "checksWords": "2 running · 1 passed for 15m"
+        "checksWords": "2 running · 1 passed for 15m",
+        "checksStateWords": "running for 15m"
       }
     },
     {
@@ -344,7 +345,8 @@
         },
         "browser": null,
         "label": "Working",
-        "checksWords": "running"
+        "checksWords": "running",
+        "checksStateWords": "running"
       }
     },
     {
@@ -605,6 +607,7 @@
           }
         ],
         "checksWords": "2 passed · 1 skipped in 14m",
+        "checksStateWords": "passed in 14m",
         "checksAgo": "16m ago"
       }
     },
@@ -1615,6 +1618,7 @@
           }
         ],
         "checksWords": "1 failed · 2 passed after 12m",
+        "checksStateWords": "failed after 12m",
         "checksAgo": "38m ago"
       }
     },
@@ -2398,7 +2402,8 @@
             "state": "next"
           }
         ],
-        "checksWords": "no checks"
+        "checksWords": "no checks",
+        "checksStateWords": "no checks"
       }
     },
     {
@@ -2699,7 +2704,8 @@
         },
         "browser": null,
         "label": "Idle · Paused for access",
-        "checksWords": "passed · cannot read all checks: the host refused the read"
+        "checksWords": "passed · cannot read all checks: the host refused the read",
+        "checksStateWords": "cannot read all checks"
       }
     },
     {
@@ -3154,7 +3160,8 @@
         },
         "browser": null,
         "label": "Working",
-        "checksWords": "not read for this version"
+        "checksWords": "not read for this version",
+        "checksStateWords": "passed"
       }
     },
     {
@@ -3253,7 +3260,8 @@
         },
         "browser": null,
         "label": "Working",
-        "checksWords": "1 passed · 1 neutral · reading incomplete"
+        "checksWords": "1 passed · 1 neutral · reading incomplete",
+        "checksStateWords": "reading incomplete"
       }
     },
     {
@@ -3351,7 +3359,8 @@
         },
         "browser": null,
         "label": "Working",
-        "checksWords": "1 neutral · 1 passed"
+        "checksWords": "1 neutral · 1 passed",
+        "checksStateWords": "neutral"
       }
     },
     {
@@ -3445,7 +3454,8 @@
         },
         "browser": null,
         "label": "Working",
-        "checksWords": "none reported for 2m"
+        "checksWords": "none reported for 2m",
+        "checksStateWords": "none reported for 2m"
       }
     },
     {
@@ -3527,7 +3537,8 @@
         },
         "browser": null,
         "label": "Working",
-        "checksWords": "not read yet"
+        "checksWords": "not read yet",
+        "checksStateWords": "not read yet"
       }
     },
     {
@@ -3618,6 +3629,7 @@
         "browser": null,
         "label": "Working",
         "checksWords": "passed in 3h 04m",
+        "checksStateWords": "passed in 3h 04m",
         "checksAgo": "just now"
       }
     },
@@ -3706,7 +3718,8 @@
         },
         "browser": null,
         "label": "Working",
-        "checksWords": "running for 1h 10m"
+        "checksWords": "running for 1h 10m",
+        "checksStateWords": "running for 1h 10m"
       }
     },
     {
@@ -3795,6 +3808,7 @@
         "browser": null,
         "label": "Working",
         "checksWords": "cancelled after 5m",
+        "checksStateWords": "cancelled after 5m",
         "checksAgo": "4m ago"
       }
     },
@@ -3883,7 +3897,8 @@
         },
         "browser": null,
         "label": "Working",
-        "checksWords": "passed"
+        "checksWords": "passed",
+        "checksStateWords": "passed"
       }
     },
     {

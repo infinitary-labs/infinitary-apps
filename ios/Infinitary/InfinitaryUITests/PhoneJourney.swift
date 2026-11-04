@@ -1008,7 +1008,11 @@ import XCTest
             tapOrbitingCrew(crewmate, in: scene, orbiting: orbiting, pace: pace)
             // The working summary is the change's hero picture, so it is kept in both appearances.
             try await verifyCrewSummary(try XCTUnwrap(summaries[id]), picture: name, themes: name == "native-scene-working-preview")
-            closeCrewSummary()
+            if name == "native-scene-working-preview" {
+                try verifyRecordDetails(try XCTUnwrap(summaries[id]), picture: "native-scene-working-record")
+            } else {
+                closeCrewSummary()
+            }
         }
         // A different computer remains a formation beside home, never a pager or a smaller version of every glyph.
         revealCrew(remote, in: scene)
@@ -1039,7 +1043,7 @@ import XCTest
         XCTAssertTrue(part.waitForPresence(timeout: 10), "The program's Running row lists the blocked part")
         tapOnPhone(part)
         try await verifyCrewSummary(blocked, picture: "native-scene-blocked-preview")
-        closeCrewSummary()
+        try verifyRecordDetails(blocked, picture: "native-scene-blocked-record")
         _ = try await home("scene-stage-finished")
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'Program, 0 running parts'"), object: mark, timeout: 10), .completed, app.debugDescription)
         picture("native-scene-between-program-stages")
@@ -1105,8 +1109,7 @@ import XCTest
                            "\(name): Now reads \(shown.label), the desktop reads \(now)")
         }
         for (field, id) in [("status", "crew-summary-status"), ("project", "crew-summary-project"), ("plan", "crew-summary-plan"),
-                            ("model", "crew-summary-model"), ("reasoning", "crew-summary-reasoning"), ("change", "crew-summary-change"),
-                            ("review", "crew-summary-review"), ("reason", "crew-summary-reason")] {
+                            ("model", "crew-summary-model"), ("change", "crew-summary-change"), ("review", "crew-summary-review")] {
             let shown = preview.staticTexts[id]
             if let words = want[field] as? String, !words.isEmpty {
                 XCTAssertEqual(shown.label, words, "\(name): \(field) as the desktop says it")
@@ -1114,7 +1117,12 @@ import XCTest
                 XCTAssertFalse(shown.exists, "\(name): the desktop shows no \(field)")
             }
         }
-        // The checks' words are followed by how long they have run, which moves with the clock.
+        // INF-2528, the captain's direction B: the summary stays short; reasoning, its footnote and the check counts
+        // are the task record's.
+        for id in ["crew-summary-reasoning", "crew-summary-reason"] {
+            XCTAssertFalse(preview.staticTexts[id].exists, "\(name): the summary shows no \(id)")
+        }
+        // The checks' one state is followed by how long they have run, which moves with the clock.
         if let checks = want["checks"] as? String {
             let shown = preview.staticTexts["crew-summary-checks"].label
             XCTAssertTrue(shown.hasPrefix(checks), "\(name): checks read \(shown), the desktop reads \(checks)")
@@ -1125,7 +1133,40 @@ import XCTest
             XCTAssertTrue(preview.otherElements["crew-summary-blocked"].descendants(matching: .any)[key].exists,
                           "\(name): Blocked by names \(key)")
         }
+        // INF-2528: Blocked by names keys only; when each wait was recorded is the task record's.
+        let blockedWords = preview.otherElements["crew-summary-blocked"].staticTexts.allElementsBoundByIndex.map(\.label)
+        XCTAssertFalse(blockedWords.contains { $0.contains("recorded") }, "\(name): Blocked by reads \(blockedWords)")
         if themes { try await appearances(name, showing: task) } else { picture(name) }
+    }
+
+    /// INF-2528, the captain's "more details should be shown in the task card, not in the preview": Open task shows
+    /// what the summary leaves out - the check counts, the reasoning level and when each wait was recorded - in the
+    /// desktop's words for the same task (`record` in tests/helpers/phoneScene.ts), then the record closes.
+    private func verifyRecordDetails(_ want: [String: Any], picture name: String) throws {
+        let record = try XCTUnwrap(want["record"] as? [String: Any])
+        tapOnPhone(app.buttons["open-crew-task"])
+        XCTAssertTrue(app.staticTexts["task-record-title"].waitForPresence(timeout: 10), "\(name): Open task shows the record")
+        let checks = app.staticTexts["task-record-checks"], reasoning = app.staticTexts["task-record-reasoning"]
+        if let words = record["checks"] as? String {
+            XCTAssertTrue(checks.waitForPresence(timeout: 10), "\(name): the record shows the checks")
+            XCTAssertTrue(checks.label.contains(words), "\(name): the record's checks read \(checks.label), the desktop reads \(words)")
+        } else {
+            XCTAssertFalse(checks.exists, "\(name): the desktop's record shows no checks")
+        }
+        if let words = record["reasoning"] as? String {
+            XCTAssertTrue(reasoning.waitForPresence(timeout: 10), "\(name): the record shows the reasoning")
+            XCTAssertTrue(reasoning.label.hasPrefix(words), "\(name): the record's reasoning reads \(reasoning.label), the desktop reads \(words)")
+        } else {
+            XCTAssertFalse(reasoning.exists, "\(name): the desktop's record shows no reasoning")
+        }
+        for key in record["recorded"] as? [String] ?? [] {
+            let waiting = app.staticTexts["task-record-waiting"]
+            XCTAssertTrue(waiting.waitForPresence(timeout: 10), "\(name): the record shows what it waits for")
+            XCTAssertTrue(waiting.label.contains("\(key) recorded "), "\(name): Waiting for reads \(waiting.label)")
+        }
+        picture(name)
+        tapOnPhone(app.buttons["close-record"])
+        XCTAssertTrue(app.staticTexts["task-record-title"].waitForAbsence(timeout: 10), "\(name): the record closes")
     }
 
     /// INF-1926, the captain's "standard sheet interaction": a tap above the sheet closes it, with no close mark.

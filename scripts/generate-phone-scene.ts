@@ -176,6 +176,8 @@ try {
           current: counts.current ? counts.current.label : counts.done === counts.total ? "All done" : "Between items" } : undefined,
         planDots: facts.plan ? planDots(shown) : undefined,
         checksWords: checks ? (checks.span ? checksSpanWords(checks.words, checks.span, now) : checks.words) : undefined,
+        // INF-2528: the summary's footer says the checks as one state with its time.
+        checksStateWords: checks ? (checks.span ? checksSpanWords(checks.state, checks.span, now) : checks.state) : undefined,
         checksAgo: checks?.span?.finishedAt != null ? checksFinishedAgo(checks.span.finishedAt, now) : undefined } };
     }) };
   }

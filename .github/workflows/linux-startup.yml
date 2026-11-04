@@ -5,6 +5,10 @@ name: Linux automatic startup
 on:
   workflow_call:
     inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
       ref:
         description: The commit to check
         type: string
@@ -15,6 +19,7 @@ permissions:
 
 jobs:
   runtime-facts:
+    name: ${{ format('{0} · Automatic startup checks (Linux)', inputs.trigger || 'Main push') }}
     # main.yml is the only caller, and main's Linux jobs run on GitHub's
     # hosted Ubuntu (docs/testing.md, "Main's desktop release check"), a fresh
     # machine with systemd and Docker. The pull request's copy in ci.yml

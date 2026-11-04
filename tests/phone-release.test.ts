@@ -449,11 +449,16 @@ describe("the dispatched workflow's gate", () => {
     const inputs = Object.fromEntries(
       Object.entries(call.with).map(([key, value]) => [
         key,
-        workflowValue(String(value), { needs }),
+        String(value).includes("${{") ? workflowValue(String(value), { needs }) : value,
       ]),
     );
     // INF-2430's plan, piece 1: the call also runs its Linux job on GitHub's hosted machines.
-    expect(inputs).toEqual({ source_commit: source, hosted: true });
+    // INF-2410's scheme A: its jobs' names lead with the release's trigger.
+    expect(inputs).toEqual({
+      trigger: "Requested TestFlight",
+      source_commit: source,
+      hosted: true,
+    });
     expect(phone.on.workflow_call.inputs.source_commit.type).toBe("string");
     const contexts = {
       inputs,

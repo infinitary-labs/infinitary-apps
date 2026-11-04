@@ -4,9 +4,10 @@ name: main
 # B): every push to main starts the full check. It checks the desktop app's
 # release (INF-2498, the captain: "the main check should be clarified to be
 # specifically about the desktop app's release"): its passing run is what the
-# desktop app's alpha is cut from. The workflow's name, main, and its job names
-# stay, since the Automation rule, the alpha's proof reader and stable
-# promotion read them. It replaces the nightly full check. Main runs no old
+# desktop app's alpha is cut from. The workflow's name, main, stays, since the
+# Automation rule reads it; its job names lead with their trigger, and the
+# alpha's proof reader and stable promotion read them through
+# scripts/ci-job-names.mjs. It replaces the nightly full check. Main runs no old
 # journey set (INF-2480, the captain: "old set at the release check only, from
 # the first piece on"): its full check is the Linux checks and the Mac lane
 # with only the tests that need a Mac, and every alpha runs every journey on
@@ -57,13 +58,20 @@ permissions:
 jobs:
   # INF-2465: no check starts while the previous check's alpha is cut, and
   # merges made meanwhile are checked together (alpha-wait.yml says how).
+  # Each job's name leads with what started the run, and every called
+  # workflow gets it too (scripts/ci-job-names.mjs): a check started by hand
+  # is a manual request, never a main push.
   alpha-wait:
+    name: ${{ format('{0} · Alpha cut wait', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/alpha-wait.yml
+    with:
+      trigger: ${{ (github.event_name == 'push' && 'Main push' || 'Manual request') }}
   # Sorts the push first (docs/testing.md, "The swept batch"): files that are
   # exactly a green batch's are already checked, so the full check is
   # skipped; a batch partly merged ends this run at once, cutting no alpha
   # and leaving no failed run; anything else gets the full check.
   sort:
+    name: ${{ format('{0} · Compare with checked batches', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -105,7 +113,7 @@ jobs:
   covered:
     needs: [alpha-wait, sort]
     if: needs.sort.outputs.kind == 'covered'
-    name: covered by batch ${{ needs.sort.outputs.batch }}
+    name: ${{ format('{0} · Covered by batch run {1}', (github.event_name == 'push' && 'Main push' || 'Manual request'), needs.sort.outputs.batch) }}
     runs-on: ubuntu-24.04
     steps:
       - env:
@@ -117,8 +125,10 @@ jobs:
   verify:
     needs: [alpha-wait, sort]
     if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' }}
+    name: ${{ format('{0} · Desktop checks', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/verify.yml
     with:
+      trigger: ${{ (github.event_name == 'push' && 'Main push' || 'Manual request') }}
       ref: ${{ github.sha }}
       profile: stable
       part: checks
@@ -130,6 +140,8 @@ jobs:
   # GitHub's hosted Ubuntu (linux-startup.yml names it: main is its only caller).
   startup:
     needs: alpha-wait
+    name: ${{ format('{0} · Linux startup', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/linux-startup.yml
     with:
+      trigger: ${{ (github.event_name == 'push' && 'Main push' || 'Manual request') }}
       ref: ${{ github.sha }}

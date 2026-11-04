@@ -32,7 +32,9 @@ concurrency:
 # tests): a stuck test or wait ends sooner, by its own cap of at most 10
 # minutes (docs/test-cohorts.md, "Budgets"), and these steps take about two.
 jobs:
+  # Each job's name leads with what started it (scripts/ci-job-names.mjs).
   typecheck-lint-build:
+    name: ${{ github.event_name == 'pull_request' && 'Pull request · Code, build and affected unit tests (Linux)' || 'Manual request · Code and build (Linux)' }}
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').typecheck || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
@@ -89,6 +91,7 @@ jobs:
   # and the job still reports (scripts/startup-paths.ts).
   linux-startup:
     if: github.event_name == 'pull_request'
+    name: Pull request · Startup checks (Linux)
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').startup || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
@@ -114,8 +117,10 @@ jobs:
   # release check.
   critical-path:
     if: github.event_name == 'pull_request'
+    name: Pull request · Critical-path journey
     uses: ./.github/workflows/source-journeys.yml
     with:
+      trigger: Pull request
       suite: affected
       lane: desktop
       files: tests/e2e/critical-path.spec.ts
@@ -124,6 +129,7 @@ jobs:
   # The in-memory cohorts and the browser layer (docs/test-cohorts.md).
   unit-tests:
     if: github.event_name != 'pull_request'
+    name: Manual request · Unit tests (Linux)
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
@@ -147,7 +153,7 @@ jobs:
   # its budgets measure. Each shard reports even when the other fails.
   integration-tests:
     if: github.event_name != 'pull_request'
-    name: integration-tests (${{ matrix.shard }}/${{ strategy.job-total }})
+    name: ${{ format('Manual request · Integration tests (Linux; group {0}/{1})', matrix.shard, strategy.job-total) }}
     strategy:
       fail-fast: false
       matrix:
@@ -172,6 +178,7 @@ jobs:
   # Run every probe on request, never a changed-path selection.
   probe-tests:
     if: github.event_name != 'pull_request'
+    name: Manual request · Environment checks (Linux)
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4

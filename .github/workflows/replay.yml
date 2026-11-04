@@ -18,6 +18,7 @@ concurrency:
 
 jobs:
   replay-gate:
+    name: Manual request · First mate replay checks
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     # The path every crewmate works under (journeys.yml says why).
     defaults:

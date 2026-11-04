@@ -16,6 +16,7 @@ import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
+import { legacyJobName } from "./ci-job-names.mjs";
 import { assertInstallerEnvironment } from "./installer-environment.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 
@@ -162,7 +163,10 @@ export function checkReuseMetadata(
     "The artifact's workflow version differs",
   );
   const builds = jobs.filter(
-    (job) => job.name === "Verify signed installer and updater / Build signed verification copies",
+    // Read by the name it had before the trigger-first rename (scripts/ci-job-names.mjs).
+    (job) =>
+      legacyJobName(job.name) ===
+      "Verify signed installer and updater / Build signed verification copies",
   );
   assert.equal(builds.length, 1, "The original signed build must be identified exactly once");
   const build = builds[0];

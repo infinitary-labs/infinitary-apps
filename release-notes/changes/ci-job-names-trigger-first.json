@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ci-job-names-trigger-first",
+      "reason": "CI work: the project's own CI jobs are named by what started them and what they check, with no change to the app."
+    }
+  ]
+}

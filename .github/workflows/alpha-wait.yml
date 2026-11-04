@@ -22,10 +22,15 @@ name: Wait for the alpha cut
 # check covers every merge made during the pause.
 on:
   workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
 
 jobs:
   wait:
-    name: Wait for the previous main check's alpha cut
+    name: ${{ format('{0} · Wait for the previous main check''s alpha cut', inputs.trigger || 'Main push') }}
     # Every Linux job main.yml starts runs on GitHub's hosted machines
     # (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04

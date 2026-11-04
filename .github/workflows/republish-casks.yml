@@ -62,7 +62,7 @@ env:
 
 jobs:
   republish:
-    name: Republish the casks at their current targets (a dry run pushes nothing)
+    name: ${{ inputs.dry_run && 'Manual request · Preview Homebrew entries; publish nothing' || format('{0} · Republish Homebrew entries', github.event_name == 'push' && 'Main push' || 'Manual request') }}
     # Only main's generator in Infinitary's own repository writes the tap;
     # any other ref or repository may only rehearse.
     if: ${{ (github.ref == 'refs/heads/main' && github.repository == 'infinitary-labs/infinitary') || inputs.dry_run == true }}

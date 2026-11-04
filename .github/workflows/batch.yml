@@ -73,8 +73,11 @@ permissions:
 jobs:
   # A by-hand send-back: the change's queue status fails with the reason, and
   # the next batch leaves it out.
+  # Each job's name leads with what started it (scripts/ci-job-names.mjs):
+  # the approval mark, a merge or the batch's own rerun is a merge batch.
   send-back:
     if: github.event_name == 'workflow_dispatch' && inputs.send_back != ''
+    name: Manual request · Send a change back
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -101,6 +104,7 @@ jobs:
   # only its failed jobs and the verdict after them.
   rerun:
     if: github.event_name == 'workflow_dispatch' && inputs.rerun != ''
+    name: Merge batch · Rerun the failed sweep jobs
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -128,6 +132,7 @@ jobs:
 
   # Reads the queue, forms the batch, composes it onto main and marks its changes.
   compose:
+    name: ${{ format('{0} · Compose the batch', (inputs.rehearsal != '' && 'Requested batch rehearsal' || 'Merge batch')) }}
     if: (github.event_name == 'status' && github.event.context == 'infinitary/queue' && github.event.state == 'pending') || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.send_back == '' && inputs.rerun == '')
     runs-on: ubuntu-24.04
     outputs:
@@ -206,8 +211,10 @@ jobs:
   sweep:
     needs: compose
     if: needs.compose.outputs.sweep == 'true'
+    name: ${{ format('{0} · Desktop checks', (inputs.rehearsal != '' && 'Requested batch rehearsal' || 'Merge batch')) }}
     uses: ./.github/workflows/verify.yml
     with:
+      trigger: ${{ (inputs.rehearsal != '' && 'Requested batch rehearsal' || 'Merge batch') }}
       ref: ${{ needs.compose.outputs.base }}
       batch: ${{ needs.compose.outputs.heads }}
       batch_tree: ${{ needs.compose.outputs.tree }}
@@ -224,8 +231,10 @@ jobs:
   critical-path:
     needs: compose
     if: needs.compose.outputs.sweep == 'true'
+    name: ${{ format('{0} · Critical-path journey', (inputs.rehearsal != '' && 'Requested batch rehearsal' || 'Merge batch')) }}
     uses: ./.github/workflows/source-journeys.yml
     with:
+      trigger: ${{ (inputs.rehearsal != '' && 'Requested batch rehearsal' || 'Merge batch') }}
       ref: ${{ needs.compose.outputs.base }}
       batch: ${{ needs.compose.outputs.heads }}
       batch_tree: ${{ needs.compose.outputs.tree }}
@@ -241,7 +250,7 @@ jobs:
   verdict:
     needs: [compose, sweep, critical-path]
     if: ${{ !cancelled() && needs.compose.outputs.sweep == 'true' }}
-    name: ${{ inputs.rehearsal != '' && 'rehearsal' || 'verdict' }} (tree ${{ needs.compose.outputs.tree }})
+    name: ${{ inputs.rehearsal != '' && format('Requested batch rehearsal · Batch report (tree {0})', needs.compose.outputs.tree) || format('Merge batch · Batch verdict (tree {0})', needs.compose.outputs.tree) }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

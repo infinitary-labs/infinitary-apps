@@ -21,6 +21,10 @@ on:
         type: string
   workflow_call:
     inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
       ref:
         description: The release's source commit
         required: true
@@ -56,8 +60,10 @@ permissions:
   contents: read
 
 jobs:
+  # Each job's name leads with what started the run, or the caller's trigger
+  # (scripts/ci-job-names.mjs).
   build:
-    name: build
+    name: ${{ format('{0} · Build Linux packages', (inputs.trigger || github.event_name == 'pull_request' && 'Pull request' || 'Manual request')) }}
     # Every job runs where LINUX_RUNNER sends it (ci.yml says how), and on
     # GitHub's hosted Ubuntu when it is unset or a release calls it.
     runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
@@ -142,20 +148,20 @@ jobs:
           retention-days: ${{ github.event_name == 'pull_request' && 1 || 3 }}
 
   check:
-    name: check (${{ matrix.system }}${{ matrix.image && format(' {0}', matrix.image) || '' }})
+    name: ${{ format('{0} · Install and run {1}', (inputs.trigger || github.event_name == 'pull_request' && 'Pull request' || 'Manual request'), matrix.label) }}
     needs: build
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { system: ubuntu-host, runner: ubuntu-24.04 }
-          - { system: ubuntu-host, runner: ubuntu-26.04 }
-          - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:24.04" }
-          - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:26.04" }
-          - { system: fedora, runner: ubuntu-24.04, image: "fedora:latest" }
-          - { system: arch, runner: ubuntu-24.04, image: "archlinux:latest" }
-          - { system: appimage, runner: ubuntu-24.04, image: "fedora:latest" }
-          - { system: nix, runner: ubuntu-24.04 }
+          - { system: ubuntu-host, runner: ubuntu-24.04, label: "package (Ubuntu 24.04 host)" }
+          - { system: ubuntu-host, runner: ubuntu-26.04, label: "package (Ubuntu 26.04 host)" }
+          - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:24.04", label: "package (Ubuntu 24.04 container)" }
+          - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:26.04", label: "package (Ubuntu 26.04 container)" }
+          - { system: fedora, runner: ubuntu-24.04, image: "fedora:latest", label: "package (Fedora; latest image)" }
+          - { system: arch, runner: ubuntu-24.04, image: "archlinux:latest", label: "package (Arch; latest image)" }
+          - { system: appimage, runner: ubuntu-24.04, image: "fedora:latest", label: "AppImage (Fedora; latest image)" }
+          - { system: nix, runner: ubuntu-24.04, label: "package (Nix on Ubuntu 24.04)" }
     # The Ubuntu 26.04 leg runs on the PC's 26.04 job image, the
     # LINUX_RUNNER label with -2604 (shell-pc-linux-2604); inside a release
     # every leg runs on the hosted machine its entry names.

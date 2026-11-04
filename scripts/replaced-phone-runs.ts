@@ -1,12 +1,14 @@
 import { appendFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { legacyJobName } from "./ci-job-names.mjs";
 
 // INF-487: a pull request's newer version must not wait behind its own older phone run.
 // Cancel a replaced run only where no simulator can exist yet: before its native job
 // starts a device gate, or right before either gate. A started gate deletes its own simulator.
 
-// The native job and its simulator steps, as phone.yml names them. One step runs both
+// The native job and its simulator steps, as phone.yml names them; the job is read by
+// the name it had before the trigger-first rename (scripts/ci-job-names.mjs). One step runs both
 // devices, sequentially on a placed VM (INF-2101). Older runs may still show the former
 // per-device steps or the combined "at once" name; every started gate owns its cleanup.
 export const NATIVE_JOB = "native-phone";
@@ -24,7 +26,7 @@ export type PhoneRun = {
 };
 
 export function replacedRunVerdict(jobs: readonly Job[]): { cancel: boolean; why: string } {
-  const native = jobs.find((job) => job.name === NATIVE_JOB);
+  const native = jobs.find((job) => legacyJobName(job.name) === NATIVE_JOB);
   if (!native) return { cancel: true, why: "its native job has not been created yet" };
   if (native.status === "completed") return { cancel: false, why: `its native job already ended (${native.conclusion})` };
   const gate = native.steps?.filter((step) => DEVICE_GATES.includes(step.name) && step.status !== "pending" && step.status !== "queued").at(-1);

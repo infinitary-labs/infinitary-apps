@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { compileFunction, constants } from "node:vm";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 
 // INF-2267: shared by release workflow contracts and behavioral alpha-handoff tests.
@@ -55,4 +56,18 @@ export function workflowString(template: string, contexts: Record<string, unknow
     const value = workflowValue(expression, contexts);
     return value === null ? "" : String(value);
   });
+}
+
+/**
+ * An actions/github-script body as a function of `parameters`, run with
+ * Node's real module loader so its `await import(...)` of a checked-out
+ * script works; Vitest's realm installs no loader on a constructed function.
+ */
+export function githubScript(
+  script: string,
+  parameters: string[],
+): (...args: unknown[]) => Promise<unknown> {
+  return compileFunction(`return (async () => {\n${script}\n})()`, parameters, {
+    importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER,
+  }) as (...args: unknown[]) => Promise<unknown>;
 }

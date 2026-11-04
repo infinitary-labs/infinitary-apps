@@ -12,6 +12,10 @@ name: Update from the last published alpha
 on:
   workflow_call:
     inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
       ref:
         required: true
         type: string
@@ -41,7 +45,7 @@ permissions:
 
 jobs:
   update:
-    name: Apple silicon
+    name: ${{ format('{0} · Apply published-alpha update (Mac; Apple silicon)', inputs.trigger || 'Manual request') }}
     # A publishing release's light queue, else the light kind's
     # (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ inputs.runner || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}

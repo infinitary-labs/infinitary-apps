@@ -11,6 +11,7 @@ import {
   verdict,
   WAITING,
 } from "../scripts/batch.mjs";
+import { legacyJobName } from "../scripts/ci-job-names.mjs";
 import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows.ts";
 
 // INF-2430 piece 3, the captain's approved plan for the swept batch, and the
@@ -442,11 +443,15 @@ describe("batch.yml", () => {
   });
 
   it("names its verdict by the swept tree, and a rehearsal never as a verdict", () => {
+    // Trigger first (docs/testing.md, "CI job names"); the alpha's proof reads
+    // the verdict by the name it had before (scripts/ci-job-names.mjs).
     const name = batch.jobs.verdict!.name!;
-    expect(workflowString(name, contexts("push"))).toBe(`verdict (tree ${pr917.tree})`);
-    expect(workflowString(name, contexts("workflow_dispatch", {}, { rehearsal: "930" }))).toBe(
-      `rehearsal (tree ${pr917.tree})`,
-    );
+    const verdict = workflowString(name, contexts("push"));
+    expect(verdict).toBe(`Merge batch · Batch verdict (tree ${pr917.tree})`);
+    expect(legacyJobName(verdict)).toBe(`verdict (tree ${pr917.tree})`);
+    const rehearsal = workflowString(name, contexts("workflow_dispatch", {}, { rehearsal: "930" }));
+    expect(rehearsal).toBe(`Requested batch rehearsal · Batch report (tree ${pr917.tree})`);
+    expect(legacyJobName(rehearsal)).not.toMatch(/^verdict/);
   });
 });
 
@@ -496,6 +501,11 @@ describe("main.yml's sort", () => {
     const covered = main.jobs.covered!;
     expect(workflowValue(covered.if!, needs("covered"))).toBe(true);
     expect(workflowValue(covered.if!, needs("full"))).toBe(false);
-    expect(workflowString(covered.name!, needs("covered"))).toBe("covered by batch 41600000001");
+    const name = workflowString(covered.name!, {
+      ...needs("covered"),
+      github: { event_name: "push" },
+    });
+    expect(name).toBe("Main push · Covered by batch run 41600000001");
+    expect(legacyJobName(name)).toBe("covered by batch 41600000001");
   });
 });

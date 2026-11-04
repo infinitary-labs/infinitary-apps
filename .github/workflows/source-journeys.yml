@@ -31,6 +31,14 @@ on:
         type: string
   workflow_call:
     inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
+      part:
+        description: This selected group's one-based place among the request's Linux groups, as 2/3, for its job name
+        type: string
+        default: ""
       ref:
         required: false
         type: string
@@ -77,7 +85,9 @@ jobs:
     # still runs alone on its machine (tests/e2e/lanes.ts). A requested
     # run-alone pass over every spec file splits four ways (docs/testing.md
     # "Each test owns its prerequisites"), each share on a machine of its own.
-    name: ${{ (inputs.suite == 'full' || inputs.suite == 'alone') && (matrix.lane == 'alone' && format('journeys (run alone {0}/4)', matrix.shard) || format('journeys ({0} {1}/4)', matrix.lane, matrix.shard)) || format('source-desktop ({0})', matrix.lane) }}
+    # The name leads with the caller's trigger (scripts/ci-job-names.mjs); a
+    # desktop lane runs one test at a time, so it reads as a serial group.
+    name: ${{ inputs.suite == 'alone' && format('{0} · Fresh-start app journeys (Linux; group {1}/4)', inputs.trigger || 'Manual request', matrix.shard) || inputs.suite == 'full' && format('{0} · App journeys (Linux; {1} group {2}/4)', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), matrix.shard) || inputs.suite == 'affected' && format('{0} · Selected app journeys (Linux; {1}{2})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), inputs.part && format('; part {0}', inputs.part) || '') || format('{0} · Starter app journeys (Linux; {1})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane)) }}
     strategy:
       fail-fast: false
       matrix:

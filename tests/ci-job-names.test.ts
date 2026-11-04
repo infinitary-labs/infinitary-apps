@@ -1,0 +1,366 @@
+import { readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import { legacyJobName, splitLevel, TRIGGERS } from "../scripts/ci-job-names.mjs";
+import {
+  coveringBatch,
+  verifyBatchEvidence,
+  verifyMainEvidence,
+} from "../scripts/main-alpha-proof.mjs";
+import { runJobNames, type Scenario } from "./helpers/ciJobNames";
+
+// INF-2410's approved scheme (the captain: "i want to distinguish what
+// triggered the job and what they check"; scheme "A. Trigger first"): every
+// job's name is `Trigger · Purpose (platform or device; group or round)`, and
+// a called workflow's jobs carry their caller's trigger on every level.
+// Names are evaluated from the workflow files for each trigger that starts them.
+
+const pass = { result: "success" };
+const releaseNeeds = {
+  resolve: {
+    ...pass,
+    outputs: { skip: "false", verify_required: "true" },
+  },
+  ...Object.fromEntries(
+    ["notes", "verify", "linux", "phone", "release", "update"].map((id) => [id, pass]),
+  ),
+};
+const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
+  { file: "ci.yml", trigger: "Pull request", scenario: { github: { event_name: "pull_request" } } },
+  {
+    file: "ci.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
+  {
+    file: "main.yml",
+    trigger: "Main push",
+    scenario: {
+      github: { event_name: "push", sha: "a".repeat(40) },
+      needs: { sort: { outputs: { kind: "full" } } },
+    },
+  },
+  {
+    file: "main.yml",
+    trigger: "Main push",
+    scenario: {
+      github: { event_name: "push", sha: "a".repeat(40) },
+      needs: { sort: { outputs: { kind: "covered", batch: "41700000001" } } },
+    },
+  },
+  {
+    file: "main.yml",
+    trigger: "Manual request",
+    scenario: {
+      github: { event_name: "workflow_dispatch" },
+      needs: { sort: { outputs: { kind: "full" } } },
+    },
+  },
+  {
+    file: "batch.yml",
+    trigger: "Merge batch",
+    scenario: {
+      github: { event_name: "status", event: { context: "infinitary/queue", state: "pending" } },
+      needs: { compose: { ...pass, outputs: { sweep: "true", tree: "b".repeat(40) } } },
+    },
+  },
+  {
+    file: "batch.yml",
+    trigger: "Requested batch rehearsal",
+    scenario: {
+      github: { event_name: "workflow_dispatch" },
+      inputs: { rehearsal: "901 902" },
+      needs: { compose: { ...pass, outputs: { sweep: "true", tree: "b".repeat(40) } } },
+    },
+  },
+  {
+    file: "batch.yml",
+    trigger: "Manual request",
+    scenario: {
+      github: { event_name: "workflow_dispatch" },
+      inputs: { send_back: "901", reason: "r" },
+    },
+  },
+  {
+    file: "release.yml",
+    trigger: "Automatic alpha",
+    scenario: {
+      github: { event_name: "workflow_run", event: { workflow_run: { conclusion: "success" } } },
+      needs: releaseNeeds,
+    },
+  },
+  {
+    // An alpha that reuses main's checks runs only the journeys part (INF-2480).
+    file: "release.yml",
+    trigger: "Automatic alpha",
+    scenario: {
+      github: { event_name: "workflow_run", event: { workflow_run: { conclusion: "success" } } },
+      needs: {
+        ...releaseNeeds,
+        resolve: {
+          ...pass,
+          outputs: { ...releaseNeeds.resolve.outputs, main_run: "https://example.test/runs/1" },
+        },
+      },
+    },
+  },
+  ...["alpha", "stable"].flatMap((channel) =>
+    [false, true].map((dry_run) => ({
+      file: "release.yml",
+      trigger: `Requested ${channel}${dry_run ? " rehearsal" : ""}`,
+      scenario: {
+        github: { event_name: "workflow_dispatch" },
+        inputs: { channel, dry_run },
+        needs: releaseNeeds,
+      },
+    })),
+  ),
+  {
+    file: "ios-release.yml",
+    trigger: "Requested TestFlight",
+    scenario: {
+      github: { event_name: "workflow_dispatch" },
+      inputs: { version: "0.2.0" },
+      needs: { resolve: { ...pass, outputs: { mode: "release" } }, phone: pass, testflight: pass },
+    },
+  },
+  {
+    file: "ios-release.yml",
+    trigger: "Requested TestFlight status",
+    scenario: {
+      github: { event_name: "workflow_dispatch" },
+      inputs: { version: "0.2.0", check_build: "41.1" },
+      needs: { resolve: { ...pass, outputs: { mode: "status" } } },
+    },
+  },
+  ...[{ suite: "full" }, { suite: "alone" }].map((inputs) => ({
+    file: "source-journeys.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" }, inputs },
+  })),
+  {
+    file: "journeys.yml",
+    trigger: "Manual request",
+    scenario: {
+      github: { event_name: "workflow_dispatch", sha: "a".repeat(40) },
+      needs: {
+        "choose-journeys": {
+          ...pass,
+          outputs: {
+            count: "1",
+            "linux-count": "2",
+            linux: JSON.stringify({
+              include: [
+                { lane: "desktop", files: "tests/e2e/a.spec.ts", estimatedMs: 1, part: "1/2" },
+                { lane: "parallel", files: "tests/e2e/b.spec.ts", estimatedMs: 1, part: "2/2" },
+              ],
+            }),
+          },
+        },
+      },
+    },
+  },
+  ...[{}, { waits: true }, { evidence_run: "41700000002" }].map((inputs) => ({
+    file: "phone.yml",
+    trigger: "Manual request",
+    scenario: {
+      github: { event_name: "workflow_dispatch" },
+      inputs,
+      needs: { "native-phone": { outputs: { repeat_parts: "cards" } } },
+    },
+  })),
+  {
+    file: "linux-packages.yml",
+    trigger: "Pull request",
+    scenario: { github: { event_name: "pull_request" } },
+  },
+  {
+    file: "linux-packages.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
+  {
+    file: "replay.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
+  {
+    file: "republish-casks.yml",
+    trigger: "Main push",
+    scenario: {
+      github: {
+        event_name: "push",
+        ref: "refs/heads/main",
+        repository: "infinitary-labs/infinitary",
+      },
+    },
+  },
+  {
+    file: "republish-casks.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" }, inputs: { dry_run: true } },
+  },
+  {
+    file: "verify.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" }, inputs: { full_system: true } },
+  },
+  {
+    file: "verify.yml",
+    trigger: "Manual request",
+    scenario: {
+      github: { event_name: "workflow_dispatch" },
+      inputs: { installer_only: true },
+      needs: { build: pass },
+    },
+  },
+  {
+    file: "windows-feasibility.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
+];
+
+describe("CI job names (INF-2410 scheme A, trigger first)", () => {
+  it("covers every workflow", () => {
+    const called = new Set([
+      "alpha-wait.yml",
+      "linux-startup.yml",
+      "mac-installer.yml",
+      "mac-update.yml",
+    ]);
+    const files = readdirSync(
+      fileURLToPath(new URL("../.github/workflows/", import.meta.url)),
+    ).filter((file) => file.endsWith(".yml") && !called.has(file));
+    expect(new Set(SCENARIOS.map((each) => each.file))).toEqual(new Set(files));
+  });
+
+  it.each(
+    SCENARIOS.map(
+      (each) =>
+        [
+          `${each.file}: ${each.trigger} ${JSON.stringify(each.scenario.inputs ?? {})}`,
+          each,
+        ] as const,
+    ),
+  )(
+    "%s leads every level of every job's name with the trigger that started it",
+    (_label, { file, trigger, scenario }) => {
+      const names = runJobNames(file, scenario);
+      expect(names.length).toBeGreaterThan(0);
+      expect(TRIGGERS).toContain(trigger);
+      for (const name of names) {
+        for (const level of name.split(" / ")) {
+          expect(splitLevel(level), name).toMatchObject({ trigger });
+        }
+      }
+      expect(new Set(names).size, names.join("\n")).toBe(names.length);
+    },
+  );
+
+  // INF-2480: main runs its checks part, with no Linux journeys, so the
+  // alpha's proof reuses its checks and the alpha runs every journey itself.
+  it("names main's full check so the alpha's proof reads both lanes, with no Linux journeys", () => {
+    const source = "a".repeat(40);
+    const names = runJobNames("main.yml", SCENARIOS[2]!.scenario);
+    expect(names.filter((name) => name.includes("Linux journeys"))).toEqual([]);
+    expect(names).toContain(
+      "Main push · Desktop checks / Main push · Code, build and all test groups (Linux)",
+    );
+    expect(names).toContain(
+      "Main push · Desktop checks / Main push · Native tests, journeys, replay and package (Mac)",
+    );
+    const run = {
+      id: 1,
+      run_attempt: 1,
+      path: ".github/workflows/main.yml",
+      event: "push",
+      head_branch: "main",
+      head_sha: source,
+      status: "completed",
+      conclusion: "success",
+      head_repository: { full_name: "infinitary-labs/infinitary" },
+      repository: { full_name: "infinitary-labs/infinitary" },
+      html_url: "https://github.com/infinitary-labs/infinitary/actions/runs/1",
+    };
+    const jobs = names.map((name) => ({
+      name,
+      run_id: 1,
+      run_attempt: 1,
+      head_sha: source,
+      status: "completed",
+      conclusion: "success",
+    }));
+    expect(verifyMainEvidence(run, jobs, "infinitary-labs/infinitary", source)).toMatchObject({
+      runId: 1,
+      journeys: false,
+    });
+    // A missing Mac lane is still an incomplete check.
+    const short = jobs.filter((job) => !job.name.endsWith("(Mac)"));
+    expect(() => verifyMainEvidence(run, short, "infinitary-labs/infinitary", source)).toThrow(
+      "every full-check owner",
+    );
+  });
+
+  it("names a covered push and the batch's sweep so the alpha follows them to the batch run", () => {
+    const covered = runJobNames("main.yml", SCENARIOS[3]!.scenario).map((name) => ({
+      name,
+      run_id: 1,
+      run_attempt: 1,
+      head_sha: "a".repeat(40),
+      status: "completed",
+      conclusion: "success",
+    }));
+    expect(coveringBatch(covered)).toBe(41700000001);
+    const tree = "b".repeat(40);
+    const names = runJobNames("batch.yml", SCENARIOS[5]!.scenario);
+    expect(names).toContain(`Merge batch · Batch verdict (tree ${tree})`);
+    const run = {
+      id: 2,
+      run_attempt: 1,
+      path: ".github/workflows/batch.yml",
+      event: "status",
+      head_branch: "main",
+      head_sha: "c".repeat(40),
+      status: "completed",
+      conclusion: "success",
+      head_repository: { full_name: "infinitary-labs/infinitary" },
+      repository: { full_name: "infinitary-labs/infinitary" },
+      html_url: "https://github.com/infinitary-labs/infinitary/actions/runs/2",
+    };
+    const jobs = names.map((name) => ({
+      name,
+      run_id: 2,
+      run_attempt: 1,
+      head_sha: run.head_sha,
+      status: "completed",
+      conclusion: "success",
+    }));
+    expect(verifyBatchEvidence(run, jobs, "infinitary-labs/infinitary", tree).runId).toBe(2);
+    // A rehearsal's report never reads as the batch's verdict.
+    const rehearsal = runJobNames("batch.yml", SCENARIOS[6]!.scenario).map((name) => ({
+      name,
+      run_id: 2,
+      run_attempt: 1,
+      head_sha: run.head_sha,
+      status: "completed",
+      conclusion: "success",
+    }));
+    expect(() => verifyBatchEvidence(run, rehearsal, "infinitary-labs/infinitary", tree)).toThrow(
+      "other files",
+    );
+  });
+
+  it("reads a name from before the scheme as it was, and a partly renamed one as no known job", () => {
+    expect(legacyJobName("verify / linux-e2e / journeys (desktop 3/4)")).toBe(
+      "verify / linux-e2e / journeys (desktop 3/4)",
+    );
+    expect(legacyJobName("sweep / mac")).toBe("verify / mac");
+    expect(legacyJobName("verify / Main push · Code, build and all test groups (Linux)")).toBe(
+      "verify / Main push · Code, build and all test groups (Linux)",
+    );
+    expect(
+      legacyJobName("Someone · Desktop checks / Someone · Code, build and all test groups (Linux)"),
+    ).toBe("Someone · Desktop checks / Someone · Code, build and all test groups (Linux)");
+  });
+});

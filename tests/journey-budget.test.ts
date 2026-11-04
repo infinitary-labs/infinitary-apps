@@ -8,10 +8,12 @@ import {
   LINUX_PLACES,
   type LinuxObservation,
   laneOf,
+  linuxParts,
   type ReportSuite,
   readLinuxObservations,
   SMALL_BIN_MS,
 } from "../scripts/journey-budget.ts";
+import { runJobNames } from "./helpers/ciJobNames";
 import { scratchDir } from "./helpers/scratchDirs.ts";
 import { needsMac } from "./lint/e2eMacTag.ts";
 
@@ -393,6 +395,26 @@ describe("INF-1987 Linux-calibrated placement", () => {
     expect(read).toHaveLength(1);
     expect(read[0]?.job).toEqual(source.job);
     expect(read[0]?.report.selectedFiles).toEqual(source.report.selectedFiles);
+    // INF-2413: the same job named trigger first, as journeys.yml names a
+    // selected Linux group (docs/testing.md, "CI job names"), joins alike;
+    // under both names at once it is two jobs, so it stays unmeasured.
+    const [part] = linuxParts([{ lane: "desktop" as const, files: "x", estimatedMs: 1 }]);
+    const renamed = runJobNames("journeys.yml", {
+      github: { event_name: "workflow_dispatch" },
+      needs: {
+        "choose-journeys": {
+          result: "success",
+          outputs: { count: "0", "linux-count": "1", linux: JSON.stringify({ include: [part] }) },
+        },
+      },
+    }).find((name) => name.includes("Selected app journeys (Linux"));
+    expect(renamed).toBe(
+      "Manual request · Selected journeys (Linux; part 1/1) / Manual request · Selected app journeys (Linux; serial; part 1/1)",
+    );
+    writeFileSync(jobsFile, JSON.stringify([{ ...job, name: renamed }]));
+    expect(readLinuxObservations(reportDir, jobsFile)).toHaveLength(1);
+    writeFileSync(jobsFile, JSON.stringify([job, { ...job, name: renamed }]));
+    expect(readLinuxObservations(reportDir, jobsFile)).toEqual([]);
     writeFileSync(jobsFile, JSON.stringify([{ ...job, head_sha: "different-checkout" }]));
     expect(readLinuxObservations(reportDir, jobsFile)).toEqual([]);
     // INF-1987 broad batches overlap with identical reusable names. The real

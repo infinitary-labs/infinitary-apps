@@ -151,7 +151,7 @@ jobs:
   # workflow's own commit and reads the rest from git. No secret or dependency install.
   resolve:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    name: Resolve the source commit and version
+    name: ${{ format('{0} · Select source and version', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     outputs:
@@ -218,6 +218,8 @@ jobs:
             if (process.env.PAUSED === 'true') {
               return skip(`Paused by the captain: the rolling pipeline is paused, so this run cuts no alpha from main's ${process.env.SOURCE}. After Resume, the next merge's check and its alpha carry this version's changes.`);
             }
+            const {pathToFileURL} = require('node:url');
+            const {legacyJobName} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/ci-job-names.mjs`).href);
             const {data} = await github.rest.actions.listWorkflowRuns({
               ...context.repo, workflow_id: 'release.yml', event: 'workflow_run', per_page: 100
             });
@@ -226,7 +228,8 @@ jobs:
               const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
                 ...context.repo, run_id: run.id, filter: 'latest', per_page: 100
               });
-              if (jobs.some(job => job.name === 'Check the release notes' && job.conclusion !== 'skipped')) {
+              // Read by the names jobs had before the trigger-first rename (scripts/ci-job-names.mjs).
+              if (jobs.some(job => legacyJobName(job.name) === 'Check the release notes' && job.conclusion !== 'skipped')) {
                 return skip(`An earlier alpha is still being cut in ${run.html_url}, so this run starts no other. The next alpha carries main's changes at ${process.env.SOURCE}.`);
               }
             }
@@ -331,12 +334,15 @@ jobs:
               core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${number} from main did not succeed.`);
               return;
             }
-            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+            // Read by the names jobs had before the trigger-first rename
+            // (scripts/ci-job-names.mjs), so an alpha cut before it reads alike.
+            const {pathToFileURL} = require('node:url');
+            const {legacyJobName} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/ci-job-names.mjs`).href);
+            const jobs = (await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
               ...context.repo, run_id: run.id, filter: 'latest', per_page: 100
-            });
+            })).map(job => ({...job, name: legacyJobName(job.name)}));
             const green = job => job.status === 'completed' && job.conclusion === 'success';
             const passed = name => jobs.some(job => job.name === name && green(job));
-            const {pathToFileURL} = require('node:url');
             const {alphaVerification, proveMain} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
             // Inheritance replaces an omitted broad check, never a failed,
             // pending or partial direct verification in the alpha release.
@@ -395,7 +401,7 @@ jobs:
   # file and re-verifies its identity.
   # Declarations only: the workflow cannot judge whether the prose is true.
   notes:
-    name: Check the release notes
+    name: ${{ format('{0} · Check release notes', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     needs: resolve
     if: ${{ needs.resolve.outputs.skip != 'true' }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
@@ -495,8 +501,10 @@ jobs:
   verify:
     if: ${{ needs.resolve.outputs.verify_required == 'true' && needs.resolve.outputs.main_journeys != 'true' }}
     needs: [resolve, notes]
+    name: ${{ format('{0} · Desktop checks', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     uses: ./.github/workflows/verify.yml
     with:
+      trigger: ${{ (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || '')) }}
       ref: ${{ needs.resolve.outputs.source_commit }}
       part: ${{ needs.resolve.outputs.main_run != '' && 'journeys' || 'all' }}
       # Publishing or dry run, its Linux jobs run on GitHub's hosted machines
@@ -516,8 +524,10 @@ jobs:
   # A publishing run's package jobs take the release's Linux label too.
   linux:
     needs: [resolve, notes]
+    name: ${{ format('{0} · Linux packages', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     uses: ./.github/workflows/linux-packages.yml
     with:
+      trigger: ${{ (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || '')) }}
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
       hosted: true
@@ -528,7 +538,7 @@ jobs:
   # of Infinitary is live there. It runs from the workflow's own commit and
   # reads each contract from git; a rehearsal says what it would wait for.
   phone:
-    name: Wait for the phone
+    name: ${{ format('{0} · Check compatible phone release', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     needs: resolve
     if: ${{ needs.resolve.outputs.skip != 'true' }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
@@ -558,7 +568,7 @@ jobs:
     # A plain name: a job skipped behind a red check shows its name
     # unevaluated. The run's summary says the channel, the version and
     # whether it was a dry run.
-    name: Build, sign and notarize while the checks run
+    name: ${{ format('{0} · Build, sign and notarize (Mac)', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     # Sign early (INF-2074, the captain's checked fix: "Build and sign an
     # alpha while its checks run, and publish only after they pass"): it
     # waits for the notes it packages and the phone (INF-1649), never for
@@ -1040,11 +1050,12 @@ jobs:
   # the new version and keep its saved work. Publication waits for it. It
   # builds, signs and sends nothing; a stable inherits its alpha's.
   update:
-    name: Update from the last published alpha
+    name: ${{ format('{0} · Published-alpha update check', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     needs: [resolve, notes, verify, linux, phone, release]
     if: ${{ always() && !cancelled() && needs.resolve.outputs.verify_required == 'true' && needs.resolve.result == 'success' && needs.notes.result == 'success' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' }}
     uses: ./.github/workflows/mac-update.yml
     with:
+      trigger: ${{ (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || '')) }}
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
       handoff_id: ${{ needs.release.outputs.handoff_id }}
@@ -1072,7 +1083,7 @@ jobs:
   # validates and lists the files and uploads nothing. Rerunning only this
   # job reuses the signing job's handoff, from whichever attempt produced it.
   upload:
-    name: Upload every download to every place at once (a dry run uploads nothing)
+    name: ${{ format(inputs.dry_run && '{0} · Preview uploads; upload nothing' || '{0} · Upload every download', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     needs: [resolve, notes, verify, linux, phone, release, update]
     if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
@@ -1533,7 +1544,7 @@ jobs:
   # back to the real Mac. Rerunning only this job checks and switches again
   # from the same uploads.
   publish:
-    name: Check every copy, then switch the casks and feeds (a dry run switches nothing)
+    name: ${{ format(inputs.dry_run && '{0} · Check every copy; switch nothing' || '{0} · Check every copy and switch downloads', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     needs: [resolve, notes, verify, linux, phone, release, update, upload]
     if: ${{ always() && !cancelled() && needs.upload.result == 'success' && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # The light kind's virtual-only queue once MAC_QUEUES names it, and

@@ -11,6 +11,7 @@ import {
   replacedRunVerdict,
   stopIfReplaced,
 } from "../scripts/replaced-phone-runs";
+import { runJobNames } from "./helpers/ciJobNames";
 
 // INF-487: PR #135's current version (run 147) waited behind its own older run 142,
 // whose native job held a Mac mini place for hours with no simulator. These are
@@ -148,6 +149,22 @@ describe("a replaced phone run", () => {
       });
     },
   );
+  // INF-2413: a run after the trigger-first rename names the native job as
+  // phone.yml does for a request (docs/testing.md, "CI job names"); its
+  // started gate still protects its simulator, and its waiting job still goes.
+  it.each([
+    ["2026-10-19T04:57:04Z", true],
+    ["2026-10-19T06:50:00Z", false],
+  ])("reads the native job named trigger first at %s", (instant, cancel) => {
+    const native = runJobNames("phone.yml", { github: { event_name: "workflow_dispatch" } }).find(
+      (name) => name.includes("Phone checks"),
+    );
+    expect(native).toBe("Manual request · Phone checks (iPhone and iPad)");
+    const jobs = asOf(run142, instant).map((job) =>
+      job.name === NATIVE_JOB ? { ...job, name: native as string } : job,
+    );
+    expect(replacedRunVerdict(jobs).cancel).toBe(cancel);
+  });
   it("is cancelled before its chooser has created the native job", () => {
     expect(replacedRunVerdict(asOf(run142, "2026-10-19T04:12:10Z")).cancel).toBe(true);
   });

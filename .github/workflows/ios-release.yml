@@ -25,7 +25,9 @@ env:
   CHECK_BUILD: ${{ inputs.check_build }}
 
 jobs:
+  # Each job's name leads with what was requested (scripts/ci-job-names.mjs).
   resolve:
+    name: ${{ inputs.check_build && 'Requested TestFlight status · Check version and build request' || 'Requested TestFlight · Check source, version and Apple readiness' }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -58,17 +60,20 @@ jobs:
     if: needs.resolve.outputs.mode == 'release'
     # The reusable workflow and its checkout use this dispatch's resolved source.
     # No release environment or signing secrets cross into the disposable guest.
+    name: Requested TestFlight · Phone checks
     uses: ./.github/workflows/phone.yml
     permissions:
       actions: write
       contents: read
       pull-requests: read
     with:
+      trigger: Requested TestFlight
       source_commit: ${{ needs.resolve.outputs.source_commit }}
       # Its Linux job runs on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
       hosted: true
 
   testflight:
+    name: Requested TestFlight · Sign and upload
     needs: [resolve, phone]
     if: needs.resolve.outputs.mode == 'release' && needs.phone.result == 'success'
     environment: ios-release
@@ -147,6 +152,7 @@ jobs:
           retention-days: 14
 
   availability:
+    name: ${{ format('{0} · Confirm TestFlight availability', (inputs.check_build && 'Requested TestFlight status' || 'Requested TestFlight')) }}
     needs: [resolve, testflight]
     # A status-only dispatch makes no Mac job. Failed uploads may have reached Apple:
     # inspect them with check_build, never automatically resubmit the upload.

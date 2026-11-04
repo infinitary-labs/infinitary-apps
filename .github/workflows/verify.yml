@@ -38,6 +38,10 @@ name: verify
 on:
   workflow_call:
     inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
       ref:
         description: Branch, tag or SHA to verify (default - the caller's ref)
         required: false
@@ -152,8 +156,9 @@ concurrency:
   cancel-in-progress: ${{ github.workflow == 'verify' }}
 
 jobs:
+  # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   request:
-    name: Validate verification selection
+    name: ${{ format('{0} · Check verification request', inputs.trigger || 'Manual request') }}
     runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Validate and record the manual request
@@ -185,8 +190,10 @@ jobs:
   linux-e2e:
     needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse && inputs.part != 'checks' }}
+    name: ${{ format('{0} · Linux journeys', inputs.trigger || 'Manual request') }}
     uses: ./.github/workflows/source-journeys.yml
     with:
+      trigger: ${{ inputs.trigger || 'Manual request' }}
       ref: ${{ inputs.ref || github.ref }}
       hosted: ${{ inputs.hosted == true }}
       suite: full
@@ -200,13 +207,14 @@ jobs:
   # recorder and the suite.
   installer:
     needs: request
-    name: Verify signed installer and updater
+    name: ${{ format('{0} · Signed installer checks', inputs.trigger || 'Manual request') }}
     if: ${{ inputs.installer_only == true || inputs.installer_reuse != '' }}
     permissions:
       contents: read
       actions: read
     uses: ./.github/workflows/mac-installer.yml
     with:
+      trigger: ${{ inputs.trigger || 'Manual request' }}
       ref: ${{ inputs.ref || github.ref }}
       reuse: ${{ inputs.installer_reuse || '' }}
       chip: ${{ inputs.installer_chip || 'both' }}
@@ -215,7 +223,7 @@ jobs:
   lane:
     needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
-    name: ${{ matrix.lane }}
+    name: ${{ format(matrix.lane == 'mac' && (inputs.part == 'journeys' && '{0} · Every app journey (Mac)' || '{0} · Native tests, journeys, replay and package (Mac)') || '{0} · Code, build and all test groups (Linux)', inputs.trigger || 'Manual request') }}
     strategy:
       fail-fast: false
       matrix:

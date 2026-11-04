@@ -5,6 +5,7 @@ import { z } from "zod";
 import { APPLICATION_SUITES, E2E_MAX_WORKERS, RENDERER_SUITES } from "../tests/e2e/lanes.ts";
 import { MAC_ONLY_TAG } from "../tests/e2e/tags.ts";
 import { needsMac } from "../tests/lint/e2eMacTag.ts";
+import { legacyJobName } from "./ci-job-names.mjs";
 import type { Reasons } from "./affected-journeys.ts";
 
 // INF-658: the captain chose six minutes of journeys, not a job timeout; it sizes the Linux jobs.
@@ -113,6 +114,14 @@ const completedJob = z.object({
     .default([]),
 });
 
+/**
+ * The Linux matrix journeys.yml runs, each group with its one-based part,
+ * which its job name carries (scripts/ci-job-names.mjs).
+ */
+export function linuxParts<Bin extends object>(bins: readonly Bin[]): (Bin & { part: string })[] {
+  return bins.map((bin, index) => ({ ...bin, part: `${index + 1}/${bins.length}` }));
+}
+
 /** Read only schema-compatible reports with an unambiguous successful job identity. */
 export function readLinuxObservations(directory: string, jobsFile: string): LinuxObservation[] {
   const observations: LinuxObservation[] = [];
@@ -151,7 +160,8 @@ export function readLinuxObservations(directory: string, jobsFile: string): Linu
             job.head_sha === report.revision &&
             job.conclusion === "success" &&
             report.job === "source-desktop" &&
-            (job.name === suffix || job.name.endsWith(` / ${suffix}`)) &&
+            // Read by the name it had before the trigger-first rename (scripts/ci-job-names.mjs).
+            (legacyJobName(job.name) === suffix || legacyJobName(job.name).endsWith(` / ${suffix}`)) &&
             job.steps.some(
               (step) =>
                 step.name === "Record the timing observation start" &&
@@ -446,7 +456,7 @@ function main() {
   if (process.env.GITHUB_OUTPUT)
     appendFileSync(
       process.env.GITHUB_OUTPUT,
-      `count=${result.mac.length}\nfiles=${result.mac.join(" ")}\nlinux-count=${result.linux.length}\nlinux=${JSON.stringify({ include: result.linux })}\n`,
+      `count=${result.mac.length}\nfiles=${result.mac.join(" ")}\nlinux-count=${result.linux.length}\nlinux=${JSON.stringify({ include: linuxParts(result.linux) })}\n`,
     );
   if (process.env.GITHUB_STEP_SUMMARY)
     appendFileSync(

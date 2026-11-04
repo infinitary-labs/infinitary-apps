@@ -60,8 +60,12 @@ jobs:
   linux-source:
     # The starter coverage belongs to a pull request; a request runs what it names.
     if: github.event_name == 'pull_request'
+    name: Pull request · Starter journeys (Linux)
     uses: ./.github/workflows/source-journeys.yml
+    with:
+      trigger: Pull request
   choose-journeys:
+    name: Manual request · Choose and place app journeys
     # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
     defaults:
@@ -212,8 +216,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.choose-journeys.outputs.linux) }}
+    # Each group's one-based part comes with it from journey-budget.ts.
+    name: ${{ format('Manual request · Selected journeys (Linux; part {0})', matrix.part) }}
     uses: ./.github/workflows/source-journeys.yml
     with:
+      trigger: Manual request
+      part: ${{ matrix.part }}
       ref: ${{ github.sha }}
       artifact-suffix: overflow-${{ strategy.job-index }}
       suite: affected
@@ -222,6 +230,7 @@ jobs:
       repeat-base: ${{ inputs.base || 'origin/main' }}
   affected-journeys:
     needs: choose-journeys
+    name: Manual request · Selected app journeys (Mac)
     # The implicit success() skips on chooser failure; zero skips by this
     # job's own condition, so its check passes without taking a Mac runner.
     if: needs.choose-journeys.outputs.count != '0'

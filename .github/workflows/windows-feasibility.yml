@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   observe:
-    name: Collect observations (not parity qualification)
+    name: Manual request · Windows feasibility observations (not parity qualification)
     runs-on: windows-2025
     timeout-minutes: 35
     defaults:

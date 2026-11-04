@@ -28,6 +28,7 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { legacyJobName } from "./ci-job-names.mjs";
 import { type AppleRead, appleReader, findPhoneApp } from "./phone-release.ts";
 
 /** What one commit's contract says: its major, and its view floor (absent before INF-1649). */
@@ -85,7 +86,7 @@ export async function testFlightBuilds(
   for (const run of runs) {
     if (run.status !== "completed") continue;
     const jobs = await jobsOf(run);
-    if (!jobs.some((job) => job.name === "availability" && job.conclusion === "success")) continue;
+    if (!jobs.some((job) => legacyJobName(job.name) === "availability" && job.conclusion === "success")) continue;
     const checked = /check build (\d+)\.(\d+)$/.exec(run.display_title);
     if (!checked) {
       builds.push({ build: `${run.run_number}.1`, source: run.head_sha });

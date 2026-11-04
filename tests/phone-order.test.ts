@@ -9,6 +9,7 @@ import {
 } from "../scripts/phone-order.ts";
 import type { AppleRead } from "../scripts/phone-release.ts";
 import { contractAccess, PROTOCOL_VERSION, VIEW_FLOOR } from "../src/shared/ipc.ts";
+import { runJobNames } from "./helpers/ciJobNames";
 
 /**
  * INF-1649, the captain's words: "alpha desktop builds wait for phone build is on
@@ -77,6 +78,33 @@ describe("the release order between the phone and the desktop app", () => {
     const builds = await testFlightBuilds(runs, async (one) => [
       { name: "resolve", status: "completed", conclusion: "success" },
       { name: "availability", status: "completed", conclusion: availability.get(one.id) ?? null },
+    ]);
+    expect(builds).toEqual([
+      { build: "6.1", source: "8b6c1af32".padEnd(40, "0") },
+      { build: "5.1", source: "02123128a".padEnd(40, "0") },
+    ]);
+  });
+
+  // INF-2413: runs after the trigger-first rename name the job as ios-release.yml
+  // does for each request (docs/testing.md, "CI job names").
+  it("counts a build whose availability job is named trigger first, by its own run or a later check", async () => {
+    const named = (check_build: string) =>
+      runJobNames("ios-release.yml", {
+        github: { event_name: "workflow_dispatch" },
+        inputs: { version: "0.6.0", check_build },
+        needs: {
+          resolve: { result: "success", outputs: { mode: check_build ? "status" : "release" } },
+          testflight: { result: "success" },
+        },
+      }).find((name) => name.endsWith("Confirm TestFlight availability")) as string;
+    expect(named("")).toBe("Requested TestFlight · Confirm TestFlight availability");
+    expect(named("6.1")).toBe("Requested TestFlight status · Confirm TestFlight availability");
+    const builds = await testFlightBuilds(runs, async (one) => [
+      {
+        name: named(one.display_title.includes("check build") ? "6.1" : ""),
+        status: "completed",
+        conclusion: one.id === 40423353350 ? "failure" : "success",
+      },
     ]);
     expect(builds).toEqual([
       { build: "6.1", source: "8b6c1af32".padEnd(40, "0") },

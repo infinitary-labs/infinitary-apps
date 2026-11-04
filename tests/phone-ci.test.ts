@@ -4,6 +4,7 @@ import { matchesGlob } from "node:path";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { describe, expect, it } from "vitest";
 import { GENERATED_CONTRACT, phoneDecision } from "../scripts/affected-phone";
+import { legacyJobName } from "../scripts/ci-job-names.mjs";
 import { PHONE_PARTS } from "../scripts/phone-test-plan";
 import { DEVICE_GATES, NATIVE_JOB } from "../scripts/replaced-phone-runs";
 import { workflowString, workflowValue } from "./helpers/releaseWorkflows";
@@ -415,17 +416,13 @@ describe("the native pull-request gate", () => {
   it.each(["", "40035937592"])(
     "keeps the native-check name distinct for evidence_run=%s",
     (evidenceRun) => {
-      const expression = workflow.jobs[NATIVE_JOB].name.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-      const ast = new Parser(new Lexer(expression).lex().tokens, ["inputs"], []).parse();
-      const inputs = new data.Dictionary({
-        key: "evidence_run",
-        value: new data.StringData(evidenceRun),
+      const name = workflowString(workflow.jobs[NATIVE_JOB].name, {
+        github: { event_name: "workflow_dispatch" },
+        inputs: { evidence_run: evidenceRun, trigger: "", waits: false },
       });
-      const name = new Evaluator(ast, new data.Dictionary({ key: "inputs", value: inputs }))
-        .evaluate()
-        .coerceString();
-      if (evidenceRun) expect(name).not.toBe(NATIVE_JOB);
-      else expect(name).toBe(NATIVE_JOB);
+      // Read as readers read it, by its name before the trigger-first rename.
+      if (evidenceRun) expect(legacyJobName(name)).not.toBe(NATIVE_JOB);
+      else expect(legacyJobName(name)).toBe(NATIVE_JOB);
     },
   );
   // INF-1066: record only on an explicit evidence request, never on ordinary checks.

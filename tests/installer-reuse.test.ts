@@ -11,6 +11,7 @@ import {
   reuseInstallerFixtures,
 } from "../scripts/installer-reuse";
 import { hostEnv } from "../src/core/hostEnv";
+import { runJobNames } from "./helpers/ciJobNames";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // Captain's "Prepare reuse": keep the original build and all installed checks,
@@ -69,6 +70,25 @@ it("accepts the successful signed build even though its installed checks failed"
   const { run, artifact, jobs } = records();
   expect(checkReuseMetadata(recordedPlan, run, artifact, jobs).build.id).toBe(jobs[0].id);
   expect(() => installerReusePlan.parse({ ...recordedPlan, sameApplication: false })).toThrow();
+});
+
+// INF-2413: a signed build named trigger first, as verify.yml's installer-only
+// request names it (docs/testing.md, "CI job names"), is the same original build.
+it("finds the signed build by its trigger-first name", () => {
+  const { run, artifact, jobs } = records();
+  const build = runJobNames("verify.yml", {
+    github: { event_name: "workflow_dispatch" },
+    inputs: { installer_only: true },
+  }).find((name) => name.endsWith("Build signed test copies (Mac)"));
+  expect(build).toBe(
+    "Manual request · Signed installer checks / Manual request · Build signed test copies (Mac)",
+  );
+  const renamed = [{ ...jobs[0], name: build as string }] satisfies [unknown];
+  expect(checkReuseMetadata(recordedPlan, run, artifact, renamed).build.id).toBe(jobs[0].id);
+  // Twice under both names is no one original build.
+  expect(() => checkReuseMetadata(recordedPlan, run, artifact, [...jobs, ...renamed])).toThrow(
+    "exactly once",
+  );
 });
 
 it.each(["expired", "other-run", "changed-digest", "failed-build", "outside-build"] as const)(

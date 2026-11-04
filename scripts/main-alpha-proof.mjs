@@ -2,6 +2,8 @@
  * source. This grants no substitute for release-specific package/update gates.
  * The caller reads the run and its latest job executions from GitHub, not artifacts.
  */
+import { legacyJobName } from "./ci-job-names.mjs";
+
 // Main runs no phone check (INF-2492), so every job of the run is the
 // desktop app's and the run itself must have succeeded. The phone's own gates
 // run in ios-release.yml before TestFlight, and the release's phone job still
@@ -15,6 +17,10 @@
 // every journey on the alpha source's files, so an alpha it proves reuses
 // them too and runs no lane (the captain on INF-2508: "Keep every journey in
 // the batch, and let an alpha reuse them").
+
+// Jobs read by the names they had before the trigger-first rename
+// (scripts/ci-job-names.mjs), so a run from before or after it reads alike.
+const legacy = (jobs) => jobs.map((job) => ({ ...job, name: legacyJobName(job.name) }));
 
 const green = (job) => job.status === "completed" && job.conclusion === "success";
 const skipped = (job) => job.status === "completed" && job.conclusion === "skipped";
@@ -48,7 +54,8 @@ function checksPassed(jobs, prefix) {
     jobs.every((job) => job.status === "completed" && ["success", "skipped"].includes(job.conclusion));
 }
 
-export function verifyMainEvidence(run, jobs, repository, source) {
+export function verifyMainEvidence(run, named, repository, source) {
+  const jobs = legacy(named);
   checkMainRun(run, jobs, repository, source);
   if (!checksPassed(jobs, "verify / "))
     throw new Error("The rolling-main run did not complete every full-check owner successfully.");
@@ -72,17 +79,20 @@ function checkMainRun(run, jobs, repository, source) {
 // The swept batch (INF-2430 piece 3, docs/testing.md "The swept batch"): a
 // main push whose files are exactly a green batch's skips main's full check,
 // and main.yml names the batch run in a job of its own. The batch run's
-// verdict job names the tree it swept, and its sweep job is verify.yml.
+// verdict job names the tree it swept, and its sweep job is verify.yml, read
+// as `verify` like main's own.
 const COVERED = /^covered by batch (\d+)$/;
 
 /** The batch run a covered main run names, or null for a full check. */
-export function coveringBatch(jobs) {
+export function coveringBatch(named) {
+  const jobs = legacy(named);
   const job = jobs.find((candidate) => COVERED.test(candidate.name) && green(candidate));
   return job ? Number(COVERED.exec(job.name)[1]) : null;
 }
 
 /** A covered main push: every job passed or skipped, and it names its batch. */
-export function verifyCoveredMain(run, jobs, repository, source) {
+export function verifyCoveredMain(run, named, repository, source) {
+  const jobs = legacy(named);
   checkMainRun(run, jobs, repository, source);
   if (coveringBatch(jobs) === null || jobs.some((job) => job.status !== "completed" ||
       !["success", "skipped"].includes(job.conclusion)))
@@ -91,7 +101,8 @@ export function verifyCoveredMain(run, jobs, repository, source) {
 }
 
 /** The batch run's full check passed on exactly `tree`, the alpha source's files. */
-export function verifyBatchEvidence(run, jobs, repository, tree) {
+export function verifyBatchEvidence(run, named, repository, tree) {
+  const jobs = legacy(named);
   if (run.path !== ".github/workflows/batch.yml" || run.head_branch !== "main" ||
       run.head_repository?.full_name !== repository || run.repository?.full_name !== repository ||
       run.status !== "completed" || run.conclusion !== "success")
@@ -101,9 +112,9 @@ export function verifyBatchEvidence(run, jobs, repository, tree) {
     throw new Error("Batch jobs must belong to a completed attempt of this run.");
   if (!jobs.some((job) => job.name === `verdict (tree ${tree})` && green(job)))
     throw new Error("The batch run swept other files than the alpha source.");
-  if (!checksPassed(jobs, "sweep / "))
+  if (!checksPassed(jobs, "verify / "))
     throw new Error("The batch run did not complete every full-check owner successfully.");
-  return { runId: run.id, attempt: run.run_attempt, url: run.html_url, journeys: everyLinuxJourney(jobs, "sweep / ") };
+  return { runId: run.id, attempt: run.run_attempt, url: run.html_url, journeys: everyLinuxJourney(jobs, "verify / ") };
 }
 
 /**
@@ -132,9 +143,13 @@ export async function proveMain(github, repo, run, source) {
  *   checks, INF-2480);
  * - "none": its verify call skipped, so it ran no lane (an automatic alpha
  *   that reused every lane, from its swept batch or a main run from before
- *   INF-2480); GitHub lists a skipped call as one job named `verify`;
- * - null: a lane failed, is pending, skipped or partial, and the alpha is refused. */
-export function alphaVerification(jobs) {
+ *   INF-2480); GitHub lists a skipped call as one job named `verify`, or,
+ *   after the trigger-first rename, under its unevaluated name, which no
+ *   lane reads, so no lane job is listed;
+ * - null: a lane failed, is pending, skipped or partial, and the alpha is refused.
+ * Jobs are read by their names from before the rename (scripts/ci-job-names.mjs). */
+export function alphaVerification(named) {
+  const jobs = legacy(named);
   const lanes = jobs.filter((job) => job.name === "verify" || job.name.startsWith("verify / "));
   if (lanes.every(skipped)) return "none";
   const passed = (name) => jobs.some((job) => job.name === name && green(job));

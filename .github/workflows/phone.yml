@@ -11,6 +11,10 @@ name: phone
 on:
   workflow_call:
     inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
       source_commit:
         description: Exact resolved source for unsigned release checks; empty uses the caller source
         type: string
@@ -73,7 +77,9 @@ permissions:
 # A started gate is never cancelled: it deletes its own simulators.
 
 jobs:
+  # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   cancel-replaced:
+    name: ${{ format('{0} · Cancel replaced phone runs', inputs.trigger || 'Manual request') }}
     # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
     # Called from a release, GitHub's hosted Ubuntu.
     runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light_gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-latest' }}
@@ -86,6 +92,7 @@ jobs:
           ref: ${{ inputs.source_commit || github.sha }}
           sparse-checkout: |
             package.json
+            scripts/ci-job-names.mjs
             scripts/replaced-phone-runs.ts
           sparse-checkout-cone-mode: false
           fetch-depth: 1
@@ -98,7 +105,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
   native-phone:
-    name: ${{ inputs.evidence_run != '' && 'native-phone-not-requested' || 'native-phone' }}
+    name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests (iPhone and iPad)' || '{0} · Phone checks (iPhone and iPad)', inputs.trigger || 'Manual request') }}
     if: inputs.evidence_run == ''
     # Required: no override or local fallback. The fleet serves this label only
     # from the two vBoxx VMs; a missing mapping supplies no runnable destination.
@@ -402,6 +409,7 @@ jobs:
   # predecessor releases its simulators before the next job starts. No retries.
   phone-repeat-2:
     needs: [native-phone]
+    name: ${{ format('{0} · Edited phone tests (iPhone and iPad; round 2/3)', inputs.trigger || 'Manual request') }}
     if: needs.native-phone.outputs.repeat_parts != ''
     runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
     permissions:
@@ -422,6 +430,7 @@ jobs:
     steps: *phone-steps
   phone-repeat-3:
     needs: [native-phone, phone-repeat-2]
+    name: ${{ format('{0} · Edited phone tests (iPhone and iPad; round 3/3)', inputs.trigger || 'Manual request') }}
     if: needs.native-phone.outputs.repeat_parts != ''
     runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
     permissions:
@@ -444,6 +453,7 @@ jobs:
   # Export selected evidence on the Xcode host without a simulator, build, sign-in or signing.
   scene-evidence:
     if: inputs.evidence_run != ''
+    name: ${{ format('{0} · Export phone pictures', inputs.trigger || 'Manual request') }}
     runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').light || vars.MAC_RUNNER || 'mini-mac' }}
     permissions:
       actions: read

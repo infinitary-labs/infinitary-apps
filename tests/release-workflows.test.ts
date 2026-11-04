@@ -15,7 +15,6 @@ import { createRequire } from "node:module";
 import { availableParallelism } from "node:os";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { compileFunction, constants } from "node:vm";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import type { PlaywrightTestConfig } from "@playwright/test";
 import type {
@@ -26,6 +25,7 @@ import type {
   JSONReportTestResult,
 } from "@playwright/test/reporter";
 import { describe, expect, it, vi } from "vitest";
+import { legacyJobName } from "../scripts/ci-job-names.mjs";
 import { BUILD_SCRIPTS_THAT_SHIP_NOTHING, isDesktopPath } from "../scripts/desktop-build.ts";
 import { laneOf } from "../scripts/journey-budget.ts";
 import { journeyArguments } from "../scripts/journey-runs.ts";
@@ -43,7 +43,13 @@ import {
 } from "../src/core/update/updateChannels";
 import vitestConfig from "../vitest.config";
 import { MAC_ONLY_TAG } from "./e2e/tags.ts";
-import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows";
+import { runJobNames } from "./helpers/ciJobNames";
+import {
+  githubScript,
+  loadYamlFile,
+  workflowString,
+  workflowValue,
+} from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
 import { standInGh } from "./helpers/standInGh";
 
@@ -245,6 +251,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       job.uses?.endsWith("/phone.yml"),
     );
     expect(releaseCall?.with).toEqual({
+      trigger: "Requested TestFlight",
       source_commit: "${{ needs.resolve.outputs.source_commit }}",
       hosted: true,
     });
@@ -845,19 +852,19 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const machines = ciJobs(eventName);
     // The startup fixtures' job runs only its plain Node paths step and its
     // action, and installs nothing.
-    for (const { name, runs } of machines)
+    for (const { id, name, runs } of machines)
       expect(
-        name === "linux-startup" ? runs : runs.slice(0, runs.indexOf(install) + 1),
+        id === "linux-startup" ? runs : runs.slice(0, runs.indexOf(install) + 1),
         name,
       ).toEqual(
-        name === "linux-startup"
+        id === "linux-startup"
           ? [paths?.run]
-          : eventName === "pull_request" && name === "typecheck-lint-build"
+          : eventName === "pull_request" && id === "typecheck-lint-build"
             ? [notes?.run, install]
             : [install],
       );
     const checks = machines
-      .filter(({ name }) => name !== "linux-startup")
+      .filter(({ id }) => id !== "linux-startup")
       .flatMap(({ runs }) => runs.slice(runs.indexOf(install) + 1))
       .filter((run) => !run.startsWith("pnpm test"));
     expect(checks.toSorted()).toEqual(
@@ -871,8 +878,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     );
     // The browser project runs once: in a pull request's gate, and in a
     // requested sweep's unit-tests, whose gate runs none.
-    const browserRuns = machines.flatMap(({ name, runs }) =>
-      runs.filter((run) => /^pnpm test .*--project browser\b/.test(run)).map(() => name),
+    const browserRuns = machines.flatMap(({ id, runs }) =>
+      runs.filter((run) => /^pnpm test .*--project browser\b/.test(run)).map(() => id),
     );
     expect(browserRuns).toEqual([
       eventName === "pull_request" ? "typecheck-lint-build" : "unit-tests",
@@ -994,7 +1001,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(workflowValue(job.strategy.matrix.lane, { inputs })).toEqual(["desktop"]);
     expect(workflowValue(job.strategy.matrix.shard, { inputs })).toEqual([1]);
     const matrix = { lane: "desktop", shard: 1 };
-    expect(workflowString(job.name, { inputs, matrix })).toBe("source-desktop (desktop)");
+    // INF-2410's scheme A: the pull request's trigger leads the name, read
+    // as the job's name before the rename.
+    const name = workflowString(job.name, { inputs, matrix });
+    expect(name).toBe("Pull request · Selected app journeys (Linux; serial)");
+    expect(legacyJobName(name)).toBe("source-desktop (desktop)");
     // Linux, where LINUX_RUNNER sends a pull request's journeys.
     expect(workflowString(job["runs-on"], { inputs, vars: {} })).toBe("ubuntu-24.04");
     expect(
@@ -1842,7 +1853,7 @@ type CiJob = {
  * main.yml's full check repeats; a pull request adds its own notes and
  * changed-file reader steps.
  */
-function ciJobs(eventName: string): { name: string; runs: string[] }[] {
+function ciJobs(eventName: string): { id: string; name: string; runs: string[] }[] {
   const ci = loadCi();
   const github = { event_name: eventName };
   return Object.entries(ci.jobs).flatMap(([id, job]) => {
@@ -1862,7 +1873,8 @@ function ciJobs(eventName: string): { name: string; runs: string[] }[] {
         strategy: { "job-index": index, "job-total": entries.length },
       };
       return {
-        name: workflowString(job.name ?? id, contexts),
+        id,
+        name: workflowString(job.name ?? id, { github, ...contexts }),
         runs: job.steps.flatMap((step) =>
           step.run &&
           (step.if === undefined || workflowValue(step.if, { github, ...contexts }) === true)
@@ -3655,23 +3667,47 @@ describe("the signed channel workflow", () => {
       (candidate) => candidate.id === "verification",
     )?.with?.script;
     expect(typeof script).toBe("string");
-    // Execute the unchanged action body with Node's real module loader, which
-    // its import of scripts/main-alpha-proof.mjs needs.
-    const execute = compileFunction(
-      `return (async () => {\n${script}\n})()`,
-      ["core", "exec", "github", "context", "process", "require"],
-      { importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER },
-    );
+    const execute = githubScript(script as string, [
+      "core",
+      "exec",
+      "github",
+      "context",
+      "process",
+      "require",
+    ]);
     const url = "https://github.com/example/project/actions/runs/123";
     const source = "c".repeat(40);
     const mainUrl = "https://github.com/example/project/actions/runs/41657804530";
     const linuxJourneys = ["parallel", "desktop"].flatMap((lane) =>
       [1, 2, 3, 4].map((shard) => `verify / linux-e2e / journeys (${lane} ${shard}/4)`),
     );
+    // INF-2413: an alpha and main run after the trigger-first rename, their
+    // jobs named as the workflows name them (docs/testing.md, "CI job names").
+    const pass = { result: "success" };
+    const renamed = (outputs: Record<string, string>) =>
+      runJobNames("release.yml", {
+        github: { event_name: "workflow_run", event: { workflow_run: { conclusion: "success" } } },
+        needs: {
+          resolve: { ...pass, outputs: { skip: "false", verify_required: "true", ...outputs } },
+          ...Object.fromEntries(
+            ["notes", "verify", "linux", "phone", "release", "update"].map((id) => [id, pass]),
+          ),
+        },
+      });
+    // GitHub lists a skipped call under its unevaluated name.
+    const skippedVerify = String((jobOf(release, "verify") as { name?: string }).name);
+    const renamedMain = runJobNames("main.yml", {
+      github: { event_name: "push", sha: source },
+      needs: { sort: { outputs: { kind: "full" } } },
+    });
     for (const scenario of [
       "alpha",
       "stable rehearsal without promotion",
       "eligible stable",
+      "eligible stable named trigger first",
+      "eligible stable named trigger first, from an alpha that ran only the journeys",
+      "eligible stable named trigger first, from an alpha that reused a swept batch",
+      "renamed stable without its update check",
       "eligible stable from before the update check",
       "eligible stable from an alpha that ran only the journeys",
       "eligible stable from an alpha that reused every lane",
@@ -3709,6 +3745,7 @@ describe("the signed channel workflow", () => {
         : "Update from the last published alpha";
       const journeysOnly = scenario.includes("ran only the journeys");
       const reusedEvery = scenario.includes("reused");
+      const trigger = scenario.includes("trigger first") || scenario.startsWith("renamed");
       const lanes = reusedEvery
         ? ["verify"]
         : [
@@ -3717,13 +3754,28 @@ describe("the signed channel workflow", () => {
             ...(scenario.endsWith("missing a shard") ? linuxJourneys.slice(1) : linuxJourneys),
             "verify / mac",
           ];
-      const jobs = [
-        "Resolve the source commit and version",
-        "Check the release notes",
-        ...lanes,
-        `${updateCheck} / Apple silicon`,
-        ...(legacy ? [`${updateCheck} / Intel`] : []),
-      ]
+      const names = trigger
+        ? [
+            ...renamed(
+              reusedEvery
+                ? { main_run: mainUrl, main_journeys: "true" }
+                : journeysOnly
+                  ? { main_run: mainUrl }
+                  : {},
+            ).filter(
+              (name) =>
+                scenario !== "renamed stable without its update check" || !name.includes("update"),
+            ),
+            ...(reusedEvery ? [skippedVerify] : []),
+          ]
+        : [
+            "Resolve the source commit and version",
+            "Check the release notes",
+            ...lanes,
+            `${updateCheck} / Apple silicon`,
+            ...(legacy ? [`${updateCheck} / Intel`] : []),
+          ];
+      const jobs = names
         .filter(
           (name) =>
             scenario !== "alpha without installed-update proof" || !name.startsWith(updateCheck),
@@ -3737,7 +3789,7 @@ describe("the signed channel workflow", () => {
               ? "in_progress"
               : "completed",
           conclusion:
-            name === "verify"
+            name === "verify" || name === skippedVerify
               ? "skipped"
               : scenario === "failed Intel proof from before the update check" &&
                   name.endsWith("Intel")
@@ -3792,14 +3844,16 @@ describe("the signed channel workflow", () => {
       const mainJobs = (
         swept
           ? ["sort", `covered by batch ${batchRun.id}`, "verify"]
-          : [
-              "verify / Validate verification selection",
-              "verify / linux-checks",
-              "verify / mac",
-              ...(scenario === "eligible stable from an alpha that reused every lane"
-                ? linuxJourneys
-                : []),
-            ]
+          : trigger
+            ? renamedMain
+            : [
+                "verify / Validate verification selection",
+                "verify / linux-checks",
+                "verify / mac",
+                ...(scenario === "eligible stable from an alpha that reused every lane"
+                  ? linuxJourneys
+                  : []),
+              ]
       ).map((name) => ({
         name,
         run_id: mainRun.id,
@@ -5277,10 +5331,18 @@ it("keeps installer verification on the selected disposable runners", () => {
     chip,
     runner: workflowString(jobs.installed["runs-on"], { vars, matrix: { chip } }),
   }));
-  // The check names PR readings and diagnoses are keyed to.
-  expect(chips.map((chip) => workflowString(jobs.installed.name, { matrix: { chip } }))).toEqual([
-    "Apple silicon",
-    "Intel",
+  // The check names PR readings and diagnoses are keyed to, each with its
+  // caller's trigger (docs/testing.md, "CI job names").
+  expect(
+    chips.map((chip) =>
+      workflowString(jobs.installed.name, {
+        inputs: { trigger: "Manual request" },
+        matrix: { chip },
+      }),
+    ),
+  ).toEqual([
+    "Manual request · Install and update (Mac; Apple silicon)",
+    "Manual request · Install and update (Mac; Intel)",
   ]);
   expect(assigned).toEqual([
     { chip: "arm64", runner: "mini-mac-virtual" },
@@ -5298,11 +5360,17 @@ it("runs the update check on Apple silicon only, updating from the signing job's
   };
   expect(
     Object.values(jobs).map((job) => [
-      job.name,
+      workflowString(job.name, { inputs: { trigger: "Automatic alpha" } }),
       workflowValue(job["runs-on"], { inputs: {}, vars: {} }),
       job.strategy,
     ]),
-  ).toEqual([["Apple silicon", "mini-mac-virtual", undefined]]);
+  ).toEqual([
+    [
+      "Automatic alpha · Apply published-alpha update (Mac; Apple silicon)",
+      "mini-mac-virtual",
+      undefined,
+    ],
+  ]);
   const release = loadYamlFile(".github/workflows/release.yml") as {
     jobs: Record<
       string,
@@ -5320,7 +5388,10 @@ it("runs the update check on Apple silicon only, updating from the signing job's
   expect(update.with?.handoff_id).toBe("${{ needs.release.outputs.handoff_id }}");
   // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
   expect(update.with?.zip_sha256).toBe("${{ needs.release.outputs.sha256 }}");
-  expect(update.name).toBe("Update from the last published alpha");
+  expect(update.with?.trigger).toBe(release.jobs.verify?.with?.trigger);
+  expect(workflowString(update.name, { github: { event_name: "workflow_run" }, inputs: {} })).toBe(
+    "Automatic alpha · Published-alpha update check",
+  );
 });
 
 // INF-1539: the captain approved "Add logging and recheck once" for Apple silicon
@@ -5497,13 +5568,21 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
     expect(lanes("alone")).toEqual(["alone"]);
     expect(shards("alone")).toEqual([1, 2, 3, 4]);
     expect(lanes("affected", "desktop")).toEqual(["desktop"]);
-    // A release's stable promotion reads every `verify / linux-e2e / …` job by name.
+    // A release's stable promotion reads every Linux journeys job by name,
+    // as it was named before the trigger-first rename (scripts/ci-job-names.mjs).
     const name = (suite: string, lane: string, shard: number) =>
-      workflowString(job?.name ?? "", { inputs: { suite }, matrix: { lane, shard } });
+      workflowString(job?.name ?? "", {
+        inputs: { suite, trigger: "Main push" },
+        matrix: { lane, shard },
+      });
     for (const shard of shards("alone") as number[]) {
-      expect(name("alone", "alone", shard)).toBe(`journeys (run alone ${shard}/4)`);
+      expect(name("alone", "alone", shard)).toBe(
+        `Main push · Fresh-start app journeys (Linux; group ${shard}/4)`,
+      );
+      expect(legacyJobName(name("alone", "alone", shard))).toBe(`journeys (run alone ${shard}/4)`);
     }
-    expect(name("full", "desktop", 2)).toBe("journeys (desktop 2/4)");
+    expect(name("full", "desktop", 2)).toBe("Main push · App journeys (Linux; serial group 2/4)");
+    expect(legacyJobName(name("full", "desktop", 2))).toBe("journeys (desktop 2/4)");
   });
   it.each(["parallel", "desktop"])(
     "runs the %s starter and overflow files through their lane",
@@ -6125,15 +6204,16 @@ describe("an alpha with nothing new to build", () => {
     const variable = workflowString(gate?.env?.PAUSED ?? "", {
       vars: { ROLLING_ALPHA_PAUSED: paused },
     });
+    // The workspace is this checkout, where the step imports the job-name
+    // reader (scripts/ci-job-names.mjs); desktop-changes is the stand-in.
     const fakeProcess = {
-      env: { SOURCE: "29ff10079a", GITHUB_WORKSPACE: "/work", PAUSED: variable },
+      env: { SOURCE: "29ff10079a", GITHUB_WORKSPACE: root, PAUSED: variable },
     };
     const fakeRequire = (name: string) => {
-      expect(name).toBe("node:child_process");
-      return childProcess;
+      expect(["node:child_process", "node:url"]).toContain(name);
+      return name === "node:url" ? { pathToFileURL } : childProcess;
     };
-    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-    await new AsyncFunction("core", "github", "context", "process", "require", script)(
+    await githubScript(script as string, ["core", "github", "context", "process", "require"])(
       {
         setOutput: (key: string, value: string) => {
           outputs[key] = value;
@@ -6147,7 +6227,11 @@ describe("an alpha with nothing new to build", () => {
     );
     return { skip: outputs.skip, summary: summaries.join("\n"), commands, reads };
   };
-  const notesJob = release.jobs.notes?.name as string;
+  // The notes job as an automatic alpha names it (docs/testing.md, "CI job names").
+  const notesJob = workflowString(release.jobs.notes?.name as string, {
+    github: { event_name: "workflow_run" },
+    inputs: {},
+  });
   const url = (n: number) => `https://github.com/example/project/actions/runs/${n}`;
 
   it("starts no cut while an earlier alpha is still being cut, whatever it holds", async () => {
@@ -6182,10 +6266,10 @@ describe("an alpha with nothing new to build", () => {
     expect(cut.skip).toBe("false");
     expect(cut.commands).toEqual([
       [
-        "/work/scripts/release-notes.ts",
+        `${root}/scripts/release-notes.ts`,
         "desktop-changes",
         "--repo",
-        "/work",
+        root,
         "--source",
         "29ff10079a",
       ],

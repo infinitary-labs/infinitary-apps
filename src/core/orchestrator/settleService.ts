@@ -1042,8 +1042,15 @@ export class SettleService {
     record: TaskRecord,
     merged: number,
   ): Promise<{ number: number; unread: boolean } | undefined> {
-    const readPull = this.host.readPull;
-    if (!readPull) return undefined;
+    if (!this.host.readPull) return undefined;
+    return this.openChangeAmong(record, merged);
+  }
+
+  /**
+   * Every pull request number the task's record keeps: its changes not yet
+   * merged, its slot, its merge reviews and its completion offers.
+   */
+  private pullNumbersOf(record: TaskRecord): Set<number> {
     const numbers = new Set<number>();
     for (const change of this.host.tasks.changesFor(record.id))
       if (change.handle?.number !== undefined && change.receipt?.outcome !== "merged")
@@ -1053,9 +1060,23 @@ export class SettleService {
       if (!review.receipt) numbers.add(review.number);
     for (const offer of record.delivery?.completionOffers ?? [])
       if (offer.prNumber !== undefined) numbers.add(offer.prNumber);
-    numbers.delete(merged);
+    return numbers;
+  }
+
+  /**
+   * The first of the task's pull requests, besides `except`, that reads open
+   * or cannot be read where the project lives; undefined when every one
+   * reads closed or merged. Without a way to read them, each one is unread.
+   */
+  private async openChangeAmong(
+    record: TaskRecord,
+    except?: number,
+  ): Promise<{ number: number; unread: boolean } | undefined> {
+    const readPull = this.host.readPull;
+    const numbers = this.pullNumbersOf(record);
+    if (except !== undefined) numbers.delete(except);
     for (const number of numbers) {
-      const pull = await readPull(record.id, number).catch(() => undefined);
+      const pull = readPull ? await readPull(record.id, number).catch(() => undefined) : undefined;
       if (pull?.number !== number) return { number, unread: true };
       if (pull.state === "open" && !pull.merged) return { number, unread: false };
     }
@@ -1863,9 +1884,16 @@ export class SettleService {
     const evidence = releaseEvidence.trim();
     if (!evidence)
       return refuse("name the release and the evidence that its delivery was verified.");
-    if (record.delivery?.prUrl || record.delivery?.prNumber || record.delivery?.changeLabel)
+    // A pull request of its own does not stop a release close: one closed
+    // without merging, its work delivered by another merged pull request or
+    // a release, is the case this close is for. Only one that may still be
+    // open does - it reads open, or cannot be read (INF-2628).
+    if (
+      this.pullNumbersOf(record).size === 0 &&
+      (record.delivery?.prUrl || record.delivery?.changeLabel)
+    )
       return refuse(
-        "this task has its own pull request; settle it with merge-pr instead, which closes the task as merged when the pull request was already merged where the project lives.",
+        "its pull request could not be read, so it may still be open; check it where the project lives before closing the task.",
       );
     if ((!record.deviceId && !record.worktreeDir) || record.workspaceState !== "present")
       return refuse("its working copy is unavailable; check the work before closing it.");
@@ -1874,6 +1902,14 @@ export class SettleService {
     if (gate) return { text: gate.text, refusal: gate };
     this.settlingTasks.set(record.id, "external release");
     try {
+      const pulls = [...this.pullNumbersOf(record)].sort((a, b) => a - b);
+      const open = await this.openChangeAmong(record);
+      if (open)
+        return refuse(
+          open.unread
+            ? `${this.changeName(record, open.number)} could not be read, so it may still be open; close or merge it first, or try again once it reads.`
+            : `${this.changeName(record, open.number)} is still open; close or merge it first.`,
+        );
       // Read the working copy where the task ran, just as discard does.
       // A missing computer or working copy is not proof of released work.
       const work = await (record.deviceId
@@ -1887,9 +1923,13 @@ export class SettleService {
         return refuse("its working copy is unavailable; check the work before closing it.");
       if ("inspectionFailure" in work)
         return refuse(`the working copy could not be checked: ${work.inspectionFailure}`);
-      if (work.dirty || work.unlandedCommits > 0)
+      // Commits that history alone calls unmerged - a squash merge's
+      // originals, or a closed pull request's - do not refuse: the close
+      // saves them on the task's kept ref before the working copy goes.
+      // Uncommitted edits are no delivered work, so they still refuse.
+      if (work.dirty)
         return refuse(
-          "its working copy has uncommitted edits or commits not in the project. Put them in or resolve them before closing it.",
+          "its working copy has uncommitted edits. Commit them or resolve them before closing it.",
         );
       // Recheck after the asynchronous work read: a concurrent turn may have
       // started or a card may have placed a new gate in the meantime.
@@ -1902,9 +1942,8 @@ export class SettleService {
         current.deviceId !== record.deviceId ||
         current.worktreeDir !== record.worktreeDir ||
         current.workspaceState !== "present" ||
-        current.delivery?.prUrl ||
-        current.delivery?.prNumber ||
-        current.delivery?.changeLabel
+        [...this.pullNumbersOf(current)].sort((a, b) => a - b).join() !== pulls.join() ||
+        (pulls.length === 0 && (current.delivery?.prUrl || current.delivery?.changeLabel))
       )
         return refuse("its state changed while the working copy was checked; try again.");
       const newGate =

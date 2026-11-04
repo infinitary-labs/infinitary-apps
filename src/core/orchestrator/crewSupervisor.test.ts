@@ -3986,11 +3986,11 @@ describe("CrewSupervisor", () => {
     expect(
       (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
     ).toContain("uncommitted edits");
-    vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: false, unlandedCommits: 2 });
-    expect(
-      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
-    ).toContain("commits not in");
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    // INF-2628, the captain's "Release close accepts closed pull requests and
+    // squash merges": commits only history calls unmerged no longer refuse,
+    // since the close saves them before the working copy goes.
+    vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: false, unlandedCommits: 2 });
     const settled = await supervisor.closeExternallyReleased("release", "v1.2.3 published");
     expect(settled.text).toContain("v1.2.3 published");
     expect(tasks.get("release")).toMatchObject({ status: "done", closedReason: "released" });
@@ -4004,8 +4004,17 @@ describe("CrewSupervisor", () => {
     ).toContain("wait for its crewmate");
   });
 
-  it("refuses an external release for unreported work, task-owned proposed changes and failed inspection", async () => {
-    const { supervisor, tasks, workspace } = setup(fakeCrewmate());
+  it("refuses an external release for unreported work, a pull request that may still be open and failed inspection", async () => {
+    // INF-2628: the task's own pull request refuses the release close only
+    // while it reads open or cannot be read.
+    const pulls = new Map<number, ForgePull | Error>();
+    const { supervisor, tasks, workspace } = setup(fakeCrewmate(), {
+      readPull: async (_id, number) => {
+        const pull = pulls.get(number);
+        if (pull instanceof Error) throw pull;
+        return pull;
+      },
+    });
     seedTask(tasks, {
       id: "release",
       title: "Publish version",
@@ -4017,9 +4026,23 @@ describe("CrewSupervisor", () => {
     ).toContain("has not reported");
     tasks.recordReport("release", { text: "Published externally" });
     seedDelivery(tasks, "release", { prUrl: "https://github.com/o/r/pull/1", prNumber: 1 });
+    const pull: ForgePull = {
+      number: 1,
+      state: "open",
+      merged: false,
+      headSha: "abc",
+      base: "main",
+      readiness: "clean",
+    };
+    pulls.set(1, pull);
     expect(
       (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
-    ).toContain("own pull request");
+    ).toContain("is still open");
+    pulls.set(1, new ForgeError("transient", "GitHub answered 502 to GET /repos/o/r/pulls/1"));
+    expect(
+      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+    ).toContain("could not be read, so it may still be open");
+    expect(tasks.get("release")?.status).toBe("active");
     seedTask(tasks, {
       id: "other",
       title: "Second release",
@@ -20320,9 +20343,9 @@ describe("closed task worktrees always go, work saved first (real git)", {
   }
 
   /** A commissioned crewmate, idle, on a real worktree of the default repo. */
-  async function commissionReal() {
+  async function commissionReal(extras: Pick<SetupExtras, "readPull"> = {}) {
     const crewmate = fakeCrewmate();
-    const harness = setup(crewmate, { realWorkspace: true });
+    const harness = setup(crewmate, { realWorkspace: true, ...extras });
     const { taskId } = await harness.supervisor.commission({
       title: "Tidy the meter test",
       intent: intentOf("go"),
@@ -20372,6 +20395,57 @@ describe("closed task worktrees always go, work saved first (real git)", {
     expect(await git(repoDir, ["branch", "--list", branch])).toBe("");
     // Ancestry cannot see a squash merge, so a save IS made - harmless,
     // since the content is also on main.
+    expect(await git(repoDir, ["show", `${kept(taskId)}:meter.txt`])).toBe("fixed meter");
+  });
+
+  // INF-2628, the captain's "Release close accepts closed pull requests and
+  // squash merges": LOOK-134's own pull request closed without merging and
+  // another task's squash-merged pull request delivered its work. The first
+  // mate closes it as released on that verified delivery; the task's own
+  // commits, unmerged to history, are kept rather than refused.
+  it("a released close of a task whose own pull request closed unmerged: closes, its squashed commits recoverable from the kept ref", async () => {
+    let ownPull: ForgePull = {
+      number: 66,
+      state: "open",
+      merged: false,
+      headSha: "",
+      base: "main",
+      readiness: "clean",
+    };
+    const harness = await commissionReal({
+      readPull: async (_id, number) => (number === ownPull.number ? ownPull : undefined),
+    });
+    const { cwd, branch, repoDir, taskId, tasks, supervisor } = harness;
+    writeFileSync(join(cwd, "meter.txt"), "fixed meter\n");
+    await git(cwd, ["add", "-A"]);
+    await git(cwd, ["commit", "-m", "fix the meter"]);
+    const original = await git(cwd, ["rev-parse", "HEAD"]);
+    ownPull = { ...ownPull, headSha: original };
+    tasks.recordReport(taskId, { text: "Fixed the meter on PR #66" });
+    seedDelivery(tasks, taskId, { prUrl: "https://github.com/o/r/pull/66", prNumber: 66 });
+    // Another task's pull request merged the same work by squash: main has
+    // the content, but not this branch's commit.
+    await git(repoDir, ["merge", "--squash", branch]);
+    await git(repoDir, ["commit", "-m", "fix the meter (#65)"]);
+
+    // While its own pull request is open, the close refuses and keeps everything.
+    const held = await supervisor.closeExternallyReleased(taskId, "PR #65 merged with this work");
+    expect(held.text).toContain("#66 is still open");
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(existsSync(cwd)).toBe(true);
+
+    ownPull = { ...ownPull, state: "closed" };
+    const closed = await supervisor.closeExternallyReleased(taskId, "PR #65 merged with this work");
+    expect(closed.text).toContain("Closed");
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "released" });
+    expect(
+      tasks.timeline(taskId).find((entry) => entry.data?.releaseEvidence)?.data,
+    ).toMatchObject({ releaseEvidence: "PR #65 merged with this work" });
+    await vi.waitFor(() => expect(existsSync(cwd)).toBe(false), REAL_GIT_WAIT);
+    await harness.realWorkspace?.deletionsSettled();
+    expect(await git(repoDir, ["branch", "--list", branch])).toBe("");
+    // The history rides along: the kept commit holds the original commit and its file.
+    expect(await git(repoDir, ["merge-base", "--is-ancestor", original, kept(taskId)])).toBe("");
     expect(await git(repoDir, ["show", `${kept(taskId)}:meter.txt`])).toBe("fixed meter");
   });
 

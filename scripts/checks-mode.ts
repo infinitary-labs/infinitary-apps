@@ -29,11 +29,11 @@ const ROUTES: Record<HeavyCheck, { name: string; route: string }> = {
     route:
       `start journeys.yml on your branch: ${DISPATCHES}/journeys.yml/dispatches with ` +
       `{"ref":"<branch>","inputs":{"files":"<journey> <journey>"}}. ` +
-      "A pull request runs only the critical path (INF-2507), never the others (INF-2139); `node scripts/affected-journeys.ts --base origin/main` lists the journeys your change reaches.",
+      "A pull request runs only the critical path (INF-2507), never the others (INF-2139); name only the journeys your change edits, since the journeys it only reaches wait for the swept batch (INF-2576).",
   },
   phone: {
     name: "The phone check",
-    route: `start phone.yml on your branch: ${DISPATCHES}/phone.yml/dispatches with {"ref":"<branch>","inputs":{"affected":"true"}}. Omit affected for every part. A pull request does not run it (INF-2139).`,
+    route: `start phone.yml on your branch: ${DISPATCHES}/phone.yml/dispatches with {"ref":"<branch>","inputs":{"affected":"true"}}. Every part on a branch also needs task and reason inputs (INF-2576). A pull request does not run it (INF-2139).`,
   },
   "replay-gate": {
     name: "The replay gate",

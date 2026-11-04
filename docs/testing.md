@@ -27,7 +27,7 @@ A small local diagnostic run is allowed, not an additional mandatory gate.
 Passing checks never grants merge permission.
 
 Edited test files require three total successful runs: ordinary coverage plus two more, never an ordinary run plus three repetitions.
-An affected unedited journey or phone part runs once per required platform or device.
+An affected unedited phone part runs once per device; an unedited journey the change only reaches runs in the swept batch, never on the task branch ("What a task branch requests").
 Failed, skipped, cancelled, incomplete and older-version outcomes are not passing proof.
 A failed or interrupted round stops later repetitions without retries.
 Record the version, selection reasons, files or parts, required platforms or devices, rounds and outcomes in the existing task/check evidence; this adds no host gate or second selector.
@@ -324,7 +324,7 @@ Logic-only signing tests use the stand-in `security` and `codesign` commands und
 Full Mac verification is not a routine pre-PR or pre-merge gate.
 Crewmates almost never request it on task branches because rolling main supplies broad post-merge coverage, automatic alphas reuse that exact proof, and every alpha runs or reuses every journey.
 Broad code changes, extra confidence and a care level alone are not exceptions.
-Keep affected Linux/native checks and their repetitions, replay where relevant, and both phone devices; do not add supplementary signed checks merely because portable code changed or a defect appeared on a Mac.
+Keep the checks "What a task branch requests" names, with their repetitions; do not add supplementary signed checks merely because portable code changed or a defect appeared on a Mac.
 
 The exceptions are an alpha candidate lacking reusable exact-source main proof, an evidenced full-run repair or infrastructure qualification that narrower checks cannot prove, coordinated missing-evidence recovery after reading existing runs/artifacts, or an explicit captain full-run request.
 Preserve full Linux/Mac parallel-lane qualification and stable promotion's inherited-alpha rules.
@@ -585,10 +585,10 @@ The fixture, simulator identity and unsigned Xcode configuration are described i
 
 ### The phone check on request
 
-`phone.yml` also runs on request (`workflow_dispatch`): `POST /repos/{owner}/{repo}/actions/workflows/phone.yml/dispatches` with `{"ref":"main","return_run_details":true}`.
-A default run on request runs every part of the device gate whatever changed, as `main.yml`'s call does.
-Branch requests also read the chooser for repeat accounting; `main.yml`'s call never repeats.
-For a crewmate checking its own branch, send `{"ref":"<branch>","inputs":{"affected":"true"},"return_run_details":true}` to select touched parts conservatively.
+`phone.yml` also runs on request (`workflow_dispatch`): a crewmate checking its own branch sends `POST /repos/{owner}/{repo}/actions/workflows/phone.yml/dispatches` with `{"ref":"<branch>","inputs":{"affected":"true"},"return_run_details":true}` to select touched parts conservatively, once at its final version ("What a task branch requests").
+A default run on request runs every part of the device gate whatever changed, as the phone release's call does; on a branch it needs `task` and `reason` inputs, and the `request` job refuses it without them.
+Branch requests also read the chooser for repeat accounting; the phone release's call never repeats.
+A release check of every part on `main` sends `{"ref":"main","return_run_details":true}`.
 The optional `base` input defaults to `origin/main`.
 This selection reuses `PART_OWNERS` and the Swift declaration reach reader, without a timing budget.
 Shared phone inputs and unreadable comparisons or test changes run every part instead.
@@ -622,19 +622,38 @@ The swept batch runs it again on the composed batch, in `batch.yml`'s own `criti
 Every other journey runs on request ("Journeys on request") and in main's desktop release check, never on a pull request of its own accord.
 A step that breaks fails the pull request, and is repaired at its owner; weakening or deleting the journey is ask-first ("This project's rulings on tests").
 
+## What a task branch requests
+
+A task branch's checks are its pull request's own, the critical path included, and only the requests below (INF-2576, the captain's choices "a, the critical path and the edited journeys only; reached ones wait for the swept batch" and "A, write the rules and add the phone workflow guard").
+The swept batch runs every journey on Linux and the Mac, and the critical path, on each approved change before it reaches `main` ("The swept batch").
+So a journey the change only reaches is checked there, and a break found there sends the change back to its pull request.
+
+| Check | A task branch requests it when | It requests |
+| --- | --- | --- |
+| Edited journeys | its change edits a journey file | `journeys.yml` with only the edited files, which run three rounds and then alone (`scripts/journey-runs.ts`); `platforms=mac` too only when an edited file holds a tagged test |
+| Reached journeys | never | nothing: they wait for the swept batch; a journey the batch sent the change back for is named again after its repair |
+| The Linux sweep | never, outside a named exception ("When to request full verification") | `source-journeys.yml` with `suite: full`, task and reason |
+| The phone check | its change selects the phone gate ("Native phone checks") | `phone.yml` with `affected: "true"`, or named `parts`; every part only with `task` and `reason` |
+| The replay gate | its change touches a replay trigger (`docs/replay-harness.md`, "The gate") | `replay.yml` |
+| Full verification | never, outside a named exception ("When to request full verification") | `verify.yml` with `full_system`, task and reason |
+
+Each request goes once per task, at the final version, after the pull request's own checks passed.
+A request made while the change is still being written is a diagnostic, never its proof.
+Before a request, read the runs already on that version, running ones included, and reuse one that passed or is still running.
+A later version keeps a run's proof when the files that differ from the proved version reach none of that run's selection: the journey chooser selects none of the proved journeys, or the phone chooser keeps no part.
+That holds across a repair and across bringing the branch up to date; otherwise request the check again, once, at the new final version.
+The phone pictures a release note or a card needs come from that one run's `phone-pictures` artifact, never from a run of their own.
+Cancel a run no longer needed by its id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).
+`phone.yml`'s `request` job refuses a branch request for every part, one with no `affected` or `parts`, without `task` and `reason`, on a light Linux machine before the run waits for a phone guest; `main`, a narrower request and the phone release's call pass.
+`tests/release-workflows.test.ts` runs that guard's shell.
+
 ## Journeys on the pull request
 
-A pull request no longer starts `journeys.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"), and runs only the critical path ("The critical path"): a crewmate runs the journeys its change reaches itself, which `node scripts/affected-journeys.ts --base origin/main` lists, locally or, in CI mode, by requesting them ("Journeys on request").
-Run every listed file when the selection contains at most 40 files; never prune it by hand (INF-2394 measure 2).
-Above 40, request `source-journeys.yml` with `suite: full`, the exact source commit, requesting task and reason: the Linux-only sweep, not full-system verification.
-Selected tagged tests still need their native proof separately.
-Beside a sweep, request those tagged tests alone: `journeys.yml` with the files that hold them and `platforms=mac`, never `linux` or `both`, since the sweep already runs every file on Linux (INF-2486).
-Use `node scripts/affected-journeys.ts --base <base> --head <head> --plan` to read the route and complete list.
-After successful runs, pass all their file names to the same comparison with `--ran "<files>"`; keep its JSON record beside the successful run links in the task evidence.
-The record lists selected and run files and every missing file; missing coverage exits nonzero.
-Above the cap it requires every journey in the sweep, not merely the listed subset.
-The file names supplied to `--ran` are the crewmate's declaration from successful run artifacts, not independent proof of success or of the source version.
-No pull request job is added: the crewmate owns this comparison before offering the change.
+A pull request no longer starts `journeys.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"), and runs only the critical path ("The critical path").
+A crewmate requests only the journeys its change edits, and the journeys its change only reaches wait for the swept batch ("What a task branch requests").
+`node scripts/affected-journeys.ts --base origin/main` lists the journeys a change reaches, which tells its author what the swept batch will check.
+A whole selection is the swept batch's and main's, never pruned by hand (INF-2394 measure 2): `--plan` reads its route, a sweep above 40 files, and `--ran "<files>"` compares it with the files that ran, exiting nonzero on missing coverage.
+Neither is a task branch's duty, and no listed-versus-run record is kept for one.
 INF-2539 removed the pull request selection from `journeys.yml`, its Linux starter job included; a request names its journeys ("Journeys on request").
 A request runs `journeys.yml`'s Linux `choose-journeys` job, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run that has an unexpired artifact of that name and sums each journey file's measured Mac durations.
@@ -1143,7 +1162,7 @@ A Linux job with no kind, such as main's startup fixtures, the Linux packages an
 
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
-| `light` | `verify.yml`'s `request` | `LINUX_RUNNER` |
+| `light` | `verify.yml`'s `request`, and `phone.yml`'s `request` on a request (the phone release's call names hosted `ubuntu-24.04`) | `LINUX_RUNNER` |
 | `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, and `replay.yml`'s `replay-gate` | `LINUX_RUNNER` |
 | `gate` | `journeys.yml`'s `choose-journeys` | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane | `LINUX_RUNNER` |

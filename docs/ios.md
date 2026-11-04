@@ -752,6 +752,7 @@ Shared modules, connection/device code, general packages and the lockfile alone 
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
 On an affected request the native job runs the chooser, `scripts/affected-phone.ts`, on the Mac before its setup; an unreadable comparison runs the gate, and a change it selects no gate for ends the job there.
 A default run on request (`workflow_dispatch`) skips the chooser and runs every part on both devices, then keeps each part's minutes as `part-times.json` in `phone-logs`, and it starts no release step (`docs/testing.md`, "The phone check on request").
+On a branch it needs `task` and `reason` inputs, and the workflow refuses it without them (`docs/testing.md`, "What a task branch requests").
 Inside a gate, a failed Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
 The gate does not check the generated Swift files: `pnpm check` does on every pull request, on Linux.
 The native job requires the `phone` kind's queue (`docs/testing.md`, "Each Mac job's kind and size"), with no runner override or fallback, and retains result bundles, logs and connection readings as `phone-results` when the job fails or a run on request records; a passing check uploads none of its result bundles, about 530 MB.

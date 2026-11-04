@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-branch-ci-requests",
+      "reason": "How the project itself is developed: the repository's rules ask a task branch to request only its edited journeys and one phone check at its final version, and the phone workflow refuses an every-part branch request without a task and reason; nothing in the app changes."
+    }
+  ]
+}

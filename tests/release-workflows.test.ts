@@ -4845,7 +4845,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").
   const queues: Record<string, string[]> = {
-    light: ["verify.yml:request"],
+    light: ["verify.yml:request", "phone.yml:request"],
     ci: [
       "ci.yml:unit-tests",
       "ci.yml:integration-tests",
@@ -5960,6 +5960,95 @@ describe("explicit manual verification scope (INF-2374)", () => {
         runRequest(linuxRequest!, { ...context, inputs: { ...inputs, suite: "full" } }).status,
       ).not.toBe(0);
     }
+  });
+});
+
+// INF-2576, the captain's choice "A, write the rules and add the phone workflow guard": a
+// branch request for every phone part names its task and reason before it waits for a phone
+// guest; touched, named and wait-clock requests, main and the release's call pass as before.
+describe("the phone check request guard (INF-2576)", () => {
+  type Step = { name?: string; run?: string; env?: Record<string, string> };
+  type Job = { needs?: string | string[]; "runs-on"?: string; steps?: Step[] };
+  const phone = loadYamlFile(".github/workflows/phone.yml") as {
+    on: { workflow_dispatch: { inputs: Record<string, unknown> } };
+    jobs: Record<string, Job>;
+  };
+  const step = phone.jobs.request?.steps?.find(
+    (candidate) => candidate.name === "Validate and record the manual phone request",
+  );
+  const branch = { event_name: "workflow_dispatch", ref: "refs/heads/fm/task-7ccc549e" };
+  function runGuard(github: Record<string, string>, inputs: Record<string, unknown>) {
+    const dir = scratchDir("infinitary-phone-request-");
+    const summary = join(dir, "summary");
+    const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", step?.run ?? ""], {
+      cwd: root,
+      env: {
+        ...hostEnv(),
+        GITHUB_STEP_SUMMARY: summary,
+        ...Object.fromEntries(
+          Object.entries(step?.env ?? {}).map(([key, value]) => [
+            key,
+            workflowString(value, { github, inputs }),
+          ]),
+        ),
+      },
+      encoding: "utf8",
+    });
+    return { ...result, summary: existsSync(summary) ? readFileSync(summary, "utf8") : "" };
+  }
+
+  it("holds the device gate behind the request check", () => {
+    expect(step).toBeDefined();
+    expect(phone.jobs["native-phone"]?.needs).toBe("request");
+    expect(phone.on.workflow_dispatch.inputs).toHaveProperty("task");
+    expect(phone.on.workflow_dispatch.inputs).toHaveProperty("reason");
+    // Refused on a light Linux machine, never in the phone guests' line; the phone release's
+    // call, which passes its resolved source, stays on GitHub's hosted Ubuntu.
+    const runner = (inputs: Record<string, string>) =>
+      workflowValue(phone.jobs.request?.["runs-on"] ?? "", {
+        inputs,
+        vars: {
+          MAC_QUEUES: JSON.stringify({ phone: "mini-mac-phone" }),
+          LINUX_QUEUES: JSON.stringify({ light: "shell-pc-light" }),
+        },
+      });
+    expect(runner({})).toBe("shell-pc-light");
+    expect(runner({ source_commit: "a".repeat(40) })).toBe("ubuntu-24.04");
+  });
+
+  it("refuses a branch request for every part without a task and reason", () => {
+    for (const inputs of [
+      {},
+      { affected: false, parts: "" },
+      { recording: true },
+      { task: "INF-2576" },
+      { reason: "Hero pictures" },
+    ]) {
+      const result = runGuard(branch, inputs);
+      expect(result.status, JSON.stringify(inputs)).not.toBe(0);
+      expect(result.stdout).toContain("requires a task and reason");
+      expect(result.summary).toBe("");
+    }
+  });
+
+  it("passes narrower requests, an explained every-part request, main and the release's call", () => {
+    for (const [github, inputs] of [
+      [branch, { affected: true }],
+      [branch, { parts: "cards" }],
+      [branch, { waits: true }],
+      [branch, { evidence_run: "41700000002" }],
+      [branch, { task: "INF-2576", reason: "Shared phone setup changed" }],
+      [{ event_name: "workflow_dispatch", ref: "refs/heads/main" }, {}],
+      [{ event_name: "workflow_call", ref: "refs/heads/main" }, { source_commit: "a".repeat(40) }],
+    ] as const) {
+      const result = runGuard(github, inputs);
+      expect(result.status, `${JSON.stringify(inputs)} ${result.stdout}`).toBe(0);
+    }
+    // GitHub fills an unsent boolean input with its default, false.
+    const explained = { affected: false, task: "INF-2576", reason: "Shared phone setup changed" };
+    expect(runGuard(branch, explained).summary).toBe(
+      "Phone request: every_part=true affected=false parts= task=INF-2576 reason=Shared phone setup changed\n",
+    );
   });
 });
 

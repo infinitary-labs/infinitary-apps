@@ -57,6 +57,12 @@ on:
         description: "Export native scene attachments from an existing phone run without starting simulators"
         required: false
         type: string
+      task:
+        description: Requesting task (required for every part on a branch)
+        type: string
+      reason:
+        description: Why this branch needs every part, not its touched or named parts (required for every part on a branch)
+        type: string
 
 permissions:
   contents: read
@@ -66,8 +72,35 @@ permissions:
 # each run and attempt waits only for a free guest.
 
 jobs:
+  # INF-2576 (the captain's choice "A, write the rules and add the phone workflow guard"): a
+  # request on a branch that would run every part names its task and reason, as a full Linux
+  # sweep does, and is refused on a light Linux machine before it waits for a phone guest
+  # (docs/testing.md, "What a task branch requests"). A call and every narrower request pass.
+  request:
+    name: ${{ format('{0} · Check phone check request', inputs.trigger || 'Manual request') }}
+    # The phone release's call, which passes its resolved source, runs it on GitHub's hosted Ubuntu.
+    runs-on: ${{ inputs.source_commit != '' && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    steps:
+      - name: Validate and record the manual phone request
+        env:
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' && inputs.evidence_run == '' }}
+          BRANCH: ${{ github.ref != 'refs/heads/main' }}
+          EVERY_PART: ${{ !inputs.affected && inputs.parts == '' && !inputs.waits }}
+          AFFECTED: ${{ inputs.affected }}
+          PARTS: ${{ inputs.parts }}
+          TASK: ${{ inputs.task }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [ "$MANUAL" != true ]; then exit 0; fi
+          if [ "$BRANCH" = true ] && [ "$EVERY_PART" = true ]; then
+            [ -n "$TASK" ] && [ -n "$REASON" ] || {
+              echo 'A branch request for every phone part requires a task and reason; send affected "true" or name parts instead'; exit 1;
+            }
+          fi
+          printf 'Phone request: every_part=%s affected=%s parts=%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
   # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   native-phone:
+    needs: request
     name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests (iPhone and iPad)' || '{0} · Phone checks (iPhone and iPad)', inputs.trigger || 'Manual request') }}
     if: inputs.evidence_run == ''
     # Required: no override or local fallback. The fleet serves this label only

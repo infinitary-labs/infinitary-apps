@@ -75,6 +75,18 @@ It fades in with opacity over `--dur-med`, a cut under reduced motion, and leave
 A click starts the ask in the message box; it never opens a card or a tip.
 It reserves card room as an expanded panel does, so a card never covers it.
 
+**Moving a panel.**
+Every panel's header is its handle, and there is no arrange mode to turn on.
+Pressing anywhere on a header and moving 5 px picks the panel up; a press that moves less stays a click, and the click after a drag does nothing.
+While it is held, the cursor reads grabbing, text selection stops, the panel stays in place at 40 % opacity, and a ghost of its header follows the pointer: the header's height and width, `--bg-2`, a 1 px `--accent` border, `--radius-m`, `--shadow-2`, its title at `--text-sm` / `--fg-1`.
+Each place it could land is the gap between two headers, the end of a group, or an empty group, on either rail; only the nearest is drawn, a 2 px `--accent` line at the rail's full width, so one accent shows at a time.
+A rail with no panels shows its top and bottom as two header-high outlines, 1 px dashed `--line-2` at `--radius-l`, only while a panel is held, so a panel can go there; the outline it would land in turns solid `--accent`.
+Letting go on a landing place moves the panel there and saves it in the arrangement (`docs/ui-plugins.md`, "Where a panel sits"); letting go elsewhere, or Escape, puts it back.
+The drop is a cut, and the rails settle to their new shares on the next frame; nothing animates under reduced motion either.
+From the keyboard, on a panel's chevron, ⌥↑ and ⌥↓ move it one place along its rail, crossing between the top and bottom groups, and ⌥← and ⌥→ move it to the other rail's same group at the end nearest the middle.
+Focus stays on its chevron, which names the keys to assistive technology; Settings → Panels shows them in its key line.
+A move never changes the panel's collapse choice.
+
 **When a rail runs out of room.**
 Expanded bodies keep four list rows (`--rail-body-min-height`, 124 px, owned by `tokens/rails.css`); a body whose complete content is shorter needs only its content height.
 When their shares would fall below that minimum, panels farthest from their anchored end fold to headers first: the lowest top panel or highest bottom panel, with top winning equal distances.
@@ -84,7 +96,7 @@ A folded chevron reads “Expand [title] · folded for room”.
 If headers alone cannot fit, the same middle-first order removes panels into one header-height More row at the rail’s foot, reserving room for that row too.
 The row reads “[count] more”, followed by the hidden titles in dim mono, with a trailing chevron; it has no card background.
 Its existing RowMenu lists titles and their last summaries, takes arrows and Escape, and stays inside the window with a scrolling menu when necessary.
-Choosing an item moves it nearest its anchored end, persists the priority in the layout, and focuses its header; it does not change its collapse choice.
+Choosing an item moves it to its slot's end nearest the window's edge in the saved arrangement, where Settings → Panels shows it, and focuses its header; it does not change its collapse choice.
 Tab reaches the More control and F6 treats it as part of the rail, with the usual focus ring.
 
 The most recent More choice keeps a remaining header ahead of earlier pins, so choosing it really returns it to the rail.

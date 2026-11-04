@@ -34,6 +34,7 @@ import {
   type Layout,
   layoutSchema,
   type PersonalPanels,
+  panelArrangementSchema,
   personalPanelsSchema,
 } from "@shared/preferences";
 import {
@@ -80,6 +81,12 @@ export const launchRecordSchema = z.object({
   earlyCrashes: z.number().int().min(0),
 });
 export type LaunchRecord = z.infer<typeof launchRecordSchema>;
+
+/** The `panel-arrangement` row: where every panel sits, and the last More pick. */
+const panelArrangementRowSchema = z.strictObject({
+  arrangement: panelArrangementSchema,
+  morePick: z.string().min(1).max(64).optional(),
+});
 
 /** Small persisted app settings (KV rows in SQLite). */
 export class SettingsStore {
@@ -248,13 +255,37 @@ export class SettingsStore {
     this.set("wash-opacity-v2", true);
   }
 
+  /**
+   * The rails' layout: the `layout` row, with the arrangement and the last
+   * More pick from a row of their own (`panel-arrangement`), so an older
+   * build, which reads `layout` strictly, still parses it and keeps the
+   * collapse choices (docs/saved-data-compatibility.md).
+   */
   getLayout(): Layout {
     const parsed = layoutSchema.safeParse(this.get("layout"));
-    return parsed.success ? parsed.data : DEFAULT_LAYOUT;
+    const {
+      arrangement: _row,
+      morePick: _pick,
+      ...layout
+    } = parsed.success ? parsed.data : DEFAULT_LAYOUT;
+    const arranged = panelArrangementRowSchema.safeParse(this.get("panel-arrangement"));
+    if (!arranged.success) return layout;
+    return {
+      ...layout,
+      arrangement: arranged.data.arrangement,
+      ...(arranged.data.morePick ? { morePick: arranged.data.morePick } : {}),
+    };
   }
 
+  /**
+   * Saves the layout. One without an arrangement keeps the saved
+   * arrangement and More pick; one with an arrangement saves both as given.
+   */
   setLayout(layout: Layout): void {
-    this.set("layout", layout);
+    const { arrangement, morePick, ...rest } = layout;
+    this.set("layout", rest);
+    if (arrangement)
+      this.set("panel-arrangement", { arrangement, ...(morePick ? { morePick } : {}) });
   }
 
   /**

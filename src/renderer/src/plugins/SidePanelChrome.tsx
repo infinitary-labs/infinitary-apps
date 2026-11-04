@@ -37,6 +37,15 @@ export type SidePanelChromeProps = {
   folded?: boolean;
   /** The body stays mounted, out of sight, while collapsed: its page keeps running. */
   keepBody?: boolean;
+  /**
+   * The header as the panel's handle (design skill Panel.prompt.md,
+   * "Moving a panel"): a press that may pick the panel up, and the keys
+   * that move it, heard on the header's controls.
+   */
+  onHeaderPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
+  onHeaderKeyDown?: (event: React.KeyboardEvent<HTMLElement>) => void;
+  /** The keys that move the panel, named on its chevron for assistive technology. */
+  moveKeys?: string;
   children?: React.ReactNode;
 };
 
@@ -66,6 +75,9 @@ export function SidePanelChrome({
   offRail = false,
   folded = false,
   keepBody = false,
+  onHeaderPointerDown,
+  onHeaderKeyDown,
+  moveKeys,
   children,
 }: SidePanelChromeProps) {
   const showCompact = collapsed && compact != null;
@@ -92,7 +104,11 @@ export function SidePanelChrome({
         flexDirection: "column",
       }}
     >
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: the header is the panel's drag handle; the keys that move it are heard from its own buttons, the chevron first. */}
       <header
+        onPointerDown={onHeaderPointerDown}
+        onKeyDown={onHeaderKeyDown}
+        data-panel-handle={onHeaderPointerDown ? "" : undefined}
         style={{
           display: "flex",
           alignItems: "center",
@@ -183,6 +199,7 @@ export function SidePanelChrome({
           }
           size={24}
           aria-expanded={!collapsed}
+          aria-keyshortcuts={moveKeys}
           onClick={onToggleCollapsed}
           style={{ flexShrink: 0 }}
         >

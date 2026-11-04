@@ -7,6 +7,8 @@ export type SwitchProps = {
   /** Accessible name when the visible label lives elsewhere (e.g. a SettingRow). */
   "aria-label"?: string;
   disabled?: boolean;
+  /** -1 inside a row that is the Tab stop and answers Space for it (Settings → Panels). */
+  tabIndex?: number;
 };
 
 export function Switch({
@@ -16,6 +18,7 @@ export function Switch({
   labelPosition = "after",
   "aria-label": ariaLabel,
   disabled,
+  tabIndex,
 }: SwitchProps) {
   const labelNode = label && (
     <span
@@ -43,6 +46,7 @@ export function Switch({
         aria-checked={checked ?? false}
         aria-label={ariaLabel ?? label}
         disabled={disabled}
+        tabIndex={tabIndex}
         onClick={() => !disabled && onChange?.(!checked)}
         style={{
           width: 36,

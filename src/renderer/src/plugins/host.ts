@@ -1,19 +1,15 @@
+import { type ArrangedPanel, arrangePanels, RAIL_SLOTS } from "@shared/panelArrangement";
 import {
   type HostCapabilitySupport,
   type PluginCapabilities,
   type PluginManifest,
   type RailSide,
-  type RailY,
   unservableGrants,
 } from "@shared/plugins/manifest";
-import {
-  DEFAULT_LAYOUT,
-  effectivePlacement,
-  isPanelHidden,
-  type Layout,
-} from "@shared/preferences";
+import { DEFAULT_LAYOUT, isPanelHidden, type Layout } from "@shared/preferences";
 import { READ_NAMES, type ReadGrant } from "@shared/reads";
 import { SQL_VIEWS } from "@shared/sql";
+import { BUILTIN_SURFACES } from "@shared/surfaces";
 import { useSyncExternalStore } from "react";
 import type {
   CardKindContribution,
@@ -60,13 +56,6 @@ function fallbackCardKind(kind: string): CardKindContribution {
 
 function byOrder<T extends Contribution & { order: number }>(a: T, b: T): number {
   return a.order - b.order || a.id.localeCompare(b.id);
-}
-
-const RAIL_Y_RANK: Record<RailY, number> = { top: 0, bottom: 1 };
-
-/** Within a rail, top-placed panels stack above bottom-placed ones; order and id break ties. */
-function bySidePanelPlacement(a: SidePanelContribution, b: SidePanelContribution): number {
-  return RAIL_Y_RANK[a.preferredPlacement.y] - RAIL_Y_RANK[b.preferredPlacement.y] || byOrder(a, b);
 }
 
 export class PluginHost {
@@ -196,13 +185,35 @@ function checkBindingsCover(
   }
 }
 
+/** A registered panel as the arrangement reads it: its id, the slot it asks for and its order. */
+export function arrangedPanelOf(panel: SidePanelContribution): ArrangedPanel {
+  return { id: panel.id, preferred: panel.preferredPlacement, order: panel.order };
+}
+
 /**
- * Final placement (D5): a contribution's `preferredPlacement` is a
- * preference the host honours - `x` picks the rail, `y` stacks it top or
- * bottom within that rail; order sorts within a `y` group, ties on id -
- * unless the captain's layout says otherwise (talk-to-personalize Step 1):
- * a panel with a `placements` record sits where that record says, and a
- * panel in `hiddenPanels` is on no rail at all, whatever its data says. The
+ * The panels a move here is computed over: every registered panel, and
+ * each of the app's own panels whose gate is shut, so a move made before
+ * the core has written the arrangement still gives a gated panel the place
+ * the core would (`knownPanels`, src/shared/panelArrangement.ts).
+ */
+export function knownArrangedPanels(registered: readonly SidePanelContribution[]): ArrangedPanel[] {
+  const ids = new Set(registered.map((panel) => panel.id));
+  return [
+    ...registered.map(arrangedPanelOf),
+    ...BUILTIN_SURFACES.filter((surface) => !ids.has(surface.id)).map((surface) => ({
+      id: surface.id,
+      preferred: surface.preferredPlacement,
+      order: surface.order,
+    })),
+  ];
+}
+
+/**
+ * Final placement (D5, INF-2344): every panel sits where the captain's one
+ * saved arrangement lists it, slot by slot and in order
+ * (`arrangePanels`, src/shared/panelArrangement.ts); a panel it does not
+ * list yet lands in the slot its `preferredPlacement` asks for. A panel in
+ * `hiddenPanels` is on no rail at all, whatever its data says. The
  * returned contributions carry the placement actually applied, so the
  * chrome's top/bottom docking follows the move. Both rails come back even
  * when empty, because empty is a state the rail renders (as nothing), not
@@ -212,30 +223,18 @@ export function placeSidePanels(
   panels: readonly SidePanelContribution[],
   layout: Layout = DEFAULT_LAYOUT,
 ): Record<RailSide, SidePanelContribution[]> {
-  const placed = panels
-    .filter((panel) => !isPanelHidden(layout, panel.id))
-    .map((panel) => {
-      const applied = effectivePlacement(layout, panel.id, panel.preferredPlacement);
-      return applied === panel.preferredPlacement
-        ? panel
-        : { ...panel, preferredPlacement: applied };
-    })
-    .sort((a, b) => {
-      const group = RAIL_Y_RANK[a.preferredPlacement.y] - RAIL_Y_RANK[b.preferredPlacement.y];
-      if (group) return group;
-      const priority = (id: string) => {
-        const at = layout.panelOrder?.indexOf(id) ?? -1;
-        return at < 0 ? Number.POSITIVE_INFINITY : at;
-      };
-      const rankA = priority(a.id);
-      const rankB = priority(b.id);
-      const order = rankA === rankB ? 0 : rankA < rankB ? -1 : 1;
-      return (a.preferredPlacement.y === "top" ? order : -order) || bySidePanelPlacement(a, b);
-    });
-  return {
-    left: placed.filter((panel) => panel.preferredPlacement.x === "left"),
-    right: placed.filter((panel) => panel.preferredPlacement.x === "right"),
-  };
+  const byId = new Map(panels.map((panel) => [panel.id, panel]));
+  const arrangement = arrangePanels(layout, panels.map(arrangedPanelOf));
+  const placed: Record<RailSide, SidePanelContribution[]> = { left: [], right: [] };
+  for (const slot of RAIL_SLOTS) {
+    for (const id of arrangement[slot.x][slot.y]) {
+      const panel = byId.get(id);
+      if (!panel || isPanelHidden(layout, id)) continue;
+      const same = panel.preferredPlacement.x === slot.x && panel.preferredPlacement.y === slot.y;
+      placed[slot.x].push(same ? panel : { ...panel, preferredPlacement: slot });
+    }
+  }
+  return placed;
 }
 
 /** Settings tabs in display order. */

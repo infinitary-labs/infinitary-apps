@@ -160,8 +160,8 @@
         "message": "<SubscriptionCard> status must be one of 'fresh' | 'stale' | 'auth_required' | 'rate_limited' | 'error'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Switch'] > JSXAttribute > JSXIdentifier[name!=/^(?:checked|onChange|label|disabled|key|ref|className|style|children)$/]",
-        "message": "<Switch> doesn't accept that prop. Declared props: checked, onChange, label, disabled."
+        "selector": "JSXOpeningElement[name.name='Switch'] > JSXAttribute > JSXIdentifier[name!=/^(?:checked|onChange|label|disabled|aria-label|tabIndex|key|ref|className|style|children)$/]",
+        "message": "<Switch> doesn't accept that prop. Declared props: checked, onChange, label, disabled, aria-label, tabIndex."
       },
       {
         "selector": "JSXOpeningElement[name.name='VoiceInput'] > JSXAttribute > JSXIdentifier[name!=/^(?:mode|keybindHint|disabled|value|onChange|level|onActivate|onAbandon|onAccept|onSubmit|onFocusChange|onKeystroke|width|style|inputRef|shellRef|maxHeight|attachments|onAttach|onPictureTooBig|onRemoveAttachment|onPaste|pastes|onPasteText|onInlinePaste|onRemovePaste|onCaretChange|onRecall|key|ref|className|style|children)$/]",

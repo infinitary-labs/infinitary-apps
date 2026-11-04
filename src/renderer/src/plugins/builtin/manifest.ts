@@ -100,8 +100,10 @@ export const builtinManifest: PluginManifest = parsePluginManifest({
     settingsSections: [
       { id: "general", label: "General", order: 10, width: "wide" },
       { id: "appearance", label: "Appearance", order: 12, width: "wide" },
+      // Where each panel sits on the rails, in order (INF-2344; docs/ui-plugins.md).
+      { id: "panels", label: "Panels", order: 13, width: "wide" },
       // Every command's keys, and the way to change them (docs/keyboard.md).
-      { id: "keyboard", label: "Keyboard", order: 13, width: "wide" },
+      { id: "keyboard", label: "Keyboard", order: 14, width: "wide" },
       { id: "projects", label: "Projects", order: 15, width: "wide" },
       // "Intelligence", not "Subscriptions" (the captain's Q1 note, S7):
       // the tab holds the accounts, the model board and the Decisions

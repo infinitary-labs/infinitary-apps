@@ -63,7 +63,7 @@ Six rules, each with its test:
 **Visibility is data, not a verb.**
 A side panel binds a `PanelSource<T>` (`subscribe` + `get`, framework-free); `null` means nothing to show, and the host renders no chrome for it.
 There is no `show_panel` / `hide_panel` anywhere, and none is planned.
-Placement: a contribution declares a `preferredPlacement` (`x`: left/right rail, `y`: top/bottom of that rail's stack), an order, and a `size` (`content` hugs what it shows; `fill` takes the rail height its siblings leave); `placeSidePanels` honours `x` for the rail in v1, then stacks `y`'s top group above its bottom group, sorting by order then id within each.
+Placement: a contribution declares a `preferredPlacement` (`x`: left/right rail, `y`: top/bottom of that rail's stack), an order, and a `size` (`content` hugs what it shows; `fill` takes the rail height its siblings leave); `placeSidePanels` stacks each rail's top group above its bottom group, in the order the captain's one saved arrangement lists them ("Preferences by talking"), and puts a panel the arrangement does not list yet in the slot its `preferredPlacement` asks for.
 A collapsed panel keeps its whole header height when a sibling overflows; expanded panels share the remaining space evenly, each capped at its own content, so a short panel shows all of it and a long one scrolls its body.
 The bottom group docks together: only its first shown panel consumes spare height above it, and later panels keep only the rail's normal gap.
 Hidden bottom panels do not consume the group's leading margin.
@@ -675,19 +675,25 @@ Rail overflow follows the measured fold ladder below.
 The window's own controls reach it over `inf:settings:appearance|layout:set`, the first mate over `personalize`, and every write pushes the WHOLE value as `inf:shell:preferences` - the value of the new read-catalog entry `shell.preferences` (`valueFromPush`, like the board), so a pushed value equals a fresh read by construction and the window applies it with no round trip (`renderer/src/app/preferences.ts`: `applyPreferences` seeds the theme, never through `setTheme`, which would write it straight back).
 `PROTOCOL_VERSION` 1.6.0: one core channel, one core push, `settings.getPreferences`/`onPreferences` under the existing key.
 
-**The layout record grew two deviations** (`src/shared/preferences.ts`): `hiddenPanels` (`true` keeps a panel off its rail whatever its data says - the rail is zero-width for it, exactly as if its source were `null`) and `placements` (a rail and an end of it, overriding `preferredPlacement`).
-Both default to empty so a Step 0 row still parses.
-`placeSidePanels(panels, layout)` applies them over every registered panel, returning the placement actually used so the chrome's docking follows a move; the registered contribution is never written back.
+**The layout record carries one deviation and one arrangement** (`src/shared/preferences.ts`): `hiddenPanels` (`true` keeps a panel off its rail whatever its data says - the rail is zero-width for it, exactly as if its source were `null`) and `arrangement` (INF-2344), which lists every panel the app knows in each of the four slots, each rail's top and bottom group, top to bottom as the rails draw them.
+`hiddenPanels` defaults to empty so a Step 0 row still parses.
+The arrangement is the one source of every panel's slot and order: the rails, Settings → Panels, a header drag, a More pick and the first mate's `panel` action all read and write it through `src/shared/panelArrangement.ts`.
+A slot's edge is the end at the window's edge, the top of a top group and the bottom of a bottom group; its middle is the end facing the other group.
+The core writes the arrangement in once from where the rails drew each panel before it existed, so nothing moves (`ShellPreferencesService.reconcile`, run at start and with each personal snapshot, before the window hears of it).
+After that a new panel lands at its slot's middle, and a panel the app stops serving keeps its place until `remove` forgets it.
+Before the arrangement, a panel's slot came from `placements` and a full rail's More picks from `panelOrder`; nothing writes them now, and they place only a panel the arrangement does not list yet.
+`SettingsStore` keeps the arrangement and the More pick in a row of their own, `panel-arrangement`, so an older build still parses the `layout` row it reads (`docs/saved-data-compatibility.md`).
+`placeSidePanels(panels, layout)` applies the arrangement and `hiddenPanels` over every registered panel, returning the placement actually used so the chrome's docking follows a move; the registered contribution is never written back.
 A hidden panel is skipped, not unregistered, so "show tasks again" is a record deletion and nothing re-mounts.
 
 **Surfaces have ids.**
-`src/shared/surfaces.ts` declares the app's own panels once (`activity` "Activity", `now` "Tasks", with their default placements); the built-in manifest declares its side panels FROM it, and the first mate's context block gains a bounded "your surfaces" section (`FirstmateAgent.renderSurfaces`, with `renderSurfacesSection` in `src/core/pi/personalizeTool.ts` its plain-text form): the theme, each app panel, each personal extension from Step 2's snapshot (marked `(yours)`, capped at twelve with a count for the rest) with its effective rail and position and its state.
+`src/shared/surfaces.ts` declares the app's own panels once (`activity` "Activity", `now` "Tasks", with their default placements); the built-in manifest declares its side panels FROM it, and the first mate's context block gains a bounded "your surfaces" section (`FirstmateAgent.renderSurfaces`, with `renderSurfacesSection` in `src/core/pi/personalizeTool.ts` its plain-text form): the theme, each app panel, each personal extension from Step 2's snapshot (marked `(yours)`, capped at twelve with a count for the rest), listed in the arrangement's order, with its rail, its end of that rail, its place in that slot (`2 of 3`) and its state.
 The state is the window's own word on the panel (`surfaceState`: drawn, collapsed, folded for room, in its rail's More row, loading, stopped, off, hidden or refused, with the reason), never read from the layout alone, and "no word from the window" until a window has answered (`docs/personal-panels.md`, "Placed on the rail").
 `personalize` resolves a surface by that id (a title is accepted too) and refuses an unknown one WITH the list, never guessing.
 
-**The tool** (`createPersonalizeTool`): `theme` (dark|light; an already-set theme is text, no feed line); `panel` (surface plus any of rail, position, visible; a move back to the panel's own placement deletes the record; a move onto either rail is allowed however many panels it holds); `remove` (an app panel is hidden and every record about it forgotten - it cannot leave; a personal extension leaves the workspace through `PersonalExtensions.remove`: `git rm` and one commit under the app's identity, its store slice cleared, the snapshot pushed without it, which is what unregisters the panel).
+**The tool** (`createPersonalizeTool`): `theme` (dark|light; an already-set theme is text, no feed line); `panel` (surface plus any of rail, position, above, below, visible; rail and position move the panel to that slot's middle, and above or below, which name the slot themselves, put it just above or below another panel; a move onto either rail is allowed however many panels it holds; the create-your-own-panel slot is never moved and never a neighbour); `remove` (an app panel is hidden and every record about it forgotten - it cannot leave; a personal extension leaves the workspace through `PersonalExtensions.remove`: `git rm` and one commit under the app's identity, its store slice cleared, the snapshot pushed without it, which is what unregisters the panel).
 `remove` acts only on the captain's own turn (the same wake stamp `remember`'s create gate uses); the theme and a panel's place may follow a schedule the captain set ("dark in the evening").
-Every outcome is one `personalized` FmEvent - the feed line's text verbatim (`switched to the light theme`, `Tasks hidden`, `Activity moved to the right rail, top`, `Open PRs removed`) - and the tool files an `operation` task through the same helper as the other operate tools.
+Every outcome is one `personalized` FmEvent - the feed line's text verbatim (`switched to the light theme`, `Tasks hidden`, `Activity moved to the right rail, top, above Tasks`, `Open PRs removed`); a change that moves several panels at once, such as Settings → Panels' Reset to defaults, is one line (`Panels put back where each asks to be`, `Panels rearranged`) - and the tool files an `operation` task through the same helper as the other operate tools.
 Refusals are text, never throws.
 
 **Panel instructions are standing directions** (INF-1054): "always use compact rows in my panels" is one `app_change` `direction` add scoped to the personal workspace, which is registered as a project at startup.
@@ -746,7 +752,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The renderer reads them once BEFORE the first render (`renderer/src/app/preferences.ts`, awaited in `main.tsx`) and writes every change through, so nothing paints a default it is about to replace.
   Never put a preference back in `localStorage` or the shell store alone: `tests/e2e/preferences.spec.ts` relaunches with Chromium's own storage wiped and the app's userData kept, which is exactly what those copies could not survive.
 - Preferences by talking (talk-to-personalize Step 1, landed 2026-09-18; captain decision Q5; "Preferences by talking" in `docs/ui-plugins.md`): `ShellPreferencesService` (`src/core/preferences/shellPreferences.ts`) is the ONE writer of the `appearance`/`layout` rows - the window's controls and the first mate's `personalize` tool both go through it, and every write pushes the whole value as `inf:shell:preferences`, the `shell.preferences` read the renderer applies (`applyPreferences`: theme seeded, never through `setTheme`; layout into `railStore`).
-  The layout record carries `hiddenPanels` and `placements` beside `collapsedPanels`, each a deviation only; `placeSidePanels(panels, layout)` applies them and `src/shared/surfaces.ts` names the app's panels once for the built-in manifest and the first mate's bounded "your surfaces" context section alike.
+  The layout record carries `hiddenPanels` beside `collapsedPanels`, each a deviation only, and the one `arrangement` of every panel's slot and order (INF-2344); `placeSidePanels(panels, layout)` applies them and `src/shared/surfaces.ts` names the app's panels once for the built-in manifest and the first mate's bounded "your surfaces" context section alike.
   `personalize` (`src/core/pi/personalizeTool.ts`: `remove`; theme and panel are `app_change`) refuses an unknown surface with the list, hides an app panel on `remove` (it cannot leave) and takes a personal extension out through `PersonalExtensions.remove` (one commit; git keeps the history); `remove` is captain-turn only, the theme may follow a schedule.
   A panel instruction is a standing direction scoped to the personal workspace (`app_change` `direction`), never a file in the workspace.
   Every outcome is one `personalized` FmEvent, the feed line verbatim; the words "preference", "extension" and "plugin" reach no user surface (`tests/e2e/personalize.spec.ts`).
@@ -775,6 +781,25 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A press the page hears before its panel listens is held for the panel's first listener.
   `tests/e2e/installed-panel-containment.spec.ts` (a hostile panel refused at every way out, a runaway torn down), `installed-panels.spec.ts` and `pluginInstaller.test.ts` are the binding tests.
 
+## Arranging the panels
+
+Every panel's place is one saved arrangement ("Preferences by talking"), and the captain arranges it three ways, each a write through `railStore` to the core's one writer (INF-2344, captain: "Both: the tab, and arranging on the rails").
+
+- **On the rails.**
+  Every panel header is a handle, with no arrange mode to turn on (captain: "make all panel headers draggable. there shouldn't be a toggle").
+  A press on a header that travels a few pixels picks the panel up (`pressPanel`, `src/renderer/src/plugins/panelDrag.ts`); a ghost follows the pointer, the nearest place it could land on either rail is drawn as a line, or as an outline over an empty rail or group, and letting go there moves it (`movePanel`).
+  Letting go anywhere else, or Escape, puts it back, and the release is never a click on the header's buttons.
+  Pressing ⌥ and an arrow on a header's chevron moves the panel one place, as on a Settings row (`docs/keyboard.md`, "Lists and Settings").
+- **Settings → Panels** (`src/renderer/src/settings/PanelsTab.tsx`, the design skill's `components/core/PanelsSettings.prompt.md`) lists each rail's top and bottom groups in order, every panel the app knows among them, with the window's word on why one does not draw (`panelRowState`), a switch that hides or shows it, the keys, and Reset to defaults.
+  A row drags as a header does, and the keyboard moves it.
+  Reset to defaults asks once more on the same button, then puts every panel where it asks to be in its declared order (`defaultArrangement`), clears the placements and More picks saved before the arrangement, and keeps each panel's collapse and visibility.
+  The tab is offered only where the window's layout writes reach the first mate's computer (`settings.panels` refuses on a Mac that controls another, `docs/view.md`).
+- **The first mate's `panel` action** moves one panel to a slot's middle, or just above or below another ("Preferences by talking").
+
+A move names one panel on the Activity feed, with where it now sits ("Tokyo moved to the right rail, top, above Tasks"); a change that moves several at once is one line.
+Two neighbours that trade places read the same either way, so the window's write names the panel the captain moved (`LayoutMove`, the optional second part of `inf:settings:layout:set`), and the first mate's `panel` action names its own.
+Settings' tabs run down a column on its left (the design skill's `components/core/SettingsTabs.prompt.md`), since the tabs no longer fit one row.
+
 ## When a rail runs out of room
 
 `Rail.tsx` measures the rail’s available height, excluding padding and the create-panel invitation, and reads the minimum from the design skill’s `--rail-body-min-height` token.
@@ -783,11 +808,10 @@ Top and bottom groups keep their anchored ends; equal distances fold the top pan
 Bodies with less than four rows of content need only their full content height.
 A fold never writes collapse or visibility settings, and room returning restores the panel.
 When headers alone cannot fit, the ladder reserves one header for More and hides as many middle panels as needed, leaving their pages mounted.
-More uses the existing keyboard RowMenu, shows the hidden titles and their last summaries, and moves a picked panel nearest its anchored end.
-That move persists in the optional layout `panelOrder` list, most recently picked first; top groups read priorities forward and bottom groups backward.
-Missing order means the panel’s declared order and id as before, and a reset removes that panel from the list.
+More uses the existing keyboard RowMenu, shows the hidden titles and their last summaries, and moves a picked panel to its slot's edge in the saved arrangement (`pickToEdge`), where Settings → Panels shows it first in a top group and last in a bottom group (INF-2344, captain: "Yes, to the end of its slot, saved in the layout where you can see it").
+The layout also keeps that panel as `morePick`, and a reset of the panel forgets it.
 The More row participates in F6 as a panel region, and its menu takes arrows and Escape.
 The narrow-window fold and each panel’s own presence remain independent.
 The ladder's folds are kept in one window store (`railFolds.ts`), written by the rail's measure and cleared when the rail is not drawn; the rail draws from it, and the window's answer about its panels reads it to name a panel `folded` or `gathered` (`docs/personal-panels.md`, "Placed on the rail").
 
-The most recent More choice keeps a remaining header ahead of earlier pins, so choosing it really returns it to the rail.
+The `morePick` panel keeps a remaining header ahead of earlier pins, so choosing it really returns it to the rail.

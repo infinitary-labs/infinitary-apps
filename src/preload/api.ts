@@ -423,7 +423,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
           invoke("inf:settings:appearance:set", appearance),
         ),
       getLayout: () => invoke("inf:settings:layout:get"),
-      setLayout: (layout) => invoke("inf:settings:layout:set", layout),
+      setLayout: (layout, move) => invoke("inf:settings:layout:set", layout, move),
       setPanels: (enabled) =>
         readableRequest("inf:settings:panels:set", () =>
           invoke("inf:settings:panels:set", enabled),

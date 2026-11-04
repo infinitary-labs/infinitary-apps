@@ -27,6 +27,7 @@ import {
   mockProviderOverrideModelsJson,
   startMockProvider,
 } from "./mockProvider";
+import { movePanelTo } from "./panelLayout";
 import { promptInput } from "./prompt";
 import { cardReply, cardScroller, showCard, shownCard, shownCardFrame } from "./stack";
 import { pressKey } from "./windowKeys";
@@ -124,14 +125,11 @@ test("first-launch cards stay reachable with collapsed, expanded or one-sided pa
   }
   await resizeWindow(app, page, { width: 1200, height: 800 });
   for (const x of ["left", "right"] as const) {
-    await page.evaluate(
-      (x) =>
-        window.infinitary.settings.setLayout({
-          collapsedPanels: { activity: false },
-          hiddenPanels: {},
-          placements: { activity: { x, y: "bottom" } },
-        }),
-      x,
+    await movePanelTo(
+      page,
+      "activity",
+      { x, y: "bottom" },
+      { collapsedPanels: { activity: false }, hiddenPanels: {} },
     );
     await expect(page.locator(`[data-rail="${x}"] > [data-side-panel="activity"]`)).toBeVisible();
     await reachable(`expanded-${x}`);
@@ -167,14 +165,11 @@ test("first-launch cards stay reachable with collapsed, expanded or one-sided pa
   await cardReply(page).field.press("Enter");
   await expect(layer.locator("[data-card-thread]")).toBeVisible({ timeout: 30_000 });
   for (const x of ["left", "right"] as const) {
-    await page.evaluate(
-      (x) =>
-        window.infinitary.settings.setLayout({
-          collapsedPanels: { activity: false },
-          hiddenPanels: {},
-          placements: { activity: { x, y: "bottom" } },
-        }),
-      x,
+    await movePanelTo(
+      page,
+      "activity",
+      { x, y: "bottom" },
+      { collapsedPanels: { activity: false }, hiddenPanels: {} },
     );
     for (const width of [1200, 1728]) {
       await resizeWindow(app, page, { width, height: width === 1728 ? 1000 : 800 });

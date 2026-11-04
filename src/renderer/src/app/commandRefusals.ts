@@ -286,6 +286,8 @@ const REFUSALS: Readonly<
   "settings.open": (s) => (s.view === "settings" ? "Settings is already open" : null),
   // From anywhere, Settings included: it goes to the Keyboard tab.
   "settings.keyboard": () => null,
+  // The arrangement is saved where the first mate lives (docs/view.md).
+  "settings.panels": usageRefusalFor("Panels"),
   // From anywhere, Settings included: it goes home to the note.
   "updates.show": (_s, facts) => (facts.updateAvailable ? null : "No update is available"),
   // Only while an update saves work: once the copy is replaced, it cannot wait.

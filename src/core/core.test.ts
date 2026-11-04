@@ -25,6 +25,8 @@ import {
   VIEW_INVOKE_CHANNELS,
   WORK_INVOKE_CHANNELS,
 } from "@shared/ipc";
+import { defaultArrangement, knownPanels, movePanel, panelSlot } from "@shared/panelArrangement";
+import type { Layout } from "@shared/preferences";
 import { SETUP_CARD_WORDS } from "@shared/projectSetup";
 import type { QuotaSnapshotView } from "@shared/quota";
 import { remoteLoginWords } from "@shared/remoteLogin";
@@ -1997,17 +1999,22 @@ describe("the core, driven with no Electron in the process", () => {
       expect(count()).toBe(afterTheme);
       const layout = { collapsedPanels: { activity: true }, hiddenPanels: {}, placements: {} };
       await core.dispatch("inf:settings:layout:set", [layout]);
+      // INF-2344: a move is written in the one saved arrangement, never in
+      // the placements an older build read.
+      const where = (saved: Layout) =>
+        saved.arrangement ? panelSlot(saved.arrangement, "now")?.slot : undefined;
       await apply("panel", { surface: "now", rail: "left", position: "top", visible: false });
-      expect(await core.dispatch("inf:settings:layout:get", [])).toEqual({
-        ...layout,
-        hiddenPanels: { now: true },
-        placements: { now: { x: "left", y: "top" } },
-      });
+      const moved = await core.dispatch("inf:settings:layout:get", []);
+      expect(moved).toMatchObject({ ...layout, hiddenPanels: { now: true } });
+      expect(where(moved)).toEqual({ x: "left", y: "top" });
       const arranged = count();
       await apply("panel", { surface: "Tasks", rail: "left", position: "top", visible: false });
       expect(count()).toBe(arranged);
       await apply("panel", { surface: "now", rail: "right", position: "bottom", visible: true });
-      expect(await core.dispatch("inf:settings:layout:get", [])).toEqual(layout);
+      const back = await core.dispatch("inf:settings:layout:get", []);
+      expect(back).toMatchObject(layout);
+      expect(back.hiddenPanels).toEqual({});
+      expect(where(back)).toEqual({ x: "right", y: "bottom" });
       expect((await apply("panel", { surface: "missing", visible: false })).text).toContain(
         "Your surfaces:",
       );
@@ -2088,37 +2095,133 @@ describe("the core, driven with no Electron in the process", () => {
       ]);
       // INF-609, the captain: "allow more panels ... not refusing it." Tasks,
       // clock and quota hold the right rail; Activity joins them as a fourth.
+      // INF-2344: each move lands in its slot's middle in the one saved
+      // arrangement, and the placements an older build read stay as they were.
+      const arranged = async () => {
+        const layout = await core.dispatch("inf:settings:layout:get", []);
+        expect(layout.placements).toEqual({});
+        return layout.arrangement;
+      };
       await change.run({
         action: "panel",
         value: { surface: "activity", rail: "right" },
         evidence: "move activity right",
       });
-      expect((await core.dispatch("inf:settings:layout:get", [])).placements).toEqual({
-        activity: { x: "right", y: "bottom" },
-      });
+      expect((await arranged())?.right.bottom[0]).toBe("activity");
+      expect((await arranged())?.right.bottom).toContain("now");
       await change.run({
         action: "panel",
         value: { surface: "activity", rail: "left" },
         evidence: "put activity back",
       });
-      expect((await core.dispatch("inf:settings:layout:get", [])).placements).toEqual({});
+      expect((await arranged())?.left.bottom).toEqual(["activity"]);
       await change.run({
         action: "panel",
         value: { surface: "clock", rail: "left", position: "bottom" },
         evidence: "move clock left",
       });
-      expect((await core.dispatch("inf:settings:layout:get", [])).placements.clock).toEqual({
-        x: "left",
-        y: "bottom",
-      });
+      expect((await arranged())?.left.bottom).toEqual(["clock", "activity"]);
       await change.run({
         action: "panel",
         value: { surface: "clock", rail: "right", position: "top" },
         evidence: "put clock back",
       });
-      expect((await core.dispatch("inf:settings:layout:get", [])).placements).toEqual({});
+      expect((await arranged())?.right.top).toEqual(["quota", "clock"]);
     } finally {
       // Restore the layout while the roster that owns any deviations is still present.
+      await core.dispatch("inf:settings:layout:set", [old]);
+      snapshot.mockRestore();
+    }
+  });
+
+  // INF-2344: the first mate edits the same arrangement the rails draw, just
+  // above or below a panel the captain names, and Activity says where it
+  // went; a Reset to defaults that puts several back is one line.
+  it("moves a panel just above or below another and says where in one Activity line, naming the panel moved", async () => {
+    const old = await core.dispatch("inf:settings:layout:get", []);
+    const extensions = ["clock", "quota"].map((id) => ({
+      id,
+      source: "yours" as const,
+      by: null,
+      frame: null,
+      title: id,
+      placement: { x: "right" as const, y: "top" as const },
+      order: 100,
+      size: "content" as const,
+      present: true,
+      ownPresence: false,
+      moves: false,
+      running: false,
+      reads: [],
+      sql: [],
+      panel: null,
+      server: null,
+      cardViews: [],
+      cards: {},
+      header: [],
+      commands: [],
+      error: null,
+    }));
+    const snapshot = vi.spyOn(core.services.personal, "snapshot").mockReturnValue({ extensions });
+    const feed: string[] = [];
+    let detach = () => {};
+    const change = createAppTools({
+      dispatch: core.dispatch,
+      actor: () => ({ kind: "firstmate", wake: "captain" }),
+    }).find((t) => t.name === "app_change");
+    if (!change) throw new Error("Missing app_change");
+    const arrangement = async () =>
+      (await core.dispatch("inf:settings:layout:get", [])).arrangement;
+    const defaults = defaultArrangement(knownPanels({ extensions }));
+    try {
+      await core.dispatch("inf:settings:layout:set", [
+        { collapsedPanels: {}, hiddenPanels: {}, placements: {}, arrangement: defaults },
+      ]);
+      detach = core.events.subscribe((channel, payload) => {
+        const event = payload as { type: string; text?: string };
+        if (channel === "inf:event" && event.type === "personalized") feed.push(event.text ?? "");
+      });
+      await change.run({
+        action: "panel",
+        value: { surface: "quota", above: "clock" },
+        evidence: "put quota above the clock",
+      });
+      expect((await arrangement())?.right.top).toEqual(["quota", "clock"]);
+      await change.run({
+        action: "panel",
+        value: { surface: "now", below: "activity" },
+        evidence: "put tasks under activity",
+      });
+      expect((await arrangement())?.left.bottom).toEqual(["activity", "now"]);
+      expect(feed).toEqual([
+        "quota moved to the right rail, top, above clock",
+        "Tasks moved to the left rail, bottom, below Activity",
+      ]);
+      const refused = await change.run({
+        action: "panel",
+        value: { surface: "now", above: "create-panel" },
+        evidence: "put tasks above the slot",
+      });
+      expect(refused.text).toContain("not a panel to move next to");
+      // The captain's Reset to defaults in Settings → Panels.
+      const layout = await core.dispatch("inf:settings:layout:get", []);
+      await core.dispatch("inf:settings:layout:set", [{ ...layout, arrangement: defaults }]);
+      expect(await arrangement()).toEqual(defaults);
+      expect(feed.slice(2)).toEqual(["Panels put back where each asks to be"]);
+      // The captain drags quota's header above clock: the two trade places,
+      // which reads either way, so the window names the panel it moved.
+      const reset = await core.dispatch("inf:settings:layout:get", []);
+      const dragged = movePanel(defaults, "quota", {
+        slot: { x: "right", y: "top" },
+        above: "clock",
+      });
+      await core.dispatch("inf:settings:layout:set", [
+        { ...reset, arrangement: dragged },
+        { moved: "quota" },
+      ]);
+      expect(feed.slice(3)).toEqual(["quota moved to the right rail, top, above clock"]);
+    } finally {
+      detach();
       await core.dispatch("inf:settings:layout:set", [old]);
       snapshot.mockRestore();
     }
@@ -2200,14 +2303,15 @@ describe("the core, driven with no Electron in the process", () => {
       await core.dispatch("inf:settings:layout:set", [
         { collapsedPanels: {}, hiddenPanels: {}, placements: {} },
       ]);
-      // Two panels move to the left rail beside Activity and the slot.
+      // Two panels move to the left rail beside Activity and the slot, each
+      // at the middle of its group in the saved arrangement (INF-2344).
       for (const surface of ["clock", "quota"])
         await change.run({
           action: "panel",
           value: { surface, rail: "left" },
           evidence: `move ${surface} left`,
         });
-      expect(Object.keys((await layout()).placements)).toEqual(["clock", "quota"]);
+      expect((await layout()).arrangement?.left.top).toEqual(["clock", "quota"]);
     } finally {
       detach();
       // Restore the layout while the roster that owns any deviations is still present.

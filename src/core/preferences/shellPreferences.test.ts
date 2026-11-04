@@ -53,12 +53,36 @@ describe("ShellPreferencesService", () => {
     expect(settings.getLayout().hiddenPanels).toEqual({});
   });
 
-  it("overrides a placement and clears it back to the panel's own", () => {
-    const { service, settings } = setup();
-    service.setPanelPlacement("activity", { x: "right", y: "top" });
-    expect(settings.getLayout().placements).toEqual({ activity: { x: "right", y: "top" } });
-    service.setPanelPlacement("activity", null);
-    expect(settings.getLayout().placements).toEqual({});
+  // INF-2344: the arrangement is written once from where the rails drew each
+  // panel, so nothing moves; a panel that arrives later lands at its slot's
+  // middle, and a write that changes nothing pushes nothing.
+  it("writes the arrangement in once without moving a panel, then adds a new panel at its slot's middle", () => {
+    const { service, settings, pushes } = setup();
+    service.setLayout({
+      collapsedPanels: {},
+      hiddenPanels: {},
+      placements: { quota: { x: "right", y: "bottom" } },
+      panelOrder: ["now"],
+    });
+    const panels = [
+      { id: "activity", preferred: { x: "left", y: "bottom" }, order: 1 },
+      { id: "now", preferred: { x: "left", y: "bottom" }, order: 2 },
+      { id: "quota", preferred: { x: "left", y: "top" }, order: 0 },
+    ] as const;
+    service.reconcile(panels);
+    expect(settings.getLayout().arrangement).toEqual({
+      left: { top: [], bottom: ["activity", "now"] },
+      right: { top: [], bottom: ["quota"] },
+    });
+    expect(settings.getLayout().morePick).toBe("now");
+    const written = pushes.length;
+    service.reconcile(panels);
+    expect(pushes.length).toBe(written);
+    service.reconcile([
+      ...panels,
+      { id: "clock", preferred: { x: "left", y: "bottom" }, order: 3 },
+    ]);
+    expect(settings.getLayout().arrangement?.left.bottom).toEqual(["clock", "activity", "now"]);
   });
 
   it("clears every record about one panel and leaves the others", () => {
@@ -159,12 +183,15 @@ it("INF-609: a lasting More move survives unrelated layout writes and clearing r
     collapsedPanels: {},
     hiddenPanels: {},
     placements: {},
-    panelOrder: ["now", "activity"],
+    arrangement: { left: { top: [], bottom: ["activity", "now"] }, right: { top: [], bottom: [] } },
+    morePick: "now",
   });
   service.setPanelHidden("activity", true);
-  service.setPanelPlacement("now", { x: "left", y: "bottom" });
-  expect(settings.getLayout().panelOrder).toEqual(["now", "activity"]);
+  service.setTheme("light");
+  expect(settings.getLayout().morePick).toBe("now");
+  expect(settings.getLayout().arrangement?.left.bottom).toEqual(["activity", "now"]);
   service.clearPanel("now");
-  expect(settings.getLayout().panelOrder).toEqual(["activity"]);
+  expect(settings.getLayout().morePick).toBeUndefined();
+  expect(settings.getLayout().arrangement?.left.bottom).toEqual(["activity"]);
   expect(settings.getLayout().hiddenPanels.activity).toBe(true);
 });

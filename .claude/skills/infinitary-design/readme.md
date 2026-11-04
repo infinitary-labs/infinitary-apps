@@ -83,6 +83,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   A rail is a vertical stack of host-framed panels at one fixed width (`--rail-width`, never resizable); the host owns each panel's title, attribution, and collapse, and a panel styles only its body region.
   A rail holds any number of panels, and its expanded panels share its height and scroll their bodies.
   When it runs out of room, middle panels fold to headers, then into a counted More row; `components/panel/Panel.prompt.md` owns the four-row minimum, pin and lasting More move.
+  Every panel's header is its handle: dragging it moves the panel along its rail or to the other, with no arrange mode, and Settings → Panels lists the same saved arrangement (`components/panel/Panel.prompt.md`, "Moving a panel"; `components/core/PanelsSettings.prompt.md`).
   The stage insets and is never covered.
   Nothing on a rail is drawn under the message box: where the window-centred box reaches into a rail's columns on a narrow page, a rail with an expanded panel ends above the box and its last-turn lane, and the box stands on a collapsed header at a rail's foot.
   A feed that gets shorter there keeps its newest line in sight.
@@ -185,6 +186,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
 - **Spacing:** 4px scale, generous by default (`--space-5..8` between regions).
   Emptiness is a feature — the null state is ~90% empty.
   Settings has two gaps, owned by `settingRows.tsx` (`SECTION_GAP` 32 above a section, `ROW_GAP` 12 between rows and from a label or intro line to its first row) plus `LABEL_GAP` 8 from a label to its intro line; a tab never writes its own.
+  Settings' tabs stand in one column on the left of the page, the section beside them (`components/core/SettingsTabs.prompt.md`).
 - **Backgrounds:** the window is translucent on macOS (the app's `docs/translucent-window.md`): native under-window material on shown Macs, tinted once by the body with `--material-tint` at the chosen wash opacity (0% by default); the app paints no other window-sized surface, no imagery, no gradients except a barely-there radial glow behind the first mate (`--accent-glow` at low opacity, lifted by `--halo-boost`).
   No textures, no patterns.
   Panels stay chromeless on the tint and the voice input's shell is its hairline alone; cards paint solid `--bg-2` without blur; only modal overlays keep their own blur.
@@ -295,7 +297,7 @@ The artwork source is `packaging/build/dmg-background.svg`, with literal colors 
 
 ## Index
 - `styles.css` → `tokens/` (colors, typography, spacing, effects, fonts)
-- `components/core/` — Button, IconButton, Input, Switch, GroupedPills, Badge, KeyCap, StatusDot, RowMenu, and CommandSearch, KeyboardSettings, ProjectFocus (the top bar's project pill) and TaskKey, the rule for every task key the app shows (prompt pages only)
+- `components/core/` — Button, IconButton, Input, Switch, GroupedPills, Badge, KeyCap, StatusDot, RowMenu, and CommandSearch, KeyboardSettings, PanelsSettings, SettingsTabs, ProjectFocus (the top bar's project pill) and TaskKey, the rule for every task key the app shows (prompt pages only)
 - `components/mate/` — Firstmate (4D character), Crewmate (3D mini), CrewStrip
 - `components/voice/` — VoiceInput (idle ↔ recording states)
 - `components/cards/` — ResponseCard, CardStack, TaskRecord (the record card's body), TaskCrewmate (a task's Crewmate tab: its crewmate's session as a transcript, and a prompt that steers it), TaskBrowser (a task's own browser on the stage), PanelCard (one of a panel's cards on the stack)

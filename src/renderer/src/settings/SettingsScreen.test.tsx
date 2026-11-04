@@ -11,8 +11,8 @@ import {
 } from "./SettingsScreen";
 
 describe("Settings column", () => {
-  it("uses the Intelligence wide width and shrinks with the window", () => {
-    const style = settingsColumnStyle("wide");
+  it("holds the tab column beside the Intelligence wide width, the same for every tab, and shrinks with the window", () => {
+    const style = settingsColumnStyle();
     expect(style.width).toBe(SETTINGS_COLUMN_PX);
     expect(style.maxWidth).toBe("100%");
     expect(style.boxSizing).toBe("border-box");
@@ -48,6 +48,7 @@ describe("Settings column", () => {
       ).toEqual([
         "general",
         "appearance",
+        "panels", // INF-2344: the arrangement is the first mate's, arranged from here.
         "keyboard",
         "projects",
         "subscriptions",
@@ -65,6 +66,11 @@ describe("Settings column", () => {
 
 describe("Settings tabs from the keyboard", () => {
   it("move to the next and previous tab with the arrows, wrapping around, and to the ends with Home and End", () => {
+    // The captain's words on INF-2344: "change the tabs to be a vertical column on the left".
+    expect(tabStep("ArrowDown", 0, 7)).toBe(1);
+    expect(tabStep("ArrowDown", 6, 7)).toBe(0);
+    expect(tabStep("ArrowUp", 0, 7)).toBe(6);
+    expect(tabStep("ArrowUp", 3, 7)).toBe(2);
     expect(tabStep("ArrowRight", 0, 7)).toBe(1);
     expect(tabStep("ArrowRight", 6, 7)).toBe(0);
     expect(tabStep("ArrowLeft", 0, 7)).toBe(6);
@@ -74,7 +80,7 @@ describe("Settings tabs from the keyboard", () => {
   });
 
   it("leave every other key to the browser, and move nothing without tabs", () => {
-    expect(tabStep("ArrowDown", 0, 7)).toBeNull();
+    expect(tabStep("PageDown", 0, 7)).toBeNull();
     expect(tabStep("Enter", 0, 7)).toBeNull();
     expect(tabStep("ArrowRight", 0, 0)).toBeNull();
   });

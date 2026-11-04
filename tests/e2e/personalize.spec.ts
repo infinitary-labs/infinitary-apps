@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { ACTIONS } from "@shared/actions";
+import { panelSlot } from "@shared/panelArrangement";
 import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
 import { OLD_PANEL_INSTRUCTIONS_PATH } from "../../src/core/personal/panelInstructions";
 import { OPEN_KNOWLEDGE, row, tab } from "./knowledgeBrowser";
@@ -149,12 +150,23 @@ test("move Activity to the right changes its rail without changing collapse or o
         value: { surface: "activity", rail: "right", position: "top" },
       }),
   );
+  // INF-2344: the move is written in the one saved arrangement, and the
+  // placements an older build read stay as they were.
   await expect
-    .poll(() => page.evaluate(() => window.infinitary.settings.getLayout()))
-    .toMatchObject({
+    .poll(async () => {
+      const layout = await page.evaluate(() => window.infinitary.settings.getLayout());
+      return {
+        collapsedPanels: layout.collapsedPanels,
+        hiddenPanels: layout.hiddenPanels,
+        placements: layout.placements,
+        activity: layout.arrangement && panelSlot(layout.arrangement, "activity")?.slot,
+      };
+    })
+    .toEqual({
       collapsedPanels: before.collapsedPanels,
       hiddenPanels: before.hiddenPanels,
-      placements: { ...before.placements, activity: { x: "right", y: "top" } },
+      placements: before.placements,
+      activity: { x: "right", y: "top" },
     });
   await expect(page.locator('[data-rail="right"] [data-side-panel="activity"]')).toBeVisible();
   await expect(page.locator("[data-card-layer]")).toHaveCount(0);

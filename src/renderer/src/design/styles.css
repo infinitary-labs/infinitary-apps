@@ -417,6 +417,77 @@ html[data-card-stack-open] [data-rail] {
   flex-shrink: 0;
 }
 
+/* Moving a panel (design skill components/panel/Panel.prompt.md, "Moving a
+   panel"; plugins/panelDrag.ts): every header is a handle with the grab
+   cursor, its buttons keeping their own. While a panel is held the whole
+   window reads grabbing, nothing selects, frames let the pointer pass, the
+   held panel stays in place faint, a ghost of its header follows the
+   pointer, and the one place it would land is lit: a 2px accent line, or
+   the outline of an empty group. A rail with no panels shows its two
+   groups as dashed outlines only while a panel is held. The drop is a cut. */
+[data-panel-handle] {
+  cursor: grab;
+}
+html[data-panel-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+/* Held, every element under the pointer reads grabbing, a button included. */
+html[data-panel-dragging] :is(*, *:hover) {
+  cursor: inherit;
+}
+html[data-panel-dragging] iframe {
+  pointer-events: none;
+}
+[data-panel-drag-source] {
+  opacity: 0.4;
+}
+[data-panel-drag-ghost] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  background: var(--bg-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+[data-panel-drop-line] {
+  position: fixed;
+  z-index: 999;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}
+[data-panel-drop-zone] {
+  position: fixed;
+  z-index: 998;
+  box-sizing: border-box;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-l);
+  pointer-events: none;
+}
+[data-panel-drop-zone][data-lit] {
+  border: 1px solid var(--accent);
+}
+[data-panel-drop-line][hidden],
+[data-panel-drop-zone][hidden] {
+  display: none;
+}
+
 /* One header-sized reachable door for panels that cannot fit. */
 [data-rail-more] {
   display: flex;

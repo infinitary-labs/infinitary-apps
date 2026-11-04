@@ -21,7 +21,7 @@ A one-off answer the captain reads once is a card ([cards-and-consent.md](cards-
 
 ## Owner and entry points
 
-- Registration: `PluginHost.registerPlugin(manifest, bindings, options)` in [`../src/renderer/src/plugins/host.ts`](../src/renderer/src/plugins/host.ts), the single door for every card kind, settings section and side panel; `placeSidePanels` applies the captain's placements.
+- Registration: `PluginHost.registerPlugin(manifest, bindings, options)` in [`../src/renderer/src/plugins/host.ts`](../src/renderer/src/plugins/host.ts), the single door for every card kind, settings section and side panel; `placeSidePanels` applies the captain's one saved arrangement of every panel's slot and order, read and written through [`../src/shared/panelArrangement.ts`](../src/shared/panelArrangement.ts) (INF-2344).
 - Panel folders: `PersonalExtensions` in [`../src/core/personal/personalExtensions.ts`](../src/core/personal/personalExtensions.ts) seeds, scans, compiles, serves and removes the captain's own panels and installed ones, and pushes one snapshot on `inf:plugins:personal`.
 - The compiler: `compilePersonalModule` and `PersonalCompileError` in [`../src/core/personal/compiler.ts`](../src/core/personal/compiler.ts).
 - The contract a panel is written against: `PanelProps`, `ServerContext` and `PersonalManifest` in [`../src/shared/personal/contracts.ts`](../src/shared/personal/contracts.ts) (type-only; it generates the workspace's `infinitary-env.d.ts`); the manifest schema and `PLUGIN_HOST_SUPPORT` in [`../src/shared/personal/manifest.ts`](../src/shared/personal/manifest.ts).

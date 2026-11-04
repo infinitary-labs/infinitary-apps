@@ -46,6 +46,8 @@ import { markWindowKeys } from "./windowKeysMark";
 
 /** Keyboard settings' search field, which Open Keyboard settings gives the caret. */
 const KEYBOARD_SEARCH = "[data-keyboard-settings] [data-keyboard-search] input";
+/** Settings → Panels' one Tab stop among its rows (PanelsTab.tsx). */
+const PANELS_ROW = '[data-panels-settings] [data-panels-row][tabindex="0"]';
 
 /** Usage's unit switch, its first control, where Open Usage puts focus. */
 const USAGE_UNIT = '[data-settings-section="usage"] [data-usage-unit] input:checked';
@@ -264,6 +266,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   // Settings → Keyboard, with the caret in its search.
   "settings.keyboard": () =>
     openSettingsAt("keyboard", KEYBOARD_SEARCH, (search) => search.focus({ preventScroll: true })),
+  // Settings → Panels, with focus on the row the arrows start from.
+  "settings.panels": () => openSettingsAt("panels", PANELS_ROW),
   "updates.show": () => setUpdateNoticeOpen(true),
   "updates.later": () => {
     void updateLater();

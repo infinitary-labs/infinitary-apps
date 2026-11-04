@@ -160,11 +160,16 @@ function SettingsScreen({theme,onTheme}){
   const [loginStart,setLoginStart]=React.useState(true);
   const [dock,setDock]=React.useState(false);
   return <div data-screen-label="Settings" style={{position:"absolute",inset:0,paddingTop:64,display:"flex",justifyContent:"center",overflowY:"auto"}}>
-    <div style={{width:760,padding:"8px 20px 48px"}}>
-      <div style={{display:"flex",gap:4,marginBottom:28,borderBottom:"1px solid var(--line-1)",paddingBottom:0}}>
+    <div style={{width:960,maxWidth:"100%",boxSizing:"border-box",padding:"8px 20px 48px",display:"flex",alignItems:"flex-start",gap:32}}>
+      {/* The tab column (components/core/SettingsTabs.prompt.md). */}
+      <div role="tablist" aria-orientation="vertical" style={{position:"sticky",top:0,flex:"0 0 168px",display:"flex",flexDirection:"column",gap:2}}>
         {[["general","General"],["appearance","Appearance"],["projects","Projects"],["intelligence","Intelligence"],["devices","Devices"]].map(([id,label])=>
-          <button key={id} onClick={()=>setTab(id)} style={{background:"transparent",border:"none",cursor:"pointer",fontFamily:"var(--font-ui)",fontSize:"var(--text-base)",fontWeight:500,color:tab===id?"var(--fg-1)":"var(--fg-3)",padding:"10px 14px",borderBottom:tab===id?"2px solid var(--accent)":"2px solid transparent",marginBottom:-1}}>{label}</button>)}
+          <button key={id} role="tab" aria-selected={tab===id} onClick={()=>setTab(id)} style={{position:"relative",display:"flex",alignItems:"center",height:32,padding:"var(--space-2) var(--space-3)",border:"none",borderRadius:"var(--radius-s)",background:tab===id?"var(--bg-2)":"transparent",cursor:"pointer",fontFamily:"var(--font-ui)",fontSize:"var(--text-base)",fontWeight:500,color:tab===id?"var(--fg-1)":"var(--fg-3)",textAlign:"left"}}>
+            {tab===id&&<span aria-hidden="true" style={{position:"absolute",top:6,bottom:6,left:0,width:2,borderRadius:1,background:"var(--accent)"}}/>}
+            {label}
+          </button>)}
       </div>
+      <div style={{flex:"1 1 0",minWidth:0,maxWidth:720}}>
       {tab==="general"&&<div>
         <SectionLabel>General</SectionLabel>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -217,6 +222,7 @@ function SettingsScreen({theme,onTheme}){
       {tab==="projects"&&<window.FM_ProjectsTab/>}
       {tab==="intelligence"&&<window.FM_IntelligenceTab/>}
       {tab==="devices"&&<DevicesTab/>}
+      </div>
     </div>
   </div>;
 }

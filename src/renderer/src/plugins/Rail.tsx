@@ -2,6 +2,8 @@ import type { FrameTheme } from "@shared/plugins/frameDocument";
 import type { RailSide } from "@shared/plugins/manifest";
 import {
   Fragment,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -9,13 +11,16 @@ import {
   useSyncExternalStore,
 } from "react";
 import { RowMenu } from "../design/core/RowMenu";
+import { focusWithRing } from "../design/focus";
 import { hasShellPainted } from "../design/reveals";
 import { CreatePanelSlot } from "./CreatePanelSlot";
 import type { PanelSource, SidePanelContribution } from "./contributions";
 import { FrameMount } from "./frames/FrameMount";
-import { pluginHost } from "./host";
+import { knownArrangedPanels, pluginHost } from "./host";
 import { PanelHeaderButtons } from "./PanelHeaderButtons";
 import { pushPanelFocus } from "./panelCards";
+import { pressPanel, railTargets, railZones, shownOnRail } from "./panelDrag";
+import { PANEL_MOVE_KEYS, panelStepOf } from "./panelMoveKeys";
 import { panelRail, type RailSaid, summaryLine, useRailSaid } from "./panelRail";
 import { railFolds, useRailFolds } from "./railFolds";
 import { railRoom } from "./railRoom";
@@ -97,7 +102,12 @@ export function Rail({
         "[data-side-panel-body], [data-side-panel-body] > *, [data-side-panel-body] iframe",
       ))
         observer.observe(element);
-      railFolds.note(side, railRoom(readings, height, gap, header, layout.panelOrder?.[0]));
+      // Before the core writes the arrangement, the newest More pick still
+      // leads the saved priority list.
+      railFolds.note(
+        side,
+        railRoom(readings, height, gap, header, layout.morePick ?? layout.panelOrder?.[0]),
+      );
     };
     const schedule = () => {
       cancelAnimationFrame(frame);
@@ -148,7 +158,7 @@ export function Rail({
                 .summary?.map((part) => ("text" in part ? part.text : part.line))
                 .join(" · "),
               onSelect: () => {
-                railStore.promote(panel.id);
+                railStore.promote(panel.id, knownArrangedPanels(pluginHost.sidePanels.list()));
                 requestAnimationFrame(() =>
                   document
                     .querySelector<HTMLButtonElement>(
@@ -233,10 +243,48 @@ function PanelMount({
     if (folded) railStore.expand(panel.id);
     else railStore.toggleCollapsed(panel.id);
   };
+  // The header is the panel's handle (INF-2344): a press that travels
+  // picks it up, ⌥ and an arrow on its controls moves it one place.
+  const onHeaderPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    const section = event.currentTarget.closest<HTMLElement>("[data-side-panel]");
+    if (!section) return;
+    pressPanel(event.nativeEvent, {
+      panelId: panel.id,
+      handle: event.currentTarget,
+      source: section,
+      title: panel.title,
+      targets: () => railTargets(panel.id),
+      zones: railZones,
+      drop: (move) =>
+        railStore.move(panel.id, move, knownArrangedPanels(pluginHost.sidePanels.list())),
+    });
+  };
+  const onHeaderKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    const step = panelStepOf(event);
+    if (!step) return;
+    event.preventDefault();
+    const moved = railStore.step(
+      panel.id,
+      step,
+      knownArrangedPanels(pluginHost.sidePanels.list()),
+      shownOnRail,
+    );
+    // The chevron is drawn again in its new place: focus follows it there.
+    if (!moved) return;
+    requestAnimationFrame(() => {
+      const chevron = document.querySelector<HTMLButtonElement>(
+        `[data-side-panel="${CSS.escape(panel.id)}"] header button[aria-expanded]`,
+      );
+      if (chevron) focusWithRing(chevron);
+    });
+  };
   if (content === null) return null;
   return (
     <SidePanelChrome
       id={panel.id}
+      onHeaderPointerDown={onHeaderPointerDown}
+      onHeaderKeyDown={onHeaderKeyDown}
+      moveKeys={PANEL_MOVE_KEYS}
       hidden={offRail || overflow}
       offRail={offRail}
       folded={folded}

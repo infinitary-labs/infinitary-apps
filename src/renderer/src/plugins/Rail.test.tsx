@@ -248,17 +248,25 @@ describe("Rail", () => {
 });
 
 describe("INF-609's own expand and lasting More choice", () => {
-  it("pins an explicit expand in the existing collapse record and keeps More order through hydration", () => {
+  // INF-2344, captain: "Yes, to the end of its slot, saved in the layout
+  // where you can see it." A More pick moves the panel to its slot's edge
+  // (the bottom of a bottom group) and stays through hydration.
+  it("pins an explicit expand in the existing collapse record and keeps a More pick at its slot's edge through hydration", () => {
+    const known = [
+      { id: "board", preferred: { x: "left", y: "bottom" }, order: 0 },
+      { id: "another", preferred: { x: "left", y: "bottom" }, order: 1 },
+    ] as const;
     railStore.expand("board");
     expect(railStore.isCollapsed("board")).toBe(false);
     expect(railStore.layout().collapsedPanels.board).toBe(false);
-    railStore.promote("board");
-    railStore.promote("another");
-    railStore.promote("board");
+    railStore.promote("board", known);
+    railStore.promote("another", known);
+    railStore.promote("board", known);
     const saved = railStore.layout();
     railStore.reset();
     railStore.hydrate(saved);
-    expect(railStore.layout().panelOrder).toEqual(["board", "another"]);
+    expect(railStore.layout().arrangement?.left.bottom).toEqual(["another", "board"]);
+    expect(railStore.morePick()).toBe("board");
     expect(railStore.isCollapsed("board")).toBe(false);
   });
 });

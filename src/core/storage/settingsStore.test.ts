@@ -176,6 +176,46 @@ describe("SettingsStore preferences", () => {
     });
   });
 
+  // INF-2344: the arrangement lives in a row of its own, because a build
+  // from before it reads the `layout` row strictly and would drop every
+  // collapse choice on a key it does not know (docs/saved-data-compatibility.md).
+  it("keeps the arrangement and the More pick out of the layout row an older build reads", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    const arrangement = {
+      left: { top: [], bottom: ["activity"] },
+      right: { top: ["tokyo-clock"], bottom: ["now", "knowledge"] },
+    };
+    settings.setLayout({
+      collapsedPanels: { now: true },
+      hiddenPanels: {},
+      placements: {},
+      arrangement,
+      morePick: "tokyo-clock",
+    });
+    const row = (key: string) =>
+      JSON.parse(
+        (db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string })
+          .value,
+      );
+    // The keys the layout row held before the arrangement existed.
+    expect(Object.keys(row("layout")).sort()).toEqual([
+      "collapsedPanels",
+      "hiddenPanels",
+      "placements",
+    ]);
+    expect(row("panel-arrangement")).toEqual({ arrangement, morePick: "tokyo-clock" });
+    // A write without an arrangement, as an older build makes, keeps it.
+    settings.setLayout({ collapsedPanels: {}, hiddenPanels: { now: true }, placements: {} });
+    expect(settings.getLayout()).toEqual({
+      collapsedPanels: {},
+      hiddenPanels: { now: true },
+      placements: {},
+      arrangement,
+      morePick: "tokyo-clock",
+    });
+  });
+
   it("answers the default for an unreadable row rather than throwing", () => {
     const db = openInMemoryDatabase();
     const settings = new SettingsStore(db);

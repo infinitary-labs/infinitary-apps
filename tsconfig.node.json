@@ -110,6 +110,7 @@
     "src/renderer/src/settings/addProjectWords.ts",
     "src/renderer/src/settings/generalWords.ts",
     "src/renderer/src/settings/projectsWords.ts",
+    "src/renderer/src/settings/panelsWords.ts",
     "src/renderer/src/cards/cardBodyWords.ts",
     "src/renderer/src/app/firstRunGateWords.ts",
     "src/renderer/src/app/lastTurnWords.ts",

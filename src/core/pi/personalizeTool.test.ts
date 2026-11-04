@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
 import type { FmEvent } from "@shared/events";
 import type { PersonalExtensionView, PersonalSnapshot } from "@shared/personal/manifest";
-import { DEFAULT_LAYOUT } from "@shared/preferences";
+import { DEFAULT_LAYOUT, type Layout } from "@shared/preferences";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { ShellPreferencesService } from "../preferences/shellPreferences";
@@ -178,7 +178,7 @@ describe("personalize", () => {
     expect(feed(events)).toEqual(["Tasks hidden", "Open PRs removed"]);
     // Gone from the surfaces, so a second remove is a refusal by list.
     expect(await run({ action: "remove", surface: "open-prs" })).toBe(
-      'No surface "open-prs". Your surfaces: activity, now, create-panel.',
+      'No surface "open-prs". Your surfaces: create-panel, activity, now.',
     );
   });
 
@@ -261,15 +261,16 @@ describe("the your-surfaces section", () => {
       "your surfaces (app_change panel and personalize remove act on these ids; theme: light):",
     );
     // Each state is the window's word (INF-607); the layout's hidden stands without one.
-    expect(lines).toContain('- activity "Activity": left rail, bottom; drawn, collapsed');
-    expect(lines).toContain('- now "Tasks": right rail, bottom; hidden');
+    // Each place is the panel's in its slot (INF-2344), so the first mate can say above or below.
+    expect(lines).toContain('- activity "Activity": left rail, bottom, 1 of 2; drawn, collapsed');
+    expect(lines).toContain('- now "Tasks": right rail, bottom, 1 of 1; hidden');
     expect(lines).toContain('- create-panel "Create your own panel": left rail, top; drawn');
-    expect(lines).toContain('- panel-0 "Panel 0" (yours): left rail, bottom; drawn');
+    expect(lines).toContain('- panel-0 "Panel 0" (yours): left rail, bottom, 2 of 2; drawn');
     expect(lines).toContain(
       `- activity "My activity" (yours): right rail, top; refused by the window: ${clash}`,
     );
     expect(lines).toContain(
-      '- panel-2 "Panel 2" (yours): right rail, top; no word from the window',
+      '- panel-2 "Panel 2" (yours): right rail, top, 5 of 12; no word from the window',
     );
     expect(lines).toContain("- and 2 more personal panels");
     expect(lines).toHaveLength(1 + 3 + SURFACES_CONTEXT_LIMIT + 1);
@@ -301,12 +302,12 @@ describe("the your-surfaces section", () => {
         ],
       },
     );
-    expect(lines).toContain('- clock-0 "Tokyo" (yours): right rail, top; drawn');
+    expect(lines).toContain('- clock-0 "Tokyo" (yours): right rail, top, 1 of 3; drawn');
     expect(lines).toContain(
-      '- clock-1 "Paris" (yours): right rail, top; folded to its header for room (the rail is too short for its body)',
+      '- clock-1 "Paris" (yours): right rail, top, 2 of 3; folded to its header for room (the rail is too short for its body)',
     );
     expect(lines).toContain(
-      `- clock-2 "Sydney" (yours): right rail, top; in the More row at its rail's foot (the rail is too short for its header)`,
+      `- clock-2 "Sydney" (yours): right rail, top, 3 of 3; in the More row at its rail's foot (the rail is too short for its header)`,
     );
   });
 
@@ -328,30 +329,56 @@ describe("the your-surfaces section", () => {
       STABLE,
     );
     expect(lines).toContain(
-      '- counter "Counter" (yours): right rail, top; no word from the window; background work paused: its server.ts is written for panel API 1 and this app serves 2; the captain pressed Update panel',
+      '- counter "Counter" (yours): right rail, top, 2 of 2; no word from the window; background work paused: its server.ts is written for panel API 1 and this app serves 2; the captain pressed Update panel',
     );
-    expect(lines).toContain('- clock "Clock" (yours): right rail, top; no word from the window');
+    expect(lines).toContain(
+      '- clock "Clock" (yours): right rail, top, 1 of 2; no word from the window',
+    );
   });
 
-  it("derives every surface's effective placement from the layout", () => {
-    const surfaces = listSurfaces(
-      { collapsedPanels: {}, hiddenPanels: {}, placements: { now: { x: "left", y: "top" } } },
-      { extensions: [extension("open-prs", "Open PRs")] },
-      STABLE,
-    );
-    expect(surfaces.map((surface) => [surface.id, surface.kind, surface.placement])).toEqual([
-      ["activity", "app", { x: "left", y: "bottom" }],
-      ["now", "app", { x: "left", y: "top" }],
-      ["create-panel", "app", { x: "left", y: "top" }],
-      ["open-prs", "personal", { x: "right", y: "top" }],
+  // INF-2344: the first mate reads the same arrangement the rails draw, in
+  // its order, with each panel's place in its slot.
+  it("derives every surface's slot and place from the layout, in the layout's order", () => {
+    const where = (layout: Layout) =>
+      listSurfaces(layout, { extensions: [extension("open-prs", "Open PRs")] }, STABLE).map(
+        (surface) => [surface.id, surface.kind, surface.placement, surface.place, surface.of],
+      );
+    // Before an arrangement is saved, a placement the captain chose still decides.
+    expect(
+      where({
+        collapsedPanels: {},
+        hiddenPanels: {},
+        placements: { now: { x: "left", y: "top" } },
+      }),
+    ).toEqual([
+      ["create-panel", "app", { x: "left", y: "top" }, undefined, undefined],
+      ["now", "app", { x: "left", y: "top" }, 1, 1],
+      ["activity", "app", { x: "left", y: "bottom" }, 1, 1],
+      ["open-prs", "personal", { x: "right", y: "top" }, 1, 1],
+    ]);
+    expect(
+      where({
+        collapsedPanels: {},
+        hiddenPanels: {},
+        placements: {},
+        arrangement: {
+          left: { top: [], bottom: ["open-prs", "activity"] },
+          right: { top: [], bottom: ["now"] },
+        },
+      }),
+    ).toEqual([
+      ["create-panel", "app", { x: "left", y: "top" }, undefined, undefined],
+      ["open-prs", "personal", { x: "left", y: "bottom" }, 1, 2],
+      ["activity", "app", { x: "left", y: "bottom" }, 2, 2],
+      ["now", "app", { x: "right", y: "bottom" }, 1, 1],
     ]);
   });
 
   it("lists the Knowledge panel only where the build keeps knowledge", () => {
     const ids = (gates: { knowledge: boolean }) =>
       listSurfaces(DEFAULT_LAYOUT, { extensions: [] }, gates).map((surface) => surface.id);
-    expect(ids({ knowledge: true })).toEqual(["activity", "now", "knowledge", "create-panel"]);
-    expect(ids(STABLE)).toEqual(["activity", "now", "create-panel"]);
+    expect(ids({ knowledge: true })).toEqual(["create-panel", "activity", "now", "knowledge"]);
+    expect(ids(STABLE)).toEqual(["create-panel", "activity", "now"]);
     const section = (gates: { knowledge: boolean }) =>
       renderSurfacesSection(
         {
@@ -363,7 +390,7 @@ describe("the your-surfaces section", () => {
         gates,
       );
     expect(section({ knowledge: true })).toContain(
-      '- knowledge "Knowledge": right rail, bottom; no word from the window',
+      '- knowledge "Knowledge": right rail, bottom, 2 of 2; no word from the window',
     );
     expect(section(STABLE).some((line) => line.includes("nowledge"))).toBe(false);
   });
@@ -387,7 +414,9 @@ describe("the your-surfaces section", () => {
     expect(off).toContain("the app closed twice just after starting");
     expect(off).toContain("Only the switch in Settings turns them on");
     expect(off).toContain("you have no tool for it");
-    expect(lines).toContain('- activity "Activity": left rail, bottom; no word from the window');
+    expect(lines).toContain(
+      '- activity "Activity": left rail, bottom, 1 of 1; no word from the window',
+    );
 
     const byHand = renderSurfacesSection(
       {

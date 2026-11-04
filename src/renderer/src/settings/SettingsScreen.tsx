@@ -7,32 +7,55 @@ import type { SettingsSectionContribution } from "../plugins/contributions";
 import { FrameMount } from "../plugins/frames/FrameMount";
 import { orderSettingsSections, pluginHost, useContributions } from "../plugins/host";
 import { SharingAsk } from "./SharingSection";
+import "./settingsScreen.css";
 
 /**
  * Settings as a shell state (not a route). The tabs are the
  * `settings-section` registry in display order (docs/ui-plugins.md): the
- * app's own General, Appearance, Keyboard, Projects, Intelligence, Usage,
- * Devices, and gated Observe sections arrive through the built-in
- * manifest like any other contribution.
+ * app's own General, Appearance, Panels, Keyboard, Projects, Intelligence
+ * and the rest, and gated Observe, arrive through the built-in manifest
+ * like any other contribution. They stand in one column on the left of the
+ * page, the shown section beside them (design skill
+ * `components/core/SettingsTabs.prompt.md`).
  */
 
-const COLUMN_WIDTH: Record<SettingsSectionContribution["width"], number> = {
+/**
+ * Each section's own width, its side gutters included: the room it takes
+ * beside the tab column, never more.
+ */
+const SECTION_WIDTH: Record<SettingsSectionContribution["width"], number> = {
   standard: 760,
   wide: 1080,
 };
 
-/** Intelligence's wide shell. */
-export const SETTINGS_COLUMN_PX = COLUMN_WIDTH.wide;
+/** The tab column on the left (design skill `components/core/SettingsTabs.prompt.md`). */
+const TAB_COLUMN_PX = 168;
+/** The room between the tab column and the section. */
+const TAB_GAP_PX = 32;
+/** The column's side gutters, each. */
+const GUTTER_PX = 20;
 
-export function settingsColumnStyle(width: SettingsSectionContribution["width"] = "wide") {
+/**
+ * The page's column: the tab column, the room after it and the widest
+ * section, the same width whichever tab is shown, so the tabs never move
+ * when the section changes.
+ */
+export const SETTINGS_COLUMN_PX = TAB_COLUMN_PX + TAB_GAP_PX + SECTION_WIDTH.wide;
+
+export function settingsColumnStyle() {
   return {
-    width: COLUMN_WIDTH[width],
+    width: SETTINGS_COLUMN_PX,
     maxWidth: "100%" as const,
     // Include the side gutters in the width cap, even when a section's
     // intrinsic size keeps this flex item from shrinking further.
     boxSizing: "border-box" as const,
-    padding: "8px 20px 48px",
+    padding: `8px ${GUTTER_PX}px 48px`,
   };
+}
+
+/** The most a section takes beside the tabs: its own width less the gutters it no longer has. */
+export function sectionMaxWidth(width: SettingsSectionContribution["width"] = "wide"): number {
+  return SECTION_WIDTH[width] - GUTTER_PX * 2;
 }
 
 /** Resolves each section's gate; sections without one are always offered. */
@@ -90,7 +113,8 @@ export function SettingsScreen() {
   const panelDomId = `${ids}-panel`;
   const tabList = useRef<HTMLDivElement>(null);
   // The tabs pattern (docs/keyboard.md, "Lists and Settings"): one Tab stop,
-  // the arrows move to the next tab and open it, Home and End to the ends.
+  // the arrows move to the next tab in the column and open it, Home and End
+  // to the ends.
   const onTabKey = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey || offered.length === 0) return;
     const at = Math.max(
@@ -125,76 +149,57 @@ export function SettingsScreen() {
         overflowY: "auto",
       }}
     >
-      <div data-settings-column style={settingsColumnStyle(tab?.width ?? "wide")}>
+      <div data-settings-column style={settingsColumnStyle()}>
         <SharingAsk />
-        <div
-          ref={tabList}
-          role="tablist"
-          aria-label="Settings sections"
-          aria-orientation="horizontal"
-          // One of the window's parts F6 moves between (app/regions.ts).
-          data-window-region="settings-tabs"
-          onKeyDown={onTabKey}
-          style={{
-            display: "flex",
-            // A row too long for a narrow window wraps rather than scroll sideways.
-            flexWrap: "wrap",
-            gap: 4,
-            marginBottom: 28,
-            borderBottom: "1px solid var(--line-1)",
-            paddingBottom: 0,
-          }}
-        >
-          {offered.map((section) => (
-            <button
-              key={section.id}
-              id={tabDomId(section.id)}
-              type="button"
-              role="tab"
-              aria-selected={tab?.id === section.id}
-              aria-controls={panelDomId}
-              tabIndex={tab?.id === section.id ? 0 : -1}
-              onClick={() => setTabId(section.id)}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "var(--font-ui)",
-                fontSize: "var(--text-base)",
-                fontWeight: 500,
-                color: tab?.id === section.id ? "var(--fg-1)" : "var(--fg-3)",
-                padding: "10px 14px",
-                transition: "color var(--dur-fast) var(--ease-out)",
-                borderBottom:
-                  tab?.id === section.id ? "2px solid var(--accent)" : "2px solid transparent",
-                // The focus ring's corners; the chosen tab's line stays square under it.
-                borderRadius: "var(--radius-s) var(--radius-s) 0 0",
-                marginBottom: -1,
-              }}
-            >
-              {section.label}
-            </button>
-          ))}
-        </div>
-        {tab && (
+        <div style={{ display: "flex", alignItems: "flex-start", gap: TAB_GAP_PX }}>
           <div
-            key={tab.id}
-            id={panelDomId}
-            role="tabpanel"
-            aria-labelledby={tabDomId(tab.id)}
-            tabIndex={-1}
-            data-settings-section={tab.id}
+            ref={tabList}
+            role="tablist"
+            aria-label="Settings sections"
+            aria-orientation="vertical"
             // One of the window's parts F6 moves between (app/regions.ts).
-            data-window-region="settings-section"
-            data-in-place-reveal={changed.current ? "fade" : undefined}
+            data-window-region="settings-tabs"
+            data-settings-tabs=""
+            onKeyDown={onTabKey}
+            style={{ flex: `0 0 ${TAB_COLUMN_PX}px`, width: TAB_COLUMN_PX }}
           >
-            {tab.frame ? (
-              <FrameSection key={tab.id} section={tab} />
-            ) : (
-              <tab.Component key={tab.id} />
-            )}
+            {offered.map((section) => (
+              <button
+                key={section.id}
+                id={tabDomId(section.id)}
+                type="button"
+                role="tab"
+                data-settings-tab={section.id}
+                aria-selected={tab?.id === section.id}
+                aria-controls={panelDomId}
+                tabIndex={tab?.id === section.id ? 0 : -1}
+                onClick={() => setTabId(section.id)}
+              >
+                <span data-settings-tab-label="">{section.label}</span>
+              </button>
+            ))}
           </div>
-        )}
+          {tab && (
+            <div
+              key={tab.id}
+              id={panelDomId}
+              role="tabpanel"
+              aria-labelledby={tabDomId(tab.id)}
+              tabIndex={-1}
+              data-settings-section={tab.id}
+              // One of the window's parts F6 moves between (app/regions.ts).
+              data-window-region="settings-section"
+              data-in-place-reveal={changed.current ? "fade" : undefined}
+              style={{ flex: "1 1 0", minWidth: 0, maxWidth: sectionMaxWidth(tab.width) }}
+            >
+              {tab.frame ? (
+                <FrameSection key={tab.id} section={tab} />
+              ) : (
+                <tab.Component key={tab.id} />
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -202,13 +207,17 @@ export function SettingsScreen() {
 
 /**
  * Where an arrow, Home or End moves among `count` tabs from `at`, or null
- * for a key that moves nothing. The arrows wrap around, as tabs do.
+ * for a key that moves nothing. The tabs stand in a column, so ↓ and ↑ go
+ * to the next and previous; → and ← do the same, as they did when the tabs
+ * stood in a row. The arrows wrap around, as tabs do.
  */
 export function tabStep(key: string, at: number, count: number): number | null {
   if (count <= 0) return null;
   switch (key) {
+    case "ArrowDown":
     case "ArrowRight":
       return (at + 1) % count;
+    case "ArrowUp":
     case "ArrowLeft":
       return (at - 1 + count) % count;
     case "Home":
@@ -222,15 +231,15 @@ export function tabStep(key: string, at: number, count: number): number | null {
 
 /**
  * A Tier-2 section: its template mounted in the frame vehicle, filling the
- * column below the tab strip (top bar 64 + column pad 8 + tab strip 69 +
- * bottom pad 48 = 189), with the plugin's declared reads as its whole
+ * section's height beside the tab column (top bar 64 + column pad 8 +
+ * bottom pad 48 = 120), with the plugin's declared reads as its whole
  * data surface and no actions - a settings frame is display-only.
  */
 function FrameSection({ section }: { section: SettingsSectionContribution }) {
   const theme = useShellStore((s) => s.theme);
   if (!section.frame) return null;
   return (
-    <div data-settings-frame={section.id} style={{ height: "calc(100vh - 189px)", minHeight: 480 }}>
+    <div data-settings-frame={section.id} style={{ height: "calc(100vh - 120px)", minHeight: 480 }}>
       <FrameMount
         title={section.label}
         template={section.frame}

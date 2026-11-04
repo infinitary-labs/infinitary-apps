@@ -78,14 +78,25 @@ export async function actionRequest(
     const rules = await dispatch("inf:automation:list", []);
     const automation = rules.state === "ready" && rules.rules.length > 0;
     const surfaces = listSurfaces(current as Layout, personal, { knowledge, automation });
-    const surface =
-      surfaces.find((s) => s.id === value.surface) ??
-      surfaces.find((s) => s.title.toLowerCase() === (value.surface as string).toLowerCase());
-    if (!surface)
-      throw new Error(
-        `No surface "${value.surface}". Your surfaces: ${surfaces.map((s) => s.id).join(", ")}. The captain's panels switch is in Settings.`,
-      );
-    current = { layout: current, surface };
+    const find = (name: string) => {
+      const found =
+        surfaces.find((s) => s.id === name) ??
+        surfaces.find((s) => s.title.toLowerCase() === name.toLowerCase());
+      if (!found)
+        throw new Error(
+          `No surface "${name}". Your surfaces: ${surfaces.map((s) => s.id).join(", ")}. The captain's panels switch is in Settings.`,
+        );
+      return found;
+    };
+    const surface = find(value.surface as string);
+    // "Put Rolling alpha above Mac CI": the panel it goes next to.
+    const next = (value.above ?? value.below) as string | undefined;
+    current = {
+      layout: current,
+      surface,
+      surfaces,
+      ...(next !== undefined ? { neighbour: find(next) } : {}),
+    };
   }
   return line.toRequest(
     value,
@@ -170,11 +181,13 @@ export function createAppTools(delegate: AppToolsDelegate) {
                 ? await delegate.propose(action, params.value)
                 : ACTIONS[action].line,
             };
+          const named = (params.value as { surface?: unknown } | undefined)?.surface;
           const actor = {
             ...delegate.actor(),
             action,
             evidence: params.evidence as string,
             projectWords: params.on_words === true,
+            ...(action === "panel" && typeof named === "string" ? { target: named } : {}),
           };
           if (isProjectChange(action) && delegate.changeProject)
             return { text: await delegate.changeProject(action, params.value, actor) };

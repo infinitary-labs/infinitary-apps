@@ -65,13 +65,14 @@ describe("the built-in plugin", () => {
     expect(recordTemplate('x"><b>').html).toContain('data-task-id="x&quot;&gt;&lt;b&gt;"');
   });
 
-  it("offers General, Appearance, Keyboard, Projects, Intelligence, Usage, Devices, then the gated Observe tab", () => {
+  it("offers General, Appearance, Panels, Keyboard, Projects, Intelligence, Usage, Devices, then the gated Observe tab", () => {
     const host = appLikeHost();
     const remove = registerBuiltinPlugin(host);
     const sections = orderSettingsSections(host.settingsSections.list());
     expect(sections.map((section) => [section.id, section.label, section.width])).toEqual([
       ["general", "General", "wide"],
       ["appearance", "Appearance", "wide"],
+      ["panels", "Panels", "wide"],
       ["keyboard", "Keyboard", "wide"],
       ["projects", "Projects", "wide"],
       ["subscriptions", "Intelligence", "wide"],

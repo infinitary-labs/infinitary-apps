@@ -68,7 +68,13 @@ describe("why a window command cannot run now", () => {
     } as const;
     const windowed = { ...HOME, thisMac: view };
     const run = { ...HOME, thisMac: { ...view, startedByCommand: true } };
-    for (const command of ["settings.usage", "usage.unit", "settings.integrations"] as const) {
+    // INF-2344: the arrangement is saved where the first mate lives, so Arrange panels is too.
+    for (const command of [
+      "settings.usage",
+      "usage.unit",
+      "settings.integrations",
+      "settings.panels",
+    ] as const) {
       expect(commandRefusal(command, windowed, CLEAR)).toMatch(/ is on Mac mini$/);
       expect(commandRefusal(command, run, CLEAR)).toBeNull();
     }

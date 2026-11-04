@@ -19,6 +19,7 @@ import { DevicesTab } from "../../settings/DevicesTab";
 import { GeneralTab } from "../../settings/GeneralTab";
 import { IntegrationsTab } from "../../settings/IntegrationsTab";
 import { KeyboardTab } from "../../settings/KeyboardTab";
+import { PanelsTab } from "../../settings/PanelsTab";
 import { ProjectsTab } from "../../settings/ProjectsTab";
 import { RunbooksTab } from "../../settings/RunbooksTab";
 import { SubscriptionsTab } from "../../settings/SubscriptionsTab";
@@ -118,6 +119,10 @@ export const builtinBindings: PluginBindings = {
     // On a Mac that controls another, its own look (docs/view.md).
     appearance: { Component: AppearanceTab, onAView: true },
     // On a Mac that controls another, its own keys (docs/keyboard.md).
+    // The arrangement is saved where the first mate lives, and a Mac that
+    // controls another cannot change it (docs/view.md); one started by a
+    // command is arranged from here (docs/run.md).
+    panels: { Component: PanelsTab, onAViewOfACommand: true },
     keyboard: { Component: KeyboardTab, onAView: true },
     projects: { Component: ProjectsTab, onAViewOfACommand: true },
     subscriptions: { Component: SubscriptionsTab, onAViewOfACommand: true },

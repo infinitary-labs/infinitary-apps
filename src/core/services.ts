@@ -35,6 +35,8 @@ import { INBOX_WORDS } from "@shared/integrations";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { modelNames } from "@shared/modelDisplayName";
 import { offeringKey, parseOfferingKey, providerLabel } from "@shared/modelSlots";
+import { knownPanels } from "@shared/panelArrangement";
+import type { PersonalSnapshot } from "@shared/personal/manifest";
 import { desktopConventions } from "@shared/platform";
 import {
   backendForProvider,
@@ -2179,7 +2181,14 @@ export async function createServices(
     enabled: personalPanelsEnabled,
     store: personalStore,
     tasks: { get: (id) => tasks.get(id), onChange: (listener) => tasks.onChange(listener) },
-    emit,
+    // Each snapshot writes its new panels into the rails' arrangement
+    // (INF-2344) before the window hears of them, so the window and the
+    // first mate read one place for each.
+    emit: (channel, payload) => {
+      if (channel === "inf:plugins:personal")
+        preferences.reconcile(knownPanels(payload as PersonalSnapshot));
+      emit(channel, payload);
+    },
     log: (message) => console.warn(`[infinitary] ${message}`),
     ...(host.capture ? { capture: host.capture } : {}),
     captureDirFor: (taskId) => join(paths.crewmatesDir, taskId, "captures"),
@@ -2237,6 +2246,9 @@ export async function createServices(
           ),
     },
   });
+  // The app's own panels have their places even when no snapshot was pushed
+  // (the captain's panels off at launch).
+  preferences.reconcile(knownPanels(personal.snapshot()));
   // The switch has one follower in the core (Step 5): every write of the
   // `panels` row reaches the host, which unmounts or remounts in one tick.
   preferences.subscribe((value) => {

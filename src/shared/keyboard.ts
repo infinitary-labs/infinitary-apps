@@ -433,6 +433,16 @@ export const KEYBOARD_COMMANDS = {
     risk: "navigate",
     keys: [],
   },
+  // Settings → Panels (INF-2344), chosen by name: no default key.
+  "settings.panels": {
+    label: "Arrange panels",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["rails", "layout", "order", "move", "hide", "show"],
+  },
   // The update notice is also reached by name; opening it grants no installation consent.
   "updates.show": {
     label: "Show available update",

@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { panelSlot } from "@shared/panelArrangement";
 import type { PanelMountState } from "@shared/personal/mounts";
 import { surfaceWord } from "../../src/core/personal/panelMounts";
 import { scratchDir } from "../helpers/scratchDirs";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { expectClearOf, resizeWindow } from "./layout";
+import { movePanelTo } from "./panelLayout";
 import { seedClockPanels } from "./personalFixtures";
 import { promptInput } from "./prompt";
 import { latestContext } from "./providerRequest";
@@ -86,18 +88,23 @@ test("crowded rails fold, own expand pins, and a More pick survives relaunch on 
     if (!city) throw new Error("Unknown fixture clock");
     await pressKey(menu.getByRole("menuitem", { name: city.title, exact: true }), "Enter");
     await expect(page.locator(`[data-side-panel="${chosen}"]`)).toBeVisible();
-    await expect
-      .poll(
-        async () =>
-          (await page.evaluate(() => window.infinitary.settings.getLayout())).panelOrder?.[0],
-      )
-      .toBe(chosen);
+    // INF-2344, captain: "Yes, to the end of its slot, saved in the layout
+    // where you can see it." The pick is saved, and the panel sits at its
+    // slot's end at the window's edge.
+    const picked = async (on: typeof page) => {
+      const layout = await on.evaluate(() => window.infinitary.settings.getLayout());
+      const at = layout.arrangement && panelSlot(layout.arrangement, chosen);
+      const ids = at && layout.arrangement ? layout.arrangement[at.slot.x][at.slot.y] : [];
+      return {
+        morePick: layout.morePick,
+        atEdge: at?.slot.y === "top" ? ids[0] === chosen : ids[ids.length - 1] === chosen,
+      };
+    };
+    await expect.poll(() => picked(page)).toEqual({ morePick: chosen, atEdge: true });
     await launched.close();
     launched = await launchApp({ userDataDir, withMockProvider: true });
     const restarted = launched.page;
-    expect(
-      (await restarted.evaluate(() => window.infinitary.settings.getLayout())).panelOrder?.[0],
-    ).toBe(chosen);
+    expect(await picked(restarted)).toEqual({ morePick: chosen, atEdge: true });
     await resizeWindow(launched.app, restarted, { width: 1280, height: 1000 });
     await expect(restarted.locator("[data-rail-more]")).toHaveCount(0);
     for (const index of cities.keys())
@@ -105,18 +112,11 @@ test("crowded rails fold, own expand pins, and a More pick survives relaunch on 
         restarted.locator(`[data-side-panel="clock-${index}"] [data-side-panel-body]`),
       ).toBeVisible();
     // Move the same panels to the opposite rail through its real layout owner.
-    await restarted.evaluate(async () => {
-      const layout = await window.infinitary.settings.getLayout();
-      await window.infinitary.settings.setLayout({
-        ...layout,
-        placements: Object.fromEntries(
-          Array.from({ length: 5 }, (_, index) => [
-            `clock-${index}`,
-            { x: "right", y: index === 4 ? "bottom" : "top" },
-          ]),
-        ),
+    for (const index of cities.keys())
+      await movePanelTo(restarted, `clock-${index}`, {
+        x: "right",
+        y: index === 4 ? "bottom" : "top",
       });
-    });
     await launched.app.evaluate(({ BrowserWindow }) => {
       for (const win of BrowserWindow.getAllWindows()) win.setMinimumSize(0, 0);
     });

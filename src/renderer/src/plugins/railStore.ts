@@ -1,9 +1,20 @@
+import {
+  type ArrangedPanel,
+  arrangePanels,
+  defaultArrangement,
+  movePanel,
+  type PanelMove,
+  type PanelStep,
+  pickToEdge,
+  stepPanel,
+} from "@shared/panelArrangement";
 import type { RailSide, RailY } from "@shared/plugins/manifest";
 import {
   DEFAULT_LAYOUT,
   effectivePlacement,
   isPanelHidden,
   type Layout,
+  type PanelArrangement,
 } from "@shared/preferences";
 import { useSyncExternalStore } from "react";
 
@@ -24,9 +35,14 @@ import { useSyncExternalStore } from "react";
  *
  * Activity, Tasks and Knowledge start collapsed; every other panel starts open. A
  * missing key means that default. Only the captain's own clicks are
- * persisted from here - a collapse toggle, the whisper's reveal, the
- * create-your-own-panel slot's Hide and the project focus; otherwise
- * visibility and placement are written by the core alone.
+ * persisted from here - a collapse toggle, the whisper's reveal, a Hide or
+ * Show, a panel moved by its header or in Settings → Panels, a More pick,
+ * Reset to defaults and the project focus.
+ *
+ * The arrangement (INF-2344) is the one saved record of where every panel
+ * sits; a move here is computed over it with the panels this window has
+ * registered (`known`), and a panel it lists that this window does not
+ * have keeps its place.
  */
 
 /** Built-in bottom docks start collapsed. */
@@ -51,20 +67,47 @@ function notify(): void {
  * The core, when the preload has installed it. Absent under vitest and in a
  * static render, where the in-memory record is the whole of the session.
  */
-function persist(next: Layout): void {
+function persist(next: Layout, moved?: string): void {
   const settings = globalThis.window?.infinitary?.settings;
   if (!settings) return;
-  void settings
-    .setLayout({
-      collapsedPanels: { ...next.collapsedPanels },
-      hiddenPanels: { ...next.hiddenPanels },
-      placements: { ...next.placements },
-      ...(next.panelOrder ? { panelOrder: [...next.panelOrder] } : {}),
-      ...(next.focusedProjectId ? { focusedProjectId: next.focusedProjectId } : {}),
-    })
-    .catch(() => {
-      // The in-memory record still serves this session.
-    });
+  // Once there is an arrangement, every write carries it; a home built
+  // before the arrangement refuses such a write, and the record here still
+  // serves this session. A write that moved one panel names it, so the
+  // Activity line names the panel the captain moved.
+  void settings.setLayout(copyLayout(next), moved ? { moved } : undefined).catch(() => {
+    // The in-memory record still serves this session.
+  });
+}
+
+function copyArrangement(arrangement: PanelArrangement): PanelArrangement {
+  return {
+    left: { top: [...arrangement.left.top], bottom: [...arrangement.left.bottom] },
+    right: { top: [...arrangement.right.top], bottom: [...arrangement.right.bottom] },
+  };
+}
+
+function copyLayout(next: Layout): Layout {
+  return {
+    collapsedPanels: { ...next.collapsedPanels },
+    hiddenPanels: { ...next.hiddenPanels },
+    placements: { ...next.placements },
+    ...(next.panelOrder ? { panelOrder: [...next.panelOrder] } : {}),
+    ...(next.arrangement ? { arrangement: copyArrangement(next.arrangement) } : {}),
+    ...(next.morePick ? { morePick: next.morePick } : {}),
+    ...(next.focusedProjectId ? { focusedProjectId: next.focusedProjectId } : {}),
+  };
+}
+
+/**
+ * Saves a new arrangement that moved one panel, keeping the last More pick
+ * unless this move is one.
+ */
+function arrange(arrangement: PanelArrangement, moved: string, picked = false): void {
+  const { morePick: was, ...rest } = current();
+  const pick = picked ? moved : was;
+  layout = { ...rest, arrangement, ...(pick ? { morePick: pick } : {}) };
+  persist(layout, moved);
+  notify();
 }
 
 function current(): Layout {
@@ -84,13 +127,7 @@ export const railStore = {
    * every push, so a change the Firstmate made lands as it is written.
    */
   hydrate(next: Layout): void {
-    layout = {
-      collapsedPanels: { ...next.collapsedPanels },
-      hiddenPanels: { ...next.hiddenPanels },
-      placements: { ...next.placements },
-      ...(next.panelOrder ? { panelOrder: [...next.panelOrder] } : {}),
-      ...(next.focusedProjectId ? { focusedProjectId: next.focusedProjectId } : {}),
-    };
+    layout = copyLayout(next);
     notify();
   },
   /** The record as applied now; the same identity until the next change. */
@@ -102,12 +139,49 @@ export const railStore = {
     if (Object.hasOwn(stored, panelId)) return stored[panelId] === true;
     return DEFAULT_COLLAPSED_PANELS.has(panelId);
   },
-  /** More is a lasting move to the anchored end, not a collapse or hide. */
-  promote(panelId: string): void {
-    layout = {
-      ...current(),
-      panelOrder: [panelId, ...(current().panelOrder ?? []).filter((id) => id !== panelId)],
-    };
+  /** Where every panel sits, given the panels this window has registered. */
+  arrangement(known: readonly ArrangedPanel[]): PanelArrangement {
+    return arrangePanels(current(), known);
+  },
+  /** The panel last chosen from a full rail's More row, whose header the rail keeps on screen. */
+  morePick(): string | undefined {
+    return current().morePick;
+  },
+  /**
+   * A More pick (captain's answer on INF-2344: "Yes, to the end of its
+   * slot, saved in the layout where you can see it"): a lasting move to its
+   * slot's edge, not a collapse or hide.
+   */
+  promote(panelId: string, known: readonly ArrangedPanel[]): void {
+    arrange(pickToEdge(railStore.arrangement(known), panelId), panelId, true);
+  },
+  /** The captain's drop of a panel's header, or a move in Settings → Panels. */
+  move(panelId: string, move: PanelMove, known: readonly ArrangedPanel[]): void {
+    arrange(movePanel(railStore.arrangement(known), panelId, move), panelId);
+  },
+  /**
+   * One keyboard step of a panel (`stepPanel`); false when it has nowhere
+   * to go. `visible` says which panels a person can see in each slot.
+   */
+  step(
+    panelId: string,
+    step: PanelStep,
+    known: readonly ArrangedPanel[],
+    visible?: (id: string) => boolean,
+  ): boolean {
+    const next = stepPanel(railStore.arrangement(known), panelId, step, visible);
+    if (!next) return false;
+    arrange(next, panelId);
+    return true;
+  },
+  /**
+   * Reset to defaults: every panel back where it asks to be, in its own
+   * order. Shown, hidden and collapsed stay as they are; the places saved
+   * before the arrangement existed go too, so an older build agrees.
+   */
+  resetArrangement(known: readonly ArrangedPanel[]): void {
+    const { morePick: _pick, panelOrder: _order, ...rest } = current();
+    layout = { ...rest, placements: {}, arrangement: defaultArrangement(known) };
     persist(layout);
     notify();
   },
@@ -150,6 +224,17 @@ export const railStore = {
     notify();
   },
   /**
+   * The captain's own Show in Settings → Panels: back on its rail where the
+   * arrangement keeps it, open or collapsed as it was.
+   */
+  show(panelId: string): void {
+    const hidden = { ...current().hiddenPanels };
+    delete hidden[panelId];
+    layout = { ...current(), hiddenPanels: hidden };
+    persist(layout);
+    notify();
+  },
+  /**
    * F6 (docs/keyboard.md, "Parts of the window"): the panel's mount gives
    * its frame focus, as a click on it would, and asks the panel to put
    * focus where a person starts in it (`asks.onFocus`) - the Tasks list's
@@ -167,7 +252,7 @@ export const railStore = {
   isHidden(panelId: string): boolean {
     return isPanelHidden(current(), panelId);
   },
-  /** Where the panel sits: the captain's record, else what it asked for. */
+  /** Which rail and end the panel sits at: its slot in the arrangement, else what it asked for. */
   placementOf(panelId: string, preferred: { x: RailSide; y: RailY }): { x: RailSide; y: RailY } {
     return effectivePlacement(current(), panelId, preferred);
   },

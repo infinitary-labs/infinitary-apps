@@ -28,6 +28,7 @@ import {
 import { type CoreInvokeChannel, invokeContract } from "./ipc";
 import { type KnowledgeDirections, knowledgeDirectionChangeSchema } from "./knowledge";
 import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
+import { arrangePanels, movePanel } from "./panelArrangement";
 import { AUTOMATIC_COMPUTER } from "./placement";
 import {
   type Appearance,
@@ -687,7 +688,7 @@ const actionLines = {
     done: (v) => `switched to the ${v.theme} theme`,
   },
   panel: {
-    fields: ["hiddenPanels", "placements"],
+    fields: ["hiddenPanels", "arrangement"],
     area: "panels",
     tier: "asked",
     change: "inf:settings:layout:set",
@@ -697,32 +698,73 @@ const actionLines = {
         surface: z.string().trim().min(1).max(64),
         rail: z.enum(["left", "right"]).optional(),
         position: z.enum(["top", "bottom"]).optional(),
+        above: z.string().trim().min(1).max(64).optional(),
+        below: z.string().trim().min(1).max(64).optional(),
         visible: z.boolean().optional(),
       })
-      .refine((v) => v.rail !== undefined || v.position !== undefined || v.visible !== undefined, {
-        message: "panel needs rail, position, or visible",
-      }),
-    line: "Move, hide or show one panel by its surface id when asked. Removal stays in personalize.",
-    // actionRequest resolves the surface and its default placement before adapting.
+      .refine(
+        (v) =>
+          v.rail !== undefined ||
+          v.position !== undefined ||
+          v.above !== undefined ||
+          v.below !== undefined ||
+          v.visible !== undefined,
+        { message: "panel needs rail, position, above, below, or visible" },
+      )
+      .refine((v) => v.above === undefined || v.below === undefined, {
+        message: "panel takes above or below, not both",
+      })
+      .refine(
+        (v) =>
+          (v.above === undefined && v.below === undefined) ||
+          (v.rail === undefined && v.position === undefined),
+        { message: "above or below already names the rail and position; leave those out" },
+      ),
+    line: "Move, hide or show one panel by its surface id when asked. rail and position move it to that slot's middle; above or below put it just above or below another panel. Removal stays in personalize.",
+    // actionRequest resolves the surface, the panel it goes next to and
+    // every surface before adapting (INF-2344: one saved arrangement).
     toRequest: (v, c) => {
-      const { layout, surface } = c as {
+      type Surface = {
+        id: string;
+        placement: { x: "left" | "right"; y: "top" | "bottom" };
+        preferred: { x: "left" | "right"; y: "top" | "bottom" };
+        declaredOrder: number;
+        place?: number;
+      };
+      const { layout, surface, neighbour, surfaces } = c as {
         layout: Layout;
-        surface: {
-          id: string;
-          placement: { x: string; y: string };
-          preferred: { x: string; y: string };
-        };
+        surface: Surface;
+        neighbour?: Surface;
+        surfaces: Surface[];
       };
-      const next = {
-        ...layout,
-        placements: { ...layout.placements },
-        hiddenPanels: { ...layout.hiddenPanels },
-      };
-      if (v.rail !== undefined || v.position !== undefined) {
-        const target = { x: v.rail ?? surface.placement.x, y: v.position ?? surface.placement.y };
-        if (target.x === surface.preferred.x && target.y === surface.preferred.y)
-          delete next.placements[surface.id];
-        else next.placements[surface.id] = target as Layout["placements"][string];
+      const next = { ...layout, hiddenPanels: { ...layout.hiddenPanels } };
+      const moves = v.rail !== undefined || v.position !== undefined || neighbour !== undefined;
+      // The create-your-own-panel slot is the only surface with no place.
+      if (moves && surface.place === undefined)
+        throw new Error(
+          `${surface.id} always sits at the top of the left rail; it can only be hidden or shown.`,
+        );
+      if (neighbour && neighbour.place === undefined)
+        throw new Error(`${neighbour.id} is not a panel to move next to; name a panel.`);
+      if (moves) {
+        const arrangement = arrangePanels(
+          layout,
+          surfaces
+            .filter((each) => each.place !== undefined)
+            .map((each) => ({ id: each.id, preferred: each.preferred, order: each.declaredOrder })),
+        );
+        const target = neighbour
+          ? neighbour.placement
+          : { x: v.rail ?? surface.placement.x, y: v.position ?? surface.placement.y };
+        const sameSlot =
+          target.x === surface.placement.x && target.y === surface.placement.y && !neighbour;
+        next.arrangement = sameSlot
+          ? arrangement
+          : movePanel(arrangement, surface.id, {
+              slot: target as { x: "left" | "right"; y: "top" | "bottom" },
+              ...(neighbour && v.above !== undefined ? { above: neighbour.id } : {}),
+              ...(neighbour && v.below !== undefined ? { below: neighbour.id } : {}),
+            });
       }
       if (v.visible === true) delete next.hiddenPanels[surface.id];
       else if (v.visible === false) next.hiddenPanels[surface.id] = true;
@@ -730,7 +772,7 @@ const actionLines = {
     },
     readValue: (c) => ({
       hiddenPanels: (c as Layout).hiddenPanels,
-      placements: (c as Layout).placements,
+      arrangement: (c as Layout).arrangement ?? null,
     }),
     done: (v) => `${v.surface} ${v.description}`,
   },
@@ -1488,6 +1530,11 @@ export type ActionActor =
       action?: ActionName;
       evidence?: string;
       projectWords?: boolean;
+      /**
+       * The panel a `panel` action names, as the first mate wrote it, so a
+       * move that reads two ways is told the way it was asked (INF-2344).
+       */
+      target?: string;
     };
 /** Settings and Firstmate share this project-change path. */
 export function isProjectChange(action: ActionName): boolean {

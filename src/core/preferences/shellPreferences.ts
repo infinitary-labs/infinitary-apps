@@ -1,5 +1,10 @@
 import type { SavedKeymap, SavedKeymapRead } from "@shared/keymap";
-import type { SidePanelPlacement } from "@shared/plugins/manifest";
+import {
+  type ArrangedPanel,
+  arrangePanels,
+  sameArrangement,
+  withoutPanel,
+} from "@shared/panelArrangement";
 import type {
   Appearance,
   Layout,
@@ -22,7 +27,9 @@ import type { SettingsStore } from "../storage/settingsStore";
  * A per-panel record holds only a deviation from the panel's default (the
  * shared schema's rule): hiding a panel writes `true`, showing it again
  * deletes the key rather than writing `false`, and a cleared panel has no
- * record at all.
+ * record at all. The arrangement is the exception (INF-2344): it lists
+ * every panel the app knows, in its slot and in order, and `reconcile`
+ * writes each new panel in.
  *
  * Step 5 added the third row, `panels`: the host-owned switch over the
  * captain's own panels. It has no Firstmate caller - only the window's
@@ -111,17 +118,25 @@ export class ShellPreferencesService {
     });
   }
 
-  /** Overrides where a panel sits; `null` returns it to the placement it asked for. */
-  setPanelPlacement(panelId: string, placement: SidePanelPlacement | null): Layout {
-    return this.updateLayout((layout) => {
-      const placements = { ...layout.placements };
-      if (placement) placements[panelId] = placement;
-      else delete placements[panelId];
-      return { ...layout, placements };
-    });
+  /**
+   * Writes in every panel the arrangement does not list yet
+   * (`arrangePanels`): the first time, the whole arrangement, built from
+   * where the rails drew each panel before it existed, so nothing moves;
+   * after that, each new panel at its slot's middle. A panel the app no
+   * longer knows keeps its place, so one that comes back returns there;
+   * only `clearPanel` forgets one. The first write also keeps the newest
+   * More pick, which the saved priority list led with, so a full rail keeps
+   * that header on screen as before. Writes and pushes only on a change.
+   */
+  reconcile(panels: readonly ArrangedPanel[]): Layout {
+    const layout = this.settings.getLayout();
+    const arrangement = arrangePanels(layout, panels);
+    if (layout.arrangement && sameArrangement(layout.arrangement, arrangement)) return layout;
+    const morePick = layout.morePick ?? (layout.arrangement ? undefined : layout.panelOrder?.[0]);
+    return this.setLayout({ ...layout, arrangement, ...(morePick ? { morePick } : {}) });
   }
 
-  /** Forgets every record about a panel: collapse, visibility, placement. */
+  /** Forgets every record about a panel: collapse, visibility, its place and a More pick of it. */
   clearPanel(panelId: string): Layout {
     return this.updateLayout((layout) => {
       const collapsedPanels = { ...layout.collapsedPanels };
@@ -130,13 +145,17 @@ export class ShellPreferencesService {
       delete collapsedPanels[panelId];
       delete hiddenPanels[panelId];
       delete placements[panelId];
+      const { morePick, ...rest } = layout;
       return {
+        ...rest,
         collapsedPanels,
         hiddenPanels,
         placements,
         ...(layout.panelOrder
           ? { panelOrder: layout.panelOrder.filter((id) => id !== panelId) }
           : {}),
+        ...(layout.arrangement ? { arrangement: withoutPanel(layout.arrangement, panelId) } : {}),
+        ...(morePick && morePick !== panelId ? { morePick } : {}),
       };
     });
   }

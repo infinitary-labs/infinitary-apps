@@ -34692,6 +34692,70 @@
               "maxLength": 64
             }
           },
+          "arrangement": {
+            "type": "object",
+            "properties": {
+              "left": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "bottom": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  }
+                },
+                "required": [
+                  "top",
+                  "bottom"
+                ]
+              },
+              "right": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "bottom": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  }
+                },
+                "required": [
+                  "top",
+                  "bottom"
+                ]
+              }
+            },
+            "required": [
+              "left",
+              "right"
+            ]
+          },
+          "morePick": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
           "focusedProjectId": {
             "type": "string",
             "minLength": 1,
@@ -34778,6 +34842,73 @@
                   "maxLength": 64
                 }
               },
+              "arrangement": {
+                "type": "object",
+                "properties": {
+                  "left": {
+                    "type": "object",
+                    "properties": {
+                      "top": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      },
+                      "bottom": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      }
+                    },
+                    "required": [
+                      "top",
+                      "bottom"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "right": {
+                    "type": "object",
+                    "properties": {
+                      "top": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      },
+                      "bottom": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      }
+                    },
+                    "required": [
+                      "top",
+                      "bottom"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "left",
+                  "right"
+                ],
+                "additionalProperties": false
+              },
+              "morePick": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
               "focusedProjectId": {
                 "type": "string",
                 "minLength": 1,
@@ -34786,6 +34917,20 @@
             },
             "required": [
               "collapsedPanels"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "moved": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              }
+            },
+            "required": [
+              "moved"
             ],
             "additionalProperties": false
           }
@@ -34858,6 +35003,70 @@
               "minLength": 1,
               "maxLength": 64
             }
+          },
+          "arrangement": {
+            "type": "object",
+            "properties": {
+              "left": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "bottom": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  }
+                },
+                "required": [
+                  "top",
+                  "bottom"
+                ]
+              },
+              "right": {
+                "type": "object",
+                "properties": {
+                  "top": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "bottom": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  }
+                },
+                "required": [
+                  "top",
+                  "bottom"
+                ]
+              }
+            },
+            "required": [
+              "left",
+              "right"
+            ]
+          },
+          "morePick": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           },
           "focusedProjectId": {
             "type": "string",
@@ -35046,6 +35255,70 @@
                   "minLength": 1,
                   "maxLength": 64
                 }
+              },
+              "arrangement": {
+                "type": "object",
+                "properties": {
+                  "left": {
+                    "type": "object",
+                    "properties": {
+                      "top": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      },
+                      "bottom": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      }
+                    },
+                    "required": [
+                      "top",
+                      "bottom"
+                    ]
+                  },
+                  "right": {
+                    "type": "object",
+                    "properties": {
+                      "top": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      },
+                      "bottom": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      }
+                    },
+                    "required": [
+                      "top",
+                      "bottom"
+                    ]
+                  }
+                },
+                "required": [
+                  "left",
+                  "right"
+                ]
+              },
+              "morePick": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
               },
               "focusedProjectId": {
                 "type": "string",
@@ -59530,6 +59803,70 @@
                   "minLength": 1,
                   "maxLength": 64
                 }
+              },
+              "arrangement": {
+                "type": "object",
+                "properties": {
+                  "left": {
+                    "type": "object",
+                    "properties": {
+                      "top": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      },
+                      "bottom": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      }
+                    },
+                    "required": [
+                      "top",
+                      "bottom"
+                    ]
+                  },
+                  "right": {
+                    "type": "object",
+                    "properties": {
+                      "top": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      },
+                      "bottom": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      }
+                    },
+                    "required": [
+                      "top",
+                      "bottom"
+                    ]
+                  }
+                },
+                "required": [
+                  "left",
+                  "right"
+                ]
+              },
+              "morePick": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
               },
               "focusedProjectId": {
                 "type": "string",

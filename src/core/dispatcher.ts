@@ -37,6 +37,14 @@ import {
   type WorkInvokeChannel,
 } from "@shared/ipc";
 import { KNOWLEDGE_OFF } from "@shared/knowledge";
+import {
+  arrangePanels,
+  defaultArrangement,
+  knownPanels,
+  movedPanels,
+  panelSlot,
+  sameArrangement,
+} from "@shared/panelArrangement";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import type { Layout } from "@shared/preferences";
 import { type AuthPromptView, providerServesRole } from "@shared/providers";
@@ -64,7 +72,7 @@ import { type MessageFile, withPastedFiles } from "./overflow";
 import { crewmateCardPicturesDir } from "./paths";
 import { actionValue } from "./pi/appTools";
 import { customCapabilityProfiles } from "./pi/customApiModels";
-import { listSurfaces } from "./pi/personalizeTool";
+import { listSurfaces, type SurfaceView } from "./pi/personalizeTool";
 import type { AuthInteractionBridge } from "./pi/piAuth";
 import { releaseNotesView } from "./releaseNotes/shown";
 import type { CoreServices } from "./services";
@@ -1538,7 +1546,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     if (channel === "inf:settings:layout:set") {
       const oldLayout = services.preferences.get().layout;
       const newLayout = args[0] as typeof oldLayout;
-      const fields = ["collapsedPanels", "hiddenPanels", "placements"] as const;
+      const fields = ["collapsedPanels", "hiddenPanels"] as const;
       const changed = new Set(
         fields.flatMap((field) =>
           [...new Set([...Object.keys(oldLayout[field]), ...Object.keys(newLayout[field])])].filter(
@@ -1546,26 +1554,34 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           ),
         ),
       );
+      // A set without an arrangement keeps the saved one (INF-2344).
+      if (newLayout.arrangement) {
+        // The slot is the app's own chrome, not a panel: it is hidden or
+        // shown, never moved, so it has no place in the arrangement.
+        if (panelSlot(newLayout.arrangement, CREATE_PANEL_SLOT_ID))
+          throw new Error(
+            `${CREATE_PANEL_SLOT_ID} always sits at the top of the left rail; it can only be hidden or shown.`,
+          );
+        // Against where every panel sat, the ones the saved arrangement had
+        // not written in yet included, so moving one of those is a move too.
+        const sat = arrangePanels(oldLayout, knownPanels(services.personal.snapshot()));
+        for (const id of movedPanels(sat, newLayout.arrangement)) changed.add(id);
+      }
       if (actor.kind === "firstmate") {
         if (changed.size > 1) throw new Error("Change one panel at a time.");
       }
       const surfaces = listSurfaces(oldLayout, services.personal.snapshot(), gatesOf(services));
-      const nextSurfaces = listSurfaces(newLayout, services.personal.snapshot(), gatesOf(services));
+      // An app panel waiting on its gate has its place too, and Settings →
+      // Panels moves it.
+      const known = new Set([
+        ...surfaces.map((surface) => surface.id),
+        ...knownPanels(services.personal.snapshot()).map((panel) => panel.id),
+      ]);
       for (const key of changed) {
-        const surface = surfaces.find((s) => s.id === key);
-        const nextSurface = nextSurfaces.find((s) => s.id === key);
-        if (!surface || !nextSurface)
+        if (!known.has(key))
           throw new Error(
             `No surface "${key}". Your surfaces: ${surfaces.map((s) => s.id).join(", ")}. The captain's panels switch is in Settings.`,
           );
-        // The slot is the app's own chrome, not a panel: it is hidden or
-        // shown, never moved.
-        if (key === CREATE_PANEL_SLOT_ID) {
-          if (!isDeepStrictEqual(surface.placement, nextSurface.placement))
-            throw new Error(
-              `${CREATE_PANEL_SLOT_ID} always sits at the top of the left rail; it can only be hidden or shown.`,
-            );
-        }
       }
     }
     if (names.length) automationSaid = undefined;
@@ -1624,19 +1640,62 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       } else if (name === "panel") {
         const old = before.get(name) as Layout;
         const next = after as typeof old;
-        const surfaces = listSurfaces(next, services.personal.snapshot(), gatesOf(services));
-        const prior = listSurfaces(old, services.personal.snapshot(), gatesOf(services));
+        const snapshot = services.personal.snapshot();
+        const surfaces = listSurfaces(next, snapshot, gatesOf(services));
+        const prior = listSurfaces(old, snapshot, gatesOf(services));
+        // The panel the first mate named, by its id or its title, as its
+        // request resolves it, or the one the captain's own write moved.
+        const target =
+          actor.kind === "firstmate"
+            ? actor.target
+            : (args as InvokeRequest<"inf:settings:layout:set">)[1]?.moved;
+        const named =
+          target === undefined
+            ? undefined
+            : (surfaces.find((surface) => surface.id === target) ??
+              surfaces.find((surface) => surface.title.toLowerCase() === target.toLowerCase()));
+        const moved = next.arrangement
+          ? movedPanels(arrangePanels(old, knownPanels(snapshot)), next.arrangement, named?.id)
+          : [];
+        // Reset to defaults, or any change that moved several panels at
+        // once, is one line, never one per panel.
+        if (moved.length > 1 && next.arrangement) {
+          const reset = sameArrangement(
+            next.arrangement,
+            defaultArrangement(knownPanels(snapshot)),
+          );
+          trail(
+            name,
+            {
+              surface: "Panels",
+              description: reset ? "put back where each asks to be" : "rearranged",
+            },
+            actor,
+          );
+        }
         for (const surface of surfaces) {
           const previous = prior.find((s) => s.id === surface.id);
           if (!previous) continue;
-          const was = { placement: previous.placement, hidden: previous.hidden };
-          const now = { placement: surface.placement, hidden: surface.hidden };
-          if (isDeepStrictEqual(was, now)) continue;
+          const state = (view: typeof surface) => ({
+            placement: view.placement,
+            place: view.place ?? null,
+            hidden: view.hidden,
+          });
+          const was = state(previous);
+          const now = state(surface);
+          const movedHere = moved.length === 1 && moved[0] === surface.id;
+          if (!movedHere && was.hidden === now.hidden) continue;
           // A settled run's line says what changed since its first step.
           const start = (runOf(name, surface.id, actor)?.from as typeof was | undefined) ?? was;
           const descriptions: string[] = [];
-          if (!isDeepStrictEqual(start.placement, now.placement))
-            descriptions.push(`moved to the ${now.placement.x} rail, ${now.placement.y}`);
+          if (
+            movedHere &&
+            !isDeepStrictEqual(
+              { placement: start.placement, place: start.place },
+              { placement: now.placement, place: now.place },
+            )
+          )
+            descriptions.push(`moved to ${whereNow(surface, surfaces)}`);
           if (start.hidden !== now.hidden) descriptions.push(now.hidden ? "hidden" : "shown");
           trail(name, { surface: surface.title, description: descriptions.join("; ") }, actor, {
             target: surface.id,
@@ -1861,4 +1920,24 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     );
     return result;
   }
+}
+
+/**
+ * Where a moved panel is now, in the words of its Activity line: its slot,
+ * and the panel just below it there, else the one just above it.
+ */
+function whereNow(surface: SurfaceView, surfaces: readonly SurfaceView[]): string {
+  const slot = `the ${surface.placement.x} rail, ${surface.placement.y}`;
+  const here = surfaces.filter(
+    (each) =>
+      each.place !== undefined &&
+      each.placement.x === surface.placement.x &&
+      each.placement.y === surface.placement.y,
+  );
+  const at = here.findIndex((each) => each.id === surface.id);
+  const below = here[at + 1];
+  if (below) return `${slot}, above ${below.title}`;
+  const above = here[at - 1];
+  if (above) return `${slot}, below ${above.title}`;
+  return slot;
 }

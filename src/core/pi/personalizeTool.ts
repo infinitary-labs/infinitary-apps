@@ -4,17 +4,17 @@ import {
   CREATE_PANEL_SLOT_TITLE,
 } from "@shared/createPanelSlot";
 import type { FmEvent } from "@shared/events";
+import { arrangePanels, knownPanels, panelSlot, RAIL_SLOTS } from "@shared/panelArrangement";
 import type { PersonalExtensionView, PersonalSnapshot } from "@shared/personal/manifest";
 import type { PanelMounts } from "@shared/personal/mounts";
 import type { SidePanelPlacement } from "@shared/plugins/manifest";
 import {
-  effectivePlacement,
   isPanelHidden,
   type Layout,
   type PersonalPanels,
   type ShellPreferences,
 } from "@shared/preferences";
-import { type AppPanelGates, builtinSurfacesFor } from "@shared/surfaces";
+import { type AppPanelGates, BUILTIN_SURFACES, builtinSurfacesFor } from "@shared/surfaces";
 import { Type } from "typebox";
 import {
   appPanelHiddenLine,
@@ -56,8 +56,18 @@ export type SurfaceView = {
   by: string | null;
   /** Where it sits once the captain's layout record is applied. */
   placement: SidePanelPlacement;
+  /**
+   * Its place in that slot among the panels listed there, from 1 at the
+   * top, and how many there are; absent for the create-your-own-panel
+   * slot, which is the app's chrome before every panel, never moved, and
+   * for a personal panel the window refused for taking an app panel's id.
+   */
+  place?: number;
+  of?: number;
   /** The placement the panel itself asked for. */
   preferred: SidePanelPlacement;
+  /** The order the panel itself declared, which places it when it is new. */
+  declaredOrder: number;
   hidden: boolean;
   collapsed: boolean;
 };
@@ -90,54 +100,84 @@ export type PersonalizeDelegate = {
  * Every surface the captain can name, in one shape: the app's own panels
  * (src/shared/surfaces.ts), the create-your-own-panel slot
  * (src/shared/createPanelSlot.ts), and the personal extensions the core
- * serves, each with its effective placement and visibility under the layout.
+ * serves, each with its slot, its place in it and its visibility under the
+ * layout. They come in the layout's own order (INF-2344): the left rail's
+ * top group first, top to bottom, then its bottom group, then the right
+ * rail's; the slot is always first on the left rail.
  */
 export function listSurfaces(
   layout: Layout,
   personal: PersonalSnapshot,
   gates: AppPanelGates,
 ): SurfaceView[] {
-  const app = [
-    ...builtinSurfacesFor(gates).map((entry) =>
-      surfaceView(layout, entry.id, entry.title, "app", entry.preferredPlacement, null),
-    ),
-    surfaceView(
-      layout,
-      CREATE_PANEL_SLOT_ID,
-      CREATE_PANEL_SLOT_TITLE,
-      "app",
-      CREATE_PANEL_SLOT_PLACEMENT,
-      null,
-    ),
+  // Every app panel, gated or not, is arranged, as the core writes it in.
+  const arrangement = arrangePanels(layout, knownPanels(personal));
+  const slotOf = (id: string, preferred: SidePanelPlacement) =>
+    panelSlot(arrangement, id) ?? { slot: preferred, index: Number.POSITIVE_INFINITY };
+  // The window refuses a personal panel that takes an app panel's id, so it
+  // has no place on the rails: it shows where it asked to be, with no place.
+  const appIds = new Set(BUILTIN_SURFACES.map((entry) => entry.id));
+  const unplaced = (slot: SidePanelPlacement) => ({ slot, index: Number.POSITIVE_INFINITY });
+  const views = [
+    {
+      ...base(layout, CREATE_PANEL_SLOT_ID, CREATE_PANEL_SLOT_TITLE, "app", null),
+      placed: false,
+      at: { slot: CREATE_PANEL_SLOT_PLACEMENT, index: -1 },
+      preferred: CREATE_PANEL_SLOT_PLACEMENT,
+      declaredOrder: 0,
+    },
+    ...builtinSurfacesFor(gates).map((entry) => ({
+      ...base(layout, entry.id, entry.title, "app", null),
+      placed: true,
+      at: slotOf(entry.id, entry.preferredPlacement),
+      preferred: entry.preferredPlacement,
+      declaredOrder: entry.order,
+    })),
+    ...personal.extensions.map((extension) => ({
+      ...base(
+        layout,
+        extension.id,
+        extension.title,
+        extension.source === "installed" ? "installed" : "personal",
+        extension.by,
+      ),
+      placed: !appIds.has(extension.id),
+      at: appIds.has(extension.id)
+        ? unplaced(extension.placement)
+        : slotOf(extension.id, extension.placement),
+      preferred: extension.placement,
+      declaredOrder: extension.order,
+    })),
   ];
-  const yours = personal.extensions.map((extension) =>
-    surfaceView(
-      layout,
-      extension.id,
-      extension.title,
-      extension.source === "installed" ? "installed" : "personal",
-      extension.placement,
-      extension.by,
-    ),
-  );
-  return [...app, ...yours];
+  const rank = (slot: SidePanelPlacement) =>
+    RAIL_SLOTS.findIndex((each) => each.x === slot.x && each.y === slot.y);
+  const byIndex = (a: number, b: number) => (a === b ? 0 : a < b ? -1 : 1);
+  views.sort((a, b) => rank(a.at.slot) - rank(b.at.slot) || byIndex(a.at.index, b.at.index));
+  return views.map(({ at, placed, ...view }) => {
+    const placement = { x: at.slot.x, y: at.slot.y };
+    if (!placed) return { ...view, placement };
+    const here = views.filter((each) => each.placed && rank(each.at.slot) === rank(at.slot));
+    return {
+      ...view,
+      placement,
+      place: here.findIndex((each) => each.id === view.id) + 1,
+      of: here.length,
+    };
+  });
 }
 
-function surfaceView(
+function base(
   layout: Layout,
   id: string,
   title: string,
   kind: SurfaceView["kind"],
-  preferred: SidePanelPlacement,
   by: string | null,
-): SurfaceView {
+) {
   return {
     id,
     title,
     kind,
     by,
-    placement: effectivePlacement(layout, id, preferred),
-    preferred,
     hidden: isPanelHidden(layout, id),
     collapsed: layout.collapsedPanels[id] === true,
   };
@@ -179,7 +219,8 @@ function pausedWords(paused: NonNullable<PersonalExtensionView["paused"]>): stri
 
 /**
  * The bounded "your surfaces" section of the Firstmate's context block:
- * the theme, every app panel, the personal panels up to a cap, each with
+ * the theme, every app panel, the personal panels up to a cap, in the
+ * layout's order with each one's place in its slot, each with
  * the window's word on it (`surfaceState`), and whether the
  * captain's own panels are on at all. Each row carries the id `personalize` takes.
  */
@@ -191,16 +232,17 @@ export function renderSurfacesSection(
 ): string[] {
   const surfaces = listSurfaces(preferences.layout, personal, gates);
   const yours = surfaces.filter((surface) => surface.kind !== "app");
-  const shown = [
-    ...surfaces.filter((surface) => surface.kind === "app"),
-    ...yours.slice(0, SURFACES_CONTEXT_LIMIT),
-  ];
+  // The cap keeps the first panels the core serves, then lists them in the layout's order.
+  const listed = new Set(
+    personal.extensions.slice(0, SURFACES_CONTEXT_LIMIT).map((extension) => extension.id),
+  );
+  const shown = surfaces.filter((surface) => surface.kind === "app" || listed.has(surface.id));
   const more = yours.length - Math.min(yours.length, SURFACES_CONTEXT_LIMIT);
   const off = panelsOffLine(preferences.panels);
   return [
     `your surfaces (app_change panel and personalize remove act on these ids; theme: ${preferences.appearance.theme}):`,
     ...shown.map((surface) => {
-      const where = `${surface.placement.x} rail, ${surface.placement.y}`;
+      const where = `${surface.placement.x} rail, ${surface.placement.y}${surface.place ? `, ${surface.place} of ${surface.of}` : ""}`;
       const state = surfaceState(surface, mounts);
       const mark =
         surface.kind === "personal"

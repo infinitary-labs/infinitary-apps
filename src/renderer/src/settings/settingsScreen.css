@@ -1,0 +1,70 @@
+/* Settings' tabs: one column on the left of the page (design skill
+   components/core/SettingsTabs.prompt.md). It sticks to the top of the
+   page while the section scrolls; each tab is a row the column's width,
+   quiet at rest, lifted under the pointer, and the chosen one filled with
+   the page's one accent as a bar on its left edge. */
+[data-settings-tabs] {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+[data-settings-tab] {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--fg-3);
+  text-align: left;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+[data-settings-tab]:hover {
+  color: var(--fg-2);
+  background: var(--bg-1);
+}
+[data-settings-tab][aria-selected="true"] {
+  color: var(--fg-1);
+  background: var(--bg-2);
+}
+[data-settings-tab][aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+[data-settings-tab-label] {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Settings → Panels (design skill components/core/PanelsSettings.prompt.md):
+   one column a rail wide or wider for each rail, side by side while both
+   fit; each group a list in a hairline box, its rows parted by hairlines. */
+[data-panels-rails] {
+  grid-template-columns: repeat(auto-fit, minmax(var(--rail-width), 1fr));
+}
+[data-panels-group] {
+  border: 1px solid var(--line-1);
+}
+[data-panels-row] + [data-panels-row] {
+  border-top: 1px solid var(--line-1);
+}

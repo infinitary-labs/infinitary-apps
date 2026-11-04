@@ -123,8 +123,12 @@ export const ACTION_FIELD_EXCEPTIONS: Partial<Record<CoreInvokeChannel, Record<s
       "A view choice inside Settings → Usage, switched there or by Switch Usage units in command search",
   },
   "inf:settings:layout:set": {
+    placements:
+      "Where a panel sat before the arrangement existed; nothing writes it now, and the panel action moves panels in the arrangement",
     panelOrder:
-      "The captain's More-menu move saves rail order; the first mate's panel action changes rail and end, not order",
+      "The More picks saved before the arrangement existed; nothing writes it now, and a More pick moves its panel in the arrangement",
+    morePick:
+      "The captain's last More pick, which the rail keeps on screen; the pick's move itself is in the arrangement the panel action writes",
     focusedProjectId:
       "The window's project focus is the captain's pick in the top bar's pill or a project chip, and only a hint to the first mate (docs/project-focus.md)",
   },

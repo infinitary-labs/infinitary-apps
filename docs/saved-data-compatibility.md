@@ -355,3 +355,13 @@ A missing or unreadable startup record supplies no capability claim, and the cur
 The home's `systems.json` records optional automatic-startup capability beside system and chip.
 An older strict reader treats that metadata file as unreadable and preserves it without rewriting; the device list and joins remain in their existing files.
 No database migration or saved-data format boundary changes.
+
+## The rails' saved arrangement
+
+Since INF-2344 the rails keep one arrangement of every panel's slot and order, and the last More pick, in a settings row of their own, `panel-arrangement`, beside the `layout` row (`SettingsStore.getLayout` and `setLayout`, `docs/ui-plugins.md` "Preferences by talking").
+An older build reads `layout` strictly, so the arrangement never goes in it: the `layout` row keeps only the collapse, hide and placement records an older build knows, and it still parses them.
+The first start of a build that has the arrangement writes it in from where the rails drew each panel, the saved `placements` and the `panelOrder` More picks included, so no panel moves.
+Nothing writes `placements` or `panelOrder` after that, and neither is removed: they place only a panel the arrangement does not list yet, and an older build reads them as before.
+A move made in a newer build is therefore not seen by an older one, which draws the panels as they last stood before the arrangement.
+A reset of the panels from Settings → Panels clears both, so an older build then draws every panel where it asks to be.
+No database migration or saved-data format revision is needed; the settings table takes a new key as it is.

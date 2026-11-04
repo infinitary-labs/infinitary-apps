@@ -3986,9 +3986,10 @@ export class FirstmateAgent {
 
   /**
    * The captain's surfaces (talk-to-personalize Step 1): the theme and every
-   * panel with its rail, position and visibility under the layout - bounded,
-   * one row per surface, each carrying the id `personalize` takes. Absent in
-   * a build with no personalize tool.
+   * panel with its rail, position, place in its slot and visibility under
+   * the layout, in the layout's own order (INF-2344) - bounded, one row per
+   * surface, each carrying the id `personalize` takes. Absent in a build
+   * with no personalize tool.
    */
   private renderSurfaces(): Record<string, unknown> | undefined {
     const personalize = this.options.personalize;
@@ -3998,10 +3999,8 @@ export class FirstmateAgent {
     const all = listSurfaces(preferences.layout, personal, personalize.gates());
     const mounts = personalize.mounts?.() ?? null;
     const personalSurfaces = all.filter((surface) => surface.kind === "personal");
-    const shown = [
-      ...all.filter((surface) => surface.kind === "app"),
-      ...personalSurfaces.slice(0, SURFACES_CONTEXT_LIMIT),
-    ];
+    const listed = new Set(personalSurfaces.slice(0, SURFACES_CONTEXT_LIMIT));
+    const shown = all.filter((surface) => surface.kind === "app" || listed.has(surface));
     const omitted =
       personalSurfaces.length - Math.min(personalSurfaces.length, SURFACES_CONTEXT_LIMIT);
     const panelsOff = panelsOffLine(preferences.panels);
@@ -4014,6 +4013,8 @@ export class FirstmateAgent {
         owner: surface.kind === "personal" ? "captain" : "app",
         rail: surface.placement.x,
         position: surface.placement.y,
+        // Its place in that slot, from the top: "2 of 3".
+        ...(surface.place ? { order: surface.place, of: surface.of } : {}),
         // The window's own word on it (docs/personal-panels.md, "Placed on the rail").
         state: surfaceState(surface, mounts),
       })),

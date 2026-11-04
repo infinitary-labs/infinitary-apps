@@ -74,6 +74,7 @@ describe("the command catalog", () => {
       "cards.next-tab",
       "cards.previous-tab",
       "settings.keyboard",
+      "settings.panels", // INF-2344: Arrange panels is chosen by name.
       "updates.show", // INF-640: the update notice is also chosen by name.
       "updates.later", // INF-2245: Update later is chosen by name while work saves.
       "updates.check", // INF-2073: Check for updates is chosen by name.
@@ -140,6 +141,7 @@ describe("the command catalog", () => {
       "cards.previous-tab",
       "settings.open",
       "settings.keyboard",
+      "settings.panels", // INF-2344: the shell opens Settings → Panels.
       "updates.show",
       "updates.later",
       "updates.check",

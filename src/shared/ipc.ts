@@ -242,6 +242,8 @@ import {
   type Appearance,
   appearanceSchema,
   type Layout,
+  type LayoutMove,
+  layoutMoveSchema,
   layoutSchema,
   type PersonalPanels,
   personalPanelsSchema,
@@ -2482,7 +2484,7 @@ export const invokeContract = {
     effect: "change",
     surface: "core",
     reach: "home",
-    request: z.tuple([layoutSchema]),
+    request: z.tuple([layoutSchema, layoutMoveSchema.optional()]),
     response: layoutSchema,
   },
   // The host-owned switch over the captain's own panels (talk-to-personalize
@@ -3832,7 +3834,8 @@ export type FirstmateApi = {
     setAppearance: (appearance: Appearance) => Promise<Appearance>;
     /** How the app is arranged: today, which rail panels are collapsed. */
     getLayout: () => Promise<Layout>;
-    setLayout: (layout: Layout) => Promise<Layout>;
+    /** `move` names the one panel the captain moved, for the Activity line. */
+    setLayout: (layout: Layout, move?: LayoutMove) => Promise<Layout>;
     /**
      * The host-owned switch over the captain's own panels (Step 5). Off
      * unmounts every one of them and stops their server modules; the

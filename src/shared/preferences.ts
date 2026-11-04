@@ -69,35 +69,75 @@ export const DEFAULT_APPEARANCE: Appearance = {
 const panelIdSchema = z.string().min(1).max(64);
 
 /**
- * How the app is arranged. Every record is keyed by side-panel contribution
- * id and holds only a DEVIATION from that panel's own default: a missing
- * key means the default, so a panel that later changes its default is not
- * pinned by a stale row.
+ * Where every panel sits, slot by slot (INF-2344): each rail's top and
+ * bottom group, every panel the app knows listed once, in the order the
+ * rail draws it from top to bottom. A hidden panel keeps its place, so
+ * showing it again puts it back; a panel listed here that the app no
+ * longer has is skipped wherever the arrangement is read. The shared
+ * functions over it are in `src/shared/panelArrangement.ts`.
+ */
+const railGroupsSchema = z.strictObject({
+  top: z.array(panelIdSchema),
+  bottom: z.array(panelIdSchema),
+});
+export const panelArrangementSchema = z.strictObject({
+  left: railGroupsSchema,
+  right: railGroupsSchema,
+});
+export type PanelArrangement = z.infer<typeof panelArrangementSchema>;
+
+/**
+ * How the app is arranged. The per-panel records are keyed by side-panel
+ * contribution id and hold only a DEVIATION from that panel's own default:
+ * a missing key means the default.
  *
  * - `collapsedPanels`: the header-only state (`DEFAULT_COLLAPSED_PANELS`).
  * - `hiddenPanels`: `true` keeps the panel off its rail entirely, whatever
  *   its data says - the rail stays zero-width for it. "hide tasks".
- * - `panelOrder`: optional most-recent More picks first, nearest each anchored end.
- * - `placements`: which rail and which end of it, overriding the panel's
- *   `preferredPlacement`. "put activity on the right".
+ * - `arrangement`: where every panel sits, in order (`PanelArrangement`).
+ *   The core fills it once from what the rails drew before it existed and
+ *   writes each new panel in; a set without it keeps the saved one.
+ * - `morePick`: the panel last chosen from a full rail's More row, whose
+ *   header the rail keeps on screen (docs/ui-plugins.md, "When a rail runs
+ *   out of room"). The pick's move itself is in `arrangement`.
+ * - `placements` and `panelOrder`: where a panel sat and the More picks
+ *   before the arrangement existed. Nothing writes them any more; they
+ *   place only a panel the arrangement does not list yet, and an older
+ *   build still reads them (docs/saved-data-compatibility.md).
  * - `focusedProjectId`: the project the window is focused on (the top bar's
  *   project pill, docs/project-focus.md); absent means All projects. It is
  *   presentation only: no task is written to for it.
  *
- * The two newer records default to empty so a `layout` row written before
- * them still parses (a strict object would otherwise refuse it and lose the
- * collapse choices with it).
+ * The records added after the first default to empty or are optional so a
+ * `layout` row written before them still parses (a strict object would
+ * otherwise refuse it and lose the collapse choices with it). The core keeps
+ * `arrangement` and `morePick` in a row of their own, so an older build,
+ * which reads the `layout` row strictly, never meets them.
  */
 export const layoutSchema = z.strictObject({
   collapsedPanels: z.record(panelIdSchema, z.boolean()),
   hiddenPanels: z.record(panelIdSchema, z.boolean()).default({}),
   placements: z.record(panelIdSchema, sidePanelPlacementSchema).default({}),
-  /** Most recently chosen in More first; nearest its anchored end within its group. */
+  /** Before the arrangement: More picks, most recent first. Read, never written. */
   panelOrder: z.array(panelIdSchema).optional(),
+  /** Where every panel sits, in order; absent until the core fills it. */
+  arrangement: panelArrangementSchema.optional(),
+  /** The panel last chosen from a full rail's More row. */
+  morePick: panelIdSchema.optional(),
   /** The focused project's id; absent is All projects. */
   focusedProjectId: z.string().min(1).max(64).optional(),
 });
 export type Layout = z.infer<typeof layoutSchema>;
+
+/**
+ * What the captain's own write of the layout moved, when it moved one
+ * panel: the panel they dragged, stepped or picked from a full rail's More
+ * row. Two neighbours that trade places read the same either way, so the
+ * Activity line names the one the captain moved from this, never from the
+ * two arrangements (INF-2344).
+ */
+export const layoutMoveSchema = z.strictObject({ moved: panelIdSchema });
+export type LayoutMove = z.infer<typeof layoutMoveSchema>;
 
 export const DEFAULT_LAYOUT: Layout = { collapsedPanels: {}, hiddenPanels: {}, placements: {} };
 
@@ -153,13 +193,21 @@ export function isPanelHidden(layout: Layout, panelId: string): boolean {
 }
 
 /**
- * Where a panel sits once the captain's choice is applied: the layout's
- * record for it, else the placement the panel asked for.
+ * Which rail and which end a panel sits at once the captain's layout is
+ * applied: its slot in the arrangement, else - for a panel the arrangement
+ * does not list yet - the placement saved before the arrangement existed,
+ * else the placement the panel asked for.
  */
 export function effectivePlacement(
   layout: Layout,
   panelId: string,
   preferred: SidePanelPlacement,
 ): SidePanelPlacement {
+  const arrangement = layout.arrangement;
+  if (arrangement) {
+    for (const x of ["left", "right"] as const)
+      for (const y of ["top", "bottom"] as const)
+        if (arrangement[x][y].includes(panelId)) return { x, y };
+  }
   return layout.placements[panelId] ?? preferred;
 }

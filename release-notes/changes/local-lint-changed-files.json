@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "local-lint-changed-files",
+      "reason": "Adds a pre-push lint command for crewmates on changed files and generated files. Development tooling only; nothing in the app changes."
+    }
+  ]
+}

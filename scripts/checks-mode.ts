@@ -40,7 +40,10 @@ const ROUTES: Record<HeavyCheck, { name: string; route: string }> = {
     route: `start replay.yml on your branch: ${DISPATCHES}/replay.yml/dispatches with {"ref":"<branch>"}.`,
   },
   typecheck: { name: "The typecheck", route: PULL_REQUEST_CHECKS },
-  lint: { name: "The lint", route: PULL_REQUEST_CHECKS },
+  lint: {
+    name: "The lint",
+    route: `run \`pnpm check:changed\` to lint only your changed files and check the generated files here; the full lint is ${PULL_REQUEST_CHECKS}`,
+  },
 };
 
 export function checksMode(env: NodeJS.ProcessEnv = process.env, cwd = process.cwd()): ChecksMode {

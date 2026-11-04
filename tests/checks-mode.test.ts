@@ -90,6 +90,15 @@ describe("where the heavy checks run", () => {
     }
   });
 
+  // INF-2588 fix 1: a crewmate on a CI-mode computer still lints its changed files before it pushes.
+  it("lints changed files and checks generated files in CI mode instead of refusing", () => {
+    const { run } = computer("ci");
+    const result = run(scripts["check:changed"] ?? "");
+    expect(result.stdout).toMatch(/check:changed: \d+ changed file/);
+    expect(result.stderr).not.toContain("typecheck-lint-build");
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+  });
+
   // The real runner boots in about a second.
   it("refuses a committed journey outside CI with the setting on, before setup", () => {
     const { run } = computer("ci");

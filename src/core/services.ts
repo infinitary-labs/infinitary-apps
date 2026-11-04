@@ -2457,6 +2457,7 @@ export async function createServices(
     ...(knowledge ? { knowledge } : {}),
     inbox,
     router,
+    accountlessServes: () => auth.servesAnyModel(),
     accounts,
     // Whoever observes a typed cut-off records it on the account.
     noteCutOff,

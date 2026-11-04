@@ -68,6 +68,15 @@ export class PiAuthService {
       .map((model) => ({ provider: model.provider, id: model.id }));
   }
 
+  /**
+   * Whether an account-less session here has any model to run on: a
+   * models.json provider, or anything else this runtime holds a credential
+   * for. With none, such a session fails before its first answer.
+   */
+  servesAnyModel(): boolean {
+    return this.modelRuntime.getAvailableSnapshot().length > 0;
+  }
+
   /** Provider rows for the catalog entries Pi serves; the rest is its backend's. */
   providers(): ProviderView[] {
     const views: ProviderView[] = [];

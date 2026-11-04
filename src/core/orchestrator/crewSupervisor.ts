@@ -720,6 +720,14 @@ export type CrewSupervisorOptions = {
   /** Optional routing (D-7/D-18); absent defers to the runtime default. */
   router?: Router;
   /**
+   * Whether the account-less runtime serves any model of its own (a
+   * models.json provider): a start on this Mac that routing placed on no
+   * model opens there. With none, that session has nothing to answer it and
+   * fails as a sign-in, so the start is refused in words instead.
+   * Absent = it may serve.
+   */
+  accountlessServes?: () => boolean;
+  /**
    * What establishes a spawn's KIND (intelligence-bucket routing S3).
    * Absent is the honest S2 behaviour: every shape stays `unclear` and R8
    * routes it high - the classifier can make routing cheaper, never
@@ -5792,11 +5800,15 @@ export class CrewSupervisor {
     let minted: BriefPart[];
     let pictures: Awaited<ReturnType<CrewSupervisor["briefPictures"]>>;
     try {
+      // Routing chose no model for a start on this Mac. With Dynamic routing
+      // off, or with an account-less runtime that serves no model of its
+      // own, a session opened anyway would fail as if a sign-in had lapsed.
       if (
         spec.routed &&
         !spec.routed.choice &&
         !placed &&
-        this.options.router?.dynamicEnabled?.() === false
+        (this.options.router?.dynamicEnabled?.() === false ||
+          this.options.accountlessServes?.() === false)
       ) {
         throw new Error(
           "No signed-in model can take this task now. Check your accounts and their allowance in Settings → Intelligence.",

@@ -12,6 +12,15 @@ The initial choice is recorded through the same decision ledger and bound throug
 If no model or account can serve a local start, startup explains that before opening a session, rather than asking the account-less engine for a default model.
 Dynamic routing off still disables automatic computer comparison and previews for moving running work.
 
+## Models no allowance is read for
+
+A model whose allowance nobody reads has no quota-catalog row: a checked custom connection's, OpenRouter's (billed by the token), and a computer's own model this Mac's catalog lacks.
+Routing admits such a model by its slot alone (`allowanceless` and `unowned` in `src/core/routing/routingEngine.ts`), in the unknown band, so a measured subscription in the same slot comes first; the account selector then picks the account that serves it, as for any model.
+An install signed in only to OpenRouter has nothing placed, so the slot record's fallback places OpenRouter's listed aliases at medium and a crewmate starts on one under that key (INF-2523).
+Beside a subscription whose starter models are placed, OpenRouter's models arrive off and route only once placed or named; if that subscription's account is withheld, the same fallback reaches them.
+A provider the app does not offer, such as one in the base engine's own `models.json`, is still never a choice.
+With Dynamic routing on, a local start that routing placed on no model opens on the account-less engine's default only while that engine serves a model of its own (`PiAuthService.servesAnyModel`); otherwise startup is refused with the same words as with routing off, rather than opening a session that fails as if a sign-in had lapsed.
+
 ## Bounded fact retrieval
 
 R10 maps classifier-owned `retrieval` to low: the whole task must ask for a fact, or how or why something is so, read from what this app can already read - the code and its history, the task record, the docs, and the current state of the computers, checks and GitHub runs it connects to (`docs/kind-classifier.md`).

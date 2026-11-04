@@ -653,6 +653,135 @@ describe("checked connection-owned models without a quota catalog", () => {
   });
 });
 
+// INF-2523: an install signed in only to OpenRouter. Nothing reads its
+// allowance, so its models have no catalog row; the crewmate it started
+// opened with no model and failed as a sign-in. Its placed models route the
+// way a custom connection's do.
+describe("an offered provider whose allowance nobody reads (INF-2523)", () => {
+  const sonnet = { provider: "openrouter", id: "~anthropic/claude-sonnet-latest" };
+  const grok = { provider: "openrouter", id: "~x-ai/grok-latest" };
+  const legacy = { provider: "openrouter", id: "anthropic/claude-3-haiku" };
+
+  it("routes an OpenRouter model its slot places, with no catalog at all", () => {
+    const decision = route({
+      catalog: [],
+      available: [legacy, sonnet, grok],
+      slotted: [
+        { ...sonnet, slot: "medium" },
+        { ...grok, slot: "medium" },
+      ],
+      pins: [],
+      bucket: "medium",
+    });
+    expect(decision.choice).toEqual(sonnet);
+    expect(decision.unserveable).toBeUndefined();
+    expect(decision.reasons.at(-1)).toBe(`picked openrouter/${sonnet.id} by runway order`);
+  });
+
+  it("serves a high request from its medium slot down the usual ladder", () => {
+    const decision = route({
+      catalog: [],
+      available: [sonnet],
+      slotted: [{ ...sonnet, slot: "medium" }],
+      pins: [],
+      bucket: "high",
+    });
+    expect(decision.choice).toEqual(sonnet);
+    expect(decision.servedBucket).toBe("medium");
+  });
+
+  it("never routes one its slot leaves out", () => {
+    // Placed or not, only a slot admits it: an unplaced model stays out.
+    expect(
+      route({
+        catalog: [],
+        available: [legacy],
+        slotted: [{ ...sonnet, slot: "medium" }],
+        pins: [],
+        bucket: "medium",
+      }).choice,
+    ).toBeUndefined();
+    expect(
+      route({ catalog: [], available: [legacy, sonnet], slotted: [], pins: [], bucket: "medium" })
+        .choice,
+    ).toBeUndefined();
+    // Naming it still places it.
+    expect(
+      route({ catalog: [], available: [legacy], slotted: [], pins: [legacy], bucket: "medium" })
+        .choice,
+    ).toEqual(legacy);
+  });
+
+  it("ranks a measured subscription in the same slot ahead of it", () => {
+    const codex = { provider: "openai-codex", id: "gpt-6.1-terra" };
+    expect(
+      route({
+        catalog: [
+          {
+            provider: "codex",
+            id: codex.id,
+            label: codex.id,
+            effectivePercentRemaining: 60,
+            spendPriority: 0.4,
+            lastsThroughReset: true,
+          },
+        ],
+        available: [sonnet, codex],
+        slotted: [
+          { ...sonnet, slot: "medium" },
+          { ...codex, slot: "medium" },
+        ],
+        pins: [],
+        bucket: "medium",
+      }).choice,
+    ).toEqual(codex);
+  });
+
+  it("takes it when the subscription in that slot is spent", () => {
+    const codex = { provider: "openai-codex", id: "gpt-6.1-terra" };
+    expect(
+      route({
+        catalog: [
+          { provider: "codex", id: codex.id, label: codex.id, effectivePercentRemaining: 0 },
+        ],
+        available: [sonnet, codex],
+        slotted: [
+          { ...sonnet, slot: "medium" },
+          { ...codex, slot: "medium" },
+        ],
+        pins: [],
+        bucket: "medium",
+      }).choice,
+    ).toEqual(sonnet);
+  });
+
+  it("never auto-selects one placed only in premium", () => {
+    const fable = { provider: "openrouter", id: "~anthropic/claude-fable-latest" };
+    expect(
+      route({
+        catalog: [],
+        available: [fable],
+        slotted: [{ ...fable, slot: "premium" }],
+        pins: [],
+        bucket: "high",
+      }).choice,
+    ).toBeUndefined();
+  });
+
+  it("still never chooses a provider the app does not offer", () => {
+    const own = { provider: "my-models-json", id: "local-model" };
+    expect(
+      route({
+        catalog: [],
+        available: [own],
+        slotted: [{ ...own, slot: "medium" }],
+        pins: [],
+        bucket: "medium",
+      }).choice,
+    ).toBeUndefined();
+  });
+});
+
 // INF-898, the captain: "our claude session quota is so tight, why aren't we
 // using codex models for more crewmates" - and "how come claude has higher
 // spending priority than codex in this case??". The readings are INF-898's

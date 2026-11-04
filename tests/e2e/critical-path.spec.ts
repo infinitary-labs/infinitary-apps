@@ -48,10 +48,9 @@ import { expectNoCard, factsStrip, shownCard, stageAtRest } from "./stack";
 
 const PROJECT = "meterlab";
 /**
- * Grok, signed in with a pasted key. OpenRouter's key is the gate's other
- * no-browser sign-in, but routing never gives a crewmate an OpenRouter model
- * on its own, so a crewmate on it alone starts with no key (INF-2523);
- * Grok's starter model is one routing picks.
+ * Grok, signed in with a pasted key: its starter model is one routing
+ * picks. OpenRouter's key, the gate's other no-browser sign-in, has a
+ * journey of its own (`openrouter-crew.spec.ts`, INF-2523).
  */
 const KEY_PROVIDER = "xai";
 const why = MOCK_GITHUB_STORY.why[0];

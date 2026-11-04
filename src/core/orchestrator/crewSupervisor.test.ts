@@ -383,6 +383,8 @@ type RecordUsageInput = {
 
 type SetupExtras = {
   realRouter?: (db: ReturnType<typeof openInMemoryDatabase>) => import("../routing/router").Router;
+  /** Whether the account-less runtime serves a model of its own. */
+  accountlessServes?: () => boolean;
   /**
    * Automatic placement's answers for a project set to Automatic, with the
    * routing switch on and computers that run work on the list (docs/helper.md,
@@ -491,6 +493,36 @@ function routingOffRouter(
       latest: () => undefined,
     } as unknown as QuotaService,
     availableModels: () => models,
+  });
+}
+
+/**
+ * Routing on, over a pool no allowance is read for: an install signed in
+ * only to OpenRouter (INF-2523). The quota catalog holds no row for it, and
+ * the slot record places every listed model at medium, as its fallback does
+ * when nothing is placed.
+ */
+function catalogLessRouter(
+  db: ReturnType<typeof openInMemoryDatabase>,
+  models: { provider: string; id: string }[],
+) {
+  return new Router({
+    settings: new SettingsStore(db),
+    decisions: new DecisionStore(db),
+    quota: {
+      latestModels: () => ({ generatedAt: "now", models: [] }),
+      latest: () => undefined,
+    } as unknown as QuotaService,
+    availableModels: () => models,
+    slots: {
+      routable: (available: { provider: string; id: string }[]) => ({
+        models: available.map((model) => ({ ...model, slot: "medium" as const })),
+        note: "no slotted or starter-map model is available; using every listed model",
+      }),
+      slotsOf: () => [],
+      reasoningChoice: () => undefined,
+      nameOf: () => undefined,
+    } as unknown as import("../routing/modelSlots").ModelSlots,
   });
 }
 
@@ -638,6 +670,7 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
         }
       : {}),
     ...(extras.accounts ? { accounts: extras.accounts } : {}),
+    ...(extras.accountlessServes ? { accountlessServes: extras.accountlessServes } : {}),
     ...(extras.machines ? { machines: extras.machines } : {}),
     ...(extras.programProcess ? { programProcess: extras.programProcess } : {}),
     ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
@@ -7274,6 +7307,62 @@ describe("CrewSupervisor", () => {
       expect(sessionSpecs).toHaveLength(0);
     },
   );
+
+  // INF-2523: a fresh install signed in only to OpenRouter started its
+  // crewmate with no model and no account, and the account-less session
+  // failed as if the key had lapsed.
+  it("starts a crewmate on an OpenRouter model under its key when OpenRouter is the only sign-in", async () => {
+    const model = { provider: "openrouter", id: "~anthropic/claude-sonnet-latest" };
+    const crewmate = fakeCrewmate({ model });
+    const selectForSpawn = vi.fn(() => "acct_openrouter");
+    const { supervisor, tasks, sessionSpecs } = setup(crewmate, {
+      realRouter: (db) => catalogLessRouter(db, [model]),
+      accountlessServes: () => false,
+      accounts: {
+        selectForSpawn,
+        reselectForResume: () => ({ changed: false }),
+        labelOf: () => "OpenRouter key",
+      },
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Read the project",
+      intent: intentOf("read the project without changing it"),
+    });
+    await tick();
+    expect(selectForSpawn).toHaveBeenCalledWith(taskId, "openrouter", { model: model.id });
+    expect(sessionSpecs).toHaveLength(1);
+    expect(sessionSpecs[0]?.model).toEqual(model);
+    expect(sessionSpecs[0]?.binding).toMatchObject({ accountId: "acct_openrouter" });
+    expect(tasks.get(taskId)?.accountId).toBe("acct_openrouter");
+    expect(tasks.get(taskId)?.model).toBe(`openrouter/${model.id}`);
+    expect(crewmate.promptCalls).toHaveLength(1);
+  });
+
+  it("refuses in words a start no model can take when the account-less runtime serves none", async () => {
+    const { supervisor, sessionSpecs } = setup(fakeCrewmate(), {
+      realRouter: (db) => catalogLessRouter(db, []),
+      accountlessServes: () => false,
+    });
+    await expect(
+      supervisor.commission({ title: "Read the project", intent: intentOf("read the project") }),
+    ).rejects.toThrow(
+      "No signed-in model can take this task now. Check your accounts and their allowance in Settings → Intelligence.",
+    );
+    expect(sessionSpecs).toHaveLength(0);
+  });
+
+  it("still opens on the account-less runtime when it serves a model of its own", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, sessionSpecs } = setup(crewmate, {
+      realRouter: (db) => catalogLessRouter(db, []),
+      accountlessServes: () => true,
+    });
+    await supervisor.commission({ title: "Read the project", intent: intentOf("read the project") });
+    await tick();
+    expect(sessionSpecs).toHaveLength(1);
+    expect(sessionSpecs[0]?.model).toBeUndefined();
+    expect(crewmate.promptCalls).toHaveLength(1);
+  });
 
   it("binds the selected account at spawn and records usage under it (broker phase 4)", async () => {
     const crewmate = fakeCrewmate();

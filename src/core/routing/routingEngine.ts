@@ -3,6 +3,7 @@ import { isOfferedProvider } from "@shared/providers";
 import {
   type CatalogModelView,
   type IntelligenceBucket,
+  isSensedProvider,
   type ModelPin,
   type Slot,
   servedModelKey,
@@ -20,7 +21,10 @@ import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./ca
  *    reads the task and says low, medium, high, or premium (see the
  *    routing rule in FIRSTMATE_PROMPT_CORE). No prompt heuristic lives
  *    here; absent a class the request is medium.
- * 2. Candidates = slot ∩ Pi-available models, minus exhausted scopes.
+ * 2. Candidates = slot ∩ Pi-available models, minus exhausted scopes. A
+ *    model with no allowance row - a checked custom connection's, an
+ *    offered provider's whose allowance nobody reads (OpenRouter), or a
+ *    computer's own - is admitted by slot membership alone.
  * 3. Within a slot, serveable candidates rank band first (INF-1714): an
  *    unadjusted reading projected to last through every reset, then one
  *    projected to run out, then one at or below the near-floor, then an
@@ -63,7 +67,9 @@ export type RoutingInput = {
   /**
    * Models with no quota-catalog row that slot membership may still choose:
    * a computer's own list for a provider this Mac's catalog lacks.
-   * Custom connections are admitted from `available` and need not be repeated.
+   * Custom connections and an offered provider's models with no allowance
+   * reader (`allowanceless`) are admitted from `available` and need not be
+   * repeated.
    */
   unowned?: PiModelRef[];
   /**
@@ -214,6 +220,21 @@ export function fallbackRank(requested: Slot, served: Slot): number {
 }
 
 /**
+ * Whether an available model can have no quota-catalog row, so only its
+ * slot admits it: a checked custom connection's, or an offered provider's
+ * whose allowance nobody reads (OpenRouter, billed by the token). A model
+ * the catalog would describe is never one, so it keeps its exhaustion and
+ * band checks; a base-runtime provider the catalog does not offer (a
+ * models.json provider) is still never a choice.
+ */
+function allowanceless(ref: PiModelRef): boolean {
+  return (
+    isCustomApiProvider(ref.provider) ||
+    (isOfferedProvider(ref.provider) && !isSensedProvider(ref.provider))
+  );
+}
+
+/**
  * Collects `slotted` into the slots each offering sits in - more than one
  * row for the same key (an offering placed in more than one slot) adds to
  * the same list rather than overwriting it.
@@ -291,6 +312,7 @@ export function route(input: RoutingInput): RoutingDecision {
     if (fact) fact.status = status;
   };
   const candidates = () => [...facts.values()];
+  const catalogKeys = new Set<string>(input.catalog.map((model) => servedModelKey(model)));
   const empty = [...input.available, ...(input.unowned ?? [])].some((ref) =>
     slotsOf(ref)?.includes(bucket),
   )
@@ -332,16 +354,16 @@ export function route(input: RoutingInput): RoutingDecision {
       mark(ref, `eligible at ${candidateSlot}`);
       return [{ model, ref, slot: candidateSlot }];
     });
-    // Checked connection-owned models, and a computer's models the quota
-    // catalog does not list. Only slot membership admits them.
-    const extras = [
-      ...input.available.filter((ref) => isCustomApiProvider(ref.provider)),
-      ...(input.unowned ?? []),
-    ];
+    // Checked connection-owned models, an offered provider's models whose
+    // allowance nobody reads, and a computer's models the quota catalog does
+    // not list. Only slot membership admits them.
+    const extras = [...input.available.filter(allowanceless), ...(input.unowned ?? [])];
     const seenExtra = new Set<string>();
     for (const ref of extras) {
       const key = `${ref.provider}/${ref.id}`;
-      if (seenExtra.has(key) || !slots?.get(key)?.includes(candidateSlot)) continue;
+      // A model the catalog describes was weighed above, with its reading.
+      if (seenExtra.has(key) || catalogKeys.has(key)) continue;
+      if (!slots?.get(key)?.includes(candidateSlot)) continue;
       seenExtra.add(key);
       const miss = capabilityMiss({
         ref,

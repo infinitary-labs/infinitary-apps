@@ -1932,6 +1932,50 @@ describe("CrewSupervisor", () => {
     expect(cards()).toEqual([]);
   });
 
+  // The captain's cancel bug (Nov 3, 2026): INF-2298 kept working after a
+  // cancel that reported success, and FIRS-6, whose turn had started on its
+  // own on another computer, stayed running after two. An abort asks the turn
+  // to stop; the cancel itself ends the task, whether or not that turn ends.
+  it.each([
+    ["turn the host started", false],
+    ["turn the crewmate started on its own", true],
+  ])("ends a cancelled task when its %s never ends", async (_name, autonomous) => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.commission({
+      title: "long",
+      intent: intentOf("long running work"),
+    });
+    await tick();
+    if (autonomous) {
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      crewmate.emit({ type: "continuation_started" });
+    }
+    expect(legacyStateOf(tasks.get(taskId))).toBe("running");
+
+    await supervisor.interruptCrewmate(taskId, "cancel");
+    await tick();
+
+    expect(crewmate.aborts).toHaveLength(1);
+    expect(legacyStateOf(tasks.get(taskId))).toBe("cancelled");
+    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 0 });
+    const finished = () => events.filter((event) => event.type === "task_finished");
+    expect(finished()).toEqual([expect.objectContaining({ status: "cancelled", title: "long" })]);
+
+    // The turn that ends late, if it ever does, changes nothing.
+    if (autonomous) {
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.emit({ type: "continuation_ended" });
+    } else {
+      crewmate.failPrompt("aborted");
+    }
+    await tick();
+    expect(legacyStateOf(tasks.get(taskId))).toBe("cancelled");
+    expect(finished()).toHaveLength(1);
+  });
+
   it("cancels an idle reported task that stayed active until settled", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, tasks } = setup(crewmate);

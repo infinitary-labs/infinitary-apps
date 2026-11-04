@@ -9849,6 +9849,13 @@ export class CrewSupervisor {
           this.recordInterrupt(taskId, mode, source, "abort-failed", error);
           throw caught;
         }
+        // An abort asks the turn to stop; it never promises the turn ends.
+        // A Claude client answers the steers it still holds in a turn of its
+        // own, and a turn on another computer may never report its end, so
+        // waiting for that end left a cancelled task running. The cancel
+        // ends the task here, as a settle's stop does; the turn's own end,
+        // whenever it comes, finds it gone (`finish`).
+        this.finish(task, "cancelled");
       }
       return;
     }
@@ -11608,6 +11615,11 @@ export class CrewSupervisor {
     // purges what is queued about it (INF-721: a choice outranks a cancel).
     // The settle releases the runtime once the abort returns.
     if (task.settling) return;
+    // A runtime no longer in the crew has ended already: a cancel ended it
+    // when its abort returned, before the turn it stopped came to an end.
+    // Ending it again would announce a second finish, and could close or
+    // purge what a runtime now holding its place carries.
+    if (this.tasks.get(task.id) !== task) return;
     // A finished task's background jobs die with it, quietly (R2).
     this.options.killJobs?.(task.id);
     // This is a terminal close, not an idle boundary: closeRecord retires

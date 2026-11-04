@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "cancel-ends-running-task",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Cancelling a working task ends it",
+      "body": "When you ask the first mate to cancel a task whose crewmate is still working, the task now closes as cancelled right away. Before, it could stay running after the first mate said it was cancelled, sometimes through a second cancel, most often for a task working on another of your computers.",
+      "noPicture": "Nothing on screen looks different: the change is that a cancelled task leaves the crew instead of staying listed as working.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

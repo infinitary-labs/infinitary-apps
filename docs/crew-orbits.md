@@ -272,7 +272,8 @@ The light is the last thing the orbit's frame passes through before it is painte
 ## Verification
 
 - `orbitalPlanes.test.ts`: the staged two orbits' geometry and signed rates from the captain's settings, measured travel of rendered frames, the first orbit's growth a notch per arrival, its widening on the springs, depth/radius/bounds, the second orbit's opening at 25 and packing through 96, outward refills, the inner orbit's shrinking and closing, churn, stable survivors, packets/cues and reduced motion.
-- `tests/e2e/crew-planes.spec.ts`: real storage → boot board → 48 crew at the minimum window: all on the stage, clear of the prompt, and a crewmate's summary still opens whole in the window.
+- `tests/browser/crew-planes.test.tsx`: 48 idle crew seeded through the core's own task store, booted by a real core, at the smallest window: all on the stage, the crowded orbit inside the window and clear of the prompt as the crew are placed and once the planes have opened out, and a crewmate's summary still opens whole in the window.
+  It reads the board the window's first read brings, with no push after it, so it fails if that read is dropped (INF-2526).
 - The `orbit`, `crewSignal`, painter/cue and crew ring browser tests exercise the unchanged lifecycle, commissioning, solids, posture and review cues.
   Each crew ring case in the browser layer (`tests/browser/crew-orbit-*.test.ts`, helpers in `tests/browser/crewOrbit.ts`) opens its own window on a fresh home with no crew, then replays the pushes the core sent as one idle crewmate went out and, for cancellation, as it was dropped (`crewStory`, `docs/testing.md` "The browser layer").
   Under reduced motion the arriving crewmate holds one still frame across 30 drawing frames.
@@ -280,7 +281,6 @@ The light is the last thing the orbit's frame passes through before it is painte
   Run it alone with `pnpm exec playwright test tests/e2e/crew-orbit.spec.ts --project=renderer --no-deps`.
   The journey attaches fresh board/count/pixel state and lifecycle pictures; sample captures are local evidence and are not committed.
 
-`crew-planes.spec.ts` writes its 48-crew minimum-window picture into the run's own results folder.
 No playground controls or generated card bundle are imported into production.
 
 ## Continuing-work posture

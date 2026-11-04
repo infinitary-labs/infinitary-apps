@@ -90,7 +90,6 @@ export const APPLICATION_SUITES = [
   "crew-hover.spec.ts",
   "crew-idle-helper.spec.ts",
   "crew-model-labels.spec.ts",
-  "crew-planes.spec.ts",
   "custom-api.spec.ts",
   "custom-context-compaction.spec.ts",
   "custom-usage.spec.ts",

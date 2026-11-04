@@ -11,7 +11,7 @@ import {
   taskStatusOf,
 } from "../../src/shared/taskPresentation";
 import type { TaskView } from "../../src/shared/tasks";
-import { taskWaitStatus, taskWaitSummary, taskWaitText } from "../../src/shared/taskWaits";
+import { taskWaitSummary, taskWaitText } from "../../src/shared/taskWaits";
 import { scratchDir } from "../helpers/scratchDirs";
 import { crewFormation } from "./crew";
 import { launchApp } from "./launch";
@@ -26,6 +26,7 @@ import {
   recordBar,
   recordBarButton,
   recordCard,
+  recordFrame,
   rowSummary,
 } from "./rails";
 import { BOARD_PANEL, boardsOnStage, boardTile, hideBoard, openBoardButton } from "./taskBoard";
@@ -143,19 +144,22 @@ test("a started crewmate idle on one blocker circles it past queued work, and it
     await focusOn(waiterRow);
     await expect(rowSummary(page)).toBeVisible();
     const summary = rowSummary(page).locator("[data-crew-summary]");
-    await expect(summary.locator('[data-task-fact="status"]')).toHaveText(
-      taskStatusLabel(taskWaitStatus(waiter, reading, "hover", Date.now())),
+    // INF-2528, the captain's direction B: the preview keeps the short
+    // status and names the blocker by its key alone.
+    await expect(summary.locator('[data-task-fact="status"]')).toHaveText(taskStatusLabel(reading));
+    await expect(summary.locator(`[data-crew-blocked-wait="${blocker.key}"]`)).toHaveText(
+      blocker.key,
     );
-    // Approved INF-2215 keeps the exact recorded date here, with the unknown end time.
+    // The exact recorded date, with the unknown end time (INF-2215), is the task card's.
     const dependency = waiter.waits?.find((wait) => wait.kind === "dependency");
     if (!dependency) throw new Error("Missing the standing dependency wait");
     expect(dependency.since).toBe(since);
-    await expect(summary.locator(`[data-crew-blocked-wait="${blocker.key}"]`)).toHaveText(
-      taskWaitText(dependency, Date.now()),
-    );
     await pressKey(waiterRow, "Enter");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "waiter");
     await expectRecordBody(page);
+    await expect(recordFrame(page).locator("[data-record-attention-title]")).toContainText(
+      taskWaitText(dependency, Date.now()),
+    );
     await hideRecord(page).click();
     await expect(recordCard(page)).toHaveCount(0);
 

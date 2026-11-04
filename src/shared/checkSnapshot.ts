@@ -79,6 +79,10 @@ const STATE_WORDS: Record<ForgeCheckState, string> = {
 
 export const CHECKS_NOT_REPORTED_WORDS = "none reported";
 export const CHECKS_ABSENT_WORDS = "no checks";
+/** What the checks say when the app could not read them all; the task card adds the reason. */
+export const CHECKS_UNREADABLE_WORDS = "cannot read all checks";
+/** What the checks say when the reading came back incomplete with no reason. */
+export const CHECKS_INCOMPLETE_WORDS = "reading incomplete";
 
 /** Display-only tally of reported facts; never a readiness or merge decision. */
 export function checkSnapshotSummary(reading: CheckSnapshot): {
@@ -90,8 +94,8 @@ export function checkSnapshotSummary(reading: CheckSnapshot): {
   const problem = reading.problem ? { problem: reading.problem } : {};
   const incomplete = reading.complete === false || Boolean(reading.problem);
   const unknownWords = reading.problem
-    ? `cannot read all checks: ${reading.problem}`
-    : "reading incomplete";
+    ? `${CHECKS_UNREADABLE_WORDS}: ${reading.problem}`
+    : CHECKS_INCOMPLETE_WORDS;
   if (reading.items.length === 0) {
     const absent = reading.absenceDeclared && !incomplete;
     return {
@@ -115,6 +119,22 @@ export function checkSnapshotSummary(reading: CheckSnapshot): {
     return { ...problem, overall: "pending", words, dot: reading.problem ? "warn" : "running" };
   if (counts.has("neutral")) return { overall: "pending", words, dot: "warn" };
   return { overall: "green", words, dot: "ok" };
+}
+
+/**
+ * The checks as one state, as the hover preview says them (INF-2528, the
+ * captain's direction B): `running`, `passed`, `failed`. The counts and a
+ * refusal's reason are the task card's (`checkSnapshotSummary`).
+ */
+export function checkSnapshotState(reading: CheckSnapshot): string {
+  const { overall, words } = checkSnapshotSummary(reading);
+  if (overall === "red") return STATE_WORDS.failure;
+  if (reading.problem) return CHECKS_UNREADABLE_WORDS;
+  if (reading.items.length === 0) return words;
+  if (overall === "green") return STATE_WORDS.success;
+  if (reading.items.some((check) => check.state === "pending")) return STATE_WORDS.pending;
+  if (reading.complete === false) return CHECKS_INCOMPLETE_WORDS;
+  return STATE_WORDS.neutral;
 }
 
 /** A cached reading never describes a different version. */

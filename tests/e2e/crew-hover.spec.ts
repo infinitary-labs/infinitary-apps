@@ -9,6 +9,7 @@ import { modelDisplayName } from "../../src/shared/modelDisplayName";
 import { modelReasonLine } from "../../src/shared/modelReason";
 import type { NowGroup } from "../../src/shared/nowPanel";
 import { type Reasoning, reasoningNote, reasoningWord } from "../../src/shared/reasoning";
+import type { TaskFactId } from "../../src/shared/taskFacts";
 import type { PlanItem } from "../../src/shared/taskPlan";
 import {
   type TaskStatusInput,
@@ -16,7 +17,6 @@ import {
   taskStatusOf,
 } from "../../src/shared/taskPresentation";
 import { BOARD_RECENT_MS } from "../../src/shared/tasks";
-import { type TaskWait, taskWaitStatus } from "../../src/shared/taskWaits";
 import {
   crewFormation,
   crewInspecting,
@@ -105,9 +105,12 @@ function readoutOf(reasoning: Reasoning | undefined): {
   };
 }
 
-/** INF-2215: the hover reconciles waits; the unchanged Tasks dot keeps its own words. */
-function stateOf(task: TaskStatusInput & { waits?: readonly TaskWait[] }): string {
-  return taskStatusLabel(taskWaitStatus(task, taskStatusOf(task), "hover", Date.now()));
+/**
+ * INF-2528, the captain's direction B: the preview's status keeps the
+ * Tasks dot's own short words; every wait's wording is the task card's.
+ */
+function stateOf(task: TaskStatusInput): string {
+  return taskStatusLabel(taskStatusOf(task));
 }
 
 /** The summary's facts as it shows them, and whether its state line is cut off. */
@@ -169,15 +172,17 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
 
     let pointer = { x: 0, y: 0 };
     let shown: [string, string][] = [];
+    const readout = readoutOf(fixture.openings[task.id]);
     await test.step("on a crewmate its summary opens", async () => {
       pointer = await pointAtCrewmate(page, task.id);
 
       await expect(crewSummary(page)).toBeVisible();
-      // The note and the reasoning fill in when the record answers.
-      const readout = readoutOf(fixture.openings[task.id]);
-      await expect(taskFact(crewSummary(page), "reasoning")).toHaveText(readout.reasoning);
+      // The note fills in when the record answers.
+      await expect(taskFact(crewSummary(page), "now")).toHaveText("Checked example 2.");
       await expect(taskFact(crewSummary(page), "why")).toHaveCount(0);
       const summary = await summaryFacts(page);
+      // INF-2528, the captain's direction B: the model and its level stay;
+      // the reasoning and its footnote are the task card's, read below.
       expect(summary).toMatchObject({
         id: task.id,
         key: task.key,
@@ -185,13 +190,19 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
         state: stateOf(task),
         note: "Checked example 2.",
         model: modelDisplayName(fixture.models[1]),
-        ...readout,
+        tier: readout.tier,
+        reasoning: null,
+        reason: null,
       });
-      // Its pull request and checks in the fact strip, as the merge card says them (FI3-1159),
-      // with how long they have run by the host's own start (INF-587).
+      // Its pull request with its checks as one state and how long they have
+      // run by the host's own start (INF-587), on the model's row (INF-2528).
       expect(summary.change).toBe("#612");
       expect(summary.checks).toMatch(/^running for 1[56]m$/);
       expect(summary.checksDot).toBe("running");
+      // One footer row: the change sits beside the model, not under it.
+      const top = async (fact: TaskFactId) =>
+        (await taskFact(crewSummary(page), fact).boundingBox())?.y ?? Number.NaN;
+      expect(await top("change")).toBeCloseTo(await top("model"), 0);
       // Its plan (FI3-734): the count and the current item, and one dot per item.
       expect(summary.dots).toEqual(["done", "done", "current", "next"]);
       await expect
@@ -229,10 +240,13 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
       const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), task.id);
       const reason = detail.modelReason ? modelReasonLine(detail.modelReason) : null;
       if (!reason) throw new Error("The fixture's routing decision has no wording");
+      // The reasoning and its footnote the preview leaves out show here (INF-2528).
       await expect
         .poll(async () => Object.fromEntries(await shownTaskFacts(recordCard(page))))
         .toEqual({
           ...Object.fromEntries(shared),
+          reasoning: readout.reasoning,
+          ...(readout.reason ? { reason: readout.reason } : {}),
           why: `${MODEL_WHY_WORDS.summary}${reason}.${MODEL_WHY_WORDS.notRecorded}`,
         });
       // The record draws the same plan as the whole list, every item with its mark.
@@ -316,11 +330,10 @@ test("resting on a backlog, an idle or a done Tasks row opens the same summary b
     await test.step("the crewmate's own summary, read on the stage", async () => {
       await pointAtCrewmate(page, idle.id);
       await expect(crewSummary(page)).toBeVisible();
-      const readout = readoutOf(fixture.openings[idle.id]);
-      await expect(taskFact(crewSummary(page), "reasoning")).toHaveText(readout.reasoning);
-      if (readout.reason)
-        await expect(taskFact(crewSummary(page), "reason")).toHaveText(readout.reason);
-      else await expect(taskFact(crewSummary(page), "reason")).toHaveCount(0);
+      // INF-2528: the reasoning and its footnote are the task card's alone.
+      await expect(taskFact(crewSummary(page), "now")).toHaveText("Checked example 2.");
+      await expect(taskFact(crewSummary(page), "reasoning")).toHaveCount(0);
+      await expect(taskFact(crewSummary(page), "reason")).toHaveCount(0);
       await expect
         .poll(async () => (await shownTaskFacts(crewSummary(page))).map(([id]) => id))
         .toContain("project");
@@ -334,7 +347,7 @@ test("resting on a backlog, an idle or a done Tasks row opens the same summary b
       await expect(rowSummary(page)).toHaveAttribute(POINT_SUMMARY, idle.id);
       const summary = rowSummary(page).locator("[data-crew-summary]");
       await expect(summary).toHaveAttribute("data-crew-summary", idle.id);
-      await expect(taskFact(summary, "reasoning")).toBeVisible();
+      await expect(taskFact(summary, "now")).toHaveText("Checked example 2.");
       // The same facts, words and order as on the stage.
       await expect.poll(() => shownTaskFacts(summary)).toEqual(onStage);
       // Read once it has settled: the summary slides in from the row.

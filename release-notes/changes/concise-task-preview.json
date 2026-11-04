@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "concise-task-preview",
+      "kind": "improvement",
+      "title": "A shorter task preview",
+      "body": "Resting on a task shows a short status, the tasks it waits on by name, and one last row: the model with its intelligence level, then the pull request with its checks as one state, such as running for 11m. Each wait’s times, the reasoning level and the check counts now show only on the task card.",
+      "area": "tasks",
+      "picture": {
+        "dark": "concise-task-preview-dark.webp",
+        "light": "concise-task-preview-light.webp",
+        "alt": "A task preview beside its Tasks row ends in one row: the model with its intelligence badge, then pull request #813 with its checks running for 11m."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

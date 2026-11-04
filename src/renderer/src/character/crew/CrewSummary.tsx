@@ -1,6 +1,5 @@
-import { taskStatusLabel, waitRecordedTime } from "@shared/taskPresentation";
-import { type TaskWait, taskWaitStatus, taskWaitText } from "@shared/taskWaits";
-import { TaskFactRows, useMinute } from "../../design/core/TaskFacts";
+import { taskStatusLabel } from "@shared/taskPresentation";
+import { TaskFactRows } from "../../design/core/TaskFacts";
 import { TaskStatusMark } from "../../design/core/TaskStatusMark";
 import { TaskKey } from "../../design/panel/TaskKey";
 import { openTaskFromKey } from "../../plugins/point/openTask";
@@ -13,10 +12,14 @@ import "./summary.css";
  * What a crewmate is and what it is doing (FI3-398, laid out again in
  * FI3-427 and FI3-439): its key and state now, then the shared task facts
  * (FI3-565 piece 2) - its task, and the newest row of its record's Activity
- * with that row's age, each beside its label; under a hairline, a readout of
- * its model, the intelligence level it is served on and the reasoning its
- * session opened at, with the footnote saying why; then its change and
- * checks. Key, title, state, model, level and change come from the board
+ * with that row's age, each beside its label; under a hairline, one row:
+ * its model with the intelligence level it is served on, then its change
+ * with its checks as one state and its time (INF-2528, the captain's
+ * direction B: "the preview should remain concise and only the most
+ * critical information. more details should be shown in the task card").
+ * The status keeps its short reason, never a wait's wording or times, and
+ * Blocked by names keys only; reasoning, check counts and every wait's
+ * times are the task card's. Key, title, state, model, level and change come from the board
  * and paint at once; once the record answers, the whole projection is the
  * record's, the same one its task record shows, and it stays live while
  * the summary is open. Read-only: the record a click opens has the full
@@ -24,13 +27,11 @@ import "./summary.css";
  * wrap in full. How it comes and goes is its holder's (./summaryMotion.ts).
  */
 export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFacts }) {
-  const clock = useMinute();
-  const read = useCrewRecord(taskId, facts);
+  const shown = useCrewRecord(taskId, facts);
   const dependencies = facts.task.waits?.filter((wait) => wait.kind === "dependency");
   const blocked = dependencies
     ? dependencies.flatMap((wait) => wait.taskKeys ?? [])
     : facts.task.blockedBy;
-  const shown = { ...read, status: taskWaitStatus(facts.task, read.status, "hover", clock) };
   // Where another computer runs it, after the project, as its Tasks row says it.
   const project = [useProjectName(facts.task.projectId), facts.task.place?.where]
     .filter(Boolean)
@@ -48,14 +49,13 @@ export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFact
       </div>
       {facts.task.reviewOf && <Reviewing builderId={facts.task.reviewOf} />}
       {facts.task.parentId && <PartOf parentId={facts.task.parentId} />}
-      {(blocked?.length ?? 0) > 0 && (
-        <BlockedBy keys={blocked} since={facts.task.blockedSince} waits={dependencies} />
-      )}
+      {(blocked?.length ?? 0) > 0 && <BlockedBy keys={blocked} />}
       {facts.task.program && <ProgramParts programId={taskId} />}
       <TaskFactRows
         facts={shown}
         withTask
         project={project}
+        strip="summary"
         // A closed task's plan is the record's to keep; the summary draws none.
         planView={
           shown.status.mark === "done" || shown.status.mark === "dropped" ? undefined : "dots"
@@ -147,49 +147,26 @@ function ProgramParts({ programId }: { programId: string }) {
 }
 
 /**
- * Named record links for a wait an edge cannot draw, and the complete list,
- * each with when its wait was recorded where that is known (INF-38).
+ * Named record links for a wait an edge cannot draw, and the complete list:
+ * each task's key only (INF-2528). When each wait was recorded, and its
+ * unknown end, are the task card's.
  */
-function BlockedBy({
-  keys,
-  since,
-  waits,
-}: {
-  keys: readonly string[];
-  since: Readonly<Record<string, number>> | undefined;
-  waits?: readonly TaskWait[];
-}) {
+function BlockedBy({ keys }: { keys: readonly string[] }) {
   const tasks = useBoardTasks();
-  const now = Date.now();
   return (
     <div className="blocked" data-crew-blocked="">
       <span className="label">Blocked by</span>
       {keys.map((key) => {
         const task = tasks.find((row) => row.key === key);
-        const at = since?.[key];
-        const wait = waits?.find((wait) => wait.taskKeys?.includes(key));
         return (
           <span key={key} className="wait" data-crew-blocked-wait={key}>
             {task ? (
               <TaskKey look="quiet" onRest={() => {}} onOpen={() => void openTaskFromKey(task)}>
-                {wait?.label ?? key}
+                {key}
               </TaskKey>
             ) : (
               <span className="key" data-crew-blocked-key="">
-                {wait?.label ?? key}
-              </span>
-            )}
-            {wait && (
-              <span
-                className="since"
-                data-crew-blocked-since={wait.since !== undefined ? "" : undefined}
-              >
-                {taskWaitText(wait, now).slice(wait.label.length)}
-              </span>
-            )}
-            {!wait && at !== undefined && (
-              <span className="since" data-crew-blocked-since="">
-                {` recorded ${waitRecordedTime(at, now)}`}
+                {key}
               </span>
             )}
           </span>

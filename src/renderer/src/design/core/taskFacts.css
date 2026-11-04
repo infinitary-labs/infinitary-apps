@@ -98,6 +98,34 @@
 .fm-task-facts .cell .dot {
   flex: none;
 }
+/* The hover preview's footer (INF-2528): one row that never wraps. The
+   model's name gives way first, ending in an ellipsis; its badge, the
+   change and the checks' state keep their width. A review's verdict takes
+   its own row under it. */
+.fm-task-facts .cells.summary {
+  flex-wrap: nowrap;
+}
+.fm-task-facts .cells + .cells {
+  margin-top: var(--space-2);
+}
+.fm-task-facts .cells.summary .cell {
+  flex: none;
+}
+.fm-task-facts .cells.summary .cell.model {
+  flex: 0 1 auto;
+}
+.fm-task-facts .cells.summary .value > * {
+  flex: none;
+}
+.fm-task-facts .cells.summary .value > [data-task-fact="model"] {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.fm-task-facts .cells.summary .state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
 .fm-task-facts .cell .age::before {
   content: "·";
   margin-right: var(--space-1);

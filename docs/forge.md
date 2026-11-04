@@ -664,6 +664,7 @@ Wherever the app shows a task's checks - the fact strip on the crew summary and 
 Every reading writes `ciStartedAt` and `ciFinishedAt` on the task's delivery facts (`checksSpan` in `src/core/orchestrator/prCi.ts`): the first check's start; once green the last check's finish; once red the first failure's finish.
 A reading with no start clears both, so a new version starts the count again, and a rerun that the host lists as the newer check counts from its own start.
 The cell reads `running for 15m`, `passed in 14m · 5m ago` or `failed after 9m · 5m ago`, in whole minutes redrawn each minute (`src/shared/checksSpan.ts`); on rest it shows when the first check started and when the app last read them.
+The crew summary says the checks as one state with that time beside the pull request, with no counts and no `ago` (`running for 11m`, `checkSnapshotState`, INF-2528).
 Checks that have not started, not read yet or merged outside the app show no time.
 The first mate's own facts keep the reading's age (`ciFact.ts`), because it judges a reading's freshness by it; Activity and the Now line keep each reading's own time.
 

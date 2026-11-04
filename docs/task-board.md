@@ -84,7 +84,7 @@ With no answer in five seconds the list says earlier results are unavailable, ne
 Blank Find asks for nothing earlier, and Earlier matches goes away.
 
 A tile keeps the shared status mark, task key, dim word, project and two-line title.
-Its existing two-line status area holds the lifecycle word, grouped wait names and the earliest recorded event; full recorded-since dates stay in the hover preview and task card.
+Its existing two-line status area holds the lifecycle word, grouped wait names and the earliest recorded event; full recorded-since dates stay on the task card.
 Without the optional structured waits it keeps the previous reason and recorded-since presentation.
 Pressing Start, or dragging a tile to Working, shows it in Queued at once, labeled Starting, and moves it to Working when its crewmate begins.
 A Starting tile in Queued refuses Back to backlog and Start now with "It is starting.".
@@ -178,7 +178,7 @@ Its waiting section reads Cards waiting for you; a taskless card has only Show t
 Desktop kanban tiles replace their generic status reason with grouped standing wait names and the earliest recorded event, never a finish estimate.
 The Tasks list and board list rows retain their existing presentation.
 Kanban columns keep their existing minimum and expand to the recorded event’s intrinsic width, using horizontal scrolling rather than clipping the time or shrinking text.
-The hover preview and task card reconcile every structured wait into their existing header, Checks and blocker or hold explanation, without another Wait section.
+The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528).
 Checks keeps each named watch and its own next read separate from other runs’ results.
 Dependencies retain their keys and recorded-since dates; missing end times stay unknown.
 Only recorded events carry clock times: next read, check-back, reset or start time.

@@ -100,7 +100,7 @@ Keep rows otherwise minimal.
 A started crewmate idle on other work names it as its reason: `Idle · Waiting on INF-12`, or `Idle · Waiting on 2 tasks` for several, so no one key stands for the others.
 The Tasks row, which shows no reason, adds the dim word `waiting`; its margin arrow points at what it waits on, and its summary names each one.
 A kanban tile uses grouped wait names and the earliest recorded event in its existing status area, with no separate recorded-since line; list rows and older homes keep their previous presentation.
-The summary's Blocked by row lists every standing blocker, its unknown end time and its recorded-since date where known, in the viewing computer's zone.
+The summary's Blocked by row lists every standing blocker by its key alone (INF-2528); the task card names its unknown end time and its recorded-since date where known, in the viewing computer's zone.
 The time is when the wait was recorded - the edge's own time or a dated declaration, the earliest when several name one task - never when work stopped; an unknown time is left out, never guessed.
 A ready decision that settles with a merge reads `Waiting on you · Waiting for your merge`, from the typed merge fact alone; other ready decisions keep `A decision card is ready`.
 Paused for access, Background work is unknown and No continuing work keep their own reasons.
@@ -114,7 +114,7 @@ Starting is a still open ring, cyan on the arc and neutral on the rest, with no 
 Shape carries lifecycle, not just color.
 All three surfaces use these same marks without animation.
 Tooltips and accessible labels say the status followed by its reason.
-The summary and record show a distinct reason beside the status, omitting a generic wait reason only when its typed source appears in their existing Checks or hold fields; posture phrases never become extra statuses.
+The summary shows the status's own short reason, the Tasks row's, and never a wait's wording or any time (INF-2528); the record shows a distinct reason beside the status, omitting a generic wait reason only when its typed source appears in its existing Checks or hold fields; posture phrases never become extra statuses.
 Closed lifecycle wins over old activity; a reachable ready decision wins over activity on live work; evidenced continuing work wins over interruption, otherwise interruption wins over idle.
 Unknown or paused posture stays Idle with an honest reason, never Working.
 Stage geometry and color remain unchanged.
@@ -124,7 +124,10 @@ The action bar follows in a separate piece.
 
 The crew summary and the task record read one set of task facts: status, task, Now, Progress, then the fact strip - model, intelligence, reasoning, the change, its checks, a review - with the model's reason under it, and the browser.
 The summary draws them in that order, leaves the browser out, and adds a Project row under Task from the Tasks row's own project name, followed by where another computer runs it (`website · on Mac mini`).
-The status, the task title and the project wrap in full; other summary facts stay one line, except check-read refusals and named watch schedules, which wrap inside Checks.
+Its fact strip is one row (INF-2528, the captain's direction B: "the preview should remain concise and only the most critical information"): MODEL, the name with its `SlotBadge` beside it and no Intelligence label, then PULL REQUEST, the change's label with its checks as one state and its time (`#813 ○ running for 11m`, `passed in 14m`, `failed after 9m`); with no change the second cell is CHECKS.
+The row never wraps: a long model name gives way first, ending in an ellipsis with the whole name on hover; a review's verdict takes a second row.
+Reasoning, the footnote, the check counts, a refusal's reason, how long ago the checks finished and each watch's next read are the record's alone; a check the app cannot read keeps the warning dot and says `cannot read all checks`.
+The status, the task title and the project wrap in full; other summary facts stay one line.
 The task record draws the same values in the same order, keeps the browser line with Now and Progress, and places the fact strip just above its action bar, after Goal and your words, Activity and Details.
 A smaller surface shows fewer of them, never different ones; the Tasks row stays a mark, key and title.
 
@@ -144,7 +147,7 @@ A smaller surface shows fewer of them, never different ones; the Tasks row stays
   Absent when the crewmate never sent a plan; a closed task keeps its list on the record and its summary draws none.
 - **The fact strip** (FI3-1159, the captain's layout B) is the merge card's strip in the window's own type, so a task's facts read the same on its record, its summary and its merge card: one cell per fact, each an uppercase micro label over a one-line value 5px under it, the cells `--space-4` apart, wrapping whole with `--space-2` between rows, under a `--line-1` hairline with 10px above and below it.
   Its cells, in order: MODEL, INTELLIGENCE (the `SlotBadge`), REASONING (in words); then PULL REQUEST, the change by the label its host gave it (`#612`; BRANCH and the branch's name on a plain Git host), a link where the host has a page and the surface takes clicks; CHECKS, the merge card's 10px state dot and word (`running`, `passed`, `failed`, `not read yet`, `merged outside the app`) with how long the checks have run or took by the host's own times (`running for 15m`, `passed in 14m`, `failed after 9m`; whole minutes, `under 1m` at first, `1h 05m` past the hour), and once they finished how long ago after a `·` (`5m ago`), the start and the last reading on hover (`Started 9:01 PM · read 9:13 PM`); checks that have not started, not read yet or merged outside the app show no time; and REVIEW, an independent review's dot and verdict (`passed`, `findings`, `blocked`) with its risk (`findings · risk high`).
-  A check-read refusal keeps its reason readable inside the Checks cell on the summary and record, wrapping without overflowing the surface; it uses the warning dot unless a reported failed check already gives it the failed mark.
+  A check-read refusal keeps its reason readable inside the record's Checks cell, wrapping without overflowing the surface; it uses the warning dot unless a reported failed check already gives it the failed mark.
   It shows no running duration: an unreadable reading does not say that a check is still running.
   Under the cells comes the footnote saying why that model was chosen (`--text-xs`, `--fg-3`).
   A value the record cannot say leaves its cell out; the strip is absent until the task has a model, a change or a checks reading.
@@ -225,7 +228,7 @@ Click or Enter brings back that task’s minimized cards with keyboard focus at 
 
 ## Recorded wait details
 
-Only desktop hover previews and task cards enrich their existing fields with the optional structured wait projection.
+Only desktop task cards enrich their existing fields with the optional structured wait projection; the hover preview keeps its short status and blocker keys (INF-2528).
 Checks owns every named watch schedule; Blocked by or the existing hold explanation owns dependencies and their recorded dates.
 Remaining check-backs and holds replace the existing header reason; no generic Wait section or extra badge repeats them.
 Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.

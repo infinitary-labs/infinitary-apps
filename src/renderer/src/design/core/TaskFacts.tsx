@@ -474,6 +474,76 @@ export function TaskFactStrip({
   );
 }
 
+/**
+ * The hover preview's footer (INF-2528, the captain's direction B): one row
+ * that never wraps - the model with its intelligence badge, then the change
+ * with its checks as one state and its time (`#813 running for 11m`); a
+ * long model name gives way first, ending in an ellipsis. A review's
+ * verdict takes a second row. Reasoning, the footnote, the check counts, a
+ * refusal's reason and each watched run's next read are the task card's.
+ */
+function SummaryStrip({ facts }: { facts: TaskFacts }) {
+  const now = useMinute();
+  const { change, checks, review } = facts.delivery ?? {};
+  if (!facts.model && !change && !checks && !review) return null;
+  const changeWords = change ? (change.label ?? change.noun) : "";
+  return (
+    <div className="strip">
+      {(facts.model || change || checks) && (
+        <div className="cells summary" data-task-fact-strip="summary">
+          {facts.model && (
+            <div className="cell model">
+              <div className="label" data-task-fact-label="">
+                Model
+              </div>
+              <div className="value">
+                <span data-task-fact="model" title={facts.model}>
+                  {facts.model}
+                </span>
+                {facts.tier && (
+                  <span data-task-fact="intelligence" data-slot={facts.tier}>
+                    <SlotBadge slot={facts.tier} />
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+          {(change || checks) && (
+            <div className="cell">
+              <div className="label" data-task-fact-label="">
+                {change ? change.noun : "Checks"}
+              </div>
+              <div className="value">
+                {change && (
+                  <span data-task-fact="change" title={changeWords}>
+                    {changeWords}
+                  </span>
+                )}
+                {checks && (
+                  <span className="state" data-task-fact="checks" data-dot={checks.dot}>
+                    <FactDot state={checks.dot} />
+                    <span data-task-fact-checks="">
+                      {checks.span ? checksSpanWords(checks.state, checks.span, now) : checks.state}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {review && (
+        <div className="cells">
+          <Cell label="Review" fact="review" data-dot={review.dot}>
+            <FactDot state={review.dot} />
+            {review.words}
+          </Cell>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** 24-hour clock time, the day too when it is not today, for a reset. */
 function whenOf(at: number, now: number): string {
   const day = new Date(at);
@@ -605,6 +675,7 @@ export function TaskFactRows({
   project,
   planView,
   omitStrip = false,
+  strip = "full",
   onOpenChange,
   onOpenBrowser,
   nowWords,
@@ -624,6 +695,11 @@ export function TaskFactRows({
   planView?: "dots" | "list";
   /** The record draws the fact strip itself, just above the action bar. */
   omitStrip?: boolean;
+  /**
+   * How much of the strip to draw: every cell (`full`), or the hover
+   * preview's one footer row (`summary`, INF-2528).
+   */
+  strip?: "full" | "summary";
   /**
    * Where a click on the task's pull request goes - in Now's words and on
    * the strip; without it, as on the summary, which never takes the
@@ -730,7 +806,8 @@ export function TaskFactRows({
           </div>
         </div>
       )}
-      {!omitStrip && (
+      {!omitStrip && strip === "summary" && <SummaryStrip facts={facts} />}
+      {!omitStrip && strip === "full" && (
         <TaskFactStrip facts={facts} onOpenChange={onOpenChange} focusable={focusable} />
       )}
     </div>

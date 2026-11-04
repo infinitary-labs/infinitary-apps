@@ -84,10 +84,9 @@ describe("recorded task wait presentation", () => {
     const input = { ...task, waits: watches };
     const original = taskStatusOf(input);
     expect(original.reason).toBe("Waiting for checks");
-    expect(taskWaitStatus(input, original, "hover", now).reason).toBe("");
-    expect(taskWaitStatus(input, original, "record", now).reason).toBe("");
+    expect(taskWaitStatus(input, original, now).reason).toBe("");
     expect(taskStatusOf(input)).toEqual(original);
-    expect(taskWaitStatus(task, original, "hover", now)).toBe(original);
+    expect(taskWaitStatus(task, original, now)).toBe(original);
     expect(recordAttentionWaits(input).map((wait) => wait.id)).toEqual(["dependency:web"]);
   });
   it("keeps a lone job check-back in its header, and never suppresses access, interruption or reach guidance", () => {
@@ -105,7 +104,7 @@ describe("recorded task wait presentation", () => {
       ],
     };
     expect(recordAttentionWaits(input)).toEqual([]);
-    expect(taskWaitStatus(input, taskStatusOf(input), "record", now).reason).toContain(
+    expect(taskWaitStatus(input, taskStatusOf(input), now).reason).toContain(
       "Website build · check-back",
     );
     const away = {
@@ -113,10 +112,8 @@ describe("recorded task wait presentation", () => {
       outOfReach: true as const,
       reason: "Mac mini is out of reach",
     };
-    expect(taskWaitStatus(input, away, "record", now).reason).toContain(away.reason);
-    expect(taskWaitStatus(input, away, "record", now).reason).toContain(
-      "Website build · check-back",
-    );
+    expect(taskWaitStatus(input, away, now).reason).toContain(away.reason);
+    expect(taskWaitStatus(input, away, now).reason).toContain("Website build · check-back");
     const access = {
       ...input,
       workPosture: {
@@ -126,15 +123,13 @@ describe("recorded task wait presentation", () => {
       },
     };
     const accessReading = taskStatusOf(access);
-    expect(taskWaitStatus(access, accessReading, "record", now).reason).toContain(
-      accessReading.reason,
-    );
+    expect(taskWaitStatus(access, accessReading, now).reason).toContain(accessReading.reason);
     const stopped = {
       ...taskStatusOf(input),
       mark: "interrupted" as const,
       reason: "Work was interrupted",
     };
-    expect(taskWaitStatus(input, stopped, "hover", now).reason).toContain(stopped.reason);
+    expect(taskWaitStatus(input, stopped, now).reason).toContain(stopped.reason);
   });
 });
 
@@ -153,7 +148,7 @@ it("keeps each decision wait in its current owner without losing its recorded ti
     waits: [decision],
   };
   expect(recordAttentionWaits(ready)).toEqual([]);
-  expect(taskWaitStatus(ready, taskStatusOf(ready), "record", now).reason).toContain(
+  expect(taskWaitStatus(ready, taskStatusOf(ready), now).reason).toContain(
     "Waiting for your merge · time unknown · wait recorded",
   );
   const paused = {
@@ -163,5 +158,5 @@ it("keeps each decision wait in its current owner without losing its recorded ti
     waits: [decision],
   };
   expect(recordAttentionWaits(paused)).toEqual([decision]);
-  expect(taskWaitStatus(paused, taskStatusOf(paused), "record", now).reason).toBe("");
+  expect(taskWaitStatus(paused, taskStatusOf(paused), now).reason).toBe("");
 });

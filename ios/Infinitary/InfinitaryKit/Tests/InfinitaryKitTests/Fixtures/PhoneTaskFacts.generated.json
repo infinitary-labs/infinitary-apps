@@ -218,6 +218,7 @@
           "checks": {
             "dot": "running",
             "words": "2 running · 1 passed",
+            "state": "running",
             "at": 1793293140000,
             "span": {
               "startedAt": 1793292300000,
@@ -335,6 +336,7 @@
           "checks": {
             "dot": "running",
             "words": "running",
+            "state": "running",
             "at": null,
             "span": null
           },
@@ -560,6 +562,7 @@
           "checks": {
             "dot": "ok",
             "words": "2 passed · 1 skipped",
+            "state": "passed",
             "at": 1793292960000,
             "span": {
               "startedAt": 1793291400000,
@@ -1569,6 +1572,7 @@
           "checks": {
             "dot": "failed",
             "words": "1 failed · 2 passed",
+            "state": "failed",
             "at": null,
             "span": {
               "startedAt": 1793290200000,
@@ -2356,6 +2360,7 @@
           "checks": {
             "dot": "idle",
             "words": "no checks",
+            "state": "no checks",
             "at": null,
             "span": null
           },
@@ -2686,6 +2691,7 @@
             "problem": "the host refused the read",
             "dot": "warn",
             "words": "passed · cannot read all checks: the host refused the read",
+            "state": "cannot read all checks",
             "at": null,
             "span": null
           },
@@ -3140,6 +3146,7 @@
           "checks": {
             "dot": "idle",
             "words": "not read for this version",
+            "state": "passed",
             "at": null,
             "span": null
           },
@@ -3238,6 +3245,7 @@
           "checks": {
             "dot": "running",
             "words": "1 passed · 1 neutral · reading incomplete",
+            "state": "reading incomplete",
             "at": null,
             "span": null
           },
@@ -3335,6 +3343,7 @@
           "checks": {
             "dot": "warn",
             "words": "1 neutral · 1 passed",
+            "state": "neutral",
             "at": null,
             "span": null
           },
@@ -3424,6 +3433,7 @@
           "checks": {
             "dot": "running",
             "words": "none reported",
+            "state": "none reported",
             "at": null,
             "span": {
               "startedAt": 1793293080000,
@@ -3509,6 +3519,7 @@
           "checks": {
             "dot": "idle",
             "words": "not read yet",
+            "state": "not read yet",
             "at": null,
             "span": null
           },
@@ -3594,6 +3605,7 @@
           "checks": {
             "dot": "ok",
             "words": "passed",
+            "state": "passed",
             "at": null,
             "span": {
               "startedAt": 1793282100000,
@@ -3682,6 +3694,7 @@
           "checks": {
             "dot": "running",
             "words": "running",
+            "state": "running",
             "at": 1793293140000,
             "span": {
               "startedAt": 1793289000000,
@@ -3769,6 +3782,7 @@
           "checks": {
             "dot": "idle",
             "words": "cancelled",
+            "state": "cancelled",
             "at": 1793292960000,
             "span": {
               "startedAt": 1793292660000,
@@ -3858,6 +3872,7 @@
           "checks": {
             "dot": "ok",
             "words": "passed",
+            "state": "passed",
             "at": null,
             "span": null
           },

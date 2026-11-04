@@ -232,7 +232,7 @@ export function RecordCard({
     const read = taskFactsOf(shown, modelName);
     const base = {
       ...read,
-      status: taskWaitStatus(shown, read.status, "record", Math.max(clock, minute)),
+      status: taskWaitStatus(shown, read.status, Math.max(clock, minute)),
     };
     const since =
       shown.startAttempt?.since ?? (shown.activity === "starting" ? shown.startedAt : null);

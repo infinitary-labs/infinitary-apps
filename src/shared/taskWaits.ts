@@ -111,18 +111,18 @@ export function recordAttentionWaits(task: {
   return box ? waits : [];
 }
 
-/** Only permitted surfaces call this; the shared list status is deliberately unchanged. */
+/**
+ * Only the task card calls this; the shared list status, and the hover
+ * preview's, are deliberately unchanged (INF-2528: the preview keeps its
+ * short reason, never a wait's wording or times).
+ */
 export function taskWaitStatus(
   task: TaskStatusInput & { waits?: readonly TaskWait[]; hold?: unknown },
   reading: TaskStatusReading,
-  surface: "hover" | "record",
   now: number,
 ): TaskStatusReading {
   if (!task.waits?.length || reading.mark === "done" || reading.mark === "dropped") return reading;
-  const owned =
-    surface === "record"
-      ? new Set(recordAttentionWaits(task).map((wait) => wait.id))
-      : new Set(task.waits.filter((wait) => wait.kind === "dependency").map((wait) => wait.id));
+  const owned = new Set(recordAttentionWaits(task).map((wait) => wait.id));
   const remaining = task.waits.filter((wait) => !checksWait(wait) && !owned.has(wait.id));
   const reason = remaining
     .map((wait) =>

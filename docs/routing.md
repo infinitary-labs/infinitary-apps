@@ -113,8 +113,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   It is absent when the task never routed, when the row predates the rule column, or when the record's model is not the one the decision chose, so the line never explains a model the crewmate is not on.
   The record's model follows the model that answers: when Claude Code moves a crewmate to another model, the record names it and the routing ledger keeps the router's decision as it was made (`docs/claude-client.md`, "The model that answers").
   `modelReasonLine` (`src/shared/modelReason.ts`) is the one wording: the captain's own choice first ("You asked for this model", "You pinned this model in Settings"), then a slot that could not serve ("No high model could take it"), then the rule's reason ("Building from the plan in FI3-419").
-  Since FI3-439 the line never leads with the level: the summary shows the served level and the reasoning as their own labeled values, and the footnote says why the reasoning is lower ("Reasoning one step lower for Quick care.", `reasoningNote`).
-  The task record shows this line, and why one model won over another inside a slot (band, spend priority, recency), under its Why this model disclosure ("Why this model on the task record" below); the summary's footnote keeps only the reasoning's.
+  Since FI3-439 the line never leads with the level: the task record shows the served level and the reasoning as their own labeled values, and the footnote says why the reasoning is lower ("Reasoning one step lower for Quick care.", `reasoningNote`); since INF-2528 the summary shows only the level's badge beside the model.
+  The task record shows this line, and why one model won over another inside a slot (band, spend priority, recency), under its Why this model disclosure ("Why this model on the task record" below); the summary shows neither.
 
 ## Read-only computer evaluation
 

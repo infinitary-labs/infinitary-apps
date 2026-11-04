@@ -177,7 +177,3 @@
   color: var(--fg-3);
   font-size: var(--text-xs);
 }
-.fm-crew-summary .blocked .since {
-  color: var(--fg-3);
-  font-size: var(--text-xs);
-}

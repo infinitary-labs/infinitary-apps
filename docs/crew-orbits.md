@@ -408,29 +408,29 @@ A click on the crewmate being read calls the shell's `openRecord(taskId)` - the 
 
 **The summary.**
 One DOM panel (`crew/CrewSummary.tsx`, `crew/summary.css`), 130 ms after the pointer lands, in the captain's instrument look: corner brackets round the crewmate, a hairline to the panel, squarer corners, and an uppercase micro label in a side column beside each line (the captain's pick from the FI3-427 mocks, 2026-10-01).
-The model, its intelligence level and its reasoning, then its pull request and checks, sit in a fact strip under a hairline, each value under its own label, with the footnote across the bottom (the model's cells are the captain's pick D from the FI3-439 mocks, 2026-10-01; the strip, the merge card's own shape, is FI3-1159's layout B), so a bare "High" never stands for either the level or the reasoning.
-Its lines are the shared task facts (FI3-565 piece 2, the design skill's NowPanel "Shared task facts"): one projection, `taskFactsOf` (`src/shared/taskFacts.ts`), drawn by one component (`design/core/TaskFacts.tsx`), which the task record shows too, so one task reads the same values on both.
+The model with its intelligence badge, then its pull request with its checks as one state and its time, sit in one row under a hairline, each value under its own label (INF-2528, the captain's direction B: "the preview should remain concise and only the most critical information. more details should be shown in the task card"); the reasoning, its footnote, the check counts and every wait's times are the record's alone.
+Its lines are the shared task facts (FI3-565 piece 2, the design skill's NowPanel "Shared task facts"): one projection, `taskFactsOf` (`src/shared/taskFacts.ts`), drawn by one component (`design/core/TaskFacts.tsx`), which the task record shows too, so one task reads the same values on both; the record adds the details the summary leaves out.
 The record places the fact strip just above its action bar, after its rows.
 Once the record's read answers, the whole projection is that read's, the same one the record shows.
 
 | Line | Content | Source |
 | --- | --- | --- |
-| first | task key, the shared status mark and word with its reason, wrapping when long | `tasks.board`, then `tasks.detail`: `taskStatusOf` |
+| first | task key, the shared status mark and word with its short reason, never a wait's wording or time; wrapping when long | `tasks.board`, then `tasks.detail`: `taskStatusOf` |
+| BLOCKED BY | each standing blocker's key; its recorded and end times are the record's | `tasks.board` `waits` (`dependency`), else `blockedBy` |
 | TASK | the task's title, wrapping in full | `tasks.board`, then `tasks.detail` |
 | PROJECT | the project's display name, wrapping, under Task; absent when the board has no name for it | the Tasks row's own lookup, `projectNameOf`: `tasks.board` `projects` by `projectId`, else empty |
 | NOW | the crewmate's own newest doing - its own row, its newest action or its last sentence - and that doing's short age (`docs/task-record.md`, "The Now line") | `tasks.detail` `activityLog` and `said`, read only while that crewmate is pointed at, live while open |
-| MODEL (strip) | the full model display name; absent before assignment | the one model-name lookup (`modelNames`, `src/shared/modelDisplayName.ts`) the labels, the record and the core's `ModelSlots.nameOf` use |
-| INTELLIGENCE (strip) | the level the crewmate is served on, as the `SlotBadge` Settings → Models draws it; absent before routing | `tasks.board` `tier`, the level the crewmate's solid shows |
-| REASONING (strip) | the reasoning its session opened at ("Extra high", "Model's own"); absent when the record cannot say | `tasks.detail` `reasoning` through `reasoningWord` (`docs/routing.md` "Reasoning effort") |
-| PULL REQUEST, CHECKS, REVIEW (strip) | the pull request (or branch) by its label as plain text, its checks as the merge card's dot and word with how long they have run or took (`running for 15m`, `passed in 14m · 5m ago`), and a review's verdict; absent until the task has a change or a checks reading, except that a task with no change shows the newest run it started by hand and the app watched as its CHECKS (`docs/forge.md`, "The checks cell's time") | `tasks.board` `delivery` |
-| footnote | why the reasoning is lower than its level asks, in plain words; absent when it is not | `tasks.detail` `reasoning` through `reasoningNote` (`docs/routing.md` "Reasoning effort") |
+| MODEL (strip) | the full model display name, ending in an ellipsis before the row would wrap, with the intelligence badge beside it; absent before assignment | the one model-name lookup (`modelNames`, `src/shared/modelDisplayName.ts`) the labels, the record and the core's `ModelSlots.nameOf` use |
+| intelligence badge (in MODEL) | the level the crewmate is served on, as the `SlotBadge` Settings → Models draws it, with no label of its own; absent before routing | `tasks.board` `tier`, the level the crewmate's solid shows |
+| PULL REQUEST, REVIEW (strip) | the pull request (or branch) by its label as plain text, then its checks as the merge card's dot and one state with how long they have run or took (`running for 11m`, `passed in 14m`), and on a second row a review's verdict; absent until the task has a change or a checks reading, except that a task with no change shows the newest run it started by hand and the app watched in a CHECKS cell (`docs/forge.md`, "The checks cell's time") | `tasks.board` `delivery`, the state through `checkSnapshotState` |
+| Reasoning, footnote, check counts, watch schedules (record only) | the reasoning its session opened at, why it is lower than its level asks, every check state's count, a refusal's reason and each watch's next read; the summary never shows them (INF-2528) | `tasks.detail` `reasoning` (`docs/routing.md` "Reasoning effort"), `delivery`, `waits` |
 | Why this model (record only) | a disclosure under the strip: why that model was chosen, how the allowance decided and the ranked models; the summary never shows it (INF-1714) | `tasks.detail` `modelReason` and `modelChoice` (`docs/routing.md` "Why this model on the task record") |
 
 The status, the task title and the project wrap in full.
 The other facts stay one line, the panel is as wide as its longest line up to 360 px, and a longer note ends in an ellipsis while the note's age stays whole at the panel's right edge.
 360 px leaves every state the app can show whole beside its key (`crew-hover.spec.ts` checks that the shown state reads whole).
-The strip's cells wrap whole, so a value the record cannot say leaves no gap, and a long model name ends in an ellipsis inside its cell.
-The footnote may wrap, to two lines at most, as may the status, the task title and the project.
+The strip's row never wraps: a value the record cannot say leaves no gap, and a long model name ends in an ellipsis inside its cell.
+The status may wrap, to two lines at most, as may the task title and the project.
 A cut-short line is not expanded in place; the record has the full text.
 The panel sits beside the crewmate on the side away from the character, level with it; where that has no room, under or over it; and only then on the character's side.
 It keeps inside the window between the top bar and the input, never under a rail's panel, and clear of the crewmate's own name.

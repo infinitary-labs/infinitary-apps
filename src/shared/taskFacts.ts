@@ -1,4 +1,4 @@
-import { currentCheckSummary } from "./checkSnapshot";
+import { checkSnapshotState, currentCheckSummary } from "./checkSnapshot";
 import { type ChecksSpan, checksSpanOf, runChecksSpanOf } from "./checksSpan";
 import type { FactDotState } from "./factDot";
 import { type ModelChoice, type ModelChoiceCandidate, modelChoiceLine } from "./modelChoice";
@@ -85,6 +85,11 @@ export type TaskChecks = {
   problem?: string;
   dot: FactDotState;
   words: string;
+  /**
+   * The checks as one state (`running`, `passed`, `failed`), the hover
+   * preview's (INF-2528); `words` carries the counts the task card shows.
+   */
+  state: string;
   at: number | null;
   span: ChecksSpan | null;
 };
@@ -319,12 +324,14 @@ function deliveryOf(task: Pick<TaskView, "status" | "delivery">): TaskDelivery |
   const change = live ? taskChangeOf(facts) : null;
   const ci = facts.ci ?? "no-pr";
   const observed = currentCheckSummary(facts);
+  const ciWords = ci === "no-pr" ? CHECKS_NOT_READ_WORDS : CHECK_WORDS[ci];
   const checks =
     live && (observed || change || ci !== "no-pr")
       ? {
           ...(observed?.problem ? { problem: observed.problem } : {}),
           dot: observed?.dot ?? CHECKS_DOT[ci],
-          words: observed?.words ?? (ci === "no-pr" ? CHECKS_NOT_READ_WORDS : CHECK_WORDS[ci]),
+          words: observed?.words ?? ciWords,
+          state: observed && facts.checks ? checkSnapshotState(facts.checks) : ciWords,
           at: facts.ciAt ?? null,
           span: checksSpanOf(facts),
         }
@@ -332,6 +339,7 @@ function deliveryOf(task: Pick<TaskView, "status" | "delivery">): TaskDelivery |
         ? {
             dot: RUN_CHECKS_DOT[facts.runChecks.state],
             words: RUN_CHECK_WORDS[facts.runChecks.state],
+            state: RUN_CHECK_WORDS[facts.runChecks.state],
             at: facts.runChecks.at,
             span: runChecksSpanOf(facts.runChecks),
           }

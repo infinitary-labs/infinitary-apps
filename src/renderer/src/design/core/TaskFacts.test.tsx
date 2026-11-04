@@ -113,7 +113,7 @@ const modelName = modelNames([
 ]);
 
 describe("one task's facts on the crew summary and the task record", () => {
-  it("are the same values, with the record's fact strip after its rows", () => {
+  it("are the same values, the record adding the details the summary leaves out, its fact strip after its rows", () => {
     const summary = renderToStaticMarkup(
       <CrewSummary taskId={task.id} facts={{ task, modelName }} />,
     );
@@ -137,13 +137,16 @@ describe("one task's facts on the crew summary and the task record", () => {
     const shown = factsOf(summary);
     // The task's own browser is the record's alone: no read here carries one.
     // Why this model is the full record's alone too (INF-1714, the captain's
-    // ruling: "don't show this in the hover preview of a task").
-    expect(shown.map(([id]) => id)).toEqual(
-      TASK_FACTS.filter((id) => id !== "browser" && id !== "why"),
-    );
+    // ruling: "don't show this in the hover preview of a task"), and so are
+    // the reasoning and its footnote (INF-2528, the captain's direction B:
+    // "more details should be shown in the task card, not in the preview").
+    const recordOnly = ["browser", "why", "reasoning", "reason"];
+    expect(shown.map(([id]) => id)).toEqual(TASK_FACTS.filter((id) => !recordOnly.includes(id)));
     const onRecord = factsOf(record);
-    const { why, ...recordShared } = Object.fromEntries(onRecord);
+    const { why, reasoning, reason, ...recordShared } = Object.fromEntries(onRecord);
     expect(recordShared).toEqual(Object.fromEntries(shown));
+    expect(reasoning).toBe("Extra high");
+    expect(reason).toBe("Reasoning one step lower for Quick care.");
     expect(why).toBe("Why this modelBuilding from the plan in SCR-1.Comparison not recorded");
     // One order on both: the record only moves its strip below its rows.
     expect(onRecord.map(([id]) => id)).toEqual(TASK_FACTS.filter((id) => id !== "browser"));
@@ -157,8 +160,6 @@ describe("one task's facts on the crew summary and the task record", () => {
       now: "Opened pull request #57.",
       plan: "1 of 3Cut the first request5m",
       model: "Nano Banana Pro",
-      reasoning: "Extra high",
-      reason: "Reasoning one step lower for Quick care.",
       change: "#57",
       checks: "running for 15m",
       review: "passed · risk low",
@@ -180,6 +181,71 @@ describe("one task's facts on the crew summary and the task record", () => {
     expect(record.match(/href="https:\/\/github.com\/demo\/repo\/pull\/57"/g)).toHaveLength(2);
     expect(record).toContain('href="https://github.com/demo/repo/pull/57">pull request #57</a>');
     expect(summary).not.toContain("href=");
+  });
+
+  // INF-2528, the captain's words: "the preview should remain concise and
+  // only the most critical information. more details should be shown in the
+  // task card, not in the preview."
+  it("keeps the summary's footer to one row: the model with its badge, the change with its checks as one state", () => {
+    const counted = {
+      ...task,
+      delivery: {
+        ...task.delivery,
+        headSha: "abc",
+        checks: {
+          headSha: "abc",
+          at: now - 60_000,
+          items: [
+            { name: "lint", state: "skipped" },
+            { name: "unit", state: "success" },
+            { name: "phone", state: "pending" },
+            { name: "journeys", state: "pending" },
+          ],
+        },
+      },
+      waits: [
+        {
+          id: "checks:abc",
+          kind: "checks",
+          label: "Checks",
+          since: now - 600_000,
+          next: { kind: "next-read", at: now + 60_000 },
+        },
+      ],
+    } as unknown as TaskDetail;
+    const summary = renderToStaticMarkup(
+      <CrewSummary taskId={task.id} facts={{ task: counted, modelName }} />,
+    );
+    const facts = taskFactsOf(counted, modelName);
+    const record = renderToStaticMarkup(<TaskFactStrip facts={facts} why />);
+    const labels = (html: string) =>
+      [...html.matchAll(/data-task-fact-label="">([^<]+)</g)].map((match) => match[1]);
+    // One row of two cells, then the review's own row.
+    const doc = parseDocument(summary) as unknown as Node;
+    const rows: string[][] = [];
+    walk(doc, (node) => {
+      if (!node.attribs?.class?.split(" ").includes("cells")) return;
+      const row: string[] = [];
+      walk(node, (child) => {
+        if (child.attribs?.["data-task-fact-label"] !== undefined) row.push(textOf(child));
+      });
+      rows.push(row);
+    });
+    expect(rows).toEqual([["Model", "Pull request"], ["Review"]]);
+    expect(labels(summary)).not.toContain("Intelligence");
+    expect(Object.fromEntries(factsOf(summary))).toMatchObject({
+      model: "Nano Banana Pro",
+      change: "#57",
+      checks: "running for 15m",
+    });
+    expect(summary).toContain('data-slot="medium"');
+    // The counts and each watch's next read are the task card's.
+    expect(summary).not.toContain("skipped");
+    expect(summary).not.toContain("next read");
+    expect(Object.fromEntries(factsOf(record)).checks).toContain(
+      "1 skipped · 1 passed · 2 running",
+    );
+    expect(Object.fromEntries(factsOf(record)).checks).toContain("next read");
   });
 
   it("dates Progress from the list, not the newer Now line, on both surfaces", () => {

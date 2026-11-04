@@ -210,6 +210,7 @@ describe("the shared task facts", () => {
         checks: {
           dot: "running",
           words: "running",
+          state: "running",
           at: now - 60_000,
           span: { startedAt: now - 15 * 60_000, finishedAt: null, joint: "for" },
         },
@@ -427,7 +428,7 @@ describe("the shared task facts", () => {
       ).delivery,
     ).toEqual({
       change: { noun: "Branch", label: "fm/task-ab12", url: null },
-      checks: { dot: "ok", words: "passed", at: null, span: null },
+      checks: { dot: "ok", words: "passed", state: "passed", at: null, span: null },
       review: null,
     });
     expect(
@@ -435,18 +436,64 @@ describe("the shared task facts", () => {
         .delivery,
     ).toEqual({
       change: null,
-      checks: { dot: "failed", words: "failed", at: now, span: null },
+      checks: { dot: "failed", words: "failed", state: "failed", at: now, span: null },
       review: null,
     });
     // A change no reading has reached yet.
     expect(
       taskFactsOf(detail({ delivery: { mode: "direct-pr", prNumber: 7 } }), names).delivery?.checks,
-    ).toEqual({ dot: "idle", words: "not read yet", at: null, span: null });
+    ).toEqual({ dot: "idle", words: "not read yet", state: "not read yet", at: null, span: null });
     // Nothing proposed and nothing read: no line at all.
     expect(taskFactsOf(detail({ delivery: { mode: "local-only" } }), names).delivery).toBeNull();
     expect(
       taskFactsOf(detail({ delivery: { mode: "direct-pr", ci: "no-pr" } }), names).delivery,
     ).toBeNull();
+  });
+
+  // INF-2528, the captain's direction B: the hover preview says the checks
+  // as one state with its time; the counts and a refusal's reason stay in
+  // `words`, the task card's.
+  it("says a read version's checks as one state beside its counts", () => {
+    const read = (items: { name: string; state: string }[], problem?: string) =>
+      taskFactsOf(
+        detail({
+          delivery: {
+            mode: "direct-pr",
+            prNumber: 813,
+            ci: "pending",
+            headSha: "abc",
+            checks: { headSha: "abc", at: 1, items, ...(problem ? { problem } : {}) },
+          } as never,
+        }),
+        names,
+      ).delivery?.checks;
+    expect(
+      read([
+        { name: "lint", state: "skipped" },
+        { name: "unit", state: "success" },
+        { name: "phone", state: "pending" },
+      ]),
+    ).toMatchObject({
+      dot: "running",
+      words: "1 skipped · 1 passed · 1 running",
+      state: "running",
+    });
+    expect(
+      read([
+        { name: "unit", state: "success" },
+        { name: "phone", state: "timed_out" },
+      ]),
+    ).toMatchObject({ dot: "failed", state: "failed" });
+    expect(
+      read([
+        { name: "lint", state: "skipped" },
+        { name: "unit", state: "success" },
+      ]),
+    ).toMatchObject({ dot: "ok", state: "passed" });
+    const refused = read([{ name: "unit", state: "success" }], "GitHub refused the log read");
+    expect(refused).toMatchObject({ dot: "warn", state: "cannot read all checks" });
+    expect(refused?.words).toContain("GitHub refused the log read");
+    expect(refused?.state).not.toContain("GitHub refused");
   });
 
   it("keeps a review's verdict beside the checks, and only it once the task has closed", () => {
@@ -459,7 +506,7 @@ describe("the shared task facts", () => {
     };
     expect(taskFactsOf(detail({ delivery }), names).delivery).toEqual({
       change: { noun: "Pull request", label: "#84", url: null },
-      checks: { dot: "failed", words: "failed", at: null, span: null },
+      checks: { dot: "failed", words: "failed", state: "failed", at: null, span: null },
       review: { dot: "warn", words: "findings · risk high" },
     });
     // A closed task names its change once, on its closing line.

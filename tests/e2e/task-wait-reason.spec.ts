@@ -329,7 +329,7 @@ test("a queued premium ask held for premium allowance says in its record why it 
  * Completion is DOM text on the three views and a live cleared dependency after a confirmed drop.
  * Uses only this isolated app, its keyboard and disposable saved tasks.
  */
-test("grouped waits reconcile into kanban, hover and task card without adding to lists", async () => {
+test("grouped waits reconcile into kanban and task card, the hover stays short, and lists add nothing", async () => {
   const dir = scratchDir("infinitary-wait-views-");
   const db = openDatabase(dir);
   const now = Date.now();
@@ -385,12 +385,14 @@ test("grouped waits reconcile into kanban, hover and task card without adding to
     await expect(tile.locator("[data-board-wait]")).toContainText(owner.key);
     await expect(tile.locator("[data-board-wait]")).toContainText(startEvent);
     await focusOn(tile);
-    await expect(rowSummary(page).locator("[data-crew-blocked-wait]")).toContainText(
-      taskWaitText(dependency, Date.now()),
+    // INF-2528, the captain's direction B: the preview names the blocker by
+    // its key and keeps the short status; every wait's wording and time is
+    // the task card's, read below.
+    await expect(rowSummary(page).locator("[data-crew-blocked-wait]")).toHaveText(owner.key);
+    await expect(rowSummary(page).locator("[data-task-fact=status]")).toHaveText(
+      taskStatusLabel(taskStatusOf(waiter)),
     );
-    await expect(rowSummary(page).locator("[data-task-fact=status]")).toContainText(
-      taskWaitText(start, Date.now()),
-    );
+    await expect(rowSummary(page).locator("[data-crew-summary]")).not.toContainText(startEvent);
     await pressKey(tile, "Enter");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", waiter.id);
     await expectRecordBody(page);

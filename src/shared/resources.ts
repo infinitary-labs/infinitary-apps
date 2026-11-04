@@ -217,4 +217,4 @@ export function taskResourceWords(share: {
 }
 
 export const TASK_USE_UNAVAILABLE = "Use unavailable";
-export const TASK_USE_EMPTY = "No attributed processes in available readings";
+export const TASK_USE_EMPTY = "No processes running for this task";

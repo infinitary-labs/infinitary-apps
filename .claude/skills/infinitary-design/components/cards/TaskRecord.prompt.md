@@ -172,7 +172,7 @@ In the app the body is a Tier-2 frame template (`src/renderer/src/plugins/builti
 
 The task record adds a live Use row after Now and Progress, on the same left edge, in the shared fact-row type.
 It shows the computer name, measured processor equivalents, resident memory and attributed process count in mono, without a meter or a color judgment.
-A missing or stale reading says Use unavailable; no matched processes says No attributed processes in available readings.
+A missing or stale reading says Use unavailable; no matched processes says No processes running for this task.
 Resident memory counts shared pages once per process and is not the computer’s used-memory figure.
 A declared heavy run adds a separate Run row below Use, in the same fact-row type and mono value, without another panel, meter or control.
 It names the computer, waiting or running, the reason or runs ahead while waiting, and processor and memory amounts explicitly marked declared.

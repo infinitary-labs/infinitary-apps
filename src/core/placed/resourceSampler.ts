@@ -14,7 +14,8 @@ import { processRoots } from "./processRoots";
 
 export type CpuWindow = { epoch: string; start: number; end: number };
 
-export type ProcessWindow = { first: ProcessReading[]; elapsedMs: number };
+/** `firstAt` is the wall-clock time just before the first reading, which process births compare against. */
+export type ProcessWindow = { first: ProcessReading[]; firstAt: number; elapsedMs: number };
 
 export type ResourceSamplerOptions = {
   /** The host supplies memory facts; core never reaches into Electron. A Mac read is async. */
@@ -23,6 +24,8 @@ export type ResourceSamplerOptions = {
   processes?: () => Promise<ProcessReading[] | null>;
   /** Monotonic, so a clock correction cannot make an old reading new. */
   now?: () => number;
+  /** Wall clock, read beside each process reading so births inside the window count. */
+  wallNow?: () => number;
   wait?: (ms: number) => Promise<unknown>;
   /** Local owners reuse this completed window; process metadata never crosses the connection. */
   observed?: (
@@ -44,7 +47,13 @@ export class ResourceSampler {
   private processWindow: ProcessWindow | undefined;
   private cpuWindow: CpuWindow | undefined;
   private baseline:
-    | { cpus: CpuInfo[]; at: number; processes: ProcessReading[] | null; processAt: number }
+    | {
+        cpus: CpuInfo[];
+        at: number;
+        processes: ProcessReading[] | null;
+        processAt: number;
+        processWallAt: number;
+      }
     | undefined;
 
   constructor(private readonly options: ResourceSamplerOptions = {}) {}
@@ -86,10 +95,12 @@ export class ResourceSampler {
       const readCpus = this.options.cpus ?? cpus;
       const now = this.options.now ?? (() => performance.now());
       const readProcess = this.options.processes;
+      const wallNow = this.options.wallNow ?? Date.now;
       const previous = this.baseline;
       this.baseline = undefined;
       const elapsed = previous ? now() - previous.at : -1;
       const reuse = previous && elapsed >= 0 && elapsed <= RESOURCE_MAX_SAMPLE_MS;
+      const firstAt = reuse ? previous.processWallAt : wallNow();
       const firstProcesses = reuse ? previous.processes : readProcess ? await readProcess() : null;
       const processStart = reuse ? previous.processAt : now();
       if (firstProcesses)
@@ -109,12 +120,14 @@ export class ResourceSampler {
         return unknown("interrupted");
       if (first.length === 0 || first.length !== last.length || last.length > 65_536)
         return unknown("interrupted");
+      const processWallAt = wallNow();
       const lastProcesses = readProcess ? await readProcess() : null;
       this.lastProcesses = lastProcesses;
       const processAt = now();
       const processMs = processAt - processStart;
-      this.baseline = { cpus: last, at, processes: lastProcesses, processAt };
-      if (firstProcesses) this.processWindow = { first: firstProcesses, elapsedMs: processMs };
+      this.baseline = { cpus: last, at, processes: lastProcesses, processAt, processWallAt };
+      if (firstProcesses)
+        this.processWindow = { first: firstProcesses, firstAt, elapsedMs: processMs };
       const processes =
         firstProcesses && lastProcesses
           ? processResources(
@@ -126,6 +139,7 @@ export class ResourceSampler {
                 processRoots.readGroups(),
               ),
               processMs,
+              firstAt,
             )
           : { status: "unknown" as const };
       const memory = await this.options.memory();

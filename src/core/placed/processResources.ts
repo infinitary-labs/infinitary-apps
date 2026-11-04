@@ -13,11 +13,16 @@ export type ProcessReading = {
   parent: number;
   group: number;
   started: string;
+  /** Wall-clock birth, at the stamp's whole-second precision or finer; absent when unreadable. */
+  bornMs?: number;
   cpuMs?: number;
   residentBytes: number;
   /** A zombie retains its identity but cannot witness a living payload launch. */
   exited?: boolean;
 };
+
+/** A Mac's lstart stamp counts whole seconds, so a birth reads up to one second early. */
+const BIRTH_STAMP_PRECISION_MS = 1000;
 
 /** ps TIME is cumulative, unlike %CPU's lifetime average on a Mac. */
 function cpuTime(text: string): number {
@@ -48,6 +53,7 @@ export function processesFromPs(text: string): ProcessReading[] | null {
       cpuMs: cpuTime(match[4] ?? ""),
       residentBytes: Number(match[5]) * 1024,
       started: state ? birth.slice(0, state.index) : birth,
+      bornMs: Date.parse(state ? birth.slice(0, state.index) : birth),
       ...(state?.[1]?.includes("Z") || state?.[1]?.includes("X") ? { exited: true } : {}),
     };
     if (
@@ -57,7 +63,7 @@ export function processesFromPs(text: string): ProcessReading[] | null {
       !Number.isFinite(row.cpuMs)
     )
       return null;
-    rows.push(row);
+    rows.push(Number.isFinite(row.bornMs) ? row : { ...row, bornMs: undefined });
   }
   return rows.length ? rows : null;
 }
@@ -124,6 +130,16 @@ export function linuxProcessTime(
   return { cpuMs: ((user + system) * 1000) / ticks, started: `linux:${born}` };
 }
 
+/** Linux birth ticks count from boot; /proc/uptime places boot on the wall clock. */
+async function linuxBootMs(): Promise<number | undefined> {
+  try {
+    const uptime = Number((await readFile("/proc/uptime", "utf8")).split(/\s+/)[0]);
+    return Number.isFinite(uptime) && uptime >= 0 ? Date.now() - uptime * 1000 : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function readProcesses(): Promise<ProcessReading[] | null> {
   if (hostPlatform() !== "darwin" && hostPlatform() !== "linux") return null;
   try {
@@ -141,19 +157,30 @@ export async function readProcesses(): Promise<ProcessReading[] | null> {
     const rows = processesFromPs(stdout);
     if (!rows || hostPlatform() !== "linux") return rows;
     const ticks = await clockTicks();
+    const boot = ticks === undefined ? undefined : await linuxBootMs();
+    const living: ProcessReading[] = [];
     // Serial asynchronous reads cannot exhaust the app's file descriptors or
-    // block its drawing thread. A vanished/unreadable process has unknown CPU.
+    // block its drawing thread. An unparsable stat has unknown CPU.
     for (const row of rows) {
       delete row.cpuMs;
-      if (ticks === undefined) continue;
+      if (ticks === undefined) {
+        living.push(row);
+        continue;
+      }
       try {
-        const time = linuxProcessTime(await readFile(`/proc/${row.pid}/stat`, "utf8"), ticks);
-        if (time) Object.assign(row, time);
+        const text = await readFile(`/proc/${row.pid}/stat`, "utf8");
+        const time = linuxProcessTime(text, ticks);
+        if (time) {
+          Object.assign(row, time);
+          const born = Number(time.started.slice("linux:".length));
+          row.bornMs = boot === undefined ? undefined : boot + (born * 1000) / ticks;
+        }
+        living.push(row);
       } catch {
-        /* Process exited or its metadata is unavailable. */
+        // The process exited between the listing and its stat: it is no longer running.
       }
     }
-    return rows;
+    return living.length ? living : null;
   } catch {
     return null;
   }
@@ -203,12 +230,27 @@ export class ProcessAttribution {
   }
 }
 
-/** Every process contributes once; RSS is resident bytes, not unique physical memory. */
+/** New, or reborn under a reused number, since the first reading. */
+function bornInWindow(row: ProcessReading, firstAt: number | undefined): boolean {
+  return (
+    firstAt !== undefined &&
+    row.bornMs !== undefined &&
+    row.bornMs + BIRTH_STAMP_PRECISION_MS > firstAt
+  );
+}
+
+/**
+ * Every process contributes once; RSS is resident bytes, not unique physical memory.
+ * A process born at or after the first reading (`firstAt`, wall-clock ms) did all its
+ * work inside the window, so its whole processor time counts. One missing from the first
+ * reading that was born earlier, or with no readable birth, leaves its task's use unknown.
+ */
 export function processResources(
   first: ProcessReading[],
   last: ProcessReading[],
   owners: ReadonlyMap<number, string>,
   elapsedMs: number,
+  firstAt?: number,
 ): ProcessResources {
   const before = new Map(first.map((row) => [row.pid, row]));
   const groups = new Map<
@@ -223,9 +265,15 @@ export function processResources(
     group.residentBytes += row.residentBytes;
     const previous = before.get(row.pid);
     const delta =
-      previous?.started === row.started && previous.cpuMs !== undefined && row.cpuMs !== undefined
-        ? row.cpuMs - previous.cpuMs
-        : -1;
+      row.cpuMs === undefined
+        ? -1
+        : previous?.started === row.started
+          ? previous.cpuMs === undefined
+            ? -1
+            : row.cpuMs - previous.cpuMs
+          : bornInWindow(row, firstAt)
+            ? row.cpuMs
+            : -1;
     if (delta < 0 || elapsedMs <= 0) unknown.add(owner);
     else group.cpuCores = (group.cpuCores ?? 0) + delta / elapsedMs;
     groups.set(owner, group);

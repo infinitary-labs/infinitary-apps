@@ -93,9 +93,51 @@ describe("accepted load plan: explicit task process shares", () => {
     expect(attribution.owners(orphan, new Map()).get(118)).toBe("task");
     const reused = orphan.map((row) => ({ ...row, started: "Tue Oct 27 12:03:36 2026" }));
     expect(attribution.owners(reused, new Map()).size).toBe(0);
-    const facts = processResources([], rows, new Map([[118, "task"]]), 250);
+    // Born seconds before the first reading yet missing from it: its time is not this window's.
+    const facts = processResources(
+      [],
+      rows,
+      new Map([[118, "task"]]),
+      250,
+      Date.parse("Tue Oct 27 11:03:40 2026"),
+    );
     if (facts.status !== "sampled") throw new Error("Expected measured processes");
     expect(facts.tasks[0]?.cpuCores).toBeUndefined();
     expect(facts.tasks[0]?.residentBytes).toBe(45040 * 1024);
+  });
+
+  // INF-2123, the captain's "why most cards show processor use unavailable": a wait
+  // loop's new process keeps the task's figure, counted from that process's start.
+  it("counts a process born inside the window, or reborn under its number, from its start", () => {
+    const first = processesFromPs(PS)!;
+    const firstAt = Date.parse("Tue Oct 27 11:05:00 2026") + 400;
+    const later =
+      processesFromPs(`${PS.replace("1:17.87", "1:18.37")}  120   118   118   0:00.30   1200 Tue Oct 27 11:05:00 2026
+`)!;
+    const owners = new Map([
+      [118, "task"],
+      [120, "task"],
+    ]);
+    const counted = processResources(first, later, owners, 2000, firstAt);
+    if (counted.status !== "sampled") throw new Error("Expected measured processes");
+    // 0.50 s from the old process's growth and 0.30 s from the new one's whole life.
+    expect(counted.tasks[0]?.cpuCores).toBeCloseTo(0.4);
+    const reborn = later.map((row) =>
+      row.pid === 119
+        ? {
+            ...row,
+            cpuMs: 200,
+            started: "Tue Oct 27 11:05:01 2026",
+            bornMs: Date.parse("Tue Oct 27 11:05:01 2026"),
+          }
+        : row,
+    );
+    const rebornFacts = processResources(first, reborn, new Map([[119, "reborn"]]), 2000, firstAt);
+    if (rebornFacts.status !== "sampled") throw new Error("Expected measured processes");
+    expect(rebornFacts.tasks.find((task) => task.taskId === "reborn")?.cpuCores).toBeCloseTo(0.1);
+    // With no first reading time, nothing says the process is new to this window.
+    const untimed = processResources(first, later, owners, 2000);
+    if (untimed.status !== "sampled") throw new Error("Expected measured processes");
+    expect(untimed.tasks[0]?.cpuCores).toBeUndefined();
   });
 });

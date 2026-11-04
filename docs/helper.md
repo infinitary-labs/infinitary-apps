@@ -461,10 +461,14 @@ Process identifiers, arguments, paths, usernames and environments never cross th
 Each process contributes once; a nested explicit root owns its subtree.
 Processes outside those trees, including simulators started by launchd, remain in everything else; this observation does not infer ownership from a working folder.
 Processor use comes from cumulative process-time deltas across the sample, not macOS’s lifetime-average percentage.
-A new process without a comparable first reading has unknown processor use for that sample, while its resident bytes still show.
+A process missing from the first reading, or reborn under the same number, counts all its processor time when its birth stamp is not earlier than the first reading's wall-clock time, since all that work happened inside the window; the comparison allows the whole second a Mac's `lstart` stamp truncates.
+Wait loops start new processes in most two-second windows, so without this the whole task's figure went blank in most readings.
+A process missing from the first reading that was born earlier, or whose birth cannot be read, leaves its task's processor use unknown for that sample, while its resident bytes still show.
+Processes that ended between the two readings are not counted.
 Resident bytes sum RSS, so shared pages can appear in more than one process; they are not unique physical memory or the placement memory figure.
 Linux reads cumulative processor ticks and the process birth tick from `/proc/<pid>/stat`, using the host’s `CLK_TCK`, rather than the whole-second TIME that Linux ps reports.
-Those asynchronous reads run serially so a large process table cannot exhaust open file descriptors; an unreadable process has unknown processor use.
+Those asynchronous reads run serially so a large process table cannot exhaust open file descriptors; a process that exits between the listing and its stat read is left out of the reading, and an unparsable stat has unknown processor use.
+The birth tick reaches the wall clock through `/proc/uptime`.
 The Mac adapter adds swap occupancy from `vm.swapusage`, independently of installed memory; Linux reads SwapTotal minus SwapFree from `/proc/meminfo`.
 None of these additions changes placement, its margins, sampling cadence or process priority.
 

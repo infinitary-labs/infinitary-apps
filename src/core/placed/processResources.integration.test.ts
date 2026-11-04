@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { watch, writeFileSync } from "node:fs";
 import { freemem, totalmem } from "node:os";
@@ -127,5 +128,60 @@ describe("live task process observation", () => {
     }
     expect([...processRoots.read().values()]).not.toContain("shell");
     expect([...processRoots.read().values()]).not.toContain("client");
+  });
+
+  /**
+   * INF-2123, from the captain's "why most cards show processor use unavailable":
+   * a task whose wait loop starts a new process inside a reading window keeps its
+   * processor figure, counted from that process's start. Fixture: a real idle task
+   * root that starts a real child doing bounded hashing between the sampler's two
+   * process reads. Fails when one new process blanks the task's whole figure.
+   */
+  it("counts a process started inside the window from its start instead of blanking the task", async () => {
+    const root = spawn(
+      process.execPath,
+      [
+        "-e",
+        `const {spawn}=require('node:child_process');process.stdin.setEncoding('utf8');process.stdin.on('data',()=>{const child=spawn(process.execPath,['-e',${JSON.stringify(
+          "const hash=require('node:crypto').createHash;const start=process.cpuUsage();while(process.cpuUsage(start).user+process.cpuUsage(start).system<150000){hash('sha256').update('new process fixture').digest()}console.log('worked');process.stdin.resume()",
+        )}],{stdio:['pipe','pipe','inherit']});child.stdout.pipe(process.stdout);process.stdin.once('end',()=>child.stdin.end())});console.log('ready')`,
+      ],
+      { env: hostEnv(), stdio: ["pipe", "pipe", "inherit"] },
+    );
+    const exited = once(root, "exit");
+    const release = processRoots.add(root.pid ?? 0, "waiting");
+    try {
+      await once(root.stdout, "data");
+      let readings = 0;
+      let startedChild = false;
+      const sampler = new ResourceSampler({
+        processes: async () => {
+          readings++;
+          return readProcesses();
+        },
+        memory: () => ({ totalBytes: totalmem(), freeBytes: freemem() }),
+        // Between the first and last process reads, the task starts its new process.
+        wait: async (ms) => {
+          if (readings !== 1 || startedChild)
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          startedChild = true;
+          const worked = once(root.stdout, "data");
+          root.stdin.write("start\n");
+          await worked;
+        },
+      });
+      const observation = await sampler.read();
+      expect(readings).toBe(2);
+      if (observation.status !== "sampled" || observation.processes?.status !== "sampled")
+        throw new Error("Process observation unavailable");
+      const task = observation.processes.tasks.find((task) => task.taskId === "waiting");
+      console.info("New process window", JSON.stringify(task));
+      expect(task?.processCount).toBe(2);
+      expect(task?.cpuCores).toBeGreaterThan(0);
+    } finally {
+      release();
+      root.stdin.end();
+      await exited;
+    }
   });
 });

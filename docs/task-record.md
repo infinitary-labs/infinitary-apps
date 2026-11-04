@@ -533,7 +533,7 @@ On the record, a line's count and what it opens to hold its actions and its fold
 The record adds a Use row after its shared Now and Progress facts (`TaskResourceUse`), on their same left edge.
 It reads the raw shared computer-resource observations, not a second sampler or the personal-panel memory projection.
 Each attributed task share names its computer, measured processor equivalents, resident bytes and process count; RSS can count shared pages more than once and is not unique physical memory.
-An unavailable, stale or older reading stays explicit as Use unavailable; no matching processes in sampled computers says No attributed processes in available readings.
+An unavailable, stale or older reading stays explicit as Use unavailable; no matching processes in sampled computers says No processes running for this task.
 The row stays live while the record is open, including when a background job continues after the model turn ends, and changes no task status or idle clock.
 The sampler and pressure notices are owned by `docs/helper.md`, "Running tasks’ resource use".
 A separate Run row below Use shows each caller-declared heavy run's computer, waiting or admitted state, and declared processor and memory amounts (`docs/heavy-runs.md`).

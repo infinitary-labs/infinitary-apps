@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-use-keeps-its-figure",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task's Use row keeps its processor figure",
+      "body": "A task that keeps starting short commands, such as one waiting its turn, now shows how much processor it uses instead of Processor use unavailable. A task with nothing running says No processes running for this task.",
+      "picture": {
+        "dark": "task-use-keeps-its-figure-dark.webp",
+        "light": "task-use-keeps-its-figure-light.webp",
+        "alt": "A task record's Use row showing processor use, resident memory and process count for a busy task"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

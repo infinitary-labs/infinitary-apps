@@ -34,7 +34,7 @@ The backend serves this ranking even when skills exist without an instruction fi
 
 Pi receives the explicit personal file and user skills through its hand-built loader, beside project resources.
 The loader still has no extensions and never enables MCP discovery.
-Claude appends the explicit file after project instructions and stages skill folder links in `personal-skills` beside the session record, under `personal:<skill>`.
+Claude appends the explicit file after project instructions and stages skill folder links in `personal-skills` in the session's own staging folder beside its record, under `personal:<skill>`.
 Only the app-owned staging folder is rebuilt; user files remain untouched.
 Claude settings sources stay empty, strict MCP stays on, and hooks are disabled when either skills plugin is served.
 

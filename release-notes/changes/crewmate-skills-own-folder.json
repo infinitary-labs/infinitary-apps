@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-skills-own-folder",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's task no longer ends when its conversation starts twice at once",
+      "body": "When a task's crewmate started its conversation twice at the same moment, as can happen right after an update, one start could fail while preparing the crewmate's skills, and the app then marked the task dropped. Each start now prepares its skills on its own, and a crewmate whose skills cannot be prepared keeps working without them.",
+      "noPicture": "The fix changes how a crewmate's conversation starts and shows no different view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

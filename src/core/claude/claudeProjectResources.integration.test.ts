@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import type { ServerResponse } from "node:http";
 import { dirname, join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -15,7 +22,11 @@ import {
 } from "../../../tests/helpers/anthropicDialect";
 import { codingSpec } from "../../../tests/helpers/codingSession";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { Runbooks } from "../runbooks/runbooks";
+import { STAGED_FOLDER } from "../session/stagingFolders";
+import { openInMemoryDatabase } from "../storage/db";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
+import { SettingsStore } from "../storage/settingsStore";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 import {
   CLAUDE_MODEL_PROVIDER,
@@ -120,11 +131,12 @@ function box() {
   plantSkill(join(home, ".claude", "skills"), "home-skill");
   const recordDir = scratchDir("infinitary-claude-project-record-");
   const env = { PATH: process.env.PATH ?? "", HOME: home, INFINITARY_CLAUDE_CLI: stub };
+  const logs: string[] = [];
   const factory = createClaudeSessionFactory({
     configDir: join(home, ".claude"),
     env: () => env,
     clock: { now: () => Date.now(), register: () => () => {} },
-    log: () => {},
+    log: (line) => logs.push(line),
     records: (dir) => {
       const store = new SessionRecordStore(dir);
       stores.push(store);
@@ -138,7 +150,21 @@ function box() {
     model: { provider: CLAUDE_MODEL_PROVIDER, id: MODEL },
     recordDir,
   });
-  return { home, cwd, recordDir, ran, factory, spec };
+  return { home, cwd, recordDir, ran, factory, spec, logs };
+}
+
+/** The runbook skills the app serves a Claude crewmate building a change, from the bundle. */
+function servedRunbookSkills() {
+  return new Runbooks(
+    join(process.cwd(), "resources/runbooks"),
+    new SettingsStore(openInMemoryDatabase()),
+  ).crew({
+    kind: "implement",
+    place: "project",
+    delivery: "direct-pr",
+    care: "standard",
+    backend: "claude",
+  }).skills;
 }
 
 /** The model's side: load a skill, run one command, then answer. */
@@ -203,27 +229,93 @@ describe("a Claude crewmate's working copy", () => {
 
   it("stages the skills beside its record, linked and never copied, and leaves them in place", async () => {
     const crewmate = box();
-    const staged = join(crewmate.recordDir, CLAUDE_PROJECT_SKILLS_DIR);
+    // INF-2054: each session stages into a folder of its own, and the next
+    // removes an ended session's folder and what earlier versions shared.
+    const shared = join(crewmate.recordDir, CLAUDE_PROJECT_SKILLS_DIR);
+    mkdirSync(join(shared, "skills"), { recursive: true });
+    const staged = () =>
+      readdirSync(join(crewmate.recordDir, STAGED_FOLDER)).map((name) =>
+        join(crewmate.recordDir, STAGED_FOLDER, name, CLAUDE_PROJECT_SKILLS_DIR),
+      );
     loadsASkillThenRuns("project:rivet-release", "true");
     const session = await crewmate.factory.open(crewmate.spec);
     await session.prompt("Count the rivets.");
     session.dispose();
     await session.closed();
-    expect(readFileSync(join(staged, "skills", "rivet-release", "SKILL.md"), "utf8")).toContain(
-      "The body of rivet-release.",
-    );
-    // A second attach stages again from nothing; the working copy keeps its skills.
+    const [first, ...others] = staged();
+    expect(others).toEqual([]);
+    expect(existsSync(shared)).toBe(false);
+    const link = join(first ?? "", "skills", "rivet-release");
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(readFileSync(join(link, "SKILL.md"), "utf8")).toContain("The body of rivet-release.");
+    // A second session stages again from nothing; the working copy keeps its skills.
     loadsASkillThenRuns("project:rivet-release", "true");
     const again = await crewmate.factory.open(crewmate.spec);
     await again.prompt("Count them again.");
     again.dispose();
     await again.closed();
+    const [second, ...more] = staged();
+    expect(more).toEqual([]);
+    expect(second).not.toBe(first);
     expect(existsSync(join(crewmate.cwd, ".claude", "skills", "rivet-design", "SKILL.md"))).toBe(
       true,
     );
     expect(existsSync(join(crewmate.cwd, ".agents", "skills", "rivet-release", "SKILL.md"))).toBe(
       true,
     );
+  });
+
+  it("INF-2054 answers on two sessions of one task attached at once, each listing every skill", async () => {
+    // The FIRS-5 report: two sessions of one task attached together, both
+    // rebuilt the one runbook folder, one failed with EEXIST and its task
+    // was dropped with its working copy.
+    const crewmate = box();
+    const runbookSkills = servedRunbookSkills();
+    expect(runbookSkills.length).toBeGreaterThan(0);
+    crewmate.spec.runbookSkills = runbookSkills;
+    api.answer((request, res) => answerText(request, res, "Counted."));
+    const first = api.requests.length;
+    const sessions = await Promise.all([
+      crewmate.factory.open(crewmate.spec),
+      crewmate.factory.open(crewmate.spec),
+    ]);
+    const outcomes = await Promise.allSettled(
+      sessions.map((session) => session.prompt("Count rivets.")),
+    );
+    for (const session of sessions) session.dispose();
+    await Promise.all(sessions.map((session) => session.closed()));
+    expect(
+      outcomes.map((outcome) =>
+        outcome.status === "fulfilled" ? "answered" : String(outcome.reason),
+      ),
+    ).toEqual(["answered", "answered"]);
+    expect(crewmate.logs.filter((line) => line.includes("not staged"))).toEqual([]);
+    const openings = api.requests.slice(first);
+    expect(openings).toHaveLength(2);
+    for (const opening of openings) {
+      expect(opening.raw).toContain("project:rivet-release");
+      for (const skill of runbookSkills) expect(opening.raw).toContain(`runbooks:${skill.name}`);
+    }
+  });
+
+  it("INF-2054 answers when the runbooks' skills cannot be staged, and says so in its log", async () => {
+    // The stage FIRS-5 failed in was the one failure that ended the turn and
+    // dropped the task; a failed stage costs the skills, never the attach.
+    // The disk refuses the staging folder here: a file stands in its place,
+    // which every runner refuses, root included.
+    const crewmate = box();
+    crewmate.spec.runbookSkills = servedRunbookSkills();
+    writeFileSync(join(crewmate.recordDir, STAGED_FOLDER), "");
+    api.answer((request, res) => answerText(request, res, "Counted."));
+    const first = api.requests.length;
+    const session = await crewmate.factory.open(crewmate.spec);
+    await session.prompt("Count rivets.");
+    session.dispose();
+    await session.closed();
+    expect(api.requests.slice(first)).toHaveLength(1);
+    expect(
+      crewmate.logs.some((line) => line.startsWith("the runbook skills were not staged")),
+    ).toBe(true);
   });
 });
 

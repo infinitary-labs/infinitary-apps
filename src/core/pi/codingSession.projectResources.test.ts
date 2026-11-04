@@ -1,10 +1,14 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { type StubApi, startStubApi } from "../../../tests/helpers/anthropicDialect";
 import { codingSpec } from "../../../tests/helpers/codingSession";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { Runbooks } from "../runbooks/runbooks";
+import type { SessionSpec } from "../session/session";
+import { openInMemoryDatabase } from "../storage/db";
+import { SettingsStore } from "../storage/settingsStore";
 import { createPiSessionFactory } from "./session";
 
 /**
@@ -77,23 +81,32 @@ async function world() {
   plantSkill(join(agentDir, "skills"), "agent-dir-skill", "Planted in the agentDir.");
   put(join(root, "worktrees", "AGENTS.md"), "Planted above the working copy.\n");
   plantSkill(join(root, "worktrees", ".agents", "skills"), "above-skill", "Planted above.");
-  /** The system prompt Pi sends for this working copy's crewmate, on its first request. */
-  const served = async (personalResources = false): Promise<string> => {
-    const session = await createPiSessionFactory({ agentDir }).open({
+  /** A crewmate's coding session on this working copy, recorded in `recordDir`. */
+  const open = (extra: Partial<SessionSpec> = {}, recordDir?: string) =>
+    createPiSessionFactory({ agentDir }).open({
       ...codingSpec({
         binding: { backend: "pi", runtime },
         cwd,
         model: { provider: PROVIDER, id: MODEL },
+        ...(recordDir ? { recordDir } : {}),
       }),
-      personalResources,
+      ...extra,
     });
+  /** The system prompt Pi sends for this session, on its first request. */
+  const system = async (session: Awaited<ReturnType<typeof open>>): Promise<string> => {
     const next = api.nextRequest();
     await session.prompt("Which way?");
     const request = await next;
-    session.dispose();
     return JSON.stringify(request.body.system ?? "");
   };
-  return { cwd, served, home: root };
+  /** The system prompt Pi sends for this working copy's crewmate, on its first request. */
+  const served = async (personalResources = false): Promise<string> => {
+    const session = await open({ personalResources });
+    const sent = await system(session);
+    session.dispose();
+    return sent;
+  };
+  return { cwd, served, open, system, home: root };
 }
 
 describe("a Pi crewmate's working copy", () => {
@@ -161,4 +174,37 @@ it("opts in only to this Mac's file and skills, with project names winning and n
   expect(on).not.toContain("Personal design, shadowed.");
   expect(on).not.toContain("Pi setup never served.");
   console.info("Pi served personal resources:", on);
+});
+
+it("INF-2054 keeps a session's runbook skills where its prompt names them while another session of its task opens", async () => {
+  // Every session of a task records into one folder, and two can be open at
+  // once (FIRS-5); the next one opens here after the runbooks were switched
+  // off, so it serves none.
+  const { open, system } = await world();
+  const recordDir = scratchDir("infinitary-pi-record-");
+  const runbookSkills = new Runbooks(
+    join(process.cwd(), "resources/runbooks"),
+    new SettingsStore(openInMemoryDatabase()),
+  ).crew({
+    kind: "implement",
+    place: "project",
+    delivery: "direct-pr",
+    care: "standard",
+    backend: "pi",
+  }).skills;
+  const [skill] = runbookSkills;
+  if (!skill) throw new Error("The bundle serves no runbook skill.");
+  const first = await open({ runbookSkills }, recordDir);
+  const sent = await system(first);
+  const location = sent.match(
+    new RegExp(`<name>${skill.name}</name>[\\s\\S]*?<location>([^<]+)</location>`),
+  )?.[1];
+  expect(location).toBeDefined();
+  const second = await open({ runbookSkills: [] }, recordDir);
+  expect(readFileSync(location ?? "", "utf8")).toBe(
+    Buffer.from(skill.files["SKILL.md"] ?? "", "base64").toString("utf8"),
+  );
+  second.dispose();
+  first.dispose();
+  await Promise.all([first.closed(), second.closed()]);
 });

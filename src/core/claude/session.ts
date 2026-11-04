@@ -48,6 +48,7 @@ import {
   StoppedBeforeStartError,
   type ThinkingLevel,
 } from "../session/session";
+import { claimStagingFolder, type StagingFolder } from "../session/stagingFolders";
 import type { BoundTool } from "../session/tools";
 import { bareToolName, CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
 import {
@@ -1490,20 +1491,26 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
   }
 
   private personalDigests: PersonalResourceDigests | undefined;
+  /** This session's own folder for the skills its attaches stage, held until it retires. */
+  private staging: StagingFolder | undefined;
 
   /**
    * A coding session's working copy as this attach hands it to the client:
-   * its instruction file, read now, and its skills, staged beside the
-   * session's record. A stage that fails costs the skills, never the attach.
+   * its instruction file, read now, and its skills, staged in this
+   * session's own folder beside its record (INF-2054). A stage that fails
+   * costs the skills, never the attach.
    */
   private async projectResources(): Promise<ClaudeProjectResources | undefined> {
     const shape = this.spec.shape;
     if (this.spec.builtins !== "coding" || shape.turns !== "rolling") return undefined;
+    // Attaches take turns, so this session's own folder is rebuilt by one at a time.
+    this.staging ??= await claimStagingFolder(shape.record.dir);
+    const staged = this.staging.dir;
     let project: ClaudeProjectResources;
     try {
       project = await claudeProjectResources(
         this.spec.cwd,
-        join(shape.record.dir, CLAUDE_PROJECT_SKILLS_DIR),
+        join(staged, CLAUDE_PROJECT_SKILLS_DIR),
       );
     } catch (error) {
       this.note(`the working copy's skills were not staged: ${String(error)}`);
@@ -1521,7 +1528,7 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       try {
         project.personalSkillsPlugin = await stageClaudeSkills(
           personal.skills,
-          join(shape.record.dir, "personal-skills"),
+          join(staged, "personal-skills"),
           "personal",
         );
       } catch (error) {
@@ -1533,15 +1540,19 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       if (this.spec.personalResources)
         for (const skill of personalResources(this.config.env.HOME, names).skills)
           names.add(skill.name);
-      const folders = await stageRunbookSkills(
-        this.spec.runbookSkills.filter((skill) => !names.has(skill.name)),
-        join(shape.record.dir, "runbook-files"),
-      );
-      project.runbookSkillsPlugin = await stageClaudeSkills(
-        folders,
-        join(shape.record.dir, "runbook-skills"),
-        "runbooks",
-      );
+      try {
+        const folders = await stageRunbookSkills(
+          this.spec.runbookSkills.filter((skill) => !names.has(skill.name)),
+          join(staged, "runbook-files"),
+        );
+        project.runbookSkillsPlugin = await stageClaudeSkills(
+          folders,
+          join(staged, "runbook-skills"),
+          "runbooks",
+        );
+      } catch (error) {
+        this.note(`the runbook skills were not staged: ${String(error)}`);
+      }
     }
     return project;
   }
@@ -1684,6 +1695,8 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
     if (this.retired) return;
     this.retired = true;
     this.unregister();
+    // Its client has exited: the next session of the task removes the folder.
+    this.staging?.release();
     void Promise.all(this.mirrors)
       .then(() => this.refreshMirror())
       .then(() => {

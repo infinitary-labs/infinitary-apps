@@ -52,6 +52,7 @@ import {
   type TaskShell,
   type ThinkingLevel,
 } from "../session/session";
+import { claimStagingFolder } from "../session/stagingFolders";
 import { PI_CONTROL_PROFILE } from "./controlProfile";
 import { speedRuntime } from "./crewSpeed";
 import { customPictureContext } from "./customPictureContext";
@@ -1230,6 +1231,7 @@ async function openCoding(
   spec: SessionSpec,
   record: Extract<SessionSpec["shape"], { turns: "rolling" }>["record"],
   binding: Extract<SessionSpec["binding"], { backend: "pi" }>,
+  staged: string | undefined,
 ): Promise<ModelSession> {
   const request = spec.bounds?.request;
   const sessionFile = record.resume?.backend === "pi" ? record.resume.sessionFile : undefined;
@@ -1257,8 +1259,8 @@ async function openCoding(
       )
     : undefined;
   const runbookSkills =
-    spec.runbookSkills && spec.shape.turns === "rolling"
-      ? await stageRunbookSkills(spec.runbookSkills, join(spec.shape.record.dir, "runbook-skills"))
+    spec.runbookSkills && staged
+      ? await stageRunbookSkills(spec.runbookSkills, join(staged, "runbook-skills"))
       : [];
   const resourceLoader = createCrewmateResourceLoader(spec.instructions.base, undefined, {
     runbookSkills,
@@ -1366,7 +1368,20 @@ export function createPiSessionFactory(deps: PiSessionDeps): SessionFactory {
         if (spec.shape.turns !== "rolling") {
           throw new Error("A Pi session serves the coding built-ins on a rolling session only.");
         }
-        return openCoding(deps, spec, spec.shape.record, binding);
+        // The runbook skills are staged in this session's own folder beside
+        // its record, held until it closes (INF-2054): Pi reads them where it
+        // was told they are for as long as it runs.
+        const staging = spec.runbookSkills
+          ? await claimStagingFolder(spec.shape.record.dir)
+          : undefined;
+        try {
+          const session = await openCoding(deps, spec, spec.shape.record, binding, staging?.dir);
+          if (staging) void session.closed().then(staging.release, staging.release);
+          return session;
+        } catch (caught) {
+          staging?.release();
+          throw caught;
+        }
       }
       return spec.shape.turns === "rolling"
         ? openRolling(deps, spec, spec.shape.record, binding)

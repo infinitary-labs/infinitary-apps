@@ -1010,6 +1010,286 @@ describe("the task protocol (task-system P3)", () => {
     expect(changed.map((event) => event.seq)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
+  // INF-2546 R5, under the captain's "close the task when its finishing
+  // change merges; others merge as continuing": the record's Info tab says
+  // merging closes the task only for the change the open finishing card was
+  // shown for. Reading a continuing pull request, or its request_merge
+  // card, claims nothing, and selecting another change never moves the claim.
+  it("says merging closes the task only for the change the open finishing card was shown for (INF-2546)", () => {
+    const { db, tasks, protocol, cards } = setup();
+    db.prepare(
+      "UPDATE repos SET origin = 'https://github.com/octo/nimbus-api.git', forge_kind = 'github', forge_host = 'github.com' WHERE id = 'r1'",
+    ).run();
+    seedTask(tasks, {
+      id: "work",
+      title: "Ship the API and its release",
+      status: "idle",
+      repoId: "r1",
+      branch: "fm/task-work",
+    });
+    const pull = (number: number) => `https://github.com/octo/nimbus-api/pull/${number}`;
+    const own = "1".repeat(40);
+    const theirs = "9".repeat(40);
+    seedDelivery(tasks, "work", {
+      mode: "direct-pr",
+      prNumber: 7,
+      prUrl: pull(7),
+      changeLabel: "#7",
+      headSha: own,
+      ci: "green",
+      checks: {
+        headSha: own,
+        prNumber: 7,
+        items: [{ name: "unit-tests", state: "success" }],
+        complete: true,
+        absenceDeclared: false,
+      },
+    });
+    const release = {
+      id: "review-release",
+      kind: "github" as const,
+      host: "github.com",
+      owner: "octo",
+      name: "nimbus-api",
+      number: 8,
+      headSha: theirs,
+      base: "main",
+      branch: "release-please--branches--main",
+      method: "squash" as const,
+      title: "chore(main): release 1.2.0",
+      at: 7_000,
+    };
+    // check_change(pull) reads the release pull request: the task's current change.
+    seedDelivery(tasks, "work", {
+      mergeReviews: [release],
+      checkTarget: release,
+      prNumber: 8,
+      prUrl: pull(8),
+      changeLabel: "#8",
+      headSha: theirs,
+      ci: "green",
+      checks: {
+        headSha: theirs,
+        prNumber: 8,
+        items: [{ name: "release", state: "success" }],
+        complete: true,
+        absenceDeclared: false,
+      },
+    });
+    const closes = () =>
+      (protocol.detail("work").delivery?.pullRequests ?? [])
+        .filter((line) => line.closes)
+        .map((line) => line.number);
+    expect(protocol.detail("work").delivery?.pullRequests?.map((line) => line.number)).toEqual([
+      7, 8,
+    ]);
+    expect(closes()).toEqual([]);
+    // Its request_merge card is a continuing merge: still no claim.
+    cards.push({
+      id: "card-continue",
+      taskId: "work",
+      author: "crewmate",
+      priority: 1,
+      title: "Merge the release",
+      meta: "",
+      body: "",
+      actions: [
+        {
+          id: "merge",
+          label: "Merge",
+          default: true,
+          effect: { kind: "request_merge", review: release.id },
+        },
+      ],
+      status: "ready",
+      offerId: "offer-continue",
+      createdAt: 1,
+    });
+    expect(closes()).toEqual([]);
+    // A finishing card shown for the release: merging the release closes the task.
+    cards.push({
+      id: "card-finish",
+      taskId: "work",
+      author: "crewmate",
+      priority: 1,
+      title: "Finish with the release",
+      meta: "",
+      body: "",
+      actions: [
+        {
+          id: "merge",
+          label: "Merge",
+          default: true,
+          effect: { kind: "settle", mode: "merge" },
+        },
+      ],
+      status: "ready",
+      offerId: "offer-finish",
+      createdAt: 2,
+    });
+    seedDelivery(tasks, "work", {
+      completionOffers: [
+        {
+          cardId: "card-finish",
+          offerId: "offer-finish",
+          headSha: theirs,
+          prNumber: 8,
+          shownFor: 8,
+          at: 7_100,
+        },
+      ],
+    });
+    expect(closes()).toEqual([8]);
+    // The own change is selected again: the card was shown for the release,
+    // so its claim does not move to the own pull request.
+    seedDelivery(tasks, "work", {
+      checkTarget: undefined,
+      prNumber: 7,
+      prUrl: pull(7),
+      changeLabel: "#7",
+      headSha: own,
+    });
+    expect(closes()).toEqual([]);
+    expect(taskDetailSchema.safeParse(protocol.detail("work")).success).toBe(true);
+    // The board does not carry the list; only the record's read does.
+    expect(protocol.board().tasks.find((task) => task.id === "work")?.delivery).not.toHaveProperty(
+      "pullRequests",
+    );
+  });
+
+  /** A task whose own pull request #7 the record reads at `head`, on GitHub. */
+  const ownPullRequest = (head: string) => {
+    const harness = setup();
+    harness.db
+      .prepare(
+        "UPDATE repos SET origin = 'https://github.com/octo/nimbus-api.git', forge_kind = 'github', forge_host = 'github.com' WHERE id = 'r1'",
+      )
+      .run();
+    seedTask(harness.tasks, {
+      id: "work",
+      title: "Ship the API and its release",
+      status: "idle",
+      repoId: "r1",
+      branch: "fm/task-work",
+    });
+    seedDelivery(harness.tasks, "work", {
+      mode: "direct-pr",
+      prNumber: 7,
+      prUrl: "https://github.com/octo/nimbus-api/pull/7",
+      changeLabel: "#7",
+      headSha: head,
+      ci: "green",
+      ciAt: 1_000,
+      checks: {
+        headSha: head,
+        prNumber: 7,
+        items: [{ name: "unit-tests", state: "success" }],
+        complete: true,
+        absenceDeclared: false,
+      },
+    });
+    const line = (number: number) =>
+      harness.protocol
+        .detail("work")
+        .delivery?.pullRequests?.find((item) => item.number === number);
+    return { ...harness, line };
+  };
+
+  // Re-review INF-2546 R5, under the captain's "close the task when its
+  // finishing change merges": the crewmate's declaration that merging its
+  // pull request completes the task is a finishing claim too, at the version
+  // it declared, with no card up; a later push leaves it behind.
+  it("says merging closes the task for the change its crewmate declared completes it, at the declared version (INF-2546)", () => {
+    const declared = "1".repeat(40);
+    const { tasks, line } = ownPullRequest(declared);
+    expect(line(7)?.closes).toBeUndefined();
+    tasks.recordReport("work", {
+      text: "Intent\nShip the API.\n\nVerified\nThe checks passed at the declared version.",
+      declared: { mergeCompletesTask: { prNumber: 7, headSha: declared } },
+    });
+    expect(line(7)?.closes).toBe(true);
+    // The crewmate pushes again: the declared version is no longer the one the record reads.
+    seedDelivery(tasks, "work", { headSha: "2".repeat(40), ci: "pending", ciAt: 2_000 });
+    expect(line(7)?.closes).toBeUndefined();
+  });
+
+  // Re-review INF-2546 R6, under the captain's "every PR with its checks":
+  // each pull request shows the checks read last, whichever of its versions
+  // they were read at - here after its branch went back to an earlier one.
+  it("shows each pull request's checks as read last, after its branch went back to an earlier version (INF-2546)", () => {
+    const first = "1".repeat(40);
+    const pushed = "2".repeat(40);
+    const { tasks, line } = ownPullRequest(first);
+    const reading = (head: string, ci: "green" | "red", at: number) =>
+      seedDelivery(tasks, "work", {
+        headSha: head,
+        ci,
+        ciAt: at,
+        checks: {
+          headSha: head,
+          prNumber: 7,
+          items: [{ name: "unit-tests", state: ci === "green" ? "success" : "failure" }],
+          complete: true,
+          absenceDeclared: false,
+        },
+      });
+    reading(pushed, "red", 2_000);
+    expect(line(7)?.ci).toBe("red");
+    // The push is taken back: the branch is at its first version again, read green.
+    reading(first, "green", 3_000);
+    expect(line(7)?.ci).toBe("green");
+  });
+
+  // Re-review INF-2546 R7, under the captain's "every PR ... and whether it
+  // closes the task": a pull request that merged stays merged on the list
+  // once the record stops naming what showed it - here its review left the
+  // capped list and another pull request became current.
+  it("keeps a merged pull request merged once its review left the list and another pull request is current (INF-2546)", () => {
+    const head = "1".repeat(40);
+    const { tasks, line } = ownPullRequest(head);
+    const review = (number: number, branch: string, sha: string) => ({
+      id: `review-${number}`,
+      kind: "github" as const,
+      host: "github.com",
+      owner: "octo",
+      name: "nimbus-api",
+      number,
+      headSha: sha,
+      base: "main",
+      branch,
+      method: "squash" as const,
+      title: number === 7 ? "fix: ship the API" : "chore(main): release 1.2.0",
+      at: 7_000 + number,
+    });
+    // The captain merged #7 on a continuing merge: its review keeps the receipt.
+    seedDelivery(tasks, "work", {
+      mergeReviews: [
+        { ...review(7, "fm/task-work", head), receipt: { head, sha: "a".repeat(40), at: 8_000 } },
+      ],
+    });
+    expect(line(7)?.merged).toBe(true);
+    const release = review(8, "release-please--branches--main", "9".repeat(40));
+    seedDelivery(tasks, "work", {
+      mergeReviews: [release],
+      checkTarget: release,
+      prNumber: 8,
+      prUrl: "https://github.com/octo/nimbus-api/pull/8",
+      changeLabel: "#8",
+      headSha: release.headSha,
+      ci: "green",
+      ciAt: 9_000,
+      checks: {
+        headSha: release.headSha,
+        prNumber: 8,
+        items: [{ name: "release", state: "success" }],
+        complete: true,
+        absenceDeclared: false,
+      },
+    });
+    expect(line(7)?.merged).toBe(true);
+    expect(line(8)?.merged).toBeUndefined();
+  });
+
   it("carries why a crewmate runs on its model in the record's detail, never on the board", () => {
     const { db, tasks, protocol } = setup();
     const model = { provider: "openai-codex", id: "gpt-5.5" };

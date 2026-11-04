@@ -31,6 +31,7 @@ import {
   cardPresentation,
   cardTakesReplies,
   MERGE_ANYWAY_ACTION,
+  MERGE_CLOSES_WORDS,
   onStage,
   opensSettings,
   splitSettleFacts,
@@ -85,6 +86,7 @@ import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { queueStartedBacklogRefusal } from "@shared/taskQueue";
 import { threadWait } from "@shared/threadWait";
+import type { MergeReview } from "@shared/mergeReview";
 import type { IntegrationAsk } from "@shared/writeAsk";
 import {
   CHECK_WORDS,
@@ -4476,7 +4478,15 @@ describe("CrewSupervisor", () => {
         this.merged = true;
         return { sha: `squash-${headSha}` };
       }
+      /** Pull requests that read open whatever the task's own reads (INF-2490). */
+      openNumbers = new Set<number>();
+      /** Pull requests the host cannot read (INF-2546). */
+      unreadable = new Set<number>();
       async pull(number: number): Promise<ForgePull> {
+        if (this.unreadable.has(number))
+          throw new ForgeError("transient", `GitHub answered 502 to GET /repos/o/r/pulls/${number}`);
+        if (this.openNumbers.has(number))
+          return { number, state: "open", merged: false, headSha: this.headSha, base: "main", readiness: "clean" };
         return {
           number,
           state: this.merged ? "closed" : "open",
@@ -5741,7 +5751,7 @@ describe("CrewSupervisor", () => {
         const delivery = h.tasks.get(h.taskId)?.delivery;
         expect(delivery).toMatchObject({
           checks: { items: [], absenceDeclared: true },
-          mergeReviews: [{ relationship: "owned", number: 7, headSha: NO_CI }],
+          mergeReviews: [{ number: 7, headSha: NO_CI }],
         });
         expect(delivery && currentCheckStatus(delivery)).toBe("green");
         await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]));
@@ -5973,6 +5983,298 @@ describe("CrewSupervisor", () => {
         }),
       );
       expect(harness.forge.merges).toEqual([]);
+    });
+
+    // INF-2490, the captain's q2 "fix now": RUU-35's release pull request,
+    // on release-please's branch, merged while autonomy was on, and the first
+    // mate's merge refused it as another branch's pull request. It closes as
+    // merged with autonomy on or off, once none of the task's other pull
+    // requests reads open (q4).
+    it.each([
+      ["on", true],
+      ["off", false],
+    ] as const)("closes as merged on the first mate's settle with autonomy %s, once none of the task's other pull requests is open (INF-2490)", async (_label, autonomy) => {
+      const harness = await approved({ referenced: true });
+      const { supervisor, tasks, taskId, forge } = harness;
+      if (autonomy) editPolicies(harness, { autonomy: true });
+      expect(supervisor.taskAutonomy(taskId)).toBe(autonomy);
+      forge.merged = true;
+      expect(await harness.declare({})).toContain("overall: merged");
+      const next: MergeReview = {
+        id: "review-next",
+        kind: "github",
+        host: "github.com",
+        owner: "o",
+        name: "r",
+        number: 8,
+        headSha: REPAIRED,
+        base: "main",
+        branch: "fm/task-next",
+        method: "squash",
+        title: "fix: label the meter",
+        at: Date.now(),
+      };
+      seedDelivery(tasks, taskId, { mergeReviews: [next] });
+      forge.openNumbers.add(8);
+      const held = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      expect(held.text).toContain("#8 on this task is still open");
+      expect(tasks.get(taskId)?.status).not.toBe("done");
+      // #8 merges too: nothing of the task is open, so it closes as merged.
+      forge.openNumbers.delete(8);
+      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      expect(result.text).toBe("#7 is already merged on GitHub.");
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+      expect(forge.merges).toEqual([]);
+    });
+
+    // INF-2546 R11, the captain's "with autonomy on, the first mate merges
+    // the finishing change": the first mate's settle merges the task's
+    // current change - here another branch's pull request - once, and closes
+    // the task as merged; with autonomy off the same settle sends nothing.
+    it("merges the current change on another branch on the first mate's settle with autonomy on, and closes the task as merged (INF-2546)", async () => {
+      const harness = await approved({ referenced: true });
+      const { supervisor, tasks, taskId, forge } = harness;
+      expect(tasks.get(taskId)?.delivery?.checkTarget).toMatchObject({ number: 7, branch: "fm/task-earlier" });
+      const held = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      expect(held.text).not.toContain("Merged");
+      expect(forge.merges).toEqual([]);
+      expect(tasks.get(taskId)?.status).not.toBe("done");
+      // With autonomy on, the crewmate's own merge card gives way to its note;
+      // the captain closes it, and the first mate merges.
+      editPolicies(harness, { autonomy: true });
+      supervisor.close(harness.card.id);
+      await tick();
+      harness.crewmate.finishPrompt();
+      await tick();
+      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      expect(result.text).toContain("Merged #7");
+      expect(forge.merges).toEqual([APPROVED]);
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+      expect(
+        tasks.changesFor(taskId).find((change) => change.head.branch === "fm/task-earlier")?.receipt,
+      ).toMatchObject({ outcome: "merged", reason: "merged" });
+    });
+
+    // INF-2546 R8, the captain's keep-open fallback: another pull request on
+    // the task that cannot be read may still be open, so the first mate's
+    // merge of the already-merged change keeps the task open and says so.
+    it("keeps the task open on the first mate's settle while another of its pull requests cannot be read (INF-2546)", async () => {
+      const harness = await approved({ referenced: true });
+      const { supervisor, tasks, taskId, forge } = harness;
+      forge.merged = true;
+      expect(await harness.declare({})).toContain("overall: merged");
+      const next: MergeReview = {
+        id: "review-next",
+        kind: "github",
+        host: "github.com",
+        owner: "o",
+        name: "r",
+        number: 8,
+        headSha: REPAIRED,
+        base: "main",
+        branch: "fm/task-next",
+        method: "squash",
+        title: "fix: label the meter",
+        at: Date.now(),
+      };
+      seedDelivery(tasks, taskId, { mergeReviews: [next] });
+      // The capped review list forgets #8; the record keeps its change.
+      seedDelivery(tasks, taskId, { mergeReviews: [] });
+      expect(tasks.changesFor(taskId).map((change) => change.handle?.number)).toContain(8);
+      forge.unreadable.add(8);
+      const held = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      expect(held.text).toContain("#8 on this task could not be read, so it may still be open");
+      expect(tasks.get(taskId)?.status).not.toBe("done");
+      // Read again and closed: nothing of the task is open, so it closes as merged.
+      forge.unreadable.delete(8);
+      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      expect(result.text).toBe("#7 is already merged on GitHub.");
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+      expect(forge.merges).toEqual([]);
+    });
+
+    // INF-2490: a merge card names one change, finishing or continuing, so
+    // its line can say whether the click closes the task.
+    it("refuses a card that offers both the finishing merge and a continuing one (INF-2490)", async () => {
+      const h = await approved({ referenced: true });
+      const review = h.tasks.get(h.taskId)?.delivery?.mergeReviews?.[0];
+      if (!review) throw new Error("Missing review");
+      await expect(
+        Promise.resolve().then(() =>
+          h.specs[0]?.onCard?.({
+            requiredActions: [],
+            title: "Merge both",
+            body: completionBody("<p>The PR is ready.</p><p>CI is green on the tested head.</p>"),
+            actions: [
+              { id: "finish", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+              { id: "continue", label: "Merge the review", effect: { kind: "request_merge", review: review.id } },
+            ],
+          }),
+        ),
+      ).rejects.toThrow("a merge card offers one merge");
+      expect(h.cards().some((card) => card.title === "Merge both")).toBe(false);
+    });
+
+    // INF-2546 R1, under the captain's "several changes per task, one per
+    // PR": a merge card offers the change it was shown for. Once check_change
+    // makes another pull request current, the click on a card shown for the
+    // earlier one - the crewmate's completion card or the first mate's merge
+    // card, neither carrying a story - merges nothing and keeps the task open.
+    it("refuses the click on a merge card shown for one pull request once another is current, and merges nothing (INF-2546)", async () => {
+      const h = await approved();
+      expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)).toMatchObject({
+        cardId: h.card.id,
+        prNumber: 7,
+        shownFor: 7,
+      });
+      const firstmateCard = h.supervisor.addFirstmateCard({
+        taskId: h.taskId,
+        title: "The meter fix is ready to merge",
+        body: "<p>The checks passed on the meter fix.</p>",
+        requiredActions: [],
+        actions: [
+          { id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE },
+          { id: "wait", label: "Wait" },
+        ],
+      });
+      expect(
+        h.tasks.get(h.taskId)?.delivery?.completionOffers?.find((offer) => offer.cardId === firstmateCard),
+      ).toMatchObject({ shownFor: 7 });
+      const next: MergeReview = {
+        id: "review-next",
+        kind: "github",
+        host: "github.com",
+        owner: "o",
+        name: "r",
+        number: 8,
+        headSha: REPAIRED,
+        base: "main",
+        branch: "fm/task-next",
+        method: "squash",
+        title: "fix: label the meter",
+        at: Date.now(),
+      };
+      seedDelivery(h.tasks, h.taskId, { mergeReviews: [next], checkTarget: next });
+      for (const [card, action] of [
+        [h.card.id, "merge"],
+        [firstmateCard, "merge"],
+      ] as const)
+        expect(() => h.supervisor.act(card, action)).toThrow(CardChoiceUnavailableError);
+      await tick();
+      expect(h.forge.merges).toEqual([]);
+      expect(h.forge.sends).toBe(0);
+      expect(h.authorization()).toBeUndefined();
+      expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
+      // With its own pull request current again, the crewmate's card merges it and closes the task.
+      seedDelivery(h.tasks, h.taskId, { checkTarget: undefined });
+      h.supervisor.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+      await vi.waitFor(() =>
+        expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" }),
+      );
+    });
+
+    // Re-review INF-2546 R1, under the same words: the change a merge card
+    // was shown for is kept apart from the head it approves. An offer the
+    // same card makes again at a moved head approves no head, and four later
+    // first mate cards do not push an open card's offer out; either way, the
+    // click refuses once another pull request is current.
+    it("keeps the change a merge card was shown for when its offer approves no head and after four later cards, and refuses its click once another change is current (INF-2546)", async () => {
+      const h = await approved();
+      const offerOf = (cardId: string) =>
+        h.tasks
+          .get(h.taskId)
+          ?.delivery?.completionOffers?.find(
+            (offer) => offer.cardId === cardId && offer.offerId === h.cards().find((card) => card.id === cardId)?.offerId,
+          );
+      const emitAgain = () =>
+        h.specs[0]?.onCard?.({
+          id: "meter-offer",
+          requiredActions: [],
+          title: "The meter fix again",
+          body: completionBody("<p>The PR is ready.</p><p>CI is green on the tested head.</p>"),
+          actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+        });
+      await repairTurn(h, async () => {
+        await emitAgain();
+      });
+      const again = h.cards().find((card) => card.title === "The meter fix again") as Card;
+      expect(offerOf(again.id)).toMatchObject({ headSha: APPROVED, prNumber: 7, shownFor: 7 });
+      // The same card, unchanged, shown again once the pull request moved:
+      // its offer stands at two heads, so it approves neither.
+      await repairTurn(h, async () => {
+        h.forge.headSha = REPAIRED;
+        await emitAgain();
+      });
+      expect(h.cards().find((card) => card.id === again.id)?.offerId).toBe(again.offerId);
+      expect(offerOf(again.id)).toMatchObject({ headSha: REPAIRED, shownFor: 7 });
+      expect(offerOf(again.id)?.prNumber).toBeUndefined();
+      for (const title of ["One", "Two", "Three", "Four"])
+        h.supervisor.addFirstmateCard({
+          taskId: h.taskId,
+          title: `First mate card ${title}`,
+          body: "<p>The checks passed on the meter fix.</p>",
+          requiredActions: [],
+          actions: [
+            { id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE },
+            { id: "wait", label: "Wait" },
+          ],
+        });
+      expect(offerOf(again.id)).toMatchObject({ shownFor: 7 });
+      expect(offerOf(h.card.id)).toMatchObject({ shownFor: 7 });
+      const next: MergeReview = {
+        id: "review-next",
+        kind: "github",
+        host: "github.com",
+        owner: "o",
+        name: "r",
+        number: 8,
+        headSha: REPAIRED,
+        base: "main",
+        branch: "fm/task-next",
+        method: "squash",
+        title: "fix: label the meter",
+        at: Date.now(),
+      };
+      seedDelivery(h.tasks, h.taskId, { mergeReviews: [next], checkTarget: next });
+      for (const card of [again.id, h.card.id])
+        expect(() => h.supervisor.act(card, "merge")).toThrow(/This action changed/);
+      await tick();
+      expect(h.forge.merges).toEqual([]);
+      expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
+    });
+
+    // Re-review INF-2546 R3, under the captain's "several changes per task,
+    // one per PR": the captain's click on a continuing merge of the task's
+    // own pull request makes it current with its own number, so the approval
+    // is of the change the slot names and it merges, keeping the task open.
+    it("merges the task's own pull request on a continuing merge card clicked while another pull request was current (INF-2546)", async () => {
+      const h = await approved();
+      // GitHub names the own pull request's branch, the task's own.
+      h.forge.referencedBranch = h.tasks.get(h.taskId)?.branch;
+      expect(await h.checkService.checkForCrew(h.taskId, { pull: 7 })).toContain("Merge review");
+      const own = h.tasks.get(h.taskId)?.delivery?.mergeReviews?.find((review) => review.number === 7);
+      if (!own) throw new Error("Missing the own review");
+      const other: MergeReview = { ...own, id: "review-other", number: 8, branch: "fm/task-other", headSha: REPAIRED };
+      seedDelivery(h.tasks, h.taskId, { mergeReviews: [own, other], checkTarget: other, prNumber: 8 });
+      await repairTurn(h, async () => {
+        await h.specs[0]?.onCard?.({
+          requiredActions: [],
+          title: "Merge the meter fix and keep going",
+          body: "<p>The meter fix is ready.</p><p>Merging it keeps this task open.</p>",
+          actions: [
+            { id: "merge", default: true, effect: { kind: "request_merge", review: own.id } },
+            { id: "not-now", label: "Not now" },
+          ],
+        });
+      });
+      const card = h.cards().find((entry) => entry.title === "Merge the meter fix and keep going") as Card;
+      h.supervisor.act(card.id, "merge");
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+      expect(h.authorization()?.status).toBe("consumed");
+      expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ prNumber: 7 });
+      expect(h.tasks.get(h.taskId)?.delivery?.checkTarget).toBeUndefined();
+      expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
     });
 
     it("mints an approval of the offer the captain saw at the head its checks read, and keeps it through a 405 conflict", async () => {
@@ -8865,15 +9167,11 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       regionHash: createHash("sha256").update(region).digest("hex"),
       number: 1,
     };
-    tasks.updateChangePresentation(taskId, () => ({
-      revisions: [story],
-      receipts: [],
-      publication,
-      published: publication,
-    }));
+    tasks.updateChangePresentation(taskId, () => ({ revisions: [story], receipts: [] }));
     seedDelivery(tasks, taskId, { headSha: head, prNumber: 1, ci: "green" });
-    // INF-1364: saved-story merge offers belong to the crewmate. Refuse a
-    // first-mate offer before showing it, also when revising an existing note.
+    // INF-2490, the captain's q8: the first mate may offer the merge on any
+    // change card. While the story is not published at its newest revision,
+    // the offer is refused before it shows, also when revising a note.
     const firstmateNote = {
       taskId,
       title: "The change waits for its completion card",
@@ -8884,26 +9182,44 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const unchangedCard = supervisor.cardsSnapshot().find((card) => card.id === firstmateId);
     const unchangedDelivery = tasks.get(taskId)?.delivery;
     const refusals: string[] = [];
+    const mergeOffer = {
+      ...firstmateNote,
+      requiredActions: [],
+      actions: [
+        { id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE },
+        { id: "wait", label: "Wait" },
+      ],
+    };
     for (const id of [undefined, firstmateId]) {
       expect(() => {
         try {
-          supervisor.addFirstmateCard({
-            ...firstmateNote,
-            id,
-            requiredActions: [],
-            actions: [
-              { id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE },
-              { id: "wait", label: "Wait" },
-            ],
-          });
+          supervisor.addFirstmateCard({ ...mergeOffer, id });
         } catch (error) {
           refusals.push(String(error));
           throw error;
         }
-      }).toThrow("saved change story");
+      }).toThrow("is not published at its newest revision");
       expect(supervisor.cardsSnapshot()).toEqual([unchangedCard]);
       expect(tasks.get(taskId)?.delivery).toEqual(unchangedDelivery);
     }
+    // Published, the same offer shows with the app's line and binds the story it carries.
+    tasks.updateChangePresentation(taskId, () => ({
+      revisions: [story],
+      receipts: [],
+      publication,
+      published: publication,
+    }));
+    supervisor.addFirstmateCard({ ...mergeOffer, id: firstmateId });
+    const offered = supervisor.cardsSnapshot().find((card) => card.id === firstmateId);
+    expect(offered?.actions.map((action) => action.id)).toContain("merge");
+    expect(splitSettleFacts(offered?.body ?? "")?.facts).toContain(MERGE_CLOSES_WORDS.closes);
+    const firstmateOffer = tasks.get(taskId)?.delivery?.completionOffers?.at(-1);
+    expect(firstmateOffer).toMatchObject({
+      cardId: firstmateId,
+      headSha: head,
+      presentationRevision: 1,
+    });
+    expect(firstmateOffer?.prNumber).toBeUndefined();
     const evidence = process.env.INFINITARY_MERGE_OFFER_EVIDENCE;
     if (evidence)
       writeFileSync(
@@ -8945,7 +9261,109 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(card?.body.startsWith(pendingMergeLine("project"))).toBe(true);
     expect(card && splitSettleFacts(card.body)?.facts).toContain('data-fact="change"');
     expect(card?.requiredActions).toBeUndefined();
-    expect(tasks.get(taskId)?.delivery?.completionOffers).toBeUndefined();
+    // The note records no offer of its own; only the first mate's merge card's stands.
+    expect(tasks.get(taskId)?.delivery?.completionOffers).toEqual([firstmateOffer]);
+  });
+
+  // INF-2490, the captain's q8 "include first-mate-merge": the first mate's
+  // merge card on a task with a published story passes the gate a crewmate's
+  // completion card does. A newer story revision refuses its click until
+  // that revision is published, and the click merges the finishing change
+  // and closes the task as merged (q3, q6).
+  it("merges on the captain's click of the first mate's merge card on a published story and closes the task as merged (INF-2490)", async () => {
+    const crewmate = fakeCrewmate();
+    const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Merged #1 on GitHub." }));
+    const { supervisor, tasks } = setup(crewmate, { checkCi: async () => "green", mergePullRequest });
+    const { taskId } = await supervisor.commission({
+      title: "Share the completed change",
+      intent: intentOf("share the same story"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    const story: ChangePresentation = {
+      version: 1,
+      taskId,
+      revision: 1,
+      destination: { host: "github.com", projectId: 1, fullName: "octo/meter", visibility: "private" },
+      title: "The upload survives restart",
+      base: head,
+      head,
+      why: ["Confirmed uploads must not be sent twice."],
+      whatChanged: ["The task keeps each confirmed receipt."],
+      before: ["Restart lost the receipt."],
+      after: ["Restart reuses the receipt."],
+      views: [],
+      noPicture: "This changes upload recovery, not a visible view.",
+      verification: ["Restart recovery passed."],
+      risk: METER_RISK,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "",
+      assets: [],
+      pictures: [],
+    };
+    const published = (revision: ChangePresentation) => {
+      const region = presentationMarkdown(revision, new Map(), "passed");
+      return {
+        revision: revision.revision,
+        head,
+        state: "confirmed" as const,
+        region,
+        regionHash: createHash("sha256").update(region).digest("hex"),
+        number: 1,
+      };
+    };
+    tasks.updateChangePresentation(taskId, () => ({
+      revisions: [story],
+      receipts: [],
+      publication: published(story),
+      published: published(story),
+    }));
+    seedDelivery(tasks, taskId, { headSha: head, prNumber: 1, ci: "green" });
+    const mergeOffer = {
+      taskId,
+      title: "The upload fix is ready to merge",
+      body: "<p>The crewmate's story is published and its checks passed.</p>",
+      requiredActions: [],
+      actions: [
+        { id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE },
+        { id: "wait", label: "Wait" },
+      ],
+    };
+    const cardId = supervisor.addFirstmateCard(mergeOffer);
+    // A newer revision prepared after the offer refuses its click.
+    const second = { ...story, revision: 2 };
+    tasks.updateChangePresentation(taskId, (record) => {
+      if (!record) throw new Error("Missing story");
+      return { ...record, revisions: [...record.revisions, second] };
+    });
+    expect(() => supervisor.act(cardId, "merge")).toThrow();
+    expect(mergePullRequest).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)?.status).not.toBe("done");
+    // Published, the revised offer binds the newer story and its click merges.
+    tasks.updateChangePresentation(taskId, (record) => {
+      if (!record) throw new Error("Missing story");
+      return { ...record, publication: published(second), published: published(second) };
+    });
+    supervisor.addFirstmateCard({ ...mergeOffer, id: cardId });
+    expect(tasks.get(taskId)?.delivery?.completionOffers?.at(-1)).toMatchObject({
+      cardId,
+      headSha: head,
+      presentationRevision: 2,
+    });
+    supervisor.act(cardId, "merge");
+    await vi.waitFor(() =>
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" }),
+    );
+    expect(mergePullRequest).toHaveBeenCalledTimes(1);
+    expect(tasks.timeline(taskId).find((event) => event.kind === "merged")).toMatchObject({
+      actor: "captain",
+      text: "Merged #1 on GitHub.",
+    });
   });
 
   it("publishes the completion card, with a fresh CI reading, once CI is green", async () => {
@@ -18317,6 +18735,8 @@ describe("the task graph (task-system P2)", () => {
         '<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">Default workspace</span></span>' +
         '<span class="inf-fact" data-fact="crewmate"><span class="inf-fact-k">Model</span><span class="inf-fact-v">mock-1</span></span>' +
         '<span class="inf-fact" data-fact="care"><span class="inf-fact-k">Care</span><span class="inf-fact-v">Quick</span></span>' +
+        // The app's line says the merge closes the task (INF-2490).
+        `<p class="inf-merge-closes" data-merge-closes>${MERGE_CLOSES_WORDS.closes}</p>` +
         "</div>",
     );
     // A card with no settle effect carries no facts line.

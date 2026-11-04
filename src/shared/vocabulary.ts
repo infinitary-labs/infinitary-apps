@@ -119,6 +119,17 @@ export const RUN_CHECK_WORDS: Words<RunChecks["state"]> = {
 export const CHECKS_NOT_READ_WORDS = "not read yet";
 
 /**
+ * The task record's Pull requests row (INF-2490): one line per pull request
+ * on a task with more than one, its state and the one whose merge closes it.
+ */
+export const PULL_REQUEST_WORDS = {
+  label: "Pull requests",
+  merged: "merged",
+  checks: "checks",
+  closes: "merging it closes the task",
+} as const;
+
+/**
  * What a change adds and deletes, as the fact strip's Lines cell says it
  * (INF-820): the plus and the minus sign beside separate words, so neither
  * count reads as the other.

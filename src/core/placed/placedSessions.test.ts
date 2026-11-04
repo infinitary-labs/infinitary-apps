@@ -127,7 +127,7 @@ import { TaskTimeline } from "../tasks/taskTimeline";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
 import { ProjectChanges } from "../workspace/projectChanges";
-import { keptRefFor, WorkspaceService } from "../workspace/workspaceService";
+import { checkedOutRefFor, keptRefFor, WorkspaceService } from "../workspace/workspaceService";
 import { NO_PLACED_TASK } from "./placedWork";
 
 /**
@@ -3017,6 +3017,64 @@ describe("a task that runs on a computer that runs work", () => {
     expect(home.tasks.timeline("t-copy").at(-1)?.text).toBe(
       "working copy on Mac mini removed - its 1 commit not in yet and uncommitted edits saved here first",
     );
+  });
+
+  // Review INF-2546 R2, under the captain's "Fix it in this change" for
+  // delivering an independent story from a computer that runs work: a
+  // crewmate there that checks out another branch prepares that branch's
+  // story and opens it from here, as one on this Mac does. The branch comes
+  // home to the task's own ref for it, so this Mac's branch of the same name
+  // never moves, and the task's own story stays empty.
+  it("prepares and opens the story of another branch the crewmate checked out there, bringing that branch home to the task's own ref for it", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.from("")));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.configure(repo.id, { delivery: "direct-pr" });
+    // This Mac's own branch of that name, at main, which nothing here may move.
+    await git(project.home, ["branch", "reading-fix", project.main]);
+    model([{ text: "Started on the reading fix." }]);
+    await at.start("t-other", "Deliver the reading fix on its own branch.", repo.id);
+    const work = at.folders("t-other").work;
+    await expect.poll(() => home.tasks.get("t-other")?.activity).toBe("idle");
+    // The crewmate checks out another branch there and commits the fix on it.
+    await git(work, ["checkout", "--quiet", "-b", "reading-fix"]);
+    writeFileSync(join(work, "reading.txt"), "on time\n");
+    const tip = await commit(work, "fix: read the meter on time");
+    const story = { ...footerStory(project.main, tip), title: "fix: read the meter on time" };
+    const publication: Step[] = [
+      { tools: [{ name: "prepare_change", args: { story } }] },
+      {
+        tools: [
+          {
+            name: "open_change",
+            args: { title: "fix: read the meter on time", branch: "reading-fix", presentation: 1 },
+          },
+        ],
+      },
+      { text: "Opened the reading fix with its own story." },
+    ];
+    model(publication);
+    const opening = api.requests.length;
+    await home.supervisor.steerCrewmate("t-other", "Open the reading fix.");
+    await expect.poll(() => api.requests.length - opening).toBe(publication.length);
+    await expect.poll(() => home.tasks.get("t-other")?.activity).toBe("idle");
+
+    // The story is that branch's, at the commit checked out there.
+    expect(said(api.requests.at(-2))).toContain("Prepared presentation 1 for");
+    expect(home.tasks.changePresentation("t-other", "reading-fix")?.revisions[0]?.head).toBe(tip);
+    expect(
+      home.tasks.changePresentation("t-other", home.tasks.get("t-other")?.branch),
+    ).toBeUndefined();
+    // open_change ran here from the task's own ref for the branch, and sent it up.
+    expect(said(api.requests.at(-1))).toContain("for reading-fix");
+    expect(await git(project.home, ["rev-parse", checkedOutRefFor("t-other")])).toBe(tip);
+    expect(await git(project.origin, ["rev-parse", "refs/heads/reading-fix"])).toBe(tip);
+    expect(await git(project.home, ["rev-parse", "refs/heads/reading-fix"])).toBe(project.main);
+    expect(home.tasks.changePresentation("t-other", "reading-fix")?.completion).toMatchObject({
+      revision: 1,
+      head: tip,
+    });
   });
 
   // INF-1713, and review INF-1772 R11: a move's copies are retired through

@@ -403,7 +403,6 @@ export const SAVED_STORY_RULE = [
   "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses the story after checks pass.",
   "Public GitHub and GitLab upload selected inspected media; other description hosts publish text, keeping media on the card. Plain Git keeps the story there. Never downgrade a failed upload.",
   "Keep local paths and private threads out of published text. A later commit needs a newly prepared revision with the same base and title and updated verification; publish where needed before the card.",
-  "A pull request opened before saved stories and since closed starts a new story; one still open keeps body and the five headings.",
 ].join(" ");
 
 const crewmateCardParams = Type.Object({

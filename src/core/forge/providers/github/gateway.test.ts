@@ -672,6 +672,64 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     expect(f.seen).toHaveLength(1);
   });
 
+  // INF-2546, under the captain's "several changes per task, one per PR":
+  // each change keeps its own story, so a raw write cannot replace either
+  // one's description, whichever change is current.
+  it("refuses a raw description write to every change's published story, not only the current one's (INF-2546)", async () => {
+    const f = await fixture();
+    const published = (number: number) => ({
+      revision: 1,
+      head: HEAD,
+      state: "confirmed" as const,
+      region: "<!-- story -->",
+      regionHash: "a".repeat(64),
+      number,
+    });
+    seedDelivery(f.tasks, "task-1", { prNumber: 1 });
+    f.tasks.updateChangePresentation("task-1", () => ({
+      revisions: [],
+      receipts: [],
+      publication: published(1),
+      published: published(1),
+    }));
+    // check_change(pull) makes the release pull request current; its story is its own.
+    const release = {
+      id: "mrrelease57",
+      kind: "github" as const,
+      host: "github.com",
+      owner: "octo",
+      name: "meter",
+      number: 57,
+      headSha: HEAD,
+      base: "main",
+      branch: "release-please--branches--main",
+      method: "squash" as const,
+      title: "chore(main): release 0.2.0",
+      at: 2,
+    };
+    seedDelivery(f.tasks, "task-1", {
+      mergeReviews: [release],
+      checkTarget: release,
+      prNumber: 57,
+    });
+    f.tasks.updateChangePresentation("task-1", () => ({
+      revisions: [],
+      receipts: [],
+      publication: published(57),
+      published: published(57),
+    }));
+    expect(f.tasks.get("task-1")?.delivery?.presentations).toHaveLength(1);
+    for (const number of [1, 57]) {
+      const refused = await f.write.run({
+        method: "PATCH",
+        path: `/repos/octo/meter/pulls/${number}`,
+        body: JSON.stringify({ body: "Bypass the story" }),
+      });
+      expect(refused.text).toContain("saved story with open_change");
+    }
+    expect(f.seen).toEqual([]);
+  });
+
   it("INF-125: checks the exact declared validation write at execution, including a kept write", async () => {
     const guard = vi.fn(
       async (_task: string, _request: string, _write: ValidationForgeWrite) => {},

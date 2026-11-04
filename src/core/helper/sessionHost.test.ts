@@ -38,6 +38,7 @@ import {
 import type { ContractWorld } from "../../../tests/helpers/sessionContract";
 import { moveWorkFolder, olderWorkFolder } from "../../../tests/helpers/workFolderMove";
 import { type HomeConnection, startConnection } from "../connection/connection";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { DevicePairing } from "../devices/pairing";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
@@ -1552,6 +1553,44 @@ describe("a conversation held on a computer that runs work", () => {
       "runs an older Infinitary that cannot change the words around a story; nothing was sent",
     );
   });
+
+  // INF-2184 (INF-2490): an older home drops branch and would open the
+  // task's own branch instead of the one the captain asked for.
+  it.each([true, false])(
+    "opens a change from a named branch only through a home that lists the change (has it: %s)",
+    async (supported) => {
+      const at = await placed({
+        homeChanges: CONTRACT_CHANGES.names.filter(
+          (name) => supported || name !== "open-change-branch",
+        ),
+      });
+      await at.order("inf:session:open", [
+        {
+          orderId: `open:${TASK}:1`,
+          task: TASK,
+          spec: { ...at.spec, tools: [...at.spec.tools, "open_change"] },
+        },
+      ]);
+      const input = {
+        title: "chore(main): release 0.1.8",
+        body: "The release the captain asked to open.",
+        branch: "release-please--branches--main",
+      };
+      model([{ tools: [{ name: "open_change", args: input }] }, { text: "Reported." }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "open-branch", task: TASK, text: "Open the release pull request." },
+      ]);
+      await at.ended(1);
+      const asked = at.home.effects
+        .filter((effect) => effect.channel === "inf:work:open-change")
+        .map((effect) => effect.request.input);
+      expect(asked).toEqual(supported ? [input] : []);
+      if (!supported)
+        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+          "needs an update before it can open a change from another branch; nothing was sent.",
+        );
+    },
+  );
 
   it("ends a turn the computer quit in the middle of as interrupted, and tells the home once it is back", async () => {
     const at = await placed();

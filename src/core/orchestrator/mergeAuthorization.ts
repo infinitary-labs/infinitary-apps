@@ -8,6 +8,7 @@ import {
 import { hasChangeRequests } from "@shared/forge";
 import { opensPullRequest, type RepoDelivery } from "@shared/repos";
 import { type ForgeRepo, forgeLocationOf, QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../forge";
+import { currentChange } from "../storage/changeProjection";
 import type {
   CompletionOffer,
   MergeAuthorization,
@@ -47,8 +48,8 @@ import type { WakeBody } from "./wakes";
  * The offer a captain's merge click on this card approves (FI3-304): the
  * completion offer the host published after reading its known head, on a
  * pull request task (direct-pr or queue-pr) whose project lives on GitHub
- * or GitLab, for the pull request the task still names - with where that
- * project lives.
+ * or GitLab, for the task's current change, whoever opened it (INF-2490) -
+ * with where that project lives.
  * Undefined where the click approves no head and is one attempt: a first
  * mate card, a seeded card, a plain Git host or an ambiguous baseline.
  */
@@ -60,8 +61,7 @@ export function approvableOffer(
 ):
   | { baseline: CompletionOffer & { prNumber: number }; host: string; owner: string; name: string }
   | undefined {
-  if (!card.offerId || !opensPullRequest(delivery) || record.delivery?.checkTarget)
-    return undefined;
+  if (!card.offerId || !opensPullRequest(delivery)) return undefined;
   if (!repo || !record.repoId || !hasChangeRequests(repo.host?.kind) || !record.branch)
     return undefined;
   const location = forgeLocationOf(repo);
@@ -72,7 +72,7 @@ export function approvableOffer(
   if (
     !baseline ||
     baseline.prNumber === undefined ||
-    baseline.prNumber !== record.delivery?.prNumber
+    baseline.prNumber !== currentChange(record.delivery, record.branch).number
   )
     return undefined;
   return {

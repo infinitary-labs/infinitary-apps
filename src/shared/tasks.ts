@@ -131,12 +131,34 @@ export const runChecksSchema = z.object({
 });
 export type RunChecks = z.infer<typeof runChecksSchema>;
 
+/**
+ * One pull request on a task (INF-2490): its number, its page where the app
+ * holds it, the checks last read for it, whether it merged, and whether its
+ * merge closes the task - true only for the change the open finishing card
+ * was shown for.
+ */
+export const taskPullRequestSchema = z.object({
+  number: z.number(),
+  url: z.string().optional(),
+  ci: z.enum(["green", "red", "pending", "no-pr", "merged"]).optional(),
+  merged: z.literal(true).optional(),
+  closes: z.literal(true).optional(),
+});
+export type TaskPullRequest = z.infer<typeof taskPullRequestSchema>;
+
 /** Delivery facts as they become known (check_pr_ci, land, merge-pr, review). */
 export const taskDeliveryViewSchema = z.object({
   captainAction: captainActionSchema.optional(),
   mode: taskDeliveryModeSchema,
+  /** `prUrl`, `prNumber` and `changeLabel` name the task's current pull request. */
   prUrl: z.string().optional(),
   prNumber: z.number().optional(),
+  /**
+   * Every pull request on the task, in number order (INF-2490). Only the
+   * record's read carries it, from the changes the record keeps; absent on
+   * a task with none, and on an older home.
+   */
+  pullRequests: z.array(taskPullRequestSchema).optional(),
   /** The change's name where the project lives: `#N`, or the sent-up branch. */
   changeLabel: z.string().optional(),
   /** The PR head the last CI read saw. */

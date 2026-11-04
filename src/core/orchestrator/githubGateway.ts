@@ -24,6 +24,7 @@ import {
 } from "../forge";
 import { guardApiWrite } from "../forge/apiWriteGuard";
 import { IntegrationOutcomeUnknown } from "../integrations";
+import { storyLedgers } from "../storage/changeProjection";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 
@@ -502,9 +503,18 @@ export class GithubGatewayService {
         "refused",
         `Use prepare_change and open_change to publish this task's saved story with its ${gitlab ? "merge request" : "pull request"}. Native media hosts confirm every selected attachment first.`,
       );
-    const ledger = record?.delivery?.presentation;
-    const number =
-      ledger?.publication?.number ?? ledger?.published?.number ?? record?.delivery?.prNumber;
+    // Every change keeps its own story (INF-2490), so each one's description is guarded.
+    const delivery = record?.delivery;
+    const changes = record ? this.options.tasks.changesFor(taskId) : [];
+    const guarded = storyLedgers(delivery).map(
+      (ledger) =>
+        ledger.publication?.number ??
+        ledger.published?.number ??
+        (ledger === delivery?.presentation
+          ? delivery.prNumber
+          : changes.find((change) => change.head.branch === (ledger.branch ?? record?.branch))
+              ?.handle?.number),
+    );
     // Compare by value: GitHub reads pulls/036 as pull request 36 (INF-285 G1). GitHub's
     // issues route is an alias for a pull request's description; GitLab's issues are their own.
     const named = (gitlab ? /^merge_requests\/(\d+)$/ : /^(?:pulls|issues)\/(\d+)$/).exec(rest);
@@ -512,10 +522,9 @@ export class GithubGatewayService {
     const field = gitlab ? "description" : "body";
     const query = new URLSearchParams(route.path.split("?")[1] ?? "");
     if (
-      ledger &&
       route.method === (gitlab ? "PUT" : "PATCH") &&
       named &&
-      Number(named[1]) === number &&
+      guarded.includes(Number(named[1])) &&
       ((body !== null && typeof body === "object" && field in body) || query.has(field))
     )
       throw new ForgeError(

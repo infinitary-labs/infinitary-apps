@@ -209,6 +209,36 @@
   border-radius: var(--radius-s);
   box-shadow: var(--focus-ring);
 }
+/* The record's Pull requests row (INF-2490): one line per pull request, parted like the Browser line. */
+.fm-task-facts .pull-requests {
+  margin-top: 6px;
+}
+.fm-task-facts .pull-request-list {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fm-task-facts .pull-request-line {
+  overflow-wrap: anywhere;
+}
+.fm-task-facts .pull-request-line + .pull-request-line {
+  margin-top: 4px;
+}
+.fm-task-facts .pull-request-line > * + *::before {
+  content: "·";
+  margin: 0 var(--space-2);
+  color: var(--fg-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+.fm-task-facts .pull-request-line .number {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.fm-task-facts .pull-request-line span.number {
+  color: var(--fg-1);
+}
 /* The uppercase micro label beside each line, or over each value of the strip. */
 .fm-task-facts .label {
   font-size: var(--text-xs);

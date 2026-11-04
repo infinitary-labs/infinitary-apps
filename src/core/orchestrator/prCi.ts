@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
+import type { ChangeRecord } from "@shared/change";
 import type { OpenChangeInput, StagedChangePresentation } from "@shared/changePresentation";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import {
@@ -14,7 +15,6 @@ import { acceptedValidation } from "@shared/liveValidation";
 import {
   type AbsentChecksDeclaration,
   MERGE_REVIEW_CAP,
-  type MergeRelationship,
   type MergeReview,
   mergeRuleWords,
   type SkippedRule,
@@ -53,13 +53,14 @@ import {
   QUEUE_STATUS,
   QUEUE_WAITING_WORDS,
 } from "../forge";
+import { currentChange } from "../storage/changeProjection";
 import type { CiWatch, TaskDelivery, TaskRecord } from "../storage/taskStore";
 import { earlyPublication } from "../tasks/liveValidation";
 import type { TaskService } from "../tasks/taskService";
 import { requireConventional, requireConventionalRange } from "../workspace/conventional";
 import { git } from "../workspace/git";
 import type { RepoRegistry } from "../workspace/repoRegistry";
-import { readChangeReading } from "../workspace/workspaceService";
+import { checkedOutRefFor, readChangeReading } from "../workspace/workspaceService";
 import type { ChangePresentations } from "./changePresentations";
 import { declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
@@ -225,6 +226,14 @@ function storyHeld(caught: unknown): never {
 }
 
 /** A pull request's number in the host's own words: `#N` on GitHub, `!N` on GitLab. */
+/**
+ * What naming a pull request does, in the answer that names it (INF-2490):
+ * it becomes the task's current change, and the card that merges it says
+ * whether the task closes.
+ */
+const SELECTED_CHANGE_WORDS =
+  "It is now this task's current change: check_change reads it until you name another or open_change opens one. A request_merge card merges it and the task continues; your completion card's merge finishes the task with it.";
+
 function numberLabel(forge: Forge, number: number): string {
   return forge.label({ number, branch: "", headSha: "", url: null });
 }
@@ -281,7 +290,17 @@ export class PrCiService {
        */
       /** Synchronous: kept proof is checked immediately before the forge send. */
       verifyValidationEvidence?: (taskId: string) => void;
-      bringBranchHome?: (taskId: string, strict?: boolean) => Promise<string | undefined>;
+      bringBranchHome?: (
+        taskId: string,
+        strict?: boolean,
+        branch?: string,
+      ) => Promise<string | undefined>;
+      /**
+       * The branch a placed task's working copy has checked out there, null
+       * when detached, and its commit (INF-2490); null when that computer is
+       * out of reach or cannot say.
+       */
+      checkedOut?: (taskId: string) => Promise<{ branch: string | null; head: string } | null>;
     },
   ) {}
 
@@ -347,13 +366,46 @@ export class PrCiService {
    * captain's to fix: the crewmate reports it, never signs in itself.
    */
   async checkForCrew(taskId: string, input: CheckChangeInput = {}): Promise<string> {
-    // The reading names the change it is of (INF-1873): a task reads only its own.
+    // The reading names the change it is of (INF-1873): one of this task's
+    // own changes (INF-2490). Naming another pull request's change makes it
+    // the current one, as naming its number does.
     if (input.change !== undefined) {
-      const own = this.options.tasks.changeFor(taskId.trim());
-      if (!own)
+      const changes = this.options.tasks.changesFor(taskId.trim());
+      if (changes.length === 0)
         return "check_change refused: this task has no change record yet; leave change out.";
-      if (own.id !== input.change.trim())
-        return `check_change refused: "${input.change}" is not this task's change; its change is ${own.id}.`;
+      const named = changes.find((change) => change.id === input.change?.trim());
+      if (!named)
+        return `check_change refused: "${input.change}" is not one of this task's changes; its changes are ${changes.map((change) => change.id).join(", ")}.`;
+      const record = this.options.tasks.get(taskId.trim());
+      const review = record?.delivery?.mergeReviews
+        ?.filter((item) => item.number === named.handle?.number && !item.skips)
+        .sort((a, b) => b.at - a.at)[0];
+      if (record && named.head.branch !== record.branch && !review && input.pull === undefined) {
+        // Its review is no longer kept: the change is read again by its
+        // number, never swapped for the current one.
+        if (named.handle?.number === undefined)
+          return `check_change refused: change "${named.id}" names no pull request to read; pass pull with its number.`;
+        const beside = (
+          [
+            "declaration",
+            "diagnosis",
+            "repair",
+            "rerun",
+            "conflictRepair",
+            "captainGuidance",
+          ] as const
+        ).filter((field) => input[field] !== undefined);
+        if (beside.length)
+          return `check_change refused: change "${named.id}" is not the current change; read it first with change alone, then send ${beside.join(", ")}.`;
+        return this.prepareReview(taskId, named.handle.number, input.absentChecks);
+      }
+      if (record && named.head.branch !== record.branch && review) this.select(record, review);
+      else if (record && named.head.branch === record.branch)
+        this.options.tasks.selectOwnChange(record.id, {
+          number: named.handle?.number,
+          headSha: named.versions.at(-1)?.head,
+          base: named.base ?? undefined,
+        });
     }
     if (input.pull !== undefined) {
       if (input.declaration) {
@@ -544,18 +596,6 @@ export class PrCiService {
     if (!pull.headRepo || pull.headRepo.toLowerCase() !== project.toLowerCase()) {
       return `Merge review refused: pull request ${number} is not a branch in ${project}. Forks are out of scope.`;
     }
-    // A check reading names a PR; it does not transfer branch ownership.
-    const owned = pull.branch === record.branch;
-    const relationship: MergeRelationship = owned ? "owned" : "referenced";
-    if (relationship === "referenced" && forge.kind !== "github") {
-      return "Merge review refused: a pull request this task did not open is supported on GitHub, including GitHub Enterprise, not on this host.";
-    }
-    if (relationship === "referenced") {
-      const destination = await forge.defaultBranch().catch(() => undefined);
-      if (!destination || pull.base !== destination) {
-        return `Merge review refused: pull request ${number} merges into ${pull.base}, not this project's default branch.`;
-      }
-    }
     let absentChecks: AbsentChecksDeclaration | undefined;
     if (absent) {
       const evidence = absent.evidence.trim();
@@ -567,7 +607,6 @@ export class PrCiService {
     }
     const review: MergeReview = {
       id: `mr${randomUUID().replace(/-/g, "").slice(0, 12)}`,
-      relationship,
       kind: forge.kind === "gitlab" ? "gitlab" : "github",
       host: origin.host,
       owner: origin.owner,
@@ -581,22 +620,14 @@ export class PrCiService {
       ...(absentChecks ? { absentChecks } : {}),
       at: this.now(),
     };
-    const kept = [review, ...(record.delivery?.mergeReviews ?? [])].slice(0, MERGE_REVIEW_CAP);
-    this.options.tasks.recordPermissionRecords(record.id, {
-      mergeReviews: kept,
-      checkTarget: relationship === "referenced" ? review : undefined,
-    });
+    this.select(record, review);
     const checks = await this.run(taskId, "crewmate");
     const where = forge.place ?? "where the project lives";
-    const whose =
-      relationship === "owned"
-        ? "This is the task's own pull request. A confirmed merge finishes the task."
-        : "This pull request is not the task's. A confirmed merge keeps the task and its working copy, and dropping the task does not close the pull request.";
     return [
       checks.text,
       `Merge review ${review.id} for ${forge.kind === "gitlab" ? "!" : "#"}${number} at ${pull.headSha} into ${pull.base} on ${where}.`,
-      whose,
-      "request_merge references this review. This request grants no approval and does not itself merge anything. With autonomy off, only the captain's merge button authorizes execution.",
+      SELECTED_CHANGE_WORDS,
+      "This request grants no approval and does not itself merge anything. With autonomy off, only the captain's merge button authorizes execution.",
       absentChecks
         ? "Absence evidence stored for this version. A merge offer expresses the crew's judgment; this evidence grants no merge permission."
         : "No absence declaration stored. An empty hosted reading alone does not establish that checks are absent.",
@@ -619,12 +650,6 @@ export class PrCiService {
       const fresh = await this.readSkipTarget(taskId, review);
       return fresh.ok ? undefined : `Card refused: ${fresh.text}`;
     }
-    if (review.relationship === "owned") {
-      const overall = await this.checkOverall(taskId);
-      return overall === "green" || overall === "merged"
-        ? undefined
-        : `Card refused: the checks read ${overall}, not passed.`;
-    }
     const fresh = await this.readReviewTarget(taskId, review);
     if (!fresh.ok) {
       return fresh.text === "already-merged"
@@ -635,15 +660,12 @@ export class PrCiService {
   }
 
   /**
-   * Merge the stored review after the captain's click. An owned review uses
-   * the ordinary guarded merge. A referenced review uses the same send after
-   * the same identity, check and readiness gates, and does not close the task.
+   * Merge the stored review after the captain's click: the pull request it
+   * names, whoever opened it, read again by its number at the reviewed
+   * version with the same identity, check and readiness gates. Whether the
+   * task closes is the caller's (`SettleService.requestMerge`).
    */
-  async mergeReview(
-    taskId: string,
-    reviewId: string,
-    guard?: MergeGuard,
-  ): Promise<PrOutcome & { relationship?: MergeRelationship }> {
+  async mergeReview(taskId: string, reviewId: string, guard?: MergeGuard): Promise<PrOutcome> {
     const record = this.options.tasks.get(taskId);
     const approved = guard ? standingAuthorization(record?.delivery)?.review : undefined;
     const review =
@@ -656,7 +678,6 @@ export class PrCiService {
     if (review.receipt) {
       return {
         ok: true,
-        relationship: review.relationship,
         text: `Pull request #${review.number} was already merged at ${review.receipt.head}.`,
         receipt: {
           head: review.receipt.head,
@@ -666,21 +687,7 @@ export class PrCiService {
       };
     }
     if (review.skips) return this.mergeSkippingRules(taskId, review);
-    if (review.relationship === "owned") {
-      const outcome = await this.merge(
-        taskId,
-        guard ?? {
-          head: review.headSha,
-          prNumber: review.number,
-          unattended: false,
-          beforeDispatch: () => undefined,
-        },
-      );
-      if (outcome.ok && outcome.receipt)
-        this.storeReviewReceipt(taskId, review.id, outcome.receipt);
-      return { ...outcome, relationship: "owned" };
-    }
-    return this.mergeReferenced(taskId, review, guard);
+    return this.mergeNamed(taskId, review, guard);
   }
 
   private storeReviewReceipt(
@@ -763,9 +770,6 @@ export class PrCiService {
     if (!pull.headRepo || pull.headRepo.toLowerCase() !== project.toLowerCase()) {
       return `Merge review refused: pull request ${number} is not a branch in ${project}. Forks are out of scope.`;
     }
-    // A check reading names a PR; it does not transfer branch ownership.
-    const owned = pull.branch === record.branch;
-    const relationship: MergeRelationship = owned ? "owned" : "referenced";
     const read = await this.readSkipState(taskId, forge, pull);
     if (!read.ok) return `Merge review refused: ${read.text}`;
     const { rules, failedChecks } = read;
@@ -774,7 +778,6 @@ export class PrCiService {
     }
     const review: MergeReview = {
       id: `mr${randomUUID().replace(/-/g, "").slice(0, 12)}`,
-      relationship,
       kind: "github",
       host: origin.host,
       owner: origin.owner,
@@ -788,19 +791,13 @@ export class PrCiService {
       skips: { rules, failedChecks },
       at: this.now(),
     };
-    const kept = [review, ...(record.delivery?.mergeReviews ?? [])].slice(0, MERGE_REVIEW_CAP);
-    this.options.tasks.recordPermissionRecords(record.id, {
-      mergeReviews: kept,
-      checkTarget: relationship === "referenced" ? review : undefined,
-    });
+    this.select(record, review);
     const checks = await this.run(taskId, "crewmate");
     const where = forge.place ?? "GitHub";
     return [
       checks.text,
       `Merge review ${review.id} for #${number} at ${pull.headSha} into ${pull.base} on ${where}, skipping the branch rules.`,
-      relationship === "owned"
-        ? "This is the task's own pull request. A confirmed merge finishes the task."
-        : "This pull request is not the task's. A confirmed merge keeps the task and its working copy.",
+      "A request_merge card merges it and the task continues.",
       rules.length
         ? `It may skip these rules, each of which ${where} says your sign-in may skip: ${rules.map((rule) => `${rule.rule} (${rule.ruleset})`).join("; ")}.`
         : "No branch rule holds it.",
@@ -876,7 +873,7 @@ export class PrCiService {
     const absent = record && this.absenceDeclared(record, { forge, change });
     // Nothing skips a queue-pr project's queue: its batch check is never a
     // check to finish or skip here, and the send waits on it.
-    const queueWait = this.queueWait(taskId, pull.headSha, checks.items);
+    const queueWait = this.queueWait(taskId, checks.items);
     const items = this.queued(taskId)
       ? checks.items.filter((item) => item.name !== QUEUE_STATUS)
       : checks.items;
@@ -1021,16 +1018,11 @@ export class PrCiService {
    * sent, then send it once. A result the app cannot read is unknown and is
    * never sent again; a confirmed merge keeps its receipt like any review.
    */
-  private async mergeSkippingRules(
-    taskId: string,
-    review: MergeReview,
-  ): Promise<PrOutcome & { relationship: MergeRelationship }> {
-    const relationship = review.relationship;
+  private async mergeSkippingRules(taskId: string, review: MergeReview): Promise<PrOutcome> {
     const label = `#${review.number}`;
     if (review.sent) {
       return {
         ok: false,
-        relationship,
         text:
           review.sent.outcome === "failed"
             ? `Cannot merge: that merge was sent once and GitHub did not merge it${review.sent.text ? ` (${review.sent.text})` : ""}. Nothing was sent again; prepare a new review to ask again. ${fixedHoldWords("sent-once")}`
@@ -1054,7 +1046,6 @@ export class PrCiService {
           this.storeReviewReceipt(taskId, review.id, receipt);
           return {
             ok: true,
-            relationship,
             text: `${label} is already merged on GitHub.`,
             receipt: { ...receipt, already: true },
           };
@@ -1062,7 +1053,6 @@ export class PrCiService {
       }
       return {
         ok: false,
-        relationship,
         text: `Cannot merge: ${fresh.text}`,
         ...(fresh.stop ? { stop: fresh.stop } : {}),
       };
@@ -1079,26 +1069,12 @@ export class PrCiService {
     };
     try {
       requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
-      if (relationship === "owned" && this.options.tasks.get(taskId)?.delivery?.presentation) {
-        const current = await forge.changeFor(change.branch);
-        if (
-          !current ||
-          current.number !== change.number ||
-          current.headSha !== change.headSha ||
-          !this.options.presentations
-        )
-          throw new Error("The current story cannot be checked for complete evidence.");
-        // INF-1365: the captain's override on the saved story passes its publication at this
-        // version, read after the last wait before the send.
-        change = overridePasses(this.options.tasks.get(taskId)?.delivery, "story", change.headSha)
-          ? { ...current, squashMessage: messageWithoutPresentation(current.body ?? "", taskId) }
-          : await this.options.presentations
-              .assertPublished(taskId, current, forge)
-              .catch(storyHeld);
-      }
+      const storied = await this.withPublishedStory(taskId, forge, change);
+      if ("held" in storied) return { ok: false, stop: "guidance", text: storied.held };
+      change = storied.change;
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
-      return { ok: false, relationship, text: `Cannot merge: ${message}`, problem: message };
+      return { ok: false, text: `Cannot merge: ${message}`, problem: message };
     }
     // A queue-pr project's queue answers first: the click marks the version
     // and sends nothing, and the review stays unsent for a click once it passes.
@@ -1113,16 +1089,14 @@ export class PrCiService {
         );
         return {
           ...waiting,
-          relationship,
           text: `${waiting.text} Nothing was sent; the same review merges on a new click once the queue passes it.`,
         };
       } catch (caught) {
-        // A status write the host refused is an outcome like the referenced
-        // route's, never an error that escapes the click.
+        // A status write the host refused is an outcome like an ordinary
+        // review's, never an error that escapes the click.
         const message = caught instanceof Error ? caught.message : String(caught);
         return {
           ok: false,
-          relationship,
           text: `Cannot merge: ${message}`,
           problem: message,
           ...(isSignInForgeFailure(caught)
@@ -1135,26 +1109,21 @@ export class PrCiService {
     }
     // Marked before the send: whatever happens next, it is never sent twice.
     this.markSkipSent(taskId, review.id, {});
-    const whose = relationship === "owned" ? "" : " The task stays open.";
-    const confirmed = (sha?: string): PrOutcome & { relationship: MergeRelationship } => {
+    const confirmed = (sha?: string): PrOutcome => {
       const receipt = { head: review.headSha, ...(sha ? { sha } : {}) };
       this.storeReviewReceipt(taskId, review.id, receipt);
       return {
         ok: true,
-        relationship,
-        text: `Merged ${label} on ${place}, skipping the branch rules.${whose}`,
+        text: `Merged ${label} on ${place}, skipping the branch rules.`,
         receipt,
       };
     };
-    const unknown = async (
-      why: string,
-    ): Promise<PrOutcome & { relationship: MergeRelationship }> => {
+    const unknown = async (why: string): Promise<PrOutcome> => {
       const after = await forge.pull?.(review.number).catch(() => undefined);
       if (after?.merged && after.headSha === review.headSha) return confirmed(after.mergedSha);
       this.markSkipSent(taskId, review.id, { outcome: "unknown", text: why });
       return {
         ok: false,
-        relationship,
         text: `The merge of ${label} was sent once, and its outcome is unknown: ${why}. It is not sent again; read pull request ${label} to see whether it merged.`,
         problem: why,
         stop: "outcome",
@@ -1170,7 +1139,6 @@ export class PrCiService {
       this.markSkipSent(taskId, review.id, { outcome: "failed", text: result.message });
       return {
         ok: false,
-        relationship,
         text: `Cannot merge: ${place} did not merge ${label}: ${result.message}. Nothing merged, and it is not sent again.`,
         problem: result.message,
       };
@@ -1181,7 +1149,6 @@ export class PrCiService {
       this.markSkipSent(taskId, review.id, { outcome: "failed", text: message });
       return {
         ok: false,
-        relationship,
         text: `Cannot merge: ${message}. Nothing merged, and it is not sent again.`,
         problem: message,
         ...(isSignInForgeFailure(caught) ? { stop: "sign-in" as const } : {}),
@@ -1207,7 +1174,7 @@ export class PrCiService {
   }
 
   /**
-   * Re-read a referenced review's target. `ok` means it still matches and may
+   * Re-read a review's pull request. `ok` means it still matches and may
    * merge. At the captain's click (`click`), a pull request GitHub has not
    * decided on yet is read again until it decides (`readDecided`).
    */
@@ -1240,8 +1207,8 @@ export class PrCiService {
         stop: "identity",
       };
     }
-    if (forge.kind !== "github" || !forge.pull) {
-      return { ok: false, text: "this host cannot merge a pull request the task did not open." };
+    if (!forge.pull) {
+      return { ok: false, text: "this host cannot read a pull request by its number." };
     }
     const read = forge.pull.bind(forge);
     let pull: ForgePull;
@@ -1291,14 +1258,6 @@ export class PrCiService {
         stop: "moved",
       };
     }
-    const destination = await forge.defaultBranch().catch(() => undefined);
-    if (!destination || pull.base !== destination) {
-      return {
-        ok: false,
-        text: "the pull request no longer merges into the default branch.",
-        stop: "identity",
-      };
-    }
     const change: ForgeChange = {
       number: pull.number,
       url: null,
@@ -1320,7 +1279,7 @@ export class PrCiService {
     }
     // A queue-pr project's own batch check is the queue's to answer, read by
     // the merge that marks it, never a check or a rule this gate stops on.
-    const queueWait = this.queueWait(taskId, pull.headSha, checks.items);
+    const queueWait = this.queueWait(taskId, checks.items);
     const items = this.queued(taskId)
       ? checks.items.filter((item) => item.name !== QUEUE_STATUS)
       : checks.items;
@@ -1371,11 +1330,17 @@ export class PrCiService {
     return { ok: true, forge, pull, ...(queueWait ? { queueWait } : {}) };
   }
 
-  private async mergeReferenced(
+  /**
+   * The captain's click on a request_merge review: the pull request it
+   * names, read again by its number, sent once at the reviewed version (or
+   * the version a declared repair carried the approval to). A story
+   * published on that pull request must still be the published one.
+   */
+  private async mergeNamed(
     taskId: string,
     review: MergeReview,
     guard?: MergeGuard,
-  ): Promise<PrOutcome & { relationship: "referenced" }> {
+  ): Promise<PrOutcome> {
     const candidate = guard ? { ...review, headSha: guard.head } : review;
     const fresh = await this.readReviewTarget(taskId, candidate, !guard?.unattended);
     if (!fresh.ok) {
@@ -1391,8 +1356,7 @@ export class PrCiService {
             this.storeReviewReceipt(taskId, review.id, receipt);
             return {
               ok: true,
-              relationship: "referenced",
-              text: `#${review.number} is already merged${located.forge.place ? ` on ${located.forge.place}` : ""}.`,
+              text: `${numberLabel(located.forge, review.number)} is already merged${located.forge.place ? ` on ${located.forge.place}` : ""}.`,
               receipt: { ...receipt, already: true },
             };
           }
@@ -1400,7 +1364,6 @@ export class PrCiService {
       }
       return {
         ok: false,
-        relationship: "referenced",
         text:
           guard && fresh.stop === "moved"
             ? `Cannot merge: the pull request moved past the approved version. Declare its repair with check_change conflictRepair; the captain's approval is kept.`
@@ -1410,7 +1373,7 @@ export class PrCiService {
       };
     }
     const { forge, pull } = fresh;
-    const change: ForgeChange = {
+    let change: ForgeChange = {
       number: pull.number,
       url: null,
       branch: pull.branch ?? review.branch,
@@ -1422,30 +1385,37 @@ export class PrCiService {
     try {
       if (hasChangeRequests(forge.kind))
         requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
+      // The task's own pull request merges with its description, as the
+      // finishing merge sends it.
+      if (change.branch === this.options.tasks.get(taskId)?.branch) {
+        const own = await forge.changeFor(change.branch);
+        if (own && own.number === change.number) change = { ...change, body: own.body ?? "" };
+      }
+      const storied = await this.withPublishedStory(taskId, forge, change, guard);
+      if ("held" in storied) return { ok: false, stop: "guidance", text: storied.held };
+      change = storied.change;
       const held = guard?.held?.();
-      if (held) return { ok: false, relationship: "referenced", stop: "guidance", text: held };
-      if (fresh.queueWait) {
-        const waiting = await this.enqueue(taskId, forge, change, fresh.queueWait.state, () =>
+      if (held) return { ok: false, stop: "guidance", text: held };
+      if (fresh.queueWait)
+        return await this.enqueue(taskId, forge, change, fresh.queueWait.state, () =>
           guard?.beforeDispatch(candidate.headSha, true),
         );
-        return { ...waiting, relationship: "referenced" };
-      }
       const stopped = guard?.beforeDispatch(candidate.headSha);
-      if (stopped)
-        return { ok: false, relationship: "referenced", stop: "withdrawn", text: stopped };
+      if (stopped) return { ok: false, stop: "withdrawn", text: stopped };
       dispatched = true;
       const sent = await forge.putIn(change, candidate.headSha);
       const receipt = { head: candidate.headSha, ...(sent?.sha ? { sha: sent.sha } : {}) };
       this.storeReviewReceipt(taskId, review.id, receipt);
       return {
         ok: true,
-        relationship: "referenced",
-        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}. The task stays open.`,
+        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.`,
         receipt,
       };
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
-      const after = await forge.pull?.(review.number).catch(() => undefined);
+      const after = dispatched
+        ? await forge.pull?.(review.number).catch(() => undefined)
+        : undefined;
       if (after?.merged && after.headSha === candidate.headSha) {
         const receipt = {
           head: candidate.headSha,
@@ -1454,14 +1424,12 @@ export class PrCiService {
         this.storeReviewReceipt(taskId, review.id, receipt);
         return {
           ok: true,
-          relationship: "referenced",
-          text: `Merged #${review.number}${forge.place ? ` on ${forge.place}` : ""}. The task stays open.`,
+          text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.`,
           receipt,
         };
       }
       return {
         ok: false,
-        relationship: "referenced",
         text: `Cannot merge: ${message}`,
         problem: message,
         stop: guard
@@ -1475,6 +1443,174 @@ export class PrCiService {
   }
 
   /**
+   * The pull request as it merges with its change's saved story - each
+   * change keeps its own (INF-2490) - for both merges, the finishing one and
+   * a continuing one: the published story at this version, or the
+   * description's own words under the captain's override on the story
+   * (INF-1365). A pull request with no story of this task merges as it is.
+   * On the captain's kept approval of a completion offer the story must be
+   * the one approved; a request_merge approval names a review, which
+   * showed no story. On either kept approval, a repair the host accepted
+   * after the published version refreshes the story to the repaired version
+   * first (FI3-304). The captain's guidance that holds the merge is answered
+   * instead, read before that refresh.
+   */
+  private async withPublishedStory(
+    taskId: string,
+    forge: Forge,
+    change: ForgeChange,
+    guard?: MergeGuard,
+  ): Promise<{ change: ForgeChange } | { held: string }> {
+    const ledger = this.options.tasks.changePresentation(taskId, change.branch);
+    const published = ledger?.published ?? ledger?.publication;
+    // A publication names the pull request it went to.
+    if (!ledger || (published?.number !== undefined && published.number !== change.number))
+      return { change };
+    const read = await forge.changeFor(change.branch);
+    if (
+      !read ||
+      read.number !== change.number ||
+      read.headSha !== change.headSha ||
+      !this.options.presentations
+    )
+      throw new Error("The current story cannot be checked for complete evidence.");
+    const record = this.options.tasks.get(taskId);
+    // INF-1365: the captain's override on the saved story passes its publication at this
+    // version: nothing is marked published, uploaded or refreshed, and the squash carries the
+    // description's own words, not an older story's. It is read after the last wait before the
+    // send, so a withdrawn override holds this merge.
+    if (overridePasses(record?.delivery, "story", change.headSha))
+      return {
+        change: { ...read, squashMessage: messageWithoutPresentation(read.body ?? "", taskId) },
+      };
+    const authorization = guard ? standingAuthorization(record?.delivery) : undefined;
+    if (authorization && !authorization.review) {
+      const offered = record?.delivery?.completionOffers?.find(
+        (offer) =>
+          offer.cardId === authorization.card.id && offer.offerId === authorization.card.offerId,
+      );
+      if (
+        !offered?.presentationContentHash ||
+        offered.presentationContentHash !== ledger.published?.contentHash
+      )
+        throw new Error(
+          "The published story differs from the approved story. Show a new completion offer before merging.",
+        );
+    }
+    const held = guard?.held?.();
+    if (held) return { held };
+    let current = read;
+    const publishedHead = ledger.published?.head;
+    if (
+      authorization &&
+      candidateHead(authorization) === change.headSha &&
+      publishedHead &&
+      publishedHead !== change.headSha &&
+      authorization.lineage.length > 0 &&
+      (publishedHead === authorization.approvedHead ||
+        authorization.lineage.some((step) => step.toHead === publishedHead))
+    ) {
+      await this.options.presentations.refreshConflictOnly(
+        taskId,
+        publishedHead,
+        change.headSha,
+        forge,
+        change.branch,
+        change.title ?? "",
+        this.attestsAt(taskId),
+      );
+      const refreshed = await forge.changeFor(change.branch);
+      if (!refreshed || refreshed.number !== change.number || refreshed.headSha !== change.headSha)
+        throw new Error("The pull request changed during the story refresh.");
+      current = refreshed;
+    }
+    return {
+      change: await this.options.presentations
+        .assertPublished(taskId, current, forge)
+        .catch(storyHeld),
+    };
+  }
+
+  /**
+   * The id of the change record a reading is of (INF-2490): the one on the
+   * read branch that names the read pull request, so passing it back to
+   * check_change selects this same change. Null while the record keeps none.
+   */
+  private changeIdOf(record: TaskRecord, change: ForgeChange): string | null {
+    return this.changeRecordOf(record, change)?.id ?? null;
+  }
+
+  /** The change record of one pull request the task names (INF-2490), as `changeIdOf` finds it. */
+  private changeRecordOf(record: TaskRecord, change: ForgeChange): ChangeRecord | undefined {
+    const changes = this.options.tasks.changesFor(record.id);
+    const named = changes.find(
+      (item) =>
+        item.head.branch === change.branch &&
+        (change.number === undefined || item.handle?.number === change.number),
+    );
+    if (named) return named;
+    return change.branch === record.branch ? this.options.tasks.changeFor(record.id) : undefined;
+  }
+
+  /**
+   * Make the named pull request the task's current change (INF-2490,
+   * `primitives/changes.md`): the slot's readings then follow it. The task's
+   * own branch needs no selection; any other branch is selected by the
+   * review that named it. The review is kept either way.
+   */
+  private select(record: TaskRecord, review: MergeReview): void {
+    const kept = [
+      review,
+      ...(record.delivery?.mergeReviews ?? []).filter((item) => item.id !== review.id),
+    ].slice(0, MERGE_REVIEW_CAP);
+    const own = review.branch === record.branch;
+    this.options.tasks.recordPermissionRecords(record.id, {
+      mergeReviews: kept,
+      ...(own ? {} : { checkTarget: review }),
+    });
+    if (own) this.options.tasks.selectOwnChange(record.id, review);
+  }
+
+  /**
+   * A change open_change opened from an existing branch (INF-2184) becomes
+   * the task's current change, selected the way a named pull request is.
+   * A host with no pull requests keeps no selection: its branch is read by
+   * name.
+   */
+  private async selectOpened(
+    record: TaskRecord,
+    forge: Forge,
+    change: ForgeChange,
+    asked: string | undefined,
+  ): Promise<void> {
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    const origin = forgeOf(repo?.origin);
+    if (
+      change.number === undefined ||
+      !hasChangeRequests(forge.kind) ||
+      !origin.host ||
+      !origin.owner ||
+      !origin.name
+    )
+      return;
+    const base = change.base ?? asked ?? (await forge.defaultBranch());
+    this.select(this.options.tasks.get(record.id) ?? record, {
+      id: `mr${randomUUID().replace(/-/g, "").slice(0, 12)}`,
+      kind: forge.kind === "gitlab" ? "gitlab" : "github",
+      host: origin.host,
+      owner: origin.owner,
+      name: origin.name,
+      number: change.number,
+      headSha: change.headSha,
+      base,
+      branch: change.branch,
+      method: "squash",
+      title: change.title ?? "",
+      at: this.now(),
+    });
+  }
+
+  /**
    * The check watch's read (`./checkWatch.ts`): the forge calls a reading
    * makes, answered as a typed fact rather than tool text. A reading
    * records pending as well as settled checks, so every surface follows a
@@ -1484,14 +1620,12 @@ export class PrCiService {
     const located = this.locate(taskId);
     if ("said" in located) return { kind: "failed", transient: false, problem: located.said };
     const { record, forge } = located;
-    const branch = record.delivery?.checkTarget?.branch ?? located.branch;
+    const current = currentChange(record.delivery, located.branch);
+    const branch = current.branch;
     try {
       let change = await this.checkChange(record, branch, forge);
       if (!change) {
-        const pull = await this.namedPull(
-          forge,
-          record.delivery?.checkTarget?.number ?? record.delivery?.prNumber,
-        );
+        const pull = await this.namedPull(forge, current.number);
         this.assertCheckTarget(record);
         this.record(record.id, pull?.merged ? "merged" : "no-pr");
         if (pull?.merged) {
@@ -1679,19 +1813,27 @@ export class PrCiService {
       if ("said" in located) return located.said;
       if (!this.options.presentations) return "Saved change stories are unavailable.";
       try {
+        // The story is for the change on the branch the working copy has
+        // checked out; each change keeps its own (INF-2490).
+        const current = currentChange(located.record.delivery, located.branch);
+        const branch = (await this.presentationBranch(taskId)) ?? current.branch;
+        const ledger = this.options.tasks.changePresentation(taskId, branch);
         // Only a pull request still open for the branch predates saved stories;
         // a recorded one that has closed is forgotten, as for any new task.
         if (
-          !located.record.delivery?.presentation &&
+          !ledger &&
           hasChangeRequests(located.forge.kind) &&
-          (await located.forge.changeFor(located.branch))
+          (await located.forge.changeFor(branch))
         )
           return "This pull request predates saved stories and will not be rewritten into one. To replace its description, pass body to open_change.";
-        const merged = await this.mergedBeforeStories(located.record, located.forge);
+        const merged =
+          branch === current.branch
+            ? await this.mergedBeforeStories(ledger, current.number, located.forge)
+            : undefined;
         if (merged) return merged;
         const revision = await this.options.presentations.prepare(taskId, staged, located.forge);
         const destination = this.options.tasks
-          .changePresentation(taskId)
+          .changePresentation(taskId, branch)
           ?.revisions.find((saved) => saved.revision === revision)?.destination;
         return `Prepared presentation ${revision} for ${staged.head}. ${destination ? `${storyAudience(destination)} ` : ""}No file was uploaded and no card was shown. Pass presentation: ${revision} to open_change after review and pushing; pass the same current published revision to emit_card after checks pass.`;
       } catch (caught) {
@@ -1712,20 +1854,14 @@ export class PrCiService {
    * closed without merging is forgotten and the task starts a story.
    */
   private async mergedBeforeStories(
-    record: {
-      delivery?: {
-        prNumber?: number;
-        presentation?: { published?: unknown; reconciled?: unknown };
-      } | null;
-    },
+    story: { published?: unknown; reconciled?: unknown } | undefined,
+    number: number | undefined,
     forge: Forge,
   ): Promise<string | undefined> {
-    const story = record.delivery?.presentation;
     // Once a story is published or reconciled, #N is the story's own pull
     // request and its own stops decide. A failed read reaches the caller's
     // catch, so the check fails closed.
     if (story?.published || story?.reconciled) return undefined;
-    const number = record.delivery?.prNumber;
     if (number === undefined) return undefined;
     const pull = await this.pullOf(forge, number);
     return pull.merged
@@ -1738,6 +1874,10 @@ export class PrCiService {
     if (!record?.branch) throw new Error("The task has no committed branch.");
     let dir = record.worktreeDir;
     if (record.deviceId) {
+      // A working copy there reads its own checkout (INF-2490): another
+      // branch the crewmate checked out answers its commit there.
+      const there = await this.options.checkedOut?.(taskId);
+      if (there && there.branch !== record.branch) return there.head;
       dir = (await this.options.bringBranchHome?.(taskId, true)) ?? "";
     } else if (dir && (await git(dir, ["status", "--porcelain", "--untracked-files=no"])).trim()) {
       throw new Error(
@@ -1745,7 +1885,30 @@ export class PrCiService {
       );
     }
     if (!dir) throw new Error("The current code version is unavailable.");
-    return git(dir, ["rev-parse", `${record.branch}^{commit}`]);
+    // Here the demonstrated version is the commit the working copy has
+    // checked out: the task's own branch, or an existing branch or another
+    // change the crewmate checked out to deliver (INF-2184, INF-2490).
+    return git(dir, ["rev-parse", `${record.deviceId ? record.branch : "HEAD"}^{commit}`]);
+  }
+
+  /**
+   * The branch the working copy has checked out, whose change a story is
+   * prepared for (INF-2184, INF-2490): the task's own, or an existing
+   * branch the crewmate checked out to deliver, on this Mac or on the
+   * computer that runs the task. Undefined - the current change - with no
+   * branch checked out. A computer that cannot say delivers the task's own.
+   */
+  async presentationBranch(taskId: string): Promise<string | undefined> {
+    const record = this.options.tasks.get(taskId);
+    if (record?.deviceId) {
+      const there = await this.options.checkedOut?.(taskId);
+      return there ? (there.branch ?? undefined) : record.branch;
+    }
+    if (!record?.worktreeDir) return undefined;
+    const branch = (
+      await git(record.worktreeDir, ["rev-parse", "--abbrev-ref", "HEAD"]).catch(() => "")
+    ).trim();
+    return branch && branch !== "HEAD" ? branch : undefined;
   }
 
   /** Delivery, not the presence of an origin, decides whether a story reaches a host. */
@@ -1776,25 +1939,38 @@ export class PrCiService {
     const located = this.locate(taskId, "open");
     if ("said" in located) throw new Error(located.said);
     if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
-    const change = await located.forge.changeFor(located.branch);
+    // The story is on the task's current change, whichever branch it is on (INF-2490).
+    const change = await located.forge.changeFor(
+      currentChange(located.record.delivery, located.branch).branch,
+    );
     if (!change) throw new Error("The story's pull request is not open.");
     await this.options.presentations.assertPublished(taskId, change, located.forge, revision);
-    return this.options.presentations.completion(taskId, revision, change.headSha);
+    return this.options.presentations.completion(taskId, revision, change.headSha, change.branch);
   }
 
   async open(taskId: string, input: OpenChangeInput): Promise<string> {
     const located = this.locate(taskId, "open");
     if ("said" in located) return located.said;
-    const { record, branch, forge } = located;
+    const { record, forge } = located;
+    // INF-2184: an existing branch the crewmate names opens as it is, at
+    // its own head; the task's own branch is the default.
+    const branch = input.branch?.trim() || located.branch;
+    const own = branch === record.branch;
     if (input.repository !== undefined) {
       const refused = this.foreignRepository(record, input.repository);
       if (refused) return refused;
     }
     try {
       requireConventional(input.title, "pull request title", this.options.namingRule?.());
-      this.options.tasks.recordPermissionRecords(taskId, { checkTarget: undefined });
-      await this.branchHome(record);
-      const dir = await this.validateRange(record.repoId, record.repoDir, branch, forge);
+      if (own) {
+        this.options.tasks.selectOwnChange(taskId);
+        await this.branchHome(record);
+      }
+      // Where this Mac's git reads the branch: by its name, or another
+      // branch from the computer that runs the task at the task's own ref
+      // for it (INF-2490).
+      const read = own || !record.deviceId ? branch : await this.otherBranchHome(record, branch);
+      const dir = await this.validateRange(record.repoId, record.repoDir, branch, forge, read);
       const existing = await forge.changeFor(branch);
       if (existing && hasChangeRequests(forge.kind))
         requireConventional(
@@ -1831,7 +2007,7 @@ export class PrCiService {
       // version is read where the range was checked: the project's folder,
       // where a branch from another computer came home.
       if (current.delivery?.reviewVerdict || current.delivery?.liveValidation) {
-        const head = existing?.headSha ?? (await git(dir, ["rev-parse", branch]));
+        const head = existing?.headSha ?? (await git(dir, ["rev-parse", read]));
         await carryPassedReview({
           tasks: this.options.tasks,
           taskId,
@@ -1862,8 +2038,10 @@ export class PrCiService {
           prerequisite = early.request.id;
       }
       const presentations = this.options.presentations;
-      if (!existing && presentations && hasChangeRequests(forge.kind)) {
-        const merged = await this.mergedBeforeStories(current, forge);
+      // The story of the change on this branch: each change keeps its own (INF-2490).
+      const ledger = this.options.tasks.changePresentation(taskId, branch);
+      if (own && !existing && presentations && hasChangeRequests(forge.kind)) {
+        const merged = await this.mergedBeforeStories(ledger, current.delivery?.prNumber, forge);
         if (merged) return merged;
       }
       // The captain's override on the saved story lets this task open its
@@ -1874,12 +2052,12 @@ export class PrCiService {
         overridePasses(
           current.delivery,
           "story",
-          existing?.headSha ?? (await git(dir, ["rev-parse", branch])),
+          existing?.headSha ?? (await git(dir, ["rev-parse", read])),
         );
       const usesStory =
         presentations &&
         (forge.storyDestination || forge.attachments) &&
-        (!hasChangeRequests(forge.kind) || !existing || current.delivery?.presentation) &&
+        (!hasChangeRequests(forge.kind) || !existing || ledger) &&
         !storyPassed;
       if (usesStory && (input.presentation === undefined || input.body !== undefined))
         return `Prepare the current change story with prepare_change, then pass its presentation revision, not body. Native media hosts confirm every selected attachment before publication; other description hosts receive text only. A plain branch keeps its story on the completion card. To change only the words around a published story, pass around. ${softHoldWords("story", "crewmate")}`;
@@ -1900,7 +2078,7 @@ export class PrCiService {
         if (
           head !== validationHead ||
           latest?.repoId !== current.repoId ||
-          latest.branch !== branch
+          latest.branch !== record.branch
         )
           throw new Error(
             "The publication changed; nothing was sent. Read its current version and permission.",
@@ -1954,6 +2132,7 @@ export class PrCiService {
                 }
               : {}),
             ...(input.base ? { base: input.base } : {}),
+            ...(read === branch ? {} : { source: read }),
           },
         );
         const place = forge.place ?? "the project's host";
@@ -1977,6 +2156,7 @@ export class PrCiService {
           title: input.title,
           body: input.body ?? "",
           ...(input.base ? { base: input.base } : {}),
+          ...(read === branch ? {} : { source: read }),
           ...(prerequisite && hasChangeRequests(forge.kind) ? { draft: true } : {}),
         });
         if (!hasChangeRequests(forge.kind)) described = keepsNoDescription(forge);
@@ -2001,6 +2181,7 @@ export class PrCiService {
           { head: validationHead ?? "" },
         );
       change = await this.readyPrerequisite(record.id, forge, change);
+      if (!own) await this.selectOpened(record, forge, change, input.base);
       this.noteChange(record.id, { change, forge });
       const next = [
         "Read its checks with check_change. If the rest of your work needs this merged first, file it as Continue: … and end this task with the completion decision after the checks pass.",
@@ -2247,6 +2428,15 @@ export class PrCiService {
     if (record.deviceId) await this.options.bringBranchHome?.(record.id);
   }
 
+  /**
+   * Another branch a placed task's crewmate checked out there to deliver,
+   * brought to the task's own ref for it here (INF-2490); answers that ref.
+   */
+  private async otherBranchHome(record: { id: string }, branch: string): Promise<string> {
+    await this.options.bringBranchHome?.(record.id, true, branch);
+    return checkedOutRefFor(record.id);
+  }
+
   /** Checks the branch's own commit names in the project's folder, and answers that folder. */
   private async validateRange(
     repoId: string | null | undefined,
@@ -2383,17 +2573,15 @@ export class PrCiService {
     const located = this.locate(taskId);
     if ("said" in located) return { text: located.said, recorded: false };
     const { record, forge } = located;
-    const branch = record.delivery?.checkTarget?.branch ?? located.branch;
+    const current = currentChange(record.delivery, located.branch);
+    const branch = current.branch;
     try {
       let change = await this.checkChange(record, branch, forge);
       if (!change) {
         // The pull request the task names may have been merged or closed
         // outside the app: read it by its number, never guessed from its
         // absence among the open ones (FI3-213).
-        const pull = await this.namedPull(
-          forge,
-          record.delivery?.checkTarget?.number ?? record.delivery?.prNumber,
-        );
+        const pull = await this.namedPull(forge, current.number);
         this.assertCheckTarget(record);
         if (pull?.merged) {
           this.record(record.id, "merged");
@@ -2440,7 +2628,7 @@ export class PrCiService {
           `${changeWords(forge, change)} head ${change.headSha}`,
           `facts: ${JSON.stringify({
             change: {
-              id: this.options.tasks.changeFor(record.id)?.id ?? null,
+              id: this.changeIdOf(record, change),
               base: mergeability?.base ?? change.base ?? null,
             },
             headSha: change.headSha,
@@ -2538,13 +2726,6 @@ export class PrCiService {
   ): Promise<PrOutcome & { transient?: boolean; dispatched?: boolean }> {
     // A stale earlier success must never survive a failed re-check.
     this.checked.delete(taskId);
-    if (this.options.tasks.get(taskId)?.delivery?.checkTarget) {
-      return {
-        ok: false,
-        stop: "identity",
-        text: "Cannot settle a referenced pull request. Use its request_merge review; the task's own branch remains separate.",
-      };
-    }
     const status = await this.run(taskId);
     const reading = this.reading(taskId);
     const checked = this.checked.get(taskId);
@@ -2592,7 +2773,7 @@ export class PrCiService {
     // no checks override passes (docs/forge.md, "A project's queue").
     const queued = this.queued(taskId);
     if (queued && checked) {
-      const items = this.queueItems(taskId, checked.change.headSha);
+      const items = this.queueItems(taskId, checked.change);
       const queue = items?.find((item) => item.name === QUEUE_STATUS);
       const othersPassed =
         items?.every((item) => item.name === QUEUE_STATUS || PASSED_STATES.has(item.state)) ===
@@ -2636,14 +2817,21 @@ export class PrCiService {
     let dispatched = false;
     try {
       const record = this.options.tasks.get(taskId);
-      if (record && !record.delivery?.presentation) await this.branchHome(record);
-      const dir = await this.validateRange(
-        record?.repoId,
-        record?.repoDir,
-        change.branch,
-        forge,
-        change.headSha,
-      );
+      // The task's own branch is checked where it was made, commit by
+      // commit. Any other change the task names was opened elsewhere or
+      // checked when the task opened it; its title is checked below.
+      const own = change.branch === record?.branch;
+      if (own && record && !record.delivery?.presentation) await this.branchHome(record);
+      const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+      const dir = own
+        ? await this.validateRange(
+            record?.repoId,
+            record?.repoDir,
+            change.branch,
+            forge,
+            change.headSha,
+          )
+        : (repo?.path ?? record?.repoDir ?? "");
       if (hasChangeRequests(forge.kind))
         requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
       const fresh = this.options.tasks.get(taskId) ?? record;
@@ -2661,7 +2849,7 @@ export class PrCiService {
       // a sign-in that could bypass the branch's rules (FI3-304 section 4).
       // Guidance is read after the carry, so a newer word during that wait
       // still stops the merge.
-      const queueWait = this.queueWait(taskId, change.headSha);
+      const queueWait = this.queueWait(taskId, this.queueItems(taskId, change));
       if (hasChangeRequests(forge.kind) && (guard?.unattended || boundary?.unattended)) {
         if (change.number === undefined)
           return { ok: false, text: "Cannot merge: the pull request identity is missing." };
@@ -2669,73 +2857,11 @@ export class PrCiService {
         const held = readinessStop(forge, pull, { head: guard?.head ?? change.headSha });
         if (held && !(queueWait && held.stop === "protected")) return held;
       }
-      let publishedChange = change;
-      // INF-1365: the captain's override on the saved story passes its publication at this
-      // version: nothing is marked published, uploaded or refreshed, and the squash carries the
-      // description's own words, not an older story's. It is read after the last wait before the
-      // send, so a withdrawn override holds this merge. Every other check above still applies.
-      const storyPassed =
-        record?.delivery?.presentation !== undefined &&
-        overridePasses(this.options.tasks.get(taskId)?.delivery, "story", change.headSha);
-      if (storyPassed) {
-        publishedChange = {
-          ...change,
-          squashMessage: messageWithoutPresentation(change.body ?? "", taskId),
-        };
-      } else if (record?.delivery?.presentation) {
-        if (!this.options.presentations)
-          throw new Error("The current story cannot be checked for complete evidence.");
-        const authorization = standingAuthorization(record.delivery);
-        const publishedHead = record.delivery.presentation.published?.head;
-        if (guard && authorization) {
-          const offered = record.delivery.completionOffers?.find(
-            (offer) =>
-              offer.cardId === authorization.card.id &&
-              offer.offerId === authorization.card.offerId,
-          );
-          if (
-            !offered?.presentationContentHash ||
-            offered.presentationContentHash !== record.delivery.presentation.published?.contentHash
-          )
-            throw new Error(
-              "The published story differs from the approved story. Show a new completion offer before merging.",
-            );
-        }
-        const beforeRefresh = guard?.held?.();
-        if (beforeRefresh)
-          return { ok: false, text: `Cannot merge yet: ${beforeRefresh}.`, stop: "guidance" };
-        if (
-          guard &&
-          authorization &&
-          candidateHead(authorization) === change.headSha &&
-          publishedHead &&
-          publishedHead !== change.headSha &&
-          authorization.lineage.length > 0 &&
-          (publishedHead === authorization.approvedHead ||
-            authorization.lineage.some((step) => step.toHead === publishedHead))
-        ) {
-          await this.options.presentations.refreshConflictOnly(
-            taskId,
-            publishedHead,
-            change.headSha,
-            forge,
-            change.branch,
-            change.title ?? "",
-            this.attestsAt(taskId),
-          );
-          const refreshed = await forge.changeFor(change.branch);
-          if (
-            !refreshed ||
-            refreshed.number !== change.number ||
-            refreshed.headSha !== change.headSha
-          )
-            throw new Error("The pull request changed during the story refresh.");
-          publishedChange = refreshed;
-        }
-        publishedChange = await this.options.presentations
-          .assertPublished(taskId, publishedChange, forge)
-          .catch(storyHeld);
-      }
+      // The change's saved story, the same way a continuing merge reads it.
+      const storied = await this.withPublishedStory(taskId, forge, change, guard);
+      if ("held" in storied)
+        return { ok: false, text: `Cannot merge yet: ${storied.held}.`, stop: "guidance" };
+      const publishedChange = storied.change;
       const held = guard?.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
       if (queueWait)
@@ -2799,22 +2925,26 @@ export class PrCiService {
    */
   private queueWait(
     taskId: string,
-    head: string,
-    items = this.queueItems(taskId, head),
+    items: { name: string; state: ForgeCheckState }[] | undefined,
   ): { state: ForgeCheckState | undefined } | undefined {
     if (!this.queued(taskId)) return undefined;
     const state = items?.find((item) => item.name === QUEUE_STATUS)?.state;
     return state === "success" ? undefined : { state };
   }
 
-  /** The checks the change record holds at one version of the task's change. */
+  /**
+   * The checks the change record holds at the merged pull request's version:
+   * that pull request's own change, whichever branch it is on (INF-2490).
+   */
   private queueItems(
     taskId: string,
-    head: string,
+    change: ForgeChange,
   ): { name: string; state: ForgeCheckState }[] | undefined {
-    const version = this.options.tasks
-      .changeFor(taskId)
-      ?.versions.find((item) => item.head === head);
+    const record = this.options.tasks.get(taskId);
+    const head = change.headSha;
+    const version = record
+      ? this.changeRecordOf(record, change)?.versions.find((item) => item.head === head)
+      : undefined;
     const snapshot = version?.checks?.snapshot;
     return snapshot?.headSha === head ? snapshot.items : undefined;
   }

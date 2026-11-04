@@ -314,7 +314,9 @@ export interface Forge {
   /**
    * Offer the branch as a proposed change; on a plain host this sends it up.
    * `base` names the branch it targets where the host takes one (INF-1873);
-   * absent, the default branch.
+   * absent, the default branch. `source` names the ref this Mac holds the
+   * branch at when not under its own name (INF-2490), for a host that is
+   * sent the branch from here.
    */
   openChange(input: {
     branch: string;
@@ -322,6 +324,7 @@ export interface Forge {
     body: string;
     draft?: boolean;
     base?: string;
+    source?: string;
   }): Promise<ForgeChange>;
   /**
    * Replace the description, a saved story or legacy words, only if its just-read body and code

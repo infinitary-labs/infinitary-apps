@@ -207,6 +207,9 @@ class FakeForge implements Forge {
   }
 }
 
+/** What a placed task's computer says its working copy has checked out (`PrCiService`'s `checkedOut`). */
+type CheckedOut = (taskId: string) => Promise<{ branch: string | null; head: string } | null>;
+
 function setup(
   options: {
     forge?: FakeForge;
@@ -215,6 +218,8 @@ function setup(
     /** Check commit names against real git rather than skipping the check. */
     realRange?: boolean;
     bringBranchHome?: (taskId: string) => Promise<string | undefined>;
+    /** The branch a placed task's working copy has checked out there, wired as the app wires it. */
+    checkedOut?: CheckedOut;
   } = {},
 ) {
   const db = freshDatabase();
@@ -223,12 +228,18 @@ function setup(
   const repos = new RepoRegistry(db, join(paths, "fleet"));
   const forge = options.forge ?? new FakeForge();
   const readHead = vi.fn(async () => forge.change?.headSha ?? "");
-  const presentations = new ChangePresentations({ tasks, mediaDir: () => paths, head: readHead });
+  const presentations = new ChangePresentations({
+    tasks,
+    mediaDir: () => paths,
+    head: readHead,
+    ...(options.checkedOut ? { branch: (taskId) => service.presentationBranch(taskId) } : {}),
+  });
   const service = new PrCiService({
     tasks,
     repos,
     forgeFor: () => forge,
     presentations,
+    ...(options.checkedOut ? { checkedOut: options.checkedOut } : {}),
     ...(options.bringBranchHome ? { bringBranchHome: options.bringBranchHome } : {}),
     ...(options.realRange ? {} : { validateRange: async () => {} }),
     ...(options.now ? { now: options.now } : {}),
@@ -742,7 +753,6 @@ describe("PrCiService", () => {
     expect(stored).toContain("Absence evidence stored for this version");
     expect(stored).not.toContain("refused");
     expect(tasks.get(task.id)?.delivery?.mergeReviews?.[0]).toMatchObject({
-      relationship: "owned",
       number: 23,
       headSha,
       absentChecks: { headSha },
@@ -908,9 +918,63 @@ describe("PrCiService", () => {
     const change = tasks.changeFor("ab12cd34");
     expect(change?.base).toBe("fm/task-lower");
     expect(await service.checkForCrew("ab12cd34", { change: "chg_other" })).toBe(
-      `check_change refused: "chg_other" is not this task's change; its change is ${change?.id}.`,
+      `check_change refused: "chg_other" is not one of this task's changes; its changes are ${change?.id}.`,
     );
     expect(await service.checkForCrew("ab12cd34", { change: change?.id })).toContain("facts: ");
+  });
+
+  // INF-2184, folded into INF-2490 (the captain's q7): the captain asked to
+  // open the change from a branch someone already pushed. It opens from that
+  // branch as it is, never moving its head, and becomes the task's current
+  // change beside its own; check_change names either by its id.
+  it("opens a change from an existing branch the crewmate names, at that branch's head, as the task's current change (INF-2184, INF-2490)", async () => {
+    const forge = new FakeForge();
+    forge.change = null;
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    repos.configure(tasks.get("ab12cd34")!.repoId!, { origin: "https://github.com/x/y.git" });
+    expect(await service.open("ab12cd34", { title: "fix: ship it", body: "b" })).toContain(
+      "Opened pull request #42",
+    );
+    const ownChange = forge.change;
+    const release = "release-please--branches--main";
+    forge.change = null;
+    forge.opened = {
+      number: 57,
+      url: "https://github.com/x/y/pull/57",
+      headSha: "beef0057",
+      title: "chore(main): release 0.1.8",
+    };
+    const opened = await service.open("ab12cd34", {
+      title: "chore(main): release 0.1.8",
+      body: "The release the captain asked to open.",
+      branch: release,
+    });
+    expect(opened).toContain(
+      `Opened pull request #57 https://github.com/x/y/pull/57 for ${release}.`,
+    );
+    // The one write where the project lives is the opening itself, on the named branch.
+    expect(forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([
+      "openChange fm/task-ab12cd34 fix: ship it",
+      `openChange ${release} chore(main): release 0.1.8`,
+    ]);
+    expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({
+      number: 57,
+      branch: release,
+      headSha: "beef0057",
+    });
+    expect(
+      tasks
+        .changesFor("ab12cd34")
+        .map((change) => change.handle?.number)
+        .sort((a, b) => (a ?? 0) - (b ?? 0)),
+    ).toEqual([42, 57]);
+    // Naming the task's own change by its id makes it current again.
+    forge.change = ownChange;
+    const own = tasks.changeFor("ab12cd34");
+    expect(own?.handle?.number).toBe(42);
+    expect(await service.checkForCrew("ab12cd34", { change: own?.id })).toContain("facts: ");
+    expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toBeUndefined();
   });
 
   describe("checkOverall", () => {
@@ -2487,7 +2551,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(putIns()).toEqual(["putIn fm/task-ab12cd34 repair01"]);
   });
 
-  it("routes a referenced request_merge review and a merge past the rules through a queue-pr project's queue (INF-2549)", async () => {
+  it("routes a request_merge review of another branch's pull request and a merge past the rules through a queue-pr project's queue (INF-2549)", async () => {
     // The captain chose "a swept batch before main": no route to a merge passes
     // the queue, and a required infinitary/queue status is what holds GitHub.
     const forge = new FakeForge();
@@ -2538,10 +2602,10 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
       pulls[number]!.readiness = "clean";
     };
 
-    // A referenced review: the click looks, then marks, and merges nothing.
+    // A review of another branch's pull request: the click looks, then
+    // marks, and merges nothing.
     const referenced: MergeReview = {
       id: "mrqueued41",
-      relationship: "referenced",
       kind: "github",
       host: "github.com",
       owner: "x",
@@ -2568,7 +2632,6 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(await service.mergeReview("ab12cd34", referenced.id, guard)).toMatchObject({
       ok: false,
       stop: "queue",
-      relationship: "referenced",
     });
     expect(marked).toEqual(["other001"]);
     expect(forge.calls.indexOf("beforeDispatch other001 mark")).toBeLessThan(
@@ -2577,7 +2640,6 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     passQueue("other001", 41);
     expect(await service.mergeReview("ab12cd34", referenced.id, guard)).toMatchObject({
       ok: true,
-      relationship: "referenced",
       receipt: { head: "other001" },
     });
     expect(forge.calls).toContain("putIn fm/task-other other001");
@@ -2588,8 +2650,8 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(await service.checkForCrew("ab12cd34", input)).toContain("Merge review");
     const skip = tasks.get("ab12cd34")!.delivery!.mergeReviews!.find((entry) => entry.skips)!;
     expect(skip.skips?.failedChecks).toEqual(["unit-tests"]);
-    // A status write GitHub refuses is the click's outcome, as on the referenced
-    // route, never an error that escapes it (re-review INF-2549).
+    // A status write GitHub refuses is the click's outcome, as on an ordinary
+    // review, never an error that escapes it (re-review INF-2549).
     const mark = forge.markQueued;
     forge.markQueued = async () => {
       throw new ForgeError("refused", "GitHub answered 403 to POST /repos/x/y/statuses/skip0001");
@@ -2860,7 +2922,6 @@ describe("the captain's click on a pull request the task did not open, while Git
     });
     const review: MergeReview = {
       id: "mrpr94clicked",
-      relationship: "referenced",
       kind: "github",
       host: "github.com",
       owner: "infinitary-labs",
@@ -2892,7 +2953,7 @@ describe("the captain's click on a pull request the task did not open, while Git
   it("refuses, sending nothing, when GitHub is still undecided after the wait", async () => {
     const { forge, click } = await adopted([{ readiness: "computing" }]);
     const outcome = await click();
-    expect(outcome).toMatchObject({ ok: false, relationship: "referenced", stop: "computing" });
+    expect(outcome).toMatchObject({ ok: false, stop: "computing" });
     expect(outcome.text).toContain("Nothing merged");
     expect(forge.reads).toBeGreaterThan(1);
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
@@ -2953,7 +3014,6 @@ describe("an absence declaration beside registered check facts (INF-893, INF-155
     });
     const review: MergeReview = {
       id: "mrpr328absent",
-      relationship: "referenced",
       kind: "github",
       host: "github.com",
       owner: "infinitary-labs",
@@ -2991,7 +3051,6 @@ describe("an absence declaration beside registered check facts (INF-893, INF-155
     await service.checkForCrew("ab12cd34");
     expect(await service.mergeReview("ab12cd34", review.id)).toMatchObject({
       ok: true,
-      relationship: "referenced",
     });
     expect(forge.calls).toContain(`putIn ${PR328.branch} ${PR328.headSha}`);
   });
@@ -3408,12 +3467,13 @@ describe("a passed review covers the same change", () => {
 describe("shared story delivery boundaries", () => {
   const original = "5ca2d466ee21f9733827383f23df81f3874e0d10";
   const repaired = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-  async function saved(kind: "github" | "gitlab" = "github") {
+  async function saved(kind: "github" | "gitlab" = "github", checkedOut?: CheckedOut) {
     const bringBranchHome = vi.fn(async (): Promise<string> => {
       throw new Error("Work computer is asleep");
     });
     const at = setup({
       bringBranchHome,
+      ...(checkedOut ? { checkedOut } : {}),
       ...(kind === "gitlab" ? { forge: new FakeForge({ kind, place: "GitLab" }) } : {}),
     });
     await insertDirectPrTask(at.tasks, at.repos, { deviceId: "sleeping-work-computer" });
@@ -3569,6 +3629,7 @@ describe("shared story delivery boundaries", () => {
     it("merges with no publication at all under a task-wide override, marking none", async () => {
       const at = await saved();
       at.tasks.updateChangePresentation("ab12cd34", () => ({ revisions: [], receipts: [] }));
+      const unpublished = at.tasks.changePresentation("ab12cd34");
       at.forge.change = { ...(at.forge.change as ForgeChange), body: "The plain description." };
       const putIn = vi.spyOn(at.forge, "putIn");
       expect((await at.service.merge("ab12cd34")).text).toContain(
@@ -3580,7 +3641,9 @@ describe("shared story delivery boundaries", () => {
         { ...at.forge.change, squashMessage: "The plain description." },
         original,
       );
-      expect(at.tasks.changePresentation("ab12cd34")).toEqual({ revisions: [], receipts: [] });
+      // Marking none: the ledger is exactly as it was before the merge.
+      expect(unpublished).toMatchObject({ revisions: [], receipts: [] });
+      expect(at.tasks.changePresentation("ab12cd34")).toEqual(unpublished);
     });
 
     it("merges a description replaced on the override, leaving the old story record as it was", async () => {
@@ -3633,7 +3696,6 @@ describe("shared story delivery boundaries", () => {
         });
         const review: MergeReview = {
           id: "mrskipstory1",
-          relationship: "owned",
           kind: "github",
           host: "github.com",
           owner: "x",
@@ -4017,6 +4079,162 @@ describe("shared story delivery boundaries", () => {
     expect(at.forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
   });
 
+  // INF-2546 R9, under the captain's kept approval (FI3-304) and "others
+  // merge as continuing": a request_merge approval of the task's own pull
+  // request keeps the completion approval's repair path, so an accepted
+  // unchanged repair republishes the unchanged story and the continuing
+  // merge goes on at the repaired version.
+  it("republishes the unchanged story before a kept continuing merge of an accepted repair (INF-2546)", async () => {
+    const at = await saved();
+    at.repos.configure(at.tasks.get("ab12cd34")?.repoId as string, {
+      origin: "https://github.com/x/y.git",
+    });
+    const putIn = vi.spyOn(at.forge, "putIn");
+    at.forge.change = { ...(at.forge.change as ForgeChange), headSha: repaired };
+    at.readHead.mockRejectedValue(new Error("Work computer is asleep"));
+    Object.assign(at.forge, {
+      pull: async () => ({
+        number: 23,
+        state: "open",
+        merged: false,
+        headSha: at.forge.change?.headSha,
+        base: "main",
+        branch: "fm/task-ab12cd34",
+        headRepo: "x/y",
+        title: "fix: ship it",
+        readiness: "clean",
+      }),
+    });
+    const review: MergeReview = {
+      id: "mrown23story",
+      kind: "github",
+      host: "github.com",
+      owner: "x",
+      name: "y",
+      number: 23,
+      headSha: original,
+      base: "main",
+      branch: "fm/task-ab12cd34",
+      method: "squash",
+      title: "fix: ship it",
+      at: 1,
+    };
+    const authorization: MergeAuthorization = {
+      version: 1,
+      id: "approved-continuing",
+      generation: 2,
+      issuer: "captain",
+      at: 1,
+      card: { id: "continue-card", offerId: "offer-c", actionId: "merge" },
+      review,
+      target: {
+        repoId: at.tasks.get("ab12cd34")?.repoId as string,
+        host: "github.com",
+        owner: "x",
+        name: "y",
+        prNumber: 23,
+        branch: "fm/task-ab12cd34",
+        delivery: "direct-pr",
+        method: "squash",
+      },
+      approvedHead: original,
+      proceedWithOpen: false,
+      status: "standing",
+      lineage: [
+        {
+          fromHead: original,
+          toHead: repaired,
+          newBase: original,
+          impact: "none",
+          changedPaths: [],
+          evidence: "The accepted repair preserves behavior.",
+          validation: "The affected checks passed.",
+          generation: 2,
+          at: 2,
+        },
+      ],
+    };
+    seedDelivery(at.tasks, "ab12cd34", {
+      mergeReviews: [review],
+      mergeAuthorization: authorization,
+    });
+    const outcome = await at.service.mergeReview("ab12cd34", review.id, {
+      head: repaired,
+      prNumber: 23,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    });
+    expect(outcome).toMatchObject({ ok: true, receipt: { head: repaired } });
+    expect(at.update).toHaveBeenCalledTimes(1);
+    expect(putIn).toHaveBeenCalledTimes(1);
+    expect(putIn.mock.calls[0]?.[0]).toMatchObject({
+      squashMessage: presentationCommitMessage(at.story),
+    });
+    expect(putIn.mock.calls[0]?.[1]).toBe(repaired);
+    expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
+    expect(at.tasks.changePresentation("ab12cd34")?.published).toMatchObject({
+      revision: 2,
+      head: repaired,
+    });
+  });
+
+  // INF-2546 R2, under the captain's "several changes per task, one per
+  // PR" and the list of every pull request on the task: each change keeps
+  // its own story, so a story prepared for another pull request starts its
+  // own ledger, leaves the task's published story as it was, and the own
+  // merge reads its own story.
+  it("keeps each change's own story: one prepared for another pull request leaves the published one as it was, and the own merge reads its own (INF-2546)", async () => {
+    const at = await saved();
+    const own = at.tasks.changePresentation("ab12cd34");
+    expect(own).toMatchObject({ branch: "fm/task-ab12cd34", published: { number: 23 } });
+    const release: MergeReview = {
+      id: "mrrelease57",
+      kind: "github",
+      host: "github.com",
+      owner: "x",
+      name: "y",
+      number: 57,
+      headSha: repaired,
+      base: "main",
+      branch: "release-please--branches--main",
+      method: "squash",
+      title: "chore(main): release 0.2.0",
+      at: 2,
+    };
+    // check_change(pull) makes the release pull request the current change.
+    seedDelivery(at.tasks, "ab12cd34", {
+      mergeReviews: [release],
+      checkTarget: release,
+      prNumber: 57,
+    });
+    expect(at.tasks.changePresentation("ab12cd34")).toBeUndefined();
+    expect(at.tasks.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
+    // Its story starts at its own first revision, in its own ledger.
+    at.readHead.mockResolvedValueOnce(repaired);
+    const revision = await at.presentations.prepare(
+      "ab12cd34",
+      { ...at.story, head: repaired, title: "chore(main): release 0.2.0" },
+      at.forge,
+    );
+    expect(revision).toBe(1);
+    const releaseStory = at.tasks.changePresentation("ab12cd34");
+    expect(releaseStory).toMatchObject({ branch: release.branch, revisions: [{ revision: 1 }] });
+    expect(releaseStory?.published).toBeUndefined();
+    expect(at.tasks.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
+    // The own change current again: its story is back where older readers read it.
+    seedDelivery(at.tasks, "ab12cd34", { checkTarget: undefined, prNumber: 23 });
+    expect(at.tasks.get("ab12cd34")?.delivery).toMatchObject({
+      presentation: own,
+      presentations: [releaseStory],
+    });
+    const putIn = vi.spyOn(at.forge, "putIn");
+    const merged = await at.service.merge("ab12cd34");
+    expect(merged.ok).toBe(true);
+    expect(putIn.mock.calls[0]?.[0]).toMatchObject({
+      squashMessage: presentationCommitMessage(at.story),
+    });
+  });
+
   it("does not attach a saved-story hold to an existing unrecorded legacy PR", async () => {
     const at = await saved();
     const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
@@ -4103,6 +4321,44 @@ describe("shared story delivery boundaries", () => {
       expect(answer).toContain(`${hosted.fullName} ${said}`);
     },
   );
+
+  // Re-review INF-2587 U2, under INF-2142's approved plan (the crewmate is
+  // told who reads a story) and the captain's "several changes per task, one
+  // per PR": a story prepared while the working copy has another branch
+  // checked out goes to that branch's own ledger, and the crewmate is told
+  // its audience from that ledger's revision, never from the task's own
+  // story's revision of the same number.
+  it("tells the crewmate who reads a story prepared for the checked-out branch from that branch's own ledger (INF-2587)", async () => {
+    const otherBranch = "reading-fix";
+    const at = await saved("github", async () => ({ branch: otherBranch, head: original }));
+    const own = at.tasks.changePresentation("ab12cd34");
+    const story = own?.revisions[0] as ChangePresentation;
+    const hosted = story.destination as HostedPresentationDestination;
+    expect(hosted.visibility).toBe("public");
+    // The project is private now; reading-fix has no pull request yet.
+    const destination = { ...hosted, visibility: "private" as const };
+    Object.assign(at.forge, {
+      attachments: {
+        destination: async () => destination,
+        upload: async () => {
+          throw new Error("No upload expected");
+        },
+      },
+    });
+    at.forge.change = null;
+    at.readHead.mockResolvedValue(story.head);
+    const answer = await at.service.preparePresentation("ab12cd34", story);
+    expect(answer).toContain("Prepared presentation 1 ");
+    expect(answer).toContain(
+      `${hosted.fullName} is private: everyone with access can read this story`,
+    );
+    expect(answer).not.toContain("anyone can read this story");
+    // The revision went to reading-fix's own ledger; the task's own story is as it was.
+    expect(at.tasks.changePresentation("ab12cd34", otherBranch)?.revisions).toMatchObject([
+      { revision: 1, destination },
+    ]);
+    expect(at.tasks.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
+  });
 
   it("stops, opening nothing, when the recorded pre-story PR merged outside the app (INF-92 F3)", async () => {
     const at = await saved();
@@ -4363,7 +4619,7 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
       changeLabel: "#94",
       headSha: R1,
       checks: { headSha: R1 },
-      checkTarget: { relationship: "referenced", number: 94, headSha: R1 },
+      checkTarget: { number: 94, headSha: R1 },
     });
     // The release pull request moves on; the next reading follows it under its number.
     forge.release = { ...forge.release, headSha: R2 };
@@ -4399,6 +4655,163 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
     expect(store.changes.forTask("ab12cd34")?.versions[0]?.checks).toMatchObject({
       state: "green",
       snapshot: { headSha: "feedbeef" },
+    });
+  });
+
+  // Re-review INF-2546 R3, under the captain's "several changes per task,
+  // one per PR": naming the task's own change after another pull request
+  // brings back the own pull request's number with its branch. Once the own
+  // pull request merged, the reading then reads it by that number, never the
+  // other pull request it read last.
+  it("reads the task's own merged pull request by its own number when its change is named after another pull request (INF-2546)", async () => {
+    const forge = new (class extends SelectingForge {
+      own: ForgeChange | null = null;
+      override async pull(number: number): Promise<ForgePull> {
+        if (!this.own || number !== this.own.number) return super.pull(number);
+        this.calls.push(`pull ${number}`);
+        return {
+          number,
+          state: "closed",
+          merged: true,
+          headSha: this.own.headSha,
+          base: "main",
+          branch: this.own.branch,
+          title: this.own.title,
+          headRepo: "infinitary-labs/infinitary",
+          readiness: "clean",
+        };
+      }
+    })();
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    repos.configure(tasks.get("ab12cd34")!.repoId!, {
+      origin: "https://github.com/infinitary-labs/infinitary.git",
+    });
+    recordPr(tasks, 23);
+    const own = reportedChange(await service.checkForCrew("ab12cd34"));
+    await service.checkForCrew("ab12cd34", { pull: 94 });
+    expect(tasks.get("ab12cd34")?.delivery?.prNumber).toBe(94);
+    // The own pull request merges where the project lives: its branch has no open one.
+    forge.own = forge.change;
+    forge.change = null;
+    forge.calls.length = 0;
+    const answer = await service.checkForCrew("ab12cd34", { change: own ?? "" });
+    expect(answer).toContain("overall: merged");
+    expect(answer).toContain("#23");
+    expect(forge.calls).toContain("pull 23");
+    expect(forge.calls).not.toContain("pull 94");
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ prNumber: 23, ci: "merged" });
+    expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toBeUndefined();
+  });
+
+  // Re-review INF-2587 U1, under the captain's "several changes per task,
+  // one per PR" and "a swept batch before main": on a queue-pr project, the
+  // merge of the task's current change on another branch - the one whose
+  // merge closes the task - reads that change's own queue status. It marks
+  // the version once, waits while the queue runs, and merges once it passes.
+  it("merges another branch's current pull request on a queue-pr project once its queue passes, marking it once (INF-2587)", async () => {
+    const forge = new SelectingForge();
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos, {
+      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+    });
+    repos.configure(tasks.get("ab12cd34")!.repoId!, {
+      origin: "https://github.com/infinitary-labs/infinitary.git",
+    });
+    recordPr(tasks, 23);
+    await service.checkForCrew("ab12cd34");
+    // check_change(pull) makes the release pull request the current change.
+    await service.checkForCrew("ab12cd34", { pull: 94 });
+    expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({ number: 94 });
+    const marked: string[] = [];
+    forge.markQueued = async (sha: string) => {
+      marked.push(sha);
+      forge.atHead[sha] = [
+        { name: "linux-checks", state: "success" },
+        { name: QUEUE_STATUS, state: "pending" },
+      ];
+    };
+    // The completion card's kept click, or the autonomous first mate's merge, of #94.
+    const guard: MergeGuard = {
+      head: R1,
+      prNumber: 94,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    };
+    const putIns = () => forge.calls.filter((call) => call.startsWith("putIn"));
+    expect(await service.merge("ab12cd34", guard)).toMatchObject({ ok: false, stop: "queue" });
+    expect(marked).toEqual([R1]);
+    // The kept approval reads it again while the batch runs: nothing is marked twice.
+    expect(await service.merge("ab12cd34", guard)).toMatchObject({ ok: false, stop: "queue" });
+    expect(marked).toEqual([R1]);
+    expect(putIns()).toEqual([]);
+    // The batch passes there: the kept click merges the release pull request at that version.
+    forge.atHead[R1] = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "success" },
+    ];
+    expect(await service.merge("ab12cd34", guard)).toMatchObject({
+      ok: true,
+      receipt: { head: R1 },
+    });
+    expect(marked).toEqual([R1]);
+    expect(putIns()).toEqual([`putIn ${RELEASE_BRANCH} ${R1}`]);
+  });
+
+  /** The change id a check_change answer reports on its facts line. */
+  const reportedChange = (answer: string): string | null => {
+    const line = answer.split("\n").find((item) => item.startsWith("facts: "));
+    if (!line) throw new Error(`No facts line in: ${answer}`);
+    return (JSON.parse(line.slice("facts: ".length)) as { change: { id: string | null } }).change
+      .id;
+  };
+
+  // INF-2546 R3 and R4, under the captain's "several changes per task, one
+  // per PR": a reading reports the id of the change it read, so passing that
+  // id back to check_change reads the same change; and a change whose review
+  // the capped review list no longer keeps is read again by its number,
+  // never swapped for the task's own.
+  it("reports the id of the change it read and reads that change again by it, also once its review left the capped list (INF-2546)", async () => {
+    const forge = new SelectingForge();
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    repos.configure(tasks.get("ab12cd34")!.repoId!, {
+      origin: "https://github.com/infinitary-labs/infinitary.git",
+    });
+    recordPr(tasks, 23);
+    const own = reportedChange(await service.checkForCrew("ab12cd34"));
+    expect(own).toBe(tasks.changeFor("ab12cd34")?.id);
+    const read = reportedChange(await service.checkForCrew("ab12cd34", { pull: 94 }));
+    const release = tasks.changesFor("ab12cd34").find((change) => change.handle?.number === 94);
+    expect(release).toBeDefined();
+    expect(read).toBe(release?.id);
+    expect(read).not.toBe(own);
+    // The reported id passed back reads the release pull request, not the own one.
+    expect(reportedChange(await service.checkForCrew("ab12cd34", { change: read ?? "" }))).toBe(
+      release?.id,
+    );
+    expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({ number: 94 });
+    expect(reportedChange(await service.checkForCrew("ab12cd34", { change: own ?? "" }))).toBe(own);
+    expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toBeUndefined();
+    // The capped list no longer keeps the release's review; its change stays on the record.
+    seedDelivery(tasks, "ab12cd34", { mergeReviews: [] });
+    expect(tasks.changesFor("ab12cd34").some((change) => change.id === release?.id)).toBe(true);
+    // A judgment sent beside it is refused until it is read again, recording nothing.
+    expect(
+      await service.checkForCrew("ab12cd34", {
+        change: release?.id,
+        declaration: { headSha: R1, verdict: "flake", evidence: "The runner lost its disk." },
+      }),
+    ).toContain("read it first with change alone, then send declaration");
+    expect(tasks.get("ab12cd34")?.delivery?.checkTarget).toBeUndefined();
+    forge.calls.length = 0;
+    expect(reportedChange(await service.checkForCrew("ab12cd34", { change: release?.id }))).toBe(
+      release?.id,
+    );
+    expect(forge.calls).toContain("pull 94");
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      prNumber: 94,
+      checkTarget: { number: 94, branch: RELEASE_BRANCH },
     });
   });
 });

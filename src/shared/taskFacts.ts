@@ -24,7 +24,13 @@ import type {
   TaskView,
 } from "./tasks";
 import type { TaskWait } from "./taskWaits";
-import { CHECK_WORDS, CHECKS_NOT_READ_WORDS, REVIEW_WORDS, RUN_CHECK_WORDS } from "./vocabulary";
+import {
+  CHECK_WORDS,
+  CHECKS_NOT_READ_WORDS,
+  PULL_REQUEST_WORDS,
+  REVIEW_WORDS,
+  RUN_CHECK_WORDS,
+} from "./vocabulary";
 
 /**
  * The facts every view of a task reads, in the order the crew summary
@@ -150,8 +156,21 @@ export type TaskFacts = {
    */
   why: TaskModelWhy | null;
   delivery: TaskDelivery | null;
+  /**
+   * Every pull request on a task with more than one (INF-2490), which the
+   * record lists; absent on a task with one or none, whose strip names it.
+   */
+  pullRequests?: TaskPullRequestLine[];
   /** Only the record's read carries it: null while the task has no browser here. */
   browser: TaskBrowserLine | null;
+};
+
+/** One line of the record's Pull requests row: its name, its page, its state and whether merging it closes the task. */
+export type TaskPullRequestLine = {
+  number: number;
+  url: string | null;
+  words: string;
+  closes: boolean;
 };
 
 /** The board row, plus what only the record read carries (absent until it answers). */
@@ -212,8 +231,30 @@ export function taskFactsOf(task: TaskFactsInput, modelName: (model: string) => 
     reason: model && task.reasoning ? reasoningNote(task.reasoning) : null,
     why: model ? modelWhyOf(task, modelName) : null,
     delivery: deliveryOf(task),
+    ...pullRequestLinesOf(task.delivery),
     browser: task.browser ? browserLineOf(task.browser, task) : null,
   };
+}
+
+/**
+ * The record's Pull requests row (INF-2490 round two): each pull request
+ * merged, or with its own checks as last read (INF-2546); none while the
+ * task has one or none.
+ */
+function pullRequestLinesOf(delivery: TaskView["delivery"]): {
+  pullRequests?: TaskPullRequestLine[];
+} {
+  const pulls = delivery?.pullRequests ?? [];
+  if (pulls.length < 2) return {};
+  const pullRequests = pulls.map((pull) => ({
+    number: pull.number,
+    url: pull.url ?? null,
+    words: pull.merged
+      ? PULL_REQUEST_WORDS.merged
+      : `${PULL_REQUEST_WORDS.checks} ${pull.ci && pull.ci !== "no-pr" ? CHECK_WORDS[pull.ci] : CHECKS_NOT_READ_WORDS}`,
+    closes: Boolean(pull.closes),
+  }));
+  return { pullRequests };
 }
 
 /** The rows a crewmate's own work writes: a note, a report, a card, a pull request, its checks. */

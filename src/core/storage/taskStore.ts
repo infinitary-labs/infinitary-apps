@@ -106,6 +106,8 @@ export type MergeOrder = { at: number; proceedWithOpen: boolean };
  * A completion card the host published after its checks passed, and the
  * head those checks read: the baseline a click on that exact offer
  * approves. A card without one (seeded, or a Firstmate card) approves no head.
+ * An offer that approves no head is still kept for the change it was shown
+ * for (INF-2490), so its click refuses once another change is current.
  */
 export type CompletionOffer = {
   cardId: string;
@@ -113,6 +115,12 @@ export type CompletionOffer = {
   headSha: string;
   /** Absent for a plain branch or local-only work; consent still binds the story and head. */
   prNumber?: number;
+  /**
+   * The task's current change, by number, when the card went up (INF-2490):
+   * a click on it refuses once another change is current. A first mate
+   * card's offer, and any offer that approves no head, names it here alone.
+   */
+  shownFor?: number;
   /** The saved story this offer showed, when it uses one. */
   presentationRevision?: number;
   presentationContentHash?: string;
@@ -278,8 +286,18 @@ export type TaskDelivery = {
    * reads a copy saved before, with the precedence it had.
    */
   result?: { at: number; value: Record<string, unknown> };
-  /** Versioned public story and native-upload receipts; only TaskService writes them. */
+  /**
+   * Versioned public story and native-upload receipts of the task's current
+   * change; only TaskService writes them. Each other change keeps its own in
+   * `presentations` (INF-2490).
+   */
   presentation?: import("@shared/changePresentation").ChangePresentationRecord;
+  /**
+   * The story ledgers of the task's other changes, each naming its branch
+   * (INF-2490). When another change becomes the current one, its ledger
+   * moves into `presentation` and the one it replaces moves here.
+   */
+  presentations?: import("@shared/changePresentation").ChangePresentationRecord[];
   liveValidation?: LiveValidation;
   validationAssignment?: {
     head: string;

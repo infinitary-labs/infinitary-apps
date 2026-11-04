@@ -7,16 +7,22 @@ import type {
   ChangeRecord,
   ChangeReview,
   ChangeStory,
+  ChangeVersion,
 } from "@shared/change";
+import type { ChangePresentationRecord } from "@shared/changePresentation";
 import { type ForgeKind, hasChangeRequests } from "@shared/forge";
+import type { MergeReview } from "@shared/mergeReview";
 import type { RepoKind } from "@shared/repos";
+import type { TaskPullRequest } from "@shared/tasks";
 import type { TaskDelivery, TaskRecord } from "./taskStore";
 
 /**
- * What a task's delivery slot says about its change, read as the change
- * record (INF-1868 piece 1, `docs/task-record.md` "A task's change"). Pure:
- * every value comes from the record and the project's row, and a fact the
- * slot does not name is left out, never made up.
+ * What a task's delivery slot says about its changes, read as the change
+ * record (INF-1868 piece 1, `docs/task-record.md` "A task's change"): the
+ * task's own change, on its own branch, and one change for every other pull
+ * request it names, whoever opened it (INF-2490). Pure: every value comes
+ * from the record and the project's row, and a fact the slot does not name
+ * is left out, never made up.
  */
 
 /** The project facts the change reads: that it is a project, and the host it lives on. */
@@ -53,19 +59,77 @@ export function carriesChange(record: TaskRecord, repo: ChangeRepo | undefined):
 const MERGED_CLOSES = new Set<string>(["merged", "landed", "released"]);
 
 /**
- * The pull requests the slot records that are not this task's own, by
- * number: the ones its referenced reviews, selection and approval name.
+ * The task's current change (INF-2490, `primitives/changes.md`): the pull
+ * request a review selected on another branch, else the task's own. The
+ * slot's readings follow it, and every merge card is shown for it and
+ * merges it.
  */
-function referencedNumbers(delivery: TaskDelivery): Set<number> {
-  const numbers = new Set<number>();
-  const approval = delivery.mergeAuthorization;
-  const reviews = [
+export function currentChange(
+  delivery: Pick<TaskDelivery, "checkTarget" | "prNumber"> | null | undefined,
+  ownBranch: string,
+): { number: number | undefined; branch: string } {
+  const target = delivery?.checkTarget;
+  return target
+    ? { number: target.number, branch: target.branch }
+    : { number: delivery?.prNumber, branch: ownBranch };
+}
+
+/** Every story ledger the slot keeps: the current change's, then each other change's. */
+export function storyLedgers(
+  delivery: Pick<TaskDelivery, "presentation" | "presentations"> | null | undefined,
+): ChangePresentationRecord[] {
+  return [
+    ...(delivery?.presentation ? [delivery.presentation] : []),
+    ...(delivery?.presentations ?? []),
+  ];
+}
+
+/**
+ * The story ledger of the change on `branch` (INF-2490): each change keeps
+ * its own. A ledger saved before then names no branch and is the task's own
+ * branch's.
+ */
+export function storyLedgerOf(
+  delivery: Pick<TaskDelivery, "presentation" | "presentations"> | null | undefined,
+  ownBranch: string,
+  branch: string,
+): ChangePresentationRecord | undefined {
+  return storyLedgers(delivery).find((ledger) => (ledger.branch ?? ownBranch) === branch);
+}
+
+/**
+ * The story ledgers placed for the current change: its own in
+ * `presentation`, the one field older readers read, and every other
+ * change's in `presentations`.
+ */
+export function placeStories(
+  ledgers: readonly ChangePresentationRecord[],
+  ownBranch: string,
+  currentBranch: string,
+): Pick<TaskDelivery, "presentation" | "presentations"> {
+  const current = ledgers.find((ledger) => (ledger.branch ?? ownBranch) === currentBranch);
+  const others = ledgers.filter((ledger) => ledger !== current);
+  return { presentation: current, presentations: others.length > 0 ? others : undefined };
+}
+
+/** Every review the slot keeps: its reviews, its selection and its approval's. */
+function reviewsOf(delivery: TaskDelivery): MergeReview[] {
+  return [
     ...(delivery.mergeReviews ?? []),
     ...(delivery.checkTarget ? [delivery.checkTarget] : []),
-    ...(approval?.review ? [approval.review] : []),
+    ...(delivery.mergeAuthorization?.review ? [delivery.mergeAuthorization.review] : []),
   ];
-  for (const review of reviews)
-    if (review.relationship === "referenced") numbers.add(review.number);
+}
+
+/**
+ * The pull requests the slot records that are not on the task's own branch,
+ * by number: each is a change of its own (INF-2490). A review saved before
+ * then also names whose it was; its branch says the same.
+ */
+function referencedNumbers(delivery: TaskDelivery, branch: string): Set<number> {
+  const numbers = new Set<number>();
+  for (const review of reviewsOf(delivery))
+    if (review.branch !== branch) numbers.add(review.number);
   return numbers;
 }
 
@@ -93,22 +157,36 @@ type SlotOverride = ChangeOverride & { prNumber?: number };
  * that does, the host cannot tell whose it was, so it is nobody's and the
  * record leaves it out.
  */
-function ownFacts(delivery: TaskDelivery): TaskDelivery {
-  const referenced = referencedNumbers(delivery);
+function ownFacts(delivery: TaskDelivery, branch: string): TaskDelivery {
+  const referenced = referencedNumbers(delivery, branch);
   const own: TaskDelivery = { ...delivery };
   const numberReferenced = delivery.prNumber !== undefined && referenced.has(delivery.prNumber);
+  // A completion offer names the change that was current when it went up,
+  // which may be another branch's pull request (INF-2490).
+  own.completionOffers = delivery.completionOffers?.filter(
+    (offer) => offer.prNumber === undefined || !referenced.has(offer.prNumber),
+  );
+  if (!own.completionOffers) delete own.completionOffers;
   if (numberReferenced) {
     delete own.prNumber;
     delete own.prUrl;
     delete own.changeLabel;
     delete own.prBase;
     const number =
-      (delivery.mergeReviews ?? []).find((review) => review.relationship === "owned")?.number ??
-      delivery.completionOffers?.[0]?.prNumber;
+      (delivery.mergeReviews ?? []).find((review) => review.branch === branch)?.number ??
+      own.completionOffers?.find((offer) => offer.prNumber !== undefined)?.prNumber;
     if (number !== undefined) own.prNumber = number;
   }
-  if (delivery.mergeAuthorization?.review?.relationship === "referenced")
+  if (delivery.mergeAuthorization && delivery.mergeAuthorization.target.branch !== branch)
     delete own.mergeAuthorization;
+  // Each change keeps its own story (INF-2490): this change's is the ledger
+  // kept for its branch, while it was not published on another's pull request.
+  const story = storyLedgerOf(delivery, branch, branch);
+  const storyNumber = story?.published?.number ?? story?.publication?.number;
+  delete own.presentations;
+  if (story && (storyNumber === undefined || !referenced.has(storyNumber)))
+    own.presentation = story;
+  else delete own.presentation;
   const ownNumber = (number: number | undefined): boolean =>
     number !== undefined &&
     !referenced.has(number) &&
@@ -156,18 +234,18 @@ function handleOf(delivery: TaskDelivery | null, repo: ChangeRepo): ChangeHandle
  * the last reading or the open (`prBase`), else its newest owned merge
  * review's, else the approval's.
  */
-function baseOf(delivery: TaskDelivery | null): string | null {
+function baseOf(delivery: TaskDelivery | null, branch: string): string | null {
   const number = delivery?.prNumber;
   if (!delivery || number === undefined) return null;
   if (delivery.prBase) return delivery.prBase;
   const owned = (delivery.mergeReviews ?? [])
-    .filter((review) => review.relationship === "owned" && review.number === number)
+    .filter((review) => review.branch === branch && review.number === number)
     .sort((a, b) => b.at - a.at)[0];
   if (owned) return owned.base;
   const approved = delivery.mergeAuthorization?.review;
   if (approved?.number === number) return approved.base;
   const target = delivery.checkTarget;
-  if (target?.relationship === "owned" && target.number === number) return target.base;
+  if (target?.branch === branch && target.number === number) return target.base;
   return null;
 }
 
@@ -208,6 +286,7 @@ function headsOf(
   delivery: TaskDelivery,
   recorded: readonly string[],
   pushed: ChangeOverride | null,
+  branch: string,
 ): { head: string; at: number | null }[] {
   const seen = new Map<string, number | null>();
   const note = (head: string | null | undefined, at: number | null | undefined): void => {
@@ -226,7 +305,7 @@ function headsOf(
   }
   for (const offer of offers) note(offer.headSha, offer.at);
   for (const review of delivery.mergeReviews ?? [])
-    if (review.relationship === "owned" && review.number === delivery.prNumber)
+    if (review.branch === branch && review.number === delivery.prNumber)
       note(review.headSha, review.at);
   note(delivery.checks?.headSha, delivery.ciAt);
   note(delivery.presentation?.completion?.head, null);
@@ -362,30 +441,56 @@ function consentAt(
   return Object.keys(consent).length > 0 ? consent : null;
 }
 
-function receiptOf(record: TaskRecord, delivery: TaskDelivery | null): ChangeReceipt | null {
+/**
+ * Where the change stands (INF-2490): merged once a merge of it is on the
+ * record - its approval's receipt, its review's, or a reading of it that
+ * found it merged. The slot's own merge facts and the task's close are the
+ * current change's: the change current when the task closed is the one
+ * whose merge closed it, so only it takes them. Of a closed task's other
+ * changes, its own change reads closed, with no reason naming another's
+ * merge, and a pull request it named takes nothing from the close.
+ */
+function receiptOf(
+  record: TaskRecord,
+  delivery: TaskDelivery | null,
+  branch: string,
+  place: { own: boolean; current: boolean },
+): ChangeReceipt | null {
   const authorization = delivery?.mergeAuthorization;
+  const reviewed = (delivery ? reviewsOf(delivery) : []).find(
+    (review) =>
+      review.branch === branch &&
+      review.receipt &&
+      (delivery?.prNumber === undefined || review.number === delivery.prNumber),
+  )?.receipt;
+  // The task's finishing merge and its close are the current change's: read
+  // from the whole slot, since they name no pull request of their own.
+  const closing = place.current ? record : undefined;
+  const finished = place.current ? record.delivery : undefined;
   const merged =
-    Boolean(delivery?.mergedSha) ||
-    Boolean(delivery?.landedMode) ||
-    delivery?.ci === "merged" ||
     Boolean(authorization?.receipt) ||
-    MERGED_CLOSES.has(record.closedReason ?? "");
+    Boolean(reviewed) ||
+    delivery?.ci === "merged" ||
+    Boolean(finished?.mergedSha) ||
+    Boolean(finished?.landedMode) ||
+    MERGED_CLOSES.has(closing?.closedReason ?? "");
   if (merged) {
-    const head = authorization?.receipt?.head ?? delivery?.headSha;
-    const sha = delivery?.mergedSha ?? authorization?.receipt?.sha;
+    const head = authorization?.receipt?.head ?? reviewed?.head ?? delivery?.headSha;
+    const sha = finished?.mergedSha ?? authorization?.receipt?.sha ?? reviewed?.sha;
     return {
       outcome: "merged",
-      ...(record.closedReason ? { reason: record.closedReason } : {}),
+      ...(closing?.closedReason ? { reason: closing.closedReason } : {}),
       ...(head ? { head } : {}),
       ...(sha ? { sha } : {}),
       ...(authorization?.receipt ? { by: "captain" as const } : {}),
-      at: authorization?.receipt?.at ?? record.closedAt ?? null,
+      at: authorization?.receipt?.at ?? reviewed?.at ?? closing?.closedAt ?? null,
     };
   }
   if (record.status !== "done" && record.status !== "dropped") return null;
+  if (!place.own && !place.current) return null;
   return {
     outcome: record.closedReason === "discarded" ? "discarded" : "closed",
-    ...(record.closedReason ? { reason: record.closedReason } : {}),
+    ...(closing?.closedReason ? { reason: closing.closedReason } : {}),
     at: record.closedAt ?? null,
   };
 }
@@ -400,19 +505,33 @@ export function projectChange(
   repo: ChangeRepo,
   recorded: readonly string[] = [],
 ): ProjectedChange {
-  const delivery = record.delivery ? ownFacts(record.delivery) : null;
+  const delivery = record.delivery ? ownFacts(record.delivery, record.branch) : null;
+  return projected(record, repo, delivery, record.branch, recorded, {
+    own: true,
+    current: currentChange(record.delivery, record.branch).branch === record.branch,
+  });
+}
+
+function projected(
+  record: TaskRecord,
+  repo: ChangeRepo,
+  delivery: TaskDelivery | null,
+  branch: string,
+  recorded: readonly string[],
+  place: { own: boolean; current: boolean },
+): ProjectedChange {
   const override = overrideOf(delivery);
   return {
     repoId: record.repoId ?? "",
-    base: baseOf(delivery),
-    head: { branch: record.branch },
+    base: baseOf(delivery, branch),
+    head: { branch },
     handle: handleOf(delivery, repo),
     raisedBy: { kind: "task", task: record.id },
     taskId: record.id,
     override: override.task,
-    receipt: receiptOf(record, delivery),
+    receipt: receiptOf(record, delivery, branch, place),
     versions: delivery
-      ? headsOf(delivery, recorded, override.pushed).map(({ head, at }) => ({
+      ? headsOf(delivery, recorded, override.pushed, branch).map(({ head, at }) => ({
           head,
           at,
           checks: checksAt(delivery, head),
@@ -422,4 +541,141 @@ export function projectChange(
         }))
       : [],
   };
+}
+
+/**
+ * The pull requests a task names besides its own change, by number: every
+ * one it reviewed, selected or was approved to merge on another branch
+ * (INF-2490). Each is a change of its own.
+ */
+export function otherChangeNumbers(record: TaskRecord): number[] {
+  return record.delivery ? [...referencedNumbers(record.delivery, record.branch)] : [];
+}
+
+/**
+ * The slot's facts about one other pull request the task names (INF-2490):
+ * each fact that names that number, by the same stamps `ownFacts` reads -
+ * its reviews, the approval that targets it, the offers and the override
+ * given for it, the reading stamped with its number, and the story published
+ * on it. A reading or an override saved before its writer stamped it names
+ * no number, so it is never another change's.
+ */
+function factsFor(
+  delivery: TaskDelivery,
+  number: number,
+  story: ChangePresentationRecord | undefined,
+): TaskDelivery {
+  const mode = delivery.mode;
+  const named = delivery.prNumber === number;
+  const reading = delivery.checks?.prNumber === number;
+  const approval = delivery.mergeAuthorization;
+  const override = delivery.override as SlotOverride | undefined;
+  const reviews = reviewsOf(delivery).filter((review) => review.number === number);
+  const storyNumber = story?.published?.number ?? story?.publication?.number;
+  return {
+    mode,
+    prNumber: number,
+    ...(named && delivery.prUrl ? { prUrl: delivery.prUrl } : {}),
+    ...(named && delivery.changeLabel ? { changeLabel: delivery.changeLabel } : {}),
+    ...(named && delivery.prBase ? { prBase: delivery.prBase } : {}),
+    mergeReviews: reviews,
+    ...(approval?.target.prNumber === number ? { mergeAuthorization: approval } : {}),
+    completionOffers: (delivery.completionOffers ?? []).filter(
+      (offer) => offer.prNumber === number,
+    ),
+    ...(reading
+      ? {
+          checks: delivery.checks,
+          ...(named && delivery.headSha ? { headSha: delivery.headSha } : {}),
+          ...(delivery.ci ? { ci: delivery.ci } : {}),
+          ...(delivery.ciAt !== undefined ? { ciAt: delivery.ciAt } : {}),
+          ...(delivery.ciStartedAt !== undefined ? { ciStartedAt: delivery.ciStartedAt } : {}),
+          ...(delivery.ciFinishedAt !== undefined ? { ciFinishedAt: delivery.ciFinishedAt } : {}),
+          ...(delivery.mainChecks ? { mainChecks: delivery.mainChecks } : {}),
+        }
+      : {}),
+    ...(override?.prNumber === number ? { override: delivery.override } : {}),
+    // Its own story: the ledger kept for its branch, while it was published on this pull request.
+    ...(story && (storyNumber === undefined || storyNumber === number)
+      ? { presentation: story }
+      : {}),
+  };
+}
+
+/**
+ * One other pull request the task names, as a change of its own (INF-2490):
+ * on the branch its reviews name, raised on this task's record. It is
+ * merged once a merge of it is on the record; the task's close is its own
+ * only when it was the current change then.
+ */
+export function projectOtherChange(
+  record: TaskRecord,
+  repo: ChangeRepo,
+  number: number,
+  recorded: readonly string[] = [],
+): ProjectedChange {
+  if (!record.delivery) throw new Error(`Task ${record.id} names no pull request #${number}.`);
+  const branch = otherBranchOf(record.delivery, number);
+  const delivery = factsFor(
+    record.delivery,
+    number,
+    storyLedgerOf(record.delivery, record.branch, branch),
+  );
+  const review = [...(delivery.mergeReviews ?? [])].sort((a, b) => b.at - a.at)[0];
+  const change = projected(record, repo, delivery, branch, recorded, {
+    own: false,
+    current: record.delivery.checkTarget?.number === number,
+  });
+  return { ...change, base: change.base ?? review?.base ?? null };
+}
+
+/** The branch another pull request the task names is on, as its newest review or its approval says. */
+function otherBranchOf(delivery: TaskDelivery, number: number): string {
+  const review = reviewsOf(delivery)
+    .filter((entry) => entry.number === number)
+    .sort((a, b) => b.at - a.at)[0];
+  return (
+    review?.branch ??
+    (delivery.mergeAuthorization?.target.prNumber === number
+      ? delivery.mergeAuthorization.target.branch
+      : "")
+  );
+}
+
+/**
+ * Every pull request on the task, as its record's Info tab lists them
+ * (INF-2490 round two, `docs/task-record.md`): one line for each change the
+ * record keeps with a pull request, in number order, with the checks last
+ * read last, whichever version they were read at, and whether it merged. Merging
+ * closes the task only for the change the open finishing card was shown for
+ * (`finishing`), while it is unmerged: a continuing merge or a reading of a
+ * pull request declares nothing.
+ */
+export function taskPullRequestsOf(
+  changes: readonly ChangeRecord[],
+  finishing: number | undefined,
+): TaskPullRequest[] {
+  const lines = new Map<number, TaskPullRequest>();
+  for (const change of changes) {
+    const number = change.handle?.number;
+    if (number === undefined) continue;
+    // Versions keep the order the host first saw them, so the newest
+    // reading is the one read last, never the last version's (INF-2490).
+    const ci = change.versions.reduce<ChangeVersion | undefined>(
+      (latest, version) =>
+        version.checks?.state && (version.checks.at ?? 0) >= (latest?.checks?.at ?? 0)
+          ? version
+          : latest,
+      undefined,
+    )?.checks?.state;
+    const merged = change.receipt?.outcome === "merged";
+    lines.set(number, {
+      number,
+      ...(change.handle?.url ? { url: change.handle.url } : {}),
+      ...(ci ? { ci } : {}),
+      ...(merged ? { merged: true as const } : {}),
+      ...(!merged && number === finishing ? { closes: true as const } : {}),
+    });
+  }
+  return [...lines.values()].sort((a, b) => a.number - b.number);
 }

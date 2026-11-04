@@ -173,6 +173,14 @@ export type GitHubStub = {
   ) => void;
   /** INF-1555 F14: refuse the version's workflow metadata list, not its sign-in or registered checks. */
   setWorkflowReadFailure: (failure: { status: number; message: string } | undefined) => void;
+  /**
+   * INF-2546 R8: GitHub fails to read pull request N by its number with this
+   * answer, until it is cleared (undefined); every other request reads as usual.
+   */
+  setPullReadFailure: (
+    number: number,
+    failure: { status: number; message: string } | undefined,
+  ) => void;
   /** Every failed-job rerun GitHub accepted, `POST /path`, in order. */
   reruns: () => string[];
   /** A completed measurement workflow on this exact disposable project version. */
@@ -263,6 +271,7 @@ export async function startGitHubStub(
   ];
   let evidenceHead: string | undefined;
   let workflowReadFailure: { status: number; message: string } | undefined;
+  const pullReadFailures = new Map<number, { status: number; message: string }>();
   const measurementZip = readFileSync("tests/fixtures/forge/measurement.zip");
   let rejected = false;
   let device: {
@@ -766,6 +775,11 @@ export async function startGitHubStub(
         const numbered = /^\/pulls\/(\d+)$/.exec(rest);
         if (method === "GET" && numbered) {
           const number = Number(numbered[1]);
+          const failure = pullReadFailures.get(number);
+          if (failure) {
+            send(failure.status, { message: failure.message });
+            return;
+          }
           const pull =
             [...opened.values()].find((open) => open.number === number) ??
             (anyPull?.number === number ? anyPull : undefined);
@@ -1069,6 +1083,10 @@ export async function startGitHubStub(
     setStatus: putStatus,
     setWorkflowReadFailure: (failure) => {
       workflowReadFailure = failure;
+    },
+    setPullReadFailure: (number, failure) => {
+      if (failure) pullReadFailures.set(number, failure);
+      else pullReadFailures.delete(number);
     },
     reruns: () => [...reruns],
     serveWorkflowEvidence: (headSha) => {

@@ -5,6 +5,7 @@ import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { taskPullRequestsOf } from "../storage/changeProjection";
 import {
   type AppDatabase,
   CHANGES_VERSION,
@@ -98,7 +99,6 @@ const KEPT: MergeAuthorization = {
 /** The owned merge review of the kept profile's pull request, as `check_change` records one. */
 const KEPT_REVIEW: MergeReview = {
   id: "review-1",
-  relationship: "owned",
   kind: "github",
   host: "github.com",
   owner: "octo",
@@ -308,8 +308,15 @@ function readDelivery(tasks: TaskService) {
   return Object.fromEntries(tasks.list().map((record) => [record.id, record.delivery]));
 }
 
+/** Each task's own change, the one on its own branch, by task id: a pull request it names is a change of its own (INF-2490). */
 function byTask(store: TaskStore): Record<string, ChangeRecord> {
-  return Object.fromEntries(store.changes.list().map((change) => [change.taskId ?? "", change]));
+  const ids = new Set(store.changes.list().map((change) => change.taskId ?? ""));
+  return Object.fromEntries(
+    [...ids].flatMap((id) => {
+      const own = store.changes.forTask(id);
+      return own ? [[id, own]] : [];
+    }),
+  );
 }
 
 /** The change less what the store assigns - its id and clock - so a match reads the facts. */
@@ -481,7 +488,6 @@ describe("the migration of an older release's open changes", () => {
     const later = "9".repeat(40);
     const release = (head: string): MergeReview => ({
       id: "review-release",
-      relationship: "referenced",
       kind: "github",
       host: "github.com",
       owner: "octo",
@@ -586,6 +592,13 @@ describe("the migration of an older release's open changes", () => {
     expect(summary(changes.again)).toEqual(ownOnly(63));
     expect(summary(changes.cleared)).toEqual(ownOnly(62));
     expect(summary(changes.kept)).toEqual(ownOnly(64));
+    // The release pull request a task selected is a change of its own beside the task's (INF-2490).
+    expect(
+      new TaskStore(upgraded).changes
+        .allForTask("selected")
+        .map((change) => change.handle?.number)
+        .sort((a, b) => (a ?? 0) - (b ?? 0)),
+    ).toEqual([61, 151]);
     // The store reads the same on a later write. An unstamped reading beside
     // the own number still makes no version there, while the upgraded reader's
     // reading, stamped with the pull request it is of, makes the own version's checks.
@@ -603,6 +616,151 @@ describe("the migration of an older release's open changes", () => {
 });
 
 describe("the change a task carries after the upgrade", () => {
+  // INF-2546 R4, R6 and R7, under the captain's round-two answer: "the
+  // task's Info tab lists every one with its checks and whether it closes
+  // the task". The list reads the changes the record keeps, so a pull
+  // request opened without a review, or whose review the capped list no
+  // longer keeps, stays on it with its own checks; and each change's merge
+  // is its own, never the task's close.
+  it("lists every pull request the record keeps with its own checks and its own merge, whatever the capped review list and the task's close say (INF-2546)", () => {
+    const { db, tasks } = setup();
+    addProject(db, "chart", "github");
+    const store = new TaskStore(db);
+    const own = "1".repeat(40);
+    const theirs = "9".repeat(40);
+    const pull = (number: number) => `https://github.com/octo/chart/pull/${number}`;
+    const reading = (number: number, head: string, name: string, state: "success" | "failure") => ({
+      headSha: head,
+      prNumber: number,
+      items: [{ name, state }],
+      complete: true,
+      absenceDeclared: false,
+    });
+    seedTask(tasks, {
+      id: "work",
+      title: "Ship the chart and its release",
+      status: "idle",
+      repoId: "chart",
+      branch: "fm/task-work",
+    });
+    // The own pull request opens with no review, and its checks pass.
+    const ownSlot: Partial<TaskDelivery> = {
+      mode: "direct-pr",
+      prNumber: 12,
+      prUrl: pull(12),
+      changeLabel: "#12",
+      headSha: own,
+      ci: "green",
+      ciAt: 7_000,
+      checks: reading(12, own, "unit-tests", "success"),
+    };
+    seedDelivery(tasks, "work", ownSlot);
+    // check_change(pull) selects the release pull request; its checks fail.
+    const release: MergeReview = {
+      ...KEPT_REVIEW,
+      id: "review-release",
+      number: 94,
+      headSha: theirs,
+      branch: "release-please--branches--main",
+      title: "chore(main): release 0.2.0",
+      at: 7_200,
+    };
+    const releaseSlot: Partial<TaskDelivery> = {
+      checkTarget: release,
+      prNumber: 94,
+      prUrl: pull(94),
+      changeLabel: "#94",
+      headSha: theirs,
+      ci: "red",
+      ciAt: 7_300,
+      checks: reading(94, theirs, "release", "failure"),
+    };
+    seedDelivery(tasks, "work", { ...releaseSlot, mergeReviews: [release] });
+    const list = () => taskPullRequestsOf(tasks.changesFor("work"), undefined);
+    const both = [
+      { number: 12, url: pull(12), ci: "green" },
+      { number: 94, url: pull(94), ci: "red" },
+    ];
+    expect(list()).toEqual(both);
+    // The own change is current again and the capped list no longer keeps
+    // the release's review: both stay listed, each with its own checks.
+    seedDelivery(tasks, "work", { ...ownSlot, checkTarget: undefined, mergeReviews: [] });
+    expect(tasks.get("work")?.delivery?.mergeReviews).toEqual([]);
+    expect(list()).toEqual(both);
+    // The release is read again under a new review, passes and merges on
+    // its own (a continuing merge), then the own pull request finishes the task.
+    const again: MergeReview = { ...release, id: "review-release-again", at: 7_500 };
+    seedDelivery(tasks, "work", {
+      ...releaseSlot,
+      checkTarget: again,
+      mergeReviews: [again],
+      ci: "green",
+      ciAt: 7_600,
+      checks: reading(94, theirs, "release", "success"),
+    });
+    const merged = { ...again, receipt: { head: theirs, sha: BASE, at: 7_700 } };
+    seedDelivery(tasks, "work", { mergeReviews: [merged], checkTarget: merged });
+    seedDelivery(tasks, "work", { ...ownSlot, checkTarget: undefined });
+    seedDelivery(tasks, "work", { ci: "merged", landedMode: "pr", mergedSha: PLAIN });
+    tasks.close("work", { status: "done", reason: "merged", actor: "captain" });
+    const releaseChange = store.changes
+      .allForTask("work")
+      .find((change) => change.handle?.number === 94);
+    // Its own merge, not masked as closed by the task's close.
+    expect(releaseChange?.receipt).toMatchObject({ outcome: "merged", head: theirs, sha: BASE });
+    expect(store.changes.forTask("work")?.receipt).toMatchObject({
+      outcome: "merged",
+      reason: "merged",
+      sha: PLAIN,
+    });
+    expect(list()).toEqual([
+      // The own change's last reading is its merge.
+      { number: 12, url: pull(12), ci: "merged", merged: true },
+      { number: 94, url: pull(94), ci: "green", merged: true },
+    ]);
+
+    // Another task finishes on the release pull request while its own one
+    // never merged: the task's merged close is the release's, not its own's.
+    seedTask(tasks, {
+      id: "other",
+      title: "Ship the release from its own branch",
+      status: "idle",
+      repoId: "chart",
+      branch: "fm/task-other",
+    });
+    seedDelivery(tasks, "other", {
+      ...ownSlot,
+      prNumber: 13,
+      prUrl: pull(13),
+      changeLabel: "#13",
+      checks: reading(13, own, "unit-tests", "success"),
+    });
+    const finishing: MergeReview = { ...release, id: "review-finishing", number: 95, at: 7_800 };
+    seedDelivery(tasks, "other", {
+      ...releaseSlot,
+      prNumber: 95,
+      prUrl: pull(95),
+      changeLabel: "#95",
+      checkTarget: finishing,
+      mergeReviews: [finishing],
+      ci: "green",
+      checks: reading(95, theirs, "release", "success"),
+    });
+    seedDelivery(tasks, "other", { ci: "merged", landedMode: "pr", mergedSha: BASE });
+    tasks.close("other", { status: "done", reason: "merged", actor: "captain" });
+    const others = store.changes.allForTask("other");
+    expect(others.find((change) => change.handle?.number === 95)?.receipt).toMatchObject({
+      outcome: "merged",
+      reason: "merged",
+      sha: BASE,
+    });
+    expect(store.changes.forTask("other")?.receipt?.outcome).not.toBe("merged");
+    expect(taskPullRequestsOf(tasks.changesFor("other"), undefined)).toEqual([
+      { number: 13, url: pull(13), ci: "green" },
+      { number: 95, url: pull(95), ci: "merged", merged: true },
+    ]);
+  });
+
   it("follows the facts that move it: a pull request opened, each version pushed with what was read at it, the merge, and the task's end", () => {
     const { dir } = olderProfile();
     const db = openDatabase(dir);
@@ -994,7 +1152,6 @@ describe("the change a task carries after the upgrade", () => {
     const referenced = {
       ...KEPT_REVIEW,
       id: "review-theirs",
-      relationship: "referenced" as const,
       number: 94,
       headSha: theirs,
       branch: "release-please--branches--main",
@@ -1165,7 +1322,6 @@ describe("the change a task carries after the upgrade", () => {
     const mirror: MergeReview = {
       ...KEPT_REVIEW,
       id: "review-mirror",
-      relationship: "referenced",
       number: 94,
       headSha: shared,
       branch: "fm/task-mirror",
@@ -1334,7 +1490,6 @@ describe("the change a task carries after the upgrade", () => {
     const mirror = (id: string, head: string, at: number): MergeReview => ({
       ...KEPT_REVIEW,
       id,
-      relationship: "referenced",
       number: 94,
       headSha: head,
       branch: "fm/task-mirror",
@@ -1344,7 +1499,6 @@ describe("the change a task carries after the upgrade", () => {
     const owned = (id: string, head: string, at: number): MergeReview => ({
       ...KEPT_REVIEW,
       id,
-      relationship: "owned",
       number: 12,
       headSha: head,
       branch: "fm/task-work",

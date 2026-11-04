@@ -4,6 +4,7 @@ import {
   type CardThread,
   onStage,
   SETTLE_FACTS_OPEN,
+  withMergeClosesLine,
 } from "@shared/cards";
 import { currentCheckSummary } from "@shared/checkSnapshot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -615,7 +616,10 @@ describe("CardService", () => {
     const changes = cards.revisionChanges(id);
     seedDelivery(tasks, "t1", { ci: "red", ciAt: 1000 });
     expect(cards.snapshot()[0]?.body).toBe(shownBody?.replace("pending", "red"));
-    expect(cards.get(id)?.body).toBe(`<p>New author body.</p>${facts()}`);
+    // The refreshed facts keep the app's closes-or-continues line (INF-2490).
+    expect(cards.get(id)?.body).toBe(
+      `<p>New author body.</p>${withMergeClosesLine(facts(), input.actions)}`,
+    );
     expect(cardStore.get(id)?.body).toBe(cards.get(id)?.body);
     expect(cards.thread(id).messages.length).toBe(before);
     expect(cards.revisionChanges(id)).toEqual(changes);
@@ -2276,7 +2280,7 @@ describe("CardService past cards", () => {
       id,
       taskId: "t1",
       title: "How to bring cards back",
-      body: questions,
+      body: `${questions}${withMergeClosesLine(undefined, plan.actions)}`,
       ending: { how: "chose", actionId: "build", label: "Approve and build", by: "captain" },
       answers,
     });

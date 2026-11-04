@@ -11,9 +11,12 @@ import {
   HOST_OPS,
   isPreviewBody,
   legacyActionEffect,
+  MERGE_CLOSES_WORDS,
   migrateLegacyActions,
   opensSettings,
   splitSettleFacts,
+  takesFactStrip,
+  withMergeClosesLine,
 } from "./cards";
 
 /**
@@ -290,6 +293,52 @@ describe("splitSettleFacts", () => {
 
   it("leaves a body with no strip alone", () => {
     expect(splitSettleFacts("<p>Ready to merge.</p>")).toBeUndefined();
+  });
+});
+
+// INF-2490, the captain's answer to INF-2489's question 4: every merge card
+// carries the app's line, "Merging closes this task" or "The task continues
+// after this merge", read from the card's own actions.
+describe("the merge card's closes line", () => {
+  const strip =
+    '<div class="inf-facts" data-facts>' +
+    '<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">meterlab</span></span>' +
+    "</div>";
+  const requestMerge: Card = {
+    ...card,
+    title: "Merge the continued work",
+    actions: [
+      {
+        id: "merge",
+        label: "Merge the pull request",
+        default: true,
+        effect: { kind: "request_merge", review: "mr-94" },
+      },
+      { id: "not-now", label: "Not now" },
+    ],
+  };
+
+  it("puts the closes line last in a completion card's strip, where the stage lifts it beside the buttons", () => {
+    const author = "<h3>Why</h3><p>The meter read early.</p>";
+    const lifted = splitSettleFacts(`${author}${withMergeClosesLine(strip, card.actions)}`);
+    expect(lifted?.body).toBe(author);
+    expect(lifted?.facts).toContain('data-fact="project"');
+    expect(lifted?.facts.endsWith(`${MERGE_CLOSES_WORDS.closes}</p></div>`)).toBe(true);
+  });
+
+  it("gives a request_merge card a strip holding only the continues line, drawn beside its buttons", () => {
+    expect(takesFactStrip(requestMerge)).toBe(true);
+    const lifted = splitSettleFacts(
+      `<p>Merge it.</p>${withMergeClosesLine(undefined, requestMerge.actions)}`,
+    );
+    expect(lifted?.facts).toContain(MERGE_CLOSES_WORDS.continues);
+    expect(lifted?.facts).not.toContain(MERGE_CLOSES_WORDS.closes);
+  });
+
+  it("adds nothing to a card that merges nothing", () => {
+    const discard = card.actions.filter((action) => action.id === "discard");
+    expect(withMergeClosesLine(strip, discard)).toBe(strip);
+    expect(withMergeClosesLine(undefined, [{}])).toBeUndefined();
   });
 });
 

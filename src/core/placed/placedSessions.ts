@@ -292,9 +292,12 @@ export type CrewMachines = {
   workStatus(taskId: string): Promise<{ dirty: boolean; unlandedCommits: number } | null>;
   /**
    * The task's branch, brought here from there before this Mac's own git
-   * reads it; answers the repository here it reads it in.
+   * reads it; answers the repository here it reads it in. `branch` names
+   * another branch the crewmate checked out there (INF-2490).
    */
-  bringBranchHome(taskId: string, strict?: boolean): Promise<string | undefined>;
+  bringBranchHome(taskId: string, strict?: boolean, branch?: string): Promise<string | undefined>;
+  /** The branch the task's working copy there has checked out, and its commit (INF-2490). */
+  checkedOut(taskId: string): Promise<{ branch: string | null; head: string } | null>;
   /** The computers that run work on the list, by device id. */
   computers(): readonly string[];
   /** The computer's name, as Devices lists it. */
@@ -749,8 +752,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.copies.status(taskId);
   }
 
-  bringBranchHome(taskId: string, strict?: boolean): Promise<string | undefined> {
-    return this.copies.bringBranchHome(taskId, strict);
+  bringBranchHome(taskId: string, strict?: boolean, branch?: string): Promise<string | undefined> {
+    return this.copies.bringBranchHome(taskId, strict, branch);
+  }
+
+  checkedOut(taskId: string): Promise<{ branch: string | null; head: string } | null> {
+    return this.copies.checkoutThere(taskId);
   }
 
   async signInsOf(machine: string): Promise<ComputerSignIns | null> {

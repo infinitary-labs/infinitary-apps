@@ -1979,6 +1979,7 @@ export async function createServices(
     tasks,
     mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
     head: (taskId) => prCi.presentationHead(taskId),
+    branch: (taskId) => prCi.presentationBranch(taskId),
   });
   const prCi: PrCiService = new PrCiService({
     namingRule: () => runbooks.naming(),
@@ -1990,7 +1991,8 @@ export async function createServices(
     // asks the sign-in service to look again; its health read is the proof.
     forgeFor,
     onNote: (text, taskId) => broadcastEvent({ type: "firstmate_note", text, taskId }),
-    bringBranchHome: (taskId, strict) => placed.bringBranchHome(taskId, strict),
+    bringBranchHome: (taskId, strict, branch) => placed.bringBranchHome(taskId, strict, branch),
+    checkedOut: (taskId) => placed.checkedOut(taskId),
     verifyValidationEvidence: (taskId): void => supervisor.verifyValidationEvidence(taskId),
     now: ticker.now,
   });

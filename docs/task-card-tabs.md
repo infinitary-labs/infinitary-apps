@@ -9,7 +9,7 @@ The captain chose the direction on the prototype card FI3-1419: one card per tas
 `TaskTabStrip` (`src/renderer/src/cards/TaskTabStrip.tsx`) draws a tablist under the task's title on the record, the Crewmate tab and the browser view.
 Its tabs come from the task's browser fact and its tab facts: how many cards it showed, whether its record holds an Activity line, and whether a crewmate has run it (`taskTabsOf`, `taskTabFactsOf`, `hasCrewmateTab`, `src/renderer/src/cards/taskTabs.ts`):
 
-- `Info` is the record's overview, shaped like the crew summary a task's circle shows on hover (`docs/task-record.md`, "The Info tab").
+- `Info` is the record's overview, shaped like the crew summary a task's circle shows on hover (`docs/task-record.md`, "The Info tab"), with the Pull requests line on a task with more than one (INF-2490).
 - `Cards` is the cards the task showed, with how many beside its name in mono (`data-task-tab-count`).
 - `Activity` is the task's Activity, with no count.
 - `Crewmate` is the crewmate's own session (below, "The Crewmate tab"), on every task a crewmate started (`startedAt`), open or closed.

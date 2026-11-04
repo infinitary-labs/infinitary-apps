@@ -527,16 +527,66 @@ export const SETTLE_FACT_VALUE_CLASS = "inf-fact-v";
 export const SETTLE_FACTS_OPEN = '<div class="inf-facts" data-facts>';
 
 /**
- * Whether the host writes its fact strip on a card, and the stage draws it
- * beside the buttons: a settle card, an independent review's card, and the
- * story note of a task that merges on its own (INF-1219), which is the one
- * card with a risk assessment and no actions - the risk rides only a merge
- * offer and that note, both written by the host from the crewmate's story.
+ * Whether the host writes its task's facts on a card's strip: a settle card,
+ * an independent review's card, and the story note of a task that merges on
+ * its own (INF-1219), which is the one card with a risk assessment and no
+ * actions - the risk rides only a merge offer and that note, both written by
+ * the host from the crewmate's story.
  */
-export function takesFactStrip(card: Pick<Card, "actions" | "reviewTaskId" | "risk">): boolean {
+export function takesTaskFacts(card: Pick<Card, "actions" | "reviewTaskId" | "risk">): boolean {
   if (card.reviewTaskId) return true;
   if (card.actions.some((action) => settleEffectOf(action))) return true;
   return card.risk !== undefined && card.actions.length === 0;
+}
+
+/**
+ * Whether a card carries the host's strip, which the stage draws beside the
+ * buttons: every card with its task's facts, and a `request_merge` card,
+ * whose strip holds only the merge line (INF-2490).
+ */
+export function takesFactStrip(card: Pick<Card, "actions" | "reviewTaskId" | "risk">): boolean {
+  return takesTaskFacts(card) || card.actions.some((action) => requestMergeEffectOf(action));
+}
+
+/**
+ * The app's line on every merge card (INF-2490, the captain's answer to
+ * INF-2489's question 4): whether the click closes the task. A settle merge
+ * merges the task's finishing change and closes it; a `request_merge`
+ * merges a continuing change and the task stays open. The host reads it
+ * from the card's own actions, never from its words.
+ */
+export const MERGE_CLOSES_WORDS = {
+  closes: "Merging closes this task",
+  continues: "The task continues after this merge",
+} as const;
+
+/** The merge line's mark, which readers find it by. */
+export const MERGE_CLOSES_MARK = "data-merge-closes";
+
+/** The merge line for a card's actions, or undefined on a card that merges nothing. */
+export function mergeClosesLine(
+  actions: readonly Pick<CardAction, "effect">[],
+): string | undefined {
+  const words = actions.some((action) => settleEffectOf(action)?.mode === "merge")
+    ? MERGE_CLOSES_WORDS.closes
+    : actions.some((action) => requestMergeEffectOf(action))
+      ? MERGE_CLOSES_WORDS.continues
+      : undefined;
+  return words ? `<p class="inf-merge-closes" ${MERGE_CLOSES_MARK}>${words}</p>` : undefined;
+}
+
+/**
+ * A card's strip with its merge line as the last part, beside the buttons;
+ * a merge card with no task facts gets a strip holding only the line.
+ */
+export function withMergeClosesLine(
+  strip: string | undefined,
+  actions: readonly Pick<CardAction, "effect">[],
+): string | undefined {
+  const line = mergeClosesLine(actions);
+  if (!line) return strip;
+  if (!strip?.endsWith("</div>")) return `${SETTLE_FACTS_OPEN}${line}</div>`;
+  return `${strip.slice(0, -"</div>".length)}${line}</div>`;
 }
 
 /**

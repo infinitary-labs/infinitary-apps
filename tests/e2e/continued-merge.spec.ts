@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { presentationCommitMessage } from "../../src/core/forge/presentation";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
@@ -19,6 +20,15 @@ import {
   CONTINUED_PULL,
   continuedMerge,
 } from "./scenarios/continuedMerge";
+import {
+  OWN_STORY_TITLE,
+  STORIED_BRANCH,
+  STORIED_CARD_TITLE,
+  STORIED_CHANGES_MARKER,
+  STORIED_STORY,
+  STORIED_STORY_TITLE,
+  storiedChanges,
+} from "./scenarios/storiedChanges";
 import { shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -152,6 +162,171 @@ test("a continued pull request shows its checks and merges an unchanged conflict
     };
     writeFileSync(test.info().outputPath("continued-merge.json"), JSON.stringify(proof, null, 2));
     console.log("Continued pull request proof", JSON.stringify(proof));
+  } finally {
+    await launched.close();
+    await github.close();
+  }
+});
+
+/**
+ * INF-2546 (R2, R9), under the captain's "a new list of every pull request
+ * on the task": the task's own pull request and a second one it opens from
+ * an existing branch each keep their own saved story, so publishing the
+ * second leaves the first's description as it was; and the captain's one
+ * click on the second, kept through a conflict and an unchanged repair,
+ * republishes its story at the repaired version before the merge. Real git supplies both branches and
+ * the repair; a disposable GitHub serves the descriptions, checks and merge.
+ * Requires desktop Electron and local git; no real sign-in or shared PR.
+ */
+test("each pull request keeps its own saved story, and a kept approval republishes the second one's at its unchanged repair before merging it (INF-2546)", async () => {
+  const userDataDir = scratchDir("infinitary-storied-changes-");
+  const repoDir = join(userDataDir, "shipyard");
+  const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" }).toString().trim();
+  git("init", "--initial-branch=main", repoDir);
+  const run = (...args: string[]) => git("-C", repoDir, ...args);
+  run("config", "user.name", "Test");
+  run("config", "user.email", "test@localhost");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
+  writeFileSync(join(repoDir, "reading.txt"), "The task reads its own branch.\n");
+  run("add", ".");
+  run("commit", "-m", "chore: initial reading");
+  run("checkout", "-b", STORIED_BRANCH);
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
+  writeFileSync(join(repoDir, "reading.txt"), "The task reads the selected pull request.\n");
+  run("add", ".");
+  run("commit", "-m", STORIED_STORY_TITLE);
+  const approved = run("rev-parse", "HEAD");
+  run("checkout", "main");
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
+  writeFileSync(join(repoDir, "guide.txt"), "The captain chooses when to merge.\n");
+  run("add", ".");
+  run("commit", "-m", "docs: describe the merge choice");
+  const base = run("rev-parse", "HEAD");
+  // The same change on main's newer version, kept aside until the crewmate
+  // moves the branch to it. A cherry-pick leaves the branch where it is,
+  // whatever this computer's git does to other branches on a rebase.
+  run("checkout", "-b", "repaired", "main");
+  run("cherry-pick", approved);
+  const repaired = run("rev-parse", "HEAD");
+  run("checkout", "main");
+  const github = await startGitHubStub();
+  // Every branch's version where the project lives is its version here.
+  github.headOf((branch) => run("rev-parse", `refs/heads/${branch}`));
+  github.setChecks([{ name: "unit-tests", status: "completed", conclusion: "success" }]);
+  // GitHub refuses the approved version once main moved: it conflicts.
+  github.conflicts((head) => head === approved);
+  seedGitHubSignIn(userDataDir);
+  const db = openDatabase(userDataDir);
+  seedProject(db, {
+    id: "repo-shipyard",
+    path: repoDir,
+    name: "shipyard",
+    setupKind: "clone",
+    origin: "https://github.com/octo/shipyard.git",
+    runsOn: null,
+    delivery: "direct-pr",
+    rigor: "quick",
+  });
+  seedHostedOrigins(db, userDataDir);
+  db.close();
+  const launched = await launchApp({
+    withMockProvider: true,
+    userDataDir,
+    env: github.env,
+    scenarios: [
+      storiedChanges(() => ({
+        fromHead: approved,
+        toHead: repaired,
+        newBase: base,
+        impact: "none",
+        changedPaths: [],
+        evidence: "The same reading change sits on main's separate guide addition.",
+        validation: "The pull request's checks passed after the unchanged repair.",
+      })),
+    ],
+  });
+  const descriptionWrites = (number: number) =>
+    github.requests().filter((request) => request === `PATCH /repos/octo/shipyard/pulls/${number}`)
+      .length;
+  try {
+    const { page } = launched;
+    const title = `shipyard ${STORIED_CHANGES_MARKER}`;
+    const input = promptInput(page);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
+    await input.press("Enter");
+    const card = shownCard(page, STORIED_CARD_TITLE);
+    await expect(card).toBeVisible({ timeout: 60_000 });
+    const saved = () =>
+      readSavedData(userDataDir, (savedDb) =>
+        new TaskStore(savedDb).list().find((task) => task.title === title),
+      );
+    // Each change keeps its own story: the second pull request's is the
+    // current one, and the task's own stays published on its own number.
+    const task = await saved();
+    const own = task?.delivery?.presentations?.find((ledger) => ledger.branch === task.branch);
+    const ownNumber = own?.published?.number as number;
+    expect(own?.revisions.at(-1)?.title).toBe(OWN_STORY_TITLE);
+    const second = task?.delivery?.presentation;
+    const secondNumber = second?.published?.number as number;
+    expect(second).toMatchObject({ branch: STORIED_BRANCH, published: { head: approved } });
+    expect(second?.revisions.at(-1)?.title).toBe(STORIED_STORY_TITLE);
+    expect([ownNumber, secondNumber].every(Number.isInteger)).toBe(true);
+    expect(secondNumber).not.toBe(ownNumber);
+    // Each opened with its own story, and neither description was written since.
+    expect(descriptionWrites(ownNumber)).toBe(0);
+    expect(descriptionWrites(secondNumber)).toBe(0);
+    expect(github.merges()).toEqual([]);
+    await regionShot(card, test.info().outputPath("storied-review.png"));
+
+    await pressKey(
+      page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }),
+      "Enter",
+    );
+    // GitHub refused the approved version; the crewmate's unchanged repair
+    // kept the click, the story went up again at the repair, then it merged.
+    await expect
+      .poll(() => github.merges(), { timeout: 60_000 })
+      .toEqual([
+        {
+          number: secondNumber,
+          sha: repaired,
+          method: "squash",
+          title: STORIED_STORY_TITLE,
+          message: presentationCommitMessage(STORIED_STORY),
+        },
+      ]);
+    expect(descriptionWrites(secondNumber)).toBe(1);
+    expect(descriptionWrites(ownNumber)).toBe(0);
+    await expect.poll(saved).toMatchObject({
+      status: "active",
+      delivery: {
+        mergeAuthorization: {
+          status: "consumed",
+          approvedHead: approved,
+          receipt: { head: repaired },
+        },
+      },
+    });
+    const after = await saved();
+    expect(after?.delivery?.presentation?.published).toMatchObject({
+      number: secondNumber,
+      head: repaired,
+    });
+    writeFileSync(
+      test.info().outputPath("storied-changes.json"),
+      JSON.stringify(
+        {
+          own: after?.delivery?.presentations,
+          current: after?.delivery?.presentation,
+          approval: after?.delivery?.mergeAuthorization,
+          requests: github.requests(),
+          merges: github.merges(),
+          status: after?.status,
+        },
+        null,
+        2,
+      ),
+    );
   } finally {
     await launched.close();
     await github.close();

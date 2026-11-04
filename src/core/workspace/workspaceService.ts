@@ -142,6 +142,15 @@ export function keptRefFor(taskId: string): string {
   return `${KEPT_REF_PREFIX}${taskId}`;
 }
 
+/**
+ * Where the home keeps the other branch a placed task's crewmate checked
+ * out on the computer that runs it, to deliver it (INF-2490): one ref of
+ * the task's own, so a branch of the same name here is never moved.
+ */
+export function checkedOutRefFor(taskId: string): string {
+  return `refs/infinitary/checked-out/${taskId}`;
+}
+
 /** Every name a task's kept work may be under, Infinitary's first. */
 export function keptRefsFor(taskId: string): string[] {
   return [keptRefFor(taskId), `${OLDER_KEPT_REF_PREFIX}${taskId}`];

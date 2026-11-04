@@ -46,6 +46,7 @@ import {
   sameAttachmentDestination,
 } from "../forge";
 import type { StagedChangePresentation } from "../pi/changePresentation";
+import { storyLedgers } from "../storage/changeProjection";
 import type { TaskService } from "../tasks/taskService";
 import { requireConventional } from "../workspace/conventional";
 
@@ -81,6 +82,8 @@ type PublicationOpening = {
   beforePublish?: (head: string) => void;
   /** Whether Careful's records complete no-mistakes' review, test and document at this version. */
   attests?: (head: string) => boolean;
+  /** The ref this Mac holds the branch at when not under its own name (INF-2490). */
+  source?: string;
 };
 
 type PresentationTarget = Forge | LocalPresentationDestination;
@@ -103,6 +106,11 @@ export class ChangePresentations {
       mediaDir: (taskId: string) => string;
       /** Read actual committed code, including after asynchronous uploads. */
       head: (taskId: string) => Promise<string>;
+      /**
+       * The branch the working copy has checked out, whose change a story
+       * is prepared for (INF-2490); undefined for the task's current change.
+       */
+      branch?: (taskId: string) => Promise<string | undefined>;
     },
   ) {}
 
@@ -117,8 +125,9 @@ export class ChangePresentations {
         async () => {
           if ((await this.options.head(taskId)) !== staged.head)
             throw new Error("The code changed. Prepare a story for the current committed version.");
+          const branch = await this.options.branch?.(taskId);
           const destination = await storyDestination(target);
-          const current = this.options.tasks.changePresentation(taskId);
+          const current = this.options.tasks.changePresentation(taskId, branch);
           if (
             current?.publication &&
             current.publication.state !== "confirmed" &&
@@ -158,7 +167,7 @@ export class ChangePresentations {
             )
               throw new Error(`Keep the original Before evidence for ${view.id}.`);
           }
-          await this.save(taskId, (record) => {
+          await this.save(taskId, branch, (record) => {
             const receipts = [...(record?.receipts ?? [])];
             for (const asset of this.nativeAssets(story)) {
               if (!hostedPresentation(story.destination))
@@ -242,7 +251,7 @@ export class ChangePresentations {
     around?: StoryAround,
     opening?: PublicationOpening,
   ): Promise<ForgeChange> {
-    const story = this.current(taskId, revision);
+    const story = this.current(taskId, branch, revision);
     if (story.version === 2 && title !== story.title)
       throw new Error("Use the saved title for the pull request and completion card.");
     if (!hostedPresentation(story.destination)) {
@@ -257,11 +266,18 @@ export class ChangePresentations {
       opening?.beforePublish?.(story.head);
       // A placed branch is brought home before publication. Preserve the plain
       // forge's first push from there; an already-pushed branch needs no write.
-      const change = existing ?? (await forge.openChange({ branch, title, body: "" }));
+      const change =
+        existing ??
+        (await forge.openChange({
+          branch,
+          title,
+          body: "",
+          ...(opening?.source ? { source: opening.source } : {}),
+        }));
       await this.validateCurrent(story, forge, branch, remoteOnly);
       if (change.headSha !== story.head)
         throw new Error("The pushed branch does not match this story.");
-      await this.save(taskId, (record) => ({
+      await this.save(taskId, branch, (record) => ({
         ...this.required(record),
         completion: { revision, head: story.head, contentHash: presentationContentHash(story) },
       }));
@@ -271,7 +287,7 @@ export class ChangePresentations {
     if (nativePresentationMedia(destination) && !forge.attachments)
       throw new Error("Native evidence publication is not available on this host.");
     const words = hostWords(forge);
-    let ledger = this.ledger(taskId);
+    let ledger = this.ledger(taskId, branch);
     if (ledger.publication && ledger.publication.state !== "confirmed") {
       // Recover a prior write by reading, even if a later push moved the code.
       // Its original head stays on the receipt; completion still needs a current story.
@@ -280,7 +296,7 @@ export class ChangePresentations {
       const reconciled = await this.reconcile(story, ledger.publication, forge, branch, recovery);
       // A reconciled write is this revision's; words around it still need their own change.
       if (reconciled && ledger.publication.revision === revision && !around) return reconciled;
-      ledger = this.ledger(taskId);
+      ledger = this.ledger(taskId, branch);
     }
     const existing = await forge.changeFor(branch);
     if (existing && !ledger.published && ledger.publication?.retryOpening) {
@@ -293,7 +309,7 @@ export class ChangePresentations {
         existing,
       );
       if (reconciled && ledger.publication.revision === revision && !around) return reconciled;
-      ledger = this.ledger(taskId);
+      ledger = this.ledger(taskId, branch);
     }
     if (existing && !ledger.published && !ledger.reconciled)
       throw new Error(`This ${words.change} predates the saved story. It will not be rewritten.`);
@@ -371,9 +387,9 @@ export class ChangePresentations {
     for (const asset of this.nativeAssets(story)) {
       if (!forge.attachments)
         throw new Error("Native evidence publication is not available on this host.");
-      let receipt = this.receipt(story, asset);
+      let receipt = this.receipt(story, branch, asset);
       if (receipt?.state === "sending" || receipt?.state === "uncertain") {
-        this.keepReceipt(story, { ...receipt, state: "uncertain" });
+        this.keepReceipt(story, branch, { ...receipt, state: "uncertain" });
         if (!recovery?.retryUploads?.includes(asset.uploadSha256))
           throw new Error(
             `An attachment may already exist on ${words.place}. Disclose this possible orphan on a card before asking for a deliberate new attempt; then pass recovery.retryUploads with digest ${asset.uploadSha256}. No upload was resent.`,
@@ -385,7 +401,7 @@ export class ChangePresentations {
         continue;
       }
       const bytes = await this.readAsset(story, asset).catch((error: unknown) => {
-        this.keepReceipt(story, {
+        this.keepReceipt(story, branch, {
           destination: destination,
           digest: asset.uploadSha256,
           mediaType: asset.mediaType,
@@ -401,7 +417,7 @@ export class ChangePresentations {
         mediaType: asset.mediaType,
         state: "sending",
       };
-      this.keepReceipt(story, receipt);
+      this.keepReceipt(story, branch, receipt);
       try {
         const uploaded = await forge.attachments.upload(destination, {
           bytes,
@@ -409,10 +425,10 @@ export class ChangePresentations {
           mediaType: asset.mediaType,
         });
         receipt = { ...receipt, state: "confirmed", url: uploaded.url };
-        this.keepReceipt(story, receipt);
+        this.keepReceipt(story, branch, receipt);
         urls.set(asset.id, uploaded.url);
       } catch (error) {
-        this.keepReceipt(story, {
+        this.keepReceipt(story, branch, {
           ...receipt,
           state: error instanceof AttachmentUploadError ? error.outcome : "uncertain",
           problem:
@@ -452,10 +468,14 @@ export class ChangePresentations {
       ...(story.version === 2 || !fresh ? { title } : {}),
       ...(fresh?.number ? { number: fresh.number } : {}),
     };
-    this.options.tasks.updateChangePresentation(taskId, (record) => ({
-      ...this.required(record),
-      publication,
-    }));
+    this.options.tasks.updateChangePresentation(
+      taskId,
+      (record) => ({
+        ...this.required(record),
+        publication,
+      }),
+      branch,
+    );
     let read: ForgeChange | null;
     try {
       if (fresh) {
@@ -483,15 +503,19 @@ export class ChangePresentations {
         throw new Error(
           "The story write did not read back exactly; a simultaneous edit or an uncertain write needs reconciliation.",
         );
-      await this.confirm(taskId, { ...publication, number: read.number });
+      await this.confirm(taskId, branch, { ...publication, number: read.number });
     } catch (error) {
-      this.options.tasks.updateChangePresentation(taskId, (record) => ({
-        ...this.required(record),
-        publication:
-          error instanceof ForgeWriteError && error.outcome === "failed"
-            ? ledger.publication
-            : { ...publication, state: "uncertain" },
-      }));
+      this.options.tasks.updateChangePresentation(
+        taskId,
+        (record) => ({
+          ...this.required(record),
+          publication:
+            error instanceof ForgeWriteError && error.outcome === "failed"
+              ? ledger.publication
+              : { ...publication, state: "uncertain" },
+        }),
+        branch,
+      );
       throw error;
     }
     // The story is the app's and is confirmed; the words around it are a person's too.
@@ -542,9 +566,9 @@ export class ChangePresentations {
   }
 
   /** A completion offer must use the newest fully published story at the current committed version. */
-  async completion(taskId: string, revision: number, head: string) {
+  async completion(taskId: string, revision: number, head: string, branch?: string) {
     return this.serial(taskId, async () => {
-      const story = this.publishedStory(taskId, head, revision);
+      const story = this.publishedStory(taskId, branch, head, revision);
       const committed = await this.options.head(taskId);
       if (committed !== head)
         throw new Error(
@@ -608,7 +632,7 @@ export class ChangePresentations {
   /** Local completion validates the committed code and retained files without reaching a forge. */
   async assertLocal(taskId: string, destination: LocalPresentationDestination): Promise<string> {
     const head = await this.options.head(taskId);
-    const story = this.publishedStory(taskId, head);
+    const story = this.publishedStory(taskId, undefined, head);
     if (!samePresentationDestination(story.destination, destination))
       throw new Error("The story's local project changed.");
     await this.checkRetained(story);
@@ -626,14 +650,16 @@ export class ChangePresentations {
     forge: Forge,
     revision?: number,
   ): Promise<ForgeChange> {
-    const record = this.ledger(taskId);
-    const story = this.publishedStory(taskId, change.headSha, revision);
+    // The story of the change being checked, on its own branch (INF-2490).
+    const branch = change.branch;
+    const record = this.ledger(taskId, branch);
+    const story = this.publishedStory(taskId, branch, change.headSha, revision);
     if (!samePresentationDestination(story.destination, await storyDestination(forge)))
       throw new Error("The story's destination or audience changed.");
     if (!hostedPresentation(story.destination)) return change;
     if (!record.published) throw new Error("The current story has not been published.");
     for (const asset of this.nativeAssets(story)) {
-      const receipt = this.receipt(story, asset);
+      const receipt = this.receipt(story, branch, asset);
       if (receipt?.state !== "confirmed" || !receipt.url)
         throw new Error("The current story is missing a confirmed attachment.");
     }
@@ -657,22 +683,26 @@ export class ChangePresentations {
     observed?: ForgeChange,
   ): Promise<ForgeChange | undefined> {
     const found = observed ?? (await forge.changeFor(branch));
-    const ledger = this.ledger(story.taskId);
+    const ledger = this.ledger(story.taskId, branch);
     const words = hostWords(forge);
     if (found && (publication.number === undefined || publication.number === found.number)) {
       const region = readPresentationRegion(found.body ?? "", story.taskId);
       if (region === presentationLines(publication.region)) {
-        await this.confirm(story.taskId, { ...publication, number: found.number });
+        await this.confirm(story.taskId, branch, { ...publication, number: found.number });
         return found;
       }
       if (
         (ledger.published && region === presentationLines(ledger.published.region)) ||
         (ledger.reconciled && region === presentationLines(ledger.reconciled.region))
       ) {
-        this.options.tasks.updateChangePresentation(story.taskId, (record) => ({
-          ...this.required(record),
-          publication: ledger.published,
-        }));
+        this.options.tasks.updateChangePresentation(
+          story.taskId,
+          (record) => ({
+            ...this.required(record),
+            publication: ledger.published,
+          }),
+          branch,
+        );
         const restored =
           ledger.published && region === presentationLines(ledger.published.region)
             ? "The last confirmed story"
@@ -687,11 +717,15 @@ export class ChangePresentations {
         region === presentationLines(recovery.replaceRegion) &&
         found.number !== undefined
       ) {
-        this.options.tasks.updateChangePresentation(story.taskId, (record) => ({
-          ...this.required(record),
-          publication: ledger.published,
-          reconciled: { number: found.number as number, region },
-        }));
+        this.options.tasks.updateChangePresentation(
+          story.taskId,
+          (record) => ({
+            ...this.required(record),
+            publication: ledger.published,
+            reconciled: { number: found.number as number, region },
+          }),
+          branch,
+        );
         return undefined;
       }
       replacePresentationRegion(
@@ -708,10 +742,14 @@ export class ChangePresentations {
     }
     if (recovery?.retryOpening || publication.retryOpening) {
       // The host permits only one open change for the branch and its target; the fresh read above found none.
-      this.options.tasks.updateChangePresentation(story.taskId, (record) => ({
-        ...this.required(record),
-        publication: { ...publication, retryOpening: true },
-      }));
+      this.options.tasks.updateChangePresentation(
+        story.taskId,
+        (record) => ({
+          ...this.required(record),
+          publication: { ...publication, retryOpening: true },
+        }),
+        branch,
+      );
       return undefined;
     }
     throw new Error(
@@ -720,8 +758,13 @@ export class ChangePresentations {
   }
 
   /** A completion offer names its revision; the merge path names none and keeps its own words. */
-  private publishedStory(taskId: string, head: string, revision?: number): ChangePresentation {
-    const record = this.ledger(taskId);
+  private publishedStory(
+    taskId: string,
+    branch: string | undefined,
+    head: string,
+    revision?: number,
+  ): ChangePresentation {
+    const record = this.ledger(taskId, branch);
     const story = record.revisions.at(-1);
     if (story && !hostedPresentation(story.destination)) {
       const ready = readyPresentation(record);
@@ -747,9 +790,13 @@ export class ChangePresentations {
     return story;
   }
 
-  private async confirm(taskId: string, publication: PresentationPublication): Promise<void> {
+  private async confirm(
+    taskId: string,
+    branch: string | undefined,
+    publication: PresentationPublication,
+  ): Promise<void> {
     const confirmed = { ...publication, state: "confirmed" as const };
-    await this.save(taskId, (record) => ({
+    await this.save(taskId, branch, (record) => ({
       ...this.required(record),
       publication: confirmed,
       published: confirmed,
@@ -760,29 +807,37 @@ export class ChangePresentations {
   /** Keep the latest draft and the last complete publication, never an unbounded revision history. */
   private async save(
     taskId: string,
+    branch: string | undefined,
     update: (record: ChangePresentationRecord | undefined) => ChangePresentationRecord,
   ): Promise<void> {
-    const previous = this.options.tasks.changePresentation(taskId);
-    this.options.tasks.updateChangePresentation(taskId, (record) => {
-      const next = update(record);
-      const newest = next.revisions.at(-1)?.revision;
-      return {
-        ...next,
-        revisions: next.revisions.filter(
-          (story) =>
-            story.revision === newest ||
-            story.revision ===
-              (next.completion?.revision ?? next.published?.revision ?? next.publication?.revision),
-        ),
-      };
-    });
+    const previous = this.options.tasks.changePresentation(taskId, branch);
+    this.options.tasks.updateChangePresentation(
+      taskId,
+      (record) => {
+        const next = update(record);
+        const newest = next.revisions.at(-1)?.revision;
+        return {
+          ...next,
+          revisions: next.revisions.filter(
+            (story) =>
+              story.revision === newest ||
+              story.revision ===
+                (next.completion?.revision ??
+                  next.published?.revision ??
+                  next.publication?.revision),
+          ),
+        };
+      },
+      branch,
+    );
     await this.cleanupMedia(taskId, previous?.revisions.flatMap((story) => story.assets) ?? []);
   }
 
   private async cleanupMedia(taskId: string, assets: PresentationAsset[]): Promise<void> {
+    // Every change's story keeps its own files (INF-2490).
     const kept = new Set(
-      (this.options.tasks.get(taskId)?.delivery?.presentation?.revisions ?? []).flatMap((story) =>
-        story.assets.map((asset) => asset.file),
+      storyLedgers(this.options.tasks.get(taskId)?.delivery).flatMap((ledger) =>
+        ledger.revisions.flatMap((story) => story.assets.map((asset) => asset.file)),
       ),
     );
     for (const asset of assets) {
@@ -811,7 +866,7 @@ export class ChangePresentations {
     attests?: (head: string) => boolean,
   ): Promise<void> {
     await this.serial(taskId, async () => {
-      const record = this.ledger(taskId);
+      const record = this.ledger(taskId, branch);
       const published = record.revisions.find(
         (story) => story.revision === record.published?.revision,
       );
@@ -841,7 +896,7 @@ export class ChangePresentations {
           "A newer edited story needs its own completion offer; it is not a repair's refresh.",
         );
       if (latest.revision === published.revision)
-        await this.save(taskId, (old) => ({
+        await this.save(taskId, branch, (old) => ({
           ...this.required(old),
           revisions: [...this.required(old).revisions, refreshed],
         }));
@@ -861,14 +916,15 @@ export class ChangePresentations {
     });
   }
 
-  private current(taskId: string, revision: number): ChangePresentation {
-    const story = this.ledger(taskId).revisions.at(-1);
+  private current(taskId: string, branch: string, revision: number): ChangePresentation {
+    const story = this.ledger(taskId, branch).revisions.at(-1);
     if (!story || story.revision !== revision)
       throw new Error("Use the newest prepared story revision.");
     return changePresentationSchema.parse(story);
   }
-  private ledger(taskId: string): ChangePresentationRecord {
-    return this.required(this.options.tasks.changePresentation(taskId));
+  /** The story ledger of the change on `branch`; undefined names the task's current change. */
+  private ledger(taskId: string, branch: string | undefined): ChangePresentationRecord {
+    return this.required(this.options.tasks.changePresentation(taskId, branch));
   }
   private required(record: ChangePresentationRecord | undefined): ChangePresentationRecord {
     if (!record) throw new Error("Prepare the change story before opening its pull request.");
@@ -883,27 +939,32 @@ export class ChangePresentations {
   }
   private receipt(
     story: ChangePresentation,
+    branch: string,
     asset: PresentationAsset,
   ): PresentationReceipt | undefined {
-    return this.ledger(story.taskId).receipts.find((receipt) =>
+    return this.ledger(story.taskId, branch).receipts.find((receipt) =>
       receiptMatches(story, asset, receipt),
     );
   }
-  private keepReceipt(story: ChangePresentation, next: PresentationReceipt): void {
-    this.options.tasks.updateChangePresentation(story.taskId, (record) => ({
-      ...this.required(record),
-      receipts: [
-        ...this.required(record).receipts.filter(
-          (receipt) =>
-            !(
-              receipt.digest === next.digest &&
-              receipt.mediaType === next.mediaType &&
-              sameAttachmentDestination(receipt.destination, next.destination)
-            ),
-        ),
-        next,
-      ],
-    }));
+  private keepReceipt(story: ChangePresentation, branch: string, next: PresentationReceipt): void {
+    this.options.tasks.updateChangePresentation(
+      story.taskId,
+      (record) => ({
+        ...this.required(record),
+        receipts: [
+          ...this.required(record).receipts.filter(
+            (receipt) =>
+              !(
+                receipt.digest === next.digest &&
+                receipt.mediaType === next.mediaType &&
+                sameAttachmentDestination(receipt.destination, next.destination)
+              ),
+          ),
+          next,
+        ],
+      }),
+      branch,
+    );
   }
   private async validateCurrent(
     story: ChangePresentation,

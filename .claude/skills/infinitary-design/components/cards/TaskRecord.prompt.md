@@ -86,6 +86,8 @@ Then the shared task facts (`components/now/NowPanel`, Shared task facts), their
 The title stays the task's one line in the chrome; the goal is never put in its place (the captain: "The title stays its one line about the task").
 The words fold is a quiet caret line in `--fg-3`; open, it holds a filing's "Why it was filed" once the filing is no longer open, why the first mate built without a plan, the captain's words verbatim in a hairline blockquote, and later asks with their short ages.
 The Browser line shows only on the record: the crew summary, a smaller surface, leaves it out.
+Then PULL REQUESTS, only while the task has more than one pull request (INF-2490): one line per pull request in number order, its `#N` in mono (a pull request link where the app holds its page), then `merged`, `checks` and the checks' words on the current one, or `open`, and `merging it closes the task` on the one whose merge closes the task, parted by `·` as on the Browser line.
+The crew summary, the task row and the board tile name only the current pull request, on the fact strip.
 A cardless paused task says “Work is paused” with its latest report summary, or “No reason has been reported yet.” when none exists.
 Queued work a gate holds has never reported, so its box says what the gate waits for and what ends the wait instead, in the words `taskHoldWords` gives (`src/shared/taskHold.ts`): a premium ask or a stronger-model retry waiting for a model at its level with allowance, or a level's allowance, a plan's allowance or a time the first mate set.
 A later dismissed note in Now never hides that report, and continuing checks, jobs or replies show no paused box.

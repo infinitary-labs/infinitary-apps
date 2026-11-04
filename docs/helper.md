@@ -684,6 +684,8 @@ A task runs in a working copy of its own on the computer that runs it, made from
   `SEEDED_REF` counts as merged work where this computer reads what a working copy holds that never merged, so only the task's own commits are kept and brought home.
 - **Its work, as a bundle.**
   `inf:working-copy:bundle` writes the task's branch or its kept commit as a git bundle in `bundles/`, leaving out the commits the home says it has, or answers that the home has that commit already; `inf:working-copy:read` reads it to the home in pieces of `PLACED_COPY_CHUNK_BYTES`.
+  With `branch`, it bundles another branch of the working copy's repository in place of the task's own: one the crewmate checked out to deliver (INF-2490).
+  `inf:working-copy:status` answers, with what the working copy holds, the branch it has checked out and that commit (`checkedOut`).
 - **Keeping and deleting.**
   Once the task's conversation is closed for good, `inf:working-copy:keep` saves what the working copy holds that never merged - uncommitted edits, its checkout's commits and its branch's - as one commit on the task's kept ref, as the home saves its own.
   The task's branch is `fm/task-<task>` wherever the checkout points, as a reviewer's checks out the version it reads.
@@ -708,6 +710,9 @@ A task runs in a working copy of its own on the computer that runs it, made from
   The record names this Mac's project folder, including after this Mac's folder moved (`docs/saved-data-compatibility.md`, "The one-time move").
   The read uses the project's folder as it stands, which can have moved again since the task started.
   Out of reach, this Mac reads what it brought last.
+  Another branch the crewmate checked out there to deliver (INF-2490) comes home to the task's own ref for it, `refs/infinitary/checked-out/<task>`, so a branch of the same name here never moves; `open_change` reads and, on a plain Git host, sends it from there.
+  A story is prepared for the branch the working copy there has checked out, and at its commit, as one here is (`PlacedCopies.checkoutThere`).
+  The home asks a computer for its checkout, or for another branch, only when it lists `checked-out-branch`; one without the change delivers the task's own branch.
 - **Opening, checking and merging** stay this Mac's, with its own sign-in: a crewmate there calls `open_change`, `check_change` and `download_artifact` as one here does, and the home does each (`inf:work:open-change`, `inf:work:check-change`, `inf:work:download-artifact`).
   `prepare_change` transfers its inspected media to the home through `inf:work:prepare-change`, gated by `CHANGE_PRESENTATIONS_SINCE`; the home retains the story without publishing it (`docs/forge.md`, "Saved change stories").
   A whole or selected archive is downloaded here and written into the working copy there before the tool answers, never kept in a folder here.

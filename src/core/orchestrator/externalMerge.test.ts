@@ -414,6 +414,63 @@ describe("external merge reconciliation", () => {
     expect(h.merge).not.toHaveBeenCalled();
   });
 
+  // INF-2546 R11, under the captain's "close the task when its finishing
+  // change merges": the finishing change may be another branch's pull
+  // request the task made current. Merged outside the app with the
+  // crewmate's declaration, it closes the task as merged, and the merge is
+  // that pull request's own, never the task's own pull request's.
+  it("closes on the outside merge of the current change on another branch, and records the merge on that change alone (INF-2546)", async () => {
+    const h = fixture();
+    const theirs = "9".repeat(40);
+    const release = {
+      id: "mrrelease94",
+      kind: "github" as const,
+      host: "github.com",
+      owner: "o",
+      name: "meter",
+      number: 94,
+      headSha: theirs,
+      base: "main",
+      branch: "release-please--branches--main",
+      method: "squash" as const,
+      title: "chore(main): release 0.2.0",
+      at: 1,
+    };
+    seedDelivery(h.tasks, "meter", {
+      mergeReviews: [release],
+      checkTarget: release,
+      prNumber: 94,
+      headSha: theirs,
+      ci: "green",
+    });
+    h.tasks.recordReport("meter", {
+      text: "The release is the finishing change; only its merge remains.",
+      declared: { mergeCompletesTask: { prNumber: 94, headSha: theirs } },
+    });
+    h.answer({
+      number: 94,
+      state: "closed",
+      merged: true,
+      mergedSha: "b".repeat(40),
+      headSha: theirs,
+      branch: release.branch,
+      base: "main",
+      readiness: "clean",
+    });
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")).toMatchObject({ status: "done", closedReason: "merged" });
+    expect(h.merge).not.toHaveBeenCalled();
+    const changes = h.tasks.changesFor("meter");
+    expect(changes.map((change) => change.handle?.number).sort()).toEqual([71, 94]);
+    expect(changes.find((change) => change.handle?.number === 94)?.receipt).toMatchObject({
+      outcome: "merged",
+      reason: "merged",
+    });
+    expect(changes.find((change) => change.handle?.number === 71)?.receipt?.outcome).not.toBe(
+      "merged",
+    );
+  });
+
   it("does not confuse closed, missing, unreadable or another numbered PR with a merge", async () => {
     const h = fixture();
     for (const answer of [

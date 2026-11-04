@@ -1419,6 +1419,14 @@ export const workOrders = {
        * a computer on an older contract, and when no working copy is there.
        */
       origin: z.string().max(4096).nullable().optional(),
+      /**
+       * The branch the working copy has checked out, null when its checkout
+       * is detached, and the commit it points at (INF-2490). Absent from a
+       * computer on an older contract, and when no working copy is there.
+       */
+      checkedOut: z
+        .object({ branch: z.string().min(1).max(255).nullable(), head: commitSchema })
+        .optional(),
     }),
   },
   /**
@@ -1433,6 +1441,13 @@ export const workOrders = {
         task: placedTaskIdSchema,
         ref: bundledRefSchema,
         have: z.array(commitSchema).max(64),
+        /**
+         * With ref `branch`, another branch of the working copy's repository
+         * to bundle in place of the task's own (INF-2490): one the crewmate
+         * checked out to deliver. Sent only to a computer that lists
+         * `checked-out-branch`.
+         */
+        branch: z.string().min(1).max(255).optional(),
       }),
     ]),
     response: z.object({ sha: commitSchema.nullable(), bundle: bundleSchema.optional() }),

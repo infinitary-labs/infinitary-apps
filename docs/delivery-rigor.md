@@ -407,10 +407,10 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
 - **The approval.**
   The captain's chrome click mints `delivery.mergeAuthorization` (version 1) in the card resolution's own transaction (`CardService.resolve`'s `alongside`): a fresh id and a generation, the card, lifecycle, offer, action and gesture ids, the GitHub repository, pull request and branch, squash, the approved head and an empty repair lineage.
   That click also stores the approved head's change reading on the approval, so the story refresh at a repaired version compares it for the attestation without reading the branch.
-  It is minted only on a GitHub direct-pr task for an offer with a baseline on the pull request the task still names.
+  It is minted only on a GitHub direct-pr task for an offer with a baseline on the task's current change, whichever branch it is on.
   A first mate completion card, a seeded completion card, a plain Git host or an ambiguous baseline mints nothing: that click is one attempt, as before.
   An ordinary `request_merge` card instead pins the stored review it names: the exact host, project, pull request, source branch, destination and reviewed head (INF-1246).
-  Its review snapshot survives review-list eviction and does not transfer ownership of a referenced branch.
+  Its review snapshot survives review-list eviction, and the click makes that pull request the task's current change (INF-2490).
   A rule-skipping review remains a one-shot click and mints no kept approval.
   Frames and agents cannot mint one - a settle effect runs only from the chrome.
 - **Its words (INF-23).**
@@ -468,7 +468,7 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   Right before the merge request goes out the guard's `beforeDispatch` re-reads the approval (same id, generation and head, the crewmate idle, no new card) and persists an `attempt` token.
   Its answer clears it; a 200 merges only when GitHub says `merged`.
   A token that outlived its answer - a quit, a timeout - is read back by the pull request's number before anything is sent again: merged spends the approval, closed ends it, open at the same head runs every gate again.
-  An owned merge closes the task once; a referenced merge leaves it open and delivers its continuation once.
+  A finishing merge, the completion card's, closes the task once; a continuing merge, a `request_merge` card's, leaves it open and delivers its continuation once.
 - **Ends.**
   Consumed by the merge; revoked by an interruption (the captain's interrupt = revoke, and the first mate's too: the captain chose in INF-1272 that a stop still ends it) or the captain's own words through `update_task withdraw_merge`; invalidated by changed work, a closed or swapped pull request, or a changed project, host or delivery; superseded by a new completion card or click; ended with its task.
   A quit, restart or update is no interruption: the approval stands and the next launch runs it again (`SettleService.resumeMergeAuthorizations`), as a computer that runs work's update pause does.

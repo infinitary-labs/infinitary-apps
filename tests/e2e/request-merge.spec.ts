@@ -25,7 +25,7 @@ import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
-import { expandDock, putInLine, taskKey, taskLine } from "./rails";
+import { expandDock, taskKey, taskLine } from "./rails";
 import { skipRules } from "./scenarios/skipRules";
 import { expectNoCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
@@ -33,7 +33,7 @@ import { pressKey } from "./windowKeys";
 /**
  * FI3-1543: one request_merge covers the task's own pull request and one
  * the task adopted. Autonomy is off. Nothing merges until the captain's key
- * on the button, and the two clicks finish or continue their tasks.
+ * on the button, and either click continues its task (INF-2490).
  */
 
 const MERGE = MERGE_WORDS["merge-pr"];
@@ -64,9 +64,12 @@ function seedReviewCard(
   review: MergeReview,
   title: string,
   body: string,
+  own = false,
 ) {
   seedDelivery(new TaskService({ db, strict: true }), taskId, {
     mode: "direct-pr",
+    // A crewmate that opened its own pull request records it on the task.
+    ...(own ? { prNumber: review.number } : {}),
     mergeReviews: [review],
     // A saved review records the scripted reviewer's judgment of this exact
     // candidate; the captain's separate key remains the merge authorization.
@@ -106,7 +109,10 @@ function seedReviewCard(
   });
 }
 
-test("a request_merge of the task's own pull request merges that pull request and finishes the task", async () => {
+// INF-2490 (the captain's answer to INF-2489's question 3): request_merge is
+// the continuing merge whichever branch its pull request is on; only the
+// completion card's merge finishes the task.
+test("a request_merge of the task's own pull request merges that pull request and the task continues", async () => {
   const userDataDir = scratchDir("infinitary-request-own-");
   const taskId = "owntask";
   const repo = seedRepo(userDataDir, taskId);
@@ -116,8 +122,9 @@ test("a request_merge of the task's own pull request merges that pull request an
     title: "feat: the crewmate's work",
     body: "The crewmate's work, ready to go in.",
   };
-  github.servePull(change);
-  github.headOf(() => repo.headSha);
+  // GitHub answers the pull request by its number with the task's branch as
+  // its head, which the click re-reads before it merges.
+  github.serveNumbered({ ...change, branch: repo.branch, headSha: repo.headSha });
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
   seedProject(db, {
@@ -141,7 +148,6 @@ test("a request_merge of the task's own pull request merges that pull request an
   });
   const review: MergeReview = {
     id: "mrowned000001",
-    relationship: "owned",
     kind: "github",
     host: "github.com",
     owner: "o",
@@ -160,7 +166,8 @@ test("a request_merge of the task's own pull request merges that pull request an
     taskId,
     review,
     title,
-    "<p>The task opened this pull request. Merging it finishes the task.</p>",
+    "<p>The task opened this pull request. Merging it keeps the task open.</p>",
+    true,
   );
   db.close();
 
@@ -173,22 +180,21 @@ test("a request_merge of the task's own pull request merges that pull request an
     const button = page.getByRole("button", { name: MERGE, exact: true });
     await pressKey(button, "Enter");
     await expectNoCard(page, title);
-    await expandDock(page, "activity");
-    await expect(putInLine(page, await taskKey(page, "Ship the pull request"))).toBeVisible({
-      timeout: 20_000,
-    });
-    expect(github.merges()).toEqual([
-      {
-        number: 55,
-        sha: repo.headSha,
-        method: "squash",
-        title: change.title,
-        message: change.body,
-      },
-    ]);
+    await expect
+      .poll(() => github.merges(), { timeout: 20_000 })
+      .toEqual([
+        {
+          number: 55,
+          sha: repo.headSha,
+          method: "squash",
+          title: change.title,
+          message: change.body,
+        },
+      ]);
     await expect
       .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), taskId))
-      .toMatchObject({ status: "done", closedReason: "merged" });
+      .toMatchObject({ status: "active" });
+    expect(existsSync(repo.worktreeDir)).toBe(true);
   } finally {
     await launched.close();
     await github.close();
@@ -232,7 +238,6 @@ test("a request_merge of an adopted pull request merges that pull request and le
   });
   const review: MergeReview = {
     id: "mradopted0001",
-    relationship: "referenced",
     kind: "github",
     host: "github.com",
     owner: "o",
@@ -342,7 +347,6 @@ test("a request_merge of an adopted pull request waits while GitHub works out wh
   });
   const review: MergeReview = {
     id: "mrundecided01",
-    relationship: "referenced",
     kind: "github",
     host: "github.com",
     owner: "o",

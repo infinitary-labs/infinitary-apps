@@ -1,6 +1,7 @@
 import { expect, type FrameLocator, type Locator, type Page } from "@playwright/test";
 import {
   CARD_CHAT_LABEL,
+  MERGE_CLOSES_MARK,
   SETTLE_FACT_VALUE_CLASS,
   SETTLE_FACTS,
   type SettleFact,
@@ -310,6 +311,8 @@ export type FactsStrip = Readonly<Record<SettleFact, Locator>> & {
   readonly cell: (fact: SettleFact) => Locator;
   /** The facts the strip holds, in the order it shows them. */
   readonly facts: () => Promise<SettleFact[]>;
+  /** The app's line saying whether the merge closes the task (INF-2490). */
+  readonly mergeLine: Locator;
 };
 
 /**
@@ -332,6 +335,7 @@ export function factsStrip(frame: FrameLocator): FactsStrip {
     ...values,
     strip,
     cell,
+    mergeLine: strip.locator(`[${MERGE_CLOSES_MARK}]`),
     facts: () =>
       strip
         .locator("[data-fact]")

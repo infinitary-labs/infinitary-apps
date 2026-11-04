@@ -131,7 +131,7 @@ import {
   validationRevision,
   validationStateRevision,
 } from "@shared/liveValidation";
-import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
+import type { MergeReview } from "@shared/mergeReview";
 import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
 import {
   AUTOMATIC_COMPUTER,
@@ -337,6 +337,7 @@ import {
   labeledActions,
 } from "../session/tools";
 import type { CardResolution, CardStore, DuplicateResult } from "../storage/cardStore";
+import { currentChange } from "../storage/changeProjection";
 import {
   FIRSTMATE_RECIPIENT,
   INBOX_ATTEMPT_MAX,
@@ -347,6 +348,7 @@ import {
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type {
   CardRefusal,
+  CompletionOffer,
   MergeRepairAssessment,
   TaskGate,
   TaskRecord,
@@ -796,14 +798,10 @@ export type CrewSupervisorOptions = {
     boundary?: import("./prCi").MergeBoundary,
   ) => Promise<PrOutcome>;
   /**
-   * Merge one stored review after the captain's click (FI3-1543). Owned
-   * reviews use the ordinary merge; referenced ones do not close the task.
+   * Merge one stored review after the captain's click (FI3-1543): a
+   * continuing merge, so the task stays open (INF-2490).
    */
-  mergeReview?: (
-    taskId: string,
-    reviewId: string,
-    guard?: MergeGuard,
-  ) => Promise<PrOutcome & { relationship?: MergeRelationship }>;
+  mergeReview?: (taskId: string, reviewId: string, guard?: MergeGuard) => Promise<PrOutcome>;
   /** Whether a stored review may be offered now. Absent in tests that publish unchecked. */
   reviewGate?: (taskId: string, reviewId: string) => Promise<string | undefined>;
   /**
@@ -2992,6 +2990,8 @@ export class CrewSupervisor {
     }
     const id = this.cards.addFirstmateCard(input);
     const offer = this.cards.get(id);
+    if (input.taskId && input.actions.some((action) => settleEffectOf(action)?.mode === "merge"))
+      this.bindFirstmateOffer(input.taskId, id);
     if (input.requiredActions !== undefined && input.taskId && offer?.offerId) {
       const merges = input.actions.some(
         (action) => settleEffectOf(action)?.mode === "merge" || requestMergeEffectOf(action),
@@ -3009,6 +3009,56 @@ export class CrewSupervisor {
       void this.sweepGates(this.now());
     }
     return id;
+  }
+
+  /**
+   * A first mate merge card on a task with a saved story carries that story
+   * (INF-2490, lifting INF-1364): the host binds the card's offer to the
+   * published story, so its click passes the same gate a crewmate's
+   * completion card does and the merge reads the same story. The offer names
+   * no pull request, so the click approves no head and is one attempt.
+   */
+  private bindFirstmateOffer(taskId: string, cardId: string): void {
+    const record = this.options.tasks.get(taskId);
+    const ready = readyPresentation(record?.delivery?.presentation);
+    const offerId = this.cards.get(cardId)?.offerId;
+    const shownFor = record ? currentChange(record.delivery, record.branch).number : undefined;
+    const head = ready?.head ?? record?.delivery?.headSha;
+    if (!record || !offerId || !head || (!ready && shownFor === undefined)) return;
+    this.keepOffer(taskId, record.delivery?.completionOffers ?? [], {
+      cardId,
+      offerId,
+      headSha: head,
+      // The change it was shown for (INF-2490): its click refuses once another is current.
+      ...(shownFor === undefined ? {} : { shownFor }),
+      ...(ready
+        ? { presentationRevision: ready.revision, presentationContentHash: ready.contentHash }
+        : {}),
+      at: this.now(),
+    });
+  }
+
+  /**
+   * One card's completion offer (INF-2490), replacing that card's earlier
+   * entry. The list keeps its four newest entries and the current offer of
+   * every card still open, so an open card never loses the change it was
+   * shown for, which its click is checked against.
+   */
+  private keepOffer(
+    taskId: string,
+    offers: readonly CompletionOffer[],
+    offer: CompletionOffer,
+  ): void {
+    const all = [
+      ...offers.filter((entry) => entry.cardId !== offer.cardId || entry.offerId !== offer.offerId),
+      offer,
+    ];
+    this.options.tasks.recordPermissionRecords(taskId, {
+      completionOffers: all.filter(
+        (entry, index) =>
+          index >= all.length - 4 || this.cards.get(entry.cardId)?.offerId === entry.offerId,
+      ),
+    });
   }
 
   declareStandaloneRequiredActions(input: EmittedCardInput, cardId: string): void {
@@ -10765,6 +10815,15 @@ export class CrewSupervisor {
         "Card refused: this task's deliverable is an answer, not a change - it commits nothing, pushes nothing, and opens no pull request, so there is nothing to merge or discard. Show the answer on this card without a settle action; the captain's choice on it, or your finished report after they close it, is what closes the task.",
       );
     }
+    // A merge card names one change (INF-2490): its line says whether the
+    // click closes the task, so it cannot both finish and continue.
+    if (
+      (input.actions ?? []).some((action) => settleEffectOf(action)?.mode === "merge") &&
+      (input.actions ?? []).some((action) => requestMergeEffectOf(action))
+    )
+      throw new Error(
+        "Card refused: a merge card offers one merge. settle merge finishes the task with its current change; request_merge merges a reviewed pull request and the task continues. Emit them on separate cards.",
+      );
     // A reviewed task's completion card waits on its review (delivery
     // rigor phase 2): the merge is held by the review's `blocks` edge, so a
     // merge decision before the pass could only be refused on the click.
@@ -10821,20 +10880,6 @@ export class CrewSupervisor {
         throw new Error(
           `Card refused: ask ${ask.id} was already sent once and is ${NEVER_SENT_AGAIN}. Make a new write with github_write, or call the integration again, to ask again. ${fixedHoldWords("sent-once")}`,
         );
-      }
-    }
-    const requested = (input.actions ?? [])
-      .map((action) => requestMergeEffectOf(action))
-      .find(Boolean);
-    if (requested) {
-      const review = this.mergeReviewOf(task.id, requested.review);
-      if (review?.relationship === "owned") {
-        const waiting = this.options.tasks.blockerRefusal(task.id);
-        if (waiting) {
-          throw new Error(
-            `Card refused: this task still waits on open work, so the merge would be refused. ${waiting.text} Report under the five headings with report instead; the first mate clears the wait and tells you when to emit the completion card.`,
-          );
-        }
       }
     }
     // The completion card's BUTTONS are the host's (contract v3.6, captain
@@ -11246,6 +11291,9 @@ export class CrewSupervisor {
    * just read green, its offer is kept with the head they read: the
    * baseline a click on exactly that offer approves. An offer that shows
    * the same content at another head is ambiguous and keeps no baseline.
+   * The change it was shown for is kept apart from the baseline (INF-2490):
+   * an offer that approves no head still refuses its click once another
+   * change is current.
    */
   private recordCompletionOffer(
     taskId: string,
@@ -11257,40 +11305,37 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     const offerId = this.cards.get(cardId)?.offerId;
     const head = presentation?.head ?? record?.delivery?.headSha;
-    const prNumber = record?.delivery?.prNumber;
-    if (
-      (!checked && !presentation) ||
-      !record ||
-      !offerId ||
-      !head ||
-      (prNumber === undefined && !presentation)
-    )
-      return;
+    // The offer is for the task's current change, whoever opened it (INF-2490).
+    const prNumber = record ? currentChange(record.delivery, record.branch).number : undefined;
+    if (!record || !offerId || !head) return;
     const offers = record.delivery?.completionOffers ?? [];
     const same = (offer: { cardId: string; offerId: string }) =>
       offer.cardId === cardId && offer.offerId === offerId;
-    const rest = offers.filter((offer) => !same(offer));
     const ambiguous = offers.some((offer) => same(offer) && offer.headSha !== head);
-    this.options.tasks.recordPermissionRecords(taskId, {
-      completionOffers: ambiguous
-        ? rest
-        : [
-            ...rest,
-            {
-              cardId,
-              offerId,
-              headSha: head,
-              ...(prNumber === undefined ? {} : { prNumber }),
-              ...(presentation
-                ? {
-                    presentationRevision: presentation.revision,
-                    presentationContentHash: readyPresentation(record.delivery?.presentation)
-                      ?.contentHash,
-                  }
-                : {}),
-              at: this.now(),
-            },
-          ].slice(-4),
+    const baseline =
+      !ambiguous &&
+      (checked || presentation !== undefined) &&
+      (prNumber !== undefined || presentation !== undefined);
+    if (!baseline && prNumber === undefined) {
+      if (ambiguous)
+        this.options.tasks.recordPermissionRecords(taskId, {
+          completionOffers: offers.filter((offer) => !same(offer)),
+        });
+      return;
+    }
+    this.keepOffer(taskId, offers, {
+      cardId,
+      offerId,
+      headSha: head,
+      ...(prNumber === undefined ? {} : { shownFor: prNumber }),
+      ...(baseline && prNumber !== undefined ? { prNumber } : {}),
+      ...(baseline && presentation
+        ? {
+            presentationRevision: presentation.revision,
+            presentationContentHash: readyPresentation(record.delivery?.presentation)?.contentHash,
+          }
+        : {}),
+      at: this.now(),
     });
   }
 
@@ -15069,20 +15114,26 @@ export class CrewSupervisor {
     // An answer task closes on this very resolution (Task B), so its
     // crewmate is gone: the choice has nowhere to round-trip to.
     const effect = chosen.effect;
-    if (
-      effect?.kind === "settle" &&
-      effect.mode === "merge" &&
-      associated?.delivery?.presentation
-    ) {
-      const ready = readyPresentation(associated.delivery.presentation);
-      const offered = associated.delivery.completionOffers?.find(
+    // A merge click merges the change its card was shown for, with the story
+    // it showed: a card shown for another change than the current one, or
+    // for another story than the current change's, is refused (INF-2490).
+    if (effect?.kind === "settle" && effect.mode === "merge" && associated) {
+      const delivery = associated.delivery;
+      const offered = delivery?.completionOffers?.find(
         (offer) => offer.cardId === card.id && offer.offerId === card.offerId,
       );
+      const shownFor = offered?.shownFor ?? offered?.prNumber;
+      const ready = readyPresentation(delivery?.presentation);
+      const story =
+        delivery?.presentation !== undefined || offered?.presentationRevision !== undefined;
       if (
-        !offered?.presentationRevision ||
-        offered.presentationRevision !== ready?.revision ||
-        offered.headSha !== ready?.head ||
-        offered.presentationContentHash !== ready?.contentHash
+        (shownFor !== undefined &&
+          shownFor !== currentChange(delivery, associated.branch).number) ||
+        (story &&
+          (!offered?.presentationRevision ||
+            offered.presentationRevision !== ready?.revision ||
+            offered.headSha !== ready?.head ||
+            offered.presentationContentHash !== ready?.contentHash))
       ) {
         this.cards.showOpenCard(card.id);
         throw new CardChoiceUnavailableError("action-changed");
@@ -15472,7 +15523,8 @@ export class CrewSupervisor {
     });
     const head = offer?.baseline.headSha ?? record.delivery?.headSha;
     if (!head) return;
-    const prNumber = offer?.baseline.prNumber ?? record.delivery?.prNumber;
+    const prNumber =
+      offer?.baseline.prNumber ?? currentChange(record.delivery, record.branch).number;
     const override: HoldOverride = {
       words: choiceWords(label, card.title, written),
       holds: ["checks"],

@@ -15,6 +15,7 @@ import {
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import { type AppPaths, crewmatePlacedDir } from "../paths";
 import { TaskService } from "../tasks/taskService";
 import { ARTIFACTS_FOLDER, artifactPath, OLDER_ARTIFACTS_FOLDER } from "../workspace/artifacts";
@@ -22,6 +23,7 @@ import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles"
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
 import {
+  checkedOutRefFor,
   type DependencyInstall,
   KEPT_REF_PREFIX,
   type KeptWork,
@@ -34,6 +36,9 @@ import {
 } from "../workspace/workspaceService";
 import { sendSourceFile } from "./sourceFiles";
 import type { WorkDevices } from "./workDevices";
+
+/** The branch a working copy there has checked out, and another branch it sends. */
+const CHECKED_OUT_BRANCH = contractChange("checked-out-branch");
 
 /**
  * The home's side of a task's working copy on a computer that runs work
@@ -329,7 +334,7 @@ export class PlacedCopies {
    * Ordinary reads log failures; a source handoff passes `strict` to refuse
    * a stale or missing branch before briefing its successor.
    */
-  bringBranchHome(taskId: string, strict = false): Promise<string | undefined> {
+  bringBranchHome(taskId: string, strict = false, branch?: string): Promise<string | undefined> {
     return this.serial(taskId, async () => {
       const record = this.options.tasks.get(taskId);
       const deviceId = record?.deviceId;
@@ -351,8 +356,20 @@ export class PlacedCopies {
               `The project's folder ${repoDir} is missing.`,
           );
         }
-        const ref = `refs/heads/${record.branch}`;
-        const sha = await this.take(deviceId, taskId, repoDir, "branch", ref);
+        // Another branch the crewmate checked out there comes to the task's
+        // own ref for it (INF-2490); the task's branch to its own name.
+        const other = branch !== undefined && branch !== record.branch;
+        if (other && !this.sendsCheckedOut(deviceId))
+          throw new Error("That computer needs an update to send another branch.");
+        const ref = other ? checkedOutRefFor(taskId) : `refs/heads/${record.branch}`;
+        const sha = await this.take(
+          deviceId,
+          taskId,
+          repoDir,
+          "branch",
+          ref,
+          other ? branch : undefined,
+        );
         if (strict && (!sha || (await commitOf(repoDir, ref)) !== sha))
           throw new Error("The source branch did not arrive at its current commit.");
       } catch (caught) {
@@ -361,6 +378,24 @@ export class PlacedCopies {
       }
       return repoDir;
     });
+  }
+
+  /**
+   * The branch the task's working copy there has checked out, null when
+   * detached, and the commit it points at (INF-2490): what a story is
+   * prepared for, as this Mac's own working copy reads its checkout. Null
+   * when that computer is out of reach or cannot say.
+   */
+  async checkoutThere(taskId: string): Promise<{ branch: string | null; head: string } | null> {
+    const deviceId = this.options.tasks.get(taskId)?.deviceId;
+    if (!deviceId || !this.options.devices.inReach(deviceId) || !this.sendsCheckedOut(deviceId))
+      return null;
+    const status = await this.ask(deviceId, "inf:working-copy:status", [{ task: taskId }]);
+    return status.present ? (status.checkedOut ?? null) : null;
+  }
+
+  private sendsCheckedOut(deviceId: string): boolean {
+    return listsChange(this.options.devices.version(deviceId)?.changes, CHECKED_OUT_BRANCH);
   }
 
   /**
@@ -393,6 +428,8 @@ export class PlacedCopies {
         ]);
         // This Mac's copy of the branch goes with it, as a local task's does.
         if (repoDir && record.branch) await this.forgetBranch(repoDir, record.branch);
+        if (repoDir)
+          await git(repoDir, ["update-ref", "-d", checkedOutRefFor(taskId)]).catch(() => {});
         this.retired(taskId, deviceId, kept);
       } catch (caught) {
         this.options.log(
@@ -678,9 +715,12 @@ export class PlacedCopies {
     repoDir: string,
     ref: BundledRef,
     to: string,
+    branch?: string,
   ): Promise<string | null> {
     const have = await this.haves(repoDir, taskId);
-    const made = await this.ask(deviceId, "inf:working-copy:bundle", [{ task: taskId, ref, have }]);
+    const made = await this.ask(deviceId, "inf:working-copy:bundle", [
+      { task: taskId, ref, have, ...(branch === undefined ? {} : { branch }) },
+    ]);
     if (!made.sha) return null;
     if (!made.bundle) {
       // This Mac has the commit already: only the ref moves.
@@ -692,7 +732,10 @@ export class PlacedCopies {
     const file = join(dir, `${ref}.bundle`);
     try {
       await this.download(deviceId, taskId, ref, made.bundle.size, dir, file);
-      const from = await bundledName(repoDir, file, taskId, ref, to);
+      const from =
+        branch === undefined
+          ? await bundledName(repoDir, file, taskId, ref, to)
+          : `refs/heads/${branch}`;
       await takeBundle(repoDir, file, made.bundle, from, to, made.sha);
     } finally {
       await rm(file, { force: true });

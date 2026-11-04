@@ -5,6 +5,9 @@ A change is the host's typed record of one unit of work offered to a project: wh
 ## Intended use
 
 Record every change a task carries as one record with a stable id, so the pull request, its checks, its reviews, its story, the consent given and the merge are facts about the change at a version rather than fields scattered over the task.
+A task carries one change on its own branch and one for every other pull request it names, whoever opened it (INF-2490): one change per pull request.
+Surfaces show the current pull request; the task record's Info tab and its `pullRequests` list name every one with its own checks, and which merge closes the task.
+Each change keeps its own saved story, so a story on one pull request never blocks another's.
 Give each version pushed its own row in the order the host saw it, holding the checks read, the review verdict declared with its findings and its reading, the story prepared and published, and the consent given there.
 Let the tools, the completion card and a review name the change by its id, and let every surface read what the host knows about it from the record ([the task record](../docs/task-record.md), "A task's change").
 
@@ -18,30 +21,39 @@ Work that ships nothing - an answer, a review the host raised, work in the perso
 
 ## Owner and entry points
 
-- The record: `ChangeStore` in [`../src/core/storage/changeStore.ts`](../src/core/storage/changeStore.ts) (`get`, `forTask`, `list`, `project`, `deleteFor`, `deleteAll`), written only by `TaskStore` beneath `TaskService`.
+- The record: `ChangeStore` in [`../src/core/storage/changeStore.ts`](../src/core/storage/changeStore.ts) (`get`, `forTask`, `allForTask`, `list`, `project`, `deleteFor`, `deleteAll`), written only by `TaskStore` beneath `TaskService`.
 - Its shape: `changeRecordSchema`, `changeVersionSchema`, `changeChecksSchema`, `changeReviewSchema`, `changeStorySchema`, `changeConsentSchema` and `changeReceiptSchema` in [`../src/shared/change.ts`](../src/shared/change.ts), published in `docs/contract.json`.
-- The projection from a task's record: `projectChange`, `carriesChange` and `isHostRaisedShape` in [`../src/core/storage/changeProjection.ts`](../src/core/storage/changeProjection.ts).
-- Reading it: `TaskService.changeFor` over `changes.forTask` for a task, and `CardService` over `changes.get` for the card that offers a version.
-- Naming it: `open_change` (`repository`, `base`), `check_change` (the change's id) and `prepare_change` in the crewmate's tools ([`../src/core/pi/crewTools.ts`](../src/core/pi/crewTools.ts)), and a review commissioned with `spawn_crewmate review_of`.
+- The projection from a task's record: `projectChange`, `projectOtherChange`, `otherChangeNumbers`, `carriesChange` and `isHostRaisedShape` in [`../src/core/storage/changeProjection.ts`](../src/core/storage/changeProjection.ts).
+- Reading it: `TaskService.changeFor` over `changes.forTask` for a task's own change, `TaskService.changesFor` over `changes.allForTask` for every change it names, and `CardService` over `changes.get` for the card that offers a version.
+- Naming it: `open_change` (`repository`, `base`, `branch`), `check_change` (`pull`, or one of the task's change ids) and `prepare_change` in the crewmate's tools ([`../src/core/pi/crewTools.ts`](../src/core/pi/crewTools.ts)), and a review commissioned with `spawn_crewmate review_of`.
+- Which change is current: the task's own, or the one `delivery.checkTarget` selects, which `check_change pull`, a named change id, `open_change branch` and the captain's click on a `request_merge` card set.
 
 ## Operations and lifecycle
 
 A change comes into being when its task first carries one - work on a project the app manages, on a branch of its own, not building in place and not raised by the host on another task's change, while the task is open - and `TaskStore` projects it again on every write that can move it.
+Another pull request's change comes into being when the task first names it, by a review, a selection or an approval of it on another branch.
 Each head the project's host saw makes one version, in order: a check read, an owned merge review, a published story, a merge click and the repairs it was carried to, a completion offer, or an override given for one version.
 A plain branch's confirmed story and a local story's committed-head completion binding also make a version, without inventing a hosted request or upload.
 A review, a reading of the working copy or an unbound prepared story makes no version; they attach once its head is observed.
 A version once recorded stays, dated when the host first saw it; a reading of the checks replaces the last whole, a review replaces the last whole, and the consent's click, carried approval and override each follow their own newest fact.
 A fact the task no longer names is kept, never erased, so the record accumulates what the delivery facts forget.
-The receipt closes it with the task's closed reason once the change is merged, discarded or closed.
+The receipt closes it with the task's closed reason once the change is merged, discarded or closed, and the task's close reaches only the current change.
+Every change takes a merged receipt from its own merge on the record, never from the task's close.
 A task's hard delete takes its change; a project removed keeps what its changes recorded.
 In this piece the record is still a projection: the delivery fields stay their writers' and readers' slot, and the change record keeps no second source (INF-1868 piece 5); dropping those fields waits for readers that read the change first.
+
+A merge card names one change.
+The completion card's settle merge is the finishing merge: it merges the task's current change and closes the task.
+A `request_merge` card is a continuing merge: the task stays open and its crewmate hears the outcome once.
+The host writes on each merge card which it is (`mergeClosesLine`, [`../src/shared/cards.ts`](../src/shared/cards.ts)), from the card's own actions.
+A merge made elsewhere closes the task as merged when the crewmate declared it finishing (`merge_completes_task`) and nothing is left, or when the first mate settles it and none of the task's pull requests is still open ([the forge seam](../docs/forge.md), "A requested merge").
 
 ## Authority
 
 A change holds facts, never permission: consent at a version is the captain's click on a card, an approval carried to a repaired version by a declared repair, or an override given for that version alone, and an override given for the whole task sits on the change ([delivery rigor](../docs/delivery-rigor.md), "The record and its holds").
 The host's holds read the record's typed facts - the checks, a kept approval's version, consent for an effect - and never the care's name.
 What a care asks of the crew - Default's procedure, Careful's review and live proof - is served guidance, and the host neither orders nor refuses by it (the captain, INF-1868: "the host only knows the three names as typed fact - a metadata").
-A reading of a referenced pull request writes into the same slot, and an approval of it is consent to merge that pull request, never this change; the record binds every fact by the pull request's number, never by its head.
+A reading of another branch's pull request writes into the same slot, and an approval of it is consent to merge that pull request, never another change; the record binds every fact to the change of the pull request it names, by its number, never by its head.
 
 ## Compositions
 
@@ -54,13 +66,13 @@ A reading of a referenced pull request writes into the same slot, and an approva
 ## Failure and recovery
 
 A database without the tables reads as no change (`ChangeStore.exists`), so migration tests on an older schema change nothing.
-A reading or a version override an older release saved before its writer stamped it is this change's only in a slot that records no referenced pull request; in one that does, the host cannot tell whose it was, and the record leaves it out ([saved-data compatibility](../docs/saved-data-compatibility.md), "The change record").
+A reading or a version override an older release saved before its writer stamped it is the task's own change's only in a slot that records no other branch's pull request; in one that does, the host cannot tell whose it was, and the record leaves it out ([saved-data compatibility](../docs/saved-data-compatibility.md), "The change record").
 A remote version the host has not seen pushed carries nothing until it is; a reviewer's pass at an unpushed remote head waits on the record for the push.
 
 ## Uses
 
 - Every direct-pr task's pull request, its checks, its story and its merge.
-- A requested merge of another pull request, read into the same slot as a referenced pull request ([the forge seam](../docs/forge.md), "A requested merge").
+- A requested merge of any pull request the task names, a change of its own ([the forge seam](../docs/forge.md), "A requested merge").
 - The attestation a github.com story carries when a review passed and live proof was accepted at its version.
 
 ## Checks

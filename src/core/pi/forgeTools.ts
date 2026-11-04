@@ -59,7 +59,7 @@ export const CHECK_CHANGE_TOOL_DESCRIPTION = [
   "An empty hosted reading stays pending. absentChecks, with pull or alone for your own pull request, records positive no-CI evidence from trusted default-branch policy and the local gate; time, history or missing workflow files prove nothing.",
   "While checks run the app watches them and wakes you on the first failure and when they finish. End your turn until that wake. With no watchable checks no wake comes.",
   "conflictRepair and captainGuidance grant no fresh merge consent.",
-  "Put pull's review id in request_merge; only the captain's click sends it with autonomy off.",
+  "Put pull's review id in request_merge: its merge continues your task, while your completion card's merge finishes it with your current change. Only the captain's click sends it with autonomy off.",
 ].join(" ");
 
 /** The conflictRepair parameter's own words: the rule a Claude crewmate must see is here. */
@@ -143,6 +143,12 @@ export const OPEN_CHANGE_TOOL = crewmateTool({
           "The branch the change targets instead of the default one, such as a stacked change's; applies when it opens.",
       }),
     ),
+    branch: Type.Optional(
+      Type.String({
+        description:
+          "An existing pushed branch the captain asked to open the change from, instead of your task's own: it opens from that branch unchanged and becomes your task's current change.",
+      }),
+    ),
     body: Type.Optional(
       Type.String({
         description:
@@ -182,7 +188,8 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
   parameters: Type.Object({
     change: Type.Optional(
       Type.String({
-        description: "Your task's change id; another's is refused.",
+        description:
+          "One of your task's change ids; naming another pull request's change makes it your current change. Another task's is refused.",
       }),
     ),
     declaration: Type.Optional(
@@ -274,7 +281,7 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
       Type.Integer({
         minimum: 1,
         description:
-          "Prepare a merge review of this pull request number in the task's project. Grants no approval and merges nothing.",
+          "Prepare a merge review of any open pull request number in the task's project, whoever opened it: it becomes your task's current change. Grants no approval and merges nothing.",
       }),
     ),
     skipRules: Type.Optional(

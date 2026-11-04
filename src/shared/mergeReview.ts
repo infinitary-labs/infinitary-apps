@@ -7,8 +7,6 @@
 export const MERGE_REVIEW_METHODS = ["squash"] as const;
 export type MergeReviewMethod = (typeof MERGE_REVIEW_METHODS)[number];
 
-export type MergeRelationship = "owned" | "referenced";
-
 /**
  * The crew's declaration that this exact head intentionally has no checks.
  * The host checks the head and the fresh check facts; it does not judge the
@@ -35,10 +33,14 @@ export type MergeSkips = {
   failedChecks: string[];
 };
 
+/**
+ * Any open pull request in the task's project, whoever opened it: naming it
+ * makes it one of the task's changes (INF-2490, `primitives/changes.md`).
+ * A review saved before then also names whose it was; nothing reads that.
+ */
 export type MergeReview = {
   id: string;
-  relationship: MergeRelationship;
-  /** `github` includes GitHub Enterprise. Referenced reviews are GitHub only. */
+  /** `github` includes GitHub Enterprise. */
   kind: "github" | "gitlab";
   host: string;
   owner: string;

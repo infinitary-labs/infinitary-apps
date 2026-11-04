@@ -53,8 +53,9 @@ export class PlainGitForge implements Forge {
     throw new ForgeError("not-found", "the project's host does not name a default branch");
   }
 
-  async openChange(input: { branch: string }): Promise<ForgeChange> {
-    await this.run(["push", "origin", `refs/heads/${input.branch}:refs/heads/${input.branch}`]);
+  async openChange(input: { branch: string; source?: string }): Promise<ForgeChange> {
+    const source = input.source ?? `refs/heads/${input.branch}`;
+    await this.run(["push", "origin", `${source}:refs/heads/${input.branch}`]);
     const sent = await this.changeFor(input.branch);
     if (!sent)
       throw new ForgeError("not-found", `${input.branch} was not found after sending it up`);

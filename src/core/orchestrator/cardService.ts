@@ -36,8 +36,10 @@ import {
   type PastCard,
   settleEffectOf,
   splitSettleFacts,
-  takesFactStrip,
+  takesTaskFacts,
+  withMergeClosesLine,
 } from "@shared/cards";
+import { readyPresentation } from "@shared/changePresentation";
 import { NEEDS_REAUTH_CONSEQUENCE, restoreAccountEffect } from "@shared/credentialHealth";
 import { HERE } from "@shared/deviceNames";
 import {
@@ -414,11 +416,14 @@ export class CardService {
     };
     const refreshed = (card: Card): Card => {
       if (!card.taskId || (taskIds && !taskIds.includes(card.taskId))) return card;
-      if (!takesFactStrip(card)) return card;
+      if (!takesTaskFacts(card)) return card;
       const taskId = card.taskId;
       const record = this.host.tasks.get(taskId);
       const read = () => this.host.settleFacts(taskId);
-      const facts = record ? this.host.tasks.projectedFact(record, factsOwner, read) : read();
+      const facts = withMergeClosesLine(
+        record ? this.host.tasks.projectedFact(record, factsOwner, read) : read(),
+        card.actions,
+      );
       const split = facts ? splitSettleFacts(card.body) : undefined;
       if (!facts || !split) return anyway(relabeled(card));
       const body = split.body.slice(0, split.at) + facts + split.body.slice(split.at);
@@ -1051,16 +1056,18 @@ export class CardService {
         `Task ${task.id} is closed, so a choice on a card about it cannot be taken; a card with actions needs an open task.`,
       );
     }
-    // INF-1364: only the crewmate emit path validates a saved story and
-    // records its completion offer. A first-mate settle button cannot pass
-    // that offer's click gate, so refuse it before writing or revising a card.
+    // A first-mate settle button on a task with a saved story carries that
+    // story once it is published (INF-2490, lifting INF-1364): the host binds
+    // the card to it (`CrewSupervisor.addFirstmateCard`). Before then the
+    // click gate could not pass, so the card is refused before it is written.
     if (
       context.author === "firstmate" &&
       task?.delivery?.presentation &&
+      !readyPresentation(task.delivery.presentation) &&
       input.actions.some((action) => settleEffectOf(action)?.mode === "merge")
     ) {
       throw new Error(
-        `Task ${task.id} has a saved change story, so only its crewmate's completion card can offer settle merge. Steer the crewmate to emit or revise that card with the published presentation; a first-mate merge button cannot carry its completion offer. The card is unchanged.`,
+        `Task ${task.id}'s saved change story is not published at its newest revision, so a merge button cannot carry it yet. Steer the crewmate to publish its story, or to emit its own completion card. The card is unchanged.`,
       );
     }
     if (input.reviewTaskId) {
@@ -1082,10 +1089,13 @@ export class CardService {
     // project, crewmate model, posture, PR link, CI state (contract v2.0,
     // captain ruling D4; the fact strip at v2.7) - on add and on every
     // in-place revision, so no prompt asks an agent to write them. So does
-    // the story note of a task that merges on its own (INF-1219).
-    if (context.taskId && takesFactStrip(input)) {
-      const facts = this.host.settleFacts(context.taskId);
-      if (facts) input = { ...input, body: `${input.body}${facts}` };
+    // the story note of a task that merges on its own (INF-1219). Every
+    // merge card's strip ends with the app's line saying whether its click
+    // closes the task (INF-2490).
+    if (context.taskId) {
+      const facts = takesTaskFacts(input) ? this.host.settleFacts(context.taskId) : undefined;
+      const strip = withMergeClosesLine(facts, input.actions);
+      if (strip) input = { ...input, body: `${input.body}${strip}` };
     }
     // A settle card says what the crew filed under this task's name
     // (captain, 2026-09-14). Deciding whether to land is the one moment

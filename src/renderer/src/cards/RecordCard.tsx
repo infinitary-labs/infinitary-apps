@@ -365,6 +365,7 @@ export function RecordCard({
               {...(shown.repo ? { project: shown.repo.name } : {})}
               planView="list"
               omitStrip
+              pullRequests
               nowWords={(text) => <KeyedText text={text} own={taskId} />}
               onOpenChange={openLink}
               onOpenBrowser={() => useShellStore.getState().openBrowserView(taskId)}

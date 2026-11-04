@@ -43,6 +43,7 @@ import {
 } from "@shared/tasks";
 import type { WorkPosture } from "@shared/workPosture";
 import type { CoreEventSink } from "../events";
+import { currentChange, taskPullRequestsOf } from "../storage/changeProjection";
 import type { ProjectRecord } from "../storage/projectStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
@@ -580,8 +581,14 @@ export class TaskProtocol {
       for (const row of proof.rows)
         row.evidence = this.options.validationEvidence(id, row.evidence);
     }
+    // Every pull request on the task, from the changes its record keeps,
+    // listed only on the record's read (INF-2490).
+    const pullRequests = taskPullRequestsOf(tasks.changesFor(id), this.finishingChange(record));
     return {
       ...view,
+      ...(view.delivery && pullRequests.length > 0
+        ? { delivery: { ...view.delivery, pullRequests } }
+        : {}),
       ...(origin
         ? {
             filing: {
@@ -1226,6 +1233,35 @@ export class TaskProtocol {
   private tiersOf(records: readonly TaskRecord[]): ReadonlyMap<string, Slot> {
     const ids = records.filter((record) => record.kind === "work").map((record) => record.id);
     return ids.length > 0 && this.options.tiers ? this.options.tiers(ids) : new Map();
+  }
+
+  /**
+   * The change whose merge closes the task (INF-2490): the current change,
+   * when the crewmate declared that its merge completes the task at the
+   * version the slot reads, or when the task's open finishing card - a merge
+   * card that settles it - was shown for it. None otherwise.
+   */
+  private finishingChange(record: TaskRecord): number | undefined {
+    const current = currentChange(record.delivery, record.branch).number;
+    if (current === undefined) return undefined;
+    const declared = record.delivery?.mergeCompletion;
+    if (declared?.prNumber === current && declared.headSha === record.delivery?.headSha)
+      return current;
+    const card = this.options.cards
+      .listOpen()
+      .filter(
+        (open) =>
+          open.taskId === record.id &&
+          open.actions.some(
+            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+          ),
+      )
+      .sort((a, b) => b.createdAt - a.createdAt)[0];
+    if (!card) return undefined;
+    const offer = record.delivery?.completionOffers?.find(
+      (entry) => entry.cardId === card.id && entry.offerId === card.offerId,
+    );
+    return (offer?.shownFor ?? offer?.prNumber) === current ? current : undefined;
   }
 
   private viewOf(

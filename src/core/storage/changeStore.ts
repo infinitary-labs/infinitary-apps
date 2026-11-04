@@ -1,8 +1,21 @@
 import { randomUUID } from "node:crypto";
-import type { ChangeChecks, ChangeRecord, ChangeStory, ChangeVersion } from "@shared/change";
+import type {
+  ChangeChecks,
+  ChangeReceipt,
+  ChangeRecord,
+  ChangeStory,
+  ChangeVersion,
+} from "@shared/change";
 import { type ForgeKind, forgeOf } from "@shared/forge";
 import type { RepoKind } from "@shared/repos";
-import { type ChangeRepo, carriesChange, projectChange } from "./changeProjection";
+import {
+  type ChangeRepo,
+  carriesChange,
+  otherChangeNumbers,
+  type ProjectedChange,
+  projectChange,
+  projectOtherChange,
+} from "./changeProjection";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
 import type { TaskRecord } from "./taskStore";
@@ -108,6 +121,23 @@ function kept<T extends object>(stored: T | null, fresh: T | null): T | null {
 }
 
 /**
+ * A change's receipt after a later write (INF-2490): a merge is final, so a
+ * merged receipt stays when the slot stops naming what showed it - a later
+ * reading of another pull request, a cleared approval - and a later merged
+ * reading adds to it; a close or a discard follows the slot. A different
+ * pull request on the branch starts without it.
+ */
+function keptReceipt(
+  stored: ChangeReceipt | null,
+  fresh: ChangeReceipt | null,
+  samePull: boolean,
+): ChangeReceipt | null {
+  if (stored?.outcome !== "merged" || !samePull) return fresh;
+  if (fresh?.outcome !== "merged") return stored;
+  return { ...stored, ...fresh, at: fresh.at ?? stored.at };
+}
+
+/**
  * A version's checks after a later write: a reading - its state, snapshot
  * and times - is one fact, so the newest reading at this head replaces the
  * last whole and a time it no longer names goes with it; the lines against
@@ -174,12 +204,13 @@ function record(row: ChangeRow, versions: VersionRow[]): ChangeRecord {
 
 /**
  * The host's change record (INF-1868 piece 1, `docs/task-record.md` "A
- * task's change"): one change per task that carries one, projected from the
- * task's delivery facts on every write that can move it, so the record is
- * current while those facts keep their writers. A version once recorded
- * stays, with the facts last read at it; a fact the task no longer names
- * is kept, never erased. Only TaskStore writes these tables, beneath
- * TaskService.
+ * task's change"): the change a task carries on its own branch, and one
+ * change for every other pull request it names (INF-2490), projected from
+ * the task's delivery facts on every write that can move them, so the
+ * record is current while those facts keep their writers. A version once
+ * recorded stays, with the facts last read at it; a fact the task no
+ * longer names is kept, never erased. Only TaskStore writes these tables,
+ * beneath TaskService.
  */
 export class ChangeStore {
   private present = false;
@@ -200,10 +231,20 @@ export class ChangeStore {
     return row ? record(row, this.versionsOf(row.id)) : undefined;
   }
 
-  /** The change a task carries, when it carries one. */
+  /** The change a task carries on its own branch, when it carries one. */
   forTask(taskId: string): ChangeRecord | undefined {
     const row = this.rowForTask(taskId);
     return row ? record(row, this.versionsOf(row.id)) : undefined;
+  }
+
+  /** Every change a task names, oldest first: its own and each other pull request. */
+  allForTask(taskId: string): ChangeRecord[] {
+    if (!this.exists()) return [];
+    const rows = prepared(
+      this.db,
+      "SELECT * FROM changes WHERE task_id = ? ORDER BY created_at, id",
+    ).all(taskId) as ChangeRow[];
+    return rows.map((row) => record(row, this.versionsOf(row.id)));
   }
 
   /** Every change, oldest first. */
@@ -235,7 +276,24 @@ export class ChangeStore {
     const existing = this.rowForTask(task.id);
     const repo = this.repo(task.repoId);
     if (!repo || (!existing && !carriesChange(task, repo))) return;
-    const at = task.updatedAt;
+    this.write(existing, task.updatedAt, (recorded) => projectChange(task, repo, recorded));
+    for (const number of otherChangeNumbers(task)) {
+      const other = prepared(
+        this.db,
+        "SELECT * FROM changes WHERE task_id = ? AND handle_number = ? AND head_branch IS NOT ?",
+      ).get(task.id, number, task.branch) as ChangeRow | undefined;
+      this.write(other, task.updatedAt, (recorded) =>
+        projectOtherChange(task, repo, number, recorded),
+      );
+    }
+  }
+
+  /** Write one projected change over its row, or as a new one. */
+  private write(
+    existing: ChangeRow | undefined,
+    at: number,
+    project: (recorded: readonly string[]) => ProjectedChange,
+  ): void {
     const id = existing?.id ?? this.freshId();
     const known = new Map(
       (
@@ -244,7 +302,7 @@ export class ChangeStore {
         ) as VersionRow[]
       ).map((row) => [row.head, row]),
     );
-    const change = projectChange(task, repo, [...known.keys()]);
+    const change = project([...known.keys()]);
     if (existing)
       prepared(
         this.db,
@@ -262,7 +320,13 @@ export class ChangeStore {
         change.handle?.url ?? null,
         change.handle?.label ?? null,
         json(change.override),
-        json(change.receipt),
+        json(
+          keptReceipt(
+            parsed(existing.receipt_json),
+            change.receipt,
+            (change.handle?.number ?? existing.handle_number) === existing.handle_number,
+          ),
+        ),
         at,
         id,
       );
@@ -351,11 +415,15 @@ export class ChangeStore {
     this.db.prepare("DELETE FROM changes").run();
   }
 
+  /** The task's own change: the oldest row it carries, on its own branch. */
   private rowForTask(taskId: string): ChangeRow | undefined {
     if (!this.exists()) return undefined;
-    return prepared(this.db, "SELECT * FROM changes WHERE task_id = ?").get(taskId) as
-      | ChangeRow
-      | undefined;
+    return prepared(
+      this.db,
+      `SELECT changes.* FROM changes JOIN tasks ON tasks.id = changes.task_id
+       WHERE changes.task_id = ? AND changes.head_branch IS tasks.branch
+       ORDER BY changes.created_at, changes.id LIMIT 1`,
+    ).get(taskId) as ChangeRow | undefined;
   }
 
   private versionsOf(changeId: string): VersionRow[] {

@@ -302,13 +302,18 @@ export function startPlacedHome(options: {
         tasks,
         repos,
         forgeFor,
-        bringBranchHome: (taskId, strict) => placed.bringBranchHome(taskId, strict),
+        bringBranchHome: (taskId, strict, branch) => placed.bringBranchHome(taskId, strict, branch),
+        checkedOut: (taskId) => placed.checkedOut(taskId),
         presentations: new ChangePresentations({
           tasks,
           mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
           head: (taskId) => {
             if (!prCi) throw new Error("No delivery service");
             return prCi.presentationHead(taskId);
+          },
+          branch: (taskId) => {
+            if (!prCi) throw new Error("No delivery service");
+            return prCi.presentationBranch(taskId);
           },
         }),
         now,

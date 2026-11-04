@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-closes-line",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Merge cards say whether merging closes the task",
+      "body": "Every card with a merge button now says, beside the button, whether merging closes the task or the task continues after it. A task can merge more than one pull request: a pull request its crewmate asks you to merge on the way keeps the task open, and the one on its completion card closes it. A task with more than one pull request lists them all on its Info tab, with the one whose merge closes the task.",
+      "picture": {
+        "dark": "merge-card-closes-line-dark.webp",
+        "light": "merge-card-closes-line-light.webp",
+        "alt": "A completion card whose merge button sits beside the line Merging closes this task"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "close-merged-with-autonomy",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "The first mate closes a task whose pull request is already merged, with autonomy on too",
+      "body": "When a task's pull request was already merged outside the app, asking the first mate to merge it now closes the task as merged whether autonomy is on or off. If another of the task's pull requests is still open, the task stays open until none is.",
+      "noPicture": "The fix is how a task closes, which shows only as the task leaving the list.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

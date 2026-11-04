@@ -408,7 +408,18 @@ export class WorkingCopies {
     if (!workspace) return { present: false, dirty: false, unlandedCommits: 0 };
     const held = await this.workspace.taskWorkStatus(workspace, { strict: true });
     const origin = await git(workspace.repoDir, ["remote", "get-url", "origin"]).catch(() => "");
-    return { present: true, ...held, origin: origin || null };
+    // The checkout itself, as the home's own working copy reads it for a
+    // story: the task's branch, or another the crewmate checked out (INF-2490).
+    const branch = await git(workspace.cwd, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(
+      () => "",
+    );
+    const head = await git(workspace.cwd, ["rev-parse", "HEAD^{commit}"]).catch(() => "");
+    return {
+      present: true,
+      ...held,
+      origin: origin || null,
+      ...(head ? { checkedOut: { branch: branch || null, head } } : {}),
+    };
   }
 
   /**
@@ -420,14 +431,19 @@ export class WorkingCopies {
     task: string,
     ref: BundledRef,
     have: readonly string[],
+    branch?: string,
   ): Promise<WorkOrderResponse<"inf:working-copy:bundle">> {
     return this.serial(task, async () => {
       const workspace = await this.workspaceOf(task);
       if (!workspace) return { sha: null };
-      if (ref === "branch" && !workspace.branch) return { sha: null };
+      // Another branch the crewmate checked out to deliver (INF-2490).
+      if (ref === "branch" && branch !== undefined)
+        await git(workspace.repoDir, ["check-ref-format", "--branch", branch]);
+      const own = branch ?? workspace.branch;
+      if (ref === "branch" && !own) return { sha: null };
       const name =
         ref === "branch"
-          ? `refs/heads/${workspace.branch}`
+          ? `refs/heads/${own}`
           : ((await keptRefHere(workspace.repoDir, task)) ?? keptRefFor(task));
       return bundleRef(workspace.repoDir, name, have, this.bundleFile(task, ref));
     });

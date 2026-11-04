@@ -107,6 +107,12 @@ import {
   AskStore,
   type AskTurnState,
 } from "../storage/askStore";
+import {
+  currentChange,
+  placeStories,
+  storyLedgerOf,
+  storyLedgers,
+} from "../storage/changeProjection";
 import { isHostRaisedShape } from "../storage/changeStore";
 import type { AppDatabase } from "../storage/db";
 import { type ProjectRecord, ProjectStore } from "../storage/projectStore";
@@ -1132,9 +1138,14 @@ export class TaskService {
     return this.store.get(id);
   }
 
-  /** The change a task carries, as its record keeps it (INF-1868 piece 1), or undefined. */
+  /** The change a task carries on its own branch, as its record keeps it (INF-1868 piece 1), or undefined. */
   changeFor(taskId: string): ChangeRecord | undefined {
     return this.store.changes.forTask(taskId);
+  }
+
+  /** Every change a task names, its own first, then each other pull request (INF-2490). */
+  changesFor(taskId: string): ChangeRecord[] {
+    return this.store.changes.allForTask(taskId);
   }
 
   byKey(key: string): TaskRecord | undefined {
@@ -4615,6 +4626,40 @@ export class TaskService {
     this.writeDeliveryRecords(id, facts, event);
   }
 
+  /**
+   * The task's own change is its current one again (INF-2490): the
+   * selection of another pull request goes with every fact the slot read
+   * of it - its number, page, label, base, head and readings - and the slot
+   * names the own pull request given, at its head and base, with the page
+   * and label its change record keeps. Given none, it names none until the
+   * next reading or opening notes the own one.
+   */
+  selectOwnChange(id: string, own?: { number?: number; headSha?: string; base?: string }): void {
+    const record = this.get(id);
+    if (!record?.delivery?.checkTarget) return;
+    const kept =
+      own?.number === undefined
+        ? undefined
+        : this.changesFor(id).find(
+            (change) =>
+              change.head.branch === record.branch && change.handle?.number === own.number,
+          )?.handle;
+    this.recordPermissionRecords(id, { checkTarget: undefined });
+    this.recordChangeEvidence(id, {
+      prNumber: own?.number,
+      prUrl: kept?.url,
+      changeLabel: kept?.label,
+      prBase: own?.base,
+      headSha: own?.headSha,
+      checks: undefined,
+      ci: undefined,
+      ciAt: undefined,
+      ciStartedAt: undefined,
+      ciFinishedAt: undefined,
+      mainChecks: undefined,
+    });
+  }
+
   /** The permission owner's typed records; no evidence or execution patch can travel with them. */
   recordPermissionRecords(
     id: string,
@@ -4665,22 +4710,42 @@ export class TaskService {
     run();
   }
 
-  /** The publication ledger's one writer; a claim is committed before any external write. */
-  changePresentation(id: string): ChangePresentationRecord | undefined {
-    return this.mustGet(id).delivery?.presentation;
+  /**
+   * The publication ledger's one writer; a claim is committed before any
+   * external write. Each change keeps its own ledger (INF-2490): `branch`
+   * names the change's branch, and none means the current change.
+   */
+  changePresentation(id: string, branch?: string): ChangePresentationRecord | undefined {
+    const record = this.mustGet(id);
+    return storyLedgerOf(
+      record.delivery,
+      record.branch,
+      branch ?? currentChange(record.delivery, record.branch).branch,
+    );
   }
 
   updateChangePresentation(
     id: string,
     update: (current: ChangePresentationRecord | undefined) => ChangePresentationRecord,
+    branch?: string,
   ): void {
     this.write(() => {
       const record = this.mustGet(id);
       if (record.status === "done" || record.status === "dropped")
         throw new Error("A closed task cannot publish another story.");
-      const presentation = update(record.delivery?.presentation);
+      const target = branch ?? currentChange(record.delivery, record.branch).branch;
+      const ledgers = storyLedgers(record.delivery);
+      const previous = storyLedgerOf(record.delivery, record.branch, target);
+      const next = { ...update(previous), branch: target };
       this.patch(id, {
-        delivery: this.mergeDelivery(record, { presentation }),
+        delivery: this.mergeDelivery(
+          record,
+          placeStories(
+            [...ledgers.filter((ledger) => ledger !== previous), next],
+            record.branch,
+            currentChange(record.delivery, record.branch).branch,
+          ),
+        ),
         updatedAt: this.now(),
       });
     })();
@@ -6238,6 +6303,17 @@ export class TaskService {
         record.repoId ? this.options.repos?.get(record.repoId)?.delivery : undefined,
       );
     const delivery = { ...(record.delivery ?? {}), ...patch, mode };
+    // The current change's story ledger is the one in `presentation`, so a
+    // write that selects another change moves its ledger there (INF-2490).
+    if (delivery.presentation || delivery.presentations)
+      Object.assign(
+        delivery,
+        placeStories(
+          storyLedgers(delivery),
+          record.branch,
+          currentChange(delivery, record.branch).branch,
+        ),
+      );
     // Kept files own the bytes. CI polls and event rows never copy transcripts.
     if (delivery.liveValidation)
       delivery.liveValidation = {

@@ -27075,6 +27075,41 @@
                         "prNumber": {
                           "type": "number"
                         },
+                        "pullRequests": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "number": {
+                                "type": "number"
+                              },
+                              "url": {
+                                "type": "string"
+                              },
+                              "ci": {
+                                "type": "string",
+                                "enum": [
+                                  "green",
+                                  "red",
+                                  "pending",
+                                  "no-pr",
+                                  "merged"
+                                ]
+                              },
+                              "merged": {
+                                "type": "boolean",
+                                "const": true
+                              },
+                              "closes": {
+                                "type": "boolean",
+                                "const": true
+                              }
+                            },
+                            "required": [
+                              "number"
+                            ]
+                          }
+                        },
                         "changeLabel": {
                           "type": "string"
                         },
@@ -28566,6 +28601,41 @@
                   },
                   "prNumber": {
                     "type": "number"
+                  },
+                  "pullRequests": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "number": {
+                          "type": "number"
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "ci": {
+                          "type": "string",
+                          "enum": [
+                            "green",
+                            "red",
+                            "pending",
+                            "no-pr",
+                            "merged"
+                          ]
+                        },
+                        "merged": {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        "closes": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "number"
+                      ]
+                    }
                   },
                   "changeLabel": {
                     "type": "string"
@@ -32967,6 +33037,41 @@
                     },
                     "prNumber": {
                       "type": "number"
+                    },
+                    "pullRequests": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "number": {
+                            "type": "number"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "ci": {
+                            "type": "string",
+                            "enum": [
+                              "green",
+                              "red",
+                              "pending",
+                              "no-pr",
+                              "merged"
+                            ]
+                          },
+                          "merged": {
+                            "type": "boolean",
+                            "const": true
+                          },
+                          "closes": {
+                            "type": "boolean",
+                            "const": true
+                          }
+                        },
+                        "required": [
+                          "number"
+                        ]
+                      }
                     },
                     "changeLabel": {
                       "type": "string"
@@ -47029,6 +47134,9 @@
                   "base": {
                     "type": "string"
                   },
+                  "branch": {
+                    "type": "string"
+                  },
                   "body": {
                     "type": "string"
                   },
@@ -55666,6 +55774,41 @@
                         "prNumber": {
                           "type": "number"
                         },
+                        "pullRequests": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "number": {
+                                "type": "number"
+                              },
+                              "url": {
+                                "type": "string"
+                              },
+                              "ci": {
+                                "type": "string",
+                                "enum": [
+                                  "green",
+                                  "red",
+                                  "pending",
+                                  "no-pr",
+                                  "merged"
+                                ]
+                              },
+                              "merged": {
+                                "type": "boolean",
+                                "const": true
+                              },
+                              "closes": {
+                                "type": "boolean",
+                                "const": true
+                              }
+                            },
+                            "required": [
+                              "number"
+                            ]
+                          }
+                        },
                         "changeLabel": {
                           "type": "string"
                         },
@@ -57157,6 +57300,41 @@
                         },
                         "prNumber": {
                           "type": "number"
+                        },
+                        "pullRequests": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "number": {
+                                "type": "number"
+                              },
+                              "url": {
+                                "type": "string"
+                              },
+                              "ci": {
+                                "type": "string",
+                                "enum": [
+                                  "green",
+                                  "red",
+                                  "pending",
+                                  "no-pr",
+                                  "merged"
+                                ]
+                              },
+                              "merged": {
+                                "type": "boolean",
+                                "const": true
+                              },
+                              "closes": {
+                                "type": "boolean",
+                                "const": true
+                              }
+                            },
+                            "required": [
+                              "number"
+                            ]
+                          }
                         },
                         "changeLabel": {
                           "type": "string"
@@ -64660,6 +64838,31 @@
                   "type": "null"
                 }
               ]
+            },
+            "checkedOut": {
+              "type": "object",
+              "properties": {
+                "branch": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 255
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "head": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
+                }
+              },
+              "required": [
+                "branch",
+                "head"
+              ]
             }
           },
           "required": [
@@ -64695,6 +64898,11 @@
                     "type": "string",
                     "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
                   }
+                },
+                "branch": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
                 }
               },
               "required": [

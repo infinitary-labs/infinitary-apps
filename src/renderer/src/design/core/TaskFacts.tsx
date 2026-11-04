@@ -18,6 +18,7 @@ import {
   type TaskPlanItem,
 } from "@shared/taskPlan";
 import { checksWait, taskWaitText } from "@shared/taskWaits";
+import { PULL_REQUEST_WORDS } from "@shared/vocabulary";
 import { type ReactNode, useState } from "react";
 import { SlotBadge } from "../quota/SlotBadge";
 import { useOverflowTitle } from "./overflowTitle";
@@ -723,6 +724,7 @@ export function TaskFactRows({
   planView,
   omitStrip = false,
   strip = "full",
+  pullRequests = false,
   onOpenChange,
   onOpenBrowser,
   nowWords,
@@ -753,6 +755,11 @@ export function TaskFactRows({
    * preview's one footer row (`summary`, INF-2528).
    */
   strip?: "full" | "summary";
+  /**
+   * The record lists every pull request of a task with more than one
+   * (INF-2490); the summary, like the task row, names only the current one.
+   */
+  pullRequests?: boolean;
   /**
    * Where a click on the task's pull request goes - in Now's words and on
    * the strip; without it, as on the summary, which never takes the
@@ -858,6 +865,40 @@ export function TaskFactRows({
               Open
             </button>
           </div>
+        </div>
+      )}
+      {pullRequests && facts.pullRequests && (
+        <div className="row pull-requests">
+          <div className="label" data-task-fact-label="">
+            {PULL_REQUEST_WORDS.label}
+          </div>
+          <ul className="pull-request-list" data-task-fact="pull-requests">
+            {facts.pullRequests.map((pull) => (
+              <li
+                key={pull.number}
+                className="pull-request-line"
+                data-task-pull-request={pull.number}
+                data-pull-request-closes={pull.closes ? "" : undefined}
+              >
+                {pull.url && onOpenChange ? (
+                  <a
+                    className="change-link number"
+                    href={pull.url}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onOpenChange(pull.url as string);
+                    }}
+                  >
+                    #{pull.number}
+                  </a>
+                ) : (
+                  <span className="number">#{pull.number}</span>
+                )}
+                <span>{pull.words}</span>
+                {pull.closes && <span>{PULL_REQUEST_WORDS.closes}</span>}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {!omitStrip && strip === "summary" && <SummaryStrip facts={facts} />}

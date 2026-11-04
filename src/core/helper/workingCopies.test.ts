@@ -205,15 +205,17 @@ describe("the working copies a computer that runs work keeps", () => {
     const { dataDir, copies } = computer();
     const { dir } = await copies.prepare("t-keep", { origin });
     writeFileSync(join(dir, "footer.html"), "<footer></footer>\n");
-    await commitAll(dir, "feat: add the footer");
+    const tip = await commitAll(dir, "feat: add the footer");
     writeFileSync(join(dir, "draft.txt"), "not committed yet\n");
     // It says where the project it was cloned from lives, for a home that
-    // no longer records the task to find that project by.
+    // no longer records the task to find that project by, and which branch
+    // and commit its checkout is on (INF-2546).
     expect(await copies.status("t-keep")).toEqual({
       present: true,
       dirty: true,
       unlandedCommits: 1,
       origin,
+      checkedOut: { branch: "fm/task-t-keep", head: tip },
     });
 
     const { kept } = await copies.keep("t-keep");
@@ -268,6 +270,7 @@ describe("the working copies a computer that runs work keeps", () => {
       dirty: false,
       unlandedCommits: 1,
       origin,
+      checkedOut: { branch: null, head: checkedOut },
     });
 
     const { kept } = await copies.keep(task);
@@ -391,6 +394,7 @@ describe("the working copies a computer that runs work keeps", () => {
       dirty: true,
       unlandedCommits: 0,
       origin,
+      checkedOut: { branch: `fm/task-${task}`, head: main },
     });
     const { kept } = await copies.keep(task);
     if (!kept) throw new Error("expected kept work");
@@ -549,6 +553,7 @@ describe("the working copies a computer that runs work keeps", () => {
       dirty: true,
       unlandedCommits: 1,
       origin: null,
+      checkedOut: { branch: "fm/task-t-meter", head },
     });
     const { kept } = await copies.keep("t-meter");
     expect(kept).toMatchObject({ dirty: true, unlandedCommits: 1 });

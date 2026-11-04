@@ -37,6 +37,7 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import {
@@ -229,6 +230,9 @@ const FORWARDED_TOOLS = new Set([
 
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
+
+/** open_change from an existing branch (`open-change-branch.md`). */
+const OPEN_CHANGE_BRANCH = contractChange("open-change-branch");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -674,8 +678,9 @@ export class SessionHost {
         return copies.read(task, ref, offset);
       }
       case "inf:working-copy:bundle": {
-        const [{ task, ref, have }] = request as WorkOrderRequest<"inf:working-copy:bundle">;
-        return copies.bundle(task, ref, have);
+        const [{ task, ref, have, branch }] =
+          request as WorkOrderRequest<"inf:working-copy:bundle">;
+        return copies.bundle(task, ref, have, branch);
       }
       case "inf:working-copy:seed": {
         const [seed] = request as WorkOrderRequest<"inf:working-copy:seed">;
@@ -1473,6 +1478,11 @@ export class SessionHost {
         if (input.around && home !== null && !changesStoryAround(home))
           throw new Error(
             `around refused: ${HOME.the} runs an older Infinitary that cannot change the words around a story; nothing was sent. Report it until ${HOME.the} is updated.`,
+          );
+        // An older home would drop branch and open the task's own branch instead.
+        if (input.branch && !listsChange(this.options.homeChanges?.(), OPEN_CHANGE_BRANCH))
+          throw new Error(
+            `branch refused: ${HOME.the} needs an update before it can open a change from another branch; nothing was sent. Report it until ${HOME.the} is updated.`,
           );
         return ask("inf:work:open-change", { input }, signal);
       },

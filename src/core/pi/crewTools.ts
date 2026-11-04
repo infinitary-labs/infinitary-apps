@@ -711,8 +711,9 @@ export function createCrewTools(delegate: CrewDelegate) {
     name: "settle_task",
     label: "Settle task",
     description:
-      "merge-pr rechecks and merges the pull request (fast-forwards the default " +
-      "branch on plain Git); land merges locally, never for direct-PR. Both close and remove the worktree. " +
+      "merge-pr rechecks and merges the task's current pull request (fast-forwards the default " +
+      "branch on plain Git), or closes as merged one already merged once none of its pull requests is open; " +
+      "land merges locally, never for direct-PR. Both close and remove the worktree. " +
       "discard removes unwanted work unmerged. answered closes reported idle work handed on by " +
       "files_from or a card choice, with no unmerged work; also internal answers with a report or successor, or finished answers. Never discard results. " +
       "released closes a reported, idle work task only after you independently verify its " +

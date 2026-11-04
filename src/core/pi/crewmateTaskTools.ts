@@ -256,7 +256,7 @@ export const REPORT_TOOL = crewmateTool({
         },
         {
           description:
-            "Name this task's recorded PR and checked head only when that merge completes all work. Clears on new turns/reports; restate after manual-merge choices if complete. Authorizes no merge.",
+            "Name your task's current change's PR and checked head only when that merge completes all work. Clears on new turns/reports; restate after manual-merge choices if complete. Authorizes no merge.",
         },
       ),
     ),

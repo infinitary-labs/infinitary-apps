@@ -170,6 +170,12 @@ export const openChangeInputSchema = z.object({
   repository: z.string().optional(),
   /** The branch the change targets, when not the default branch: another change's branch for a stacked change. */
   base: z.string().optional(),
+  /**
+   * An existing branch the captain asked to open the change from, instead of
+   * the task's own (INF-2184): it opens from that branch as it is, and the
+   * change becomes the task's current one (INF-2490).
+   */
+  branch: z.string().optional(),
   body: z.string().optional(),
   presentation: z.number().int().positive().optional(),
   recovery: presentationRecoverySchema.optional(),
@@ -209,6 +215,12 @@ export type PresentationCompletion = {
   contentHash: string;
 };
 export type ChangePresentationRecord = {
+  /**
+   * The branch of the change this ledger is for (INF-2490): each change of a
+   * task keeps its own story. A ledger saved before then names none and is
+   * the task's own branch's.
+   */
+  branch?: string;
   revisions: ChangePresentation[];
   completion?: PresentationCompletion;
   receipts: PresentationReceipt[];

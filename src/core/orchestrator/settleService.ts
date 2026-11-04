@@ -13,7 +13,7 @@ import type { FmEvent } from "@shared/events";
 import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh";
 import { forgePlace, hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords, withoutHoldWords } from "@shared/holds";
-import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
+import type { MergeReview } from "@shared/mergeReview";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
 import { hostedPresentation } from "@shared/presentationDestination";
 import { opensPullRequest, type RepoDelivery } from "@shared/repos";
@@ -23,6 +23,7 @@ import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import type { TaskDeliveryMode } from "@shared/tasks";
 import { MERGE_WORDS } from "@shared/vocabulary";
 import { type ForgePull, forgeLocationOf, QUEUE_WAITING_WORDS, signInRefusal } from "../forge";
+import { currentChange } from "../storage/changeProjection";
 import { FIRSTMATE_RECIPIENT, type InboxStore } from "../storage/inboxStore";
 import type {
   MergeAuthorization,
@@ -297,14 +298,10 @@ export type SettleServiceHost = {
     boundary?: import("./prCi").MergeBoundary,
   ) => Promise<PrOutcome>;
   /**
-   * Merge one stored review (FI3-1543). The caller closes an owned task;
-   * a referenced merge leaves the task open.
+   * Merge one stored review (FI3-1543): a continuing merge, so the task
+   * stays open (INF-2490).
    */
-  mergeReview?: (
-    taskId: string,
-    reviewId: string,
-    guard?: MergeGuard,
-  ) => Promise<PrOutcome & { relationship?: MergeRelationship }>;
+  mergeReview?: (taskId: string, reviewId: string, guard?: MergeGuard) => Promise<PrOutcome>;
   /** The requested merge's outcome reaches its still-open crewmate, including a kept merge. */
   mergeContinued?: (taskId: string, review: MergeReview | undefined, result: SettleOutcome) => void;
   closePullRequest?: (taskId: string) => Promise<PrOutcome>;
@@ -917,7 +914,7 @@ export class SettleService {
         !current ||
         TaskService.isClosed(current) ||
         current.repoId !== record.repoId ||
-        current.delivery?.prNumber !== pull.number
+        currentChange(current.delivery, current.branch).number !== pull.number
       )
         return false;
       this.host.tasks.recordChangeEvidence(taskId, {
@@ -964,15 +961,47 @@ export class SettleService {
   }
 
   /**
-   * The pull request the task names, when it reads merged by its number:
-   * put in where the project lives outside the app (FI3-213). Undefined
-   * when there is none, it is not merged, or it cannot be read.
+   * The task's current change, when it reads merged by its number: put in
+   * where the project lives outside the app (FI3-213). Undefined when there
+   * is none, it is not merged, or it cannot be read.
    */
   private async mergedOutside(record: TaskRecord): Promise<ForgePull | undefined> {
-    const prNumber = record.delivery?.prNumber;
+    const prNumber = currentChange(record.delivery, record.branch).number;
     if (prNumber === undefined || !this.host.readPull) return undefined;
     const pull = await this.host.readPull(record.id, prNumber).catch(() => undefined);
     return pull?.merged && pull.number === prNumber ? pull : undefined;
+  }
+
+  /**
+   * One of the task's other changes that may still be open where the
+   * project lives (INF-2490): every pull request its record keeps a change
+   * for, and every one its slot names, besides the merged one, read by its
+   * number. A task closes as merged on an earlier merge only when none is
+   * open; one that cannot be read may be open, so it keeps the task open
+   * too (`unread`).
+   */
+  private async otherOpenChange(
+    record: TaskRecord,
+    merged: number,
+  ): Promise<{ number: number; unread: boolean } | undefined> {
+    const readPull = this.host.readPull;
+    if (!readPull) return undefined;
+    const numbers = new Set<number>();
+    for (const change of this.host.tasks.changesFor(record.id))
+      if (change.handle?.number !== undefined && change.receipt?.outcome !== "merged")
+        numbers.add(change.handle.number);
+    if (record.delivery?.prNumber !== undefined) numbers.add(record.delivery.prNumber);
+    for (const review of record.delivery?.mergeReviews ?? [])
+      if (!review.receipt) numbers.add(review.number);
+    for (const offer of record.delivery?.completionOffers ?? [])
+      if (offer.prNumber !== undefined) numbers.add(offer.prNumber);
+    numbers.delete(merged);
+    for (const number of numbers) {
+      const pull = await readPull(record.id, number).catch(() => undefined);
+      if (pull?.number !== number) return { number, unread: true };
+      if (pull.state === "open" && !pull.merged) return { number, unread: false };
+    }
+    return undefined;
   }
 
   /**
@@ -1096,8 +1125,10 @@ export class SettleService {
 
   /**
    * The captain's click on `request_merge`. Declaring the action merged
-   * nothing; this runs only from that click. An owned review finishes the
-   * task. A referenced review keeps the task and its working copy.
+   * nothing; this runs only from that click. It is a continuing merge
+   * (INF-2490): whichever change it names, the task keeps its working copy
+   * and its crewmate hears the outcome once. Only the completion card's
+   * settle merge, the finishing change, closes the task.
    */
   async requestMerge(
     taskId: string,
@@ -1182,27 +1213,29 @@ export class SettleService {
         if (!unattended && review) this.host.mergeContinued?.(taskId, review, outcome);
         return outcome;
       }
-      if (result.relationship === "referenced" && review) {
-        this.finishReferenced(taskId, review, result);
-        return { ...result, continued: true };
-      }
-      return this.closeMerged(record, "captain", result);
+      this.finishContinued(taskId, review, result);
+      return { ...result, continued: true };
     } finally {
       this.settlingTasks.delete(taskId);
     }
   }
 
-  private finishReferenced(taskId: string, review: MergeReview, result: SettleOutcome): void {
+  private finishContinued(
+    taskId: string,
+    review: MergeReview | undefined,
+    result: SettleOutcome,
+  ): void {
     this.clearPendingMerge(taskId, "merged");
     this.host.tasks.atomic(
       () => {
         const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
         if (
+          review &&
           authorization?.review?.id === review.id &&
           candidateHead(authorization) === result.receipt?.head
         )
           this.consumeStanding(taskId, result.receipt);
-        else if (authorization?.review?.id === review.id)
+        else if (review && authorization?.review?.id === review.id)
           this.endAuthorization(
             taskId,
             "invalidated",
@@ -2014,16 +2047,26 @@ export class SettleService {
         refusal: gateRefusal,
       };
     }
+    // A first mate merge of a change already merged where the project
+    // lives sends nothing: the task closes as merged, with autonomy on or
+    // off, once none of its changes is still open (FI3-213, INF-2490).
+    if (mode === "merge-pr" && actor === "firstmate") {
+      const pull = await this.mergedOutside(record);
+      const open = pull ? await this.otherOpenChange(record, pull.number) : undefined;
+      if (pull && open !== undefined) {
+        return {
+          ok: false,
+          text: `Cannot close as merged: ${this.changeName(record, pull.number)} is merged, and ${this.changeName(record, open.number)} on this task ${open.unread ? "could not be read, so it may still be open" : "is still open"}. The task closes as merged once none of its changes is open.`,
+          plain: open.unread
+            ? "another of its pull requests could not be read"
+            : "another of its pull requests is still open",
+        };
+      }
+      if (pull) return this.closeMergedOutside(taskId, actor, pull);
+    }
     if (mode === "merge-pr" || mode === "land") {
       // The autonomy hold, before anything merges or lands.
       const held = this.autonomyRefusal(record, mode, actor);
-      // The hold keeps a merge for the captain; one already made where the
-      // project lives leaves nothing to hold, so the task closes as merged
-      // without a put-in (FI3-213).
-      if (held && mode === "merge-pr") {
-        const pull = await this.mergedOutside(record);
-        if (pull) return this.closeMergedOutside(taskId, actor, pull);
-      }
       if (held) return { ok: false, text: held.text, refusal: held };
     }
     if (mode === "merge-pr") {
@@ -2224,10 +2267,13 @@ export class SettleService {
     const generation = (previous?.generation ?? 0) + 1;
     const minted = this.mint(record, approval, proceedWithOpen, generation, now, reviewId);
     if (minted) {
+      // The approved review is the task's current change from the click on (INF-2490).
+      const own = minted.review?.branch === record.branch;
       this.host.tasks.recordPermissionRecords(taskId, {
         mergeAuthorization: minted,
-        ...(minted.review?.relationship === "referenced" ? { checkTarget: minted.review } : {}),
+        ...(minted.review && !own ? { checkTarget: minted.review } : {}),
       });
+      if (minted.review && own) this.host.tasks.selectOwnChange(taskId, minted.review);
       this.host.tasks.note(
         taskId,
         `The captain approved merging ${this.changeName(record, minted.target.prNumber)} at ${minted.approvedHead}.`,
@@ -2290,7 +2336,7 @@ export class SettleService {
         owner: offer.owner,
         name: offer.name,
         prNumber: baseline.prNumber,
-        branch: review?.branch ?? record.branch,
+        branch: review?.branch ?? currentChange(record.delivery, record.branch).branch,
         delivery: "direct-pr",
         method: "squash",
       },
@@ -2543,14 +2589,11 @@ export class SettleService {
             location.owner !== target.owner ||
             location.name !== target.name
           ? "where the project lives changed"
-          : authorization.review?.relationship === "referenced"
-            ? record.delivery?.checkTarget?.number !== target.prNumber ||
-              record.delivery.checkTarget.branch !== target.branch
-              ? "the task's selected pull request is not the one approved"
-              : undefined
-            : record.branch !== target.branch || record.delivery?.prNumber !== target.prNumber
-              ? "the task's pull request is not the one approved"
-              : undefined;
+          : // The approved change must still be the task's current one (INF-2490).
+            currentChange(record.delivery, record.branch).branch !== target.branch ||
+              currentChange(record.delivery, record.branch).number !== target.prNumber
+            ? "the task's current change is not the one approved"
+            : undefined;
   }
 
   private preflight(
@@ -2831,8 +2874,9 @@ export class SettleService {
     this.settlingTasks.set(taskId, "merge-pr");
     try {
       const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
-      if (authorization?.review?.relationship === "referenced") {
-        this.finishReferenced(taskId, authorization.review, {
+      // A kept request_merge approval merged a continuing change (INF-2490).
+      if (authorization?.review) {
+        this.finishContinued(taskId, authorization.review, {
           ok: true,
           text: `Merged ${this.changeName(this.host.tasks.get(taskId), pull.number)} on ${this.placeOf(this.host.tasks.get(taskId))}. The task stays open.`,
           receipt: {

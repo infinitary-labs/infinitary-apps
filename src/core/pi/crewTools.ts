@@ -721,19 +721,19 @@ export function createCrewTools(delegate: CrewDelegate) {
     name: "settle_task",
     label: "Settle task",
     description:
-      "merge-pr rechecks and merges the task's current pull request (fast-forwards the default " +
-      "branch on plain Git), or closes as merged one already merged once no question or other pull request on it is open; " +
+      "merge-pr rechecks and merges the task's current pull request (fast-forwards on " +
+      "plain Git), or closes as merged one already merged once no question or other pull request on it is open; " +
       "a merge with either open keeps the task open. " +
       "land merges locally, never for direct-PR. Both close and remove the worktree. " +
+      "Every close keeps unmerged commits, records, sessions; squash merges never block closing. " +
       "discard removes unwanted work unmerged. answered closes reported idle work handed on by " +
       "files_from or a card choice, with no unmerged work; also internal answers with a report or successor, or finished answers. Never discard results. " +
       "released closes a reported, idle work task only after you independently verify its " +
       "delivery through an external release process, with release_evidence. finished closes verified, reported, idle " +
       "operations, in_folder or personal_ui work with completion_evidence; folder files and git stay. " +
       "Missing changes or dismissed cards prove nothing. Never discard successful folder work or use finished to bypass merging. " +
-      "carried_on closes work another task carries on, named by carried_by, as done through it, never dropped: " +
-      "its waits move there, commits are kept and its own PR closed; no note goes up. " +
-      "Records and sessions stay. " +
+      "carried_on closes work another task carries on or merged in its PR, named by carried_by, as done, never dropped: " +
+      "its waits move there and its own PR closes; no note goes up. " +
       "Use crew_status to pick the task id; never guess among several matches.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from crew_status or spawn" }),

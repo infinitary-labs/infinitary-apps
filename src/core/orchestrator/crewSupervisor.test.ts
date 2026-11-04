@@ -6311,6 +6311,41 @@ describe("CrewSupervisor", () => {
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "active", delivery: { ci: "merged" } });
     });
 
+    // INF-2626, fix 1 (the captain's "File the checked fixes"): a task whose own
+    // pull request closed unmerged while another task's merged pull request
+    // delivered its work held open, because no close it tried fit. settle_task's
+    // description now names carried_on for it; this is that route working.
+    it("closes a task whose own pull request closed unmerged, delivered by another task's merged one, done through carried_on (INF-2626)", async () => {
+      const h = await approved();
+      h.supervisor.close(h.card.id);
+      await tick();
+      h.crewmate.finishPrompt();
+      await tick();
+      // Its own #7 closed without merging; #65, the carrier's, merged.
+      h.forge.changeFor = async () => null;
+      h.forge.pull = async (number: number): Promise<ForgePull> =>
+        number === 65
+          ? { number, state: "closed", merged: true, mergedSha: "squash65", headSha: "head65", base: "main", readiness: "clean" }
+          : { number, state: "closed", merged: false, headSha: h.forge.headSha, base: "main", readiness: "clean" };
+      h.tasks.recordReport(h.taskId, { text: "Its work merged in #65 with the other fix." });
+      await tick();
+      const carrier = seedTask(h.tasks, { id: "carrier", title: "Fix both in one pull request", status: "idle" });
+      seedDelivery(h.tasks, carrier.id, { prNumber: 65, ci: "merged" });
+
+      // The merge close reads its own closed #7, so it cannot close it.
+      editPolicies(h, { autonomy: true });
+      const merge = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      expect(merge.text).toContain("closed without merging");
+      expect(h.tasks.get(h.taskId)?.status).toBe("active");
+
+      const text = await h.supervisor.carryOnTask(h.taskId, carrier.key);
+      await tick();
+      expect(text).toContain(`${carrier.key} carries on its work.`);
+      expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "superseded" });
+      expect(h.tasks.replacementOf(h.taskId)).toBe(carrier.key);
+      expect(h.forge.merges).toEqual([]);
+    });
+
     // INF-2490: a merge card names one change, finishing or continuing, so
     // its line can say whether the click closes the task.
     it("refuses a card that offers both the finishing merge and a continuing one (INF-2490)", async () => {
@@ -20446,6 +20481,39 @@ describe("closed task worktrees always go, work saved first (real git)", {
     expect(await git(repoDir, ["branch", "--list", branch])).toBe("");
     // The history rides along: the kept commit holds the original commit and its file.
     expect(await git(repoDir, ["merge-base", "--is-ancestor", original, kept(taskId)])).toBe("");
+    expect(await git(repoDir, ["show", `${kept(taskId)}:meter.txt`])).toBe("fixed meter");
+  });
+
+  // INF-2626, fix 1 (the captain's "File the checked fixes"): a first mate held
+  // squash-merged tasks open because their commits sit outside the merged
+  // history. settle_task's description now says every close keeps them; this
+  // is the merge close doing so for a pull request already merged by squash.
+  it("the first mate's merge close of a squash-merged task closes it as merged and keeps its own commit (INF-2626)", async () => {
+    const harness = await commissionReal({
+      readPull: async (_id, number) => ({
+        number,
+        state: "closed",
+        merged: true,
+        mergedSha: "squash40",
+        headSha: "head40",
+        base: "main",
+        readiness: "clean",
+      }),
+    });
+    const { cwd, branch, repoDir, taskId, tasks, supervisor } = harness;
+    writeFileSync(join(cwd, "meter.txt"), "fixed meter\n");
+    await git(cwd, ["add", "-A"]);
+    await git(cwd, ["commit", "-m", "fix the meter"]);
+    await git(repoDir, ["merge", "--squash", branch]);
+    await git(repoDir, ["commit", "-m", "fix the meter (#40)"]);
+    seedDelivery(tasks, taskId, { prNumber: 40 });
+
+    await supervisor.settleTaskDetailed(taskId, "merge-pr");
+    await vi.waitFor(() => expect(tasks.get(taskId)?.workspaceState).toBe("removed"), REAL_GIT_WAIT);
+
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+    expect(existsSync(cwd)).toBe(false);
+    expect(await git(repoDir, ["log", "--format=%s", kept(taskId)])).toContain("fix the meter");
     expect(await git(repoDir, ["show", `${kept(taskId)}:meter.txt`])).toBe("fixed meter");
   });
 

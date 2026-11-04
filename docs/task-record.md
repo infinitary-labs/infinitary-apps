@@ -477,6 +477,7 @@ The first mate declares the replacement with `update_task`'s `replaced_by` besid
 
 Work another task carries on closes done, never dropped (INF-1825): "dropped" is kept for work that was really abandoned.
 The first mate closes started work with `settle_task` mode `carried_on` and `carried_by`, the task carrying it (`SettleService.closeCarriedOn`), and unstarted work with `update_task` `drop` and `replaced_by` (`TaskService.dropWithChildren`).
+It is also the close for work another task delivered in its merged pull request while the old task's own pull request closed unmerged (INF-2626), since the merge close reads that closed pull request and cannot close the task.
 The close writes the `replaced-by` link first, so the old task's live waits move to that task before the close clears them (`docs/task-graph.md`, "A wait follows moved work").
 Its unmerged commits are saved as every close saves them, and its own pull request is closed unless the task carrying the work carries that same pull request.
 It closes with status `done` and reason `superseded`, an existing closing reason, so the published contract gains no member (`carriedOnClose`).

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-service-guardrails",
+      "reason": "Internal: tests pin how the task record releases an unconfirmed start and an unread message, edits a task's shape and refuses a broken import before the task service is split; nothing a person sees changes."
+    }
+  ]
+}

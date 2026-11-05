@@ -239,6 +239,87 @@ describe("the task export (task-system P5)", () => {
     expect(clean.list()).toEqual([]);
   });
 
+  // Pinned before the task service splits into its owners (INF-2625's plan,
+  // the task service row): every reference the bundle names must resolve,
+  // and a refusal writes nothing.
+  it("refuses every reference it cannot resolve, before writing", () => {
+    const bundle = parseTaskExport(exportTaskRecords(populated().tasks, 5_000));
+    const [first] = bundle.tasks;
+    const [ask] = bundle.asks;
+    const [event] = bundle.events;
+    const [link] = bundle.links;
+    if (!first || !ask || !event || !link) throw new Error("the populated record lost a row");
+    const cases: [string, typeof bundle, RegExp][] = [
+      [
+        "a task in an unknown project",
+        { ...bundle, tasks: [{ ...first, projectId: "proj-ghost" }, ...bundle.tasks.slice(1)] },
+        new RegExp(`task ${first.key} names an unknown project "proj-ghost"`),
+      ],
+      [
+        "a task under an unknown parent",
+        { ...bundle, tasks: [{ ...first, parentId: "ghost" }, ...bundle.tasks.slice(1)] },
+        new RegExp(`task ${first.key} names an unknown parent "ghost"`),
+      ],
+      [
+        "an event about an unknown task",
+        {
+          ...bundle,
+          events: [{ ...event, concerns: [{ taskId: "ghost", relation: "related", via: null }] }],
+        } as typeof bundle,
+        /an event concerns an unknown task "ghost"/,
+      ],
+      [
+        "a link to an unknown task",
+        { ...bundle, links: [{ ...link, toId: "ghost" }] },
+        new RegExp(`a link names an unknown task \\("${link.fromId}" -> "ghost"\\)`),
+      ],
+      [
+        "an ask on an unknown task",
+        { ...bundle, asks: [{ ...ask, taskId: "ghost" }] },
+        new RegExp(`ask "${ask.id}" names an unknown task "ghost"`),
+      ],
+    ];
+    for (const [name, broken, refusal] of cases) {
+      const target = new TaskService({ db: openInMemoryDatabase(), strict: true });
+      const seq = target.boardSeq();
+      expect(() => target.importRecords(broken), name).toThrow(refusal);
+      expect(target.list()).toEqual([]);
+      expect(target.boardSeq()).toBe(seq);
+    }
+
+    // A project keyed differently here, a taken key and an ask already here
+    // refuse too, into a record that has them.
+    const project = new TaskService({ db: openInMemoryDatabase(), strict: true });
+    project.projects.ensureForRepo({ id: "r1", name: "nimbus-api" });
+    const rekeyed = {
+      ...bundle,
+      projects: bundle.projects.map((entry) =>
+        entry.id === "proj-r1" ? { ...entry, key: "ZZZ" } : entry,
+      ),
+    };
+    expect(() => project.importRecords(rekeyed)).toThrow(
+      /Import refused: project "proj-r1" is keyed NIA here, not ZZZ/,
+    );
+    expect(project.list()).toEqual([]);
+    const keyed = new TaskService({ db: openInMemoryDatabase(), strict: true });
+    keyed.importRecords({ ...bundle, events: [], links: [], asks: [] });
+    const renamed = {
+      ...bundle,
+      tasks: [{ ...first, id: "fresh" }],
+      events: [],
+      links: [],
+      asks: [],
+    };
+    expect(() => keyed.importRecords(renamed)).toThrow(
+      new RegExp(`task key ${first.key} is already taken`),
+    );
+    const asked = new TaskService({ db: openInMemoryDatabase(), strict: true });
+    asked.importRecords(bundle);
+    expect(() =>
+      asked.importRecords({ ...bundle, projects: [], tasks: [], events: [], links: [] }),
+    ).toThrow(new RegExp(`ask "${ask.id}" already exists`));
+  });
+
   it("parses strictly: a missing header, a bad line, and a count mismatch each name themselves", () => {
     expect(() => parseTaskExport("")).toThrow(/No header line/);
     expect(() => parseTaskExport('{"kind":"task"}')).toThrow(/Line 1: a row before the header/);

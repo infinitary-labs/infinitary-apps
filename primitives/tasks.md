@@ -103,6 +103,8 @@ Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.
 ## Checks
 
 - [`../src/core/tasks/taskService.test.ts`](../src/core/tasks/taskService.test.ts) and [`../src/core/tasks/taskService.graph.test.ts`](../src/core/tasks/taskService.graph.test.ts): the record, graph, refusals and close rules.
+- [`../src/core/tasks/taskService.releases.test.ts`](../src/core/tasks/taskService.releases.test.ts): a start whose contact was lost or came back unconfirmed, and a message the first mate's turn never read.
+- [`../src/core/tasks/taskService.edits.test.ts`](../src/core/tasks/taskService.edits.test.ts): `update_task`'s edits to a task's shape, each keeping the rest, and the edits started work refuses.
 - [`../src/core/orchestrator/settleService.test.ts`](../src/core/orchestrator/settleService.test.ts): settle modes and `SettleRefusal`.
 - [`../src/core/orchestrator/settleService.boundary.test.ts`](../src/core/orchestrator/settleService.boundary.test.ts): the last look before a merge goes out, and a merge's, land's and discard's refusals.
 - [`../src/core/orchestrator/settleService.keptMerge.test.ts`](../src/core/orchestrator/settleService.keptMerge.test.ts): the captain's kept merge approval - its guard, its waits, a host-run merge's first checks and an attempt read back.

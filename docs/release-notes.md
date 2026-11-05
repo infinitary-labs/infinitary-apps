@@ -89,7 +89,7 @@ The Infinitary rename (step 7 of FI3-1780's plan) starts a new repository from o
   `scripts/resolve-release.sh` numbers from the newest stable tag as always; with none, from the record: the next patch or minor above the newest numeric core either channel published there, so a new repository's restarted run numbers still sort above every archived alpha.
   Every version, either way, must be newer than the record's newest stable and newest alpha ("Versions" in `docs/alpha.md`).
 - **Its tests.**
-  `tests/release-notes.test.ts` "a fresh history" pins, checks, catalogs and records releases on a parentless copy of an archived fixture, and `tests/release-workflows.test.ts` "resolving a release" numbers one.
+  `tests/release-notes.test.ts` "a fresh history" pins, checks, catalogs and records releases on a parentless copy of an archived fixture, and `tests/release-workflows-resolve.test.ts` "resolving a release" numbers one.
 
 ### Hero pictures
 

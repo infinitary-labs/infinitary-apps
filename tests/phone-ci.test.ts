@@ -393,7 +393,7 @@ describe("the native gate on an affected request", () => {
         "${{ inputs.parts || steps.request-select.outputs.parts }}",
       );
     }
-    // The shell execution and both-device arguments belong to release-workflows.test.ts.
+    // The shell execution and both-device arguments belong to release-workflows-journey-suites.test.ts.
   });
   it("ignores former runner overrides for every device job (INF-2202)", () => {
     for (const id of [NATIVE_JOB])

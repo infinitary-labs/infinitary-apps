@@ -7,7 +7,7 @@
  *
  * An entry ending in a slash is a folder, `*` matches within one name, and
  * any other entry is one file. Test files inside a listed folder never count.
- * tests/release-workflows.test.ts fails when the build starts running a
+ * tests/release-workflows-alpha-cut.test.ts fails when the build starts running a
  * script this list misses and BUILD_SCRIPTS_THAT_SHIP_NOTHING does not name.
  */
 export const DESKTOP_BUILD: readonly string[] = [

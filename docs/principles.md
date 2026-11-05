@@ -102,7 +102,7 @@ Three checks hold the rule for journeys, so it does not wear away:
 
 1. Every Linux journey job fails on a test that skipped there without the tag (`scripts/untagged-skips.ts`).
 2. The `e2e-mac-tag` lint in `pnpm check` refuses an untagged test that reads a Mac fact (`THIS_DESKTOP`, `HAS_APP_MENU` or "darwin") and a tagged test that reads none (`tests/lint/e2eMacTag.ts`).
-3. `tests/release-workflows.test.ts` holds the Mac steps of a request for journeys and a requested full check to the tag.
+3. `tests/release-workflows-journey-requests.test.ts` holds the Mac steps of a request for journeys and a requested full check to the tag.
 
 How each check runs is `docs/testing.md`, "Tests that need a Mac".
 

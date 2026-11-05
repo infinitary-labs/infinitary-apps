@@ -12,11 +12,11 @@ Mock-only macOS tests need no additional Mac full-check coverage.
 The captain's INF-2273 exception still requires three total local rounds for every edited unit file, including portable or mock-only files; the native list does not exclude those local rounds.
 Linux keeps every file, including every probe, in test groups that name only projects and shards: no unit file moves off Linux or disappears from the full check.
 When adding a case that needs macOS, add its file to that list; the scratch Keychain probes retain their existing opt-in gates.
-`tests/release-workflows.test.ts` uses real Vitest file discovery to check the Mac selection, its cohort assignments and its inclusion in the complete Linux suite.
+`tests/release-workflows-verification.test.ts` uses real Vitest file discovery to check the Mac selection, its cohort assignments and its inclusion in the complete Linux suite.
 
 Requested runs (`ci.yml`) run the same projects on separate machines, and so does a push to `main`, once, in the full check's Linux test groups (`verify.yml`); PRs omit the full unit, integration and probe sweeps: `unit-tests` runs `pure`, `unit`, `unit-isolated` and `browser`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs every file of `probe` ("Probes" below, `docs/testing.md`).
 The full check's `linux-tests` job splits them across eight machines with vitest's own `--shard`: `pure`, `unit` and `unit-isolated` in three groups, `integration` in two, `probe` in two and `browser` in one, each a machine of its own (INF-2646).
-`tests/release-workflows.test.ts` holds both layouts to every project, each in one job or in shards of one count that cover it, and the alpha's proof requires every group's complete set (`scripts/main-alpha-proof.mjs`).
+`tests/release-workflows-pr-checks.test.ts` holds both layouts to every project, each in one job or in shards of one count that cover it, and the alpha's proof requires every group's complete set (`scripts/main-alpha-proof.mjs`).
 
 | Project | Files | Rule |
 | --- | --- | --- |
@@ -132,7 +132,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/replay-captain-session.test.ts` | the replay CLI, git | 60 to 240 s |
 | `tests/release-contract.test.ts` | node, brew, and on a Mac the Electron binary running the release gates' stand-in app (`tests/fixtures/launch-gate-app`) | 10 s default, 50 s on each gate's run of the stand-in (Mac fastest: launch gate 9.5 s, data-folder check 4.7 s), 180 s on brew style |
 | `tests/batch-compose.test.ts` | real git: the swept batch composed onto a scratch main in shallow job clones (`scripts/batch-compose.sh`) | 5 s default |
-| `tests/release-workflows.test.ts` | node, git, shell stand-ins, and real Vitest file discovery; portable workflow contracts, isolated in the integration cohort and absent from the Mac-only file list | 10 s default, 15 s on file discovery |
+| `tests/release-workflows-*.test.ts` (one file per workflow owner) | node, git, shell stand-ins, and real Vitest file discovery; portable workflow contracts, isolated in the integration cohort and absent from the Mac-only file list | 10 s default, 15 s on file discovery |
 | `tests/release-publication.test.ts` | the release workflow's tap and release-asset scripts: real git on a stand-in tap, the publication CLI, a stand-in `gh`, `brew` and `curl` | 50 s |
 | `tests/release-notes.test.ts` | the release-notes gate: real git on scratch repositories with commits and tags, the `scripts/release-notes.ts` CLI | 10 s |
 | `tests/universal-file-types.test.ts` | the system `file` behind a counting stand-in, over Electron's distribution and darwin prebuilds | 15 s (Mac whole file 2.4 s) |

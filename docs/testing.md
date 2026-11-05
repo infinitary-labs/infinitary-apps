@@ -262,8 +262,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Requested runs also run the full unit and probe sweeps and both integration shards, five jobs in total; there is no unit/integration selector.
   A push to `main` starts no `ci.yml` job (INF-2340, the captain's route "drop-ci-main"): the full check's `linux-checks` lane and its Linux test groups run the same commands, every probe included ("Main's desktop release check").
   `typecheck-lint-build` runs typecheck, biome, eslint adherence and build on pull requests, `linux-startup` runs the Linux automatic startup fixtures beside it, and `critical-path` runs the critical-path journey; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests`, shown as integration test groups 1/2 and 2/2, runs the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
-  The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run what `verify.yml`'s `linux-checks` lane and its Linux test groups run, every probe included, and `tests/release-workflows.test.ts` holds every vitest project, in each layout, to one job or to shards that cover it, including the full probe project.
-  Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-24.04` when the variable is unset, the one hosted image every workflow falls back to (INF-2539); `tests/release-workflows.test.ts` evaluates each job's runner both ways.
+  The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run what `verify.yml`'s `linux-checks` lane and its Linux test groups run, every probe included, and `tests/release-workflows-pr-checks.test.ts` holds every vitest project, in each layout, to one job or to shards that cover it, including the full probe project.
+  Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-24.04` when the variable is unset, the one hosted image every workflow falls back to (INF-2539); `tests/release-workflows-runners.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so setup-node restores its pnpm cache only on a GitHub-hosted runner (`runner.environment`); every self-hosted job, wherever a variable sent it, skips it.
   The repository variable `LINUX_QUEUES` can send a job's kind to another queue before `LINUX_RUNNER` ("Each Linux job's kind").
   Every other workflow's requested Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser and overflow, `verify.yml`'s Linux lanes, the replay gate, Linux startup and the Linux packages; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
@@ -324,7 +324,7 @@ Three checks hold the tag to what a test needs:
 2. The `e2e-mac-tag` lint in `pnpm check` (`tests/lint/e2eMacTag.ts`) refuses an untagged test that reads a Mac fact, and a tagged test that reads none.
    A test reads a Mac fact when its own code, or a `test.skip` or hook of the describe or file around it, names `THIS_DESKTOP` or `HAS_APP_MENU` (`tests/e2e/desktop.ts`) or the platform name "darwin".
    A step only Linux runs, such as a comparison with "linux", needs no Mac, and a helper the test calls is not followed.
-3. `tests/release-workflows.test.ts` holds the Mac steps of `journeys.yml` (`--grep @mac-only`) and `verify.yml` (`INFINITARY_E2E_TAG=@mac-only`) to the tag, and the untagged-skip step to every Linux journey job.
+3. `tests/release-workflows-journey-requests.test.ts` holds the Mac steps of `journeys.yml` (`--grep @mac-only`) and `verify.yml` (`INFINITARY_E2E_TAG=@mac-only`) to the tag, and the untagged-skip step to every Linux journey job.
    `verify.yml` names the tag in `INFINITARY_E2E_TAG`, which `playwright.config.ts` makes every lane's filter: the command line's `--grep` filters only the lanes a run names, so the `desktop` lane, the others' teardown, would still run every test it holds.
    `tests/e2e-lanes.test.ts` runs the real lanes over fixture specs to hold this, with `desktop` still running after the parallel lanes.
 
@@ -338,7 +338,7 @@ The genuine signing proof is `verify.yml`'s own stages: `dev-signing` signs the 
 The mac lane runs that proof after every stage that launches the dev Electron (`e2e`, `perf`), so signing never changes what those journeys ran on, and a failed signing stage stops none of them.
 The lane logs the dev Electron's signature before the suite, read from the binary, and a red signing stage still ends the full check red.
 Logic-only signing tests use the stand-in `security` and `codesign` commands under `tests/fixtures/local-codesign/`.
-`tests/release-workflows.test.ts` holds both: no journey route signs, and the signing stages follow the journeys and fail the lane.
+`tests/release-workflows-verify-evidence.test.ts` holds both: no journey route signs, and the signing stages follow the journeys and fail the lane.
 
 ## When to request full verification
 
@@ -478,7 +478,7 @@ The full check runs no run-alone pass either; the proof of edited journeys runs 
 Its Linux jobs run on GitHub's hosted Ubuntu, whatever `LINUX_RUNNER` says, so the run never waits in the PC's line ("A release's hosted machines").
 There one two-processor machine ran every vitest project past its step's 60-minute limit, so the Linux checks run on nine machines at once (INF-2646, the captain's approved split): `linux-checks` runs the typecheck, the lints and the build, and `linux-tests` runs the tests in eight groups, `pure`, `unit` and `unit-isolated` in three, `integration` in two, `probe` in two and `browser` in one, each group a set of vitest's own `--shard`.
 Each group keeps the 60-minute limit and reports whatever another did, and the alpha's proof requires every group's complete set (`scripts/main-alpha-proof.mjs`).
-`tests/release-workflows.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls and the phone release's call of every part.
+`tests/release-workflows-main-check.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls and the phone release's call of every part.
 Beside the wait, its `sort` job reads each push against the swept batch ("The swept batch"): a push whose files are exactly a green batch's skips the full check once the wait ends, a push while a green batch is still merging cancels its own run, and every other push gets the full check.
 
 ## The swept batch
@@ -556,7 +556,7 @@ The cost is GitHub's per-minute bill for those jobs.
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.
-`tests/release-workflows.test.ts` holds where each job starts with `LINUX_RUNNER` set and unset, publishing and in a dry run.
+`tests/release-workflows-runners.test.ts` holds where each job starts with `LINUX_RUNNER` set and unset, publishing and in a dry run.
 
 ## Native phone checks
 
@@ -676,7 +676,7 @@ That holds across a repair and across bringing the branch up to date; otherwise 
 The phone pictures a release note or a card needs come from that one run's `phone-pictures` artifact, never from a run of their own.
 Cancel a run no longer needed by its id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).
 `phone.yml`'s `request` job refuses a branch request for every part, one with no `affected` or `parts`, without `task` and `reason`, on a light Linux machine before the run waits for a phone guest; `main`, a narrower request and the phone release's call pass.
-`tests/release-workflows.test.ts` runs that guard's shell.
+`tests/release-workflows-journey-suites.test.ts` runs that guard's shell.
 
 ## Journeys on the pull request
 
@@ -818,7 +818,7 @@ The Mac job refuses an empty file list, builds once, then runs the chosen files'
 After the rounds pass it runs the edited files' tagged tests alone, as Linux does for the rest ("Each test owns its prerequisites"), and keeps that result as the `e2e-alone-mac` artifact.
 It does not repeat the release's other stages: the replay gate and the package smoke stay `verify.yml`'s, in rolling main, reused by automatic alphas and newly run only for alphas without reusable proof or named exceptions, and the full suite runs in every alpha or the swept batch it reuses.
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.
-`tests/affected-journeys.test.ts` pins the selection and `tests/release-workflows.test.ts` the workflow's shape.
+`tests/affected-journeys.test.ts` pins the selection and `tests/release-workflows-journey-requests.test.ts` the workflow's shape.
 
 The native phone gate uses the same clock and cap through `PhoneWaits.swift`, with 1200-second ordinary XCTest allowances and a 90-minute gate limit on every route; graded native runs retain Xcode's own allowances and wall-clock waits (`docs/ios.md`, "Disposable verification").
 Its on-demand `parts`, `starve` and `perf` inputs select native parts and reproduce twelve-second stalls without changing assertions or app deadlines.
@@ -914,7 +914,7 @@ In the 2026-09 release cuts, side-rails' collapse and settings cases and forge-s
   A test that runs only on a Mac carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`) beside its own `test.skip` and reason: on Linux it is recorded as skipped, and the Mac routes run those tests alone (`--alone-tag @mac-only`), keeping the result as the `e2e-alone-mac` artifact.
   A test that skips without the tag, or skips on a Mac, fails the pass, since it never ran alone.
   The pass over every spec file runs only on request: `source-journeys.yml` with `suite: alone`, in four isolated Linux jobs, `Manual request · Fresh-start app journeys (Linux; group N/4)` ("The Linux source desktop", below), each keeping its share's result as the `e2e-alone-N` artifact.
-  `tests/release-workflows.test.ts` holds those steps and `tests/journey-runs.test.ts` the edited selection.
+  `tests/release-workflows-journey-suites.test.ts` and `tests/release-workflows-verify-evidence.test.ts` hold those steps and `tests/journey-runs.test.ts` the edited selection.
   Locally it takes the affected spec files, like a Playwright run: `node scripts/e2e-alone.ts tests/e2e/<file>.spec.ts` after `pnpm build`.
   The renderer and application lanes' tests run four at a time, and the desktop lane's one at a time after them, as in the full run.
 - Vitest cases keep the same rule, selected alone with `pnpm test <file> -t "<name>"`.
@@ -1118,7 +1118,7 @@ The affected-journey selector retains that journey for changes to the core Mac c
 
 ## A red verify's evidence
 
-`verify.yml` keeps what the e2e run left on the run itself, so a red release is read from its page instead of re-run blind (scout `fm3000-e2e-rigidity-s2`, I5; held by `tests/release-workflows.test.ts`):
+`verify.yml` keeps what the e2e run left on the run itself, so a red release is read from its page instead of re-run blind (scout `fm3000-e2e-rigidity-s2`, I5; held by `tests/release-workflows-verify-evidence.test.ts`):
 
 - **`e2e-results`** is Playwright's JSON result (the `json` reporter in `playwright.config.ts` beside the unchanged console reporter; verify's e2e step names its path, `playwright-report/e2e-results.json`, through `PLAYWRIGHT_JSON_OUTPUT_FILE`), kept whenever the suite ran.
 - **`e2e-failures`** is, on a failed run, everything under `test-results/` (the run's own directory under `test-results/runs/`, "Per-run e2e evidence" above): each failed journey's `error-context.md` (the error, its call log and the window's accessibility snapshot), `trace.zip` (the runner's steps, errors and sources) and `test-failed-*.png` (the app window), beside whatever the specs wrote.
@@ -1189,7 +1189,7 @@ Each such job reads `fromJSON(vars.LINUX_QUEUES || '{}').<kind>` after the hoste
 A kind the variable leaves out, and an unset or empty variable, keep the label the job asked for before, so the variable changes nothing until it names a kind.
 Name a kind only once runner-up serves its queue, so no job waits on a label nothing serves.
 A Linux job with no kind, such as main's startup fixtures, the Linux packages and every release job, never reads the variable.
-`tests/release-workflows.test.ts` moves each kind alone and holds every other job where it was.
+`tests/release-workflows-runners.test.ts` moves each kind alone and holds every other job where it was.
 
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
@@ -1226,7 +1226,7 @@ The TestFlight job runs only for a release, so its `testflight` kind has no rele
 A dry run asks for the ordinary kinds, so a rehearsal never takes a release's place in line.
 `release.yml` hands `release_check` to `verify.yml` as its `mac_runner` input and `release_light` to `mac-update.yml` as its `runner` input, and `verify.yml`'s Mac lane reads its kind only when that input is empty.
 The signed installer's Intel check stays on `macos-15-intel` and takes no kind.
-`tests/release-workflows.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
+`tests/release-workflows-runners.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
 The `phone` mapping remains `mini-mac-phone`; DOP-246 removes that label from the mini and activates vBoxx-only eligibility, without interrupting running work.
 The two rented places serve only that queue; journeys, signing, publishing, installer checks and borrows stay off it.
 `tests/phone-pool-isolation.test.ts` evaluates workflow runner expressions, including matrix entries and both release modes, against the configured queues.
@@ -1253,7 +1253,7 @@ The signing job runs while the release's checks run (`docs/alpha.md`, "Signing w
 These checks require throwaway guests for their signing, trust changes or writes to `/Applications`; the signed installer's Intel check, run only on request, stays on a disposable hosted Mac (`docs/alpha.md`, "Isolated signed verification").
 The phone check reads its `phone` kind's queue alone (the repository variable `VIRTUAL_MAC_RUNNER` is read by no workflow), so it starts on the next free virtual place; the Mac mini has one, so there it starts after any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 The other Mac jobs read their kind's queue or `MAC_RUNNER` and may run in any place, a virtual one or the real Mac's.
-`tests/release-workflows.test.ts` holds which jobs ask for the real Mac.
+`tests/release-workflows-runners.test.ts` holds which jobs ask for the real Mac.
 
 ### The runner's microphone access
 

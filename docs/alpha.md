@@ -234,7 +234,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   It uploads nothing: it checks that the upload job's list names the signed zip, then downloads each copy from every place and checks it against its sidecar and that list, the record's with a token that only reads and the public ones without a credential.
   Every Mac check there - signature, Gatekeeper, launch and version, the disk image against the zip - still runs on the fetched copies, never replaced by a checksum.
   Only after every check passed does it switch the Homebrew casks, the old cask and the feeds; a rehearsal runs its tap and feed rehearsals on the handoff's own copies instead.
-  The Apple signing material stays on the real Mac; the upload job holds the upload keys - the workflow token that writes, the storage keys and both tap tokens - and the virtual Mac holds only the tap tokens and storage keys its switch steps write with (`tests/release-workflows.test.ts`, "pins which machine holds which key").
+  The Apple signing material stays on the real Mac; the upload job holds the upload keys - the workflow token that writes, the storage keys and both tap tokens - and the virtual Mac holds only the tap tokens and storage keys its switch steps write with (`tests/release-workflows-resolve.test.ts`, "pins which machine holds which key").
   Rerunning only the upload or publication job reuses the signing job's handoff from whichever attempt produced it; rerunning the signing job hands off anew, and the record's immutable adoption still decides which bytes publish.
   The handoff and upload code lives in the workflow itself, so an older alpha promoted to stable needs none of it in its source.
 - **Release notes are checked first (`docs/release-notes.md`).**
@@ -358,7 +358,7 @@ It skips in two cases:
 
 The list names what the release installs, builds and packages the app and its Linux packages from: `src/` without its test files, `resources/`, `packaging/`, `vendor/`, `store/`, `patches/`, the package and builder configuration, the design skill and the scripts the build runs.
 Tests, the phone, docs, `.github/`, `release-notes/` and every other script never cut an alpha on their own.
-`tests/release-workflows.test.ts` fails when the build starts running a script the list misses, unless `BUILD_SCRIPTS_THAT_SHIP_NOTHING` names it with a reason.
+`tests/release-workflows-alpha-cut.test.ts` fails when the build starts running a script the list misses, unless `BUILD_SCRIPTS_THAT_SHIP_NOTHING` names it with a reason.
 
 A skipped merge is not lost: the next alpha that cuts carries it, and that alpha's notes check covers its note or exclusion.
 A failed or cancelled alpha publishes no tag, so the next run still finds the change and cuts.
@@ -389,7 +389,7 @@ GitHub reads a variable only when a job starts, so the variable alone cannot sto
 Pausing therefore sets the variable and also cancels main's running and waiting checks, the captain's answer "stop now, also cancel the running check".
 The pause lasts until Resume, which clears the variable and re-runs nothing, the captain's answer "the next merge starts a check that covers the pause".
 The next merge's check runs at main's head, so it covers every merge made during the pause, and its alpha carries their notes.
-`tests/release-workflows.test.ts` holds both steps.
+`tests/release-workflows-alpha-cut.test.ts` holds both steps.
 
 ### An alpha does not wait on the phone check
 
@@ -628,7 +628,7 @@ An item is done when its result is recorded where it names; it is never ticked h
 - `tests/e2e/mac-updates.spec.ts` drives keyboard selection, restart persistence, progress, recovery, cancellation, Saving work and Update later through the hermetic app.
 - `src/core/orchestrator/crewSupervisor.test.ts` ("saving work before this computer's update") owns the hold, the safe stop, Update later and the carry-on after the restart; `tests/helpers/sessionContract.ts` owns each backend's safe stop.
 - `src/core/update/linuxInstall.test.ts` and `src/core/update/updateChecker.test.ts` own the Linux save before replacement and its Update later.
-- `tests/release-workflows.test.ts` evaluates the release workflow's conditions, promotion evidence and no-publication rehearsals.
+- The `tests/release-workflows-*.test.ts` files evaluate the release workflow's conditions, promotion evidence and no-publication rehearsals.
 - `tests/e2e/installed-update-work.spec.ts` checks that a fresh app accepts the proof's local connection and message while its real provider stream stays open, then retains the message after stopping.
 - `tests/installed-update-fixtures.test.ts` exercises coherent archive reads across an ordered replacement and the real saved-work mover's retained recovery copy.
 - `scripts/check-update-from-alpha.mjs` updates the published alpha to each release's own signed zip in a disposable Apple silicon virtual Mac.

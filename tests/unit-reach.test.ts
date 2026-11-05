@@ -35,11 +35,11 @@ describe("local direct unit reach", () => {
   it("selects workflow readers by literal path, not just module imports", () => {
     const readers = [
       "tests/unit-repeats-workflow.test.ts",
-      "tests/release-workflows.test.ts",
+      "tests/release-workflows-main-check.test.ts",
       "tests/phone-order.test.ts",
     ];
     expect(directUnitReach([".github/workflows/ci.yml"], readers, root)).toEqual([
-      "tests/release-workflows.test.ts",
+      "tests/release-workflows-main-check.test.ts",
       "tests/unit-repeats-workflow.test.ts",
     ]);
     expect(directUnitReach(["unrelated/ci.yml"], readers, root)).toEqual([]);
@@ -56,17 +56,17 @@ describe("local direct unit reach", () => {
     expect(
       directUnitReach(
         ["packaging/old-cask-switch.json"],
-        ["tests/release-workflows.test.ts"],
+        ["tests/release-workflows-resolve.test.ts"],
         root,
       ),
-    ).toEqual(["tests/release-workflows.test.ts"]);
+    ).toEqual(["tests/release-workflows-resolve.test.ts"]);
     expect(
       directUnitReach(
         [".github/workflows/republish-casks.yml"],
-        ["tests/release-workflows.test.ts"],
+        ["tests/release-workflows-pr-checks.test.ts"],
         root,
       ),
-    ).toEqual(["tests/release-workflows.test.ts"]);
+    ).toEqual(["tests/release-workflows-pr-checks.test.ts"]);
   });
 
   // INF-2426: b4c11e3fd and 61ba81374 edited the testing runbook's text and

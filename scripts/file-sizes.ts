@@ -69,7 +69,6 @@ export const OVER_CEILING: readonly string[] = [
   "tests/e2e/task-browser.spec.ts",
   "tests/export-corpus-corrections.test.ts",
   "tests/helpers/phoneHome.ts",
-  "tests/release-workflows.test.ts",
   "tests/replay-captain-session.test.ts",
 ];
 

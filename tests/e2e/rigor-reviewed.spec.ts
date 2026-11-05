@@ -9,7 +9,7 @@ import {
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
-import { REVIEW_FINDING_LABEL } from "../../src/shared/cards";
+import { MERGE_CLOSES_WORDS, REVIEW_FINDING_LABEL } from "../../src/shared/cards";
 import { reportSummary } from "../../src/shared/feed";
 import { validationStateRevision } from "../../src/shared/liveValidation";
 import type { TaskView } from "../../src/shared/tasks";
@@ -33,11 +33,14 @@ import {
   MOCK_REVIEW_AUTOFIX_FINDING,
   MOCK_REVIEW_CAP_CARD_TITLE,
   MOCK_REVIEW_CAP_RETRY_LABEL,
+  MOCK_REVIEW_KEEP_LABEL,
+  MOCK_REVIEW_KEEP_STEER,
   MOCK_REVIEW_REFIX_STEER,
   MOCK_REVIEWED_BUILDER_REPORT,
   MOCK_REVIEWED_CARD_TITLE,
   MOCK_REVIEWED_CHANGE,
   MOCK_REVIEWED_FIX_REPORT,
+  MOCK_REVIEWED_KEEP_REPORT,
   MOCK_REVIEWED_READ_STEER,
   MOCK_REVIEWED_READ_WORDS,
   MOCK_REVIEWED_REFIX_REPORT,
@@ -64,7 +67,9 @@ import { setThemeViaSettings } from "./theme";
  * the Firstmate directly (never supervision) and become one steer and one
  * decision card; repeated re-reviews return findings without a host round
  * allowance; a later re-review passes, which closes the review task and is
- * one feed line; the completion card shows the review and merges.
+ * one feed line; the completion card shows the review, says its merge leaves
+ * the task open while the ask-user card stands (INF-2525), and once the
+ * captain answers that card it merges and closes the task.
  *
  * Real: the repository, task working copies, care derivation, review brief,
  * the typed verdict, card path and settle. Stand-ins: models (the mock
@@ -268,7 +273,7 @@ test("a reviewed task's review passes before its completion card, which merges w
   await expect(findingFacts.project).toContainText(REPO_NAME);
   await expect(findingFacts.review).toContainText(HEAD_SHA.slice(0, 7));
   await expect(findingFacts.review).toContainText("risk medium");
-  await expect(page.getByRole("button", { name: "Keep the copy" })).toBeVisible();
+  await expect(page.getByRole("button", { name: MOCK_REVIEW_KEEP_LABEL })).toBeVisible();
   await expect(
     reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_REVIEWED_FIX_REPORT) }),
   ).toBeVisible({ timeout: 30_000 });
@@ -361,9 +366,9 @@ test("a reviewed task's review passes before its completion card, which merges w
 
   // 9. Told the review passed, the builder emits its completion card, which
   //    renders the five headings and the host's facts strip with the review
-  //    beside CI. The ask-user card is the Firstmate's and still stands (the
-  //    cap card was answered), so the stack holds two and the new one waits
-  //    unread until paged to (WI-18: a new card never steals the shown one).
+  //    beside CI. The ask-user card is the Firstmate's and still stands, so
+  //    the stack holds two and the new one waits unread until paged to
+  //    (WI-18: a new card never steals the shown one).
   await expect(pager(page, 2)).toBeVisible({ timeout: 30_000 });
   await showCard(page, MOCK_REVIEWED_CARD_TITLE);
   const frame = cardBody(page, MOCK_REVIEWED_CARD_TITLE);
@@ -380,8 +385,47 @@ test("a reviewed task's review passes before its completion card, which merges w
   await expect(facts.review).toContainText(FINAL_SHA.slice(0, 7));
   await expect(facts.review).toContainText("low");
   await expect(facts.cell("review")).toHaveAttribute("title", "one test file changed.");
+  // While the ask-user card stands, the merge would leave the task open for
+  // that question, and the card says so (INF-2525, docs/forge.md "A
+  // requested merge").
+  await expect(facts.mergeLine).toHaveText(MERGE_CLOSES_WORDS.continues);
 
-  // 10. The merge: the click asks GitHub for exactly that PR at its head.
+  // 10. The captain answers the finding first. The click is the Firstmate's
+  //     turn, served as the captain's choice on its card, and the Firstmate
+  //     relays the answer to the builder, which has nothing to change.
+  if (!mockProvider) throw new Error("this journey runs on the mock provider");
+  const askCard = (await page.evaluate(() => window.infinitary.cards.list())).find(
+    (card) => card.title === MOCK_REVIEW_ASK_CARD_TITLE,
+  );
+  const keep = askCard?.actions.find((action) => action.label === MOCK_REVIEW_KEEP_LABEL);
+  if (!askCard || !keep) throw new Error("the finding card is up with its keep");
+  expect(askCard.taskId).toBe(builder.id);
+  const kept = mockProvider.scriptFirstmateTurn(
+    captainCardChoice(
+      { id: askCard.id, title: askCard.title, taskId: builder.id },
+      { id: keep.id, label: keep.label },
+    ),
+    [{ name: "steer_crewmate", args: { task_id: builder.id, message: MOCK_REVIEW_KEEP_STEER } }],
+  );
+  await showCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
+  await shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE)
+    .getByRole("button", { name: MOCK_REVIEW_KEEP_LABEL })
+    .click();
+  // A miss prints the whole outcome: what the Firstmate was served instead.
+  await expect
+    .poll(kept.outcome, { timeout: 30_000 })
+    .toEqual(expect.objectContaining({ state: "closed", results: [expect.any(String)] }));
+  await expect(
+    reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_REVIEWED_KEEP_REPORT) }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expectNoCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
+  // Nothing else on the task is open now, so the merge closes it.
+  await showCard(page, MOCK_REVIEWED_CARD_TITLE);
+  await expect(factsStrip(cardBody(page, MOCK_REVIEWED_CARD_TITLE)).mergeLine).toHaveText(
+    MERGE_CLOSES_WORDS.closes,
+  );
+
+  // 11. The merge: the click asks GitHub for exactly that PR at its head.
   await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
   await expect(putInLine(page, builder.key)).toBeVisible({ timeout: 30_000 });
   // GitHub squashes exactly that change at the reviewed head, under its title.
@@ -399,7 +443,7 @@ test("a reviewed task's review passes before its completion card, which merges w
     .toMatchObject({ status: "done", closedReason: "merged" });
 
   // The steers reached the builder's session: the auto-fix finding, the
-  // re-findings, and the captain's answer that reopened the rounds. What
+  // re-findings, and the captain's answer on the ask-user finding. What
   // each session's prompt says is piResources.test.ts's, intentBrief.test.ts's
   // and wakes.test.ts's.
   const builderBodies = (mockProvider?.requestBodies() ?? []).filter(
@@ -410,6 +454,7 @@ test("a reviewed task's review passes before its completion card, which merges w
   );
   expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_AUTOFIX_FINDING))).toBe(true);
   expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_REFIX_STEER))).toBe(true);
+  expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_KEEP_STEER))).toBe(true);
   expect(builderBodies.some((body) => body.includes(MOCK_CAP_RETRY_STEER))).toBe(false);
 
   // Each later step of the review reached the Firstmate on the wake it

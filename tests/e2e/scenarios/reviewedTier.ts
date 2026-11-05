@@ -73,6 +73,15 @@ export const MOCK_REVIEW_PASS_REPORT = "No findings; the flush is awaited before
 export const MOCK_REVIEWED_FIX_REPORT =
   "Fixed F1: the flush is awaited before the read; pushed a new head and the checks passed again.";
 export const MOCK_REVIEW_ASK_CARD_TITLE = "Keep the Later copy?";
+/**
+ * The captain's answer on the ask-user finding: keep the copy. The spec
+ * scripts the first mate's turn on that click (`scriptFirstmateTurn`), which
+ * relays it to the builder; the builder has nothing to change and says so.
+ */
+export const MOCK_REVIEW_KEEP_LABEL = "Keep the copy";
+export const MOCK_REVIEW_KEEP_STEER = "The captain keeps the Later copy: F2 needs no change.";
+export const MOCK_REVIEWED_KEEP_REPORT =
+  "Noted the captain's answer on F2: the Later copy stays, so nothing changes.";
 export const MOCK_REVIEWED_CARD_TITLE = "The meter test is steady, reviewed";
 /** "ask the reviewer to look again": the captain's word for the re-review. */
 export const REREVIEW_PROMPT_MARKER = "ask the reviewer to look again";
@@ -267,7 +276,7 @@ function firstmateMove({
               `<p>${MOCK_REVIEW_ASK_FINDING}</p>` +
               "<ul><li>The reviewer challenges a deliberate choice; your words did not settle it.</li></ul>",
             actions: [
-              { id: "keep-copy", label: "Keep the copy", default: true },
+              { id: "keep-copy", label: MOCK_REVIEW_KEEP_LABEL, default: true },
               { id: "change-copy", label: "Change it" },
             ],
           },
@@ -364,6 +373,7 @@ function crewmateMove({
     return { text: MOCK_REVIEWED_FIX_REPORT };
   if (latestUserTail.includes(MOCK_REVIEW_REFIX_STEER)) return { text: MOCK_REVIEWED_REFIX_REPORT };
   if (latestUserTail.includes(MOCK_CAP_RETRY_STEER)) return { text: MOCK_REVIEWED_RETRY_REPORT };
+  if (latestUserTail.includes(MOCK_REVIEW_KEEP_STEER)) return { text: MOCK_REVIEWED_KEEP_REPORT };
   // INF-125: this lifecycle fixture changes only commit history, not a running product.
   if (!calledTool(body, "report")) {
     return {

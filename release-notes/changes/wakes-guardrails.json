@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "wakes-guardrails",
+      "reason": "Internal: new tests pin every wake's words, the saved rows of retired wakes and each wake's once-name before the wakes file is split; nothing a person sees changes."
+    }
+  ]
+}

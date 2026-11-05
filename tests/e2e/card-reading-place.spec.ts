@@ -6,7 +6,7 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { expandDock, nowFrame, pressRow, recordCard, recordFrame, showRecordTab } from "./rails";
-import { cardScroller, showCard, shownCard, stageAtRest } from "./stack";
+import { cardScroller, showCard, shownCard, shownEntry, stageAtRest } from "./stack";
 
 const checks = [
   "Read the release notes against the changes people will see.",
@@ -120,6 +120,12 @@ test("paging away from a task record and back keeps its reading place", async ()
       .evaluate((el) => (el as HTMLElement).click());
     await pressRow(page, a.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", a.id);
+    // The record appears once its body frame has drawn, and until then it is
+    // unseen and takes no pointer (docs/renderer.md). Opened before then, its
+    // words push that frame out of view, where the Mac does not draw it, so
+    // the record appears only when its hold ends and a wheel turn meanwhile
+    // scrolls nothing. The captain opens the words on the record they see.
+    await expect(shownEntry(page)).toHaveCSS("opacity", "1");
     await recordCard(page)
       .locator('[data-record-section="words"] > summary')
       .evaluate((el) => (el as HTMLElement).click());
@@ -127,6 +133,9 @@ test("paging away from a task record and back keeps its reading place", async ()
     await expect
       .poll(() => scroller().evaluate((el) => el.scrollHeight - el.clientHeight > 400))
       .toBe(true);
+    // The open words grow the card: the captain scrolls it once it has come
+    // to rest (docs/e2e-contracts.md).
+    await stageAtRest(page);
     const box = await scroller().boundingBox();
     if (!box) throw new Error("no box");
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);

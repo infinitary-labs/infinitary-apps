@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "record-words-after-appear",
+      "reason": "Internal: the reading-place journey opens a task record's words only once the record has appeared and turns the wheel once the stage has come to rest, since an unseen record takes no pointer and its words opened early push its body out of view. No product behavior changes."
+    }
+  ]
+}

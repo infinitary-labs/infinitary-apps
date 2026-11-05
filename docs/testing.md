@@ -216,7 +216,7 @@ New spec files start in desktop.
 A file joins application once a review finds it needs no voice, paint budget, demo recording or other one-at-a-time resource, keeps its own HOME, userData, ports and service stand-ins, and passes under the parallel lanes' load in a full Mac and Linux run (`verify.yml`).
 Background work (`run-work.spec.ts`) and the browser booking journeys (`task-browser-booking.spec.ts`) are such files: scratch homes, loopback SSH fixtures, a `launchctl` stand-in and a local test airline.
 Desktop keeps the voice journeys (the dictation key and the microphone), the paint budgets tagged `@perf` (`tests/e2e/perf.ts`), and the demo recordings, which play at real speed.
-Devices (`devices.spec.ts`) stays in desktop: under the parallel lanes' load, adding a Mac by its address, which packs the app at background priority (`src/core/devices/appArchive.ts`), outlasts the journey's wait for the Mac to join.
+Devices (`devices.spec.ts`, `devices-links.spec.ts`, `devices-command.spec.ts`, `devices-address.spec.ts` and `devices-ssh.spec.ts`) stays in desktop: under the parallel lanes' load, adding a Mac by its address, which packs the app at background priority (`src/core/devices/appArchive.ts`), outlasts the journey's wait for the Mac to join.
 Automatic placement (`automatic-placement.spec.ts`) stays in desktop pending the full Mac and Linux parallel-lane qualification; its memory and compatibility readings remain live.
 Its first two journeys replay captured busy and available CPU counters inside the isolated Electron process, releasing room only after observing the task's CPU wait (`tests/e2e/placementCpu.ts`, `docs/routing.md`).
 No product hook or shared runner setting changes, and the remaining refusal journeys keep live CPU readings.
@@ -287,7 +287,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A fake clock that also advances with real time (`shouldAdvanceTime`) can fire a timer before the test does, so a step that fires the next timer while real work runs holds the clock still with `vi.setTimerTickMode("manual")` (`sessionHostDeadlines.test.ts`, INF-435).
   A journey that waits on one of the app's own passes - a redelivery after a restart, a check's reread, a placement sweep - spreads `SHORT_TICK` (`tests/e2e/launch.ts`) into its launch `env` rather than waiting out the app's one-minute tick: it names a two-second period in `INFINITARY_TICK_PERIOD_MS` (`docs/architecture.md`, "One clock"), which a packaged build ignores.
   A test that waits for another process to reach a step waits on a mark it made, through `reachMark` (`tests/helpers/reachMark.ts`), never on a folder's watch.
-  On macOS a folder's watch is FSEvents, which held or dropped a new file's event while other unit rounds churned the disk, so `remoteLogin.test.ts` ran out its budget with the mark already there (INF-2578); `churnDisk` (`tests/helpers/diskChurn.ts`) makes that churn in the test that owns the wait.
+  On macOS a folder's watch is FSEvents, which held or dropped a new file's event while other unit rounds churned the disk, so `remoteLoginUpdate.test.ts` ran out its budget with the mark already there (INF-2578); `churnDisk` (`tests/helpers/diskChurn.ts`) makes that churn in the test that owns the wait.
   The main thread's own processor time is work, not a wall-clock window: a busy host stretches a stall's wall time but not the work the main thread did in it, so the freeze journey (`tests/e2e/main-thread-freeze.spec.ts`) grades its 250 ms line wherever it runs (`docs/freeze-recorder.md`, "Before a change merges").
   A budgeted duration goes through `tests/e2e/perf.ts` (`measured`, or `graded` for a bar with a 95th percentile and a maximum, tests tagged `@perf`): printed and annotated every run, graded only by `verify.yml`'s on-demand `perf` input on a quiet host, the same run that holds vitest's tests to their budgets (`docs/test-cohorts.md`, "Budgets"); the Biome plugin `tests/lint/e2e-no-ms-budgets.grit` refuses `toBeLessThan(X_MS)` anywhere else in `tests/e2e`.
 - Test temp directories: a test makes one only through `scratchDir(prefix)` (`tests/helpers/scratchDirs.ts`), removed after the vitest file or as the Playwright worker exits - never at module scope or in a Playwright `describe` body, which run in the runner (refused there).
@@ -781,7 +781,7 @@ The fallback table beside the existing selector unions these files into its resu
 | --- | --- |
 | `src/renderer/src/cards/`, `src/renderer/src/app/HomeScreen.tsx`, `HomeMate.tsx`, `HomePrompt.tsx` or `src/renderer/src/app/stage/` | `keyboard-routing.spec.ts`, `stage-reveals.spec.ts` |
 | `src/renderer/src/app/focusRecovery.ts` or `src/renderer/src/plugins/frames/frameFocus.ts` | `frame-focus.spec.ts`, `focus-recovery.spec.ts`, `card-task-keys.spec.ts` |
-| `src/core/devices/` | `devices.spec.ts` |
+| `src/core/devices/` | `devices.spec.ts`, `devices-links.spec.ts`, `devices-command.spec.ts`, `devices-address.spec.ts`, `devices-ssh.spec.ts` |
 | `src/core/routing/placementEngine.ts`, `src/main/host/resourceMemory.ts`, or `automaticPlacement.ts`, `placementFacts.ts`, `resourceSampler.ts`, `computerResources.ts` or `computerResourceFeed.ts` in `src/core/placed/` | `automatic-placement.spec.ts` |
 
 Directory paths match descendants; file paths match exactly.

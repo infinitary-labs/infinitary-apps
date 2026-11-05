@@ -10,8 +10,8 @@ import { commandSearch, pressWindowKey } from "./windowKeys";
  * Devices, + A phone included, first-launch joining and device cards a
  * development run offers, through the real core, shell, preload and renderer
  * with the installed flag. No link is made here: an installed build listens
- * on this Mac's own network, which a test never does (devices.spec.ts and
- * view.spec.ts make and use links on loopback).
+ * on this Mac's own network, which a test never does (devices-links.spec.ts
+ * and view.spec.ts make and use links on loopback).
  */
 
 test("an installed build offers joining at its first launch, Settings -> Devices and its command", async () => {

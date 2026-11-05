@@ -34,7 +34,7 @@ test.afterEach(async () => {
   }
 });
 
-/** Another app at its first launch, as in devices.spec.ts: it says its window and its user. */
+/** Another app at its first launch, as in devices-links.spec.ts: it says its window and its user. */
 const AT_FIRST_LAUNCH = {
   kind: "mac",
   window: true,

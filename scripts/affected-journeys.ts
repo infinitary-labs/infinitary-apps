@@ -114,7 +114,16 @@ const FALLBACKS = [
     paths: ["src/renderer/src/app/focusRecovery.ts", "src/renderer/src/plugins/frames/frameFocus.ts"],
     specs: ["frame-focus.spec.ts", "focus-recovery.spec.ts", "card-task-keys.spec.ts"],
   },
-  { paths: ["src/core/devices/"], specs: ["devices.spec.ts"] },
+  {
+    paths: ["src/core/devices/"],
+    specs: [
+      "devices.spec.ts",
+      "devices-links.spec.ts",
+      "devices-command.spec.ts",
+      "devices-address.spec.ts",
+      "devices-ssh.spec.ts",
+    ],
+  },
   {
     // The Mac journey drives this controller and shared store, even when no drawn hook changes.
     paths: [

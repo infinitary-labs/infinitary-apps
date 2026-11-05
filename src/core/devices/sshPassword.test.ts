@@ -5,7 +5,7 @@ import { passwordMethods, passwordSshOptions } from "./sshPassword";
  * The password, once (docs/devices.md): which way a Mac takes a password,
  * read from SSH's own note after a refused key, and the one run that types
  * it. The run itself, against a throwaway SSH server, is
- * `remoteLogin.test.ts`.
+ * `remoteLoginPassword.test.ts`.
  */
 describe("the password, once", () => {
   it("reads which password methods the Mac offered after it refused the key", () => {

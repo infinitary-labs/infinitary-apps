@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "../design";
 import type { ViewMac } from "../devices/viewWords";
-import { joinedWhen } from "./DevicesTab";
+import { joinedWhen } from "./devicesWords";
 import "./devices.css";
 import { HERE } from "@shared/deviceNames";
 import { SectionLabel } from "./settingRows";

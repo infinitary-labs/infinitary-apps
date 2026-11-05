@@ -48,7 +48,7 @@ import { cardReply, expectNoCard, showCard, shownCard } from "./stack";
  * when it is a picture or text, and is refused otherwise, since a path on
  * this Mac means nothing there. Both apps run on this Mac, each with its own
  * data, and the Mac where Firstmate lives makes the link as its Devices tab
- * does (devices.spec.ts drives that tab and its card).
+ * does (devices-links.spec.ts drives that tab and its card).
  */
 
 const PICTURE_TASK = "harbour-task";

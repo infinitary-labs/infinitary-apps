@@ -22,9 +22,10 @@ import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Button, Input, MicroLabel, StatusDot } from "../design";
 import { focusWithRing } from "../design/focus";
-import { NearbyList, PortField, sshMustBeOn } from "../settings/DevicesTab";
+import { NearbyList, PortField, sshMustBeOn } from "./NearbyList";
 import { JOIN_CONFIRM_WORDS, JOIN_RUNS_WORK, joinRefusalWords } from "./viewWords";
 import "./joinAnotherMac.css";
+import "../accounts/connectChips.css";
 import "../settings/devices.css";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 

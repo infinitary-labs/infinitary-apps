@@ -1,4 +1,9 @@
-import { type DeviceAddresses, type DeviceView, deviceWords } from "@shared/devices";
+import {
+  type DeviceAddresses,
+  type DeviceView,
+  deviceJoinedLine,
+  deviceWords,
+} from "@shared/devices";
 import { feedLineFrom } from "@shared/feed";
 import { NEARBY_OFF, type NearbyMacsView, nearbyMacsWords } from "@shared/nearbyMacs";
 import { type RemoteLoginRefusedAnswer, remoteLoginWords } from "@shared/remoteLogin";
@@ -6,25 +11,26 @@ import type { DeviceSignIns } from "@shared/signIns";
 import { sshConnectionWords } from "@shared/sshConnection";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { nearbyStep } from "../devices/NearbyList";
+import { DevicesTabView } from "./DevicesTab";
 import {
-  DevicesTabView,
   type DevicesTabViewProps,
+  joinedNoticeClears,
+  reachRefusalAfter,
+  reachRefusalOf,
+} from "./devicesState";
+import {
   deviceDetail,
   deviceState,
   deviceSummary,
   heldLine,
-  joinedLine,
-  joinedNoticeClears,
   joinedWhen,
   linkTimeLeft,
-  nearbyStep,
-  reachRefusalAfter,
-  reachRefusalOf,
+  removeLines,
   sshStoppedLine,
   strandedLine,
   wayBack,
-} from "./DevicesTab";
-import { removeLines } from "./devicesWords";
+} from "./devicesWords";
 
 /**
  * Settings -> Devices as the captain reads it (design skill
@@ -124,7 +130,6 @@ function render(overrides: Partial<DevicesTabViewProps> = {}) {
       onTryAgain={noop}
       onAskChangeAddress={noop}
       onChangeAddress={noop}
-      onChooseAddress={noop}
       onCopyWay={noop}
       {...overrides}
     />,
@@ -266,7 +271,11 @@ describe("Settings -> Devices", () => {
     expect(open).toContain("Stop it");
 
     const joined = render({
-      panel: { state: "joined", line: joinedLine("iMac", "view"), work: false },
+      panel: {
+        state: "joined",
+        line: deviceJoinedLine({ name: "iMac", kind: "view" }),
+        work: false,
+      },
     });
     expect(joined).toContain(
       "iMac joined. It can control your first mate. Your first mate&#x27;s tasks and conversation stay on this computer.",
@@ -1037,7 +1046,7 @@ describe("Settings -> Devices", () => {
     for (const kind of ["view", "work"] as const)
       expect(
         feedLineFrom({ type: "device_joined", deviceId: "air", name: "MacBook Air", kind })?.text,
-      ).toBe(joinedLine("MacBook Air", kind));
+      ).toBe(deviceJoinedLine({ name: "MacBook Air", kind }));
     expect(
       feedLineFrom({
         type: "device_joined",
@@ -1129,9 +1138,9 @@ describe("a refusal after a network drop", () => {
 
   it("clears the line on a later connection", () => {
     const kept = keptOf("unreachable");
-    expect(reachRefusalAfter(kept, [MAC]).clears).toBe(false);
-    expect(reachRefusalAfter(kept, [{ ...back, connectedAt: at }]).clears).toBe(false);
-    expect(reachRefusalAfter(kept, [back]).clears).toBe(true);
+    expect(reachRefusalAfter(kept, [MAC])).toBe(false);
+    expect(reachRefusalAfter(kept, [{ ...back, connectedAt: at }])).toBe(false);
+    expect(reachRefusalAfter(kept, [back])).toBe(true);
   });
 
   it("goes for a computer on another version once that connection began after the refusal", () => {
@@ -1142,19 +1151,19 @@ describe("a refusal after a network drop", () => {
       otherVersion: { takesWork: false, updateBy: "command" } as DeviceView["otherVersion"],
       connectedAt: at + 1,
     };
-    expect(reachRefusalAfter(kept, [older]).clears).toBe(true);
+    expect(reachRefusalAfter(kept, [older])).toBe(true);
   });
 
   it("stays while the connection that was up when the refusal came is still the one connected", () => {
     const kept = keptOf("unreachable");
     const same = { ...back, connectedAt: at - 1 };
-    expect(reachRefusalAfter(kept, [same]).clears).toBe(false);
-    expect(reachRefusalAfter(kept, [MAC]).clears).toBe(false);
-    expect(reachRefusalAfter(kept, [back]).clears).toBe(true);
+    expect(reachRefusalAfter(kept, [same])).toBe(false);
+    expect(reachRefusalAfter(kept, [MAC])).toBe(false);
+    expect(reachRefusalAfter(kept, [back])).toBe(true);
   });
 
   it("goes when the computer is removed from the list", () => {
-    expect(reachRefusalAfter(keptOf("unreachable"), [AIR]).clears).toBe(true);
+    expect(reachRefusalAfter(keptOf("unreachable"), [AIR])).toBe(true);
   });
 
   it("keeps no record of a refusal that is not about reaching it, so it stays until the next action", () => {
@@ -1165,9 +1174,9 @@ describe("a refusal after a network drop", () => {
   it("for Change address, goes only when a later connection is at the address that was tried", () => {
     const kept = keptOf("unreachable", "kunchen@studio.local");
     // Connected again at the old address: the tried one still did not answer.
-    expect(reachRefusalAfter(kept, [back]).clears).toBe(false);
+    expect(reachRefusalAfter(kept, [back])).toBe(false);
     const moved: DeviceView = { ...back, remoteLogin: "kunchen@studio.local" };
-    expect(reachRefusalAfter(kept, [moved]).clears).toBe(true);
+    expect(reachRefusalAfter(kept, [moved])).toBe(true);
   });
 });
 

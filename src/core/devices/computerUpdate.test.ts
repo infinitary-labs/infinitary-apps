@@ -180,7 +180,7 @@ async function world(
     countEveryMs: 50,
     emitUpdate: (event) => said.push(event),
     updateWaitMs: options.waitMs ?? 5_000,
-    // Remote Login's own update is RemoteLogin's (remoteLogin.test.ts); this
+    // Remote Login's own update is RemoteLogin's (remoteLoginUpdate.test.ts); this
     // records that the list hands it a Mac added by its address, which goes
     // ahead there, pausing its crew, as RemoteLogin does once nothing refused.
     updateOverRemoteLogin: async (deviceId, asked) => {

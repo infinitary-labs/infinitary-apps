@@ -22,6 +22,13 @@ export const MAC_UNIT_FILES = [
   "src/core/workspace/git.test.ts",
   "src/core/devices/relay.test.ts",
   "src/core/devices/remoteLogin.test.ts",
+  "src/core/devices/remoteLoginDownload.test.ts",
+  "src/core/devices/remoteLoginForward.test.ts",
+  "src/core/devices/remoteLoginFound.test.ts",
+  "src/core/devices/remoteLoginLink.test.ts",
+  "src/core/devices/remoteLoginPassword.test.ts",
+  "src/core/devices/remoteLoginUbuntu.test.ts",
+  "src/core/devices/remoteLoginUpdate.test.ts",
   "src/core/devices/joinCommand.test.ts",
   "src/core/devices/computerUpdate.test.ts",
   // Native same-group fork/exec, macOS birth identities and receipt cancellation.

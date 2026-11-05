@@ -1,3 +1,4 @@
+import { awayWord } from "@shared/devices";
 import type { ComputerForges, DeviceSignIns } from "@shared/signIns";
 import { signInPlace } from "@shared/signIns";
 import { useCallback, useEffect, useState } from "react";
@@ -6,7 +7,6 @@ import { Badge, Button, RowMenu, StatusDot, type StatusDotTone } from "../design
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { DeviceSignInAside, type Flow } from "./DeviceSignIns";
 import { DEVICE_FORGE_ROLE } from "./deviceForgeWords";
-import { awayWord } from "./devicesWords";
 
 /**
  * Settings -> Projects, "Where your projects live", for each computer that

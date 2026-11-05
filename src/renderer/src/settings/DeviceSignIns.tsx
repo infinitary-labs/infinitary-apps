@@ -1,5 +1,6 @@
 import type { AccountView } from "@shared/accounts";
 import { isCustomApiProvider } from "@shared/customApi";
+import { awayWord } from "@shared/devices";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import type { QuotaProviderView } from "@shared/quota";
 import {
@@ -27,7 +28,6 @@ import { useShellStore } from "../app/store";
 import type { RowMenuItem } from "../design";
 import { Button, Input } from "../design";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
-import { awayWord } from "./devicesWords";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP } from "./settingRows";
 
 /**

@@ -7,7 +7,7 @@ import { socketScratchDir } from "./scratchDirs";
  * OpenSSH's reverse forward does on the Mac it forwards to
  * (docs/helper.md, "Through the home's SSH"): a stand-in for the far end of
  * the home's SSH connection, in a folder only this user may enter. A real
- * OpenSSH forward is src/core/devices/remoteLogin.test.ts's.
+ * OpenSSH forward is src/core/devices/remoteLoginForward.test.ts's.
  */
 export type SocketForward = {
   /** The socket's path. */

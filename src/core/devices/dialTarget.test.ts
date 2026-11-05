@@ -32,7 +32,7 @@ import { DevicePairing } from "./pairing";
  * real pairing and connection over scratch folders, and a socket that does
  * what OpenSSH's reverse forward does at the far end (`forwardSocket`): every
  * connection to it is carried to the home's loopback. A real OpenSSH forward
- * is remoteLogin.test.ts's. Built on PR #838's checks of a dial carried by a
+ * is remoteLoginForward.test.ts's. Built on PR #838's checks of a dial carried by a
  * relay: joined, connected and answered through it; refused when nothing
  * answers there or another computer does.
  */

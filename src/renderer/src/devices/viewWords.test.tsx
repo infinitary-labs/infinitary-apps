@@ -5,7 +5,7 @@ import { joinAtRefusalWords } from "../../../shared/joinByAddress";
 import { NEARBY_OFF, type NearbyMacsView } from "../../../shared/nearbyMacs";
 import { remoteLoginWords } from "../../../shared/remoteLogin";
 import { ControllingTabView } from "../settings/ControllingTab";
-import { joinedWhen } from "../settings/DevicesTab";
+import { joinedWhen } from "../settings/devicesWords";
 import { JoinAnotherMacView, type JoinAnotherMacViewProps } from "./JoinAnotherMac";
 import { RemoteControlLineView } from "./RemoteControl";
 import {

@@ -61,6 +61,10 @@ it("collects every spec once, isolates app boundaries and serializes voice, pain
     "card-demo.spec.ts",
     // Under the parallel lanes' load, adding a Mac by its address outlasts its wait.
     "devices.spec.ts",
+    "devices-links.spec.ts",
+    "devices-command.spec.ts",
+    "devices-address.spec.ts",
+    "devices-ssh.spec.ts",
     // INF-1129 controls CPU input, but live memory remains; no parallel-lane qualification yet.
     "automatic-placement.spec.ts",
     // INF-741: a tile's summary lets go when its window loses focus, which another

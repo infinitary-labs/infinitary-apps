@@ -4,8 +4,8 @@ import { type DeviceSignIns, devicePlace, signInPlace } from "@shared/signIns";
 import { useEffect, useState } from "react";
 import "./devices.css";
 import { COMPUTER } from "@shared/deviceNames";
+import { awayWord } from "@shared/devices";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
-import { awayWord } from "./devicesWords";
 
 /**
  * A project's Runs on (design skill `components/devices/RunsOn`;

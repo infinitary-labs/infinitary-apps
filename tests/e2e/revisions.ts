@@ -1,6 +1,9 @@
 /**
  * INF-2394: fixture ownership follows the product reader.
  * @journey-area src/core/orchestrator/cardService.ts
+ * @journey-area src/core/orchestrator/cardEmit.ts
+ * @journey-area src/core/orchestrator/cardEvidence.ts
+ * @journey-area src/core/orchestrator/cardThreads.ts
  */
 import type { Page } from "@playwright/test";
 import { CardService } from "../../src/core/orchestrator/cardService";
@@ -26,7 +29,6 @@ export function seedRevisionCard(
     tasks,
     cardStore,
     syncCaptainGate: () => {},
-    noteCapAnswered: () => {},
     closeAnsweredTask: () => false,
     settleFacts: () => undefined,
     followupNotice: () => undefined,

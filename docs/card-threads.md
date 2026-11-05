@@ -34,7 +34,7 @@ A marked saved answer keeps its receipt and ending for explicit Done.
 The host draws Done on a marked answer note and in its record; Done alone receipts that answer.
 Putting a decision away retains the card’s drafts and the task’s gate until an explicit choice, withdrawal or task ending.
 
-A card the captain answered with a choice stays answered (INF-1389 friction 1, the captain's "Start now"): `CardService.refuseAnsweredRevision` reads how the card ended (`CardStore.past`) before an emit under its id opens it again.
+A card the captain answered with a choice stays answered (INF-1389 friction 1, the captain's "Start now"): `CardEmits.refuseAnsweredRevision` (`cardEmit.ts`) reads how the card ended (`CardStore.past`) before an emit under its id opens it again.
 While the choice still waits on the author's lane, not yet handed to a turn (`InboxStore.holdsUndeliveredChoice`, the first mate's lane for its own cards and the task's lane for a crewmate's), every emit under the id is refused, and the refusal carries the choice and the answers to the card's questions, because that revision was written without them.
 Once the author has heard the choice, an emit with actions under the id is refused, since it would ask the same question again: a new question is a new card with its own title.
 One without actions only tells the captain something, such as which crewmate took the work, and shows as a note.
@@ -171,7 +171,7 @@ Explicit build words authorize implementation, not merging; settings alone autho
 Since v4.14 it also says when: the work comes first and the answer once, because the card comes back only when its author is done.
 `piResources.test.ts` pins that every persona carries it once and no tool description repeats a sentence of it, the same structural pin `CARD_AUTHORING` has.
 
-While a captain reply waits on the author, `emit_card` under that card's id without `reply` is refused as tool text naming the fix, and the card and thread stay unchanged (`CardService.upsertEmitted`).
+While a captain reply waits on the author, `emit_card` under that card's id without `reply` is refused as tool text naming the fix, and the card and thread stay unchanged (`CardEmits.upsertEmitted`, `cardEmit.ts`).
 While one of a crewmate's cards waits on its answer, a new card carrying `reply` - a new id, or none - is refused naming the card that waits, since the reply rides only a revision of that card and would otherwise be lost (INF-990 friction 4).
 A `reply` under another of its cards succeeds, and its receipt names the card that still waits.
 A revision's `reply` lands right after its `revised:` line whenever the card has a thread, whether or not a reply still waits, so an earlier line that ended the wait never makes the answer vanish (INF-1623).
@@ -210,7 +210,7 @@ Every other card keeps its row as its author allows.
 
 One host card takes a reply: the idle ladder's stuck alert (`card-stall-<task>`, INF-1670, the captain's word: "i would remove the "drop task" option and leave nuanced operations to the reply").
 The host names its answerer when it raises the card (`Card.answeredBy` "firstmate", the `cards.answered_by` column), and `cardTakesReplies`, the phone's `takesReplies` and `CrewSupervisor.replyToCard` read that field, never the id.
-A reply there is a captain turn about the card, the same as a reply on a first mate card, and the first mate answers it with an `emit_card` reply naming the message (`CardService.firstmateAnswers`).
+A reply there is a captain turn about the card, the same as a reply on a first mate card, and the first mate answers it with an `emit_card` reply naming the message (`CardThreads.firstmateAnswers`, `cardThreads.ts`).
 It is never a thread the task's crewmate owes (`CardService.threadsAwaitingAuthor` leaves it out), so no nudge or reminder names it.
 While the answer is owed the alert stays up even if the task moves (`IdleLadder.withdrawStallCard`); once it lands, the next move takes the alert down as before.
 

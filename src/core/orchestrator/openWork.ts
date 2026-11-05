@@ -12,7 +12,7 @@ import { AttachmentUnavailableError, loadImages } from "../attachments";
 import type { AskRecord } from "../storage/askStore";
 import { TaskService } from "../tasks/taskService";
 import type { AskChain, AskEnding, AskState } from "./askEnding";
-import type { ThreadOwed } from "./cardService";
+import type { ThreadOwed } from "./cardThreads";
 
 /**
  * The first mate's read of what is still open (INF-1712): every message of

@@ -21,7 +21,7 @@ import {
   HOST_CARD_PRIORITY,
   moveLabel,
   PROVIDER_SIGN_IN_TITLE,
-} from "./cardService";
+} from "./hostCards";
 import { requiredActionCard } from "./requiredActionCard";
 
 /**

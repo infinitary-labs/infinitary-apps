@@ -37,7 +37,6 @@ function setup(profile: "fresh" | "legacy" = "legacy") {
       tasks,
       cardStore,
       syncCaptainGate: () => {},
-      noteCapAnswered: () => {},
       closeAnsweredTask: () => false,
       settleFacts: () => undefined,
       followupNotice: () => undefined,

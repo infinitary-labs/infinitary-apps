@@ -1,5 +1,6 @@
 import type { Card } from "@shared/cards";
 import type { CaptainAction } from "@shared/requiredActions";
+import type { TaskService } from "../tasks/taskService";
 import { escapeCardText } from "./cardText";
 
 /**
@@ -8,6 +9,13 @@ import { escapeCardText } from "./cardText";
  * the source task's name for its filing. Absent, the card says neither.
  */
 export type RequiredActionProvenance = { filedFrom: (sourceId: string) => string };
+
+/** The filing words every required-action card shows: the source task's key, else its id. */
+export function requiredActionProvenance(
+  tasks: Pick<TaskService, "get">,
+): RequiredActionProvenance {
+  return { filedFrom: (sourceId) => tasks.get(sourceId)?.key || sourceId };
+}
 
 /** Instructions stay inert; completion and deferral alone carry host lifecycle effects. */
 export function requiredActionCard(

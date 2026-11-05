@@ -44,7 +44,6 @@ function fixture() {
       tasks,
       cardStore,
       syncCaptainGate: () => {},
-      noteCapAnswered: () => {},
       closeAnsweredTask: (card, action, by) => settle.declared.closeAnsweredTask(card, action, by),
       captainResponded: (card, response, action) => ending.captainResponded(card, response, action),
       settleFacts: () => undefined,

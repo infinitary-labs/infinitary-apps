@@ -41,7 +41,6 @@ export default function seed(userDataDir: string, input: Input): void {
       tasks: new TaskService({ db, strict: true }),
       cardStore: new CardStore(db),
       syncCaptainGate: () => {},
-      noteCapAnswered: () => {},
       closeAnsweredTask: () => false,
       settleFacts: () => undefined,
       followupNotice: () => undefined,

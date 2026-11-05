@@ -48,7 +48,6 @@ function setup(clock: "ticks" | "still" = "ticks") {
     tasks,
     cardStore,
     syncCaptainGate: () => {},
-    noteCapAnswered: () => {},
     closeAnsweredTask: () => false,
     settleFacts: () => undefined,
     followupNotice: () => undefined,

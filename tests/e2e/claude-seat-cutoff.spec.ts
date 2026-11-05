@@ -3,7 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import {
   firstmatePauseTitle,
   RECHECK_ALLOWANCE_LABEL,
-} from "../../src/core/orchestrator/cardService";
+} from "../../src/core/orchestrator/hostCards";
 import {
   ALLOWANCE_CHECKING_WORDS,
   allowanceSpentWords,

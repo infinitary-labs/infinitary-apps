@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import {
   ANSWER_DONE_LABEL,
   answerDoneRest,
@@ -7,90 +7,68 @@ import {
 } from "@shared/cardLeave";
 import type { CardRevisionLinks } from "@shared/cards";
 import {
-  CARD_OBSERVATION_NOTE_MAX,
-  CARD_QUESTIONS_MAX_BYTES,
-  CARD_REPLY_MAX_CHARS,
   type Card,
-  type CardAction,
-  type CardActionSource,
   type CardAnswer,
   type CardAsked,
   type CardAwaiting,
   type CardChanges,
   type CardContributor,
-  type CardDecisionContext,
-  type CardDisplay,
   type CardMessage,
   type CardMessageWho,
   type CardMutation,
-  type CardObservation,
   type CardObservationActor,
-  type CardObservationPayload,
   type CardObservationSource,
-  type CardQuestion,
-  type CardSubmission,
   type CardThread,
-  type CardWidth,
-  cardAnswerLines,
-  cardMutationSchema,
   cardPresentation,
-  cardQuestionsBytes,
-  cardQuestionsSchema,
-  cardSubmissionSchema,
-  cardTakesReplies,
   cardWord,
   compareStack,
-  FIRSTMATE_CARD_META,
   isPreviewBody,
   isStoryNote,
   keepsTaskOpen,
-  MERGE_ANYWAY_ACTION,
   onStage,
   type PastCard,
   settleEffectOf,
-  splitSettleFacts,
-  takesFactStrip,
-  takesTaskFacts,
-  withMergeClosesLine,
 } from "@shared/cards";
-import { readyPresentation } from "@shared/changePresentation";
-import { NEEDS_REAUTH_CONSEQUENCE, restoreAccountEffect } from "@shared/credentialHealth";
 import type { CrewResponse } from "@shared/crewResponses";
-import { HERE } from "@shared/deviceNames";
-import {
-  deviceForgeSignInBody,
-  deviceForgeSignInCardId,
-  deviceForgeSignInTitle,
-} from "@shared/deviceSetup";
+import { deviceForgeSignInCardId } from "@shared/deviceSetup";
 import type { FmEvent } from "@shared/events";
-import {
-  forgeCliRefusedText,
-  forgeRefusedText,
-  forgeSignInTitle,
-  LOCAL_PROJECTS_UNAFFECTED,
-} from "@shared/forges";
-import { INTEGRATIONS_WORDS } from "@shared/integrations";
-import { FIRSTMATE_SESSION_ID } from "@shared/observe";
-import type { RequiredActionText } from "@shared/requiredActions";
-import { MERGE_ANYWAY_WORDS } from "@shared/vocabulary";
-import { z } from "zod";
-import { parseStableCardId, resolveFirstmateCardId } from "../pi/cardTool";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
-import {
-  type CardResolution,
-  type CardStore,
-  type DuplicateResult,
-  updateSightingId,
-} from "../storage/cardStore";
+import type { CardResolution, CardStore, DuplicateResult } from "../storage/cardStore";
 import type { TaskOriginLine } from "../tasks/taskOrigin";
-import { TaskService } from "../tasks/taskService";
-import { cardChanges } from "./cardChanges";
-import { cardMutationText } from "./cardMutationText";
-import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
-import { type RequiredActionProvenance, requiredActionCard } from "./requiredActionCard";
-import type { SeatPauseClass } from "./seat";
-import { type WakeCard, waitingCardWords } from "./wakes";
+import type { TaskService } from "../tasks/taskService";
+import { CardEmits, cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
+import { CardEvidence, type CardInteractionEvidence, submissionDisplay } from "./cardEvidence";
+import {
+  authorKey,
+  type CardCaller,
+  type CardContribution,
+  type CardRead,
+  CardThreads,
+  type MessageFacts,
+  type ThreadActivity,
+  type ThreadOwed,
+} from "./cardThreads";
+import {
+  authDecisionCard,
+  deviceForgeSignInCard,
+  FIRSTMATE_FAILURE_CARD_ID,
+  FIRSTMATE_MOVE_BACK_CARD_ID,
+  FIRSTMATE_PAUSE_CARD_IDS,
+  FIRSTMATE_QUIET_CARD_ID,
+  type FirstmatePauseCard,
+  firstmateFailureCard,
+  firstmateMoveBackCard,
+  firstmatePauseCard,
+  firstmatePauseCardId,
+  firstmateQuietCard,
+  forgeSignInCard,
+  hostCard,
+  systemNoteCard,
+} from "./hostCards";
+import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
+import { settleCardFacts } from "./settleCardFacts";
+import type { WakeCard } from "./wakes";
 
 /**
  * The card stack (the primitives review's P4 and P6, docs/card-threads.md):
@@ -120,6 +98,12 @@ import { type WakeCard, waitingCardWords } from "./wakes";
  * card off it while his line is the newest on the thread. Every write in
  * between lands on the record and paints the thread; `snapshot()` - the
  * stage - does not move until the author closes out.
+ *
+ * Its owners each keep one part over the same stack (`CardStack`): the
+ * record's evidence (`CardEvidence`), a card's thread and every write on
+ * someone else's card (`CardThreads`), the cards agents emit (`CardEmits`),
+ * the host's own cards (`hostCards`) and a settle card's facts
+ * (`settleCardFacts`).
  */
 
 type CardActor = "captain" | "firstmate" | "crewmate";
@@ -137,59 +121,6 @@ export type CardAuthorRef = { kind: "crewmate"; taskId: string } | { kind: "firs
  */
 export type CloseOut = "report" | "idle" | "turn-end" | "restart";
 
-/**
- * Who is writing on a card (docs/card-threads.md, "Shared cards"): the
- * first mate, or a crewmate by its task. The host passes the caller it
- * authenticated, never one an agent named.
- */
-export type CardCaller = { actor: "firstmate" } | { actor: "crewmate"; taskId: string };
-
-/**
- * What an emit's id names for its caller: no card yet (a new one in the
- * caller's own namespace), one of the caller's own cards, someone else's
- * open card, someone else's closed card, or a card id the record lacks.
- */
-export type CardTarget =
-  | { kind: "new" }
-  | { kind: "own"; id: string }
-  | { kind: "foreign"; id: string; card: Card }
-  | { kind: "closed"; id: string; card: Card }
-  | { kind: "unknown"; id: string };
-
-/** A contribution's declared facts beside the card it writes (`shared-cards.md`). */
-export type CardContribution = {
-  /** The revision (offer id) the contributor read; a revision needs it. */
-  expectedRevision?: string;
-  reason?: string;
-  operationId?: string;
-  /** The captain message this contribution's reply answers. */
-  answersMessage?: number;
-};
-
-/** A thread line's facts beyond its words (`CardService.addMessage`). */
-type MessageFacts = {
-  contributor?: CardContributor;
-  answersMessage?: number;
-  clarification?: true;
-  responseId?: string;
-};
-
-/** What a reply alone keeps of its card, as its receipt names it. */
-const REPLY_FIELDS_KEPT = ["title", "body", "choices"];
-
-/**
- * Who owes the captain an answer on a card's thread now (docs/card-threads.md
- * "How the first mate learns"): `author` or `firstmate` while the open card's
- * current lifecycle holds for an answer (`CardStore.awaitingAuthor`), `none`
- * on an open card without that hold, `closed` once the card is resolved.
- * Never read from who wrote last: a captain message an earlier lifecycle
- * kept survives the card's resolution and reopening and owes nothing.
- */
-export type ThreadOwed = "author" | "firstmate" | "none" | "closed";
-
-/** One card whose thread moved, as the Firstmate's context section reads it. */
-export type ThreadActivity = { card: Card; count: number; last: CardMessage; owed: ThreadOwed };
-
 /** What the card stack needs from the supervisor that composes it. */
 export type CardServiceHost = {
   /** The host's one clock (the ticker's). */
@@ -198,8 +129,6 @@ export type CardServiceHost = {
   cardStore: CardStore;
   /** A card placed, revised or gone on a task: the ladder's captain gate follows. */
   syncCaptainGate(taskId: string, now: number): void;
-  /** A card answered: a round cap it carried hears the answer. */
-  noteCapAnswered(card: Card, action: string, by: CardActor, firstmateCard: boolean): void;
   /** An answer task closes on its card's resolution (Task B); whether it did. */
   closeAnsweredTask(card: Card, action: string, by: CardActor): boolean;
   /** The fact strip and the follow-ups a settle card carries (HTML fragments). */
@@ -265,95 +194,27 @@ export type CardServiceHost = {
 };
 
 /**
- * What an interaction carried that the record keeps beside the choice
- * (docs/card-evidence.md): the channel, the shell's submission metadata as
- * it arrived - read leniently here, so metadata that cannot be read never
- * refuses a valid choice - a body script's own value, and the task as it
- * stood before the choice was admitted.
+ * The open stack as its owners share it (`CardThreads`, `CardEmits`): the
+ * cards and what the stage holds back, the one evidence writer, and the
+ * stack's own moves, so a write from any owner lands, places and broadcasts
+ * the way every other write does.
  */
-export type CardInteractionEvidence = {
-  source: CardActionSource;
-  submission?: unknown;
-  frameValue?: string;
-  context?: CardDecisionContext;
-  contextGap?: "no-task" | "task-missing";
+export type CardStack = {
+  cards: Map<string, Card>;
+  staged: Map<string, Card>;
+  asideUntilTurnEnd: Map<string, string>;
+  answeringUntilCloseOut: Map<string, string>;
+  contributedUntilCloseOut: Map<string, { writer: string; lifecycleId: string }>;
+  evidence: CardEvidence;
+  shown(id: string): Card | undefined;
+  snapshot(): Card[];
+  addMessage: CardService["addMessage"];
+  placed(card: Card): void;
+  scheduleBroadcast(): void;
+  broadcastSnapshot(): void;
+  topPriority(floor: number): number;
+  othersOpen(taskId: string, except: string | undefined): boolean;
 };
-
-/** Why an offer came to exist, as its observation says. */
-type OfferBasis = CardObservationPayload<"offer">["basis"];
-type StageCause = CardObservationPayload<"availability">["cause"];
-/** How a lifecycle began, carried by its first availability. */
-type Opened = {
-  lifecycle: "started" | "reopened" | "legacy-initial-snapshot";
-  predecessor?: string;
-};
-
-/** A decision (a card with actions) shows before a note; the host's own cards sit above both. */
-function cardPriority(input: Pick<EmittedCardInput, "actions">): number {
-  return input.actions.length > 0 ? 30 : 15;
-}
-export const HOST_CARD_PRIORITY = 40;
-const HOST_NOTE_PRIORITY = 25;
-
-/** Firstmate-agent cards are id-prefixed so `CrewSupervisor.act` can route their answers. */
-export const FIRSTMATE_CARD_PREFIX = "card-fm-";
-
-/** The paused seat's cards (W1 S9): the move offer, the refusal, and the rest. */
-export const FIRSTMATE_MOVE_CARD_ID = "card-fm-flagship-move";
-export const FIRSTMATE_REFUSED_CARD_ID = "card-fm-refused";
-export const FIRSTMATE_BENCH_CARD_ID = "card-fm-no-headroom";
-export const FIRSTMATE_MOVE_BACK_CARD_ID = "card-fm-move-back";
-/** The Firstmate failure card (the agent-down set): Retry, until a turn ends clean. */
-export const FIRSTMATE_FAILURE_CARD_ID = "card-fm-turn-failure";
-/** The failure card's title. */
-export const FIRSTMATE_FAILURE_TITLE = "Your first mate hit a problem";
-const FIRSTMATE_PAUSE_CARD_IDS = [
-  FIRSTMATE_MOVE_CARD_ID,
-  FIRSTMATE_REFUSED_CARD_ID,
-  FIRSTMATE_BENCH_CARD_ID,
-] as const;
-
-/** A paused seat's card, as the Firstmate agent asks for it. */
-export type FirstmatePauseCard = {
-  pause: SeatPauseClass;
-  /** What stopped the seat and what happens now, in the user's words. */
-  body: string;
-  /** The paused account, for its way back (sign in again, try again). */
-  accountId?: string;
-  /** The paused account's provider, by name. */
-  providerName: string;
-  /** Rung 2: where the seat could move, asked on the card. */
-  move?: { providerId: string; providerName: string };
-  /** A spent allowance is being read again: no second recheck is offered. */
-  checking?: boolean;
-};
-
-/** The spent-allowance card's way back: read the allowance again. */
-export const RECHECK_ALLOWANCE_LABEL = "Recheck allowance";
-
-/** A crewmate's sign-in card's title, and the Firstmate's own on a 401. */
-export const PROVIDER_SIGN_IN_TITLE = "A provider needs sign in";
-
-/** A move's button: a paused seat's names a provider, a crewmate's sign-in card the model. */
-export function moveLabel(to: string): string {
-  return `Move to ${to}`;
-}
-
-/** A paused seat's card title: what stopped it, never how. */
-export function firstmatePauseTitle(pause: SeatPauseClass, providerName: string): string {
-  switch (pause) {
-    case "no_headroom":
-      return "Your first mate has used up its allowance";
-    case "signed_out":
-      return "Your first mate needs you to sign in again";
-    case "refused":
-      return `${providerName} is not answering your first mate right now`;
-    case "client":
-      return `Your first mate cannot run on ${HERE.this} right now`;
-    case "unavailable":
-      return "Your first mate needs an account";
-  }
-}
 
 export class CardService {
   /** The open cards as their authors last wrote them: the record. */
@@ -379,16 +240,6 @@ export class CardService {
    * waits does. Memory only: a restart closes every author out.
    */
   private readonly answeringUntilCloseOut = new Map<string, string>();
-  /**
-   * What changed in each card's shown version since the captain last saw
-   * it, by card, worked out once per shown offer: a later look cannot move
-   * it, because `seen` is recorded only for the version on the stage and the
-   * comparison passes over that version. Memory only; a restart recomputes.
-   */
-  private readonly changes = new Map<
-    string,
-    { offerId: string; changes: CardChanges | undefined }
-  >();
   /** The newest `sentBackAt` handed out: stamps stay distinct inside one millisecond. */
   private lastSentBack = 0;
   /**
@@ -406,11 +257,33 @@ export class CardService {
   >();
   private presentation = "";
   private readonly threadOffers = new Map<string, string | undefined>();
-  private cardSeq = 0;
+  /** The record's evidence, the threads and the agents' emits, each over this stack. */
+  private readonly evidence: CardEvidence;
+  private readonly threads: CardThreads;
+  private readonly emits: CardEmits;
   private broadcastTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly unsubscribeTasks: () => void;
 
   constructor(private readonly host: CardServiceHost) {
+    this.evidence = new CardEvidence(host, this.cards);
+    const stack: CardStack = {
+      cards: this.cards,
+      staged: this.staged,
+      asideUntilTurnEnd: this.asideUntilTurnEnd,
+      answeringUntilCloseOut: this.answeringUntilCloseOut,
+      contributedUntilCloseOut: this.contributedUntilCloseOut,
+      evidence: this.evidence,
+      shown: (id) => this.shown(id),
+      snapshot: () => this.snapshot(),
+      addMessage: (...args) => this.addMessage(...args),
+      placed: (card) => this.placed(card),
+      scheduleBroadcast: () => this.scheduleBroadcast(),
+      broadcastSnapshot: () => this.broadcastSnapshot(),
+      topPriority: (floor) => this.topPriority(floor),
+      othersOpen: (taskId, except) => this.othersOpen(taskId, except),
+    };
+    this.threads = new CardThreads(host, stack);
+    this.emits = new CardEmits(host, stack, this.threads);
     host.cardStore.markCaptureEpoch(host.now(), host.build);
     // Unresolved cards survive restarts (D-9). Migration 73 has retired
     // their keep-open actions and streaming state. A card with a lifecycle
@@ -424,12 +297,10 @@ export class CardService {
       }
       const seeded: Card = { ...ready, lifecycleId: randomUUID(), offerId: randomUUID() };
       host.cardStore.transaction(() => {
-        host.cardStore.upsert(seeded);
-        this.noteOffer(seeded, "legacy-initial-snapshot", "restore");
-        this.noteStage({ head: seeded, shown: seeded }, "restore", {
-          source: "restore",
-          opened: { lifecycle: "legacy-initial-snapshot" },
-        });
+        this.evidence.write(
+          { card: seeded, offer: true, opened: { lifecycle: "legacy-initial-snapshot" } },
+          { basis: "legacy-initial-snapshot", source: "restore", cause: "restore" },
+        );
       });
       this.cards.set(seeded.id, seeded);
     }
@@ -445,9 +316,9 @@ export class CardService {
           card.offerId &&
           !host.cardStore.currentUpdate(card.id, card.lifecycleId, card.offerId)
         )
-          this.noteStage({ head: card, shown: card }, "restore", { source: "restore" });
+          this.evidence.noteStage({ head: card, shown: card }, "restore", { source: "restore" });
         if (host.cardStore.unreleasedAnswer(card.id, card.lifecycleId))
-          this.noteStage({ head: card, shown: card }, "close-out", {
+          this.evidence.noteStage({ head: card, shown: card }, "close-out", {
             source: "host",
             closeOut: "restart",
             answer: true,
@@ -479,53 +350,19 @@ export class CardService {
     // the task projection invalidates both records and facts after a write.
     const factsOwner = Symbol("settle facts");
     let changed = false;
-    const merges = (action: Card["actions"][number]) =>
-      action.effect?.kind === "settle" && action.effect.mode === "merge" && !action.passes;
-    const relabeled = (card: Card): Card => {
-      const label = this.host.mergeLabel?.(card);
-      if (!label || !card.actions.some((action) => merges(action) && action.label !== label))
-        return card;
-      return {
-        ...card,
-        actions: card.actions.map((action) => (merges(action) ? { ...action, label } : action)),
-      };
-    };
-    // Merge anyway follows the record like the merge's words: it stands
-    // beside the merge while the host offers it, and goes when it does not.
-    const anyway = (card: Card): Card => {
-      const offered = card.actions.some((action) => action.passes === "checks");
-      const wanted = card.actions.some(merges) && this.host.mergeAnyway?.(card) === true;
-      if (offered === wanted) return card;
-      if (!wanted)
-        return { ...card, actions: card.actions.filter((action) => action.passes !== "checks") };
-      const at = card.actions.findIndex(merges);
-      const action: Card["actions"][number] = {
-        id: MERGE_ANYWAY_ACTION,
-        label: MERGE_ANYWAY_WORDS,
-        variant: "secondary",
-        effect: { kind: "settle", mode: "merge" },
-        passes: "checks",
-      };
-      return {
-        ...card,
-        actions: [...card.actions.slice(0, at), action, ...card.actions.slice(at)],
-      };
-    };
     const refreshed = (card: Card): Card => {
       if (!card.taskId || (taskIds && !taskIds.includes(card.taskId))) return card;
-      if (!takesTaskFacts(card)) return card;
       const taskId = card.taskId;
-      const record = this.host.tasks.get(taskId);
-      const read = () => this.host.settleFacts(taskId);
-      const facts = withMergeClosesLine(
-        record ? this.host.tasks.projectedFact(record, factsOwner, read) : read(),
-        card.actions,
-        this.othersOpen(taskId, card.id),
-      );
-      const split = facts ? splitSettleFacts(card.body) : undefined;
-      if (!facts || !split) return anyway(relabeled(card));
-      const body = split.body.slice(0, split.at) + facts + split.body.slice(split.at);
-      return anyway(relabeled(body === card.body ? card : { ...card, body }));
+      return settleCardFacts(card, {
+        facts: () => {
+          const record = this.host.tasks.get(taskId);
+          const read = () => this.host.settleFacts(taskId);
+          return record ? this.host.tasks.projectedFact(record, factsOwner, read) : read();
+        },
+        othersOpen: () => this.othersOpen(taskId, card.id),
+        mergeLabel: (shown) => this.host.mergeLabel?.(shown),
+        mergeAnyway: (shown) => this.host.mergeAnyway?.(shown) === true,
+      });
     };
     for (const [id, card] of this.cards) {
       const next = refreshed(card);
@@ -599,50 +436,14 @@ export class CardService {
     return this.host.cardStore.hasCompletionCard(taskId);
   }
 
-  /**
-   * A card emitted by a crewmate through its emit_card tool (D-9, Q3), once
-   * the supervisor's holds, completion actions, lint and CI gate passed it.
-   * `place` is where its task runs when that is a computer that runs work.
-   */
-  emitCrewmateCard(
-    taskId: string,
-    input: EmittedCardInput,
-    meta: string,
-    model?: string,
-    place?: string,
-  ): string {
-    return this.upsertEmitted(input, {
-      taskId,
-      author: "crewmate",
-      meta,
-      ...(model ? { model } : {}),
-      ...(place ? { place } : {}),
-      mintId: () => {
-        this.cardSeq += 1;
-        return `card-${taskId}-${this.cardSeq}`;
-      },
-      resolveId: (stableId) => crewmateCardId(taskId, stableId),
-    });
+  /** A crewmate's card from its emit_card tool (`CardEmits`). */
+  emitCrewmateCard(...args: Parameters<CardEmits["emitCrewmateCard"]>): string {
+    return this.emits.emitCrewmateCard(...args);
   }
 
-  /**
-   * The open completion card a crewmate's emit would revise in place: the
-   * card its declared id names on this task's stack, still carrying a merge.
-   * Undefined for a new card, another task's card or one already answered.
-   */
+  /** The open completion card a crewmate's emit would revise in place (`CardEmits`). */
   openCompletionCard(taskId: string, declaredId: string | undefined): Card | undefined {
-    let stableId: string | undefined;
-    try {
-      stableId = parseStableCardId(declaredId);
-    } catch {
-      return undefined;
-    }
-    if (!stableId) return undefined;
-    const card = this.cards.get(crewmateCardId(taskId, stableId));
-    if (card?.taskId !== taskId || card.author !== "crewmate") return undefined;
-    return card.actions.some((action) => settleEffectOf(action)?.mode === "merge")
-      ? card
-      : undefined;
+    return this.emits.openCompletionCard(taskId, declaredId);
   }
 
   /**
@@ -676,7 +477,7 @@ export class CardService {
         by === "captain" ? resolution : `script:${resolution}`,
         answers,
       );
-      observation = this.noteAction(card, action, { closes: true, answers, by, evidence });
+      observation = this.evidence.noteAction(card, action, { closes: true, answers, by, evidence });
       alongside?.();
       if (by === "captain") this.host.captainResponded?.(card, "choice", action);
     });
@@ -702,9 +503,9 @@ export class CardService {
     const savedAnswer = card.taskId && this.answerNoteForTask(card.taskId)?.id === card.id;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(card.id, "close");
-      this.noteExit(card, "captain", "close-control", {
+      this.evidence.noteExit(card, "captain", "close-control", {
         reason: "dismissed",
-        display: displayOf(readSubmission(submission), card),
+        display: submissionDisplay(submission, card),
       });
       // Message acknowledgement does not end work. A marked saved answer
       // alone reserves its acknowledgement for explicit Done.
@@ -737,7 +538,7 @@ export class CardService {
     let observation: string | undefined;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(card.id, "close");
-      observation = this.noteExit(card, "captain", "host", { reason: "dismissed" });
+      observation = this.evidence.noteExit(card, "captain", "host", { reason: "dismissed" });
     });
     this.cards.delete(card.id);
     this.staged.delete(card.id);
@@ -825,9 +626,7 @@ export class CardService {
    * the captain replied under keeps its place (`compareStack`).
    */
   taskSnapshot(): Card[] {
-    for (const id of this.changes.keys()) {
-      if (!this.cards.has(id)) this.changes.delete(id);
-    }
+    this.evidence.pruneChanges();
     for (const [id, lifecycleId] of this.asideUntilTurnEnd) {
       if (this.cards.get(id)?.lifecycleId !== lifecycleId) this.asideUntilTurnEnd.delete(id);
     }
@@ -842,8 +641,8 @@ export class CardService {
     return this.taskSnapshot().map((staged) => {
       const shown = {
         // Corner words and Done belong to the public view, not graph-free task flags.
-        ...this.withChanges(this.onTheStage(staged)),
-        ...this.updateState(staged),
+        ...this.evidence.withChanges(this.onTheStage(staged)),
+        ...this.evidence.updateState(staged),
         seen: staged.lifecycleId
           ? this.host.cardStore.lastSeenOffer(staged.id, staged.lifecycleId) !== undefined
           : false,
@@ -858,19 +657,6 @@ export class CardService {
     });
   }
 
-  /** Current-update sightings are independent of lifecycle-wide historical offer sightings. */
-  private updateState(card: Card): Pick<Card, "currentUpdateId" | "currentUpdateSeen"> {
-    if (!card.lifecycleId || !card.offerId) return {};
-    const store = this.host.cardStore;
-    const currentUpdateId = store.currentUpdate(card.id, card.lifecycleId, card.offerId);
-    return currentUpdateId
-      ? {
-          currentUpdateId,
-          currentUpdateSeen: store.updateSeen(card.id, card.lifecycleId, currentUpdateId),
-        }
-      : {};
-  }
-
   /** Accept only the released update actually drawn, never an old lifecycle or prepared successor. */
   seenUpdate(cardId: string, lifecycleId: string, updateId: string): void {
     const card = this.cards.get(cardId);
@@ -883,25 +669,7 @@ export class CardService {
       shown.minimized
     )
       return;
-    const store = this.host.cardStore;
-    if (
-      store.currentUpdate(cardId, lifecycleId, shown.offerId) !== updateId ||
-      store.updateSeen(cardId, lifecycleId, updateId)
-    )
-      return;
-    store.observe({
-      id: updateSightingId(updateId),
-      kind: "seen",
-      cardId,
-      lifecycleId,
-      taskId: shown.taskId,
-      at: this.host.now(),
-      actor: "captain",
-      source: "stage",
-      offerId: shown.offerId,
-      build: this.host.build,
-      payload: { updateId },
-    });
+    if (!this.evidence.noteUpdateSeen(shown, lifecycleId, shown.offerId, updateId)) return;
     this.scheduleBroadcast();
   }
 
@@ -919,37 +687,6 @@ export class CardService {
   }
 
   /**
-   * The version on the stage with what changed in it since the captain last
-   * saw the card (docs/card-authoring.md "What changed since you looked"):
-   * compared with the newest version the window reported seen on this
-   * lifecycle, so revisions that landed unseen accumulate, and a card never
-   * seen before it changed carries nothing.
-   */
-  private withChanges(shown: Card): Card {
-    const { lifecycleId, offerId } = shown;
-    if (!lifecycleId || !offerId) return shown;
-    let known = this.changes.get(shown.id);
-    if (known?.offerId !== offerId) {
-      known = { offerId, changes: this.changesSinceSeen(shown, lifecycleId, offerId) };
-      this.changes.set(shown.id, known);
-    }
-    return known.changes ? { ...shown, changes: known.changes } : shown;
-  }
-
-  /** The comparison of one version with the newest other version seen on its lifecycle. */
-  private changesSinceSeen(
-    shown: Card,
-    lifecycleId: string,
-    offerId: string,
-  ): CardChanges | undefined {
-    const store = this.host.cardStore;
-    const seenId = store.lastSeenOffer(shown.id, lifecycleId, offerId);
-    const seen = seenId ? store.offer(shown.id, seenId) : undefined;
-    if (!seen) return undefined;
-    return cardChanges(seen.payload, shown, store.offer(shown.id, offerId)?.at ?? shown.createdAt);
-  }
-
-  /**
    * What the stage will mark when the card's newest write reaches it: the
    * same comparison `withChanges` makes, on the head rather than the version
    * on the stage. It tells a crewmate author what its revision did; undefined
@@ -959,7 +696,7 @@ export class CardService {
   revisionChanges(cardId: string): (CardChanges & { preview: boolean }) | undefined {
     const head = this.cards.get(cardId);
     if (!head?.lifecycleId || !head.offerId) return undefined;
-    const changes = this.changesSinceSeen(head, head.lifecycleId, head.offerId);
+    const changes = this.evidence.changesSinceSeen(head, head.lifecycleId, head.offerId);
     return changes && { ...changes, preview: isPreviewBody(head.body) };
   }
 
@@ -973,21 +710,7 @@ export class CardService {
     const card = this.cards.get(cardId);
     const shown = card && this.onTheStage(card);
     if (!shown?.lifecycleId || shown.offerId !== offerId || !onStage(shown)) return;
-    const store = this.host.cardStore;
-    if (store.lastSeenOffer(cardId, shown.lifecycleId) === offerId) return;
-    store.observe({
-      id: randomUUID(),
-      kind: "seen",
-      cardId,
-      lifecycleId: shown.lifecycleId,
-      taskId: shown.taskId,
-      at: this.host.now(),
-      actor: "captain",
-      source: "stage",
-      offerId,
-      build: this.host.build,
-      payload: {},
-    });
+    this.evidence.noteSeen(shown, shown.lifecycleId, offerId);
   }
 
   /**
@@ -1077,1355 +800,49 @@ export class CardService {
     return this.host.cardStore.newestForTask(taskId)?.body;
   }
 
-  /**
-   * A card emitted by the Firstmate agent - its only user-facing output
-   * channel (report section 4a). Decision answers route back to the agent
-   * as [fm-op] messages through `CrewSupervisor.act`.
-   */
+  /** A card the Firstmate agent emits, its only user-facing output (`CardEmits`). */
   addFirstmateCard(input: EmittedCardInput): string {
-    return this.upsertEmitted(input, {
-      ...(input.taskId ? { taskId: input.taskId } : {}),
-      author: "firstmate",
-      meta:
-        (input.taskId ? this.host.tasks.get(input.taskId)?.title : undefined) ??
-        FIRSTMATE_CARD_META,
-      mintId: () => {
-        this.cardSeq += 1;
-        return `${FIRSTMATE_CARD_PREFIX}${this.cardSeq}-${randomUUID().slice(0, 6)}`;
-      },
-      resolveId: resolveFirstmateCardId,
-    });
+    return this.emits.addFirstmateCard(input);
   }
 
-  /**
-   * What an emit's id names for its caller (docs/card-threads.md, "Shared
-   * cards"): an exact existing card id wins before the caller's own
-   * prefixing, so a full id another agent read reaches that card; a card id
-   * the record lacks, outside the caller's own namespace, is an unknown
-   * target and never a new card.
-   */
-  targetOf(caller: CardCaller, rawId: string | undefined): CardTarget {
-    const id = rawId?.trim() ?? "";
-    if (!id) return { kind: "new" };
-    const card = this.cards.get(id) ?? this.host.cardStore.get(id);
-    if (card) {
-      if (ownedBy(card, caller)) return { kind: "own", id };
-      return this.cards.has(id) ? { kind: "foreign", id, card } : { kind: "closed", id, card };
-    }
-    const own =
-      caller.actor === "firstmate"
-        ? id.startsWith(FIRSTMATE_CARD_PREFIX)
-        : id.startsWith(`card-${caller.taskId}-`);
-    return id.startsWith("card-") && !own ? { kind: "unknown", id } : { kind: "new" };
+  /** What an emit's id names for its caller (`CardThreads`). */
+  targetOf(caller: CardCaller, rawId: string | undefined): ReturnType<CardThreads["targetOf"]> {
+    return this.threads.targetOf(caller, rawId);
   }
 
-  /**
-   * The line someone other than the card's answerer wrote that answered
-   * this captain message, if one did: a queued answerer hears it instead of
-   * answering the same question again (docs/card-threads.md, "Shared cards").
-   */
+  /** The line another writer wrote that answered a captain message (`CardThreads`). */
   answeredByContributor(cardId: string, messageId: number): CardMessage | undefined {
-    const line = this.host.cardStore.answerTo(cardId, messageId);
-    return line?.contributor ? line : undefined;
+    return this.threads.answeredByContributor(cardId, messageId);
   }
 
-  /** The host's words for a writer, the same on every view and receipt. */
+  /** The host's words for a writer (`CardThreads`). */
   contributorOf(caller: CardCaller): CardContributor {
-    if (caller.actor === "firstmate") return { actor: "firstmate", label: "your first mate" };
-    const key = this.host.tasks.get(caller.taskId)?.key || caller.taskId;
-    return { actor: "crewmate", taskId: caller.taskId, label: `the crewmate on ${key}` };
+    return this.threads.contributorOf(caller);
   }
 
-  /**
-   * One card's current facts for a writer about to edit or answer it
-   * (read-before-edit): its revision and lifecycle, the captain question it
-   * waits on, its choices, words and thread with message ids, and for a
-   * required action its generation and filings. Undefined for no card.
-   */
+  /** One card's current facts for a writer about to edit or answer it (`CardThreads`). */
   cardRead(id: string): CardRead | undefined {
-    const card = this.cards.get(id) ?? this.host.cardStore.get(id);
-    if (!card) return undefined;
-    const open = this.cards.has(id);
-    const task = card.taskId ? this.host.tasks.get(card.taskId) : undefined;
-    const captainAction = task?.delivery?.captainAction;
-    const question =
-      open && this.host.cardStore.awaitingAuthor(id)
-        ? this.host.cardStore.newestCaptainMessage(id)
-        : undefined;
-    return {
-      id: card.id,
-      title: card.title,
-      author: card.author,
-      ...(task ? { task: task.key || task.id } : {}),
-      open,
-      ...(card.lifecycleId ? { lifecycle: card.lifecycleId } : {}),
-      ...(card.offerId ? { revision: card.offerId } : {}),
-      ...(question ? { waitingOn: { messageId: question.id, text: question.text } } : {}),
-      choices: card.actions.map((action) => ({
-        id: action.id,
-        label: action.label,
-        ...(action.effect ? { effect: action.effect.kind } : {}),
-      })),
-      body: card.body,
-      thread: this.host.cardStore.messages(id).map((message) => ({
-        id: message.id,
-        who: message.who,
-        at: message.at,
-        text: message.text,
-        ...(message.contributor ? { by: message.contributor.label } : {}),
-        ...(message.answersMessage !== undefined ? { answers: message.answersMessage } : {}),
-        ...(message.clarification ? { clarification: true } : {}),
-      })),
-      ...(captainAction && captainAction.cardId === id
-        ? {
-            requiredAction: {
-              task: task?.key || card.taskId,
-              generation: captainAction.generation,
-              state: captainAction.state,
-              requirements: captainAction.requirements.map((entry) => ({
-                source: this.host.tasks.get(entry.source)?.key || entry.source,
-                action: entry.action.id,
-                title: entry.action.title,
-                consequence: entry.action.consequence,
-                instructions: entry.action.instructions,
-                criterion: entry.action.criterion,
-                corrections: (entry.corrections ?? []).map((correction) => ({
-                  by: correction.label,
-                  at: correction.at,
-                  reason: correction.reason,
-                  generation: correction.generation,
-                })),
-              })),
-            },
-          }
-        : {}),
-    };
+    return this.threads.cardRead(id);
   }
 
-  /**
-   * Revise or answer someone else's card (docs/card-threads.md, "Shared
-   * cards"). Any first mate or crewmate may, with no grant: the card keeps
-   * its author, task, lifecycle, source offer and answerer, the write
-   * records who really made it, and nothing transfers responsibility,
-   * attaches the card to the writer's task, approves, completes or settles.
-   * A revision names the revision it read; a stale one, a closed card, a
-   * card the host owns or a choice that carries an effect is refused with
-   * nothing written. Without a revision named, it is a reply alone.
-   */
+  /** Revise or answer someone else's card (`CardThreads`). */
   contribute(caller: CardCaller, raw: EmittedCardInput, facts: CardContribution): CardMutation {
-    const contributor = this.contributorOf(caller);
-    const target = this.targetOf(caller, raw.id);
-    if (target.kind !== "foreign" && target.kind !== "closed") {
-      return {
-        effect: "refused",
-        cardId: raw.id?.trim() ?? "",
-        contributor,
-        display: "available",
-        refusal:
-          target.kind === "unknown"
-            ? "that id names no card on the record."
-            : "that id names no card of someone else's; write your own card under your own id.",
-      };
-    }
-    const repeated = this.repeatedContribution(facts.operationId, target.id, contributor);
-    if (repeated) return repeated;
-    const card = target.card;
-    if (facts.expectedRevision === undefined) {
-      const text = raw.reply?.trim();
-      if (!text) {
-        return this.refusedOn(
-          card,
-          contributor,
-          "a revision of someone else's card names expected_revision, the revision you read; a reply alone carries reply. Read the card first.",
-        );
-      }
-      return this.replyAs(caller, {
-        cardId: card.id,
-        text,
-        ...(facts.answersMessage !== undefined ? { answersMessage: facts.answersMessage } : {}),
-        ...(facts.operationId ? { operationId: facts.operationId } : {}),
-      });
-    }
-    const refusal = this.contributionRefusal(card, target.kind === "closed", raw, facts);
-    if (refusal) return this.refusedOn(card, contributor, refusal);
-    const answer = raw.reply?.trim();
-    if (answer && answer.length > CARD_REPLY_MAX_CHARS) {
-      return this.refusedOn(
-        card,
-        contributor,
-        `reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter.`,
-      );
-    }
-    const answerFacts = answer ? this.answerFacts(card, facts.answersMessage) : undefined;
-    if (answerFacts && "refusal" in answerFacts) {
-      return this.refusedOn(card, contributor, answerFacts.refusal);
-    }
-    const answerer = answersFor(card, caller, (other) => this.firstmateAnswers(other));
-    const author = card.author === "crewmate" ? "crewmate" : "firstmate";
-    const declared = buildEmittedCard(
-      card.id,
-      { ...raw, taskId: card.taskId },
-      {
-        author,
-        meta: card.meta,
-        ...(card.taskId ? { taskId: card.taskId } : {}),
-        ...(card.model ? { model: card.model } : {}),
-        ...(card.place ? { place: card.place } : {}),
-      },
-      card.createdAt,
-    );
-    const { pictures: _pictures, width: _width, ...kept } = card;
-    const revised: Card = {
-      ...kept,
-      title: declared.title,
-      body: declared.body,
-      actions: declared.actions,
-      priority: declared.priority,
-      ...(declared.pictures ? { pictures: declared.pictures } : {}),
-      ...(declared.width ? { width: declared.width } : {}),
-    };
-    const changed =
-      card.title !== revised.title ||
-      card.body !== revised.body ||
-      JSON.stringify(card.actions) !== JSON.stringify(revised.actions) ||
-      JSON.stringify(card.pictures) !== JSON.stringify(revised.pictures);
-    if (!changed && !answer) {
-      return { ...this.mutationBase(card, contributor), effect: "unchanged" };
-    }
-    if (!changed && answer) {
-      return this.replyAs(caller, {
-        cardId: card.id,
-        text: answer,
-        ...(facts.answersMessage !== undefined ? { answersMessage: facts.answersMessage } : {}),
-        ...(facts.operationId ? { operationId: facts.operationId } : {}),
-      });
-    }
-    const { card: updated, offer } = this.stamp(revised);
-    // The stage keeps what it showed until the writer's own turn ends: a
-    // crewmate's always, the first mate's while the card waits on its
-    // author. A card not yet on the stage takes the write with it.
-    const staged =
-      this.staged.get(card.id) ??
-      (onStage(card) && (caller.actor === "crewmate" || card.awaiting !== undefined)
-        ? card
-        : undefined);
-    let line: CardMessage | undefined;
-    let replyLine: CardMessage | undefined;
-    const mutation = this.host.cardStore.transaction((): CardMutation => {
-      this.host.cardStore.revise(updated);
-      if (offer) this.noteOffer(updated, "emitted", "tool");
-      this.noteStage({ head: updated, shown: staged ?? updated }, "revise", { source: "tool" });
-      this.cards.set(card.id, updated);
-      line = this.addMessage(
-        card.id,
-        "host",
-        `revised: ${updated.title}`,
-        undefined,
-        undefined,
-        revisionLinks(card, updated),
-        false,
-        { contributor },
-      );
-      if (answer && answerFacts) {
-        replyLine = this.addMessage(
-          card.id,
-          caller.actor,
-          answer,
-          undefined,
-          undefined,
-          undefined,
-          false,
-          { ...answerFacts.facts, ...(answerer ? {} : { contributor }) },
-        );
-      }
-      const result: CardMutation = {
-        ...this.mutationBase(updated, contributor),
-        effect: "revised",
-        unchanged: ["author", "task", "lifecycle", "answerer"],
-        display: staged ? "held" : "available",
-        ...(replyLine ? this.lineResult(replyLine, answerFacts) : {}),
-      };
-      this.recordContribution(facts, card.id, caller, result);
-      return result;
-    });
-    void line;
-    if (staged) {
-      this.staged.set(card.id, staged);
-      if (updated.lifecycleId) {
-        this.contributedUntilCloseOut.set(card.id, {
-          writer: authorKey(caller),
-          lifecycleId: updated.lifecycleId,
-        });
-      }
-    }
-    this.placed(updated);
-    this.scheduleBroadcast();
-    return mutation;
+    return this.threads.contribute(caller, raw, facts);
   }
 
-  /**
-   * A line in a card's thread from any first mate or crewmate (the `reply`
-   * output; docs/card-threads.md, "Shared cards"). Anyone but the card's
-   * own answerer has its line carry who wrote it. Any line ends a captain
-   * question only when it names that message and it is the one the card
-   * waits on. A line naming a question already answered is kept as a
-   * comment. A closed card takes a dated clarification that reopens
-   * nothing. A response it carries is saved with it, once.
-   */
-  replyAs(
-    caller: CardCaller,
-    input: {
-      cardId: string;
-      text: string;
-      interim?: boolean;
-      answersMessage?: number;
-      operationId?: string;
-      response?: CrewResponse;
-    },
-  ): CardMutation {
-    const contributor = this.contributorOf(caller);
-    const id = input.cardId.trim();
-    const refuse = (refusal: string, card?: Card): CardMutation =>
-      card
-        ? this.refusedOn(card, contributor, refusal)
-        : { effect: "refused", cardId: id, contributor, display: "available", refusal };
-    if (!id) return refuse("reply needs card_id.");
-    const card = this.cards.get(id) ?? this.host.cardStore.get(id);
-    if (!card) return refuse("that id names no card on the record.");
-    const repeated = this.repeatedContribution(input.operationId, id, contributor);
-    if (repeated) return repeated;
-    const open = this.cards.has(id);
-    if (open && !cardTakesReplies(card)) {
-      return refuse(
-        card.replies === false ? "this card takes no reply." : "this card has no thread.",
-        card,
-      );
-    }
-    const text = input.text.trim();
-    if (!text) return refuse("a reply needs some words.", card);
-    if (text.length > CARD_REPLY_MAX_CHARS) {
-      return refuse(
-        `a reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter, or revise the card.`,
-        card,
-      );
-    }
-    if (input.response && caller.actor !== "crewmate") {
-      return refuse("only a crewmate's line carries a response.", card);
-    }
-    // The card's own answerer writes as before; anyone else's line says who.
-    const answerer = answersFor(card, caller, (other) => this.firstmateAnswers(other));
-    const designated = open && answerer;
-    const facts: MessageFacts = answerer ? {} : { contributor };
-    if (!open) facts.clarification = true;
-    if (!open && input.answersMessage !== undefined) {
-      return refuse(
-        "the card is closed, so a line on it answers no question; drop answers_message to add a dated clarification.",
-        card,
-      );
-    }
-    let answer = open ? this.answerFacts(card, input.answersMessage) : undefined;
-    if (answer && "refusal" in answer) return refuse(answer.refusal, card);
-    // A queued answerer whose question someone else already answered hears
-    // that answer instead of answering again: its line is a comment.
-    if (designated && input.answersMessage === undefined && card.awaiting !== "answer") {
-      const newest = this.host.cardStore.newestCaptainMessage(id);
-      const done = newest ? this.host.cardStore.answerTo(id, newest.id) : undefined;
-      if (done?.contributor) answer = { facts: {}, already: done };
-    }
-    Object.assign(facts, answer?.facts ?? {});
-    if (input.response && caller.actor === "crewmate") {
-      if (!this.host.checkCardResponse || !this.host.submitCardResponse) {
-        return refuse("this home cannot save a response with a card line.", card);
-      }
-      try {
-        this.host.checkCardResponse(caller.taskId, input.response, {
-          id,
-          ...(card.lifecycleId ? { lifecycleId: card.lifecycleId } : {}),
-          ...(facts.answersMessage !== undefined ? { messageId: facts.answersMessage } : {}),
-        });
-      } catch (caught) {
-        return refuse(caught instanceof Error ? caught.message : String(caught), card);
-      }
-      facts.responseId = input.response.responseId;
-    }
-    // An interim line keeps the captain's reply waiting only from the card's
-    // own answerer while one waits; anyone else's is a comment.
-    const interim = designated && input.interim === true && card.awaiting === "answer";
-    const response = input.response;
-    return this.host.cardStore.transaction((): CardMutation => {
-      const line = this.addMessage(
-        id,
-        caller.actor,
-        text,
-        undefined,
-        undefined,
-        undefined,
-        interim,
-        facts,
-      );
-      if (response && caller.actor === "crewmate") {
-        this.host.submitCardResponse?.(caller.taskId, response, text, {
-          cardId: id,
-          messageId: line.id,
-        });
-      }
-      const result: CardMutation = {
-        ...this.mutationBase(this.cards.get(id) ?? card, contributor),
-        effect: "reply-only",
-        unchanged: REPLY_FIELDS_KEPT,
-        display: "available",
-        ...this.lineResult(line, answer),
-      };
-      this.recordContribution(input, id, caller, result);
-      return result;
-    });
+  /** A line in a card's thread from any first mate or crewmate (`CardThreads`). */
+  replyAs(...args: Parameters<CardThreads["replyAs"]>): CardMutation {
+    return this.threads.replyAs(...args);
   }
 
-  /**
-   * Correct a required action's words on its card (docs/required-actions.md,
-   * "Correcting the words"): `TaskService.reviseRequiredAction` writes the
-   * correction, and a card on the stack shows the new words and generation
-   * at once with a thread line naming who corrected it. Every refusal
-   * writes nothing.
-   */
-  reviseRequiredAction(
-    caller: CardCaller,
-    input: {
-      action: string;
-      source: string;
-      actionId: string;
-      expectedGeneration: number;
-      patch: RequiredActionText;
-      reason: string;
-      operationId: string;
-      sameAction: boolean;
-    },
-  ): CardMutation {
-    const contributor = this.contributorOf(caller);
-    const ref = input.action.trim();
-    const rowId = ref.startsWith("card-fm-required-action-")
-      ? ref.slice("card-fm-required-action-".length)
-      : ref;
-    const row = this.host.tasks.resolve(rowId);
-    const cardId = row?.delivery?.captainAction?.cardId ?? ref;
-    const shown = this.cards.get(cardId);
-    let updated: Card | undefined;
-    const result = this.host.tasks.atomic(
-      () => {
-        const revision = this.host.tasks.reviseRequiredAction(ref, {
-          source: input.source,
-          actionId: input.actionId,
-          expectedGeneration: input.expectedGeneration,
-          patch: input.patch,
-          reason: input.reason,
-          operationId: input.operationId,
-          sameAction: input.sameAction,
-          by: {
-            actor: contributor.actor,
-            ...(contributor.taskId ? { taskId: contributor.taskId } : {}),
-            label: contributor.label,
-          },
-          presented: shown !== undefined,
-        });
-        if (revision.effect !== "revised" || !shown || !row) return revision;
-        const action = this.host.tasks.get(row.id)?.delivery?.captainAction;
-        if (!action) return revision;
-        const next = requiredActionCard(
-          row.id,
-          action,
-          shown.createdAt,
-          this.requiredActionProvenance(),
-        );
-        const { card } = this.stamp({
-          ...shown,
-          title: next.title,
-          body: next.body,
-          actions: next.actions,
-          width: decidedCardWidth({ body: next.body }),
-        });
-        this.host.cardStore.revise(card);
-        this.noteOffer(card, "put", "host");
-        this.noteStage({ head: card, shown: card }, "revise", { source: "host" });
-        this.cards.set(card.id, card);
-        this.addMessage(
-          card.id,
-          "host",
-          `revised: ${card.title}`,
-          undefined,
-          undefined,
-          revisionLinks(shown, card),
-          false,
-          { contributor },
-        );
-        updated = card;
-        return revision;
-      },
-      () => {
-        if (updated) {
-          this.placed(updated);
-          this.scheduleBroadcast();
-        }
-      },
-    );
-    const card = updated ?? shown ?? this.host.cardStore.get(cardId);
-    const base: Omit<CardMutation, "effect"> = card
-      ? this.mutationBase(card, contributor)
-      : { cardId, contributor, display: "available" };
-    const generation = "generation" in result ? result.generation : undefined;
-    switch (result.effect) {
-      case "refused":
-        return {
-          ...base,
-          effect: "refused",
-          refusal: result.refusal,
-          ...(generation !== undefined ? { generation } : {}),
-        };
-      case "unchanged":
-        return { ...base, effect: "unchanged", generation: result.generation };
-      case "repeated":
-      case "revised": {
-        // A repeated operation answers the revision it made the first time,
-        // read back from the correction that operation saved.
-        const changed =
-          result.effect === "revised"
-            ? result.changed
-            : result.correction
-              ? Object.keys(result.correction.previous)
-              : undefined;
-        return {
-          ...base,
-          effect: "revised",
-          generation:
-            result.effect === "repeated"
-              ? (result.correction?.generation ?? result.generation)
-              : result.generation,
-          ...(result.effect === "repeated" ? { repeated: true } : {}),
-          unchanged: [
-            "target",
-            "filing",
-            "prerequisites",
-            "completion",
-            "state",
-            "thread",
-            ...(changed
-              ? (["title", "consequence", "instructions", "criterion"] as const).filter(
-                  (field) => !changed.includes(field),
-                )
-              : []),
-          ],
-        };
-      }
-    }
+  /** Correct a required action's words on its card (`CardThreads`). */
+  reviseRequiredAction(...args: Parameters<CardThreads["reviseRequiredAction"]>): CardMutation {
+    return this.threads.reviseRequiredAction(...args);
   }
 
-  /**
-   * Why someone else's open card cannot take this revision, or undefined
-   * when it can (docs/card-threads.md, "Shared cards"): a closed card keeps
-   * its offered words and choices; the app's own cards, a required action's
-   * words and a saved change story have their own owners; a choice that
-   * carries an effect is validated only on its own task's path; and the
-   * facts that belong to the card's own task and author stay theirs.
-   */
-  private contributionRefusal(
-    card: Card,
-    closed: boolean,
-    raw: EmittedCardInput,
-    facts: CardContribution,
-  ): string | undefined {
-    if (closed) {
-      return "the card is closed, so its offered words, choices and decision history stay as they were. Add a dated clarification with reply alone.";
-    }
-    const task = card.taskId ? this.host.tasks.get(card.taskId) : undefined;
-    if (task?.delivery?.captainAction?.cardId === card.id) {
-      return "a required action's words change only through revise_required_action, which keeps its filing and moves its generation; its thread takes a reply.";
-    }
-    if (card.author !== "crewmate" && card.author !== "firstmate") {
-      return "the app wrote this card, so its words and controls are not prose anyone revises; its thread takes a reply when it has one.";
-    }
-    if (facts.expectedRevision !== card.offerId) {
-      return `you read revision ${facts.expectedRevision}, and the card has changed since. Read it again, then revise the version it shows now.`;
-    }
-    if (raw.taskId && raw.taskId !== card.taskId) {
-      return "a contribution keeps the card on its own task; drop task_id.";
-    }
-    const effect = [...card.actions, ...raw.actions].find((action) => action.effect);
-    if (effect || takesFactStrip(card)) {
-      return `choice "${effect?.id ?? "merge"}" carries an effect the app checks against this card's own task, checks and version, so only its author's own path changes it. Write on its thread with reply instead.`;
-    }
-    if (task?.delivery?.presentation && card.author === "crewmate") {
-      return "this task's saved change story owns its completion words, bound to its checked version; its own crewmate revises the story. Write on its thread with reply instead.";
-    }
-    const owned = [
-      raw.requiredActions !== undefined && "required_actions",
-      raw.riskDeclaration && "risk",
-      raw.presentationRevision !== undefined && "presentation",
-      raw.reviewTaskId && "review_task_id",
-      raw.validationDecision && "validation_request",
-      (raw.browserButton !== undefined || raw.browserPage !== undefined || raw.browserHandoff) &&
-        "browser controls",
-    ].filter(Boolean);
-    if (owned.length > 0) {
-      return `${owned.join(", ")} belong to the card's own task and author; leave them out of a contribution.`;
-    }
-    return undefined;
-  }
-
-  /** The filing words every required-action card shows. */
-  private requiredActionProvenance(): RequiredActionProvenance {
-    return { filedFrom: (sourceId) => this.host.tasks.get(sourceId)?.key || sourceId };
-  }
-
-  /** What a refusal or a result names of the card as it stands. */
-  private mutationBase(card: Card, contributor: CardContributor): Omit<CardMutation, "effect"> {
-    return {
-      cardId: card.id,
-      title: card.title,
-      ...(card.lifecycleId ? { lifecycleId: card.lifecycleId } : {}),
-      ...(card.offerId ? { revision: card.offerId } : {}),
-      contributor,
-      display: "available",
-    };
-  }
-
-  private refusedOn(card: Card, contributor: CardContributor, refusal: string): CardMutation {
-    return { ...this.mutationBase(card, contributor), effect: "refused", refusal };
-  }
-
-  /** The same operation identity answers its earlier result, on its own card only. */
-  private repeatedContribution(
-    operationId: string | undefined,
-    cardId: string,
-    contributor: CardContributor,
-  ): CardMutation | undefined {
-    if (!operationId) return undefined;
-    const prior = this.host.cardStore.contribution(operationId);
-    if (!prior) return undefined;
-    if (prior.cardId !== cardId) {
-      return {
-        effect: "refused",
-        cardId,
-        contributor,
-        display: "available",
-        refusal: `operation ${operationId} already wrote on card ${prior.cardId}; give this write its own operation identity.`,
-      };
-    }
-    const parsed = cardMutationSchema.safeParse(prior.result);
-    return parsed.success ? { ...parsed.data, repeated: true } : undefined;
-  }
-
-  private recordContribution(
-    facts: { operationId?: string; reason?: string },
-    cardId: string,
-    caller: CardCaller,
-    result: CardMutation,
-  ): void {
-    if (!facts.operationId) return;
-    this.host.cardStore.recordContribution({
-      operationId: facts.operationId,
-      cardId,
-      actor: caller.actor,
-      ...(caller.actor === "crewmate" ? { taskId: caller.taskId } : {}),
-      ...(facts.reason?.trim() ? { reason: facts.reason.trim().slice(0, 500) } : {}),
-      at: this.host.now(),
-      result,
-    });
-  }
-
-  /**
-   * Which captain message a line answers, read from the record: the one it
-   * names, checked to be a captain message on this card; a line naming none
-   * answers none. A named message someone already answered makes the line
-   * a comment.
-   */
-  private answerFacts(
-    card: Card,
-    named: number | undefined,
-  ): { facts: MessageFacts; already?: CardMessage } | { refusal: string } {
-    if (named === undefined) return { facts: {} };
-    const message = this.host.cardStore.messageById(named);
-    if (!message || message.cardId !== card.id || message.who !== "captain") {
-      return {
-        refusal: `message ${named} is not a captain message on this card; read the card and name the captain message you answer.`,
-      };
-    }
-    const already = this.host.cardStore.answerTo(card.id, named);
-    if (already) return { facts: {}, already };
-    return { facts: { answersMessage: named } };
-  }
-
-  /** The thread facts a write's result names. */
-  private lineResult(
-    line: CardMessage,
-    answer: { facts: MessageFacts; already?: CardMessage } | { refusal: string } | undefined,
-  ): Partial<CardMutation> {
-    const already = answer && "already" in answer ? answer.already : undefined;
-    return {
-      replyId: line.id,
-      ...(line.answersMessage !== undefined && !already ? { answered: line.answersMessage } : {}),
-      ...(line.clarification ? { clarification: true as const } : {}),
-      ...(already
-        ? {
-            alreadyAnswered: {
-              messageId: already.answersMessage ?? 0,
-              by:
-                already.contributor?.label ??
-                (already.who === "firstmate" ? "your first mate" : "the card's author"),
-              text: already.text.replace(/\s+/g, " ").slice(0, 160),
-            },
-          }
-        : {}),
-    };
-  }
-
-  /**
-   * A host-presented Firstmate note with its completed answer and caller's
-   * durable record in the same commit. No model turn or close-out hold.
-   * The stack changes only after all writers have committed successfully.
-   * `onTop` places it above every card on the stack now, where a note
-   * otherwise sorts behind every decision and every older note. The host
-   * may also present it as taking no reply, or at the width its body was
-   * drawn for (the welcome: its picture is the regular card's width).
-   */
-  addRecordedFirstmateNote(
-    input: Pick<EmittedCardInput, "title" | "body" | "pictures"> & {
-      /** What the record keeps as its answer when the body is more than words (the welcome). */
-      answer?: string;
-    },
-    record: (cardId: string) => void,
-    presentation: { onTop?: boolean; replies?: false; width?: CardWidth } = {},
-  ): string {
-    const id = `${FIRSTMATE_CARD_PREFIX}${randomUUID()}`;
-    const emitted = buildEmittedCard(
-      id,
-      {
-        title: input.title,
-        body: input.body,
-        actions: [],
-        ...(input.pictures ? { pictures: input.pictures } : {}),
-      },
-      { author: "firstmate", meta: FIRSTMATE_CARD_META },
-      this.host.now(),
-    );
-    // How the host presents it: the welcome takes no reply and keeps the
-    // regular width its picture was drawn for.
-    const built = {
-      ...emitted,
-      ...(presentation.replies === false ? { replies: false as const } : {}),
-      ...(presentation.width ? { width: presentation.width } : {}),
-    };
-    const { card, opened } = this.stamp(
-      presentation.onTop ? { ...built, priority: this.topPriority(built.priority) } : built,
-    );
-    return this.host.tasks.atomic(
-      () => {
-        this.host.cardStore.upsert(card);
-        this.noteOffer(card, "emitted", "host");
-        this.noteStage({ head: card, shown: card }, "emit", {
-          source: "host",
-          ...(opened ? { opened } : {}),
-        });
-        this.host.tasks.fileQuestion({
-          id: randomUUID().slice(0, 8),
-          title: input.title,
-          outcome: input.answer ?? input.body,
-          cardId: id,
-        });
-        record(id);
-        return id;
-      },
-      () => {
-        this.cards.set(id, card);
-        this.placed(card);
-        // The note is in the same published ready state, not waiting on the
-        // ordinary buffered card broadcast (or any model work).
-        this.broadcastSnapshot();
-      },
-    );
-  }
-
-  /**
-   * Create or revise an agent-emitted card. A still-open card with the same
-   * stable id is updated in place (same stack position); otherwise a new
-   * card is minted.
-   */
-  private upsertEmitted(
-    raw: EmittedCardInput,
-    context: {
-      taskId?: string;
-      author: "crewmate" | "firstmate";
-      meta: string;
-      model?: string;
-      place?: string;
-      mintId: () => string;
-      resolveId: (stableId: string) => string;
-    },
-  ): string {
-    let input = raw;
-    // The two structural checks every emit boundary holds (P1): the host's
-    // own effect is no agent's to declare, and a settle effect must know
-    // its task or the button can settle nothing. Each lint already refuses
-    // both with corrective text; this is the last line behind them.
-    const hostEffect = input.actions.find((action) => action.effect?.kind === "host");
-    if (hostEffect) {
-      throw new Error(
-        `Action "${hostEffect.id}" carries a host effect, which only the app's own cards may.`,
-      );
-    }
-    // A kept write is its crewmate's to ask about, on its own task (FI3-1571 piece 4).
-    const write = input.actions.find((action) => action.effect?.kind === "request_write");
-    if (write && (context.author !== "crewmate" || !context.taskId)) {
-      throw new Error(
-        `Action "${write.id}" asks to send a crewmate's write, which only that crewmate's card may.`,
-      );
-    }
-    const settle = input.actions.find((action) => settleEffectOf(action));
-    if (settle && !context.taskId) {
-      throw new Error(
-        `Action "${settle.id}" carries a settle effect, so the card must pass task_id; without it the host cannot tell which task to settle and the button does nothing.`,
-      );
-    }
-    // The click refuses every choice on a closed task's card
-    // (`CrewSupervisor.act`), so a card with actions on one never goes up.
-    const task = context.taskId ? this.host.tasks.get(context.taskId) : undefined;
-    if (task && input.actions.length > 0 && TaskService.isClosed(task)) {
-      throw new Error(
-        `Task ${task.id} is closed, so a choice on a card about it cannot be taken; a card with actions needs an open task.`,
-      );
-    }
-    // A first-mate settle button on a task with a saved story carries that
-    // story once it is published (INF-2490, lifting INF-1364): the host binds
-    // the card to it (`CrewSupervisor.addFirstmateCard`). Before then the
-    // click gate could not pass, so the card is refused before it is written.
-    if (
-      context.author === "firstmate" &&
-      task?.delivery?.presentation &&
-      !readyPresentation(task.delivery.presentation) &&
-      input.actions.some((action) => settleEffectOf(action)?.mode === "merge")
-    ) {
-      throw new Error(
-        `Task ${task.id}'s saved change story is not published at its newest revision, so a merge button cannot carry it yet. Steer the crewmate to publish its story, or to emit its own completion card. The card is unchanged.`,
-      );
-    }
-    if (input.reviewTaskId) {
-      const review = this.host.tasks.resolve(input.reviewTaskId);
-      if (
-        context.author !== "firstmate" ||
-        !task ||
-        review?.shape?.kind !== "review" ||
-        review.shape.kind_source !== "host:review" ||
-        review.parentId !== task.id
-      ) {
-        throw new Error(
-          "Card refused: review_task_id must name an independent review of task_id. The card is unchanged.",
-        );
-      }
-      input = { ...input, reviewTaskId: review.id };
-    }
-    // A settle card carries the facts the host holds about its task -
-    // project, crewmate model, posture, PR link, CI state (contract v2.0,
-    // captain ruling D4; the fact strip at v2.7) - on add and on every
-    // in-place revision, so no prompt asks an agent to write them. So does
-    // the story note of a task that merges on its own (INF-1219). Every
-    // merge card's strip ends with the app's line saying whether its click
-    // closes the task (INF-2490).
-    if (context.taskId) {
-      const facts = takesTaskFacts(input) ? this.host.settleFacts(context.taskId) : undefined;
-      const strip = withMergeClosesLine(
-        facts,
-        input.actions,
-        this.othersOpen(context.taskId, input.id),
-      );
-      if (strip) input = { ...input, body: `${input.body}${strip}` };
-    }
-    // A settle card says what the crew filed under this task's name
-    // (captain, 2026-09-14). Deciding whether to land is the one moment
-    // those follow-ups bear on the captain's choice, so they are named
-    // here rather than met later as a refusal.
-    if (
-      context.taskId &&
-      input.actions.some((action) => settleEffectOf(action)?.mode === "merge")
-    ) {
-      const notice = this.host.followupNotice(context.taskId);
-      if (notice) input = { ...input, body: `${input.body}${notice}` };
-    }
-    // An exact card id wins before the author's own prefixing, and a card id
-    // the record lacks is an unknown target, never a new card. Someone
-    // else's card is written through `contribute`, never here.
-    const target = this.targetOf(
-      context.author === "firstmate"
-        ? { actor: "firstmate" }
-        : { actor: "crewmate", taskId: context.taskId ?? "" },
-      input.id,
-    );
-    if (target.kind === "unknown") {
-      throw new Error(
-        `Card refused: "${target.id}" names no card on the record, so there is nothing to update. Read the card's id again, or give a short id of your own for a new card. Nothing was shown.`,
-      );
-    }
-    if (target.kind === "foreign" || target.kind === "closed") {
-      throw new Error(
-        `Card refused: card "${target.id}" is someone else's, so this write is a contribution. Read the card, then pass expected_revision with the revision you read to revise it, or give reply alone to write on its thread. Nothing was shown.`,
-      );
-    }
-    let stableId: string | undefined;
-    try {
-      stableId = parseStableCardId(input.id);
-    } catch {
-      stableId = undefined;
-    }
-    const resolved =
-      target.kind === "own" ? target.id : stableId ? context.resolveId(stableId) : undefined;
-    const existing = resolved ? this.cards.get(resolved) : undefined;
-    const owner =
-      existing?.taskId ?? (resolved ? this.host.cardStore.get(resolved)?.taskId : undefined);
-    if (
-      [owner, input.taskId].some((id) => id && this.host.tasks.get(id)?.delivery?.captainAction)
-    ) {
-      // INF-1137 friction 2: answer on the required-action card without
-      // replacing the app's instructions, generation or completion controls.
-      const answer = input.reply?.trim();
-      if (
-        existing &&
-        existing.author === "firstmate" &&
-        owner &&
-        this.host.tasks.get(owner)?.delivery?.captainAction &&
-        (!input.taskId || input.taskId === owner) &&
-        context.author === "firstmate" &&
-        answer
-      ) {
-        if (answer.length > CARD_REPLY_MAX_CHARS)
-          throw new Error(`A reply is at most ${CARD_REPLY_MAX_CHARS} characters.`);
-        const named = this.answerFacts(existing, input.answersMessage);
-        if ("refusal" in named) throw new Error(`Card refused: ${named.refusal}`);
-        this.addMessage(
-          existing.id,
-          "firstmate",
-          answer,
-          undefined,
-          undefined,
-          undefined,
-          false,
-          named.facts,
-        );
-        return existing.id;
-      }
-      throw new Error(
-        "This required-action card keeps its app-owned instructions and confirmation. To answer here, emit_card with this same id and reply; the host keeps the body and controls unchanged. Use update_task drop with a reason to cancel, or revise the declaration on its source card.",
-      );
-    }
-    if (!existing && resolved) this.refuseAnsweredRevision(resolved, input);
-    if (existing && resolved) {
-      // An update is never the whole answer: while the captain's reply waits
-      // on its author, the revision carries the author's short answer too.
-      const answer = input.reply?.trim();
-      const waiting = this.host.cardStore.awaitingAuthor(resolved);
-      if (waiting && !answer) {
-        throw new Error(
-          `Card refused: the captain's reply under card "${resolved}" waits on your answer, and a revision alone does not give it. Call emit_card again with the same id and the same card plus reply: one to three sentences answering them and saying what you changed on the card and under which heading, with answers_message naming their message when it answers it. The card and its thread are unchanged.`,
-        );
-      }
-      if (answer && answer.length > CARD_REPLY_MAX_CHARS) {
-        throw new Error(
-          `Card refused: reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter. The card and its thread are unchanged.`,
-        );
-      }
-      // The reply ends the captain's question only when it names it.
-      const named = this.answerFacts(existing, answer ? input.answersMessage : undefined);
-      if ("refusal" in named) {
-        throw new Error(`Card refused: ${named.refusal} The card and its thread are unchanged.`);
-      }
-      const revised = buildEmittedCard(resolved, input, context, existing.createdAt);
-      const changed =
-        existing.title !== revised.title ||
-        existing.body !== revised.body ||
-        JSON.stringify(existing.actions) !== JSON.stringify(revised.actions) ||
-        JSON.stringify(existing.attachment) !== JSON.stringify(revised.attachment) ||
-        JSON.stringify(existing.risk) !== JSON.stringify(revised.risk) ||
-        JSON.stringify(existing.requiredActions) !== JSON.stringify(revised.requiredActions);
-      // Every revision made while answering the captain carries its own
-      // answer (INF-1623, the captain's "every"): one after the turn's
-      // answer would otherwise follow it with no word on what it changed.
-      if (
-        changed &&
-        !answer &&
-        existing.lifecycleId !== undefined &&
-        this.answeringUntilCloseOut.get(resolved) === existing.lifecycleId
-      ) {
-        throw new Error(
-          `Card refused: you answered the captain's reply under card "${resolved}" in this turn, and this revision changes the card again without saying how. Call emit_card again with the same id and the same card plus reply: one to three sentences saying what you changed on the card and under which heading. The card and its thread are unchanged.`,
-        );
-      }
-      // A card off the stage stays off it; one on it keeps showing what it
-      // showed until its crewmate author's turn ends (the one rule), and so
-      // does one still waiting on its author after the captain's reply,
-      // whoever its author is. The Firstmate's own revision of any other
-      // card on the stage redraws at once. One the captain put aside stays
-      // aside while its reply leaves their question waiting (INF-1623).
-      const stillAsked =
-        waiting &&
-        named.facts.answersMessage !== this.host.cardStore.newestCaptainMessage(resolved)?.id;
-      const aside = existing.minimized === true && stillAsked;
-      const { card: updated, offer } = this.stamp({
-        ...revised,
-        ...(aside ? { minimized: true as const } : {}),
-        ...(existing.awaiting ? { awaiting: existing.awaiting } : {}),
-        ...(existing.sentBackAt !== undefined ? { sentBackAt: existing.sentBackAt } : {}),
-      });
-      const staged =
-        this.staged.get(resolved) ??
-        (onStage(existing) && (context.author === "crewmate" || existing.awaiting !== undefined)
-          ? existing
-          : undefined);
-      this.host.cardStore.transaction(() => {
-        // Revise in place keeps the replaced version as the card's history (WI-12).
-        this.host.cardStore.revise(updated);
-        if (offer) this.noteOffer(updated, "emitted", "tool");
-        this.noteStage({ head: updated, shown: staged ?? updated }, "revise", {
-          source: "tool",
-        });
-      });
-      if (staged) this.staged.set(resolved, staged);
-      this.cards.set(resolved, updated);
-      // A crewmate's revision of a card the captain put aside brings it back
-      // when that crewmate's turn ends, never mid-turn (INF-926).
-      if (existing.minimized && !aside && context.author === "crewmate" && updated.lifecycleId)
-        this.asideUntilTurnEnd.set(resolved, updated.lifecycleId);
-      this.placed(updated);
-      // The preferred answer to a thread message is a revision of the head
-      // (cards-as-threads phase 1): the card re-renders above, and the
-      // thread says so in one host line, so a small change is never
-      // invisible - the captain's own "it's not clear where the update is".
-      if (changed && this.host.cardStore.messages(resolved).length > 0) {
-        this.addMessage(
-          resolved,
-          "host",
-          `revised: ${updated.title}`,
-          undefined,
-          undefined,
-          revisionLinks(existing, updated),
-        );
-      }
-      // The answer lands right after the revised line, whether or not the
-      // captain's reply still waits (INF-1623): an earlier line that ended
-      // the wait never makes the answer vanish.
-      if (answer && (waiting || this.host.cardStore.messages(resolved).length > 0)) {
-        this.addMessage(
-          resolved,
-          context.author,
-          answer,
-          undefined,
-          undefined,
-          undefined,
-          false,
-          named.facts,
-        );
-      }
-      this.scheduleBroadcast();
-      return resolved;
-    }
-    // A reply rides a revision of the card the captain wrote under. A new
-    // card carrying one would drop it and leave that card waiting on an
-    // answer nobody gives (INF-990 friction 4), so it names that card.
-    const waiting =
-      input.reply?.trim() && context.author === "crewmate" && context.taskId
-        ? this.threadsAwaitingAuthor(context.taskId)
-        : [];
-    if (waiting.length > 0) {
-      throw new Error(
-        `Card refused: reply answers the captain's reply under ${waitingCardWords(waiting)}, and ${stableId ? `id "${stableId}" names a new card` : "a card without that card's id is a new card"}, so that answer would be lost. Revise that card under its own id with reply, or answer it with reply(card_id, text) and emit this card without reply. Nothing was shown.`,
-      );
-    }
-    const id = resolved && !this.cards.has(resolved) ? resolved : context.mintId();
-    const built = buildEmittedCard(id, input, context, this.host.now());
-    // A crewmate's new card waits for its close-out, and lands on its
-    // task's timeline (P1) when it reaches the stage (`release`). The
-    // Firstmate's own cards go up at once - its emits end a short turn -
-    // and are recorded by the agent at its emit_card boundary, where it
-    // also knows which task a task-less card files.
-    const { card, opened } = this.stamp(
-      context.author === "crewmate" ? { ...built, awaiting: "close-out" } : built,
-    );
-    this.host.cardStore.transaction(() => {
-      if (opened?.lifecycle === "reopened") this.host.cardStore.reopen(id);
-      this.host.cardStore.upsert(card);
-      this.noteOffer(card, "emitted", "tool");
-      this.noteStage({ head: card, shown: card }, "emit", {
-        source: "tool",
-        ...(opened ? { opened } : {}),
-      });
-    });
-    this.cards.set(id, card);
-    this.staged.delete(id);
-    this.placed(card);
-    this.scheduleBroadcast();
-    return id;
-  }
-
-  /**
-   * A card the captain answered with a choice stays answered (INF-1389
-   * friction 1): an emit under its id is refused while the choice has not
-   * reached its author, the refusal carrying the choice, since that
-   * revision was written without it. Once the author has heard it, a
-   * revision with actions would ask the same question again, so a new
-   * question is a new card; one without actions only tells the captain
-   * something and shows as a note. A card closed without choosing can come back.
-   */
-  private refuseAnsweredRevision(id: string, input: EmittedCardInput): void {
-    const past = this.host.cardStore.past(id);
-    if (past?.ending.how !== "chose" || (past.ending.by && past.ending.by !== "captain")) return;
-    const stored = this.host.cardStore.get(id);
-    const choice = `"${past.ending.label ?? past.ending.actionId ?? "an action"}"`;
-    if (stored && this.host.choiceUnheard?.(stored)) {
-      const answers = past.answers.length
-        ? ` Their answers to the card's questions:\n${cardAnswerLines(past.answers).join("\n")}`
-        : "";
-      throw new Error(
-        `Card refused: the captain already answered card "${id}" ("${past.title}") by choosing ${choice}, and that answer has not reached you yet, so this revision was written without it.${answers} Act on that answer; it also reaches you as its own message. The card stays closed.`,
-      );
-    }
-    if (input.actions.length > 0) {
-      throw new Error(
-        `Card refused: the captain already answered card "${id}" ("${past.title}") by choosing ${choice}, so a card with actions under its id would ask them that question again. Ask a new question on a new card, without this id and under a title of its own; a revision without actions, which only tells them something, shows as a note. The card stays closed.`,
-      );
-    }
-  }
-
-  /**
-   * The lifecycle and offer a card write carries (docs/card-evidence.md). An
-   * open card keeps its lifecycle, and its offer while nothing it shows has
-   * changed; a card not on the stack starts a lifecycle - a reopen when its
-   * row already exists, linked to the one before.
-   */
-  private stamp(next: Card): { card: Card; offer: boolean; opened?: Opened } {
-    const previous = this.cards.get(next.id);
-    if (previous?.lifecycleId && previous.offerId) {
-      const same = offerFingerprint(previous) === offerFingerprint(next);
-      return {
-        card: {
-          ...next,
-          lifecycleId: previous.lifecycleId,
-          offerId: same ? previous.offerId : randomUUID(),
-        },
-        offer: !same,
-      };
-    }
-    const stored = this.host.cardStore.get(next.id);
-    return {
-      card: { ...next, lifecycleId: randomUUID(), offerId: randomUUID() },
-      offer: true,
-      opened: {
-        lifecycle: stored ? "reopened" : "started",
-        ...(stored?.lifecycleId ? { predecessor: stored.lifecycleId } : {}),
-      },
-    };
-  }
-
-  /** An offer, whole and immutable: its observation id is its offer id. */
-  private noteOffer(card: Card, basis: OfferBasis, source: CardObservationSource): void {
-    const { lifecycleId, offerId } = card;
-    if (!lifecycleId || !offerId) return;
-    this.host.cardStore.observe({
-      id: offerId,
-      kind: "offer",
-      cardId: card.id,
-      lifecycleId,
-      taskId: card.taskId,
-      at: this.host.now(),
-      actor: basis === "emitted" ? authorActor(card) : "host",
-      source,
-      offerId,
-      build: this.host.build,
-      payload: {
-        basis,
-        fingerprint: offerFingerprint(card),
-        author: card.author,
-        title: card.title,
-        meta: card.meta,
-        ...(card.reviewTaskId ? { reviewTaskId: card.reviewTaskId } : {}),
-        ...(card.model ? { model: card.model } : {}),
-        ...(card.place ? { place: card.place } : {}),
-        body: card.body,
-        actions: card.actions,
-        ...(card.pictures?.length ? { pictures: card.pictures } : {}),
-        ...(card.width ? { width: card.width } : {}),
-        ...(card.attachment ? { attachment: card.attachment } : {}),
-        ...(card.risk ? { risk: card.risk } : {}),
-        ...(card.requiredActions !== undefined ? { requiredActions: card.requiredActions } : {}),
-        ...(card.asking ? { asking: true as const } : {}),
-        ...(card.designOnly ? { designOnly: true as const } : {}),
-        ...(card.continues ? { continues: true as const } : {}),
-        ...(card.answering ? { answering: true as const } : {}),
-        ...(card.holdsPlace ? { holdsPlace: true as const } : {}),
-      },
-    });
-  }
-
-  /**
-   * What the stage does with a card after a write, as availability facts:
-   * the offer it shows is `available`, or `waiting` on what the card waits
-   * on; a newer head the stage does not show yet waits on its author's
-   * close-out. Only a change is recorded, read against the log itself, so a
-   * restart or a repeated write never doubles a fact.
-   */
-  private noteStage(
-    view: { head: Card; shown: Card },
-    cause: StageCause,
-    options: {
-      source: CardObservationSource;
-      actor?: CardObservationActor;
-      closeOut?: CloseOut;
-      opened?: Opened;
-      answer?: boolean;
-    },
-  ): void {
-    const { head, shown } = view;
-    const lifecycleId = head.lifecycleId;
-    if (!lifecycleId || !head.offerId || !shown.offerId) return;
-    const facts: { offerId: string; state: "available" | "waiting"; waitingOn?: CardAwaiting }[] = [
-      shown.awaiting
-        ? { offerId: shown.offerId, state: "waiting", waitingOn: shown.awaiting }
-        : { offerId: shown.offerId, state: "available" },
-    ];
-    if (head.offerId !== shown.offerId) {
-      facts.push({
-        offerId: head.offerId,
-        state: "waiting",
-        waitingOn: head.awaiting ?? "close-out",
-      });
-    }
-    let opened = options.opened;
-    const store = this.host.cardStore;
-    for (const fact of facts) {
-      const last = store.lastAvailabilityOf(head.id, lifecycleId, fact.offerId);
-      if (
-        last &&
-        last.state === fact.state &&
-        last.waitingOn === fact.waitingOn &&
-        !opened &&
-        !options.answer
-      ) {
-        continue;
-      }
-      const before =
-        fact.state === "available" ? store.lastAvailableOffer(head.id, lifecycleId) : undefined;
-      store.observe({
-        id: randomUUID(),
-        kind: "availability",
-        cardId: head.id,
-        lifecycleId,
-        taskId: head.taskId,
-        at: this.host.now(),
-        actor: options.actor ?? (options.source === "tool" ? authorActor(head) : "host"),
-        source: options.source,
-        offerId: fact.offerId,
-        build: this.host.build,
-        payload: {
-          state: fact.state,
-          ...(fact.waitingOn ? { waitingOn: fact.waitingOn } : {}),
-          cause,
-          ...(options.closeOut ? { closeOut: options.closeOut } : {}),
-          ...(before && before !== fact.offerId ? { replaces: before } : {}),
-          ...(opened ? opened : {}),
-        },
-      });
-      opened = undefined;
-    }
-  }
-
-  /**
-   * One interaction with an offer's actions, as the host admitted it:
-   * `shown` is the version the click chose from, and the id the click
-   * named is kept whether or not that offer declared it.
-   */
-  private noteAction(
-    shown: Card,
-    actionId: string,
-    input: {
-      closes: boolean;
-      answers?: CardAnswer[] | undefined;
-      by: "captain" | "firstmate" | "crewmate";
-      evidence?: CardInteractionEvidence | undefined;
-    },
-  ): string | undefined {
-    const { lifecycleId, offerId } = shown;
-    if (!lifecycleId || !offerId) return undefined;
-    const action = shown.actions.find((entry) => entry.id === actionId);
-    const evidence = input.evidence;
-    const source = evidence?.source ?? (input.by === "captain" ? "chrome" : "frame");
-    const read = readSubmission(evidence?.submission);
-    const submission = read.submission;
-    const answered = Boolean(input.answers?.length);
-    const questions: Pick<
-      CardObservationPayload<"action">,
-      "questions" | "questionsGap"
-    > = read.questions
-      ? { questions: read.questions }
-      : read.questionsGap
-        ? { questionsGap: read.questionsGap }
-        : answered
-          ? { questionsGap: "absent" }
-          : {};
-    const id = randomUUID();
-    const kept = this.host.cardStore.observe({
-      id,
-      kind: "action",
-      cardId: shown.id,
-      lifecycleId,
-      taskId: shown.taskId,
-      at: this.host.now(),
-      actor: source === "chrome" ? "captain" : "frame",
-      source,
-      offerId,
-      interactionId: submission?.id ?? randomUUID(),
-      build: this.host.build,
-      payload: {
-        actionId,
-        recognized: action !== undefined,
-        label: action?.label ?? null,
-        closes: input.closes,
-        keepsOpen: false,
-        effect: action?.effect ?? null,
-        ...(evidence?.frameValue !== undefined ? { frameValue: evidence.frameValue } : {}),
-        ...(answered ? { answers: input.answers } : {}),
-        display: displayOf(read, shown),
-        ...(submission?.reading ? { reading: submission.reading } : {}),
-        ...(submission?.remounted ? { remounted: true as const } : {}),
-        ...questions,
-        ...(evidence?.context ? { context: evidence.context } : {}),
-        ...(evidence?.contextGap ? { contextGap: evidence.contextGap } : {}),
-        interactionSource: submission ? "shell" : "host",
-      },
-    });
-    return kept ? id : undefined;
-  }
-
-  /** How a lifecycle ended without a declared action. */
-  private noteExit(
-    card: Card,
-    actor: CardObservationActor,
-    source: CardObservationSource,
-    payload: CardObservationPayload<"exit">,
-  ): string | undefined {
-    const { lifecycleId, offerId } = card;
-    if (!lifecycleId) return undefined;
-    const id = randomUUID();
-    const kept = this.host.cardStore.observe({
-      id,
-      kind: "exit",
-      cardId: card.id,
-      lifecycleId,
-      taskId: card.taskId,
-      at: this.host.now(),
-      actor,
-      source,
-      offerId,
-      build: this.host.build,
-      payload: {
-        ...payload,
-        ...(payload.note ? { note: payload.note.slice(0, CARD_OBSERVATION_NOTE_MAX) } : {}),
-      },
-    });
-    return kept ? id : undefined;
+  /** A host-presented Firstmate note with its record in one commit (`CardEmits`). */
+  addRecordedFirstmateNote(...args: Parameters<CardEmits["addRecordedFirstmateNote"]>): string {
+    return this.emits.addRecordedFirstmateNote(...args);
   }
 
   /**
@@ -2445,7 +862,7 @@ export class CardService {
     for (let card of [...this.cards.values()]) {
       const mine =
         author.kind === "firstmate"
-          ? this.firstmateAnswers(card)
+          ? this.threads.firstmateAnswers(card)
           : card.author === "crewmate" && card.taskId === author.taskId;
       // Someone else's held write - a revision, or an answer it named -
       // moves the stage with its own writer's turn end, never with an
@@ -2492,7 +909,7 @@ export class CardService {
       else if (staged || answer) {
         // The stage moves from the version it held to the author's newest.
         this.host.cardStore.transaction(() =>
-          this.noteStage({ head: card, shown: card }, "close-out", {
+          this.evidence.noteStage({ head: card, shown: card }, "close-out", {
             source: "host",
             closeOut: reason,
             answer,
@@ -2528,7 +945,10 @@ export class CardService {
     const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...shown } = card;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.upsert(shown);
-      this.noteStage({ head: shown, shown }, "close-out", { source: "host", closeOut: reason });
+      this.evidence.noteStage({ head: shown, shown }, "close-out", {
+        source: "host",
+        closeOut: reason,
+      });
     });
     this.cards.set(card.id, shown);
     this.host.cardPlaced?.(shown);
@@ -2572,7 +992,11 @@ export class CardService {
           : {}),
     };
     this.host.cardStore.upsert(held);
-    this.noteStage({ head: held, shown: held }, awaiting === "answer" ? "reply" : "answered", by);
+    this.evidence.noteStage(
+      { head: held, shown: held },
+      awaiting === "answer" ? "reply" : "answered",
+      by,
+    );
     return held;
   }
 
@@ -2628,7 +1052,7 @@ export class CardService {
     let observation: string | undefined;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(id, why);
-      observation = this.noteExit(card, actor.kind, "tool", {
+      observation = this.evidence.noteExit(card, actor.kind, "tool", {
         reason: "author-withdrawal",
         ...(reason?.trim() ? { note: why } : {}),
       });
@@ -2646,38 +1070,9 @@ export class CardService {
     return this.host.cardStore.past(cardId);
   }
 
-  /**
-   * A card's thread as it stands (cards-as-threads phase 1), oldest first.
-   * Reading one never changes it.
-   */
+  /** A card's thread as it stands, oldest first (`CardThreads`). */
   thread(cardId: string): CardThread {
-    const shown = this.shown(cardId);
-    const messages = this.host.cardStore.messages(cardId);
-    if (!shown?.offerId) return { cardId, messages };
-    const offers = this.host.cardStore
-      .observations(cardId)
-      .filter(
-        (o): o is Extract<CardObservation, { kind: "offer" }> =>
-          o.kind === "offer" && o.lifecycleId === shown.lifecycleId,
-      );
-    const shownAt = offers.findIndex((o) => o.offerId === shown.offerId);
-    return {
-      cardId,
-      messages: messages.map((message) => {
-        const revision = message.revision;
-        if (!revision?.released || revision.lifecycleId !== shown.lifecycleId) return message;
-        const sourceAt = offers.findIndex((o) => o.offerId === revision.offerId);
-        if (sourceAt < 0 || shownAt < sourceAt) return message;
-        const versions = offers.slice(sourceAt, shownAt + 1).map((o) => o.payload);
-        return {
-          ...message,
-          revisionShown: {
-            offerId: shown.offerId!,
-            targets: resolveRevisionTargets(revision.targets, versions),
-          },
-        };
-      }),
-    };
+    return this.threads.thread(cardId);
   }
 
   /**
@@ -2743,29 +1138,7 @@ export class CardService {
         ...(facts.clarification ? { clarification: true as const } : {}),
         ...(facts.responseId ? { responseId: facts.responseId } : {}),
       });
-      if (about?.lifecycleId) {
-        this.host.cardStore.observe({
-          id: randomUUID(),
-          kind: "message_ref",
-          cardId,
-          lifecycleId: about.lifecycleId,
-          taskId: about.taskId,
-          at: message.at,
-          ...by,
-          offerId: about.offerId,
-          messageId: message.id,
-          build: this.host.build,
-          payload: {
-            messageId: message.id,
-            who,
-            ...(interim ? { interim: true as const } : {}),
-            ...(answers ? { answers } : {}),
-            ...(submission !== undefined
-              ? { display: displayOf(readSubmission(submission), about) }
-              : {}),
-          },
-        });
-      }
+      if (about) this.evidence.noteMessage(about, message, by, { interim, answers, submission });
       if (who === "captain") held = this.writeHold(cardId, "answer", by);
       else if (answered) held = this.writeHold(cardId, "close-out", by);
       return message;
@@ -2813,183 +1186,44 @@ export class CardService {
     return message;
   }
 
-  /**
-   * Whether the Firstmate is the one that answers a card's thread: its own
-   * card, a card the host named it the answerer of (the stuck alert,
-   * `Card.answeredBy`), or a note a task closed done kept, whose crewmate
-   * is gone.
-   */
-  private firstmateAnswers(card: Card): boolean {
-    if (card.author === "firstmate" || card.answeredBy === "firstmate") return true;
-    if (card.author !== "crewmate" || !card.taskId) return false;
-    const task = this.host.tasks.get(card.taskId);
-    return task !== undefined && TaskService.isClosed(task);
-  }
-
-  /**
-   * Capture the Firstmate's closing words as its line in the thread of a
-   * card it answers (phase 2). The line names no captain message, so it
-   * leaves the question waiting: a handoff stays open, and the Firstmate
-   * answers with an emit_card reply that names the message. No-op without
-   * a current answer hold - a named reply may have answered it, or the old
-   * lifecycle may have closed - or when the Firstmate already wrote its
-   * own line since the captain's. Returns whether the line was written.
-   */
+  /** The Firstmate's closing words as its line on a card it answers (`CardThreads`). */
   recordFirstmateThreadAnswer(cardId: string, text: string): boolean {
-    const card = this.cards.get(cardId);
-    if (!card || !this.firstmateAnswers(card)) return false;
-    if (!this.host.cardStore.awaitingAuthor(cardId)) return false;
-    const trimmed = text.trim();
-    if (!trimmed) return false;
-    const asked = this.host.cardStore.newestCaptainMessage(cardId)?.id ?? 0;
-    const wrote = this.host.cardStore
-      .messages(cardId)
-      .some((line) => line.id > asked && line.who === "firstmate" && !line.contributor);
-    if (wrote) return false;
-    this.addMessage(cardId, "firstmate", trimmed);
-    return true;
+    return this.threads.recordFirstmateThreadAnswer(cardId, text);
   }
 
-  /**
-   * Open cards on this session that have a thread, for Observe. The
-   * Firstmate session lists firstmate-authored cards; a crewmate session
-   * lists that task's cards. Empty threads stay off the pane.
-   */
-  observeThreads(
-    sessionId: string,
-  ): Array<{ cardId: string; title: string; messages: CardMessage[] }> {
-    const cards =
-      sessionId === FIRSTMATE_SESSION_ID
-        ? this.snapshot().filter((card) => card.author === "firstmate")
-        : this.snapshot().filter((card) => card.taskId === sessionId);
-    return cards
-      .map((card) => ({
-        cardId: card.id,
-        title: card.title,
-        messages: this.host.cardStore.messages(card.id),
-      }))
-      .filter((thread) => thread.messages.length > 0);
+  /** Open cards on a session that have a thread, for Observe (`CardThreads`). */
+  observeThreads(sessionId: string): ReturnType<CardThreads["observeThreads"]> {
+    return this.threads.observeThreads(sessionId);
   }
 
-  /**
-   * A crewmate's line in a card's thread (the `reply` output, contract
-   * v4.1): prose only, and never a second card. On its own card it writes
-   * as the author; on anyone else's card - another task's, the first
-   * mate's, a required action - it writes with its name on the line
-   * (`replyAs`, docs/card-threads.md "Shared cards"). Either way it ends a
-   * captain question only by naming it. Refusals are tool text and write
-   * nothing.
-   */
-  replyFromCrewmate(
-    taskId: string,
-    input: {
-      cardId: string;
-      text: string;
-      interim?: boolean;
-      answersMessage?: number;
-      operationId?: string;
-      response?: CrewResponse;
-    },
-  ): string {
-    const id = input.cardId.trim();
-    if (!id) return "reply needs card_id: the id of the card whose thread you write in.";
-    const card = this.cards.get(id) ?? this.host.cardStore.get(id);
-    if (!card) {
-      return `Unknown card "${id}". Read the card's id again; a reply names a card on the record.`;
-    }
-    const caller: CardCaller = { actor: "crewmate", taskId };
-    const own =
-      this.cards.has(id) && answersFor(card, caller, (other) => this.firstmateAnswers(other));
-    const mutation = this.replyAs(caller, input);
-    if (!own || mutation.effect !== "reply-only" || mutation.alreadyAnswered || mutation.repeated) {
-      return cardMutationText(mutation);
-    }
-    const question = this.host.cardStore.awaitingAuthor(id)
-      ? this.host.cardStore.newestCaptainMessage(id)
-      : undefined;
-    if (input.interim === true && question) {
-      return `Posted in the thread on "${card.title}" (${id}); the captain's message ${question.id} still waits for your answer when the work is done, in a line naming it in answers_message.`;
-    }
-    const replied = `Replied in the thread on "${card.title}" (${id}).`;
-    const answered =
-      mutation.answered !== undefined
-        ? ` It answers the captain's message ${mutation.answered}.`
-        : question
-          ? ` The captain's message ${question.id} still waits: a line answers it only by naming it in answers_message.`
-          : "";
-    // An answer under another card leaves the captain's reply waiting
-    // (INF-990 friction 4): the receipt names the card that still waits.
-    const still = this.threadsAwaitingAuthor(taskId).filter((other) => other.id !== id);
-    return still.length > 0
-      ? `${replied}${answered} ${stillWaitingWords(still)}`
-      : `${replied}${answered}`;
+  /** A crewmate's line in a card's thread, its `reply` output (`CardThreads`). */
+  replyFromCrewmate(...args: Parameters<CardThreads["replyFromCrewmate"]>): string {
+    return this.threads.replyFromCrewmate(...args);
   }
 
   /** Whether a captain reply on this open card still waits for its answer. */
   answerOwed(cardId: string): boolean {
-    return this.cards.has(cardId) && this.host.cardStore.awaitingAuthor(cardId);
+    return this.threads.answerOwed(cardId);
   }
 
-  /**
-   * Whether any of a task's open cards currently waits on an author answer.
-   * The sort and idle ladder share this persisted lifecycle-aware witness;
-   * retained thread history alone does not mean the author owes an answer.
-   */
+  /** Whether any of a task's open cards waits on an author answer (`CardThreads`). */
   threadAwaitingAuthor(taskId: string): boolean {
-    return this.threadsAwaitingAuthor(taskId).length > 0;
+    return this.threads.threadAwaitingAuthor(taskId);
   }
 
-  /**
-   * The task's open cards whose current lifecycle waits on an author answer,
-   * oldest first: what a reminder names, so its author answers the card the
-   * captain wrote under rather than another of its cards (INF-990 friction 4).
-   */
+  /** The task's open cards waiting on an author answer, oldest first (`CardThreads`). */
   threadsAwaitingAuthor(taskId: string): { id: string; title: string }[] {
-    // A reply the first mate answers on the host's behalf (the stuck alert)
-    // is never a thread the task's crewmate owes (INF-1670).
-    return [...this.cards.values()]
-      .filter(
-        (card) =>
-          card.taskId === taskId &&
-          card.answeredBy !== "firstmate" &&
-          this.host.cardStore.awaitingAuthor(card.id),
-      )
-      .sort((a, b) => a.createdAt - b.createdAt)
-      .map((card) => ({ id: card.id, title: card.title }));
+    return this.threads.threadsAwaitingAuthor(taskId);
   }
 
-  /**
-   * What a task's crew line says about its threads (`thread:`): how many
-   * messages sit on its open cards and who wrote the newest, so the
-   * Firstmate reads the state of a conversation it was never woken for.
-   */
+  /** What a task's crew line says about its threads (`CardThreads`). */
   threadFact(taskId: string): string | undefined {
-    return this.threadFacts([taskId]).get(taskId);
+    return this.threads.threadFact(taskId);
   }
 
-  /** One current roster read: visit the open stack once and fetch only its requested thread metadata. */
+  /** The thread facts of a roster read, by task (`CardThreads`). */
   threadFacts(taskIds: readonly string[]): Map<string, string> {
-    if (taskIds.length === 0) return new Map();
-    const wanted = new Set(taskIds);
-    const cards = [...this.cards.values()].filter((card) => card.taskId && wanted.has(card.taskId));
-    const stats = this.host.cardStore.threadStats(cards.map((card) => card.id));
-    const threads = new Map<string, { count: number; last: Pick<CardMessage, "who" | "at"> }>();
-    for (const card of cards) {
-      const stat = stats.get(card.id);
-      if (!stat || !card.taskId) continue;
-      const thread = threads.get(card.taskId);
-      if (!thread) threads.set(card.taskId, { count: stat.count, last: stat });
-      else {
-        thread.count += stat.count;
-        if (stat.at >= thread.last.at) thread.last = stat;
-      }
-    }
-    return new Map(
-      [...threads].map(([taskId, { count, last }]) => [
-        taskId,
-        `thread: ${count} message${count === 1 ? "" : "s"}, last from ${last.who}`,
-      ]),
-    );
+    return this.threads.threadFacts(taskIds);
   }
 
   /**
@@ -3006,7 +1240,7 @@ export class CardService {
       if (result.status === "flagged" && open) {
         this.host.cardStore.resolve(open.id, "duplicate");
         // The Firstmate's tool stamps the label the captain confirmed.
-        observation = this.noteExit(open, "firstmate", "tool", {
+        observation = this.evidence.noteExit(open, "firstmate", "tool", {
           reason: "duplicate",
           duplicateOf: input.duplicateOf,
           ...(input.note.trim() ? { note: input.note.trim() } : {}),
@@ -3078,7 +1312,6 @@ export class CardService {
         ...(answers ? { answers } : {}),
         ...(observation ? { observation } : {}),
       });
-      this.host.noteCapAnswered(card, action, by, card.author === "firstmate");
       // This explicit resolution resynchronizes the captain gate, with
       // the action as its timeline reason. A real gate change restarts the
       // idle clock; putting a card aside never enters this path.
@@ -3136,118 +1369,19 @@ export class CardService {
    * A card put aside remains pending rather than acquiring a refusal.
    */
   addFirstmatePauseCard(input: FirstmatePauseCard, options: { reviseOnly?: boolean } = {}): void {
-    const id = input.move
-      ? FIRSTMATE_MOVE_CARD_ID
-      : input.pause === "refused"
-        ? FIRSTMATE_REFUSED_CARD_ID
-        : FIRSTMATE_BENCH_CARD_ID;
+    const id = firstmatePauseCardId(input);
     const previous = this.cards.get(id);
     if (!previous && options.reviseOnly) return;
-    // A spent allowance is read again on the captain's word - after a switch
-    // to another login elsewhere, say - and that is the card's default; a
-    // move or Settings stays beside it.
-    if (input.pause === "no_headroom" && input.accountId && !input.checking) {
-      this.putFirstmatePauseCard(id, input, [
-        {
-          id: "recheck-allowance",
-          label: RECHECK_ALLOWANCE_LABEL,
-          variant: "primary",
-          default: true,
-          effect: { kind: "host", op: "try-again", arg: input.accountId },
-        },
-        input.move
-          ? {
-              id: "move-flagship",
-              label: moveLabel(input.move.providerName),
-              variant: "secondary",
-              effect: { kind: "host", op: "move-flagship", arg: input.move.providerId },
-            }
-          : {
-              id: "open-settings",
-              label: "Open settings",
-              variant: "secondary",
-              effect: { kind: "open", target: "settings" },
-            },
-      ]);
-      return;
-    }
-    const wayBack: CardAction[] =
-      input.pause === "refused" && input.accountId
-        ? [
-            {
-              id: "try-again",
-              label: `Try ${input.providerName} again`,
-              variant: input.move ? "secondary" : "primary",
-              ...(input.move ? {} : { default: true }),
-              effect: { kind: "host", op: "try-again", arg: input.accountId },
-            },
-          ]
-        : input.pause === "signed_out" && input.accountId
-          ? [
-              {
-                id: "sign-in",
-                label: "Sign in",
-                variant: input.move ? "secondary" : "primary",
-                ...(input.move ? {} : { default: true }),
-                effect: restoreAccountEffect(input.accountId),
-              },
-            ]
-          : [];
-    const actions: CardAction[] = input.move
-      ? [
-          {
-            id: "move-flagship",
-            label: moveLabel(input.move.providerName),
-            variant: "primary",
-            default: true,
-            effect: { kind: "host", op: "move-flagship", arg: input.move.providerId },
-          },
-          ...wayBack,
-        ]
-      : [
-          ...wayBack,
-          ...(wayBack.length === 0 || input.pause === "refused"
-            ? [
-                {
-                  id: "open-settings",
-                  label: "Open settings",
-                  variant: wayBack.length === 0 ? ("primary" as const) : ("secondary" as const),
-                  ...(wayBack.length === 0 ? { default: true } : {}),
-                  effect: { kind: "open" as const, target: "settings" as const },
-                },
-              ]
-            : []),
-        ];
-    this.putFirstmatePauseCard(id, input, actions);
-  }
-
-  /** Put a pause card under `id`, unless the one up already says the same. */
-  private putFirstmatePauseCard(
-    id: string,
-    input: FirstmatePauseCard,
-    actions: CardAction[],
-  ): void {
-    const previous = this.cards.get(id);
-    const title = firstmatePauseTitle(input.pause, input.providerName);
+    const next = firstmatePauseCard(id, input);
     if (
       previous &&
-      previous.title === title &&
-      previous.body === input.body &&
-      JSON.stringify(previous.actions) === JSON.stringify(actions)
+      previous.title === next.title &&
+      previous.body === next.body &&
+      JSON.stringify(previous.actions) === JSON.stringify(next.actions)
     ) {
       return;
     }
-    this.put({
-      id,
-      author: "host",
-      priority: HOST_CARD_PRIORITY,
-      title,
-      meta: FIRSTMATE_CARD_META,
-      body: input.body,
-      actions,
-      status: "ready",
-      createdAt: previous?.createdAt ?? this.host.now(),
-    });
+    this.put({ ...next, createdAt: previous?.createdAt ?? this.host.now() });
   }
 
   /**
@@ -3261,24 +1395,7 @@ export class CardService {
     body: string;
   }): void {
     if (this.cards.has(FIRSTMATE_MOVE_BACK_CARD_ID)) return;
-    this.put({
-      id: FIRSTMATE_MOVE_BACK_CARD_ID,
-      author: "host",
-      priority: HOST_CARD_PRIORITY,
-      title: `Move your first mate back to ${input.providerName}?`,
-      meta: FIRSTMATE_CARD_META,
-      body: input.body,
-      actions: [
-        {
-          id: "move-flagship",
-          label: `Move back to ${input.providerName}`,
-          variant: "primary",
-          effect: { kind: "host", op: "move-flagship", arg: input.providerId },
-        },
-      ],
-      status: "ready",
-      createdAt: this.host.now(),
-    });
+    this.put({ ...firstmateMoveBackCard(input), createdAt: this.host.now() });
   }
 
   /** The seat serves again, or moved: every pause card's question is gone. */
@@ -3305,47 +1422,7 @@ export class CardService {
     },
   ): void {
     if (this.cards.has(id)) return;
-    const restoreAccountId = options?.restoreAccountId;
-    const card: Card = {
-      id,
-      ...(options?.taskId ? { taskId: options.taskId } : {}),
-      author: "host",
-      priority: HOST_CARD_PRIORITY,
-      title: restoreAccountId ? body : PROVIDER_SIGN_IN_TITLE,
-      meta,
-      body: restoreAccountId ? NEEDS_REAUTH_CONSEQUENCE : body,
-      actions: [
-        ...(options?.move && !restoreAccountId
-          ? [
-              {
-                id: "move-task",
-                label: moveLabel(options.move.modelName),
-                variant: "primary" as const,
-                default: true,
-                effect: { kind: "host" as const, op: "move-task" as const, arg: options.move.arg },
-              },
-            ]
-          : []),
-        restoreAccountId
-          ? {
-              id: "sign-in",
-              label: "Sign in",
-              variant: "primary",
-              effect: restoreAccountEffect(restoreAccountId),
-            }
-          : {
-              id: "open-settings",
-              label: "Open settings",
-              variant: options?.move ? "secondary" : "primary",
-              // Sign-in lives on the Intelligence tab, so that is where the
-              // card lands - never the General tab one click short of it.
-              effect: { kind: "open", target: "subscriptions" },
-            },
-      ],
-      status: "ready",
-      createdAt: this.host.now(),
-    };
-    this.put(card);
+    this.put({ ...authDecisionCard(id, meta, body, options), createdAt: this.host.now() });
   }
 
   /**
@@ -3364,37 +1441,10 @@ export class CardService {
     options: { reauth?: boolean; cli?: boolean } = {},
   ): void {
     if (this.cards.has(id)) return;
-    const reauth = options.reauth ?? true;
-    // A sign-in through GitHub CLI is signed in again in GitHub CLI itself, never here.
-    const cli = reauth && options.cli === true;
-    const waiting =
-      waitingChanges === 0
-        ? ""
-        : waitingChanges === 1
-          ? " One pull request is waiting on it."
-          : ` ${waitingChanges} pull requests are waiting on it.`;
-    const card: Card = {
-      id,
-      author: "host",
-      priority: HOST_CARD_PRIORITY,
-      title: forgeSignInTitle(name, reauth),
-      meta: name,
-      body: reauth
-        ? `<p>${cli ? forgeCliRefusedText(name) : forgeRefusedText(name)}${waiting}</p><p>${LOCAL_PROJECTS_UNAFFECTED}</p>`
-        : `<p>A task for a project on ${name} is waiting for your sign-in.${waiting}</p><p>Once you sign in, your first mate will retry starting the task. ${LOCAL_PROJECTS_UNAFFECTED}</p>`,
-
-      actions: [
-        {
-          id: "sign-in",
-          label: cli ? INTEGRATIONS_WORDS.open : reauth ? "Sign in again" : `Sign in to ${name}`,
-          variant: "primary",
-          effect: { kind: "open", target: "projects", signIn: host },
-        },
-      ],
-      status: "ready",
+    this.put({
+      ...forgeSignInCard(id, host, name, waitingChanges, options),
       createdAt: this.host.now(),
-    };
-    this.put(card);
+    });
   }
 
   /**
@@ -3416,29 +1466,7 @@ export class CardService {
   }): void {
     const id = deviceForgeSignInCardId(input.host, input.deviceId);
     if (this.cards.has(id)) return;
-    const card: Card = {
-      id,
-      author: "host",
-      priority: HOST_CARD_PRIORITY,
-      title: deviceForgeSignInTitle(input.place.where, input.name),
-      meta: input.place.label,
-      body: deviceForgeSignInBody(input.project, input.place, input.name),
-      actions: [
-        {
-          id: "sign-in",
-          label: deviceForgeSignInTitle(input.place.where, input.name),
-          variant: "primary",
-          effect: {
-            kind: "open",
-            target: "projects",
-            forgeSignInOn: { deviceId: input.deviceId, host: input.host },
-          },
-        },
-      ],
-      status: "ready",
-      createdAt: this.host.now(),
-    };
-    this.put(card);
+    this.put({ ...deviceForgeSignInCard(id, input), createdAt: this.host.now() });
   }
 
   /**
@@ -3463,14 +1491,7 @@ export class CardService {
     options: { note?: boolean } = {},
   ): void {
     const previous = this.cards.get(card.id);
-    const raised: Card = {
-      ...card,
-      author: "host",
-      priority: options.note ? HOST_NOTE_PRIORITY : HOST_CARD_PRIORITY,
-      status: "ready",
-      createdAt: previous?.createdAt ?? this.host.now(),
-    };
-    this.put(raised);
+    this.put({ ...hostCard(card, options), createdAt: previous?.createdAt ?? this.host.now() });
   }
 
   /** Takes a host card down without an answer: the question it asked is gone. */
@@ -3498,20 +1519,14 @@ export class CardService {
           taskId,
           action,
           this.host.now(),
-          this.requiredActionProvenance(),
+          requiredActionProvenance(this.host.tasks),
         );
-        const { card, offer, opened } = this.stamp({
+        const stamped = this.evidence.stamp({
           ...next,
           width: decidedCardWidth({ body: next.body }),
         });
-        if (opened?.lifecycle === "reopened") this.host.cardStore.reopen(card.id);
-        this.host.cardStore.upsert(card);
-        if (offer) this.noteOffer(card, "put", "host");
-        this.noteStage({ head: card, shown: card }, "put", {
-          source: "host",
-          ...(opened ? { opened } : {}),
-        });
-        return card;
+        this.evidence.write(stamped, { basis: "put", source: "host", cause: "put" });
+        return stamped.card;
       },
       (card) => {
         this.cards.set(card.id, card);
@@ -3567,8 +1582,8 @@ export class CardService {
    * its id. A card raised again under an id it once had reopens its row, so
    * the stack and the row agree and it survives a restart like any other.
    */
-  put(next: Card): void {
-    const { card, offer, opened } = this.stamp({
+  put(next: Card, options: { revise?: boolean } = {}): void {
+    const stamped = this.evidence.stamp({
       ...next,
       width: decidedCardWidth({
         body: next.body,
@@ -3576,13 +1591,13 @@ export class CardService {
         width: next.width === "regular" ? undefined : next.width,
       }),
     });
+    const card = stamped.card;
     this.host.cardStore.transaction(() => {
-      if (opened?.lifecycle === "reopened") this.host.cardStore.reopen(card.id);
-      this.host.cardStore.upsert(card);
-      if (offer) this.noteOffer(card, "put", "host");
-      this.noteStage({ head: card, shown: card }, "put", {
+      this.evidence.write(stamped, {
+        ...(options.revise ? { revise: true } : {}),
+        basis: "put",
         source: "host",
-        ...(opened ? { opened } : {}),
+        cause: "put",
       });
     });
     this.cards.set(card.id, card);
@@ -3600,13 +1615,11 @@ export class CardService {
   reviseBody(id: string, body: string): void {
     const existing = this.cards.get(id);
     if (!existing || existing.body === body) return;
-    const { card, offer } = this.stamp({ ...existing, body });
+    const stamped = this.evidence.stamp({ ...existing, body });
     this.host.cardStore.transaction(() => {
-      this.host.cardStore.revise(card);
-      if (offer) this.noteOffer(card, "put", "host");
-      this.noteStage({ head: card, shown: card }, "put", { source: "host" });
+      this.evidence.write(stamped, { revise: true, basis: "put", source: "host", cause: "put" });
     });
-    this.cards.set(id, card);
+    this.cards.set(id, stamped.card);
     this.staged.delete(id);
     this.scheduleBroadcast();
   }
@@ -3661,7 +1674,7 @@ export class CardService {
     if (!card) return;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(id, resolution);
-      this.noteExit(card, "host", "host", { reason: "host-withdrawal", note: resolution });
+      this.evidence.noteExit(card, "host", "host", { reason: "host-withdrawal", note: resolution });
     });
     this.cards.delete(id);
     this.staged.delete(id);
@@ -3777,7 +1790,7 @@ export class CardService {
       }
       this.host.cardStore.transaction(() => {
         this.host.cardStore.resolve(cardId, reason);
-        this.noteExit(card, "host", "host", { reason: "task-retired", note: reason });
+        this.evidence.noteExit(card, "host", "host", { reason: "task-retired", note: reason });
       });
       this.cards.delete(cardId);
       this.staged.delete(cardId);
@@ -3791,24 +1804,12 @@ export class CardService {
    * escalation may re-raise over a dismissed one.
    */
   addFirstmateQuietCard(body: string): void {
-    const id = "card-fm-quiet";
-    const card: Card = {
-      id,
-      author: "host",
-      priority: HOST_NOTE_PRIORITY,
-      title: "Your first mate has gone quiet",
-      meta: FIRSTMATE_CARD_META,
-      body,
-      actions: [],
-      status: "ready",
-      createdAt: this.host.now(),
-    };
-    this.put(card);
+    this.put({ ...firstmateQuietCard(body), createdAt: this.host.now() });
   }
 
   /** Activity resumed or the turn ended: the quiet question answered itself. */
   clearFirstmateQuietCard(): void {
-    this.takeDown("card-fm-quiet", "activity-resumed");
+    this.takeDown(FIRSTMATE_QUIET_CARD_ID, "activity-resumed");
   }
 
   /**
@@ -3819,95 +1820,27 @@ export class CardService {
    * than stacking copies.
    */
   addFirstmateFailureCard(body: string): void {
-    const id = FIRSTMATE_FAILURE_CARD_ID;
-    const existing = this.cards.get(id);
-    const card: Card = {
-      id,
-      author: "host",
-      priority: HOST_CARD_PRIORITY,
-      title: FIRSTMATE_FAILURE_TITLE,
-      meta: FIRSTMATE_CARD_META,
-      body,
-      actions: [
-        {
-          id: "retry-firstmate",
-          label: "Retry",
-          variant: "primary",
-          default: true,
-          effect: { kind: "host", op: "retry-firstmate" },
-        },
-      ],
-      status: "ready",
-      createdAt: existing?.createdAt ?? this.host.now(),
-    };
-    const {
-      card: stamped,
-      offer,
-      opened,
-    } = this.stamp({
-      ...card,
-      width: decidedCardWidth({ body: card.body, pictures: card.pictures }),
-    });
-    this.host.cardStore.transaction(() => {
-      if (existing) this.host.cardStore.revise(stamped);
-      else {
-        if (opened?.lifecycle === "reopened") this.host.cardStore.reopen(id);
-        this.host.cardStore.upsert(stamped);
-      }
-      if (offer) this.noteOffer(stamped, "put", "host");
-      this.noteStage({ head: stamped, shown: stamped }, "put", {
-        source: "host",
-        ...(opened ? { opened } : {}),
-      });
-    });
-    this.cards.set(id, stamped);
-    this.placed(stamped);
-    this.scheduleBroadcast();
+    const existing = this.cards.get(FIRSTMATE_FAILURE_CARD_ID);
+    this.put(
+      { ...firstmateFailureCard(body), createdAt: existing?.createdAt ?? this.host.now() },
+      { revise: existing !== undefined },
+    );
   }
 
   /** An app-raised note card (for example the mic permission primer). */
   addSystemNoteCard(id: string, title: string, body: string): void {
     if (this.cards.has(id)) return;
-    const card: Card = {
-      id,
-      author: "host",
-      priority: HOST_NOTE_PRIORITY,
-      title,
-      meta: FIRSTMATE_CARD_META,
-      body,
-      actions: [],
-      status: "ready",
-      createdAt: this.host.now(),
-    };
-    this.put(card);
+    this.put({ ...systemNoteCard(id, title, body), createdAt: this.host.now() });
   }
 
-  /**
-   * Every card whose thread has moved since `since`, newest first, with its
-   * message count, newest message and who owes an answer now: what the
-   * Firstmate's context-block section is rendered from (phase 1, captain's
-   * C9 A). A card whose row is gone is skipped rather than named as an id
-   * nobody can look up.
-   */
-  threadActivitySince(since: number, limit = 8): ThreadActivity[] {
-    return this.host.cardStore.threadSummaries(since, limit).flatMap((summary) => {
-      const open = this.cards.get(summary.cardId);
-      const card = open ?? this.host.cardStore.get(summary.cardId);
-      if (!card) return [];
-      return [{ card, count: summary.count, last: summary.last, owed: this.threadOwed(open) }];
-    });
+  /** Every card whose thread moved since `since`, newest first (`CardThreads`). */
+  threadActivitySince(since: number, limit?: number): ThreadActivity[] {
+    return this.threads.threadActivitySince(since, limit);
   }
 
-  /** Who owes an answer on a card now: `closed` once it is off the stack. */
+  /** Who owes an answer on a card now (`CardThreads`). */
   owed(cardId: string): ThreadOwed {
-    return this.threadOwed(this.cards.get(cardId));
-  }
-
-  /** The current lifecycle's answer hold, the witness the sort and idle ladder read (`ThreadOwed`). */
-  private threadOwed(open: Card | undefined): ThreadOwed {
-    if (!open) return "closed";
-    if (!this.host.cardStore.awaitingAuthor(open.id)) return "none";
-    return this.firstmateAnswers(open) ? "firstmate" : "author";
+    return this.threads.owed(cardId);
   }
 
   /**
@@ -3974,9 +1907,8 @@ export class CardService {
   }
 }
 
-/** The author of a card as the actor its own writes are stamped with. */
 /** A task's origin line as the card carries it (`cardAskedSchema`). */
-export function cardAskedOf(line: TaskOriginLine | undefined): CardAsked | undefined {
+function cardAskedOf(line: TaskOriginLine | undefined): CardAsked | undefined {
   if (!line) return undefined;
   if (line.kind === "from") return { at: line.at, text: line.title, kind: "from", key: line.key };
   const through = line.through > 0 ? { through: line.through } : {};
@@ -3990,262 +1922,4 @@ export function cardAskedOf(line: TaskOriginLine | undefined): CardAsked | undef
     case "automation":
       return { at: line.at, text: line.name, kind: "automation", ...through };
   }
-}
-
-function authorActor(card: Pick<Card, "author">): CardObservationActor {
-  return card.author;
-}
-
-/**
- * What an offer shows, fingerprinted: the words, the body with every fact
- * the host appended, the actions in footer order, the pictures, the width,
- * the live attachment, where its task runs and its risk. Status, stage and
- * position are not what a card offers. A card with no attachment, no place
- * and no risk fingerprints as it always did.
- */
-function offerFingerprint(card: Card): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify([
-        card.author,
-        card.title,
-        card.meta,
-        card.model ?? null,
-        card.body,
-        card.actions,
-        card.pictures ?? [],
-        card.width ?? null,
-        ...(card.attachment ? [card.attachment] : []),
-        ...(card.place ? [{ place: card.place }] : []),
-        ...(card.risk ? [{ risk: card.risk }] : []),
-        ...(card.requiredActions !== undefined ? [{ requiredActions: card.requiredActions }] : []),
-        ...(card.asking ? [{ asking: true }] : []),
-        ...(card.designOnly ? [{ designOnly: true }] : []),
-        ...(card.continues ? [{ continues: true }] : []),
-        ...(card.answering ? [{ answering: true }] : []),
-        ...(card.holdsPlace ? [{ holdsPlace: true }] : []),
-        ...(card.reviewTaskId ? [{ reviewTaskId: card.reviewTaskId }] : []),
-      ]),
-    )
-    .digest("hex");
-}
-
-/** The shell's submission metadata, read so that nothing it says can refuse a choice. */
-type SubmissionReading = {
-  submission?: CardSubmission;
-  /** Something arrived, and it could not be read. */
-  malformed: boolean;
-  questions?: CardQuestion[];
-  questionsGap?: "no-fresh-reading" | "too-large" | "invalid";
-};
-
-const submissionEnvelopeSchema = cardSubmissionSchema.extend({ questions: z.unknown().optional() });
-
-function readSubmission(raw: unknown): SubmissionReading {
-  if (raw === undefined) return { malformed: false };
-  const envelope = submissionEnvelopeSchema.safeParse(raw);
-  if (!envelope.success) return { malformed: true };
-  const { questions: rawQuestions, ...rest } = envelope.data;
-  const submission: CardSubmission = rest;
-  if (rawQuestions === undefined) {
-    return {
-      submission,
-      malformed: false,
-      ...(rest.questionsGap ? { questionsGap: rest.questionsGap } : {}),
-    };
-  }
-  const questions = cardQuestionsSchema.safeParse(rawQuestions);
-  if (!questions.success) return { submission, malformed: false, questionsGap: "invalid" };
-  if (cardQuestionsBytes(questions.data) > CARD_QUESTIONS_MAX_BYTES) {
-    return { submission, malformed: false, questionsGap: "too-large" };
-  }
-  return { submission, malformed: false, questions: questions.data };
-}
-
-/**
- * Whether the offer the shell said it showed is the one the core
- * dispatched. A mismatch is kept as a mismatch, never repaired with the
- * newest head.
- */
-function displayOf(read: SubmissionReading, dispatched: Card): CardDisplay {
-  if (read.malformed) return { fidelity: "unavailable" };
-  const submission = read.submission;
-  if (!submission) return { fidelity: "legacy-missing" };
-  const reported = {
-    ...(submission.offerId ? { reportedOfferId: submission.offerId } : {}),
-    ...(submission.lifecycleId ? { reportedLifecycleId: submission.lifecycleId } : {}),
-  };
-  if (!submission.offerId || !dispatched.offerId) return { fidelity: "unavailable", ...reported };
-  return {
-    fidelity: submission.offerId === dispatched.offerId ? "matched" : "mismatched",
-    ...reported,
-  };
-}
-
-/**
- * Who put a task's card on the stack, read off its id: the Firstmate mints
- * `card-fm-…`, a crewmate `card-<taskId>-…`; anything else (the auth cards)
- * is the host's own.
- */
-export function cardEmitter(cardId: string, taskId: string): "firstmate" | "crewmate" | "host" {
-  if (cardId.startsWith(FIRSTMATE_CARD_PREFIX)) return "firstmate";
-  if (cardId.startsWith(`card-${taskId}-`)) return "crewmate";
-  return "host";
-}
-
-/**
- * Uniform chrome for agent-emitted cards (crewmate and firstmate alike). A
- * card carries exactly the actions its author declared (cards/tasks/agents
- * P0, WI-1): the host prepends, appends, and arranges nothing - an agent
- * that wants "ask me tomorrow" declares that as an ordinary action.
- */
-function buildEmittedCard(
-  id: string,
-  input: EmittedCardInput,
-  context: {
-    taskId?: string;
-    author: "crewmate" | "firstmate";
-    meta: string;
-    model?: string;
-    place?: string;
-  },
-  createdAt: number,
-): Card {
-  // The emitter's own default is the primary button (WI-10) - never an
-  // accident of which option it listed last.
-  // The footer reads the same on every card (design skill ResponseCard):
-  // the other choices, then the default last. Notes with no declared
-  // actions have no footer; close lives in the card chrome.
-  const rank = (action: EmittedCardInput["actions"][number]) => (action.default ? 1 : 0);
-  const declared: Card["actions"] = [...input.actions]
-    .sort((a, b) => rank(a) - rank(b))
-    .map((action) => {
-      // A destructive choice reads as one: declared danger, or a discard
-      // (which is always destructive). Danger outranks the default's primary.
-      const danger = action.danger === true || settleEffectOf(action)?.mode === "discard";
-      return {
-        id: action.id,
-        label: action.label,
-        variant: danger
-          ? ("danger" as const)
-          : action.default
-            ? ("primary" as const)
-            : ("secondary" as const),
-        ...(action.default ? { default: true } : {}),
-        ...(action.effect ? { effect: action.effect } : {}),
-        ...(danger ? { danger: true } : {}),
-        ...(action.care ? { care: action.care } : {}),
-      };
-    });
-  const width = decidedCardWidth(input);
-  return {
-    id,
-    ...(context.taskId ? { taskId: context.taskId } : {}),
-    author: context.author,
-    ...(input.reviewTaskId ? { reviewTaskId: input.reviewTaskId } : {}),
-    priority: cardPriority(input),
-    title: input.title,
-    meta: context.meta,
-    ...(context.model ? { model: context.model } : {}),
-    ...(context.place ? { place: context.place } : {}),
-    body: input.body,
-    actions: declared,
-    status: "ready",
-    createdAt,
-    ...(input.pictures?.length ? { pictures: input.pictures } : {}),
-    // Facts first, then the author's hint, which only widens (the
-    // captain's Q5 A); decided again on every revision, since a revised
-    // body can hold a different table or picture.
-    ...(width ? { width } : {}),
-    // The host resolved it from the author's label (docs/task-browser.md,
-    // "From a card"); a revision without one takes it away.
-    ...(input.attachment ? { attachment: input.attachment } : {}),
-    // The host keeps the author's declaration alone
-    // (docs/card-authoring.md "The risk chart"); a revision replaces it.
-    ...(input.risk ? { risk: input.risk } : {}),
-    ...(input.requiredActions !== undefined ? { requiredActions: input.requiredActions } : {}),
-    ...(input.asking ? { asking: true as const } : {}),
-    ...(input.designOnly ? { designOnly: true as const } : {}),
-    ...(input.continues ? { continues: true as const } : {}),
-    ...(input.answering ? { answering: true as const } : {}),
-    ...(input.holdsPlace ? { holdsPlace: true as const } : {}),
-  };
-}
-
-/**
- * A crewmate card's id on its task. Idempotent, like resolveFirstmateCardId:
- * emit_card hands the model back the resolved id, so a crewmate revising its
- * own card resends that id. Prefixing it again would mint a duplicate instead.
- */
-/** What a receipt adds when another card's thread still waits on its author. */
-function stillWaitingWords(cards: readonly { id: string; title: string }[]): string {
-  return `The captain's reply under ${waitingCardWords(cards)} still waits on your answer: answer it there with reply, or in that card's emit_card revision, naming their message in answers_message.`;
-}
-
-/** Whether a card is the caller's own: the first mate's, or its crewmate's on its task. */
-function ownedBy(card: Card, caller: CardCaller): boolean {
-  return caller.actor === "firstmate"
-    ? card.author === "firstmate"
-    : card.author === "crewmate" && card.taskId === caller.taskId;
-}
-
-/** Whether the caller is the one the card's thread routes the captain's replies to. */
-function answersFor(
-  card: Card,
-  caller: CardCaller,
-  firstmateAnswers: (card: Card) => boolean,
-): boolean {
-  // A crewmate answers every card on its own task, as it always has
-  // (INF-1273: a first mate card its task's crewmate is asked to answer).
-  return caller.actor === "firstmate" ? firstmateAnswers(card) : card.taskId === caller.taskId;
-}
-
-/** A writer's key in `contributedUntilCloseOut`, matched by `closeOut`. */
-function authorKey(author: CardCaller | CardAuthorRef | CardContributor): string {
-  const kind = "actor" in author ? author.actor : author.kind;
-  return kind === "firstmate" ? "firstmate" : `crewmate:${(author as { taskId: string }).taskId}`;
-}
-
-/**
- * One card as a writer reads it before editing or answering
- * (`CardService.cardRead`): JSON for the `tasks` read's card field.
- */
-export type CardRead = {
-  id: string;
-  title: string;
-  author: Card["author"];
-  task?: string;
-  open: boolean;
-  lifecycle?: string;
-  revision?: string;
-  waitingOn?: { messageId: number; text: string };
-  choices: { id: string; label: string; effect?: string }[];
-  body: string;
-  thread: {
-    id: number;
-    who: CardMessageWho;
-    at: number;
-    text: string;
-    by?: string;
-    answers?: number;
-    clarification?: boolean;
-  }[];
-  requiredAction?: {
-    task?: string;
-    generation: number;
-    state: string;
-    requirements: {
-      source: string;
-      action: string;
-      title: string;
-      consequence: string;
-      instructions: string[];
-      criterion: string;
-      corrections: { by: string; at: number; reason: string; generation: number }[];
-    }[];
-  };
-};
-
-function crewmateCardId(taskId: string, stableId: string): string {
-  return stableId.startsWith(`card-${taskId}-`) ? stableId : `card-${taskId}-${stableId}`;
 }

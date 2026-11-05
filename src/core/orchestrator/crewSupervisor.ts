@@ -409,18 +409,12 @@ import {
 import { CREWMATE_ANSWER_ASK } from "./answerDelivery";
 import { type AskEnding, askEndingOf } from "./askEnding";
 import { revisionNotice } from "./cardChanges";
+import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
+import type { CardInteractionEvidence } from "./cardEvidence";
 import { cardMutationText } from "./cardMutationText";
-import {
-  type CardCaller,
-  type CardInteractionEvidence,
-  CardService,
-  cardEmitter,
-  FIRSTMATE_CARD_PREFIX,
-  type FirstmatePauseCard,
-  type ThreadActivity,
-  type ThreadOwed,
-} from "./cardService";
+import { CardService } from "./cardService";
 import { escapeCardText } from "./cardText";
+import type { CardCaller, ThreadActivity, ThreadOwed } from "./cardThreads";
 import type { PrCiOverall } from "./changeChecks";
 import type { MergeGuard, PrOutcome } from "./changeMerge";
 import { declareRunCheck } from "./checkRepair";
@@ -439,6 +433,7 @@ import {
 } from "./crewSession";
 import type { WriteAskSent } from "./githubGateway";
 import { premiumRetryPossible } from "./holds";
+import type { FirstmatePauseCard } from "./hostCards";
 import {
   type AccountServeability,
   IdleLadder,
@@ -1746,7 +1741,6 @@ export class CrewSupervisor {
       tasks: options.tasks,
       cardStore: options.cardStore,
       syncCaptainGate: (taskId, at) => this.ladder.syncCaptainGate(taskId, at),
-      noteCapAnswered: () => {},
       closeAnsweredTask: (card, action, by) =>
         this.settling.declared.closeAnsweredTask(card, action, by),
       settleFacts: (taskId) => this.settleFacts(taskId),

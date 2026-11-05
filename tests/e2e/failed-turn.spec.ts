@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { FIRSTMATE_FAILURE_TITLE } from "../../src/core/orchestrator/cardService";
+import { FIRSTMATE_FAILURE_TITLE } from "../../src/core/orchestrator/hostCards";
 import { type LaunchedApp, launchApp } from "./launch";
 import { FAIL_AUTH_PROMPT_MARKER, FAIL_PROVIDER_PROMPT_MARKER } from "./mockProvider";
 

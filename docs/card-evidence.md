@@ -20,7 +20,7 @@ The evidence table below is what keeps those apart.
 ## The one table
 
 `card_observations` (migration 57) is append-only and card-owned.
-Its one writer is `CardStore.observe`, called only by `CardService` inside the same SQLite transaction as the card or thread write it describes, so a failed write leaves neither the row nor its evidence, and the in-memory stack moves only after the commit.
+Its one writer is `CardStore.observe`, called only by the card stack's evidence owner `CardEvidence` (`src/core/orchestrator/cardEvidence.ts`) inside the same SQLite transaction as the card or thread write it describes, so a failed write leaves neither the row nor its evidence, and the in-memory stack moves only after the commit.
 Every payload is checked against its kind's schema in `src/shared/cards.ts` (`cardObservationPayloadSchemas`) before it is written.
 
 Each row carries the card id, its lifecycle id, the task id if any, the kind, the actor (`captain`, `firstmate`, `crewmate`, `host`, `frame`), the source (`chrome`, `frame`, `close-control`, `thread`, `tool`, `host`, `restore`, `stage`), the offer it is about, the capture version (`CARD_CAPTURE_VERSION`, 1), the app build, and the payload.
@@ -40,7 +40,7 @@ The seven kinds:
 
 ### Lifecycles and offers
 
-`CardService.stamp` gives a card a `lifecycleId` when it is not on the stack, and a new `offerId` when its content fingerprint (sha256 over author, title, meta, model, body, actions, pictures, width, and the live attachment, where its task runs, and a declared asking, design-only or continues fact when it has them) changes.
+`CardEvidence.stamp` gives a card a `lifecycleId` when it is not on the stack, and a new `offerId` when its content fingerprint (sha256 over author, title, meta, model, body, actions, pictures, width, and the live attachment, where its task runs, and a declared asking, design-only or continues fact when it has them) changes.
 A card id reused after it left starts a new lifecycle that names its predecessor, so a reopen never rewrites an earlier episode.
 The two ids ride the card snapshot to the shell and are persisted on the row (`cards.lifecycle_id`, `cards.offer_id`), so a restart resumes the same lifecycle.
 
@@ -174,12 +174,12 @@ Never drop the table or rewrite its rows to recover from a capture problem.
 
 ## Tests
 
-- `src/core/orchestrator/cardService.test.ts` "CardService evidence" - stale offer, fidelity, retransmit, reopen and restart past 500 task events, exits, offer minting, host reopen, thread refs, a failed write rolled back, legacy seed, purge.
+- `src/core/orchestrator/cardEvidence.test.ts` "CardService evidence" - stale offer, fidelity, retransmit, reopen and restart past 500 task events, exits, offer minting, host reopen, thread refs, a failed write rolled back, legacy seed, purge.
 - `src/core/storage/cardStore.test.ts`, `src/core/storage/cardColumnMigrations.test.ts` - the purge and the schema refusal; migration 57's reversal under each older card column.
 - `src/core/orchestrator/crewSupervisor.test.ts` - the frozen task slice and a frame action.
 - `src/renderer/src/app/cardActions.test.ts`, `src/renderer/src/plugins/frames/frameController.test.ts`, `src/shared/ipc.test.ts` - the gesture, the mounted offer and the definitions on the wire.
 - `tests/export-human-supervision.test.ts` - episodes, legacy strata, pictures and checksums, determinism, redaction, refusal, exclusions, and the CLI gate; `tests/export-corpus.test.ts` holds the default export's five files.
-- `cardService.test.ts` "what changed since the captain looked" and `tests/e2e/card-changes.spec.ts` - the `seen` kind: once per offer, stale looks ignored, and the revised line and bars it drives.
+- `cardEvidence.test.ts` "what changed since the captain looked" and `tests/e2e/card-changes.spec.ts` - the `seen` kind: once per offer, stale looks ignored, and the revised line and bars it drives.
 - `tests/e2e/card-evidence.spec.ts` - the stale-offer journey through the app and the real export command, every question shape the bridge defines, and no draft kept on a close or a quit.
 
 Author-directed replies also commit their bounded named answers in the existing `message_ref` observation.

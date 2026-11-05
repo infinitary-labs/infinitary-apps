@@ -13,7 +13,7 @@ import type { FirstmateAsk, TaskDelivery, TaskGate, TaskRecord } from "../storag
 import { type DependencyWait, standingDependencyWaits } from "../tasks/dependencyWaits";
 import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
-import { cardEmitter } from "./cardService";
+import { cardEmitter } from "./cardEmit";
 import { escapeCardText } from "./cardText";
 import { crewHoldWays, idleStallWays } from "./holds";
 import { type IdleRule, type IdleTurn, idleTurn, type Witnesses } from "./reportSort";

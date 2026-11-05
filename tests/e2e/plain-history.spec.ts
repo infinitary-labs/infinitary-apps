@@ -50,7 +50,6 @@ test("plain history and deeper exact sources", async ({}, testInfo) => {
     cardStore,
     now,
     syncCaptainGate: () => {},
-    noteCapAnswered: () => {},
     closeAnsweredTask: () => false,
     settleFacts: () => undefined,
     followupNotice: () => undefined,

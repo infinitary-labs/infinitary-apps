@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { reportSummary } from "@shared/feed";
-import { moveLabel, PROVIDER_SIGN_IN_TITLE } from "../../src/core/orchestrator/cardService";
+import { moveLabel, PROVIDER_SIGN_IN_TITLE } from "../../src/core/orchestrator/hostCards";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { modelNames } from "../../src/shared/modelDisplayName";
 import { catalogEntry } from "../../src/shared/providers";

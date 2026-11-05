@@ -5,10 +5,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { COMPUTER } from "@shared/deviceNames";
 import { INTEGRATION_NOTICES } from "@shared/integrations";
 import electronPath from "electron";
-import {
-  HOST_CARD_PRIORITY,
-  PROVIDER_SIGN_IN_TITLE,
-} from "../../src/core/orchestrator/cardService";
+import { HOST_CARD_PRIORITY, PROVIDER_SIGN_IN_TITLE } from "../../src/core/orchestrator/hostCards";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { RUN_WORDS } from "../../src/main/runCommand";

@@ -82,7 +82,6 @@ function buildUserData(dir: string): { first: Card; revisedTitle: string } {
     tasks,
     cardStore,
     syncCaptainGate: () => {},
-    noteCapAnswered: () => {},
     closeAnsweredTask: () => false,
     settleFacts: () => undefined,
     followupNotice: () => undefined,

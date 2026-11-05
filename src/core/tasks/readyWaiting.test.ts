@@ -57,7 +57,6 @@ function setup(delta = false) {
       tasks,
       cardStore,
       syncCaptainGate: () => {},
-      noteCapAnswered: () => {},
       closeAnsweredTask: () => false,
       settleFacts: () => undefined,
       followupNotice: () => undefined,

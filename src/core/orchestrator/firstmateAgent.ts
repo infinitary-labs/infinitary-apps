@@ -145,15 +145,10 @@ import {
 import { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { withAskAttribution } from "./askAttribution";
 import { AskCapture, type TurnOrigin } from "./askCapture";
+import { cardEmitter } from "./cardEmit";
 import { cardMutationText } from "./cardMutationText";
-import {
-  cardEmitter,
-  FIRSTMATE_FAILURE_CARD_ID,
-  FIRSTMATE_MOVE_BACK_CARD_ID,
-  type FirstmatePauseCard,
-  type ThreadOwed,
-} from "./cardService";
 import { escapeCardText } from "./cardText";
+import type { ThreadOwed } from "./cardThreads";
 import {
   ContextDelivery,
   type ContextSection,
@@ -163,6 +158,11 @@ import {
 import { type CrewSupervisor, QUIET_CARD_MS, QUIET_FEED_MS } from "./crewSupervisor";
 import { DecisionCapture, type ServedInput } from "./decisionCapture";
 import type { Flagship } from "./flagship";
+import {
+  FIRSTMATE_FAILURE_CARD_ID,
+  FIRSTMATE_MOVE_BACK_CARD_ID,
+  type FirstmatePauseCard,
+} from "./hostCards";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
 import { asksInTurn, IN_TURN, readOpenWork } from "./openWork";
 import { type ReplyFacts, replyLine, replyWords, startedReply } from "./replyLine";

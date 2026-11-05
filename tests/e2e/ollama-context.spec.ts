@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { FIRSTMATE_FAILURE_TITLE } from "../../src/core/orchestrator/cardService";
+import { FIRSTMATE_FAILURE_TITLE } from "../../src/core/orchestrator/hostCards";
 import {
   DEFAULT_LOCAL_ORCHESTRATOR_SETTING,
   localSeatDescription,

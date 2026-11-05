@@ -934,7 +934,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
   No new table, no setting and no previous-version switch; when a card reaches the stage, its checks, pictures and size limit are unchanged.
   `CardService.snapshot` works the comparison out once per shown version.
 
-Tests: `src/core/orchestrator/cardChanges.test.ts` (parts, matching, the rewrite threshold, pictures, facts, previews, a moving figure), `cardService.test.ts` "what changed since the captain looked" (accumulation, stale looks, a crewmate's close-out, restart and a card leaving), `src/renderer/src/cards/revisedLine.test.ts`, `prototypeSrcdoc.test.ts`, and the journeys `tests/e2e/card-changes.spec.ts` (a first mate card through a small revision, a reload, two revisions while the window is away, a rewrite, a preview and a figure that moves on a press, with the bars measured beside their parts and the text unmoved) and `tests/e2e/card-body-file.spec.ts` (a crewmate's file-backed revision marks its one new paragraph).
+Tests: `src/core/orchestrator/cardChanges.test.ts` (parts, matching, the rewrite threshold, pictures, facts, previews, a moving figure), `cardEvidence.test.ts` "what changed since the captain looked" (accumulation, stale looks, a crewmate's close-out, restart and a card leaving), `src/renderer/src/cards/revisedLine.test.ts`, `prototypeSrcdoc.test.ts`, and the journeys `tests/e2e/card-changes.spec.ts` (a first mate card through a small revision, a reload, two revisions while the window is away, a rewrite, a preview and a figure that moves on a press, with the bars measured beside their parts and the text unmoved) and `tests/e2e/card-body-file.spec.ts` (a crewmate's file-backed revision marks its one new paragraph).
 
 ## The You asked line
 

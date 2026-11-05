@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-service-split",
+      "reason": "Internal: the card stack and its tests split into files by owner (emitting, threads, evidence, the host's own cards and a settle card's facts), with an unused hook and dead helpers removed and the same test names; nothing a person sees changes."
+    }
+  ]
+}

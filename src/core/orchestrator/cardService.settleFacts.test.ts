@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "../../../tests/helpers/cardServiceHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
-import { cardEmitter } from "./cardService";
+import { cardEmitter } from "./cardEmit";
 
 /**
  * Guardrails for a merge card's facts (INF-2625's plan, cardService's row:

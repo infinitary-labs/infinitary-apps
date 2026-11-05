@@ -1,8 +1,8 @@
 import type { Card } from "@shared/cards";
 import { INTEGRATION_APPROVAL_WORDS, integrationApprovalTitle } from "@shared/integrations";
 import type { IntegrationAsk } from "@shared/writeAsk";
-import { HOST_CARD_PRIORITY } from "./cardService";
 import { escapeCardText } from "./cardText";
+import { HOST_CARD_PRIORITY } from "./hostCards";
 import { writeAskStrip } from "./requestStrips";
 
 /**

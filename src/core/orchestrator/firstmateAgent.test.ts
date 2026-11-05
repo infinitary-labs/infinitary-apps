@@ -105,7 +105,6 @@ import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
 import { ANSWER_ONLY_REFUSAL } from "./answerDelivery";
-import { RECHECK_ALLOWANCE_LABEL } from "./cardService";
 import { DELIVERY_CHANGES, DELIVERY_COMPLETE } from "./contextDelivery";
 import { CrewSupervisor } from "./crewSupervisor";
 import {
@@ -118,6 +117,7 @@ import {
 } from "./firstmateAgent";
 import { Flagship, type FlagshipOptions, type FlagshipVaultView } from "./flagship";
 import { idleStallWays } from "./holds";
+import { RECHECK_ALLOWANCE_LABEL } from "./hostCards";
 import { IN_TURN } from "./openWork";
 import { Scheduler } from "./scheduler";
 import { ALLOWANCE_CHECKING_WORDS, keptMessageWords } from "./seat";

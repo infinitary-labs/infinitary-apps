@@ -53,7 +53,6 @@ describe("the app's own cards about a task", () => {
       tasks,
       cardStore: new CardStore(db),
       syncCaptainGate: () => {},
-      noteCapAnswered: () => {},
       closeAnsweredTask: () => false,
       settleFacts: () => undefined,
       followupNotice: () => undefined,

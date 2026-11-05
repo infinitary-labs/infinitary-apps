@@ -61,7 +61,6 @@ function olderProfile() {
     cardStore,
     now,
     syncCaptainGate: () => {},
-    noteCapAnswered: () => {},
     closeAnsweredTask: () => false,
     settleFacts: () => undefined,
     followupNotice: () => undefined,
@@ -99,7 +98,7 @@ function olderProfile() {
   // Reconstruct an older saved lifecycle that reopened an answered question.
   // Current emits forbid this; only fixture construction uses the older rule,
   // keeping the real offer/choice writers and all historical assertions intact.
-  const olderWriter = cards as unknown as { refuseAnsweredRevision: () => void };
+  const olderWriter = (cards as unknown as { emits: { refuseAnsweredRevision: () => void } }).emits;
   const currentRule = olderWriter.refuseAnsweredRevision;
   olderWriter.refuseAnsweredRevision = () => {};
   try {

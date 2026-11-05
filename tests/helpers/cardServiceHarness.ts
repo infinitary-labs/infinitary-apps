@@ -42,7 +42,6 @@ export function setup(
       tasks,
       cardStore,
       syncCaptainGate: (taskId) => gates.push(taskId),
-      noteCapAnswered: () => {},
       closeAnsweredTask: () => false,
       captainResponded,
       settleFacts,

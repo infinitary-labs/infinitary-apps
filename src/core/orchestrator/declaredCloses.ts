@@ -4,7 +4,7 @@ import { isFolderWork } from "@shared/routingPolicy";
 import type { TaskRecord } from "../storage/taskStore";
 import { carriedOnClose, type SettleRefusal, TaskService } from "../tasks/taskService";
 import { taskResultResponse } from "./answerTaskResponse";
-import { cardEmitter } from "./cardService";
+import { cardEmitter } from "./cardEmit";
 import type { SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { describeStatus, type SettleService } from "./settleService";

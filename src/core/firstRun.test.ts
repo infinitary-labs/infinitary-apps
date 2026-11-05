@@ -27,7 +27,6 @@ function setup(initialOpen = true) {
       tasks,
       cardStore,
       syncCaptainGate: () => {},
-      noteCapAnswered: () => {},
       closeAnsweredTask: () => false,
       settleFacts: () => undefined,
       followupNotice: () => undefined,

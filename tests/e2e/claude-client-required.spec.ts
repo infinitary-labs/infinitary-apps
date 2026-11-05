@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import {
   FIRSTMATE_FAILURE_TITLE,
   firstmatePauseTitle,
-} from "../../src/core/orchestrator/cardService";
+} from "../../src/core/orchestrator/hostCards";
 import { CLAUDE_FIRST_RUN_TEXT } from "../../src/renderer/src/settings/subscriptionsWords";
 import {
   CLAUDE_CHIP_INSTALL_NOTE,

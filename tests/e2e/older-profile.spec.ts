@@ -415,7 +415,6 @@ function taskWriters(userDataDir: string, at = Date.now() - 60 * 60_000) {
     tasks,
     cardStore,
     syncCaptainGate: () => {},
-    noteCapAnswered: () => {},
     closeAnsweredTask: () => false,
     settleFacts: () => undefined,
     followupNotice: () => undefined,

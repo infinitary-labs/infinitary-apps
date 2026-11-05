@@ -29,7 +29,6 @@ function setup(seed: Partial<TaskSeed> = {}) {
     tasks,
     cardStore: new CardStore(db),
     syncCaptainGate: () => {},
-    noteCapAnswered: () => {},
     closeAnsweredTask: () => false,
     settleFacts: () => undefined,
     followupNotice: () => undefined,

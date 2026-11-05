@@ -1,6 +1,6 @@
 import type { Card } from "@shared/cards";
 import type { TaskRecord } from "../storage/taskStore";
-import { cardEmitter } from "./cardService";
+import { cardEmitter } from "./cardEmit";
 
 /** A terminal response to the task's own result, never an intermediate consent. */
 export function taskResultResponse(

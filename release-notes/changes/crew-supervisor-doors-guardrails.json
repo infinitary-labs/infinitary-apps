@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-doors-guardrails",
+      "reason": "Internal: new tests pin how the first mate's tools, the window's card channels and the host's own steers reach the card stack and settling before the crew supervisor's forwards are removed; nothing a person sees changes."
+    }
+  ]
+}

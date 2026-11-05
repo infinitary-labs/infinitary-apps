@@ -31,18 +31,34 @@ import { scratchDir } from "./scratchDirs";
  * A census reads what the tools say; nothing here runs one.
  */
 export async function firstmateTools(): Promise<BoundTool[]> {
+  return (await firstmateSeat()).tools;
+}
+
+/**
+ * The same live agent with the crew supervisor and stores it was built
+ * over, for a case that runs a tool and reads what it did to the record
+ * and the card stack. Nothing is bound to the workspace; a tool that
+ * reaches it fails.
+ */
+export async function firstmateSeat(): Promise<{
+  tools: BoundTool[];
+  supervisor: CrewSupervisor;
+  tasks: TaskService;
+  cardStore: CardStore;
+}> {
   const paths = appPathsFor(scratchDir("infinitary-firstmate-tools-"));
   const db = freshDatabase();
   const settings = new SettingsStore(db);
   const repos = new RepoRegistry(db, paths.fleetDir);
   const tasks = new TaskService({ db, strict: true });
+  const cardStore = new CardStore(db);
   const supervisor = new CrewSupervisor({
     sessions: { pi: fakeSessionFactory() },
     bind: async (accountId) => fakeBinding(accountId),
     workspace: {} as WorkspaceService,
     repos,
     tasks,
-    cardStore: new CardStore(db),
+    cardStore,
     inbox: new InboxStore(db),
     paths,
     broadcastEvent: () => {},
@@ -89,5 +105,5 @@ export async function firstmateTools(): Promise<BoundTool[]> {
   await agent.rebind("census");
   const served = seat.specs[0]?.tools;
   if (!served) throw new Error("the Firstmate never attached a session");
-  return [...served];
+  return { tools: [...served], supervisor, tasks, cardStore };
 }

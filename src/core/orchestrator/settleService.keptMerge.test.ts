@@ -17,7 +17,7 @@ import {
 } from "../../../tests/helpers/settleHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { MergeAuthorization } from "../storage/taskStore";
-import type { MergeGuard, MergeStop } from "./prCi";
+import type { MergeGuard, MergeStop } from "./changeMerge";
 import { MERGE_PENDING_TITLE, mergePendingCardId } from "./settleWords";
 
 const OTHER_HEAD = "b".repeat(40);

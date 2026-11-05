@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "settle-tests-import-change-merge",
+      "reason": "Internal: two settle test files import the merge types from their new home after the checks and merge service split, so the project's typecheck passes again; nothing a person sees changes."
+    }
+  ]
+}

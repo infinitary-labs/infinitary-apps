@@ -8,7 +8,7 @@
 import type { ForgePull } from "../../src/core/forge";
 import { askEndingOf } from "../../src/core/orchestrator/askEnding";
 import type { CardService } from "../../src/core/orchestrator/cardService";
-import type { MergeGuard, PrOutcome } from "../../src/core/orchestrator/prCi";
+import type { MergeGuard, PrOutcome } from "../../src/core/orchestrator/changeMerge";
 import { SettleService, type SettleServiceHost } from "../../src/core/orchestrator/settleService";
 import type { AppDatabase } from "../../src/core/storage/db";
 import { InboxStore } from "../../src/core/storage/inboxStore";

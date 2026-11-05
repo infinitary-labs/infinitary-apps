@@ -304,3 +304,159 @@ describe("CrewOrbit", () => {
     expect(m.update(32).crew.map((c) => c.id)).toContain("c");
   });
 });
+
+/**
+ * Guardrails for INF-2625's renderer piece, which moves the companions and
+ * the constellations out of orbit.ts: the branches the crew's tests did not
+ * reach before the move, each held by what the stage draws.
+ */
+describe("CrewOrbit's waits, reviews and constellations", () => {
+  const satellite = (waiterId: string, blockerId: string) => ({
+    waiterId,
+    mode: "satellite" as const,
+    blockerId,
+    index: 0,
+    count: 1,
+    arrows: [blockerId],
+  });
+  /** The crew on their orbital planes, where waits circle and constellations draw. */
+  const planes = () => new CrewOrbit(0, { ...DEFAULT_ORBIT }, seeded(), "adaptive");
+  const at = (frame: OrbitFrame, id: string) => {
+    const c = frame.crew.find((mate) => mate.id === id);
+    return { x: c?.x ?? Number.NaN, y: c?.y ?? Number.NaN };
+  };
+
+  it("keeps a builder's arrow to its other blocker when it also waits on its own reviewer", () => {
+    const m = planes();
+    for (const id of ["builder", "reviewer", "other"]) m.spawn(id, "idle", 0, true);
+    m.setReview("reviewer", "builder");
+    m.setDependencies([
+      {
+        waiterId: "builder",
+        mode: "tether",
+        blockerId: "other",
+        index: 0,
+        count: 1,
+        arrows: ["reviewer", "other"],
+      },
+    ]);
+    expect(m.update(16, true).links).toEqual(
+      expect.arrayContaining([
+        { fromId: "builder", toId: "other", kind: "wait" },
+        { fromId: "reviewer", toId: "builder", kind: "review" },
+      ]),
+    );
+    expect(m.update(32, true).links).not.toContainEqual(
+      expect.objectContaining({ fromId: "builder", toId: "reviewer" }),
+    );
+  });
+
+  it("repaints nothing for the same waits again", () => {
+    const m = planes();
+    for (const id of ["waiter", "blocker"]) m.spawn(id, "idle", 0, true);
+    m.setDependencies([satellite("waiter", "blocker")]);
+    const version = m.version;
+    m.setDependencies([satellite("waiter", "blocker")]);
+    expect(m.version).toBe(version);
+    m.setDependencies([{ ...satellite("waiter", "blocker"), arrows: [] }]);
+    expect(m.version).toBe(version + 1);
+  });
+
+  it("keeps a waiter on its slot, with its arrow, while its blocker leaves", () => {
+    const plain = planes();
+    const m = planes();
+    for (const model of [plain, m]) {
+      for (const id of ["waiter", "blocker"]) model.spawn(id, "working", 0, true);
+      model.update(16, true);
+      model.leave("blocker", "away", 32);
+    }
+    m.setDependencies([satellite("waiter", "blocker")]);
+    const frame = m.update(48);
+    expect(frame.crew.find((c) => c.id === "blocker")?.phase).toBe("leaving");
+    expect(at(frame, "waiter")).toEqual(at(plain.update(48), "waiter"));
+    expect(frame.links).toContainEqual({ fromId: "waiter", toId: "blocker", kind: "wait" });
+  });
+
+  it("keeps a reviewer that waits itself on its own slot rather than circling its builder", () => {
+    const plain = planes();
+    const m = planes();
+    const wait = {
+      waiterId: "reviewer",
+      mode: "tether" as const,
+      blockerId: "other",
+      index: 0,
+      count: 1,
+      arrows: ["other"],
+    };
+    for (const model of [plain, m]) {
+      for (const id of ["builder", "reviewer", "other"]) model.spawn(id, "idle", 0, true);
+      model.setDependencies([wait]);
+    }
+    m.setReview("reviewer", "builder");
+    const frame = m.update(16, true);
+    expect(at(frame, "reviewer")).toEqual(at(plain.update(16, true), "reviewer"));
+    expect(frame.links).toContainEqual({ fromId: "reviewer", toId: "other", kind: "wait" });
+  });
+
+  it("points a waiter at a part seated in a constellation, never circling it", () => {
+    const plain = planes();
+    const m = planes();
+    for (const model of [plain, m]) {
+      for (const id of ["waiter", "part-a"]) model.spawn(id, "working", 0, true);
+      model.setPrograms(
+        [{ id: "survey", state: "live", parts: [{ id: "part-a", parents: [], state: "live" }] }],
+        0,
+      );
+    }
+    m.setDependencies([satellite("waiter", "part-a")]);
+    const frame = m.update(16, true);
+    expect(at(frame, "waiter")).toEqual(at(plain.update(16, true), "waiter"));
+    expect(frame.links).toContainEqual({ fromId: "waiter", toId: "part-a", kind: "wait" });
+  });
+
+  it("carries a part's report up its branches to the mark, and the program's own report home", () => {
+    const m = planes();
+    for (const id of ["part-a", "part-b"]) m.spawn(id, "working", 0, true);
+    const parts = [
+      { id: "part-a", parents: [], state: "live" as const },
+      { id: "part-b", parents: ["part-a"], state: "live" as const },
+    ];
+    m.setPrograms([{ id: "survey", state: "live", parts }], 0);
+    m.update(400, true);
+
+    m.signal("part-b", "report", 400);
+    const climbing = m.update(400 + DEFAULT_ORBIT.packetMs * 0.3);
+    expect(climbing.packets).toHaveLength(1);
+    const branches = climbing.programs.find((p) => p.id === "survey")?.branches ?? [];
+    expect(branches.filter((b) => b.lit).length).toBeGreaterThan(0);
+    run(m, 400 + DEFAULT_ORBIT.packetMs * 0.3 + 16, 400 + DEFAULT_ORBIT.packetMs * 2);
+    expect(m.update(400 + DEFAULT_ORBIT.packetMs * 2 + 16).packets).toEqual([]);
+
+    m.takeCues();
+    m.signal("survey", "report", 5000);
+    expect(m.update(5000 + DEFAULT_ORBIT.packetMs * 0.3).packets).toHaveLength(1);
+    run(m, 5000 + DEFAULT_ORBIT.packetMs * 0.3 + 16, 5000 + DEFAULT_ORBIT.packetMs * 2);
+    expect(m.takeCues()).toContainEqual({ kind: "receive" });
+  });
+
+  it("sends a packet down from its parents to a part that starts later", () => {
+    const m = planes();
+    for (const id of ["part-a", "part-b"]) m.spawn(id, "working", 0, true);
+    const first = { id: "part-a", parents: [], state: "live" as const };
+    m.setPrograms([{ id: "survey", state: "live", parts: [first] }], 0);
+    m.update(200, true);
+    expect(m.update(216).packets).toEqual([]);
+
+    m.setPrograms(
+      [
+        {
+          id: "survey",
+          state: "live",
+          parts: [first, { id: "part-b", parents: ["part-a"], state: "live" }],
+        },
+      ],
+      232,
+    );
+    expect(m.update(232 + DEFAULT_ORBIT.packetMs * 0.3).packets).toHaveLength(1);
+  });
+});

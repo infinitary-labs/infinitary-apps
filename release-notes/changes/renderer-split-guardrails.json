@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "renderer-split-guardrails",
+      "reason": "Internal: tests that hold the window's store, home screen and crew orbit before those files are split; nothing a person sees changes."
+    }
+  ]
+}

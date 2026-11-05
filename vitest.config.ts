@@ -80,7 +80,10 @@ const isolatedUnit = [
   "src/main/voice/voiceProtocol.test.ts",
   "src/main/work.test.ts",
   "src/renderer/src/app/commandRefusals.test.ts",
+  "src/renderer/src/app/store.minimize.test.ts",
+  "src/renderer/src/app/store.reconnect.test.ts",
   "src/renderer/src/app/store.test.ts",
+  "src/renderer/src/app/store.voice.test.ts",
   "src/renderer/src/cards/cardTask.test.ts",
   "src/renderer/src/cards/taskLinks.test.ts",
   // Its useCrewBoard mock must reach CrewSummary, which other files load unmocked.

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "database-split-guardrails",
+      "reason": "Internal: tests pin the saved database's upgrade path and migration numbers before the database file is split; nothing a person sees changes."
+    }
+  ]
+}

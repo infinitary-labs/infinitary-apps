@@ -95,6 +95,32 @@ describe("which journeys a change affects", () => {
     ]).toEqual(["tests/e2e/installed-update-work.spec.ts"]);
   });
 
+  it("runs every journey built on the device fixtures for a change to the devices core, with no hook or word changed", () => {
+    // INF-2625's plan, the devices piece: devices.spec.ts splits into several
+    // journeys over tests/e2e/deviceFixtures.ts, and the fallback for
+    // src/core/devices/ has to name each of them, since a core edit there
+    // changes no hook or word a journey reads.
+    const readReal = (file: string) => {
+      try {
+        return readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+      } catch {
+        return undefined;
+      }
+    };
+    const exists = (file: string) => readReal(file) !== undefined;
+    const deviceJourneys = currentSpecs.filter((spec) =>
+      importsOf(spec, readReal(spec) ?? "", exists).includes("tests/e2e/deviceFixtures.ts"),
+    );
+    expect(deviceJourneys).not.toEqual([]);
+    // The core module whose cases the devices piece also splits; the
+    // fallback covers the folder, so one edit in it stands for any.
+    const changed = "src/core/devices/remoteLogin.ts";
+    const chosen = [
+      ...select({ changed: [changed], sourceDiff: "", specs: currentSpecs, read: readReal }).keys(),
+    ];
+    expect(chosen).toEqual(expect.arrayContaining(deviceJourneys));
+  });
+
   it("runs the spec a change edits, and nothing for a change no journey reaches", () => {
     expect(picked({ changed: ["tests/e2e/b.spec.ts"] })).toEqual(["tests/e2e/b.spec.ts"]);
     expect(picked({ changed: ["src/core/tasks/taskService.ts", "docs/testing.md"] })).toEqual([]);

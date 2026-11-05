@@ -94,9 +94,8 @@ export const SKIP_RULES_DESCRIPTION = [
  */
 export const PREPARE_CHANGE_STORY_DESCRIPTION = [
   "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one short sentence each, checked 1 to 6 observed {check, result} facts.",
-  "base, head and every captureHead are full 40-character commit ids from git rev-parse, never short; a later revision keeps the first base.",
-  "Before media name base as captureHead, and a view kept from an earlier revision keeps them; kind new has none.",
-  "After media name head or give applicability, kept as data, not displayed.",
+  "base, head and every captureHead are full 40-character commit ids from git rev-parse, never short; a later revision keeps the first base and each kept view's Before media.",
+  "Before media name base, After media head; media taken on another version name that version with applicability, kept as data, not displayed; kind new has no Before.",
   "layout adjacent needs exactly two media in each shown state.",
   "Everyone who can see the project reads the story, and anyone when it is public: write it for a stranger, naming the captain's setup only by its kind, with no computer, host, user or account names, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys or the captain's own words.",
   "publishable true is your declaration that you read the whole story once as that stranger and it holds nothing personal or local.",

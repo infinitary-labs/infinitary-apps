@@ -862,6 +862,7 @@ The card keeps its risk radar; the pull request gives one line naming dimensions
 Empty required-action and unfinished sections, a frozen checks status and story/version stamps are absent.
 Authors never put code versions, hashes or revision numbers in prose, captions, alt text, verification or project text, even folded; this is instruction only, with no prose refusal or redaction.
 Capture versions and applicability remain retained data, never rendered on new stories.
+Before media name the story's base and After media its head; a picture truly captured on another version keeps that version as its `captureHead` with an applicability declaration saying why it still shows that state, so an older Before picture keeps its true source while the base stays the original comparison, and nothing is relabelled (INF-2660).
 Version-1 saved stories keep their rendering; already published descriptions are not rewritten automatically.
 Changed views have Before and After media; new views have only After; an invisible change has no views and an explicit no-picture reason.
 Under Before and after, each changed view pairs its Before pictures with its After pictures, with one caption per view.

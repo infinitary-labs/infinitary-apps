@@ -1305,6 +1305,55 @@ describe("deliberate publication recovery", () => {
     expect(at.update).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps an older Before picture's own version beside the original base once it says why (INF-2660)", async () => {
+    const at = await arrange();
+    const root = { taskId: TASK, worktree: at.worktree, dir: at.media };
+    // The base is the story's comparison; the Before picture was taken on an earlier version.
+    const base = "d36b25daf7f2691e67da7734fd9d675ae25c877b";
+    const taken = "41163dc192c032c622880d19e1ecc3759cf276ad";
+    const because = "Taken before the base; the view it shows did not change before the base.";
+    const older = (applicability?: string): ChangePresentationDraft => ({
+      ...at.draft,
+      base,
+      views: at.draft.views.map((view) => ({
+        ...view,
+        before: view.before.map((media) => ({
+          ...media,
+          captureHead: taken,
+          ...(applicability ? { applicability } : {}),
+        })),
+      })),
+    });
+    await expect(stageChangePresentation(older(), root)).rejects.toThrow(
+      "Before evidence for completion needs the original base or an applicability declaration.",
+    );
+
+    const staged = await stageChangePresentation(older(because), root);
+    expect(await at.service.prepare(TASK, staged, at.forge)).toBe(1);
+    const saved = at.tasks.changePresentation(TASK)?.revisions.at(-1);
+    expect(saved?.base).toBe(base);
+    expect(saved?.views[0]?.before[0]).toMatchObject({
+      captureHead: taken,
+      applicability: because,
+    });
+    const published = await at.publish();
+    // Capture versions and applicability stay data; the description names neither.
+    expect(published.body).not.toContain(taken);
+    expect(published.body).not.toContain(because);
+
+    // A push republishes the story with the picture's version and reason as they were.
+    const pushed = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+    at.change = { ...published, headSha: pushed };
+    at.setHead(pushed);
+    expect(await at.service.atPushedVersion(TASK, 1, at.change, at.forge)).toBe(2);
+    const republished = at.tasks.changePresentation(TASK)?.revisions.at(-1);
+    expect(republished?.base).toBe(base);
+    expect(republished?.views[0]?.before[0]).toMatchObject({
+      captureHead: taken,
+      applicability: because,
+    });
+  });
+
   it("keeps only the newest and published revisions and removes only their superseded copies", async () => {
     const at = await arrange();
     await at.prepare();

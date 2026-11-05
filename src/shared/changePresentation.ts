@@ -22,7 +22,7 @@ export const presentationMediaSchema = z.strictObject({
   /** The author inspected the exact upload copy, including any conversion. */
   inspected: z.literal(true),
   captureHead: head,
-  /** Required when After media was captured on another code version. */
+  /** Required when media was captured off its state's version: Before's base, After's head. */
   applicability: words.optional(),
   /** A recording names its inspected still poster here; an image has none. */
   poster: z.string().min(1).max(4096).optional(),
@@ -286,9 +286,12 @@ function evidenceRelations(
       (view.after.length !== 2 || (view.kind === "changed" && view.before.length !== 2))
     )
       issue(`Adjacent view ${view.id} needs exactly two media in each shown state.`);
+    // INF-2660: an older Before keeps its own version; the base stays the comparison.
     for (const media of view.before) {
-      if (media.captureHead !== draft.base)
-        issue(`Before evidence for ${view.id} must name the original base.`);
+      if (media.captureHead !== draft.base && !media.applicability)
+        issue(
+          `Before evidence for ${view.id} needs the original base or an applicability declaration.`,
+        );
     }
     for (const media of view.after) {
       if (media.captureHead !== draft.head && !media.applicability)

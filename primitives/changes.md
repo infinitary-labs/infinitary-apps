@@ -81,6 +81,8 @@ A remote version the host has not seen pushed carries nothing until it is; a rev
 - [`../src/core/tasks/changeRecords.test.ts`](../src/core/tasks/changeRecords.test.ts): the projection, the versions, the binding by number and the receipt.
 - [`../src/core/tasks/taskDeliveryRecords.test.ts`](../src/core/tasks/taskDeliveryRecords.test.ts): the delivery facts the record is read from.
 - [`../src/core/orchestrator/prCi.test.ts`](../src/core/orchestrator/prCi.test.ts): the readings, the story and the attestation at a version.
+- [`../src/core/orchestrator/prCi.reviews.test.ts`](../src/core/orchestrator/prCi.reviews.test.ts): a review of a pull request named by its number, a merge past the branch rules, and the captain's click on either.
+- [`../src/core/orchestrator/prCi.merge.test.ts`](../src/core/orchestrator/prCi.merge.test.ts): what a kept merge stops on, a lost answer read back before anything is sent again, and a project's queue answering a review's click.
 - [`../tests/holds.test.ts`](../tests/holds.test.ts) and `scripts/holds.ts`: every hold the host places reads a typed fact, none the care's name.
 
 ## Where the detail lives

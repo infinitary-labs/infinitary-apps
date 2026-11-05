@@ -370,6 +370,8 @@
         "!src/core/orchestrator/crewSupervisor.test.ts",
         "!src/core/orchestrator/firstmateAgent.test.ts",
         "!src/core/orchestrator/prCi.test.ts",
+        "!src/core/orchestrator/prCi.merge.test.ts",
+        "!src/core/orchestrator/prCi.reviews.test.ts",
         "!src/core/orchestrator/settleService.test.ts",
         "!src/core/orchestrator/handedResult.test.ts",
         "!src/core/placed/placedSessions.test.ts",

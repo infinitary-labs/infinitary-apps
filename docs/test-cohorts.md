@@ -115,6 +115,8 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/placed/loadLine.integration.test.ts` | real native wrappers, command processes, process groups and two-second admission/lifetime cadence | 35 s |
 | `src/core/workspace/worktreePool.test.ts` | real git, real pnpm, at the run's own priority | 15 s for the file; the real-pnpm measurement test is 600 s |
 | `src/core/orchestrator/prCi.test.ts` | real git at the run's own priority, the put-in's 300 + 900 ms backoff | 10 s |
+| `src/core/orchestrator/prCi.merge.test.ts` | a real `git init` per project at the run's own priority, the put-in's 300 + 900 ms backoff | 5 s default |
+| `src/core/orchestrator/prCi.reviews.test.ts` | a real `git init` per project, at the run's own priority | 5 s default |
 | `src/core/orchestrator/settleService.test.ts` | real git for a pure update and an edited line, at the run's own priority | 15 s |
 | `src/core/workspace/conventional.test.ts` | real git for incoming commit range, at the run's own priority | 5 s default |
 | `src/core/workspace/workspaceService.test.ts` | real git, at the run's own priority | 15 s |

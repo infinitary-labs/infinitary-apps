@@ -623,6 +623,7 @@ Like every `request_merge`, it continues the task.
 Not established: whether GitHub honours `bypass_rules` for the app's sign-in, an OAuth App, or on GitHub Enterprise Server.
 No real merge past the rules has been attempted; the check is the captain's, on a throwaway repository.
 Evidence: `tests/e2e/request-merge.spec.ts` ("a merge that skips the branch rules ...") has a scripted crewmate prepare an adopted release pull request held by a review rule and a failed check, reads the rules and the check off the card, finds nothing sent before the captain's key and one asynchronous merge with `bypass_rules` after it, and refuses the same review on a revised card.
+`prCi.reviews.test.ts` holds each refusal word for word, the review marked sent before the request, and every outcome of the one send: merged, refused, unknown, a lost answer read back as merged, and a second click that sends nothing.
 
 ## A project's queue
 

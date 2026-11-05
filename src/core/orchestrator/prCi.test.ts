@@ -9,13 +9,18 @@ import type { MergeReview } from "@shared/mergeReview";
 import type { HostedPresentationDestination } from "@shared/presentationDestination";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
-import { freshDatabase } from "../../../tests/helpers/database";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
-import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import {
+  type CheckedOut,
+  FakeForge,
+  insertDirectPrTask,
+  insertTask,
+  recordPr,
+  setup,
+} from "../../../tests/helpers/prCiHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   AttachmentUploadError,
-  type Forge,
   ForgeAllowanceSpent,
   type ForgeChange,
   type ForgeCheck,
@@ -34,13 +39,10 @@ import {
 } from "../forge";
 import { stageChangePresentation } from "../pi/changePresentation";
 import { type MergeAuthorization, TaskStore } from "../storage/taskStore";
-import { seedTask, type TaskSeed } from "../tasks/seedTask";
+import type { TaskSeed } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
-import { TaskService } from "../tasks/taskService";
 import { git } from "../workspace/git";
-import { RepoRegistry } from "../workspace/repoRegistry";
 import { readChangeReading } from "../workspace/workspaceService";
-import { ChangePresentations } from "./changePresentations";
 import { CheckWatcher } from "./checkWatch";
 import { MERGE_CHECKS_HOLD_REASON } from "./mergeAuthorization";
 import { type MergeGuard, PrCiService } from "./prCi";
@@ -64,226 +66,6 @@ vi.mock("../utilityQos", async (importOriginal) =>
  * GitHub over its REST API is `githubForge.test.ts`; a plain
  * Git host against real repositories is `plainGit.test.ts`.
  */
-
-/** A forge whose change, checks and failures the test moves between calls. */
-class FakeForge implements Forge {
-  readonly kind;
-  readonly host;
-  readonly place;
-  readonly hasChecks;
-  change: ForgeChange | null = {
-    number: 23,
-    url: "https://github.com/x/y/pull/23",
-    branch: "fm/task-ab12cd34",
-    headSha: "feedbeef",
-    title: "fix: ship it",
-  };
-  states: ForgeCheckState[] = ["success"];
-  names?: string[];
-  /** Each check's start and finish as the host gives them, by position. */
-  times?: { startedAt?: number; finishedAt?: number }[];
-  fail: Partial<
-    Record<
-      "changeFor" | "checks" | "putIn" | "close" | "openChange" | "updateChangeBody",
-      ForgeError | Error
-    >
-  > = {};
-  /** The description the host holds after a replacement: a person's edit that raced it. */
-  heldAfterWrite?: string;
-  /** What `openChange` offers the branch as. */
-  opened: Omit<ForgeChange, "branch"> = {
-    number: 42,
-    url: "https://github.com/x/y/pull/42",
-    headSha: "cafe0042",
-    title: "fix: ship it",
-  };
-  /** Fail `changeFor` only this many more times. */
-  failChangeForTimes = 0;
-  /** The checks GitHub holds at named versions, or its refusal there; other versions read `states`. */
-  atHead: Record<string, { name: string; state: ForgeCheckState }[] | Error> = {};
-  readonly calls: string[] = [];
-
-  constructor(where: { kind?: Forge["kind"]; place?: string | null } = {}) {
-    this.kind = where.kind ?? "github";
-    this.host = this.kind === "github" ? "github.com" : "git.example.com";
-    this.place = where.place === undefined ? "GitHub" : where.place;
-    this.hasChecks = this.kind === "github";
-  }
-
-  async listProjects() {
-    return [];
-  }
-  async defaultBranch() {
-    return "main";
-  }
-  drafts: boolean[] = [];
-  /** The base each opening asked for; undefined is the default branch. */
-  bases: (string | undefined)[] = [];
-  async openChange(input: {
-    branch: string;
-    title: string;
-    body: string;
-    draft?: boolean;
-    base?: string;
-  }): Promise<ForgeChange> {
-    this.drafts.push(input.draft === true);
-    this.bases.push(input.base);
-    this.calls.push(`openChange ${input.branch} ${input.title}`);
-    if (this.fail.openChange) throw this.fail.openChange;
-    this.change = {
-      ...this.opened,
-      branch: input.branch,
-      ...(input.base ? { base: input.base } : {}),
-    };
-    return this.change;
-  }
-  /** GitHub's and GitLab's conditional write: refused unless the change is as just read. */
-  async updateChangeBody(change: ForgeChange, body: string, title?: string): Promise<void> {
-    this.calls.push(`updateChangeBody ${this.label(change)}`);
-    if (this.fail.updateChangeBody) throw this.fail.updateChangeBody;
-    if (
-      !this.change ||
-      this.change.headSha !== change.headSha ||
-      (this.change.body ?? "") !== (change.body ?? "") ||
-      (title !== undefined && this.change.title !== change.title)
-    )
-      throw new ForgeWriteError("failed", "refused", "The pull request changed after it was read.");
-    this.change = {
-      ...this.change,
-      body: this.heldAfterWrite ?? body,
-      ...(title === undefined ? {} : { title }),
-    };
-  }
-  async changeFor(branch: string) {
-    this.calls.push(`changeFor ${branch}`);
-    if (this.failChangeForTimes > 0) {
-      this.failChangeForTimes -= 1;
-      throw this.fail.changeFor ?? new Error("changeFor failed");
-    }
-    return this.change ? { ...this.change, branch } : null;
-  }
-  failReady: Error | undefined;
-  async markReady(change: ForgeChange, beforeSend: () => void) {
-    beforeSend();
-    this.calls.push(`markReady ${change.headSha}`);
-    if (this.failReady) throw this.failReady;
-    this.change = { ...change, draft: false, title: change.title?.replace(/^Draft: /, "") };
-    return this.change;
-  }
-  branchesAt?: Forge["branchesAt"];
-  /** Marks a version for the project's queue, where a test gives the host it. */
-  markQueued?: Forge["markQueued"];
-  /** The default branch's own checks, where a test gives the host them. */
-  branchChecks?: Forge["branchChecks"];
-  async checks(change: ForgeChange, movedPast?: string) {
-    const headSha = movedPast ?? change.headSha;
-    this.calls.push(`checks ${headSha}`);
-    if (this.fail.checks) throw this.fail.checks;
-    const held = this.atHead[headSha];
-    if (held instanceof Error) throw held;
-    const items =
-      held ??
-      this.states.map((state, index) => ({
-        name: this.names?.[index] ?? (index === 0 ? "linux-checks" : `check-${index}`),
-        state,
-        ...this.times?.[index],
-      }));
-    return { items };
-  }
-  async putIn(change: ForgeChange, headSha: string) {
-    this.calls.push(`putIn ${change.branch} ${headSha}`);
-    if (this.fail.putIn) throw this.fail.putIn;
-    return undefined;
-  }
-  async close(change: ForgeChange) {
-    this.calls.push(`close ${change.branch}`);
-    if (this.fail.close) throw this.fail.close;
-  }
-  label(change: ForgeChange) {
-    return change.number !== undefined ? `#${change.number}` : change.branch;
-  }
-  url(change: ForgeChange) {
-    return change.url;
-  }
-}
-
-/** What a placed task's computer says its working copy has checked out (`PrCiService`'s `checkedOut`). */
-type CheckedOut = (taskId: string) => Promise<{ branch: string | null; head: string } | null>;
-
-function setup(
-  options: {
-    forge?: FakeForge;
-    now?: () => number;
-    onNote?: (text: string) => void;
-    /** Check commit names against real git rather than skipping the check. */
-    realRange?: boolean;
-    bringBranchHome?: (taskId: string) => Promise<string | undefined>;
-    /** The branch a placed task's working copy has checked out there, wired as the app wires it. */
-    checkedOut?: CheckedOut;
-    /** One forge per project, by its origin, where a test names more than one project. */
-    forgeFor?: (repo: { origin?: string | null } | undefined) => FakeForge;
-  } = {},
-) {
-  const db = freshDatabase();
-  const tasks = new TaskService({ db, strict: true });
-  const paths = scratchDir("infinitary-prci-");
-  const repos = new RepoRegistry(db, join(paths, "fleet"));
-  const forge = options.forge ?? new FakeForge();
-  const readHead = vi.fn(async () => forge.change?.headSha ?? "");
-  const presentations = new ChangePresentations({
-    tasks,
-    mediaDir: () => paths,
-    head: readHead,
-    ...(options.checkedOut ? { branch: (taskId) => service.presentationBranch(taskId) } : {}),
-  });
-  const service = new PrCiService({
-    tasks,
-    repos,
-    forgeFor: options.forgeFor ?? (() => forge),
-    presentations,
-    ...(options.checkedOut ? { checkedOut: options.checkedOut } : {}),
-    ...(options.bringBranchHome ? { bringBranchHome: options.bringBranchHome } : {}),
-    ...(options.realRange ? {} : { validateRange: async () => {} }),
-    ...(options.now ? { now: options.now } : {}),
-    ...(options.onNote ? { onNote: options.onNote } : {}),
-  });
-  return { db, tasks, repos, service, forge, paths, presentations, readHead };
-}
-
-function insertTask(tasks: TaskService, overrides: Partial<TaskSeed> = {}): void {
-  seedTask(tasks, {
-    id: "ab12cd34",
-    title: "Ship it",
-    prompt: "work",
-    repoId: null,
-    repoDir: tmpdir(),
-    worktreeDir: tmpdir(),
-    branch: "fm/task-ab12cd34",
-    sessionFile: null,
-    accountId: null,
-    status: "idle",
-    createdAt: Date.now(),
-    ...overrides,
-  });
-}
-
-async function insertDirectPrTask(
-  tasks: TaskService,
-  repos: RepoRegistry,
-  overrides: Partial<TaskSeed> = {},
-): Promise<void> {
-  const { repo } = await repos.setup({
-    kind: "init",
-    name: `pr-${overrides.id ?? "ab12cd34"}`,
-  });
-  repos.configure(repo.id, { delivery: "direct-pr" });
-  insertTask(tasks, { repoId: repo.id, repoDir: repo.path, ...overrides });
-}
-
-/** The host learned of the task's PR: what `pr_opened` records. */
-function recordPr(tasks: TaskService, number: number, id = "ab12cd34"): void {
-  seedDelivery(tasks, id, { prNumber: number, prUrl: `https://github.com/x/y/pull/${number}` });
-}
 
 describe("PrCiService", () => {
   it("holds a missing saved story at the merge boundary even when every check passes (INF-92)", async () => {

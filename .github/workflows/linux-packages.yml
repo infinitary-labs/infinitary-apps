@@ -80,7 +80,10 @@ jobs:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       # electron-builder makes the Fedora package with the system's rpmbuild.
-      - run: sudo apt-get update && sudo apt-get install -y rpm
+      # The machine's own automatic updates may hold apt's locks; the helper
+      # takes over from them (docs/testing.md, "The runner's automatic updates").
+      - run: scripts/apt-install.sh rpm
+        timeout-minutes: 10
       - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
@@ -189,7 +192,8 @@ jobs:
           name: linux-packages
           path: ${{ runner.temp }}/linux-packages
       - name: Install the virtual screen
-        run: sudo apt-get update && sudo apt-get install -y xvfb xdotool imagemagick
+        timeout-minutes: 10
+        run: scripts/apt-install.sh xvfb xdotool imagemagick
       - if: matrix.system == 'nix'
         uses: cachix/install-nix-action@v31
       - name: Install, open and run a crew turn

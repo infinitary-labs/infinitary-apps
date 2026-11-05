@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "runner-apt-takes-over-automatic-updates",
+      "reason": "Internal CI only: package installs on a Linux runner take over from the machine's own automatic updates instead of failing on apt's lock. No product change."
+    }
+  ]
+}

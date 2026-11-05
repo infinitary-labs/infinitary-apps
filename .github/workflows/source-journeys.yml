@@ -137,9 +137,11 @@ jobs:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      # The machine's own automatic updates may hold apt's locks; the helper
+      # takes over from them (docs/testing.md, "The runner's automatic updates").
       - name: Install virtual display and desktop libraries
         timeout-minutes: 10
-        run: sudo apt-get update && sudo apt-get install -y xvfb xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1
+        run: scripts/apt-install.sh xvfb xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1
       - uses: ./Application Support/firstmate/.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.

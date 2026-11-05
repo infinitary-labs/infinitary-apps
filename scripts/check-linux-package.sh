@@ -89,8 +89,7 @@ start_box() {
 
 case "$SYSTEM" in
   ubuntu-host)
-    sudo apt-get update -qq
-    sudo apt-get install -y "$DEB"
+    "$WORKSPACE/scripts/apt-install.sh" "$DEB"
     [[ -f /etc/apparmor.d/infinitary ]] || fail "the package loaded no AppArmor profile"
     bash -euo pipefail -c "$OLD_PATH" || fail "the package left no link at Firstmate 3000's program path"
     cat /etc/os-release > "$EVIDENCE/os-release.txt"

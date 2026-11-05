@@ -1313,6 +1313,18 @@ It grades the plan's bar, each a soft hold (`graded` in `tests/e2e/perf.ts`), so
 Every run prints each measure as a `[perf]` line, and writes `latency.json`, each stall in words and the trace into the run's own directory.
 The app ticks at its own period, so a minute pass may or may not fall in a stretch; judge a measure near its bar over several runs.
 
+## The runner's automatic updates
+
+A fresh Ubuntu runner machine can start Ubuntu's own automatic updates as it boots, and they hold apt's locks: the daily list refresh holds the package lists' lock, and `unattended-upgrade` holds dpkg's.
+A plain `apt-get` stops at once on a held lock with exit code 100, which fails the job before any test runs, whatever the change.
+So every package install on the runner machine itself goes through `scripts/apt-install.sh`, never a bare `apt-get`: the journeys' virtual display, the Linux packages' build tools and virtual screen, and the Ubuntu package installed on the runner.
+The helper first turns the automatic updates off for the rest of the machine's life (`APT::Periodic::Enable "0"`), so a run that starts later ends without touching apt; only a disposable runner may run it.
+It then waits for a run already going to end, which apt's daily script marks by holding `/var/lib/apt/daily_lock` for its whole run.
+Meanwhile it asks that run's `unattended-upgrade` to stop, the way the package's own shutdown helper does, and it stops after the package it is installing, leaving dpkg consistent.
+`apt-get` then waits for dpkg's lock (`DPkg::Lock::Timeout=-1`) should anything else hold it; apt's own wait covers only dpkg's lock, never the lists' lock `apt-get update` takes, which is why the helper waits for the daily run itself.
+Each wait lasts as long as its step's time limit, ten minutes for each install step.
+An install inside a container needs none of this: the container's apt is its own, and nothing in it updates automatically.
+
 ## The Linux source desktop
 
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on Ubuntu 24.04 x64 (`LINUX_RUNNER`, hosted when unset), under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.

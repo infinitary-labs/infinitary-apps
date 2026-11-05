@@ -45,6 +45,7 @@ export const DESKTOP_BUILD: readonly string[] = [
  * change to one alone rides with the next desktop alpha.
  */
 export const BUILD_SCRIPTS_THAT_SHIP_NOTHING: Readonly<Record<string, string>> = {
+  "scripts/apt-install.sh": "it only installs the Linux build machine's own tools before the build",
   "scripts/refuse-build-during-e2e.ts": "it only refuses a build while journeys run",
   "scripts/prepare-local-codesign.mjs": "it prepares this computer's local signing, never the release's",
   "scripts/release-notes.ts":

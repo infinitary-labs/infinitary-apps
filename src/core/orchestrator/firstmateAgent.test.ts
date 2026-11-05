@@ -6280,6 +6280,526 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
   });
 });
 
+// Guardrails before the first mate's split (INF-2625's plan, the seat's
+// row): the seat's own test reached 78% of its branches and no other test
+// reaches the seat, so each branch the split moves is pinned here first.
+describe("the seat's other ways: Settings, the way back, holds and moves (INF-2625 guardrails)", () => {
+  const PERSONAL = {
+    id: "acct_a",
+    providerId: "openai-codex",
+    label: "Personal",
+    enabled: true,
+  } satisfies FlagshipAccount;
+  const WORK = {
+    id: "acct_b",
+    providerId: "openai-codex",
+    label: "Work #2",
+    enabled: true,
+  } satisfies FlagshipAccount;
+  const GROK = { provider: "xai", id: "grok-4.6" };
+
+  /** Two Codex accounts, the seat on the first after one finished turn unless `fresh`. */
+  async function codexPair(options: { fresh?: boolean } = {}) {
+    const t = setupWithFlagship({ accounts: [{ ...PERSONAL }, { ...WORK }] });
+    t.setHeadroom("acct_a", 80);
+    t.setHeadroom("acct_b", 70);
+    if (options.fresh) return t;
+    await t.agent.converse("first");
+    const seat = t.sessions[0] as FakeSession;
+    seat.emitTurnEnd("Hi.");
+    seat.resolveNextPrompt();
+    await tick();
+    expect(t.agent.boundAccount()).toBe("acct_a");
+    return t;
+  }
+
+  /** A seat on Codex that left Claude, with the way back offered by card. */
+  async function movedOffClaude() {
+    const t = setupWithFlagship({
+      claudeSeat: true,
+      accounts: [
+        { id: "acct_codex", providerId: "openai-codex", label: "Codex", enabled: true },
+        claudeLogin(),
+      ],
+      availableModels: [CODEX_MODEL, CLAUDE_MODEL],
+    });
+    t.setHeadroom("acct_codex", 60);
+    t.setHeadroom(CLAUDE_ACCOUNT, 80);
+    t.settings.setFirstmateBinding(CODEX_MODEL, "acct_codex");
+    t.settings.setFirstmateMovedFrom({
+      providerId: "anthropic-claude",
+      accountId: CLAUDE_ACCOUNT,
+      class: "refused",
+    });
+    t.agent.onQuotaRefreshed();
+    await tick();
+    const back = () => t.cards().find((card) => card.id === "card-fm-move-back");
+    return { t, back };
+  }
+
+  it("Observe's peek names the setting's model before a seat attaches, and nothing as its file", async () => {
+    const f = setup();
+    expect(f.agent.modelRef()).toBeNull();
+    expect(f.agent.sessionFile()).toBeNull();
+    f.settings.setFirstmateModel({ provider: "fm-mock", id: "mock-2" });
+    expect(f.agent.modelRef()).toEqual({ provider: "fm-mock", id: "mock-2" });
+    await f.agent.converse("first");
+    expect(f.agent.modelRef()).toEqual({ provider: "fm-mock", id: "mock-1" });
+    expect(f.agent.sessionFile()).toBe("/tmp/fm/sessions/session.jsonl");
+  });
+
+  it("an idle seat lets go of its session when the local seat is chosen, and the next turn opens on it", async () => {
+    const f = setup();
+    await f.agent.converse("first");
+    f.session.emitTurnEnd("Hi.");
+    f.session.resolveNextPrompt();
+    await tick();
+    const local = {
+      model: { provider: "local", id: "fixture" },
+      runtime: { kind: "local" } as unknown as ModelRuntime,
+      host: "localhost",
+      source: "setting" as const,
+    };
+
+    await f.agent.setLocalOrchestrator(local);
+    expect(f.session.dispose).toHaveBeenCalledTimes(1);
+    expect(f.agent.sessionFile()).toBeNull();
+    expect(f.specs).toHaveLength(1);
+
+    await f.agent.converse("second");
+    await tick();
+    expect(f.specs).toHaveLength(2);
+    expect(f.specs[1]?.model).toEqual(local.model);
+    expect(runtimeKind(f.specs[1])).toBe("local");
+  });
+
+  it("a Settings account pick waits for a seat to apply it: before any session, nothing opens", async () => {
+    const t = await codexPair({ fresh: true });
+    t.settings.setFirstmateAccount("acct_b");
+    await t.agent.applyAccountSetting();
+    expect(t.specs).toHaveLength(0);
+    expect(t.ledger).toEqual([]);
+  });
+
+  it("a Settings account pick that names the bound account moves nothing", async () => {
+    const t = await codexPair();
+    const ledgered = t.ledger.length;
+    t.settings.setFirstmateAccount("acct_a");
+    await t.agent.applyAccountSetting();
+    expect(t.specs).toHaveLength(1);
+    expect(t.ledger).toHaveLength(ledgered);
+  });
+
+  it("a Settings account pick that cannot serve leaves the seat where it is", async () => {
+    const t = await codexPair();
+    const ledgered = t.ledger.length;
+    t.account("acct_b").enabled = false;
+    t.settings.setFirstmateAccount("acct_b");
+    await t.agent.applyAccountSetting();
+    expect(t.agent.boundAccount()).toBe("acct_a");
+    expect(t.specs).toHaveLength(1);
+    expect(t.ledger).toHaveLength(ledgered);
+  });
+
+  it("a Settings account pick made mid-turn applies at the next idle boundary, never mid-turn", async () => {
+    const t = await codexPair();
+    const seat = t.sessions[0] as FakeSession;
+    await t.agent.converse("second");
+    await tick();
+    const ledgered = t.ledger.length;
+    t.settings.setFirstmateAccount("acct_b");
+    await t.agent.applyAccountSetting();
+    expect(t.agent.boundAccount()).toBe("acct_a");
+    expect(t.specs).toHaveLength(1);
+    expect(t.ledger).toHaveLength(ledgered);
+
+    seat.emitTurnEnd("Done.");
+    seat.resolveNextPrompt();
+    await tick();
+    await t.agent.converse("third");
+    await tick();
+    expect(t.agent.boundAccount()).toBe("acct_b");
+    expect(runtimeKind(t.specs[1])).toBe("runtime-acct_b");
+  });
+
+  it("a Settings account pick does not move the local seat", async () => {
+    const t = await codexPair({ fresh: true });
+    await t.agent.setLocalOrchestrator({
+      model: { provider: "local", id: "fixture" },
+      runtime: { kind: "local" } as unknown as ModelRuntime,
+      host: "localhost",
+      source: "setting",
+    });
+    await t.agent.converse("first");
+    const seat = t.sessions[0] as FakeSession;
+    seat.emitTurnEnd("Hi.");
+    seat.resolveNextPrompt();
+    await tick();
+    t.settings.setFirstmateAccount("acct_b");
+    await t.agent.applyAccountSetting();
+    expect(t.specs).toHaveLength(1);
+    expect(runtimeKind(t.specs[0])).toBe("local");
+    expect(t.agent.boundAccount()).toBeUndefined();
+  });
+
+  it("a Settings model pick before any session is saved with its account and opens nothing", async () => {
+    const t = setupWithFlagship({
+      accounts: [
+        { id: "acct_codex", providerId: "openai-codex", label: "Codex", enabled: true },
+        { id: "acct_grok", providerId: "xai", label: "Grok", enabled: true },
+      ],
+      availableModels: [CODEX_MODEL, GROK],
+    });
+    t.setHeadroom("acct_codex", 40);
+    t.setHeadroom("acct_grok", 60);
+    await t.agent.applyModelSetting(GROK);
+    expect(t.settings.getFirstmateModel()).toEqual(GROK);
+    expect(t.settings.getFirstmateAccount()).toBe("acct_grok");
+    expect(t.specs).toHaveLength(0);
+    expect(t.ledger).toEqual([]);
+    expect(t.db.prepare("SELECT COUNT(*) AS n FROM inbox WHERE ref = 'seat-moved'").get()).toEqual({
+      n: 0,
+    });
+  });
+
+  it("choosing Auto in Settings clears the pick, records no move, and the seat reopens on the automatic pick", async () => {
+    const t = setupWithFlagship({
+      accounts: [
+        { id: "acct_codex", providerId: "openai-codex", label: "Codex", enabled: true },
+        { id: "acct_grok", providerId: "xai", label: "Grok", enabled: true },
+      ],
+      availableModels: [CODEX_MODEL, GROK],
+    });
+    t.setHeadroom("acct_codex", 40);
+    t.setHeadroom("acct_grok", 60);
+    t.settings.setFirstmateBinding(GROK, "acct_grok");
+    await t.agent.converse("first");
+    (t.sessions[0] as FakeSession).resolveNextPrompt();
+    await tick();
+    const ledgered = t.ledger.length;
+
+    await t.agent.applyModelSetting(null);
+    // With no catalog reading, the automatic pick is the first model listed.
+    expect(t.specs).toHaveLength(2);
+    expect(t.specs[1]?.model).toEqual(CODEX_MODEL);
+    expect(t.settings.getFirstmateModel()).toEqual(CODEX_MODEL);
+    expect(t.agent.boundAccount()).toBe("acct_codex");
+    expect(t.ledger.slice(ledgered).filter((row) => row.reasons[0] === "seat pinned")).toEqual([]);
+    expect(notes(t.events).filter((text) => text.startsWith("Your first mate moved"))).toEqual([]);
+  });
+
+  it("offers the way back before a seat attaches without naming where it stays, and a Settings pick withdraws it", async () => {
+    const { t, back } = await movedOffClaude();
+    expect(back()?.body).toBe("Claude can serve your first mate again.");
+    expect(t.settings.getFirstmateMovedFrom()).toMatchObject({ offered: true });
+
+    await t.agent.applyModelSetting(CODEX_MODEL);
+    await tick();
+    expect(t.settings.getFirstmateMovedFrom()).toBeNull();
+    expect(back()).toBeUndefined();
+  });
+
+  it("withdraws the way back when the account it would return to is removed", async () => {
+    const { t, back } = await movedOffClaude();
+    expect(back()).toBeDefined();
+    t.accounts.splice(
+      t.accounts.findIndex((account) => account.id === CLAUDE_ACCOUNT),
+      1,
+    );
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(t.settings.getFirstmateMovedFrom()).toBeNull();
+    expect(back()).toBeUndefined();
+  });
+
+  it("withdraws a stale way back when that account stops serving again, and offers it once more when it serves", async () => {
+    const { t, back } = await movedOffClaude();
+    expect(back()).toBeDefined();
+    t.account(CLAUDE_ACCOUNT).cutOff = { class: "refused" };
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(back()).toBeUndefined();
+    expect(t.settings.getFirstmateMovedFrom()).toMatchObject({ offered: false });
+
+    t.account(CLAUDE_ACCOUNT).cutOff = undefined;
+    t.agent.onCutOffChanged();
+    await tick();
+    expect(back()).toBeDefined();
+    expect(t.ledger.filter((row) => row.reasons[0] === "seat move-back-offered")).toHaveLength(2);
+  });
+
+  it("the way back clicked mid-turn is saved at once and opens its seat at the next idle boundary", async () => {
+    const { t, back } = await movedOffClaude();
+    expect(back()).toBeDefined();
+    await t.agent.converse("first");
+    await tick();
+    const codex = t.sessions[0] as FakeSession;
+    expect(t.specs).toHaveLength(1);
+
+    t.supervisor.act("card-fm-move-back", "move-flagship");
+    await tick();
+    expect(t.settings.getFirstmateModel()).toEqual(CLAUDE_MODEL);
+    expect(t.settings.getFirstmateMovedFrom()).toBeNull();
+    expect(t.specs).toHaveLength(1);
+
+    codex.emitTurnEnd("Answered on Codex.");
+    codex.resolveNextPrompt();
+    await tick();
+    await t.agent.converse("second");
+    await tick();
+    expect(t.specs[1]?.binding).toEqual({ backend: "claude", accountId: CLAUDE_ACCOUNT });
+    expect((t.sessions[1] as FakeSession).prompts[0]).toContain(
+      "you now answer on Claude (claude-opus)",
+    );
+  });
+
+  it("a move to a provider with no signed-in model raises the failure card and moves nothing", async () => {
+    const availableModels = [CLAUDE_MODEL, CODEX_MODEL];
+    const t = setupWithFlagship({
+      claudeSeat: true,
+      accounts: [
+        claudeLogin(),
+        {
+          id: "acct_codex",
+          providerId: "openai-codex",
+          label: "Codex",
+          enabled: true,
+          connected: true,
+        },
+      ],
+      availableModels,
+    });
+    t.settings.setFirstmateModel(CLAUDE_MODEL);
+    t.setHeadroom(CLAUDE_ACCOUNT, 80);
+    t.setHeadroom("acct_codex", 60);
+    await t.agent.converse("hello");
+    await cutOffTurn(t.sessions[0] as FakeSession, { class: "refused" });
+    expect(t.cards().map((card) => card.id)).toEqual(["card-fm-flagship-move"]);
+
+    availableModels.splice(availableModels.indexOf(CODEX_MODEL), 1);
+    t.supervisor.act("card-fm-flagship-move", "move-flagship");
+    await tick();
+    expect(t.specs).toHaveLength(1);
+    expect(t.settings.getFirstmateModel()).toEqual(CLAUDE_MODEL);
+    expect(t.settings.getFirstmateMovedFrom()).toBeNull();
+    const failure = t.cards().find((card) => card.id === "card-fm-turn-failure") as Card;
+    expect(failure.body).toContain("No signed-in model is available on that subscription.");
+  });
+
+  it("holds on the seat's account count up, each release counts once, and the last one lets the kept turn through", async () => {
+    const t = await claudeLoginSeat();
+    await t.agent.converse("first");
+    const seat = t.sessions[0] as FakeSession;
+    seat.emitTurnEnd("Hi.");
+    seat.resolveNextPrompt();
+    await tick();
+
+    const first = await t.agent.holdSeatFor(CLAUDE_ACCOUNT);
+    const second = await t.agent.holdSeatFor(CLAUDE_ACCOUNT);
+    expect(seat.detach).toHaveBeenCalledTimes(2);
+    await t.agent.converse("while signing in");
+    await tick();
+    first();
+    first();
+    await tick();
+    expect(seat.prompts).toHaveLength(1);
+    expect(captainRows(t.inbox)).toEqual(["while signing in"]);
+
+    second();
+    await tick();
+    expect(seat.prompts).toHaveLength(2);
+    expect(seat.prompts[1]).toContain("while signing in");
+  });
+
+  it("a hold on another account neither lets go of the seat's client nor keeps its turns", async () => {
+    const t = await claudeLoginSeat({ codex: 60 });
+    await t.agent.converse("first");
+    const seat = t.sessions[0] as FakeSession;
+    seat.emitTurnEnd("Hi.");
+    seat.resolveNextPrompt();
+    await tick();
+
+    const release = await t.agent.holdSeatFor("acct_codex");
+    expect(seat.detach).not.toHaveBeenCalled();
+    await t.agent.converse("second");
+    await tick();
+    expect(seat.prompts).toHaveLength(2);
+    release();
+  });
+
+  it("a seat whose account was removed moves to another account of its model's provider, saying why", async () => {
+    const t = await codexPair();
+    t.accounts.splice(0, 1);
+    await t.agent.converse("second");
+    await tick();
+    expect(t.agent.boundAccount()).toBe("acct_b");
+    expect(notes(t.events)).toContain(
+      "Your first mate moved to Work #2 - its previous account is no longer available.",
+    );
+    expect(t.ledger.at(-1)).toMatchObject({
+      accountId: "acct_b",
+      reasons: [
+        "seat rebound",
+        "acct_a: unavailable",
+        "picked Work #2: an account of the same provider that can serve",
+      ],
+    });
+  });
+
+  it("a spent allowance on every account of a provider counts them on the move card", async () => {
+    const t = setupWithFlagship({
+      accounts: [
+        { ...PERSONAL },
+        { ...WORK },
+        { id: "acct_grok", providerId: "xai", label: "Grok", enabled: true },
+      ],
+      availableModels: [CODEX_MODEL, GROK],
+    });
+    t.setHeadroom("acct_a", 80);
+    t.setHeadroom("acct_b", 70);
+    t.setHeadroom("acct_grok", 60);
+    t.settings.setFirstmateModel(CODEX_MODEL);
+    await t.agent.converse("first");
+    (t.sessions[0] as FakeSession).resolveNextPrompt();
+    await tick();
+
+    t.setHeadroom("acct_a", 0);
+    t.setHeadroom("acct_b", 0);
+    await t.agent.converse("second");
+    await tick();
+    const card = t.cards().find((entry) => entry.id === "card-fm-flagship-move") as Card;
+    expect(card.body).toBe(
+      // The check time is the stand-in reading's own.
+      `Your first mate's Codex accounts have used up their allowance (Personal resets Fri; Work #2 resets Fri). Your messages are kept. Checked at ${clockTime(0)}. Move your first mate to Grok until then?`,
+    );
+  });
+
+  it("a seat whose only account is turned off, with nowhere to move, asks for an account", async () => {
+    const t = setupWithFlagship({ accounts: [{ ...PERSONAL }] });
+    t.setHeadroom("acct_a", 80);
+    await t.agent.converse("first");
+    (t.sessions[0] as FakeSession).resolveNextPrompt();
+    await tick();
+
+    t.account("acct_a").enabled = false;
+    await t.agent.converse("second");
+    await tick();
+    expect(t.cards().map((card) => [card.id, card.title, card.body])).toEqual([
+      [
+        "card-fm-no-headroom",
+        "Your first mate needs an account",
+        "Your first mate's account was disconnected and no other account can serve it. Connect an account to continue.",
+      ],
+    ]);
+    expect(captainRows(t.inbox)).toEqual(["second"]);
+  });
+
+  it("a seat whose only account was removed pauses in its provider's name and keeps the words", async () => {
+    const t = setupWithFlagship({ accounts: [{ ...PERSONAL }] });
+    t.setHeadroom("acct_a", 80);
+    t.settings.setFirstmateModel(CODEX_MODEL);
+    await t.agent.converse("first");
+    (t.sessions[0] as FakeSession).resolveNextPrompt();
+    await tick();
+
+    t.accounts.splice(0, 1);
+    await t.agent.converse("second");
+    await tick();
+    expect(t.cards().map((card) => [card.id, card.title, card.body])).toEqual([
+      [
+        "card-fm-no-headroom",
+        "Your first mate needs an account",
+        "Your first mate's account was disconnected and no other account can serve it. Connect an account to continue.",
+      ],
+    ]);
+    expect(notes(t.events)).toEqual([
+      "Your first mate paused: That account no longer exists.",
+      "Your message is saved. That account no longer exists. Your first mate answers it once an account can run it, or choose another model for your first mate in Settings, under Intelligence.",
+    ]);
+    expect(t.ledger.at(-1)?.reasons).toEqual([
+      "seat paused",
+      "acct_a: unavailable",
+      "nothing else can serve",
+    ]);
+    expect(captainRows(t.inbox)).toEqual(["second"]);
+  });
+
+  it("a model picked mid-turn whose seat cannot attach keeps the next turn and says why", async () => {
+    const t = setupWithFlagship({
+      accounts: [
+        { id: "acct_codex", providerId: "openai-codex", label: "Codex", enabled: true },
+        claudeLogin(),
+      ],
+      availableModels: [CODEX_MODEL, CLAUDE_MODEL],
+    });
+    t.setHeadroom("acct_codex", 60);
+    t.setHeadroom(CLAUDE_ACCOUNT, 80);
+    t.settings.setFirstmateModel(CODEX_MODEL);
+    await t.agent.converse("first");
+    const codex = t.sessions[0] as FakeSession;
+    await t.agent.applyModelSetting(CLAUDE_MODEL);
+    expect(t.specs).toHaveLength(1);
+    codex.emitTurnEnd("Answered on Codex.");
+    codex.resolveNextPrompt();
+    await tick();
+
+    await t.agent.converse("second");
+    await tick();
+    expect(t.specs).toHaveLength(1);
+    expect(codex.prompts).toHaveLength(1);
+    expect(t.cards().map((card) => [card.id, card.title, card.body])).toEqual([
+      [
+        "card-fm-turn-failure",
+        "Your first mate hit a problem",
+        "Claude cannot run your first mate.",
+      ],
+    ]);
+    expect(captainRows(t.inbox)).toEqual(["second"]);
+  });
+
+  it("a model picked mid-turn that will not open keeps the next turn off the old session", async () => {
+    const session = fakeSession();
+    let opens = 0;
+    const f = setup({
+      session,
+      piSeat: async () => {
+        opens += 1;
+        if (opens > 1) throw new Error("The picked model would not open.");
+        return session;
+      },
+    });
+    await f.agent.converse("first");
+    await f.agent.applyModelSetting({ provider: "fm-mock", id: "mock-next" });
+    expect(f.specs).toHaveLength(1);
+    session.emitTurnEnd("Hi.");
+    session.resolveNextPrompt();
+    await tick();
+
+    await f.agent.converse("second");
+    await tick();
+    expect(f.specs.at(-1)?.model).toEqual({ provider: "fm-mock", id: "mock-next" });
+    expect(session.prompts).toHaveLength(1);
+    const failure = f.cards().find((card) => card.id === "card-fm-turn-failure") as Card;
+    expect(failure.body).toContain("The picked model would not open.");
+  });
+
+  it("a Claude model with no Claude seat on this app fails its attach in the account's words", async () => {
+    const t = setupWithFlagship({ accounts: [claudeLogin()], availableModels: [CLAUDE_MODEL] });
+    t.settings.setFirstmateModel(CLAUDE_MODEL);
+    t.setHeadroom(CLAUDE_ACCOUNT, 80);
+    await t.agent.converse("hello");
+    await tick();
+    expect(t.specs).toEqual([]);
+    expect(t.cards().map((card) => [card.id, card.title, card.body])).toEqual([
+      [
+        "card-fm-turn-failure",
+        "Your first mate hit a problem",
+        "Claude cannot run your first mate.",
+      ],
+    ]);
+  });
+});
+
 describe("Retry on the Firstmate failure card (W1 S9 re-review R1)", () => {
   it("a failed drain turn's Retry delivers the rows it failed on, never the last captain turn again", async () => {
     const { agent, session, cards, supervisor } = setup();

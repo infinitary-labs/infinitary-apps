@@ -5,8 +5,10 @@ import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeS
  * INF-2546 R11, under the captain's "include first-mate-merge" answer (q8:
  * the first mate may offer the merge on any change card): a crewmate
  * publishes its pull request with its saved story and puts its completion
- * card up; once the captain closes that card and asks (`FIRSTMATE_MERGE_ASK`),
- * the first mate puts up a merge card of its own on the task.
+ * card up. The captain asks under that card (`FIRSTMATE_MERGE_ASK`): putting
+ * a decision aside keeps it open (INF-1879), so the crewmate withdraws its
+ * card and hands the captain's words to the first mate, as a thread reply's
+ * steer tells it to, and the first mate puts up a merge card of its own.
  */
 export const STORY_MERGE_MARKER = "publish the meter story for the first mate";
 /** The captain's ask the first mate answers with its own merge card. */
@@ -18,6 +20,11 @@ export const STORY_MERGE_STORY = {
   whatChanged: ["The meter reads on the first paint."],
 };
 export const FIRSTMATE_MERGE_CARD = "Merge the meter fix";
+
+/** The card a thread reply's steer names (`Card "title" (id).`). */
+function repliedCard(steer: string): string {
+  return steer.match(/\((card-[\w-]+)\)/)?.[1] ?? "missing";
+}
 
 /** One git reading: main's version, then the committed one. */
 const READ_VERSIONS = "git rev-parse main HEAD";
@@ -49,6 +56,24 @@ export const firstmateStoryMerge: Scenario =
                 },
                 { id: "wait", label: "Wait" },
               ],
+            },
+          },
+        ],
+      };
+    }
+    // The captain's ask under the completion card: the crewmate withdraws
+    // it and reports the words verbatim for the first mate to run.
+    if (latestUserTail.includes(FIRSTMATE_MERGE_ASK)) {
+      if (hasToolResults) return { text: "The merge is the first mate's to offer." };
+      const asked = `${FIRSTMATE_MERGE_ASK}${settleNeedle(latestUserTail, FIRSTMATE_MERGE_ASK)}`;
+      return {
+        calls: [
+          { name: "close_card", args: { card_id: repliedCard(latestUserTail) } },
+          {
+            name: "report",
+            args: {
+              text: "The captain asked under my completion card for the first mate's merge card, so I withdrew mine.",
+              needs_firstmate: `The captain's words, verbatim: "${asked}"`,
             },
           },
         ],

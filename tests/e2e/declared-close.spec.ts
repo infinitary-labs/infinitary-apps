@@ -41,7 +41,14 @@ import {
   STORY_MERGE_STORY,
   STORY_MERGE_TITLE,
 } from "./scenarios/firstmateStoryMerge";
-import { cardSurface, completionAction, expectNoCard, factsStrip, shownCard } from "./stack";
+import {
+  cardReply,
+  cardSurface,
+  completionAction,
+  expectNoCard,
+  factsStrip,
+  shownCard,
+} from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -416,14 +423,12 @@ test("the first mate's merge card on a published story merges at the published v
     expect(published).toMatchObject({ head, number: task?.delivery?.prNumber });
     const number = published?.number as number;
 
-    // The captain closes that card and asks the first mate for its own.
-    const crewCard = (await page.evaluate(() => window.infinitary.cards.list())).find(
-      (card) => card.title === STORY_MERGE_TITLE,
-    )?.id;
-    if (!crewCard) throw new Error("The completion card is not open");
-    await page.evaluate((id) => window.infinitary.cards.close(id), crewCard);
-    await expectNoCard(page, STORY_MERGE_TITLE);
-    await send(page, `${FIRSTMATE_MERGE_ASK}${title}`);
+    // The captain asks under that card for the first mate's own. Putting a
+    // decision aside keeps it open (INF-1879), so the crewmate withdraws its
+    // card and hands the words to the first mate, which puts up its own.
+    await cardReply(page).field.fill(`${FIRSTMATE_MERGE_ASK}${title}`);
+    await pressKey(cardReply(page).field, "Enter");
+    await expectNoCard(page, STORY_MERGE_TITLE, { timeout: 30_000 });
     const card = shownCard(page, FIRSTMATE_MERGE_CARD);
     await expect(card).toBeVisible({ timeout: 30_000 });
     await expect(factsStrip(cardBody(page, FIRSTMATE_MERGE_CARD)).mergeLine).toHaveText(

@@ -31767,7 +31767,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     );
     // That computer's side of letting a copy go: its working copy and the
     // task's folders there are removed for good (the real owners' removal is
-    // placedSessions.test.ts's move journey).
+    // placedWorkingCopies.test.ts's move journey).
     const retireMoved = vi.fn(async (machine: string) => {
       await options.retire?.();
       await rm(thereOf(machine), { recursive: true, force: true });

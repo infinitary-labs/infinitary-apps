@@ -33,7 +33,7 @@ import { PrCiService } from "../../src/core/orchestrator/prCi";
 import type { TypedWake } from "../../src/core/orchestrator/wakes";
 import { WorkflowEvidenceService } from "../../src/core/orchestrator/workflowEvidence";
 import { type AppPaths, appPathsFor, crewmateCardPicturesDir } from "../../src/core/paths";
-import { PlacedSessions } from "../../src/core/placed/placedSessions";
+import { type PlacedBrowserSink, PlacedSessions } from "../../src/core/placed/placedSessions";
 import { WorkDevices } from "../../src/core/placed/workDevices";
 import type { QuotaCatalogModel } from "../../src/core/quota/auth";
 import type { QuotaService } from "../../src/core/quota/quotaService";
@@ -187,6 +187,8 @@ export function startPlacedHome(options: {
    * nothing runs here.
    */
   here?: SessionFactory;
+  /** Where a computer's task browsers report here; absent, nothing hears them. */
+  browsers?: () => PlacedBrowserSink | undefined;
   log?: (line: string) => void;
 }): PlacedHome {
   const { now } = options;
@@ -281,6 +283,7 @@ export function startPlacedHome(options: {
       ? { runsForAnotherFirstmate: options.runsForAnotherFirstmate }
       : {}),
     ...(options.reachOf ? { reachOf: options.reachOf } : {}),
+    ...(options.browsers ? { browsers: options.browsers } : {}),
     broadcastEvent: (event) => events.push(event),
     now,
     schedule: options.scheduleCopy,

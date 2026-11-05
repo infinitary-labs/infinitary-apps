@@ -200,7 +200,7 @@ A sweep on the shared ticker, once a minute, reads only the conversations holdin
 A conversation in a turn is never rewritten under its writer.
 The pass lets go of it between turns, so its next turn opens it from its files, and one that is working is noted to be read whole on a later sweep.
 A computer that runs work reads every file of a conversation at each visit, since its clock is its own, and a task that no longer exists is dropped from the ledger.
-`src/core/storage/outsideDataScrub.test.ts` holds the replacement over lines as Pi and the Claude client save them, `src/core/integrations/savedOutsideData.test.ts` holds the pass over a scratch userData with the Google stand-in, and `src/core/placed/placedSessions.test.ts` holds it over a crewmate on a computer that runs work, across the real connection.
+`src/core/storage/outsideDataScrub.test.ts` holds the replacement over lines as Pi and the Claude client save them, `src/core/integrations/savedOutsideData.test.ts` holds the pass over a scratch userData with the Google stand-in, and `src/core/placed/placedOutside.test.ts` holds it over a crewmate on a computer that runs work, across the real connection.
 
 ## Notes moved from AGENTS.md
 

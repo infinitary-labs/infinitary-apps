@@ -20,7 +20,7 @@ import { TaskTempFiles } from "./taskTemp";
  * hand files to the waiting task"), under the captain's words on it: "make
  * sure file content never gets printed or leaked because it's possible the
  * file can contain secrets". The transfer between two computers is
- * `placedSessions.test.ts`'s; this file owns the copies on one computer.
+ * `placedCallbacks.test.ts`'s; this file owns the copies on one computer.
  */
 
 const SECRET = `client_secret=${createHash("sha256").update("INF-992").digest("hex")}`;

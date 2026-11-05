@@ -176,5 +176,5 @@ A command whose app is held up from before the channel's deadline until after Pi
 When the shell itself becomes a background job, the helper ends the turn until that job's exit wake supplies its output, ignoring the receipt's partial output and unrelated or repeated job exits rather than running the browser action again.
 `tests/mockProvider.test.ts` exercises those answers through the provider's request interface using the shell tool's receipt and the host's rendered exit wake, including a job whose output itself asks for the next look.
 `channel.test.ts` also runs `infinitary-integrations-axi`: list, show and call reach only the integrations the task was granted, a refusal exits 1, a malformed input exits 2 before reaching them, and a task without the command is answered `NO_TOOL`.
-`placedSessions.test.ts` runs it from a Pi crewmate's shell on a computer that runs work, across the connection to this Mac's integrations (`docs/integrations.md`, "Tests").
+`placedOutside.test.ts` runs it from a Pi crewmate's shell on a computer that runs work, across the connection to this Mac's integrations (`docs/integrations.md`, "Tests").
 `tests/release-contract.test.ts` holds the launcher and its identical copies shipped outside the archive.

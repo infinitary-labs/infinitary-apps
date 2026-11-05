@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-session-tests-split",
+      "reason": "Tests only: the placed-session and session-host test files split by owner over shared helpers, with guardrail tests for placedSessions before its split, and no app behavior change."
+    }
+  ]
+}

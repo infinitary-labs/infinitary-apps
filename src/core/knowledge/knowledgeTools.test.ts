@@ -5,7 +5,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { piToolsOf } from "../pi/toolSpec";
 import { bindTools } from "../session/tools";
 import { contextKnowledge, knowledgeShortlist, renderBriefKnowledge } from "./context";
-import { type KnowledgeActor, KnowledgeService } from "./knowledgeService";
+import { type KnowledgeActor, type KnowledgeDeps, KnowledgeService } from "./knowledgeService";
 import { KNOWLEDGE_TOOLS, knowledgeBinding } from "./knowledgeTools";
 
 /**
@@ -21,7 +21,7 @@ type Tool = {
   ) => Promise<{ content: { text: string }[] }>;
 };
 
-function harness() {
+function harness(pinned: Pick<KnowledgeDeps, "now" | "newId"> = {}) {
   const root = scratchDir("fm-knowledge-tools-");
   const service = new KnowledgeService({
     projects: {
@@ -29,6 +29,7 @@ function harness() {
       list: () => [{ id: "repo-1", name: "shop", path: root }],
     },
     gitFacts: async () => ({ commit: "0123456789abcdef", dirty: false }),
+    ...pinned,
   });
   const recorded: string[] = [];
   const bind = (actor: KnowledgeActor) => {
@@ -239,4 +240,119 @@ describe("the knowledge pair", () => {
     expect(await h.crew.record(call)).toContain("Already done (same request_id)");
     expect(h.recorded).toHaveLength(1);
   });
+
+  it("says the same words for every read of a collection recorded with pinned ids", async () => {
+    let clock = 1_792_000_000_000;
+    let given = 0;
+    const h = harness({
+      now: () => (clock += 60_000),
+      newId: (prefix) => {
+        given += 1;
+        return `${prefix}-pin${String(given).padStart(3, "0")}`;
+      },
+    });
+    const captain = h.bind({ kind: "firstmate", origin: "captain-turn", canCreate: true });
+    await h.crew.record({
+      action: "publish",
+      request_id: "evidence",
+      kind: "concept",
+      title: "Evidence",
+      aliases: ["proof"],
+      text: "What a claim rests on.",
+    });
+    await h.crew.record({
+      action: "publish",
+      request_id: "versions",
+      kind: "concept",
+      title: "Source versions",
+      text: "The version of a file a claim was read at.",
+    });
+    await h.crew.record({
+      action: "relate",
+      request_id: "link",
+      id: "c-pin002",
+      to: "c-pin001",
+      type: "related",
+      reason: "Evidence names the version it read.",
+    });
+    await h.crew.record({
+      action: "publish",
+      request_id: "pins",
+      kind: "finding",
+      text: "A source reference pins the inspected version.",
+      basis: "observation",
+      about: ["c-pin001", "c-pin002"],
+      relationship: { from: "c-pin001", predicate: "pins", to: "c-pin002" },
+      conditions: "On main.",
+      sources: [{ quote: "references pin the version they read", citation: "release notes" }],
+    });
+    await h.crew.record({
+      action: "assess",
+      request_id: "check",
+      id: "f-pin004",
+      verdict: "supports",
+      method: "Read the release notes.",
+      conditions: "On main.",
+      sources: [{ quote: "a reference never floats", citation: "release notes" }],
+    });
+    await h.crew.record({
+      action: "revise",
+      request_id: "revise",
+      id: "c-pin001",
+      expected_revision: 1,
+      text: "What a claim rests on: a report, a quotation or an article.",
+      reason: "Name the kinds.",
+    });
+    const words = {
+      search: await captain.read({ action: "search", query: "evidence version" }),
+      get: await h.crew.read({ action: "get", ids: ["f-pin004", "s-pin003"] }),
+      neighbors: await h.crew.read({ action: "neighbors", id: "c-pin001" }),
+      history: await h.crew.read({ action: "history", id: "c-pin001" }),
+    };
+    expect(words).toEqual({
+      search: SEARCH_WORDS,
+      get: GET_WORDS,
+      neighbors: NEIGHBOR_WORDS,
+      history: HISTORY_WORDS,
+    });
+  });
 });
+
+/**
+ * The words each read answers over that collection, whole: what a model
+ * reads, so a change to any of them is a change a reviewer sees here.
+ */
+const SEARCH_WORDS = [
+  "2 matches in your knowledge, best first (candidates: get one before relying on it):",
+  '- c-pin002 concept "Source versions" r2 [private, saved reference]; 1 findings, 1 read-together links',
+  '- c-pin001 concept "Evidence" r2 [private, saved reference]; also called proof; 1 findings, 1 read-together links',
+].join("\n");
+const GET_WORDS = [
+  "f-pin004 finding [private], revision 1 (publish) by task:t1 on 2026-10-14, observation",
+  "statement: A source reference pins the inspected version.",
+  "conditions: On main.",
+  'about: c-pin001 "Evidence"; c-pin002 "Source versions"',
+  'relationship: "Evidence" -[pins]-> "Source versions" (c-pin001 to c-pin002; what this finding claims, read subject to object - not a verification and not causation by itself)',
+  "status: checked (Read the release notes. by task:t1)",
+  "evidence:",
+  "- s-pin003 quotation from release notes, kept 2026-10-14 by task:t1, sha256 d33cb7b1a697: kept - quoted from release notes; an attributed quotation, not checked by the app",
+  "assessments:",
+  "- supports on revision 1 by task:t1 on 2026-10-14; method: Read the release notes.; conditions: On main.",
+  "  - s-pin005 quotation from release notes, kept 2026-10-14 by task:t1, sha256 3b5528fef96b: kept - quoted from release notes; an attributed quotation, not checked by the app",
+  "",
+  "s-pin003 quotation from release notes, kept 2026-10-14 by task:t1, sha256 d33cb7b1a697: kept - quoted from release notes; an attributed quotation, not checked by the app",
+  "references pin the version they read",
+].join("\n");
+const NEIGHBOR_WORDS = [
+  "c-pin001: 3 neighbors one hop away:",
+  '- claimed relationship: this -[pins]-> c-pin002 concept "Source versions" r2 [private, saved reference]; 1 findings, 1 read-together links (claimed by f-pin004)',
+  '- read together: c-pin002 concept "Source versions" r2 [private, saved reference]; 1 findings, 1 read-together links - Evidence names the version it read.',
+  '- finding about this: f-pin004 finding r1 [private, saved reference] (observation; checked (Read the release notes. by task:t1)) about "Evidence", "Source versions"; claims "Evidence" -[pins]-> "Source versions": A source reference pins the inspected version.',
+].join("\n");
+const HISTORY_WORDS = [
+  "c-pin001 revisions, newest first:",
+  "- revision 2 (revise) by task:t1 on 2026-10-14: Name the kinds.",
+  "  Evidence: What a claim rests on: a report, a quotation or an article.",
+  "- revision 1 (publish) by task:t1 on 2026-10-14",
+  "  Evidence: What a claim rests on.",
+].join("\n");

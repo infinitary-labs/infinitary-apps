@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "knowledge-guardrails",
+      "reason": "Internal: tests that pin what the knowledge owner does today - bulk retirement, carried directions, refusals, reads and the tool's words - before it is split into smaller files; nothing a person sees changes."
+    }
+  ]
+}

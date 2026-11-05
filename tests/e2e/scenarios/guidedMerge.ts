@@ -21,9 +21,11 @@ import { mergeShellCall, mergeShellTurn } from "./mergeShell";
  * the Firstmate, whose steer in his turn is his guidance; the crewmate
  * brings the change up to date, declares the repair and asks him back on a
  * card without declaring the guidance, so the merge waits. His reply under
- * that card is guidance too: the crewmate declares the newest mark it read
- * as none, and the host merges. Words carrying KEPT_MERGE_ON_CLAUDE pin the
- * spawn to CLAUDE_CREW_MODEL.
+ * that card is guidance too, and it answers the question: the crewmate
+ * withdraws that card, since crewmates settle their open questions before a
+ * merge and an open one keeps the task open past it (INF-2525), declares
+ * the newest mark it read as none, and the host merges and closes the task.
+ * Words carrying KEPT_MERGE_ON_CLAUDE pin the spawn to CLAUDE_CREW_MODEL.
  */
 export const GUIDED_MERGE_MARKER = "hold a kept merge for guidance";
 export const GUIDED_MERGE_TITLE = "feat: hold the merge for guidance";
@@ -35,6 +37,16 @@ export const GUIDED_MERGE_ASK = `${GUIDED_MERGE_MARKER}: ask whether to rename t
 export const GUIDED_MERGE_ANSWER = `${GUIDED_MERGE_MARKER}: keep its name`;
 // e2e-typed-words: the mock Firstmate's own steer, relaying the captain's ask
 export const GUIDED_MERGE_STEER = `${GUIDED_MERGE_MARKER} - the captain asks whether the file should be renamed`;
+
+/**
+ * The question card's id, as the app names it in the steer that carries the
+ * captain's reply under it (`Card "<title>" (<id>).`, `src/core/orchestrator/wakes.ts`).
+ */
+function questionCardId(user: string): string {
+  const named = `Card "${GUIDED_MERGE_QUESTION}" (`;
+  const at = user.indexOf(named);
+  return (at < 0 ? undefined : /^[^)\s]+/.exec(user.slice(at + named.length))?.[0]) ?? "missing";
+}
 
 export const guidedMerge: Scenario =
   () =>
@@ -96,7 +108,21 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
         .at(-1)
         ?.match(/^ (\d+)/)?.[1] ?? 0,
     );
+    // His reply answered the question, so the card no longer applies: the
+    // crewmate withdraws it before the merge can run (INF-2525).
     if (!results.length)
+      return {
+        calls: [
+          {
+            name: "close_card",
+            args: {
+              card_id: questionCardId(user),
+              reason: "The captain answered it in the thread: the file keeps its name.",
+            },
+          },
+        ],
+      };
+    if (results.length === 1)
       return {
         calls: [
           {
@@ -112,7 +138,7 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
           },
         ],
       };
-    if (results.length === 1)
+    if (results.length === 2)
       return {
         calls: [
           {

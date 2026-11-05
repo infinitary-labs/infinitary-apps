@@ -419,6 +419,8 @@ import {
   type ThreadOwed,
 } from "./cardService";
 import { escapeCardText } from "./cardText";
+import type { PrCiOverall } from "./changeChecks";
+import type { MergeGuard, PrOutcome } from "./changeMerge";
 import { declareRunCheck } from "./checkRepair";
 import { checkVerdicts } from "./checkVerdicts";
 import { CheckWatcher, type WatchedReading } from "./checkWatch";
@@ -490,7 +492,6 @@ import {
   standingAuthorization,
 } from "./mergeAuthorization";
 import { type NamedModel, namedModelOf, namedModelWords } from "./namedModel";
-import type { MergeGuard, PrCiOverall, PrOutcome } from "./prCi";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
@@ -805,7 +806,7 @@ export type CrewSupervisorOptions = {
   mergePullRequest?: (
     taskId: string,
     guard?: MergeGuard,
-    boundary?: import("./prCi").MergeBoundary,
+    boundary?: import("./changeMerge").MergeBoundary,
   ) => Promise<PrOutcome>;
   /**
    * Merge one stored review after the captain's click (FI3-1543): a
@@ -885,7 +886,7 @@ export type CrewSupervisorOptions = {
   githubRead?: (taskId: string, input: GithubReadInput) => Promise<string>;
   githubWrite?: (taskId: string, input: GithubWriteInput) => Promise<string>;
   /**
-   * The check watch's quiet read (`PrCiService.readWatched`, docs/forge.md
+   * The check watch's quiet read (`ChangeChecks.readWatched`, docs/forge.md
    * "The check watch"): the host reads a watched change's checks on the
    * shared tick, wakes the crewmate on the first failed check, and wakes it
    * again when they finish. Absent means
@@ -894,7 +895,7 @@ export type CrewSupervisorOptions = {
   readCheckWatch?: (taskId: string) => Promise<WatchedReading>;
   /**
    * The default branch's checks for projects with a standing baseline wait
-   * (INF-833 Fix 4, `PrCiService.readDefaultBranchChecks`). Absent means a
+   * (INF-833 Fix 4, `ChangeChecks.readDefaultBranchChecks`). Absent means a
    * main failure still resumes only when the named task closes.
    */
   readMainChecks?: (repoId: string) => Promise<MainBranchReading>;

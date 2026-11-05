@@ -257,7 +257,7 @@ export type LineageFacts =
       repairedReading?: string | null;
     };
 
-/** The git questions a declaration asks; `PrCiService` answers them. */
+/** The git questions a declaration asks; `CheckChangeTool` answers them. */
 export type LineageQuestion = {
   approvedHead: string;
   fromHead: string;

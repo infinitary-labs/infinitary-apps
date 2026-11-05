@@ -166,6 +166,7 @@ import { isObserveEnabled } from "./observe/gate";
 import { ObserveService } from "./observe/observeService";
 import { createCrewmateTranscriptResolver } from "./observe/transcriptSource";
 import { isAllowedOpenExternalUrl } from "./openExternal";
+import { type ChangeDelivery, createChangeDelivery } from "./orchestrator/changeDelivery";
 import { ChangePresentations } from "./orchestrator/changePresentations";
 import { CrewSupervisor, type PersonalLiveDelegate } from "./orchestrator/crewSupervisor";
 import { FirstmateAgent, type RunningComputerVersion } from "./orchestrator/firstmateAgent";
@@ -173,7 +174,6 @@ import { firstmateCanServe } from "./orchestrator/firstmateAvailability";
 import { Flagship } from "./orchestrator/flagship";
 import { GithubGatewayService } from "./orchestrator/githubGateway";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
-import { PrCiService } from "./orchestrator/prCi";
 import { Scheduler } from "./orchestrator/scheduler";
 import { TICK_PERIOD_MS, Ticker, tickPeriodFor } from "./orchestrator/ticker";
 import type { TypedWake } from "./orchestrator/wakes";
@@ -1988,10 +1988,10 @@ export async function createServices(
     namingRule: () => runbooks.naming(),
     tasks,
     mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
-    head: (taskId) => prCi.presentationHead(taskId),
-    branch: (taskId) => prCi.presentationBranch(taskId),
+    head: (taskId) => changeDelivery.publication.presentationHead(taskId),
+    branch: (taskId) => changeDelivery.publication.presentationBranch(taskId),
   });
-  const prCi: PrCiService = new PrCiService({
+  const changeDelivery: ChangeDelivery = createChangeDelivery({
     namingRule: () => runbooks.naming(),
     tasks,
     repos,
@@ -2019,7 +2019,7 @@ export async function createServices(
         ? gitlabForge({ kind, host, dir: "" })
         : githubForge({ kind: "github", host, dir: "" });
     },
-    readChecks: (taskId) => prCi.checkForCrew(taskId),
+    readChecks: (taskId) => changeDelivery.checkTool.checkForCrew(taskId),
     beforeValidationWrite: (taskId, request, write): Promise<void> =>
       supervisor.consumeValidationEffect(taskId, request, write),
     watchRun: (taskId, runId) => workflowEvidence.watchStarted(taskId, runId),
@@ -2556,8 +2556,10 @@ export async function createServices(
         effect?.();
       });
     },
-    mergePullRequest: (taskId, guard, beforeDispatch) => prCi.merge(taskId, guard, beforeDispatch),
-    mergeReview: (taskId, reviewId, guard) => prCi.mergeReview(taskId, reviewId, guard),
+    mergePullRequest: (taskId, guard, beforeDispatch) =>
+      changeDelivery.merges.merge(taskId, guard, beforeDispatch),
+    mergeReview: (taskId, reviewId, guard) =>
+      changeDelivery.reviews.mergeReview(taskId, reviewId, guard),
     // An integration's ask runs through its binding; every other is a forge write.
     sendWriteAsk: (taskId, askId, choice) =>
       tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === askId)?.kind ===
@@ -2566,21 +2568,22 @@ export async function createServices(
         : githubGateway.sendAsk(taskId, askId),
     sendTakenIntegrationAsk: (rowId, taken, choice) => integrations.sendTaken(rowId, taken, choice),
     panelAskAnswered: (askId, choice) => panelAsks.answered(askId, choice === "deny"),
-    reviewGate: (taskId, reviewId) => prCi.reviewGate(taskId, reviewId),
-    readPull: (taskId, prNumber) => prCi.pullState(taskId, prNumber),
-    closePullRequest: (taskId) => prCi.close(taskId),
-    checkCi: (taskId) => prCi.readForOffer(taskId),
-    prepareChange: (taskId, input) => prCi.preparePresentation(taskId, input),
-    openChange: (taskId, input) => prCi.open(taskId, input),
-    completionPresentation: (taskId, revision) => prCi.completionPresentation(taskId, revision),
-    validateLocalStory: (taskId) => prCi.validateLocalStory(taskId),
-    checkChange: (taskId, input) => prCi.checkForCrew(taskId, input),
+    reviewGate: (taskId, reviewId) => changeDelivery.reviews.reviewGate(taskId, reviewId),
+    readPull: (taskId, prNumber) => changeDelivery.merges.pullState(taskId, prNumber),
+    closePullRequest: (taskId) => changeDelivery.merges.close(taskId),
+    checkCi: (taskId) => changeDelivery.checks.readForOffer(taskId),
+    prepareChange: (taskId, input) => changeDelivery.publication.preparePresentation(taskId, input),
+    openChange: (taskId, input) => changeDelivery.publication.open(taskId, input),
+    completionPresentation: (taskId, revision) =>
+      changeDelivery.publication.completionPresentation(taskId, revision),
+    validateLocalStory: (taskId) => changeDelivery.publication.validateLocalStory(taskId),
+    checkChange: (taskId, input) => changeDelivery.checkTool.checkForCrew(taskId, input),
     readWorkflow: (taskId, input) => workflowEvidence.read(taskId, input),
     downloadArtifact: (taskId, input) => workflowEvidence.download(taskId, input),
     githubRead: (taskId, input) => githubGateway.read(taskId, input),
     githubWrite: (taskId, input) => githubGateway.write(taskId, input),
-    readCheckWatch: (taskId) => prCi.readWatched(taskId),
-    readMainChecks: (repoId) => prCi.readDefaultBranchChecks(repoId),
+    readCheckWatch: (taskId) => changeDelivery.checks.readWatched(taskId),
+    readMainChecks: (repoId) => changeDelivery.checks.readDefaultBranchChecks(repoId),
     readRunWatch: (taskId, runId) => workflowEvidence.readWatched(taskId, runId),
     killJobs: (taskId) => jobs.killForOwner(taskId),
     personal: personalLive,

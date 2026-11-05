@@ -48,6 +48,7 @@ import { taskResultResponse } from "./answerTaskResponse";
 import { type AskEnding, answersByShape, type ClosingPlace } from "./askEnding";
 import { type CardService, cardEmitter } from "./cardService";
 import { escapeCardText } from "./cardText";
+import type { MergeGuard, MergeStop, PrOutcome } from "./changeMerge";
 import {
   approvableOffer,
   candidateHead,
@@ -59,7 +60,6 @@ import {
   standingAuthorization,
   wakesFirstmate,
 } from "./mergeAuthorization";
-import type { MergeGuard, MergeStop, PrOutcome } from "./prCi";
 import {
   type ClosedWithoutClick,
   cannotMergeText,
@@ -296,7 +296,7 @@ export type SettleServiceHost = {
   mergePullRequest?: (
     taskId: string,
     guard?: MergeGuard,
-    boundary?: import("./prCi").MergeBoundary,
+    boundary?: import("./changeMerge").MergeBoundary,
   ) => Promise<PrOutcome>;
   /**
    * Merge one stored review (FI3-1543): a continuing merge, so the task

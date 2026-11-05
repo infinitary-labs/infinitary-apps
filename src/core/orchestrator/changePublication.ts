@@ -1,0 +1,820 @@
+import { existsSync } from "node:fs";
+import type { OpenChangeInput, StagedChangePresentation } from "@shared/changePresentation";
+import { forgeOf, hasChangeRequests } from "@shared/forge";
+import { overridePasses, softHoldWords } from "@shared/holds";
+import {
+  hostedPresentation,
+  type LocalPresentationDestination,
+  type PresentationDestination,
+} from "@shared/presentationDestination";
+import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
+import { effectiveTaskPolicies } from "@shared/taskPolicies";
+import {
+  AttachmentUploadError,
+  changeTitle,
+  type Forge,
+  type ForgeChange,
+  ForgeError,
+  ForgeWriteError,
+  isSignInForgeFailure,
+  PresentationAroundError,
+  presentationLines,
+} from "../forge";
+import { currentChange } from "../storage/changeProjection";
+import type { TaskRecord } from "../storage/taskStore";
+import { earlyPublication } from "../tasks/liveValidation";
+import { requireConventional, requireConventionalRange } from "../workspace/conventional";
+import { git, gitFailure } from "../workspace/git";
+import { checkedOutRefFor } from "../workspace/workspaceService";
+import type { ChangeChecks } from "./changeChecks";
+import {
+  type ChangeContext,
+  type ChangeDeliveryOptions,
+  changeWords,
+  crewSignInText,
+  numberLabel,
+  reviewOf,
+} from "./changeContext";
+import type { DraftReadiness } from "./draftReadiness";
+import { carryPassedReview } from "./reviewCarry";
+
+/**
+ * A task's change offered where the project lives: its saved change story
+ * prepared and published, and the change opened - in the task's own project
+ * or another the app manages - for the checks and the merge to read.
+ */
+export class ChangePublication {
+  private readonly options: ChangeDeliveryOptions;
+
+  constructor(
+    private readonly context: ChangeContext,
+    private readonly checks: ChangeChecks,
+    private readonly readiness: DraftReadiness,
+  ) {
+    this.options = context.options;
+  }
+
+  /**
+   * The crewmate's prepare_change: the change story saved for the change on
+   * the branch the working copy has checked out, for open_change to publish
+   * and the completion card to show. Nothing is uploaded and no card shown.
+   */
+  async preparePresentation(taskId: string, staged: StagedChangePresentation): Promise<string> {
+    try {
+      const local = this.localStoryDestination(taskId);
+      if (local) {
+        if (!this.options.presentations) return "Saved change stories are unavailable.";
+        const revision = await this.options.presentations.prepare(taskId, staged, local);
+        return `Prepared presentation ${revision} for ${staged.head}. Nothing was uploaded and no card was shown. This work merges locally: pass presentation: ${revision} to emit_card; no open_change or host sign-in is needed.`;
+      }
+      // A story is prepared for the task's own project; a change opened in
+      // another managed project carries its body instead (INF-2510).
+      const located = this.context.locate(taskId, "open", "own");
+      if ("said" in located) return located.said;
+      if (!this.options.presentations) return "Saved change stories are unavailable.";
+      try {
+        // The story is for the change on the branch the working copy has
+        // checked out; each change keeps its own (INF-2490).
+        const current = currentChange(located.record.delivery, located.branch);
+        const branch = (await this.presentationBranch(taskId)) ?? current.branch;
+        const ledger = this.options.tasks.changePresentation(taskId, branch);
+        // Only a pull request still open for the branch predates saved stories;
+        // a recorded one that has closed is forgotten, as for any new task.
+        if (
+          !ledger &&
+          hasChangeRequests(located.forge.kind) &&
+          (await located.forge.changeFor(branch))
+        )
+          return "This pull request predates saved stories and will not be rewritten into one. To replace its description, pass body to open_change.";
+        const merged =
+          branch === current.branch
+            ? await this.mergedBeforeStories(ledger, current.number, located.forge)
+            : undefined;
+        if (merged) return merged;
+        const revision = await this.options.presentations.prepare(taskId, staged, located.forge);
+        const destination = this.options.tasks
+          .changePresentation(taskId, branch)
+          ?.revisions.find((saved) => saved.revision === revision)?.destination;
+        return `Prepared presentation ${revision} for ${staged.head}. ${destination ? `${storyAudience(destination)} ` : ""}No file was uploaded and no card was shown. Pass presentation: ${revision} to open_change after review and pushing; pass the same current published revision to emit_card after checks pass.`;
+      } catch (caught) {
+        if (isSignInForgeFailure(caught))
+          return crewSignInText(this.context.signInFact(located.forge, located.record.repoId));
+        return `Could not prepare the change story: ${caught instanceof Error ? caught.message : String(caught)}`;
+      }
+    } catch (caught) {
+      return `Could not prepare the change story: ${caught instanceof Error ? caught.message : String(caught)}`;
+    } finally {
+      await this.options.presentations?.discardStaged(taskId, staged);
+    }
+  }
+
+  /**
+   * The pull request a task recorded before saved stories, merged outside the
+   * app: nothing more is opened for it, as for a merged published story. One
+   * closed without merging is forgotten and the task starts a story.
+   */
+  private async mergedBeforeStories(
+    story: { published?: unknown; reconciled?: unknown } | undefined,
+    number: number | undefined,
+    forge: Forge,
+  ): Promise<string | undefined> {
+    // Once a story is published or reconciled, #N is the story's own pull
+    // request and its own stops decide. A failed read reaches the caller's
+    // catch, so the check fails closed.
+    if (story?.published || story?.reconciled) return undefined;
+    if (number === undefined) return undefined;
+    const pull = await this.context.pullOf(forge, number);
+    return pull.merged
+      ? `${numberLabel(forge, pull.number)} was merged outside the app. Nothing more is opened for it; close this task or start a new one.`
+      : undefined;
+  }
+
+  async presentationHead(taskId: string): Promise<string> {
+    const record = this.options.tasks.get(taskId);
+    if (!record?.branch) throw new Error("The task has no committed branch.");
+    let dir = record.worktreeDir;
+    if (record.deviceId) {
+      // A working copy there reads its own checkout (INF-2490): another
+      // branch the crewmate checked out answers its commit there.
+      const there = await this.options.checkedOut?.(taskId);
+      if (there && there.branch !== record.branch) return there.head;
+      dir = (await this.options.bringBranchHome?.(taskId, true)) ?? "";
+    } else if (dir && (await git(dir, ["status", "--porcelain", "--untracked-files=no"])).trim()) {
+      throw new Error(
+        "Commit the task's changes before preparing or publishing its demonstrated version.",
+      );
+    }
+    if (!dir) throw new Error("The current code version is unavailable.");
+    // Here the demonstrated version is the commit the working copy has
+    // checked out: the task's own branch, or an existing branch or another
+    // change the crewmate checked out to deliver (INF-2184, INF-2490).
+    return git(dir, ["rev-parse", `${record.deviceId ? record.branch : "HEAD"}^{commit}`]);
+  }
+
+  /**
+   * The branch the working copy has checked out, whose change a story is
+   * prepared for (INF-2184, INF-2490): the task's own, or an existing
+   * branch the crewmate checked out to deliver, on this Mac or on the
+   * computer that runs the task. Undefined - the current change - with no
+   * branch checked out. A computer that cannot say delivers the task's own.
+   */
+  async presentationBranch(taskId: string): Promise<string | undefined> {
+    const record = this.options.tasks.get(taskId);
+    if (record?.deviceId) {
+      const there = await this.options.checkedOut?.(taskId);
+      return there ? (there.branch ?? undefined) : record.branch;
+    }
+    if (!record?.worktreeDir) return undefined;
+    const branch = (
+      await git(record.worktreeDir, ["rev-parse", "--abbrev-ref", "HEAD"]).catch(() => "")
+    ).trim();
+    return branch && branch !== "HEAD" ? branch : undefined;
+  }
+
+  /** Delivery, not the presence of an origin, decides whether a story reaches a host. */
+  private localStoryDestination(taskId: string): LocalPresentationDestination | undefined {
+    const record = this.options.tasks.get(taskId);
+    if (!record) throw new Error("The task no longer exists.");
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    if (record.repoId && !repo) throw new Error("The task's project is no longer registered.");
+    if (deliveryForRecord(record, repo?.delivery) !== "local-only") return undefined;
+    return { kind: "local", project: record.repoId ?? record.repoDir };
+  }
+
+  async validateLocalStory(taskId: string): Promise<string> {
+    const destination = this.localStoryDestination(taskId);
+    if (!destination || !this.options.presentations)
+      throw new Error("The local story cannot be checked.");
+    const head = await this.presentationHead(taskId);
+    if (overridePasses(this.options.tasks.get(taskId)?.delivery, "story", head)) return head;
+    return this.options.presentations.assertLocal(taskId, destination);
+  }
+
+  async completionPresentation(taskId: string, revision: number) {
+    if (this.localStoryDestination(taskId)) {
+      if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
+      const head = await this.validateLocalStory(taskId);
+      return {
+        ...(await this.options.presentations.completion(taskId, revision, head)),
+        revision,
+      };
+    }
+    const located = this.context.locate(taskId, "open");
+    if ("said" in located) throw new Error(located.said);
+    if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
+    // The story is on the task's current change, whichever branch it is on (INF-2490).
+    const change = await located.forge.changeFor(
+      currentChange(located.record.delivery, located.branch).branch,
+    );
+    if (!change) throw new Error("The story's pull request is not open.");
+    // INF-2509: a pull request that moved past its published story shows it
+    // republished at the pushed version, with the same words.
+    const shown = await this.options.presentations.atPushedVersion(
+      taskId,
+      revision,
+      change,
+      located.forge,
+      this.context.attestsAt(taskId),
+    );
+    const current =
+      shown === revision
+        ? change
+        : await located.forge.changeFor(change.branch).then((read) => {
+            if (!read || read.number !== change.number || read.headSha !== change.headSha)
+              throw new Error("The pull request changed while its story was republished.");
+            return read;
+          });
+    await this.options.presentations.assertPublished(taskId, current, located.forge, shown);
+    return {
+      ...(await this.options.presentations.completion(
+        taskId,
+        shown,
+        current.headSha,
+        current.branch,
+      )),
+      revision: shown,
+    };
+  }
+
+  /**
+   * The crewmate's open_change (git integration PR 1.2): offer the task's
+   * branch as a proposed change where the project lives - a pull request
+   * on GitHub (the crewmate has pushed the branch), the branch sent up on a
+   * plain host (the forge pushes it). A change already open for the branch
+   * is answered, not opened twice, and a body replaces its description when
+   * that is not a saved story (`redescribe`). Recorded like a reading's change:
+   * `pr_opened` on the timeline, the label and link on the delivery facts.
+   */
+  async open(taskId: string, input: OpenChangeInput): Promise<string> {
+    const located = this.context.locate(taskId, "open", "own");
+    if ("said" in located) return located.said;
+    const { record, forge } = located;
+    if (input.repository !== undefined) {
+      const named = this.projectNamed(record, input.repository);
+      if ("said" in named) return named.said;
+      if (!named.own) return this.openElsewhere(record, named.repo, input);
+    }
+    // INF-2184: an existing branch the crewmate names opens as it is, at
+    // its own head; the task's own branch is the default.
+    const branch = input.branch?.trim() || located.branch;
+    const own = branch === record.branch;
+    try {
+      requireConventional(input.title, "pull request title", this.options.namingRule?.());
+      if (own) {
+        this.options.tasks.selectOwnChange(taskId);
+        await this.context.branchHome(record);
+      }
+      // Where this Mac's git reads the branch: by its name, or another
+      // branch from the computer that runs the task at the task's own ref
+      // for it (INF-2490).
+      const read = own || !record.deviceId ? branch : await this.otherBranchHome(record, branch);
+      const dir = await this.context.validateRange(
+        record.repoId,
+        record.repoDir,
+        branch,
+        forge,
+        read,
+      );
+      const existing = await forge.changeFor(branch);
+      if (existing && hasChangeRequests(forge.kind))
+        requireConventional(
+          changeTitle(forge.kind, existing) ?? "",
+          "existing pull request title",
+          this.options.namingRule?.(),
+        );
+      const current = this.options.tasks.get(taskId);
+      const policy =
+        current &&
+        effectiveTaskPolicies(
+          current,
+          current.repoId ? this.options.repos.get(current.repoId) : undefined,
+        );
+      if (!current || !policy || !opensPullRequest(policy.delivery.value))
+        return "Cannot open the change: its delivery policy changed. Read the current task record.";
+      let prerequisite: string | undefined;
+      let validationHead: string | undefined;
+      if (
+        !existing &&
+        current.delivery?.liveValidation?.permissions.some(
+          (item) =>
+            item.request.kind === "effect" &&
+            item.request.prerequisitePublication &&
+            item.request.publication?.repoId === current.repoId &&
+            item.request.publication.branch === branch &&
+            (item.state === "started" || item.state === "unknown"),
+        )
+      )
+        return "The earlier prerequisite publication has an unknown outcome. Reconcile it before another publication; a missing result does not prove it failed.";
+      // A task with a review or a live-validation record carries it to the
+      // version being opened, at any care: the care's name holds nothing
+      // here, and a task with neither record has nothing to read. The
+      // version is read where the range was checked: the project's folder,
+      // where a branch from another computer came home.
+      if (current.delivery?.reviewVerdict || current.delivery?.liveValidation) {
+        const head = existing?.headSha ?? (await git(dir, ["rev-parse", read]));
+        await carryPassedReview({
+          tasks: this.options.tasks,
+          taskId,
+          record: current,
+          repoDir: dir,
+          head,
+        });
+        validationHead = head;
+        this.options.tasks.recordChangeEvidence(taskId, { validationHead: head });
+        const early =
+          earlyPublication(current.delivery?.liveValidation, head, Boolean(existing)) ??
+          (existing
+            ? current.delivery?.liveValidation?.permissions.find(
+                (item) =>
+                  item.request.kind === "effect" &&
+                  item.request.prerequisitePublication &&
+                  item.request.head === head &&
+                  item.request.publication?.repoId === current.repoId &&
+                  item.request.publication.branch === branch &&
+                  ["started", "unknown", "succeeded"].includes(item.state),
+              )
+            : undefined);
+        if (
+          early?.request.kind === "effect" &&
+          early.request.publication?.repoId === current.repoId &&
+          early.request.publication.branch === branch
+        )
+          prerequisite = early.request.id;
+      }
+      const presentations = this.options.presentations;
+      // The story of the change on this branch: each change keeps its own (INF-2490).
+      const ledger = this.options.tasks.changePresentation(taskId, branch);
+      if (own && !existing && presentations && hasChangeRequests(forge.kind)) {
+        const merged = await this.mergedBeforeStories(ledger, current.delivery?.prNumber, forge);
+        if (merged) return merged;
+      }
+      // The captain's override on the saved story lets this task open its
+      // pull request with a body; the default stays as he chose.
+      const storyPassed =
+        input.presentation === undefined &&
+        current.delivery?.override?.holds.includes("story") === true &&
+        overridePasses(
+          current.delivery,
+          "story",
+          existing?.headSha ?? (await git(dir, ["rev-parse", read])),
+        );
+      const usesStory =
+        presentations &&
+        (forge.storyDestination || forge.attachments) &&
+        (!hasChangeRequests(forge.kind) || !existing || ledger) &&
+        !storyPassed;
+      if (usesStory && (input.presentation === undefined || input.body !== undefined))
+        return `Prepare the current change story with prepare_change, then pass its presentation revision, not body. Native media hosts confirm every selected attachment before publication; other description hosts receive text only. A plain branch keeps its story on the completion card. To change only the words around a published story, pass around. ${softHoldWords("story", "crewmate")}`;
+      if (!usesStory && input.presentation !== undefined)
+        return "This host or existing pull request does not use saved change stories. Keep its existing delivery.";
+      if (!usesStory && input.around !== undefined)
+        return "This pull request does not carry a saved story, so around has nothing to keep; pass body to replace its description.";
+      if (
+        input.around &&
+        presentationLines(input.around.from) === presentationLines(input.around.to)
+      )
+        return "Nothing was sent: around.to is the same as around.from.";
+      if (!usesStory && !existing && input.body === undefined)
+        return "The pull request description is missing.";
+      const beginPublication = (head: string) => {
+        if (!validationHead || (prerequisite && existing)) return;
+        const latest = this.options.tasks.get(taskId);
+        if (
+          head !== validationHead ||
+          latest?.repoId !== current.repoId ||
+          latest.branch !== record.branch
+        )
+          throw new Error(
+            "The publication changed; nothing was sent. Read its current version and permission.",
+          );
+        if (!prerequisite) return;
+        // The transition rechecks the current approval, code clearance and
+        // scenario. For saved stories this runs after their preflight, before
+        // any attachment leaves the computer, not before a possibly long read.
+        this.options.tasks.recordLiveValidation(
+          taskId,
+          {
+            kind: "effect-state",
+            request: prerequisite,
+            state: "started",
+            evidence: "The approved prerequisite draft publication passed its execution gate.",
+          },
+          { head },
+        );
+        this.options.tasks.recordLiveValidation(
+          taskId,
+          {
+            kind: "effect-state",
+            request: prerequisite,
+            state: "unknown",
+            evidence:
+              "The approved prerequisite publication is being sent; read the host before any repeat.",
+          },
+          { head },
+        );
+      };
+      let change: ForgeChange;
+      let described = "";
+      if (usesStory) {
+        change = await presentations.publish(
+          taskId,
+          input.presentation as number,
+          forge,
+          branch,
+          input.title,
+          current.delivery?.ci === "green" && current.delivery.headSha === existing?.headSha
+            ? "passed"
+            : "pending",
+          input.recovery,
+          input.around,
+          {
+            ...(validationHead
+              ? {
+                  beforePublish: beginPublication,
+                  attests: this.context.attestsAt(taskId),
+                  ...(prerequisite && !existing ? { draft: hasChangeRequests(forge.kind) } : {}),
+                }
+              : {}),
+            ...(input.base ? { base: input.base } : {}),
+            ...(read === branch ? {} : { source: read }),
+          },
+        );
+        const place = forge.place ?? "the project's host";
+        // INF-717: a renamed change says its new title, the story's.
+        const renamed =
+          existing && changeTitle(forge.kind, change) !== changeTitle(forge.kind, existing);
+        described = [
+          input.around
+            ? `Changed the words around the story: ${place} shows them, and the story is as published.`
+            : "",
+          renamed ? `Its title now reads "${changeTitle(forge.kind, change)}", the story's.` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+      } else if (existing) {
+        ({ change, said: described } = await this.redescribe(forge, branch, existing, input));
+      } else {
+        beginPublication(validationHead ?? "");
+        change = await forge.openChange({
+          branch,
+          title: input.title,
+          body: input.body ?? "",
+          ...(input.base ? { base: input.base } : {}),
+          ...(read === branch ? {} : { source: read }),
+          ...(prerequisite && hasChangeRequests(forge.kind) ? { draft: true } : {}),
+        });
+        if (!hasChangeRequests(forge.kind)) described = keepsNoDescription(forge);
+      }
+      if (
+        prerequisite &&
+        ["started", "unknown"].includes(
+          this.options.tasks
+            .get(taskId)
+            ?.delivery?.liveValidation?.permissions.find((item) => item.request.id === prerequisite)
+            ?.state ?? "",
+        )
+      )
+        this.options.tasks.recordLiveValidation(
+          taskId,
+          {
+            kind: "effect-state",
+            request: prerequisite,
+            state: "succeeded",
+            evidence: `The host confirmed ${changeWords(forge, change)}.`,
+          },
+          { head: validationHead ?? "" },
+        );
+      change = await this.readiness.readyPrerequisite(record.id, forge, change);
+      if (!own) await this.selectOpened(record, forge, change, input.base);
+      this.checks.noteChange(record.id, { change, forge });
+      const next = [
+        "Read its checks with check_change. If the rest of your work needs this merged first, file it as Continue: … and end this task with the completion decision after the checks pass.",
+        this.readiness.readinessProblem(taskId, change),
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const said = described ? ` ${described}` : "";
+      return existing
+        ? `A pull request for ${branch} is already open: ${changeWords(forge, change)}.${said} ${next}`
+        : `Opened ${changeWords(forge, change)} for ${branch}.${said} ${next}`;
+    } catch (caught) {
+      return this.openFailure(record, forge, located.repo, caught);
+    }
+  }
+
+  /**
+   * open_change in another project the app manages (INF-2510): the crewmate
+   * pushed a branch to where that project lives. The host reads the branch
+   * into that project's folder, checks its commit names there, and opens the
+   * change with the crewmate's description through that project's host. The
+   * change becomes the task's current one, so check_change and the merge
+   * read and act on it there. It carries no saved story: prepare_change
+   * prepares the task's own project's.
+   */
+  private async openElsewhere(
+    record: TaskRecord,
+    repo: RepoView,
+    input: OpenChangeInput,
+  ): Promise<string> {
+    const forge = this.options.forgeFor(repo, repo.path);
+    if (!hasChangeRequests(forge.kind))
+      return `Cannot open the change in ${repo.name}: ${forge.place ?? "where it lives"} has no pull requests, so the app opens no change there for another project's task.`;
+    const branch = input.branch?.trim();
+    if (!branch)
+      return `Name the branch you pushed to ${repo.name} with branch: a change in another project opens from its own pushed branch.`;
+    if (branch === record.branch)
+      return `Cannot open the change in ${repo.name} from ${branch}: that name is this task's own branch. Push the work there under another branch name, then name it with branch.`;
+    if (
+      input.presentation !== undefined ||
+      input.around !== undefined ||
+      input.recovery !== undefined
+    )
+      return "A change in another project carries no saved story: pass body as its description, without presentation, around or recovery.";
+    if (!existsSync(repo.path)) return `${repo.name}'s folder is gone; cannot open a change there.`;
+    try {
+      requireConventional(input.title, "pull request title", this.options.namingRule?.());
+      await this.validateElsewhere(record.id, repo.path, branch, forge);
+      const existing = await forge.changeFor(branch);
+      let change: ForgeChange;
+      let described = "";
+      if (existing) {
+        requireConventional(
+          changeTitle(forge.kind, existing) ?? "",
+          "existing pull request title",
+          this.options.namingRule?.(),
+        );
+        ({ change, said: described } = await this.redescribe(forge, branch, existing, input));
+      } else {
+        if (input.body === undefined) return "The pull request description is missing.";
+        change = await forge.openChange({
+          branch,
+          title: input.title,
+          body: input.body,
+          ...(input.base ? { base: input.base } : {}),
+        });
+      }
+      await this.selectOpened(record, forge, change, input.base, repo);
+      this.checks.noteChange(record.id, { change, forge });
+      const next =
+        "Read its checks with check_change; they are read there, and the merge goes there. Show its outcome on the completion decision after they pass.";
+      const said = described ? ` ${described}` : "";
+      return existing
+        ? `A pull request for ${branch} in ${repo.name} is already open: ${changeWords(forge, change)}.${said} ${next}`
+        : `Opened ${changeWords(forge, change)} in ${repo.name} for ${branch}.${said} ${next}`;
+    } catch (caught) {
+      return this.openFailure(record, forge, repo, caught);
+    }
+  }
+
+  /**
+   * Reads a branch pushed to another managed project into that project's
+   * folder, beside its default branch, then checks the branch's own commit
+   * names there (INF-2510). Its private ref leaves the person's branches as
+   * they were.
+   */
+  private async validateElsewhere(
+    taskId: string,
+    dir: string,
+    branch: string,
+    forge: Forge,
+  ): Promise<void> {
+    if (this.options.validateRange) {
+      await this.options.validateRange(dir, branch, forge, branch);
+      return;
+    }
+    const name = await forge.defaultBranch();
+    const head = `refs/infinitary/opened/${taskId}`;
+    try {
+      await git(
+        dir,
+        [
+          "fetch",
+          "--quiet",
+          "--no-tags",
+          "origin",
+          `+refs/heads/${name}:refs/remotes/origin/${name}`,
+          `+refs/heads/${branch}:${head}`,
+        ],
+        { env: { GIT_TERMINAL_PROMPT: "0" } },
+      );
+    } catch (caught) {
+      throw new ForgeError(
+        "refused",
+        `could not read ${branch} there (${gitFailure(caught)})`,
+        true,
+      );
+    }
+    const base = await git(dir, ["merge-base", head, `refs/remotes/origin/${name}`]);
+    await requireConventionalRange(dir, base, head, this.options.namingRule?.());
+  }
+
+  /** What open_change says when the host or the checks refused the change, in either project. */
+  private openFailure(
+    record: TaskRecord,
+    forge: Forge,
+    repo: RepoView | undefined,
+    caught: unknown,
+  ): string {
+    const message = caught instanceof Error ? caught.message : String(caught);
+    if (isSignInForgeFailure(caught)) {
+      return crewSignInText(this.context.signInFact(forge, repo?.id ?? record.repoId));
+    }
+    // An evidence upload says what stopped it; the branch is already pushed (INF-290 F4).
+    // A permission refusal keeps the write-access note and blocker words below (INF-290 G1).
+    if (caught instanceof AttachmentUploadError && caught.failure !== "permission") return message;
+    // INF-497: nothing was sent, or what the host shows; the words carry the current text.
+    if (caught instanceof PresentationAroundError) return message;
+    const place = forge.place ?? "the project's host";
+    if (caught instanceof ForgeError && caught.failure === "permission") {
+      this.options.onNote?.(
+        `${place} did not allow the change on ${repo?.name ?? record.title} - ask its owner for write access.`,
+        record.id,
+      );
+      return `${place} did not allow opening the change: ${message}. Report this as a blocker: the captain needs write access to the project there.`;
+    }
+    if (caught instanceof ForgeError && caught.failure === "refused") {
+      return `${place} refused to open the change: ${message}. Push your branch first (git push) if you have not, then call open_change again.`;
+    }
+    return `Could not open the pull request: ${message}`;
+  }
+
+  /**
+   * An open change whose description is the crewmate's own words, not a
+   * saved story (INF-291): a body replaces it whole through the forge's
+   * conditional write, and the answer says what the host shows when read
+   * back, never only that the change exists. A refused or uncertain write,
+   * or a read-back that differs, is said as such; nothing is sent again.
+   */
+  private async redescribe(
+    forge: Forge,
+    branch: string,
+    existing: ForgeChange,
+    input: OpenChangeInput,
+  ): Promise<{ change: ForgeChange; said: string }> {
+    const { body } = input;
+    // A title is never renamed here; say so rather than drop it quietly.
+    const titled =
+      existing.title !== undefined && existing.title !== input.title
+        ? ` Its title stays "${existing.title}".`
+        : "";
+    const place = forge.place ?? "the project's host";
+    const readBack = "Read it with github_read before calling open_change again.";
+    if (!hasChangeRequests(forge.kind))
+      return { change: existing, said: body === undefined ? "" : keepsNoDescription(forge) };
+    if (body === undefined)
+      return {
+        change: existing,
+        said: `Its description is unchanged; pass body to replace it.${titled}`,
+      };
+    if (sameDescription(existing.body, body))
+      return {
+        change: existing,
+        said: `${place} already shows this description; nothing was sent.${titled}`,
+      };
+    if (!forge.updateChangeBody)
+      return {
+        change: existing,
+        said: `Its description was not replaced: ${place} offers no way to replace it here.`,
+      };
+    try {
+      await forge.updateChangeBody(existing, body);
+    } catch (caught) {
+      // A missing sign-in or write access keeps the blocker words open_change already gives.
+      const denied =
+        isSignInForgeFailure(caught) ||
+        (caught instanceof ForgeError && caught.failure === "permission");
+      if (!(caught instanceof ForgeWriteError) || denied) throw caught;
+      return {
+        change: existing,
+        said:
+          caught.outcome === "failed"
+            ? `Its description was not replaced: ${caught.message}`
+            : `Its description may or may not have been replaced: ${caught.message} ${readBack}`,
+      };
+    }
+    let read: ForgeChange | null;
+    try {
+      read = await forge.changeFor(branch);
+    } catch (caught) {
+      if (isSignInForgeFailure(caught)) throw caught;
+      const why = caught instanceof Error ? caught.message : String(caught);
+      return {
+        change: existing,
+        said: `Sent the new description, but could not read it back: ${why}. ${readBack}`,
+      };
+    }
+    if (read && read.number === existing.number && sameDescription(read.body, body))
+      return {
+        change: read,
+        said: `Replaced its description: ${place} now shows the ${body.length}-character body you passed, at version ${read.headSha.slice(0, 7)}.${titled}`,
+      };
+    return {
+      change: read ?? existing,
+      said: `Sent the new description, but ${place} shows different words; someone may have edited it at the same time. ${readBack}`,
+    };
+  }
+
+  /**
+   * open_change names the project the change opens on (INF-1873): the
+   * task's own or any other project the app manages (INF-2510), by its
+   * name, id, owner/name or origin where it lives. A name the app does not
+   * manage is refused in words that list the ones it does.
+   */
+  private projectNamed(
+    record: TaskRecord,
+    repository: string,
+  ): { repo: RepoView; own: boolean } | { said: string } {
+    const asked = repository.trim().toLowerCase();
+    const namesOf = (repo: RepoView) => {
+      const origin = forgeOf(repo.origin);
+      const full = origin.owner && origin.name ? `${origin.owner}/${origin.name}` : undefined;
+      return [repo.id, repo.name, full, repo.origin]
+        .filter((name): name is string => Boolean(name))
+        .map((name) => name.toLowerCase());
+    };
+    const repos = this.options.repos.list();
+    const own = record.repoId ? repos.find((repo) => repo.id === record.repoId) : undefined;
+    if (own && namesOf(own).includes(asked)) return { repo: own, own: true };
+    const matches = repos.filter((repo) => repo.id !== own?.id && namesOf(repo).includes(asked));
+    if (matches.length === 1) return { repo: matches[0] as RepoView, own: false };
+    const managed = repos.map((repo) => repo.name).join(", ");
+    if (matches.length > 1)
+      return {
+        said: `Cannot open the change on "${repository}": more than one project the app manages answers to that name (${matches.map((repo) => repo.name).join(", ")}). Name it by owner/name or its origin.`,
+      };
+    return {
+      said: `Cannot open the change on "${repository}": a change opens only in a project the app manages${managed ? ` (${managed})` : ""}. Name one of them, or leave repository out for this task's own.`,
+    };
+  }
+
+  /**
+   * A change open_change opened from an existing branch (INF-2184) becomes
+   * the task's current change, selected the way a named pull request is.
+   * A host with no pull requests keeps no selection: its branch is read by
+   * name. One opened in another managed project names that project
+   * (INF-2510).
+   */
+  private async selectOpened(
+    record: TaskRecord,
+    forge: Forge,
+    change: ForgeChange,
+    asked: string | undefined,
+    elsewhere?: RepoView,
+  ): Promise<void> {
+    const repo = elsewhere ?? (record.repoId ? this.options.repos.get(record.repoId) : undefined);
+    const origin = forgeOf(repo?.origin);
+    if (
+      change.number === undefined ||
+      !hasChangeRequests(forge.kind) ||
+      !origin.host ||
+      !origin.owner ||
+      !origin.name
+    )
+      return;
+    const base = change.base ?? asked ?? (await forge.defaultBranch());
+    this.context.select(
+      this.options.tasks.get(record.id) ?? record,
+      reviewOf(
+        forge,
+        { host: origin.host, owner: origin.owner, name: origin.name },
+        { ...change, number: change.number, base },
+        this.context.now(),
+        elsewhere ? { repoId: elsewhere.id } : {},
+      ),
+    );
+  }
+
+  /**
+   * Another branch a placed task's crewmate checked out there to deliver,
+   * brought to the task's own ref for it here (INF-2490); answers that ref.
+   */
+  private async otherBranchHome(record: { id: string }, branch: string): Promise<string> {
+    await this.options.bringBranchHome?.(record.id, true, branch);
+    return checkedOutRefFor(record.id);
+  }
+}
+
+/** What open_change says of a body on a host whose pushed branch carries no description. */
+function keepsNoDescription(forge: Forge): string {
+  return `${forge.place ?? "The project's host"} keeps no description for a pushed branch, so body was not published.`;
+}
+
+/** Two descriptions alike as a host keeps them: line endings and trailing space aside. */
+function sameDescription(held: string | undefined, body: string): boolean {
+  const plain = (text: string) => text.replace(/\r\n?/g, "\n").trimEnd();
+  return plain(held ?? "") === plain(body);
+}
+
+/**
+ * Who reads a story, from the visibility the host read when it was prepared
+ * (INF-2142's approved plan): the crewmate is told the audience it writes for.
+ */
+function storyAudience(destination: PresentationDestination): string {
+  if (hostedPresentation(destination))
+    return destination.visibility === "public"
+      ? `${destination.fullName} is public: anyone can read this story, so it names nothing personal or local.`
+      : `${destination.fullName} is ${destination.visibility}: everyone with access can read this story, and the project can turn public, so it names nothing personal or local.`;
+  return destination.kind === "branch"
+    ? "Everyone who can reach the branch where the project lives can read its commits; write them for a stranger."
+    : "";
+}

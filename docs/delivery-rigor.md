@@ -430,7 +430,7 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   A fix brings a new version with fresh checks, so it comes back to the captain on a new completion card when it changed the work (a repair declared `changed-work`, under "Repairs" below); a fix declared to leave the approved work as it was, or the same version passing on a rerun, merges on the kept approval once the checks pass.
   A card whose click approves nothing keeps its words, since a click there is refused and nothing waits.
 - **The head it covers.**
-  A merge under the approval runs with a `MergeGuard` (`PrCiService.merge`): only the candidate head (the approved head, or the newest accepted repair) on the pinned pull request.
+  A merge under the approval runs with a `MergeGuard` (`ChangeMerge.merge`): only the candidate head (the approved head, or the newest accepted repair) on the pinned pull request.
   A pull request at any other head stops as `moved`, and nothing is sent.
 - **Repairs.**
   Any new version after the approved one is a repair - bringing the change up to date, a reworded commit, a fix for what refused the merge - and the crewmate declares it with `check_change conflictRepair` (`fromHead`, `toHead`, `newBase`, `impact`, `changedPaths`, `evidence`, `validation`).

@@ -715,7 +715,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   The record's repository is this Mac's default workspace, where its branch comes home and merges.
   A project without an origin runs on this Mac only; an origin's address crosses with any name or password in it taken out.
 - **Reading its branch here.**
-  Before this Mac's own git reads a placed task's branch - to open its change, to check a declared repair, to merge it, to merge it locally - the branch is brought home as a bundle of only the commits this Mac lacks, into `refs/heads/<branch>` of the task's repository here (`bringBranchHome`, called by `PrCiService` and `SettleService`).
+  Before this Mac's own git reads a placed task's branch - to open its change, to check a declared repair, to merge it, to merge it locally - the branch is brought home as a bundle of only the commits this Mac lacks, into `refs/heads/<branch>` of the task's repository here (`bringBranchHome`, called by `ChangeContext`, `ChangePublication` and `SettleService`).
   This Mac's git reads it in that repository: the project's folder now, or this Mac's default workspace for a task with no project (`bringBranchHome` answers it).
   The record names this Mac's project folder, including after this Mac's folder moved (`docs/saved-data-compatibility.md`, "The one-time move").
   The read uses the project's folder as it stands, which can have moved again since the task started.

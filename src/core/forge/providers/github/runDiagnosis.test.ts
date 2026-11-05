@@ -4,9 +4,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
+import { createChangeDelivery } from "../../../orchestrator/changeDelivery";
 import { declareRunCheck } from "../../../orchestrator/checkRepair";
 import { GithubGatewayService } from "../../../orchestrator/githubGateway";
-import { PrCiService } from "../../../orchestrator/prCi";
 import { RunWatcher } from "../../../orchestrator/runWatch";
 import { WorkflowEvidenceService } from "../../../orchestrator/workflowEvidence";
 import { CHECK_CHANGE_TOOL, GITHUB_WRITE_TOOL, READ_WORKFLOW_TOOL } from "../../../pi/forgeTools";
@@ -174,12 +174,12 @@ async function setup(delivery: "direct-pr" | "local-only" = "direct-pr", operati
     forgeFor: () => forge,
     now: clock,
   });
-  const prCi = new PrCiService({ tasks, repos, forgeFor: () => forge, now: clock });
+  const changeDelivery = createChangeDelivery({ tasks, repos, forgeFor: () => forge, now: clock });
   const gateway = new GithubGatewayService({
     tasks,
     repos,
     forgeFor: () => forge,
-    readChecks: (taskId) => prCi.checkForCrew(taskId),
+    readChecks: (taskId) => changeDelivery.checkTool.checkForCrew(taskId),
     watchRun: (taskId, runId) => evidence.watchStarted(taskId, runId),
     now: clock,
     sleep: async () => {},
@@ -199,7 +199,7 @@ async function setup(delivery: "direct-pr" | "local-only" = "direct-pr", operati
     onCheckChange: async (input) =>
       operation
         ? declareRunCheck(tasks, "proof", input ?? {}, clock())
-        : prCi.checkForCrew("proof", input),
+        : changeDelivery.checkTool.checkForCrew("proof", input),
   });
   const githubWrite = bindTool(GITHUB_WRITE_TOOL, {
     onGithubWrite: (input) => gateway.write("proof", input),

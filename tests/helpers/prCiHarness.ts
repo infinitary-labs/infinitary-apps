@@ -1,5 +1,5 @@
 /**
- * The shared stand-in for where a project lives in PrCiService's tests
+ * The shared stand-in for where a project lives in the change delivery tests
  * (INF-2625's plan): one fake forge whose change, checks and failures a test
  * moves between calls, and the service wired as the app wires it over a
  * fresh database and a scratch project folder.
@@ -14,8 +14,11 @@ import {
   type ForgeError,
   ForgeWriteError,
 } from "../../src/core/forge";
+import {
+  type ChangeDelivery,
+  createChangeDelivery,
+} from "../../src/core/orchestrator/changeDelivery";
 import { ChangePresentations } from "../../src/core/orchestrator/changePresentations";
-import { PrCiService } from "../../src/core/orchestrator/prCi";
 import type { AppDatabase } from "../../src/core/storage/db";
 import { seedTask, type TaskSeed } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
@@ -166,7 +169,7 @@ export class FakeForge implements Forge {
   }
 }
 
-/** What a placed task's computer says its working copy has checked out (`PrCiService`'s `checkedOut`). */
+/** What a placed task's computer says its working copy has checked out (`ChangeDeliveryOptions`' `checkedOut`). */
 export type CheckedOut = (
   taskId: string,
 ) => Promise<{ branch: string | null; head: string } | null>;
@@ -176,7 +179,7 @@ export type PrCiHarness = {
   db: AppDatabase;
   tasks: TaskService;
   repos: RepoRegistry;
-  service: PrCiService;
+  service: ChangeDelivery;
   forge: FakeForge;
   paths: string;
   presentations: ChangePresentations;
@@ -207,9 +210,11 @@ export function setup(
     tasks,
     mediaDir: () => paths,
     head: readHead,
-    ...(options.checkedOut ? { branch: (taskId) => service.presentationBranch(taskId) } : {}),
+    ...(options.checkedOut
+      ? { branch: (taskId) => service.publication.presentationBranch(taskId) }
+      : {}),
   });
-  const service: PrCiService = new PrCiService({
+  const service: ChangeDelivery = createChangeDelivery({
     tasks,
     repos,
     forgeFor: options.forgeFor ?? (() => forge),

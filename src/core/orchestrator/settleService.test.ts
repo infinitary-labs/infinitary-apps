@@ -12,8 +12,8 @@ import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { readChangeReading } from "../workspace/workspaceService";
 import type { CardService } from "./cardService";
+import type { MergeBoundary, MergeGuard } from "./changeMerge";
 import { declareMergeRepair } from "./mergeAuthorization";
-import type { MergeBoundary, MergeGuard } from "./prCi";
 import { carryPassedReview, reviewCoversHead } from "./reviewCarry";
 import { SettleService, type SettleServiceHost } from "./settleService";
 

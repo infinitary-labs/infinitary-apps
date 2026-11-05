@@ -190,7 +190,7 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
 
   // The captain puts it in: the task's own put-in line, and the host's
   // default branch moves onto exactly the version that was checked. The
-  // receipt's words, naming where it went in, are prCi.test.ts's.
+  // receipt's words, naming where it went in, are changeMerge.test.ts's.
   await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
   await expect(putInLine(page, task?.key as string)).toBeVisible({ timeout: 30_000 });
   expect(git("-C", bare, "rev-parse", "refs/heads/main")).toBe(sentUp);

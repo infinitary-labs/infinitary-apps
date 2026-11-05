@@ -26,10 +26,13 @@ import {
   SavedOutsideData,
 } from "../../src/core/integrations";
 import { jobExitWake } from "../../src/core/jobs/jobManager";
+import {
+  type ChangeDelivery,
+  createChangeDelivery,
+} from "../../src/core/orchestrator/changeDelivery";
 import { ChangePresentations } from "../../src/core/orchestrator/changePresentations";
 import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor";
 import { GithubGatewayService } from "../../src/core/orchestrator/githubGateway";
-import { PrCiService } from "../../src/core/orchestrator/prCi";
 import type { TypedWake } from "../../src/core/orchestrator/wakes";
 import { WorkflowEvidenceService } from "../../src/core/orchestrator/workflowEvidence";
 import { type AppPaths, appPathsFor, crewmateCardPicturesDir } from "../../src/core/paths";
@@ -79,7 +82,7 @@ import { STAND_IN_CLIENT_ID, STAND_IN_CLIENT_SECRET } from "./googleStandIn";
  * names this Mac's own subscriptions, over the slot record as
  * `createServices` keeps it; otherwise every task binds `binding`.
  * Given a forge, the crew's open_change, check_change, read_workflow and
- * download_artifact, and the run watch, are the home's own (`PrCiService`,
+ * download_artifact, and the run watch, are the home's own (`createChangeDelivery`,
  * `WorkflowEvidenceService`), composed as `createServices` composes them.
  * Given a github.com sign-in, the integrations are the home's own too, and
  * a crewmate's integrations command there is answered by them here; given
@@ -300,8 +303,8 @@ export function startPlacedHome(options: {
     },
   };
   const forgeFor = options.forgeFor;
-  const prCi: PrCiService | undefined = forgeFor
-    ? new PrCiService({
+  const delivery: ChangeDelivery | undefined = forgeFor
+    ? createChangeDelivery({
         tasks,
         repos,
         forgeFor,
@@ -311,12 +314,12 @@ export function startPlacedHome(options: {
           tasks,
           mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
           head: (taskId) => {
-            if (!prCi) throw new Error("No delivery service");
-            return prCi.presentationHead(taskId);
+            if (!delivery) throw new Error("No delivery service");
+            return delivery.publication.presentationHead(taskId);
           },
           branch: (taskId) => {
-            if (!prCi) throw new Error("No delivery service");
-            return prCi.presentationBranch(taskId);
+            if (!delivery) throw new Error("No delivery service");
+            return delivery.publication.presentationBranch(taskId);
           },
         }),
         now,
@@ -348,7 +351,7 @@ export function startPlacedHome(options: {
         repos,
         forgeFor: forgeFor ?? accountForge,
         accountForge,
-        readChecks: async (taskId) => prCi?.checkForCrew(taskId) ?? "No checks here.",
+        readChecks: async (taskId) => delivery?.checkTool.checkForCrew(taskId) ?? "No checks here.",
         now,
       })
     : undefined;
@@ -441,19 +444,19 @@ export function startPlacedHome(options: {
     ...(router ? { router } : {}),
     workspace,
     repos,
-    ...(prCi
+    ...(delivery
       ? {
           prepareChange: (
             taskId: string,
             input: import("@shared/changePresentation").StagedChangePresentation,
-          ) => prCi.preparePresentation(taskId, input),
+          ) => delivery.publication.preparePresentation(taskId, input),
           completionPresentation: (taskId: string, revision: number) =>
-            prCi.completionPresentation(taskId, revision),
+            delivery.publication.completionPresentation(taskId, revision),
           openChange: (
             taskId: string,
             input: import("@shared/changePresentation").OpenChangeInput,
-          ) => prCi.open(taskId, input),
-          checkChange: (taskId: string) => prCi.checkForCrew(taskId),
+          ) => delivery.publication.open(taskId, input),
+          checkChange: (taskId: string) => delivery.checkTool.checkForCrew(taskId),
         }
       : {}),
     ...(evidence

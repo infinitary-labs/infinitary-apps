@@ -13,9 +13,9 @@ import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { askEndingOf } from "./askEnding";
 import type { CardService } from "./cardService";
+import { createChangeDelivery } from "./changeDelivery";
 import { armWatch, CHECK_REFRESH_MS, CheckWatcher } from "./checkWatch";
 import { CrewSupervisor } from "./crewSupervisor";
-import { PrCiService } from "./prCi";
 import { SettleService, type SettleServiceHost } from "./settleService";
 
 /** INF-458 and the captain’s safety correction: only an explicitly finished task closes on merge. */
@@ -55,7 +55,7 @@ function fixture() {
   };
   const readPull = vi.fn(async () => pull);
   const forge = { pull: readPull } as unknown as Forge;
-  const prCi = new PrCiService({ tasks, repos, forgeFor: () => forge });
+  const delivery = createChangeDelivery({ tasks, repos, forgeFor: () => forge });
   const retire = vi.fn(async () => ({ outcome: "removed" as const, kept: null }));
   const stop = vi.fn(async () => {});
   const merge = vi.fn();
@@ -77,7 +77,7 @@ function fixture() {
     askEnding: askEndingOf(tasks, cards),
     now: () => now,
     workspace: { retireTaskWorktree: retire } as unknown as SettleServiceHost["workspace"],
-    readPull: (id, number) => prCi.pullState(id, number),
+    readPull: (id, number) => delivery.merges.pullState(id, number),
     mergePullRequest: merge,
     runtimeState: () => "idle",
     stopRuntime: stop,

@@ -10,7 +10,7 @@ import type { TypedWake, WakeFacts } from "./wakes";
  * and wakes it once when they finish. It replaces a crewmate re-reading
  * `check_change` until its checks settle, a full-context model turn per read.
  *
- * - Armed by a reading that finds the checks running (`PrCiService`), on a
+ * - Armed by a reading that finds the checks running (`ChangeChecks`), on a
  *   host whose forge has checks (`Forge.hasChecks`); a host without them is
  *   never watched, and the crewmate is told so.
  * - Durable: the watch is a delivery fact on the task (`ciWatch`), so it
@@ -79,7 +79,7 @@ function legacyEndOnce(watch: CiWatch): string {
 export type WatchedCheck = { name: string; state: string };
 
 /**
- * What one read of a watched change found (`PrCiService.readWatched`). A
+ * What one read of a watched change found (`ChangeChecks.readWatched`). A
  * settled reading is already recorded on the task, as every reading is.
  */
 export type WatchedReading =

@@ -196,6 +196,8 @@ import {
   readChangeReading,
   type WorkspaceService,
 } from "../workspace/workspaceService";
+import { type ChangeDelivery, createChangeDelivery } from "./changeDelivery";
+import type { PrOutcome } from "./changeMerge";
 import { BASELINE_OBSERVATIONS_NEXT, CHECK_DIAGNOSIS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { ciFactOf } from "./ciFact";
 import {
@@ -231,7 +233,6 @@ import {
   type LineageFacts,
   MERGE_CHECKS_HOLD_REASON,
 } from "./mergeAuthorization";
-import { PrCiService, type PrOutcome } from "./prCi";
 import {
   closingNoteTitle,
   droppedLine,
@@ -3245,10 +3246,10 @@ describe("CrewSupervisor", () => {
         label: () => "#9",
         url: () => null,
       } as unknown as Forge;
-      let prCi: PrCiService;
-      const closePullRequest = vi.fn((id: string) => prCi.close(id));
+      let delivery: ChangeDelivery;
+      const closePullRequest = vi.fn((id: string) => delivery.merges.close(id));
       const { supervisor, tasks, workspace, repos } = setup(crewmate, { closePullRequest });
-      prCi = new PrCiService({ tasks, repos, forgeFor: () => forge });
+      delivery = createChangeDelivery({ tasks, repos, forgeFor: () => forge });
       const { repo } = await repos.setup({ kind: "init", name: "abandoned" });
       repos.configure(repo.id, { delivery: "direct-pr" });
       const { taskId } = await supervisor.commission({
@@ -4739,23 +4740,23 @@ describe("CrewSupervisor", () => {
       const crewmate = fakeCrewmate();
       // The reviewer the app starts from Review carefully (INF-1875).
       const reviewer = fakeCrewmate();
-      let prCi: PrCiService | undefined;
+      let delivery: ChangeDelivery | undefined;
       const service = () => {
-        if (!prCi) throw new Error("check service not ready");
-        return prCi;
+        if (!delivery) throw new Error("check service not ready");
+        return delivery;
       };
       const harness = setup(crewmate, {
         crewmates: [reviewer],
-        checkCi: (id) => service().readForOffer(id),
-        mergePullRequest: (id, guard, beforeDispatch) => service().merge(id, guard, beforeDispatch),
-        mergeReview: (id, reviewId, guard) => service().mergeReview(id, reviewId, guard),
-        reviewGate: (id, reviewId) => service().reviewGate(id, reviewId),
-        readPull: (id, prNumber) => service().pullState(id, prNumber),
-        openChange: (id, input) => service().open(id, input),
-        checkChange: (id, input) => service().checkForCrew(id, input),
+        checkCi: (id) => service().checks.readForOffer(id),
+        mergePullRequest: (id, guard, beforeDispatch) => service().merges.merge(id, guard, beforeDispatch),
+        mergeReview: (id, reviewId, guard) => service().reviews.mergeReview(id, reviewId, guard),
+        reviewGate: (id, reviewId) => service().reviews.reviewGate(id, reviewId),
+        readPull: (id, prNumber) => service().merges.pullState(id, prNumber),
+        openChange: (id, input) => service().publication.open(id, input),
+        checkChange: (id, input) => service().checkTool.checkForCrew(id, input),
         ...(where.guidance ? { runbooks: bundledRunbooks() } : {}),
       });
-      prCi = new PrCiService({
+      delivery = createChangeDelivery({
         tasks: harness.tasks,
         repos: harness.repos,
         forgeFor: () => forge,
@@ -4795,7 +4796,7 @@ describe("CrewSupervisor", () => {
         ...(where.internalStep ? { shape: { internal_step: true } } : {}),
       });
       await tick();
-      if (where.referenced) await service().checkForCrew(taskId, { pull: 7 });
+      if (where.referenced) await service().checkTool.checkForCrew(taskId, { pull: 7 });
       const review = harness.tasks.get(taskId)?.delivery?.mergeReviews?.[0];
       const emit = (title: string) =>
         harness.specs[0]?.onCard?.({
@@ -4854,7 +4855,7 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("checks"));
       expect(h.forge.merges).toEqual([]);
       h.forge.states = ["success"];
-      expect(await h.checkService.readWatched(h.taskId)).toMatchObject({ kind: "finished", head: REPAIRED });
+      expect(await h.checkService.checks.readWatched(h.taskId)).toMatchObject({ kind: "finished", head: REPAIRED });
       await repairTurn(h, async () => {});
       await vi.waitFor(() => expect(h.authorization()?.status).toBe("consumed"));
       expect(h.forge.merges).toEqual([REPAIRED]);
@@ -4897,14 +4898,14 @@ describe("CrewSupervisor", () => {
       seedDelivery(h.tasks, h.taskId, { mergeReviews: [] });
       h.forge.states = ["success"];
       const tasks = new TaskService({ db: h.db, strict: true });
-      const prCi = new PrCiService({ tasks, repos: h.repos, forgeFor: () => h.forge });
+      const delivery = createChangeDelivery({ tasks, repos: h.repos, forgeFor: () => h.forge });
       const resumed = fakeCrewmate();
       const supervisor = new CrewSupervisor({
         ...crewSessions(h.paths, vi.fn(async () => resumed)),
         workspace: h.workspace, repos: h.repos, tasks, cardStore: new CardStore(h.db),
         inbox: new InboxStore(h.db), paths: h.paths,
-        mergeReview: (id, review, guard) => prCi.mergeReview(id, review, guard),
-        readPull: (id, number) => prCi.pullState(id, number),
+        mergeReview: (id, review, guard) => delivery.reviews.mergeReview(id, review, guard),
+        readPull: (id, number) => delivery.merges.pullState(id, number),
         broadcastEvent: () => {}, broadcastCards: () => {},
       });
       supervisor.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
@@ -4956,7 +4957,7 @@ describe("CrewSupervisor", () => {
         checkTarget: { ...target, id: "new-review", number: 8, branch: "fm/task-next" },
         prNumber: 8, headSha: REPAIRED, ci: "green",
       });
-      expect(await h.checkService.readWatched(h.taskId)).toMatchObject({ kind: "failed" });
+      expect(await h.checkService.checks.readWatched(h.taskId)).toMatchObject({ kind: "failed" });
       expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ prNumber: 8, headSha: REPAIRED, ci: "green" });
     });
 
@@ -6569,7 +6570,7 @@ describe("CrewSupervisor", () => {
       const h = await approved();
       // GitHub names the own pull request's branch, the task's own.
       h.forge.referencedBranch = h.tasks.get(h.taskId)?.branch;
-      expect(await h.checkService.checkForCrew(h.taskId, { pull: 7 })).toContain("Merge review");
+      expect(await h.checkService.checkTool.checkForCrew(h.taskId, { pull: 7 })).toContain("Merge review");
       const own = h.tasks.get(h.taskId)?.delivery?.mergeReviews?.find((review) => review.number === 7);
       if (!own) throw new Error("Missing the own review");
       const other: MergeReview = { ...own, id: "review-other", number: 8, branch: "fm/task-other", headSha: REPAIRED };
@@ -9953,7 +9954,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     await tick();
   }
 
-  async function shipping(checks: { overall: import("./prCi").PrCiOverall }) {
+  async function shipping(checks: { overall: import("./changeChecks").PrCiOverall }) {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate, { checkCi: async () => checks.overall });
     const { taskId } = await harness.supervisor.commission({
@@ -9968,7 +9969,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
   }
 
   it("records a missing-target refusal, names it beside a report that says the card went up, and clears it once the card goes up", async () => {
-    const checks: { overall: import("./prCi").PrCiOverall } = { overall: "no-pr" };
+    const checks: { overall: import("./changeChecks").PrCiOverall } = { overall: "no-pr" };
     const { supervisor, tasks, ops, ledger, ledgerFacts, cards, crewmate, taskId, emitCard } =
       await shipping(checks);
 
@@ -28137,18 +28138,18 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
    */
   async function waiting(forge = new ChecksForge()) {
     const crewmate = fakeCrewmate();
-    let prCi: PrCiService | undefined;
+    let delivery: ChangeDelivery | undefined;
     const service = () => {
-      if (!prCi) throw new Error("check service not ready");
-      return prCi;
+      if (!delivery) throw new Error("check service not ready");
+      return delivery;
     };
     const harness = setup(crewmate, {
       now: hostClock,
-      openChange: (taskId, input) => service().open(taskId, input),
-      checkChange: (taskId, input) => service().checkForCrew(taskId, input),
-      readCheckWatch: (taskId) => service().readWatched(taskId),
+      openChange: (taskId, input) => service().publication.open(taskId, input),
+      checkChange: (taskId, input) => service().checkTool.checkForCrew(taskId, input),
+      readCheckWatch: (taskId) => service().checks.readWatched(taskId),
     });
-    prCi = new PrCiService({
+    delivery = createChangeDelivery({
       tasks: harness.tasks,
       repos: harness.repos,
       forgeFor: () => forge,
@@ -28180,7 +28181,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
       await harness.supervisor.pollCheckWatches(hostNow);
       await tick();
     };
-    return { ...harness, crewmate, forge, prCi, taskId, said, start, at };
+    return { ...harness, crewmate, forge, delivery, taskId, said, start, at };
   }
 
   const watchWakes = (prompts: string[]) =>
@@ -28452,7 +28453,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
       const crewmate = fakeCrewmate();
       const tasks = new TaskService({ db, strict: true, now: hostClock });
       const repos = new RepoRegistry(db, paths.fleetDir);
-      const prCi = new PrCiService({ tasks, repos, forgeFor: () => forge, now: hostClock });
+      const delivery = createChangeDelivery({ tasks, repos, forgeFor: () => forge, now: hostClock });
       const supervisor = new CrewSupervisor({
         now: hostClock,
         ...crewSessions(paths, async () => crewmate),
@@ -28462,9 +28463,9 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
         cardStore: new CardStore(db),
         inbox: new InboxStore(db, { now: hostClock }),
         paths,
-        openChange: (id, input) => prCi.open(id, input),
-        checkChange: (id) => prCi.checkForCrew(id),
-        readCheckWatch: (id) => prCi.readWatched(id),
+        openChange: (id, input) => delivery.publication.open(id, input),
+        checkChange: (id) => delivery.checkTool.checkForCrew(id),
+        readCheckWatch: (id) => delivery.checks.readWatched(id),
         broadcastEvent: () => {},
         broadcastCards: () => {},
       });
@@ -30352,16 +30353,16 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
       label: () => "#9",
       url: () => "https://github.com/acme/shop/pull/9",
     } as unknown as Forge;
-    let prCi: PrCiService;
+    let delivery: ChangeDelivery;
     const githubWrite = vi.fn(async () => "200 OK");
     const githubRead = vi.fn(async () => "200 OK");
     const harness = setup(crewmate, {
-      closePullRequest: (id) => prCi.close(id),
-      readPull: (id, number) => prCi.pullState(id, number),
+      closePullRequest: (id) => delivery.merges.close(id),
+      readPull: (id, number) => delivery.merges.pullState(id, number),
       githubRead,
       githubWrite,
     });
-    prCi = new PrCiService({ tasks: harness.tasks, repos: harness.repos, forgeFor: () => forge });
+    delivery = createChangeDelivery({ tasks: harness.tasks, repos: harness.repos, forgeFor: () => forge });
     const { repo } = await harness.repos.setup({ kind: "init", name: "shop" });
     harness.repos.configure(repo.id, { delivery: "direct-pr" });
     const { taskId } = await harness.supervisor.commission({

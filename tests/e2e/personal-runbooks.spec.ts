@@ -3,12 +3,11 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { ACTIONS } from "../../src/shared/actions";
 import { runbookManifestSchema } from "../../src/shared/runbooks";
-import { waitForFirstmateIdle } from "./crew";
+import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { APP_CATALOG_PROMPT_MARKER, servedInstructions } from "./mockProvider";
 import { regionShot } from "./pictures";
-import { promptInput } from "./prompt";
 import { activityFrame, dockRegion, feedLine } from "./rails";
 import { settingRow } from "./settings";
 import { pressKey } from "./windowKeys";
@@ -27,11 +26,11 @@ test("copy a built-in, edit it in place, replace it and restore it", async ({}, 
   const copy = { id: "my-workflows", name: "My workflows" };
   let at = await launchApp({ withMockProvider: true });
   const { userDataDir, homeDir } = at;
-  const ask = async (action: string, value: Record<string, unknown>) => {
-    await promptInput(at.page).fill(APP_CATALOG_PROMPT_MARKER + JSON.stringify({ action, value }));
-    await promptInput(at.page).press("Enter");
-    await waitForFirstmateIdle(at.page);
-  };
+  // Each ask ends on the first mate's answer, never on the character looking idle:
+  // after a relaunch the character settles back to idle while the turn still waits
+  // for its session, before any served request this spec reads exists.
+  const ask = (action: string, value: Record<string, unknown>) =>
+    askFirstmate(at.page, APP_CATALOG_PROMPT_MARKER + JSON.stringify({ action, value }));
   try {
     await ask("runbook-copy", { id: builtin.id, copyId: copy.id, name: copy.name });
     await expect(

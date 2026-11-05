@@ -780,7 +780,8 @@ Every class reaches the seat through the one admission ladder, the same for a Pi
   One feed line and one ledger row per pause, and no generic problem line beside it: a failed turn that carries a cut-off class is not a problem in the feed (`feedLineFrom`).
   An attach the account's own fact explains (no client to run it) pauses the same way, and the captain's words it was carrying wait on the inbox (rev-9).
   The pause is durable (`firstmate-paused`), so a restart repeats neither, and a pinned account a fact pauses stays bound at attachment (`Flagship.resolveAccountId`) rather than the seat answering on the base runtime.
-  The card is raised once and revised in place when its words change; one the captain dismissed stays down for that pause; a changed class or rung replaces it.
+  The card is raised once and revised in place when its words change; revision-only updates do not recreate a card removed by a choice or withdrawal.
+  The minus keeps the pause card pending, while a changed class or rung replaces it.
   The pause card also replaces the generic sign-in card a failed turn raised before the proof.
   Whenever the seat's account serves, any pause card up - one a previous run left too - is taken down.
 - **Nothing is attempted while paused.**

@@ -6,9 +6,11 @@ import { z } from "zod";
 import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { claudeCrewmateTools, zodShapeOf } from "../claude/claudeTaskTools";
+import { ORDINARY_NOTE_READ_ACK, ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
 import { crewmateTool } from "../session/tools";
 import { CREWMATE_TOOLS, CREWMATE_TOOLS_MODULE, crewmateToolManifest } from "./crewmateTaskTools";
 import { createCrewmateTools } from "./crewmateTools";
+import { buildCrewmateSystemPrompt } from "./piResources";
 
 /**
  * The crewmate tool spec (primitives P7): one list both runtimes generate
@@ -179,6 +181,24 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
 };
 
 describe("the crewmate tool spec", () => {
+  // Both served runtimes must distinguish ordinary read acknowledgement from aside.
+  it("serves the ordinary-read rule in report fields and card guidance on Pi and Claude", () => {
+    const delegate = crewmateToolDelegate();
+    const pi = createCrewmateTools(delegate).find((tool) => tool.name === "report") as PiTool;
+    const claude = claudeCrewmateTools(delegate).find(
+      (tool) => tool.name === "report",
+    ) as ClaudeTool;
+    for (const schema of [pi.parameters, claudeSchema(claude)]) {
+      const properties = (schema as { properties: Record<string, { description?: string }> })
+        .properties;
+      expect(properties.finished?.description).toContain(ORDINARY_NOTE_READ_ACK);
+      expect(properties.waiting_on_captain?.description).toContain(ORDINARY_NOTE_READ_ACK);
+    }
+    for (const backend of ["pi", "claude"] as const) {
+      expect(buildCrewmateSystemPrompt(backend)).toContain(ORDINARY_NOTE_READ_GUIDANCE);
+    }
+  });
+
   it("keeps the progress rule within Claude's tool description limit", () => {
     const tool = CREWMATE_TOOLS.find((entry) => entry.name === "note_progress");
     expect(tool?.description.length).toBeLessThan(2048);

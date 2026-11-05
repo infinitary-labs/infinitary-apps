@@ -478,8 +478,9 @@ export type TaskDelivery = {
    * What the crewmate's latest report declared about whose turn follows it
    * (FI3-435): it waits on the captain (`captainWait`, which places the
    * task's `captain` gate), or its work is finished and the captain has
-   * read it (`finishedAt`). Present from that report until its next turn
-   * starts - a close, a click, a reply or a steer all start one.
+   * acknowledged its outcome (`finishedAt`). Present from that report until
+   * its next turn starts, including an ordinary-read or duplicate notification.
+   * Aside and saved-answer reads do not start that turn.
    */
   captainWait?: CaptainWait;
   finishedAt?: number;

@@ -72,7 +72,7 @@ import {
   taskBrowserBooking,
   unknownCardTitle,
 } from "./scenarios/taskBrowserBooking";
-import { SHOWN_ENTRY, showCard, shownCard, shownCardFrame } from "./stack";
+import { cardLeave, SHOWN_ENTRY, showCard, shownCard, shownCardFrame } from "./stack";
 import {
   canvasReading,
   clickOnPage,
@@ -270,6 +270,9 @@ function callsHoldCard(app: LaunchedApp, title: string): string[] {
 async function openFromRecord(page: Page, task: TaskDetail): Promise<Locator> {
   await expandDock(page, "now");
   await pressRow(page, task.key);
+  // INF-1879: a waiting consent's row restores its live card; its task key opens the record.
+  if (!(await recordCard(page).isVisible()))
+    await page.locator(SHOWN_ENTRY).locator("[data-task-key]").first().click();
   await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
   const line = taskFact(recordCard(page), "browser");
   await expect(line).toBeVisible();
@@ -390,12 +393,14 @@ for (const runtime of RUNTIMES) {
           await expect(strip).toHaveAttribute("data-attachment-handoff", "waiting");
           await shoot(page.locator(SHOWN_ENTRY), "card-sign-in-dark.png");
           // The captain dismisses the request without choosing.
-          await page.locator(`${SHOWN_ENTRY} button[aria-label="Close"]`).first().click();
+          await cardLeave(page).click();
           await expect
-            .poll(async () => (await cardTitled(page, task.id, MOCK_AIRLINE_SIGN_IN_TITLE))?.status)
-            .not.toBe("ready");
-          // Its crewmate hears of the close, and its browser stays paused for him.
-          const told = await reported(detail, MOCK_SIGN_IN_CLOSED_REPORT);
+            .poll(
+              async () => (await cardTitled(page, task.id, MOCK_AIRLINE_SIGN_IN_TITLE))?.minimized,
+            )
+            .toBe(true);
+          // INF-1879: putting consent away sends no refusal or turn; its browser stays waiting.
+          const told = await detail();
           expect(told.browser).toMatchObject({ control: "waiting" });
           // The request is still reachable: the record says so, and its Open shows it.
           const line = await openFromRecord(page, told);

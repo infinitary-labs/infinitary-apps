@@ -5,12 +5,6 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {
-  CLOSE_ANYWAY,
-  closeRestWords,
-  PUT_ASIDE_INSTEAD,
-  unansweredReplyWords,
-} from "../../src/renderer/src/app/closeQuestionWords";
-import {
   MAXIMIZE_LABEL,
   PUT_ASIDE_LABEL,
   PUT_ASIDE_REST,
@@ -25,7 +19,16 @@ import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { expandDock, nowFrame, pressRow, recordCard, recordFrame, showRecordTab } from "./rails";
-import { cardReply, clickInBody, closeQuestion, showCard, shownCard, shownEntry } from "./stack";
+import {
+  cardLeave,
+  cardReply,
+  clickInBody,
+  closeQuestion,
+  minimizeForLegacyView,
+  showCard,
+  shownCard,
+  shownEntry,
+} from "./stack";
 import { boardCard, boardMenu, boardTile, pressInBoard } from "./taskBoard";
 import { focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
 
@@ -136,7 +139,7 @@ test("minimize preserves the decision and restores it from its own task row", as
 });
 
 /** INF-476: notes on finished tasks and taskless cards have a way back; first mate restores only when asked. */
-test("minimized notes use the task row, taskless notes use their title, and restart retains visibility", async () => {
+test("legacy note-minimize requests keep the task or title row and retain visibility after restart", async () => {
   const userDataDir = scratchDir("infinitary-minimized-notes-");
   const db = openDatabase(userDataDir);
   let key = "";
@@ -179,8 +182,7 @@ test("minimized notes use the task row, taskless notes use their title, and rest
     let { page } = launched;
     for (const title of ["The launch review is ready", "Keep Friday for the launch"]) {
       await showCard(page, title);
-      await shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
-      await expect(shownCard(page, title)).toBeHidden();
+      await minimizeForLegacyView(page, title);
     }
     await expandDock(page, "now");
     const row = nowFrame(page).locator(`[data-now-group="waiting"] [data-now-key="${key}"]`);
@@ -200,13 +202,12 @@ test("minimized notes use the task row, taskless notes use their title, and rest
       (await page.evaluate(() => window.infinitary.cards.list())).filter((card) => card.minimized),
     ).toEqual([]);
     await showCard(page, "Your weekly overview");
-    await shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
+    await minimizeForLegacyView(page, "Your weekly overview");
     const standalone = nowFrame(page).getByRole("button", { name: /Your weekly overview/ });
     await expect(standalone).toBeVisible();
     await clickInBody(standalone);
     await expect(shownCard(page, "Your weekly overview")).toBeVisible();
-    await shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
-    await expect(shownCard(page, "Your weekly overview")).toBeHidden();
+    await minimizeForLegacyView(page, "Your weekly overview");
     await launched.close();
     launched = await launchApp({ userDataDir, withMockProvider: true });
     page = launched.page;
@@ -222,8 +223,8 @@ test("minimized notes use the task row, taskless notes use their title, and rest
     await promptInput(page).press("Enter");
     await expect(shownCard(page, "Your weekly overview")).toBeVisible();
     await waitForFirstmateIdle(page);
+    // The current corner reads the note; no legacy minimized row remains.
     await shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
-    await page.evaluate(() => window.infinitary.cards.close("week-note"));
     await expect(nowFrame(page).getByRole("button", { name: /Your weekly overview/ })).toHaveCount(
       0,
     );
@@ -233,7 +234,7 @@ test("minimized notes use the task row, taskless notes use their title, and rest
 });
 
 /** INF-476 answer where=A: minimizing in a viewing Mac is shared, and restoring at home updates that view. */
-test("minimized visibility is shared by Macs that show the same first mate", async () => {
+test("legacy minimized-note visibility is shared by Macs that show the same first mate", async () => {
   const userDataDir = scratchDir("infinitary-minimize-home-");
   const db = openDatabase(userDataDir);
   new CardStore(db).upsert({
@@ -264,7 +265,7 @@ test("minimized visibility is shared by Macs that show the same first mate", asy
       "in-reach",
     );
     await showCard(view.page, "The shared launch review");
-    await shownEntry(view.page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
+    await minimizeForLegacyView(view.page, "The shared launch review");
     await expect
       .poll(
         async () =>
@@ -295,7 +296,7 @@ test("minimized visibility is shared by Macs that show the same first mate", asy
 });
 
 /** INF-476 assumption 5: the reading place survives a minimized card's in-session remount. */
-test("a minimized review returns to its reading place", async () => {
+test("a legacy minimized-note request retains the review's reading place", async () => {
   const userDataDir = scratchDir("infinitary-minimize-reading-");
   const db = openDatabase(userDataDir);
   const checks = [
@@ -337,8 +338,7 @@ test("a minimized review returns to its reading place", async () => {
       return element.scrollTop;
     });
     expect(top).toBeGreaterThan(0);
-    await shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
-    await expect(shownCard(page, "Read the launch review")).toBeHidden();
+    await minimizeForLegacyView(page, "Read the launch review");
     await expandDock(page, "now");
     await clickInBody(nowFrame(page).getByRole("button", { name: /Read the launch review/ }));
     await expect(shownCard(page, "Read the launch review")).toBeVisible();
@@ -349,12 +349,9 @@ test("a minimized review returns to its reading place", async () => {
 });
 
 /**
- * INF-770 direction A: Put aside and Close are the only ways a card leaves,
- * and each says what it does - the minus says the comeback, the × where the
- * closed card stays - and closing with the captain's reply unanswered asks
- * first, with Put aside instead as the default beside Close anyway.
+ * Minus preserves an unanswered reply and its draft without a confirmation.
  */
-test("Put aside and Close say what they do, and a close with a reply unanswered asks first", async () => {
+test("INF-1879: one minus keeps an unanswered reply open without a warning", async () => {
   const userDataDir = scratchDir("infinitary-card-exits-");
   const db = openDatabase(userDataDir);
   let key = "";
@@ -387,52 +384,27 @@ test("Put aside and Close say what they do, and a close with a reply unanswered 
     await showCard(page, TITLE);
     const label = page.locator("[data-icon-label]");
     const putAside = shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true });
-    const close = shownEntry(page).getByRole("button", { name: "Close", exact: true });
-
-    await test.step("the minus and the × say what they do on rest", async () => {
+    await test.step("INF-1879: the one minus says what it does and sends no unanswered-reply question", async () => {
+      await expect(shownEntry(page).locator("[data-card-leave]")).toHaveCount(1);
       await focusOn(putAside);
       await expect(label.filter({ hasText: PUT_ASIDE_REST })).toBeVisible();
       await expect(label).toContainText(hintOf("cards.minimize"));
-      await focusOn(close);
-      await expect(label.filter({ hasText: closeRestWords(key) })).toBeVisible();
-      if (evidence) await regionShot(shownEntry(page), join(evidence, "close-rest-after.png"));
-    });
-
-    const question = closeQuestion(page);
-    await test.step("closing with the reply unanswered asks, and Put aside instead keeps the card", async () => {
-      await close.click();
-      await expect(question).toContainText(unansweredReplyWords("your first mate", key));
-      await expect(
-        question.getByRole("button", { name: PUT_ASIDE_INSTEAD, exact: true }),
-      ).toBeVisible();
-      await expect(question.getByRole("button", { name: CLOSE_ANYWAY, exact: true })).toBeVisible();
-      if (evidence) await regionShot(shownEntry(page), join(evidence, "close-question-after.png"));
-      if (process.env.CARD_EXITS_HERO === "1")
-        await heroShot(launched.app, page, { region: shownEntry(page), name: "card-exits" });
-      await question.getByRole("button", { name: PUT_ASIDE_INSTEAD, exact: true }).click();
+      await putAside.click();
       await expect(shownCard(page, TITLE)).toBeHidden();
       expect(
         (await page.evaluate(() => window.infinitary.cards.list())).find(
           (card) => card.id === "exits-choice",
         )?.minimized,
       ).toBe(true);
-    });
-
-    await test.step("from its task row it comes back, and Close anyway closes it", async () => {
       await expandDock(page, "now");
       await pressRow(page, key);
       await expect(shownCard(page, TITLE)).toBeVisible();
-      await close.click();
-      await expect(question).toBeVisible();
-      await question.getByRole("button", { name: CLOSE_ANYWAY, exact: true }).click();
-      await expect(shownCard(page, TITLE)).toBeHidden();
-      await expect
-        .poll(async () =>
-          (await page.evaluate(() => window.infinitary.cards.list())).some(
-            (card) => card.id === "exits-choice",
-          ),
-        )
-        .toBe(false);
+      await putAside.click();
+      expect(
+        (await page.evaluate(() => window.infinitary.cards.list())).find(
+          (card) => card.id === "exits-choice",
+        )?.minimized,
+      ).toBe(true);
     });
   } finally {
     await launched.close();

@@ -11,10 +11,10 @@ import {
 } from "@shared/tasks";
 import { presentBoard, presentProjects, presentTask } from "@shared/taskWaiting";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
 import { type ReadApi, ReadExecutor } from "../../renderer/src/plugins/reads/executor";
 import { CardService } from "../orchestrator/cardService";
 import { CardStore } from "../storage/cardStore";
-import { openInMemoryDatabase } from "../storage/db";
 import { TaskProtocol } from "./taskProtocol";
 import { TaskService } from "./taskService";
 
@@ -74,7 +74,11 @@ function setup(delta = false) {
   const protocol = new TaskProtocol({
     tasks,
     repos: { get: () => undefined },
-    cards: { listOpen: () => cardStore.listOpen(), snapshot: () => cards.snapshot() },
+    cards: {
+      listOpen: () => cardStore.listOpen(),
+      snapshot: () => cards.snapshot(),
+      answerNoteForTask: (id) => cards.answerNoteForTask(id),
+    },
     beforePush: () => cards.flushBroadcast(),
     now: () => 1000,
     ...(delta ? { deltaTrigger: { rows: 0, bytes: 0 } } : {}),
@@ -196,9 +200,60 @@ function setup(delta = false) {
   };
 }
 
-describe("ready decisions are the sole waiting fact", () => {
+describe("ready decisions and saved answers are the waiting facts", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
+
+  it("INF-1879: a saved answer stays in waiting rows and project counts after reading and restart", async () => {
+    const h = setup(true);
+    try {
+      h.tasks.create({
+        id: "answer",
+        title: "Explain the launch window",
+        prompt: "Explain the launch window without changing it.",
+        repoId: null,
+        shape: { kind: "research", deliverable: "answer" },
+      });
+      h.tasks.dispatch("answer", {
+        workspace: { repoDir: "r", worktreeDir: "w", branch: "b" },
+        accountId: null,
+        assignee: "crew",
+      });
+      h.tasks.setActivity("answer", "idle");
+      h.subscribe("answer");
+      const id = h.cards.emitCrewmateCard(
+        "answer",
+        {
+          title: "The launch window is ready",
+          body: "<p>The review stays beside the launch checklist.</p>",
+          actions: [],
+          answering: true,
+        },
+        "route",
+      );
+      h.cards.closeOut({ kind: "crewmate", taskId: "answer" }, "report");
+      await h.flush();
+      h.cards.dismiss(required(h.cards.shown(id)));
+      await h.flush();
+      h.restart();
+      await h.flush();
+      const detail = h.protocol.detail("answer");
+      expect(detail).toMatchObject({
+        status: "active",
+        answerNoteId: id,
+        flags: { needsYou: true },
+      });
+      expect(detail.waitingCardId).toBeNull();
+      expect(nowGroupOf(detail)).toBe("waiting");
+      expect(recordBarOf(detail)?.next).toBe("answer-done");
+      expect(h.protocol.projects()[0]?.counts.waitingOnYou).toBe(1);
+      expect(h.boards.at(-1)?.projects[0]?.counts.waitingOnYou).toBe(1);
+      expect(h.details.at(-1)?.answerNoteId).toBe(id);
+      expect(h.cards.snapshot()).toEqual([]);
+    } finally {
+      h.dispose();
+    }
+  });
 
   it("a declaration alone never counts as waiting, including after a ready card closes", async () => {
     const h = setup(true);
@@ -228,7 +283,8 @@ describe("ready decisions are the sole waiting fact", () => {
       expect(h.boards.at(-1)?.projects[0]?.counts.waitingOnYou).toBe(0);
       expect(nowGroupOf(required(h.details.at(-1)))).toBe("working");
       h.local(h.cards.snapshot());
-      h.cards.dismiss(required(h.cards.shown(id)));
+      // INF-1879: a real choice, not the minimize corner, closes the ready decision.
+      h.cards.resolve(required(h.cards.shown(id)), "go", "go", undefined, "captain");
       await h.flush();
       h.assertWaiting("t", null);
       expect(h.protocol.detail("t").outcomeSummary).toBe("The session cannot open a pull request.");
@@ -600,7 +656,8 @@ describe("ready decisions are the sole waiting fact", () => {
       await h.flush();
       h.assertWaiting("t", id);
       const lifecycle = h.cards.shown(id)?.lifecycleId;
-      h.cards.dismiss(required(h.cards.shown(id)));
+      // INF-1879: use the author's withdrawal to exercise a genuinely closed lifecycle.
+      h.cards.close(id, { kind: "crewmate", taskId: "t" }, "The earlier route is obsolete.");
       await h.flush();
       h.assertWaiting("t", null);
       h.cards.emitCrewmateCard("t", { ...decision, id }, "route");

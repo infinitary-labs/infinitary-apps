@@ -39,14 +39,8 @@ export interface ResponseCardProps {
    * risk chart (`ResponseCard.prompt.md`, "The risk chart"). The title gives way by its width.
    */
   aside?: { node: React.ReactNode; width: number };
-  /** Top-right chrome close; not a declared card action. */
-  onClose?: () => void;
-  /** The close button itself, for a popover that hangs from it. */
-  closeRef?: React.Ref<HTMLButtonElement>;
-  /** Host chrome anchored under the close: the question a close asks first. */
-  closeAsk?: React.ReactNode;
-  /** The close is asking: the button says its popover is open. */
-  closeAsking?: boolean;
+  /** Shared minus callback: puts the card away, never a choice or task ending. */
+  onMinimize?: () => void;
   /** Card body. Any HTML artifact; keep it on system tokens. */
   children?: React.ReactNode;
   width?: number | string;

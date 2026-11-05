@@ -1,3 +1,4 @@
+import { ANSWER_DONE_LABEL } from "./cardLeave.ts";
 import { type TaskStatusInput, taskStatusOf } from "./taskPresentation";
 import { type ComputerMoveView, isUnstartedWork, type TaskView } from "./tasks";
 
@@ -27,14 +28,15 @@ import { type ComputerMoveView, isUnstartedWork, type TaskView } from "./tasks";
  *   slot follows the shared status's precedence, so a waiting decision
  *   outranks an interruption or a blocker.
  */
-export type RecordBarEnd = "drop-task" | "stop-task";
+export type RecordBarEnd = "drop-task" | "stop-task" | "dismiss-question";
 export type RecordBarNext =
   | "start"
   | "try-again"
   | "starting"
   | "start-again"
   | "continue"
-  | "show-card";
+  | "show-card"
+  | "answer-done";
 export type RecordBar = {
   end: RecordBarEnd | null;
   next: RecordBarNext | null;
@@ -55,6 +57,7 @@ export const RECORD_NEXT_LABELS: Record<RecordBarNext, string> = {
   "start-again": "Start again",
   continue: "Continue",
   "show-card": "Show the card",
+  "answer-done": ANSWER_DONE_LABEL,
 };
 
 /** The open record bar, or Start again on eligible dropped work. */
@@ -65,9 +68,12 @@ export function recordBarOf(task: RecordBarInput): RecordBar | null {
       ? { end: null, next: "start-again", blocked: false }
       : null;
   }
+  if (task.answerNoteId) return { end: "stop-task", next: "answer-done", blocked: false };
   const work = task.kind === "work";
   const end: RecordBarEnd | null = !work
-    ? null
+    ? task.kind === "decision" && task.waitingCardId
+      ? "dismiss-question"
+      : null
     : isUnstartedWork(task)
       ? "drop-task"
       : task.status === "active"

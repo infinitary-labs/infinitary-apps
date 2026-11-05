@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
 import { seededHome, subscribed } from "./freshHome";
-import { answerStack, inFrameTitled, shownEntry } from "./stack";
+import { answerStack, cardLeave, inFrameTitled } from "./stack";
 import { openSize, openWindow } from "./window";
 
 // FI3-871, from the stage-reveals journey: the next card is prepared while
@@ -58,11 +58,7 @@ test("a plain next card's animation waits until it is shown", async () => {
   expect(await fade()).toEqual({ state: "paused", time: 0 });
 
   // Section: closing the note shows the tide table, and its fade plays.
-  await userEvent.click(
-    page
-      .elementLocator(shownEntry() as HTMLElement)
-      .getByRole("button", { name: "Close", exact: true }),
-  );
+  await userEvent.click(cardLeave());
   await expect.element(page.getByRole("region", { name: TIDE_TABLE, exact: true })).toBeVisible();
   await expect.poll(async () => (await fade())?.state).not.toBe("paused");
   expect([...new Set(bridge.unanswered)]).toEqual([]);

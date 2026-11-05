@@ -1779,7 +1779,12 @@ describe("FirstmateAgent", () => {
     // The newest line on each of these threads is the captain's too.
     supervisor.replyToCard("card-t1-1", "what about X?");
     supervisor.replyToCard("card-t2-1", "never mind");
-    supervisor.close("card-t2-1");
+    // INF-1879: a pending note stays owed when put away; its author explicitly withdraws this closed-history fixture.
+    supervisor.closeCard(
+      "card-t2-1",
+      { kind: "crewmate", taskId: "t2" },
+      "The old plan is withdrawn",
+    );
 
     await agent.converse("anything new?");
     const lines = decodeContext(session.prompts.at(-1) as string).thread_activity ?? [];
@@ -1825,7 +1830,7 @@ describe("FirstmateAgent", () => {
   });
 
   it("tells the turn which closed card the captain is reading, as history", async () => {
-    const { agent, session, supervisor } = setup();
+    const { agent, session, supervisor, tasks } = setup();
     supervisor.addFirstmateCard({
       title: "Old plan",
       body: "<p>The plan.</p>",
@@ -1833,7 +1838,15 @@ describe("FirstmateAgent", () => {
     });
     const card = supervisor.cardsSnapshot()[0];
     expect(card).toBeDefined();
-    supervisor.close(card?.id ?? "");
+    // INF-1879: only the question's explicit Dismiss creates dismissed history.
+    const question = seedTask(tasks, {
+      id: "old-plan-question",
+      title: "Old plan",
+      kind: "decision",
+      status: "queued",
+      gate: { kind: "captain", reason: "Choose the plan", ref: card!.id },
+    });
+    expect(supervisor.runTaskOp(question.id, "dismiss-question")).toBeUndefined();
     expect(supervisor.cardsSnapshot()).toHaveLength(0);
     await agent.converse({ text: "build this plan again", pastCardId: card?.id });
     const turn = session.prompts[0] as string;
@@ -3322,6 +3335,44 @@ describe("FirstmateAgent", () => {
     expect(row()?.graph).toBe(`waits on ${owner}`);
     tasks.close("owner", { status: "done", reason: "merged", actor: "captain" });
     expect(row()?.graph).toBeUndefined();
+  });
+
+  it("INF-1879: keeps a read answer's Done witness on the stable crew context row", () => {
+    const card: Card = {
+      ...crewCard(
+        "card-launch-answer",
+        "launch",
+        "The launch window is ready",
+        "<p>The review is ready.</p>",
+      ),
+      answering: true,
+    };
+    let now = card.createdAt;
+    const { agent, supervisor } = setup({
+      now: () => now,
+      seedTasks: [
+        {
+          id: "launch",
+          title: "Explain the launch window",
+          status: "idle",
+          shape: { kind: "research", deliverable: "answer" },
+        },
+      ],
+      seedCards: [card],
+    });
+    supervisor.close(card.id);
+    const context = () => decodeContext(agent.buildContextBlock());
+    const before = context();
+    expect(before.open_cards?.some((entry) => entry.card_id === card.id) ?? false).toBe(false);
+    const answer = before.crew.find((entry) => entry.task_id === card.taskId)?.answer_waiting;
+    expect(answer).toEqual({
+      since: new Date(card.createdAt).toISOString(),
+      completion: expect.any(String),
+    });
+    now += 60_000;
+    expect(context().crew.find((entry) => entry.task_id === card.taskId)?.answer_waiting).toEqual(
+      answer,
+    );
   });
 
   it("lists each open card with its task in the context block (WI-12)", async () => {
@@ -5975,7 +6026,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(bench.actions.map((action) => action.label)).toEqual(["Sign in"]);
   });
 
-  it("each message the paused seat keeps says it is saved, with the card closed too (FI3-592)", async () => {
+  it("each message the paused seat keeps says it is saved, with its attention card put away too (FI3-592, INF-1879)", async () => {
     const t = await claudeLoginSeat();
     await t.agent.converse("hello");
     const seat = t.sessions[0] as FakeSession;
@@ -5995,7 +6046,16 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     await tick();
     // The card stays down and nothing is attempted, yet each kept message
     // gets its own saved line, naming the way back the captain can still reach.
-    expect(t.cards().map((card) => card.id)).not.toContain("card-fm-refused");
+    expect(t.cards().find((card) => card.id === "card-fm-refused")).toMatchObject({
+      minimized: true,
+    });
+    // onStage tests author readiness; visibleCards also excludes the saved minimized fact.
+    expect(
+      t
+        .cards()
+        .filter((card) => onStage(card) && !card.minimized)
+        .map((card) => card.id),
+    ).not.toContain("card-fm-refused");
     expect(seat.prompts).toHaveLength(1);
     expect(captainRows(t.inbox)).toEqual(["hello", "are you there?", "still nothing?"]);
     expect(notes(t.events).filter((note) => note === saved)).toHaveLength(2);
@@ -6818,7 +6878,7 @@ describe("FirstmateAgent capture", () => {
     expect(events.some((event) => event.type === "firstmate_state")).toBe(true);
   });
 
-  it("a dismissed decision task drops; a withdrawn one is superseded", async () => {
+  it("INF-1879: explicit Dismiss drops a decision task; putting it away does not, and withdrawal supersedes", async () => {
     const { agent, session, specs, tasks, supervisor } = setup();
     await agent.converse("two questions");
     const emit = toolsOf(specs).get("emit_card");
@@ -6844,6 +6904,12 @@ describe("FirstmateAgent capture", () => {
     const firstId = first?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
     const secondId = second?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
     supervisor.close(firstId);
+    const firstQuestion = tasks.openDecisionFor(firstId)!;
+    expect(firstQuestion.status).toBe("open");
+    expect(supervisor.cardsSnapshot().find((card) => card.id === firstId)).toMatchObject({
+      minimized: true,
+    });
+    expect(supervisor.runTaskOp(firstQuestion.id, "dismiss-question")).toBeUndefined();
     await close?.execute("c3", { card_id: secondId, reason: "moot" });
     const rows = tasks.list().filter((record) => record.kind === "decision");
     expect(rows.map((row) => [row.status, row.closedReason])).toEqual([
@@ -8975,9 +9041,23 @@ describe("FirstmateAgent answer delivery", () => {
     expect(noticeOf(f)).toBeUndefined();
     expect(f.tasks.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
 
-    // The work ends and the captain closes that card without a choice: the same notice returns.
+    // The approved minus rule preserves this unanswered decision and its coverage.
+    const answerId = f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "";
     f.tasks.close(work?.id ?? "", { status: "done", reason: "answered", actor: "host" });
-    f.supervisor.close(f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "");
+    f.supervisor.close(answerId);
+    expect(f.supervisor.cardsSnapshot().find((card) => card.id === answerId)).toMatchObject({
+      minimized: true,
+    });
+    expect(f.tasks.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
+    expect(noticeOf(f)).toBeUndefined();
+    // Notice retraction requires a genuinely absent answering card. Its author
+    // withdraws the unanswered offer; no captain choice or receipt is invented.
+    f.supervisor.closeCard(
+      answerId,
+      { kind: "crewmate", taskId: work?.id ?? "" },
+      "Withdraw the unanswered offer",
+    );
+    expect(f.supervisor.cardsSnapshot().some((card) => card.id === answerId)).toBe(false);
     await vi.waitFor(() => expect(noticeOf(f)?.id).toBe(notice));
     expect(f.tasks.getAsk(ask?.id ?? "")).toMatchObject({
       delivery: "unresolved",
@@ -9062,9 +9142,23 @@ describe("FirstmateAgent answer delivery", () => {
     await finish(f);
     expect(f.tasks.getAsk(newer?.id ?? "")?.continues).toBe(ask?.id);
 
-    // The work ends and its card closes unanswered: the newer message is retried, with its own words.
+    // The approved minus rule keeps this decision available to the newer message.
+    const answerId = f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "";
     f.tasks.close(work?.id ?? "", { status: "done", reason: "answered", actor: "host" });
-    f.supervisor.close(f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "");
+    f.supervisor.close(answerId);
+    expect(f.supervisor.cardsSnapshot().find((card) => card.id === answerId)).toMatchObject({
+      minimized: true,
+    });
+    expect(f.tasks.getAsk(newer?.id ?? "")?.delivery).toBe("covered");
+    expect(noticeOf(f)).toBeUndefined();
+    // The author removes the unanswered offer, so the newer message now needs
+    // its own retry, with its own words; the older notice is not substituted.
+    f.supervisor.closeCard(
+      answerId,
+      { kind: "crewmate", taskId: work?.id ?? "" },
+      "Withdraw the unanswered offer",
+    );
+    expect(f.supervisor.cardsSnapshot().some((card) => card.id === answerId)).toBe(false);
     await vi.waitFor(() => expect(f.tasks.getAsk(newer?.id ?? "")?.delivery).toBe("retrying"));
     const wakes = new InboxStore(f.db)
       .allFor(FIRSTMATE_RECIPIENT)
@@ -10827,9 +10921,21 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     const card = jsonOf(textOf(await read?.execute("o3", { card: "card-t1-1" })));
     expect(card).toMatchObject({ state: "open", body: "<p>Two ways to retry.</p>" });
     expect(card.messages).toEqual([expect.objectContaining({ who: "captain", text: replied })]);
+    // INF-1879: put-away keeps the question open; an author withdrawal supplies closed history to this reader.
     supervisor.close("card-t1-1");
+    expect(jsonOf(textOf(await read?.execute("aside", { card: "card-t1-1" })))).toMatchObject({
+      state: "open",
+    });
+    supervisor.closeCard(
+      "card-t1-1",
+      { kind: "crewmate", taskId: "t1" },
+      "This retry offer is withdrawn",
+    );
     const closed = jsonOf(textOf(await read?.execute("o4", { card: "card-t1-1" })));
-    expect(closed).toMatchObject({ state: "closed", ending: { how: "dismissed" } });
+    expect(closed).toMatchObject({
+      state: "closed",
+      ending: { how: "author-withdrawal", by: "crewmate" },
+    });
     expect(closed.messages).toEqual([expect.objectContaining({ who: "captain", text: replied })]);
 
     // INF-1746 R4: a message's picture comes back as the picture itself.

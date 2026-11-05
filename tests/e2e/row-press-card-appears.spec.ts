@@ -12,6 +12,7 @@ import {
   nowFrame,
   nowRow,
   nowRowSelector,
+  pressDrawnRow,
   recordCard,
 } from "./rails";
 import { showCard, shownCard, shownEntry } from "./stack";
@@ -127,7 +128,9 @@ test("a click on a Tasks row opens its task while the card pointed at just befor
     expect(await focusedRegion(page)).toBe("panel:now");
 
     // The press ends in its click, which opens the idle task's record.
-    await nowRow(page, idle).evaluate((row) => (row as HTMLElement).click());
+    // INF-2537 / run 41733606005: keep the focus assertion above intact;
+    // find and click the current row in one read, without refocusing it.
+    expect(await pressDrawnRow(page, idle), `the Tasks row ${idle} is drawn to press`).toBe(true);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "press-idle");
   } finally {
     await launched.close();
@@ -268,7 +271,9 @@ test("a press the window hears of only after the card appeared keeps the Tasks p
     expect(await focusedRegion(page)).toBe("panel:now");
 
     // The press ends in its click, which opens the idle task's record.
-    await nowRow(page, idle).evaluate((row) => (row as HTMLElement).click());
+    // INF-2537 / run 41733606005: keep the focus assertion above intact;
+    // find and click the current row in one read, without refocusing it.
+    expect(await pressDrawnRow(page, idle), `the Tasks row ${idle} is drawn to press`).toBe(true);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "press-idle");
   } finally {
     await launched.close();

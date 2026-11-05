@@ -1,7 +1,8 @@
+import { type CardCornerWords, cardCornerOf } from "@shared/cardLeave";
 import type React from "react";
 import { createContext, useContext } from "react";
 import { IconButton } from "../core/IconButton";
-import { MAXIMIZE_LABEL, PUT_ASIDE_LABEL, PUT_ASIDE_REST, RESTORE_LABEL } from "./cardSizeWords";
+import { MAXIMIZE_LABEL, RESTORE_LABEL } from "./cardSizeWords";
 
 /**
  * The shown card's size, lent by the stage to the card it shows (design
@@ -12,6 +13,7 @@ import { MAXIMIZE_LABEL, PUT_ASIDE_LABEL, PUT_ASIDE_REST, RESTORE_LABEL } from "
  */
 export type CardSize = {
   maximized: boolean;
+  corner?: CardCornerWords;
   minimize?: {
     run: () => void;
     keys?: string | undefined;
@@ -78,35 +80,16 @@ export function CardSizeToggle() {
   );
 }
 
-function CardMinimize() {
-  const minimize = useContext(CardSizeContext)?.minimize;
-  if (!minimize) return null;
-  return (
-    <IconButton
-      label={PUT_ASIDE_LABEL}
-      restWords={PUT_ASIDE_REST}
-      keys={minimize.keys}
-      aria-keyshortcuts={minimize["aria-keyshortcuts"]}
-      onClick={minimize.run}
-    >
-      <svg {...icon} aria-hidden="true">
-        <path d="M5 12h14" />
-      </svg>
-    </IconButton>
-  );
-}
-
-/**
- * A card's top-right corner: the size control, then the card's own Close or
- * Hide, which keep their meaning. Every card chrome puts its close in one.
- */
+/** The only card corner: maximize, then a minus that never ends work. */
 export function CardCorner({
-  children,
+  buttonRef,
   style,
 }: {
-  children: React.ReactNode;
+  buttonRef?: React.Ref<HTMLButtonElement> | undefined;
   style?: React.CSSProperties;
 }) {
+  const size = useContext(CardSizeContext);
+  const corner = size?.corner ?? cardCornerOf("window-panel");
   return (
     <span
       data-card-corner=""
@@ -118,9 +101,20 @@ export function CardCorner({
         ...style,
       }}
     >
-      <CardMinimize />
       <CardSizeToggle />
-      {children}
+      <IconButton
+        ref={buttonRef}
+        data-card-leave=""
+        label={corner.label}
+        restWords={corner.restWords}
+        keys={size?.minimize?.keys}
+        aria-keyshortcuts={size?.minimize?.["aria-keyshortcuts"]}
+        onClick={size?.minimize?.run}
+      >
+        <svg {...icon} aria-hidden="true">
+          <path d="M5 12h14" />
+        </svg>
+      </IconButton>
     </span>
   );
 }

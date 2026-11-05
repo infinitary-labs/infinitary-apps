@@ -569,9 +569,9 @@ describe("the answer-shape section (contract v3.6, captain lock 2; Task B)", () 
     expect(section).not.toMatch(/wherever|if a picture|when a picture|you may/i);
   });
 
-  // INF-1732: INF-1718's answer note carried no mark, so the captain's close
-  // closed nothing; the brief tells a captain-asked answer to mark its card
-  // and names finished as the fallback. A step's answer goes to a report.
+  // The answer brief marks a saved note for explicit Done, never corner
+  // closure. Other acknowledged work uses the typed finished report;
+  // an internal step's answer goes to its report instead of a card.
   it("tells a captain-asked answer to mark its answer card answering, with finished as the fallback (INF-1732)", () => {
     expect(renderAnswerShapeSection()).toContain(ANSWER_MARK_WORDS);
     expect(ANSWER_MARK_WORDS).toContain("report with finished true");

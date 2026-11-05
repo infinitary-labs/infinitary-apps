@@ -845,7 +845,7 @@ describe("card-thread replies", () => {
     }
   }, 60_000);
 
-  it("plays a recorded close its crewmate never answered as a silent turn, leaving its next recorded turn to the thread reply (FI3-435)", async () => {
+  it("plays an unanswered ordinary note read as a silent turn, keeping the next recorded reply", async () => {
     const TASK = "c0ffee02";
     const NOTE = `card-${TASK}-note`;
     const PLAN = `card-${TASK}-plan`;
@@ -911,8 +911,9 @@ describe("card-thread replies", () => {
     const lines = vi.spyOn(CardService.prototype, "addMessage");
     try {
       const report = await replaySession(discoverSources({ name: "close", root }));
-      // The close reached the crewmate as a turn the recording never
-      // answered; its recorded reply still answers the captain's words.
+      // An ordinary read reaches its author. The recording holds no answer
+      // to that input, so the replay records a silent turn, never inventing
+      // a response or consuming the later recorded thread reply.
       expect(report.fidelity).toMatchObject({
         recorded_crewmate_turns: 2,
         played_crewmate_turns: 2,
@@ -921,6 +922,7 @@ describe("card-thread replies", () => {
         recorded_thread_replies: 1,
         skipped_thread_replies: 0,
       });
+      expect(report.details.unplayed_crewmate_turns).toEqual([]);
       expect(Object.values(threads(lines))).toEqual([
         [
           "captain: are those pictures right?",

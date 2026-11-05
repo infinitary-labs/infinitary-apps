@@ -1,5 +1,6 @@
 import { CREWMATE_ANSWER_ASK } from "../../../src/core/orchestrator/answerDelivery";
-import { CARD_CLOSED_STEER_NEEDLE, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { providerMessages } from "../providerRequest";
 
 /**
  * The deliverable axis (crew-posture rationalization Task B). A Firstmate
@@ -10,6 +11,7 @@ import { CARD_CLOSED_STEER_NEEDLE, type Scenario } from "../mockProvider";
  * reports. It emits no completion card and never commits: the brief told
  * it so, and the host refuses either way.
  */
+export const ANSWER_READ_MARKER = "I read the answer; finish without starting a build.";
 export const ANSWER_TASK_PROMPT_MARKER = "find out and answer:";
 export const MOCK_ANSWER_CARD_TITLE = "The meter idles because the claim query filters on repo_id";
 export const MOCK_ANSWER_ACTION_LABEL = "Fix the claim query";
@@ -20,24 +22,20 @@ const MOCK_ANSWER_CARD_BODY =
 export const MOCK_ANSWER_REPORT =
   "The claim query filters on repo_id and seven idle rows carry none; the card shows where.";
 /**
- * The captain's close reaches its crewmate (FI3-435). The answer-task
- * crewmate steered with the close of its card judges it read and finished
- * and reports so with `finished: true`; the mock Firstmate, woken by a
- * report that declared its work finished, closes the task the way its
- * instructions say - `settle_task answered` on an answer, in the shared
- * stand-in.
+ * INF-1879: the captain explicitly asks the answer's author to finish without a build.
+ * The author answers the thread, withdraws the obsolete decision and reports finished.
+ * The first mate hears that report and closes the answer through settle_task answered.
  */
 export const MOCK_ANSWER_FINISHED_REPORT =
   "The captain read the answer on the card, and nothing is left for me to do.";
 /**
- * A decision the captain closed without a choice does not answer their
- * message (INF-1610 piece 2), so the finished report is refused once; the
- * crewmate says why it has no more to show, and its report stands.
+ * With no marked answer card, the answer-delivery boundary refuses the finished report once
+ * (INF-1610 piece 2); the author explains the explicit finish request, and its report stands.
  */
 export const MOCK_ANSWER_FINISHED_AGAIN =
-  "My card held the whole answer and the captain closed it after reading; I have nothing more to show.";
+  "My card held the whole answer and the captain explicitly asked me to finish without a build; I have nothing more to show.";
 
-/** The first mate spawns the investigation; its crewmate answers on one card, and finishes once it is closed. */
+/** The investigation answers on one card and finishes only on the captain's explicit words. */
 export const answerTask: Scenario = () => {
   let saidWhy = false;
   return ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
@@ -60,12 +58,11 @@ export const answerTask: Scenario = () => {
         ],
       };
     }
-    // The crewmate told the captain closed its card: it judges the answer
-    // read and finished (FI3-435).
-    if (
-      body.includes(ANSWER_TASK_PROMPT_MARKER) &&
-      latestUserTail.includes(CARD_CLOSED_STEER_NEEDLE)
-    ) {
+    // A serialized transport tail escapes quotation marks; read the actual reply through its owner.
+    if (body.includes(ANSWER_TASK_PROMPT_MARKER) && latestUserTail.includes(ANSWER_READ_MARKER)) {
+      const reply =
+        providerMessages(body).findLast((message) => message.role === "user")?.text ?? "";
+      const cardId = reply.match(/\((card-[\w-]+)\)/)?.[1] ?? "missing";
       if (hasToolResults && body.includes(CREWMATE_ANSWER_ASK) && !saidWhy) {
         saidWhy = true;
         return {
@@ -74,7 +71,23 @@ export const answerTask: Scenario = () => {
       }
       if (hasToolResults) return { text: "done" };
       return {
-        calls: [{ name: "report", args: { text: MOCK_ANSWER_FINISHED_REPORT, finished: true } }],
+        calls: [
+          {
+            name: "reply",
+            args: {
+              card_id: cardId,
+              text: "The answer is complete; I will not start a build.",
+            },
+          },
+          {
+            name: "close_card",
+            args: {
+              card_id: cardId,
+              reason: "The captain explicitly finished without a build.",
+            },
+          },
+          { name: "report", args: { text: MOCK_ANSWER_FINISHED_REPORT, finished: true } },
+        ],
       };
     }
     // One decision card carrying the answer, and a report. No completion

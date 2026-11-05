@@ -77,7 +77,8 @@ The record's Cards row (FI3-579 piece 1) lists a task's cards through `TaskDetai
 A closed card reads as the version last seen with `pastCardEndingWords`; an open one reads "On the stage".
 A purged card is absent.
 The row's link goes through the one door above for a closed card (`window.infinitary.cards.showPast`) and `focusCard` for an open one.
-The cross on a card writes one feed line on its task, `KEY You closed "<title>"`, from `CrewSupervisor.close`; a card with no record to point at keeps the plain "captain dismissed" line.
+The shared minus puts a card aside or reads a note without writing a closing feed line.
+`CrewSupervisor.close` emits neither a `You closed` task line nor a plain `captain dismissed` line; the saved card remains accessible through its record.
 
 ### The stage
 

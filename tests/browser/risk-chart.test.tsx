@@ -4,7 +4,7 @@ import { page, userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
 import { seededHome } from "./freshHome";
 import { intersects, type Rect } from "./layout";
-import { bodyDrawn, inCardBody, SHOWN_ENTRY, stageAtRest } from "./stack";
+import { bodyDrawn, cardLeave, inCardBody, SHOWN_ENTRY, stageAtRest } from "./stack";
 import { openWindow } from "./window";
 
 /**
@@ -41,11 +41,7 @@ const dot = (dimension: RiskDimension) =>
 const note = (dimension: RiskDimension) =>
   document.querySelector<HTMLElement>(`${CHART} [data-risk-note="${dimension}"]`);
 const notes = () => document.querySelectorAll(`${CHART} [data-risk-note]`).length;
-const closeButton = () =>
-  page
-    .getByRole("region", { name: TITLE, exact: true })
-    .getByRole("button", { name: "Close", exact: true })
-    .element() as HTMLElement;
+const closeButton = () => cardLeave();
 
 /**
  * The box of an element's own words, not of its block, which reaches under

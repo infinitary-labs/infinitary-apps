@@ -1,4 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
+import {
+  ANSWER_DONE_LABEL,
+  answerDoneRest,
+  cardCornerOf,
+  cardLeaveOperation,
+} from "@shared/cardLeave";
 import type { CardRevisionLinks } from "@shared/cards";
 import {
   CARD_OBSERVATION_NOTE_MAX,
@@ -27,6 +33,7 @@ import {
   type CardWidth,
   cardAnswerLines,
   cardMutationSchema,
+  cardPresentation,
   cardQuestionsBytes,
   cardQuestionsSchema,
   cardSubmissionSchema,
@@ -385,13 +392,6 @@ export class CardService {
   /** The newest `sentBackAt` handed out: stamps stay distinct inside one millisecond. */
   private lastSentBack = 0;
   /**
-   * Crewmate cards the captain closed while they waited on the answer to his
-   * reply, by card id, with the task whose crewmate owes it: that answer, a
-   * revision under the same id, would open the card again, so it is refused
-   * until the crewmate closes out. Memory only: a restart closes everyone out.
-   */
-  private readonly closedAwaitingAnswer = new Map<string, string>();
-  /**
    * Cards holding a write from someone other than their author - a
    * revision the stage holds back, or an answer it named - whose writer has
    * not closed out since, by card, with that writer (`authorKey`) and the
@@ -688,44 +688,62 @@ export class CardService {
   }
 
   /**
-   * The captain's close control: the card leaves the stack without a
-   * declared action. Its row resolves `close`, and the record says it was a
-   * dismissal of the offer he was looking at, never a choice.
+   * The shared corner puts decisions, attention and pending notes aside;
+   * an ordinary note leaves the stack as read. Neither path chooses an
+   * action, receipts a pending answer task or ends work. An ordinary read
+   * acknowledges its message and returns true so its author can hear it;
+   * the marked saved answer keeps its receipt and ending for explicit Done.
    */
   dismiss(card: Card, submission?: unknown): boolean {
-    let observation: string | undefined;
+    if (cardLeaveOperation(cardPresentation(card), Boolean(card.awaiting)) === "aside") {
+      this.setMinimized(card.id, true);
+      return false;
+    }
+    const savedAnswer = card.taskId && this.answerNoteForTask(card.taskId)?.id === card.id;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(card.id, "close");
-      if (card.taskId && this.host.tasks.get(card.taskId)?.delivery?.captainAction)
-        this.host.tasks.deferCaptainAction(card.taskId);
-      observation = this.noteExit(card, "captain", "close-control", {
+      this.noteExit(card, "captain", "close-control", {
         reason: "dismissed",
         display: displayOf(readSubmission(submission), card),
       });
+      // Message acknowledgement does not end work. A marked saved answer
+      // alone reserves its acknowledgement for explicit Done.
+      if (!savedAnswer) this.host.captainResponded?.(card, "close");
     });
-    // A kept card he replied under stays closed through the answer its
-    // crewmate is still writing (docs/card-threads.md "The record").
-    const head = this.cards.get(card.id);
-    if (
-      head?.author === "crewmate" &&
-      head.taskId &&
-      head.awaiting &&
-      head.sentBackAt !== undefined
-    ) {
-      this.closedAwaitingAnswer.set(card.id, head.taskId);
-    }
     this.cards.delete(card.id);
     this.staged.delete(card.id);
-    this.host.captainResponded?.(head ?? card, "close");
-    const closedAnswer = this.recordResolution(
-      head ?? card,
-      "dismissed",
-      "captain",
-      undefined,
-      observation,
-    );
+    // Reading an ordinary note may progress its author, never end its task.
     this.scheduleBroadcast();
-    return closedAnswer;
+    return !savedAnswer;
+  }
+
+  /** The captain explicitly receipts a saved answer, not a presentation change. */
+  finishAnswer(taskId: string): boolean {
+    const card = this.answerNoteForTask(taskId);
+    if (!card) return false;
+    if (this.cards.has(card.id)) this.dismiss(card);
+    this.host.captainResponded?.(card, "close");
+    return this.recordResolution(card, "answer-done", "captain");
+  }
+
+  /** The task-less question's explicit Dismiss, never a corner operation. */
+  dismissQuestion(taskId: string): string | undefined {
+    const record = this.host.tasks.get(taskId);
+    const card = this.snapshot().find(
+      (entry) => this.host.tasks.openCardTaskFor(entry.id)?.id === taskId,
+    );
+    if (record?.kind !== "decision" || !card || card.taskId)
+      return "This question is no longer waiting.";
+    let observation: string | undefined;
+    this.host.cardStore.transaction(() => {
+      this.host.cardStore.resolve(card.id, "close");
+      observation = this.noteExit(card, "captain", "host", { reason: "dismissed" });
+    });
+    this.cards.delete(card.id);
+    this.staged.delete(card.id);
+    this.recordResolution(card, "dismissed", "captain", undefined, observation);
+    this.scheduleBroadcast();
+    return undefined;
   }
 
   /** A task that never started leaves no card rows behind. */
@@ -815,7 +833,7 @@ export class CardService {
     }
     // Task flags and minimized-card rows need the shown version and order,
     // not each card's message graph, task title or seen observation.
-    return [...this.cards.values()].map((card) => this.onTheStage(card)).sort(compareStack);
+    return [...this.cards.values()].map((card) => this.stageVersion(card)).sort(compareStack);
   }
 
   /** The stage's full presentation, including task, message and seen facts. */
@@ -823,7 +841,8 @@ export class CardService {
     const asked = new Map<string, CardAsked | undefined>();
     return this.taskSnapshot().map((staged) => {
       const shown = {
-        ...this.withChanges(staged),
+        // Corner words and Done belong to the public view, not graph-free task flags.
+        ...this.withChanges(this.onTheStage(staged)),
         ...this.updateState(staged),
         seen: staged.lifecycleId
           ? this.host.cardStore.lastSeenOffer(staged.id, staged.lifecycleId) !== undefined
@@ -977,6 +996,45 @@ export class CardService {
    * and still aside while its author's answer to that waits on its turn end.
    */
   private onTheStage(card: Card): Card {
+    const shown = this.stageVersion(card);
+    const record = card.taskId ? this.host.tasks.get(card.taskId) : undefined;
+    const answer = record && this.answerNoteForTask(record.id);
+    return {
+      ...shown,
+      corner: cardCornerOf(cardPresentation(shown), record?.key, Boolean(shown.awaiting)),
+      ...(answer?.id === shown.id && record
+        ? {
+            answerDone: {
+              taskId: record.id,
+              label: ANSWER_DONE_LABEL,
+              restWords: answerDoneRest(record.key),
+            },
+          }
+        : {}),
+    };
+  }
+
+  /** Saved note eligibility survives reading it, a restart and the author leaving. */
+  answerNoteForTask(taskId: string): Card | undefined {
+    const record = this.host.tasks.get(taskId);
+    if (
+      record?.status !== "active" ||
+      record.kind !== "work" ||
+      record.shape?.deliverable !== "answer"
+    )
+      return;
+    const card = this.host.cardStore.newestForTask(taskId, "crewmate");
+    return card?.answering &&
+      card.actions.length === 0 &&
+      !card.continues &&
+      card.awaiting === undefined &&
+      card.status === "ready" &&
+      cardEmitter(card.id, taskId) === "crewmate"
+      ? card
+      : undefined;
+  }
+
+  private stageVersion(card: Card): Card {
     const aside = !card.minimized && this.heldAside(card);
     const version = this.staged.get(card.id);
     if (!version) return aside ? { ...card, minimized: true } : card;
@@ -1955,11 +2013,6 @@ export class CardService {
         "This required-action card keeps its app-owned instructions and confirmation. To answer here, emit_card with this same id and reply; the host keeps the body and controls unchanged. Use update_task drop with a reason to cancel, or revise the declaration on its source card.",
       );
     }
-    if (!existing && resolved && this.closedAwaitingAnswer.has(resolved)) {
-      throw new Error(
-        `Card refused: the captain closed card "${resolved}" while it waited on your answer to their reply, so that answer does not open it again. Give the answer in your report instead.`,
-      );
-    }
     if (!existing && resolved) this.refuseAnsweredRevision(resolved, input);
     if (existing && resolved) {
       // An update is never the whole answer: while the captain's reply waits
@@ -2386,11 +2439,6 @@ export class CardService {
    * end, so it comes back once, with the crewmate's last word (INF-926).
    */
   closeOut(author: CardAuthorRef, reason: CloseOut): void {
-    if (author.kind === "crewmate") {
-      for (const [id, taskId] of this.closedAwaitingAnswer) {
-        if (taskId === author.taskId) this.closedAwaitingAnswer.delete(id);
-      }
-    }
     let moved = false;
     const released: string[] = [];
     const key = authorKey(author);
@@ -2546,8 +2594,8 @@ export class CardService {
   }
 
   /**
-   * Dismiss an open card the same way Done does: resolve the row, drop it
-   * from the stack, broadcast. Does not decommission a crewmate.
+   * An author explicitly withdraws its own offer: resolve the row, remove
+   * the card from the stack and broadcast. Does not decommission a crewmate.
    */
   close(
     cardId: string,
@@ -2566,9 +2614,9 @@ export class CardService {
     if (actor.kind === "firstmate" && !card.id.startsWith(FIRSTMATE_CARD_PREFIX)) {
       // Retired with the close rule (cards-as-threads phase 1, captain's Q3
       // A): the Firstmate no longer closes a card on the captain's behalf.
-      // A card leaves on a button, a settle, the captain's own close, or
-      // its AUTHOR's withdrawal - so words about someone else's card are a
-      // steer to that author, and the captain's × is the only dismissal.
+      // An offer ends on an explicit action or its AUTHOR's withdrawal;
+      // putting it away never resolves it. Words about someone else's card
+      // are a steer to that author, not permission to withdraw it.
       throw new Error(
         `Card "${id}" is not yours to close: only its author withdraws it, and only the captain dismisses a card they are looking at. To change what it says, revise it yourself under its full id with expected_revision, or write on its thread with reply.`,
       );
@@ -2981,7 +3029,7 @@ export class CardService {
   }
 
   /**
-   * A card left the stack (P1): the task it is about hears `card_resolved`,
+   * An explicit card resolution (P1): its task hears `card_resolved`,
    * and a decision task the Firstmate raised without a task closes with the
    * choice - answered on an action, cancelled on a dismiss, superseded when
    * the agent withdrew it.
@@ -2989,12 +3037,15 @@ export class CardService {
    * On an ANSWER task the captain's choice is also the CLOSE (Task B,
    * captain F2 A): the card was the deliverable, and answering it closes
    * the row `done/answered`, unless its crewmate declared the card
-   * `continues` (INF-1226). His close control is not a choice: it reaches
-   * the crewmate, which judges whether the task is finished (FI3-435).
+   * `continues` (INF-1226). Explicit Done also receipts a marked saved
+   * answer. The corner never ends work: aside and saved-answer reads send
+   * no author notification. Only an ordinary read or duplicate closure
+   * reaches the live author, through the separate `tellCardClosed` path;
+   * only the ordinary read acknowledges its note.
    * Returns whether it closed, because the click's ordinary round-trip to a
    * still-running crewmate has nowhere to go once the task is closed.
-   * `observation` is the card evidence's record of the same choice or
-   * close, which the task's event names as that occurrence (its alias on
+   * `observation` is the card evidence's record of the same resolution,
+   * which the task's event names as that occurrence (its alias on
    * the unified timeline, docs/task-record.md).
    */
   private recordResolution(
@@ -3028,9 +3079,9 @@ export class CardService {
         ...(observation ? { observation } : {}),
       });
       this.host.noteCapAnswered(card, action, by, card.author === "firstmate");
-      // The card leaving releases the captain gate it held (the owner's
-      // call 3): with the action as the reason on the timeline above, and
-      // the captain's close as an act that restarts the idle clock.
+      // This explicit resolution resynchronizes the captain gate, with
+      // the action as its timeline reason. A real gate change restarts the
+      // idle clock; putting a card aside never enters this path.
       this.host.syncCaptainGate(card.taskId, this.host.now());
       closedAnswer = this.host.closeAnsweredTask(card, action, by);
     }
@@ -3081,7 +3132,8 @@ export class CardService {
    * word). Nothing moves or retries until a click. Its one primary is its
    * default, so the footer draws it at the right edge. A card already up
    * under the id is revised in place when its words or actions differ;
-   * `reviseOnly` leaves a card the captain dismissed down.
+   * `reviseOnly` never recreates a card removed by a choice or withdrawal.
+   * A card put aside remains pending rather than acquiring a refusal.
    */
   addFirstmatePauseCard(input: FirstmatePauseCard, options: { reviseOnly?: boolean } = {}): void {
     const id = input.move

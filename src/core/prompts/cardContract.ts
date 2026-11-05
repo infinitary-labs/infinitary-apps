@@ -1,5 +1,11 @@
 import { RISK_DIMENSIONS, RISK_WHY_MAX, RISK_WORDS } from "@shared/risk";
 
+/** The acknowledgement clause shared by the report fields and card guidance. */
+export const ORDINARY_NOTE_READ_ACK =
+  "Reading an ordinary note acknowledges it, not task completion.";
+/** The full distinction lives in card guidance; report fields reuse its acknowledgement clause. */
+export const ORDINARY_NOTE_READ_GUIDANCE = `${ORDINARY_NOTE_READ_ACK} After that read, report finished if nothing remains. Aside and marked saved-answer reads are not acknowledgement; saved answers wait for Done.`;
+
 /**
  * The card contract, re-homed BY KIND (orchestrator contract v3.6, captain
  * lock 1 of 2026-09-19 on the visual-density audit

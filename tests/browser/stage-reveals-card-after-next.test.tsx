@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
 import { seededHome, subscribed } from "./freshHome";
-import { answerStack, shownEntry } from "./stack";
+import { answerStack, cardLeave, shownEntry } from "./stack";
 import { openSize, openWindow } from "./window";
 
 // INF-624, from the stage-reveals journey: the card after the next one is
@@ -65,11 +65,7 @@ test("the card after next is prepared when the height easing finishes ahead of t
     return animation;
   };
   try {
-    await userEvent.click(
-      page
-        .elementLocator(shownEntry() as HTMLElement)
-        .getByRole("button", { name: "Close", exact: true }),
-    );
+    await userEvent.click(cardLeave());
     await expect.element(shownCard(TALL_NOTE)).toBeVisible();
     // The close eased the card's height, and the easing finished.
     await expect.poll(() => easings).toContain("finished");

@@ -290,14 +290,16 @@ export class AskEnding {
   }
 
   /**
-   * The captain responded to a card: a choice, or their close. It is the
+   * The captain acknowledged a card: a choice, an ordinary note read, or
+   * explicit Done on a marked saved answer. It is the
    * answer for each open chain it is about, when it was shown since the
    * chain's newest message and no reply of theirs waits under it: their
    * choice on a decision about its work that is not still asking (or an
-   * explicitly answering terminal answer-task choice), or their close of
-   * a note shaped as its answer. A decision closed without a
-   * choice answers nothing. A chain whose reply is still running counts
-   * too: a quick choice lands before the turn that showed the card ends.
+   * explicitly answering terminal answer-task choice), or acknowledgement
+   * of a note shaped as its answer. Aside and saved-answer reads never call
+   * this acknowledgement path. A decision put aside answers nothing.
+   * A chain whose reply is still running counts too: a quick choice lands
+   * before the turn that showed the card ends.
    */
   captainResponded(card: Card, response: "choice" | "close", action?: string): void {
     if (card.awaiting === "answer") return;
@@ -308,8 +310,8 @@ export class AskEnding {
       answerTaskChoice(card, card.taskId ? this.host.tasks.get(card.taskId) : undefined, action);
     if (response === "choice" && (card.continues || (card.asking && !terminalAnswer))) return;
     for (const chain of this.openChains(true)) {
-      // A choice on any decision about its work answers it; a closed note
-      // answers it only when shaped as its answer, not a note along the way.
+      // A choice on a decision about its work answers it; an acknowledged
+      // note answers it only when shaped as its answer, not a note along the way.
       const answers = response === "choice" ? this.about(chain, card) : this.candidate(chain, card);
       if (!answers || this.host.shownAt(card) < chain.newestAt) continue;
       this.host.tasks.acceptAnswer(chain.ids, card.id);

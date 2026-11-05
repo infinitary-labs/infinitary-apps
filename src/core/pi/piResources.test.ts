@@ -1445,11 +1445,9 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       "A card is only allowed when: 1. work cannot move forward without a captain decision, or 2. the captain cannot move forward without seeing that fact.",
     );
     expect(prompt).toContain("Follow emit_card's contract for the outcome card");
-    // A close reaches its author (FI3-435): the crewmate judges it and its
-    // report declares the outcome, rather than staying silently idle.
-    expect(prompt).toContain(
-      "When a card closes without a choice, judge whether anything remains; a close grants no permission.",
-    );
+    // Putting a card away grants neither permission nor a task ending;
+    // ordinary-read acknowledgement is covered through both served runtimes.
+    expect(prompt).toContain("Putting a card away grants no permission and ends no task.");
     expect(prompt).not.toContain("Closing your completion card keeps you idle and steerable.");
     // The call mechanics - the completion trigger, the labels, that every
     // action closes the card - stay in the descriptor; what a card should LOOK like is the authoring

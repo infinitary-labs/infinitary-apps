@@ -711,14 +711,13 @@ export class SettleService {
    * The answer task's own close (Task B, captain F2 A). The captain's choice
    * on the card its own crewmate emitted closes it `done/answered`: the
    * deliverable was produced and he answered it, which is not the same as
-   * declining a decision the Firstmate raised. His close control is not a
-   * choice: it reaches the crewmate like every other card's close, and the
-   * crewmate judges whether the task is finished (FI3-435) - the Firstmate
-   * then closes it with settle_task `answered`. The one close that answers
-   * is his close of a note its crewmate marked `answering` with no reply of
-   * his waiting under it (INF-1732, the same test `AskEnding.captainResponded`
-   * accepts a closed note by): INF-1718 stayed open after he closed its
-   * answer note, because no report of its crewmate set `finished`.
+   * declining a decision the Firstmate raised. The close control never
+   * chooses or ends work. Only an ordinary note read or duplicate closure
+   * notifies its live author; only the ordinary read acknowledges a note.
+   * After that acknowledgement, the crewmate can report `finished` and the
+   * Firstmate can settle the answer task `answered`. A marked saved answer
+   * instead waits for explicit Done (`answer-done`), which receipts it and
+   * closes the answer task `done/answered` without a `card-closed` steer.
    * Interrupt, cancel and `update_task drop` keep their own closes.
    */
   closeAnsweredTask(card: Card, action: string, by: "captain" | "firstmate" | "crewmate"): boolean {
@@ -730,10 +729,7 @@ export class SettleService {
     if (choice && !choice.effect)
       this.host.tasks.recordResultHandoff(record.id, { cardId: card.id, action });
     if (this.host.deliverableOf(record) !== "answer") return false;
-    const text =
-      action === "closed" || action === "dismissed"
-        ? "answer closed"
-        : `chose "${choice?.label ?? action}"`;
+    const text = !choice ? "marked answer Done" : `chose "${choice.label}"`;
     // An invalid action never produces a closure-choice wake.
     const handoff = choice ? this.answerTaskClosedPayload(record, card, choice) : undefined;
     void this.closeTask(card.taskId, {
@@ -1649,7 +1645,7 @@ export class SettleService {
     const finished = record.delivery?.finishedAt !== undefined;
     if (!record.shape?.internal_step && !finished && !handedOn) {
       return refuse(
-        "it was not opened as an internal step of yours - the captain asked for this answer, so it closes on their choice on its card, or once its crewmate reports it finished after they close that card.",
+        "it was not opened as an internal step of yours - the captain asked for this answer, so it closes on their choice or Done on its marked note, or once its crewmate reports it finished after their explicit acknowledgement. Putting the card away is not that acknowledgement.",
       );
     }
     if (record.status !== "active" || this.working(record.id)) {
@@ -3304,8 +3300,9 @@ export class SettleService {
     close: TaskClose,
     options: { recordBeforeStop?: boolean } = {},
   ): Promise<void> {
-    // The close reaches its crewmate, which leaves once the spark lands; a
-    // superseded one hands over to its successor, whose start is its spark.
+    // This task settlement announces its reach before stopping the runtime;
+    // the crewmate leaves after that spark. A superseded one instead hands
+    // over to its successor, whose start is its spark.
     // Work carried on closes done and goes home like any done task.
     if (close.reason !== "superseded" || close.status === "done") this.host.announceReach?.(taskId);
     this.host.killJobs?.(taskId);

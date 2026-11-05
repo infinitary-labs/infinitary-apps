@@ -103,8 +103,7 @@ URLSession's WebSocket reports no bytes before a whole message arrives, so silen
 Each round dials every saved and nearby address together (INF-2157): private IPv4 candidates first and the rest a quarter second later (`ReadOnlySession.privateLead`, RFC 8305's attempt delay), so the private network wins when both answer.
 The first attempt whose WebSocket opens (`PinnedTransport.opened`, after the pinned TLS, the phone's key and the upgrade) is kept and greeted; the others are closed before any hello, so each round makes one welcomed connection.
 A round fails once every attempt failed or none opened within `ReadOnlySession.dialLimit`, which cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
-Failed rounds wait 2, 4 and 8 s and so on, each up to a quarter longer at random, never past `ReadOnlySession.longestWait`, so a computer that comes back is found within 15 s.
-A welcome that replays brings every push the phone missed, so once the phone has read everything since its last reload it says In reach at once and sends only the scene's two small reads and any read a cut left unanswered; a reload, or a change whose result was lost, reads everything first.
+Failed rounds wait 2, 4 and 8 s and so on, each up to a quarter longer at random, never past `ReadOnlySession.longestWait`, so a computer that comes back is found within 15 s. A welcome that replays brings every push the phone missed, so once the phone has read everything since its last reload it says In reach at once and sends only the scene's two small reads and any read a cut left unanswered; a reload, or a change whose result was lost, reads everything first.
 `contact` is where the connection is and gates reads and changes; `reach` is what the reach line and the computer button say.
 `reach` follows `contact`, except that after the computer was in reach it keeps saying In reach while the phone redials, until the computer has been quiet for `patience`, so a cell pause passes unnoticed and a dead path is named within half a minute.
 A deliberate stop, such as the close when iOS ends the app's background time, has nothing to be patient about, so the words follow `contact` at once and a reopen reads Reaching until its dial is in reach.
@@ -174,10 +173,14 @@ Native controls own the head, footer choices and reply field; a body cannot draw
 The head draws the Mac's: the kind (Attention in the danger color), Review finding, the task's key in mono, where the task runs, the model chip and the risk, then the title and the revised line; it names no sender.
 The task's key opens its record on Tasks, or in the sidebar beside the stage.
 A merge card's risk, on a merge card, a past merge card or a self-merge note, is a row of seven dots in the levels' colors, and a press opens a sheet naming each dimension, its level's words and the crewmate's why.
-Put aside (a minus before the close, ⇧⌘M from a keyboard) sends `inf:cards:minimize` with `true`; the core brings the card back when it changes.
+The card has one minimize minus after Maximize, with ⇧⌘M from a keyboard; its label and rest words come from the core’s optional `corner` (`src/shared/cardLeave.ts`).
+It asks the shared close dispatcher to put a decision away or read a note, never to refuse consent or end a task.
+With an older core lacking `corner`, the phone uses the older safe minimize request, not its destructive close.
+An answer note carries the host’s Done, and its record carries the same Done after the note was put away.
+The task-record sheet reads its Hide minus and rest words from the record row, and Shift-Command-M hides that sheet without ending the task.
 On an iPad the head also maximizes the card to the stage's whole width.
-The close asks first, in the Mac's words (`closeQuestionWords.ts`), while picks or typed words would be discarded, or while the captain's reply waits on its answer, which offers Put aside instead.
-VoiceOver reads the close's and put aside's rest words as their hints.
+Putting a decision away retains its picks and typed words without a warning question.
+The corner's hint carries those same rest words.
 The words a phone card shows come from the Mac's owners through `PhoneCardWords.generated.swift`, written by `scripts/generate-phone-contract.ts`.
 The footer choices are the Mac's row (`PhoneChoiceStyle` in `PhoneChoiceRow`): rounded rectangles with 16-point words, drawn about 37 points tall inside a 44-point touch area, each keeping its own width at the trailing edge and wrapping onto another line when they do not fit.
 As on the Mac (`footerGroups`), the default is drawn last, filled with the accent; a danger choice has a red outline and the rest a hairline outline.
@@ -406,6 +409,8 @@ A close or a choice takes the card off Home and the next card is up; putting a c
 A reply joins the card's thread marked Sending… where its time will be, and the draft and photos clear.
 A message clears the box and stands as the last turn, marked Sending… until the computer has it.
 Start and Continue read Starting on the record and its row, Interrupt reads Stopping, and a steer shows in the transcript marked Sending… as its draft clears.
+An explicit Done or Dismiss shows its selected ending on the record and row at the tap, and settles only when the home's task reading carries the matching status and reason.
+Putting a decision aside predicts its minimized state, while putting a note away predicts its acknowledgement; neither predicts a task ending.
 A snapshot that holds the change retires its intent with nothing moving.
 A reply or a steer is held once the thread or transcript has more of the captain's messages than it showed at the tap, and a message once the last turn follows the one shown at the tap, since the computer writes the words its own way (trimmed, with a line for each picture).
 A snapshot whose card or task changed under the intent, such as a revised offer or a closed task, voids it quietly.

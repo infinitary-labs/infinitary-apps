@@ -3,6 +3,7 @@ import { type LiveValidationInput, liveValidationInputSchema } from "@shared/liv
 import { RECOVERY_APPROACHES, type RecoveryApproach } from "@shared/recovery";
 import { Type } from "typebox";
 import { KNOWLEDGE_TOOL, RECORD_KNOWLEDGE_TOOL } from "../knowledge/knowledgeTools";
+import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
 import {
   type CrewmateTool,
   callWithSignal,
@@ -247,8 +248,7 @@ export const REPORT_TOOL = crewmateTool({
           ),
         },
         {
-          description:
-            "Pass when nothing is left for you until the captain acts: your outcome card is up, or they may still want something after closing your card. Your task then waits on them: nothing nudges you, and while your card is up the first mate is not woken until they close, click or reply under it, or you are steered. With no card of yours up they have nothing to answer, so the first mate is woken to ask them. Never while work of your own remains.",
+          description: `Pass when only the captain can unblock you and no work remains. ${ORDINARY_NOTE_READ_ACK} Saved answers await Done; aside is not acknowledgement. With neither card nor saved answer, the first mate asks them. Never while work remains.`,
         },
       ),
     ),
@@ -281,8 +281,7 @@ export const REPORT_TOOL = crewmateTool({
     ),
     finished: Type.Optional(
       Type.Boolean({
-        description:
-          "True only after the captain closed your outcome card and nothing is left for you: the first mate is woken to close your task. Never with waiting_on_captain.",
+        description: `True after the captain acknowledges your outcome and nothing remains; the first mate is woken to close it. ${ORDINARY_NOTE_READ_ACK} Aside is not acknowledgement. Saved answers await Done; use waiting_on_captain. Never with waiting_on_captain.`,
       }),
     ),
     responses: Type.Optional(

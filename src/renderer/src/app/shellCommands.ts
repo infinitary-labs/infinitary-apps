@@ -108,6 +108,9 @@ const browserControlButton = (entryId: string) =>
 const moveComputerButton = (entryId: string) =>
   shownPart(entryId, "[data-record-move-open]:enabled");
 
+const answerDoneButton = (entryId: string) =>
+  shownPart(entryId, "button[data-answer-done-control]:not(:disabled)");
+
 /** The shown card's reply field. */
 const replyField = (cardId: string) =>
   shownPart(cardId, `[data-card-reply="${CSS.escape(cardId)}"] textarea`);
@@ -118,7 +121,8 @@ const cardBody = (entryId: string) => shownPart(entryId, "[data-card-body]");
 /** The shown card's buttons: its default, or else the first a person can press. */
 const cardButton = (cardId: string) =>
   shownPart(cardId, "[data-card-actions] button[data-card-action-default]:enabled") ??
-  shownPart(cardId, "[data-card-actions] button:enabled");
+  shownPart(cardId, "[data-card-actions] button:enabled") ??
+  answerDoneButton(cardId);
 
 /** Presses the shown card's nth choice (`choiceOrder`), the click the pointer would make. */
 function pressCardChoice(index: number): void {
@@ -244,8 +248,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "project-focus.clear": () => projectFocus.pick(null),
   "cards.previous": () => onShownCard((stage) => stage.page(-1)),
   "cards.next": () => onShownCard((stage) => stage.page(1)),
-  "cards.close": () => onShownCard((stage) => stage.close()),
   "cards.minimize": () => onShownCard((stage) => stage.minimize?.()),
+  "cards.done": () => toShownPart(answerDoneButton, (button) => button.click()),
   "cards.maximize": () => onShownCard((stage) => stage.toggleSize()),
   "cards.next-revision": () =>
     toShownPart(cardBody, (body) =>
@@ -363,6 +367,10 @@ function openUsage(): void {
 function windowFacts(): WindowFacts {
   return {
     dialogOpen: modalOpen(),
+    answerDoneReady: (() => {
+      const id = shownEntry(useShellStore.getState())?.id;
+      return !!id && answerDoneButton(id) !== null;
+    })(),
     browserControl: (() => {
       const id = shownEntry(useShellStore.getState())?.id;
       return !!id && browserControlButton(id) !== null;

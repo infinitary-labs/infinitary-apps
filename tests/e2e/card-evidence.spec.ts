@@ -17,7 +17,14 @@ import {
   STALE_OFFER_TITLE,
   staleOffer,
 } from "./scenarios/staleOffer";
-import { discardAndClose, expectNoCard, showCard, shownCard } from "./stack";
+import {
+  cardAnswersLine,
+  cardLeave,
+  closeQuestion,
+  expectNoCard,
+  showCard,
+  shownCard,
+} from "./stack";
 
 /**
  * Card evidence (docs/card-evidence.md). What the captain chose is recorded
@@ -372,14 +379,14 @@ test("a footer click records what each question asked; a draft the captain never
     // A changed field closed without sending.
     await showCard(page, NAME_RELEASE);
     await enter(cardBody(page, NAME_RELEASE), "input", CLOSED_DRAFT);
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
-    await discardAndClose(page);
-    await expectNoCard(page, NAME_RELEASE);
+    await cardLeave(page).first().click();
+    await expect(closeQuestion(page)).toHaveCount(0);
+    await expect(shownCard(page, NAME_RELEASE)).toBeHidden();
 
     // A changed field the app quits on.
     await showCard(page, PICK_WASH);
     await enter(cardBody(page, PICK_WASH), "textarea", RESTART_DRAFT);
-    await expect(page.locator("[data-card-answers]")).toContainText("1 changed");
+    await expect(cardAnswersLine(page)).toContainText("1 changed");
   } finally {
     await launched.close();
   }
@@ -409,16 +416,7 @@ test("a footer click records what each question asked; a draft the captain never
 
   // The dismissal is recorded as one, against the offer shown; its draft is not.
   const named = observationsOf(userDataDir, "card-fm-release-name");
-  expect(named.filter((observation) => observation.kind === "exit")).toEqual([
-    expect.objectContaining({
-      actor: "captain",
-      source: "close-control",
-      payload: expect.objectContaining({
-        reason: "dismissed",
-        display: expect.objectContaining({ fidelity: "matched" }),
-      }),
-    }),
-  ]);
+  expect(named.filter((observation) => observation.kind === "exit")).toEqual([]);
   expect(JSON.stringify(named)).not.toContain(CLOSED_DRAFT);
   const washed = observationsOf(userDataDir, "card-fm-wash");
   // Shown, so seen - and nothing the captain picked and never sent.

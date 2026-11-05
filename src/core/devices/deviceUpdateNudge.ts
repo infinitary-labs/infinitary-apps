@@ -138,7 +138,8 @@ export class DeviceUpdateNudge {
       chosen === deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.update, gap)
     )
       return true;
-    // The close control names no gap: it holds for the gap this run knows, or the one before a restart.
+    // A legacy dismissed resolution names no gap: preserve its saved hold
+    // for the known gap. The current minus records no such resolution.
     const known = this.gaps.get(deviceId);
     return chosen === "dismissed" && (known === undefined || known === gap);
   }

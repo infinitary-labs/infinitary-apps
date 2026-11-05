@@ -46,8 +46,8 @@ import type { RepoRegistry } from "./repoRegistry";
  * the captain's click on its Add project (a host effect, which no body
  * script or agent can run) sets it up, through the same dispatcher
  * Settings uses, as the captain: the setup, then its settings, all before
- * the Firstmate hears. Not now, or closing the card, adds nothing. Either
- * way the Firstmate is told once.
+ * the Firstmate hears. Explicit Not now declines and tells the Firstmate
+ * once. The minus keeps the offer pending without a setup outcome.
  */
 
 export type ProjectSetupFacts = Extract<WakeFacts, { kind: "project-setup" }>;
@@ -223,7 +223,7 @@ export class ProjectSetups {
     });
   }
 
-  /** The captain's Not now, or his close of the card. */
+  /** The captain's explicit Not now; putting the card aside never calls this. */
   decline(arg: string | undefined): void {
     const offer = readOffer(arg);
     if (offer) this.options.tell({ kind: "project-setup", outcome: "not-now", name: offer.name });

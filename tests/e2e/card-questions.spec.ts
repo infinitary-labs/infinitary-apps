@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
-import { closeQuestionWords } from "../../src/renderer/src/app/closeQuestionWords";
 import { answersLine as answersWords } from "../../src/renderer/src/cards/answersLine";
 import {
   ANYTHING_ELSE_ANSWER,
@@ -37,7 +36,17 @@ import {
   INLINE_QUESTIONS_TITLE,
   inlineQuestions,
 } from "./scenarios/inlineQuestions";
-import { cardReply, closeQuestion, expectNoCard, showCard, shownCard, shownEntry } from "./stack";
+import {
+  cardAnswersLine as answersLine,
+  cardLeave,
+  cardReply,
+  closeQuestion,
+  expectNoCard,
+  putAwayAndRestore,
+  showCard,
+  shownCard,
+  shownEntry,
+} from "./stack";
 import { focusOn, pressKey, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
 /**
@@ -65,10 +74,6 @@ async function type(frame: FrameLocator, selector: string, text: string) {
     field.value = value;
     field.dispatchEvent(new Event("input", { bubbles: true }));
   }, text);
-}
-
-function answersLine(page: Page) {
-  return page.locator("[data-card-answers]");
 }
 
 /** The footer's answers line for these counts: picks on a card, answers on a preview. */
@@ -169,28 +174,8 @@ test("picks inside a card queue until a footer button sends them, and survive a 
     await expect(answersLine(page)).toHaveText(pickedLine(3, 3, 3));
     await expect(lock).toBeEnabled();
 
-    // Closing would discard it, so the × asks once, under itself, and the
-    // card's own choices stay where they are.
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
-    const confirm = closeQuestion(page);
-    await expect(confirm).toBeVisible();
-    await expect(lock).toBeVisible();
-    await page.screenshot({ path: test.info().outputPath("card-questions-close-confirm.png") });
-    await confirm.getByRole("button", { name: "Keep answering", exact: true }).click();
-    await expect(confirm).toHaveCount(0);
-    await expect(shownCard(page, INLINE_QUESTIONS_REVISED_TITLE)).toBeVisible();
-    // Escape is a keep too.
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
-    await expect(confirm).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(confirm).toHaveCount(0);
-    // So is moving into the card's body, where a click there takes focus.
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
-    await expect(confirm).toBeVisible();
-    await focusOn(cardBodyElement(page, INLINE_QUESTIONS_REVISED_TITLE));
-    await expect(confirm).toHaveCount(0);
-    await expect(shownCard(page, INLINE_QUESTIONS_REVISED_TITLE)).toBeVisible();
-    // Every keep kept the pick too.
+    // INF-1879: putting away retains the latest unsent pick and sends no choice.
+    await putAwayAndRestore(page, INLINE_QUESTIONS_REVISED_TITLE);
     await expect(revised.locator('input[name="write-scope"][value="shipping"]')).toBeChecked();
 
     // Nothing the picks did reached the author: one steer so far, the
@@ -383,12 +368,7 @@ test("a question's Something else row takes the captain's own words to the autho
     await typeInto(keyField, "Try once after a minute, then tell me");
     await expect(answersLine(page)).toHaveText(pickedLine(1, 3, 1));
     await expect(send).toBeEnabled();
-    // Closing would lose them, so the × asks first.
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
-    const confirm = closeQuestion(page);
-    await expect(confirm).toBeVisible();
-    await confirm.getByRole("button", { name: "Keep answering", exact: true }).click();
-    await expect(confirm).toHaveCount(0);
+    await putAwayAndRestore(page, WRITE_IN_TITLE);
     await pressKey(keyField, "Shift+Tab");
     await page.keyboard.press("ArrowUp");
     await expect(frame.locator('input[name="key_app"][value="keep"]')).toBeChecked();
@@ -546,8 +526,8 @@ test("a scripted body stages a snapshot beside its form, and the close confirms 
     // captain's pick, so closing does not ask.
     await showCard(page, UNTOUCHED_TITLE);
     await expect(answersLine(page)).toHaveText(pickedLine(1, 1));
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
-    await expectNoCard(page, UNTOUCHED_TITLE);
+    await cardLeave(page).first().click();
+    await expect(shownCard(page, UNTOUCHED_TITLE)).toBeHidden();
     await expect(closeQuestion(page)).toHaveCount(0);
 
     await showCard(page, LOOK_TITLE);
@@ -560,11 +540,7 @@ test("a scripted body stages a snapshot beside its form, and the close confirms 
     });
     await expect(answersLine(page)).toHaveText(answeredLine(2, 2, 1));
 
-    // A changed pick makes the close ask; confirming closes and sends nothing.
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
-    const confirm = closeQuestion(page);
-    await expect(confirm).toBeVisible();
-    await confirm.getByRole("button", { name: "Keep answering", exact: true }).click();
+    await putAwayAndRestore(page, LOOK_TITLE);
 
     await page.getByRole("button", { name: "Use this look", exact: true }).click();
     await expectNoCard(page, LOOK_TITLE);
@@ -678,10 +654,7 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
     await expect(frame.locator('input[value="summary"]')).toBeChecked();
     await expect(frame.locator("select")).toHaveValue("weekly");
     await expect(answersLine(page)).toHaveText(pickedLine(3, 3));
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
-    const confirm = closeQuestion(page);
-    await expect(confirm).toBeVisible();
-    await confirm.getByRole("button", { name: "Keep answering" }).click();
+    await putAwayAndRestore(page, PICK_TITLE);
     await page.screenshot({
       path: process.env.FM_TASK_EVIDENCE
         ? `${process.env.FM_TASK_EVIDENCE}/recommendations-picked.png`
@@ -907,11 +880,7 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
     await expect(answersLine(page)).toHaveText(pickedLine(1, 3));
     expect((await steers()).slice(steersBefore)).toHaveLength(0);
 
-    // Closing would discard the words, so the × asks first.
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
-    await expect(closeQuestion(page)).toContainText(closeQuestionWords(0, false, true));
-    await closeQuestion(page).getByRole("button", { name: "Keep answering", exact: true }).click();
-    await expect(closeQuestion(page)).toHaveCount(0);
+    await putAwayAndRestore(page, INLINE_QUESTIONS_TITLE);
 
     // A picture goes only as a reply: the choices wait, and a press sends nothing.
     await pastePictures(field, [{ name: "theme.png" }]);

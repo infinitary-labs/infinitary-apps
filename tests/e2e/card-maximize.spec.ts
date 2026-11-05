@@ -16,6 +16,7 @@ import { type Rect, resizeWindow, settled, within } from "./layout";
 import { promptInput } from "./prompt";
 import { expandDock, openGroup, pressRow, recordCard } from "./rails";
 import {
+  cardLeave,
   cardReply,
   cardSurface,
   clickInBody,
@@ -178,9 +179,9 @@ test("a card maximizes into the window and comes back with its page, answers, re
     });
 
     await test.step("Tab and Shift+Tab go round the card and its pager", async () => {
-      // INF-476 places Minimize before Maximize, retaining the whole focus round.
-      await page.keyboard.press("Shift+Tab");
-      await expect(sizeControl(page, PUT_ASIDE_LABEL)).toBeFocused();
+      // INF-1879 places the one minus after Maximize, retaining the whole focus round.
+      await pressKey(sizeControl(page, PUT_ASIDE_LABEL), "Shift+Tab");
+      await expect(sizeControl(page, RESTORE_LABEL)).toBeFocused();
       await page.keyboard.press("Shift+Tab");
       await expect
         .poll(() =>
@@ -188,18 +189,12 @@ test("a card maximizes into the window and comes back with its page, answers, re
         )
         .toBe(true);
       await page.keyboard.press("Tab");
-      await expect(sizeControl(page, PUT_ASIDE_LABEL)).toBeFocused();
-      await page.keyboard.press("Tab");
       await expect(sizeControl(page, RESTORE_LABEL)).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(sizeControl(page, PUT_ASIDE_LABEL)).toBeFocused();
     });
 
-    await test.step("the close question takes the first Escape, and the next restores the card", async () => {
-      await shownCard(page, READ).getByRole("button", { name: "Close", exact: true }).click();
-      const question = closeQuestion(page);
-      await expect(question).toBeVisible();
-      await page.keyboard.press("Escape");
-      await expect(question).toHaveCount(0);
-      await expect(sizeControl(page, RESTORE_LABEL)).toBeVisible();
+    await test.step("Escape restores the maximized card without a leaving question", async () => {
       await pressKey(sizeControl(page, RESTORE_LABEL), "Escape");
       await expect(sizeControl(page, MAXIMIZE_LABEL)).toBeFocused();
       await expect(promptInput(page)).toBeVisible();

@@ -373,7 +373,7 @@ The task board runs the same ops on a tile, plus its own `queue-task` and `unque
 Nothing resolves a card as an answer; a dropped task's outstanding cards come down as obsolete.
 Put in, discard and keep are not here.
 An accepted Start dismisses the record card, as Hide does (`closeTaskRecord`, by task, so a record the captain paged away from still goes); the row reopens it.
-The top cross is Hide and only dismisses the popover.
+The top-right minus is Hide and only puts the record card away.
 Show the card is a pointing gesture: the host refreshes the task's waiting association and brings its decision card forward with `focusCard`, writing nothing.
 The record body declares no actions and carries no buttons.
 `record-controls.spec.ts` drives every bar state against the built app through the shared `expectRecordBar` (`tests/e2e/rails.ts`).
@@ -450,7 +450,7 @@ The host stamps `source` (`yours` | `installed`) from the root it found the plug
 **Two roots, one scan** (item 2): `PersonalExtensions` scans `userData/plugins/<id>` from the `plugins` table (migration 43, `PluginRecords` its one writer: id, source, pinned version, installed-at, the consented capabilities).
 An added plugin is served only what the captain consented to: a tree on disk asking for anything else, or holding a `server.ts`, mounts nothing, with the reason named.
 
-**Install by talking** (item 3): `install_plugin` (the first mate's 25th tool) -> `PluginInstaller` (`src/core/plugins/`): fetch as plain files (npm `pack --ignore-scripts`, git with hooks off, or a folder; links refused; pinned) -> `checkPluginTree`, the same check the scan runs (the manifest, no server code, the tidy-up's refusals, a compile for the frame realm) -> one host consent card (`card-plugin-<id>`, host ops `add-plugin` / `decline-plugin` only the captain's click on card chrome runs; the captain's dismissal declines) -> one feed line.
+**Install by talking** (item 3): `install_plugin` (the first mate's 25th tool) -> `PluginInstaller` (`src/core/plugins/`): fetch as plain files (npm `pack --ignore-scripts`, git with hooks off, or a folder; links refused; pinned) -> `checkPluginTree`, the same check the scan runs (the manifest, no server code, the tidy-up's refusals, a compile for the frame realm) -> one host consent card (`card-plugin-<id>`, host ops `add-plugin` / `decline-plugin` only the captain's click on card chrome runs; only Don't add declines, while the minus keeps the staged offer pending) -> one feed line.
 A top-level `runbook.json` instead takes guidance admission through the same installer and consent effects, with no panel mounted; `docs/runbooks.md` owns that contract.
 An update asks again only on a capability diff; `personalize remove` uninstalls.
 

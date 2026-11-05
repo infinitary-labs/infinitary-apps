@@ -45,11 +45,13 @@ A question that needs a structured answer uses the questions in the body ([decis
   Someone else's write the stage holds, a revision or an answer it named, reaches it at that writer's own close-out; the author's close-out still ends what its own turn held.
 - Reply: the captain's words under a card go to its answerer (its author, or the first mate for its own cards and for a crewmate's card whose task closed) as a steer stamped `via: "thread"`; the answerer answers once, revising with `reply` or answering with `reply(card_id, text)` (`CARD_REPLY`), naming the message in `answers_message`.
 - Choose: every declared action closes its card; an action with no effect returns to its author as the captain's choice, and an action with an effect is run by the host.
-- Close: the captain's close is the keep; it runs nothing, is not a choice, and reaches a crewmate author as the typed `card-closed` wake for it to judge.
+- Put away: the one minimize corner preserves decisions and consent, reads notes, or hides the window’s own panel; it never ends work.
+  Reading an ordinary completed note acknowledges its message and notifies its live crewmate author through the existing durable turn path; decisions, pending notes and marked saved answers send no such read steer.
+- Done: the host receipts a saved marked answer note from the note or its record, closing its task answered; time alone never does.
 - Contribute: a write on someone else's card keeps its author, task, lifecycle, source offer and answerer; a revision names the revision it read, and a closed card takes a dated clarification alone.
   Any writer's line, the answerer's own included, ends a captain question only when `answers_message` names the one the card waits on; a handoff stays open.
 - Withdraw: only a card's own author withdraws it (`CardService.close` refuses the first mate closing someone else's card).
-- Every card with actions places the `captain` gate on its task (`IdleLadder.syncCaptainGate`); a task-less host card files an `operation` row (`TaskService.fileHostCardTask`); the card leaving releases the gate (`docs/card-authoring.md` "A card places the gate").
+- Every card with actions places the `captain` gate on its task (`IdleLadder.syncCaptainGate`); a task-less host card files an `operation` row (`TaskService.fileHostCardTask`); a choice or explicit ending releases the gate; putting a card away preserves it (`docs/card-authoring.md` "A card places the gate").
 - Evidence: every offer, availability change, admitted action, thread line, exit and stage sighting is appended to `card_observations` by `CardStore.observe`, inside the same transaction as the write it describes (`docs/card-evidence.md`).
 
 ## Authority
@@ -69,7 +71,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - What a choice authorizes (`HANDOFF`, contract v4.41): Approve and build authorizes implementation, not merging; Save and defer keeps the plan and authorizes no build; Abandon files nothing.
 - Explicit build words in a reply authorize implementation, not merging; settings, selection, praise, dismissal, script-triggered actions and a preview's controls authorize neither.
 - Merge, discard, a stronger model and unrelated work asked for under a crewmate's card are not the crewmate's to run: it closes its card and reports the captain's words verbatim with `needs_firstmate`.
-- Cards are threads (`docs/card-threads.md`): a reply goes to the card's author and resolves nothing, and the captain's close of a crewmate's card reaches that crewmate, which judges it; nothing in the host reads the captain's words.
+- Cards are threads (`docs/card-threads.md`): a reply goes to the card's author and resolves nothing, and putting it away resolves nothing; nothing in the host reads the captain’s words.
 - Required actions on a completion offer are display-only: they grant no execution permission, and a confirmation runs nothing (`docs/required-actions.md`).
 - A Careful validation question binds its approval to one ordinary action with `emit_card.validation_request` (`docs/delivery-rigor.md`, "Careful live validation"): a check approval is kept on the check by its id while the check declares the same resources and cost per run, and names no sign-in; an effect others can see is approved once and used once; a version's gaps share one host-drawn checklist whose ticked rows the click accepts, on a card with no script or field of its own, and an accepted gap lasts until its check fails or leaves the list.
 - Card bodies render verbatim with no sanitizer; never reintroduce a tag/attribute/CSS allowlist.

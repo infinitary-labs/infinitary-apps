@@ -5,14 +5,14 @@ import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
-import { clickInBody, closeQuestion, shownCard, shownEntry } from "./stack";
+import { cardLeave, clickInBody, closeQuestion, shownCard, shownEntry } from "./stack";
 
 const evidence = process.env.FM_CARD_DEPARTURE_EVIDENCE;
 /** The two seeded cards: the one a choice closes and the successor the stage prepares. */
 const CHOSEN_PLAN = "The chosen plan";
 const NEXT_PREVIEW = "The next preview";
-for (const action of ["Approve and build", "Close", "Discard and close"]) {
-  test(`${action} closes without waiting for the next body`, async () => {
+for (const action of ["Approve and build", "Put aside", "Put aside with a draft"]) {
+  test(`${action} leaves without waiting for the next body`, async () => {
     const userDataDir = scratchDir("infinitary-card-departure-");
     const db = openDatabase(userDataDir);
     const cards = new CardStore(db);
@@ -43,7 +43,7 @@ for (const action of ["Approve and build", "Close", "Discard and close"]) {
         priority: 50,
         status: "ready",
         actions: [
-          { id: "approve", label: action === "Close" ? "Build it" : action, default: true },
+          { id: "approve", label: "Approve and build", default: true },
           { id: "leave", label: "Leave it" },
         ],
       });
@@ -112,22 +112,14 @@ for (const action of ["Approve and build", "Close", "Discard and close"]) {
         };
         requestAnimationFrame(tick);
       }, CHOSEN_PLAN);
-      if (action === "Discard and close") {
+      if (action === "Put aside with a draft") {
         const trail = cardBody(page, CHOSEN_PLAN).getByLabel("Leave a trail");
         await clickInBody(trail);
         await expect(trail).toBeChecked();
-        await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
-        await expect(closeQuestion(page)).toBeVisible();
-        // Asking does not close; only the confirmed discard departs.
-        expect(
-          (await page.evaluate(() => window.infinitary.cards.list())).some(
-            (card) => card.id === "chosen",
-          ),
-        ).toBe(true);
-        await closeQuestion(page).getByRole("button", { name: action, exact: true }).click();
-      } else {
-        await shownEntry(page).getByRole("button", { name: action, exact: true }).click();
       }
+      if (action === "Put aside" || action === "Put aside with a draft")
+        await cardLeave(page).click();
+      else await shownEntry(page).getByRole("button", { name: action, exact: true }).click();
       await expect
         .poll(() =>
           app.evaluate(
@@ -160,7 +152,14 @@ for (const action of ["Approve and build", "Close", "Discard and close"]) {
           ).departureProbe,
       );
       const stack = await page.evaluate(() => window.infinitary.cards.list());
-      expect(stack.map((card) => card.id)).toEqual(["next", "last"]);
+      expect(stack.filter((card) => !card.minimized).map((card) => card.id)).toEqual([
+        "next",
+        "last",
+      ]);
+      const chosen = stack.find((card) => card.id === "chosen");
+      if (action === "Put aside" || action === "Put aside with a draft")
+        expect(chosen?.minimized, "putting away keeps the chosen plan open").toBe(true);
+      else expect(chosen, "an explicit choice resolves the chosen plan").toBeUndefined();
       if (evidence) {
         mkdirSync(evidence, { recursive: true });
         await page

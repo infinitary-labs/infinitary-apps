@@ -16,7 +16,7 @@ import {
   recordFrame,
   showRecordTab,
 } from "./rails";
-import { expectNoCard, shownCard } from "./stack";
+import { cardLeave, expectNoCard, shownCard } from "./stack";
 
 /**
  * The Cards row (FI3-579 piece 1): a closed task's record lists every card it
@@ -166,7 +166,7 @@ test("a card still on the stage reads On the stage and its link focuses the live
   }
 });
 
-test("the cross on a card writes one line saying where it went, and the record lists it, its link a focusable button", async () => {
+test("INF-1879: reading a note is quiet and its record keeps a focusable link", async () => {
   const userDataDir = scratchDir("infinitary-record-cards-cross-");
   const db = openDatabase(userDataDir);
   const tasks = new TaskService({ db, strict: true });
@@ -193,11 +193,11 @@ test("the cross on a card writes one line saying where it went, and the record l
   try {
     const { page } = launched;
     await expect(shownCard(page, QUAY_TITLE)).toBeVisible();
-    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await cardLeave(page).click();
     await expectNoCard(page, QUAY_TITLE);
-    // One line names the card, on the record it stays on, so it carries that task's key (INF-1845).
+    // The minimize corner reads the note without a close announcement or a task ending.
     const said = noteLines(page, task.key).filter({ hasText: QUAY_TITLE });
-    await expect(said).toHaveCount(1);
+    await expect(said).toHaveCount(0);
 
     await expandDock(page, "now");
     await click(nowFrame(page).locator('[data-now-group-header="backlog"]'));
@@ -214,8 +214,8 @@ test("the cross on a card writes one line saying where it went, and the record l
     ]);
     await click(line.locator("button"));
     await expect(page.locator('[data-past-card="quay-note"]')).toBeVisible();
-    // Opening it wrote no second line.
-    await expect(said).toHaveCount(1);
+    // Opening it stays quiet too.
+    await expect(said).toHaveCount(0);
   } finally {
     await launched.close();
   }

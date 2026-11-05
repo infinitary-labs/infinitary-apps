@@ -65,8 +65,8 @@ import {
  * 3. stages it and puts ONE consent card in front of the captain, built
  *    from `consentSummary`: what it can read, in his words. Only his click
  *    on "Add it" - a host effect, which the app never lets a card body or
- *    an agent run - puts it in (`add`); "Don't add", or closing the card,
- *    turns it down (`decline`);
+ *    an agent run - puts it in (`add`); only "Don't add" turns it down
+ *    (`decline`). The minus keeps the staged offer pending;
  * 4. on "Add it" moves the files into `userData/plugins/<id>`, records the
  *    consented capabilities, says so in one feed line, and rescans - the
  *    plugin host then registers it beside the captain's own panels.
@@ -148,7 +148,7 @@ export class PluginInstaller {
     return this.serial(() => this.runAdd(id));
   }
 
-  /** The captain's "Don't add", or his dismissal of the card. */
+  /** The captain's explicit "Don't add"; the minus never declines the offer. */
   decline(id: string): Promise<void> {
     return this.serial(() => this.runDecline(id));
   }

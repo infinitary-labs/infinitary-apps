@@ -15,7 +15,8 @@ Runs on defaults to Automatic for a project with a remote; an explicit This comp
 A folder with a remote is linked where it is by default, and the card offers a fresh clone into the projects folder instead.
 Add project and Not now carry host ops (`add-project`, `decline-project`) whose argument is the card's own offer; an effect is never declared to the body's frame, so only the captain's click on the card's own button adds a project.
 Add project runs, as the captain, the same dispatcher Settings uses: the setup, then the settings the captain chose that differ from the new row, then Runs on; each writes its own feed line and operation, and all are saved before the first mate hears.
-The first mate then hears once, as an `[fm-op]` `project-setup` wake: added with its settings and the work the card named, which it starts; already on the list; not now, which Not now and closing the card both mean; or failed with the reason, carrying a clone's typed sign-in refusal (`docs/forge.md`).
+The first mate then hears once, as an `[fm-op]` `project-setup` wake: added with its settings and the work the card named, which it starts; already on the list; not now, from the explicit Not now button; or failed with the reason, carrying a clone's typed sign-in refusal (`docs/forge.md`).
+Putting the setup card aside leaves its offer and operation row pending and sends no setup outcome.
 That wake skips the inbox's coalescing window, so the first mate answers the click at once (`docs/inbox.md`).
 Settings' own Add project adds at once and shows no card.
 
@@ -37,7 +38,8 @@ The first mate applies an exact change the captain named in the captain's words,
 The first mate declares that judgment with `on_words: true`; an omitted declaration proposes instead.
 The exact-words judgment belongs to its tool guidance, not a host parser.
 Every other proposal, including an ordinary agent-card choice, reaches `ProjectChanges` (`src/core/workspace/projectChanges.ts`) and gets an app-written card showing the old and proposed values.
-Only that card's Apply change button applies the stored patch once; Not now or closing changes nothing.
+Only that card's Apply change button applies the stored patch once; Not now declines the proposal without a change.
+The minus keeps the proposal pending without applying or declining it.
 The host refuses a card if the saved project changed since the offer, and revalidates the folder, address and devices on applying.
 The first mate hears the outcome once through `project-change` and reads current values before starting work that needs it.
 Removal still needs the captain's typed words, and adding still uses the setup card above.

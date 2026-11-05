@@ -211,7 +211,7 @@ import XCTest
         waitUntilEnabled(keepFinding)
         XCTAssertTrue(keepFinding.isEnabled)
         picture("review-finding")
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10))
         let first = try await home("state", method: "GET")
         let devices = try XCTUnwrap(first["devices"] as? [[String: Any]])
@@ -346,7 +346,7 @@ import XCTest
         _ = try await home("review-finding")
         showCard("Review the phone connection finding")
         XCTAssertTrue(app.staticTexts["Review finding"].waitForPresence(timeout: 10))
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10))
         let first = try await home("state", method: "GET")
         let phone = try XCTUnwrap((first["devices"] as? [[String: Any]])?.first)
@@ -698,6 +698,8 @@ import XCTest
         app.launchEnvironment["INFINITARY_TEST_RETRIED_CARD_LAG"] = "3"
         try await launchJoined()
         try await verifyMergeCard()
+        try await verifyAnswerDone()
+        try await verifyQuestionDismiss()
         try await verifyAskedLine()
         try await verifyCardReadiness()
         try await verifySharedSeen()
@@ -1597,7 +1599,7 @@ import XCTest
         tapOnPhone(toggle)
         let refolded = NSPredicate { _, _ in abs(line.frame.height - folded) < 1 }
         XCTAssertEqual(waitForPhonePredicate(refolded, object: nil, timeout: 10), .completed, app.debugDescription)
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
     }
 
@@ -1614,7 +1616,7 @@ import XCTest
         tapOnPhone(pager)
         XCTAssertFalse(app.buttons[held].exists, "The held card cannot be chosen from the pager")
         tapOnPhone(app.buttons[ready].firstMatch)
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(app.otherElements["phone-character"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertFalse(pager.exists, "Only the waiting card remains, so the stage and pager are empty")
         picture("card-readiness-waiting")
@@ -1649,8 +1651,8 @@ import XCTest
     /// INF-1524, the captain: "ios app's cards don't have minimize button. also the merge card doesn't have the radar chart."
     /// Data: a crewmate's merge card with its task, model, place, risk, the host's fact strip, an action to take after
     /// merging, a revision and a thread with a line another task's crewmate wrote (INF-2225). Completion: the phone draws
-    /// the Mac's head and foot, names that line's true writer, puts the card aside on the
-    /// computer, asks before discarding typed words, counts a new card beside the pager and sends the words with a choice.
+    /// the Mac's head and foot, names that line's true writer, puts the card aside on the computer, preserves typed
+    /// words without a warning, counts a new card beside the pager and sends the words with a choice.
     private func verifyMergeCard() async throws {
         let fixture = try await home("merge-card")
         let title = try XCTUnwrap(fixture["title"] as? String)
@@ -1701,15 +1703,8 @@ import XCTest
             XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(done)
             XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
         }
-        let close = app.buttons["close-card"]
-        reveal(close); tapOnPhone(close)
-        let question = app.alerts[try XCTUnwrap(fixture["closeTitle"] as? String)]
-        XCTAssertTrue(question.waitForPresence(timeout: 10), app.debugDescription)
-        picture("merge-close-question")
-        tapOnPhone(question.buttons[try XCTUnwrap(fixture["keepAnswering"] as? String)])
-        XCTAssertTrue(question.waitForAbsence(timeout: 10))
-        XCTAssertTrue(cardHeading(title).exists, "Keep answering keeps the card")
-        // Put aside is the Mac's minimize: the card leaves the stack and waits on its task's row in Tasks (INF-1517).
+        // INF-1879: the one minus retains typed words without a warning or an ending.
+        XCTAssertFalse(app.buttons["close-card"].exists)
         let putAside = app.buttons["put-aside-card"]
         reveal(putAside); tapOnPhone(putAside)
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
@@ -1748,10 +1743,10 @@ import XCTest
         XCTAssertEqual(sent.label, "\(try XCTUnwrap(fixture["sentLead"] as? String)) \(words)")
         XCTAssertEqual(app.buttons["card-action-later"].value as? String, "Chosen")
         picture("merge-past")
-        reveal(app.buttons["close-card"]); tapOnPhone(app.buttons["close-card"])
+        reveal(app.buttons["put-aside-card"]); tapOnPhone(app.buttons["put-aside-card"])
         let newsTitle = try XCTUnwrap(news["title"] as? String)
         showCard(newsTitle)
-        reveal(app.buttons["close-card"]); tapOnPhone(app.buttons["close-card"])
+        reveal(app.buttons["put-aside-card"]); tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading(newsTitle).waitForAbsence(timeout: 10))
     }
 
@@ -1781,6 +1776,119 @@ import XCTest
         picture("shared-seen-relaunched")
     }
 
+    /// INF-1879: reading an answer never completes it; Done remains available on its record.
+    private func verifyAnswerDone() async throws {
+        let fixture = try await home("answer-note-fixture")
+        let title = try XCTUnwrap(fixture["title"] as? String)
+        let taskID = try XCTUnwrap(fixture["taskId"] as? String)
+        showCard(title)
+        XCTAssertTrue(app.buttons["answer-done"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.webViews.staticTexts[try XCTUnwrap(fixture["answerText"] as? String)].waitForPresence(timeout: 10), app.debugDescription)
+        reveal(app.buttons["answer-done"])
+        try await appearances("answer-note-done", showing: cardHeading(title))
+        tapOnPhone(app.buttons["put-aside-card"])
+        XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
+        let read = try await home("answer-note-state", body: "{\"taskId\":\"\(taskID)\",\"expectedCardOpen\":false}")
+        XCTAssertEqual(read["status"] as? String, "active")
+        XCTAssertEqual(read["cardOpen"] as? Bool, false)
+        XCTAssertEqual(read["ready"] as? Bool, true)
+        tab("Tasks")
+        let row = app.buttons.matching(identifier: "task-\(taskID)").firstMatch
+        tapOnPhone(row)
+        let done = app.buttons["record-answer-done"]
+        XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
+        try await appearances("answer-record-done", showing: app.staticTexts["task-record-title"])
+        XCTAssertTrue(done.isHittable, app.debugDescription)
+        let hide = app.buttons["close-record"]
+        XCTAssertEqual(hide.label, try XCTUnwrap(fixture["hideLabel"] as? String))
+        tapOnPhone(hide)
+        XCTAssertTrue(hide.waitForAbsence(timeout: 10), app.debugDescription)
+        let hidden = try await home("answer-note-state", body: "{\"taskId\":\"\(taskID)\"}")
+        XCTAssertEqual(hidden["status"] as? String, "active", "Hiding the record never answers its task")
+        XCTAssertEqual(hidden["ready"] as? Bool, true)
+        try await appearances("saved-answer-in-tasks", showing: row)
+        tapOnPhone(row)
+        XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(done)
+        XCTAssertTrue(done.waitForAbsence(timeout: 10), app.debugDescription)
+        let completed = try await home("answer-note-state", body: "{\"taskId\":\"\(taskID)\",\"expectedStatus\":\"done\"}")
+        XCTAssertEqual(completed["status"] as? String, "done")
+        XCTAssertEqual(completed["reason"] as? String, "answered")
+        XCTAssertEqual(completed["ready"] as? Bool, false)
+        // The task record is a sheet; dismiss it before using the tab strip behind it.
+        tapOnPhone(app.buttons["close-record"])
+        XCTAssertTrue(app.buttons["close-record"].waitForAbsence(timeout: 10), app.debugDescription)
+        tab("Home")
+        // The note's own Done uses the same explicit operation, even before the computer answers.
+        let next = try await home("answer-note-fixture")
+        let nextTaskID = try XCTUnwrap(next["taskId"] as? String)
+        let nextTitle = try XCTUnwrap(next["title"] as? String)
+        showCard(nextTitle)
+        let noteDone = app.buttons["answer-done"]
+        XCTAssertTrue(noteDone.waitForPresence(timeout: 10), app.debugDescription)
+        reveal(noteDone)
+        _ = try await home("hold-card-action", body: #"{"channel":"inf:task:run"}"#)
+        tapOnPhone(noteDone)
+        _ = try await home("card-action-held")
+        XCTAssertTrue(cardHeading(nextTitle).waitForAbsence(timeout: 10), "Done puts the answer away at the tap")
+        let pending = try await home("answer-note-state", body: "{\"taskId\":\"\(nextTaskID)\"}")
+        XCTAssertEqual(pending["status"] as? String, "active", "The prediction is not a saved answer receipt")
+        XCTAssertEqual(pending["ready"] as? Bool, true)
+        _ = try await home("release-card-action")
+        let answered = try await home("answer-note-state", body: "{\"taskId\":\"\(nextTaskID)\",\"expectedStatus\":\"done\"}")
+        XCTAssertEqual(answered["status"] as? String, "done")
+        XCTAssertEqual(answered["reason"] as? String, "answered")
+        XCTAssertEqual(answered["ready"] as? Bool, false)
+    }
+
+    /// INF-1879: the record's minus hides a real filed question; only Dismiss cancels it.
+    /// The device gate runs this with cards-merge, on fresh disposable homes on both devices in all three rounds.
+    private func verifyQuestionDismiss() async throws {
+        let fixture = try await home("question-record-fixture")
+        let taskID = try XCTUnwrap(fixture["taskId"] as? String)
+        let cardID = try XCTUnwrap(fixture["cardId"] as? String)
+        let stateBody = "{\"taskId\":\"\(taskID)\",\"cardId\":\"\(cardID)\"}"
+        tab("Tasks")
+        let row = app.buttons.matching(identifier: "task-\(taskID)").firstMatch
+        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(row)
+        let dismiss = app.buttons["dismiss-question"]
+        XCTAssertTrue(dismiss.waitForPresence(timeout: 10), app.debugDescription)
+        let hide = app.buttons["close-record"]
+        XCTAssertEqual(hide.label, try XCTUnwrap(fixture["hideLabel"] as? String))
+        try await appearances("question-record-dismiss", showing: app.staticTexts["task-record-title"])
+        tapOnPhone(hide)
+        XCTAssertTrue(hide.waitForAbsence(timeout: 10), app.debugDescription)
+        let hidden = try await home("question-record-state", body: stateBody)
+        XCTAssertEqual(hidden["status"] as? String, "open", "Hiding the record never ends its question")
+        XCTAssertNil(hidden["reason"] as? String)
+        XCTAssertEqual(hidden["cardOnStack"] as? Bool, true)
+        XCTAssertEqual((hidden["runs"] as? [Any])?.count, 0)
+        tapOnPhone(row)
+        XCTAssertTrue(dismiss.waitForPresence(timeout: 10), app.debugDescription)
+        _ = try await home("hold-card-action", body: #"{"channel":"inf:task:run"}"#)
+        tapOnPhone(dismiss)
+        _ = try await home("card-action-held")
+        XCTAssertTrue(dismiss.waitForAbsence(timeout: 10), "Dismiss shows at the tap, before the computer answers")
+        let pending = try await home("question-record-state", body: stateBody)
+        XCTAssertEqual(pending["status"] as? String, "open", "A prediction is not the computer's recorded ending")
+        picture("question-dismiss-at-tap")
+        _ = try await home("release-card-action")
+        let ended = try await home("question-record-state",
+            body: "{\"taskId\":\"\(taskID)\",\"cardId\":\"\(cardID)\",\"expectedStatus\":\"dropped\"}")
+        XCTAssertEqual(ended["status"] as? String, "dropped")
+        XCTAssertEqual(ended["reason"] as? String, "cancelled")
+        XCTAssertEqual(ended["cardOnStack"] as? Bool, false)
+        let runs = try XCTUnwrap(ended["runs"] as? [[String: Any]])
+        XCTAssertEqual(runs.count, 1)
+        XCTAssertEqual(runs.first?["move"] as? String, "dismiss-question")
+        let actor = try XCTUnwrap(runs.first?["actor"] as? [String: Any])
+        XCTAssertEqual(actor["kind"] as? String, "captain")
+        tapOnPhone(hide)
+        XCTAssertTrue(hide.waitForAbsence(timeout: 10), app.debugDescription)
+        tab("Home")
+    }
+
     private func verifyCardForm() async throws {
         let fixture = try await home("cards-fixture")
         let choice = try XCTUnwrap(fixture["choice"] as? String)
@@ -1789,7 +1897,7 @@ import XCTest
         let boundary = "effect refused · network refused · parent refused · native refused"
         XCTAssertTrue(app.webViews.staticTexts[boundary].waitForPresence(timeout: 20), app.debugDescription)
         // INF-209's native card chrome promises 44-point touch targets, not padding outside a tiny button.
-        for id in ["close-card", "previous-card", "next-card", "card-pager"] {
+        for id in ["put-aside-card", "previous-card", "next-card", "card-pager"] {
             let control = app.descendants(matching: .any).matching(identifier: id).firstMatch
             // Accessibility geometry can represent 44 as 43.999999999999986.
             XCTAssertGreaterThanOrEqual(control.frame.width + 0.001, 44, id)
@@ -1828,7 +1936,7 @@ import XCTest
         reveal(choose); tapOnPhone(choose)
         XCTAssertTrue(app.staticTexts["This card did not answer. Your choice was not sent."].waitForPresence(timeout: 10))
         XCTAssertTrue(app.buttons["retry-card"].waitForPresence(timeout: 15))
-        XCTAssertTrue(app.buttons["close-card"].isEnabled, "A stalled form cannot keep native chrome busy")
+        XCTAssertTrue(app.buttons["put-aside-card"].isEnabled, "A stalled form cannot keep native chrome busy")
         tapOnPhone(app.buttons["retry-card"])
         XCTAssertTrue(app.webViews.staticTexts[boundary].waitForPresence(timeout: 20))
         waitUntilEnabled(choose)
@@ -1906,12 +2014,12 @@ import XCTest
         XCTAssertFalse(app.buttons["card-action-choose"].isEnabled)
         XCTAssertFalse(app.textFields["card-reply"].exists)
         picture("past-card")
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         _ = try await home("show-past")
         // INF-589 item 7: an answered card opened from its notice shows as a past card.
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch.label, "Past card")
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
     }
 
     private func verifyCardMediaAndBody() async throws {
@@ -1919,22 +2027,13 @@ import XCTest
         let choice = try XCTUnwrap(fixture["choice"] as? String)
         let chart = try XCTUnwrap(fixture["conversation"] as? String)
         let note = try XCTUnwrap(fixture["note"] as? String)
-        // The form test answers the choice card; here it is closed unanswered, so the stage empties as it did there.
-        // The choice card stages its chart when its page loads, and a staged setting always counts as changed
-        // (docs/card-authoring.md), so once the page reports, the close asks before it discards. A close tapped before
-        // that report closed at once, and one tapped after it met the question: wait for the report, then discard.
+        // INF-1879: put the staged choice aside without discarding it or answering it.
         showCard(choice)
         let reported = app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", #"[0-9]+ of [0-9]+ answered · 1 changed"#)).firstMatch
         XCTAssertTrue(reported.waitForPresence(timeout: 10), app.debugDescription)
-        tapOnPhone(app.buttons["close-card"])
-        let question = app.alerts[try XCTUnwrap(fixture["closeTitle"] as? String)]
-        XCTAssertTrue(question.waitForPresence(timeout: 10), app.debugDescription)
-        // INF-2485: the app ignores every touch until the alert has arrived. A plain tap sent 0.44 s into its entrance
-        // reached the app while UIKit still ignored touches, and the alert stayed open; tapOnPhone waits for the button,
-        // and the screen inside it, to hold still first.
-        tapOnPhone(question.buttons[try XCTUnwrap(fixture["discardAndClose"] as? String)])
-        XCTAssertTrue(question.waitForAbsence(timeout: 10), app.debugDescription)
+        tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading(choice).waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.alerts.firstMatch.exists, "Putting a card aside never asks to discard its staged settings")
 
         showCard(chart)
         // INF-1062: with no bar under it, scrolling a long card leaves the message box where it is, in the column's width.
@@ -1945,7 +2044,7 @@ import XCTest
             XCTAssertEqual(composer.frame.minY, before.minY, accuracy: 1, "Scrolling a card does not move the message box")
             XCTAssertEqual(composer.frame.width, before.width, accuracy: 1, "Scrolling a card does not narrow the message box")
             verifyPhoneComposerBounds(app: app)
-            try await appearances("card-scrolled", showing: app.buttons["close-card"])
+            try await appearances("card-scrolled", showing: app.buttons["put-aside-card"])
         }
         let pictureElement = app.webViews.images["Blue harbour survey"].firstMatch
         XCTAssertTrue(pictureElement.waitForPresence(timeout: 10))
@@ -2004,7 +2103,7 @@ import XCTest
         _ = try await home("thread-answer")
         XCTAssertTrue(waitForPhonePredicate(NSPredicate { _, _ in cue.value as? String == "1 new" }, object: cue, timeout: 10) == .completed,
                       app.debugDescription)
-        XCTAssertTrue(app.buttons["close-card"].exists, "A landing reply never turns the card")
+        XCTAssertTrue(app.buttons["put-aside-card"].exists, "A landing reply never turns the card")
         picture("card-thread-unread")
         tapOnPhone(cue)
         XCTAssertTrue(app.staticTexts["I kept your harbour reply with this chart."].waitForPresence(timeout: 10))
@@ -2020,7 +2119,7 @@ import XCTest
 
         _ = try await home("offline")
         outOfReach()
-        XCTAssertFalse(app.buttons["close-card"].isEnabled)
+        XCTAssertFalse(app.buttons["put-aside-card"].isEnabled)
         XCTAssertFalse(app.buttons["card-action-body"].isEnabled)
         let atDisconnect = try await home("card-state", method: "GET")
         let bodyButton = app.webViews.buttons["Choose from the body"]
@@ -2051,14 +2150,16 @@ import XCTest
         XCTAssertEqual((bodyPast["ending"] as? [String: Any])?["by"] as? String, "frame")
         let pastWords = try XCTUnwrap(bodyChoice["conversationEnding"] as? String)
         XCTAssertTrue(app.staticTexts["past-ending"].label.hasPrefix(pastWords), "A script's choice is not credited to the captain")
+        // INF-1879: photograph the past card's minus only once its body is drawn, not its incoming shell.
+        showCard(chart)
         picture("past-body-choice")
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         showCard(note)
         // INF-2553 (the captain: "to its place in the stack, with a short notice where you are"): a close the
         // computer refuses brings the card back where it was and says why on Home.
         let refusal = "This card changed on your computer. Look at it again."
         _ = try await home("refuse-next-change", body: #"{"channel":"inf:cards:close","words":"\#(refusal)"}"#)
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         let notice = app.buttons["change-notice"]
         XCTAssertTrue(notice.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(notice.label, refusal)
@@ -2075,7 +2176,7 @@ import XCTest
             showCard(second)
             turnPhone(to: .landscapeLeft, in: app, moving: cardHeading(second))
             _ = try await home("refuse-next-change", body: #"{"channel":"inf:cards:close","words":"\#(refusal)"}"#)
-            tapOnPhone(app.buttons["close-card"])
+            tapOnPhone(app.buttons["put-aside-card"])
             showCard(note)
             XCTAssertFalse(app.staticTexts["card-error"].exists, "The words stay with the card that came back")
             showCard(second)
@@ -2107,13 +2208,13 @@ import XCTest
             let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
             XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(done)
             XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10))
-            tapOnPhone(app.buttons["close-card"])
+            tapOnPhone(app.buttons["put-aside-card"])
             XCTAssertTrue(cardHeading(second).waitForAbsence(timeout: 10), app.debugDescription)
             showCard(note)
         }
         // A close the computer still holds has already taken the card off Home.
         _ = try await home("hold-card-action", body: #"{"channel":"inf:cards:close"}"#)
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         _ = try await home("card-action-held")
         XCTAssertTrue(cardHeading(note).waitForAbsence(timeout: 10), "A close shows at the tap, before the computer answers")
         _ = try await home("release-card-action")
@@ -2139,7 +2240,7 @@ import XCTest
         reach("In reach", timeout: 20)
         _ = try await home("late-picture-asked")
         picture("card-picture-after-reaching")
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading(lateTitle).waitForAbsence(timeout: 10))
         // The same after view in both themes supplies the release note's native hero pair.
         let hero = try await home("hero-card")
@@ -2239,7 +2340,7 @@ import XCTest
         XCTAssertTrue(app.webViews.buttons["Evening tide saved"].waitForPresence(timeout: 10))
         // A completed page away/back witnesses receipt and restoration of the changed native draft.
         _ = try await home("show-saved-past")
-        XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10)); tapOnPhone(app.buttons["close-card"])
+        XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10)); tapOnPhone(app.buttons["put-aside-card"])
         showCard(fallback)
         let restored = app.webViews.textFields["Harbour note"]
         XCTAssertTrue(restored.waitForPresence(timeout: 10))
@@ -2268,14 +2369,14 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         picture("saved-answer-choice")
         _ = try await home("capture-stop")
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
     }
 
     /// INF-499 #3: reading a past card gives the message its history hint, never a current-card hint.
     private func verifyPastMessageContext() async throws {
         let fixture = try await home("context-fixture")
         showCard(try XCTUnwrap(fixture["title"] as? String))
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
         _ = try await home("show-context-past")
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         let input = app.textFields["message-box"]
@@ -2288,7 +2389,7 @@ import XCTest
         XCTAssertNil(payload["visibleCardId"])
         XCTAssertNil(payload["taskId"])
         picture("message-about-past-card")
-        tapOnPhone(app.buttons["close-card"])
+        tapOnPhone(app.buttons["put-aside-card"])
     }
 
     /// INF-2218's approved reading view: the existing saved round opens without sending another message.

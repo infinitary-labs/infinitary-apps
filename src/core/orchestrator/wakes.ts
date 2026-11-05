@@ -15,6 +15,7 @@ import type { PressureTaskShare } from "../placed/resourcePressure";
 import {
   ABANDON,
   APPROVE_AND_BUILD,
+  ORDINARY_NOTE_READ_GUIDANCE,
   SAVE_AND_DEFER,
   START_THE_NEXT_STEP,
 } from "../prompts/cardContract";
@@ -101,10 +102,10 @@ const STEP_FINISH_WORDS =
 export const IDLE_STEP_NUDGE_TEXT = `You stopped with nothing running and nothing up for the captain to decide. ${STEP_ANSWER_WORDS} Either ${STEP_FINISH_WORDS}`;
 
 /**
- * What a captain-asked answer task is told it is (INF-1732): its card marked
- * answering is its outcome, and `finished` is the fallback that closes it
- * when the captain's close of that card did not - INF-1718 said "finished"
- * in prose and stayed open.
+ * A captain-asked answer task shows its outcome on a card marked answering.
+ * Its saved answer waits for explicit Done, never the minimize corner.
+ * Other acknowledged work reaches settlement through the typed `finished`
+ * report flag, not the word "finished" in prose.
  */
 const ANSWER_WORDS =
   "This task's deliverable is an answer, shown on your card marked answering; it takes no completion card.";
@@ -132,13 +133,6 @@ export function idleNoteNudgeText(note: WakeNote, step = false, answer = false):
 }
 /** How the steer telling a crewmate the captain closed its card begins (FI3-435). */
 export const CARD_CLOSED_STEER_PREFIX = "The captain closed your card ";
-
-/**
- * What that steer adds on a captain-asked answer task (INF-1732): the close
- * of a card not marked answering closes nothing, so `finished` does.
- */
-const CARD_CLOSED_ANSWER_WORDS =
-  "If that card was your answer and nothing is left for you, report with finished true - saying so in words does not close the task - and mark your answer card answering on each revision, so the captain's close of it closes the task.";
 
 /** Whether a crewmate's served guidance is that steer: the replay finds it no recorded answer. */
 export function isCardClosedSteer(text: string): boolean {
@@ -880,13 +874,13 @@ export type WakeFacts =
     }
   | {
       /**
-       * The captain closed a crewmate's card without choosing (FI3-435): its
-       * steer, so the author judges what the close meant.
+       * An ordinary read or a legacy/duplicate card closure without choosing.
+       * The host marks an actual read; only that fact carries acknowledgement.
        */
       kind: "card-closed";
       card: { id: string; title: string };
-      /** The task's deliverable is an answer the captain asked for (INF-1732). */
-      answer?: true;
+      /** The host actually read an ordinary note, rather than putting a card aside. */
+      read?: true;
       /** The earlier card it repeats, when the captain closed it as a duplicate (INF-759). */
       duplicateOf?: { id: string; title: string };
     }
@@ -895,7 +889,8 @@ export type WakeFacts =
        * The captain answered the app's setup card for a project the
        * Firstmate proposed (docs/fleet.md, "Asking the first mate to add a
        * project"): added with the settings he chose there, already on the
-       * list, not now - or the card closed - or the setup failed. Told once.
+       * list, explicit Not now, or setup failure. Told once; putting the
+       * card aside produces no setup outcome.
        */
       kind: "project-setup";
       outcome: ProjectSetupOutcome;
@@ -2259,7 +2254,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "card-closed":
       return facts.duplicateOf
         ? `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) as a duplicate of "${facts.duplicateOf.title}" (${facts.duplicateOf.id}), without choosing.`
-        : `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) without choosing.${facts.answer ? ` ${CARD_CLOSED_ANSWER_WORDS}` : ""}`;
+        : `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) without choosing.${facts.read ? ` ${ORDINARY_NOTE_READ_GUIDANCE}` : ""}`;
     case "project-change":
       return `The captain answered the app’s project change card “${facts.title}”: ${facts.outcome}.${facts.reason ? ` ${facts.reason}` : ""} Read the current project values before starting work. This is an outcome, not permission for another change.`;
     case "project-setup":

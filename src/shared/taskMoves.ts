@@ -1,4 +1,4 @@
-import { type Card, settleEffectOf, type TaskLifecycleOp } from "./cards";
+import { type Card, settleEffectOf, TASK_LIFECYCLE_OPS, type TaskLifecycleOp } from "./cards";
 import { type RecordBarInput, recordBarOf } from "./recordBar";
 import { isUnstartedWork, type TaskView } from "./tasks";
 
@@ -36,6 +36,8 @@ export function taskMovesOf(task: TaskMovesInput): TaskMoves | undefined {
   if (task.requiredAction && task.status === "open") {
     const captainOwns = no("This action waits for you, not a crewmate.");
     return {
+      "answer-done": no("This is not an answer task."),
+      "dismiss-question": no("This is not a question."),
       "start-task": captainOwns,
       "start-again": captainOwns,
       "stop-task": captainOwns,
@@ -46,6 +48,15 @@ export function taskMovesOf(task: TaskMovesInput): TaskMoves | undefined {
       "show-card":
         task.requiredAction.state === "blocked" ? no("Its prerequisites have not finished.") : OK,
     };
+  }
+  if (task.kind === "decision" && task.status === "open" && task.waitingCardId) {
+    const unavailable = no("This question waits for your choice.");
+    return Object.fromEntries(
+      TASK_LIFECYCLE_OPS.map((op) => [
+        op,
+        op === "dismiss-question" || op === "show-card" ? OK : unavailable,
+      ]),
+    ) as TaskMoves;
   }
   if (
     task.kind !== "work" ||
@@ -118,6 +129,8 @@ export function taskMovesOf(task: TaskMovesInput): TaskMoves | undefined {
   const unqueue = queueGuard ?? (waitsForWord ? no("It already waits for your word.") : OK);
 
   return {
+    "answer-done": task.answerNoteId ? OK : no("It has no answer ready."),
+    "dismiss-question": no("This is not a question."),
     "start-task": start,
     "start-again":
       bar?.next === "start-again"

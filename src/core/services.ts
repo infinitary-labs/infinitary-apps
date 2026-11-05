@@ -953,7 +953,14 @@ export async function createServices(
     : Number.parseInt(settingFrom(process.env, "TASK_DELTA_ROWS") ?? "", 10);
   // Task readers can run during async boot, before the supervisor restores the stack.
   let cardStack:
-    | Pick<CrewSupervisor, "taskCardsSnapshot" | "taskCardHeads" | "flushCards" | "browserReturned">
+    | Pick<
+        CrewSupervisor,
+        | "taskCardsSnapshot"
+        | "taskCardHeads"
+        | "flushCards"
+        | "browserReturned"
+        | "answerNoteForTask"
+      >
     | undefined;
   const taskProtocol = new TaskProtocol({
     tasks,
@@ -963,6 +970,7 @@ export async function createServices(
     repos,
     cards: {
       listOpen: () => cardStack?.taskCardHeads() ?? cardStore.listOpen(),
+      answerNoteForTask: (taskId) => cardStack?.answerNoteForTask(taskId),
       snapshot: () => cardStack?.taskCardsSnapshot() ?? [],
       forTask: (taskId, extraIds) => cardStore.forTask(taskId, extraIds),
     },

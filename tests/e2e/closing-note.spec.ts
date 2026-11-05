@@ -107,7 +107,7 @@ test("a first mate's drop of started work leaves its note until the captain clos
     });
 
     await test.step("the keyboard closes it, and it stays closed", async () => {
-      await runFromSearch(app.app, app.page, "cards.close");
+      await runFromSearch(app.app, app.page, "cards.minimize");
       await expectNoCard(app.page, noteTitle);
       await expect.poll(() => app.page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
     });

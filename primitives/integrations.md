@@ -48,7 +48,8 @@ Integration keys still use the temporary bridge below until INF-785 moves its wr
 
 - Every connection's actions start at Asks you (`ask`), including existing connections, until the captain chooses Always allow (`allow`); Off is `never` (INF-950).
 - The service keeps a reasoned call and raises its own card with caller, action, effect, description, exact checked input and the attributed agent reason.
-- Always allow runs and saves the grant, Only this time runs once without a grant, and Not now or closing runs nothing; outward actions highlight Only this time.
+- Always allow runs and saves the grant, Only this time runs once without a grant, and Not now refuses without running the call; outward actions highlight Only this time.
+- The minus leaves the ask and host operation row pending without granting, refusing or notifying an outcome.
 - The click consumes the ask before the call and delivers its outcome once through `write-answered`.
 - Grants live per connection reference and action in `action-approvals.json`, beside the older strict settings file, and end on Settings changes, connection replacement, another account or a changed MCP description/read-only mark.
 - The captain-only `integration-action-rule` catalog line changes Asks you or Always allowed; the existing switch remains Off.

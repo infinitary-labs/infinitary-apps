@@ -1,3 +1,4 @@
+import { answerDoneRest } from "@shared/cardLeave";
 import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
 import {
   computerMoveLine,
@@ -13,34 +14,17 @@ import {
   dropPartsRefusal,
   dropUnderwayLine,
   dropWaitingLine,
-  HIDE_RECORD_LABEL,
 } from "@shared/recordDrop";
 import type { TaskStatusReading } from "@shared/taskPresentation";
 import type { ComputerMoveView, DropEffects, MoveDestination, MoveOptions } from "@shared/tasks";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, IconButton } from "../design";
+import { Badge, Button } from "../design";
 import { CardCorner } from "../design/cards/CardSize";
 import { useCutWords } from "../design/core/overflowTitle";
 import { TaskStatusMark } from "../design/core/TaskStatusMark";
 import type { RecordPillTone } from "./recordFooter";
 import { KeyedText } from "./TaskKey";
-
-const closeIcon = (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M18 6 6 18M6 6l12 12" />
-  </svg>
-);
 
 const keyText: React.CSSProperties = {
   fontFamily: "var(--font-mono)",
@@ -70,7 +54,6 @@ export function RecordPaneChrome({
   taskKey,
   title,
   tabs,
-  onClose,
   middle,
 }: {
   pillTone: RecordPillTone;
@@ -79,7 +62,6 @@ export function RecordPaneChrome({
   title: string;
   /** The card's tab strip, under the title, when the task has more than Info. */
   tabs?: React.ReactNode;
-  onClose: () => void;
   /** Title, tabs and body give way together while the top row stays pinned. */
   middle?: React.ReactNode;
 }) {
@@ -151,11 +133,7 @@ export function RecordPaneChrome({
             {taskKey}
           </span>
         )}
-        <CardCorner style={{ marginLeft: "auto" }}>
-          <IconButton label={HIDE_RECORD_LABEL} onClick={onClose}>
-            {closeIcon}
-          </IconButton>
-        </CardCorner>
+        <CardCorner style={{ marginLeft: "auto" }} />
       </div>
       {middle !== undefined ? (
         <div
@@ -393,6 +371,17 @@ export function RecordPaneFooter({
         {MOVE_LABELS.move}
       </Button>
     );
+  } else if (end === "dismiss-question") {
+    endButton = (
+      <Button variant="secondary" pending={pending === end} onClick={() => run(end)}>
+        Dismiss
+      </Button>
+    );
+    nextButton = (
+      <Button variant="primary" onClick={onShowCard}>
+        {RECORD_NEXT_LABELS["show-card"]}
+      </Button>
+    );
   } else if (asking) {
     endButton = (
       <Button variant="secondary" autoFocus disabled={busy} onClick={() => setConfirming(false)}>
@@ -444,6 +433,18 @@ export function RecordPaneFooter({
       nextButton = (
         <Button variant="primary" onClick={onShowCard}>
           {RECORD_NEXT_LABELS["show-card"]}
+        </Button>
+      );
+    } else if (bar.next === "answer-done") {
+      nextButton = (
+        <Button
+          variant="primary"
+          pending={pending === "answer-done"}
+          data-answer-done-control=""
+          note={answerDoneRest(taskKey)}
+          onClick={() => run("answer-done")}
+        >
+          {RECORD_NEXT_LABELS["answer-done"]}
         </Button>
       );
     } else if (bar.next === "starting") {

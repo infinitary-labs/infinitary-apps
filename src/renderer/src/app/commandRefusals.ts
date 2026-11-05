@@ -65,6 +65,7 @@ export type WindowFacts = {
   browserControl?: boolean;
   /** The shown task record offers Move to a computer. */
   taskMove?: boolean;
+  answerDoneReady?: boolean;
   computers?: { page: number; pages: number };
   /** The top bar's project pill: whether it shows, and the focus that holds (docs/project-focus.md). */
   projectFocus?: { shown: boolean; focus: string | null };
@@ -205,8 +206,9 @@ const REFUSALS: Readonly<
     return shownEntry(s) ? null : NO_CARD;
   },
   // Only a live card has buttons, and none while it is still being written.
-  "focus.card-actions": (s) => {
+  "focus.card-actions": (s, facts) => {
     if (s.recording) return RECORDING;
+    if (facts.answerDoneReady) return null;
     const entry = shownEntry(s);
     if (!entry) return NO_CARD;
     if (isHeldEntry(entry) || entry.actions.length === 0) return "This card has no buttons";
@@ -244,12 +246,9 @@ const REFUSALS: Readonly<
     facts.projectFocus?.focus ? null : "Every project is shown",
   "cards.previous": (s) => pageRefusal(s, -1),
   "cards.next": (s) => pageRefusal(s, 1),
-  "cards.close": cardRefusal,
-  "cards.minimize": (s) => {
-    const refusal = cardRefusal(s);
-    if (refusal) return refusal;
-    return isHeldEntry(shownEntry(s)) ? "Only a message card can be minimized" : null;
-  },
+  "cards.minimize": cardRefusal,
+  "cards.done": (s, facts) =>
+    cardRefusal(s) ?? (facts.answerDoneReady ? null : "No answer is ready to mark Done"),
   "cards.maximize": cardRefusal,
   // A thread exists once its first message is sent; a recording keeps focus
   // where its words will go.

@@ -6,7 +6,7 @@ function Demo(){
   const [i,setI]=React.useState(0);
   return <div style={{display:"flex",justifyContent:"center",paddingTop:18}}>
     <CardStack index={i} count={4} onPrev={()=>setI(Math.max(0,i-1))} onNext={()=>setI(Math.min(3,i+1))} width={560}>
-      {i%2===0?<ResponseCard kind="decision" title="Two ways to fix the flaky test" meta="just now · crewmate 4" onClose={()=>{}}
+      {i%2===0?<ResponseCard kind="decision" title="Two ways to fix the flaky test" meta="just now · crewmate 4" onMinimize={()=>{}}
         actions={<React.Fragment><Button variant="secondary">Mock the clock</Button><Button>Await the queue</Button></React.Fragment>}>
         <div className="fm-card-md">
           <p>The retry helper races a 50ms timer.</p>
@@ -17,7 +17,7 @@ function Demo(){
           </ul>
         </div>
       </ResponseCard>
-      :<ResponseCard kind="note" title="Refactor finished" meta="2m ago · atlas" onClose={()=>{}}>
+      :<ResponseCard kind="note" title="Refactor finished" meta="2m ago · atlas" onMinimize={()=>{}}>
         14 files changed, tests green. Two snapshots updated; nothing else moved.
       </ResponseCard>}
     </CardStack>

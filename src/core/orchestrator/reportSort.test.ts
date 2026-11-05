@@ -33,6 +33,17 @@ const NOTHING: ReportSortFacts = {
 const facts = (over: Partial<ReportSortFacts> = {}): ReportSortFacts => ({ ...NOTHING, ...over });
 
 describe("sortReport", () => {
+  it("INF-1879: a saved answer stays the captain’s turn without a live card, regardless of elapsed idle or finished reports", () => {
+    const waiting = facts({
+      answerReady: true,
+      finished: true,
+      finishedNoCard: true,
+      captainGateOwed: true,
+    });
+    expect(sortReport(waiting)).toMatchObject({ rule: "captain-card", wake: false });
+    expect(idleTurn(waiting)).toBe("captain");
+    expect(sortReport({ ...waiting, threadAwaitingAuthor: true }).rule).toBe("thread-unanswered");
+  });
   it.each([false, true])(
     "an internal step wakes independently of backend observability (%s)",
     (workObservable) => {
@@ -395,6 +406,8 @@ describe("sortReport", () => {
   // crewmate's own ask and a recorded wait keep their places above it.
   it("an open review's findings outrank every quiet row but the three above it", () => {
     for (const quiet of [
+      // INF-1892's saved-answer witness retains INF-1876's review reread priority.
+      "answerReady",
       "decisionCardOpen",
       "finishedCardUp",
       "jobsRunning",

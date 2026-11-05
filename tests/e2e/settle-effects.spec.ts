@@ -42,7 +42,7 @@ import {
   KEPT_MERGE_TITLE,
   keptMerge,
 } from "./scenarios/keptMerge";
-import { cardReply, completionAction, expectNoCard, showCard, shownCard } from "./stack";
+import { cardLeave, cardReply, completionAction, expectNoCard, showCard, shownCard } from "./stack";
 
 /**
  * Cards/tasks/agents P1 exit check: a completion card carries ONE merge
@@ -485,12 +485,13 @@ test("closing a settle card is the keep: nothing lands, nothing goes, the crewma
     await expect(page.getByRole("button", { name: "Discard", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Keep" })).toHaveCount(0);
     await expandDock(page, "activity");
-    await page.getByRole("button", { name: "Close", exact: true }).click();
-    await expectNoCard(page, READY_CARD_TITLE);
-    // The feed notes the card was put away, naming it, on its task (INF-1845).
-    await expect(
-      noteLines(page, await taskKey(page, "Keep the work")).filter({ hasText: READY_CARD_TITLE }),
-    ).toBeVisible();
+    await cardLeave(page).click();
+    await expect(shownCard(page, READY_CARD_TITLE)).toBeHidden();
+    expect(
+      (await page.evaluate(() => window.infinitary.cards.list())).find(
+        (card) => card.title === READY_CARD_TITLE,
+      )?.minimized,
+    ).toBe(true);
     expect(repo.mainLog()).not.toContain("the crewmate's work");
     expect(existsSync(join(repo.worktreeDir, "feature.txt"))).toBe(true);
     await expect

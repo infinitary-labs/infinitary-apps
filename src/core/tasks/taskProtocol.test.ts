@@ -7,6 +7,7 @@ import {
   dropReviewKeys,
   NO_LONGER_WANTED,
 } from "@shared/recordDrop";
+import { taskMovesOf } from "@shared/taskMoves";
 import {
   applyTaskBoardDelta,
   BOARD_RECENT_MS,
@@ -18,12 +19,11 @@ import {
 } from "@shared/tasks";
 import type { WorkPosture } from "@shared/workPosture";
 import { describe, expect, it, vi } from "vitest";
-import { rowsRead } from "../../../tests/helpers/database";
+import { freshDatabase as openInMemoryDatabase, rowsRead } from "../../../tests/helpers/database";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { modelReasonOf } from "../routing/modelReason";
 import { servedSlots } from "../routing/router";
 import { ActivityStore } from "../storage/activityStore";
-import { openInMemoryDatabase } from "../storage/db";
 import { DecisionStore } from "../storage/decisionStore";
 import { seedTask } from "./seedTask";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
@@ -2397,7 +2397,7 @@ describe("the task protocol (task-system P3)", () => {
     expect(protocol.projects()).toEqual(board.projects);
   });
 
-  it("says on each live work row which of the six moves it allows and whether its waiting card merges (FI3-1014 piece 4)", () => {
+  it("says on each live work row which lifecycle moves it allows and whether its waiting card merges (FI3-1014 piece 4)", () => {
     const { tasks, protocol, cards } = setup();
     tasks.create({ id: "a", title: "A", prompt: "p", repoId: "r1" });
     tasks.create({ id: "b", title: "B", prompt: "p", repoId: "r1", blockedBy: ["a"] });
@@ -2429,7 +2429,13 @@ describe("the task protocol (task-system P3)", () => {
       moves: { "stop-task": { ok: true }, "queue-task": { ok: false } },
     });
     expect(view("b")?.waitingCardMerges).toBeUndefined();
-    expect(view("b")?.moves).toEqual({
+    const blocked = view("b");
+    if (!blocked) throw new Error("The blocked work row is missing.");
+    // INF-1879 adds two explicit endings; their refusal words come from the move-policy owner.
+    const policy = taskMovesOf(blocked);
+    expect(blocked.moves).toEqual({
+      "answer-done": policy?.["answer-done"],
+      "dismiss-question": policy?.["dismiss-question"],
       "show-card": { ok: false, text: "It has no card to show." },
       "start-task": { ok: false, text: "NIA-1 must finish first." },
       "start-again": {
@@ -2439,10 +2445,11 @@ describe("the task protocol (task-system P3)", () => {
       "stop-task": { ok: false, text: "It has not started. Drop task drops it." },
       "continue-task": { ok: false, text: "Only interrupted work continues." },
       "drop-task": { ok: true },
-      // Created to start by itself once nothing holds it: queued already.
       "queue-task": { ok: false, text: "It is already queued." },
       "unqueue-task": { ok: true },
     });
+    expect(blocked.moves?.["answer-done"]?.ok).toBe(false);
+    expect(blocked.moves?.["dismiss-question"]?.ok).toBe(false);
     // A question has no moves, and neither does closed work.
     expect(view("q")?.moves).toBeUndefined();
   });

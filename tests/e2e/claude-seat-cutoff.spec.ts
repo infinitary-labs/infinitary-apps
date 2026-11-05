@@ -183,7 +183,7 @@ test("a refusal pauses the seat on its own card, and Try Claude again answers th
   expect(await cardTitles(page)).not.toContain(title);
 });
 
-test("a message the paused seat keeps after its card is closed says it is saved, where the captain typed it", async () => {
+test("a message the paused seat keeps after its card is put away says it is saved, where the captain typed it", async () => {
   const mock = await startMockProvider();
   mockProvider = mock;
   launched = await launchClaudeSeat({ mockProvider: mock });
@@ -193,8 +193,9 @@ test("a message the paused seat keeps after its card is closed says it is saved,
   const title = firstmatePauseTitle("refused", "Claude");
   await expect(shownCard(page, title)).toBeVisible({ timeout: 45_000 });
 
-  // The captain closes the pause card, then writes again: the card stays
-  // down and nothing is tried, but the words are not met with silence.
+  // INF-1879: the captain puts the pause card aside, then writes again.
+  // The saved card stays open but off stage; no words are tried into the
+  // paused seat, and the captain's new message is not met with silence.
   await closeOpenCards(page);
   const later = "are you there?";
   await say(page, later);
@@ -203,7 +204,8 @@ test("a message the paused seat keeps after its card is closed says it is saved,
   await expect(bubbleWords(yourBubble(page))).toHaveText(later);
   await expect(bubbleWords(mateBubble(page))).toHaveText(saved, { timeout: 30_000 });
   await expect(feedLine(page, saved)).toBeVisible();
-  expect(await cardTitles(page)).not.toContain(title);
+  expect(await pauseCard(page, title)).toMatchObject({ status: "ready", minimized: true });
+  await expect(shownCard(page, title)).toBeHidden();
   expect(tried(mock, later)).toBe(0);
   await page.screenshot({ path: test.info().outputPath("claude-seat-kept-after-close.png") });
 });

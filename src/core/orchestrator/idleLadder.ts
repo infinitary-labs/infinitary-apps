@@ -191,6 +191,8 @@ export type IdleLadderHost = {
   oldestRunningJob?: (taskId: string) => RunningJob | undefined;
   /** The cards on the stack now. */
   openCards(): Iterable<Card>;
+  /** A saved marked answer waits for explicit Done even after it was read. */
+  answerNoteForTask?(taskId: string): Card | undefined;
   /** The task's open cards whose captain reply waits on their author, oldest first. */
   threadsAwaitingAuthor(taskId: string): WakeNote[];
   /** A review task bypasses supervision; its builder is sorted like any task (INF-1876). */
@@ -285,6 +287,7 @@ export class IdleLadder {
     const record = this.host.tasks.get(taskId);
     const gate = record?.gate ?? null;
     const cardUp = this.decisionCardsFor(taskId).length > 0;
+    const answerReady = this.host.answerNoteForTask?.(taskId) !== undefined;
     const gateCardUp =
       gate?.kind === "captain" && gate.ref !== undefined && this.cardOpen(gate.ref);
     // A wait its crewmate declared is the captain's turn while a card of
@@ -295,21 +298,24 @@ export class IdleLadder {
       Boolean(record?.delivery?.captainWait) && (cardUp || gateCardUp || this.anyCardFor(taskId));
     // A browser in the captain's hands wakes its crewmate when he returns it.
     const browserWithCaptain = this.host.browserWithCaptain?.(taskId) === true;
-    // Work its crewmate declared finished waits on his close of its own card
-    // (INF-731): that close is its crewmate's next turn.
+    // Finished work with its own card still up waits on the captain.
+    // An ordinary read can start its author's next turn; aside and saved-
+    // answer reads cannot. A marked saved answer waits for explicit Done.
     const finished = record?.delivery?.finishedAt !== undefined;
     const finishedCardUp = finished && this.ownCardFor(taskId);
     return {
       threadAwaitingAuthor: this.host.threadsAwaitingAuthor(taskId).length > 0,
       decisionCardOpen: cardUp || gateCardUp || captainWait || browserWithCaptain,
       captainWait,
+      answerReady,
       finishedCardUp,
       // With no card of its own up, only the Firstmate's close is left
       // (INF-1428): never a nudge for a crewmate with nothing left to do.
       finishedNoCard: finished && !finishedCardUp,
       browserWithCaptain,
       askedFirstmate: record ? this.unansweredAsk(record) !== undefined : false,
-      captainGateOwed: gate?.kind === "captain" && !cardUp && !gateCardUp && !captainWait,
+      captainGateOwed:
+        gate?.kind === "captain" && !cardUp && !gateCardUp && !captainWait && !answerReady,
       deliverable: this.host.inbox.hasDeliverable(taskId, INBOX_ATTEMPT_MAX),
       jobsRunning: this.jobInBound(taskId, now),
       pendingSettle: Boolean(record?.pendingSettle),
@@ -592,7 +598,7 @@ export class IdleLadder {
     return false;
   }
 
-  /** A card its crewmate emitted, a note included: the one whose close reaches that crewmate. */
+  /** A card its crewmate emitted, including a note: the `finishedCardUp` witness. */
   private ownCardFor(taskId: string): boolean {
     for (const card of this.host.openCards()) {
       if (card.taskId === taskId && cardEmitter(card.id, taskId) === "crewmate") return true;
@@ -1226,9 +1232,10 @@ export class IdleLadder {
    * raises its own card - the app's attention, like the sign-in card. Like
    * every card with actions it places the captain gate on its task, so it
    * holds the turn while it is up and nothing repeats; it leaves on a
-   * click, on his close (the keep: rung 3 stays, nothing more this
-   * episode), when the task moves - unless a reply under it still waits
+   * choice, including explicit Keep waiting (rung 3 stays, nothing more
+   * this episode), when the task moves - unless a reply under it still waits
    * on the first mate, which answers it (INF-1670) - or when the task closes.
+   * The minus only minimizes the alert and keeps its card and gate pending.
    */
   private raiseStallCard(record: TaskRecord, now: number): void {
     const observed = this.host.tasks
@@ -1306,8 +1313,8 @@ export class IdleLadder {
           effect: { kind: "host", op: "continue-task", arg: record.id },
         },
         {
-          // No effect: the click closes the alert, as the captain's close
-          // does (the keep: rung 3 stays, nothing more this episode).
+          // No effect: explicit Keep waiting closes the alert for this
+          // episode. The minus only puts it aside and keeps it pending.
           id: "keep-waiting",
           label: "Keep waiting",
           variant: "secondary",
@@ -1387,6 +1394,8 @@ export class IdleLadder {
     const held = record.gate?.kind === "captain" ? record.gate.ref : undefined;
     const card = cards.find((entry) => entry.id === held) ?? newestCard(cards);
     if (card) return { kind: "captain", ref: card.id };
+    const answer = this.host.answerNoteForTask?.(record.id);
+    if (answer) return { kind: "captain", ref: answer.id, reason: "Read the answer or mark Done" };
     const wait = record.delivery?.captainWait;
     if (wait)
       return { kind: "captain", ...(wait.cardId ? { ref: wait.cardId } : {}), reason: wait.reason };

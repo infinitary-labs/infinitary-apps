@@ -37,7 +37,6 @@ function rendered(props: {
       }
       taskKey={props.taskKey === undefined ? "FI3-84" : props.taskKey}
       title={props.title ?? "Prototype translucent app window variants"}
-      onClose={() => {}}
     />,
   );
   return parseDocument(html) as unknown as Node;
@@ -182,6 +181,16 @@ const open = (patch: Partial<RecordBar>): RecordBar => ({
 });
 
 describe("task record action bar", () => {
+  it("INF-1879: keeps explicit Dismiss beside Show the card, and Done beside Drop task", () => {
+    expect(slots(bar({ end: "dismiss-question", next: "show-card", blocked: false }))).toEqual({
+      end: "Dismiss",
+      next: "Show the card",
+    });
+    expect(slots(bar({ end: "stop-task", next: "answer-done", blocked: false }))).toEqual({
+      end: DROP_TASK_LABEL,
+      next: "Done",
+    });
+  });
   it("renders Start again alone in the next slot without confirmation", () => {
     const root = bar({ end: null, next: "start-again", blocked: false });
     expect(slots(root)).toEqual({ end: "", next: "Start again" });

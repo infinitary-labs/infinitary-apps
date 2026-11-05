@@ -11,15 +11,8 @@ import { bodyIn, cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { DEMO_CARD_TITLE, SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { DEMO_PROMPT_MARKER, demoCard } from "./scenarios/demoCard";
-import {
-  clickInBody,
-  closeQuestion,
-  discardAndClose,
-  SHOWN_ENTRY,
-  showCard,
-  shownCard,
-} from "./stack";
+import { DEMO_PROMPT_MARKER, DEMO_WITHDRAW_MARKER, demoCard } from "./scenarios/demoCard";
+import { cardReply, clickInBody, SHOWN_ENTRY, showCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -261,9 +254,9 @@ test("the demo plays again after the app restarts and from the card once it is c
     if (!card) throw new Error("the demo card did not come back");
     await playFrom(page, body(page));
 
-    // Closed, the card reads back as it was, and its demo plays there too.
-    await page.locator(`${SHOWN_ENTRY} button[aria-label="Close"]`).first().click();
-    if (await closeQuestion(page).isVisible()) await discardAndClose(page);
+    // INF-1879: ask its author to withdraw the offer; putting it away would keep it open.
+    await cardReply(page).field.fill(DEMO_WITHDRAW_MARKER);
+    await cardReply(page).send.click();
     await expect
       .poll(async () => (await page.evaluate(() => window.infinitary.cards.list())).length)
       .toBe(0);

@@ -583,8 +583,9 @@ export function reconcileStack(
               : arrived.includes(card.id)),
         ).length
       : 0,
-    // A project hold is not a loss: only a card that really left takes focus back.
-    lostCard: prevShownIds.some((id) => !kept.has(id)),
+    // A project hold is not a loss; only the shown entry’s real departure takes focus back.
+    // A question can close behind its retained record without taking its next keyboard action.
+    lostCard: active !== undefined && !kept.has(active.id),
   };
 }
 
@@ -625,8 +626,6 @@ export type ShellState = {
    * captain's Q4 A).
    */
   cardAnswers: Record<string, FrameAnswers>;
-  /** Last accepted send, kept across revisions but retired with its card. */
-  sentCardAnswers: Record<string, CardAnswer[]>;
   /** Open shell-held records, newest opened first (one per task). */
   records: OpenRecord[];
   cardIndex: number;
@@ -743,7 +742,7 @@ export type ShellState = {
   /**
    * A focus request that is only a way back (`focusMainMessage`'s
    * `yields`): it gives way to a control that took focus in the same
-   * render, such as the close question a command from search asked.
+   * render, such as a control reached by a command from search.
    */
   focusYields: number | null;
   voiceModelReady: boolean | null;
@@ -1176,7 +1175,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   pendingCardActions: {},
   cardActionErrors: {},
   cardAnswers: {},
-  sentCardAnswers: {},
   records: [],
   cardIndex: 0,
   unreadCardIds: [],
@@ -1964,7 +1962,12 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       }));
       return;
     }
-    void window.infinitary.cards.close(cardId, submissionFor(mounted)).catch(() => {});
+    const card = get().cards.find((entry) => entry.id === cardId);
+    // A core predating the corner contract still has a destructive close.
+    const request = card?.corner
+      ? window.infinitary.cards.close(cardId, submissionFor(mounted))
+      : window.infinitary.cards.minimize(cardId, true);
+    void request.catch(() => {});
   },
   loadThread: (cardId) => {
     if (get().threads[cardId]) return;
@@ -1983,15 +1986,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     // The thread paints at once; where its card sits is the core's, which
     // the cards push carries.
     set((s) => ({
-      sentCardAnswers: (() => {
-        const latest = messages.findLast((message) => message.who === "captain" && message.answers);
-        const previous = s.threads[cardId]?.findLast(
-          (message) => message.who === "captain" && message.answers,
-        );
-        return latest?.answers && latest.id > (previous?.id ?? -1)
-          ? { ...s.sentCardAnswers, [cardId]: latest.answers }
-          : s.sentCardAnswers;
-      })(),
       threads: { ...s.threads, [cardId]: messages },
       threadsLoaded: { ...s.threadsLoaded, [cardId]: true },
       // A message arriving on a thread the captain collapsed opens it again
@@ -2114,9 +2108,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
             }
           : text;
       const thread = await window.infinitary.cards.reply(cardId, payload, submission);
-      if (answers) {
-        set((s) => ({ sentCardAnswers: { ...s.sentCardAnswers, [cardId]: answers } }));
-      }
       // Paint it before anything else is awaited: the card stays on the
       // stage now, so a later line the core pushes (its author's answer)
       // must not be overwritten by this older reading.
@@ -2405,9 +2396,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         ),
         cardActionErrors: Object.fromEntries(
           Object.entries(s.cardActionErrors).filter(([id]) => present.has(id)),
-        ),
-        sentCardAnswers: Object.fromEntries(
-          Object.entries(s.sentCardAnswers).filter(([id]) => present.has(id)),
         ),
         cardAnswers: Object.fromEntries(
           Object.entries(s.cardAnswers).filter(([id]) => present.has(id)),

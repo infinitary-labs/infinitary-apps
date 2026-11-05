@@ -84,6 +84,8 @@ export const RETIRED_COMMANDS: Readonly<Record<string, PanelCommandId>> = {
 function carriedOver(saved: SavedKeymap): SavedKeymap {
   const keys: SavedKeymap["keys"] = {};
   for (const [id, bindings] of Object.entries(saved.keys)) {
+    // INF-1879: Close retired; its custom binding cannot acquire another effect.
+    if (id === "cards.close") continue;
     const now = RETIRED_COMMANDS[id];
     if (now === undefined) keys[id] = bindings;
     else if (!Object.hasOwn(saved.keys, now)) keys[now] = bindings;

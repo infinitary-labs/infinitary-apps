@@ -61,7 +61,9 @@ Its one writer on an active row is a crewmate's report that names `check_back` (
 A crewmate declares a wait with `waiting_on_captain` (`docs/report-sort.md`); the host does not parse a free-text wait.
 
 A host card with actions and no task files an open `operation` row, `captain` gate ref = the card id (`TaskService.fileHostCardTask`), so the host's own asks count as waiting on the captain while their shown decisions are ready, like every other card.
-It closes with the card - `done/answered` on a choice, `dropped/cancelled` on the captain's close, `dropped/superseded` when the host takes it down - with no feed line (host bookkeeping), and the sweep closes one whose card is gone and files one for a host card that has none, as it does for first mate decision rows (`openCardTaskFor` finds either).
+An explicit choice closes the row `done/answered`; host withdrawal records `dropped/superseded`, and a recorded terminal dismissal records `dropped/cancelled`, with no feed line (host bookkeeping).
+The minus is not a terminal dismissal: it keeps the host card, its operation row and its captain gate open without choosing or declining.
+The sweep closes a row whose card is gone and files one for a host card that has none, as it does for first mate decision rows (`openCardTaskFor` finds either).
 
 A row whose blocker was **dropped** is a wait that cannot end: `listDeadBlocked` feeds one `[fm-op]` wake to the first mate (`wakeDeadGate`, cards/tasks/agents P0), deduped by content on the task's ref so the tick never nags, and the row stays as it is - no card, no hold.
 The first mate's own tools are the ways out: `link_tasks remove` the dead edge (the sweep then starts it), `update_task drop` it too, or leave it waiting.
@@ -96,9 +98,11 @@ Because a marked edge gates closing, `flagsOf` reports `blocked` for **active** 
 A task whose deliverable is an answer closes on a third path (captain F2 A): the captain's choice on its own crewmate's card closes the row `done/answered`, and `merge-pr` and `land` are refused on it outright, because it ships nothing.
 A card its crewmate declared `continues`, something it goes on from such as a consent, a card asking to send a kept write and a card handing the captain the task's browser (`browser_handoff`, INF-1322) are not that card: their choice reaches the crewmate and the row stays active (INF-1226, `docs/card-authoring.md` "An answer task's card is its deliverable").
 A choice made while the crewmate is still working outranks the cancel of that turn (INF-721): the close stops the turn, and that turn's end, before or after the close, neither relabels the row nor drops the `answer-closed` wake the first mate is owed (`CrewSupervisor.stopRuntime` marks the runtime settling, and `finish` leaves the record to the close).
-The captain's close control is not a choice (FI3-435): it reaches the crewmate like every crewmate card's close, and once the crewmate reports `finished` the first mate closes the row with `settle_task answered`.
-The one close that answers is the captain's close of a note its crewmate marked `answering`, with no reply of theirs waiting under it (INF-1732, the same test `AskEnding.captainResponded` accepts a closed note by): it closes the row `done/answered` and sends no `card-closed` wake.
-A decision closed without a choice still answers nothing, and `finished` stays the fallback for every other close.
+The captain's close control is not a choice and never ends work: it puts a decision or pending card aside, or reads an ordinary note.
+An ordinary note read acknowledges its message and reaches its crewmate through `card-closed`; a duplicate closure also reaches the author, but is not an ordinary-read acknowledgement.
+Putting a card aside or reading a marked saved answer sends no author wake and does not acknowledge that saved answer.
+Only explicit Done receipts the marked saved answer (`CardService.finishAnswer`, `answer-done`); for an answer deliverable, it closes the row `done/answered` without a `card-closed` wake.
+After an ordinary read, the crewmate reports `finished` if nothing remains, and the first mate can close the answer row with `settle_task answered`; the read itself never closes it.
 The row lists under the now panel's `landed` group like any other closed work and reads `answered`.
 
 Whether an answer task is an internal step (captain's call C, 2026-09-24: "intelligent judgments ... handled mostly through instructions") of a sequence the first mate runs, or something the captain asked for personally, is the first mate's judgment: it declares a step when it creates it (`internal_step` on `spawn_crewmate` or `create_task`, stored on the shape), and the host infers nothing - no rule reads the parent, the kind or the words.

@@ -39,8 +39,8 @@
  *     task is on his screen. A declared wait with none is step 4's: the
  *     Firstmate owes the card (INF-11). Work its crewmate declared finished
  *     while a card of its own is still up holds the turn too (INF-731):
- *     finished means he closed that card, so his close is the next move -
- *     and an answer's close waits on it anyway.
+ *     the card or saved answer still owns its explicit ending. Putting it
+ *     away neither starts an author turn nor acknowledges its outcome.
  *  1a. The report declared the work finished - the captain has read its
  *     outcome and nothing is left (FI3-435): wake, so the Firstmate closes
  *     the task. The crewmate's declaration, never a reading of its words.
@@ -158,6 +158,8 @@ export type Witnesses = {
    * (`browserWithCaptain`).
    */
   decisionCardOpen: boolean;
+  /** The saved marked answer still offers Done in its record (INF-1879), even with no live card. */
+  answerReady?: boolean;
   /**
    * Its crewmate's last report declared a wait on the captain and a card of
    * the task, a note included, is on his screen (counted in
@@ -168,11 +170,13 @@ export type Witnesses = {
   /**
    * Its crewmate's last report declared its work finished while a card of
    * its own, a note included, is still on the captain's screen (INF-731).
-   * Finished means he closed that card, and an answer's close waits on it
-   * (`closeAnswerUsedAsBasis`), so his close is the next move: it reaches
-   * the crewmate as its next turn, whose report declares finished again with
-   * the card gone. Read beside `decisionCardOpen`, never inside it, so a
-   * note alone never holds a report's turn.
+   * Putting a decision or pending card aside, or reading a saved answer,
+   * neither acknowledges its outcome nor starts an author turn. An ordinary
+   * completed note read acknowledges its message and notifies its live author,
+   * without completing work. A saved answer remains
+   * on the captain's turn through `answerReady`, even after its note is read.
+   * Read beside `decisionCardOpen`, never inside it, so a note alone never
+   * holds a report's turn.
    */
   finishedCardUp?: boolean;
   /**
@@ -360,18 +364,20 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
         "its open review returned findings and waits for what this report brings; the first mate steers the reviewer.",
     };
   }
-  if (facts.decisionCardOpen || facts.finishedCardUp) {
+  if (facts.answerReady || facts.decisionCardOpen || facts.finishedCardUp) {
     return {
       rule: "captain-card",
       verdict: "routine",
       wake: false,
-      reason: facts.captainWait
-        ? "its crewmate declared that it waits on the captain; the next move is theirs."
-        : facts.browserWithCaptain
-          ? "its browser is in the captain's hands until they return control; the next move is theirs."
-          : facts.finishedCardUp
-            ? "its crewmate declared its work finished while its own card is still on the captain's screen; their close of that card is the next move."
-            : "a decision card for this task is on the captain's screen; the next move is theirs.",
+      reason: facts.answerReady
+        ? "its saved answer waits for the captain’s explicit Done in its record."
+        : facts.captainWait
+          ? "its crewmate declared that it waits on the captain; the next move is theirs."
+          : facts.browserWithCaptain
+            ? "its browser is in the captain's hands until they return control; the next move is theirs."
+            : facts.finishedCardUp
+              ? "its crewmate declared its work finished while its own card is still open; its explicit ending remains the captain's move."
+              : "a decision card for this task is on the captain's screen; the next move is theirs.",
     };
   }
   if (facts.finished) {
@@ -539,7 +545,12 @@ export function idleTurn(witnesses: Witnesses): IdleTurn {
   // The crewmate answers a reply the captain wrote since its request first,
   // as row 0 holds row 0a; the reply on its lane is that answer coming.
   if (witnesses.askedFirstmate && !witnesses.threadAwaitingAuthor) return "asked";
-  if (witnesses.decisionCardOpen || witnesses.finishedCardUp || witnesses.finishedNoCard)
+  if (
+    witnesses.answerReady ||
+    witnesses.decisionCardOpen ||
+    witnesses.finishedCardUp ||
+    witnesses.finishedNoCard
+  )
     return "captain";
   if (stillMoving(witnesses) || witnesses.reviewOpen) return "moving";
   if (witnesses.captainGateOwed) return "owed";

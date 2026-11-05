@@ -77,7 +77,9 @@ The card stage fits the shell's available column, up to 560 logical points, and 
 A card is the Mac's raised surface: a solid fill, a thin edge, a light line inside its top and a soft drop shadow, and the next card's sliver is raised the same way.
 The head, footer buttons and reply field are native controls outside the body’s web view.
 The head reads as the Mac's: the kind chip (Attention in red), the task's key in mono, which opens its record, where the task runs, the model chip and the risk, then the title and the revised line; it names no sender.
-Put aside, a minus before the close, puts the card away until it changes; the close asks first, in the Mac's words, before it discards picks, typed words or a reply still waiting on its answer.
+The shared minus is the card's only leave control: it puts decisions, attention and pending notes aside, or reads an ordinary note using the host's declared meaning.
+It asks no close question, selects no choice or refusal, and never ends work; picks, typed words and pending replies remain available.
+A marked saved answer waits for explicit Done, on its note or record.
 A merge card's risk is a row of seven dots in the levels' colors, and a tap opens a sheet with each dimension's name, level words and the crewmate's why.
 The native controls inherit the shell's tint and retain platform focus and touch behavior.
 A review-finding card shows Review finding in the warning color on its head's first line.

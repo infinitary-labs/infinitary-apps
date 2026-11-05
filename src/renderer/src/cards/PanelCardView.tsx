@@ -1,7 +1,6 @@
 import type { FrameTheme } from "@shared/plugins/frameDocument";
 import { useContext, useEffect, useSyncExternalStore } from "react";
 import type { PanelCardEntry } from "../app/store";
-import { IconButton } from "../design";
 import { CardCorner, CardSizeContext } from "../design/cards/CardSize";
 import { CARD_MAX_HEIGHT, ResponseCard } from "../design/cards/ResponseCard";
 import { pluginHost } from "../plugins/host";
@@ -60,13 +59,7 @@ export function PanelCardView({
             bodyStyle: { padding: 0, overflow: "hidden", scrollbarGutter: "auto" },
           }
         : {})}
-      chrome={
-        <PanelCardChrome
-          title={card.title}
-          attribution={panel?.attribution ?? null}
-          onClose={onClose}
-        />
-      }
+      chrome={<PanelCardChrome title={card.title} attribution={panel?.attribution ?? null} />}
     >
       <div
         data-panel-card={`${card.panel}/${card.id}`}
@@ -93,15 +86,7 @@ export function PanelCardView({
 }
 
 /** The card's one row of chrome: its title, who made its panel, and Hide. */
-function PanelCardChrome({
-  title,
-  attribution,
-  onClose,
-}: {
-  title: string;
-  attribution: string | null;
-  onClose: () => void;
-}) {
+function PanelCardChrome({ title, attribution }: { title: string; attribution: string | null }) {
   return (
     <div
       data-panel-card-chrome=""
@@ -143,28 +128,7 @@ function PanelCardChrome({
           {attribution}
         </span>
       )}
-      <CardCorner style={{ marginLeft: "auto" }}>
-        <IconButton label="Hide" onClick={onClose}>
-          {HIDE}
-        </IconButton>
-      </CardCorner>
+      <CardCorner style={{ marginLeft: "auto" }} />
     </div>
   );
 }
-
-const HIDE = (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M18 6 6 18" />
-    <path d="m6 6 12 12" />
-  </svg>
-);

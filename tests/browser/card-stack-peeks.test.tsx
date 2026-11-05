@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
 import { seededHome } from "./freshHome";
-import { answerStack, shownEntry, stageAtRest } from "./stack";
+import { answerStack, cardLeave, shownEntry, stageAtRest } from "./stack";
 import { openWindow } from "./window";
 
 /**
@@ -71,13 +71,7 @@ test("the front card draws over the peeks behind it with three cards stacked, th
     expect(topEdgeHits(), `with ${count} cards, the front card's top edge is its own`).toEqual(
       FRONT_OWNS_ITS_EDGE,
     );
-    if (count > 2)
-      await userEvent.click(
-        page.elementLocator(shownEntry() as HTMLElement).getByRole("button", {
-          name: "Close",
-          exact: true,
-        }),
-      );
+    if (count > 2) await userEvent.click(cardLeave());
   }
   expect([...new Set(bridge.unanswered)]).toEqual([]);
 });

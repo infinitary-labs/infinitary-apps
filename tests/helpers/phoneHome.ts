@@ -12,17 +12,13 @@ import { startCore } from "@core/index";
 import type { CardService } from "@core/orchestrator/cardService";
 import { appPathsFor } from "@core/paths";
 import { seedTask } from "@core/tasks/seedTask";
+import { CARD_LEAVE } from "@shared/cardLeave";
 import { ANYTHING_ELSE_ANSWER, PAST_CARD_WORDS_LEAD } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
 import { PROTOCOL_VERSION, SCENE_OBSERVATIONS_SINCE, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
 import { RISK_WORDS } from "@shared/risk";
 import { CONTRACT_CHANGES } from "../../src/core/connection/contractChanges";
-import {
-  CLOSE_QUESTION_TITLE,
-  DISCARD_AND_CLOSE,
-  KEEP_ANSWERING,
-} from "../../src/renderer/src/app/closeQuestionWords";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
 import { contributorWords, THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
 import {
@@ -811,6 +807,115 @@ export async function startPhoneHome(
           result = { card: await core.dispatch("inf:cards:past", ["card-phone-readiness"]) };
           break;
         }
+        case "POST answer-note-fixture": {
+          const answer = seedTask(core.services.tasks, {
+            id: `native-answer-${randomBytes(8).toString("hex")}`,
+            title: "Explain the harbour launch window",
+            status: "idle",
+            shape: { kind: "research", deliverable: "answer" },
+          });
+          const cards = (core.services.supervisor as unknown as { cards: CardService }).cards;
+          const answerText = "The review stays beside the launch checklist.";
+          const id = cards.emitCrewmateCard(
+            answer.id,
+            {
+              id: "harbour-answer",
+              title: "The harbour launch window is ready",
+              body: `<p>${answerText}</p>`,
+              actions: [],
+              answering: true,
+            },
+            "crew",
+          );
+          cards.closeOut({ kind: "crewmate", taskId: answer.id }, "idle");
+          result = {
+            taskId: answer.id,
+            id,
+            title: "The harbour launch window is ready",
+            answerText,
+            hideLabel: CARD_LEAVE.record.label,
+          };
+          break;
+        }
+        case "POST answer-note-state": {
+          let body = "";
+          for await (const chunk of request) body += chunk.toString();
+          const {
+            taskId: id,
+            expectedStatus,
+            expectedCardOpen,
+          } = JSON.parse(body) as {
+            taskId: string;
+            expectedStatus?: string;
+            expectedCardOpen?: boolean;
+          };
+          const cards = (core.services.supervisor as unknown as { cards: CardService }).cards;
+          if (expectedStatus !== undefined || expectedCardOpen !== undefined)
+            await until(
+              () =>
+                (expectedStatus === undefined ||
+                  core.services.tasks.get(id)?.status === expectedStatus) &&
+                (expectedCardOpen === undefined ||
+                  cards.snapshot().some((card) => card.taskId === id) === expectedCardOpen),
+            );
+          const answer = typeof id === "string" ? core.services.tasks.get(id) : undefined;
+          result = {
+            status: answer?.status,
+            reason: answer?.closedReason,
+            ready: typeof id === "string" && cards.answerNoteForTask(id) !== undefined,
+            cardOpen: cards.snapshot().some((card) => card.taskId === id),
+          };
+          observations.push({ check: "saved-answer-state", taskId: id, result });
+          break;
+        }
+        // INF-1879: a real first-mate question record, filed through the task owner.
+        case "POST question-record-fixture": {
+          const title = "Pick the harbour review day";
+          const cardId = core.services.supervisor.addFirstmateCard({
+            id: "harbour-review-day",
+            title,
+            body: "<p>The harbour review can run on Tuesday or Thursday next week.</p>",
+            actions: [
+              { id: "tuesday", label: "Tuesday", default: true },
+              { id: "thursday", label: "Thursday" },
+            ],
+          });
+          const question = core.services.tasks.fileDecision({
+            id: randomBytes(4).toString("hex"),
+            title,
+            cardId,
+            repoId: null,
+          });
+          result = { taskId: question.id, cardId, title, hideLabel: CARD_LEAVE.record.label };
+          break;
+        }
+        case "POST question-record-state": {
+          const { taskId, cardId, expectedStatus } = JSON.parse(await controlBody(request)) as {
+            taskId: string;
+            cardId: string;
+            expectedStatus?: string;
+          };
+          if (expectedStatus !== undefined)
+            await until(() => core.services.tasks.get(taskId)?.status === expectedStatus);
+          const question = core.services.tasks.get(taskId);
+          result = {
+            status: question?.status,
+            reason: question?.closedReason ?? null,
+            cardOnStack: core.services.supervisor
+              .cardsSnapshot()
+              .some((card) => card.id === cardId),
+            runs: writes
+              .filter(
+                (write) =>
+                  write.channel === "inf:task:run" &&
+                  Array.isArray(write.args) &&
+                  write.args[0] === taskId,
+              )
+              .map((write) => ({ actor: write.actor, move: write.args[1] })),
+          };
+          observations.push({ check: "question-record-state", taskId, result });
+          break;
+        }
         case "POST cards-fixture": {
           // INF-64 piece 4: actual stored cards, published requests and the existing view journey's promises.
           for (const card of await core.dispatch("inf:cards:list", []))
@@ -903,8 +1008,6 @@ export async function startPhoneHome(
             choice: "Choose the harbour",
             conversation: "Read the harbour chart",
             note: "The tide note",
-            closeTitle: CLOSE_QUESTION_TITLE,
-            discardAndClose: DISCARD_AND_CLOSE,
             replyAnswer: MOCK_FM_CHAT_TEXT,
           };
           break;
@@ -1042,8 +1145,6 @@ export async function startPhoneHome(
             key: core.services.tasks.get(merging.id)?.key,
             taskId: merging.id,
             words: "Hold it for the morning survey.",
-            closeTitle: CLOSE_QUESTION_TITLE,
-            keepAnswering: KEEP_ANSWERING,
             blast: `${RISK_WORDS.blast.label} · ${RISK_WORDS.blast.levels.low}`,
             sentLead: PAST_CARD_WORDS_LEAD,
             anythingElse: ANYTHING_ELSE_ANSWER,
@@ -1139,7 +1240,9 @@ export async function startPhoneHome(
           result = await core.dispatch("inf:cards:show-past", [cardIDs.merge]);
           break;
         case "POST hero-card": {
-          const title = "Choose the harbour";
+          // INF-1892: the earlier choice now stays put aside. Give this separate
+          // entrance choice its own title so Tasks restores the card it names.
+          const title = "Choose the harbour entrance";
           heroId = core.services.supervisor.addFirstmateCard({
             id: "phone-hero",
             title,
@@ -1631,7 +1734,7 @@ export async function startPhoneHome(
           // INF-82: the actual first mate holds a turn; never emit a synthetic busy event.
           await until(() => !firstmateBusy);
           // The previous journey's crew note is obsolete for this fixture. Its author withdraws it:
-          // captain dismissal would intentionally wake that crew and produce another Rivet count card.
+          // reading this ordinary note would wake that crew and produce another Rivet count card.
           for (const card of await core.dispatch("inf:cards:list", [])) {
             if (card.author === "firstmate")
               core.services.supervisor.closeCard(
@@ -1750,9 +1853,8 @@ export async function startPhoneHome(
           });
           result = {
             text: `Read my harbour note and ${ANSWER_PROMPT_MARKER}`,
-            visibleCardId: core.services.supervisor
-              .cardsSnapshot()
-              .find((card) => card.title === "Choose the harbour")?.id,
+            // INF-1892: the hero's creator owns its identity, independent of its title.
+            visibleCardId: heroId,
             steer: CLAUDE_STEER_MARKER,
             report: MOCK_CLAUDE_STEERED_REPORT,
           };

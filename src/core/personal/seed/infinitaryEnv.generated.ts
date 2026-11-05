@@ -262,6 +262,9 @@ declare module "@infinitary/contracts" {
     children: { total: number; closed: number };
     /** Reachable shown ready decision, null on hidden/working/closed tasks. */
     waitingCardId: string | null;
+    /** A saved marked answer waits for the captain’s Done, even after it is read. */
+    answerNoteId?: string;
+    answerSince?: number;
     /** Desktop presentation only; leaves task status and operational waiting unchanged. */
     minimizedCardId?: string;
     /** Its waiting card settles with a merge: only that card's own button merges. */

@@ -1,3 +1,4 @@
+import { answerWaitWords } from "./cardLeave.ts";
 import type { TaskView } from "./tasks";
 import { workPostureLabel } from "./workPosture";
 
@@ -61,7 +62,13 @@ export type TaskStatusInput = Pick<
   Partial<
     Pick<
       TaskView,
-      "blockedBy" | "blockedSince" | "waitingCardMerges" | "queueWait" | "backlogSince"
+      | "blockedBy"
+      | "blockedSince"
+      | "waitingCardMerges"
+      | "queueWait"
+      | "backlogSince"
+      | "answerNoteId"
+      | "answerSince"
     >
   > & {
     closedReason: string | null;
@@ -95,7 +102,7 @@ const words: Record<TaskStatus, string> = {
  * hold or its parts already give one. An interruption, a start and a ready
  * decision keep their own reading.
  */
-export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
+export function taskStatusOf(task: TaskStatusInput, now = Date.now()): TaskStatusReading {
   const reading = (mark: TaskStatus, reason: string): TaskStatusReading => ({
     mark,
     word: words[mark],
@@ -131,6 +138,14 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
       "waiting",
       task.requiredAction.state === "blocked" ? "Waiting for prerequisites" : "",
     );
+  if (task.answerNoteId)
+    return {
+      ...reading(
+        "waiting",
+        task.answerSince !== undefined ? answerWaitWords(task.answerSince, now) : "Answer ready",
+      ),
+      ...(task.answerSince !== undefined ? { since: task.answerSince } : {}),
+    };
   if (task.waitingCardId) {
     // Only the typed fact that the card settles with a merge names the merge.
     return reading(

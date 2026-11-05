@@ -203,8 +203,8 @@ test("a bounded explanation requests low, reads its source and stays an answer a
       ),
     ).toBe(false);
 
-    // A person's close reaches the author, whose finished report lets Firstmate close it answered.
-    await shownEntry(launched.page).getByRole("button", { name: "Close", exact: true }).click();
+    // INF-1879: the saved marked answer still offers an explicit Done after restart.
+    await shownEntry(launched.page).getByRole("button", { name: "Done", exact: true }).click();
     await expect.poll(() => row()?.closedReason, { timeout: 30_000 }).toBe("answered");
     expect(row()?.delivery?.prUrl ?? null).toBeNull();
     expect(row()?.delivery?.landedMode ?? null).toBeNull();

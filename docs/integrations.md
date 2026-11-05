@@ -71,9 +71,11 @@ A call at Asks you must carry a reason; without one the service refuses it and a
 The service keeps its exact checked input as an `IntegrationAsk` on the crewmate's task and raises its own card from typed facts: caller, action, description, effect, exact input and the reason marked as the crewmate's words.
 The first mate's calls follow the same rule (INF-1108): it has no task, so its card is a host card with no task, the host files that card's own row (`TaskService.fileHostCardTask`), and the ask, marked `by: "firstmate"`, waits on it with the reason marked as the first mate's words.
 The buttons are Always allow, Only this time and Not now; reads highlight Always allow, while changes and sends highlight Only this time.
-Always allow runs the call and saves its action's grant; Only this time runs it once and leaves Asks you; Not now or closing the card runs nothing.
+Always allow runs the call and saves its action's grant; Only this time runs it once and leaves Asks you; Not now refuses the call without running it.
+The minus only puts the card aside: the ask and its row remain pending, with no grant, refusal or outcome notification.
 The click takes the ask before running it, and the existing `write-answered` steer delivers the outcome once, including refusals.
-The first mate's card row closes with the click or the close, so the click takes its ask in the same transaction that closes the row, and closing the card takes it before the row goes; its outcome is a `write-answered` wake on the durable inbox, named once by the ask, and it runs as the first mate's own call.
+The first mate's explicit button choice closes the card's row and takes its ask in the same transaction; its outcome is a `write-answered` wake on the durable inbox, named once by the ask, and an approved call runs as the first mate's own.
+Putting that card aside leaves its row and ask open and sends no outcome wake.
 Grants live in `action-approvals.json` beside the older strict `settings.json`, keyed by connection reference and action, and bound to the action's description and effect.
 A missing or unreadable grant file asks again; an existing connection has no grant until the captain chooses one.
 Settings changes, removing or replacing a connection, signing in as another account, or changing an MCP tool's description or read-only mark end Always allow.
@@ -324,7 +326,8 @@ The service serves it through `IntegrationsService.forPanel` with a panel caller
 The core reads what a panel names from its own manifest at each call; the window's request names only the panel and the verb (`inf:plugins:integrations`), and a background call asks the core over the process's own lane (`docs/personal-panels.md`, "Background work runs apart").
 A call follows the action's rule in Settings, as every caller's does: Always allowed runs it, and Asks you keeps it and raises the app's approval card, naming the panel and giving its manifest's why as its reason (`integrationApprovalCard`).
 The panel has no task, so the card is a host card whose own row the host files and keeps the call on, as the first mate's is; the ask is marked `by: "panel"` and its click runs the call as that panel's, and nobody is woken with the outcome.
-One ask stands per panel and action at a time (`PanelAsks`, `src/core/integrations/panelAsks.ts`, in `userData/integrations/panel-asks.json`): while its card is up, the panel's next calls answer that they wait on it, and once the captain chooses Not now or closes it, they answer that the captain did, without a card.
+One ask stands per panel and action at a time (`PanelAsks`, `src/core/integrations/panelAsks.ts`, in `userData/integrations/panel-asks.json`): while its card is up, the panel's next calls answer that they wait on it, and once the captain chooses Not now, they answer that the captain declined, without a card.
+Putting the card aside instead leaves the ask pending and the next calls waiting on it.
 Meanwhile the window draws a line above the panel for each such ask, with Ask again, which shows the open card again or raises it anew (`inf:plugins:ask-again`, `BackgroundAsking`).
 Always allow takes the line away, and the panel's next call runs; Only this time runs the kept call once and leaves Asks you.
 A panel the captain added from elsewhere has no background code, so it reaches its integrations from its drawing, and its consent card lists each connection it names with its actions, events and why; an update that names more asks again, as any other wider grant does.
@@ -348,7 +351,7 @@ The kept-request case in `mcpIntegration.test.ts` approves an ask saved before t
 Its INF-947 cases remove a stand-in notes server and add another under the same name and id: the ask kept for the first is refused and neither server changes, an ask kept for the replacement runs after a rename and a restart, an ask kept by an older build is refused, and a rule on the removed server never looks at the replacement until it is pointed there with `reconnect`, nor does a rule saved by an older build.
 The Google case of the same number keeps an ask through a renewal and a sign-in as the same person, and refuses it once the row signs in as another account.
 `src/core/forge/providers/github/gateway.test.ts` holds GitHub through the integration against a stand-in GitHub: a crewmate's read runs, its write is kept as an ask even on its own project and sent by the captain's click, the first mate's read runs and its write is kept, sent once through its seat when taken and refused when GitHub refuses it, and an action turned off reaches nothing.
-`src/core/orchestrator/crewSupervisor.test.ts` holds the first mate's card: the call waits on the card's own row, the click runs it once, closing the card is Not now, and either wakes the first mate once.
+`src/core/orchestrator/crewSupervisor.test.ts` holds the first mate's card: the call waits on the card's own row, an approval button runs it once, Not now refuses it, and either explicit choice wakes the first mate once; putting it aside leaves the call pending without a wake.
 `src/core/axi/channel.test.ts` runs the command through the real launcher and channel.
 The panel caller's cases in `service.test.ts` list and show only what a manifest names, refuse an undeclared connection or action, keep one ask per panel and action, and run a kept panel call as the panel's own.
 `src/core/panels/panelRuntimes.integration.test.ts` runs a real panel process whose background code reads a stand-in GitHub through `context.integrations` and spends no allowance.

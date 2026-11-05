@@ -27,7 +27,7 @@ A browser the click started is the captain's own: its control button is `Close p
 `Close page` stops it, and the view shows the stopped panel; no crewmate is told.
 It works on a task that has closed, so a game's note can play it after its task is done.
 
-**The card's top** is the task record's own (`TaskRecord.prompt.md`), as the Crewmate tab's is (`TaskCrewmate.prompt.md`): the status pill and its reason and the task key, with the size control (`ResponseCard.prompt.md`, "Maximize") and Hide, the card's top-right cross (`IconButton`, label `Hide`), in its corner; the title under them; then the tab strip ("The tab strip" below).
+**The card's top** is the task record's own (`TaskRecord.prompt.md`), as the Crewmate tab's is (`TaskCrewmate.prompt.md`): the status pill and its reason and the task key, with the size control (`ResponseCard.prompt.md`, "Maximize") and Hide, the card's shared top-right minus (`IconButton`, label `Hide`), in its corner; the title under them; then the tab strip ("The tab strip" below).
 Hide sits in that corner on every tab of the task's card, in every state of the view, as on every other card, and never beside the browser's own controls, so it reads as putting the card away and never as closing the page (the captain on INF-1502: the close button was not where it usually is on cards, so what clicking it would do was unclear).
 
 **One row of browser chrome** under the card's top, `--space-2` padding, a `--line-1` hairline under it:

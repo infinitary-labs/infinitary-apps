@@ -532,11 +532,11 @@ export const RETRIEVAL_TASK_GOAL =
   "Explain from release-info.json why its release reports video demos, citing its fields; do not test playback.";
 
 /**
- * The captain's close reaches its crewmate (FI3-435): a crewmate steered
- * with the close of its card judges it read and finished and reports so
- * with `finished: true`; the mock Firstmate, woken by a report that
- * declared its work finished, closes the task the way its instructions say
- * - `settle_task answered` on an answer.
+ * Only ordinary reads and duplicate closures deliver `card-closed` to a
+ * live author; only the ordinary read acknowledges its note. The scripted
+ * ordinary-read reaction reports `finished: true`, then the mock Firstmate
+ * settles an answer task `answered`. Aside and saved-answer reads deliver
+ * no such steer; explicit Done receipts and ends a saved answer in the host.
  */
 export const CARD_CLOSED_STEER_NEEDLE = CARD_CLOSED_STEER_PREFIX.trim();
 export const FINISHED_WAKE_NEEDLE = FINISHED_REPORT_WORDS;

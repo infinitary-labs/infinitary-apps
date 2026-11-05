@@ -382,22 +382,51 @@ export function riskChart(page: Page): RiskChartReader {
   };
 }
 
-/**
- * The question the shown card's × asks first when closing would discard
- * picked answers: a popover under the × (design skill ResponseCard).
- */
-export const closeQuestion = (page: Page) => page.getByRole("dialog", { name: "Close this card?" });
+/** INF-1879: every card's one leaving control is owned here, not by copied labels. */
+export const cardLeave = (page: Page, scope: Locator = shownEntry(page)) =>
+  scope.locator("[data-card-leave]").and(shownEntry(page).locator("[data-card-leave]"));
 
-/** Answers the close's question with the choice that closes and discards the picks. */
-export async function discardAndClose(page: Page): Promise<void> {
-  await closeQuestion(page).getByRole("button", { name: "Discard and close", exact: true }).click();
+/** The shown card's answer summary, never a retained or outgoing card's copy. */
+export const cardAnswersLine = (page: Page) => shownEntry(page).locator("[data-card-answers]");
+
+/** Put a decision away and restore it through the same saved-visibility door its Tasks row uses. */
+export async function putAwayAndRestore(page: Page, title: string): Promise<void> {
+  const card = (await page.evaluate(() => window.infinitary.cards.list())).find(
+    (card) => card.title === title,
+  );
+  if (!card) throw new Error(`No open card titled ${title}`);
+  await cardLeave(page).click();
+  await expect(shownCard(page, title)).toBeHidden();
+  await expect
+    .poll(
+      async () =>
+        (await page.evaluate(() => window.infinitary.cards.list())).find(
+          (entry) => entry.id === card.id,
+        )?.minimized,
+    )
+    .toBe(true);
+  await page.evaluate((id) => window.infinitary.cards.minimize(id, false), card.id);
+  await showCard(page, title);
 }
 
+/** The safe saved-visibility request retained for older views; the current note corner reads instead. */
+export async function minimizeForLegacyView(page: Page, title: string): Promise<void> {
+  const card = (await page.evaluate(() => window.infinitary.cards.list())).find(
+    (card) => card.title === title,
+  );
+  if (!card) throw new Error(`No open card titled ${title}`);
+  await page.evaluate((id) => window.infinitary.cards.minimize(id, true), card.id);
+  await expect(shownCard(page, title)).toBeHidden();
+}
+
+/** No confirmation dialog may interrupt the shared minus. */
+export const closeQuestion = (page: Page) => page.getByRole("dialog");
+
 /**
- * Hide notes and close choices before an unrelated journey; hide records
- * first. Each card the core holds is closed by the core's own call - what
- * pressing its × does after the "Close this card?" question - and the stage
- * is then waited on until it agrees. The window's drawing of the stack lags
+ * Read notes and put choices away before an unrelated journey; hide records
+ * first. The core's presentation-only corner request reads notes and puts
+ * decisions aside, and the stage is waited on until it agrees.
+ * The window's drawing of the stack lags
  * the core's state by a push, so a cleanup that reads the drawing and
  * presses × on it fails whenever the card leaves between the read and the
  * press (three fixes of this helper in a day, each for a new gap between
@@ -412,9 +441,9 @@ export async function closeOpenCards(page: Page): Promise<void> {
         page.evaluate(async () => {
           const open = await window.infinitary.cards.list();
           await Promise.all(open.map((card) => window.infinitary.cards.close(card.id)));
-          return open.length;
+          return open.filter((card) => !card.minimized).length;
         }),
-      { message: "the core holds no open card" },
+      { message: "the core holds no card on the stage" },
     )
     .toBe(0);
   await expect(page.locator("[data-card-layer] [data-stage-entry]")).toHaveCount(0);

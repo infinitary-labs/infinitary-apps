@@ -10,6 +10,7 @@ import {
   writeChangePicturesCalls,
   writeFilesCalls,
 } from "../mockProvider";
+import { providerMessages } from "../providerRequest";
 
 /**
  * Marker prompt (demo recordings, `tests/e2e/card-demo.spec.ts`): the mock
@@ -20,6 +21,8 @@ import {
  * still picture under Before, the demo under After.
  */
 export const DEMO_PROMPT_MARKER = "show the demo";
+export const DEMO_WITHDRAW_MARKER =
+  "I read the recording; withdraw this offer without ending the task.";
 
 export const DEMO_REFUSAL = DEMO_UNPLAYED_WORDS;
 
@@ -42,7 +45,31 @@ function writeDemoCalls(): ScriptedCall[] {
  */
 export const demoCard: Scenario =
   () =>
-  ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
+  ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
+    // INF-1879: archived playback needs a real withdrawal, not the presentation-only minus.
+    if (!isFirstmate && wantsStream && latestUserTail.includes(DEMO_WITHDRAW_MARKER)) {
+      if (hasToolResults)
+        return { text: "The offer is withdrawn and the recording stays on its record." };
+      const message =
+        providerMessages(body).findLast((message) => message.role === "user")?.text ?? "";
+      const cardId = message.match(/\((card-[\w-]+)\)/)?.[1];
+      if (!cardId) throw new Error("The withdrawal request did not name its demo card");
+      return {
+        calls: [
+          {
+            name: "reply",
+            args: {
+              card_id: cardId,
+              text: "I withdrew the offer; the recording stays on its record.",
+            },
+          },
+          {
+            name: "close_card",
+            args: { card_id: cardId, reason: "The captain asked to withdraw this offer." },
+          },
+        ],
+      };
+    }
     // The demo crewmate: write the files, offer the card with the filler
     // recording, then with the real one once the decoder refused it.
     if (!isFirstmate && latestUserTail.includes(DEMO_PROMPT_MARKER) && wantsStream) {

@@ -101,7 +101,7 @@ describe("the record's action bar, from typed state only", () => {
     expect(recordBarOf(task({ startedAt: 5 }))?.end).toBeNull();
     // The Firstmate's own decision and operation rows end on their cards.
     expect(recordBarOf(task({ kind: "decision", waitingCardId: "card-1" }))).toEqual({
-      end: null,
+      end: "dismiss-question",
       next: "show-card",
       blocked: false,
     });

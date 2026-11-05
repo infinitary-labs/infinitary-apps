@@ -46,8 +46,8 @@ vi.mock("../utilityQos", async (importOriginal) =>
  * the real paths: the real fetcher (a folder, a git repository, an npm
  * pack), the real record, the real plugin host scanning its second root,
  * and the real supervisor's card dispatch - the consent card's buttons are
- * clicked the way `inf:cards:act` clicks them, and closed the way the
- * captain's x closes one. Wired exactly as services.ts wires them.
+ * clicked through `inf:cards:act`, while the shared minus uses the real
+ * aside path without granting or declining. Wired as services.ts wires them.
  */
 async function harness() {
   const root = realpathSync(scratchDir("infinitary-plugin-install-"));
@@ -266,7 +266,7 @@ describe("PluginInstaller", () => {
     }
   });
 
-  it("turns a plugin down on Don't add or on the captain closing the card, leaving nothing behind", async () => {
+  it("putting consent away leaves it pending; only Don't add turns a plugin down", async () => {
     const h = await harness();
     const first = h.plugin("clock-one", { "manifest.json": manifest(), "panel.tsx": PANEL });
     const second = h.plugin("clock-two", { "manifest.json": manifest(), "panel.tsx": PANEL });
@@ -276,7 +276,15 @@ describe("PluginInstaller", () => {
       expect(h.records.pending().map((record) => record.id)).toEqual(["clock-one", "clock-two"]);
 
       h.supervisor.act(consentCardId("clock-one"), "decline");
+      // INF-1879: minimizing never grants or declines consent.
       h.supervisor.close(consentCardId("clock-two"));
+      await h.settled();
+      expect(h.records.pending().map((record) => record.id)).toEqual(["clock-two"]);
+      expect(h.cards().find((card) => card.id === consentCardId("clock-two"))?.minimized).toBe(
+        true,
+      );
+      expect(h.installed()).toEqual([]);
+      h.supervisor.act(consentCardId("clock-two"), "decline");
       await h.settled();
 
       expect(h.records.pending()).toEqual([]);
@@ -905,7 +913,8 @@ describe("adding runbooks through the panel installer's consent", () => {
         expect(() => h.supervisor.act(consentCardId(id), "add", "frame")).toThrow(
           "only from the card controls",
         );
-        h.supervisor.close(consentCardId(id));
+        // INF-1879: explicit refusal, not the minimize corner, ends consent.
+        h.supervisor.act(consentCardId(id), "decline");
         await h.settled();
         expect(h.records.pending()).toEqual([]);
         expect(h.books.firstmate().text).not.toContain("# Studio workflows");

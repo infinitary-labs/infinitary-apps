@@ -29,7 +29,7 @@ import {
 } from "./mockProvider";
 import { movePanelTo } from "./panelLayout";
 import { promptInput } from "./prompt";
-import { cardReply, cardScroller, showCard, shownCard, shownCardFrame } from "./stack";
+import { cardLeave, cardReply, cardScroller, showCard, shownCard, shownCardFrame } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -275,9 +275,7 @@ test("fresh key setup commits the welcome before ready without inference, restor
 
   // The welcome takes no reply: no reply row under it, and the core refuses one.
   await expect(cardReply(launched.page).row).toHaveCount(0);
-  await expect(
-    shownCard(launched.page, WELCOME_TITLE).getByRole("button", { name: "Close", exact: true }),
-  ).toBeVisible();
+  await expect(cardLeave(launched.page, shownCard(launched.page, WELCOME_TITLE))).toBeVisible();
   const refused = await launched.page.evaluate(async (id) => {
     try {
       await window.infinitary.cards.reply(id, "Where should I begin?");

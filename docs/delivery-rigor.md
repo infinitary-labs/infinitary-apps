@@ -186,7 +186,10 @@ An ask made of the origin never reaches it, and a posture the project changed wh
 
 The captain's choice on that card is the CLOSE (captain F2 A): it closes the row `done/answered`, because the deliverable was produced and the captain answered it.
 A card its crewmate declared `continues`, such as a consent before it uses something sensitive, is not that card, and its choice goes back to the crewmate (INF-1226); nor is a card handing the captain the task's browser, whose click hands it over while the task goes on (INF-1322).
-The captain's close control reaches the crewmate instead (FI3-435), which reports `finished` once the captain has read it, and the first mate closes the row with `settle_task answered`.
+The captain's close control never ends work or selects a choice: putting a card aside or reading a marked saved answer sends no author wake.
+An ordinary note read acknowledges its message and reaches its crewmate through `card-closed`; a duplicate closure also reaches the author without being an ordinary-read acknowledgement.
+After an ordinary read, the crewmate reports `finished` if nothing remains, and the first mate can close the answer row with `settle_task answered`.
+A marked saved answer instead waits for explicit Done, which receipts it and closes an answer deliverable `done/answered` without a `card-closed` wake.
 The findings travel to a builder through `basis`: when `spawn_crewmate` names a verified basis, `renderBasisSection` carries that task's captain words and its report into the builder's brief, and names the file its card body is saved to whole (`docs/sequences.md`); any agent can read them back with the `tasks` query by key.
 
 One bound sits under the order, mechanical rather than judged: Careful's guidance ships a pull request after its review passes, so Careful asked for on a local-only posture ships Default instead, the most care that posture can take, with the reason saying why.

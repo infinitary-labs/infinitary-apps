@@ -4,7 +4,8 @@ The title asks “Change website?”, using the project’s current name.
 The opening says that nothing changes until the captain clicks Apply change.
 A table follows: Detail, Now, After your click.
 It names each changed field in the same words as Settings, with data in mono, and shows the full hosting address rather than only its host.
-The primary Apply change and ghost Not now are the only buttons; closing means Not now.
+The primary Apply change and ghost Not now are the only buttons; only Not now declines the proposal.
+The shared minus puts the card aside and keeps the proposal pending, without applying or declining it.
 Apply change rechecks the stored values, refuses a stale offer, and applies the exact patch once through Settings' dispatcher.
 An address the app discovers in git always needs this card before it becomes the saved destination.
 

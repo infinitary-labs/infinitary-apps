@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cardCornerSchema } from "./cardLeave.ts";
 import { SPELLINGS } from "./codeNames.ts";
 import { requiredActionsSchema } from "./requiredActions.ts";
 import { rigorSchema } from "./rigor.ts";
@@ -197,23 +198,14 @@ export const HOST_OPS = [
 ] as const;
 
 /**
- * The host ops that turn down what a host card asks (the consent card, the
- * setup card): closing that card is the same answer, never a question left
- * behind a card nobody can see.
- */
-export const HOST_DECLINE_OPS: ReadonlySet<(typeof HOST_OPS)[number]> = new Set([
-  "decline-plugin",
-  "decline-project",
-  "decline-project-change",
-]);
-
-/**
  * The host ops the task record's footer and the task board run, on one
  * task. `drop-task` is the footer's own, and `queue-task` and
  * `unqueue-task` the board's (src/shared/taskQueue.ts): none is a card host
  * effect.
  */
 export const TASK_LIFECYCLE_OPS = [
+  "answer-done",
+  "dismiss-question",
   "start-task",
   "start-again",
   "stop-task",
@@ -1095,6 +1087,9 @@ export const cardSchema = z.strictObject({
   place: z.string().optional(),
   /** Semantic HTML rendered only inside a sandboxed iframe. */
   body: z.string(),
+  /** Core-owned presentation and explicit answer receipt (INF-1879). */
+  corner: cardCornerSchema.optional(),
+  answerDone: z.object({ taskId: z.string(), label: z.string(), restWords: z.string() }).optional(),
   requiredActions: requiredActionsSchema.optional(),
   actions: z.array(cardActionSchema),
   status: z.enum(["streaming", "ready"]),

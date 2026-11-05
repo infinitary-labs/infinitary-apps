@@ -135,6 +135,22 @@ export function nowRow(page: Page, key: string): Locator {
 }
 
 /**
+ * Finds and presses the currently drawn Tasks row in one frame read, without
+ * changing focus. INF-2537 / run 41733606005: a row moving to Working can be
+ * replaced between resolving a row handle and clicking it. The root stays
+ * drawn; querying and clicking its row together cannot press the old handle.
+ */
+export function pressDrawnRow(page: Page, key: string): Promise<boolean> {
+  return nowFrame(page)
+    .locator(":root")
+    .evaluate((root, selector) => {
+      const row = root.querySelector<HTMLElement>(selector);
+      row?.click();
+      return row !== null;
+    }, nowRowSelector(key));
+}
+
+/**
  * Presses a Tasks row as the captain's click does: the click gives the
  * panel's page the window's focus - opening a task counts only from his own
  * click or key in it (`point.openTask`) - and lands on the row. The press is
@@ -160,13 +176,7 @@ export async function pressRow(page: Page, key: string): Promise<void> {
   await expect(tasks).toBeVisible();
   await nowRow(page, key).waitFor({ state: "attached" });
   await tasks.focus();
-  const pressed = await nowFrame(page)
-    .locator(":root")
-    .evaluate((root, selector) => {
-      const row = root.querySelector<HTMLElement>(selector);
-      row?.click();
-      return row !== null;
-    }, nowRowSelector(key));
+  const pressed = await pressDrawnRow(page, key);
   expect(pressed, `the Tasks row ${key} is drawn to press`).toBe(true);
 }
 

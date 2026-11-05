@@ -278,19 +278,6 @@ export const KEYBOARD_COMMANDS = {
       { key: "}", meta: true, shift: true },
     ],
   },
-  // No key of its own: a close could cost the answers picked on the card,
-  // so it is chosen by name, and the card still asks first.
-  "cards.close": {
-    label: "Close the shown card",
-    scope: "window",
-    runs: "shell",
-    repeat: false,
-    risk: "close",
-    keys: [],
-  },
-  // The shown card's size control (design skill ResponseCard, "Maximize"):
-  // chosen by name, with no key of its own to clash with, and a person may
-  // give it one.
   "cards.minimize": {
     label: "Put card aside",
     scope: "window",
@@ -298,6 +285,15 @@ export const KEYBOARD_COMMANDS = {
     repeat: false,
     risk: "view",
     keys: [{ key: "m", meta: true, shift: true }],
+  },
+  "cards.done": {
+    label: "Mark the answer Done",
+    searchWords: ["card"],
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "close",
+    keys: [],
   },
   "cards.maximize": {
     label: "Maximize or restore card",

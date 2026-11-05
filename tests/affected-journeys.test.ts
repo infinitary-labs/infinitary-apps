@@ -46,6 +46,12 @@ const FILES = new Map<string, string>([
 ]);
 const read = (file: string) => FILES.get(file);
 const specs = [...FILES.keys()].filter((file) => file.endsWith(".spec.ts"));
+// Historical readings retain their recorded source, but the chooser uses today's
+// journey catalog, including INF-1879's mandatory card-leave fallback.
+const currentSpecs = readdirSync(new URL("./e2e/", import.meta.url))
+  .filter((file) => file.endsWith(".spec.ts"))
+  .map((file) => `tests/e2e/${file}`);
+const catalog = (recorded: string[]) => [...new Set([...recorded, ...currentSpecs])];
 const run = (change: { changed?: string[]; sourceDiff?: string }) =>
   [...select({ changed: [], sourceDiff: "", specs, read, ...change }).entries()].sort(([a], [b]) =>
     a.localeCompare(b),
@@ -456,7 +462,7 @@ describe("hooks a changed screen file draws (INF-625)", () => {
     const reasons = select({
       changed: fixture.changed,
       sourceDiff: "",
-      specs: fixture.specs,
+      specs: catalog(fixture.specs),
       read,
     });
     for (const journey of fixture.missed)
@@ -510,7 +516,7 @@ describe("edited screen regions (INF-658)", () => {
     const reasons = select({
       changed: original.changed,
       sourceDiff: fixture.sourceDiff,
-      specs: original.specs,
+      specs: catalog(original.specs),
       read: (file) =>
         fixture.after[file] ??
         original.journeys[file] ??
@@ -648,7 +654,7 @@ describe("a changed message between the window and its core (INF-1136)", () => {
   ) => ({
     changed,
     sourceDiff: "",
-    specs: [...new Set([...fixture.specs, ...Object.keys(journeys)])],
+    specs: catalog([...fixture.specs, ...Object.keys(journeys)]),
     read: (file: string) =>
       after[file] ??
       fixture.unchanged[file] ??
@@ -763,10 +769,13 @@ describe("words the core serves that a stand-in reads (INF-1255)", () => {
   ) as { merges: Merge[] };
   const merge = (pull: string) => merges.find((entry) => entry.pull === pull) as Merge;
   const chosen = ({ changed, sourceDiff, files, specs }: Merge) =>
-    Object.fromEntries(select({ changed, sourceDiff, specs, read: (file) => files[file] }));
+    Object.fromEntries(
+      select({ changed, sourceDiff, specs: catalog(specs), read: (file) => files[file] }),
+    );
 
   it("chooses check-repair for Merge anyway, whose refusal names check_change (PR #462)", () => {
     expect(chosen(merge("#462"))).toEqual({
+      ...chosen({ ...merge("#462"), sourceDiff: "" }),
       "tests/e2e/check-repair.spec.ts": [
         "scripts check_change, which words src/core/orchestrator/crewSupervisor.ts serves add or remove",
       ],
@@ -791,12 +800,12 @@ describe("words the core serves that a stand-in reads (INF-1255)", () => {
       ...real.sourceDiff.split("\n"),
       ...added.map((line) => `-${line.slice(1)}`),
     ].join("\n");
-    expect(chosen({ ...real, sourceDiff: moved })).toEqual({});
+    expect(chosen({ ...real, sourceDiff: moved })).toEqual(chosen({ ...real, sourceDiff: "" }));
     // The gate's own answer "checked" beside the tool's name is code, not words it serves.
     const repair = merge("#462");
     const header = repair.sourceDiff.slice(0, repair.sourceDiff.indexOf("@@"));
     const value = `${header}@@ -9653 +9653 @@\n-        return "checked";\n+        return "check_change";\n`;
-    expect(chosen({ ...repair, sourceDiff: value })).toEqual({});
+    expect(chosen({ ...repair, sourceDiff: value })).toEqual(chosen({ ...repair, sourceDiff: "" }));
   });
 });
 

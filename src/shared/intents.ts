@@ -50,6 +50,10 @@ export const INTENT_TABLE = {
     shows: "The record and its row read Starting.",
     settles: "A board or record snapshot showing the start.",
   },
+  finish: {
+    shows: "The record and its row show the explicit Done or Dismiss ending.",
+    settles: "A board or record snapshot with that ending, never merely a hidden card.",
+  },
   interrupt: {
     shows: "The record reads Stopping.",
     settles: "A board or record snapshot not running.",

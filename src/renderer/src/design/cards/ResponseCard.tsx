@@ -1,7 +1,6 @@
 import { REVIEW_FINDING_LABEL } from "@shared/cards";
 import type React from "react";
 import { Badge, type BadgeTone } from "../core/Badge";
-import { IconButton } from "../core/IconButton";
 import { ModelChip } from "../core/ModelChip";
 import { CardCorner } from "./CardSize";
 
@@ -82,20 +81,8 @@ export type ResponseCardProps = {
    * gap; the body keeps clear of the rest of it with its own spacer.
    */
   aside?: { node: React.ReactNode; width: number; ref?: React.Ref<HTMLDivElement> };
-  /** Top-right chrome close; not a declared card action. */
-  onClose?: () => void;
-  /** The close button itself, for a popover that hangs from it. */
+  /** The stage-owned corner button, for keyboard focus. */
   closeRef?: React.Ref<HTMLButtonElement>;
-  /** What the close says on rest beyond its name: where the closed card stays (INF-770). */
-  closeRest?: string | undefined;
-  /**
-   * Host chrome anchored under the close: the question a close asks first
-   * (design skill `components/cards/ResponseCard.prompt.md`). It is never
-   * a card action and never touches the action row.
-   */
-  closeAsk?: React.ReactNode;
-  /** The close is asking: the button says its popover is open. */
-  closeAsking?: boolean;
   children?: React.ReactNode;
   width?: number | string;
   minHeight?: number;
@@ -143,22 +130,6 @@ export type ResponseCardProps = {
   /** The owner may keep its body reading place across an in-session remount. */
   bodyRef?: React.Ref<HTMLDivElement>;
 };
-
-const closeIcon = (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M18 6 6 18M6 6l12 12" />
-  </svg>
-);
 
 const cardKinds: Record<ResponseCardKind, { label: string; tone: BadgeTone }> = {
   decision: { label: "Decision", tone: "accent" },
@@ -215,11 +186,7 @@ export function ResponseCard({
   comment,
   facts,
   aside,
-  onClose,
   closeRef,
-  closeRest,
-  closeAsk,
-  closeAsking,
   children,
   width = 560,
   minHeight = 340,
@@ -355,21 +322,7 @@ export function ResponseCard({
                   {model && <ModelChip label={model} />}
                 </span>
               )}
-              <CardCorner style={{ marginLeft: "auto" }}>
-                <span style={{ position: "relative", display: "inline-flex" }}>
-                  <IconButton
-                    ref={closeRef}
-                    label="Close"
-                    restWords={closeRest}
-                    onClick={onClose}
-                    aria-haspopup={closeAsk === undefined ? undefined : "dialog"}
-                    aria-expanded={closeAsk === undefined ? undefined : closeAsking === true}
-                  >
-                    {closeIcon}
-                  </IconButton>
-                  {closeAsk}
-                </span>
-              </CardCorner>
+              <CardCorner style={{ marginLeft: "auto" }} buttonRef={closeRef} />
             </div>
           ))}
       <div

@@ -1929,7 +1929,7 @@ export class FirstmateAgent {
     const card = this.pauseCard(accountId, pause);
     if (!fresh) {
       // The same pause: its card stands, revised in place if its words
-      // moved; one the captain dismissed stays down.
+      // moved, without recreating a card removed by a choice or withdrawal.
       this.options.supervisor.addFirstmatePauseCard(card, { reviseOnly: true });
       return;
     }
@@ -4218,6 +4218,7 @@ export class FirstmateAgent {
       .map((record) => {
         const entry = crew.get(record.id);
         const times = entry?.times ?? {};
+        const answer = this.options.supervisor.answerNoteForTask(record.id);
         const graph = this.indexGraphNote(record).replace(/^ \[|\]$/g, "");
         return {
           id: record.id,
@@ -4227,6 +4228,14 @@ export class FirstmateAgent {
             ...(record.kind === "work" ? {} : { kind: record.kind }),
             status: entry?.status ?? indexStatus(record),
             title: record.title,
+            ...(answer
+              ? {
+                  answer_waiting: {
+                    since: iso(answer.createdAt),
+                    completion: "Done in its record; time does not close it",
+                  },
+                }
+              : {}),
             repo:
               entry?.repoName ??
               (record.repoId ? this.options.repos.get(record.repoId)?.name : undefined) ??

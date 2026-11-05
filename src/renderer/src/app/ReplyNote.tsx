@@ -10,12 +10,10 @@ import "./replyNote.css";
 export function ReplyNoteCard({
   note,
   width,
-  onClose,
   onDrawn,
 }: {
   note: ReplyNote;
   width: number | string;
-  onClose: () => void;
   onDrawn?: () => void;
 }) {
   useLayoutEffect(() => {
@@ -27,7 +25,6 @@ export function ReplyNoteCard({
       headExtra={<h3 className="reply-note-heading">{CONVERSATION_HEADING}</h3>}
       width={width}
       minHeight={120}
-      onClose={onClose}
     >
       <ConversationMessages key={`${note.you}\0${note.words}`} note={note} />
     </ResponseCard>

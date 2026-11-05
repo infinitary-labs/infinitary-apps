@@ -1097,6 +1097,20 @@ describe("task records on the card stack", () => {
     expect(shell().unreadCardIds).toEqual([]);
     expect(shell().cardIndex).toBe(0);
   });
+  it("INF-1879: dismissing a question behind its shown record does not take focus from the record's minus", () => {
+    const shell = () => useShellStore.getState();
+    shell().applyCards([
+      card({ id: "question", title: "Choose when to review", status: "ready", actions: DECIDE }),
+    ]);
+    shell().openRecord("t1");
+    const before = shell().focusRequest;
+    // The Dismiss action removes its question before the retained record's next key.
+    shell().applyCards([]);
+    expect(shownCard(shell().cards, shell().cardIndex, [], shell().records)?.recordTaskId).toBe(
+      "t1",
+    );
+    expect(shell().focusRequest).toBe(before);
+  });
   it("returns input focus only when the final entry closes", () => {
     const shell = () => useShellStore.getState();
     shell().openRecord("t1");
@@ -3014,11 +3028,16 @@ describe("a panel's cards on the card stack (docs/ui-plugins.md, \"A panel's car
       shell().emitPanelCard("reading-list", { ...reader, id: `c${n}` }, false);
     }
     expect(() => shell().emitPanelCard("reading-list", reader, false)).toThrow(
-      `${PANEL_OPEN_CARDS_MAX} cards open`,
+      `${PANEL_OPEN_CARDS_MAX} cards open; close one with cards.close first`,
     );
     // A revision is not a new card, and another panel has its own bound.
     expect(shell().emitPanelCard("reading-list", { ...reader, id: "c0" }, false)).toBe("c0");
     expect(shell().emitPanelCard("notes", reader, false)).toBe("card-1");
+    // The refusal names the panel API that really frees its slot.
+    shell().closePanelCard("reading-list", "c0");
+    expect(shell().emitPanelCard("reading-list", { ...reader, id: "replacement" }, false)).toBe(
+      "replacement",
+    );
   });
 
   it("hides the shown card on Hide, and takes a panel's cards off with the panel", () => {

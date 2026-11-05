@@ -245,8 +245,9 @@ async function awaitTurnCommit(
 
 /**
  * A panel build's ordinary ending (INF-1677): its crewmate's one answering
- * note, with no actions, stays after the task closes; the captain's close
- * of it accepts the answer, and no answer retry ever reached the first mate.
+ * note, with no actions, stays after the task closes; putting it away as
+ * read acknowledges the already-completed build's message without ending
+ * work (INF-1879). No answer retry ever reaches the first mate.
  */
 async function acceptNote(page: Page, mockProvider: MockProviderServer): Promise<void> {
   const notes = () =>
@@ -265,14 +266,21 @@ async function acceptNote(page: Page, mockProvider: MockProviderServer): Promise
   const [note] = await notes();
   await page.evaluate((id) => window.infinitary.cards.close(id), note?.id ?? "");
   await expect.poll(notes).toEqual([]);
-  expect(
-    mockProvider
-      .requestBodies()
-      .some(
-        (body) =>
-          body.includes(ANSWER_MISSING_OPENING) || body.includes(ANSWER_MISSING_ENDED_OPENING),
-      ),
-  ).toBe(false);
+  const answerRetrySent = mockProvider
+    .requestBodies()
+    .some(
+      (body) =>
+        body.includes(ANSWER_MISSING_OPENING) || body.includes(ANSWER_MISSING_ENDED_OPENING),
+    );
+  expect(answerRetrySent).toBe(false);
+  console.log(
+    JSON.stringify({
+      intent: "INF-1879 completed workspace answer acknowledgement",
+      readNote: note?.id,
+      remainingCards: await notes(),
+      answerRetrySent,
+    }),
+  );
 }
 
 /** A PNG's width and height from its IHDR chunk. */
@@ -561,8 +569,8 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       await expect(statusLine(page, key)).toBeVisible({ timeout: 30_000 });
       await expect(panel().locator("[data-side-panel-running]")).toHaveCount(0);
       await expect(page.locator("[data-panel-draft]")).toHaveCount(0);
-      // The build ended the ordinary way (INF-1677): one answering note with
-      // no actions stays after the close, and closing it accepts the answer.
+      // The build already ended (INF-1677); its one answering note stays.
+      // Reading it acknowledges the message, not a new task ending.
       await acceptNote(page, mockProvider);
 
       // The record: done, finished, on the personal repo, with no worktree.

@@ -14,7 +14,7 @@ Putting up a card whose id is open revises it in place: its title, width and dat
 
 - The card's title at `--text-md`, `--fg-1`, weight 500, on one line that gives way with an ellipsis.
 - Who made the panel in mono `--text-xs` `--fg-3` right after it: `yours` for the captain's own, the maker's name for one the captain added, nothing for the app's own panels.
-- Hide, the surface's own cross (`IconButton`, label `Hide`), at the row's end, with the size control right before it (`ResponseCard.prompt.md`, "Maximize").
+- Hide, the shared minus (`IconButton`, label `Hide`), at the row's end, with the size control right before it (`ResponseCard.prompt.md`, "Maximize").
 
 **The body.**
 Under the row, the card's view in the side panel body's type: `--text-sm`, `--leading-body`, `--fg-2`, on the stack's ordinary surface with the card's own scroll.

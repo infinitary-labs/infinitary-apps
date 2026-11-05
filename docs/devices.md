@@ -489,7 +489,8 @@ The card is "Update Infinitary on Mac mini": both versions, what the gap costs o
 Its button is Update it, which opens Settings -> Devices with the update running (the `update` arrival), or Make the command for one too old to update from here.
 It is raised once per gap, with one feed line, and a reconnect that says the same raises nothing.
 Its answers carry the gap in their action ids (`update@<this>><that>`, `not-now@...`), so Not now and Update it hold across restarts for that gap only; this Mac or that computer changing version raises it again.
-The close control names no gap and holds for the gap on the stack.
+A legacy dismissed resolution names no gap and preserves its saved hold for the known gap.
+The current minus only puts the card aside, without recording Not now or a terminal resolution.
 A refused update (`device_update`, stage `refused`) raises the card once more with the refusal in its body.
 It comes down by itself, with one feed line, when that computer runs this Mac's version.
 The first mate's offer to update the same computer answers that the card is standing instead of making a second.

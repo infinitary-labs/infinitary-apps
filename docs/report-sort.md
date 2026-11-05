@@ -88,15 +88,19 @@ The report's receipt tells the crewmate so when no card is up as it reports.
 Only a ready card lists the task under "waiting on you"; without one, its record shows the latest report as the reason it is paused (FI3-702, `docs/task-record.md`).
 An undeclared note still holds nothing.
 The ladder still climbs past it, but what it sends names the newest note up on the task rather than claim no card is up (FI3-438): the nudge (`idleNoteNudgeText`) asks a crewmate whose outcome it is to declare its wait instead of posting it again, and the stall wake (`idle-stall` with `note`) tells the first mate the note is up and to steer it that way.
-The wait lasts until the crewmate's next turn starts (`TaskService.clearDeclaration` in `beginTurn`): the captain's close, a click, a reply or any steer starts one, and that turn's report declares it again if it still holds.
-The captain's close of a crewmate's card reaches its author as a steer (`card-closed`), and the author judges it (`buildCrewmateSystemPrompt`): read and finished, so `finished: true` (row 1a, which wakes the first mate to close it - `answered` for an answer, `released` with evidence, or discard with nothing to merge); still waiting, so `waiting_on_captain` again; or a passing note, so it carries on.
-Whether the captain read something is the crewmate's call, never the first mate's.
+The wait lasts until the crewmate's next turn starts (`TaskService.clearDeclaration` in `beginTurn`): a choice, reply or steer starts one, and that turn's report declares it again if it still holds.
+Putting a decision or pending note aside, or reading a marked saved answer, starts no turn and preserves its wait.
+Reading an ordinary note acknowledges it and starts its author's next turn through the existing durable path, clearing that declaration; the author reports finished if nothing remains.
+The minimize corner itself never declares work finished.
+A saved marked answer remains a captain-turn witness (`answerReady`) even after its note is read, until explicit Done on the note or its record; neither the idle clock nor a finished report takes that choice.
+The first mate’s crew context row carries the saved answer’s creation time and explicit Done receipt, so reading the note removes no answer witness and elapsed time does not rewrite that row.
+What remains after the acknowledgement is the crewmate's call, never the first mate's.
 
-**Finished wakes the first mate once, after the captain's close** (INF-731, the captain's "Send the 'crewmate finished' wake once per task, not once per reply").
-`finished` means the captain closed the crewmate's card, and on an answer task the first mate's `settle_task answered` is refused while a card of the crewmate's is up (`closeAnswerUsedAsBasis`), so each such wake asked for a close it could not make.
+**Finished wakes the first mate once, after an explicit acknowledgement** (INF-731, with the INF-1879 corner rule).
+`finished` is the crewmate’s declaration that nothing remains after the captain’s acknowledgement, and on an answer task the first mate's `settle_task answered` is refused while a card of the crewmate's is up (`closeAnswerUsedAsBasis`), so each such wake asked for a close it could not make.
 So a report that declares it while a card of its own is still on the captain's screen, a note included, is row 1: the captain's turn, no wake (`finishedCardUp`, kept apart from `decisionCardOpen` so a note alone never holds a report's turn).
 The captain's replies under that card each bring the crewmate a turn and a report, and none of them wakes the first mate; the receipt tells the crewmate so.
-The captain's close reaches the crewmate as its next turn (`card-closed`), whose report declares `finished` again with the card gone: row 1a, the one wake, and the first mate closes the task.
+An explicit message can reach the crewmate as its next turn, whose report declares `finished` with the card no longer holding a decision; a corner press never starts that turn.
 A request beside it (`needs_firstmate`) still wakes at row 0a, so a reply that needs the first mate reaches it.
 
 **A wait on work nobody has started is the first mate's turn** (FI3-671, captain-approved 2026-10-03).
@@ -242,7 +246,9 @@ The order is the rule's own:
 8. Otherwise nobody's turn, and the clock is read.
 
 **A gate change restarts the clock.**
-A `captain` gate placed or released on an idle record - a cap reached, a card answered or closed by the captain - is an act on it, so `idle_since` restarts there and the rungs start over: a card the captain closes without choosing gets its nudge ten minutes after the close, not on the next tick - and a crewmate's own card's close is that crewmate's next turn, so its clock runs from that turn's end.
+A `captain` gate placed or released on an idle record is an act on it, so `idle_since` restarts there and the rungs start over rather than firing on the next tick.
+An ordinary note read or duplicate closure notifies its live author; when that starts a turn, its idle clock runs from the turn's end.
+Putting a decision aside neither releases its gate nor starts an author turn, and reading a marked saved answer still waits for explicit Done.
 Rung 3 stays terminal.
 
 **The rungs.**
@@ -264,10 +270,10 @@ The ladder holds its clock at each tick the wake still waits (`InboxStore.holdsU
 - the first mate let two wakes go, so the work cannot move without the captain.
   Its title says how long ("<title> has been stuck for 1h 20m"), its body what the crewmate last said or the problem its last try ended in, what the ladder already did, what each button does, and that anything else goes in a reply.
   When its newest report declared a work wait, the body also says what it still waits on and the recovery attempts the first mate recorded since ("Self-resolving work waits" above).
-  **Nudge** is the nudge again with the captain's authority (host op `continue-task`, naming a note up as rung 1 does), **Keep waiting** has no effect and closes the card as the captain's close does, **Discard** is the host's `settle discard` with the unlanded-work guard, whose refusal names its ways like any settle refusal (INF-1670: the captain removed Drop task and left nuanced operations to the reply).
+  **Nudge** is the nudge again with the captain's authority (host op `continue-task`, naming a note up as rung 1 does), **Keep waiting** has no effect and explicitly closes the alert for this episode, while the minus only puts it aside with its gate still held, **Discard** is the host's `settle discard` with the unlanded-work guard, whose refusal names its ways like any settle refusal (INF-1670: the captain removed Drop task and left nuanced operations to the reply).
   A reply under it goes to the first mate, which answers in its thread (`docs/card-threads.md`, "The stuck alert's reply row").
   While it is up the task is the captain's turn and nothing repeats.
-  It leaves on a click, on the captain's close or Keep waiting (the keep: no more wakes or cards this episode, and the task's standing line stays), when the task moves (a new turn retires it, unless a reply under it still waits on the first mate's answer), or when the task closes.
+  It leaves on a choice or Keep waiting (putting it away keeps its card minimized; Keep waiting leaves no card this episode, and the task's standing line stays), when the task moves (a new turn retires it, unless a reply under it still waits on the first mate's answer), or when the task closes.
 
 **The first mate's closing note** (INF-547, the captain's choice of 2026-10-19) is the other card the host raises about work: started work the first mate closed without the captain's click, when it is the answer to the captain's message, at most one for each message (`docs/task-capture.md`, "How a message ends").
 It carries the first mate's own sentence, has no actions, places no gate, and no rung reads it (`docs/card-authoring.md`, "Work that closed without the captain's click").

@@ -74,7 +74,7 @@ function HomeScreen({phase,setPhase,cardIdx,setCardIdx,dismiss}){
     {showCards&&<div style={{position:"absolute",left:"50%",top:lift,transform:"translate(-50%,-50%)",transition:liftEase}}>
       <CardStack index={cardIdx} count={DEMO_CARDS.length} width={560}
         onPrev={()=>setCardIdx(Math.max(0,cardIdx-1))} onNext={()=>setCardIdx(Math.min(DEMO_CARDS.length-1,cardIdx+1))}>
-        <ResponseCard kind={card.kind} title={card.title} meta={card.meta} onClose={dismiss}
+        <ResponseCard kind={card.kind} title={card.title} meta={card.meta} onMinimize={dismiss}
           actions={card.actions.length>0?card.actions.map((a,i)=><Button key={a} variant={i===card.actions.length-1?"primary":"secondary"} onClick={dismiss}>{a}</Button>):undefined}>
           {card.body}
         </ResponseCard>

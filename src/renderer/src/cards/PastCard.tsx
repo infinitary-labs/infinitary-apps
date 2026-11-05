@@ -1,9 +1,8 @@
 import { anythingElseOf, type CardWidth, PAST_CARD_WORDS_LEAD, type PastCard } from "@shared/cards";
 import { pastCardEndingWords } from "@shared/pastCard";
 import type { FramePicture } from "@shared/plugins/bridge";
-import { HIDE_RECORD_LABEL } from "@shared/recordDrop";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Button, IconButton, MicroLabel } from "../design";
+import { Button, MicroLabel } from "../design";
 import { CardCorner } from "../design/cards/CardSize";
 import { ResponseCard } from "../design/cards/ResponseCard";
 import { RiskChart, riskBodyInset, riskChartBox } from "../design/cards/RiskChart";
@@ -45,22 +44,6 @@ export function usePastCard(cardId: string | undefined): PastRead | null {
   return read?.cardId === cardId ? read.value : { state: "loading" };
 }
 
-const closeIcon = (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M18 6 6 18M6 6l12 12" />
-  </svg>
-);
-
 const microText: React.CSSProperties = {
   fontFamily: "var(--font-mono)",
   fontSize: "var(--text-xs)",
@@ -98,7 +81,6 @@ export function PastCardColumn({
   width,
   size,
   surface = true,
-  onClose,
   onDrawn,
   onInteraction,
   onPicture,
@@ -108,7 +90,6 @@ export function PastCardColumn({
   width: number | string;
   size: CardWidth;
   surface?: boolean;
-  onClose: () => void;
   onDrawn?: () => void;
   onInteraction?: () => void;
   onPicture?: React.ComponentProps<typeof HtmlCardBody>["onPicture"];
@@ -177,11 +158,7 @@ export function PastCardColumn({
             <span data-past-ending="" {...endingCut} style={{ ...microText, flex: 1 }}>
               {strip}
             </span>
-            <CardCorner style={{ marginLeft: "auto" }}>
-              <IconButton label={HIDE_RECORD_LABEL} onClick={onClose}>
-                {closeIcon}
-              </IconButton>
-            </CardCorner>
+            <CardCorner style={{ marginLeft: "auto" }} />
           </div>
           <div
             data-past-title=""
@@ -343,12 +320,10 @@ export function PastThreadColumn({ past, width }: { past: PastCard; width: numbe
 /** A past card that could not be read, with Hide: the entry never traps the stage. */
 export function PastCardUnreadable({
   width,
-  onClose,
   loading,
   onDrawn,
 }: {
   width: number | string;
-  onClose: () => void;
   loading: boolean;
   /** The read settled as unreadable: this line is the entry's whole drawing. */
   onDrawn?: () => void;
@@ -361,7 +336,6 @@ export function PastCardUnreadable({
       title={loading ? "" : "This card could not be read"}
       meta="past card"
       width={width}
-      onClose={onClose}
       minHeight={120}
     >
       <div aria-busy={loading || undefined} style={{ minHeight: "var(--space-7)" }} />

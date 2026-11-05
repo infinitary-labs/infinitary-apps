@@ -1,7 +1,6 @@
 import { expect, type Locator, test } from "@playwright/test";
 import { renderAnswerShapeSection } from "../../src/core/orchestrator/intentBrief";
 import { renderWake } from "../../src/core/orchestrator/wakes";
-import { ANSWERED_LINE } from "../../src/core/tasks/taskFeed";
 import { reportSummary } from "../../src/shared/feed";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
@@ -41,6 +40,7 @@ import {
   answerMidTurn,
 } from "./scenarios/answerMidTurn";
 import {
+  ANSWER_READ_MARKER,
   ANSWER_TASK_PROMPT_MARKER,
   answerTask,
   MOCK_ANSWER_ACTION_LABEL,
@@ -49,7 +49,7 @@ import {
   MOCK_ANSWER_REPORT,
 } from "./scenarios/answerTask";
 import { OWN_RENT_CARD_TITLE, OWN_RENT_TITLE, ownRentAnswer } from "./scenarios/ownRentAnswer";
-import { expectNoCard, shownCard, shownEntry } from "./stack";
+import { cardLeave, cardReply, expectNoCard, shownCard, shownEntry } from "./stack";
 
 /**
  * The deliverable axis (crew-posture rationalization Task B, captain
@@ -214,81 +214,59 @@ test("an answer task is briefed as shipping nothing, waits on its card, and clos
 });
 
 /**
- * The captain's close of the answer card is not a choice (FI3-435, his
- * answer "Send it to the crewmate like every other card"): it reaches the
- * crewmate that wrote it, which judges the answer read and reports it
- * finished. A decision closed without a choice does not answer the
- * captain's message (INF-1610 piece 2, the captain's "closed: split"), so
- * that report is refused once; the crewmate says why it has no more to
- * show, and the Firstmate closes the task answered on that report.
- * Its own app, so it owns every prerequisite.
+ * INF-1879: putting the answer plan away neither chooses for the captain
+ * nor ends its task. Reopening it preserves the explicit choice, whose
+ * completion still writes the task's own answered line (INF-1845).
+ * Its own app owns every prerequisite.
  */
-test("closing the answer card reaches its crewmate, which reports it finished, and Firstmate closes it answered", async () => {
+test("INF-1879: putting an answer plan away keeps its choices and task alive until an explicit choice", async () => {
   const own = await launchApp({
     withMockProvider: true,
-    scenarios: [ownRentAnswer, answerTask],
-    userDataDir: scratchDir("infinitary-answer-close-"),
+    scenarios: [answerTask],
+    userDataDir: scratchDir("infinitary-answer-put-away-"),
   });
+  const { page } = own;
   try {
-    const { page, mockProvider } = own;
-    const title = "why the gauge drifts";
-    const input = promptInput(page);
-    await input.click();
-    await input.fill(`${ANSWER_TASK_PROMPT_MARKER} ${title}`);
-    await input.press("Enter");
+    await promptInput(page).fill(`${ANSWER_TASK_PROMPT_MARKER} why does the meter idle?`);
+    await promptInput(page).press("Enter");
     await expect(shownCard(page, MOCK_ANSWER_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
-    const board = await page.evaluate(() => window.infinitary.tasks.board());
-    const row = board.tasks.find((task) => task.title === title);
-    if (!row) throw new Error("the answer task never reached the board");
-    const detail = async (): Promise<TaskDetail> =>
-      page.evaluate((id) => window.infinitary.tasks.detail(id), row.id);
-
-    // Its card up: waiting on the captain.
-    await expandDock(page, "now");
-    const waiting = nowFrame(page).locator('[data-now-group="waiting"]');
-    await expect(waiting.locator(`[data-now-key="${row.key}"]`)).toBeVisible({ timeout: 30_000 });
-    await page.screenshot({ path: test.info().outputPath("answer-close-before.png") });
-
-    // The captain closes the card without choosing.
-    await shownEntry(page).locator('button[aria-label="Close"]').first().click();
-    await expectNoCard(page, MOCK_ANSWER_CARD_TITLE);
-
-    // The close reached the crewmate as its next turn; it reported the
-    // answer read and finished, was asked once for the answer, said why it
-    // had none more; the Firstmate closed the task on that.
-    await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
-      status: "done",
-      closedReason: "answered",
-    });
-    const { events } = await detail();
-    expect(events).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ kind: "steered", actor: "captain" }),
-        expect.objectContaining({
-          kind: "report",
-          text: MOCK_ANSWER_FINISHED_AGAIN,
-          actor: "crewmate",
-        }),
-      ]),
-    );
-    // In that order: the close, then the crewmate's word.
-    const steered = events.findIndex(
-      (event) => event.kind === "steered" && event.actor === "captain",
-    );
-    const reported = events.findIndex((event) => event.text === MOCK_ANSWER_FINISHED_AGAIN);
-    expect(steered).toBeGreaterThanOrEqual(0);
-    expect(reported).toBeGreaterThan(steered);
+    const card = (await page.evaluate(() => window.infinitary.cards.list())).find(
+      (card) => card.title === MOCK_ANSWER_CARD_TITLE,
+    )!;
+    await cardLeave(page).click();
+    await expect(shownCard(page, MOCK_ANSWER_CARD_TITLE)).toBeHidden();
     expect(
-      (mockProvider?.requestBodies() ?? []).some(
-        (body) => body.includes("You are a crewmate") && body.includes(CARD_CLOSED_STEER_NEEDLE),
+      await page.evaluate((id) => window.infinitary.tasks.detail(id), card.taskId!),
+    ).toMatchObject({ status: "active", closedReason: null });
+    expect(
+      providerMessages((own.mockProvider?.requestBodies() ?? []).at(-1) ?? "{}").some((message) =>
+        message.text.includes("The captain closed your card"),
       ),
-    ).toBe(true);
-    // A finished report writes no line of its own (INF-1845): Activity
-    // shows the task's own close after it, the answer with no choice.
-    await expect(statusLine(page, row.key).filter({ hasText: ANSWERED_LINE })).toBeVisible({
-      timeout: 30_000,
+    ).toBe(false);
+    const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), card.taskId!);
+    await expandDock(page, "now");
+    await pressRow(page, detail.key);
+    await expect(shownCard(page, MOCK_ANSWER_CARD_TITLE)).toBeVisible();
+    await shownEntry(page).getByRole("button", { name: MOCK_ANSWER_ACTION_LABEL }).click();
+    await expect
+      .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), card.taskId!))
+      .toMatchObject({ status: "done", closedReason: "answered" });
+    // INF-1845: an explicit choice closes with its chosen label; plain Answered is for a close without a choice.
+    await expect(
+      statusLine(page, detail.key).filter({ hasText: MOCK_ANSWER_ACTION_LABEL }),
+    ).toBeVisible({ timeout: 30_000 });
+    const closed = await page.evaluate((id) => window.infinitary.tasks.detail(id), card.taskId!);
+    await test.info().attach("explicit-choice-closed-task", {
+      body: JSON.stringify({
+        id: closed.id,
+        key: closed.key,
+        status: closed.status,
+        closedReason: closed.closedReason,
+      }),
+      contentType: "application/json",
     });
-    await expect(waiting.locator(`[data-now-key="${row.key}"]`)).toHaveCount(0);
+    const waiting = nowFrame(page).locator('[data-now-group="waiting"]');
+    await expect(waiting.locator(`[data-now-key="${detail.key}"]`)).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath("answer-close-after.png") });
   } finally {
     await own.close();
@@ -388,9 +366,9 @@ test("a choice on an answer task's consent card resumes its crewmate, and the an
 });
 
 /**
- * FI3-1581: the captain closes the crewmate's answer card. Firstmate puts a
- * note on that task and, in the same turn, closes the task answered. The
- * note stays, because the captain has not closed it.
+ * FI3-1581: the captain acknowledges the answer in its thread. Firstmate
+ * puts a note on that task and, in the same turn, settles it answered. The
+ * note stays because the captain has not read it; the corner ends no task.
  */
 test("a Firstmate note on an answer task stays up after settle_task answered", async () => {
   const own = await launchApp({
@@ -412,7 +390,8 @@ test("a Firstmate note on an answer task stays up after settle_task answered", a
     const detail = async (): Promise<TaskDetail> =>
       page.evaluate((id) => window.infinitary.tasks.detail(id), row.id);
 
-    await shownEntry(page).locator('button[aria-label="Close"]').first().click();
+    await cardReply(page).field.fill(ANSWER_READ_MARKER);
+    await cardReply(page).send.click();
     await expectNoCard(page, MOCK_ANSWER_CARD_TITLE);
     await expect(shownCard(page, OWN_RENT_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
     await expect.poll(detail, { timeout: 30_000 }).toMatchObject({

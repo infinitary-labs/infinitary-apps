@@ -1,5 +1,5 @@
 The body of a task's record card.
-Its top row is the status pill, the reason beside it, and the task key, then close; the title sits alone beneath at `--text-lg`, the decision card's title size.
+Its top row is the status pill, the reason beside it, and the task key, then the shared minimize minus; the title sits alone beneath at `--text-lg`, the decision card's title size.
 The pill uses the shared eight-state task mark and word (`components/now/NowPanel`, Shared task status).
 The whole pill tints for Waiting on you (`accent`) or Interrupted/failed Dropped (`danger`); its mark never changes because of tint.
 The key gives way (ellipsis).
@@ -71,7 +71,7 @@ Cancel, or hiding the record card, writes nothing.
 A click is pending until the record moves under it, and competing buttons disable immediately.
 A refusal is an inline line under the row and writes nothing.
 Tab reaches the buttons in the order shown.
-The top-right cross is `Hide`: it dismisses the record card and never drops the task; the size control stands right before it (`ResponseCard.prompt.md`, "Maximize"), and a maximized record restores on Esc before a later Esc hides it.
+The top-right minus is `Hide`: it puts the record card away and never drops the task; the size control stands right before it (`ResponseCard.prompt.md`, "Maximize"), and a maximized record restores on Esc before a later Esc hides it.
 Every other write to a task happens by talking to the first mate while the card is shown (only the shown entry hints the turn).
 
 Waiting uses only `waitingCardId`, the reachable shown ready decision on a live task, not `flags.needsYou` (broader attention).
@@ -125,7 +125,7 @@ Inside a row, only Activity's `Show earlier · N` link, the Activity lines that 
 
 **The Cards tab** (FI3-579 direction A, the captain's 3 "a Cards row on the task's record"; a tab since INF-2261).
 Its label is `Cards`, with the count in mono, and it sits between Info and Activity; it is absent when the task never showed a card.
-Open, it lists every card the task showed - the open ones and every closed one, those closed with the cross, those withdrawn and those taken down when the task ended - newest first, one line each, in the Activity line's grid: the kind in mono (`Decision` or `Note`), the title as a link in `--accent` (ellipsis, full title on hover), and how it ended in `--text-xs` `--fg-3` with its short age (`You chose Approve and build · 4h`, `Closed without choosing · 2h`, `Withdrawn by its author`, `Taken down when the task ended`).
+Open, it lists every card the task showed - the open ones and every past one, including ordinary notes read, older closed decisions, cards withdrawn and cards taken down when the task ended - newest first, one line each, in the Activity line's grid: the kind in mono (`Decision` or `Note`), the title as a link in `--accent` (ellipsis, full title on hover), and how it ended in `--text-xs` `--fg-3` with its short age (`You chose Approve and build · 4h`, `Closed without choosing · 2h`, `Withdrawn by its author`, `Taken down when the task ended`).
 A card still open - a folded seen note included - reads `On the stage` and no age, and its link focuses that live card, never a past copy.
 Every closed card's link brings it forward through the shared show-card door, the one the first mate uses, as the read-only past card (`ResponseCard`, Past card); the row writes nothing and shows no button of its own.
 The Cards tab is the same on closed and open records.
@@ -168,7 +168,7 @@ The line keeps the Activity grid and ends with `from SCR-6` in mono `--text-xs` 
 Nothing folds under such a line, and it never stands as Now.
 
 ```jsx
-<ResponseCard kind="record" title="Refactor the auth middleware" meta="FM3K-9 · working" onClose={onClose}>
+<ResponseCard kind="record" title="Refactor the auth middleware" meta="FM3K-9 · working" onMinimize={onMinimize}>
   <TaskRecord record={{goal:"The middleware has one code path and the suite is green.",userWords:"commission a crewmate: refactor the auth middleware",
     blockedBy:[],blocks:["FM3K-11"],children:{total:1,closed:0},
     events:[{id:1,at:Date.now()-900000,text:"created"},{id:2,at:Date.now()-800000,text:"dispatched to crewmate 1"},{id:3,at:Date.now(),text:"Steady as she goes.",report:"Steady as she goes. 14 files changed, tests green."}],
@@ -186,6 +186,10 @@ Resident memory counts shared pages once per process and is not the computer’s
 A declared heavy run adds a separate Run cell beside Use, in the same cell type and mono value, without another panel, meter or control.
 It names the computer, waiting or running, the reason or runs ahead while waiting, and processor and memory amounts explicitly marked declared.
 Unavailable remote run facts say Run status unavailable on that computer, rather than showing the old state as current or implying completion.
+
+The shared minimize corner only hides the record, never ends its task (`src/shared/cardLeave.ts`).
+A saved marked answer offers Done in the next slot, with its waiting age, even after its note was put away.
+A task-less first mate question offers explicit Dismiss beside Show the card.
 
 ## Recorded wait details
 

@@ -11,7 +11,7 @@ import { cardBody } from "./frames";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { mockProviderOverrideModelsJson } from "./mockProvider";
-import { expectNoCard, shownCard } from "./stack";
+import { cardLeave, expectNoCard, shownCard } from "./stack";
 
 test("selecting a base Ollama model creates a hidden alias and serves a visible card", async () => {
   const model = await startOllamaFixture((request) =>
@@ -126,7 +126,7 @@ test("Retry replays the ask, and a successful operation ends on its answer card"
     // The answer card hides the Firstmate's frame; its turn has still ended.
     await waitForFirstmateIdle(app.page);
     await expectNoCard(app.page, FIRSTMATE_FAILURE_TITLE);
-    await app.page.getByRole("button", { name: "Close", exact: true }).click();
+    await cardLeave(app.page).click();
     phase = "operate";
     await askFirstmate(app.page, "switch to the light theme");
     await expect(app.page.locator("body")).toHaveAttribute("data-theme", "light");

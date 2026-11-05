@@ -154,6 +154,7 @@ export type TaskProtocolOptions = {
   /** The open card stack: which decision card a task waits on. */
   cards: {
     listOpen(): Card[];
+    answerNoteForTask?(taskId: string): Card | undefined;
     snapshot(): Card[];
     /** Every card a task showed, newest first (the record's Cards row); `extraIds` are ones its timeline names. */
     forTask?(taskId: string, extraIds: readonly string[]): TaskCardRow[];
@@ -1334,12 +1335,14 @@ export class TaskProtocol {
       ? undefined
       : graph.decisionCards.get(record.id);
     const waitingCardId = waitingCard?.id ?? null;
+    const answerNote = this.options.cards.answerNoteForTask?.(record.id);
     // A declaration remains an operational hold, not proof that a ready
     // decision is available to the captain (FI3-702).
     const captainWait = record.status === "active" && Boolean(record.delivery?.captainWait);
     const needsYou =
       !TaskService.isClosed(record) &&
-      (waitingCardId !== null ||
+      (answerNote !== undefined ||
+        waitingCardId !== null ||
         captainWait ||
         graph.durableDecisions.has(record.id) ||
         gateCard !== null ||
@@ -1408,6 +1411,7 @@ export class TaskProtocol {
         ? reportHeadline(record.outcome, record.outcomeSummary)
         : record.outcomeSummary,
       waitingCardId,
+      ...(answerNote ? { answerNoteId: answerNote.id, answerSince: answerNote.createdAt } : {}),
       ...(record.delivery?.captainAction
         ? {
             requiredAction: {
@@ -1457,7 +1461,11 @@ export class TaskProtocol {
       if (TaskService.isClosed(record)) continue;
       const view = viewed.get(record.id) ?? this.viewOf(record, graph);
       if (view.flags.needsYou) entry.needsYou += 1;
-      if (view.waitingCardId || (view.requiredAction && view.status === "open"))
+      if (
+        view.answerNoteId ||
+        view.waitingCardId ||
+        (view.requiredAction && view.status === "open")
+      )
         entry.waitingOnYou += 1;
     }
     // Scratch first, then repo projects oldest first: a stable order a

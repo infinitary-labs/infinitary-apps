@@ -8,6 +8,7 @@ import { writeMockClaudeClient } from "./mockClaudeClient";
 import { MOCK_COMPLETION_TEXT } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine, taskKey } from "./rails";
+import { cardLeave } from "./stack";
 
 /**
  * Phase 1 acceptance (docs/architecture.md §17): walk the shell states
@@ -65,7 +66,7 @@ for (const theme of themes) {
       );
       // The fake e2e voice model cannot transcribe; close the quiet error
       // notice if it surfaced.
-      const close = page.getByRole("button", { name: "Close", exact: true });
+      const close = cardLeave(page);
       if (await close.isVisible().catch(() => false)) {
         await close.click();
       }

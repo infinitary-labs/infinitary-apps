@@ -60,9 +60,7 @@ const past: PastCard = {
 
 function column(card: PastCard): Node {
   return parseDocument(
-    renderToStaticMarkup(
-      <PastCardColumn past={card} theme="dark" width="100%" size="regular" onClose={() => {}} />,
-    ),
+    renderToStaticMarkup(<PastCardColumn past={card} theme="dark" width="100%" size="regular" />),
   ) as unknown as Node;
 }
 
@@ -137,7 +135,7 @@ describe("a past card on the stage", () => {
 
   it("draws the body in a sandboxed frame and no reply row", () => {
     const html = renderToStaticMarkup(
-      <PastCardColumn past={past} theme="dark" width="100%" size="regular" onClose={() => {}} />,
+      <PastCardColumn past={past} theme="dark" width="100%" size="regular" />,
     );
     const root = parseDocument(html) as unknown as Node;
     const frames = find(root, (n) => n.name === "iframe");

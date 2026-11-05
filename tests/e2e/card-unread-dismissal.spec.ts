@@ -5,7 +5,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { windowShot } from "./pictures";
 import { readSavedData } from "./savedData";
-import { expectUpdateSeen, pagerAt, shownCard, shownEntry, stageAtRest } from "./stack";
+import { cardLeave, expectUpdateSeen, pagerAt, shownCard, shownEntry, stageAtRest } from "./stack";
 
 const titles = [
   "The launch review is ready",
@@ -69,12 +69,12 @@ for (const reload of [false, true]) {
         await expect(shownCard(page, titles[1])).toBeVisible();
       }
       await stageAtRest(page);
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+      await cardLeave(page, shownEntry(page)).click();
       await expect(shownCard(page, titles[2])).toBeVisible();
       await expect(pagerAt(page, 2, 2)).toBeVisible();
       await stageAtRest(page);
       await windowShot(page, testInfo.outputPath("unvisited-selected.png"));
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+      await cardLeave(page, shownEntry(page)).click();
       await expect(shownCard(page, titles[0])).toBeVisible();
       await stageAtRest(page);
       await windowShot(page, testInfo.outputPath("read-card-fallback.png"));

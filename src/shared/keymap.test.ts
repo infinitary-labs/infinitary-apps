@@ -61,6 +61,16 @@ describe("reading what is saved", () => {
     expect(readSavedKeymap(kept)).toEqual({ saved: kept, unreadable: false });
   });
 
+  it("INF-1879: drops a saved Close binding without assigning its old effect elsewhere", () => {
+    const before = saved({
+      "cards.close": [{ key: "w", meta: true, shift: true }],
+      "cards.minimize": [{ key: "m", meta: true, shift: true }],
+    });
+    expect(readSavedKeymap(before).saved.keys).toEqual({
+      "cards.minimize": before.keys["cards.minimize"],
+    });
+  });
+
   it("carries a key saved under a retired command to the panel command that took it over", () => {
     // The catalog's `tasks.*` are the Tasks panel folder's own commands now.
     const before = saved({
@@ -122,7 +132,7 @@ describe("the keys a command may take", () => {
     expect(bindingProblem({ key: "ArrowUp", meta: true }, "message.recall")).toMatch(/arrow keys/);
     expect(bindingProblem({ key: "Dead", alt: true }, "commands.search")).toMatch(/accent/);
     expect(bindingProblem({ key: "q", meta: true }, "commands.search")).toBe("⌘Q quits Infinitary");
-    expect(bindingProblem({ key: "w", meta: true }, "cards.close")).toBe("⌘W closes the window");
+    expect(bindingProblem({ key: "w", meta: true }, "cards.maximize")).toBe("⌘W closes the window");
     expect(bindingProblem({ key: "z", meta: true, shift: true }, "cards.next")).toBe("⇧⌘Z redoes");
     expect(bindingProblem({ key: "a", ctrl: true }, "message.delete-to-line-start")).toBe(
       "⌃A moves to the start of the line",
@@ -216,7 +226,7 @@ describe("clashes", () => {
     );
     // Two two-key shortcuts may share their first key.
     expect(
-      clashesWith(twoKeys, "cards.close", { key: "j", meta: true, second: { key: "w" } }),
+      clashesWith(twoKeys, "cards.maximize", { key: "j", meta: true, second: { key: "w" } }),
     ).toEqual([]);
   });
 });
@@ -361,7 +371,7 @@ describe("changes Keyboard settings makes", () => {
     );
     expect(withCatalogKeys(changed, "commands.search")).toEqual(DEFAULT_SAVED_KEYMAP);
     // A command chosen by name has no key to remove.
-    expect(withKeys(DEFAULT_SAVED_KEYMAP, "cards.close", [])).toEqual(DEFAULT_SAVED_KEYMAP);
+    expect(withKeys(DEFAULT_SAVED_KEYMAP, "cards.maximize", [])).toEqual(DEFAULT_SAVED_KEYMAP);
   });
 
   it("resets every command it knows and keeps the ones it does not", () => {

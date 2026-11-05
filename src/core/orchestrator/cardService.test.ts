@@ -10,10 +10,11 @@ import {
 } from "@shared/cards";
 import { currentCheckSummary } from "@shared/checkSnapshot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { CardStore } from "../storage/cardStore";
-import { openDatabase, openInMemoryDatabase } from "../storage/db";
+import { openDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
@@ -124,6 +125,46 @@ describe("CardService", () => {
     expect(cardStore.past(id)?.answers).toEqual(answers);
     expect(cardStore.chosenAction(id)).toBe("start");
     cards.dispose();
+  });
+
+  // INF-1879 sweep regression / INF-1677: reading a completed workspace
+  // build's answer still acknowledges its message, without ending any task.
+  it("acknowledges a completed panel build's read note without changing its task", () => {
+    const { db, tasks, make } = setup();
+    seedTask(tasks, {
+      id: "panel",
+      title: "Build the Tokyo clock panel",
+      status: "running",
+      shape: { kind: "implement", deliverable: "change" },
+    });
+    tasks.openAsk({ id: "panel-ask", text: "Make me a Tokyo clock panel." });
+    tasks.attachAsk("panel-ask", "panel", "tool:spawn_crewmate");
+    const cards = make(undefined, (card, response) => {
+      expect(db.inTransaction).toBe(true);
+      expect(response).toBe("close");
+      tasks.acceptAnswer(["panel-ask"], card.id);
+    });
+    try {
+      const id = cards.emitCrewmateCard(
+        "panel",
+        {
+          title: "The Tokyo clock panel is ready",
+          body: "<p>The panel shows the time in Tokyo beside your activity.</p>",
+          answering: true,
+          actions: [],
+        },
+        "model",
+      );
+      cards.closeOut({ kind: "crewmate", taskId: "panel" }, "report");
+      tasks.close("panel", { status: "done", reason: "finished", actor: "host" });
+      const completed = tasks.get("panel");
+      expect(tasks.getAsk("panel-ask")?.acceptedAt).toBeNull();
+      cards.dismiss(cards.get(id) as Card);
+      expect(tasks.getAsk("panel-ask")?.answerCardId).toBe(id);
+      expect(tasks.get("panel")).toEqual(completed);
+    } finally {
+      cards.dispose();
+    }
   });
 
   // INF-2242: a script firing a declared action is not the captain accepting an answer.
@@ -1071,34 +1112,30 @@ describe("CardService", () => {
     expect(cardStore.awaitingAuthor(asked)).toBe(false);
   });
 
-  it("keeps a replied-under card the captain closed closed through its crewmate's answer, until that crewmate closes out", () => {
+  it("INF-1879: keeps a replied-under decision open while put away and returns its answer at close-out", () => {
     const { tasks, make, cardStore } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
-    seedTask(tasks, { id: "t2", title: "Other work", status: "idle" });
     const cards = make();
-    const asked = cards.emitCrewmateCard("t1", decision, "m");
-    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
-    const ids = () => cards.snapshot().map((card) => card.id);
-    cards.addMessage(asked, "captain", "why not left?");
-    expect(ids()).toEqual([asked]);
-
-    // The captain closes the lone card while its crewmate works on the answer.
-    cards.dismiss(cards.shown(asked) as Card);
-    expect(ids()).toEqual([]);
-    // The answer it was writing - a revision under the same id - opens nothing.
-    const answer = { ...decision, id: asked, body: "<p>Left races the queue.</p>" };
-    expect(() => cards.emitCrewmateCard("t1", answer, "m")).toThrow(/captain closed card/);
-    // Another crewmate's close-out leaves the refusal standing.
-    cards.closeOut({ kind: "crewmate", taskId: "t2" }, "report");
-    expect(() => cards.emitCrewmateCard("t1", answer, "m")).toThrow(/captain closed card/);
-    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
-    expect(ids()).toEqual([]);
-    expect(cardStore.listOpen().map((card) => card.id)).toEqual([]);
-
-    // After its close-out the crewmate may raise the id again, a new card, as for any closed card.
-    cards.emitCrewmateCard("t1", answer, "m");
-    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
-    expect(ids()).toContain(asked);
+    const id = cards.emitCrewmateCard("t1", decision, "m");
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
+    const question = cards.addMessage(id, "captain", "why not left?");
+    cards.dismiss(cards.shown(id) as Card);
+    expect(cards.shown(id)?.minimized).toBe(true);
+    expect(cardStore.chosenAction(id)).toBeUndefined();
+    cards.emitCrewmateCard(
+      "t1",
+      { ...decision, id, body: "<p>Left races the queue.</p>", reply: "Left races the queue." },
+      "m",
+    );
+    cards.replyFromCrewmate("t1", {
+      cardId: id,
+      text: "Left races the queue.",
+      answersMessage: question.id,
+    });
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
+    expect(cards.shown(id)).toMatchObject({ body: "<p>Left races the queue.</p>" });
+    expect(cards.shown(id)?.minimized).toBeUndefined();
+    expect(cardStore.listOpen().map((card) => card.id)).toEqual([id]);
   });
 
   it("lets a crewmate revise a card the captain closed when no reply of his waited on it", () => {
@@ -1675,6 +1712,34 @@ describe("CardService", () => {
  * observation beside it, read back through the store's typed reader.
  */
 describe("CardService evidence", () => {
+  // INF-1879: only the question's explicit Dismiss ends it; retain that captain action in its history.
+  it("records the explicit question Dismiss, not its presentation-only corner, as an exit", () => {
+    const { tasks, cardStore, make } = setup();
+    const cards = make();
+    const id = cards.addFirstmateCard({ ...decision, id: "card-fm-launch-review" });
+    const question = tasks.fileDecision({ id: "launch-review", title: decision.title, cardId: id });
+    try {
+      cards.dismiss(cards.shown(id) as Card);
+      expect(tasks.get(question.id)?.status).toBe("open");
+      expect(cardStore.observations(id).filter((entry) => entry.kind === "exit")).toEqual([]);
+      expect(cards.dismissQuestion(question.id)).toBeUndefined();
+      expect(tasks.get(question.id)).toMatchObject({
+        status: "dropped",
+        closedReason: "cancelled",
+      });
+      expect(cardStore.observations(id).filter((entry) => entry.kind === "exit")).toEqual([
+        expect.objectContaining({
+          actor: "captain",
+          source: "host",
+          payload: { reason: "dismissed" },
+        }),
+      ]);
+      expect(cards.shown(id)).toBeUndefined();
+    } finally {
+      cards.dispose();
+    }
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -1990,7 +2055,12 @@ describe("CardService evidence", () => {
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
     seedTask(tasks, { id: "t2", title: "Other", status: "idle" });
     const cards = make();
-    const dismissed = cards.addFirstmateCard({ ...decision, id: "fm-d", taskId: "t1" });
+    const dismissed = cards.addFirstmateCard({
+      ...decision,
+      actions: [],
+      id: "fm-d",
+      taskId: "t1",
+    });
     const withdrawn = cards.addFirstmateCard({ ...decision, id: "fm-w", taskId: "t1" });
     const duplicate = cards.addFirstmateCard({ ...decision, id: "fm-dup", taskId: "t1" });
     cards.addAuthDecisionCard("card-auth-x", "Codex", "Sign in again.");
@@ -2024,7 +2094,12 @@ describe("CardService evidence", () => {
     const cards = make();
     const chosen = cards.addFirstmateCard({ ...decision, id: "fm-c", taskId: "t1" });
     clock += 10;
-    const dismissed = cards.addFirstmateCard({ ...decision, id: "fm-d", taskId: "t1" });
+    const dismissed = cards.addFirstmateCard({
+      ...decision,
+      actions: [],
+      id: "fm-d",
+      taskId: "t1",
+    });
     clock += 10;
     const withdrawn = cards.addFirstmateCard({ ...decision, id: "fm-w", taskId: "t1" });
     clock += 10;
@@ -2047,7 +2122,7 @@ describe("CardService evidence", () => {
       [scripted, "closed", "decision", "Your first mate chose Left"],
       [open, "open", "decision", null],
       [withdrawn, "closed", "decision", "Withdrawn by its author"],
-      [dismissed, "closed", "decision", "Closed without choosing"],
+      [dismissed, "closed", "note", "Closed without choosing"],
       [chosen, "closed", "decision", "You chose Right"],
     ]);
   });
@@ -2168,7 +2243,7 @@ describe("CardService evidence", () => {
     cards.retireTaskCards("t1", "merged");
     expect(cardStore.observations(id).length).toBeGreaterThan(0);
 
-    const taskless = cards.addFirstmateCard({ ...decision, id: "fm-free" });
+    const taskless = cards.addFirstmateCard({ ...decision, actions: [], id: "fm-free" });
     cards.dismiss(cards.shown(taskless) as Card);
     const open = cards.addFirstmateCard({ ...decision, id: "fm-open" });
     cards.purgeTask("t1");
@@ -2524,7 +2599,12 @@ describe("CardService past cards", () => {
       return id;
     };
 
-    const dismissed = emit("dismissed");
+    const dismissed = cards.emitCrewmateCard(
+      "t1",
+      { ...decision, actions: [], title: "Read note" },
+      "m",
+    );
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     expect(cards.past(dismissed)).toBeUndefined();
     cards.dismiss(cards.shown(dismissed) as Card);
     expect(cards.past(dismissed)?.ending).toMatchObject({ how: "dismissed", by: "captain" });

@@ -31,9 +31,10 @@ Pass events oldest→newest.
 Optional `max` keeps only the most recent N rows; omit it so history can fill the column.
 In the app this is the Activity panel's folder (`src/panels/activity/`), drawn in a page of its own, not this JSX; the look is the same.
 
-**Closing a card with the cross writes one line** (FI3-579, the captain's 5 "yes"), the one place the captain learns where the card went: `You closed "<title>". It stays on FI3-569's record.` (the key of the task the card is about, a first mate decision's own record included).
-A card with no record to point at keeps the plain `captain dismissed the card "<title>".`.
-A choice, a merge, a withdrawal or the app taking a card down writes no such line (a merge already has its own), and opening the card again from the Cards row (`components/cards/TaskRecord`) writes none.
+**Putting a card away writes no closing feed line.**
+The shared minus selects no choice or refusal and writes neither `You closed` nor `captain dismissed`.
+The saved card remains accessible from its record, and opening it again from the Cards row (`components/cards/TaskRecord`) writes no feed line.
+Choices, merges, withdrawals and host outcomes keep their own existing reporting paths, not a corner-generated closing line.
 
 ## Line hover (INF-1761, approved direction A)
 

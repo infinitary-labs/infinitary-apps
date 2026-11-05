@@ -39,7 +39,8 @@ Ask the first mate to add a runbook from a full folder path, a git address (opti
 `PluginInstaller` uses the existing source fetcher, plain-file copy and source pin, staging records and host consent effects.
 A top-level `runbook.json` chooses guidance admission rather than panel compilation; `PluginRecords` owns both kinds in the same table and installed folder root.
 Existing saved records remain panels.
-Nothing is served until the captain chooses Add it on the host's card, and closing or declining removes the staged files.
+Nothing is served until the captain chooses Add it on the host's card; Don't add declines and removes the staged files.
+Putting the card aside keeps the staged offer pending without serving or declining it.
 Every runbook update asks again, because new guidance or a different replacement changes what the agents follow even when no panel grant changes.
 The card names the source, author, guidance reach and any built-in it turns off.
 Adding leaves one feed line, including that replacement; the built-in stays available to turn back on.

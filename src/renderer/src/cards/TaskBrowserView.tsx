@@ -561,7 +561,6 @@ function usePageRoom(
 export function TaskBrowserView({
   taskId,
   from,
-  onClose,
   onDrawn,
 }: {
   taskId: string;
@@ -572,7 +571,6 @@ export function TaskBrowserView({
    * that browser is no longer the task's.
    */
   from?: { cardId: string; session?: string; generation?: number };
-  onClose: () => void;
   onDrawn: () => void;
 }) {
   const [detail, setDetail] = useState<TaskDetail | null>(null);
@@ -727,7 +725,6 @@ export function TaskBrowserView({
             captain={captain}
           />
         }
-        onClose={onClose}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+import { cardCornerOf } from "@shared/cardLeave";
 import {
   CARD_FILES_FIRST,
   type Card,
@@ -149,10 +150,8 @@ import {
 } from "../plugins/frames/frameController";
 import { giveFocusBack } from "../plugins/frames/frameFocus";
 import { useCardKind } from "../plugins/host";
-import { type CloseAsk, CloseQuestion } from "./CloseQuestion";
 import { ComposerNotice } from "./ComposerNotice";
 import { type CardStage, lendCardStage } from "./cardStage";
-import { closeRestWords } from "./closeQuestionWords";
 import { DiagnosticsNotice } from "./DiagnosticsNotice";
 import { FirstRunGate } from "./FirstRunGate";
 import { focusTakenElsewhere } from "./focusRecovery";
@@ -179,7 +178,6 @@ import {
   visibleStack,
 } from "./store";
 import { TOP_BAR_HEIGHT } from "./TopBar";
-import { replyUnanswered, unsentAnswers, unsentComment } from "./unsentAnswers";
 import { VoiceNotice } from "./VoiceNotice";
 
 /** Same symmetric clearance as the script, applied in the resize's layout. */
@@ -923,15 +921,6 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     if (viewer && viewer.cardId !== cardId) setViewer(null);
   }, [viewer, cardId]);
 
-  // The close asks once, under the card's ×, when the captain picked or
-  // changed an answer (the captain's Q3 A): closing is the keep and sends
-  // nothing, so those picks would otherwise go without a word.
-  const [confirmingClose, setConfirmingClose] = useState<string | null>(null);
-  // A close asked for by a key puts focus on the question it raises.
-  const [confirmFocus, setConfirmFocus] = useState(false);
-  useEffect(() => {
-    setConfirmingClose((open) => (open === cardId ? open : null));
-  }, [cardId]);
   // The arrows and the close, lent to the window's card commands (./cardStage).
   const lentStage = useRef<CardStage | null>(null);
   useEffect(() => lendCardStage(() => lentStage.current), []);
@@ -1014,18 +1003,15 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const cardSize: CardSize | null = cardId
     ? {
         maximized,
+        corner: isHeldEntry(card)
+          ? cardCornerOf(card.recordTaskId ? "record" : "window-panel")
+          : (card.corner ?? cardCornerOf("decision")),
         toggle: toggleSize,
         ...maximizeKeys,
-        ...(!isHeldEntry(card)
-          ? {
-              minimize: {
-                run: () => {
-                  void useShellStore.getState().minimizeCard(card.id);
-                },
-                ...minimizeKeys,
-              },
-            }
-          : {}),
+        minimize: {
+          run: () => (isHeldEntry(card) ? closeRecord() : closeCard(card.id, mountOf(card))),
+          ...minimizeKeys,
+        },
       }
     : null;
 
@@ -1036,40 +1022,9 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   lentStage.current = null;
   if (!layerCard || !layerView) return null;
 
-  const askClose = (byKey: boolean) => {
-    if (!card || !cardId) return;
-    // The × again, while it asks, keeps the card: only the question closes it.
-    if (confirmingClose === cardId) {
-      if (!byKey) setConfirmingClose(null);
-      return;
-    }
-    const shell = useShellStore.getState();
-    const unsent = unsentAnswers(card, shell.cardAnswers[cardId], shell.sentCardAnswers[cardId]);
-    const wrote = unsentComment(shell.replyDrafts[cardId], shell.sentCardAnswers[cardId]);
-    if (unsent > 0 || wrote || replyUnanswered(card, shell.threads[cardId])) {
-      setConfirmingClose(cardId);
-      setConfirmFocus(byKey);
-      return;
-    }
-    setConfirmingClose(null);
-    closeCard(cardId, mountOf(card));
+  const requestClose = () => {
+    if (card && cardId) closeCard(cardId, mountOf(card));
   };
-  const requestClose = () => askClose(false);
-  const closeConfirm =
-    card && cardId && confirmingClose === cardId
-      ? {
-          onClose: () => {
-            setConfirmingClose(null);
-            closeCard(cardId, mountOf(card));
-          },
-          onKeep: () => setConfirmingClose(null),
-          onPutAside: () => {
-            setConfirmingClose(null);
-            void useShellStore.getState().minimizeCard(cardId);
-          },
-          focus: confirmFocus,
-        }
-      : undefined;
   const onCardAction: StackedCardProps["onAction"] = (actionId, source, value, collect, mounted) =>
     cardId ? actOnCard(cardId, actionId, source, value, collect, mounted) : Promise.resolve();
 
@@ -1111,16 +1066,10 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
       ? {
           shownId: cardId,
           page,
-          close: () => (isHeldEntry(card) ? closeRecord() : askClose(true)),
+          close: () => (isHeldEntry(card) ? closeRecord() : requestClose()),
           maximized,
           toggleSize: () => toggleSize(true),
-          ...(!isHeldEntry(card)
-            ? {
-                minimize: () => {
-                  void useShellStore.getState().minimizeCard(card.id);
-                },
-              }
-            : {}),
+          minimize: () => (isHeldEntry(card) ? closeRecord() : requestClose()),
           ...(foldsThread ? { thread: () => showThread(view.collapsed, true) } : {}),
         }
       : null;
@@ -1291,8 +1240,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
                       onHeld={markHeld}
                       onBorn={markBorn}
                       onInteraction={isShown ? presentation.cancelGeometry : undefined}
-                      onClose={isShown ? (isHeldEntry(entry) ? closeRecord : requestClose) : noop}
-                      closeConfirm={isShown ? closeConfirm : undefined}
+                      onClose={isShown ? closeRecord : noop}
                       onAction={isShown ? onCardAction : noAction}
                       onPicture={isShown ? openPictures : undefined}
                       onThread={isShown ? showThread : undefined}
@@ -1419,7 +1367,6 @@ function EntrySurface({
   onBorn,
   onInteraction,
   onClose,
-  closeConfirm,
   onAction,
   onPicture,
   onThread,
@@ -1440,7 +1387,6 @@ function EntrySurface({
   onBorn: (slot: string) => void;
   onInteraction: (() => void) | undefined;
   onClose: () => void;
-  closeConfirm: StackedCardProps["closeConfirm"];
   onAction: StackedCardProps["onAction"];
   onPicture: StackedCardProps["onPicture"];
   /** The thread collapses (false) or opens (true); `byKey` when a key pressed it. Shown entry only. */
@@ -1482,7 +1428,6 @@ function EntrySurface({
         <PastCardUnreadable
           width="100%"
           loading={view.past?.state !== "unreadable"}
-          onClose={onClose}
           onDrawn={drew}
         />
       );
@@ -1506,7 +1451,6 @@ function EntrySurface({
           width={view.card}
           size={shownCardSize(view.card)}
           surface={false}
-          onClose={onClose}
           onDrawn={drew}
           onInteraction={onInteraction}
           onPicture={onPicture}
@@ -1519,7 +1463,6 @@ function EntrySurface({
         theme={theme}
         width="100%"
         size={shownCardSize(view.card)}
-        onClose={onClose}
         onDrawn={drew}
         onInteraction={onInteraction}
         onPicture={onPicture}
@@ -1527,7 +1470,7 @@ function EntrySurface({
     );
   }
   if (entry.replyNote) {
-    return <ReplyNoteCard note={entry.replyNote} width="100%" onClose={onClose} onDrawn={drew} />;
+    return <ReplyNoteCard note={entry.replyNote} width="100%" onDrawn={drew} />;
   }
   if (entry.recordTaskId) {
     return (
@@ -1535,7 +1478,6 @@ function EntrySurface({
         taskId={entry.recordTaskId}
         view={entry.recordView ?? "info"}
         theme={theme}
-        onClose={onClose}
         onDrawn={drew}
         onPicture={onPicture}
       />
@@ -1545,17 +1487,10 @@ function EntrySurface({
     return <PanelCardView card={entry.panelCard} theme={theme} onClose={onClose} onDrawn={drew} />;
   }
   if (entry.crewmateTaskId) {
-    return <CrewmateView taskId={entry.crewmateTaskId} onClose={onClose} onDrawn={drew} />;
+    return <CrewmateView taskId={entry.crewmateTaskId} onDrawn={drew} />;
   }
   if (entry.browserTaskId) {
-    return (
-      <TaskBrowserView
-        taskId={entry.browserTaskId}
-        from={entry.browserFrom}
-        onClose={onClose}
-        onDrawn={drew}
-      />
-    );
+    return <TaskBrowserView taskId={entry.browserTaskId} from={entry.browserFrom} onDrawn={drew} />;
   }
   const prepared = role === "warm";
   // The last rung: the card's body becomes the thread behind a segmented
@@ -1604,8 +1539,6 @@ function EntrySurface({
           }
           sharedCollectRef={collectRef}
           size={shownCardSize(view.card)}
-          onClose={onClose}
-          closeConfirm={closeConfirm}
           onAction={onAction}
           onPicture={onPicture}
           onDrawn={drew}
@@ -1921,9 +1854,6 @@ type StackedCardProps = {
    * INF-1919 note); its fact strip stays at the card's foot.
    */
   choicesIn?: HTMLElement | null;
-  onClose: () => void;
-  /** The close is asking first: changed picks would go unsent (Q3 A). */
-  closeConfirm?: CloseAsk | undefined;
   /** Settles with the request's outcome: a body's own `inf.action` rejects with its refusal. */
   onAction: (
     actionId: string,
@@ -1955,8 +1885,6 @@ function StackedCard({
   inPlaceThread = false,
   threadWorking = false,
   choicesIn = null,
-  onClose,
-  closeConfirm,
   onAction,
   onPicture,
   sharedCollectRef,
@@ -1996,8 +1924,6 @@ function StackedCard({
   );
   const messages = useShellStore((s) => s.threads[card.id]) ?? [];
   const answers = useShellStore((s) => s.cardAnswers[card.id]);
-  const sentAnswers = useShellStore((s) => s.sentCardAnswers[card.id]);
-  const words = useShellStore((s) => s.replyDrafts[card.id]);
   // A file or picture goes only as a reply: the choices wait until it has.
   const filesFirst = useShellStore(
     (s) =>
@@ -2219,30 +2145,7 @@ function StackedCard({
             <ThreadSegments showing={showing} count={messages.length} onShow={setShowing} />
           ) : undefined
         }
-        onClose={onClose}
         closeRef={closeRef}
-        closeRest={closeRestWords(task?.key)}
-        closeAsking={closeConfirm !== undefined}
-        closeAsk={
-          <CloseQuestion
-            ask={closeConfirm}
-            count={unsentAnswers(card, answers, sentAnswers)}
-            wrote={unsentComment(words, sentAnswers)}
-            unanswered={
-              replyUnanswered(card, messages)
-                ? {
-                    author:
-                      card.author === "firstmate"
-                        ? "your first mate"
-                        : (task?.assignee ?? "the crewmate"),
-                    taskKey: task?.key,
-                  }
-                : undefined
-            }
-            preview={isPreviewBody(card.body)}
-            trigger={closeRef}
-          />
-        }
         actions={choicesIn ? undefined : footer}
         comment={reply}
         aside={
@@ -2251,8 +2154,9 @@ function StackedCard({
             : undefined
         }
         attachment={
-          !bare && (card.attachment || card.requiredActions?.length) ? (
+          !bare && (card.answerDone || card.attachment || card.requiredActions?.length) ? (
             <>
+              {card.answerDone && <AnswerDone done={card.answerDone} />}
               {card.attachment && <CardAttachment cardId={card.id} attachment={card.attachment} />}
               {card.requiredActions && <RequiredActions actions={card.requiredActions} />}
             </>
@@ -2629,7 +2533,7 @@ export const HomePrompt = memo(function HomePrompt() {
     focusHandled.current = focusRequest;
     if (view === "home" && !recording) {
       // A way back gives way to a control that took focus in this render,
-      // such as the close question a command from search asked, and to
+      // such as a control reached by a command from search, and to
       // command search opened again before the way back ran.
       if (
         focusYields === focusRequest &&
@@ -2779,3 +2683,39 @@ export const HomePrompt = memo(function HomePrompt() {
     </div>
   );
 });
+
+function AnswerDone({ done }: { done: NonNullable<Card["answerDone"]> }) {
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  return (
+    <div
+      data-answer-done=""
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        gap: "var(--space-3)",
+      }}
+    >
+      {error && <span role="alert">{error}</span>}
+      <Button
+        variant="primary"
+        pending={busy}
+        data-answer-done-control=""
+        note={done.restWords}
+        onClick={() => {
+          setBusy(true);
+          void window.infinitary.task
+            .run(done.taskId, "answer-done")
+            .then((result) => {
+              if (!result.ok) setError(result.text);
+            })
+            .catch((error) => setError(String(error)))
+            .finally(() => setBusy(false));
+        }}
+      >
+        {done.label}
+      </Button>
+    </div>
+  );
+}

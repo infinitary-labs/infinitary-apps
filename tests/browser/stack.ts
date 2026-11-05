@@ -64,6 +64,9 @@ export function inFrameTitled<T, A = null>(
 export const inCardBody = <T, A = null>(title: string, read: (argument: A) => T, argument?: A) =>
   inFrameTitled(`${title} body`, read, argument);
 
+/** INF-1879: read the shown card's shared minus through its chrome owner. */
+export const cardLeave = (): HTMLElement => inShown("[data-card-leave]");
+
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 /**

@@ -12,7 +12,7 @@ import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { nowFrame, pressRow, recordCard } from "./rails";
 import { externalRelease, RELEASE_PROMPT_MARKER } from "./scenarios/externalRelease";
-import { shownCard } from "./stack";
+import { cardLeave, shownCard } from "./stack";
 
 /** The crewmate's note the spec seeds on the stage, and finds there. */
 const RELEASE_NOTE_TITLE = "The release was published";
@@ -77,7 +77,7 @@ test("a verified external release closes reported work, not a dismissed note or 
     const { page, mockProvider } = launched;
     await expect(shownCard(page, RELEASE_NOTE_TITLE)).toBeVisible();
     // A note disappearing and a missing task-owned change are not a close.
-    await page.getByRole("button", { name: "Close", exact: true }).first().click();
+    await cardLeave(page).first().click();
     await expect
       .poll(() => page.evaluate(() => window.infinitary.tasks.detail("released")))
       .toMatchObject({ status: "active" });

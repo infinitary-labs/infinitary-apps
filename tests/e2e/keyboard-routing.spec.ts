@@ -24,7 +24,7 @@ import {
   shownCardFrame,
   stagePrepared,
 } from "./stack";
-import { commandSearch, focusOn, pressWindowKey, typeInto } from "./windowKeys";
+import { commandSearch, focusOn, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
 /**
  * The window's keys (docs/keyboard.md): Cmd+L goes back to the main message
@@ -160,7 +160,7 @@ test("command search opens from inside a card, says why a command cannot run, an
     ])
       await expect(search.row(command).locator("kbd")).toHaveCount(1);
     // Close is chosen by name only: it has no key.
-    await expect(search.row("cards.close").locator("kbd")).toHaveCount(0);
+    await expect(search.row("cards.maximize").locator("kbd")).toHaveCount(0);
     const { position, count } = await pagerPlace(page);
     const edge = position === 1 ? "cards.previous" : position === count ? "cards.next" : null;
     expect(edge).not.toBeNull();
@@ -317,7 +317,7 @@ test("the window's keys go to the reply, page the cards, find a task and open Se
   });
 });
 
-test("closing the shown card from command search still asks first about unsent answers", async () => {
+test("INF-1879: putting the shown card away from command search retains its unsent answers", async () => {
   const { app, page } = launched;
   const search = commandSearch(page);
   const prompt = promptInput(page);
@@ -331,14 +331,7 @@ test("closing the shown card from command search still asks first about unsent a
     .locator('input[name="writes"][value="any"]')
     .evaluate((control: HTMLInputElement) => control.click());
 
-  await pressWindowKey(app, "k", ["meta"]);
-  await search.field.fill("close");
-  await page.keyboard.press("Enter");
-  const confirm = closeQuestion(page);
-  await expect(confirm).toBeVisible();
-  // The question takes focus on the choice that loses nothing.
-  await expect(confirm.getByRole("button", { name: "Keep answering", exact: true })).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(confirm).toHaveCount(0);
-  await expect(shownCard(page, INLINE_QUESTIONS_TITLE)).toBeVisible();
+  await runFromSearch(app, page, "cards.minimize");
+  await expect(shownCard(page, INLINE_QUESTIONS_TITLE)).toBeHidden();
+  await expect(closeQuestion(page)).toHaveCount(0);
 });

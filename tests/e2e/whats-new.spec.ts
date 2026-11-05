@@ -165,7 +165,7 @@ test("What's new brings the release note back from the Help menu, command search
     });
 
     await test.step("with the note closed, both bring it back read-only, and make no new card", async () => {
-      await runFromSearch(app, page, "cards.close");
+      await runFromSearch(app, page, "cards.minimize");
       await expect
         .poll(() =>
           page.evaluate(() => window.infinitary.cards.list().then((l) => l.map((c) => c.id))),

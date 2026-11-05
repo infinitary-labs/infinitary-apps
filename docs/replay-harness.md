@@ -99,8 +99,11 @@ The engine joins the card to its own recorded task, which must be `done` or `dro
 A reason that is also a declared action id remains a possible captain choice; missing or conflicting closure facts also stay on the ordinary admission path.
 A proven retirement is never an input or a skip, even when the replay never showed the card; its title is listed separately under `details.retired_cards`.
 The replay does not force a retirement onto its live cards: the current host retires them when its own settlement runs.
-Since the fable review (Q4a) a dismissal is a feed line and a line in the first mate's next context block, never a wake, so a skipped dismissal changes no wake count.
-Since FI3-435 the dismissal of a crewmate's own card is also a steer to that crewmate (`card-closed`); a recording from before it holds no answer to that steer, so the replay plays it as a silent turn counted under `fidelity.unrecorded_crewmate_turns` and never spends the crewmate's next recorded turn on it (`unrecordedClose`).
+Historical dismissal entries are not first-mate wakes, so skipping them changes no first-mate wake count.
+The current minus writes no closing feed line and selects no refusal or outcome.
+An ordinary note read or a duplicate closure can steer the card's crewmate through `card-closed`; putting a card aside or reading a marked saved answer does not.
+Only an ordinary read acknowledges its note; a marked saved answer waits for explicit Done, which closes an answer deliverable `done/answered` without that steer.
+When the recording's next turn does not answer a `card-closed` steer, the replay plays it as a silent turn counted under `fidelity.unrecorded_crewmate_turns` and never spends the crewmate's next recorded turn on it (`unrecordedClose`).
 A recording whose next turn answers a close plays that turn.
 
 A captain's reply in a card's thread (`docs/card-threads.md`) is an input too (FI3-429).

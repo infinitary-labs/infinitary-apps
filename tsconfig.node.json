@@ -57,7 +57,6 @@
     "src/renderer/src/cards/revisedLine.ts",
     "src/renderer/src/cards/askedWords.ts",
     "src/renderer/src/cards/answersLine.ts",
-    "src/renderer/src/app/closeQuestionWords.ts",
     "src/renderer/src/cards/requiredActionsWords.ts",
     "src/renderer/src/cards/threadWords.ts",
     "src/renderer/src/design/cards/pictureViewerWords.ts",

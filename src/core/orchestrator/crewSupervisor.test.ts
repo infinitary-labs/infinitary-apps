@@ -1,3 +1,4 @@
+import { ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import careCarefulGuide from "../../../resources/runbooks/care/careful.json" with { type: "json" };
 import { execFileSync } from "node:child_process";
@@ -19,6 +20,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
+import { ANSWER_DONE_LABEL } from "@shared/cardLeave";
 import {
   CARD_ANSWER_TEXT_MAX,
   CARD_ANSWERS_BOUND_REFUSAL,
@@ -2734,8 +2736,9 @@ describe("CrewSupervisor", () => {
       await tick();
       const note = h.cards().find((card) => card.taskId === taskId) as Card;
       h.supervisor.close(note.id);
+      await h.supervisor.steerCrewmate(taskId, "I read the outcome; report what is left.");
       await tick();
-      h.specs[0]?.onReport?.("The captain closed my note and nothing is left.", undefined, {
+      h.specs[0]?.onReport?.("The captain read my note and nothing is left.", undefined, {
         finished: true,
       });
       crewmate.finishPrompt();
@@ -2756,17 +2759,21 @@ describe("CrewSupervisor", () => {
     // revised with the drop and the first mate's sentence, once.
     it("brings the answer the captain accepted back revised with a later drop, and adds no note (INF-1533)", async () => {
       const h = await idleTask();
+      await h.supervisor.steerCrewmate(h.taskId, "Show the final outcome for my choice.");
+      await tick();
       h.specs[0]?.onCard?.({
         title: "The notice is renamed",
         body: "<p>The notice now reads Your first mate has not answered your message.</p>",
-        actions: [],
+        actions: [{ id: "read", label: "I read the outcome", default: true }, { id: "question", label: "Explain further" }],
         answering: true,
       });
       await tick();
-      const answer = h.cards().find((card) => card.taskId === h.taskId) as Card;
-      h.supervisor.close(answer.id);
+      h.crewmate.finishPrompt();
       await tick();
-      // The close reaches the crewmate as its next turn, which ends idle.
+      const answer = h.cards().find((card) => card.taskId === h.taskId) as Card;
+      h.supervisor.act(answer.id, "read");
+      await tick();
+      // The explicit choice reaches the crewmate, whose turn ends idle.
       h.crewmate.finishPrompt();
       await tick();
       expect(left(h.cards(), h.taskId)).toEqual([]);
@@ -2782,6 +2789,45 @@ describe("CrewSupervisor", () => {
       expect(up[0]?.body).toContain(closingNoteTitle(h.key, "dropped"));
       expect(up[0]?.body).toContain(SENTENCE);
       expect(up[0]?.body).toContain("The notice now reads");
+    });
+
+    // Keep both acknowledgement routes covered: the decision case above and
+    // an ordinary note read through the actual corner before its later drop.
+    it("revises the same read note on a later drop without completing work on read", async () => {
+      const h = await idleTask();
+      await h.supervisor.steerCrewmate(h.taskId, "Show the final outcome for me to read.");
+      await tick();
+      const words = "The notice now reads Your first mate has not answered your message.";
+      h.specs[0]?.onCard?.({
+        title: "The notice is renamed",
+        body: `<p>${words}</p>`,
+        actions: [],
+        answering: true,
+      });
+      await tick();
+      h.crewmate.finishPrompt();
+      await tick();
+      const answer = h.cards().find((card) => card.taskId === h.taskId) as Card;
+      const prompts = h.crewmate.promptCalls.length;
+      h.supervisor.close(answer.id);
+      await tick();
+      expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
+      expect(h.tasks.get(h.taskId)?.status).toBe("active");
+      h.crewmate.finishPrompt();
+      await tick();
+      expect(left(h.cards(), h.taskId)).toEqual([]);
+
+      await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+        h.supervisor.settleTask(h.taskId, "discard"),
+      );
+      await tick();
+      const up = h.cards().filter((card) => card.taskId === h.taskId);
+      expect(up.map((card) => ({ id: card.id, actions: card.actions }))).toEqual([
+        { id: answer.id, actions: [] },
+      ]);
+      expect(up[0]?.body).toContain(closingNoteTitle(h.key, "dropped"));
+      expect(up[0]?.body).toContain(SENTENCE);
+      expect(up[0]?.body).toContain(words);
     });
 
     it("puts up the sentence when the first mate cancels idle work", async () => {
@@ -5213,7 +5259,7 @@ describe("CrewSupervisor", () => {
           });
         });
         const story = h.cards().find((card) => card.title === "The meter reads on time") as Card;
-        // The close reaches the crewmate as its next turn, which ends at once.
+        // Reading this ordinary story note starts its author's next turn.
         h.supervisor.close(story.id);
         await tick();
         h.crewmate.finishPrompt();
@@ -6192,11 +6238,17 @@ describe("CrewSupervisor", () => {
       expect(held.text).not.toContain("Merged");
       expect(forge.merges).toEqual([]);
       expect(tasks.get(taskId)?.status).not.toBe("done");
-      // With autonomy on, the crewmate's own merge card gives way to its note;
-      // the captain closes it, and the first mate merges.
+      // INF-1879: putting the question away grants no permission and leaves it open.
+      // With autonomy on, its author withdraws the now-unnecessary question before the first mate merges.
       editPolicies(harness, { autonomy: true });
       supervisor.close(harness.card.id);
       await tick();
+      expect(harness.cards().find((card) => card.id === harness.card.id)?.minimized).toBe(true);
+      expect(forge.merges).toEqual([]);
+      await harness.specs[0]?.onCloseCard?.({
+        cardId: harness.card.id,
+        reason: "Autonomy is on; the first mate owns this merge.",
+      });
       harness.crewmate.finishPrompt();
       await tick();
       const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
@@ -7465,12 +7517,9 @@ describe("CrewSupervisor", () => {
     supervisor.close(settle.id);
     await tick();
 
-    expect(cards().find((card) => card.id === settle.id)).toBeUndefined();
-    // The close is not a choice: it reaches the crewmate as its next turn
-    // (FI3-435), which judges it; nothing is merged or discarded.
-    expect(crewmate.promptCalls.at(-1)).toBe(
-      `The captain closed your card "${settle.title}" (${settle.id}) without choosing.`,
-    );
+    expect(cards().find((card) => card.id === settle.id)).toMatchObject({ minimized: true });
+    // INF-1879: putting away is not a choice, turn or end.
+    expect(crewmate.promptCalls.some(isCardClosedSteer)).toBe(false);
     crewmate.finishPrompt();
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
@@ -7801,7 +7850,7 @@ describe("CrewSupervisor", () => {
     expect(ops.at(-1)).toContain('[user]\nquota-axi\nChoice on card "Which project?"');
   });
 
-  it("closes a note without a Done action as one feed line, never a wake", async () => {
+  it("INF-1879: reads a note without ending work, a feed line or a wake", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, ops, cardStore, specs, events } = setup(crewmate);
     supervisor.addFirstmateCard({
@@ -7819,10 +7868,7 @@ describe("CrewSupervisor", () => {
     expect(cards().find((entry) => entry.id === note.id)).toBeUndefined();
     expect(cardStore.chosenAction(note.id)).toBe("close");
     expect(ops).toHaveLength(opsBefore);
-    expect(events).toContainEqual({
-      type: "firstmate_note",
-      text: 'Captain dismissed the card "Quota note".',
-    });
+    expect(events.filter(event => event.type === "firstmate_note")).toEqual([]);
     expect(supervisor.captainResolutionsSince(0, 8)).toEqual([
       expect.objectContaining({ action: "close", card: expect.objectContaining({ id: note.id }) }),
     ]);
@@ -7830,7 +7876,7 @@ describe("CrewSupervisor", () => {
     expect(specs).toEqual([]);
   });
 
-  it("tells the crewmate, and parks no decision, when the captain closes its card", async () => {
+  it("INF-1879: putting a decision away preserves it and sends no turn", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, ops, cardStore, specs, tasks, events } = setup(crewmate);
     const { taskId } = await supervisor.commission({
@@ -7853,26 +7899,12 @@ describe("CrewSupervisor", () => {
     const opsBefore = ops.length;
     supervisor.close(decision.id);
     await tick();
-    expect(cards().find((entry) => entry.id === decision.id)).toBeUndefined();
-    expect(cardStore.chosenAction(decision.id)).toBe("close");
-    expect(ops.slice(opsBefore).filter((op) => op.includes("dismissed"))).toEqual([]);
-    // One line, saying where the card stays: the task's record.
-    const key = tasks.get(taskId)?.key;
-    expect(key).toBeTruthy();
-    expect(
-      events.filter(
-        (event) => event.type === "firstmate_note" && /closed|dismissed/.test(event.text),
-      ),
-    ).toEqual([
-      // INF-1845: on the task's record, so the line carries its key.
-      { type: "firstmate_note", taskId, text: `You closed "Pick a course"` },
-    ]);
-    // Mid-turn, the close reaches the crewmate's running turn (FI3-435).
-    expect(crewmate.steer.mock.calls.at(-1)?.[0]).toBe(
-      `The captain closed your card "Pick a course" (${decision.id}) without choosing.`,
-    );
-    expect(tasks.list().filter((record) => record.kind === "decision")).toEqual([]);
-    expect(taskId).toBeTruthy();
+    expect(cards().find((entry) => entry.id === decision.id)).toMatchObject({ minimized: true });
+    expect(cardStore.chosenAction(decision.id)).toBeUndefined();
+    expect(ops).toHaveLength(opsBefore);
+    expect(events.filter(event => event.type === "firstmate_note" && /closed|dismissed/.test(event.text))).toEqual([]);
+    expect(crewmate.steer).not.toHaveBeenCalled();
+    expect(tasks.get(taskId)?.status).toBe("active");
   });
 
   // INF-1381: Dynamic routing off must still bind a signed-in model/account,
@@ -13024,7 +13056,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
     expect(tasks.timeline(row?.id ?? "").at(-1)).toMatchObject({ feed: false });
   });
 
-  it("a host card taken down unanswered drops its row; the captain's close cancels it", () => {
+  it("a host withdrawal drops its row; INF-1879 putting it away keeps it open", () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
     supervisor.addAuthDecisionCard(
       "card-auth-account-acct_cl1",
@@ -13043,10 +13075,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
     const [failure] = hostRows(tasks, "card-fm-turn-failure");
     expect(failure?.status).toBe("open");
     supervisor.close("card-fm-turn-failure");
-    expect(tasks.get(failure?.id ?? "")).toMatchObject({
-      status: "dropped",
-      closedReason: "cancelled",
-    });
+    expect(tasks.get(failure?.id ?? "")).toMatchObject({ status: "open", closedReason: null });
     // A note asks nothing, so it files nothing.
     supervisor.addSystemNoteCard("card-note", "A note", "<p>FYI.</p>");
     expect(hostRows(tasks, "card-note")).toEqual([]);
@@ -15939,7 +15968,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await second.at(minutes(400));
     // The keep: no more wakes or cards this episode, the context line stays.
     expect(second.ops).toHaveLength(opsBefore);
-    expect(second.cards()).toEqual([]);
+    expect(second.cards()).toEqual([expect.objectContaining({ minimized: true })]);
     expect(second.supervisor.crewStatus(second.taskId)[0]?.stalled).toBe(
       "stalled 6h 40m · 2 wakes",
     );
@@ -16786,7 +16815,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
     });
 
-    it("a card the captain closes without choosing reaches its crewmate as its next turn (FI3-435)", async () => {
+    it("INF-1879: putting a decision away preserves its gate and idle witness", async () => {
       const { supervisor, crewmate, ops, specs, taskId, tasks, cards, idleSince, at } =
         await stopped();
       specs[0]?.onCard?.({
@@ -16808,31 +16837,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       hostNow = idleSince + minutes(30);
       supervisor.close(card.id);
       await tick();
-      expect(
-        tasks
-          .timeline(taskId)
-          .some((event) => event.kind === "card_resolved" && event.data?.action === "dismissed"),
-      ).toBe(true);
-      expect(tasks.get(taskId)?.gate).toBeNull();
-      // The close travels the click's path: a steer from the captain, on
-      // the card, that the crewmate takes as its next turn. The Firstmate
-      // is not woken by it.
-      expect(crewmate.promptCalls.at(-1)).toBe(
-        `The captain closed your card "Pick a course" (${card.id}) without choosing.`,
-      );
-      expect(tasks.timeline(taskId).find((event) => event.kind === "steered")).toMatchObject({
-        actor: "captain",
-        data: expect.objectContaining({ via: "card", cardId: card.id }),
-      });
+      expect(tasks.timeline(taskId).some(event => event.kind === "card_resolved")).toBe(false);
+      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: card.id });
+      expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(ops.slice(opsBefore)).toEqual([]);
-      // A turn that says nothing new leaves nobody's turn: the clock runs
-      // from its end, and the ladder's first rung acts ten minutes later.
-      await endTurn(crewmate, taskId);
-      expect(tasks.get(taskId)?.idleSince).toBe(idleSince + minutes(30));
-      await at(minutes(40) - 1);
-      expect(crewmate.promptCalls.at(-1)).not.toBe(IDLE_NUDGE_TEXT);
+      expect(cards().find(entry => entry.id === card.id)?.minimized).toBe(true);
       await at(minutes(40));
-      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
+      expect(crewmate.promptCalls).toHaveLength(prompts);
     });
 
     /** A crewmate mid-turn on a fresh task, its outcome note up and not yet reported. */
@@ -16891,12 +16902,15 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(ops.slice(opsBefore)).toEqual([]);
 
-      // His close reaches the crewmate; its turn releases the wait.
+      // Reading the note itself reaches its author and releases
+      // the declared wait; no injected steer repairs the production path.
       supervisor.close(note.id);
       await tick();
-      expect(crewmate.promptCalls.at(-1)).toBe(
-        `The captain closed your card "Version 1.2 is out" (${note.id}) without choosing.`,
+      expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+      expect(crewmate.promptCalls.at(-1)).toContain(
+        renderWake({ facts: { kind: "card-closed", card: { id: note.id, title: note.title }, read: true } }),
       );
+      expect(tasks.get(taskId)?.status).not.toBe("done");
       expect(tasks.get(taskId)?.gate).toBeNull();
       expect(tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
       specs[0]?.onReport?.("The captain read the release note and nothing is left.", undefined, {
@@ -16930,6 +16944,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         { finished: true },
       );
       expect(receipt).toContain("finished does not wake the first mate while it is up");
+      expect(receipt).toContain(ORDINARY_NOTE_READ_GUIDANCE);
       await endTurn(crewmate, taskId);
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
 
@@ -16953,18 +16968,24 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       }
       expect(finishedWakes()).toEqual([]);
 
-      // His close of the card is the next move: nothing nudges the crewmate
-      // and nothing wakes the first mate while the card stays up.
+      // Reading this ordinary note is the next move: while it stays up,
+      // nothing nudges the crewmate or wakes the first mate.
       const prompts = crewmate.promptCalls.length;
       const opsBefore = ops.length;
       await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20), minutes(90)]);
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(ops.slice(opsBefore)).toEqual([]);
 
-      // His close reaches the crewmate; its finished report now wakes the
-      // first mate, once.
+      // Reading the note starts its author's next turn; only that
+      // turn's finished report wakes the first mate, once, without a manual steer.
       supervisor.close(note.id);
       await tick();
+      expect(finishedWakes()).toHaveLength(0);
+      expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+      expect(crewmate.promptCalls.at(-1)).toContain(
+        renderWake({ facts: { kind: "card-closed", card: { id: note.id, title: note.title }, read: true } }),
+      );
+      expect(tasks.get(taskId)?.status).not.toBe("done");
       specs[0]?.onReport?.("The captain read the release note and nothing is left.", undefined, {
         finished: true,
       });
@@ -16980,8 +17001,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("a declared wait with no card up is the first mate's to put to the captain, and a steer releases it (INF-11)", async () => {
       const { supervisor, crewmate, ops, sorts, specs, tasks, taskId, note, cards } =
         await withOutcomeNote();
+      // A note still owed its author's turn stays open when put away.
+      // Once complete, reading it itself gives its author the next turn.
+      await endTurn(crewmate, taskId);
+      const promptsBeforeRead = crewmate.promptCalls.length;
       supervisor.close(note.id);
       await tick();
+      expect(crewmate.promptCalls).toHaveLength(promptsBeforeRead + 1);
       const words = "The release is out; the captain may still want the old build.";
       const receipt = specs[0]?.onReport?.(words, undefined, {
         wait: { reason: "decide whether to keep the old build" },
@@ -24453,7 +24479,7 @@ describe("the deliverable axis (Task B)", () => {
     expect(crewmate.steer).not.toHaveBeenCalled();
   });
 
-  it("sends a dismissal to the answer's crewmate like every other card, and closes it answered on its finished report (FI3-435)", async () => {
+  it("INF-1879: reading an unmarked note neither finishes nor creates a Done receipt", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs, cards, inbox, ops, taskId } = await investigation(crewmate);
     specs[0]?.onCard?.({ title: "The answer", body: "<p>Found it.</p>", actions: [] });
@@ -24467,41 +24493,22 @@ describe("the deliverable axis (Task B)", () => {
     expect(inbox.pending(FIRSTMATE_RECIPIENT)).toEqual([]);
     const opsBefore = ops.length;
 
-    // His close of a card not marked answering is not a choice: the task
-    // stays open and its crewmate is told, with `finished` named (INF-1732).
+    // An unmarked note gives its author a turn, not a task receipt or ending.
+    const promptsBeforeRead = crewmate.promptCalls.length;
     supervisor.close(card.id);
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
-    expect(crewmate.promptCalls.at(-1)).toBe(
-      renderWake({
-        facts: {
-          kind: "card-closed",
-          card: { id: card.id, title: "The answer" },
-          answer: true,
-        },
-      }),
+    expect(crewmate.promptCalls).toHaveLength(promptsBeforeRead + 1);
+    expect(crewmate.promptCalls.at(-1)).toContain(
+      renderWake({ facts: { kind: "card-closed", card: { id: card.id, title: card.title }, read: true } }),
     );
-    expect(crewmate.promptCalls.at(-1)).toContain("report with finished true");
-    // Until the crewmate says it is finished, the Firstmate cannot close an
-    // answer the captain asked for.
-    expect((await supervisor.closeAnswerUsedAsBasis(taskId)).text).toContain(
-      "once its crewmate reports it finished",
-    );
-    specs[0]?.onReport?.("The captain read the answer and nothing is left.", undefined, {
-      finished: true,
-    });
-    crewmate.finishPrompt();
-    await tick();
-    expect(ops.slice(opsBefore)).toEqual([
-      expect.stringContaining("It declared its work finished"),
-    ]);
-    expect(await supervisor.closeAnswerUsedAsBasis(taskId)).toMatchObject({ ok: true });
-    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+    expect(tasks.get(taskId)?.gate).toBeNull();
+    expect(ops.slice(opsBefore)).toEqual([]);
+    expect(supervisor.runTaskOp(taskId, "answer-done")).toContain("no answer ready");
+    expect(tasks.get(taskId)?.status).toBe("active");
   });
 
-  // INF-1732: INF-1718's answer note was closed and its task stayed open,
-  // because no report of its crewmate set finished. The captain's close of
-  // a note marked answering now closes the task itself.
+  // INF-1879 replaces INF-1732's implicit close receipt with explicit Done.
   async function answerCardUp(crewmate: FakeCrewmate, actions: EmittedAction[] = []) {
     const harness = await investigation(crewmate);
     harness.specs[0]?.onCard?.({
@@ -24520,15 +24527,42 @@ describe("the deliverable axis (Task B)", () => {
     return { ...harness, card };
   }
 
-  it("closes the answer task answered when the captain closes its note marked answering, with no finished report (INF-1732)", async () => {
+  it("closes the answer task answered when the captain presses Done on its marked answer note, with no finished report (INF-1732)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, taskId, card } = await answerCardUp(crewmate);
     const prompts = crewmate.promptCalls.length;
     supervisor.close(card.id);
     await tick();
+    expect(tasks.get(taskId)?.status).toBe("active");
+    supervisor.reconcileIdle(card.createdAt + 30 * 24 * 60 * 60 * 1000);
+    await tick();
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(crewmate.promptCalls).toHaveLength(prompts);
+    expect(supervisor.runTaskOp(taskId, "answer-done")).toBeUndefined();
+    await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
     // The task is closed: its crewmate has no close left to judge.
     expect(crewmate.promptCalls.slice(prompts).filter(isCardClosedSteer)).toEqual([]);
+  });
+
+  it("INF-1879: a finished report's receipt still leaves a read answer waiting for explicit Done", async () => {
+    const { supervisor, tasks, specs, taskId, card } = await answerCardUp(fakeCrewmate());
+    supervisor.close(card.id);
+    await tick();
+    expect(supervisor.cardsSnapshot().some((entry) => entry.id === card.id)).toBe(false);
+    const receipt = specs[0]?.onReport?.("The answer is complete.", undefined, { finished: true });
+    expect(receipt).toContain(ANSWER_DONE_LABEL);
+    expect(tasks.get(taskId)?.status).toBe("active");
+  });
+
+  it("INF-1879: a declared choice id matching the host Done operation keeps its ordinary choice semantics", async () => {
+    const { supervisor, tasks, taskId, card } = await answerCardUp(fakeCrewmate(), [
+      { id: "answer-done", label: "Accept this answer", default: true },
+      { id: "more", label: "Investigate further" },
+    ]);
+    supervisor.act(card.id, "answer-done");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
   });
 
   it("keeps the answer task open when the captain closes a decision marked answering without choosing (INF-1732)", async () => {
@@ -24540,7 +24574,7 @@ describe("the deliverable axis (Task B)", () => {
     supervisor.close(card.id);
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
-    expect(crewmate.promptCalls.at(-1)).toSatisfy(isCardClosedSteer);
+    expect(crewmate.promptCalls.some(isCardClosedSteer)).toBe(false);
   });
 
   it("keeps the answer task open when the captain closes a marked answer note whose reply waits on its crewmate (INF-1732)", async () => {
@@ -24551,6 +24585,8 @@ describe("the deliverable axis (Task B)", () => {
     supervisor.close(card.id);
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
+    expect(supervisor.cardsSnapshot().find(entry => entry.id === card.id)?.minimized).toBe(true);
+    expect(supervisor.runTaskOp(taskId, "answer-done")).toContain("no answer ready");
   });
 
   /**
@@ -24569,6 +24605,7 @@ describe("the deliverable axis (Task B)", () => {
     crewmate.finishPrompt();
     await tick();
     supervisor.close(card.id);
+    await supervisor.steerCrewmate(taskId, "I read the answer; report what remains.");
     await tick();
     specs[0]?.onReport?.("Own vs rent: owning wins for sustained work.", undefined, {
       finished: true,
@@ -25635,7 +25672,7 @@ describe("CrewSupervisor: the card thread", () => {
   it("refuses a reply to a card with no author to reach, and to a closed one", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
-    const { card } = await withCard(harness);
+    const { card, taskId } = await withCard(harness);
 
     // The host's own agent-down cards answer to nobody.
     harness.supervisor.addSystemNoteCard("card-host-1", "Host note", "nothing to reply to");
@@ -25646,6 +25683,10 @@ describe("CrewSupervisor: the card thread", () => {
     expect(() => harness.supervisor.replyToCard("ghost", "hello")).toThrow(/Unknown card/);
     expect(() => harness.supervisor.replyToCard(card.id, "   ")).toThrow(/needs some words/);
 
+    // Read a completed ordinary note, not one still awaiting its author's turn (INF-1879).
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
     harness.supervisor.close(card.id);
     await tick();
     expect(() => harness.supervisor.replyToCard(card.id, "too late")).toThrow(/is closed/);
@@ -31570,21 +31611,22 @@ describe("the first mate's integration approval card (INF-1108)", () => {
     expect(wakes()).toHaveLength(1);
   });
 
-  it("treats closing the card as Not now: nothing runs and the first mate hears it once", async () => {
+  it("INF-1879: putting consent away waits; only Not now refuses it", async () => {
     const { supervisor, tasks, sent, wakes } = firstmateSetup();
     const ask = heldCall("ia0000000002");
     const cardId = supervisor.askIntegrationForFirstmate(ask);
     const row = tasks.openCardTaskFor(cardId);
     supervisor.close(cardId);
     await tick();
-    expect(sent).toEqual([{ rowId: row?.id, askId: ask.id, choice: "deny" }]);
-    expect(wakes()).toEqual([
-      expect.stringContaining("To ask again, call the integration again with a reason."),
-    ]);
-    supervisor.act(cardId, "once");
+    expect(sent).toEqual([]);
+    expect(wakes()).toEqual([]);
+    expect(tasks.get(row!.id)?.status).toBe("open");
+    supervisor.act(cardId, "deny");
     await tick();
-    expect(sent).toHaveLength(1);
+    expect(sent).toEqual([{ rowId: row?.id, askId: ask.id, choice: "deny" }]);
     expect(wakes()).toHaveLength(1);
+    supervisor.act(cardId, "once");
+    expect(sent).toHaveLength(1);
   });
 });
 

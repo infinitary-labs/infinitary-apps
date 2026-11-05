@@ -1,3 +1,4 @@
+import { CARD_LEAVE } from "@shared/cardLeave";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Button } from "../core/Button";
@@ -6,13 +7,13 @@ import { MAXIMIZE_LABEL, RESTORE_LABEL } from "./cardSizeWords";
 import { ResponseCard } from "./ResponseCard";
 
 describe("ResponseCard chrome", () => {
-  it("gives every card a close control and leaves a note without a Done button", () => {
+  it("gives every card a non-ending corner and leaves a note without a Done button", () => {
     const html = renderToStaticMarkup(
       <ResponseCard kind="note" title="Quota note" meta="firstmate">
         All steady.
       </ResponseCard>,
     );
-    expect(html).toContain('aria-label="Close"');
+    expect(html).toContain(`aria-label="${CARD_LEAVE["window-panel"].label}"`);
     expect(html).not.toContain(">Done</");
   });
 
@@ -73,7 +74,7 @@ describe("ResponseCard chrome", () => {
     expect(plain).not.toContain(">·<");
   });
 
-  it("keeps real footer actions next to the close control", () => {
+  it("keeps real footer actions next to the leaving control", () => {
     const html = renderToStaticMarkup(
       <ResponseCard
         kind="decision"
@@ -89,16 +90,16 @@ describe("ResponseCard chrome", () => {
         14 files changed.
       </ResponseCard>,
     );
-    expect(html).toContain('aria-label="Close"');
+    expect(html).toContain(`aria-label="${CARD_LEAVE["window-panel"].label}"`);
     expect(html).toContain("Discard task");
     expect(html).toContain("Land this work");
     expect(html).toContain(">Done</button>");
     expect(html).toContain("padding:var(--space-3) 16px 16px");
   });
 
-  it("draws the size control right before Close only where the stage lends a size", () => {
+  it("draws the size control right before the minus only where the stage lends a size", () => {
     const card = (
-      <ResponseCard kind="note" title="Quota note" onClose={() => {}}>
+      <ResponseCard kind="note" title="Quota note">
         All steady.
       </ResponseCard>
     );
@@ -112,9 +113,9 @@ describe("ResponseCard chrome", () => {
     const usual = lent(false);
     expect(usual.indexOf(`aria-label="${MAXIMIZE_LABEL}"`)).toBeGreaterThan(-1);
     expect(usual.indexOf(`aria-label="${MAXIMIZE_LABEL}"`)).toBeLessThan(
-      usual.indexOf('aria-label="Close"'),
+      usual.indexOf(`aria-label="${CARD_LEAVE["window-panel"].label}"`),
     );
     expect(lent(true)).toContain(`aria-label="${RESTORE_LABEL}"`);
-    expect(lent(true)).toContain('aria-label="Close"');
+    expect(lent(true)).toContain(`aria-label="${CARD_LEAVE["window-panel"].label}"`);
   });
 });

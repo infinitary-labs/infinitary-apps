@@ -59,6 +59,7 @@ export type NowGroupInput = Pick<
   | "requiredAction"
   | "waitingCardId"
   | "minimizedCardId"
+  | "answerNoteId"
   | "captainWait"
   | "startPolicy"
   | "startAttempt"
@@ -67,7 +68,7 @@ export type NowGroupInput = Pick<
   Partial<Pick<TaskView, "backlogSince">>;
 
 export function nowGroupOf(task: NowGroupInput): NowGroup | null {
-  if (task.minimizedCardId) return "waiting";
+  if (task.answerNoteId || task.minimizedCardId) return "waiting";
   if (task.requiredAction && (task.status === "open" || task.status === "active")) return "waiting";
   // A task that is starting (a start attempt preparing or checking, or a
   // claimed row whose crewmate has not begun) is queued until it begins; a

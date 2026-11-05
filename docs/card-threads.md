@@ -8,7 +8,7 @@ Captain-approved on the Lavish board on 2026-09-20 ("cards-as-threads over a dec
 This file is the one home for the feature as built (phase 1 and phase 2).
 
 Only a card's own author withdraws it.
-The captain's close resolves the card; a reply may dismiss it temporarily without resolving it.
+Minus puts decisions and pending notes aside and reads ordinary completed notes; it never chooses or ends work.
 The first mate does not close someone else's card to relay the captain's words (`CardService.close` refuses that and names the door).
 
 ## The record
@@ -25,15 +25,14 @@ A line the captain types in a task's Crewmate tab rides the same lane as the cap
 While the captain's kept merge approval stands on the task, the captain's reply, like the captain's line in the Crewmate tab, is guidance that holds that merge until the crewmate declares its impact (`docs/delivery-rigor.md`, "A kept merge approval").
 
 A reply resolves nothing.
-The buttons stay pinned, and a card still leaves the stage on a button, a settle, the captain's close, the author's withdrawal - all host code.
+The buttons stay pinned; explicit choices, task endings and author withdrawals retire cards, while minus puts them away.
 
-The captain's close of a crewmate's card on a live task reaches that crewmate the same way (FI3-435, captain-approved 2026-10-01): a captain steer stamped `via: "card"` with the card's id, the typed `card-closed` wake ("The captain closed your card ... without choosing.").
-The one exception is an answer task's note marked `answering`: the captain's close of it closes the task, so no wake goes (INF-1732, `docs/card-authoring.md` "An answer task's card is its deliverable").
-A close is not a choice, so the author judges what it meant by instruction - read and finished, still waiting on the captain, or a passing note - and its report declares it (`waiting_on_captain` or `finished`, `docs/report-sort.md`).
-The host reads none of it.
-The captain's close of a crewmate's card the captain replied under holds through the answer the crewmate is still writing (FI3-693): until that crewmate closes out, `emit_card` under the card's id is refused in words that send the answer to its report, so the answer does not open the card again.
-After the close-out the crewmate may raise the id again, a new card, as after any close.
-The first mate's own cards keep Q4a: their close wakes nobody and the next context block lists it.
+The captain’s minimize corner is presentation only (INF-1879): a decision stays open, and a note is read without ending work.
+A minimized decision or pending note sends no close steer, and consent waits rather than becoming a refusal.
+Reading an ordinary completed note still notifies its live crewmate author through the existing durable turn path; that acknowledgement never completes its task.
+A marked saved answer keeps its receipt and ending for explicit Done.
+The host draws Done on a marked answer note and in its record; Done alone receipts that answer.
+Putting a decision away retains the card’s drafts and the task’s gate until an explicit choice, withdrawal or task ending.
 
 A card the captain answered with a choice stays answered (INF-1389 friction 1, the captain's "Start now"): `CardService.refuseAnsweredRevision` reads how the card ended (`CardStore.past`) before an emit under its id opens it again.
 While the choice still waits on the author's lane, not yet handed to a turn (`InboxStore.holdsUndeliveredChoice`, the first mate's lane for its own cards and the task's lane for a crewmate's), every emit under the id is refused, and the refusal carries the choice and the answers to the card's questions, because that revision was written without them.
@@ -42,7 +41,7 @@ One without actions only tells the captain something, such as which crewmate too
 A card the captain closed without choosing, or one a script or its author closed, can still come back under its id.
 
 A reply does hand the turn to the author, and it never moves the card (INF-770 direction A, captain-approved 2026-10-21): the card stays shown in its place with the thread beside it, the pager and the arrows do not change, and the waiting line says who answers next.
-Put aside and Close are the only ways a card leaves the captain's screen, and each says what it does on rest (`docs/card-authoring.md`, "Put a card aside" and "Close").
+The minimize minus puts the card away and says what stays on rest (`docs/card-authoring.md`, "Put a card aside").
 An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): each newly arriving marked card comes forward, including the same stable id raised again as a note after a choice, but a revision or thread answer never undoes the captain's paging away.
 Every choice still closes the card immediately; nothing keeps its page running while its author writes.
 The card's body and scroll stay the same elements as the thread opens: only the surface's columns change.
@@ -127,7 +126,7 @@ Under a card nobody waits on, `interim` is an ordinary reply.
 The mark crosses from a computer that runs work too: `inf:work:reply` carries `interim`, so a crewmate there keeps the reply waiting the same way (INF-1623).
 An interim line never brings back a card the captain put aside, and neither does a handoff or a revision whose `reply` names no message: the card comes back with the final answer (`addMessage`, the revision's `aside`).
 The rule lives in the steer preamble and the tool's `interim` parameter, both crewmate-only, so the first mate's contract is unchanged.
-Closing a card asks first while its hold says a reply waits, as well as while the captain's line is the newest (`replyUnanswered`).
+Putting a card aside never asks to discard an unanswered reply; its hold and draft remain until its author answers.
 
 ## The waiting line
 
@@ -336,7 +335,7 @@ Cancellation and terminal session failure retire the task's open cards through `
   `crewSupervisor.test.ts` joins closure with cards and task detail, covering hidden cards, pending revisions, preserved history/threads, unrelated choices and resumable failure/interruption.
 - `tests/e2e/card-threads.spec.ts` - phase 1's three scenarios (a reply that revises the card in place, a reply answered in the thread, and "merge it" under a completion card landing as the first mate's settle) plus phase 2: a captain reply on a first mate card revises it / lands as prose, and an image rides a thread reply on a transport that supports it.
   The stage rule's case A: with two cards, a reply keeps the card shown with its thread, an acknowledgement and a reload leave it in its place, and the crewmate's turn end after its report redraws it with the answer in place.
-  A lone replied-under card closes from its own X, through the close's question about the unanswered reply, and stays closed through its crewmate's answer; `cardService.test.ts` holds the refusal until that crewmate's close-out.
+  A lone replied-under card is put aside without a warning and remains open for its author's answer; `cardService.test.ts` covers its release at that author's close-out.
 - `tests/e2e/stage-reveals.spec.ts` - a close brings up the first unread card, a reply keeps its card shown while the unread card waits, and with nothing unread the first card comes up; a reply under a lone card keeps its body as the captain left it.
   `store.test.ts` owns `departureIndex`, `dismissalSuccessor` and the reply that moves nothing.
 - `crewSupervisor.test.ts` ("a card reaches the stage at its author's close-out") - the design's recorded exchanges A, B and C replayed at their offsets through the real card, thread and report paths, each answered only at its turn's end, and a card put aside that its crewmate answers mid-turn; `firstmateAgent .test.ts` - case D on the first mate's own card and the mid-turn capture; `cardService.test.ts` - the kept card across a restart.
@@ -352,13 +351,13 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 - Cards as threads (phase 1, captain-approved 2026-09-20 "cards-as-threads over a decision model - ship it"; the decided design is R4 of `fm3000-card-close-decision-model-s1/report.md`, `docs/card-threads.md` is the one home).
   Every card is the head of a thread between the captain and the card's AUTHOR: what the captain types under a card goes to that author, and the author always answers in the thread; a revision under the same id carries that answer as `reply`, after the host's one `revised: …` line.
-  A reply RESOLVES NOTHING - the buttons stay pinned and a card still leaves on a button, a settle, the captain's close, the author's withdrawal.
-  Sending takes the card off the stage until the author has answered and closed out - its idle, the first mate's turn end - held in the core as `Card.awaiting` ("When a card reaches the stage", 2026-09-27).
+  A reply resolves nothing; the buttons stay pinned and explicit choices, task endings or author withdrawals retire cards.
+  A reply keeps the card shown while its author answers; a revision is released at its writer's close-out, held in the core as `Card.awaiting` ("When a card reaches the stage").
   The record is `card_messages` (migration 38, owned by `CardStore` beside `card_revisions`, dying with its card in `deleteForTask`'s transaction) and `CardService.addMessage` is its ONE writer, so no row lands without the `inf:cards:thread` push that paints it; a captain reply on a crewmate's card is a captain STEER to that crewmate - the path a card click already takes - stamped `via: "thread"` with `THREAD_STEER_PREAMBLE` and the captain's words verbatim, delivered fire-and-forget the way a click's round-trip is.
   `CARD_REPLY` (contract v4.2) is the shared contract, stated ONCE the way `CARD_AUTHORING` is and included by every persona (`piResources.test.ts` pins both directions); the crewmate's `reply(card_id, text)` is its prose half on Pi and Claude, and the first mate's tool count stays 24.
   The settle hand-off carries NO classifier: nothing in the host reads the captain's words - a crewmate asked to put a change in, discard it, route a stronger model or take on unrelated work closes its own card and reports those words verbatim, and the whose-turn rule routes that report to the first mate, which runs the settle.
   The first mate is never woken for a thread message; it reads the bounded "thread activity since your last turn" context section beside `renderCaptainResolutions` (8 lines, 6h, same watermark) and the `thread:` fact on each crew line.
-  RETIRED with it (captain's Q3 A): the close rule at `piResources.ts:92`, and `close_card` on the captain's behalf - only a card's own AUTHOR withdraws it now and the captain's × is the only dismissal, so `closeCard` refuses a first mate close of anyone else's card; the Jev pre-step and the relay classifier were the alternatives this replaced and are not built.
+  Only a card's own author withdraws it, so `closeCard` refuses a first mate withdrawal of someone else's card; the captain puts cards away through minus and ends work through explicit controls.
   The shell is one CONTAINER for the pair (one surface, border, radius, shadow; a single hairline between columns; thread `clamp(0.4*stage,288,360)`, card `min(560, stage-32-thread)`), the card's one field sits above its buttons until the first message (INF-924), and below a 400px card the docked rails FOLD - `html[data-rails-folded]` zeroes their width while they keep their panels, which is why `--rail-docked-*` (what they ask for) is a different variable from `--occupied-rail-*` (what they take): reading the effective one would make the ladder circular.
   `threadGeometry.test.ts` reproduces the captain's R3.1 table at 960/1200/1440/1728; `tests/e2e/card-threads.spec.ts` is the binding flow.
   Phase 2 (`PROTOCOL_VERSION` 1.19.0; contract stays 4.2): a captain reply on the first mate's own card is a captain TURN with the card as its about line (`converseAboutCard`, `TurnPayload.aboutCardId`) - the first mate answers through the same `CARD_REPLY` shape (revise same id, or resend it unchanged, with a `reply` naming the captain's message; its closing words via `recordFirstmateThreadAnswer` are a line that leaves the question open; no first mate `reply` tool, count stays 24); images ride `inf:cards:reply` / `steer(text, images)` where the transport can carry them (Pi native, Claude Agent SDK user-message image blocks) and degrade with `ATTACHMENTS_DROPPED_NOTE` where they cannot (the durable inbox); Observe's session detail lists open threads (`CrewSupervisor.observeThreads`, `[data-observe-threads]`).

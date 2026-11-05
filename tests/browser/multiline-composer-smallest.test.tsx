@@ -5,7 +5,7 @@ import { fakeBridge } from "./bridge";
 import { seededHome, subscribed } from "./freshHome";
 import { intersects, type Rect, windowBox, within } from "./layout";
 import { messageBox, messageBoxLocator } from "./prompt";
-import { answerStack, SHOWN_ENTRY, stageAtRest } from "./stack";
+import { answerStack, cardLeave, SHOWN_ENTRY, stageAtRest } from "./stack";
 import { openSize, openWindow } from "./window";
 
 /**
@@ -80,12 +80,10 @@ test("at the smallest window a tall draft stays in view and clear of the card, a
   expect(within(laid.shell, laid.window)).toEqual([]);
   expect(intersects(laid.shell, laid.card)).toBe(false);
 
-  // With the draft still up, Close on the card closes it.
+  // With the draft still up, the shared minus puts the card away.
   const layer = document.querySelector<HTMLElement>("[data-card-layer]");
   if (!layer) throw new Error("The window drew no card layer");
-  await userEvent.click(
-    page.elementLocator(layer).getByRole("button", { name: "Close", exact: true }),
-  );
+  await userEvent.click(cardLeave());
   await expect.element(title).not.toBeInTheDocument();
   expect(bridge.requests("inf:cards:close").map(([id]) => id)).toEqual([CARD_ID]);
   expect(field.value).toBe(draft);

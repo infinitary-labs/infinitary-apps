@@ -379,6 +379,9 @@ export const taskViewSchema = z.object({
   outcomeSummary: z.string().nullable(),
   /** Reachable shown ready decision on a live task; not durable attention/holds. */
   waitingCardId: z.string().nullable(),
+  /** A saved answer note ready for the captain’s explicit Done, even after reading it. */
+  answerNoteId: z.string().optional(),
+  answerSince: z.number().optional(),
   /** Desktop presentation only; not a decision, gate or task status. */
   minimizedCardId: z.string().optional(),
   /** Its waiting card settles with a merge: only that card's own button merges. Absent otherwise. */
@@ -398,6 +401,8 @@ export const taskViewSchema = z.object({
       "queue-task": taskMoveAllowanceSchema,
       "unqueue-task": taskMoveAllowanceSchema,
       "show-card": taskMoveAllowanceSchema.optional(),
+      "answer-done": taskMoveAllowanceSchema.optional(),
+      "dismiss-question": taskMoveAllowanceSchema.optional(),
     } satisfies Record<z.infer<typeof taskLifecycleOpSchema>, z.ZodType>)
     .optional(),
   /**

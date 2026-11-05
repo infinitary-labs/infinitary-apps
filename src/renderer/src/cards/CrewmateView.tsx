@@ -309,15 +309,7 @@ function Composer({
   );
 }
 
-export function CrewmateView({
-  taskId,
-  onClose,
-  onDrawn,
-}: {
-  taskId: string;
-  onClose: () => void;
-  onDrawn: () => void;
-}) {
+export function CrewmateView({ taskId, onDrawn }: { taskId: string; onDrawn: () => void }) {
   const { value: detail, failed: unreadable } = useTaskRead<TaskDetail>("tasks.detail", taskId);
   const { value: transcript, failed: transcriptFailed } = useTaskRead<CrewTranscript>(
     "tasks.crewmate",
@@ -423,7 +415,6 @@ export function CrewmateView({
             />
           )
         }
-        onClose={onClose}
         middle={
           <div
             ref={log}

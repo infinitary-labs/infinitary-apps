@@ -1,6 +1,20 @@
 import InfinitaryKit
 import SwiftUI
 
+/// The record's corner changes only which local view is shown, never the task.
+struct PhoneRecordLeaveButton: View {
+    @Binding var record: PhoneTask?
+    var body: some View {
+        Button { record = nil } label: {
+            Label(PhoneCardWords.recordLeave, systemImage: "minus").labelStyle(.iconOnly)
+        }.frame(minWidth: 44, minHeight: 44)
+            .foregroundStyle(PhoneTheme.secondary)
+            .keyboardShortcut("m", modifiers: [.command, .shift])
+            .accessibilityHint(PhoneCardWords.recordLeaveRest)
+            .accessibilityIdentifier("close-record")
+    }
+}
+
 struct PhoneTasks: View {
     let session: ReadOnlySession
     @Environment(PhoneMessageContext.self) private var messageContext
@@ -101,7 +115,7 @@ struct PhoneTasks: View {
         .sheet(item: $selected, onDismiss: { messageContext.taskID = nil }) { task in
             NavigationStack {
                 PhoneTaskRecord(session: session, initial: task)
-                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { selected = nil }.accessibilityIdentifier("close-record") } }
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { PhoneRecordLeaveButton(record: $selected) } }
             }.font(PhoneFont.body).tint(PhoneTheme.accent)
         }
     }
@@ -174,6 +188,10 @@ struct PhoneTasks: View {
                         Text(task.title).font(PhoneFont.body).foregroundStyle(PhoneTheme.text).lineLimit(1)
                         Spacer(minLength: PhoneTheme.space2)
                         if let project { Text(project).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).lineLimit(1) }
+                    }
+                    if let since = task.answerSince {
+                        HStack { Text("Answer waiting"); Text(Date(timeIntervalSince1970: since / 1000), style: .relative) }
+                            .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                     }
                     if let wait = task.queueWait {
                         Text(wait.line).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
@@ -250,10 +268,12 @@ struct PhoneTaskRecord: View {
     private var transcript: PhoneCrew? { crew.map(session.shown) }
     private var steerable: Bool { showingCrew && task.canSteer }
     private var canStart: Bool { task.moves?["start-task"]?.ok == true }
+    private var canDone: Bool { task.moves?["answer-done"]?.ok == true }
+    private var canDismiss: Bool { task.moves?["dismiss-question"]?.ok == true }
     private var canContinue: Bool { task.moves?["continue-task"]?.ok == true }
     private var canInterrupt: Bool { steerable && live?.since != nil && task.activity != "stopping" }
     private var hasActions: Bool {
-        (task.status == "open" || task.status == "active") && (steerable || canStart || canContinue)
+        (task.status == "open" || task.status == "active") && (steerable || canStart || canContinue || canDone || canDismiss)
     }
 
     var body: some View {
@@ -401,9 +421,11 @@ struct PhoneTaskRecord: View {
     @ViewBuilder private var actions: some View {
         VStack(spacing: PhoneTheme.space3) {
             if steerable { steerBox }
-            if canInterrupt || canStart || canContinue {
+            if canInterrupt || canStart || canContinue || canDone || canDismiss {
                 // The card's row (INF-944 item 5): the default lit and last at the trailing edge, Interrupt outlined beside it.
                 PhoneChoiceRow {
+                    if canDismiss { choice("Dismiss", id: "dismiss-question", primary: false) { change(.finish(task: task.id, ending: .dismissQuestion), .run, args: [task.id, PhoneTaskEnding.dismissQuestion.rawValue], from: "dismiss-question") } }
+                    if canDone { choice(PhoneCardWords.done, id: "record-answer-done", primary: true) { change(.finish(task: task.id, ending: .answerDone), .run, args: [task.id, PhoneTaskEnding.answerDone.rawValue], from: "record-answer-done") }.accessibilityHint(PhoneCardWords.doneRest(task.key)) }
                     if canInterrupt { choice("Interrupt", id: "interrupt-task", primary: false) { change(.interrupt(task: task.id), .interrupt, args: [task.id], from: "interrupt-task") } }
                     if canStart { choice("Start", id: "start-task", primary: true) { change(.start(task: task.id, move: "start-task"), .run, args: [task.id, "start-task"], from: "start-task") } }
                     if canContinue { choice("Continue", id: "continue-task", primary: true) { change(.start(task: task.id, move: "continue-task"), .run, args: [task.id, "continue-task"], from: "continue-task") } }

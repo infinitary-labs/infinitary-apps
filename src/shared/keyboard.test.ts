@@ -61,7 +61,7 @@ describe("the command catalog", () => {
       "computers.previous",
       "computers.next",
       "project-focus.clear",
-      "cards.close",
+      "cards.done",
       "cards.maximize",
       "cards.next-revision",
       "cards.show-info",
@@ -125,8 +125,8 @@ describe("the command catalog", () => {
       "project-focus.clear",
       "cards.previous",
       "cards.next",
-      "cards.close",
       "cards.minimize",
+      "cards.done",
       "cards.maximize",
       "cards.next-revision",
       "cards.thread",
@@ -413,11 +413,11 @@ describe("key hints", () => {
   it("shows a command's first key, every key for assistive technology, and nothing without keys", () => {
     expect(keyHint("focus.card-reply")).toBe("⇧⌘L");
     expect(keyHint("size.larger")).toBe("⌘+");
-    expect(keyHint("cards.close")).toBeUndefined();
+    expect(keyHint("cards.maximize")).toBeUndefined();
     expect(keyHint("cards.thread")).toBe("⌘\\");
     expect(ariaKeyShortcuts("focus.card-reply")).toBe("Shift+Meta+L");
     expect(ariaKeyShortcuts("message.recall")).toBe("ArrowUp Control+P");
-    expect(ariaKeyShortcuts("cards.close")).toBeUndefined();
+    expect(ariaKeyShortcuts("cards.maximize")).toBeUndefined();
     expect(
       keyHint("focus.card-reply", { ...DEFAULT_BINDINGS, "focus.card-reply": [] }),
     ).toBeUndefined();

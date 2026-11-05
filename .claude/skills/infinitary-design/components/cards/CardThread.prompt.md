@@ -32,7 +32,7 @@ A settle card's fact strip stays at the card's foot, where its row was.
 When the thread collapses, the choices go back under the field at the card's foot.
 The field keeps its draft, chips and focus across the move, and the card body is the same one, never rebuilt: what the captain did in the body (a preview's state, an open disclosure, scrolling) is still there beside the thread.
 A reply never moves the card (INF-770): it stays shown beside its thread whatever waits behind it, the pager and the arrows do not change, and the waiting line says who answers next and the way on.
-Put aside and Close are the only ways a card leaves (`ResponseCard.prompt.md`, "Put aside" and "Close").
+The card's minus puts the card and its thread away together without answering the question or ending work (`ResponseCard.prompt.md`, "Put aside").
 
 The pair is ONE container, not two (the captain's tweak: "the card and chat should feel like just one single container with a border in between, not two disconnected containers").
 One opaque `--bg-2` (`--acrylic-bg`) with no blur (`--acrylic-blur`), one `--line-1` (`--acrylic-border`), one `--radius-l`, one `--acrylic-shadow`, and a single `--line-2` hairline dividing the two columns.
@@ -48,7 +48,7 @@ A maximized card (`ResponseCard.prompt.md`, "Maximize") keeps its open thread as
 Only if the pair still does not fit does the thread go **in place** - a segmented control in the card's head (`card` · `thread · N`) swaps the body for the message list - which needs a stage under 720px and is out of reach at the app's 960px window minimum.
 
 The thread column, top to bottom: a mono micro-label head (`THREAD` alone, `--text-xs`, `.08em` tracking, uppercase, level with the card's head), the message list, the reply row, and the card's choices at its foot.
-The head never repeats the card's author, model or close: the card beside it already carries them (the captain: "this thread panel should not repeat the task title and model name and the close button, because the attached card already has all of that"), and the card's own × closes the card and its thread.
+The head never repeats the card's author, model or corner: the card beside it already carries them (the captain: "this thread panel should not repeat the task title and model name and the close button, because the attached card already has all of that"), and the card's own minus puts the card and its thread away.
 Its one control is **Collapse thread** at the head's right end, a 28px `IconButton` that is never an ×: a 16px rounded square with a panel line on its right and a chevron pointing LEFT, into the card, because the arrow says where the thread goes (Lucide's `panel-right-open` glyph, whose name is the reverse of its meaning here; the captain found arrows the other way round "the opposite of what user would expect").
 Its drawn label reads "Collapse thread" with the command's key (⌘\), and it names every key in `aria-keyshortcuts`.
 While its author is actively working, the message list ends with the muted mono text `working`, without a crewmate glyph or author prefix; derive this from task activity, never reply-in-flight state.

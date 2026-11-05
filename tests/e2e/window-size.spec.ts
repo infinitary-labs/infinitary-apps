@@ -28,7 +28,7 @@ import {
   MOCK_CHOICE_CARD_TITLE,
   MOCK_LONG_ACTION_LABEL,
 } from "./scenarios/everyCardKind";
-import { cardReply, cardSurface, pager, showCard, shownEntry } from "./stack";
+import { cardLeave, cardReply, cardSurface, pager, showCard, shownEntry } from "./stack";
 import { MAC_ONLY_TAG } from "./tags";
 import { pressWindowKey } from "./windowKeys";
 
@@ -136,10 +136,7 @@ for (const size of UI_SIZES) {
       await capture(launched, `card-${size}.png`);
       await resizeWindow(app, page, await minimumWindowSize(app));
       await expect(input).toBeVisible();
-      await expectControlsWhole(page, [
-        shownEntry(page).getByRole("button", { name: "Close", exact: true }),
-        cardReply(page).field,
-      ]);
+      await expectControlsWhole(page, [cardLeave(page, shownEntry(page)), cardReply(page).field]);
       await capture(launched, `minimum-${size}.png`);
       await writeFile(
         test.info().outputPath(`measurements-${size}.json`),
@@ -356,7 +353,7 @@ test("a card in a short window at a larger size keeps its reading room and every
     const card = shownEntry(page);
     const bodyFrame = cardBodyElement(card, DECISION_TITLE);
     const controls = [
-      card.getByRole("button", { name: "Close", exact: true }),
+      cardLeave(page, card),
       card.getByRole("button", { name: MOCK_LONG_ACTION_LABEL, exact: true }),
       card.getByRole("button", { name: "Await the queue", exact: true }),
       cardReply(page).field,
@@ -482,10 +479,7 @@ for (const size of UI_SIZES) {
       for (const window of windows) {
         await resizeWindow(app, page, window);
         await expectHeadersClearOfInput(page, { cardUp: true });
-        await expectControlsWhole(page, [
-          shownEntry(page).getByRole("button", { name: "Close", exact: true }),
-          cardReply(page).field,
-        ]);
+        await expectControlsWhole(page, [cardLeave(page, shownEntry(page)), cardReply(page).field]);
       }
       await capture(launched, `headers-card-${size}.png`);
     } finally {

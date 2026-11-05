@@ -99,9 +99,10 @@ export type Reasons = Map<string, string[]>;
 // These narrow fallbacks cover breaks that do not change a hook or copied
 // words. Union them with the existing selection, never replace it.
 const FALLBACKS = [
+  { paths: ["src/shared/cardLeave.ts", "src/shared/cards.ts", "src/core/orchestrator/cardService.ts", "src/core/orchestrator/crewSupervisor.ts", "src/renderer/src/design/cards/"], specs: ["card-leave.spec.ts"] },
   {
     paths: ["src/renderer/src/cards/", "src/renderer/src/app/HomeScreen.tsx"],
-    specs: ["keyboard-routing.spec.ts", "stage-reveals.spec.ts"],
+    specs: ["keyboard-routing.spec.ts", "stage-reveals.spec.ts", "card-leave.spec.ts"],
   },
   {
     paths: ["src/renderer/src/app/focusRecovery.ts", "src/renderer/src/plugins/frames/frameFocus.ts"],

@@ -22,8 +22,8 @@ A task of its own exists only for a genuinely standalone one-off, and only when 
    The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask with `attached_via = tool:<name>`:
    - `spawn_crewmate` -> the new task; `steer_crewmate`, `interrupt_crewmate`, `settle_task`, `update_task` (including `start_now`) -> the named task.
    - `emit_card` with `task_id` -> that task: a note is an `answered` event carrying the body, a decision a `card_raised` event whose resolution `act()`/`close()` record as `card_resolved`.
-   - `emit_card` decision without `task_id` -> a new `decision` task, open, captain gate `ref = card id`, living exactly as long as the card is on the stack: the captain's choice closes it `done/answered`, a dismiss `dropped/cancelled`, a `close_card` `dropped/superseded`, and the sweep closes one whose card is gone anyway `dropped/superseded`.
-     Nothing parks it and nothing brings the card back (cards/tasks/agents P0; migration 28 closed every park row and logged it in `park_row_backfill`).
+   - `emit_card` decision without `task_id` -> a new `decision` task, open, captain gate `ref = card id`, living as long as its choice remains open, including while put away: the captain’s choice closes it `done/answered`, explicit Dismiss in its record closes it `dropped/cancelled`, `close_card` closes it `dropped/superseded`, and the sweep closes one whose card is gone anyway `dropped/superseded`.
+     Putting it away retains the open card and its Tasks row; Show the card brings it back (cards/tasks/agents P0; migration 28 closed every park row and logged it in `park_row_backfill`).
    - `emit_card` note without `task_id` requires `standalone: true` (lint refusal otherwise, `NOTE_NEEDS_TASK_REFUSAL` in `src/core/pi/cardLint.ts`); it files a `question` task born `done/answered` with the body as outcome.
      Revising the card in place revises the same row.
    - The operate tools that still file through `filingOperations` in `firstmateAgent.ts` are `schedule_prompt`, `record_knowledge` (`docs/knowledge.md`), `flag_missed_escalation`, `flag_duplicate`, `personalize` and `install_plugin` (`setup_repo` and `unregister_repo` are retired); each files an `operation` task `done/settled` with the tool result as outcome, in the repo's project or Scratch.
@@ -94,6 +94,8 @@ The check runs at the turn's end, after reply capture and the first mate's close
    A crewmate's card still held for its close-out takes nothing back until it reaches the stage, since the captain sees neither until then.
    While its notice is up the first mate may still name the message on work, so that work's card can be the one.
    The message keeps `notice_card_id`, so if it goes unanswered again the same notice comes back, with no second retry.
+   An author's explicit withdrawal rechecks coverage through the existing answer-delivery sweep, without accepting the answer on the captain's behalf.
+   Putting a decision aside keeps its answering offer available and does not withdraw it.
    A newer message that joined the chain after the notice was taken back has its own one retry, and its own notice.
    A notice the captain answered, with Ask again or Leave it, is gone, and its message stays ended.
 
@@ -125,9 +127,11 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
 - **A card that can answer it.**
   A card about its work that its author marked `answering`, a completion card's merge, the app's merge line on a story note, or a card the first mate showed for the message; it counts only when it was shown since the newest message of the chain.
 - **Accepted.**
-  The captain's choice on a decision about its work that is not still asking (`asking`, `continues`), or their close of a note that can answer it, with no reply of theirs waiting under it (`CardService` reports each response through `captainResponded`).
+  The captain's choice on a decision about its work that is not still asking (`asking`, `continues`), or Done on a note that can answer it, with no reply of theirs waiting under it (`CardService` reports each response through `captainResponded`).
+  Putting a taskless note or an already-completed task's note away as read also acknowledges the message when the note qualifies as its answer; this ends no work.
+  Reading an active task's note accepts nothing: a saved answer still waits for explicit Done.
   An explicitly answering crewmate card on an active answer-deliverable task also counts when its admitted choice qualifies to close that task, even with `asking` set.
-  Ask acceptance and task completion share `taskResultResponse`; continuing cards, held writes, browser handoffs and pending replies do not qualify.
+  Ask acceptance and task completion for that admitted answer-task choice share `taskResultResponse`; continuing cards, held writes, browser handoffs and pending replies do not qualify.
   The author judges whether the requested result is supplied, including a ready plan that offers further work, rather than a prerequisite question or consent.
   The host checks attribution, the admitted choice and offer freshness, never card meaning or button wording.
   CardService saves choice acceptance through TaskService in the resolution transaction before task closure, preserving the original offer and submitted answers.
@@ -192,7 +196,7 @@ An open first mate decision card does not light the rail: the strip counts worki
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - Capture (task-system P1, design section 6, captain decision D1 - "attach first"; `docs/task-capture.md`): every `inf:converse` opens a `captain_asks` row BEFORE the turn runs (`src/core/orchestrator/askCapture.ts` over `TaskService.openAsk`); the first mate's tools select the read message they address through `ask_id` (empty for unrelated operational work) and attach it to the task they act on (`attached_via = tool:<name>`), and `AskCapture.endTurn` files whatever is still loose - on the hinted task (the open card's task, or the turn's `taskId`), else as a standalone `question` task in Scratch (`host:fallback`; the share of these is the attribution metric).
-  `emit_card` needs `task_id` or `standalone: true` for a note (lint refusal), a task-less decision files an open `decision` task keyed by its card id (the choice, a dismissal or a close_card closes it; nothing parks it), and the operate tools file `operation` tasks through one helper.
+  `emit_card` needs `task_id` or `standalone: true` for a note (lint refusal), a task-less decision files an open `decision` task keyed by its card id (a choice, explicit Dismiss or close_card closes it; putting it away does not), and the operate tools file `operation` tasks through one helper.
   `[fm-op]` wakes open no ask.
   Never add a second ask writer, and never let a first mate card with `task_id` count as the crewmate's card (`cardEmitter` in `crewSupervisor.ts` reads the emitter off the id: `card-fm-` vs `card-<taskId>-`).
 

@@ -51,7 +51,6 @@ describe("the shared task mark", () => {
           pillTone="neutral"
           taskKey="DEMO-1"
           title="Example task"
-          onClose={() => {}}
         />,
       );
       const summary = renderToStaticMarkup(

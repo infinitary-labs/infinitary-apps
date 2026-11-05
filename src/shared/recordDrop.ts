@@ -5,7 +5,7 @@ import type { DropTaskReview } from "./cards";
  * open state since FI3-565 piece 4). On never-started work it is the footer's
  * own drop: the record is dropped/cancelled, and a parent with open parts is
  * refused, not cascaded. On started work it is the stall card's stop. The
- * top-right cross only hides the popover, so its name is not the action that
+ * top-right minus only hides the record, so its name is not the action that
  * ends the task.
  */
 

@@ -719,14 +719,15 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
       "waits for Mac mini's own Claude sign-in",
     );
 
-    // Two hours with the card up, the card closed, two hours more: nothing is
-    // tried, nothing is set aside, and the closed card does not come back.
+    // INF-1879: two hours with the card up, then put away, two hours more:
+    // nothing is tried or decided, and the sign-in card stays put away.
     await at.ticks(120 * MINUTE, 5 * MINUTE);
     home.supervisor.close("card-auth-t1");
     await at.settle();
     await at.ticks(120 * MINUTE, 5 * MINUTE);
     expect(at.claude.turns).toHaveLength(1);
-    await expect.poll(() => signInCards(at)).toEqual([]);
+    expect(signInCards(at)).toEqual(["card-auth-t1"]);
+    expect(home.cards().find((card) => card.id === "card-auth-t1")?.minimized).toBe(true);
     expect(kinds(at)).toEqual(["queued-started", "provider-cut-off"]);
     expect(home.tasks.get("t2")?.status).toBe("open");
     // The captain's word meanwhile is kept for it.

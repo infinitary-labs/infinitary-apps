@@ -6,7 +6,6 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { CLOSE_ANYWAY } from "../../src/renderer/src/app/closeQuestionWords";
 import { CARD_REPLY_MAX_CHARS, type Card } from "../../src/shared/cards";
 import { COMPOSER_NOTICE_WORDS } from "../../src/shared/composer";
 import { reportSummary } from "../../src/shared/feed";
@@ -65,6 +64,7 @@ import {
   threadSettle,
 } from "./scenarios/threadSettle";
 import {
+  cardLeave,
   cardReply,
   closeOpenCards,
   closeQuestion,
@@ -376,11 +376,7 @@ test('"merge it" typed under a completion card closes it and lands as the Firstm
   const { page } = launched;
   // Clear whatever the previous test left on the stage, so the completion
   // card is the one the reply row belongs to.
-  const openClose = page.locator(`${SHOWN_ENTRY} button[aria-label="Close"]`).first();
-  while (await openClose.isVisible()) {
-    await openClose.click();
-    await page.waitForTimeout(300);
-  }
+  await closeOpenCards(page);
 
   const input = promptInput(page);
   await input.click();
@@ -508,16 +504,16 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
   await settings.click();
   await expect(settings).toHaveAttribute("aria-expanded", "true");
   await expect(multiLine.locator("[data-thread-settings]")).toContainText("brief");
-  // The revised draft was sent with the latest reply, so closing loses no settings.
-  await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+  // INF-1879: putting the revised decision away keeps its sent settings and open choices.
+  await cardLeave(page, shownEntry(page)).click();
   await expect(closeQuestion(page)).toHaveCount(0);
   await expect
     .poll(async () =>
       (await page.evaluate(() => window.infinitary.cards.list())).some(
-        (card) => card.id === cardId,
+        (card) => card.id === cardId && card.minimized,
       ),
     )
-    .toBe(false);
+    .toBe(true);
 });
 
 test("a card reply takes the shell keys and undoes typing by the run, but never brings back the main message", {
@@ -564,13 +560,19 @@ test("an image rides a thread reply on a transport that supports it", async () =
   expect(cardId).toBeTruthy();
   const before = mockProvider?.requestBodies().length ?? 0;
   await page.evaluate(
-    async ({ id, png }) => {
+    async ({ id, png, text }) => {
       await window.infinitary.cards.reply(id, {
-        text: "see this picture",
+        text,
         images: [{ mimeType: "image/png", data: png }],
       });
     },
-    { id: cardId as string, png: THREAD_IMAGE_PNG },
+    // INF-1879: minus preserves unanswered replies. Give the existing scenario
+    // its real question as well as the caption, so it answers before the next case.
+    {
+      id: cardId as string,
+      png: THREAD_IMAGE_PNG,
+      text: `${THREAD_PROSE_REPLY}\n\nsee this picture`,
+    },
   );
   await expect(
     shownEntry(page).locator("[data-card-thread]").getByText("see this picture"),
@@ -684,7 +686,7 @@ test("a reply keeps the card shown with its thread while another card waits; an 
   await closeOpenCards(page);
 });
 
-test("a lone replied-under card closes from its own X and stays closed through its crewmate's answer", async () => {
+test("INF-1879: a lone replied-under card stays open while put away and returns with its crewmate's answer", async () => {
   const { page, mockProvider } = launched;
   await waitForFirstmateIdle(page);
   await closeOpenCards(page);
@@ -705,19 +707,16 @@ test("a lone replied-under card closes from its own X and stays closed through i
   await expect.poll(() => mockProvider?.heldThreadAnswers() ?? 0, { timeout: 30_000 }).toBe(1);
   await windowCaughtUp(page, cardId);
 
-  // The captain closes it with its own X. The acknowledgement named no
-  // message, so the reply still waits (the captain's "a handoff stays
-  // open") and the close asks first; Close anyway closes it.
+  // Put aside preserves the unanswered thread instead of withdrawing its card.
   await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
-  await shownEntry(page)
-    .locator("[data-card-pair]")
-    .getByRole("button", { name: "Close", exact: true })
-    .click();
-  await closeQuestion(page).getByRole("button", { name: CLOSE_ANYWAY, exact: true }).click();
-  await expectNoCard(page, THREAD_CARD_TITLE);
+  await cardLeave(page, shownEntry(page).locator("[data-card-pair]")).click();
+  await expect(shownCard(page, THREAD_CARD_TITLE)).toBeHidden();
+  expect(
+    (await page.evaluate(() => window.infinitary.cards.list())).find((card) => card.id === cardId)
+      ?.minimized,
+  ).toBe(true);
 
-  // The answer it was writing - a revision under the same id - lands after
-  // the close, and the crewmate's turn ends: the card stays closed.
+  // The author's revision under the same id returns when its answering turn ends.
   mockProvider?.releaseThreadAnswer();
   await expect
     .poll(
@@ -736,8 +735,8 @@ test("a lone replied-under card closes from its own X and stays closed through i
       async (id) => (await window.infinitary.cards.list()).some((card) => card.id === id),
       cardId,
     ),
-  ).toBe(false);
-  await expectNoCard(page, THREAD_ACK_REVISED_TITLE);
+  ).toBe(true);
+  await expect(shownCard(page, THREAD_ACK_REVISED_TITLE)).toBeVisible();
   await expect(page.locator("[data-card-pager]")).toHaveCount(0);
   await closeOpenCards(page);
 });

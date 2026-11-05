@@ -17,7 +17,7 @@ import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { encodePng } from "./pictureFixtures";
 import { heroShot } from "./pictures";
-import { clickInBody, closeOpenCards, pagerAt, shownCard } from "./stack";
+import { clickInBody, closeOpenCards, pagerAt, showCard, shownCard, shownEntry } from "./stack";
 import { setThemeViaSettings } from "./theme";
 
 /**
@@ -147,6 +147,8 @@ const stack = (page: Page) =>
 test("an upgrade puts one release note on top of the stack, a restart keeps it, and a closed one stays closed", async () => {
   const userDataDir = scratchDir("infinitary-release-notes-");
   const env = { INFINITARY_RELEASE_NOTES_DIR: notesDir() };
+  const projectQuestion = "Which project first?";
+  const firstProject = "First";
   // A profile that last opened the earlier version, after an even earlier
   // one, and has a decision open.
   const db = openDatabase(userDataDir);
@@ -159,13 +161,13 @@ test("an upgrade puts one release note on top of the stack, a restart keeps it, 
   });
   new CardStore(db).upsert({
     id: "card-fm-open-decision",
-    title: "Which project first?",
+    title: projectQuestion,
     author: "firstmate",
     priority: 30,
     meta: "firstmate",
     body: "<p>Two projects are waiting.</p>",
     actions: [
-      { id: "first", label: "First", variant: "secondary" },
+      { id: "first", label: firstProject, variant: "secondary" },
       { id: "second", label: "Second", variant: "primary", default: true },
     ],
     status: "ready",
@@ -212,6 +214,12 @@ test("an upgrade puts one release note on top of the stack, a restart keeps it, 
     try {
       const cards = await stack(launched.page);
       expect(cards.map((card) => card.id)).toEqual([noteId, "card-fm-open-decision"]);
+      // INF-1879: minus preserves a decision. Explicitly answer this fixture's
+      // unrelated question; putting away the release note must still persist.
+      await showCard(launched.page, projectQuestion);
+      await shownEntry(launched.page)
+        .getByRole("button", { name: firstProject, exact: true })
+        .click();
       await closeOpenCards(launched.page);
       expect(await stack(launched.page)).toEqual([]);
     } finally {

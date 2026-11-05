@@ -175,7 +175,7 @@ Natural measurement temporarily releases the shell constraint before paint, then
 Same-entry growth, drafts and controls remain instant.
 Resize/drag/focus, reduced motion and error/Retry also remain usable.
 
-How a replacement draws is judged by eye and by recordings; the journeys through it (paging, a reply draft kept across paging and a card-body disclosure in `tests/browser/phase4-cards.test.tsx`; Close, the next-card rule and a lone card's reply keeping its body in `stage-reveals.spec.ts`) are end-to-end and browser tests, and `stageSlots.test.ts` and `store.test.ts` own the lifecycle and selection ordering.
+How a replacement draws is judged by eye and by recordings; the journeys through it (paging, a reply draft kept across paging and a card-body disclosure in `tests/browser/phase4-cards.test.tsx`; the shared minus, the next-card rule and a lone card's reply keeping its body in `stage-reveals.spec.ts`) are end-to-end and browser tests, and `stageSlots.test.ts` and `store.test.ts` own the lifecycle and selection ordering.
 Shared e2e helpers read the shown entry (`tests/e2e/stack.ts` `SHOWN_ENTRY`): a prepared or leaving entry is never "the card".
 
 ### Held preparation

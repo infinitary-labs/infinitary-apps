@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
 import { openInMemoryDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { CHECK_DIAGNOSIS_NEXT } from "./checkRepair";
@@ -141,16 +142,32 @@ describe("renderWake", () => {
     expect(renderWake(idleNudge(true, undefined, false, [], true))).toBe(IDLE_THREAD_NUDGE_TEXT);
   });
 
-  it("names finished when the captain closes a card on an answer task without choosing (INF-1732)", () => {
+  it("a legacy card-closed wake never instructs its author to finish", () => {
     const card = { id: "card-t1-answer", title: "The answer" };
     const plain = renderWake({ facts: { kind: "card-closed", card } });
-    const answer = renderWake({ facts: { kind: "card-closed", card, answer: true } });
     expect(plain).toBe(
       'The captain closed your card "The answer" (card-t1-answer) without choosing.',
     );
-    expect(answer.startsWith(plain)).toBe(true);
-    expect(answer).toContain("report with finished true");
-    expect(isCardClosedSteer(answer)).toBe(true);
+    expect(plain).not.toContain("report with finished true");
+    expect(isCardClosedSteer(plain)).toBe(true);
+  });
+
+  // Ordinary-read acknowledgement is distinct from saved-answer completion.
+  it("serves acknowledgement only for an actual ordinary note read, not a duplicate", () => {
+    const card = { id: "card-t1-note", title: "The measurements" };
+    const legacy = renderWake({ facts: { kind: "card-closed", card } });
+    const read = renderWake({ facts: { kind: "card-closed", card, read: true } });
+    const duplicate = renderWake({
+      facts: {
+        kind: "card-closed",
+        card,
+        duplicateOf: { id: "card-t1-first", title: "Measurements" },
+      },
+    });
+    expect(read).toBe(`${legacy} ${ORDINARY_NOTE_READ_GUIDANCE}`);
+    expect(isCardClosedSteer(read)).toBe(true);
+    expect(duplicate).not.toContain(ORDINARY_NOTE_READ_GUIDANCE);
+    expect(isCardClosedSteer(duplicate)).toBe(true);
   });
 
   it("says a note is up in the stall wake, never that no card is (FI3-438)", () => {

@@ -533,12 +533,12 @@ const ANSWER_CONTINUES_CARD =
   "A card whose choice you go on from rather than your answer, such as a consent before you use something sensitive, declares continues on each revision: that choice comes back to you, and the captain's choice on any other card of yours closes this task as answered.";
 
 /**
- * Which close ends a captain-asked answer (INF-1732): INF-1718's answer
- * note was closed and its task stayed open, because nothing marked it and
- * no report set `finished`. The host reads only the mark and the flag.
+ * A captain-asked answer marks its note for explicit Done; the corner
+ * never ends work. Other acknowledged work reaches settlement through a
+ * typed `finished` report. The host reads the mark and flag, not prose.
  */
 export const ANSWER_MARK_WORDS =
-  "Mark the card that is your answer answering on each revision: when it is a note, the captain's close of it closes this task as answered. When nothing is left for you otherwise, report with finished true - saying so in words does not close the task.";
+  "Mark the card that is your answer answering on each revision: when it is a note, the host draws Done, which closes this task as answered. The minimize corner only puts it away and ends nothing. When nothing is left for you otherwise, report with finished true - saying so in words does not close the task.";
 
 /**
  * The one section the brief carries about what an answer task's answer

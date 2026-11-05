@@ -96,6 +96,14 @@ describe("why a window command cannot run now", () => {
     expect(commandRefusal("updates.later", HOME, CLEAR)).toBe("No update is saving work now");
   });
 
+  it("INF-1879: the new Done control preserves the existing recording focus guard", () => {
+    const answer = { ...CLEAR, answerDoneReady: true };
+    expect(commandRefusal("focus.card-actions", HOME, answer)).toBeNull();
+    expect(commandRefusal("focus.card-actions", { ...HOME, recording: true }, answer)).toBe(
+      commandRefusal("focus.card-body", { ...HOME, recording: true }, CLEAR),
+    );
+  });
+
   it("lets every command run on a home screen with cards, but the arrow past the stack's end", () => {
     for (const id of [
       "commands.search",
@@ -105,7 +113,7 @@ describe("why a window command cannot run now", () => {
       "regions.next",
       "regions.previous",
       "cards.next",
-      "cards.close",
+      "cards.minimize",
       "cards.maximize",
       "settings.open",
       "settings.keyboard",
@@ -282,10 +290,12 @@ describe("why a window command cannot run now", () => {
 
   it("keeps the cards' commands to the home screen, where the cards are", () => {
     const settings = { ...HOME, view: "settings" as const };
-    expect(commandRefusal("cards.close", settings, CLEAR)).toBe("Settings is open");
+    expect(commandRefusal("cards.minimize", settings, CLEAR)).toBe("Settings is open");
     expect(commandRefusal("cards.next", settings, CLEAR)).toBe("Settings is open");
     expect(commandRefusal("settings.open", settings, CLEAR)).toBe("Settings is already open");
-    expect(commandRefusal("cards.close", { ...HOME, cards: [] }, CLEAR)).toBe("No card is shown");
+    expect(commandRefusal("cards.minimize", { ...HOME, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
     expect(commandRefusal("cards.maximize", settings, CLEAR)).toBe("Settings is open");
     expect(commandRefusal("cards.maximize", { ...HOME, cards: [] }, CLEAR)).toBe(
       "No card is shown",

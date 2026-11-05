@@ -49,9 +49,10 @@ Only when the words are cut, the bubble itself is the control: click or tap it t
 On desktop it is a Tab stop with the focus ring, and Enter or Space activates it.
 `QuestionBubble` on desktop and `PhoneQuestionBubble` in the native app own the same treatment for the asked line and conversation questions; callers provide the words and expansion state, keeping their own label and time.
 The line keeps clear of the risk chart as the title does, and a card about no message of the captain's draws none.
-Every card has a top-right close control (IconButton, aria-label Close), with the size control, Maximize card, right before it ("Maximize", below).
-Close dismisses the card; it is not a footer action.
-Notes with no declared actions have no Done button.
+Every card has one top-right leaving control, a neutral Lucide minus after Maximize, that only puts the card away and never ends a task (INF-1879).
+The shared `src/shared/cardLeave.ts` table owns each kind’s icon, label, rest words and operation; live cards carry the core’s corner and the window’s own panels read their table row.
+An answer note carries the host’s Done row between body and field; Done closes its task as answered, and the task record offers the same Done after the note is put away.
+Other notes have no Done button.
 Card actions acknowledge before the next paint: while the host accepts a request, the selected Button is pending and the entire action row is disabled.
 Embedded body actions use the same request guard.
 Acceptance closes the card before background work settles; the durable feed carries the outcome, including refusal reasons.
@@ -81,19 +82,10 @@ Picking it opens a text field under it, focused: one line growing to three, `--t
 Picking another option hides the field and keeps its words, which are sent only with the row; an empty field is no answer, so a required question's default still waits and its click focuses the field.
 What the captain writes there counts as picked and changed, and reaches the author as the captain's own answer.
 A question whose options are the only possible answers carries `data-inf-options-only` instead, a mark for the card check that the app does not draw.
-After a thread reply or footer choice is accepted, the close warning compares current values with that send, not with the authored proposal; returning to the sent values needs no warning.
-When the captain closes with any unsent picked answer, the × asks one question in a popover hung under it, right-aligned to it, and the action row stays as it is.
-The popover is 296px of `--bg-2` with a `--line-2` hairline, `--radius-m`, `--shadow-2` and `--space-3` padding, and grows from the × like every popover: "You picked 2 answers.
-Closing will discard them."
-(`--text-sm`, `--fg-2`; a preview counts settings) above small `secondary` "Keep answering" and primary "Discard and close" on the right.
-Escape, a click anywhere else or the × again keeps the card.
-While the captain's reply is the newest line on the card's thread, the same popover asks (INF-770): "Crewmate 7 has not answered your reply yet.
-Closed, its answer stays on INF-770's record." above small primary "Put aside instead", the default, and `secondary` "Close anyway" on its right; a card about no task says "stays readable in Tasks", and the first mate's card says "Your first mate".
-When unsent picks are there too it stays one popover: the picks' words come first, the reply's sentence follows, and the choices are Keep answering and Discard and close.
-A close from command search focuses the first choice; nothing else asks.
+Putting a decision away preserves its in-session picks and unsent words without a popover.
 The frame stylesheet dresses a plain `fieldset` as a hairline `--line-1` box at `--radius-m` with its `legend` in `--fg-1` weight 500, each radio or checkbox label a row with `--space-2` between control and text (`accent-color: --accent`, a checked row's text `--fg-1`), and a `textarea` full width under its label.
 Every ready card body is semantic HTML in a sandboxed iframe.
-The host owns the chip, title, size control, close, pager, and footer actions.
+The host owns the chip, title, size control, minimize corner, pager, and footer actions.
 Follow the card contract the models read (`CARD_AUTHORING` in `src/core/prompts/cardContract.ts`, mirrored by the readme's Card bodies bullet): a card leads with its answer in one sentence (finished code-work completion cards are the exception: the title alone carries the answer, and the body opens at Why, then What changed, Before and After; `docs/card-authoring.md` owns that loose outline), and an answer that explains how something works, compares options, or shows state, shape or layout is drawn - that sentence, then the figures carrying it.
 An explanation with several parts gets several figures, each beside the short sentence it illustrates, rather than one crowded drawing.
 Keep prose needed to follow the answer in the open; reserve `<details>` for evidence, exact code paths, qualifications, and other material for a reader who digs.
@@ -206,15 +198,15 @@ Inside the body, prose (paragraphs, lists, headings, captions, summaries) keeps 
 The body's document carries `data-width` (`regular`, `wide`, `full`) for the size it is shown at.
 
 **Maximize.**
-Every card on the stage - a decision, a note, an attention card, a task's record, a past card, a panel's card such as the task board, and a task's browser where the build offers it - carries one size control immediately before its Close or Hide: an `IconButton` with outward diagonal arrows (Lucide `maximize-2`), labelled `Maximize card`.
-While the card is maximized the same control reads `Restore card`, with inward arrows (Lucide `minimize-2`); Close and Hide keep their meaning and their question.
+Every card on the stage - a decision, a note, an attention card, a task's record, a past card, a panel's card such as the task board, and a task's browser where the build offers it - carries one size control immediately before its minimize minus: an `IconButton` with outward diagonal arrows (Lucide `maximize-2`), labelled `Maximize card`.
+While the card is maximized the same control reads `Restore card`, with inward arrows (Lucide `minimize-2`); the minus keeps its presentation-only meaning.
 Maximized, the card nearly fills the app's window: the window's width less 16 px at each side, with no width of its own and no drag, from 16 px under the top bar to 16 px above the window's bottom, less a 40 px lane for the pager when there is one.
 Its surface fills that room however short its body; the window and its top bar do not change.
 The side panels and the main message step aside, hidden and out of the keyboard's reach, with their panels running and their words kept; the stack's peeks and the edge grips go too, and the pager stays in its lane.
 The head, title, body, attachment, facts strip, action row and reply keep their places, and the body scrolls inside as ever; prose keeps its 66-character measure while tables, code and wide drawings take the room.
 A thread already open beside the card stays its right column at its own width and the card takes the rest (`CardThread.prompt.md`); maximizing opens no thread.
 It is the same card, never a copy: its page, answers, open details, script and reply stay as they were through any number of changes of size, and the reading place in its body holds.
-Restore, or an Escape nothing in the card used, gives it back its usual width, or the width the captain dragged, and the panels as they were; the card's own controls, the close question, the picture viewer and command search use their Escape first, and a record or a panel's card restores on Escape before a later Escape hides it.
+Restore, or an Escape nothing in the card used, gives it back its usual width, or the width the captain dragged, and the panels as they were; the card's own controls, the picture viewer and command search use their Escape first, and a record or a panel's card restores on Escape before a later Escape hides it.
 A click outside the card does nothing.
 The keyboard's focus lands on the size control after each change; while maximized, Tab and ⇧Tab go round the card, its thread and its pager, and the window's parts are the card alone.
 Command search lists "Maximize or restore card", with no key of its own (`docs/keyboard.md`).
@@ -223,7 +215,7 @@ Paging, closing, a withdrawal, a reply that sends the card back, another card br
 Going to the main message restores the current card until another card comes forward.
 A change of size is a cut: no width tween, no scaled text, no blur.
 ```jsx
-<ResponseCard kind="decision" title="Two ways to fix the flaky test" meta="just now" onClose={onClose}
+<ResponseCard kind="decision" title="Two ways to fix the flaky test" meta="just now"
   actions={<><Button variant="secondary">Mock the clock</Button><Button>Await the queue</Button></>}>
   <iframe title="Two ways to fix the flaky test body" sandbox="allow-scripts" srcDoc={bodyDocument} />
 </ResponseCard>
@@ -282,7 +274,7 @@ The app's own cards, the welcome, a task's record and a panel card draw no field
 ## Past card (FI3-579, direction A)
 
 A closed card can be read again on the stage, exactly as the captain last saw it, and does nothing.
-It is a shell-held entry like a task record: one per saved card, opened at the front and shown at once, paging with the stack, never persisted or emitted as a card, and gone on Hide or Esc (the top-right cross, label `Hide`).
+It is a shell-held entry like a task record: one per saved card, opened at the front and shown at once, paging with the stack, never persisted or emitted as a card, and gone on Hide or Esc (the shared top-right minus, label `Hide`).
 Hide only hides; the saved card, its thread and its record keep everything.
 
 - **PAST strip.**
@@ -318,13 +310,10 @@ Deferred obligations remain under Waiting on you in Tasks with Show the card; ma
 
 ## Put aside
 
-Every live decision, note and attention card has a neutral Lucide minus before Maximize, named Put aside, whose label on rest says the comeback: "Put aside · back when it changes", with the installed key hint (default ⇧⌘M).
-The same control stays while maximized or threaded.
-It changes saved stack visibility, never closes a card, asks the close question or changes work, gates or notifications.
-Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Put aside.
-
-## Close
-
-The card's × is named Close; its label on rest says where the closed card stays: "Close · stays on INF-770's record", the key of the task the card is about, or "Close · stays readable in Tasks" for a card about none (INF-770).
-Its question is above, under picked answers.
+Every card has one leaving control, the neutral Lucide minus after Maximize, with its installed key hint (default ⇧⌘M).
+`src/shared/cardLeave.ts` owns its label and rest words, and `docs/card-authoring.md` carries the checked table.
+Decisions and attention cards stay open under Waiting on you, notes are read, and the window’s own panels hide.
+The minus never decides, refuses consent or ends a task; ending is a named button.
+The host draws Done on an answer note and in its record, and never completes it by time.
+The separate Close command retires; unsent picks and words stay on a put-away decision without a warning question.
 The body primitive accepts an owner-supplied bodyRef for keeping an in-session reading place.

@@ -1,5 +1,6 @@
 import { GUIDANCE_MARK_WORDS } from "../../../src/core/orchestrator/wakes";
 import {
+  answering,
   CLAUDE_CREW_MODEL,
   contextRepos,
   findCrewTaskId,
@@ -108,11 +109,19 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
         .at(-1)
         ?.match(/^ (\d+)/)?.[1] ?? 0,
     );
-    // His reply answered the question, so the card no longer applies: the
-    // crewmate withdraws it before the merge can run (INF-2525).
+    // Answer the captain's actual message and withdraw its obsolete question
+    // before declaring guidance can release the merge (INF-1879, INF-2652).
     if (!results.length)
       return {
         calls: [
+          {
+            name: "reply",
+            args: {
+              card_id: questionCardId(user),
+              text: "The file keeps its name, and the approved change stays as it was.",
+              ...answering(user),
+            },
+          },
           {
             name: "close_card",
             args: {
@@ -122,7 +131,7 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
           },
         ],
       };
-    if (results.length === 1)
+    if (results.length === 2)
       return {
         calls: [
           {
@@ -138,7 +147,7 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
           },
         ],
       };
-    if (results.length === 2)
+    if (results.length === 3)
       return {
         calls: [
           {

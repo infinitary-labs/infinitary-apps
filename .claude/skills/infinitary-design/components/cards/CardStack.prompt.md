@@ -77,15 +77,15 @@ Explicit jumps still show their target, and the arrows keep stack order.
 ## Cards put aside
 
 Live messages put aside stay open but leave the stack, its pager count and new dot.
-They leave by the close navigation rule without its close question or any message.
+They leave by the put-away navigation rule without a confirmation or any message.
 Their reading place, picked answers and reply draft stay for this run.
 A revision or author answer returns one unread; a pointed-at card returns at the front, focused at the default size.
-Their visibility is saved at the first mate and shared by every viewing Mac, but the phone list stays unchanged.
+Their put-away state is saved and shared by desktop and native views.
 
 ## Held back by the project focus
 
 While the window is focused on a project (`components/core/ProjectFocus`), cards about other projects' tasks are held back: they stay open but leave the stack, its pager count and new dot, with no marker of their own.
-They leave by the close navigation rule without its close question or any message.
+They leave by the put-away navigation rule without a confirmation or any message.
 Cards about no task stay, and so does anything the captain opened: a task record, a past card, a task's browser, a panel's card.
 The pill's tail is the one notice: it counts what waits on the captain in other projects, held cards among them.
 A card that arrives while held back stirs nothing; picking its project or All projects returns it to its place, unread if it arrived while held, seen if it had been seen.

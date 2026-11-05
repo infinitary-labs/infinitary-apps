@@ -34,7 +34,6 @@ import {
   cardSubmissionSchema,
   cardTakesReplies,
   type DropTaskReview,
-  HOST_DECLINE_OPS,
   type HostEffect,
   isStoryNote,
   LIVE_ATTACHMENT_LABEL_MAX,
@@ -299,6 +298,7 @@ import type { CrewMachines } from "../placed/placedSessions";
 import { askJson } from "../program/programAsk";
 import { type ProgramEnd, type ProgramPartAsk, ProgramRunner } from "../program/programRunner";
 import { programRefusal } from "../program/programScript";
+import { ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
 import { CLASSIFY_TIMEOUT_MS } from "../routing/decisionKindClassifier";
 import {
   KIND_SOURCE,
@@ -544,8 +544,8 @@ import { deriveWorkPosture, type PostureFacts } from "./workPosture";
 
 /**
  * The consent card's two answers (one plugin vehicle, Phase A, A2a): the
- * captain's click on "Add it" adds the staged plugin, and "Don't add" - or
- * his dismissal of the card - turns it down. The installer is the only
+ * captain's click on "Add it" adds the staged plugin, and only "Don't add"
+ * turns it down. The minus keeps the staged offer pending. The installer is the only
  * implementation; the supervisor only routes the click it already owns.
  */
 export type PluginConsentHandler = {
@@ -556,8 +556,8 @@ export type PluginConsentHandler = {
 /**
  * The setup card's two answers (docs/fleet.md, "Asking the first mate to add a
  * project"): Add project sets the project up with the settings the
- * captain chose on the card, which its answers carry, and Not now - or his
- * dismissal of the card - adds nothing. `offer` is the card's own effect
+ * captain chose on the card, which its answers carry, and explicit Not now
+ * declines it. The minus keeps the offer pending. `offer` is the card's own effect
  * argument, never words a body or an agent wrote.
  */
 export type ProjectSetupHandler = {
@@ -1863,6 +1863,7 @@ export class CrewSupervisor {
         options.hasRunningJobs?.(taskId) === true || this.clientJobStart(taskId) !== undefined,
       oldestRunningJob: (taskId) => this.oldestJob(taskId),
       openCards: () => this.cards.values(),
+      answerNoteForTask: (taskId) => this.cards.answerNoteForTask(taskId),
       threadsAwaitingAuthor: (taskId) => this.cards.threadsAwaitingAuthor(taskId),
       bypassesSupervision: (taskId) => this.bypassesSupervision(taskId),
       notifyOp: (wake, origin, taskId) => this.hooks.notifyOp(wake, origin, taskId),
@@ -3175,7 +3176,11 @@ export class CrewSupervisor {
     actor: { kind: "firstmate" } | { kind: "crewmate"; taskId: string },
     reason?: string,
   ): string {
-    return this.cards.close(cardId, actor, reason);
+    const result = this.cards.close(cardId, actor, reason);
+    // Withdrawal can leave a message without its answering offer. Re-read
+    // coverage through the existing sweep, never a captain acknowledgement.
+    this.hooks.asksMoved?.();
+    return result;
   }
 
   cardThread(cardId: string): CardThread {
@@ -3218,6 +3223,11 @@ export class CrewSupervisor {
         this.cards.retireTaskCards(record.id, "answered");
     }
     void this.sweepGates(this.now());
+  }
+
+  /** The saved answer still offering the captain an explicit Done. */
+  answerNoteForTask(taskId: string): Card | undefined {
+    return this.cards.answerNoteForTask(taskId);
   }
 
   /** A closed card as the captain last saw it (`CardService.past`). */
@@ -3270,8 +3280,8 @@ export class CrewSupervisor {
   flagDuplicate(input: { cardId: string; duplicateOf: string; note: string }): DuplicateResult {
     const card = this.cards.shown(input.cardId);
     const result = this.cards.flagDuplicate(input);
-    // A crewmate's card closed as a duplicate is told to it, as the
-    // captain's own close is (INF-759).
+    // A duplicate closure notifies the live author, as an ordinary read
+    // does, but without the ordinary-read acknowledgement (INF-759).
     if (result.status === "flagged" && card)
       this.tellCardClosed(card, { id: result.original.id, title: result.original.title });
     return result;
@@ -7580,8 +7590,8 @@ export class CrewSupervisor {
       this.ladder.withdrawStallCard(task.id);
     }
     // Whatever the last report declared about whose turn followed it no
-    // longer stands once a turn runs: a close, a click, a reply or a steer
-    // started this one, and its own report says it again if it still holds.
+    // longer stands once a turn runs: a delivered input started this one,
+    // and its own report says it again if it still holds.
     if (this.options.tasks.clearDeclaration(task.id)) {
       this.ladder.syncCaptainGate(task.id, this.now());
     }
@@ -14231,13 +14241,17 @@ export class CrewSupervisor {
           ? "The first mate is woken for it when this turn ends only if the captain's reply under your card has your answer by then: answer it in that thread or revise the card."
           : "The first mate is woken for it when this turn ends.",
       );
+    } else if (declaration?.finished && this.cards.answerNoteForTask(task.id)) {
+      receipt.push(
+        "Your saved answer still waits for the captain's Done on its note or record. This report does not close it or wake the first mate; putting it away is not an acknowledgement.",
+      );
     } else if (
       declaration?.finished &&
       this.openCardsFor(task.id).some((card) => cardEmitter(card.id, task.id) === "crewmate")
     ) {
-      // Finished means the captain closed its card; the first mate hears it then (INF-731).
+      // INF-1879: an open card, including one put away, still owns its explicit ending.
       receipt.push(
-        "A card of yours is still on the captain's screen, so finished does not wake the first mate while it is up: their close comes back to you as a turn, and finished in that turn's report has the first mate close your task.",
+        `A card of yours is still open, so finished does not wake the first mate while it is up. ${ORDINARY_NOTE_READ_GUIDANCE} A decision waits for its choice; Done receipts a marked answer note or its record.`,
       );
     } else if (declaration?.finished) {
       receipt.push("The first mate hears it when this turn ends and closes your task.");
@@ -15913,7 +15927,7 @@ export class CrewSupervisor {
       // The action round-trip: a declared choice on a crewmate's card
       // reaches its still-running session as a steering message. A host
       // card's choice with no effect - the stuck alert's Keep waiting - only
-      // closes it, as the captain's close does.
+      // closes that alert for this episode. The minus instead keeps it pending.
       this.steerChoice(card.taskId, card, source, choice);
     }
     return {};
@@ -16313,7 +16327,7 @@ export class CrewSupervisor {
   /**
    * What came of the first mate's held call reaches the first mate once
    * (INF-1108): the row keeps the outcome and a line, and the wake names the
-   * ask, so a click, a close and a restart together still wake it once. A
+   * ask, so an explicit button choice and a restart still notify it once. A
    * run that threw after the click took the ask is unknown, never retried.
    */
   private answerFirstmateAsk(
@@ -16519,6 +16533,12 @@ export class CrewSupervisor {
     // A move a panel made on the captain's click names that panel beside it.
     const panel = from?.panel;
     switch (op) {
+      case "answer-done": {
+        if (!this.cards.finishAnswer(taskId)) return "This task has no answer ready to mark Done.";
+        return undefined;
+      }
+      case "dismiss-question":
+        return this.cards.dismissQuestion(taskId);
       case "show-card": {
         const action = this.options.tasks.get(taskId)?.delivery?.captainAction;
         if (action && !this.showRequiredAction(taskId))
@@ -16528,7 +16548,11 @@ export class CrewSupervisor {
           this.cards
             .snapshot()
             .find(
-              (card) => card.taskId === taskId && card.status === "ready" && card.actions.length,
+              (card) =>
+                (card.taskId === taskId ||
+                  this.options.tasks.openCardTaskFor(card.id)?.id === taskId) &&
+                card.status === "ready" &&
+                card.actions.length,
             )?.id;
         if (!cardId) return "This task has no card to show.";
         this.cards.showOpenCard(cardId);
@@ -17037,68 +17061,18 @@ export class CrewSupervisor {
     });
   }
 
-  /**
-   * Chrome close: the card leaves the stack without a declared action. The
-   * resolution is on the record (the card row, the task timeline) and one
-   * feed line on the record the card stays on says so (FI3-579; its key names that record). A crewmate's own card on a live task reaches that
-   * crewmate, on the path a click takes (FI3-435): the author judges what
-   * the close meant - read and finished, still waiting on the captain, or a
-   * passing note - and its report declares it. Anything else wakes nobody
-   * (Q4a): the Firstmate learns of it from its next context block
-   * (`captainResolutionsSince`).
-   */
+  /** The corner never ends work; a read note still gives its author the next turn. */
   close(cardId: string, submission?: unknown): void {
     const card = this.cards.shown(cardId);
-    if (!card) return;
-    // The record the card stays on, read before the dismissal closes a
-    // Firstmate decision's own row (FI3-579: the line says where it went).
-    const home = card.taskId
-      ? this.options.tasks.get(card.taskId)
-      : this.options.tasks.openCardTaskFor(card.id);
-    const integrationAsk =
-      card.author === "host"
-        ? card.actions.find(
-            (action) =>
-              action.effect?.kind === "request_write" && action.effect.integration === "deny",
-          )?.effect
-        : undefined;
-    // The first mate's held call waits on this card's own row, which the
-    // dismissal closes: closing is Not now, taken before the row goes (INF-1108).
-    const firstmateAsk =
-      !card.taskId && home && integrationAsk?.kind === "request_write"
-        ? {
-            rowId: home.id,
-            ask: integrationAsk.ask,
-            taken: this.options.tasks.takeWriteAsk(home.id, integrationAsk.ask),
-          }
-        : undefined;
-    const closedAnswer = this.cards.dismiss(card, submission);
-    if (card.taskId && integrationAsk?.kind === "request_write")
-      this.answerWriteAsk(card, card.taskId, integrationAsk.ask, "deny");
-    if (firstmateAsk)
-      this.answerFirstmateAsk(firstmateAsk.rowId, firstmateAsk.ask, firstmateAsk.taken, "deny");
-    // A host card that can turn something down treats the dismissal as that
-    // answer (the consent card, A2a; the setup card): closing it is "don't
-    // add", never a question left staged behind a card nobody can see.
-    const decline = card.actions.find(
-      (action) => action.effect?.kind === "host" && HOST_DECLINE_OPS.has(action.effect.op),
-    )?.effect;
-    if (card.author === "host" && decline?.kind === "host") this.runHostOp(decline);
-    // On the record the card stays on, so the line carries its key (INF-1845).
-    this.options.broadcastEvent(
-      home?.key && home.kind !== "operation"
-        ? { type: "firstmate_note", taskId: home.id, text: `You closed "${card.title}"` }
-        : { type: "firstmate_note", text: `Captain dismissed the card "${card.title}".` },
-    );
-    // His close of a marked answer note closed its task (INF-1732): the
-    // crewmate has nothing left to judge.
-    if (!closedAnswer) this.tellCardClosed(card);
+    // CardService distinguishes an ordinary read from putting aside a card
+    // or reading a marked saved answer. Only that read notifies its author.
+    if (card && this.cards.dismiss(card, submission)) this.tellCardClosed(card);
   }
 
   /**
-   * A crewmate's own card on a live task closed without a choice: that
-   * crewmate hears it, on the path a click takes, and judges what the close
-   * meant. `duplicateOf` names the earlier card a duplicate close repeats.
+   * An ordinary read or duplicate closure on a live task reaches its author
+   * through the existing turn path. Only an ordinary read acknowledges its note;
+   * `duplicateOf` names the earlier card a duplicate closure repeats.
    */
   private tellCardClosed(card: Card, duplicateOf?: { id: string; title: string }): void {
     const cardId = card.id;
@@ -17115,10 +17089,7 @@ export class CrewSupervisor {
         facts: {
           kind: "card-closed",
           card: { id: card.id, title: card.title },
-          ...(duplicateOf ? { duplicateOf } : {}),
-          ...(record.shape?.deliverable === "answer" && !record.shape.internal_step
-            ? { answer: true as const }
-            : {}),
+          ...(duplicateOf ? { duplicateOf } : { read: true as const }),
         },
       },
       "captain",

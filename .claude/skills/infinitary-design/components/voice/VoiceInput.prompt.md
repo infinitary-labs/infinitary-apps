@@ -68,7 +68,7 @@ Phone keeps its existing completed-reply clock and appearance.
 After the dissolve the older round's room stays empty, so the input does not move, and there is no control to bring it back; the next message brings the round before it back as the older round.
 A relaunch shows the two saved rounds again and starts a fresh 15 seconds for the older round on desktop, or for a known completed reply on phone.
 The captain's words are not a control: the pointer stays an arrow, a click does nothing, Tab passes over them, and they draw no underline or focus ring; resting on a cut line shows its whole text.
-Each reply line, the older one included, is a button with no chrome of its own (INF-1102's plan, the captain's Approve and build): it takes the pointer, a Tab stop and the focus ring, and a click, Enter or Space opens that whole reply as a note at the front of the stack, titled with its message in quotation marks, its words as the first mate wrote them; × or Esc closes it (`docs/composer.md` "The reply note").
+Each reply line, the older one included, is a button with no chrome of its own (INF-1102's plan, the captain's Approve and build): it takes the pointer, a Tab stop and the focus ring, and a click, Enter or Space opens that whole reply as a note at the front of the stack, titled with its message in quotation marks, its words as the first mate wrote them; the shared minus or Esc puts it away (`docs/composer.md` "The reply note").
 
 Keys: Enter sends.
 Shift+Enter or Option+Enter adds a line (right Option is the default voice key; Enter while recording is ignored).

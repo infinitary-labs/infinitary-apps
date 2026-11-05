@@ -15,8 +15,9 @@ export function taskResultResponse(
   if (card.continues || card.awaiting === "answer") return false;
   if (card.actions.some((entry) => entry.effect?.kind === "request_write")) return false;
   if (card.attachment?.kind === "browser" && card.attachment.handoff) return false;
-  if (action === "dismissed") return card.answering === true && card.actions.length === 0;
-  return action === "closed" || card.actions.some((entry) => entry.id === action);
+  // A declared choice retains its own meaning; bare close and put-away never receipt an answer.
+  if (card.actions.some((entry) => entry.id === action)) return true;
+  return action === "answer-done" && card.answering === true && card.actions.length === 0;
 }
 
 /** The same terminal choice that closes an answer task, for ask acceptance. */

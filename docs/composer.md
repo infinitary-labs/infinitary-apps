@@ -181,7 +181,7 @@ A round is one message of the captain's and the reply line kept beside it.
   `QuestionBubble` owns the question's two-line fold, overflow measurement and pointer/Enter/Space activation; its caller owns expansion state, reset for another opened round, and a message that was only pictures reads A picture.
   This read-only view opts into selecting question text through that same owner, so a drag selects words without folding them; ordinary asked lines retain their existing activation.
   The reply stays as the first mate wrote it, selectable with line breaks kept and nothing read as formatting; a reply saved before the words were kept, a typed line and a problem show the line itself, a problem in `--danger`.
-  It has the Note chip and no buttons or reply row; the × or Esc closes it.
+  It has the Note chip and no buttons or reply row; the shared minus or Esc puts it away.
   There is one reply note: opening it again brings it to the front with the reply whose line was pressed, and it stays until it is closed, even after a new message.
   Opening it hides the older round and pauses its clock; closing it resumes the remaining reading time.
   Open the first mate's reply (`firstmate.reply`, `docs/keyboard.md`) opens it from command search while a reply is saved, after the line has faded too, and comes home from Settings first.

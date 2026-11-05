@@ -119,7 +119,6 @@ function useParentKey(id: string | null): string | undefined {
 export function RecordCard({
   taskId,
   theme,
-  onClose,
   onDrawn,
   onPicture,
   view = "info",
@@ -128,7 +127,6 @@ export function RecordCard({
   /** Which of the record's three tabs is shown: Info, Cards or Activity (INF-2261). */
   view?: RecordView;
   theme: FrameTheme;
-  onClose: () => void;
   onDrawn: () => void;
   onPicture: ComponentProps<typeof HtmlCardBody>["onPicture"];
 }) {
@@ -255,10 +253,10 @@ export function RecordCard({
       shown?.startAttempt?.phase === "preparing" ||
       shown?.startAttempt?.phase === "checking" ||
       shown?.activity === "starting";
-    if (!preparing) return;
+    if (!preparing && !shown?.answerNoteId) return;
     const timer = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [shown?.startAttempt?.phase, shown?.activity]);
+  }, [shown?.startAttempt?.phase, shown?.activity, shown?.answerNoteId]);
   const meta = shown ? shown.key : unreadable ? "this record could not be read" : "";
   // The crew summary's projection of the same read, so both say the same.
   const facts = useMemo(() => {
@@ -322,7 +320,6 @@ export function RecordCard({
               />
             )
           }
-          onClose={onClose}
         />
       }
       footer={

@@ -6008,7 +6008,8 @@ export class TaskService {
    * The row a host card with actions and no task files (docs/card-authoring.md,
    * "A card places the gate"): an open `operation` waiting on the captain,
    * its card id the gate ref, so "waiting on you" counts the host's own
-   * asks the way it counts every other card. It closes with the card.
+   * asks the way it counts every other card. Explicit resolution closes
+   * the row; the minus leaves its card and captain gate pending.
    */
   fileHostCardTask(input: { id: string; title: string; cardId: string }): TaskRecord {
     const at = this.now();

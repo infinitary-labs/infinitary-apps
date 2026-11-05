@@ -35,8 +35,8 @@ A decision offers 2-3 declared options and marks exactly one `default`; the card
 An available crewmate shows its own findings and decisions on its own card, rather than reporting only for the first mate to relay them.
 A note is never a progress update; routine progress belongs in the quiet feed, and emitting zero cards is correct when nothing needs them.
 
-Every card has a close control in its chrome, and closing is the keep: the card leaves the stack and nothing runs.
-A crewmate's card's close is told to its author, which judges what it meant (`docs/card-threads.md`); a first mate card's close wakes nobody.
+Every card has one minimize corner that only puts it away and never ends a task (INF-1879); named buttons make decisions and Done receipts an answer.
+Putting a decision or pending note away sends no choice, refusal or close steer to its author (`docs/card-threads.md`).
 So a card never offers a "Keep" or "Dismiss" button of its own.
 
 ### The preview is the decision
@@ -100,7 +100,7 @@ Two things the host deliberately does not take over.
 `confirm` on the discard is a claim about what the BODY says, not a fact the host holds, and setting it would destroy unlanded work without the captain choosing; left off, a destructive discard returns the structured `unlanded-work` refusal and its ways out, which is the captain's confirmation.
 And a non-settle action the author declared - its own deferral, a question it wants answered alongside - survives untouched: a card carries exactly the actions its author declares beside the completion pair.
 
-There is still no keep button; closing the card keeps the crewmate idle and the worktree and any PR open.
+There is still no keep button; putting this completion decision aside starts no author turn and keeps the task, working copy and any PR open.
 Clicking a settle action never comes back as a steer: the host runs it and reports the outcome to the first mate, which re-settles or raises a decision when the outcome is a refusal.
 Do not put settle effects on intermediate questions, and if a completion card is already open reuse its `emit_card` id so it updates in place.
 
@@ -619,20 +619,12 @@ The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `HomeScreen.ts
   A renamed question starts fresh; a revised proposal never overrides a pick.
 - The same `collect` reply carries the question definitions the fresh reading saw - each name's prompt, kind, options with their labels and the authored proposal - which the core records beside the choice and never words into the wake (`docs/card-evidence.md`).
 - Picks are shell draft state, like a reply draft: a restart loses them and the card returns as written - unpicked, its recommendations tagged (the captain's Q4 A).
-- Closing a card with ×, with any unsent picked answer, asks once, in a popover under the ×: "You picked 2 answers.
-  Closing will discard them." with Keep answering and Discard and close (the captain's Q3 A; where and how it asks is the captain's Build it of 2026-10-04).
-  The card's own action row and fact strip stay as they are while it asks.
-  Escape, a click anywhere else, including in the card's body, or the × again keeps the card and its picks.
-  A picked answer is the captain's own, the bridge's `picked` count: a pick in a question marked `data-inf-recommended`, or any answer changed from the author's proposal.
-  Before the first send, an untouched prefilled text field or unmarked legacy default is the author's, so that card closes at once.
-  After a successfully accepted thread reply or footer choice, the shell compares current answers by name and values, including write-ins, with that send rather than the authored proposal.
-  Only differing answers ask for confirmation; changing back to the last sent values closes without asking, while clearing a sent answer is an unsent edit.
-- Closing a card while the captain's reply is the newest line on its thread asks in the same popover (INF-770): who has not answered, and that a closed card's answer stays on its task's record, or readable in Tasks for a card about none, with Put aside instead as the default beside Close anyway (`replyUnanswered`, `unansweredReplyWords`).
-  With unsent picks too it stays one popover: the picks' words, then the reply's sentence, with Keep answering and Discard and close.
-  The question guards the one close that does not come back: a crewmate's card the captain replied under stays closed through that crewmate's answer, which goes to the task's record (`docs/card-threads.md`).
-  A failed send never advances that comparison, and a revision keeps it alongside the draft.
-  Closing is still the keep and sends nothing.
-  Previews keep their settings, answered counter and changed-answer close confirmation, which counts settings ("You changed 1 setting."); text fields retain the existing changed-text revision behavior.
+- Minus puts a decision, permission request or pending note aside without sending, discarding picks or answering its question.
+  The same card returns with its current draft; no close-confirmation popover appears.
+  Preview settings and written replies stay drafts until an explicit send or choice.
+- Reading an ordinary completed note acknowledges its message and gives a live crewmate author its next turn, without completing the task.
+  A marked saved answer instead keeps its acknowledgement and task ending for explicit Done on the note or its record.
+  An author's withdrawal or an explicit task ending can still retire a card and its draft.
 
 What this gives up against host-drawn questions, stated so nobody rediscovers it: two authors' questions can look different, nothing lints a missing recommendation, an option without a bound `<label>` reads as its value alone, and a Something else row's words are the author's to get right.
 The frame stylesheet dresses a plain `fieldset`, `legend`, radio and checkbox rows and a `textarea` on-brand; an author restyles them freely.
@@ -697,8 +689,7 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
   `anything_else` is the app's: the shape lint refuses an author's control or staged setting of that name, and a crewmate's `CARD_AUTHORING` says the app draws the field.
   The first mate's fixed context has no room for that sentence, so it reads the words by the written-in rule it already has.
 - **Closing, revisions and past cards.**
-  The close asks first while the field holds words the card has not sent ("You wrote a reply.
-  Closing will discard it.").
+  Putting a decision away retains its unsent field and picks without asking a question.
   A revision keeps the words, because they belong to the card's id; a restart loses them, as it loses picks.
   A past card shows the words that went with its choice as one quiet line under its dimmed buttons ("Sent with your choice:", `PAST_CARD_WORDS_LEAD`), and nothing when none went.
 
@@ -713,9 +704,10 @@ The declaration is optional and stored as `Card.continues` in `cards.continues`;
 A card that asks to send a kept write is never the deliverable either, whatever it declares.
 Nor is a card that hands the captain the task's browser (`browser_handoff`, its attachment's `handoff`): its open-browser choice hands the browser over and the crewmate goes on from Return control, and any other choice on it reaches the crewmate (INF-1322: INF-1317's "Open browser and sign in" closed its read-only check and stopped the browser the captain had just taken).
 `renderAnswerShapeSection` tells the crewmate which of its cards closes the task.
-The captain's close control is not a choice: like every crewmate card's close it reaches the crewmate (FI3-435, captain's answer "Send it to the crewmate like every other card"), which reports `finished` once the captain has read it and nothing is left, and the first mate then closes the task with `settle_task answered`.
-The exception is the answer itself (INF-1732): the brief tells the crewmate to mark its answer card `answering` (`ANSWER_MARK_WORDS`), and the captain's close of such a note with no reply of theirs waiting under it closes the task `done/answered`, as a choice on it would.
-On an answer task the `card-closed` wake and the idle nudge name `finished` as the fallback, because a crewmate that says it is finished only in words leaves the task open.
+The minimize corner is presentation only: a decision or consent stays open, and a note is marked read without completing its task.
+The host draws Done on the newest crewmate note marked `answering`, and in its task record, while that answer is ready and no reply awaits its author.
+Done closes the answer task `done/answered`; the saved note supplies the same operation after a restart or after it was put away.
+No timer completes a put-away answer, and its task remains Waiting on you with the answer's recorded age.
 So the card carries the answer itself rather than a pointer to it: a builder spawned with `basis` naming that task receives this body verbatim, saved whole in a file its brief names, and any agent can read it back with the `tasks` query by key.
 
 ## Replying to a card
@@ -741,8 +733,8 @@ A card with actions and a task id - a crewmate's (`addCrewmateCard`), the first 
 A host card with actions and no task files an open `operation` row gated on the card (`TaskService.fileHostCardTask`), so it has a row for "waiting on you" to count.
 A note places nothing on its own; its crewmate places the gate by declaring `waiting_on_captain` in its report, naming the note (`docs/report-sort.md`).
 
-The card leaving releases the gate: a choice with its action as the reason on the `card_resolved` event, the captain's close with `dismissed`.
-The close wakes no first mate (the captain's Q4a stands for its own cards; a crewmate's card's close is that crewmate's next turn) and is an act on the record: the task's idle clock restarts at the close, so the ladder's first rung acts ten minutes later, not on the next tick (`docs/report-sort.md`).
+A choice releases its gate with the action on the `card_resolved` event.
+Putting a decision away preserves its gate, choices and in-session drafts, and sends no close steer or refusal.
 The stall card follows the same rule; its rung 3 stays terminal.
 No reader of whose turn it is finds a card by its id pattern any more - a card is found by its task.
 
@@ -867,9 +859,10 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A card carries exactly the actions its author declares (cards/tasks/agents P0, captain rulings D1-D8): no automatic Later, no park; a deferral is an action the author offers and its reminder is `schedule_prompt`.
   The ONE exception is the completion pair (contract v3.6, captain lock 3): a crewmate declares a `settle merge` action and the host replaces every settle action on that card with the merge labelled for the posture plus the danger discard, leaving the author's non-settle actions untouched - the labels and the count were facts the host held and an agent was transcribing, and `confirm` is deliberately not host-set, because it is a claim about the body and auto-confirming would destroy unlanded work without the captain choosing.
   The only host-authored cards are the agent-down set (`card-auth-*`, the paused seat's cards - `card-fm-no-headroom` titled per class (a spent allowance's leads with "Recheck allowance", host op `try-again`), `card-fm-refused` "<provider> is not answering your first mate right now" with "Try <provider> again" (host op `try-again`) and "Open settings", the flagship-move card, and `card-fm-move-back` "Move your first mate back to <provider>?"
-  (W1 S9, `docs/architecture.md` §16.8; a refused card never says signing in again clears it) - `card-fm-quiet`, the first mate failure card), `card-forge-<host>` (a sign-in where projects live that the host refused), `card-ask-<message>` - the answer-delivery notice (`docs/task-capture.md` "Answer delivery": "Your first mate has not answered your message", the captain's own words escaped, with Ask again and Leave it), `card-project-setup-<project>` - the setup card a first mate proposal puts up (`docs/fleet.md` "Asking the first mate to add a project": "Add <name> as a project?" with Add project, which reads the card's own answers, and Not now; closing it is Not now), and `card-stall-<task>` - the idle ladder's rung 3 (captain decision 2026-09-26, `docs/report-sort.md` "The idle ladder"): after two wakes about a stuck crewmate went ignored the work cannot move without the captain, so the host raises one card with Nudge, Keep waiting and Discard, and a reply row the first mate answers (`docs/card-threads.md`, "The stuck alert's reply row"); every other host moment - a refused settle, a dead gate, a reasoning wait, a quiet crewmate, a steer past its budget - is a feed line plus one `[fm-op]` wake.
+  (W1 S9, `docs/architecture.md` §16.8; a refused card never says signing in again clears it) - `card-fm-quiet`, the first mate failure card), `card-forge-<host>` (a sign-in where projects live that the host refused), `card-ask-<message>` - the answer-delivery notice (`docs/task-capture.md` "Answer delivery": "Your first mate has not answered your message", the captain's own words escaped, with Ask again and Leave it), `card-project-setup-<project>` - the setup card a first mate proposal puts up (`docs/fleet.md` "Asking the first mate to add a project": "Add <name> as a project?" with Add project, which reads the card's own answers, and Not now; only that button declines, while the minus keeps the offer pending), and `card-stall-<task>` - the idle ladder's rung 3 (captain decision 2026-09-26, `docs/report-sort.md` "The idle ladder"): after two wakes about a stuck crewmate went ignored the work cannot move without the captain, so the host raises one card with Nudge, Keep waiting and Discard, and a reply row the first mate answers (`docs/card-threads.md`, "The stuck alert's reply row"); every other host moment - a refused settle, a dead gate, a reasoning wait, a quiet crewmate, a steer past its budget - is a feed line plus one `[fm-op]` wake.
   One card shape on the wire (cards/tasks/agents P1, ruling D1 a): `cardSchema` is strict with no `kind` and carries `author` (crewmate | firstmate | host); the chip is derived (`cardPresentation`: actions = decision, host author = attention, none = note) and the store's `kind` column is history (new rows write `card`).
-  An action's `effect` is the only host semantics - `settle {merge|discard}` (merge resolved by the task's posture in `mergeModeFor`, so no agent learns merge-pr from land), `open {settings|subscriptions}` (and `open {browser}` on a crewmate's request card, `docs/task-browser.md` "Asking for help"), and the host's own `host` ops on the agent-down cards - and `CrewSupervisor.act` dispatches on it, never on an action id; an action with no effect is a reply to its author, and there is no keep button because closing is the keep.
+  An action's `effect` is the only host semantics - `settle {merge|discard}` (merge resolved by the task's posture in `mergeModeFor`, so no agent learns merge-pr from land), `open {settings|subscriptions}` (and `open {browser}` on a crewmate's request card, `docs/task-browser.md` "Asking for help"), and the host's own `host` ops on the agent-down cards - and `CrewSupervisor.act` dispatches on it, never on an action id; an agent card's action with no effect is a reply to its author, while a host alert's effect-free Keep waiting closes that alert without steering an author.
+  There is no author-supplied Keep button because the minus puts the card aside without ending work.
   A card body has NO sanitizer (captain decision 2026-09-15, direction C; review in `docs/live-prototype-security.md`, authoring in `docs/card-authoring.md`): it renders verbatim and the boundary is the sandbox, the frame CSP (`default-src 'none'`, every script by hash, `img-src data: app-frame:` - the body's own pictures and the host's verified copies) and the host's bridge validation - measured end to end by `tests/e2e/card-containment.spec.ts`, which is the corpus the deleted allowlists used to be tested against.
   Never reintroduce a tag/attribute/CSS allowlist: it degraded honest markup and stopped nothing, since a body runs its own script anyway.
   Tokens and helper classes are an authoring PREFERENCE the prompts ask for, never a filter.
@@ -1014,17 +1007,29 @@ The native phone reader shows the same label and task name without running the b
 
 ## Put a card aside
 
-Put aside is the neutral minus before Maximize on every live decision, note and attention card, including maximized cards and cards with threads (INF-770 renamed it from Minimize card).
-Its label on rest says the comeback, "Put aside · back when it changes", and the card's × says where a closed card stays, "Close · stays on INF-770's record" with the key of the card's task, or "Close · stays readable in Tasks" (`PUT_ASIDE_REST`, `closeRestWords`).
-A reply never moves a card, so Put aside and Close are the only ways one leaves the captain's screen.
-It changes only the card’s optional saved `minimized` fact, through `CardService.setMinimized` and the views-only `inf:cards:minimize` request.
-It is independent from `awaiting`, resolution, offers, task status, the captain gate and the idle ladder; no message, feed line or notification is emitted.
-The Mac stack and pager omit minimized cards, and so does the phone's stack, which lists them under Minimized in its pager menu (`docs/ios.md`, "Cards on the phone").
-Every Mac showing this first mate shares that fact, including after a restart.
-A crewmate's revision or answer brings the card back unread when that crewmate's turn ends, never at a report mid-turn (INF-926); the first mate's own answer brings it back at once.
-It comes back the same way when the captain put it aside after that write, while the stage still showed the earlier version (INF-1472).
-While the captain's question waits, a line or a revision's `reply` that names no message leaves the card aside, so it comes back with the answer (INF-1623; the captain's "a handoff stays open").
-Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Put aside.
+Every card has one leaving control, the minimize minus, after Maximize (INF-1879, direction C).
+`src/shared/cardLeave.ts` owns its icon, label, rest words and operation; the core puts that corner on every live card, and the window reads the table for its own panels.
+The phone draws the received corner and uses generated fallback words with an older core; a client without the corner uses the older safe minimize request instead of its destructive close.
+A decision or attention card stays open under Waiting on you and comes back when its author changes it.
+A note is read and stays on its record, but no task ends until an explicit choice or Done.
+A note whose author still owes an answer stays open and put away until that answer arrives.
+The task record and the window's own panels only hide.
+The task-less first mate question's record offers Dismiss as an explicit ending, never in the corner.
+Shift-Command-M puts away every shown card, including the window's own panels; the Close command and its installed bindings retire.
+A put-away decision preserves its draft without a warning popover.
+No timer completes an answer left put away.
+While the captain’s question waits, a line or revision that names no answered message leaves the card aside; it comes back with the answer.
+
+| Kind | Label | Operation |
+| --- | --- | --- |
+| `decision` | Put aside | aside |
+| `note` | Put aside | read |
+| `attention` | Put aside | aside |
+| `record` | Hide | hide |
+| `window-panel` | Hide | hide |
+
+The typechecked table, core and rendered-corner tests, `scripts/card-leave.ts` in `pnpm check`, and `card-leave.spec.ts` hold the rule.
+The journey has one section per table row and runs whenever the cards change.
 
 The renderer keeps answers and reply drafts in their existing in-session stores while a card is minimized.
 `useCardReadingPlace` keeps its body’s reading place across remounts for the same run, for live cards, task records (`record:<task>`) and past cards (`past:<card>`); the stack's retirement leaves the last two alone, and closing a record or past card forgets its place.

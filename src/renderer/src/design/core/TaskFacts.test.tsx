@@ -125,7 +125,6 @@ describe("one task's facts on the crew summary and the task record", () => {
           pillTone="neutral"
           taskKey={facts.key}
           title={facts.title}
-          onClose={() => {}}
         />
         <TaskFactRows facts={facts} planView="list" omitStrip onOpenChange={() => {}} />
         <div data-record-rows="" />

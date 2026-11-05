@@ -4,7 +4,7 @@ import { page } from "vitest/browser";
 import { fakeBridge } from "./bridge";
 import { seededHome } from "./freshHome";
 import { intersects } from "./layout";
-import { inShown } from "./stack";
+import { cardLeave, inShown } from "./stack";
 import { openWindow } from "./window";
 
 /**
@@ -41,7 +41,7 @@ test("a card from a task on another Mac names where it runs whole, however long 
     expect(readsWhole(meta), "the title gives way").toBe(false);
     const box = place.getBoundingClientRect();
     expect(intersects(box, shownHead("[data-model-chip]").getBoundingClientRect())).toBe(false);
-    const close = page.getByRole("button", { name: "Close" }).element();
+    const close = cardLeave();
     expect(intersects(box, close.getBoundingClientRect())).toBe(false);
   }
   expect([...new Set(bridge.unanswered)]).toEqual([]);

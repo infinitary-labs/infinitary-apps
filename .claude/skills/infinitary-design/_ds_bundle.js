@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"InfinitaryDesignSystem_94f559","components":[{"name":"CardStack","sourcePath":"components/cards/CardStack.jsx"},{"name":"ResponseCard","sourcePath":"components/cards/ResponseCard.jsx"},{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"Input","sourcePath":"components/core/Input.jsx"},{"name":"KeyCap","sourcePath":"components/core/KeyCap.jsx"},{"name":"Switch","sourcePath":"components/core/Switch.jsx"},{"name":"MachineRow","sourcePath":"components/machines/MachineRow.jsx"},{"name":"ActivityFeed","sourcePath":"components/mate/ActivityFeed.jsx"},{"name":"CrewStrip","sourcePath":"components/mate/CrewStrip.jsx"},{"name":"Crewmate","sourcePath":"components/mate/Crewmate.jsx"},{"name":"Firstmate","sourcePath":"components/mate/Firstmate.jsx"},{"name":"BucketBadge","sourcePath":"components/quota/SlotBadge.jsx"},{"name":"QuotaMeter","sourcePath":"components/quota/QuotaMeter.jsx"},{"name":"SubscriptionCard","sourcePath":"components/quota/SubscriptionCard.jsx"},{"name":"VoiceInput","sourcePath":"components/voice/VoiceInput.jsx"}],"sourceHashes":{"components/cards/CardStack.jsx":"727ee6d5d3e9","components/cards/ResponseCard.jsx":"e38abedb69f2","components/core/Badge.jsx":"94770091e424","components/core/Button.jsx":"f38e7435ddd5","components/core/IconButton.jsx":"ff6e8ae11d30","components/core/Input.jsx":"b5c30fb16a0f","components/core/KeyCap.jsx":"2feb5a4a7469","components/core/Switch.jsx":"46f714a47c9f","components/machines/MachineRow.jsx":"e4e936a9ae66","components/mate/ActivityFeed.jsx":"8c9d561c1e37","components/mate/CrewStrip.jsx":"8a08a70bc112","components/mate/Crewmate.jsx":"f22f55d976b6","components/mate/Firstmate.jsx":"cc986532e821","components/quota/SlotBadge.jsx":"d523e6f2d1e2","components/quota/QuotaMeter.jsx":"4e8091644caa","components/quota/SubscriptionCard.jsx":"55d96204ab45","components/voice/VoiceInput.jsx":"cb756e541bb8","ui_kits/firstmate/AppShell.jsx":"029b69688f5f","ui_kits/firstmate/SettingsScreen.jsx":"7eb235ce1808"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"InfinitaryDesignSystem_94f559","components":[{"name":"CardStack","sourcePath":"components/cards/CardStack.jsx"},{"name":"ResponseCard","sourcePath":"components/cards/ResponseCard.jsx"},{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"Input","sourcePath":"components/core/Input.jsx"},{"name":"KeyCap","sourcePath":"components/core/KeyCap.jsx"},{"name":"Switch","sourcePath":"components/core/Switch.jsx"},{"name":"MachineRow","sourcePath":"components/machines/MachineRow.jsx"},{"name":"ActivityFeed","sourcePath":"components/mate/ActivityFeed.jsx"},{"name":"CrewStrip","sourcePath":"components/mate/CrewStrip.jsx"},{"name":"Crewmate","sourcePath":"components/mate/Crewmate.jsx"},{"name":"Firstmate","sourcePath":"components/mate/Firstmate.jsx"},{"name":"BucketBadge","sourcePath":"components/quota/SlotBadge.jsx"},{"name":"QuotaMeter","sourcePath":"components/quota/QuotaMeter.jsx"},{"name":"SubscriptionCard","sourcePath":"components/quota/SubscriptionCard.jsx"},{"name":"VoiceInput","sourcePath":"components/voice/VoiceInput.jsx"}],"sourceHashes":{"components/cards/CardStack.jsx":"727ee6d5d3e9","components/cards/ResponseCard.jsx":"b724ccbcf2d3","components/core/Badge.jsx":"94770091e424","components/core/Button.jsx":"f38e7435ddd5","components/core/IconButton.jsx":"ff6e8ae11d30","components/core/Input.jsx":"b5c30fb16a0f","components/core/KeyCap.jsx":"2feb5a4a7469","components/core/Switch.jsx":"46f714a47c9f","components/machines/MachineRow.jsx":"e4e936a9ae66","components/mate/ActivityFeed.jsx":"8c9d561c1e37","components/mate/CrewStrip.jsx":"8a08a70bc112","components/mate/Crewmate.jsx":"f22f55d976b6","components/mate/Firstmate.jsx":"cc986532e821","components/quota/SlotBadge.jsx":"d523e6f2d1e2","components/quota/QuotaMeter.jsx":"4e8091644caa","components/quota/SubscriptionCard.jsx":"55d96204ab45","components/voice/VoiceInput.jsx":"cb756e541bb8","ui_kits/firstmate/AppShell.jsx":"ff7e376bfe0a","ui_kits/firstmate/SettingsScreen.jsx":"7eb235ce1808"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -82,33 +82,29 @@ Object.assign(__ds_scope, { Badge });
 
 // components/cards/ResponseCard.jsx
 try { (() => {
+// The chip is DERIVED, never declared: a card with actions is a decision, one without a note,
+// one the app itself raised (a provider needs sign in, Firstmate is down) an attention.
+// `record` is a task's record (no card actions; its
+// footer is the host's lifecycle toggles, TaskRecord.prompt.md).
 const cardKinds = {
   decision: {
     label: "Decision",
     tone: "accent"
   },
-  result: {
-    label: "Done",
-    tone: "ok"
-  },
-  prototype: {
-    label: "Prototype",
-    tone: "accent"
-  },
-  info: {
+  note: {
     label: "Note",
     tone: "neutral"
   },
-  error: {
+  attention: {
     label: "Attention",
     tone: "danger"
   },
-  working: {
-    label: "Working",
-    tone: "accent"
+  record: {
+    label: "Task",
+    tone: "neutral"
   }
 };
-const closeIco = /*#__PURE__*/React.createElement("svg", {
+const minimizeIco = /*#__PURE__*/React.createElement("svg", {
   width: "16",
   height: "16",
   viewBox: "0 0 24 24",
@@ -119,20 +115,20 @@ const closeIco = /*#__PURE__*/React.createElement("svg", {
   strokeLinejoin: "round",
   "aria-hidden": "true"
 }, /*#__PURE__*/React.createElement("path", {
-  d: "M18 6 6 18M6 6l12 12"
+  d: "M5 12h14"
 }));
 function ResponseCard({
-  kind = "info",
+  kind = "note",
   title,
   meta,
   actions,
-  onClose,
+  onMinimize,
   children,
   width = 560,
   minHeight = 340,
   style
 }) {
-  const k = cardKinds[kind] || cardKinds.info;
+  const k = cardKinds[kind] || cardKinds.note;
   return /*#__PURE__*/React.createElement("div", {
     style: {
       width,
@@ -174,13 +170,13 @@ function ResponseCard({
       flex: 1
     }
   }, meta), /*#__PURE__*/React.createElement(__ds_scope.IconButton, {
-    label: "Close",
-    onClick: onClose,
+    label: kind === "record" ? "Hide" : "Put aside",
+    onClick: onMinimize,
     style: {
       marginLeft: "auto",
       flexShrink: 0
     }
-  }, closeIco)), title && /*#__PURE__*/React.createElement("div", {
+  }, minimizeIco)), title && /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "10px 20px 0",
       fontSize: "var(--text-lg)",
@@ -200,9 +196,11 @@ function ResponseCard({
   }, children), actions && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      gap: 8,
+      flexWrap: "wrap",
       justifyContent: "flex-end",
-      padding: "0 16px 16px"
+      gap: "var(--space-2)",
+      rowGap: "var(--space-2)",
+      padding: "var(--space-3) 16px 16px"
     }
   }, actions));
 }
@@ -1549,7 +1547,15 @@ Object.assign(__ds_scope, { VoiceInput });
 
 // ui_kits/firstmate/AppShell.jsx
 try { (() => {
-function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+function _extends() {
+  return _extends = Object.assign ? Object.assign.bind() : function (n) {
+    for (var e = 1; e < arguments.length; e++) {
+      var t = arguments[e];
+      for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]);
+    }
+    return n;
+  }, _extends.apply(null, arguments);
+}
 const NS = window.InfinitaryDesignSystem_94f559;
 const {
   Firstmate,
@@ -1612,19 +1618,19 @@ const DEMO_CARDS = [{
   title: "Two ways to fix the flaky test",
   meta: "just now · crewmate 4",
   body: "The retry helper races a 50ms timer. Awaiting the job queue removes the race entirely; mocking the clock is faster but leaves the race in production code.",
-  actions: ["Later", "Mock the clock", "Await the queue"]
+  actions: ["Mock the clock", "Await the queue"]
 }, {
-  kind: "result",
+  kind: "note",
   title: "Refactor finished",
   meta: "2m ago · atlas",
   body: "14 files changed, tests green. Two snapshots updated; nothing else moved.",
-  actions: ["View diff"]
+  actions: []
 }, {
-  kind: "info",
-  title: "Quota note",
-  meta: "12m ago",
-  body: "Claude opus weekly is at 9% — routing high-bucket work to Grok until Friday's reset.",
-  actions: ["Override"]
+  kind: "attention",
+  title: "Claude (Personal) needs you to sign in again.",
+  meta: "claude",
+  body: "Your first mate cannot use this subscription until you sign in again.",
+  actions: ["Sign in"]
 }];
 const now = Date.now();
 const DEMO_EVENTS = [{
@@ -1746,6 +1752,27 @@ function HomeScreen({
   const card = DEMO_CARDS[cardIdx];
   const timerRef = React.useRef(null);
   React.useEffect(() => () => clearTimeout(timerRef.current), []);
+  // The input grows upward from its pinned bottom; its growth is published as --prompt-rise and the
+  // Firstmate and the card lift by half of it (components/voice/VoiceInput.prompt.md, "The stage lifts").
+  const promptRef = React.useRef(null);
+  React.useEffect(() => {
+    const el = promptRef.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const ro = new ResizeObserver(() => {
+      const shell = el.firstElementChild;
+      if (!shell) return;
+      const rise = Math.max(0, shell.getBoundingClientRect().height - parseFloat(getComputedStyle(shell).minHeight));
+      root.style.setProperty("--prompt-rise", rise + "px");
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--prompt-rise");
+    };
+  }, []);
+  const lift = "calc(50% - 60px - var(--prompt-rise, 0px) / 2)";
+  const liftEase = "top var(--dur-fast) var(--ease-out)";
   const submit = () => {
     setText("");
     setPhase("thinking");
@@ -1753,7 +1780,7 @@ function HomeScreen({
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => setPhase("working"), 5000);
   };
-  // Fixed vertical geometry: Firstmate layer and card layer are absolutely positioned; the input never moves.
+  // Vertical geometry: the input is pinned by its bottom; the Firstmate layer and card layer lift by half its growth.
   return /*#__PURE__*/React.createElement("div", {
     "data-screen-label": showCards ? "Working" : listening ? "Listening" : "Null state",
     style: {
@@ -1764,11 +1791,11 @@ function HomeScreen({
     style: {
       position: "absolute",
       left: "50%",
-      top: "calc(50% - 60px)",
+      top: lift,
       transform: "translate(-50%,-50%)",
       opacity: showCards ? 0.45 : 1,
       filter: showCards ? "blur(3px)" : "none",
-      transition: "opacity var(--dur-slow) var(--ease-out),filter var(--dur-slow) var(--ease-out)"
+      transition: "opacity var(--dur-slow) var(--ease-out),filter var(--dur-slow) var(--ease-out)," + liftEase
     }
   }, /*#__PURE__*/React.createElement(Firstmate, {
     state: listening ? "listening" : working ? "working" : "idle",
@@ -1779,8 +1806,9 @@ function HomeScreen({
     style: {
       position: "absolute",
       left: "50%",
-      top: "calc(50% - 60px)",
-      transform: "translate(-50%,-50%)"
+      top: lift,
+      transform: "translate(-50%,-50%)",
+      transition: liftEase
     }
   }, /*#__PURE__*/React.createElement(CardStack, {
     index: cardIdx,
@@ -1792,13 +1820,14 @@ function HomeScreen({
     kind: card.kind,
     title: card.title,
     meta: card.meta,
-    onClose: dismiss,
-    actions: card.actions.map((a, i) => /*#__PURE__*/React.createElement(Button, {
+    onMinimize: dismiss,
+    actions: card.actions.length > 0 ? card.actions.map((a, i) => /*#__PURE__*/React.createElement(Button, {
       key: a,
-      variant: i === card.actions.length - 1 ? "primary" : i === 0 ? "ghost" : "secondary",
+      variant: i === card.actions.length - 1 ? "primary" : "secondary",
       onClick: dismiss
-    }, a))
+    }, a)) : undefined
   }, card.body))), /*#__PURE__*/React.createElement("div", {
+    ref: promptRef,
     style: {
       position: "absolute",
       left: "50%",

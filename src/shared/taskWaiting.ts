@@ -53,6 +53,7 @@ export function presentProjects(
   const counts = new Map<string, number>();
   for (const task of tasks) {
     if (
+      task.answerNoteId ||
       task.waitingCardId ||
       task.minimizedCardId ||
       (task.requiredAction && (task.status === "open" || task.status === "active"))

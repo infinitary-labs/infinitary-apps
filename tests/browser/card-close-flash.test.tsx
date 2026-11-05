@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { page } from "vitest/browser";
 import { type FakeBridge, fakeBridge } from "./bridge";
 import { seededHome } from "./freshHome";
-import { answerStack, SHOWN_ENTRY, shownEntry, stageAtRest } from "./stack";
+import { answerStack, cardLeave, SHOWN_ENTRY, shownEntry, stageAtRest } from "./stack";
 import { openWindow } from "./window";
 
 // INF-1011, captain: closing a card must remove it without a brief flash.
@@ -46,7 +46,7 @@ async function closeShown(bridge: FakeBridge, id: string): Promise<Sample[]> {
   const closing = shownEntry();
   if (!closing) throw new Error(`${id} has not drawn`);
   const samples = sampleWhileItLeaves(closing);
-  await page.elementLocator(closing).getByRole("button", { name: "Close", exact: true }).click();
+  await page.elementLocator(cardLeave()).click();
   await expect.poll(() => document.querySelector(`[data-stage-entry-id="${id}"]`)).toBeNull();
   expect(bridge.requests("inf:cards:close").at(-1)?.[0]).toBe(id);
   return samples;

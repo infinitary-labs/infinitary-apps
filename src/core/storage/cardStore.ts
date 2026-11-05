@@ -589,10 +589,18 @@ export class CardStore {
    * replaces the row under the same id - reads as the version the captain
    * last saw.
    */
-  newestForTask(taskId: string): Card | undefined {
-    const row = this.db
-      .prepare("SELECT * FROM cards WHERE task_id = ? ORDER BY created_at DESC, id DESC LIMIT 1")
-      .get(taskId) as Row | undefined;
+  newestForTask(taskId: string, author?: Card["author"]): Card | undefined {
+    const row = author
+      ? (this.db
+          .prepare(
+            "SELECT * FROM cards WHERE task_id = ? AND author = ? ORDER BY created_at DESC, id DESC LIMIT 1",
+          )
+          .get(taskId, author) as Row | undefined)
+      : (this.db
+          .prepare(
+            "SELECT * FROM cards WHERE task_id = ? ORDER BY created_at DESC, id DESC LIMIT 1",
+          )
+          .get(taskId) as Row | undefined);
     return row ? fromRow(row) : undefined;
   }
 

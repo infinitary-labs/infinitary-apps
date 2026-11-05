@@ -27,11 +27,13 @@ import {
   replyingNote,
 } from "./scenarios/replyingNote";
 import {
+  cardLeave,
   cardReply,
   closeQuestion,
   expectNoCard,
   expectUpdateSeen,
   pagerAt,
+  putAwayAndRestore,
   showCard,
   shownCard,
   shownCardFrame,
@@ -191,7 +193,7 @@ test("closing a middle card or hiding a record reveals the oldest card, not the 
     await showCard(page, HARBOUR_NOTES[2]);
     await expect(surface(page)).toHaveCSS("opacity", "1");
     await page.screenshot({ path: test.info().outputPath("before-middle-dismiss.png") });
-    await shownEntry(page).locator('button[aria-label="Close"]').click();
+    await cardLeave(page).click();
     await expect(shownCard(page, HARBOUR_NOTES[0])).toBeVisible();
     await expect(pagerAt(page, 3, 5)).toBeVisible();
     await expect(surface(page)).toHaveCSS("opacity", "1");
@@ -242,7 +244,7 @@ test("closing a card brings up the first unread card, not the first card, and a 
     await expectUpdateSeen(page, "closing");
     await receiveUnreadCard(page);
     await test.step("a close skips the first card for the unread one", async () => {
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+      await cardLeave(page, shownEntry(page)).click();
       await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible();
       await expect(unreadBadge).toHaveCount(0);
     });
@@ -274,12 +276,12 @@ test("closing a card brings up the first unread card, not the first card, and a 
       await expect(cardReply(page).field).toBeFocused();
     });
     await test.step("once its author answered, a close brings up the unread card", async () => {
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+      await cardLeave(page, shownEntry(page)).click();
       await expect(cardReply(page).row).toHaveAttribute("data-card-reply", arrived);
       await expect(unreadBadge).toHaveCount(0);
     });
     await test.step("with nothing unread, a close brings up the first card", async () => {
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+      await cardLeave(page, shownEntry(page)).click();
       await expect(shownCard(page, READ_NOTE)).toBeVisible();
     });
   } finally {
@@ -296,7 +298,7 @@ test("after the last card closes, the stage empties and the next card arrives wi
   try {
     const { page } = app;
     await expect(shownCard(page, LAST_CARD)).toBeVisible();
-    await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+    await cardLeave(page, shownEntry(page)).click();
     // The closed card leaves the stack at once; its drawing may still be on
     // its way out, but no card is up.
     await expectNoCard(page, LAST_CARD);
@@ -432,7 +434,7 @@ for (const held of ["record", "past"] as const) {
         );
       }
       // Ordinary close still selects the unread answer, not the held entry.
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+      await cardLeave(page, shownEntry(page)).click();
       await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible();
     } finally {
       await app.close();
@@ -505,7 +507,7 @@ test("a scripted next card is prepared while you read and starts only once shown
       html.dataset.preparedPage = "same";
     });
 
-    await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+    await cardLeave(page, shownEntry(page)).click();
     await expect(shownCard(page, NEXT_PLAN)).toBeVisible();
     await expect(shownEntry(page)).toHaveCSS("opacity", "1");
     const shown = shownCardFrame(page);
@@ -531,7 +533,7 @@ test("a scripted next card is prepared while you read and starts only once shown
 // FI3-871's first pitfall: a value a prepared body's own script fills in is
 // what the body shows, never a change the captain made, so closing it does
 // not ask about discarding one.
-test("a prepared scripted card whose script fills in its settings closes without asking", async () => {
+test("a prepared scripted card keeps its initialized settings when put away without asking", async () => {
   const preview = `<p>Choose the berth for the night.</p>
 <fieldset><legend>Which berth?</legend>
 <label><input type="radio" name="berth" value="north"> North</label>
@@ -545,11 +547,11 @@ test("a prepared scripted card whose script fills in its settings closes without
   try {
     const { page } = app;
     await expect(warmElement(page)).toHaveAttribute("data-frame-held", "", { timeout: 15_000 });
-    await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+    await cardLeave(page, shownEntry(page)).click();
     await expect(shownCard(page, BERTH_CARD)).toBeVisible();
     await expect(shownCardFrame(page).locator('[name="settings"]')).toHaveValue('{"depth":4}');
-    await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
-    await expectNoCard(page, BERTH_CARD);
+    await putAwayAndRestore(page, BERTH_CARD);
+    await expect(shownCardFrame(page).locator('[name="settings"]')).toHaveValue('{"depth":4}');
     await expect(closeQuestion(page)).toHaveCount(0);
   } finally {
     await app.close();

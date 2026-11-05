@@ -32,5 +32,6 @@ The rows are plain native radios and a select, so they work from the keyboard li
 **Its buttons.**
 A ghost "Not now" and a primary "Add project", the default.
 Add project sets the project up with the rows as they stand - before any task starts there - and the first mate hears once that it was added and starts the work the card named.
-Not now, or closing the card, adds nothing, and the first mate hears that once too.
+Not now declines the offer without adding a project, and the first mate hears that once too.
+The shared minus only puts the card aside; its offer remains pending and the first mate receives no setup outcome.
 A setup that fails says so in one feed line, "Could not add dotfiles-private: …", and the first mate offers the way out, such as signing in to GitHub.

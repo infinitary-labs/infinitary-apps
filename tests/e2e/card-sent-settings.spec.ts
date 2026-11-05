@@ -1,26 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
-import { CLOSE_ANYWAY } from "../../src/renderer/src/app/closeQuestionWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { saveKeepOpenCard } from "./olderProfile";
 import { heroShot, regionShot } from "./pictures";
-import { cardReply, clickInBody, closeQuestion, shownEntry } from "./stack";
-
-/**
- * Nothing answers the reply in these launches, so the close asks about it
- * (INF-770) - and only about it: the sent picks are not discarded, so the
- * picks' Keep answering is not offered. Close anyway closes.
- */
-async function closeWithReplyUnanswered(page: Parameters<typeof closeQuestion>[0]): Promise<void> {
-  const question = closeQuestion(page);
-  await expect(question.getByRole("button", { name: CLOSE_ANYWAY, exact: true })).toBeVisible();
-  await expect(question.getByRole("button", { name: "Keep answering" })).toHaveCount(0);
-  await question.getByRole("button", { name: CLOSE_ANYWAY, exact: true }).click();
-}
+import {
+  cardLeave,
+  cardReply,
+  clickInBody,
+  closeQuestion,
+  putAwayAndRestore,
+  shownEntry,
+} from "./stack";
 
 for (const preview of [true, false]) {
   test(`closing after sent ${preview ? "settings" : "answers"} loses nothing`, async () => {
@@ -67,15 +61,7 @@ for (const preview of [true, false]) {
       // An edit after sending still needs confirmation, even back at the proposal.
       if (preview) await frame.getByLabel("Tone").fill("warm");
       else await choose("Warm");
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
-      await expect(closeQuestion(page)).toBeVisible();
-      if (process.env.FM_SENT_SETTINGS_EVIDENCE) {
-        await regionShot(
-          page.locator("[data-card-layer]"),
-          `${process.env.FM_SENT_SETTINGS_EVIDENCE}/${preview ? "preview" : "decision"}-edited.png`,
-        );
-      }
-      await closeQuestion(page).getByRole("button", { name: "Keep answering" }).click();
+      await putAwayAndRestore(page, "Choose your settings");
       if (preview) await frame.getByLabel("Tone").fill("plain");
       else await choose("Plain");
       if (process.env.FM_SENT_SETTINGS_EVIDENCE) {
@@ -84,15 +70,15 @@ for (const preview of [true, false]) {
           `${process.env.FM_SENT_SETTINGS_EVIDENCE}/${preview ? "preview" : "decision"}-after.png`,
         );
       }
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
-      await closeWithReplyUnanswered(page);
+      await cardLeave(page, shownEntry(page)).click();
+
       await expect
         .poll(async () =>
           (await page.evaluate(() => window.infinitary.cards.list())).some(
-            (card) => card.id === "settings",
+            (card) => card.id === "settings" && card.minimized,
           ),
         )
-        .toBe(false);
+        .toBe(true);
     } finally {
       await launched.app.close();
     }
@@ -153,17 +139,17 @@ for (const status of ["ready", "streaming"] as const) {
       expect(
         thread.messages.find((message) => message.who === "captain")?.answers?.[0]?.values,
       ).toEqual(["plain"]);
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
-      await closeWithReplyUnanswered(page);
+      await cardLeave(page, shownEntry(page)).click();
+
       await expect
         .poll(() =>
           page.evaluate(() =>
             window.infinitary.cards
               .list()
-              .then((cards) => cards.some((card) => card.id === "legacy")),
+              .then((cards) => cards.some((card) => card.id === "legacy" && card.minimized)),
           ),
         )
-        .toBe(false);
+        .toBe(true);
     } finally {
       await launched.close();
     }

@@ -20,4 +20,5 @@ One window, four states:
 Theme toggle in the top bar (light/dark).
 All data is fake; oauth flows are out of scope.
 Composes only system components from `components/` — nothing is re-implemented here.
+The shared card uses `onMinimize` and a minus labelled Put aside, or Hide for a record; no close-question props or confirmation are part of this kit.
 `index.html` loads the components the prebuilt `_ds_bundle.js` lacks or carries stale (GroupedPills, StatusDot, RowMenu, ConnectChips, QuotaMicroMeter, SlotBadge) from their sources.

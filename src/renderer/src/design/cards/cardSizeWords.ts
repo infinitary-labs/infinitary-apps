@@ -1,3 +1,4 @@
+import { CARD_LEAVE } from "@shared/cardLeave";
 /** The words the card's size control reads in each state, its accessible name (`CardSize.tsx`). */
 export const MAXIMIZE_LABEL = "Maximize card";
 export const RESTORE_LABEL = "Restore card";
@@ -7,5 +8,5 @@ export const RESTORE_LABEL = "Restore card";
  * until it changes (INF-770): its name, and the words it shows on rest,
  * which say the comeback.
  */
-export const PUT_ASIDE_LABEL = "Put aside";
-export const PUT_ASIDE_REST = "Put aside · back when it changes";
+export const PUT_ASIDE_LABEL = CARD_LEAVE.decision.label;
+export const PUT_ASIDE_REST = CARD_LEAVE.decision.restWords;

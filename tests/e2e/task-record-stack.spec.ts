@@ -17,7 +17,7 @@ import {
   reportLine,
   taskKey,
 } from "./rails";
-import { pagerAt, showCard, shownCard } from "./stack";
+import { cardLeave, pagerAt, showCard, shownCard } from "./stack";
 
 const CHART_GOAL = "Keep the harbour chart readable.";
 
@@ -128,10 +128,7 @@ test("records page one per task beside the cards, and the character returns when
     await expect(recordCard(page)).toHaveCount(0);
     await expect(nowFrame(page).locator("[data-now-selected]")).toHaveCount(0);
     await expect(character).toBeHidden();
-    await page
-      .locator("[data-response-card]")
-      .getByRole("button", { name: "Close", exact: true })
-      .click();
+    await cardLeave(page, page.locator("[data-response-card]")).click();
     await expect(character).toBeVisible();
     await expect(promptInput(page)).toBeFocused();
     await page.screenshot({ path: test.info().outputPath("character-restored.png") });

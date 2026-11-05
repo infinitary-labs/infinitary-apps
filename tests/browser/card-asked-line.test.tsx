@@ -9,7 +9,7 @@ import {
 } from "../../src/renderer/src/cards/askedWords";
 import { fakeBridge } from "./bridge";
 import { seededHome } from "./freshHome";
-import { answerStack, inShown, shownEntry, stageAtRest } from "./stack";
+import { answerStack, cardLeave, inShown, shownEntry, stageAtRest } from "./stack";
 import { openSize, openWindow } from "./window";
 
 /**
@@ -83,11 +83,7 @@ test("a card shows the message it answers, folding a long one to two lines", asy
     askedWords(SHORT_ASK, false),
   );
   expect((inShown("[data-question-bubble]") as HTMLButtonElement).disabled).toBe(true);
-  await userEvent.click(
-    page
-      .elementLocator(shownEntry() as HTMLElement)
-      .getByRole("button", { name: "Close", exact: true }),
-  );
+  await userEvent.click(cardLeave());
 
   // A long one shows its start in two lines and offers the rest.
   await shownCard(LONG_TITLE);
@@ -119,12 +115,7 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   await userEvent.keyboard(" ");
   await expect.poll(() => toggle.getAttribute("aria-expanded")).toBe("false");
   expect(linesShown(words)).toBe(2);
-  const close = () =>
-    userEvent.click(
-      page
-        .elementLocator(shownEntry() as HTMLElement)
-        .getByRole("button", { name: "Close", exact: true }),
-    );
+  const close = () => userEvent.click(cardLeave());
   await close();
 
   // Work an automation filed names the automation, with no bubble of words.

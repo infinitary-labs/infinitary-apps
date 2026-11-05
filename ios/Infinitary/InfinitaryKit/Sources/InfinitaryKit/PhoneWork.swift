@@ -35,7 +35,7 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let parentId: String?
     public let kind: String
     public let title: String
-    public let status: String
+    public internal(set) var status: String
     public let createdAt: Double
     public let startPolicy: String?
     /// The home’s dated start-wait line, shared with its first mate and desktop views.
@@ -55,6 +55,8 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public internal(set) var moves: [String: PhoneMove]?
     public let outcomeSummary: String?
     public let waitingCardId: String?
+    public let answerNoteId: String?
+    public let answerSince: Double?
     public let assignee: String?
     public let modelLabel: String?
     public let brief: String?
@@ -67,7 +69,7 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let blockedBy: [String]
     /// INF-1926: the rest of what the desktop's crew summary reads (src/shared/taskFacts.ts), each optional so an older
     /// Mac's rows still decode: the board row's lifecycle facts, then the record's own reading (`.detail`).
-    public let closedReason: String?
+    public internal(set) var closedReason: String?
     public let flags: Flags?
     public struct Flags: Decodable, Sendable { public let blocked: Bool; public let held: Bool }
     public let children: Children?
@@ -87,16 +89,16 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public var canSteer: Bool { status == "active" && startedAt != nil }
     public var group: PhoneTaskGroup? {
         .reading(status: status, work: kind == "work", required: requiredAction != nil,
-                 waiting: waitingCardId != nil,
+                 waiting: waitingCardId != nil || answerNoteId != nil,
                  starting: startAttempt?.phase == "preparing" || startAttempt?.phase == "checking" || (status == "active" && activity == "starting"),
                  onRequest: startPolicy == "on-request", minimized: minimizedCardId != nil)
     }
     public struct StartAttempt: Decodable, Sendable { public let phase: String }
     public struct RequiredAction: Decodable, Sendable { public let state: String?; public let result: String? }
     public var state: String {
-        if waitingCardId != nil { return "Waiting on you" }
         if status == "done" { return "Done" }
         if status == "dropped" { return "Dropped" }
+        if waitingCardId != nil || answerNoteId != nil { return "Waiting on you" }
         if startAttempt?.phase == "preparing" || startAttempt?.phase == "checking" { return "Starting" }
         if !blockedBy.isEmpty { return "Waiting on another task" }
         if status == "open" { return startPolicy == "on-request" ? "Backlog" : "Queued" }

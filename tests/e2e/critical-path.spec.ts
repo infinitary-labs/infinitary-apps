@@ -20,7 +20,7 @@ import {
   DESTINATION_STORY_TITLE,
   destinationStory,
 } from "./scenarios/destinationStory";
-import { expectNoCard, factsStrip, shownCard, stageAtRest } from "./stack";
+import { cardLeave, expectNoCard, factsStrip, shownCard, stageAtRest } from "./stack";
 
 /**
  * The critical path (INF-2480, captain: "path six-steps (launch, sign in,
@@ -108,7 +108,7 @@ test("a fresh install signs in, adds a project, asks the first mate and merges i
       expect(mockProvider.requests()).toBe(0);
       await stageAtRest(page);
       await windowShot(page, picture("2-signed-in"));
-      await welcome.getByRole("button", { name: "Close", exact: true }).click();
+      await cardLeave(page, welcome).click();
       await expectNoCard(page, WELCOME_TITLE);
     });
 

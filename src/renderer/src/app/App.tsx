@@ -57,8 +57,8 @@ export function App() {
       if (event.key === "Escape") {
         // An Escape nothing in the card used restores a maximized card
         // before anything else it would do (design skill ResponseCard,
-        // "Maximize"); its own controls, the close question, the picture
-        // viewer and command search use theirs first.
+        // "Maximize"); its own controls, the picture viewer and command
+        // search use theirs first.
         const stage = cardStage();
         if (
           store.view === "home" &&

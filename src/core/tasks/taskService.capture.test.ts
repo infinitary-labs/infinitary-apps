@@ -17,6 +17,29 @@ function setup() {
 }
 
 describe("TaskService capture", () => {
+  // INF-2667 review of INF-2664: a message joins an earlier message's chain
+  // on its first attachment only (docs/task-capture.md, "How a message
+  // ends"); naming it later on other work never moves it under another chain.
+  it("joins a message to an earlier one's chain on its first attachment only", () => {
+    const { tasks, tick } = setup();
+    seedTask(tasks, { id: "t1", title: "Add pagination", status: "running" });
+    seedTask(tasks, { id: "t2", title: "Fix the meter", status: "running" });
+    tasks.openAsk({ id: "askA", text: "add pagination", images: [] });
+    tasks.attachAsk("askA", "t1", "tool:spawn_crewmate");
+    tick();
+    tasks.openAsk({ id: "askB", text: "fix the meter", images: [] });
+    tasks.attachAsk("askB", "t2", "tool:spawn_crewmate");
+    tick();
+    // A message first attached to askA's work joins it.
+    tasks.openAsk({ id: "askC", text: "and the page size?", images: [] });
+    tasks.attachAsk("askC", "t1", "host:fallback");
+    expect(tasks.getAsk("askC")?.continues).toBe("askA");
+    tick();
+    // askB named later on askA's work stays the root of its own chain.
+    expect(tasks.attachAsk("askB", "t1", "tool:create_task")).toBe(true);
+    expect(tasks.getAsk("askB")?.continues).toBeNull();
+  });
+
   it("opens an ask, attaches it once per task with an ask event, and closes it", () => {
     const { tasks, tick } = setup();
     seedTask(tasks, { id: "t1", title: "Add pagination", status: "running" });

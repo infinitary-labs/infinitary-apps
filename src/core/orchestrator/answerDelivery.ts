@@ -178,9 +178,17 @@ export const CREWMATE_ANSWER_ASK =
 /** The one notice's card title. */
 export const ANSWER_NOTICE_TITLE = "Your first mate has not answered your message";
 
+const NOTICE_CARD_PREFIX = "card-ask-";
+
 /** The one notice's card id, fixed per message so a restart never raises a second. */
 export function noticeCardId(askId: string): string {
-  return `card-ask-${askId}`;
+  return `${NOTICE_CARD_PREFIX}${askId}`;
+}
+
+/** The message a notice card is for, or undefined for any other card. */
+export function noticeAskId(cardId: string): string | undefined {
+  if (!cardId.startsWith(NOTICE_CARD_PREFIX)) return undefined;
+  return cardId.slice(NOTICE_CARD_PREFIX.length);
 }
 
 /** How much of the captain's message the notice and the wake quote. */

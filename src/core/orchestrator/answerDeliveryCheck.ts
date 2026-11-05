@@ -1,4 +1,4 @@
-import type { Card } from "@shared/cards";
+import { type Card, onStage } from "@shared/cards";
 import { FIRSTMATE_RECIPIENT, type InboxRow, type InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
 import {
@@ -27,6 +27,8 @@ export type AnswerDeliveryHost = {
   now: () => number;
   /** Put the one notice on the stack (a host card; its own record, no crewmate task). */
   raiseNotice: (card: Pick<Card, "id" | "title" | "meta" | "body" | "actions">) => void;
+  /** Take a notice down unanswered: an answering card went up after it. Absent, notices stay up. */
+  withdrawNotice?: (cardId: string) => void;
   /** The title of a card the captain replied under, when it is still on the stack. */
   cardTitle: (cardId: string) => string | undefined;
   /** How each message ends (`AskEnding`): its chain, its work and its answer. */
@@ -229,6 +231,7 @@ export class AnswerDeliveryCheck {
    */
   sweep(): void {
     if (this.host.observe) return;
+    this.withdrawNotices();
     for (const chain of this.host.ending.openChains()) {
       try {
         if (chain.members.some((member) => member.delivery !== "covered")) continue;
@@ -240,6 +243,35 @@ export class AnswerDeliveryCheck {
         }
       } catch (caught) {
         console.warn("[firstmate] answer delivery could not read a message's ending:", caught);
+      }
+    }
+  }
+
+  /**
+   * A notice up for a message whose work now shows an answering card on the
+   * stage, offered after the notice, is taken back (INF-2664): a card still
+   * held for its author's close-out waits until it is released. Every message of
+   * its chain waits on that card again, as one that never had a notice
+   * would. The notice keeps its id on the message, so if that card closes
+   * with no answer the same notice comes back, with no second reminder.
+   */
+  withdrawNotices(): void {
+    const withdraw = this.host.withdrawNotice;
+    if (this.host.observe || !withdraw) return;
+    for (const notice of this.host.ending.noticesUp()) {
+      try {
+        const ask = this.host.tasks.getAsk(notice.askId);
+        if (!ask?.followed || ask.delivery !== "unresolved") continue;
+        if (ask.noticeCardId !== noticeCardId(ask.id)) continue;
+        const chain = this.host.ending.chain(ask.id);
+        const card = chain ? this.host.ending.waitingCard(chain) : undefined;
+        if (!chain || !card || !onStage(card)) continue;
+        if (this.host.ending.offeredAt(card) < notice.shownAt) continue;
+        const unresolved = chain.members.filter((member) => member.delivery === "unresolved");
+        for (const member of unresolved) this.host.tasks.setAskDelivery(member.id, "covered");
+        withdraw(noticeCardId(ask.id));
+      } catch (caught) {
+        console.warn("[firstmate] answer delivery could not take back a notice:", caught);
       }
     }
   }
@@ -273,6 +305,12 @@ export class AnswerDeliveryCheck {
   private retry(id: string, chain?: AskChain): void {
     const ask = this.host.tasks.getAsk(id);
     if (!ask) return;
+    // A message whose notice was taken back already had its retry: the notice
+    // returns. A newer message that joined after has its own retry.
+    if (ask.noticeCardId) {
+      this.notify(id, chain);
+      return;
+    }
     const refusal = refusalOf(ask.deliveryFacts.entries);
     const filed = ask.taskId ? this.host.tasks.get(ask.taskId) : undefined;
     const aboutId = this.about.get(id);
@@ -308,11 +346,12 @@ export class AnswerDeliveryCheck {
 
   /**
    * The one notice, raised under a fixed id and marked on the message so it
-   * is never raised again; every message of its chain ends unanswered with it.
+   * is never raised twice at once; every message of its chain ends
+   * unanswered with it. One taken back comes back under the same id.
    */
   private notify(id: string, chain?: AskChain): void {
     const ask = this.host.tasks.getAsk(id);
-    if (!ask || ask.noticeCardId) return;
+    if (!ask || ask.delivery === "unresolved") return;
     this.host.raiseNotice(noticeCard(id, ask.text, ask.deliveryFacts.entries));
     this.host.tasks.markAskUnresolved(id, noticeCardId(id));
     for (const other of chain?.ids ?? []) {

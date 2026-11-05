@@ -139,6 +139,7 @@ import {
   ANSWER_ONLY_REFUSED_TOOLS,
   type DeliveryNote,
   type DeliveryRefusal,
+  excerptOf,
 } from "./answerDelivery";
 import { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { withAskAttribution } from "./askAttribution";
@@ -857,6 +858,8 @@ export class FirstmateAgent {
       inbox: options.inbox,
       now: () => this.now(),
       raiseNotice: (card) => options.supervisor.raiseHostCard(card),
+      withdrawNotice: (cardId) =>
+        options.supervisor.withdrawHostCard(cardId, "an answering card went up"),
       cardTitle: (cardId) =>
         options.supervisor.cardsSnapshot().find((card) => card.id === cardId)?.title,
       ending: options.supervisor.askEnding,
@@ -873,6 +876,7 @@ export class FirstmateAgent {
       asksMoved: () => {
         if (!this.running) this.delivery.sweep();
       },
+      cardPlaced: () => this.delivery.withdrawNotices(),
       firstmateCannotAnswer: () => this.cannotAnswerNow(),
       notifyCaptainChoice: (wake, ref) => this.notifyCaptainChoice(wake, ref),
       premiumCanServe: () => this.premiumCanServe(),
@@ -2654,7 +2658,26 @@ export class FirstmateAgent {
       // and standalone (contract v2.0).
       emitCardTool,
       createCloseCardTool((input) => {
-        const result = supervisor.closeCard(input.cardId, { kind: "firstmate" }, input.reason);
+        // The messages a step has read that wait on this card, before the close (INF-2664).
+        const ending = supervisor.askEnding;
+        const waiting = ending.openChains(true).filter((chain) => {
+          const unread = (id: string, turn: string) =>
+            turn === "open" && !this.readThisTurn.has(id);
+          if (chain.members.some((member) => unread(member.id, member.turnState))) return false;
+          return ending.waitingCard(chain)?.id === input.cardId;
+        });
+        const closed = supervisor.closeCard(input.cardId, { kind: "firstmate" }, input.reason);
+        const left = waiting.flatMap((chain) => {
+          const now = ending.chain(chain.root.id);
+          return now && ending.state(now).kind === "missing" ? [now.root] : [];
+        });
+        const result = [
+          closed,
+          ...left.map(
+            (ask) =>
+              `The captain's message ${ask.id} ("${excerptOf(ask.text)}") now has no answering card up and no work running for it.`,
+          ),
+        ].join("\n");
         this.deliveredThisTurn = true;
         this.noteDelivery({
           outcome: "action",
@@ -2984,7 +3007,12 @@ export class FirstmateAgent {
     // The one retry only shows an answer: every work-changing tool answers
     // with a refusal as text, the way a graph refusal does.
     return tools.map((tool) => {
-      const attributed = withAskAttribution(tool, this.asks, (id) => this.readThisTurn.has(id));
+      const attributed = withAskAttribution(
+        tool,
+        this.asks,
+        (id) => this.readThisTurn.has(id),
+        (id) => this.options.supervisor.askEnding.nameRefusal(id),
+      );
       return {
         ...attributed,
         run: (params: Parameters<typeof tool.run>[0], signal?: AbortSignal) =>

@@ -184,6 +184,8 @@ function fromRow(row: Row): AskRecord {
 /** Where a followed message has not ended: answered, or given its one notice. */
 const NOT_ENDED =
   "followed = 1 AND answered_at IS NULL AND delivery != 'unresolved' AND turn_state != 'open'";
+/** The same, with the messages whose reply is still running (INF-2664). */
+const NOT_ENDED_OR_RUNNING = "followed = 1 AND answered_at IS NULL AND delivery != 'unresolved'";
 
 export class AskStore {
   constructor(private readonly db: AppDatabase) {}
@@ -303,12 +305,13 @@ export class AskStore {
    * Complete chains with an unfinished member, in one read. The unfinished
    * rows select roots, not members: an open turn or an already-ended member
    * still belongs to its chain and determines the newest message's time.
+   * `running` also selects messages whose reply has not finished.
    */
-  openChains(): { root: AskRecord; members: AskRecord[] }[] {
+  openChains(running = false): { root: AskRecord; members: AskRecord[] }[] {
     const rows = prepared(
       this.db,
       `WITH unfinished AS (
-         SELECT id, continues FROM captain_asks WHERE ${NOT_ENDED}
+         SELECT id, continues FROM captain_asks WHERE ${running ? NOT_ENDED_OR_RUNNING : NOT_ENDED}
        ), roots AS (
          SELECT DISTINCT COALESCE(parent.id, unfinished.id) AS id
          FROM unfinished LEFT JOIN captain_asks parent ON parent.id = unfinished.continues

@@ -613,6 +613,8 @@ export type FirstmateHooks = {
    * not mid-turn (INF-1610).
    */
   asksMoved?: () => void;
+  /** A card went up: a notice it answers is taken back (INF-2664). */
+  cardPlaced?: () => void;
 };
 
 /**
@@ -1761,6 +1763,7 @@ export class CrewSupervisor {
         this.askEnding.captainResponded(card, response, action);
         this.hooks.asksMoved?.();
       },
+      cardPlaced: () => this.hooks.cardPlaced?.(),
       checkCardResponse: (_taskId, response, card) => this.checkCardResponse(response, card),
       submitCardResponse: (taskId, response, text, line) => {
         options.inbox.submitResponse(

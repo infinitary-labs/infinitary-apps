@@ -2,7 +2,7 @@ import { type Card, settleEffectOf } from "@shared/cards";
 import type { AskRecord } from "../storage/askStore";
 import type { TaskCoverageFields } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
-import { actionTookEffect } from "./answerDelivery";
+import { actionTookEffect, noticeAskId } from "./answerDelivery";
 import { answerTaskChoice } from "./answerTaskResponse";
 import { hasMergeLine } from "./settleWords";
 
@@ -124,11 +124,60 @@ export class AskEnding {
     };
   }
 
-  /** The chains that have not ended, oldest first: one per root. */
-  openChains(): AskChain[] {
+  /**
+   * The chains that have not ended, oldest first: one per root. `running`
+   * also reads the messages whose reply is still running.
+   */
+  openChains(running = false): AskChain[] {
     return this.host.tasks.readProjection(() =>
-      this.host.tasks.openAskChains().map(({ root, members }) => this.withCoverage(root, members)),
+      this.host.tasks
+        .openAskChains(running)
+        .map(({ root, members }) => this.withCoverage(root, members)),
     );
+  }
+
+  /**
+   * Why the first mate may not name a message on an action from a step
+   * that did not read it, or undefined when it may (INF-2664): any open
+   * message a finished reply has read, a notice-up one included. Typed
+   * facts only - which message the work serves is the first mate's to say.
+   */
+  nameRefusal(askId: string): string | undefined {
+    const ask = this.host.tasks.getAsk(askId);
+    if (!ask) return "ask_id must name an open message (open_asks id), or be empty.";
+    if (ask.turnState === "open") {
+      return "ask_id must name a message a step has read; this one waits for its own step.";
+    }
+    const chain = this.chain(askId);
+    const ended =
+      !ask.followed ||
+      !chain ||
+      chain.members.some((member) => member.answeredAt !== null) ||
+      (chain.members.some((member) => member.delivery === "unresolved") &&
+        !chain.members.some((member) => member.noticeCardId && this.noticeUp(member.id)));
+    return ended
+      ? "ask_id names a message that has ended: it was answered, or its notice was closed. Leave ask_id empty for this work."
+      : undefined;
+  }
+
+  /** Whether a message's notice is on the stack now. */
+  private noticeUp(askId: string): boolean {
+    return this.noticesUp().some((notice) => notice.askId === askId);
+  }
+
+  /** When the captain was last offered a card as it stands. */
+  offeredAt(card: Card): number {
+    return this.host.shownAt(card);
+  }
+
+  /** The notices up now, by message, with when each was offered. */
+  noticesUp(): { askId: string; shownAt: number }[] {
+    const notices: { askId: string; shownAt: number }[] = [];
+    for (const card of this.host.openCards()) {
+      const askId = noticeAskId(card.id);
+      if (askId) notices.push({ askId, shownAt: this.host.shownAt(card) });
+    }
+    return notices;
   }
 
   /** The chains whose work includes a task, newest first. */
@@ -247,7 +296,8 @@ export class AskEnding {
    * choice on a decision about its work that is not still asking (or an
    * explicitly answering terminal answer-task choice), or their close of
    * a note shaped as its answer. A decision closed without a
-   * choice answers nothing.
+   * choice answers nothing. A chain whose reply is still running counts
+   * too: a quick choice lands before the turn that showed the card ends.
    */
   captainResponded(card: Card, response: "choice" | "close", action?: string): void {
     if (card.awaiting === "answer") return;
@@ -257,7 +307,7 @@ export class AskEnding {
       card.answering === true &&
       answerTaskChoice(card, card.taskId ? this.host.tasks.get(card.taskId) : undefined, action);
     if (response === "choice" && (card.continues || (card.asking && !terminalAnswer))) return;
-    for (const chain of this.openChains()) {
+    for (const chain of this.openChains(true)) {
       // A choice on any decision about its work answers it; a closed note
       // answers it only when shaped as its answer, not a note along the way.
       const answers = response === "choice" ? this.about(chain, card) : this.candidate(chain, card);

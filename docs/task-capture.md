@@ -15,7 +15,9 @@ A task of its own exists only for a genuinely standalone one-off, and only when 
 
 1. `inf:converse` opens a `captain_asks` row before the first mate turn runs (`TaskService.openAsk`, policy in `src/core/orchestrator/askCapture.ts`).
    The hint is the task the open card points at: an explicit `taskId` on the turn (the P4 record card), else the visible card's `taskId`, else the decision row a visible first mate decision card carries.
-2. The first mate's attributing tools accept `ask_id`: a message this turn has read, or the empty string for operational work unrelated to a captain message.
+2. The first mate's attributing tools accept `ask_id`: a message this turn has read, any open message a finished reply has read (INF-2664), or the empty string for operational work unrelated to a captain message.
+   Which message work serves is the first mate's to declare: its description tells it to name the message on work that comes from a click on its card or a report on its work.
+   The host checks only typed facts (`AskEnding.nameRefusal`): a message still waiting for its own step is refused as unread, and one that has ended - answered, or its notice closed - is refused with a reason saying it ended.
    Omission uses the latest read message for ordinary direct-request calls.
    The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask with `attached_via = tool:<name>`:
    - `spawn_crewmate` -> the new task; `steer_crewmate`, `interrupt_crewmate`, `settle_task`, `update_task` (including `start_now`) -> the named task.
@@ -38,7 +40,7 @@ A task of its own exists only for a genuinely standalone one-off, and only when 
 
 Turn scope is the asks whose inputs the backend witnessed with `input_read`: Pi when the user message enters context, Claude at its acknowledgement.
 A captain steer opens its ask immediately, but an in-flight action keeps its selected source even when the steer is read.
-New actions can name any message this turn has read; unrelated operational actions select no message rather than inheriting the turn's captain words.
+New actions can name any message this turn has read, or any open one a finished reply has read; unrelated operational actions select no message rather than inheriting the turn's captain words.
 An unread ask stays open without a task attachment or reply from the earlier turn, and its parked captain turn supplies its own read witness later.
 Only a turn end that names an ask closes it (`AskCapture.endTurn` takes the asks it ends), so nothing else files a message before the turn that reads it.
 
@@ -88,6 +90,12 @@ The check runs at the turn's end, after reply capture and the first mate's close
    Older messages with no retained picture copies keep their text-only retry.
    It never quotes closing words, refusal text or an error, and the host's own record for it files no crewmate task.
    The message, and every message joined to it, ends `unresolved`.
+5. A card that can answer the message, offered on the stage after its notice, takes the notice back (`AnswerDeliveryCheck.withdrawNotices`, run whenever a card goes up, is revised or leaves its close-out hold, and on every sweep): every message of its chain is `covered` again and waits on that card.
+   A crewmate's card still held for its close-out takes nothing back until it reaches the stage, since the captain sees neither until then.
+   While its notice is up the first mate may still name the message on work, so that work's card can be the one.
+   The message keeps `notice_card_id`, so if it goes unanswered again the same notice comes back, with no second retry.
+   A newer message that joined the chain after the notice was taken back has its own one retry, and its own notice.
+   A notice the captain answered, with Ask again or Leave it, is gone, and its message stays ended.
 
 Boot reconciles from the saved facts: a message stranded mid-turn is judged as uncovered, a retrying message whose wake was served is judged now, and a message whose parked words are still on the lane waits for them; the once-name and the fixed card id rule out a second retry or notice.
 Operational wakes and card clicks open no message and are never checked.
@@ -112,6 +120,7 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
   The message's own work is the part of it the first mate's tools acted on for the message (`acted` on the same read), and anything filed or started after it; a task the message only pointed at, such as the card it was typed under, which nobody acted on since, is not working on it.
 - **Joining.**
   A message about open work of an earlier message that has not ended joins it (`continues`), set once when it first attaches; the earliest is the root, and the root with every message that joined it ends together.
+  A later attachment, such as the first mate naming the message on other work, never moves it under another chain.
   An answer once recorded never moves: work linked afterwards belongs to the newer message.
 - **A card that can answer it.**
   A card about its work that its author marked `answering`, a completion card's merge, the app's merge line on a story note, or a card the first mate showed for the message; it counts only when it was shown since the newest message of the chain.
@@ -123,8 +132,11 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
   The host checks attribution, the admitted choice and offer freshness, never card meaning or button wording.
   CardService saves choice acceptance through TaskService in the resolution transaction before task closure, preserving the original offer and submitted answers.
   The normal `answer_task_closed` handoff remains pending until the first mate recovers and handles the choice; acceptance alone neither authorizes nor proves later work.
+  A choice counts whether it lands before or after the reply that showed the card finishes: `captainResponded` also reads the chains whose reply is still running.
   A decision closed without a choice answers nothing; a reply, a question or a new message keeps the message open.
   Work the choice started keeps the message working until it ends; then the accepted card still answers it.
+  The step that handles the click joins that work to the message only when the first mate names the message on it (`ask_id`).
+  Closing the first mate's own card is never an acceptance; when `close_card` closes the card a message a step has read was waiting on, and leaves it with no answering card up and no work running, its answer says so, as a fact and never a refusal.
   The first mate's answer in the thread of the card the message was typed under is accepted; so is a reaction to a message that asks nothing, the first mate's own judgment.
 - **Answered.**
   An accepted answer becomes `answered_at` once the first mate has nothing queued that could start more work for it.

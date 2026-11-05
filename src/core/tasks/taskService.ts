@@ -1686,8 +1686,8 @@ export class TaskService {
   }
 
   /** Complete unfinished chains, with each message decoded once for this read. */
-  openAskChains(): { root: AskRecord; members: AskRecord[] }[] {
-    return this.asks.openChains();
+  openAskChains(running = false): { root: AskRecord; members: AskRecord[] }[] {
+    return this.asks.openChains(running);
   }
 
   /** A message and every message that joined its work, oldest first. */
@@ -5797,10 +5797,11 @@ export class TaskService {
         .some((event) => event.kind === "ask" && event.ref === askId);
       if (already) return false;
       const first = this.asks.attach(askId, taskId, via, at);
-      // A message about work an earlier message's work includes joins that
-      // earlier message while it has not ended (docs/task-capture.md "How a
-      // message ends").
-      if (ask.followed && ask.continues === null) {
+      // A message first attached to work an earlier message's work includes
+      // joins that earlier message while it has not ended (docs/task-capture.md
+      // "How a message ends"); a later attachment, such as a message named on
+      // other work, never moves it.
+      if (first && ask.followed && ask.continues === null) {
         const earlier = this.asksAbove(taskId).find(
           (other) =>
             other.id !== askId &&
@@ -5878,7 +5879,9 @@ export class TaskService {
   markAskUnresolved(askId: string, cardId: string): boolean {
     const run = this.write((): boolean => {
       const ask = this.asks.get(askId);
-      if (!ask || ask.delivery === "unresolved" || ask.noticeCardId) return false;
+      // A notice taken back when an answering card went up comes back under its own id.
+      if (!ask || ask.delivery === "unresolved") return false;
+      if (ask.noticeCardId && ask.noticeCardId !== cardId) return false;
       this.asks.setDelivery(askId, "unresolved");
       this.asks.setNoticeCard(askId, cardId);
       return true;

@@ -25,9 +25,11 @@ const ATTRIBUTING_TOOLS = new Set([
 const ASK_ID = Type.Optional(
   Type.String({
     description:
-      "The read message this action addresses (open_asks id). Empty for unrelated operational work, even in a captain turn. Omit uses the latest read message.",
+      "The open message served (open_asks id), any step: name it on work from its card's click or its work's report. Empty if unrelated. Omit: latest read.",
   }),
 );
+
+const UNREAD = "ask_id must name a message this turn has read.";
 
 // These file or start work, so they may name the wake they answer (INF-2326).
 const FILING_TOOLS = new Set(["spawn_crewmate", "create_task"]);
@@ -61,11 +63,17 @@ type AttributedTool<Tool> =
       : never
     : never;
 
-/** One action's source, shared by both session backends and every attachment writer. */
+/**
+ * One action's source, shared by both session backends and every attachment
+ * writer. `witnessed` says whether this step read the message; one it did
+ * not read may still be named when `nameRefusal` gives no reason against
+ * it (INF-2664: any open message a finished reply has read).
+ */
 export function withAskAttribution<Tool extends BoundTool>(
   tool: Tool,
   capture: AskCapture,
   witnessed: (askId: string) => boolean,
+  nameRefusal: (askId: string) => string | undefined = () => UNREAD,
 ): AttributedTool<Tool> {
   const parameters = {
     ...tool.parameters,
@@ -88,8 +96,10 @@ export function withAskAttribution<Tool extends BoundTool>(
       const named = filing ? origin : undefined;
       if (declared !== undefined && typeof declared !== "string")
         throw new Error("ask_id must name a read message, or be empty for unrelated work.");
-      if (declared && !witnessed(declared))
-        throw new Error("ask_id must name a message this turn has read.");
+      if (declared && !witnessed(declared)) {
+        const refusal = nameRefusal(declared);
+        if (refusal) throw new Error(refusal);
+      }
       const askId = declared === undefined ? capture.current()?.id : declared || undefined;
       if (named === undefined || named === "")
         return capture.withAsk(askId, () => tool.run(filing ? input : rest, signal));

@@ -231,6 +231,11 @@ export type CardServiceHost = {
    * answer hears it (INF-1610, `AskEnding.captainResponded`).
    */
   captainResponded?: (card: Card, response: "choice" | "close", action?: string) => void;
+  /**
+   * A card was placed, revised or released onto the stage from its
+   * close-out hold: a notice it answers may be taken back.
+   */
+  cardPlaced?: (card: Card) => void;
   /** The app build every observation is stamped with (docs/card-evidence.md). */
   build?: string;
   /**
@@ -2478,6 +2483,7 @@ export class CardService {
       this.noteStage({ head: shown, shown }, "close-out", { source: "host", closeOut: reason });
     });
     this.cards.set(card.id, shown);
+    this.host.cardPlaced?.(shown);
     if (card.author !== "crewmate" || !card.taskId) return;
     const returned = this.host.cardStore
       .messages(card.id)
@@ -3619,6 +3625,7 @@ export class CardService {
    * host's own asks too. A note places nothing.
    */
   private placed(card: Card): void {
+    this.host.cardPlaced?.(card);
     if (card.taskId) {
       this.host.syncCaptainGate(card.taskId, this.host.now());
       // Its merge card's line follows what else is open (INF-2525).

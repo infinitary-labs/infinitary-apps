@@ -113,6 +113,18 @@ describe("how a captain's message ends", () => {
     expect(f.ending.openChains()).toEqual([]);
   });
 
+  // INF-2664: the first mate names which message its work serves; the host
+  // checks only that the message is open and that a finished reply read it.
+  it("lets any open message a finished reply read be named, and refuses an unread or ended one", () => {
+    const f = fixture();
+    f.message("read", "why is my mac mini having memory pressure warning?");
+    expect(f.ending.nameRefusal("read")).toBeUndefined();
+    f.tasks.openAsk({ id: "parked", text: "and the other mac?" });
+    expect(f.ending.nameRefusal("parked")).toMatch(/a step has read/);
+    f.tasks.markAnswered(["read"], null);
+    expect(f.ending.nameRefusal("read")).toMatch(/has ended/);
+  });
+
   it("needs its answer now when it only pointed at work nobody acted on", () => {
     const f = fixture();
     f.work("t58", "Check if PR 58 merged", "idle");

@@ -8863,6 +8863,269 @@ describe("FirstmateAgent answer delivery", () => {
     expect(g.tasks.getAsk(original?.id ?? "")?.delivery).toBe("unresolved");
   });
 
+  // INF-2664, the captain's recorded case: they chose on the first mate's
+  // card 0.4 seconds before its reply finished, the click's step started the
+  // work, and that work's crewmate card answered them - yet the notice went up.
+  it("counts a choice made before the reply finishes, and the card of work named for the message as its answer (INF-2664)", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("why is my mac mini having memory pressure warning?");
+    const ask = f.tasks.listAsks()[0];
+    const shown = await toolsOf(f.specs)
+      .get("emit_card")
+      ?.execute("c1", {
+        title: "Memory pressure on the Mac mini has two likely causes",
+        body: "<p>A file indexer or a build is holding the most memory.</p>",
+        actions: [
+          { id: "find", label: "Find what's using the memory", default: true },
+          { id: "wait", label: "Leave it for now" },
+        ],
+      });
+    const cardId = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
+    // The captain's choice lands while the reply that showed the card still runs.
+    f.supervisor.act(cardId, "find");
+    expect(f.tasks.getAsk(ask?.id ?? "")?.answerCardId).toBe(cardId);
+    await finish(f, "Here is what I found.");
+    await drained(f.session, 2);
+    expect(retries(f)).toEqual([]);
+
+    // The click's step names the message on the work it starts.
+    const started = await toolsOf(f.specs).get("spawn_crewmate")?.execute("s1", {
+      title: "Find what is using the Mac mini's memory",
+      goal: "Name the process holding the memory and how to relieve it",
+      user_words: "Find what's using the memory",
+      ask_id: ask?.id,
+    });
+    expect(started?.content[0]?.text).toContain("Commissioned");
+    await vi.waitFor(() => expect(f.crewSpecs).toHaveLength(1));
+    await finish(f, "Started.");
+    expect(retries(f)).toEqual([]);
+    expect(noticeOf(f)).toBeUndefined();
+
+    // Its crewmate's answering card is the answer the captain chooses on.
+    const work = f.tasks.list().find((task) => task.title.startsWith("Find what is using"));
+    await f.crewSpecs[0]?.callbacks?.onCard?.({
+      title: "A file indexer holds most of the memory",
+      body: "<p>Pausing it relieves the pressure.</p>",
+      answering: true,
+      actions: [
+        { id: "pause", label: "Pause the indexer", default: true },
+        { id: "keep", label: "Keep it running" },
+      ],
+    });
+    // Its report puts the card on the stage.
+    await f.crewSpecs[0]?.tools
+      ?.find((tool) => tool.name === "report")
+      ?.run({ text: "The indexer holds the memory.", summary: "Found the indexer." });
+    const answer = f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "";
+    f.supervisor.act(answer, "pause");
+    expect(f.tasks.getAsk(ask?.id ?? "")?.answerCardId).toBe(answer);
+    expect(retries(f)).toEqual([]);
+    expect(noticeOf(f)).toBeUndefined();
+  });
+
+  it("takes the notice back when an answering card of the message's work goes up, and raises the same notice if it goes unanswered again (INF-2664)", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [{ id: "t58", title: "Check if PR 58 merged", status: "idle" }],
+    });
+    await f.agent.converse({ text: "is PR 58 merged?", taskId: "t58" });
+    await finish(f);
+    await drained(f.session, 2);
+    await finish(f);
+    await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
+    const ask = f.tasks.listAsks()[0];
+    const notice = `card-ask-${ask?.id}`;
+
+    // A later step names the message, its notice up, on the work it starts.
+    notifyProse(f.db, f.agent, "[fm-op] a crewmate reported on PR 58", "agent");
+    await drained(f.session, 3);
+    await toolsOf(f.specs).get("spawn_crewmate")?.execute("s1", {
+      title: "Check whether PR 58 merged",
+      goal: "Say whether PR 58 merged",
+      user_words: "is PR 58 merged?",
+      ask_id: ask?.id,
+    });
+    await vi.waitFor(() => expect(f.crewSpecs).toHaveLength(1));
+    await finish(f);
+    expect(noticeOf(f)?.id).toBe(notice);
+
+    // Its crewmate's answering card takes the notice back once it reaches
+    // the stage: while it is held for the crewmate's close-out, the captain
+    // sees neither, so the notice stays up.
+    const work = f.tasks.list().find((task) => task.title === "Check whether PR 58 merged");
+    await f.crewSpecs[0]?.callbacks?.onCard?.({
+      title: "PR 58 merged",
+      body: "<p>It merged into main.</p>",
+      answering: true,
+      actions: [
+        { id: "close-out", label: "Close it out", default: true },
+        { id: "recheck", label: "Check again tomorrow" },
+      ],
+    });
+    const crewCard = () =>
+      f.supervisor
+        .cardsSnapshot()
+        .find((card) => card.taskId === work?.id && card.title === "PR 58 merged");
+    expect(crewCard()?.awaiting).toBe("close-out");
+    expect(noticeOf(f)?.id).toBe(notice);
+    await f.crewSpecs[0]?.tools
+      ?.find((tool) => tool.name === "report")
+      ?.run({ text: "PR 58 merged.", summary: "PR 58 merged." });
+    expect(crewCard()?.awaiting).toBeUndefined();
+    expect(noticeOf(f)).toBeUndefined();
+    expect(f.tasks.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
+
+    // The work ends and the captain closes that card without a choice: the same notice returns.
+    f.tasks.close(work?.id ?? "", { status: "done", reason: "answered", actor: "host" });
+    f.supervisor.close(f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "");
+    await vi.waitFor(() => expect(noticeOf(f)?.id).toBe(notice));
+    expect(f.tasks.getAsk(ask?.id ?? "")).toMatchObject({
+      delivery: "unresolved",
+      noticeCardId: notice,
+    });
+    expect(retries(f)).toHaveLength(1);
+
+    // Leave it ends the message: naming it again is refused as ended.
+    f.supervisor.act(notice, "leave-it");
+    notifyProse(f.db, f.agent, "[fm-op] another report on PR 58", "agent");
+    await drained(f.session, 4);
+    await expect(
+      toolsOf(f.specs)
+        .get("create_task")
+        ?.execute("t1", { title: "Recheck PR 58", ask_id: ask?.id }),
+    ).rejects.toThrow(/has ended/);
+    await finish(f);
+  });
+
+  it("says in close_card's answer when the close leaves an open message with no answering card (INF-2664)", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("what is two plus two?");
+    const ask = f.tasks.listAsks()[0];
+    const tools = toolsOf(f.specs);
+    const idOf = (shown: { content: { text?: string }[] } | undefined) =>
+      shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
+    const first = idOf(await tools.get("emit_card")?.execute("c1", note("four", "Four")));
+    const second = idOf(await tools.get("emit_card")?.execute("c2", note("still-four", "Four")));
+    const left = `The captain's message ${ask?.id} ("what is two plus two?") now has no answering card up`;
+    // Another card that can answer it is still up: nothing to say.
+    const kept = await tools.get("close_card")?.execute("x1", { card_id: first, reason: "twice" });
+    expect(kept?.content[0]?.text).not.toContain(left);
+    const closed = await tools.get("close_card")?.execute("x2", { card_id: second });
+    expect(closed?.content[0]?.text).toContain(left);
+    await finish(f);
+  });
+
+  // INF-2667 review of INF-2664: a newer message that joins the chain after
+  // the notice was taken back has a retry of its own; the old notice, with the
+  // old words, never stands in for it.
+  it("gives a newer message that joins after a withdrawn notice its own retry (INF-2664)", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [{ id: "t58", title: "Check if PR 58 merged", status: "idle" }],
+    });
+    await f.agent.converse({ text: "is PR 58 merged?", taskId: "t58" });
+    await finish(f);
+    await drained(f.session, 2);
+    await finish(f);
+    await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
+    const ask = f.tasks.listAsks()[0];
+
+    notifyProse(f.db, f.agent, "[fm-op] a crewmate reported on PR 58", "agent");
+    await drained(f.session, 3);
+    await toolsOf(f.specs).get("spawn_crewmate")?.execute("s1", {
+      title: "Check whether PR 58 merged",
+      goal: "Say whether PR 58 merged",
+      user_words: "is PR 58 merged?",
+      ask_id: ask?.id,
+    });
+    await vi.waitFor(() => expect(f.crewSpecs).toHaveLength(1));
+    await finish(f);
+    const work = f.tasks.list().find((task) => task.title === "Check whether PR 58 merged");
+    await f.crewSpecs[0]?.callbacks?.onCard?.({
+      title: "PR 58 merged",
+      body: "<p>It merged into main.</p>",
+      answering: true,
+      actions: [
+        { id: "close-out", label: "Close it out", default: true },
+        { id: "recheck", label: "Check again tomorrow" },
+      ],
+    });
+    await f.crewSpecs[0]?.tools
+      ?.find((tool) => tool.name === "report")
+      ?.run({ text: "PR 58 merged.", summary: "PR 58 merged." });
+    expect(noticeOf(f)).toBeUndefined();
+
+    // A newer message about that work joins the message's chain.
+    await f.agent.converse({ text: "and did its checks pass?", taskId: work?.id ?? "" });
+    await vi.waitFor(() => expect(f.tasks.listAsks()).toHaveLength(2));
+    const newer = f.tasks.listAsks()[1];
+    await finish(f);
+    expect(f.tasks.getAsk(newer?.id ?? "")?.continues).toBe(ask?.id);
+
+    // The work ends and its card closes unanswered: the newer message is retried, with its own words.
+    f.tasks.close(work?.id ?? "", { status: "done", reason: "answered", actor: "host" });
+    f.supervisor.close(f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "");
+    await vi.waitFor(() => expect(f.tasks.getAsk(newer?.id ?? "")?.delivery).toBe("retrying"));
+    const wakes = new InboxStore(f.db)
+      .allFor(FIRSTMATE_RECIPIENT)
+      .flatMap((row) => (row.facts?.kind === "answer-missing" ? [row.facts.askId] : []));
+    expect(wakes).toEqual([newer?.id]);
+    expect(noticeOf(f)).toBeUndefined();
+    expect(f.tasks.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
+  });
+
+  // INF-2664, found running the app: a decision card files its own task, which
+  // ends with the card, so closing it in the step that showed it still names
+  // the message it leaves without an answer.
+  it("says so in close_card's answer for a decision card closed in the step that showed it (INF-2664)", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("what is two plus two?");
+    const ask = f.tasks.listAsks()[0];
+    const tools = toolsOf(f.specs);
+    const shown = await tools.get("emit_card")?.execute("c1", {
+      title: "Two plus two is four",
+      body: "<p>2 + 2 = 4.</p>",
+      answering: true,
+      actions: [
+        { id: "ok", label: "Thanks", default: true },
+        { id: "more", label: "Explain more" },
+      ],
+    });
+    const id = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
+    const closed = await tools.get("close_card")?.execute("x1", { card_id: id });
+    expect(closed?.content[0]?.text).toContain(
+      `The captain's message ${ask?.id} ("what is two plus two?") now has no answering card up`,
+    );
+    await finish(f);
+  });
+
+  // INF-2667 review of INF-2664: close_card names only the messages that
+  // waited on the card it closed, never a chain whose newer message the card
+  // came before.
+  it("names in close_card's answer only the messages waiting on that card (INF-2664)", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("is PR 58 merged?");
+    const first = f.tasks.listAsks()[0];
+    const shown = await toolsOf(f.specs).get("emit_card")?.execute("c1", note("merged", "Merged"));
+    const card = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
+    await finish(f);
+    // A newer message about the card's work joins the chain; the card came before it.
+    const work = f.tasks.getAsk(first?.id ?? "")?.taskId ?? "";
+    await f.agent.converse({ text: "and did its checks pass?", taskId: work });
+    await drained(f.session, 2);
+    await finish(f);
+    const newer = f.tasks.listAsks()[1];
+    expect(f.tasks.getAsk(newer?.id ?? "")?.continues).toBe(first?.id);
+    const chain = f.supervisor.askEnding.chain(first?.id ?? "");
+    expect(chain && f.supervisor.askEnding.state(chain).kind).not.toBe("waiting");
+    notifyProse(f.db, f.agent, "[fm-op] a crewmate reported on PR 58", "agent");
+    await vi.waitFor(() => expect(f.session.prompts.length).toBeGreaterThanOrEqual(3));
+    const closed = await toolsOf(f.specs).get("close_card")?.execute("x1", { card_id: card });
+    expect(closed?.content[0]?.text).toContain("Closed card");
+    expect(closed?.content[0]?.text).not.toContain("now has no answering card up");
+    await finish(f);
+  });
+
   // INF-1433: Ask again must send the retained pictures, even with no words.
   it.each(["What is in these pictures?", ""])(
     "resends the original pictures and their names with Ask again (%j)",

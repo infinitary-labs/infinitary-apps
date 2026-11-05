@@ -77,7 +77,7 @@ Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/key
 ## Checks
 
 - [`src/shared/actions.test.ts`](../src/shared/actions.test.ts): action permissions, channel parity and per-field claims.
-- [`src/core/core.test.ts`](../src/core/core.test.ts): dispatch, refusals and settled runs.
+- [`src/core/core.settings.test.ts`](../src/core/core.settings.test.ts): dispatch, refusals and settled runs.
 - [`src/core/preferences/shellPreferences.test.ts`](../src/core/preferences/shellPreferences.test.ts): the one presentation writer.
 - [`tests/e2e/activity-runs.spec.ts`](../tests/e2e/activity-runs.spec.ts): a run of steps is one Activity line.
 

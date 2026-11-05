@@ -37,7 +37,7 @@ function seatLine(url: string): string {
  * a seat, so the first-run gate is up, and the switch alone closes it,
  * moves a captain turn onto the endpoint, and opens it again when turned
  * off. A packaged build refuses both the environment and the control; that
- * half is the core boot's contract test (core.test.ts), since e2e runs
+ * half is the core boot's contract test (core.boot.test.ts), since e2e runs
  * unpackaged.
  */
 

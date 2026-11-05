@@ -87,7 +87,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 
 - [`../src/core/knowledge/knowledgeService.test.ts`](../src/core/knowledge/knowledgeService.test.ts): add, revise and retire through `StandingDirections.change`, kept reasons, a stale revision refused, and `record_knowledge` refusing a direction.
 - [`../src/core/knowledge/directions.test.ts`](../src/core/knowledge/directions.test.ts): the active directions carried once, a retried and a conflicting carry, and the browser's pages and one-direction reads.
-- [`../src/core/core.test.ts`](../src/core/core.test.ts) ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line and its reason in the history.
+- [`../src/core/core.settings.test.ts`](../src/core/core.settings.test.ts) ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line and its reason in the history.
 - [`../src/core/orchestrator/firstmateAgent.test.ts`](../src/core/orchestrator/firstmateAgent.test.ts) ("renders authoritative directions and keeps them from a scheduled turn too"): whole delivery to the first mate, background wakes included.
 - [`../src/core/orchestrator/crewSupervisor.test.ts`](../src/core/orchestrator/crewSupervisor.test.ts) ("serves active project directions with their authority once on the first turn", "serves the personal workspace's directions on every turn and drops a retired one"): project directions on a crewmate turn.
 - [`../src/core/personal/panelInstructions.test.ts`](../src/core/personal/panelInstructions.test.ts): the panel instructions carry, its repeat and its unreadable-Knowledge case.

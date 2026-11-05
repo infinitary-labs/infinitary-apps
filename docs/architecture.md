@@ -863,7 +863,7 @@ Cadences count the design's one-minute period (`TICK_PERIOD_MS`).
 A development or end-to-end run may shorten the interval's period with `INFINITARY_TICK_PERIOD_MS` (`tickPeriodFor`), and every pass then runs sooner in proportion, so a journey waiting on a sweep need not wait out the minute; a packaged build always ticks once a minute.
 
 `startCore(host)` (`src/core/index.ts`) builds all of it and returns `{ services, paths, events, dispatch, dispose }`; the host composes the adapters over it.
-`src/core/core.test.ts` boots the entire core under vitest - plain Node, no Electron runtime - and drives it through `dispatch` against real SQLite and real stores, with a stand-in shell, and over the connection with devices that know only the wire.
+The `src/core/core.*.test.ts` files boot the entire core under vitest - plain Node, no Electron runtime - and drives it through `dispatch` against real SQLite and real stores, with a stand-in shell, and over the connection with devices that know only the wire.
 
 ## 18. The UI plugin system
 
@@ -948,7 +948,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `src/main/` is only the shell: window, security lockdown, voice protocol, IPC adapter, `createElectronHost`.
   Three seams: `core.dispatch` in (`src/core/dispatcher.ts` - it zod-parses the raw args itself, so validation is the protocol's not the transport's, and the Electron adapter forwards the whole core surface in one loop over `CORE_INVOKE_CHANNELS`), `core.events` out (`src/core/events.ts`, a sink registry - already N-client shaped), and `HostCapabilities` sideways (`src/core/host.ts` - effects only, including the Keychain read; the open-external allowlist stays with the caller).
   Every channel of the contract (`src/shared/ipc.ts` and `src/shared/channels/`) carries a `surface`, `PROTOCOL_VERSION` rides the healthcheck, and `src/shared/ipc.test.ts` pins the host set, so a new channel has to be classified.
-  `startCore(host)` (`src/core/index.ts`) is the composition root; `src/core/core.test.ts` boots the entire core under vitest with no Electron, which is the point of the fence.
+  `startCore(host)` (`src/core/index.ts`) is the composition root; the `src/core/core.*.test.ts` files boot the entire core under vitest with no Electron, which is the point of the fence.
 - The frozen `window.infinitary` API surface and the first mate tool set are each pinned twice: `phase0-guardrails.spec.ts` (API keys) and `FIRSTMATE_TOOLS` in `src/core/session/tools.ts`, which `scripts/generate-self-source.mjs` reads, + that script's test (tools, in registration order).
   The crewmate tool set has one input, `CREWMATE_TOOLS` (`src/core/pi/crewmateTaskTools.ts`), which both runtimes and the self-map read (primitives P7).
   Adding a namespace or tool means updating both pins deliberately.

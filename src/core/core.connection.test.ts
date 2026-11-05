@@ -1,0 +1,671 @@
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { HandoverOffer } from "@shared/actions";
+import type { Card } from "@shared/cards";
+import { CONNECTION_CLOSE, CONNECTION_PORT } from "@shared/connection";
+import { deviceJoinedLine, parsePairingLink } from "@shared/devices";
+import type { FmEvent } from "@shared/events";
+import {
+  HOME_CAPABILITIES,
+  invokeContract,
+  PROTOCOL_VERSION,
+  VIEW_INVOKE_CHANNELS,
+} from "@shared/ipc";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  APP_CATALOG_PROMPT_MARKER,
+  type MockProviderServer,
+  mockModelsJson,
+  startMockProvider,
+} from "../../tests/e2e/mockProvider";
+import { projectSetup } from "../../tests/e2e/scenarios/projectSetup";
+import {
+  AT_FIRST_LAUNCH,
+  fakeHost,
+  serveConnection,
+  waitFor,
+} from "../../tests/helpers/bootedCore";
+import { claimedPort } from "../../tests/helpers/claimedPort";
+import { connectClient, type ReceivedPush } from "../../tests/helpers/connectionClient";
+import { projectFontBytes } from "../../tests/helpers/fontFixture";
+import { scratchDir } from "../../tests/helpers/scratchDirs";
+import { startConnection } from "./connection/connection";
+import { claimLink } from "./devices/dial";
+import { type Core, startCore } from "./index";
+import { createAppTools } from "./pi/appTools";
+import { catalogRefreshesSettled } from "./pi/modelRuntime";
+import type { AskRecord } from "./storage/askStore";
+
+// This file chains real git and is not about the utility-QoS clamp, so what
+// the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
+vi.mock("./utilityQos", async (importOriginal) =>
+  (await import("../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
+);
+
+/**
+ * The whole core served over its connection (tests/helpers/bootedCore.ts):
+ * paired devices, a first mate started by a command, words typed on a paired
+ * Mac, and the development loopback port.
+ */
+
+/**
+ * The connection over the real core (docs/connection.md, docs/devices.md):
+ * the core makes links through its own requests, and devices that know only
+ * the wire join with them and use what a paired device may.
+ */
+describe("the connection serves the core to paired devices", () => {
+  let userDataDir: string;
+  let core: Core;
+  let connection: ReturnType<typeof startConnection>;
+  let at: string;
+
+  beforeAll(async () => {
+    userDataDir = scratchDir("infinitary-core-connection-");
+    process.env.PI_OFFLINE = "1";
+    core = await startCore(fakeHost(userDataDir).host);
+    ({ connection, at } = await serveConnection(core));
+  }, 60_000);
+
+  afterAll(async () => {
+    await connection?.close();
+    await core?.dispose();
+    rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  /** The captain makes a link on this Mac; a device uses it. */
+  const pairDevice = async (kind: "view" | "work" = "view", name = "Test Mac") => {
+    const { link } = await core.dispatch("inf:devices:invite", [
+      { kind: kind === "view" ? "mac" : "work", at },
+    ]);
+    await connection.settled();
+    // A computer that runs work dials loopback here, so it runs as another
+    // user than this process, as on the home's own Mac (docs/helper.md); a
+    // view is a second app here, at its first launch.
+    const user = { name: "builder", uid: (process.getuid?.() ?? 0) + 1 };
+    return {
+      link,
+      grant: await claimLink(
+        link,
+        kind === "work" ? { kind, name, user } : { ...AT_FIRST_LAUNCH, name },
+      ),
+    };
+  };
+
+  it("listens once paired, numbers each push once for every device, and catches a dropped one up", async () => {
+    await connection.settled();
+    expect(connection.listening()).toEqual([]);
+    const { grant: grantA } = await pairDevice("view", "Mac A");
+    const { grant: grantB } = await pairDevice("view", "Mac B");
+    const a = await connectClient(grantA);
+    const b = await connectClient(grantB);
+    expect(await a.invoke("inf:app:healthcheck", [])).toMatchObject({
+      protocolVersion: PROTOCOL_VERSION,
+      capabilities: [...HOME_CAPABILITIES],
+    });
+
+    const shows = (id: string) => (push: ReceivedPush) =>
+      push.channel === "inf:cards" && (push.payload as Card[]).some((card) => card.id === id);
+    const { supervisor } = core.services;
+    supervisor.addSystemNoteCard("card-connection-1", "Seen twice", "<p>One</p>");
+    const [fromA, fromB] = await Promise.all([
+      a.push(shows("card-connection-1")),
+      b.push(shows("card-connection-1")),
+    ]);
+    expect(fromA).toEqual(fromB);
+
+    // One device answers; the other sees the card go.
+    await a.invoke("inf:cards:close", ["card-connection-1"]);
+    await b.push(
+      (push) =>
+        push.seq > fromB.seq && push.channel === "inf:cards" && !shows("card-connection-1")(push),
+    );
+    expect((await b.invoke("inf:cards:list", [])).map((card) => card.id)).not.toContain(
+      "card-connection-1",
+    );
+
+    // B drops; two cards arrive while it is away; it comes back with its cursor.
+    const cursor = b.cursor();
+    await b.close();
+    supervisor.addSystemNoteCard("card-connection-2", "While away", "<p>Two</p>");
+    supervisor.addSystemNoteCard("card-connection-3", "Still away", "<p>Three</p>");
+    await a.push(shows("card-connection-3"));
+    const back = await connectClient(grantB, { cursor });
+    expect(back.welcome).toMatchObject({ catchUp: "replay", epoch: cursor.epoch });
+    await a.push((push) => push.seq >= back.welcome.seq);
+    const missed = a.pushes.filter((push) => push.seq > cursor.seq && push.seq <= back.welcome.seq);
+    expect(back.pushes.filter((push) => push.seq <= back.welcome.seq)).toEqual(missed);
+    expect(missed.some(shows("card-connection-2"))).toBe(true);
+    expect(missed.some(shows("card-connection-3"))).toBe(true);
+
+    await core.dispatch("inf:devices:remove", [grantA.deviceId]);
+    await core.dispatch("inf:devices:remove", [grantB.deviceId]);
+    expect(await Promise.all([a.closed, back.closed])).toEqual([
+      CONNECTION_CLOSE.unpaired,
+      CONNECTION_CLOSE.unpaired,
+    ]);
+    await connection.settled();
+    expect(connection.listening()).toEqual([]);
+  });
+
+  // INF-2553 (the captain: "closing a card on the ios would not immediately take effect, but seems to rely on server
+  // response"): a view shows a close at the tap and settles it on the next cards snapshot, so the home sends the
+  // snapshot without the card before it answers the close, never a coalescing window after it.
+  it("sends a view the cards without a closed card before it answers the close", async () => {
+    const { grant } = await pairDevice("view", "Phone");
+    const view = await connectClient(grant);
+    const holds = (id: string) => (push: ReceivedPush) =>
+      push.channel === "inf:cards" && (push.payload as Card[]).some((card) => card.id === id);
+    core.services.supervisor.addSystemNoteCard(
+      "card-close-first",
+      "Closed from the phone",
+      "<p>Gone at once</p>",
+    );
+    const shown = await view.push(holds("card-close-first"));
+
+    await view.invoke("inf:cards:close", ["card-close-first"]);
+    const after = view.pushes.filter(
+      (push) => push.seq > shown.seq && push.channel === "inf:cards",
+    );
+    expect(after.at(-1)).toBeDefined();
+    expect(holds("card-close-first")(after.at(-1)!)).toBe(false);
+
+    await view.close();
+    await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    await connection.settled();
+  });
+
+  it("says in Devices while a Mac that controls this Firstmate is connected, and since when it is out of reach", async () => {
+    // The shell attaches the connection to the core's devices, as the app does.
+    const unreach = core.services.workDevices.attach(connection);
+    const pushed: unknown[] = [];
+    const off = core.events.subscribe((channel, payload) => {
+      if (channel === "inf:devices") pushed.push(payload);
+    });
+    try {
+      const { grant } = await pairDevice("view", "MacBook Air");
+      const listed = async () =>
+        (await core.dispatch("inf:devices:list", [])).find(
+          (device) => device.id === grant.deviceId,
+        );
+      // Never connected yet: out of reach, never seen.
+      expect(await listed()).toEqual({
+        id: grant.deviceId,
+        kind: "view",
+        name: "MacBook Air",
+        pairedAt: expect.any(Number),
+        onThisMac: true,
+        inReach: false,
+        controlling: false,
+      });
+
+      // Firstmate opens there: in reach and controlling, pushed to the window.
+      const view = await connectClient(grant);
+      await expect
+        .poll(listed)
+        .toMatchObject({ inReach: true, controlling: true, seenAt: expect.any(Number) });
+      expect(pushed.at(-1)).toEqual([await listed()]);
+
+      // It quits there: out of reach since then, which pairing keeps for a restart.
+      const quit = Date.now();
+      await view.close();
+      await expect.poll(async () => (await listed())?.controlling).toBe(false);
+      const away = await listed();
+      expect(away).toMatchObject({ inReach: false, controlling: false });
+      expect(away?.seenAt).toBeGreaterThanOrEqual(quit);
+      expect(core.services.devices.lastSeen(grant.deviceId)).toBe(away?.seenAt);
+      expect(pushed.at(-1)).toEqual([away]);
+
+      await core.dispatch("inf:devices:remove", [grant.deviceId]);
+      expect(await core.dispatch("inf:devices:list", [])).toEqual([]);
+    } finally {
+      off();
+      unreach();
+    }
+  });
+
+  it("answers every read a view may ask intact over the wire, and refuses what stays home", async () => {
+    const { grant } = await pairDevice("view", "Mac C");
+    const view = await connectClient(grant);
+    // Each answer is parsed against its channel's own response schema.
+    const reads = VIEW_INVOKE_CHANNELS.filter(
+      (channel) =>
+        invokeContract[channel].effect === "read" &&
+        invokeContract[channel].request.safeParse([]).success,
+    );
+    expect(reads).toContain("inf:tasks:board");
+    for (const channel of reads) await view.invoke(channel, []);
+
+    // A paired view cannot list, invite or remove: a lost Mac adds no other.
+    for (const [channel, args] of [
+      ["inf:settings:routing:get", []],
+      ["inf:devices:list", []],
+      ["inf:devices:invite", [{ kind: "mac" }]],
+      ["inf:devices:remove", [grant.deviceId]],
+    ] as const)
+      await expect(view.invoke(channel, [...args])).rejects.toThrow(
+        "answered only on the computer where your first mate lives",
+      );
+    await expect(view.invoke("inf:app:choose-folder", [])).rejects.toThrow(
+      "not a request this home answers",
+    );
+    await expect(view.invoke("inf:cards:act", ["only-one-argument"])).rejects.toThrow(
+      "malformed request",
+    );
+    await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    expect(await view.closed).toBe(CONNECTION_CLOSE.unpaired);
+  });
+
+  it("shows a view a card's picture, recording and font by name, and says in the feed when a view leaves", async () => {
+    const { grant } = await pairDevice("view", "Mac D");
+    const view = await connectClient(grant);
+    // The home's own copy, where the card picture host keeps it.
+    const name = `task-pic-${"a".repeat(32)}.png`;
+    const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
+    mkdirSync(join(core.paths.crewmatesDir, "task-pic", "cards"), { recursive: true });
+    writeFileSync(join(core.paths.crewmatesDir, "task-pic", "cards", name), bytes);
+    expect(await view.invoke("inf:cards:picture", [name])).toEqual({
+      contentType: "image/png",
+      data: bytes.toString("base64"),
+    });
+    // Only a minted name, and never a path.
+    for (const asked of ["../task-pic/cards/x.png", `task-pic-${"b".repeat(32)}.png`])
+      await expect(view.invoke("inf:cards:picture", [asked])).rejects.toThrow(/card picture/);
+    // A recording, a piece at a time, with the whole file's size; never a picture by that door.
+    const recording = `task-pic-${"c".repeat(32)}.mp4`;
+    const recorded = Buffer.from(Array.from({ length: 40 }, (_, at) => at));
+    writeFileSync(join(core.paths.crewmatesDir, "task-pic", "cards", recording), recorded);
+    expect(await view.invoke("inf:cards:media", [recording, 10, 5])).toEqual({
+      contentType: "video/mp4",
+      size: 40,
+      data: recorded.subarray(10, 15).toString("base64"),
+    });
+    expect(await view.invoke("inf:cards:media", [recording, 38, 5])).toMatchObject({
+      size: 40,
+      data: recorded.subarray(38).toString("base64"),
+    });
+    expect(await view.invoke("inf:cards:media", [recording, 0, 0])).toMatchObject({
+      size: 40,
+      data: "",
+    });
+    for (const asked of [name, `task-pic-${"d".repeat(32)}.mp4`])
+      await expect(view.invoke("inf:cards:media", [asked, 0, 1])).rejects.toThrow(/recording/);
+    // A project font a preview names (INF-128), whole, by its minted name alone.
+    const typeface = `task-pic-${"e".repeat(32)}.woff2`;
+    const font = projectFontBytes();
+    writeFileSync(join(core.paths.crewmatesDir, "task-pic", "cards", typeface), font);
+    expect(await view.invoke("inf:cards:typeface", [typeface])).toEqual({
+      contentType: "font/woff2",
+      data: font.toString("base64"),
+    });
+    for (const asked of [name, `task-pic-${"f".repeat(32)}.woff2`, "../task-pic/cards/x.woff2"])
+      await expect(view.invoke("inf:cards:typeface", [asked])).rejects.toThrow(/card('s)? font/);
+
+    // Leave: the view comes off the list, cut as for a Remove, named in the feed.
+    view.sendRaw(JSON.stringify({ t: "leave" }));
+    expect(await view.closed).toBe(CONNECTION_CLOSE.unpaired);
+    expect(core.services.devices.list().map((device) => device.id)).not.toContain(grant.deviceId);
+    const feed = await core.dispatch("inf:feed:recent", []);
+    expect(feed.map((line) => line.text)).toContain("Mac D left.");
+  });
+
+  it("makes a link only for the captain's own window, and keeps it out of everything saved", async () => {
+    let wake: "captain" | "other" = "captain";
+    const offered: { target: string; offer: HandoverOffer }[] = [];
+    const firstmate = createAppTools({
+      dispatch: core.dispatch,
+      actor: () => ({ kind: "firstmate", wake }),
+      handover: (target, offer) => {
+        offered.push({ target, offer });
+        return `offered ${offer.cardId}`;
+      },
+    });
+    const change = firstmate.find((tool) => tool.name === "app_change");
+    const state = firstmate.find((tool) => tool.name === "app_state");
+    if (!change || !state) throw new Error("Missing catalog tools");
+
+    // The Firstmate cannot make a link, whatever the captain said: it can
+    // only offer the card whose button makes one in Settings -> Devices.
+    const asked = await change.run({
+      action: "device-invite",
+      value: { name: "MacBook Air" },
+      evidence: "connect my MacBook Air",
+    });
+    expect(asked.text).toBe("offered app-device-invite");
+    expect(offered).toEqual([
+      {
+        target: "devices",
+        offer: {
+          cardId: "app-device-invite",
+          title: "Connect your MacBook Air",
+          paragraphs: [
+            "Your first mate stays on this computer. Your MacBook Air will show it and can run work for it.",
+            "Make a link here, then paste it into Infinitary on your MacBook Air.",
+            "It works once, for ten minutes. Only your click can make it, so I never see it.",
+          ],
+          label: "Make a link",
+          decline: "Not now",
+          arrival: { make: "link" },
+        },
+      },
+    ]);
+    expect(core.services.devices.list()).toEqual([]);
+    expect(core.services.devices.any()).toBe(false);
+    wake = "other";
+    expect(
+      (await change.run({ action: "device-invite", value: {}, evidence: "a report" })).text,
+    ).toContain("stays with the captain");
+    expect(offered).toHaveLength(1);
+    wake = "captain";
+
+    // The captain's own window can; the feed says a link was made, and who
+    // joined, never what the link is.
+    const { link, grant } = await pairDevice("work", "Mini");
+    const recent = await core.dispatch("inf:feed:recent", []);
+    expect(
+      recent.some((line) => line.text === "Captain · made a ten-minute link to add a device"),
+    ).toBe(true);
+    expect(
+      recent.some(
+        (line) =>
+          line.text ===
+          deviceJoinedLine({ name: "Mini", kind: "work", user: "builder", onThisMac: true }),
+      ),
+    ).toBe(true);
+    expect(recent.some((line) => line.text.includes(parsePairingLink(link).code))).toBe(false);
+    expect(await core.dispatch("inf:devices:list", [])).toEqual([
+      {
+        id: grant.deviceId,
+        kind: "work",
+        name: "Mini",
+        pairedAt: expect.any(Number),
+        user: "builder",
+        onThisMac: true,
+        // What the home reads of a computer that runs work now: no shell
+        // attached the connection to the core's computers here.
+        inReach: false,
+        tasks: 0,
+        runs: [],
+      },
+    ]);
+    const look = JSON.parse((await state.run({ area: "general" })).text) as {
+      action: string;
+      current: unknown;
+    }[];
+    expect(look.find((line) => line.action === "device-remove")?.current).toEqual({
+      devices: [{ id: grant.deviceId, kind: "work", name: "Mini" }],
+    });
+
+    // Removing stays the captain's too: words typed on a paired view reach
+    // the Firstmate as the captain's, so it cannot remove a device either.
+    // It offers the card, which the host writes from the list itself.
+    const work = await connectClient(grant);
+    const handed = await change.run({
+      action: "device-remove",
+      value: { deviceId: grant.deviceId },
+      evidence: "remove the mini",
+    });
+    expect(handed.text).toMatch(/^offered app-device-remove-/);
+    expect(offered.at(-1)).toMatchObject({
+      target: "devices",
+      offer: {
+        title: "Remove Running as Builder?",
+        label: "Remove Running as Builder",
+        danger: true,
+        decline: "Keep it",
+        arrival: { remove: grant.deviceId },
+      },
+    });
+    expect(
+      (
+        await change.run({
+          action: "device-remove",
+          value: { deviceId: "not-a-device" },
+          evidence: "remove the mini",
+        })
+      ).text,
+    ).toContain("No device with that id");
+    expect(core.services.devices.list()).toHaveLength(1);
+    // Out of reach of the core's computers, it is removed now, as the captain chose.
+    await expect(core.dispatch("inf:devices:remove", [grant.deviceId])).rejects.toThrow(
+      "out of reach",
+    );
+    await core.dispatch("inf:devices:remove", [grant.deviceId, "now"]);
+    expect(await work.closed).toBe(CONNECTION_CLOSE.unpaired);
+    expect(
+      (await core.dispatch("inf:feed:recent", [])).some(
+        (line) => line.text === "Captain · Removed Running as Builder.",
+      ),
+    ).toBe(true);
+
+    // Nothing the home saved holds the link, its code, or the device's own key.
+    const { code } = parsePairingLink(link);
+    const saved = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+        entry.isDirectory()
+          ? saved(join(dir, entry.name))
+          : entry.isFile()
+            ? [join(dir, entry.name)]
+            : [],
+      );
+    const deviceKey = grant.key.split("\n")[1] ?? grant.key;
+    const holding = saved(userDataDir).filter((file) => {
+      const text = readFileSync(file, "latin1");
+      return text.includes(code) || text.includes(link) || text.includes(deviceKey);
+    });
+    expect(holding).toEqual([]);
+  });
+});
+
+/**
+ * Where a development run's connection listens (docs/devices.md, "Where
+ * devices find this Mac"): its loopback stand-in, which every e2e launch
+ * sets, keeps the link and the listener on 127.0.0.1 at its own port, wired
+ * as the app wires it; a packaged build ignores it.
+ */
+/**
+ * INF-1228, the captain's answer control=all: a first mate started by a
+ * command has no window, so the computer that controls it does everything
+ * that window would, its sign-ins included, and a page it would open in a
+ * browser opens there (docs/run.md, "Control from another computer").
+ */
+describe("a first mate started by a command, controlled from another computer", () => {
+  let userDataDir: string;
+  let core: Core;
+  let shell: ReturnType<typeof fakeHost>;
+  let connection: ReturnType<typeof startConnection>;
+  let at: string;
+
+  beforeAll(async () => {
+    userDataDir = scratchDir("infinitary-core-run-");
+    process.env.PI_OFFLINE = "1";
+    shell = fakeHost(userDataDir);
+    core = await startCore(shell.host, { startedByCommand: true });
+    ({ connection, at } = await serveConnection(core, { startedByCommand: true }));
+  }, 60_000);
+
+  afterAll(async () => {
+    await connection?.close();
+    await core?.dispose();
+    rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  it("answers the controlling computer's Settings and opens a page there, never on its own computer", async () => {
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const view = await connectClient(
+      await claimLink(link, { ...AT_FIRST_LAUNCH, name: "MacBook Air" }),
+    );
+    expect(view.welcome.startedByCommand).toBe(true);
+    // A request only its window could ask before.
+    expect(await view.invoke("inf:accounts:list", [])).toEqual(
+      await core.dispatch("inf:accounts:list", []),
+    );
+
+    await core.dispatch("inf:update:open-release", []);
+    const page = await view.push((push) => push.channel === "inf:app:open-page");
+    expect((page.payload as { url: string }).url).toMatch(/^https:\/\//);
+    expect(shell.opened).toEqual([]);
+  });
+});
+
+describe("words typed on a paired Mac are the captain's own words", () => {
+  // The captain's pick on FI3-709: a paired view is the captain at another
+  // Mac, so what he types there may ask the Firstmate for an own-words change.
+  let userDataDir: string;
+  let core: Core;
+  let mock: MockProviderServer;
+  let connection: ReturnType<typeof startConnection>;
+  let at: string;
+
+  beforeAll(async () => {
+    process.env.PI_OFFLINE = "1";
+    userDataDir = scratchDir("infinitary-core-paired-words-");
+    mock = await startMockProvider({ scenarios: [projectSetup] });
+    mkdirSync(join(userDataDir, "auth"), { recursive: true, mode: 0o700 });
+    writeFileSync(join(userDataDir, "auth", "models.json"), mockModelsJson(mock.port));
+    core = await startCore(fakeHost(userDataDir).host);
+    ({ connection, at } = await serveConnection(core));
+  }, 120_000);
+
+  afterAll(async () => {
+    await connection?.close();
+    await core?.dispose();
+    await core?.services.workspace.poolSettled();
+    await core?.services.workspace.deletionsSettled();
+    await catalogRefreshesSettled();
+    await mock?.close();
+    rmSync(userDataDir, { recursive: true, force: true });
+  }, 30_000);
+
+  /** One captain turn the view sent: the ask it opened, once the turn ends. */
+  async function turnFrom(send: () => Promise<unknown>): Promise<AskRecord> {
+    const before = new Set(core.services.tasks.listAsks().map((ask) => ask.id));
+    await send();
+    let opened: AskRecord | undefined;
+    await waitFor(() => {
+      opened = core.services.tasks.listAsks().find((ask) => !before.has(ask.id));
+      return opened !== undefined;
+    });
+    const id = opened?.id ?? "";
+    await waitFor(() => core.services.tasks.getAsk(id)?.turnState !== "open", 60_000);
+    const closed = core.services.tasks.getAsk(id);
+    if (!closed) throw new Error("the ask vanished");
+    return closed;
+  }
+
+  it("removes a project asked in the input, and moves the projects folder asked under a card", async () => {
+    const folder = scratchDir("infinitary-paired-words-repo-");
+    const projects = scratchDir("infinitary-paired-words-projects-");
+    writeFileSync(join(folder, "keep.txt"), "mine\n");
+    const events: FmEvent[] = [];
+    const off = core.events.subscribe((channel, event) => {
+      if (channel === "inf:event") events.push(event as FmEvent);
+    });
+    const { repo } = await core.dispatch("inf:repos:setup", [{ kind: "adopt", path: folder }]);
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const grant = await claimLink(link, { ...AT_FIRST_LAUNCH, name: "MacBook Air" });
+    const view = await connectClient(grant);
+    const cardId = core.services.supervisor.addFirstmateCard({
+      id: "paired-mac-projects-folder",
+      title: "Where new projects go",
+      body: "<p>New projects go in the default folder.</p>",
+      actions: [],
+    });
+    try {
+      // The input: inf:converse, as the view's window sends it.
+      const removed = await turnFrom(() =>
+        view.invoke("inf:converse", [
+          APP_CATALOG_PROMPT_MARKER +
+            JSON.stringify({ action: "project-remove", value: { repoId: repo.id } }),
+        ]),
+      );
+      expect(removed.attachedVia).toBe("tool:app_change");
+      expect(core.services.repos.get(repo.id)).toBeUndefined();
+      expect(existsSync(join(folder, "keep.txt"))).toBe(true);
+      expect(events.filter((e) => e.type === "repo_unregistered")).toMatchObject([
+        { actor: "firstmate", repoId: repo.id, name: repo.name },
+      ]);
+      expect(core.services.tasks.get(removed.taskId ?? "")?.title).toBe(
+        `Removed project ${repo.name}`,
+      );
+
+      // A reply under a Firstmate card: inf:cards:reply.
+      const moved = await turnFrom(() =>
+        view.invoke("inf:cards:reply", [
+          cardId,
+          APP_CATALOG_PROMPT_MARKER +
+            JSON.stringify({ action: "projects-folder", value: { path: projects } }),
+        ]),
+      );
+      expect(moved.attachedVia).toBe("tool:app_change");
+      expect((await core.dispatch("inf:repos:folder", [])).path).toBe(projects);
+    } finally {
+      off();
+      await core.dispatch("inf:repos:folder:set", [null]);
+      await core.dispatch("inf:devices:remove", [grant.deviceId]);
+      await view.closed;
+      rmSync(folder, { recursive: true, force: true });
+      rmSync(projects, { recursive: true, force: true });
+    }
+  }, 120_000);
+});
+
+describe("a development run keeps the connection to loopback at its own port", () => {
+  let userDataDir: string;
+  let core: Core | undefined;
+  let connection: ReturnType<typeof startConnection> | undefined;
+
+  afterEach(async () => {
+    await connection?.close();
+    connection = undefined;
+    core?.dispose();
+    core = undefined;
+    await catalogRefreshesSettled();
+    rmSync(userDataDir, { recursive: true, force: true });
+    delete process.env.INFINITARY_CONNECTION_LOOPBACK_PORT;
+  });
+
+  const boot = async (packaged: boolean) => {
+    const port = await claimedPort();
+    userDataDir = scratchDir("infinitary-core-loopback-");
+    process.env.PI_OFFLINE = "1";
+    process.env.INFINITARY_CONNECTION_LOOPBACK_PORT = String(port);
+    const booted = await startCore(fakeHost(userDataDir, packaged).host);
+    core = booted;
+    return { port, booted };
+  };
+
+  it("the link names 127.0.0.1 at that port, a device joins there, and nothing else listens", async () => {
+    const { port, booted } = await boot(false);
+    connection = startConnection({
+      dispatch: booted.dispatch,
+      events: booted.events,
+      devices: booted.services.devices,
+      address: () => booted.services.devices.listenHosts(),
+      port: booted.services.devices.port,
+    });
+    expect(await booted.dispatch("inf:devices:addresses", [])).toEqual({
+      addresses: [],
+      chosen: null,
+      current: null,
+    });
+    const { link } = await booted.dispatch("inf:devices:invite", [{ kind: "mac" }]);
+    expect(parsePairingLink(link).at).toBe(`127.0.0.1:${port}`);
+    await connection.settled();
+    expect(connection.listening()).toEqual([`127.0.0.1:${port}`]);
+    const device = await connectClient(
+      await claimLink(link, { ...AT_FIRST_LAUNCH, name: "Test Mac" }),
+    );
+    expect(await device.invoke("inf:app:healthcheck", [])).toMatchObject({
+      protocolVersion: PROTOCOL_VERSION,
+    });
+    await device.close();
+  }, 60_000);
+
+  it("a packaged build ignores it and keeps the connection's own port", async () => {
+    const { port, booted } = await boot(true);
+    expect(booted.services.devices.port).toBe(CONNECTION_PORT);
+    expect(booted.services.devices.port).not.toBe(port);
+  }, 60_000);
+});

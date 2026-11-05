@@ -206,7 +206,7 @@ The captain's calls of 2026-10-06 (FI3-1124, on a reviewed plan) and 2026-10-12:
 - **The keyboard.**
   Tab reaches it and then its Hide, F6 lands on it as the left rail's first part, and Enter or Space clicks it (`docs/keyboard.md`); it is not a command, because nobody repeats it.
 
-`createPanelSlot.test.ts` pins the rule, `createPanelSlotStore.test.ts` the click and the Hide, `firstRun.test.ts` the first finished task an older view reads, `core.test.ts` "hide it", and `tests/e2e/create-panel-slot.spec.ts` the journey, from the third finished crewmate on.
+`createPanelSlot.test.ts` pins the rule, `createPanelSlotStore.test.ts` the click and the Hide, `firstRun.test.ts` the first finished task an older view reads, `core.projects.test.ts` "hide it", and `tests/e2e/create-panel-slot.spec.ts` the journey, from the third finished crewmate on.
 
 ## What is deliberately not here
 

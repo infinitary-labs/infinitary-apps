@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "app-wiring-guardrails",
+      "reason": "Internal: the booted-core test splits into files by owner and new tests pin what the app wiring answers before it is split; nothing a person sees changes."
+    }
+  ]
+}

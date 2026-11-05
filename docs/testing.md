@@ -919,7 +919,7 @@ In the 2026-09 release cuts, side-rails' collapse and settings cases and forge-s
   Locally it takes the affected spec files, like a Playwright run: `node scripts/e2e-alone.ts tests/e2e/<file>.spec.ts` after `pnpm build`.
   The renderer and application lanes' tests run four at a time, and the desktop lane's one at a time after them, as in the full run.
 - Vitest cases keep the same rule, selected alone with `pnpm test <file> -t "<name>"`.
-  `core.test.ts`'s capture cases share one booted core: a case that needs a project registers its own, the decision case waits out the first mate turn its choice wakes, and the crewmate's spawn, steer, hinted turn, settle and protocol reads are one test whose `section(name, part)` calls name the part a failure stopped in.
+  `core.capture.test.ts`'s capture cases share one booted core: a case that needs a project registers its own, the decision case waits out the first mate turn its choice wakes, and the crewmate's spawn, steer, hinted turn, settle and protocol reads are one test whose `section(name, part)` calls name the part a failure stopped in.
   A check over the whole session is an `afterEach` that holds whichever cases ran, never a last case counting what earlier ones made.
 
 ## The e2e assertion contract

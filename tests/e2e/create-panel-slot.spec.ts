@@ -22,7 +22,7 @@ import { regionAfter } from "./windowKeys";
  * in the message box; the panel built from it lands where the slot was, and
  * the slot leaves while that panel exists. The rule's facts are
  * createPanelSlot.test.ts's, the click's createPanelSlotStore.test.ts's,
- * and "hide it" core.test.ts's.
+ * and "hide it" core.projects.test.ts's.
  */
 
 const slot = (page: Page) => page.locator("[data-create-panel-slot]");

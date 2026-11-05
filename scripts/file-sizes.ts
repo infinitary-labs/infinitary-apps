@@ -33,7 +33,6 @@ export const OVER_CEILING: readonly string[] = [
   "ios/Infinitary/InfinitaryUITests/PhoneJourney.swift",
   "src/core/browser/taskBrowsers.test.ts",
   "src/core/browser/taskBrowsers.ts",
-  "src/core/core.test.ts",
   "src/core/orchestrator/crewSupervisor.test.ts",
   "src/core/orchestrator/crewSupervisor.ts",
   "src/core/orchestrator/firstmateAgent.test.ts",

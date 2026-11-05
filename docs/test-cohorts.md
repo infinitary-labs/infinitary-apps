@@ -196,7 +196,13 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/claude/interruptWedge.integration.test.ts` | the SDK's own client, boxed, under the work computer's `SessionHost`, against a local stub API that never answers; the client frozen with SIGSTOP and stopped by the session | 30 s (each case waits out the SDK's 5 s SIGTERM-to-SIGKILL grace; Mac about 3.5 s per case) |
 | `tests/bench-attempt.test.ts` | the benchmark attempt CLI: the whole core, real git, the e2e mock provider | 95 s |
 | `src/core/claude/claudeFirstmateSeat.live.test.ts` | the installed Claude client on the machine's own login (opt-in, `INFINITARY_CLAUDE_SEAT_LIVE=1`) | 180 s opt-in |
-| `src/core/core.test.ts` | the whole core: git at the run's own priority, the login shell, the MCP stand-in as a Node child | 60 to 120 s on its boots; 20 s on adding three MCP servers (Linux fastest 3.567 s, three child starts) |
+| `src/core/core.settings.test.ts` | the whole core: git at the run's own priority, the login shell, the MCP stand-in as a Node child | 60 s on its boot; 20 s on adding three MCP servers (Linux fastest 3.567 s, three child starts) |
+| `src/core/core.projects.test.ts` | the whole core: git at the run's own priority, the login shell | 60 s on its boot |
+| `src/core/core.capture.test.ts` | the whole core, real git, the e2e mock provider's Firstmate and crewmate sessions | 120 s on its boot and on each captain turn |
+| `src/core/core.boot.test.ts` | the whole core, booted once per case, real git | 60 s default per boot |
+| `src/core/core.connection.test.ts` | the whole core and its connection on loopback, the e2e mock provider | 60 to 120 s on its boots |
+| `src/core/core.contract.test.ts` | the whole core, its connection on loopback, the scripted client as its own process | 60 s on its boot |
+| `src/core/core.wiring.test.ts` | the whole core, a loopback GitHub and GitLab stand-in, the e2e mock provider | 120 s on its boot and its one first mate turn |
 | `tests/replay-gate-catches-lint.test.ts` | the replay CLI, git | 60 s |
 | `src/core/forge/providers/plainGit.test.ts` | real git, at the run's own priority | 5 s default (five times its slowest is 2.5 s) |
 | `tests/bench-patch-pool.test.ts` | real git, python3's tomllib (benchmark tooling, `scripts/bench/`) | 5 s default |

@@ -48,7 +48,7 @@ import {
  * folder, and a stand-in core behind `dispatch`, so each rule is driven on
  * its own: when it listens, how a device joins and proves itself, how pushes
  * are numbered and caught up, which requests reach the core, and what is
- * refused before any frame. src/core/core.test.ts drives the real core.
+ * refused before any frame. src/core/core.connection.test.ts drives the real core.
  */
 
 function standInCore() {

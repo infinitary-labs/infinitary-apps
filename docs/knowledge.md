@@ -312,7 +312,7 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
 ## Tests
 
 - `src/core/knowledge/knowledgeService.test.ts`: reuse in other words through a link, scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data, purge and the shortlist; a direction's add, revise and retire through `StandingDirections.change`, its kept reasons and a stale revision refused, and `record_knowledge` refusing one.
-- `src/core/core.test.ts` ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line, its reason in the history, and `app_state` listing it.
+- `src/core/core.settings.test.ts` ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line, its reason in the history, and `app_state` listing it.
 - `src/core/knowledge/knowledgeTools.test.ts`, `knowledgeContext.test.ts` and `availability.test.ts`: what the tools and the context say, and the gate.
 - `src/core/knowledge/knowledgeSources.integration.test.ts`: evidence from a real git working copy.
 - `src/core/knowledge/knowledgeRefusals.test.ts`: each write the owner refuses answers in its own words, commits nothing and leaves the collection byte for byte as it was, including a write another write moved past while it was prepared and a read of a scope the reader does not read.
@@ -321,7 +321,7 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
 - `src/core/knowledge/directions.test.ts`: the older record's active directions carried once, a retry after a quit and a conflicting destination, and the browser's pages and one direction read only where its project remains and the reader may see it.
 - `tests/e2e/knowledge.spec.ts`: a crewmate's knowledge outlives its discarded task and a restart, and the next crewmate finds it in other words through its brief; a stated fact goes to knowledge, not notes.
 - `tests/e2e/knowledge-gate.spec.ts`: stable and alpha share tools, browsing and linked references; unreadable directions pause new work without replacing the collection.
-- `src/core/knowledge/knowledgeBrowse.test.ts`, `browse.test.ts` and `src/core/core.test.ts`: counts, bounded graph, pages, standings, filters, entry reads and unavailability in every build.
+- `src/core/knowledge/knowledgeBrowse.test.ts`, `browse.test.ts` and `src/core/core.boot.test.ts`: counts, bounded graph, pages, standings, filters, entry reads and unavailability in every build.
 
 - `src/panels/knowledge/graph.test.ts` and `place.test.ts`: the camera's signs and real projected places, the layout, label collisions, and the place the browser keeps.
 - `src/core/knowledge/knowledgeBrowse.test.ts` also covers `knowledge.refs` and `knowledge.uses`: the order asked, standings, a removed project's entries left out, a task's uses each revision once beside the current one, and that reading records nothing; `src/shared/knowledge.test.ts` the ids a body writes; `src/panels/knowledge/place.test.ts` a revision kept and asked for, and Ask about this's words; `src/renderer/src/plugins/builtin/record/record.frame.test.ts` the Knowledge used row; `src/renderer/src/plugins/panelPoint.test.ts` `point.draft`.

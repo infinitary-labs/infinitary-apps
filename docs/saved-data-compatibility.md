@@ -138,7 +138,7 @@ Saved work is protected from stable 0.1.25 onward (`docs/alpha.md`, "Activating 
 ## Verification
 
 - `savedDataCompatibility.test.ts`: fresh/current/older migration history, future history, invalid and incompatible format markers, refusal preserving all seeded files, and WAL-only future migrations.
-- `core.test.ts`: the real startup entry refuses before account/service state is initialized.
+- `core.boot.test.ts`: the real startup entry refuses before account/service state is initialized.
 - `saved-data-refusal.spec.ts`: isolated Electron journeys for future database and incompatible non-database format; each sees the explanation with no normal bridge and verifies protected files unchanged after quit.
   Screenshots go to the run's own results folder.
 - `older-profile.spec.ts`: a profile an older release saved opens in this build and works ("Profiles saved by an older release", below).

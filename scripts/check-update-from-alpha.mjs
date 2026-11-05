@@ -10,6 +10,7 @@ import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { userDataFolderOf } from "../src/shared/userDataFolders.ts";
 import { runInstallerCommand } from "./installer-command.ts";
 import { installStageRecorder, keepShipItLogs } from "./installer-update-trace.ts";
+import { resolvesHere, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
 import { virtualMacSwitches } from "../tests/e2e/virtualMac.ts";
 import { assertInstallerEnvironment, installerAppEnvironment, installerServerEnvironment } from "./installer-environment.ts";
 
@@ -148,10 +149,10 @@ try {
   fixtureSha1 = new X509Certificate(readFileSync(certificate)).fingerprint.replaceAll(":", "");
   // Chromium enumerates admin-trusted roots from the System keychain, not the user search list.
   run("/usr/bin/sudo", ["/usr/bin/security", "add-trusted-cert", "-d", "-r", "trustRoot", "-k", systemKeychain, certificate]);
-  copyFileSync("/etc/hosts", join(work, "original-hosts"));
-  writeFileSync(join(work, "hosts"), `${readFileSync("/etc/hosts", "utf8")}\n127.0.0.1 ${new URL(source.downloadBase).hostname}\n`);
-  run("/usr/bin/sudo", ["/bin/cp", join(work, "hosts"), "/etc/hosts"]); hostsChanged = true;
-  run("/usr/bin/sudo", ["/usr/bin/dscacheutil", "-flushcache"]);
+  // The real feed and disk image were read from this name moments ago (scripts/installer-hosts.ts).
+  const rerouted = [new URL(source.downloadBase).hostname];
+  routeHostsHere(rerouted, work, run, () => { hostsChanged = true; });
+  await expect.poll(() => resolvesHere(rerouted), { timeout: 60_000, message: "The system resolver must answer the download address with this Mac before a feed is read" }).toBe(true);
   for (const [name, value] of Object.entries(launchValues)) {
     launchEnvironment.set(name, spawnSync("/bin/launchctl", ["getenv", name], { encoding: "utf8" }).stdout?.trim());
     run("/bin/launchctl", ["setenv", name, value]);
@@ -258,7 +259,7 @@ try {
       if (value) run("/bin/launchctl", ["setenv", name, value]); else run("/bin/launchctl", ["unsetenv", name]);
     });
   }
-  await cleanup("Restoring hosts", () => { if (hostsChanged) run("/usr/bin/sudo", ["/bin/cp", join(work, "original-hosts"), "/etc/hosts"]); });
+  await cleanup("Restoring hosts", () => { if (hostsChanged) restoreHosts(work, run); });
   // Delete only this certificate; its admin record disappears with the disposable Mac.
   await cleanup("Deleting the local certificate", () => { if (fixtureSha1) run("/usr/bin/sudo", ["/usr/bin/security", "delete-certificate", "-Z", fixtureSha1, systemKeychain]); });
   await cleanup("Deleting the scratch keychain", () => { if (existsSync(trust)) run("/usr/bin/security", ["delete-keychain", trust]); });

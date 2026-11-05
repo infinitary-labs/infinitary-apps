@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { X509Certificate } from "node:crypto";
 import { once } from "node:events";
-import { appendFileSync, chmodSync, closeSync, copyFileSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
@@ -11,6 +11,7 @@ import { checkInstalledHomebrew } from "./check-installed-homebrew.mjs";
 import { runInstallerCommand } from "./installer-command.ts";
 import { installerHomebrewEnvironment, prepareInstallerHomebrew } from "./installer-homebrew.ts";
 import { installStageRecorder, keepShipItLogs } from "./installer-update-trace.ts";
+import { resolvesHere, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
 import { virtualMacSwitches } from "../tests/e2e/virtualMac.ts";
 
 import { assertInstallerEnvironment, installerAppEnvironment, installerServerEnvironment } from "./installer-environment.ts";
@@ -239,10 +240,9 @@ try {
   run("/usr/bin/sudo", ["/usr/bin/security", "add-trusted-cert", "-d", "-r", "trustRoot", "-k", systemKeychain, certificate]);
   // security's successful dump, including certificate labels, is written to stdout.
   assert(run("/usr/bin/security", ["dump-trust-settings", "-d"]).includes("Infinitary isolated installer verification"), "Chromium's admin trust listing must include the fixture root");
-  copyFileSync("/etc/hosts", join(work, "original-hosts"));
-  writeFileSync(join(work, "hosts"), `${readFileSync("/etc/hosts", "utf8")}\n127.0.0.1 downloads.getinfinitary.com github.com raw.githubusercontent.com\n`);
-  run("/usr/bin/sudo", ["/bin/cp", join(work, "hosts"), "/etc/hosts"]); hostsChanged = true;
-  run("/usr/bin/sudo", ["/usr/bin/dscacheutil", "-flushcache"]);
+  const rerouted = ["downloads.getinfinitary.com", "github.com", "raw.githubusercontent.com"];
+  routeHostsHere(rerouted, work, run, () => { hostsChanged = true; });
+  await expect.poll(() => resolvesHere(rerouted), { timeout: 60_000, message: "The system resolver must answer every rerouted address with this Mac before a feed is read" }).toBe(true);
   for (const [name, value] of Object.entries(launchValues)) {
     launchEnvironment.set(name, spawnSync("/bin/launchctl", ["getenv", name], { encoding: "utf8" }).stdout?.trim());
     run("/bin/launchctl", ["setenv", name, value]);
@@ -376,7 +376,7 @@ try {
       if (value) run("/bin/launchctl", ["setenv", name, value]); else run("/bin/launchctl", ["unsetenv", name]);
     });
   }
-  await cleanup("Restoring hosts", () => { if (hostsChanged) run("/usr/bin/sudo", ["/bin/cp", join(work, "original-hosts"), "/etc/hosts"]); });
+  await cleanup("Restoring hosts", () => { if (hostsChanged) restoreHosts(work, run); });
   // Removing the last admin trust record prompts for a password even as root. Delete only
   // this certificate; its admin record disappears when the entire hosted Mac is discarded.
   await cleanup("Deleting the fixture certificate", () => { if (fixtureSha1) run("/usr/bin/sudo", ["/usr/bin/security", "delete-certificate", "-Z", fixtureSha1, systemKeychain]); });

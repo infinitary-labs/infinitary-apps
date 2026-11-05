@@ -2,6 +2,7 @@ import { createServer } from "node:https";
 import { createReadStream, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { assertInstallerEnvironment } from "./installer-environment.ts";
+import { LOCAL_FEED_ADDRESS } from "./installer-hosts.ts";
 
 // Isolated verification only. The normal production addresses resolve to this disposable
 // Mac while the installed app uses its unchanged HTTPS provider and signature checker.
@@ -64,5 +65,5 @@ const server = createServer({ cert: readFileSync(certificate), key: readFileSync
   }
 });
 server.on("tlsClientError", error => console.error(`Fixture TLS: ${error.code ?? error.name}: ${error.message}`));
-server.listen(443, "127.0.0.1", () => writeFileSync(`${control}.ready`, "ready"));
+server.listen(443, LOCAL_FEED_ADDRESS, () => writeFileSync(`${control}.ready`, "ready"));
 process.on("SIGTERM", () => { server.closeAllConnections(); server.close(); });

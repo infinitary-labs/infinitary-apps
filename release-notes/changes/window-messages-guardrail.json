@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "window-messages-guardrail",
+      "reason": "Internal: a test holds the journey chooser to every channel the window asks before the window API's channels move to their own files; nothing a person sees changes."
+    }
+  ]
+}

@@ -169,7 +169,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     SYNC_CAP_MS: record("the command goes on as a background job; its exit wakes the owner"),
     OUTPUT_CAP: physical("tail kept; the rest spills to a file the output names"),
   },
-  "src/core/knowledge/knowledgeService.ts": {
+  "src/core/knowledge/access.ts": {
     KNOWLEDGE_LIMITS: physical("pages carry a cursor; a write past 16 KB is refused: split it"),
   },
   "src/core/knowledge/sources.ts": {
@@ -503,7 +503,7 @@ export const BASELINE: Record<string, Record<string, string>> = {
     MAX_GIF_DEMO_FRAMES: "refused in words naming seconds and rate; trim or slow it",
     MIN_DELAY_CS: "refused in words naming the rate; re-encode at 10 or fewer",
   },
-  "src/core/knowledge/knowledgeService.ts": {
+  "src/core/knowledge/access.ts": {
     MAX: "refused in words naming the field's bound; shorten it",
   },
   "src/core/orchestrator/mergeAuthorization.ts": {

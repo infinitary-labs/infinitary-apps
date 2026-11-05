@@ -19,7 +19,6 @@ function service(dir?: string) {
       get: (id) => (id === "repo-1" ? { id, name: "shop", path: root } : undefined),
       list: () => [{ id: "repo-1", name: "shop", path: root }],
     },
-    gitFacts: async () => ({ commit: null, dirty: true }),
   });
 }
 
@@ -27,7 +26,6 @@ const crew = {
   kind: "crewmate",
   taskId: "t1",
   repoId: "repo-1",
-  access: "references",
 } as const;
 
 describe("knowledge first", () => {

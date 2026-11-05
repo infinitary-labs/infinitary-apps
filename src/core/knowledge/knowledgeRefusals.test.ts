@@ -3,13 +3,10 @@ import { join } from "node:path";
 import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import {
-  type KnowledgeActor,
-  KnowledgeRefusal,
-  KnowledgeService,
-  type RecordInput,
-  type SourceInput,
-} from "./knowledgeService";
+import { type KnowledgeActor, KnowledgeRefusal } from "./access";
+import { KnowledgeService } from "./knowledgeService";
+import type { SourceInput } from "./sources";
+import type { RecordInput } from "./writes";
 
 /**
  * What the knowledge owner refuses, in the words the model reads
@@ -50,7 +47,6 @@ async function fixture() {
       resolve: (ref) => tasks.get(ref) ?? [...tasks.values()].find((task) => task.key === ref),
       reports: (taskId) => reports.get(taskId) ?? [],
     },
-    gitFacts: async () => ({ commit: null, dirty: false }),
     now: () => (clock += 1000),
     changed: () => {
       changes += 1;

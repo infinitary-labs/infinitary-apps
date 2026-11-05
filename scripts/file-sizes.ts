@@ -35,7 +35,6 @@ export const OVER_CEILING: readonly string[] = [
   "src/core/browser/taskBrowsers.ts",
   "src/core/core.test.ts",
   "src/core/devices/remoteLogin.test.ts",
-  "src/core/knowledge/knowledgeService.ts",
   "src/core/orchestrator/cardService.test.ts",
   "src/core/orchestrator/cardService.ts",
   "src/core/orchestrator/crewSupervisor.test.ts",

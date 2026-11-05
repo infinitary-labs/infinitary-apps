@@ -3,13 +3,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { KnowledgeStore } from "../storage/knowledgeStore";
-import {
-  type KnowledgeActor,
-  KnowledgeRefusal,
-  KnowledgeService,
-  type RecordInput,
-} from "./knowledgeService";
+import { type KnowledgeActor, KnowledgeRefusal } from "./access";
+import { KnowledgeService } from "./knowledgeService";
 import { sha256 } from "./sources";
+import type { RecordInput } from "./writes";
 
 /**
  * What a reader is shown of an entry's surroundings (docs/knowledge.md,
@@ -34,7 +31,6 @@ function fixture(options: { store?: KnowledgeStore } = {}) {
       list: () => [{ ...ALPHA, path: root }],
     },
     tasks: { resolve: (ref) => tasks.get(ref), reports: () => [] },
-    gitFacts: async () => ({ commit: null, dirty: false }),
     now: () => (clock += 1000),
     newId: (prefix) => {
       given += 1;
@@ -99,7 +95,7 @@ describe("reading around an entry", () => {
   it("names a claim's concepts as its subject and object, and the finding that contradicts it", async () => {
     const f = fixture();
     const { evidence, versions, pins, floats } = await seed(f);
-    const near = f.service.neighbors(f.crew(), { id: pins });
+    const near = f.service.neighbors({ id: pins });
     expect(
       near.neighbors.map(({ layer, outgoing, label, other }) => [layer, outgoing, label, other.id]),
     ).toEqual([
@@ -108,7 +104,7 @@ describe("reading around an entry", () => {
       ["history", false, "contradicts", floats],
     ]);
     expect(near.total).toBe(3);
-    expect(f.service.neighbors(f.crew(), { id: pins, layer: "history" }).total).toBe(1);
+    expect(f.service.neighbors({ id: pins, layer: "history" }).total).toBe(1);
     // A contradicting finding disputes both sides; neither decides which is right.
     for (const [id, other] of [
       [pins, floats],
@@ -137,7 +133,7 @@ describe("reading around an entry", () => {
   it("shows the captain's window a finding's relations with who recorded them", async () => {
     const f = fixture();
     const { pins, floats } = await seed(f);
-    const read = f.service.entry({ id: floats });
+    const read = f.service.window.entry({ id: floats });
     if (read.state !== "ready") throw new Error(read.state);
     expect(read.entry.relations).toEqual([
       {

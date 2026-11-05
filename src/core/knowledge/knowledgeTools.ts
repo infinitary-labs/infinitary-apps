@@ -1,16 +1,9 @@
 import { Type } from "typebox";
 import type { CrewmateTool, KnowledgeBinding, KnowledgeReadInput } from "../session/tools";
 import { callWithSignal, crewmateTool, stringEnum } from "../session/tools";
+import { type KnowledgeActor, KnowledgeRefusal, PRIVATE_SCOPE } from "./access";
 import { renderDirection } from "./directions";
-import {
-  type KnowledgeActor,
-  KnowledgeRefusal,
-  type KnowledgeService,
-  PRIVATE_SCOPE,
-  type RecordInput,
-  type RecordOutcome,
-  type SourceInput,
-} from "./knowledgeService";
+import type { KnowledgeService } from "./knowledgeService";
 import {
   renderEntries,
   renderHistory,
@@ -18,6 +11,8 @@ import {
   renderSearch,
   renderSource,
 } from "./render";
+import type { SourceInput } from "./sources";
+import type { RecordInput, RecordOutcome } from "./writes";
 
 /**
  * The knowledge pair (docs/knowledge.md, "The tools"): `knowledge` reads,
@@ -318,7 +313,7 @@ function readKnowledge(
         const extra: string[] = [];
         for (const id of ids) {
           if (id.startsWith("d:")) {
-            const read = service.direction({ id: id.slice(2) }, actor);
+            const read = service.directions.read({ id: id.slice(2) }, actor);
             extra.push(
               read.state === "ready"
                 ? renderDirection(read.direction)
@@ -335,18 +330,18 @@ function readKnowledge(
       case "neighbors": {
         const offset = offsetOf(input.cursor);
         const id = input.id?.trim() ?? "";
-        return renderNeighbors(id, service.neighbors(actor, { id, offset }), offset);
+        return renderNeighbors(id, service.neighbors({ id, offset }), offset);
       }
       case "history": {
         const before = offsetOf(input.cursor);
         if (input.id?.startsWith("d:")) {
-          const read = service.direction({ id: input.id.slice(2), page: before }, actor);
+          const read = service.directions.read({ id: input.id.slice(2), page: before }, actor);
           return read.state === "ready"
             ? renderDirection(read.direction)
             : "No direction you can read.";
         }
         return renderHistory(
-          service.history(actor, {
+          service.history({
             id: input.id?.trim() ?? "",
             ...(before > 0 ? { before } : {}),
           }),

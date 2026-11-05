@@ -96,11 +96,10 @@ export async function approvalHost(
   const knowledge = test.directions
     ? new KnowledgeService({
         projects: { get: () => undefined, list: () => [] },
-        gitFacts: async () => ({ commit: null, dirty: false }),
       })
     : undefined;
   for (const direction of test.directions ?? [])
-    knowledge!.changeDirection({ ...direction, op: "add", reason: "Fictional audit fixture" });
+    knowledge!.directions.change({ ...direction, op: "add", reason: "Fictional audit fixture" });
   const ids = Object.fromEntries(Object.keys(test.tasks).map((alias) => [alias, randomUUID()]));
   const aliases = Object.fromEntries(Object.entries(ids).map(([alias, id]) => [id, alias]));
   // Work a fixture calls committed is a real commit on its task's branch, in a registered
@@ -400,7 +399,7 @@ export async function approvalHost(
   steered.length = 0;
   // Fictional aliases in the prompt map to fresh task ids; the host never resolves real records.
   const directionContext = knowledge
-    ? `\n${renderDirections(knowledge.standingDirections({ kind: "firstmate", origin: "agent", canCreate: false }))}\nDisposable app catalog line: ${JSON.stringify({ action: "direction", line: ACTIONS.direction.line, valueSchema: ACTIONS.direction.value.toJSONSchema() })}\nOnly direction app changes are connected; other settings and sign-ins are disconnected.`
+    ? `\n${renderDirections(knowledge.directions.standing({ kind: "firstmate", origin: "agent", canCreate: false }))}\nDisposable app catalog line: ${JSON.stringify({ action: "direction", line: ACTIONS.direction.line, valueSchema: ACTIONS.direction.value.toJSONSchema() })}\nOnly direction app changes are connected; other settings and sign-ins are disconnected.`
     : "";
   const prompt = `${test.context}${threadContext}${directionContext}\n\nIsolated records (use task_id in tool calls):\n${JSON.stringify(
     Object.fromEntries(
@@ -497,7 +496,7 @@ export async function approvalHost(
       if (name === "app_change") {
         if (args.action !== "direction" || !knowledge) return "refused";
         const value = args.value as { op?: string; id?: string; text?: string };
-        const read = knowledge.direction({ id: (value.id ?? "").replace(/^d:/, "") });
+        const read = knowledge.directions.read({ id: (value.id ?? "").replace(/^d:/, "") });
         if (read.state !== "ready") return "refused";
         const latest = read.direction.history[0];
         return latest?.evidence === args.evidence &&
@@ -570,10 +569,10 @@ export async function approvalHost(
       const build = ids.BUILD ? tasks.get(ids.BUILD) : undefined;
       return {
         ...(knowledge ? {
-          directions: knowledge.standingDirections({ kind: "firstmate", origin: "agent", canCreate: false })
+          directions: knowledge.directions.standing({ kind: "firstmate", origin: "agent", canCreate: false })
             .map(({ id, text, revision }) => ({ id: `d:${id}`, text, revision })),
           shownCards: cards.listOpen().map(({ title, body, actions }) => ({ title, body, actions })),
-          directionHistory: test.directions!.map(({ id }) => knowledge.direction({ id })),
+          directionHistory: test.directions!.map(({ id }) => knowledge.directions.read({ id })),
         } : {}),
         ...(test.taskIndexOnly || knowledge
           ? {

@@ -735,16 +735,17 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       enabled: services.knowledge !== undefined,
       held: services.knowledge?.held() ?? false,
     }),
-    "inf:knowledge:collections": () => knowledgeOf(services).collections(),
-    "inf:knowledge:graph": (args) => knowledgeOf(services).graph(args),
-    "inf:knowledge:concepts": (args) => knowledgeOf(services).concepts(args),
-    "inf:knowledge:findings": (args) => knowledgeOf(services).findings(args),
-    "inf:knowledge:entry": (args) => knowledgeOf(services).entry(args),
-    "inf:knowledge:directions": (args = { scope: "all" }) => knowledgeOf(services).directions(args),
-    "inf:knowledge:direction": (args) => knowledgeOf(services).direction(args),
-    "inf:knowledge:direction:set": (change) => knowledgeOf(services).changeDirection(change),
-    "inf:knowledge:refs": (args) => knowledgeOf(services).refs(args),
-    "inf:knowledge:uses": (args) => knowledgeOf(services).taskUses(args),
+    "inf:knowledge:collections": () => knowledgeOf(services).window.collections(),
+    "inf:knowledge:graph": (args) => knowledgeOf(services).window.graph(args),
+    "inf:knowledge:concepts": (args) => knowledgeOf(services).window.concepts(args),
+    "inf:knowledge:findings": (args) => knowledgeOf(services).window.findings(args),
+    "inf:knowledge:entry": (args) => knowledgeOf(services).window.entry(args),
+    "inf:knowledge:directions": (args = { scope: "all" }) =>
+      knowledgeOf(services).directions.page(args),
+    "inf:knowledge:direction": (args) => knowledgeOf(services).directions.read(args),
+    "inf:knowledge:direction:set": (change) => knowledgeOf(services).directions.change(change),
+    "inf:knowledge:refs": (args) => knowledgeOf(services).window.refs(args),
+    "inf:knowledge:uses": (args) => knowledgeOf(services).window.uses(args),
 
     // The feed is a view (task-system P3): the record's own feed-worthy
     // timeline events merged with the few task-less activity lines.

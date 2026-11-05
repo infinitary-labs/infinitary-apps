@@ -1,4 +1,5 @@
-import { KNOWLEDGE_LIMITS, type KnowledgeActor, type KnowledgeService } from "./knowledgeService";
+import { KNOWLEDGE_LIMITS } from "./access";
+import type { KnowledgeService } from "./knowledgeService";
 import { summaryLine } from "./render";
 
 /**
@@ -25,14 +26,13 @@ export function knowledgeShortlist(
   service: KnowledgeService,
   scopes: readonly string[],
   words: string,
-  actor?: KnowledgeActor,
 ): Shortlist | undefined {
   const query = words.slice(0, KNOWLEDGE_LIMITS.queryBytes);
   if (!/[\p{L}\p{N}]{2,}/u.test(query) || scopes.length === 0) return undefined;
   const searched = scopes.map((scope) => service.scopeName(scope)).join(", ");
   const available = service.availability();
   if (available.state === "unavailable") return { state: "unavailable", reason: available.reason };
-  const hits = service.shortlist(scopes, query, actor);
+  const hits = service.shortlist(scopes, query);
   if (hits.length === 0) return { state: "none", searched };
   const lines: string[] = [];
   let used = 0;

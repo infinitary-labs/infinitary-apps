@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  type KnowledgeActor,
-  type KnowledgeApproval,
-  KnowledgeService,
-  type RecordInput,
-} from "./knowledgeService";
+import type { KnowledgeActor } from "./access";
+import { type KnowledgeApproval, KnowledgeService } from "./knowledgeService";
+import type { RecordInput } from "./writes";
 
 /**
  * Retiring a captain-approved list in one write (docs/knowledge.md,
@@ -26,7 +23,6 @@ async function fixture() {
   let given = 0;
   const service = new KnowledgeService({
     projects: { get: () => undefined, list: () => [] },
-    gitFacts: async () => ({ commit: null, dirty: false }),
     now: () => (clock += 1000),
     newId: (prefix) => {
       given += 1;
@@ -110,7 +106,7 @@ describe("retiring an approved list", () => {
     ]);
     expect(f.changes()).toBe(before + 1);
     for (const id of [article, claim, servers]) {
-      const history = f.service.history(CAPTAIN, { id });
+      const history = f.service.history({ id });
       expect(history.entry.retired).toBe(true);
       expect(
         history.revisions.map(({ revision, op, reason, actor, origin }) => ({

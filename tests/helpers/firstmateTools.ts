@@ -63,7 +63,6 @@ export async function firstmateTools(): Promise<BoundTool[]> {
     tasks,
     knowledge: new KnowledgeService({
       projects: { get: (id) => repos.get(id), list: () => repos.list() },
-      gitFacts: async () => ({ commit: null, dirty: true }),
     }),
     integrations: new IntegrationsService({
       bindings: [],

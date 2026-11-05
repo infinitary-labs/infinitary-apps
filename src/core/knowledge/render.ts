@@ -1,12 +1,7 @@
 import type { RevisionRow } from "../storage/knowledgeStore";
-import {
-  type EntrySummary,
-  type EntryView,
-  type FindingStatus,
-  KNOWLEDGE_LIMITS,
-  type Neighbor,
-  type SourceView,
-} from "./knowledgeService";
+import { KNOWLEDGE_LIMITS } from "./access";
+import type { EntrySummary, EntryView, FindingStatus, Neighbor } from "./entries";
+import type { SourceView } from "./sources";
 
 /**
  * Knowledge as the model reads it (docs/knowledge.md, "The tools"): one line

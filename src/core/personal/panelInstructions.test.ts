@@ -43,7 +43,6 @@ function knowledgeAt(dir?: string) {
   return new KnowledgeService({
     ...(dir ? { dir } : {}),
     projects: { get: (id) => (id === PERSONAL.id ? PERSONAL : undefined), list: () => [PERSONAL] },
-    gitFacts: async () => ({ commit: null, dirty: false }),
   });
 }
 
@@ -63,8 +62,8 @@ function writeOld(dir: string): void {
 }
 
 const texts = (knowledge: KnowledgeService) =>
-  knowledge
-    .standingDirections(CREWMATE)
+  knowledge.directions
+    .standing(CREWMATE)
     .map((row) => row.text)
     .sort();
 
@@ -84,7 +83,7 @@ describe("carryPanelInstructions", () => {
       "Weather panels show Celsius first.",
     ]);
     // The captain's own words, so the captain's authority, in the personal workspace's scope.
-    const rows = knowledge.standingDirections(CREWMATE);
+    const rows = knowledge.directions.standing(CREWMATE);
     expect(rows.every((row) => row.authority === "instruction" && row.scope === PERSONAL.id)).toBe(
       true,
     );
@@ -100,10 +99,10 @@ describe("carryPanelInstructions", () => {
     expect(
       await carryPanelInstructions({ workspaceDir: dir, scope: PERSONAL.id, knowledge }),
     ).toEqual({ state: "absent" });
-    const compact = knowledge
-      .standingDirections(CREWMATE)
+    const compact = knowledge.directions
+      .standing(CREWMATE)
       .find((row) => row.text.startsWith("Always"));
-    knowledge.changeDirection({
+    knowledge.directions.change({
       op: "retire",
       id: compact?.id ?? "",
       reason: "The captain retired it.",

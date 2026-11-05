@@ -61,7 +61,7 @@ export async function carryPanelInstructions(options: {
   workspaceDir: string;
   /** The personal workspace's project id, the directions' scope. */
   scope: string;
-  knowledge: Pick<KnowledgeService, "direction" | "changeDirection">;
+  knowledge: Pick<KnowledgeService, "directions">;
   log?: (message: string) => void;
 }): Promise<PanelInstructionsCarry> {
   const path = join(options.workspaceDir, OLD_PANEL_INSTRUCTIONS_PATH);
@@ -76,13 +76,13 @@ export async function carryPanelInstructions(options: {
   try {
     for (const text of oldPanelInstructions(markdown)) {
       const id = `panel-${createHash("sha256").update(text).digest("hex").slice(0, 16)}`;
-      const read = options.knowledge.direction({ id });
+      const read = options.knowledge.directions.read({ id });
       if (read.state === "unavailable") throw new Error(read.reason);
       if (read.state === "ready") {
         kept += 1;
         continue;
       }
-      options.knowledge.changeDirection({
+      options.knowledge.directions.change({
         op: "add",
         id,
         text,

@@ -2,13 +2,9 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import {
-  type KnowledgeActor,
-  type KnowledgeProject,
-  KnowledgeService,
-  PRIVATE_SCOPE,
-  type RecordInput,
-} from "./knowledgeService";
+import { type KnowledgeActor, PRIVATE_SCOPE, scopesFor } from "./access";
+import { type KnowledgeProject, KnowledgeService } from "./knowledgeService";
+import type { RecordInput } from "./writes";
 
 /**
  * The knowledge owner through its own interface: what a crewmate records
@@ -39,7 +35,6 @@ function fixture(options: { dir?: string; newId?: (prefix: string) => string } =
       resolve: (ref) => tasks.get(ref) ?? [...tasks.values()].find((task) => task.key === ref),
       reports: (taskId) => reports.get(taskId) ?? [],
     },
-    gitFacts: async () => ({ commit: "a1b2c3d4e5f6a7b8c9d0", dirty: false }),
     now: () => (clock += 1000),
     ...(options.newId ? { newId: options.newId } : {}),
   });
@@ -53,7 +48,6 @@ function fixture(options: { dir?: string; newId?: (prefix: string) => string } =
     kind: "crewmate",
     taskId,
     repoId: repo,
-    access: "references",
   });
   const firstmate = (origin: "captain-turn" | "agent" = "captain-turn", canCreate = true) =>
     ({ kind: "firstmate", origin, canCreate }) as const;
@@ -135,7 +129,7 @@ describe("KnowledgeService", () => {
     const concept = found.hits.find((hit) => hit.id === inboxId);
     expect(concept?.findings).toBe(1);
 
-    const near = f.service.neighbors(reader, { id: inboxId });
+    const near = f.service.neighbors({ id: inboxId });
     const about = near.neighbors.find((item) => item.layer === "about");
     expect(about?.other.id).toBe(findingId);
     const claim = near.neighbors.find((item) => item.layer === "relationship");
@@ -189,7 +183,7 @@ describe("KnowledgeService", () => {
 
     expect(f.service.search(f.firstmate(), { query: "travel" }).hits[0]?.id).toBe(secretId);
     expect(f.service.search(f.firstmate(), { query: "inbox" }).hits[0]?.id).toBe(inboxId);
-    expect(f.service.scopesFor(f.firstmate())).toEqual([PRIVATE_SCOPE]);
+    expect(scopesFor(f.firstmate())).toEqual([PRIVATE_SCOPE]);
   });
 
   it("answers a repeated request once and refuses a request id reused for another write", async () => {
@@ -268,7 +262,7 @@ describe("KnowledgeService", () => {
     expect(stale.text).toContain("is at revision 2, not 1");
     const missing = await f.record(writer, { action: "revise", id: inboxId, explanation: "x" });
     expect(missing.text).toContain("Pass expected_revision");
-    const history = f.service.history(writer, { id: inboxId });
+    const history = f.service.history({ id: inboxId });
     expect(history.revisions.map((row) => [row.revision, row.op, row.actor])).toEqual([
       [2, "revise", "task:task-b"],
       [1, "publish", "task:task-a"],
@@ -376,7 +370,7 @@ describe("KnowledgeService", () => {
     expect(f.service.get(reader, oldId).shown.body).toMatchObject({
       statement: "Wakes are dropped on restart.",
     });
-    const history = f.service.neighbors(reader, { id: oldId, layer: "history" });
+    const history = f.service.neighbors({ id: oldId, layer: "history" });
     expect(history.neighbors[0]).toMatchObject({ label: "supersedes", outgoing: false });
 
     const linked = await f.record(writer, {
@@ -434,7 +428,7 @@ describe("KnowledgeService", () => {
     ).not.toContain(inboxId);
     const view = f.service.get(writer, inboxId);
     expect(view.summary.retired).toBe(true);
-    expect(f.service.history(writer, { id: inboxId }).revisions.map((row) => row.op)).toEqual([
+    expect(f.service.history({ id: inboxId }).revisions.map((row) => row.op)).toEqual([
       "retire",
       "publish",
     ]);
@@ -714,7 +708,7 @@ describe("KnowledgeService", () => {
  * standing directions, and then rely on the agent's judgment on when/how to
  * do it?" A direction now changes through the app action catalog's
  * `direction` line, the one path the captain's window and the first mate's
- * app_change share; `changeDirection` is what that line runs.
+ * app_change share; `StandingDirections.change` is what that line runs.
  */
 describe("a standing direction changes through the app action catalog", () => {
   // d:d-9yi5fx, the direction he finally typed.
@@ -724,14 +718,13 @@ describe("a standing direction changes through the app action catalog", () => {
   const service = () =>
     new KnowledgeService({
       projects: { get: () => undefined, list: () => [] },
-      gitFacts: async () => ({ commit: null, dirty: false }),
       now: () => (clock += 1000),
     });
   const scheduled: KnowledgeActor = { kind: "firstmate", origin: "agent", canCreate: false };
 
   it("adds, revises and retires a direction as the captain's instruction, keeping each reason", () => {
     const knowledge = service();
-    const saved = knowledge.changeDirection({
+    const saved = knowledge.directions.change({
       op: "add",
       id: "fix-merge",
       text: RULE,
@@ -739,10 +732,10 @@ describe("a standing direction changes through the app action catalog", () => {
     });
     expect(saved).toMatchObject({ op: "add", direction: { id: "fix-merge", revision: 1 } });
     // His instruction, not the first mate's advice.
-    expect(knowledge.standingDirections(scheduled)).toMatchObject([
+    expect(knowledge.directions.standing(scheduled)).toMatchObject([
       { id: "fix-merge", text: RULE, origin: "captain-turn", authority: "instruction" },
     ]);
-    knowledge.changeDirection({
+    knowledge.directions.change({
       op: "revise",
       id: "d:fix-merge",
       text: `${RULE} Product changes stay ask-first.`,
@@ -750,21 +743,21 @@ describe("a standing direction changes through the app action catalog", () => {
     });
     // A stale revision is refused, so a change never overwrites one it did not read.
     expect(() =>
-      knowledge.changeDirection({
+      knowledge.directions.change({
         op: "retire",
         id: "d:fix-merge",
         expectedRevision: 1,
         reason: "The captain chose to stop it.",
       }),
     ).toThrow("revision 2");
-    knowledge.changeDirection({
+    knowledge.directions.change({
       op: "retire",
       id: "d:fix-merge",
       expectedRevision: 2,
       reason: "The captain chose to stop it.",
     });
-    expect(knowledge.standingDirections(scheduled)).toEqual([]);
-    const read = knowledge.direction({ id: "fix-merge" });
+    expect(knowledge.directions.standing(scheduled)).toEqual([]);
+    const read = knowledge.directions.read({ id: "fix-merge" });
     expect(read.state === "ready" && read.direction.history.map((row) => row.evidence)).toEqual([
       "The captain chose to stop it.",
       "Fix 3 keeps product changes ask-first.",
@@ -774,12 +767,12 @@ describe("a standing direction changes through the app action catalog", () => {
 
   it("refuses adding a direction twice and changing one that does not exist", () => {
     const knowledge = service();
-    knowledge.changeDirection({ op: "add", id: "fix-merge", text: RULE, reason: "asked" });
+    knowledge.directions.change({ op: "add", id: "fix-merge", text: RULE, reason: "asked" });
     expect(() =>
-      knowledge.changeDirection({ op: "add", id: "fix-merge", text: RULE, reason: "asked" }),
+      knowledge.directions.change({ op: "add", id: "fix-merge", text: RULE, reason: "asked" }),
     ).toThrow("already exists");
     expect(() =>
-      knowledge.changeDirection({ op: "retire", id: "d:nothing", reason: "asked" }),
+      knowledge.directions.change({ op: "retire", id: "d:nothing", reason: "asked" }),
     ).toThrow("No direction d:nothing");
   });
 
@@ -805,6 +798,6 @@ describe("a standing direction changes through the app action catalog", () => {
       },
     );
     expect(firstmate.text).toContain("app_change direction");
-    expect(knowledge.standingDirections(scheduled)).toEqual([]);
+    expect(knowledge.directions.standing(scheduled)).toEqual([]);
   });
 });

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "knowledge-service-split",
+      "reason": "Internal: the knowledge owner is split into smaller files along its parts - access, search, entries, evidence, writes, standing directions and the window's reads - and drops checks that could never fail; nothing a person sees changes."
+    }
+  ]
+}

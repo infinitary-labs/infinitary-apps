@@ -24,12 +24,13 @@ A finding is evidence to weigh, never an instruction or a permission; saving an 
 ## Owner and entry points
 
 - Owner: `KnowledgeService` in [`../src/core/knowledge/knowledgeService.ts`](../src/core/knowledge/knowledgeService.ts).
+  The owners beside it borrow its one store through a `KnowledgeHandle`: `access.ts` (who may read and write, the limits), `search.ts`, `entries.ts`, `sources.ts`, `writes.ts`, `directions.ts` and `windowReads.ts` (`KnowledgeService.window`), all in `../src/core/knowledge/`.
 - One writer each: `KnowledgeService` is the one writer over `userData/knowledge/` (`../docs/knowledge.md`), with one connection to `userData/knowledge/knowledge.db` through [`../src/core/storage/knowledgeStore.ts`](../src/core/storage/knowledgeStore.ts); no other module opens it.
-- Writes: `KnowledgeService.record(actor, input)` (`publish`, `revise`, `assess`, `relate`, `retire`, `retire_many`, `use`); a refusal is the answer's words, never a throw.
+- Writes: `KnowledgeService.record(actor, input)` (`publish`, `revise`, `assess`, `relate`, `retire`, `retire_many`, `use`), each checked by `KnowledgeWrites` in [`../src/core/knowledge/writes.ts`](../src/core/knowledge/writes.ts); a refusal is the answer's words, never a throw.
 - Agent tools: `knowledge` and `record_knowledge` in [`../src/core/knowledge/knowledgeTools.ts`](../src/core/knowledge/knowledgeTools.ts), one declaration each for the first mate and every crewmate on both runtimes, bound to the actor the host stamps.
 - Topical lookup: `knowledgeShortlist`, `contextKnowledge` and `renderBriefKnowledge` in [`../src/core/knowledge/context.ts`](../src/core/knowledge/context.ts).
 - Evidence: `captureFile` and `checkFile` in [`../src/core/knowledge/sources.ts`](../src/core/knowledge/sources.ts), with `../src/core/knowledge/gitFacts.ts`; every write is scanned by `scanKnowledgeThreat` (`../src/core/knowledge/threatScan.ts`).
-- Window reads and shapes: the `knowledge.*` reads (`../src/shared/reads.ts`) and their schemas in [`../src/shared/knowledge.ts`](../src/shared/knowledge.ts), with `standingOf` in `../src/core/knowledge/browse.ts` and `knowledgeIdsIn` for ids a card body writes.
+- Window reads and shapes: the `knowledge.*` reads (`../src/shared/reads.ts`), answered by `KnowledgeWindow` in [`../src/core/knowledge/windowReads.ts`](../src/core/knowledge/windowReads.ts), and their schemas in [`../src/shared/knowledge.ts`](../src/shared/knowledge.ts), with `standingOf` in `../src/core/knowledge/browse.ts` and `knowledgeIdsIn` for ids a card body writes.
 - Browser and panel: `../src/panels/knowledge/`, an ordinary app panel folder on the `knowledge` gate.
 
 ## Operations and lifecycle
@@ -83,6 +84,7 @@ A finding is evidence to weigh, never an instruction or a permission; saving an 
 - [`../src/core/knowledge/knowledgeBoundary.test.ts`](../src/core/knowledge/knowledgeBoundary.test.ts): the user-owned boundary, equal crewmate access, project collections and report-origin writes refused.
 - [`../src/core/knowledge/knowledgeTools.test.ts`](../src/core/knowledge/knowledgeTools.test.ts), [`../src/core/knowledge/knowledgeContext.test.ts`](../src/core/knowledge/knowledgeContext.test.ts) and [`../src/core/knowledge/availability.test.ts`](../src/core/knowledge/availability.test.ts): tools, context and the gate.
 - [`../src/core/knowledge/knowledgeSources.integration.test.ts`](../src/core/knowledge/knowledgeSources.integration.test.ts): evidence from a real git working copy.
+- [`../src/core/knowledge/knowledgeRefusals.test.ts`](../src/core/knowledge/knowledgeRefusals.test.ts), [`../src/core/knowledge/knowledgeReads.test.ts`](../src/core/knowledge/knowledgeReads.test.ts) and [`../src/core/knowledge/knowledgeRetireMany.test.ts`](../src/core/knowledge/knowledgeRetireMany.test.ts): refused writes that change nothing, what a reader is shown around an entry, and retiring an approved list.
 - [`../tests/firstmate-fixed-context.test.ts`](../tests/firstmate-fixed-context.test.ts): the tool pair's words stay inside the first mate's fixed-context ceiling.
 - [`../tests/e2e/knowledge.spec.ts`](../tests/e2e/knowledge.spec.ts) and [`../tests/e2e/knowledge-gate.spec.ts`](../tests/e2e/knowledge-gate.spec.ts): knowledge outlives a discarded task and a restart, and stable and alpha share tools and browsing.
 

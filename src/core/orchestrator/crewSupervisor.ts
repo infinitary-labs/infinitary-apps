@@ -257,13 +257,14 @@ import type {
 } from "../forge";
 import type { IntegrationAskTaken, TaskIntegrations } from "../integrations";
 import { jobExitWake } from "../jobs/jobManager";
+import { PRIVATE_SCOPE } from "../knowledge/access";
 import {
   knowledgeShortlist,
   renderBriefKnowledge,
   renderReferenceImport,
 } from "../knowledge/context";
 import { renderDirections } from "../knowledge/directions";
-import { type KnowledgeService, PRIVATE_SCOPE } from "../knowledge/knowledgeService";
+import type { KnowledgeService } from "../knowledge/knowledgeService";
 import { knowledgeBinding } from "../knowledge/knowledgeTools";
 import { capWithOverflow, type MessageFile, withPastedFiles } from "../overflow";
 import {
@@ -7193,11 +7194,7 @@ export class CrewSupervisor {
       const words = [record?.title ?? "", record?.goal ?? ""].join("\n");
       sections.push([
         renderBriefKnowledge(
-          knowledgeShortlist(knowledge, [PRIVATE_SCOPE], words, {
-            kind: "crewmate",
-            taskId,
-            repoId: repoId ?? "",
-          }),
+          knowledgeShortlist(knowledge, [PRIVATE_SCOPE], words),
           (repoId ? this.options.repos.get(repoId)?.name : undefined) ?? "this task",
         ),
       ]);
@@ -7499,7 +7496,7 @@ export class CrewSupervisor {
       const repoId = this.options.tasks.get(task.id)?.repoId;
       if (this.options.knowledge && repoId) {
         const directions = renderDirections(
-          this.options.knowledge.standingDirections({
+          this.options.knowledge.directions.standing({
             kind: "crewmate",
             taskId: task.id,
             repoId,

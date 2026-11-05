@@ -4,8 +4,9 @@ import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { piToolsOf } from "../pi/toolSpec";
 import { bindTools } from "../session/tools";
+import type { KnowledgeActor } from "./access";
 import { contextKnowledge, knowledgeShortlist, renderBriefKnowledge } from "./context";
-import { type KnowledgeActor, type KnowledgeDeps, KnowledgeService } from "./knowledgeService";
+import { type KnowledgeDeps, KnowledgeService } from "./knowledgeService";
 import { KNOWLEDGE_TOOLS, knowledgeBinding } from "./knowledgeTools";
 
 /**
@@ -28,7 +29,6 @@ function harness(pinned: Pick<KnowledgeDeps, "now" | "newId"> = {}) {
       get: (id) => (id === "repo-1" ? { id, name: "shop", path: root } : undefined),
       list: () => [{ id: "repo-1", name: "shop", path: root }],
     },
-    gitFacts: async () => ({ commit: "0123456789abcdef", dirty: false }),
     ...pinned,
   });
   const recorded: string[] = [];
@@ -55,7 +55,6 @@ function harness(pinned: Pick<KnowledgeDeps, "now" | "newId"> = {}) {
     taskId: "t1",
     repoId: "repo-1",
     cwd: root,
-    access: "references",
   });
   return { root, service, recorded, crew, bind };
 }

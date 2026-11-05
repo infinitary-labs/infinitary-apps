@@ -49,9 +49,10 @@ import { encode } from "@toon-format/toon";
 import { AttachmentUnavailableError, keepImages, loadImages } from "../attachments";
 import type { CoreDispatch } from "../dispatcher";
 import type { IntegrationsService } from "../integrations";
+import { PRIVATE_SCOPE } from "../knowledge/access";
 import { contextKnowledge, knowledgeShortlist } from "../knowledge/context";
 import { renderDirections } from "../knowledge/directions";
-import { type KnowledgeService, PRIVATE_SCOPE } from "../knowledge/knowledgeService";
+import type { KnowledgeService } from "../knowledge/knowledgeService";
 import {
   KNOWLEDGE_TOOL,
   knowledgeBinding,
@@ -3890,7 +3891,7 @@ export class FirstmateAgent {
     const knowledge = this.knowledgeForTurn(words, hinted?.repoId ?? undefined);
     const directions = this.options.knowledge
       ? renderDirections(
-          this.options.knowledge.standingDirections({
+          this.options.knowledge.directions.standing({
             kind: "firstmate",
             origin: this.turnOrigin,
             canCreate: this.turnCanCreate,

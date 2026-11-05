@@ -482,7 +482,6 @@ function setup(
     options.knowledge !== false
       ? new KnowledgeService({
           projects: { get: (id) => repos.get(id), list: () => repos.list() },
-          gitFacts: async () => ({ commit: null, dirty: true }),
         })
       : undefined;
   // Talk-to-personalize Step 1: the preferences writer pushes every write;
@@ -4251,7 +4250,7 @@ describe("FirstmateAgent", () => {
     });
     expect(directionsIn(revised)).toMatchObject([{ id: "d:squash-merges", revision: 2 }]);
     expect(
-      knowledge.standingDirections({ kind: "firstmate", origin: "agent", canCreate: false }),
+      knowledge.directions.standing({ kind: "firstmate", origin: "agent", canCreate: false }),
     ).toMatchObject([{ text: "Always squash-merge when merging work.", authority: "instruction" }]);
   });
 
@@ -4282,9 +4281,9 @@ describe("FirstmateAgent", () => {
       });
     expect(directionsIn(saved)).toMatchObject([{ id: "d:fix-merge", text: FIX_MERGE_RULE }]);
     expect(
-      knowledge.standingDirections({ kind: "firstmate", origin: "agent", canCreate: false }),
+      knowledge.directions.standing({ kind: "firstmate", origin: "agent", canCreate: false }),
     ).toMatchObject([{ text: FIX_MERGE_RULE, origin: "captain-turn", authority: "instruction" }]);
-    expect(knowledge.direction({ id: "fix-merge" })).toMatchObject({
+    expect(knowledge.directions.read({ id: "fix-merge" })).toMatchObject({
       direction: { history: [{ evidence: "The captain checked Fix 3 on the crewmate's card." }] },
     });
     session.emitTurnEnd("Saved.");
@@ -4307,13 +4306,13 @@ function bindDirections(agent: FirstmateAgent, knowledge: KnowledgeService): voi
   let operations = 0;
   agent.bindAppDispatch(async (channel, args, actor) => {
     if (channel === "inf:knowledge:directions")
-      return knowledge.directions(
+      return knowledge.directions.page(
         (args as [KnowledgeDirectionsArgs?])[0] ?? { scope: "all" },
       ) as never;
     if (channel !== "inf:knowledge:direction:set") throw new Error(`Not a direction: ${channel}`);
     const refusal = actor?.kind === "firstmate" && actionRefusal(ACTIONS.direction, actor);
     if (refusal) throw new Error(refusal);
-    const changed = knowledge.changeDirection((args as [KnowledgeDirectionChange])[0]);
+    const changed = knowledge.directions.change((args as [KnowledgeDirectionChange])[0]);
     operations += 1;
     agent.appActionRecorded(`op-${operations}`, "direction", {
       op: changed.op,
@@ -10039,7 +10038,7 @@ describe("FirstmateAgent with knowledge", () => {
 
   it("leads a turn with matching Knowledge and carries standing directions separately", async () => {
     const f = setup({ knowledge: true });
-    f.knowledge?.changeDirection({
+    f.knowledge?.directions.change({
       op: "add",
       id: "squash-merges",
       text: "Always squash-merge when landing work.",
@@ -10674,7 +10673,7 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     const { agent, repos, tasks, knowledge } = fixture;
     if (!knowledge) throw new Error("No knowledge.");
     await repos.setup({ kind: "adopt", path: process.cwd() });
-    knowledge.changeDirection({
+    knowledge.directions.change({
       op: "add",
       id: "squash",
       text: "Always squash-merge.",
@@ -10702,7 +10701,7 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
 
     // A direction revised or retired reaches the next input whole; the set
     // emptied clears it.
-    knowledge.changeDirection({
+    knowledge.directions.change({
       op: "retire",
       id: "squash",
       reason: "the captain took it back",
@@ -10786,7 +10785,7 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     const fixture = setup({ knowledge: true });
     const { agent, session, knowledge } = fixture;
     if (!knowledge) throw new Error("No knowledge.");
-    knowledge.changeDirection({
+    knowledge.directions.change({
       op: "add",
       id: "squash",
       text: "Always squash-merge.",
@@ -10795,7 +10794,7 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     await turn(fixture, "hello");
     session.holdSteers();
     await agent.converse("keep going");
-    knowledge.changeDirection({
+    knowledge.directions.change({
       op: "add",
       id: "rebase",
       text: "Rebase before review.",
@@ -10805,7 +10804,7 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     await tick();
     const captain = session.steers.at(-1) as string;
     expect(String(decodeContext(captain).directions)).toContain("Rebase before review.");
-    knowledge.changeDirection({ op: "retire", id: "rebase", reason: "the captain took it back" });
+    knowledge.directions.change({ op: "retire", id: "rebase", reason: "the captain took it back" });
     session.emit({ type: "context_compacted", turn: "goes-on" });
     await tick();
     const recovery = session.steers.at(-1) as string;

@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  type KnowledgeActor,
-  KnowledgeService,
-  PRIVATE_SCOPE,
-  type RecordInput,
-} from "./knowledgeService";
+import { type KnowledgeActor, PRIVATE_SCOPE } from "./access";
+import { KnowledgeService } from "./knowledgeService";
+import type { RecordInput } from "./writes";
 
 /**
  * The boundary saved on FI3-1338: knowledge holds personal context and
@@ -29,7 +26,6 @@ function service(): KnowledgeService {
       get: (id) => [ALPHA, BETA].find((project) => project.id === id),
       list: () => [ALPHA, BETA],
     },
-    gitFacts: async () => ({ commit: null, dirty: false }),
     now: () => 1_700_000_000_000,
   });
 }
@@ -47,7 +43,6 @@ describe("user-owned knowledge", () => {
     kind: "crewmate",
     taskId: "task-import",
     repoId: ALPHA.id,
-    access: "references",
   };
 
   async function publish(svc: KnowledgeService, actor: KnowledgeActor, input: RecordInput) {
@@ -196,10 +191,10 @@ describe("user-owned knowledge", () => {
       conceptId,
     ]);
     expect(svc.get(importer, personal.ids[0] as string).summary.lane).toBe("personal");
-    expect(svc.shortlist([PRIVATE_SCOPE], "inbox retries", harbor).map((hit) => hit.id)).toContain(
+    expect(svc.shortlist([PRIVATE_SCOPE], "inbox retries").map((hit) => hit.id)).toContain(
       conceptId,
     );
-    expect(svc.shortlist([PRIVATE_SCOPE], "travel plans", importer).map((hit) => hit.id)).toContain(
+    expect(svc.shortlist([PRIVATE_SCOPE], "travel plans").map((hit) => hit.id)).toContain(
       personal.ids[0],
     );
     expect(

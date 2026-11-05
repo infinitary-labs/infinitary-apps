@@ -16,7 +16,7 @@ import type {
   ReadWorkflowInput,
 } from "../forge";
 import type { TaskIntegrations } from "../integrations";
-import type { RecordInput } from "../knowledge/knowledgeService";
+import type { RecordInput } from "../knowledge/writes";
 import type { PanelCaptureResult, PanelPlaceResult } from "../personal/personalExtensions";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import type { CardRefusal, CardRefusalReason } from "../storage/taskStore";

@@ -1,6 +1,7 @@
 import { openInMemoryDatabase } from "@core/storage/db";
 import { describe, expect, it } from "vitest";
-import { type KnowledgeActor, KnowledgeService } from "./knowledgeService";
+import type { KnowledgeActor } from "./access";
+import { KnowledgeService } from "./knowledgeService";
 
 /**
  * Standing directions as the knowledge owner keeps them (docs/knowledge.md,
@@ -107,7 +108,6 @@ function fixture() {
       get: (id) => projects.find((project) => project.id === id),
       list: () => projects,
     },
-    gitFacts: async () => ({ commit: null, dirty: false }),
     now: () => (clock += 1000),
   });
   const removeProject = (id: string) => {
@@ -126,11 +126,11 @@ describe("carrying the older record's directions", () => {
   it("carries each active preference once, and a retry after a quit adds no second history line", () => {
     const { knowledge } = fixture();
     const first = notesDatabase(NOTES);
-    knowledge.carryDirections(first);
+    knowledge.directions.carry(first);
     expect(notesTables(first)).toEqual([]);
     const carried = () =>
-      knowledge
-        .standingDirections(FIRSTMATE)
+      knowledge.directions
+        .standing(FIRSTMATE)
         .map(({ id, scope, origin, revision, updatedAt }) => ({
           id,
           scope,
@@ -153,10 +153,10 @@ describe("carrying the older record's directions", () => {
     ]);
     // The app quit after the knowledge write and before the old tables went.
     const retried = notesDatabase(NOTES);
-    knowledge.carryDirections(retried);
+    knowledge.directions.carry(retried);
     expect(notesTables(retried)).toEqual([]);
     expect(carried()).toEqual(once);
-    const read = knowledge.direction({ id: "mornings" });
+    const read = knowledge.directions.read({ id: "mornings" });
     expect(read.state === "ready" && read.direction.history).toEqual([
       {
         revision: 1,
@@ -172,43 +172,43 @@ describe("carrying the older record's directions", () => {
 
   it("stops at a conflicting direction and removes nothing on either side", () => {
     const { knowledge } = fixture();
-    knowledge.carryDirections(notesDatabase(NOTES));
-    const before = knowledge.standingDirections(FIRSTMATE);
+    knowledge.directions.carry(notesDatabase(NOTES));
+    const before = knowledge.directions.standing(FIRSTMATE);
     const conflicting = notesDatabase(
       NOTES.map((note) =>
         note.id === "mornings" ? { ...note, text: "Plan reviews for the evening." } : note,
       ),
     );
-    expect(() => knowledge.carryDirections(conflicting)).toThrow(
+    expect(() => knowledge.directions.carry(conflicting)).toThrow(
       "A standing direction conflicts with Knowledge. No original direction was removed.",
     );
     expect(notesTables(conflicting)).toEqual([{ name: "memories" }, { name: "memory_revisions" }]);
-    expect(knowledge.standingDirections(FIRSTMATE)).toEqual(before);
+    expect(knowledge.directions.standing(FIRSTMATE)).toEqual(before);
   });
 
   it("leaves a record with no notes tables alone", () => {
     const { knowledge } = fixture();
     const db = notesDatabase([]);
-    knowledge.carryDirections(db);
+    knowledge.directions.carry(db);
     expect(notesTables(db)).toEqual([]);
-    knowledge.carryDirections(db);
-    expect(knowledge.standingDirections(FIRSTMATE)).toEqual([]);
+    knowledge.directions.carry(db);
+    expect(knowledge.directions.standing(FIRSTMATE)).toEqual([]);
   });
 });
 
 describe("the browser's directions", () => {
   it("pages the captain's instructions first, newest first, narrowed by scope and words", () => {
     const { knowledge } = fixture();
-    knowledge.carryDirections(notesDatabase(NOTES));
-    knowledge.changeDirection({
+    knowledge.directions.carry(notesDatabase(NOTES));
+    knowledge.directions.change({
       op: "add",
       id: "dock-tests",
       scope: DOCK.id,
       text: "Run dock's journeys before every merge.",
       reason: "The captain asked.",
     });
-    const ids = (args: Parameters<KnowledgeService["directions"]>[0]) => {
-      const page = knowledge.directions(args);
+    const ids = (args: Parameters<KnowledgeService["directions"]["page"]>[0]) => {
+      const page = knowledge.directions.page(args);
       if (page.state !== "ready") throw new Error(page.state);
       return { scope: page.scope, total: page.total, ids: page.rows.map((row) => row.id) };
     };
@@ -228,18 +228,18 @@ describe("the browser's directions", () => {
       total: 1,
       ids: ["keep-harbor-green"],
     });
-    const harbor = knowledge.directions({ scope: HARBOR.id });
+    const harbor = knowledge.directions.page({ scope: HARBOR.id });
     expect(
       harbor.state === "ready" && harbor.rows.map((row) => [row.scopeName, row.authority]),
     ).toEqual([
       ["harbor", "instruction"],
       ["harbor", "advice"],
     ]);
-    const captain = knowledge.directions({ scope: "captain" });
+    const captain = knowledge.directions.page({ scope: "captain" });
     expect(captain.state === "ready" && captain.rows[0]?.scopeName).toBe(
       "Everywhere, first mate only",
     );
-    const counted = knowledge.collections();
+    const counted = knowledge.window.collections();
     expect(
       counted.state === "ready" &&
         counted.collections.map(({ scope, directions }) => [scope, directions]),
@@ -248,26 +248,28 @@ describe("the browser's directions", () => {
       [DOCK.id, 1],
       [HARBOR.id, 2],
     ]);
-    expect(() => knowledge.directions({ scope: "repo-gone" })).toThrow(
+    expect(() => knowledge.directions.page({ scope: "repo-gone" })).toThrow(
       "This project is not available.",
     );
   });
 
   it("reads one direction only where its project remains and the reader may see it", () => {
     const { knowledge, removeProject } = fixture();
-    knowledge.carryDirections(notesDatabase(NOTES));
-    expect(knowledge.direction({ id: "keep-harbor-green" }, crewOn(HARBOR.id)).state).toBe("ready");
-    expect(knowledge.direction({ id: "keep-harbor-green" }, crewOn(DOCK.id))).toEqual({
+    knowledge.directions.carry(notesDatabase(NOTES));
+    expect(knowledge.directions.read({ id: "keep-harbor-green" }, crewOn(HARBOR.id)).state).toBe(
+      "ready",
+    );
+    expect(knowledge.directions.read({ id: "keep-harbor-green" }, crewOn(DOCK.id))).toEqual({
       state: "missing",
     });
-    expect(knowledge.direction({ id: "mornings" }, crewOn(HARBOR.id))).toEqual({
+    expect(knowledge.directions.read({ id: "mornings" }, crewOn(HARBOR.id))).toEqual({
       state: "missing",
     });
-    expect(knowledge.direction({ id: "nothing" })).toEqual({ state: "missing" });
+    expect(knowledge.directions.read({ id: "nothing" })).toEqual({ state: "missing" });
     removeProject(HARBOR.id);
-    expect(knowledge.direction({ id: "keep-harbor-green" })).toEqual({ state: "missing" });
-    const all = knowledge.directions({ scope: "all" });
+    expect(knowledge.directions.read({ id: "keep-harbor-green" })).toEqual({ state: "missing" });
+    const all = knowledge.directions.page({ scope: "all" });
     expect(all.state === "ready" && all.rows.map((row) => row.id)).toEqual(["mornings"]);
-    expect(knowledge.standingDirections(crewOn(HARBOR.id))).toEqual([]);
+    expect(knowledge.directions.standing(crewOn(HARBOR.id))).toEqual([]);
   });
 });

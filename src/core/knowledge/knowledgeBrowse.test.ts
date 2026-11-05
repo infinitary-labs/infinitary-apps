@@ -3,13 +3,9 @@ import { join } from "node:path";
 import { KNOWLEDGE_LIST_PAGE } from "@shared/knowledge";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import {
-  type KnowledgeActor,
-  type KnowledgeProject,
-  KnowledgeService,
-  PRIVATE_SCOPE,
-  type RecordInput,
-} from "./knowledgeService";
+import { type KnowledgeActor, PRIVATE_SCOPE } from "./access";
+import { type KnowledgeProject, KnowledgeService } from "./knowledgeService";
+import type { RecordInput } from "./writes";
 
 /**
  * The knowledge browser's reads through the one owner (docs/knowledge.md,
@@ -46,7 +42,6 @@ function fixture(options: { dir?: string } = {}) {
       resolve: (ref) => tasks.get(ref) ?? [...tasks.values()].find((task) => task.key === ref),
       reports: () => [],
     },
-    gitFacts: async () => ({ commit: "a1b2c3d4e5f6a7b8c9d0", dirty: false }),
     now: () => (clock += 1000),
     changed: () => {
       changes += 1;
@@ -120,7 +115,7 @@ describe("the knowledge browser's reads", () => {
     const f = fixture();
     await seedAlpha(f);
     await f.concept("Beta idea");
-    const read = f.service.collections();
+    const read = f.service.window.collections();
     expect(read).toEqual({
       state: "ready",
       collections: [
@@ -155,7 +150,7 @@ describe("the knowledge browser's reads", () => {
   it("draws a collection's concepts with directed claims and undirected read-together links", async () => {
     const f = fixture();
     const { evidence, versions, retry, pins } = await seedAlpha(f);
-    const graph = f.service.graph({ scope: PRIVATE_SCOPE });
+    const graph = f.service.window.graph({ scope: PRIVATE_SCOPE });
     if (graph.state !== "ready") throw new Error("unavailable");
     expect(graph.concepts.map((concept) => concept.title).sort()).toEqual([
       "Evidence",
@@ -193,9 +188,9 @@ describe("the knowledge browser's reads", () => {
     expect(graph.shown).toEqual({ concepts: 3, connections: 2 });
     expect(graph.total).toEqual({ concepts: 3, connections: 2 });
     // Never another collection's: beta is empty, the private one too.
-    const beta = f.service.graph({ scope: BETA.id });
+    const beta = f.service.window.graph({ scope: BETA.id });
     expect(beta.state === "ready" && beta.concepts).toEqual([]);
-    expect(() => f.service.graph({ scope: "repo-gone" })).toThrow("No collection repo-gone");
+    expect(() => f.service.window.graph({ scope: "repo-gone" })).toThrow("No collection repo-gone");
   });
 
   it("narrows the graph to a neighborhood, one hop or two, or to what typed words find", async () => {
@@ -204,27 +199,29 @@ describe("the knowledge browser's reads", () => {
     const far = await f.concept("Archive", {
       links: [{ to: versions, reason: "Old versions live here." }],
     });
-    const ids = (graph: ReturnType<typeof f.service.graph>) =>
+    const ids = (graph: ReturnType<typeof f.service.window.graph>) =>
       graph.state === "ready" ? graph.concepts.map((concept) => concept.id).sort() : [];
-    expect(ids(f.service.graph({ scope: PRIVATE_SCOPE, focus: retry, hops: 1 }))).toEqual(
+    expect(ids(f.service.window.graph({ scope: PRIVATE_SCOPE, focus: retry, hops: 1 }))).toEqual(
       [retry, evidence].sort(),
     );
-    expect(ids(f.service.graph({ scope: PRIVATE_SCOPE, focus: retry, hops: 2 }))).toEqual(
+    expect(ids(f.service.window.graph({ scope: PRIVATE_SCOPE, focus: retry, hops: 2 }))).toEqual(
       [retry, evidence, versions].sort(),
     );
-    const near = f.service.graph({ scope: PRIVATE_SCOPE, focus: retry, hops: 2 });
+    const near = f.service.window.graph({ scope: PRIVATE_SCOPE, focus: retry, hops: 2 });
     expect(near.state === "ready" && near.focus).toBe(retry);
     expect(near.state === "ready" && near.total.concepts).toBe(3);
-    expect(ids(f.service.graph({ scope: PRIVATE_SCOPE, focus: far, hops: 1 }))).toEqual(
+    expect(ids(f.service.window.graph({ scope: PRIVATE_SCOPE, focus: far, hops: 1 }))).toEqual(
       [far, versions].sort(),
     );
     // By an alias, and by a finding's words, which bring its concepts.
-    expect(ids(f.service.graph({ scope: PRIVATE_SCOPE, query: "proof" }))).toEqual([evidence]);
-    expect(ids(f.service.graph({ scope: PRIVATE_SCOPE, query: "pins" }))).toEqual(
+    expect(ids(f.service.window.graph({ scope: PRIVATE_SCOPE, query: "proof" }))).toEqual([
+      evidence,
+    ]);
+    expect(ids(f.service.window.graph({ scope: PRIVATE_SCOPE, query: "pins" }))).toEqual(
       [evidence, versions].sort(),
     );
     // A focus no longer in the collection draws the whole collection.
-    const lost = f.service.graph({ scope: PRIVATE_SCOPE, focus: "c-zzzzzz" });
+    const lost = f.service.window.graph({ scope: PRIVATE_SCOPE, focus: "c-zzzzzz" });
     expect(lost.state === "ready" && lost.focus).toBeNull();
     expect(ids(lost)).toHaveLength(4);
   });
@@ -233,7 +230,7 @@ describe("the knowledge browser's reads", () => {
     const f = fixture();
     const { evidence } = await seedAlpha(f);
     for (let i = 0; i < 22; i++) await f.concept(`Topic ${String(i).padStart(2, "0")}`);
-    const first = f.service.concepts({ scope: PRIVATE_SCOPE });
+    const first = f.service.window.concepts({ scope: PRIVATE_SCOPE });
     if (first.state !== "ready") throw new Error("unavailable");
     expect(first.total).toBe(25);
     expect(first.rows).toHaveLength(KNOWLEDGE_LIST_PAGE);
@@ -243,9 +240,9 @@ describe("the knowledge browser's reads", () => {
       explanation: "Evidence, explained.",
       findings: 1,
     });
-    const last = f.service.concepts({ scope: PRIVATE_SCOPE, page: 9 });
+    const last = f.service.window.concepts({ scope: PRIVATE_SCOPE, page: 9 });
     expect(last.state === "ready" && [last.page, last.rows.length]).toEqual([1, 5]);
-    const found = f.service.concepts({ scope: PRIVATE_SCOPE, query: "proof" });
+    const found = f.service.window.concepts({ scope: PRIVATE_SCOPE, query: "proof" });
     expect(found.state === "ready" && found.rows.map((row) => row.id)).toEqual([evidence]);
   });
 
@@ -292,7 +289,10 @@ describe("the knowledge browser's reads", () => {
     writeFileSync(join(f.alphaRoot, "pins.ts"), "export const pinned = false;\n");
 
     const standing = (filter?: "all" | "recheck" | "differing") => {
-      const read = f.service.findings({ scope: PRIVATE_SCOPE, ...(filter ? { filter } : {}) });
+      const read = f.service.window.findings({
+        scope: PRIVATE_SCOPE,
+        ...(filter ? { filter } : {}),
+      });
       if (read.state !== "ready") throw new Error("unavailable");
       return Object.fromEntries(read.rows.map((row) => [row.id, row.standing]));
     };
@@ -303,7 +303,7 @@ describe("the knowledge browser's reads", () => {
     });
     expect(standing("recheck")).toEqual({});
     expect(standing("differing")).toEqual({ [disputed]: "differing" });
-    const all = f.service.findings({ scope: PRIVATE_SCOPE });
+    const all = f.service.window.findings({ scope: PRIVATE_SCOPE });
     const pinned = all.state === "ready" ? all.rows.find((row) => row.id === pins) : undefined;
     expect(pinned).toMatchObject({
       basis: "observation",
@@ -313,14 +313,14 @@ describe("the knowledge browser's reads", () => {
       checks: 0,
       relationship: { predicate: "pins" },
     });
-    const found = f.service.findings({ scope: PRIVATE_SCOPE, query: "retry safe" });
+    const found = f.service.window.findings({ scope: PRIVATE_SCOPE, query: "retry safe" });
     expect(found.state === "ready" && found.rows.map((row) => row.id)).toEqual([disputed]);
   });
 
   it("reads an entry whole: its connections and findings, its kept sources, checks, history and declared uses", async () => {
     const f = fixture();
     const { evidence, versions, retry, pins } = await seedAlpha(f);
-    const concept = f.service.entry({ id: evidence });
+    const concept = f.service.window.entry({ id: evidence });
     if (concept.state !== "ready") throw new Error(concept.state);
     expect(concept.entry).toMatchObject({
       kind: "concept",
@@ -362,7 +362,7 @@ describe("the knowledge browser's reads", () => {
       sources: [{ kind: "quote", text: "export const pinned = true;", citation: "pins.ts" }],
       reason: "More exact.",
     });
-    const finding = f.service.entry({ id: pins });
+    const finding = f.service.window.entry({ id: pins });
     if (finding.state !== "ready") throw new Error(finding.state);
     expect(finding.entry).toMatchObject({
       kind: "finding",
@@ -391,13 +391,13 @@ describe("the knowledge browser's reads", () => {
       ],
     });
     // The revision it was used at, as it read then.
-    const earlier = f.service.entry({ id: pins, revision: 1 });
+    const earlier = f.service.window.entry({ id: pins, revision: 1 });
     expect(earlier.state === "ready" && [earlier.entry.revision, earlier.entry.title]).toEqual([
       1,
       "A source reference pins the inspected version.",
     ]);
-    expect(f.service.entry({ id: pins, revision: 9 })).toEqual({ state: "missing" });
-    expect(f.service.entry({ id: "f-zzzzzz" })).toEqual({ state: "missing" });
+    expect(f.service.window.entry({ id: pins, revision: 9 })).toEqual({ state: "missing" });
+    expect(f.service.window.entry({ id: "f-zzzzzz" })).toEqual({ state: "missing" });
   });
 
   it("names the entries a card cites, as they stand now, and leaves out any the window cannot read", async () => {
@@ -406,7 +406,7 @@ describe("the knowledge browser's reads", () => {
     const beta = await f.concept("Beta idea", {});
     const before = f.changes();
     // In the order asked, each once; an id no collection holds is left out.
-    expect(f.service.refs({ ids: [pins, evidence, "f-zzzzzz", pins, beta] })).toEqual({
+    expect(f.service.window.refs({ ids: [pins, evidence, "f-zzzzzz", pins, beta] })).toEqual({
       state: "ready",
       refs: [
         {
@@ -439,18 +439,18 @@ describe("the knowledge browser's reads", () => {
       ],
     });
     // A saved quotation does not ask for a recheck: the app does not re-read it.
-    const changed = f.service.refs({ ids: [pins] });
+    const changed = f.service.window.refs({ ids: [pins] });
     expect(changed.state === "ready" && changed.refs[0]?.standing).toBe("unchecked");
     // Removing a project does not hide the captain's own entries.
     f.projects.splice(
       f.projects.findIndex((project) => project.id === BETA.id),
       1,
     );
-    const still = f.service.refs({ ids: [beta] });
+    const still = f.service.window.refs({ ids: [beta] });
     expect(still.state === "ready" && still.refs).toHaveLength(1);
     // Reading them recorded nothing.
     expect(f.changes()).toBe(before);
-    const read = f.service.entry({ id: pins });
+    const read = f.service.window.entry({ id: pins });
     expect(read.state === "ready" && read.entry.uses.count).toBe(0);
   });
 
@@ -479,7 +479,7 @@ describe("the knowledge browser's reads", () => {
     // Another task's use, and Firstmate's, are not this task's.
     await f.record(f.crew("task-a"), { action: "use", id: pins, purpose: "Its own reason." });
     const before = f.changes();
-    expect(f.service.taskUses({ task: "task-b" })).toEqual({
+    expect(f.service.window.uses({ task: "task-b" })).toEqual({
       state: "ready",
       total: 2,
       uses: [
@@ -512,7 +512,7 @@ describe("the knowledge browser's reads", () => {
         },
       ],
     });
-    expect(f.service.taskUses({ task: "task-none" })).toEqual({
+    expect(f.service.window.uses({ task: "task-none" })).toEqual({
       state: "ready",
       uses: [],
       total: 0,
@@ -524,17 +524,21 @@ describe("the knowledge browser's reads", () => {
     const dir = join(scratchDir("fm-knowledge-browse-unmade-"), "knowledge");
     const f = fixture({ dir });
     const file = join(dir, "knowledge.db");
-    expect(f.service.collections()).toMatchObject({ state: "ready" });
-    expect(f.service.graph({ scope: PRIVATE_SCOPE })).toMatchObject({
+    expect(f.service.window.collections()).toMatchObject({ state: "ready" });
+    expect(f.service.window.graph({ scope: PRIVATE_SCOPE })).toMatchObject({
       state: "ready",
       concepts: [],
     });
-    expect(f.service.findings({ scope: PRIVATE_SCOPE, filter: "recheck" })).toMatchObject({
+    expect(f.service.window.findings({ scope: PRIVATE_SCOPE, filter: "recheck" })).toMatchObject({
       total: 0,
     });
-    expect(f.service.entry({ id: "c-abcdef" })).toEqual({ state: "missing" });
-    expect(f.service.refs({ ids: ["c-abcdef"] })).toEqual({ state: "ready", refs: [] });
-    expect(f.service.taskUses({ task: "task-a" })).toEqual({ state: "ready", uses: [], total: 0 });
+    expect(f.service.window.entry({ id: "c-abcdef" })).toEqual({ state: "missing" });
+    expect(f.service.window.refs({ ids: ["c-abcdef"] })).toEqual({ state: "ready", refs: [] });
+    expect(f.service.window.uses({ task: "task-a" })).toEqual({
+      state: "ready",
+      uses: [],
+      total: 0,
+    });
     expect(f.service.held()).toBe(false);
     expect(existsSync(file)).toBe(false);
     await f.concept("First");
@@ -542,7 +546,10 @@ describe("the knowledge browser's reads", () => {
     expect(f.service.held()).toBe(true);
     f.service.purge();
     expect(f.service.held()).toBe(false);
-    expect(f.service.concepts({ scope: PRIVATE_SCOPE })).toMatchObject({ rows: [], total: 0 });
+    expect(f.service.window.concepts({ scope: PRIVATE_SCOPE })).toMatchObject({
+      rows: [],
+      total: 0,
+    });
     expect(existsSync(dir)).toBe(false);
   });
 
@@ -550,8 +557,8 @@ describe("the knowledge browser's reads", () => {
     const f = fixture();
     await seedAlpha(f);
     const before = f.changes();
-    f.service.collections();
-    f.service.graph({ scope: PRIVATE_SCOPE });
+    f.service.window.collections();
+    f.service.window.graph({ scope: PRIVATE_SCOPE });
     const refused = await f.service.record(f.crew(), {
       requestId: "bad",
       action: "publish",
@@ -569,13 +576,13 @@ describe("the knowledge browser's reads", () => {
     writeFileSync(join(dir, "knowledge.db"), "this is not a database");
     const f = fixture({ dir });
     for (const read of [
-      f.service.collections(),
-      f.service.graph({ scope: PRIVATE_SCOPE }),
-      f.service.concepts({ scope: PRIVATE_SCOPE }),
-      f.service.findings({ scope: PRIVATE_SCOPE }),
-      f.service.entry({ id: "c-abcdef" }),
-      f.service.refs({ ids: ["c-abcdef"] }),
-      f.service.taskUses({ task: "task-a" }),
+      f.service.window.collections(),
+      f.service.window.graph({ scope: PRIVATE_SCOPE }),
+      f.service.window.concepts({ scope: PRIVATE_SCOPE }),
+      f.service.window.findings({ scope: PRIVATE_SCOPE }),
+      f.service.window.entry({ id: "c-abcdef" }),
+      f.service.window.refs({ ids: ["c-abcdef"] }),
+      f.service.window.uses({ task: "task-a" }),
     ]) {
       // A collection that cannot be read still has something to say.
       expect(f.service.held()).toBe(true);

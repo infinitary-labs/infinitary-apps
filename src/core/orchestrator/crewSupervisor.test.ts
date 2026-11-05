@@ -18617,13 +18617,12 @@ describe("CrewSupervisor direction context", () => {
         knowledge: (registry) => {
           knowledge = new KnowledgeService({
             projects: { get: (id) => registry.get(id), list: () => registry.list() },
-            gitFacts: async () => ({ commit: null, dirty: false }),
           });
           return knowledge;
         },
       });
       const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
-      knowledge?.changeDirection({
+      knowledge?.directions.change({
         op: "add",
         id: "smoke-check",
         scope: repo.id,
@@ -18669,13 +18668,12 @@ describe("CrewSupervisor direction context", () => {
       knowledge: (registry) => {
         knowledge = new KnowledgeService({
           projects: { get: (id) => registry.get(id), list: () => registry.list() },
-          gitFacts: async () => ({ commit: null, dirty: true }),
         });
         return knowledge;
       },
     });
     const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
-    knowledge?.changeDirection({
+    knowledge?.directions.change({
       op: "add",
       scope: repo.id,
       text: "Always squash-merge smoke fixes.",
@@ -18739,7 +18737,6 @@ describe("CrewSupervisor direction context", () => {
       knowledge: (registry) =>
         new KnowledgeService({
           projects: { get: (id) => registry.get(id), list: () => registry.list() },
-          gitFacts: async () => ({ commit: null, dirty: true }),
         }),
     });
     const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
@@ -18764,7 +18761,6 @@ describe("CrewSupervisor direction context", () => {
       knowledge: (registry) =>
         new KnowledgeService({
           projects: { get: (id) => registry.get(id), list: () => registry.list() },
-          gitFacts: async () => ({ commit: null, dirty: true }),
         }),
     });
     await supervisor.commission({ title: "Scratch work", intent: intentOf("Explain an article.") });
@@ -21350,13 +21346,12 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
       knowledge: (registry) => {
         knowledge ??= new KnowledgeService({
           projects: { get: (id) => registry.get(id), list: () => registry.list() },
-          gitFacts: async () => ({ commit: null, dirty: false }),
         });
         return knowledge;
       },
     });
     const personal = h.repos.ensurePersonal(h.workspaceDir);
-    knowledge?.changeDirection({
+    knowledge?.directions.change({
       op: "add",
       id: "compact-rows",
       scope: personal.id,
@@ -21376,7 +21371,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(crewmate.promptCalls.at(-1)).toContain("Always use compact rows in my panels.");
     crewmate.finishPrompt();
     await tick();
-    knowledge?.changeDirection({ op: "retire", id: "compact-rows", reason: "captain retired it" });
+    knowledge?.directions.change({ op: "retire", id: "compact-rows", reason: "captain retired it" });
     await h.supervisor.steerCrewmate(taskId, "and blue");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain("and blue");

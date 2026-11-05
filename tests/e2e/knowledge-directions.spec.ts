@@ -66,13 +66,12 @@ test("directions stay distinct from personal facts in the browser and in Firstma
       list: () => [{ ...HARBOR, path: userDataDir }],
       get: (id) => (id === HARBOR.id ? { ...HARBOR, path: userDataDir } : undefined),
     },
-    gitFacts: async () => ({ commit: null, dirty: false }),
   });
   const actor = { kind: "firstmate", origin: "captain-turn", canCreate: true } as const;
   let fact = "";
   let beforeHistory: unknown;
   try {
-    knowledge.changeDirection({
+    knowledge.directions.change({
       op: "add",
       id: DIRECTION.id,
       scope: HARBOR.id,
@@ -81,7 +80,7 @@ test("directions stay distinct from personal facts in the browser and in Firstma
     });
     // Forty short directions exceed the former budget once labels are rendered.
     for (let i = 0; i < 39; i += 1) {
-      knowledge.changeDirection({
+      knowledge.directions.change({
         op: "add",
         id: `z-rule-${i}`,
         scope: HARBOR.id,
@@ -90,7 +89,7 @@ test("directions stay distinct from personal facts in the browser and in Firstma
       });
     }
     // The direction inspected below is the newest instruction on the first page.
-    knowledge.changeDirection({
+    knowledge.directions.change({
       op: "revise",
       id: `d:${DIRECTION.id}`,
       expectedRevision: 1,
@@ -117,7 +116,7 @@ test("directions stay distinct from personal facts in the browser and in Firstma
     });
     expect(kept.committed, kept.text).toBe(true);
     fact = kept.ids[0] as string;
-    const original = knowledge.direction({ id: DIRECTION.id });
+    const original = knowledge.directions.read({ id: DIRECTION.id });
     beforeHistory = original.state === "ready" ? original.direction.history : undefined;
   } finally {
     knowledge.close();

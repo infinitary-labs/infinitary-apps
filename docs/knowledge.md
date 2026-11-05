@@ -17,7 +17,8 @@ A task held on another computer (`docs/helper.md`) receives its project directio
 
 ## Where it is kept
 
-`KnowledgeService` is the one writer, with one connection to `userData/knowledge/knowledge.db` (`src/core/storage/knowledgeStore.ts`).
+`KnowledgeService` (`src/core/knowledge/knowledgeService.ts`) is the one writer, with one connection to `userData/knowledge/knowledge.db` (`src/core/storage/knowledgeStore.ts`).
+The owners beside it borrow that one store and never open their own: who may read and write and how much one call carries (`access.ts`), the full-text words (`search.ts`), an entry as both read sides show it (`entries.ts`), kept evidence (`sources.ts`), each write's checks (`writes.ts`), the standing directions (`StandingDirections` in `directions.ts`) and the captain's window (`KnowledgeWindow` in `windowReads.ts`).
 The store has its own schema history and inspects a private snapshot before any writable connection touches it (`readDatabaseSnapshot`, `src/core/storage/db.ts`).
 An unreadable or newer collection stays unchanged; new agent work pauses because its standing directions cannot be read.
 Startup carries the remaining active directions before agents start, as described below; otherwise the collection stays lazy.
@@ -142,7 +143,7 @@ A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/ipc.ts`
 
 The first mate adds, revises and retires the captain's standing directions on its own judgment of what the captain wants, whatever began the turn: the captain's words, the captain's choice on a card, a confirmation click and a message the captain sends while it works all count, and nothing checks which one it was (INF-638, the captain: "why not just give first mate a tool to freely read and write standing directions, and then rely on the agent's judgment on when/how to do it?").
 It does so through the app action catalog, as it changes any setting: `app_change` with the `direction` line, whose `judgment` tier lets it act at any wake and keeps its evidence as the change's reason (`docs/orchestrator-contract.md`, "App action catalog").
-The line's channel, `inf:knowledge:direction:set`, runs `KnowledgeService.changeDirection` through the dispatcher, the same path a captain's own control takes, so each change leaves one feed line and one operation; Knowledge has no such control yet.
+The line's channel, `inf:knowledge:direction:set`, runs `StandingDirections.change` through the dispatcher, the same path a captain's own control takes, so each change leaves one feed line and one operation; Knowledge has no such control yet.
 Every direction it writes is stamped `captain-turn`, the captain's instruction, and its history keeps the reason the first mate gave.
 `record_knowledge` refuses a direction, pointing the first mate at `app_change`.
 A crewmate never writes a direction; it reports the captain's words or choice with `needs_firstmate`.
@@ -217,7 +218,7 @@ The command `panel:knowledge/open` (Open Knowledge, no default key) opens your g
 
 ### The reads
 
-The browser reads seven catalog entries, and the app's other surfaces two more (`src/shared/reads.ts`), each over a `home` channel of its own (`inf:knowledge:*`, `src/shared/ipc.ts`; shapes in `src/shared/knowledge.ts`), answered by `KnowledgeService` with personal entries in the captain's collection and directions in their own scope:
+The browser reads seven catalog entries, and the app's other surfaces two more (`src/shared/reads.ts`), each over a `home` channel of its own (`inf:knowledge:*`, `src/shared/ipc.ts`; shapes in `src/shared/knowledge.ts`), answered by `KnowledgeService` (`KnowledgeWindow` for entries, `StandingDirections` for directions) with personal entries in the captain's collection and directions in their own scope:
 
 | Read | Answers |
 | --- | --- |
@@ -272,7 +273,7 @@ Retiring removes active influence while retaining edits made in Knowledge; it is
 
 ### Carrying the active directions
 
-`KnowledgeService.carryDirections` runs before any agent starts.
+`StandingDirections.carry` runs before any agent starts.
 It carries only active preference rows into `directions` and `direction_history`, preserving identifiers, wording, origin, scope and dates.
 The carried current wording is Knowledge revision one; old revisions, retired notes and facts/lessons are not archived or promoted.
 There is no inactive copy, preparation receipt, authority switch marker, legacy tool source or older-notes browser.
@@ -310,10 +311,14 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
 
 ## Tests
 
-- `src/core/knowledge/knowledgeService.test.ts`: reuse in other words through a link, scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data, purge and the shortlist; a direction's add, revise and retire through `changeDirection`, its kept reasons and a stale revision refused, and `record_knowledge` refusing one.
+- `src/core/knowledge/knowledgeService.test.ts`: reuse in other words through a link, scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data, purge and the shortlist; a direction's add, revise and retire through `StandingDirections.change`, its kept reasons and a stale revision refused, and `record_knowledge` refusing one.
 - `src/core/core.test.ts` ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line, its reason in the history, and `app_state` listing it.
 - `src/core/knowledge/knowledgeTools.test.ts`, `knowledgeContext.test.ts` and `availability.test.ts`: what the tools and the context say, and the gate.
 - `src/core/knowledge/knowledgeSources.integration.test.ts`: evidence from a real git working copy.
+- `src/core/knowledge/knowledgeRefusals.test.ts`: each write the owner refuses answers in its own words, commits nothing and leaves the collection byte for byte as it was, including a write another write moved past while it was prepared and a read of a scope the reader does not read.
+- `src/core/knowledge/knowledgeReads.test.ts`: a claim's concepts named as its subject and object, the finding that contradicts it, its relations in the captain's window, a revision or source the reader cannot read refused as absent, and a file an older build kept checked against the reader's working copy.
+- `src/core/knowledge/knowledgeRetireMany.test.ts`: `retire_many` retires only what the captain's resolved card names, keeps the exceptions, lists what it left alone, keeps each entry's history and says the list in one feed line.
+- `src/core/knowledge/directions.test.ts`: the older record's active directions carried once, a retry after a quit and a conflicting destination, and the browser's pages and one direction read only where its project remains and the reader may see it.
 - `tests/e2e/knowledge.spec.ts`: a crewmate's knowledge outlives its discarded task and a restart, and the next crewmate finds it in other words through its brief; a stated fact goes to knowledge, not notes.
 - `tests/e2e/knowledge-gate.spec.ts`: stable and alpha share tools, browsing and linked references; unreadable directions pause new work without replacing the collection.
 - `src/core/knowledge/knowledgeBrowse.test.ts`, `browse.test.ts` and `src/core/core.test.ts`: counts, bounded graph, pages, standings, filters, entry reads and unavailability in every build.

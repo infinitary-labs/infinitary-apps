@@ -156,7 +156,6 @@ import {
   standInIntegration,
 } from "./integrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
-import { workingCopyFacts } from "./knowledge/gitFacts";
 import { KnowledgeService } from "./knowledge/knowledgeService";
 import { createAccountStore } from "./models/accountStore";
 import type { ServedModels } from "./models/servedModels";
@@ -852,13 +851,12 @@ export async function createServices(
       },
     },
     announce: (text) => broadcastEvent({ type: "firstmate_note", text }),
-    gitFacts: workingCopyFacts,
     now: ticker.now,
     // The browser reads again after a write commits and after the purge.
     changed: () => broadcastEvent({ type: "knowledge_changed" }),
   });
   // Startup stops if any active direction cannot be carried; no old runtime fallback.
-  knowledge.carryDirections(db);
+  knowledge.directions.carry(db);
   // The durable inbox (design A): rows a dead process left in-flight go
   // back to pending before anything can drain - the boot half of
   // ack-after-handling (at-least-once; a rare duplicate over a silent loss).

@@ -5,12 +5,10 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  type KnowledgeActor,
-  KnowledgeService,
-  type RecordInput,
-} from "../../src/core/knowledge/knowledgeService";
+import type { KnowledgeActor } from "../../src/core/knowledge/access";
+import { KnowledgeService } from "../../src/core/knowledge/knowledgeService";
 import { captureFile, sha256 } from "../../src/core/knowledge/sources";
+import type { RecordInput } from "../../src/core/knowledge/writes";
 import { openDatabase } from "../../src/core/storage/db";
 import { type FindingBody, KnowledgeStore } from "../../src/core/storage/knowledgeStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -166,7 +164,6 @@ export async function seedKnowledge(userDataDir: string): Promise<HarborKnowledg
           .filter((event) => event.kind === "report")
           .map((event) => ({ id: event.id, text: event.text })),
     },
-    gitFacts: async () => ({ commit: "4f1c2a9e7b3d5f6a8c0e", dirty: false }),
     newId: pinnedIds(),
   });
   const crew: KnowledgeActor = {
@@ -174,7 +171,6 @@ export async function seedKnowledge(userDataDir: string): Promise<HarborKnowledg
     taskId: "harbor-retry",
     repoId: HARBOR.id,
     cwd: harborDir,
-    access: "references",
   };
   const checker: KnowledgeActor = { ...crew, taskId: "harbor-check" };
   let request = 0;
@@ -377,7 +373,6 @@ export async function seedKnowledge(userDataDir: string): Promise<HarborKnowledg
       taskId: "website-1",
       repoId: WEBSITE.id,
       cwd: websiteDir,
-      access: "references",
     },
     {
       action: "publish",

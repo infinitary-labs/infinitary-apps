@@ -34,7 +34,7 @@ export const ONE_TIME_CALLERS: Record<string, string> = {
   "src/core/folderMove/taskFolders.ts repairMovedTaskFolders":
     "runs at an open only after a folder move, and rewrites nothing once the rows name the new folder",
   "src/core/tasks/taskService.ts TaskService.purge": "the D-13 purge deletes every task at once",
-  "src/core/knowledge/knowledgeService.ts KnowledgeService.carryDirections":
+  "src/core/knowledge/directions.ts StandingDirections.carry":
     "carries the older record's standing directions into the knowledge collection once, then removes the old tables",
 };
 

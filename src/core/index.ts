@@ -1,8 +1,9 @@
+import type { CoreServices } from "./coreServices";
 import { type CoreDispatch, createCoreDispatcher } from "./dispatcher";
 import { CoreEventBus } from "./events";
 import type { HostCapabilities } from "./host";
 import type { AppPaths } from "./paths";
-import { type CoreServices, createServices } from "./services";
+import { createServices } from "./services";
 import { recordStartAtLogin } from "./storage/startAtLoginRecord";
 
 /**
@@ -112,6 +113,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   };
 }
 
+export type { CoreServices } from "./coreServices";
 export type { CoreDispatch } from "./dispatcher";
 export type { CoreEventSink } from "./events";
 export type {
@@ -121,4 +123,3 @@ export type {
   HostKeychain,
   HostKeychainOutcome,
 } from "./host";
-export type { CoreServices } from "./services";

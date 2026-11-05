@@ -5,7 +5,7 @@ import { createCoreDispatcher } from "../../src/core/dispatcher.ts";
 import type { HostCapabilities } from "../../src/core/host.ts";
 import { renderDirections } from "../../src/core/knowledge/directions.ts";
 import { KnowledgeService } from "../../src/core/knowledge/knowledgeService.ts";
-import type { CoreServices } from "../../src/core/services.ts";
+import type { CoreServices } from "../../src/core/coreServices.ts";
 import { ACTIONS } from "../../src/shared/actions.ts";
 import { effectiveTaskPolicies } from "../../src/shared/taskPolicies.ts";
 import { appPathsFor } from "../../src/core/paths.ts";

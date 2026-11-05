@@ -35,7 +35,7 @@ Bitbucket is recognised by name and behaves as a plain host.
 
 - `github`: `providers/github/githubForge.ts`, GitHub's REST API with the app's own GitHub sign-in as a bearer token (git integration PR 1.2; below), on github.com and on each GitHub Enterprise host at that host's own API (`githubApiBaseFor`).
   `INFINITARY_GITHUB_API_URL` (github.com) and `INFINITARY_GITHUB_ENTERPRISE_API_URL` (every enterprise host) are honoured only in an unpackaged app.
-  The composition root (`src/core/services.ts`) binds every GitHub project to it; no other program's GitHub sign-in is ever read, and the app no longer runs any GitHub tool of the Mac's.
+  The home's forge wiring (`src/core/forge/homeForges.ts`) binds every GitHub project to it; no other program's GitHub sign-in is ever read, and the app no longer runs any GitHub tool of the Mac's.
 - `gitlab`: `providers/gitlab/gitlabForge.ts`, GitLab's REST API (`/api/v4`) with the app’s own sign-in, on gitlab.com and on each self-hosted server ("GitLab merge requests" below).
 - `git` (and `bitbucket`): `providers/plainGit.ts`, git against the repository's own `origin` with prompts off.
 - `none`: `providers/noHost.ts`.
@@ -787,7 +787,7 @@ The store keeps each signed-in JSON GET's `ETag` and answer, sends the tag as `I
 GitHub does not count a signed-in 304 against the hourly allowance, so a watch that finds nothing changed spends nothing, and how often anything is read does not change.
 The key is the address, the `Accept` and API version headers, and a hash of the sign-in, so one sign-in never reads another's answer.
 It keeps nothing for a write, a ranged or unsigned read, a redirect, or an answer that is not JSON, and forgets the oldest answer past its byte bound (`KEPT_ANSWERS_MAX_BYTES`).
-The app builds a new client for each call, so the store lives in `services.ts`, one for the run.
+The app builds a new client for each call, so the store lives in the home's forge wiring (`homeForges.ts`), one for the run.
 
 ## Failures are typed
 
@@ -811,7 +811,7 @@ Every other string the host writes about a change names the project's own host, 
 ## The fence
 
 Everything outside `src/core/forge/` imports `src/core/forge/index.ts`.
-The provider files under `src/core/forge/providers/` are fenced by Biome `noRestrictedImports`: only the seam and the composition root may import one, the way Pi is reached only through `src/core/pi/`.
+The provider files under `src/core/forge/providers/` are fenced by Biome `noRestrictedImports`: only `src/core/forge/` itself may import one, the seam and the home's forge wiring among it, the way Pi is reached only through `src/core/pi/`.
 
 ## Evidence
 
@@ -824,7 +824,7 @@ A computer's own sign-in is `src/core/helper/signIns.test.ts` (GitHub's device f
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
-- The forge seam (git integration PRs 1.1-1.3; `docs/forge.md` is the one home): everything the app asks of where a project lives - a branch's open change, its checks, put it in, close it, what it is called - goes through `src/core/forge/index.ts`; the provider files under `src/core/forge/providers/` are Biome-fenced to the seam and `services.ts`.
+- The forge seam (git integration PRs 1.1-1.3; `docs/forge.md` is the one home): everything the app asks of where a project lives - a branch's open change, its checks, put it in, close it, what it is called - goes through `src/core/forge/index.ts`; the provider files under `src/core/forge/providers/` are Biome-fenced to `src/core/forge/`, the seam and its home wiring (`homeForges.ts`).
   A repo's `host` (`RepoView.host`, migration 40) is stamped from its `origin` by `forgeOf`.
   GitHub is the REST `GitHubForge` with the app's OWN GitHub sign-in (PR 1.2: OAuth device flow, `userData/forges/<host>/` 0700/0600 beside - never inside - the account vault, health on the supervisor's tick where GitHub's 401 is the proof, one `card-forge-<host>` card; the app's own code never runs `gh` or reads another program's sign-in; a crewmate the captain asks to run a program runs it), and GitLab the REST `GitLabForge` with the person's browser or key sign-in; every "Not signed in" answer is a refusal whose ways are the sign-in and keeping the project on this Mac, and crewmates open and check changes with `open_change`/`check_change`; a plain host (and Bitbucket until its file exists) has the working copy sent up as a branch, reads green with zero checks, and is put in by a never-forced fast-forward push; a project kept on this Mac has no host.
   Surfaces name a change by the recorded `changeLabel`, never by parsing a URL, and name a host only on a project whose changes go there - a forge is never required.

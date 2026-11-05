@@ -41,7 +41,7 @@ Usage lands in `usage_events` under the caller's task, or under its `purpose` wh
 
 ## Authority
 
-Jev is fenced to `src/core/decisions/`: a Biome rule (`biome.json`) lets only that folder and the composition root (`src/core/services.ts`) import `decisions/jev/`, so nothing else may build a request to that endpoint or read that key.
+Jev is fenced to `src/core/decisions/`: a Biome rule (`biome.json`) lets only that folder import `decisions/jev/`, the home's decision wiring (`homeDecisions.ts`) among it, so nothing else may build a request to that endpoint or read that key.
 A native model is off by default: `DecisionModels` builds no client unless the row names it, its egress is on, the consent covers the current `DECISION_STATE_VERSION`, and the user's own key is stored.
 The key is entered only in Settings and stored 0600 under `userData/decisions/<id>/` (`DecisionKeyStore`), never in the settings table, an environment variable, a log, a feed line or a card.
 Widening the facts sent (`decisionConsent`) re-shows consent and turns egress off until accepted again.

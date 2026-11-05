@@ -1013,7 +1013,7 @@ export type CrewSupervisorOptions = {
  * brief), the stamp window (`beginLiveTask`/`endLiveTask`, so the running
  * dot follows the crewmate's saves), the commit at the end of each turn,
  * and the three checks the crewmate's tools call. Implemented by
- * `PersonalExtensions` plus the repo registry, wired in services.ts.
+ * `PersonalExtensions` plus the repo registry, wired in personal/homePersonal.ts.
  */
 export type PersonalLiveDelegate = {
   workspaceDir: string;
@@ -12913,7 +12913,7 @@ export class CrewSupervisor {
         // The firstmate lane is the agent's own to drain; the tick pokes it
         // separately (startWatchdog). The retired supervision lane is
         // skipped so leftover rows are never swept as a task's - boot
-        // reassigns them to the Firstmate instead (S7c, `services.ts`).
+        // reassigns them to the Firstmate instead (S7c, `bootRecovery.ts`).
         if (recipient === FIRSTMATE_RECIPIENT || recipient === SUPERVISION_RECIPIENT) continue;
         await this.sweepTaskLane(recipient, now);
       }

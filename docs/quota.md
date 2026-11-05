@@ -159,7 +159,7 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   Each health or allowance read passes its non-secret projection to `AccountVault.noteCredentialRead`; the vault compares that login and updates Claude's row label from the current identity.
   There is no separate focus-time identity scan; the next ordinary reading observes a swap.
   The first login seen is adopted and an unreadable one is no change; a different one clears whatever cut-off stood on the account and is heard through `AccountVault.onLoginChange`.
-  The composition root then forgets the old login's pushed readings (`PushedQuotaStore.forget`), drops its row from the last snapshot so it is not carried forward (`QuotaService.forgetAccount`), and takes a reading at once (`refresh("account-changed")`, which, like `demand`, chains after a refresh in flight instead of joining it).
+  The home's quota wiring (`src/core/quota/homeQuota.ts`) then forgets the old login's pushed readings (`PushedQuotaStore.forget`), drops its row from the last snapshot so it is not carried forward (`QuotaService.forgetAccount`), and takes a reading at once (`refresh("account-changed")`, which, like `demand`, chains after a refresh in flight instead of joining it).
   The sensor keeps each Claude answer under the login it was asked with (`createQuotaFetcher`'s `loginOf`): an answer the old login got is never served from the five-minute ledger, and one that lands after the switch is dropped as `skipped`.
   An unchanged login keeps its spacing, its backoff and its genuine refusal.
   The captain's Recheck allowance (the spent-allowance card, command search, Subscriptions' Refresh) refreshes with `demand`, the one reason that may ask for access (`FirstmateAgent.recheckAllowance`).

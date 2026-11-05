@@ -371,7 +371,7 @@ async function buildRecord() {
   });
   supervisor.startWatchdog(ticker);
   ticker.register("work-presentation", TICK_PERIOD_MS, () => presentation.schedule());
-  // The first launch's crew facts as services.ts wires them (INF-2338). A
+  // The first launch's crew facts as firstLaunch.ts wires them (INF-2338). A
   // record that lacks them, as every launch of the freeze journey's freshly
   // seeded record does, decides them at boot in the startup stretch, and a
   // fact still false is read again at each task close.

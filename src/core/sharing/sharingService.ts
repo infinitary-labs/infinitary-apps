@@ -391,7 +391,7 @@ export class SharingService {
 /**
  * The crew half of the first-run funnel, read off the events every task
  * change already broadcasts (the `broadcastEvent` seam in
- * `src/core/services.ts`): a crewmate starting, its first report, and its
+ * `src/core/eventSeam.ts`): a crewmate starting, its first report, and its
  * task closing. `record` keeps each once per install, so this names the
  * step every time and the first one is what goes.
  */

@@ -60,7 +60,7 @@ The host enforces autonomy on merges: `SettleService` refuses a first-mate `merg
 Observing a confirmed merge of the task's recorded pull request grants no merge permission and does not declare the task finished.
 The shared check watcher records the merge, then closes only a matching `report.merge_completes_task` declaration with no active work, queued instructions, unfinished required children or dependency holds; otherwise it wakes the crewmate once and leaves its work intact.
 An unreachable computer delays only its working-copy retirement, never recording the confirmed merge; the existing placed-copy owner saves and removes it on reconnection.
-Forge providers are fenced to `src/core/forge/index.ts`: the provider files under `src/core/forge/providers/` are importable only by the seam and the composition root (Biome `noRestrictedImports`).
+Forge providers are fenced to `src/core/forge/index.ts`: the provider files under `src/core/forge/providers/` are importable only from `src/core/forge/` itself, the seam and its home wiring (`homeForges.ts`) among it (Biome `noRestrictedImports`).
 The app never runs `gh` or reads another program's sign-in; forge work goes through the forge seam and the app's own sign-in (`docs/forge.md`).
 When the captain's own words ask a crewmate to run a program, that rule is in the crewmate prompt, not a reason to refuse.
 Crewmate isolation is social (system prompt + git worktree), not a filesystem jail.

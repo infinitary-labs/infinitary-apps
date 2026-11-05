@@ -18,8 +18,8 @@ import type { ForgeServer, ForgeSignInProvider } from "./signIns";
  * The forge seam's one door (git integration PR 1.1, `docs/forge.md`).
  * Everything outside `src/core/forge/` imports this file; the provider
  * files under `./providers/` are fenced (Biome `noRestrictedImports`) so
- * only this directory and the composition root reach one, the way Pi is
- * reached only through `src/core/pi/`.
+ * only this directory, its home wiring (`homeForges.ts`) among it, reaches
+ * one, the way Pi is reached only through `src/core/pi/`.
  */
 
 export type {
@@ -127,9 +127,9 @@ export { ForgeSignInStore, ForgeSignIns } from "./signIns";
 /**
  * Every host the app offers its own sign-in to, as the sign-in service asks
  * it: GitHub's device flow for now (PR 1.2). The dev and e2e endpoint
- * overrides are read only off a packaged app. The home's composition root
- * and a computer that runs work's own sign-ins (`src/core/helper/forges.ts`)
- * both start from this list.
+ * overrides are read only off a packaged app. The home's forge wiring
+ * (`homeForges.ts`) and a computer that runs work's own sign-ins
+ * (`src/core/helper/forges.ts`) both start from this list.
  */
 export function forgeSignInProviders(options: {
   packaged: boolean;
@@ -186,9 +186,9 @@ export type {
 
 /**
  * Which implementation serves a kind that needs the person's sign-in. The
- * composition root chooses it: GitHub - github.com and every GitHub
- * Enterprise host - is the REST `GitHubForge` with the app's own sign-in
- * for that host (PR 1.2), and GitLab - gitlab.com and every self-hosted
+ * home's forge wiring (`homeForges.ts`) chooses it: GitHub - github.com and
+ * every GitHub Enterprise host - is the REST `GitHubForge` with the app's
+ * own sign-in for that host (PR 1.2), and GitLab - gitlab.com and every self-hosted
  * server - is the REST `GitLabForge` with the app's own sign-in. A kind with
  * no binding - Bitbucket until its own file exists - is a plain Git host.
  */

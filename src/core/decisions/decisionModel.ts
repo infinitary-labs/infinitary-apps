@@ -46,7 +46,7 @@ import { questionSessionSpec } from "./questionSession";
  *   pins its served bytes (`adapterInstruction`, `adapterText`) gets the
  *   same call it got before this class existed, sha for sha.
  * - `DecisionModels` is the CORE-WIDE service (the captain's annotation,
- *   report section 10): registered once in `services.ts` and handed to
+ *   report section 10): registered once in `homeDecisions.ts` and handed to
  *   whichever module needs it, the way `TaskService` is. Adding a consumer
  *   is adding a question - not a model, not a transport, not a setting.
  *

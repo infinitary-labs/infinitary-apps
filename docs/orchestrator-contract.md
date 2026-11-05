@@ -134,7 +134,7 @@ Each change the first mate makes stays one line and one operation, so the answer
 Acts rather than values never settle or withdraw: every `alwaysTrail` line, the usage refresh, an account renamed or disconnected, a device removed and crew slots reset.
 A project's setup, settings, where it runs and its removal write their own events (`repo_setup`, `repo_configured`, `repo_runs_on`, `repo_unregistered`), one line per change.
 
-The event seam holds the one fact the run needs from Activity: which run Activity's newest line belongs to (`activityRun` in `src/core/services.ts`).
+The event seam holds the one fact the run needs from Activity: which run Activity's newest line belongs to (`activityRun` in `src/core/eventSeam.ts`).
 A step's `personalized` event carries its run's id, and a withdrawal carries `withdrawn`; the seam rewrites or deletes that row in `activity_events` only while it is still the newest line, and any other line ends the run.
 The run is the generic `feedRunSchema` (`src/shared/events.ts`), read through `feedRunOf`: a copy's count of what it sent so far to a Mac being set up rides the same seam as a `device_setup` run (`docs/devices.md`, "How far the copy has gone"), and so ends a captain's run as any other line does.
 `changesFeed` (`src/shared/feed.ts`) makes `feed.recent` read again on a rewrite and on a withdrawal, so Activity draws a run as one line with no change to the panel or to `PanelFeedLine`.

@@ -1,0 +1,257 @@
+import type { DeviceChip, DeviceInvite, DeviceInviteRequest, DeviceSystem } from "@shared/devices";
+import type { FmEvent } from "@shared/events";
+import type { ForgeChangesView } from "@shared/forges";
+import type { ProviderView } from "@shared/providers";
+import type { UsageQuery, UsageSummary, UsageTasks, UsageTasksQuery } from "@shared/usage";
+import type { AxiChannel } from "./axi/channel";
+import type { DecisionModels } from "./decisions/decisionModel";
+import type { HomeAnnouncement } from "./devices/announce";
+import type { Computers } from "./devices/computers";
+import type { DeviceSignIns } from "./devices/deviceSignIns";
+import type { FarBuild } from "./devices/farBuilds";
+import type { NearbyMacs } from "./devices/nearby";
+import type { DevicePairing } from "./devices/pairing";
+import type { PhoneDoor } from "./devices/phoneDoor";
+import type { RemoteLogin } from "./devices/remoteLogin";
+import type { SshConnections } from "./devices/sshConnections";
+import type { FirstRunService } from "./firstRun";
+import type { ForgeSignIns } from "./forge";
+import type { FreezeRecorder } from "./freeze/freezeRecorder";
+import type { Inbox, IntegrationsService, SavedOutsideData } from "./integrations";
+import type { JobManager } from "./jobs/jobManager";
+import type { KnowledgeService } from "./knowledge/knowledgeService";
+import type { ServedModels } from "./models/servedModels";
+import type { ObserveService } from "./observe/observeService";
+import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
+import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
+import type { Flagship } from "./orchestrator/flagship";
+import type { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
+import type { Scheduler } from "./orchestrator/scheduler";
+import type { Ticker } from "./orchestrator/ticker";
+import type { AppPaths } from "./paths";
+import type { PanelMountsHolder } from "./personal/panelMounts";
+import type { PersonalExtensions } from "./personal/personalExtensions";
+import type { LaunchWatch } from "./personal/safeMode";
+import type { AccountVault } from "./pi/accountVault";
+import type { PiAuthService } from "./pi/piAuth";
+import type { AutomaticPlacement } from "./placed/automaticPlacement";
+import type { ComputerLoads } from "./placed/computerLoads";
+import type { ComputerResourceFeed } from "./placed/computerResourceFeed";
+import type { ComputerResources } from "./placed/computerResources";
+import type { LoadLine } from "./placed/loadLine";
+import type { HomeBrowsers } from "./placed/placedBrowsers";
+import type { PlacedWork } from "./placed/placedWork";
+import type { WorkDevices } from "./placed/workDevices";
+import type { MediatedFetch } from "./plugins/mediatedFetch";
+import type { ShellPreferencesService } from "./preferences/shellPreferences";
+import type { AppDataWatch } from "./privacy/appDataWatch";
+import type { QuotaService } from "./quota/quotaService";
+import type { ModelSlots } from "./routing/modelSlots";
+import type { Runbooks } from "./runbooks/runbooks";
+import type { SharingService } from "./sharing/sharingService";
+import type { SqlService } from "./sql/sqlService";
+import type { ActivityStore } from "./storage/activityStore";
+import type { SettingsStore } from "./storage/settingsStore";
+import type { CrewLiveText } from "./tasks/crewTranscript";
+import type { TaskProtocol } from "./tasks/taskProtocol";
+import type { TaskService } from "./tasks/taskService";
+import type { TaskTimeline } from "./tasks/taskTimeline";
+import type { UpdateChecker } from "./update/updateChecker";
+import type { ProjectChanges } from "./workspace/projectChanges";
+import type { ProjectSetups } from "./workspace/projectSetups";
+import type { RepoRegistry } from "./workspace/repoRegistry";
+import type { WorkspaceService } from "./workspace/workspaceService";
+
+/**
+ * The services the app wiring hands the shell (`createServices` in
+ * src/core/services.ts): everything a client-facing dispatcher can reach.
+ */
+export type CoreServices = {
+  runbooks: Runbooks;
+  paths: AppPaths;
+  auth: PiAuthService;
+  vault: AccountVault;
+  flagship: Flagship;
+  scheduler: Scheduler;
+  /** The host's one clock and interval (P5); stopped at dispose. */
+  ticker: Ticker;
+  jobs: JobManager;
+  /** Provider rows across every registered backend, for the Subscriptions tab. */
+  providerViews: () => ProviderView[];
+  /** The pooled availability: vault accounts plus base-runtime customs. */
+  availableModels: () => { provider: string; id: string }[];
+  /**
+   * The decision-model seam (S7): any module may ask it a typed, bounded
+   * question, and Settings reads and writes its one row through it.
+   */
+  decisions: DecisionModels;
+  /** The install's model-slot record behind Settings -> Subscriptions. */
+  slots: ModelSlots;
+  /** The runtime catalog reads (docs/model-lists.md); never awaited on a user path. */
+  servedModels: ServedModels;
+  stopLivenessSweep: () => void;
+  supervisor: CrewSupervisor;
+  /** The one task writer (task-system P0/P1); the record every surface reads. */
+  tasks: TaskService;
+  /**
+   * The one reader of a task's durable entries (docs/task-record.md, "The
+   * unified timeline"): task events, card evidence and threads, and its
+   * crewmate's actions, read-only.
+   */
+  timeline: TaskTimeline;
+  /** The task protocol's reads and emitter (P3): board, detail, projects, feed. */
+  taskProtocol: TaskProtocol;
+  firstmate: FirstmateAgent;
+  /** The first launch: the gate on the stage and the once-only welcome (docs/first-launch.md). */
+  firstRun: FirstRunService;
+  /** The dev-only local seat (roadmap 1.7): boot, Settings reads and writes; refused packaged. */
+  localOrchestrator: LocalOrchestratorService;
+  observe: ObserveService;
+  /** What each crewmate is writing in its running turn, for its Crewmate tab. */
+  crewLive: CrewLiveText;
+  /** Settings → Usage (docs/usage.md): the ledger summed by period, work, day, model and place, and its recent tasks. */
+  usage: {
+    summary: (query: UsageQuery) => UsageSummary;
+    tasks: (query: UsageTasksQuery) => UsageTasks;
+  };
+  /** The mediated fetch seam for plugin frames; serves no grant yet (D6). */
+  pluginFetch: MediatedFetch;
+  /** The `sql` read's engine: the query process over the published views. */
+  sql: SqlService;
+  /** Personal extensions (talk-to-personalize Step 2): the seeded workspace, compiled and served. */
+  personal: PersonalExtensions;
+  /** What the window did with each panel, as it last said (`inf:plugins:personal:mounts`). */
+  panelMounts: PanelMountsHolder;
+  /**
+   * Each task's own browser (docs/task-browser.md): this Mac's, and a task's
+   * on another computer as the captain reads and drives it from here.
+   * Absent on a host with none.
+   */
+  browsers?: HomeBrowsers;
+  /** The task channel its crewmate's commands reach it by (docs/axi-commands.md); absent with no browser. */
+  taskCommands?: AxiChannel;
+  /** The launch marker safe mode reads (Step 5); a clean quit settles it. */
+  launchWatch: LaunchWatch;
+  repos: RepoRegistry;
+  /** The setup card: the Firstmate's proposal and the captain's click on it (docs/fleet.md). */
+  projectSetups: ProjectSetups;
+  projectChanges: ProjectChanges;
+  /** Worktree pool and background trash cleanup (also awaited by core integration tests). */
+  workspace: WorkspaceService;
+  /**
+   * The app's own sign-ins where projects live (git integration PR 1.2):
+   * optional, one per host, read by the forge and the app's git helper.
+   */
+  forges: ForgeSignIns;
+  /** Integrations (docs/integrations.md): the one writer over userData/integrations/. */
+  integrations: IntegrationsService;
+  /** The inbox integration's door, key and receipts (docs/integrations.md, "The inbox"). */
+  integrationInbox: Inbox;
+  /** Words from outside in saved conversations: their sweep and the captain's delete. */
+  savedOutsideData: SavedOutsideData;
+  /**
+   * Pairing (docs/devices.md): the one writer over userData/devices, and the
+   * connection's pairing seam. Nothing is on disk until the first link.
+   */
+  devices: DevicePairing;
+  /**
+   * Your devices as Settings -> Devices lists them, and Remove for a
+   * computer that runs work, which brings its unmerged work here first
+   * (src/core/devices/computers.ts).
+   */
+  computers: Computers;
+  /**
+   * Makes a link for a device, wrapped in the command for one when asked
+   * (docs/devices.md, "Joining by a command"): for this Mac's own window.
+   */
+  inviteDevice: (request: DeviceInviteRequest) => Promise<DeviceInvite>;
+  /**
+   * The app a command on another Mac gets from this one, or null when this
+   * copy cannot send itself (docs/devices.md, "Getting Infinitary from this Mac").
+   */
+  appBundle: () => string | null;
+  /**
+   * The Firstmate a computer that names its system and chip gets from this
+   * one (docs/devices.md, "Infinitary for another system"), or its Ubuntu
+   * package when it asks for that (`deb`), or null when there is none to send.
+   */
+  farBuild: (
+    system: DeviceSystem | undefined,
+    chip: DeviceChip | undefined,
+    kind?: "deb",
+  ) => Promise<FarBuild | null>;
+  /**
+   * Adding a Mac by its address over Remote Login, and updating Firstmate
+   * there (docs/devices.md, "Adding a computer by its address"): the captain's
+   * own click in Settings -> Devices runs each.
+   */
+  remoteLogin: RemoteLogin;
+  /**
+   * Macs nearby with Remote Login on, listed while "By its address" is open
+   * (docs/devices.md, "Macs nearby"): Settings -> Devices asks, and it stops
+   * a minute after the last ask.
+   */
+  nearbyMacs: NearbyMacs;
+  /** This computer's Bonjour announcement to a phone on its list; stopped at dispose. */
+  homeAnnouncement: HomeAnnouncement;
+  /** The door a phone signed in over SSH asks for a link at; closed at dispose. */
+  phoneDoor?: PhoneDoor;
+  /**
+   * The privacy watch on macOS (docs/macos-privacy.md): each "data from
+   * other apps" question a crewmate's search raises, on its task's
+   * timeline; null where there is no privacy log to read.
+   */
+  privacyWatch: AppDataWatch | null;
+  /** The freeze recorder (docs/freeze-recorder.md); null outside an alpha build. Stopped at dispose. */
+  freezeRecorder: FreezeRecorder | null;
+  /**
+   * This Mac's own SSH connection to each computer it added by its address
+   * (docs/devices.md, "Through the home's SSH"): the shell starts it once it
+   * attached the paired connection, and stops it before it closes that
+   * connection.
+   */
+  sshConnections: SshConnections;
+  /**
+   * The home's side of a crewmate's conversation held on a computer that
+   * runs work (src/core/placed/placedSessions.ts): the work requests such a
+   * computer asks, answered for the task its record names on it.
+   */
+  placed: PlacedWork;
+  /**
+   * The core's way to the computers that run work (src/core/placed/workDevices.ts):
+   * the shell attaches the connection once it listens.
+   */
+  workDevices: WorkDevices;
+  /** Demand-only resource facts; does not choose or move a task. */
+  computerResources: ComputerResources;
+  computerResourceFeed: ComputerResourceFeed;
+  loadLine: LoadLine;
+  computerLoads: ComputerLoads;
+  automaticPlacement: AutomaticPlacement;
+  /**
+   * Each computer that runs work signing in to its own subscriptions, as
+   * Settings -> Intelligence draws it (docs/helper.md, "Its own sign-ins").
+   */
+  deviceSignIns: DeviceSignIns;
+  /** The person's open proposed changes where their projects live: the `forge.changes` read. */
+  forgeChanges: () => Promise<ForgeChangesView>;
+  forgeProjects: (host: string) => Promise<import("@shared/forges").ForgeProject[]>;
+  /** The one event seam: feed, Observe, and the renderer. */
+  broadcastEvent: (event: FmEvent) => void;
+  /**
+   * The captain's settled run whose line is Activity's newest, by id, or
+   * null when the newest line is any other (docs/orchestrator-contract.md,
+   * "Settled runs"): only that run's next step rewrites its line in place.
+   */
+  activityRun: () => string | null;
+  quota: QuotaService;
+  settings: SettingsStore;
+  /** The one writer of the captain's presentation preferences; pushes every write. */
+  preferences: ShellPreferencesService;
+  /** The two switches (roadmap 1.4): the one writer of `sharing` and the gate on what leaves for us. */
+  sharing: SharingService;
+  activity: ActivityStore;
+  /** Knowledge (docs/knowledge.md); present in every home, absent only in a helper or test. */
+  knowledge?: KnowledgeService;
+  updateChecker: UpdateChecker;
+};

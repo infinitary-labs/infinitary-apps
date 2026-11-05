@@ -55,8 +55,8 @@ export type QuotaFetcherOptions = {
   now?: () => number;
   /**
    * Endpoint overrides, for exercising the real sensor against a local stub.
-   * Dev and e2e only: the composition root refuses to read them in a packaged
-   * app, the same gate the fixture seam already has.
+   * Dev and e2e only: the stand-in reads (`standIns.ts`) refuse them in a
+   * packaged app, the same gate the fixture seam already has.
    */
   endpoints?: {
     claudeUsageUrl?: string;

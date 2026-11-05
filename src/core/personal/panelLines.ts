@@ -1,7 +1,7 @@
 /**
  * The feed's lines about the captain's panels:
  * one line per change, never a card (`pluginInstaller.ts`,
- * `personalizeTool.ts`, and the safe-mode boot in `services.ts`). A plain
+ * `personalizeTool.ts`, and the safe-mode boot in `bootRecovery.ts`). A plain
  * module, so an e2e spec reads them from their owner (docs/e2e-contracts.md,
  * "Words come from their owner").
  */

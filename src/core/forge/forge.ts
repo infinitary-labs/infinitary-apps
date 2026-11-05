@@ -14,8 +14,8 @@ import type { ForgeWorkflows } from "./workflows";
  * rest of the core knowing which host answers. One `Forge` per repository;
  * `forgeFor` in `./index.ts` picks the implementation from the repository's
  * kind. The provider files live under `./providers/` and are fenced: only
- * this directory and the composition root (`src/core/services.ts`) may
- * import one.
+ * this directory, its home wiring (`homeForges.ts`) among it, may import
+ * one.
  *
  * The kinds answer:
  * - `github`: a pull request, its check runs and commit statuses, a merge at

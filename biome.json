@@ -113,44 +113,7 @@
                       "../../forge/providers/**",
                       "../../../forge/providers/**"
                     ],
-                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ and the composition root (src/core/services.ts) may import one."
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": ["src/core/services.ts"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": ["electron", "electron/*", "electron/**"],
-                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
-                  },
-                  {
-                    "group": [
-                      "../main/**",
-                      "../../main/**",
-                      "../../../main/**",
-                      "../../../../main/**"
-                    ],
-                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
-                  },
-                  {
-                    "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
-                    "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
-                  },
-                  {
-                    "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
-                    "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ may import one, its home wiring (src/core/forge/homeForges.ts) among them."
                   }
                 ]
               }
@@ -196,7 +159,7 @@
                       "../../forge/providers/**",
                       "../../../forge/providers/**"
                     ],
-                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ and the composition root (src/core/services.ts) may import one."
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ may import one, its home wiring (src/core/forge/homeForges.ts) among them."
                   }
                 ]
               }
@@ -234,7 +197,7 @@
                       "../../forge/providers/**",
                       "../../../forge/providers/**"
                     ],
-                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ and the composition root (src/core/services.ts) may import one."
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ may import one, its home wiring (src/core/forge/homeForges.ts) among them."
                   }
                 ]
               }
@@ -272,7 +235,7 @@
                       "../../forge/providers/**",
                       "../../../forge/providers/**"
                     ],
-                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ and the composition root (src/core/services.ts) may import one."
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ may import one, its home wiring (src/core/forge/homeForges.ts) among them."
                   }
                 ]
               }

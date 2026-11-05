@@ -41,7 +41,7 @@ it("the 60s account health check leaves the remembered sign-in alone, so the nex
       };
     },
   };
-  // As services.ts calls it on every quota refresh.
+  // As quota/homeQuota.ts calls it on every quota refresh.
   const quotaTick = () => readClaudeStore(dir, { keychain, env });
 
   expect((await quotaTick()).state).toBe("present");

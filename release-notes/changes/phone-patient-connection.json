@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-patient-connection",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Infinitary on your iPhone and iPad stays in reach on a weak connection",
+      "body": "On a slow or patchy connection, such as mobile data, Infinitary on your iPhone or iPad no longer flips between Out of reach and Reaching your computer. A slow connection is given the time it needs instead of being cut and started again, and a reconnect after a brief drop picks up only what was missed. The line under the top bar stays quiet while a reconnect takes under 20 seconds, says Out of reach once your computer has been silent that long, and the phone taps only when your computer comes back after Out of reach was shown.",
+      "noPicture": "The change is in when the existing reach line appears, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

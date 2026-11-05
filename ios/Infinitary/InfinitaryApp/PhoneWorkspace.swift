@@ -227,7 +227,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     /// INF-1062, the captain's pick: the computer's name left the bar, so one line under it on every tab says the reach
     /// with its time while the computer is not in reach, and nothing while it is. INF-589 item 11: said once.
     @ViewBuilder private var reachLine: some View {
-        if session.contact != "in-reach" {
+        if session.reach != "in-reach" {
             PhoneReach(session: session, oneLine: true)
                 .padding(.horizontal, PhoneTheme.space4).padding(.bottom, PhoneTheme.space2)
                 .frame(maxWidth: .infinity)

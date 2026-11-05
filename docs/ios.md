@@ -34,7 +34,8 @@ The app turns off iOS's transport security (`NSAllowsArbitraryLoads`), because i
 `PinnedTransport` is the app's only URL session, and card web views load only local content.
 An App Store submission or external TestFlight build must give Apple a written reason for that setting: the app trusts only the Mac's pinned key, over TLS 1.3 with the phone's own key, and no narrower setting can name a person's own Tailscale address.
 `PhoneTransportSecurityTests` joins and reconnects at `127.1`, a loopback form iOS also counts as not local, under the app's own Info.plist.
-Pairing has short request deadlines; the socket uses a separate configuration whose deadlines outlast its heartbeat, not the pairing POST's timeouts.
+Pairing has short request deadlines; the socket uses a separate configuration with no request deadline of its own, since that timer also cut a message still arriving after 60 seconds, so the session's silence watch and dial limit own a connection's deadlines.
+The home's own heartbeat still bounds a slow link: its ping waits behind whatever it is sending, so a catch-up that takes more than about 30 to 60 seconds to arrive is cut by the home, not the phone.
 A join sends the invitation's kind and `system: "ios"`; the Mac returns HTTP 201 and kind `view` regardless of that invitation's computer kind.
 Before spending the invitation, a pinned, non-mutating `GET /connection` must return 426 from a reachable candidate.
 Private IPv4 candidates in `100.64.0.0/10` come first, followed by local names and addresses; an unavailable preflight, including a timeout, may try the next candidate.
@@ -96,16 +97,26 @@ Only a delta whose base is not the board held requests a coalesced full board, t
 Only a closed list of non-streaming events that can change the feed requests a coalesced feed refresh; assistant and thinking deltas cause no reads.
 The feed owner exports `FEED_EVENT_TYPES`, with its authoring switch checked exhaustively against that list, and the contract generator derives the Swift `FeedChange` enum from it.
 A gap in numbering drops the cursor and reconnects rather than silently losing updates.
-Successful frames and pongs update the last-heard time; bounded handshake, welcome, read, Leave and heartbeat waits cut a stalled connection.
+Successful frames and pongs update the last-heard time.
+A connection is cut for silence, never because an answer is slow (INF-2668): quiet for `ReadOnlySession.patience` (the captain's 20 s, two missed pings) while nothing is awaited, or for `ReadOnlySession.answerWait` while the welcome or a read is out, since a pong waits behind an answer on its way.
+URLSession's WebSocket reports no bytes before a whole message arrives, so silence is measured in frames and pongs; a read the computer leaves unanswered that long while it sends nothing else, and a Leave unanswered for 15 s, cut it too.
 Each round dials every saved and nearby address together (INF-2157): private IPv4 candidates first and the rest a quarter second later (`ReadOnlySession.privateLead`, RFC 8305's attempt delay), so the private network wins when both answer.
 The first attempt whose WebSocket opens (`PinnedTransport.opened`, after the pinned TLS, the phone's key and the upgrade) is kept and greeted; the others are closed before any hello, so each round makes one welcomed connection.
-A round fails once every attempt failed or none opened within `ReadOnlySession.dialLimit`; the watchdog then bounds the welcome and the first reads, and cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
-While a round dials the reach line says "Reaching your computer…"; "Out of reach" is said only once a whole round failed, and later rounds that try again on their own keep it.
-Reopening the app, or a change of network (`PhoneModel`'s path monitor), looks again at once: a kept connection must answer a ping within `ReadOnlySession.reopenAnswer` or it is cut and redialed, and a wait between rounds ends and the next round dials now.
+A round fails once every attempt failed or none opened within `ReadOnlySession.dialLimit`, which cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
+Failed rounds wait 2, 4 and 8 s and so on, each up to a quarter longer at random, never past `ReadOnlySession.longestWait`, so a computer that comes back is found within 15 s.
+A welcome that replays brings every push the phone missed, so once the phone has read everything since its last reload it says In reach at once and sends only the scene's two small reads and any read a cut left unanswered; a reload, or a change whose result was lost, reads everything first.
+`contact` is where the connection is and gates reads and changes; `reach` is what the reach line and the computer button say.
+`reach` follows `contact`, except that after the computer was in reach it keeps saying In reach while the phone redials, until the computer has been quiet for `patience`, so a cell pause passes unnoticed and a dead path is named within half a minute.
+A deliberate stop, such as the close when iOS ends the app's background time, has nothing to be patient about, so the words follow `contact` at once and a reopen reads Reaching until its dial is in reach.
+Then it says "Reaching your computer…" while a round dials and "Out of reach" once a whole round failed; later rounds that try again on their own keep it.
+Reopening the app, or a change of network once the path has kept still for `PhoneModel.networkSettle`, looks again: a kept connection must answer a ping within `ReadOnlySession.reopenAnswer`, or four measured round trips when that is longer, and a wait between rounds ends and the next round dials now.
+A kept connection that does not answer in time but is still receiving is answering, so the check goes on from the last thing it heard; one silent for a whole window is doubted, never cut at once: the phone dials a replacement and cuts the kept connection only once the replacement opened, unless the kept one is heard first.
+A replacement that does not open leaves the kept connection to the watchdog, and the next reopen checks it again.
 `PhoneReopenTests` reopens against the test home through a route that goes silent under a kept connection, and during a wait between rounds.
+`PhoneWeakLinkTests` holds INF-2666's seven checks of a weak link through the test home's relay, which can slow, delay, stall and drop the path or take it away (`relay-shape`, `relay-stall`, `relay-drop`, `relay-offline`, `relay-online`, `relay-readings`).
 The app keeps only its in-memory view while out of reach and shows its last-heard time.
 Out of reach is said once, by the reach line under the top bar with the time the computer was last heard; the message capsule and a card's reply row dim, and `changesOffLine` puts the Mac's own words (`changesOffWords`, `src/renderer/src/devices/viewWords.ts`) under the message box.
-`ReadOnlySession.returns` counts the times the computer came back in reach after a failed attempt, so the app can mark a return without mistaking the ordinary reconnection when it opens for one.
+`ReadOnlySession.returns` counts the times the computer came back in reach after the reach line said Out of reach, so the app marks a return without mistaking a redial the line never showed, or the ordinary reconnection when it opens, for one.
 A trip to the background keeps the connection for the background time iOS gives the app (INF-1528), so a short trip away comes back in reach on the same connection, with what changed meanwhile already read.
 When iOS ends that time, the app cancels the connection generation before it is suspended, and activation starts it again; an inactive scene such as Control Center does not disconnect.
 A late callback from an old connection cannot clear or overwrite a newer connection.

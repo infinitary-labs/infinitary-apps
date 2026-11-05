@@ -236,7 +236,15 @@ export async function startPhoneHome(
   };
   // INF-2157: a route to the home that can go silent without closing, as a path that died under a kept
   // connection while the app was in the background (Wi-Fi asleep, left the house).
+  // INF-2668: the same route also shapes the path as a weak cell does: a byte rate and a delay each way, a stall
+  // that holds bytes and then delivers them, a drop of every open connection, and no path at all.
   let relayFrozen = false;
+  let relayOffline = false;
+  let relayStalled: ReturnType<typeof setTimeout> | undefined;
+  const relayShape = { delayMs: 0, bytesPerSec: 0 };
+  const relayStarted = Date.now();
+  const relayDials: { openedAt: number; closedAt?: number; down: number; up: number }[] = [];
+  let relayRefused = 0;
   const relayPairs = new Set<{ client: Socket; upstream: Socket }>();
   // Every socket the relay holds, frozen arrivals included: closing the relay server waits for each to end, so
   // the home's close destroys them all rather than wait on a peer that may never hang up.
@@ -245,22 +253,94 @@ export async function startPhoneHome(
     relaySockets.add(socket);
     socket.once("close", () => relaySockets.delete(socket));
   };
+  const relaySeconds = () => (Date.now() - relayStarted) / 1000;
+  // Bytes wait out the delay, then leave at the byte rate; a stall holds them, a freeze drops them.
+  const shapedPipe = (
+    from: Socket,
+    to: Socket,
+    count: (bytes: number) => void,
+    closed: () => boolean,
+  ) => {
+    const queue: { data: Buffer; readyAt: number }[] = [];
+    let tokens = 0;
+    let last = Date.now();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const step = () => {
+      timer = undefined;
+      if (closed()) return;
+      const now = Date.now();
+      if (relayShape.bytesPerSec > 0)
+        tokens = Math.min(
+          relayShape.bytesPerSec / 4,
+          tokens + ((now - last) / 1000) * relayShape.bytesPerSec,
+        );
+      last = now;
+      while (!relayStalled) {
+        const head = queue[0];
+        if (!head || head.readyAt > now) break;
+        if (relayShape.bytesPerSec > 0) {
+          const n = Math.min(head.data.length, Math.floor(tokens));
+          if (n < 1) break;
+          to.write(head.data.subarray(0, n));
+          tokens -= n;
+          count(n);
+          if (n < head.data.length) {
+            head.data = head.data.subarray(n);
+            break;
+          }
+        } else {
+          to.write(head.data);
+          count(head.data.length);
+        }
+        queue.shift();
+      }
+      if (queue.length) timer = setTimeout(step, 20);
+    };
+    from.on("data", (data: Buffer) => {
+      if (relayFrozen) return;
+      queue.push({ data, readyAt: Date.now() + relayShape.delayMs });
+      if (!timer) step();
+    });
+  };
+  const dropRelayPairs = () => {
+    for (const pair of [...relayPairs]) {
+      pair.client.destroy();
+      pair.upstream.destroy();
+    }
+  };
   const relayServer = createTCPServer((client) => {
     client.on("error", () => {});
     holdRelaySocket(client);
+    if (relayOffline) {
+      relayRefused += 1;
+      client.destroy();
+      return;
+    }
     if (relayFrozen) return;
     const upstream = createConnection(port, "127.0.0.1");
     holdRelaySocket(upstream);
     const pair = { client, upstream };
+    const dial: (typeof relayDials)[number] = { openedAt: relaySeconds(), down: 0, up: 0 };
+    relayDials.push(dial);
     relayPairs.add(pair);
     upstream.on("error", () => {});
-    client.on("data", (data) => {
-      if (!relayFrozen) upstream.write(data);
-    });
-    upstream.on("data", (data) => {
-      if (!relayFrozen) client.write(data);
-    });
+    let ended = false;
+    shapedPipe(
+      client,
+      upstream,
+      (bytes) => (dial.up += bytes),
+      () => ended,
+    );
+    shapedPipe(
+      upstream,
+      client,
+      (bytes) => (dial.down += bytes),
+      () => ended,
+    );
     const end = () => {
+      if (ended) return;
+      ended = true;
+      dial.closedAt = relaySeconds();
       relayPairs.delete(pair);
       client.destroy();
       upstream.destroy();
@@ -547,12 +627,62 @@ export async function startPhoneHome(
           break;
         case "POST relay-thaw":
           relayFrozen = false;
+          relayOffline = false;
+          clearTimeout(relayStalled);
+          relayStalled = undefined;
+          relayShape.delayMs = 0;
+          relayShape.bytesPerSec = 0;
+          relayDials.length = 0;
+          relayRefused = 0;
           result = { address: `127.0.0.1:${relayPort}`, at: `127.0.0.1:${port}` };
           break;
         case "POST relay-freeze":
           relayFrozen = true;
           result = { held: relayPairs.size };
           break;
+        // INF-2668: the weak path's controls; each answers with the relay's readings so far.
+        case "POST relay-shape":
+        case "POST relay-stall":
+        case "POST relay-drop":
+        case "POST relay-offline":
+        case "POST relay-online":
+        case "GET relay-readings": {
+          let body = "";
+          for await (const chunk of request) {
+            body += chunk.toString();
+            if (body.length > 1024) throw new Error("A relay request is too large");
+          }
+          const asked = body
+            ? (JSON.parse(body) as { delayMs?: number; bytesPerSec?: number; ms?: number })
+            : {};
+          if (command === "relay-shape") {
+            relayShape.delayMs = Math.max(0, Number(asked.delayMs ?? 0));
+            relayShape.bytesPerSec = Math.max(0, Number(asked.bytesPerSec ?? 0));
+          }
+          if (command === "relay-stall") {
+            clearTimeout(relayStalled);
+            // Held bytes leave on the pipes' next step once the stall ends.
+            relayStalled = setTimeout(
+              () => (relayStalled = undefined),
+              Math.max(1, Number(asked.ms ?? 1000)),
+            );
+          }
+          if (command === "relay-drop") dropRelayPairs();
+          if (command === "relay-offline") {
+            relayOffline = true;
+            dropRelayPairs();
+          }
+          if (command === "relay-online") relayOffline = false;
+          result = {
+            address: `127.0.0.1:${relayPort}`,
+            at: relaySeconds(),
+            shape: { ...relayShape },
+            open: relayPairs.size,
+            refused: relayRefused,
+            dials: relayDials,
+          };
+          break;
+        }
         case "POST routing-legacy":
           legacyRouting = true;
           result = { ok: true };
@@ -1796,6 +1926,7 @@ export async function startPhoneHome(
       unsubscribe("net.server.socket", countAttempt);
       for (const socket of stalledSockets) socket.destroy();
       await new Promise<void>((resolve) => stalledServer.close(() => resolve()));
+      clearTimeout(relayStalled);
       for (const socket of relaySockets) socket.destroy();
       await new Promise<void>((resolve) => relayServer.close(() => resolve()));
       stopConversationReading();

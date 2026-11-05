@@ -116,6 +116,12 @@ import XCTest
 
     /// INF-1062: in reach the bar says nothing; the computer button's value carries the reach for VoiceOver,
     /// and a line under the bar says it only while the computer is not in reach.
+    /// INF-2668: the line says Out of reach once the computer has been quiet for the captain's 20 s, counted from the
+    /// last thing it sent, which a ping every 10 s keeps at most that old; a gone computer is named within 31 s.
+    private func outOfReach(_ message: @autoclosure () -> String = "") {
+        XCTAssertTrue(app.staticTexts["Out of reach"].waitForPresence(timeout: 35), message())
+    }
+
     private func reach(_ words: String, timeout: TimeInterval = 20) {
         let button = app.buttons["computer-details"]
         // Reading an absent button's value fails at once, so a join still under way is waited for first.
@@ -373,7 +379,7 @@ import XCTest
         XCTAssertEqual((afterLaunch["devices"] as? [[String: Any]])?.first?["id"] as? String, phone["id"] as? String)
 
         _ = try await home("offline")
-        XCTAssertTrue(app.staticTexts["Out of reach"].waitForPresence(timeout: 20))
+        outOfReach()
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].exists)
         // INF-589 item 11: out of reach is said once; under the composer, one line says only that changes are off.
         XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'out of reach' AND NOT (label ==[c] 'Out of reach')")).count, 0,
@@ -521,7 +527,7 @@ import XCTest
         try await join()
         // INF-136 #4: a Mac that cannot answer must not keep the phone joined forever.
         _ = try await home("offline")
-        XCTAssertTrue(app.staticTexts["Out of reach"].waitForPresence(timeout: 20))
+        outOfReach()
         computerDetails()
         tapOnPhone(app.buttons["forget-mac"])
         XCTAssertTrue(app.alerts.buttons["Keep it"].firstMatch.waitForPresence(timeout: 10))
@@ -2013,7 +2019,7 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Do this on Test Mac mini."].waitForPresence(timeout: 10))
 
         _ = try await home("offline")
-        XCTAssertTrue(app.staticTexts["Out of reach"].waitForPresence(timeout: 20))
+        outOfReach()
         XCTAssertFalse(app.buttons["close-card"].isEnabled)
         XCTAssertFalse(app.buttons["card-action-body"].isEnabled)
         let atDisconnect = try await home("card-state", method: "GET")
@@ -2122,7 +2128,7 @@ import XCTest
         // phone comes back is drawn from the first cards read while the board read is still out, so its picture is asked
         // before the computer is in reach. The phone asks for it once it is in reach, rather than keeping a broken box.
         _ = try await home("offline")
-        XCTAssertTrue(app.staticTexts["Out of reach"].waitForPresence(timeout: 20))
+        outOfReach()
         let late = try await home("late-picture-card")
         let lateTitle = try XCTUnwrap(late["title"] as? String)
         _ = try await home("online")
@@ -2528,7 +2534,7 @@ import XCTest
         for write in allWrites { XCTAssertEqual((write["actor"] as? [String: Any])?["kind"] as? String, "captain") }
         focusForPhoneTyping(input, in: app); input.typeText("Keep this unsent draft")
         _ = try await home("offline")
-        XCTAssertTrue(app.staticTexts["Out of reach"].waitForPresence(timeout: 20))
+        outOfReach()
         XCTAssertFalse(app.buttons["send-message"].isEnabled)
         verifyPhoneComposerBounds(app: app)
         picture("offline-draft")
@@ -2544,7 +2550,7 @@ import XCTest
         let lastYou = app.staticTexts["last-turn-you"]
         _ = try await home("lose-reply", body: #"{"before":true}"#)
         tapOnPhone(app.buttons["send-message"])
-        XCTAssertTrue(app.staticTexts["Out of reach"].waitForPresence(timeout: 20), app.debugDescription)
+        outOfReach(app.debugDescription)
         XCTAssertTrue(app.staticTexts["last-turn-sending"].exists, "A message whose answer was lost stays marked sending")
         XCTAssertEqual(lastYou.label, "Keep this unsent draft")
         XCTAssertNotEqual(input.value as? String, "Keep this unsent draft", "The box stays clear while the answer is unknown")

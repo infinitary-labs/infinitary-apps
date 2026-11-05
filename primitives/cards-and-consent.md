@@ -112,6 +112,9 @@ A question that needs a structured answer uses the questions in the body ([decis
 - [`src/core/claude/claudeToolSurface.test.ts`](../src/core/claude/claudeToolSurface.test.ts): `CARD_MECHANICS` is served as written.
 - [`src/core/pi/cardLint.test.ts`](../src/core/pi/cardLint.test.ts): the shape rules.
 - [`src/core/orchestrator/cardService.test.ts`](../src/core/orchestrator/cardService.test.ts) and [`src/core/storage/cardStore.test.ts`](../src/core/storage/cardStore.test.ts): stack, threads, revisions and evidence.
+- [`src/core/orchestrator/cardService.hostCards.test.ts`](../src/core/orchestrator/cardService.hostCards.test.ts): the cards the host puts up itself, each by what it shows, what its click does and what it writes.
+- [`src/core/orchestrator/cardService.threads.test.ts`](../src/core/orchestrator/cardService.threads.test.ts): a reply's receipt, every refusal of a line word for word, and who owes a thread its answer.
+- [`src/core/orchestrator/cardService.settleFacts.test.ts`](../src/core/orchestrator/cardService.settleFacts.test.ts): a merge card's words and Merge anyway following the record, and a task's open cards as an emitter reads them.
 - [`src/core/orchestrator/sharedCards.test.ts`](../src/core/orchestrator/sharedCards.test.ts) and [`src/core/tasks/requiredActionCorrection.test.ts`](../src/core/tasks/requiredActionCorrection.test.ts): writes on someone else's card and corrections of a required action's words.
 - [`src/renderer/src/cards/bridgeActions.test.ts`](../src/renderer/src/cards/bridgeActions.test.ts): effects never reach the frame.
 - [`tests/e2e/card-containment.spec.ts`](../tests/e2e/card-containment.spec.ts), [`tests/e2e/card-threads.spec.ts`](../tests/e2e/card-threads.spec.ts), [`tests/e2e/card-evidence.spec.ts`](../tests/e2e/card-evidence.spec.ts) and [`tests/e2e/required-action-row.spec.ts`](../tests/e2e/required-action-row.spec.ts).

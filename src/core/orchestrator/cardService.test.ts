@@ -1,7 +1,6 @@
 import {
   type Card,
   type CardObservation,
-  type CardThread,
   isStoryNote,
   MERGE_CLOSES_WORDS,
   onStage,
@@ -10,6 +9,7 @@ import {
 } from "@shared/cards";
 import { currentCheckSummary } from "@shared/checkSnapshot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setup } from "../../../tests/helpers/cardServiceHarness";
 import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
@@ -17,40 +17,9 @@ import { CardStore } from "../storage/cardStore";
 import { openDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
-import { TaskService } from "../tasks/taskService";
 import { revisionNotice } from "./cardChanges";
-import { CardService, type CardServiceHost, FIRSTMATE_CARD_PREFIX } from "./cardService";
+import { CardService, FIRSTMATE_CARD_PREFIX } from "./cardService";
 import { idleTurn, type ReportSortFacts, sortReport } from "./reportSort";
-
-function setup(db = openInMemoryDatabase(), now = () => 1000) {
-  const tasks = new TaskService({ db, strict: true, now });
-  const cardStore = new CardStore(db);
-  const gates: string[] = [];
-  const pushes: Card[][] = [];
-  const threads: CardThread[] = [];
-  const make = (
-    settleFacts: (taskId: string) => string | undefined = () => undefined,
-    captainResponded?: CardServiceHost["captainResponded"],
-    extra: Partial<CardServiceHost> = {},
-  ) =>
-    new CardService({
-      now,
-      tasks,
-      cardStore,
-      syncCaptainGate: (taskId) => gates.push(taskId),
-      noteCapAnswered: () => {},
-      closeAnsweredTask: () => false,
-      captainResponded,
-      settleFacts,
-      followupNotice: () => undefined,
-      broadcastCrewCounts: () => {},
-      broadcastEvent: () => {},
-      broadcastCards: (cards) => pushes.push(cards),
-      broadcastThread: (thread) => threads.push(thread),
-      ...extra,
-    });
-  return { db, tasks, cardStore, gates, pushes, threads, make };
-}
 
 /** A crewmate's whole risk declaration, as a saved story carries it. */
 const STORY_RISK: Card["risk"] = {

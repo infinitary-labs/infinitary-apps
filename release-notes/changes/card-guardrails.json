@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-guardrails",
+      "reason": "Internal: tests pin the host's own cards, card threads and a merge card's facts before the card service is split, and its tests share one setup; nothing a person sees changes."
+    }
+  ]
+}

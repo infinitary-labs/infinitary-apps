@@ -125,7 +125,7 @@ class RunningProgram {
   ) {
     const tasks = host.tasks;
     const program = this.program();
-    this.recorded = tasks
+    this.recorded = tasks.graph
       .children(programId)
       .filter((child) => child.shape?.program_part)
       .sort((a, b) => (a.shape?.program_part?.call ?? 0) - (b.shape?.program_part?.call ?? 0));
@@ -283,7 +283,9 @@ class RunningProgram {
     const tasks = this.host.tasks;
     while (this.queue.length > 0) {
       const program = this.program();
-      const parts = tasks.children(this.programId).filter((child) => child.shape?.program_part);
+      const parts = tasks.graph
+        .children(this.programId)
+        .filter((child) => child.shape?.program_part);
       const bound = program.shape?.program?.bound ?? 0;
       if (parts.length >= bound) {
         this.host.bounded(program, parts.length);
@@ -500,7 +502,7 @@ export class ProgramRunner {
       this.running.delete(programId),
     );
     this.running.set(programId, running);
-    this.host.tasks.markProgramStarted(programId);
+    this.host.tasks.starts.markProgramStarted(programId);
     return undefined;
   }
 

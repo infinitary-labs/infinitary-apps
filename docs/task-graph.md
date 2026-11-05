@@ -22,7 +22,7 @@ P0 made a task a durable record, P1 made every captain ask land on one; P2 gives
   Only open or active endpoints participate in the mixed traversal; historical diagnoses, green deliveries, closed dependencies and informational links do not.
   A refusal names the complete task-key loop, writes no link or diagnosis, and spends no repair attempt.
   Structural ordinary-link refusal remains in force even for historical links, and dropped blockers retain their existing startup rules.
-- **Derived, never stored** (design principle 4): `blocked`, `held`, `ready`, `deadBlocker` come from `TaskService.flagsOf` at read time.
+- **Derived, never stored** (design principle 4): `blocked`, `held`, `ready`, `deadBlocker` come from `TaskService.graph.flagsOf` at read time.
 
 Start again uses the existing `replaced-by` link: the dropped predecessor stays closed, and a fresh task takes its outgoing waits from still-open or active work atomically (`docs/task-record.md`, "Starting dropped work again").
 **A wait follows moved work** (INF-1826).
@@ -57,10 +57,10 @@ A wait on another task ends the same way when that task closes: one `dependency-
 A baseline wait also resumes sooner, when the default branch's own run of the check it names passes (`docs/forge.md`, "A main failure's wake").
 A wait the first mate recorded can end sooner: a report from the task it waits on wakes the first mate, which passes on a finding the waiter was held for and removes the link (`docs/report-sort.md`, "A hold on a task's finding ends when that task reports it").
 The wait's end opens a new idle episode, so the turn it starts is the task's own.
-Its one writer on an active row is a crewmate's report that names `check_back` (`TaskService.recordReport`, `docs/report-sort.md` "A check-back on a running job"); the next turn's start clears it with the rest of that report's declaration.
+Its one writer on an active row is a crewmate's report that names `check_back` (`TaskService.turns.recordReport`, `docs/report-sort.md` "A check-back on a running job"); the next turn's start clears it with the rest of that report's declaration.
 A crewmate declares a wait with `waiting_on_captain` (`docs/report-sort.md`); the host does not parse a free-text wait.
 
-A host card with actions and no task files an open `operation` row, `captain` gate ref = the card id (`TaskService.fileHostCardTask`), so the host's own asks count as waiting on the captain while their shown decisions are ready, like every other card.
+A host card with actions and no task files an open `operation` row, `captain` gate ref = the card id (`TaskService.capture.fileHostCardTask`), so the host's own asks count as waiting on the captain while their shown decisions are ready, like every other card.
 An explicit choice closes the row `done/answered`; host withdrawal records `dropped/superseded`, and a recorded terminal dismissal records `dropped/cancelled`, with no feed line (host bookkeeping).
 The minus is not a terminal dismissal: it keeps the host card, its operation row and its captain gate open without choosing or declining.
 The sweep closes a row whose card is gone and files one for a host card that has none, as it does for first mate decision rows (`openCardTaskFor` finds either).
@@ -81,10 +81,10 @@ A detached follow-up must stay findable, so its origin is shown wherever the par
 
 ## The close rules
 
-A parent closes only when every child is closed (`TaskService.closeRefusal` names the open children by key) - except delivery machinery: a child the HOST commissioned as part of delivering its parent (a `host:*` kind_source: the independent review, and the independent assessment of a kept merge's undecided repair; `TaskService.isDeliveryChild`) carries no intent of its own, so it never holds the parent's close, keeps the parent the host gave it (`setParent` refuses), and is retired by the supervisor whenever the parent closes, in any direction (`docs/delivery-rigor.md`, the reviewed sequence).
-The parent edge is the only stored review-to-builder join: which review a builder's verdict came from is read off it (`TaskService.verdictReviewOf`), never cached on the builder.
+A parent closes only when every child is closed (`TaskService.graph.closeRefusal` names the open children by key) - except delivery machinery: a child the HOST commissioned as part of delivering its parent (a `host:*` kind_source: the independent review, and the independent assessment of a kept merge's undecided repair; `TaskService.isDeliveryChild`) carries no intent of its own, so it never holds the parent's close, keeps the parent the host gave it (`setParent` refuses), and is retired by the supervisor whenever the parent closes, in any direction (`docs/delivery-rigor.md`, the reviewed sequence).
+The parent edge is the only stored review-to-builder join: which review a builder's verdict came from is read off it (`TaskService.graph.verdictReviewOf`), never cached on the builder.
 The host records no `blocks` edge from a review onto its builder (INF-1876): whether a merge waits for the verdict is the care runbook's guidance, and the edge an earlier release recorded is removed at the upgrade (`docs/saved-data-compatibility.md`, "The review's edge").
-A task also does not close while something it waits on is still live work - open or active (`TaskService.blockerRefusal`, over `blockersHoldingClose`): that is what `blocks_me` promises, and blocks edges otherwise gate dispatch alone, which says nothing about work already under way.
+A task also does not close while something it waits on is still live work - open or active (`TaskService.graph.blockerRefusal`, over `blockersHoldingClose`): that is what `blocks_me` promises, and blocks edges otherwise gate dispatch alone, which says nothing about work already under way.
 That wait is a soft hold (`waits`): the captain's recorded override passes it, and a close refused on it says so (`docs/delivery-rigor.md`, "The holds").
 A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
 A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does (`closeGateRefusal`, `settleRefusals.ts`).
@@ -162,7 +162,7 @@ The prompt's class 4 is "spawn or plan"; the C5 dispatch extractor sorts `create
 Crewmates (`src/core/pi/crewmateTaskTools.ts`, the same pair over Claude's tool server in `src/core/claude/claudeTaskTools.ts`): `file_followup` (title, goal, why, `blocks_me`, and for a test failure `test_failure` plus `test_path`) files an on-request task of its own - never a child - joined to the crewmate's task by a `discovered-from` edge and placed in its project and repo, and the first mate hears one `[fm-op]` that names the key, whether it holds the origin up, and the choices.
 The host stores `test_path` and answers with the existing key instead of filing a second open or active row for the same path; a test failure with no path is refused.
 A test that fails outside the crewmate's change is a follow-up only when it also fails on the untouched main line, otherwise one line in the report.
-A report's `waits_on` records an existing open task its work cannot go on without as a `blocks` link that holds no merge, on the task carrying its work when a `replaced-by` link moved it (`TaskService.carrierOf`), refusing an unknown, closed, own or circular key (`TaskService.linkWaits`; `docs/report-sort.md`, "A wait on work nobody has started is the first mate's turn").
+A report's `waits_on` records an existing open task its work cannot go on without as a `blocks` link that holds no merge, on the task carrying its work when a `replaced-by` link moved it (`TaskService.graph.carrierOf`), refusing an unknown, closed, own or circular key (`TaskService.graph.linkWaits`; `docs/report-sort.md`, "A wait on work nobody has started is the first mate's turn").
 `note_progress` writes one `progress` event on the crewmate's own timeline with `feed = 0`.
 Both register through `CrewmateSpec.onFollowup` / `onProgress`.
 

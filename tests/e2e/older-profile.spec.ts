@@ -470,7 +470,7 @@ function seedHistory(userDataDir: string): string {
       },
     );
     cards.resolve(cards.get(card) as Card, "flush", "flush");
-    tasks.recordReport(HISTORY_ID, {
+    tasks.turns.recordReport(HISTORY_ID, {
       text: "The Mac check passes with the queue flush. I kept it and removed the retry.",
       summary: "The Mac check passes with the queue flush.",
       declared: { result: KEPT },
@@ -647,7 +647,7 @@ test("a task's history an older release saved reads the same after the upgrade",
       app = undefined;
       const { db, tasks } = taskWriters(userDataDir, Date.now());
       try {
-        tasks.recordReport(HISTORY_ID, {
+        tasks.turns.recordReport(HISTORY_ID, {
           text: "Two more nightly runs passed with the queue flush.",
           declared: { result: NEWER },
         });
@@ -1033,13 +1033,13 @@ function seedRunningWork(userDataDir: string): Record<keyof typeof RUNNING, stri
       },
     });
     const waitingFile = sessionFile(RUNNING.waiting, "colors-1");
-    tasks.setSessionFile(RUNNING.waiting, waitingFile, facts(waitingFile));
+    tasks.turns.setSessionFile(RUNNING.waiting, waitingFile, facts(waitingFile));
     tasks.updateFields(
       RUNNING.waiting,
       { policies: { delivery: null, autonomy: true } },
       "firstmate",
     );
-    tasks.recordReport(RUNNING.waiting, {
+    tasks.turns.recordReport(RUNNING.waiting, {
       text: "Two palettes both pass contrast. Which one should the chart use?",
       declared: {
         wait: { reason: WAITING_REASON },
@@ -1054,7 +1054,7 @@ function seedRunningWork(userDataDir: string): Record<keyof typeof RUNNING, stri
       outcome: "The axis starts at zero.",
     });
     // A token from before conversations were recorded: no conversation names it.
-    tasks.setSessionFile(RUNNING.legacy, sessionFile(RUNNING.legacy, "axis-older"));
+    tasks.turns.setSessionFile(RUNNING.legacy, sessionFile(RUNNING.legacy, "axis-older"));
     tasks.close(RUNNING.legacy, { status: "done", reason: "merged", actor: "host" });
 
     tasks.create({
@@ -1064,9 +1064,9 @@ function seedRunningWork(userDataDir: string): Record<keyof typeof RUNNING, stri
       repoId: null,
       actor: "captain",
     });
-    tasks.commitPlacement(RUNNING.placed, () => miniPlacement());
+    tasks.placement.commitPlacement(RUNNING.placed, () => miniPlacement());
     const placedFile = `/Users/mini/infinitary/crewmates/${RUNNING.placed}/sessions/render-1.jsonl`;
-    tasks.setSessionFile(RUNNING.placed, placedFile, {
+    tasks.turns.setSessionFile(RUNNING.placed, placedFile, {
       ...facts(placedFile),
       computer: MINI.name,
       device_id: MINI.id,
@@ -1275,7 +1275,7 @@ test("running work and policy inputs an older release saved read the same after 
       const { db, tasks } = taskWriters(userDataDir, Date.now());
       try {
         tasks.updateFields(RUNNING.waiting, { policies: { rigor: "quick" } }, "firstmate");
-        tasks.recordReport(RUNNING.waiting, {
+        tasks.turns.recordReport(RUNNING.waiting, {
           text: "I used the first palette.",
           declared: { finished: true },
         });
@@ -1669,7 +1669,7 @@ function seedDeliveryEffects(userDataDir: string, project: ChartProject): void {
       mergeAuthorization: keptApproval(project, "moved", moved.first),
     });
     seedDelivery(tasks, DELIVERED.pending, changeOn("pending", pending.head));
-    tasks.setPendingSettle(DELIVERED.pending, {
+    tasks.delivery.setPendingSettle(DELIVERED.pending, {
       mode: "merge-pr",
       actor: "captain",
       requestedAt: Date.now() - 60_000,

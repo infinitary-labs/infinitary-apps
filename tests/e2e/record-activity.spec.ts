@@ -53,7 +53,7 @@ async function seeded(): Promise<{ userDataDir: string; transcript: string }> {
   });
   tasks.note(ID, "a fresh working copy of main", { news: false });
   tasks.noteProgress(ID, "The rerun failed on a different journey; reading its log.");
-  tasks.recordReport(ID, {
+  tasks.turns.recordReport(ID, {
     text: "The Mac check failed again on another journey. I filed it as its own task.",
     summary: "The rerun failed on a different journey, and I filed it.",
   });
@@ -65,7 +65,7 @@ async function seeded(): Promise<{ userDataDir: string; transcript: string }> {
     },
   };
   const words = replyWordsSpan(reply);
-  tasks.recordSteer(ID, {
+  tasks.turns.recordSteer(ID, {
     text: renderWake(reply),
     actor: "captain",
     outcome: "mid-turn",
@@ -81,7 +81,7 @@ async function seeded(): Promise<{ userDataDir: string; transcript: string }> {
   tasks.note(ID, "The captain approved merging #977.", { news: true });
   // INF-125: a historical fixture's unavailable live boundary remains explicit, not a pass.
   const head = "a".repeat(40);
-  tasks.recordLiveValidation(
+  tasks.delivery.recordLiveValidation(
     ID,
     {
       kind: "plan",
@@ -114,7 +114,7 @@ async function seeded(): Promise<{ userDataDir: string; transcript: string }> {
   writeFileSync(poster, DEMO_POSTER.bytes);
   // e2e-fixture: input -- supply the real fixture recording to the evidence keeper
   writeFileSync(recording, GIF_DEMO_RECORDING.bytes);
-  tasks.recordLiveValidation(
+  tasks.delivery.recordLiveValidation(
     ID,
     await keepValidationEvidence(
       {
@@ -167,7 +167,7 @@ async function seeded(): Promise<{ userDataDir: string; transcript: string }> {
   );
   seedDelivery(tasks, ID, { validationHead: head });
   tasks.close(ID, { status: "done", reason: "merged", actor: "host" });
-  tasks.markWorkspaceRemoved(ID);
+  tasks.placement.markWorkspaceRemoved(ID);
   db.close();
   return { userDataDir, transcript };
 }
@@ -297,13 +297,13 @@ function seededWithSession(): { userDataDir: string; described: string[] } {
   at = base + 7 * 60_000;
   tasks.noteProgress(ACTED, "The journey passes alone; running it three times.");
   at = base + 9 * 60_000;
-  tasks.recordReport(ACTED, {
+  tasks.turns.recordReport(ACTED, {
     text: "The journey waits for the panel's data now. It passed three runs in a row.",
     summary: "The journey waits for its data now.",
   });
   at = base + 12 * 60_000;
   tasks.close(ACTED, { status: "done", reason: "merged", actor: "host" });
-  tasks.markWorkspaceRemoved(ACTED);
+  tasks.placement.markWorkspaceRemoved(ACTED);
   db.close();
 
   const iso = (minutes: number) => new Date(base + minutes * 60_000).toISOString();

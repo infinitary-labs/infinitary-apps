@@ -95,14 +95,14 @@ describe("handed-on result completion", () => {
     await expect(
       CrewSupervisor.prototype.handFiles.call(supervisor, "finder", "builder"),
     ).rejects.toThrow("no reported files");
-    expect(tasks.resultHandoffOf("finder")).toBe(false);
+    expect(tasks.capture.resultHandoffOf("finder")).toBe(false);
   });
 
   it.each(["answer", "change"] as const)(
     "closes a reported %s handed to another task without an internal-step declaration",
     async (kind) => {
       const { tasks, service, cardCloses } = fixture(kind);
-      tasks.recordResultHandoff("finder", { taskId: "builder" });
+      tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
       expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: true });
       expect(tasks.get("finder")).toMatchObject({ status: "done", closedReason: "answered" });
       expect(cardCloses).toEqual(ANSWERED_CLOSE);
@@ -123,7 +123,7 @@ describe("handed-on result completion", () => {
       actions: [{ id: "use", label: "Use it" }],
     } as Card;
     expect(service.closeAnsweredTask(card, "use", "captain")).toBe(false);
-    expect(tasks.resultHandoffOf("finder")).toBe(true);
+    expect(tasks.capture.resultHandoffOf("finder")).toBe(true);
     expect(cardCloses).toEqual([]);
     expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: true });
     expect(tasks.get("finder")?.status).toBe("done");
@@ -137,7 +137,7 @@ describe("handed-on result completion", () => {
       action,
       "captain",
     );
-    expect(tasks.resultHandoffOf("finder")).toBe(false);
+    expect(tasks.capture.resultHandoffOf("finder")).toBe(false);
   });
 
   it("does not count a continuing consent card as a result", () => {
@@ -152,18 +152,18 @@ describe("handed-on result completion", () => {
       "allow",
       "captain",
     );
-    expect(tasks.resultHandoffOf("finder")).toBe(false);
+    expect(tasks.capture.resultHandoffOf("finder")).toBe(false);
   });
 
   it("requires the source's report even when files were delivered", async () => {
     const { tasks, service } = fixture("change", false);
-    tasks.recordResultHandoff("finder", { taskId: "builder" });
+    tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
     expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
   });
 
   it("keeps a task-owned pull request on its normal delivery path", async () => {
     const { tasks, service } = fixture("change");
-    tasks.recordResultHandoff("finder", { taskId: "builder" });
+    tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
     seedDelivery(tasks, "finder", { prNumber: 497 });
     expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
     expect(tasks.get("finder")?.status).toBe("active");
@@ -171,7 +171,7 @@ describe("handed-on result completion", () => {
 
   it("preserves the open-child close rule after a result handoff", async () => {
     const { tasks, service } = fixture("change");
-    tasks.recordResultHandoff("finder", { taskId: "builder" });
+    tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
     seedTask(tasks, {
       id: "child",
       title: "Check screenshot dimensions",
@@ -197,13 +197,13 @@ describe("handed-on result completion", () => {
     { dirty: false, unlandedCommits: 1 },
   ])("keeps unmerged work after handoff: %j", async (work) => {
     const { tasks, service, workStatus } = fixture("change");
-    tasks.recordResultHandoff("finder", { taskId: "builder" });
-    tasks.dispatch("finder", {
+    tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
+    tasks.starts.dispatch("finder", {
       workspace: { repoDir: "/project", worktreeDir: "/working-copy", branch: "finder" },
       assignee: "crewmate",
       accountId: null,
     });
-    tasks.setActivity("finder", "idle");
+    tasks.turns.setActivity("finder", "idle");
     workStatus.mockResolvedValue(work);
     expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
     expect(tasks.get("finder")?.status).toBe("active");
@@ -211,7 +211,7 @@ describe("handed-on result completion", () => {
 
   it("keeps a question and its result open after handoff", async () => {
     const { tasks, service, cards } = fixture();
-    tasks.recordResultHandoff("finder", { taskId: "builder" });
+    tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
     cards.push({
       id: "card-finder-result",
       taskId: "finder",

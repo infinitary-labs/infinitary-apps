@@ -6,7 +6,8 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "../tasks/seedTask";
-import { TaskService, TIMELINE_CAP } from "../tasks/taskService";
+import { TaskService } from "../tasks/taskService";
+import { TIMELINE_CAP } from "../tasks/timelineCompaction";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import {
   type ProgramEnd,
@@ -85,11 +86,11 @@ function harness(script: string, bound: number) {
   };
   /** A part's crewmate reports and the part closes, as the supervisor does. */
   const answer = (call: number, text: string, result?: Record<string, unknown>) => {
-    const part = tasks
+    const part = tasks.graph
       .children(program.id)
       .find((child) => child.shape?.program_part?.call === call);
     if (!part) throw new Error(`no part for call ${call}`);
-    tasks.recordReport(part.id, { text, ...(result ? { declared: { result } } : {}) });
+    tasks.turns.recordReport(part.id, { text, ...(result ? { declared: { result } } : {}) });
     tasks.close(part.id, { status: "done", reason: "answered", actor: "host" });
   };
   const lines = (text: string) =>
@@ -214,7 +215,7 @@ describe("the program runner", () => {
     await vi.waitFor(() => expect(h.filed).toHaveLength(2), WAIT);
     h.answer(1, "Capped gauge.ts.");
     await vi.waitFor(() => expect(h.bounded).toContain(2), WAIT);
-    expect(h.tasks.children(h.program.id)).toHaveLength(2);
+    expect(h.tasks.graph.children(h.program.id)).toHaveLength(2);
     // The captain agreed to one more; the first mate raises the bound on the captain's words.
     expect(h.tasks.updateFields(h.program.id, { programBound: 3 }, "firstmate")).toEqual([
       "bound 3",
@@ -236,7 +237,7 @@ describe("the program runner", () => {
     );
     h.start();
     await vi.waitFor(() => expect(h.filed).toHaveLength(1), WAIT);
-    const part = h.tasks.children(h.program.id)[0] as TaskRecord;
+    const part = h.tasks.graph.children(h.program.id)[0] as TaskRecord;
     h.tasks.close(part.id, { status: "dropped", reason: "superseded", actor: "firstmate" });
     expect(await h.end).toEqual({
       value: {
@@ -376,8 +377,8 @@ describe("the program runner", () => {
     await vi.waitFor(() => expect(h.filed).toHaveLength(1), WAIT);
     // The part's crewmate reports and the app quits before the report closed it.
     first.dispose();
-    const part = h.tasks.children(h.program.id)[0] as TaskRecord;
-    h.tasks.recordReport(part.id, { text: "Capped the meter." });
+    const part = h.tasks.graph.children(h.program.id)[0] as TaskRecord;
+    h.tasks.turns.recordReport(part.id, { text: "Capped the meter." });
     h.start();
     expect(await h.end).toEqual({ value: "Capped the meter." });
     expect(h.tasks.get(part.id)?.status).toBe("done");
@@ -423,7 +424,7 @@ describe("the program runner", () => {
     expect(timeline.length).toBeLessThanOrEqual(TIMELINE_CAP);
     expect(timeline.some((event) => event.kind === "compacted")).toBe(true);
     expect(h.lines("checked file 0")).toBe(0);
-    expect(h.tasks.programStarted(h.program.id)).toBe(true);
+    expect(h.tasks.starts.programStarted(h.program.id)).toBe(true);
 
     first.dispose();
     h.start();
@@ -433,6 +434,6 @@ describe("the program runner", () => {
     expect(h.asked).toEqual(["Which module first?"]);
     expect(h.filed).toHaveLength(1);
     expect([h.lines("checked file 0"), h.lines(`checked file ${lines - 1}`)]).toEqual([0, 1]);
-    expect(h.tasks.programStarted(h.program.id)).toBe(true);
+    expect(h.tasks.starts.programStarted(h.program.id)).toBe(true);
   });
 });

@@ -254,7 +254,7 @@ describe("ChangeMerge", () => {
     const { tasks, repos, service, forge } = setup();
     await insertDirectPrTask(tasks, repos);
     recordPr(tasks, 23);
-    tasks.updateChangePresentation("ab12cd34", () => ({ revisions: [], receipts: [] }));
+    tasks.delivery.updateChangePresentation("ab12cd34", () => ({ revisions: [], receipts: [] }));
     await service.checkTool.checkForCrew("ab12cd34");
     expect(service.checks.reading("ab12cd34")?.overall).toBe("green");
     const result = await service.merges.merge("ab12cd34");

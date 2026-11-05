@@ -53,9 +53,10 @@ import { holdingWaits, waitsSince } from "./holdingWaits";
 import { queueWaitOf } from "./queueWait";
 import { type ConcernedEventView, condenseActivity, reportHeadline } from "./recordActivity";
 import { taskFeedLine } from "./taskFeed";
-import { type TaskChange, TaskService } from "./taskService";
+import { TaskService } from "./taskService";
 import type { TaskTimeline } from "./taskTimeline";
 import { type TaskWaitFacts, taskWaitsOf } from "./taskWaits";
+import type { TaskChange } from "./taskWriter";
 
 /**
  * The task protocol's core side (task-system design section 9, P3): the
@@ -82,7 +83,7 @@ import { type TaskWaitFacts, taskWaitsOf } from "./taskWaits";
  * host fact that moved with no row written (`TaskChange.presentation`) has
  * every row's live facts read again, and the rows they moved on rebuilt; a
  * purge or an import rebuilds everything. The cached board equals a build
- * from nothing (`taskProtocol.test.ts` pins it after every shape of write).
+ * from nothing (`taskProtocol.cache.test.ts` pins it after every shape of write).
  *
  * The board is the LIVE set (open, active, closed within BOARD_RECENT_MS,
  * and the parents of those); history stays in the database and is read one
@@ -95,7 +96,7 @@ import { type TaskWaitFacts, taskWaitsOf } from "./taskWaits";
  * a DIFF of two snapshots, never a replay of the writer's bookkeeping, so
  * a derived change (a blocker closing, a card leaving the stack) travels
  * exactly as a written one does and applying it reproduces the fresh
- * snapshot by construction (`taskProtocol.test.ts`). The first push after
+ * snapshot by construction (`taskProtocol.push.test.ts`). The first push after
  * a purge, and the first push ever, are snapshots: a delta needs a base.
  */
 
@@ -614,7 +615,7 @@ export class TaskProtocol {
       // shaped before the axis existed, which shipped as a change.
       deliverable: record.shape?.deliverable ?? null,
       // The basis as the record names it, its verdict derived now.
-      basis: tasks.basisOf(record),
+      basis: tasks.graph.basisOf(record),
       skippedPlanBecause: record.shape?.skipped_plan_because ?? null,
       brief: record.prompt,
       outcome: readableOutcome(record, timeline),
@@ -633,10 +634,10 @@ export class TaskProtocol {
       }),
       said: this.options.said?.(record) ?? null,
       plan: planOf(timeline),
-      closing: closingOf(record, events, tasks.carriedOn(id)),
+      closing: closingOf(record, events, tasks.graph.carriedOn(id)),
       problem: problemOf(events),
       ...(hold ? { hold: taskHoldWords(hold) } : {}),
-      asks: tasks.asksFor(id).map((ask) => ({
+      asks: tasks.capture.asksFor(id).map((ask) => ({
         id: ask.id,
         at: ask.at,
         text: ask.text,
@@ -744,7 +745,9 @@ export class TaskProtocol {
             }
           : {}),
         closedReason: record.closedReason,
-        ...(replaced(record) ? { replacedBy: this.options.tasks.replacementOf(record.id) } : {}),
+        ...(replaced(record)
+          ? { replacedBy: this.options.tasks.graph.replacementOf(record.id) }
+          : {}),
         seq: change.seq,
       });
     }
@@ -826,13 +829,13 @@ export class TaskProtocol {
     const shown = this.shownOf(records, cutoff, minimized);
     const ids = [...shown];
     const links = new Map<string, TaskLink>();
-    for (const link of tasks.linksTouching(ids)) links.set(edgeKey(link), link);
+    for (const link of tasks.graph.linksTouching(ids)) links.set(edgeKey(link), link);
     this.readEnds(records, shown, links);
     const childCounts = tasks.childCounts(ids);
     const rows = ids.map((id) => records.get(id) as TaskRecord);
     // What replaced each dropped row, read for all of them at once; one at
     // a time, each read its task's whole timeline (INF-2070).
-    const replacedBy = tasks.replacementsOf(rows.filter(replaced).map((record) => record.id));
+    const replacedBy = tasks.graph.replacementsOf(rows.filter(replaced).map((record) => record.id));
     const graph = this.graphOf(
       [...records.values()],
       [...links.values()],
@@ -932,7 +935,7 @@ export class TaskProtocol {
       links.delete(key);
       around(link);
     }
-    for (const link of tasks.linksTouching([...reread])) {
+    for (const link of tasks.graph.linksTouching([...reread])) {
       links.set(edgeKey(link), link);
       around(link);
     }
@@ -961,7 +964,7 @@ export class TaskProtocol {
     }
     // What replaced the rebuilt dropped rows.
     const replacedIds = [...rebuild].filter((id) => replaced(records.get(id) as TaskRecord));
-    const replacements = tasks.replacementsOf(replacedIds);
+    const replacements = tasks.graph.replacementsOf(replacedIds);
     for (const id of replacedIds) {
       const replacement = replacements.get(id);
       if (replacement) cache.replacedBy.set(id, replacement);
@@ -1085,7 +1088,8 @@ export class TaskProtocol {
         place: this.options.place?.(record),
         computerMove: record.kind === "work" ? this.options.computerMove?.(record) : undefined,
         startAttempt:
-          this.options.startAttempt?.(record.id) ?? this.options.tasks.startAttemptOf(record.id),
+          this.options.startAttempt?.(record.id) ??
+          this.options.tasks.starts.startAttemptOf(record.id),
       }),
       [record],
     );
@@ -1131,7 +1135,7 @@ export class TaskProtocol {
     const { tasks } = this.options;
     const ids = rows.map((record) => record.id);
     const known = new Set(ids);
-    const links = tasks.linksTouching(ids);
+    const links = tasks.graph.linksTouching(ids);
     const ends = new Set<string>();
     for (const link of links) {
       if (!known.has(link.fromId)) ends.add(link.fromId);
@@ -1140,7 +1144,7 @@ export class TaskProtocol {
     const all = [...rows, ...tasks.getMany([...ends])];
     // What replaced each dropped row, read for all of them at once; one at
     // a time, each read its task's whole timeline (INF-2070).
-    const replacedBy = tasks.replacementsOf(rows.filter(replaced).map((record) => record.id));
+    const replacedBy = tasks.graph.replacementsOf(rows.filter(replaced).map((record) => record.id));
     return this.graphOf(all, links, replacedBy, tasks.childCounts(ids), cards);
   }
 
@@ -1312,7 +1316,7 @@ export class TaskProtocol {
     const open = record.status === "open";
     // An active row shows the blockers that still hold its CLOSE - a
     // marked edge, what a `blocks_me` follow-up files against the task a
-    // crewmate is holding (TaskService.flagsOf). A recorded wait keeps its
+    // crewmate is holding (TaskService.graph.flagsOf). A recorded wait keeps its
     // place in blockedBy and draws the arrow, and holds no close. A dropped
     // blocker holds no close, so it is no dead wait there either.
     const holdingClose = liveBlockers.filter((blocker) =>
@@ -1321,7 +1325,7 @@ export class TaskProtocol {
     const blocked = open
       ? waiting.length > 0
       : record.status === "active" && holdingClose.length > 0;
-    // A gate holds an active row as it holds an open one (TaskService.flagsOf).
+    // A gate holds an active row as it holds an open one (TaskService.graph.flagsOf).
     const held = (open || record.status === "active") && record.gate !== null;
     const deadBlocker = open && waiting.some((blocker) => blocker.status === "dropped");
     // The decision card the captain must answer: one raised on this task,
@@ -1532,7 +1536,7 @@ type BoardCache = {
   links: Map<string, TaskLink>;
   /** Each shown parent's child counts (`TaskService.childCounts`). */
   childCounts: Map<string, { total: number; closed: number }>;
-  /** What replaced each shown dropped or superseded row (`TaskService.replacementsOf`). */
+  /** What replaced each shown dropped or superseded row (`TaskService.graph.replacementsOf`). */
   replacedBy: Map<string, string>;
   /** The graph around the shown rows, as the last read built it. */
   graph: Graph;
@@ -1591,7 +1595,7 @@ type Graph = {
   decisionCards: Map<string, Card>;
   openCardIds: Set<string>;
   durableDecisions: Set<string>;
-  /** What carries each dropped or superseded row's work on (`TaskService.replacementsOf`). */
+  /** What carries each dropped or superseded row's work on (`TaskService.graph.replacementsOf`). */
   replacedBy: Map<string, string>;
 };
 
@@ -1676,7 +1680,7 @@ export function taskEventOf(record: TaskRecord, event: TaskEvent): FmEvent {
 function closingOf(
   record: TaskRecord,
   events: readonly TaskEventView[],
-  carried?: ReturnType<TaskService["carriedOn"]>,
+  carried?: ReturnType<TaskService["graph"]["carriedOn"]>,
 ): TaskDetail["closing"] {
   if (!TaskService.isClosed(record)) return null;
   const close = events.findLast(
@@ -1691,7 +1695,9 @@ function closingOf(
 }
 
 /** Where the work of a task closed as carried on stands, in the record's words (INF-1825). */
-export function carriedOnWords(carried: NonNullable<ReturnType<TaskService["carriedOn"]>>): string {
+export function carriedOnWords(
+  carried: NonNullable<ReturnType<TaskService["graph"]["carriedOn"]>>,
+): string {
   if (carried.state === "done") return `Done through ${carried.key}`;
   if (carried.state === "dropped") return `Carried on by ${carried.key}, which was dropped`;
   return `Carried on by ${carried.key}`;

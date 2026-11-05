@@ -122,9 +122,10 @@ async function fixture() {
     store: new IntegrationSettingsStore(dir),
     secrets,
     asks: {
-      keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
-      take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
-      record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+      keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
+      take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
+      record: (taskId, askId, outcome) =>
+        tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
     },
     push: (view) => pushed.push(JSON.stringify(view)),
   });

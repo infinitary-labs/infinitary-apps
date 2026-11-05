@@ -52,13 +52,13 @@ describe("CardService", () => {
       status: "running",
       shape: { kind: "plan", deliverable: "answer" },
     });
-    tasks.openAsk({ id: "reading-ask", text: "How could a reading-style feature work?" });
-    tasks.attachAsk("reading-ask", "reading", "tool:spawn_crewmate");
+    tasks.capture.openAsk({ id: "reading-ask", text: "How could a reading-style feature work?" });
+    tasks.capture.attachAsk("reading-ask", "reading", "tool:spawn_crewmate");
     let interrupt = true;
     const cards = make(undefined, (card, response, action) => {
       expect(db.inTransaction).toBe(true);
       expect({ response, action }).toEqual({ response: "choice", action: "start" });
-      tasks.acceptAnswer(["reading-ask"], card.id);
+      tasks.capture.acceptAnswer(["reading-ask"], card.id);
       if (interrupt) throw new Error("Interrupted while admitting choice");
     });
     const id = cards.emitCrewmateCard(
@@ -77,12 +77,12 @@ describe("CardService", () => {
     expect(() => cards.resolve(card, "start", "start", answers)).toThrow(
       "Interrupted while admitting choice",
     );
-    expect(tasks.getAsk("reading-ask")?.acceptedAt).toBeNull();
+    expect(tasks.capture.getAsk("reading-ask")?.acceptedAt).toBeNull();
     expect(cardStore.chosenAction(id)).toBeUndefined();
     expect(cards.get(id)).toBeDefined();
     interrupt = false;
     cards.resolve(card, "start", "start", answers);
-    expect(tasks.getAsk("reading-ask")?.answerCardId).toBe(id);
+    expect(tasks.capture.getAsk("reading-ask")?.answerCardId).toBe(id);
     expect(cardStore.past(id)?.answers).toEqual(answers);
     expect(cardStore.chosenAction(id)).toBe("start");
     cards.dispose();
@@ -98,12 +98,12 @@ describe("CardService", () => {
       status: "running",
       shape: { kind: "implement", deliverable: "change" },
     });
-    tasks.openAsk({ id: "panel-ask", text: "Make me a Tokyo clock panel." });
-    tasks.attachAsk("panel-ask", "panel", "tool:spawn_crewmate");
+    tasks.capture.openAsk({ id: "panel-ask", text: "Make me a Tokyo clock panel." });
+    tasks.capture.attachAsk("panel-ask", "panel", "tool:spawn_crewmate");
     const cards = make(undefined, (card, response) => {
       expect(db.inTransaction).toBe(true);
       expect(response).toBe("close");
-      tasks.acceptAnswer(["panel-ask"], card.id);
+      tasks.capture.acceptAnswer(["panel-ask"], card.id);
     });
     try {
       const id = cards.emitCrewmateCard(
@@ -119,9 +119,9 @@ describe("CardService", () => {
       cards.closeOut({ kind: "crewmate", taskId: "panel" }, "report");
       tasks.close("panel", { status: "done", reason: "finished", actor: "host" });
       const completed = tasks.get("panel");
-      expect(tasks.getAsk("panel-ask")?.acceptedAt).toBeNull();
+      expect(tasks.capture.getAsk("panel-ask")?.acceptedAt).toBeNull();
       cards.dismiss(cards.get(id) as Card);
-      expect(tasks.getAsk("panel-ask")?.answerCardId).toBe(id);
+      expect(tasks.capture.getAsk("panel-ask")?.answerCardId).toBe(id);
       expect(tasks.get("panel")).toEqual(completed);
     } finally {
       cards.dispose();
@@ -162,7 +162,7 @@ describe("CardService", () => {
     seedTask(tasks, { id: "board", title: "Keep Tasks responsive", status: "running" });
     cards.emitCrewmateCard("board", { ...decision, id: "board-choice" }, "m");
     const get = vi.spyOn(tasks, "get");
-    const about = vi.spyOn(tasks, "originAbout");
+    const about = vi.spyOn(tasks.capture, "originAbout");
     try {
       const full = cards.snapshot();
       expect(get).toHaveBeenCalled();
@@ -219,31 +219,31 @@ describe("CardService", () => {
     const { tasks, make } = setup();
     const cards = make();
     seedTask(tasks, { id: "footer", title: "Fix the footer", status: "running" });
-    tasks.openAsk({
+    tasks.capture.openAsk({
       id: "ask-footer",
       text: "the footer overlaps the composer\n\non small windows",
     });
-    tasks.attachAsk("ask-footer", "footer", "tool:spawn_crewmate");
+    tasks.capture.attachAsk("ask-footer", "footer", "tool:spawn_crewmate");
     const crewCard = cards.emitCrewmateCard(
       "footer",
       { ...decision, id: "footer-choice", body: "<p>Why: you asked about something else.</p>" },
       "m",
     );
     // The first mate's answer is filed as a question the message attaches to.
-    tasks.openAsk({ id: "ask-port", text: "what does the port flag do?" });
+    tasks.capture.openAsk({ id: "ask-port", text: "what does the port flag do?" });
     const answer = cards.addFirstmateCard({
       title: "It picks the port",
       body: "<p>It picks the port.</p>",
       actions: [],
       answering: true,
     });
-    tasks.fileQuestion({
+    tasks.capture.fileQuestion({
       id: "q-port",
       title: "The port flag",
       outcome: "It picks the port.",
       cardId: answer,
     });
-    tasks.attachAsk("ask-port", "q-port", "tool:emit_card");
+    tasks.capture.attachAsk("ask-port", "q-port", "tool:emit_card");
     const unasked = cards.addFirstmateCard({
       title: "The nightly check failed",
       body: "<p>It failed.</p>",
@@ -251,7 +251,7 @@ describe("CardService", () => {
     });
     const shown = new Map(cards.snapshot().map((card) => [card.id, card]));
     expect(shown.get(crewCard)?.asked).toEqual({
-      at: tasks.getAsk("ask-footer")?.at,
+      at: tasks.capture.getAsk("ask-footer")?.at,
       text: "the footer overlaps the composer\n\non small windows",
     });
     expect(shown.get(answer)).toMatchObject({
@@ -320,7 +320,7 @@ describe("CardService", () => {
       expect(facts).toHaveBeenCalledTimes(1);
       now += 60_000;
       facts.mockClear();
-      tasks.recordChangeEvidence("builder", {
+      tasks.delivery.recordChangeEvidence("builder", {
         ci: "green",
         checks: { ...checks, items: [{ name: "unit-tests", state: "success" }] },
       });

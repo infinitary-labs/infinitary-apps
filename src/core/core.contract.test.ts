@@ -67,7 +67,7 @@ describe("a client that knows only the published contract", () => {
       const worktreeDir = join(userDataDir, "worktrees", id);
       mkdirSync(worktreeDir, { recursive: true });
       seedTask(tasks, { id, title: `Tidy ${id}`, status: "completed", worktreeDir });
-      tasks.recordRecovery(id, {
+      tasks.turns.recordRecovery(id, {
         rung: 2,
         count: 2,
         at: now - 35 * 60_000,

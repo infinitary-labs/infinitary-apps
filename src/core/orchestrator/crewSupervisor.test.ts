@@ -184,7 +184,9 @@ import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { recentFeed, SETTLE_FOLD, taskFeedLine } from "../tasks/taskFeed";
 import { TaskProtocol } from "../tasks/taskProtocol";
 import { queryTasks } from "../tasks/taskQuery";
-import { type ReportDeclaration, TaskService, TIMELINE_CAP } from "../tasks/taskService";
+import { TaskService } from "../tasks/taskService";
+import { type ReportDeclaration } from "../tasks/taskTurns";
+import { TIMELINE_CAP } from "../tasks/timelineCompaction";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
 import { packWork, unpackWork } from "../workspace/workMove";
@@ -1416,7 +1418,7 @@ describe("CrewSupervisor", () => {
       "your task moved to Codex, which cannot reopen a conversation another provider held",
     );
     // INF-1288: moving creates a second association, not a rewritten history.
-    expect(tasks.sessions(taskId)).toMatchObject([
+    expect(tasks.archive.sessions(taskId)).toMatchObject([
       { conversation: crewmate.sessionId, provider: claude.provider, model: claude.id, began: "start", current: false },
       { conversation: moved.sessionId, provider: codex.provider, model: codex.id, began: "move", current: true },
     ]);
@@ -2602,9 +2604,9 @@ describe("CrewSupervisor", () => {
     // The captain asked for the work: its close answers their message
     // (docs/task-capture.md "How a message ends").
     const askedFor = (tasks: TaskService, taskId: string, words: string) => {
-      const ask = tasks.openAsk({ id: `ask-${taskId}`, text: words });
-      tasks.attachAsk(ask.id, taskId, "tool:spawn_crewmate");
-      tasks.closeAsk(ask.id, "closed");
+      const ask = tasks.capture.openAsk({ id: `ask-${taskId}`, text: words });
+      tasks.capture.attachAsk(ask.id, taskId, "tool:spawn_crewmate");
+      tasks.capture.closeAsk(ask.id, "closed");
     };
 
     async function idleTask() {
@@ -2897,9 +2899,9 @@ describe("CrewSupervisor", () => {
         title: "Fix the notice",
         intent: intentOf("fix the notice"),
       });
-      const ask = harness.tasks.openAsk({ id: `ask-${taskId}`, text: "fix the notice" });
-      harness.tasks.attachAsk(ask.id, taskId, "tool:spawn_crewmate");
-      harness.tasks.closeAsk(ask.id, "closed");
+      const ask = harness.tasks.capture.openAsk({ id: `ask-${taskId}`, text: "fix the notice" });
+      harness.tasks.capture.attachAsk(ask.id, taskId, "tool:spawn_crewmate");
+      harness.tasks.capture.closeAsk(ask.id, "closed");
       await tick();
       crewmate.finishPrompt();
       await tick();
@@ -2918,7 +2920,7 @@ describe("CrewSupervisor", () => {
       vi.spyOn(h.supervisor, "taskDelivery").mockReturnValue("direct-pr");
       seedDelivery(h.tasks, h.taskId, { prNumber: 9 });
       const waiter = seedTask(h.tasks, { id: "waiter", title: "Ship the notice", status: "idle" });
-      h.tasks.link(h.taskId, waiter.id, "blocks", "firstmate");
+      h.tasks.graph.link(h.taskId, waiter.id, "blocks", "firstmate");
 
       const text = await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
         h.supervisor.carryOnTask(h.taskId, h.carrier.key),
@@ -2927,9 +2929,9 @@ describe("CrewSupervisor", () => {
 
       expect(text).toContain(`${h.carrier.key} carries on its work.`);
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "superseded" });
-      expect(h.tasks.replacementOf(h.taskId)).toBe(h.carrier.key);
+      expect(h.tasks.graph.replacementOf(h.taskId)).toBe(h.carrier.key);
       // Done clears a wait, so the wait moved before the close.
-      expect(h.tasks.linksTo(waiter.id)).toEqual([
+      expect(h.tasks.graph.linksTo(waiter.id)).toEqual([
         expect.objectContaining({ fromId: h.carrier.id, type: "blocks" }),
       ]);
       expect(closePullRequest).toHaveBeenCalledExactlyOnceWith(h.taskId);
@@ -2990,13 +2992,13 @@ describe("CrewSupervisor", () => {
         'its card "Which notice wording?" still waits on the captain',
       );
       expect(h.tasks.get(h.taskId)?.status).toBe("active");
-      expect(h.tasks.allLinks().filter((link) => link.type === "replaced-by")).toEqual([]);
+      expect(h.tasks.graph.allLinks().filter((link) => link.type === "replaced-by")).toEqual([]);
     });
 
     it("places the outcome of a carrier that closed first once, where it would have gone", async () => {
       const h = await carriedWork();
       // The carrier worked for the same message, so the old task held its outcome back.
-      h.tasks.attachAsk(h.ask.id, h.carrier.id, "tool:spawn_crewmate");
+      h.tasks.capture.attachAsk(h.ask.id, h.carrier.id, "tool:spawn_crewmate");
       const merged = "The notice fix merged in PR #12.";
       await h.supervisor.withClosingSentence(h.carrier.id, merged, () =>
         h.supervisor.closeTask(h.carrier.id, {
@@ -3181,7 +3183,7 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     // INF-1288: a start records the actual serving model, not the route's choice.
-    expect(tasks.sessions(taskId)).toMatchObject([
+    expect(tasks.archive.sessions(taskId)).toMatchObject([
       { conversation: crewmate.sessionId, provider: "fm-mock", model: "mock-1", began: "start", current: true },
     ]);
     const dispatched = tasks.timeline(taskId).find((event) => event.kind === "dispatched");
@@ -3883,7 +3885,7 @@ describe("CrewSupervisor", () => {
       status: "idle",
       worktreeDir: "/work/restart-merge",
     });
-    tasks.setPendingSettle("restart-merge", {
+    tasks.delivery.setPendingSettle("restart-merge", {
       mode: "merge-pr",
       actor: "captain",
       requestedAt: Date.now(),
@@ -4083,7 +4085,7 @@ describe("CrewSupervisor", () => {
     expect(
       (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
     ).toContain("has not reported");
-    tasks.recordReport("release", { text: "Published externally" });
+    tasks.turns.recordReport("release", { text: "Published externally" });
     seedDelivery(tasks, "release", { prUrl: "https://github.com/o/r/pull/1", prNumber: 1 });
     const pull: ForgePull = {
       number: 1,
@@ -4281,7 +4283,7 @@ describe("CrewSupervisor", () => {
         status: "queued",
         startPolicy: "when-ready",
       });
-      tasks.link("fix", "next", "blocks", "firstmate");
+      tasks.graph.link("fix", "next", "blocks", "firstmate");
       merge("fix");
       await closed("fix");
       await tick();
@@ -4291,8 +4293,8 @@ describe("CrewSupervisor", () => {
       seedTask(tasks, { id: "half", title: "Half", status: "idle", worktreeDir: "/half" });
       seedTask(tasks, { id: "other", title: "Other", status: "queued", startPolicy: "on-request" });
       seedTask(tasks, { id: "both", title: "Both", status: "queued", startPolicy: "on-request" });
-      tasks.link("half", "both", "blocks", "firstmate");
-      tasks.link("other", "both", "blocks", "firstmate");
+      tasks.graph.link("half", "both", "blocks", "firstmate");
+      tasks.graph.link("other", "both", "blocks", "firstmate");
       merge("half");
       await closed("half");
       await tick();
@@ -4302,7 +4304,7 @@ describe("CrewSupervisor", () => {
       // says it covers - now waits on a start alone: the merge wakes it once.
       seedTask(tasks, { id: "covers", title: "Covers", status: "idle", worktreeDir: "/covers" });
       seedTask(tasks, { id: "covered", title: "Covered", status: "queued", startPolicy: "on-request" });
-      tasks.link("covers", "covered", "blocks", "firstmate");
+      tasks.graph.link("covers", "covered", "blocks", "firstmate");
       merge("covers");
       await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(1));
       expect(settleWakes(ops)[0]).toContain(`the captain chose ${mode} for task covers "Covers"`);
@@ -4345,7 +4347,7 @@ describe("CrewSupervisor", () => {
         parentId: "P",
         shape: { kind: "research", deliverable: "answer" },
       });
-      tasks.recordReport("PLAN", {
+      tasks.turns.recordReport("PLAN", {
         text: "Build the two approved repairs after the foundation merges; keep the other work held.",
       });
       tasks.close("PLAN", { status: "done", reason: "answered", actor: "captain" });
@@ -4392,9 +4394,9 @@ describe("CrewSupervisor", () => {
               }
             : {}),
         });
-        if (id !== "other" && id !== "unrelated") tasks.link("root", id, "blocks", "host");
+        if (id !== "other" && id !== "unrelated") tasks.graph.link("root", id, "blocks", "host");
       }
-      tasks.link("other", "blocked", "blocks", "host");
+      tasks.graph.link("other", "blocked", "blocks", "host");
       // INF-269 Q1: a plan-named action is not a host-set gate before dispatch.
       tasks.updateFields(
         "captain-action",
@@ -4404,15 +4406,15 @@ describe("CrewSupervisor", () => {
         "host",
       );
       // An already recorded captain decision remains a real hold, unlike words in a plan.
-      tasks.setGate(
+      tasks.placement.setGate(
         "gated",
         { kind: "captain", ref: "later-choice" },
         "An existing captain decision holds this task.",
       );
-      tasks.setQueued("backlog", "unqueue-task", { actor: "captain" });
+      tasks.starts.setQueued("backlog", "unqueue-task", { actor: "captain" });
       for (const status of ["idle", "cancelled"] as const) {
         seedTask(tasks, { id: status, title: status, status, startPolicy: "on-request" });
-        tasks.link("root", status, "blocks", "host");
+        tasks.graph.link("root", status, "blocks", "host");
       }
       if (outcome === "refused")
         vi.mocked(workspace.landTaskWork).mockRejectedValue(
@@ -5412,7 +5414,7 @@ describe("CrewSupervisor", () => {
         .find((task) => task.shape?.kind === "review" && task.parentId === h.taskId);
       expect(review).toMatchObject({ title: "Review: Ship the meter", status: "active" });
       expect(review?.delivery?.headSha).toBe(APPROVED);
-      expect(h.tasks.blockersHoldingClose(h.taskId)).toEqual([]);
+      expect(h.tasks.graph.blockersHoldingClose(h.taskId)).toEqual([]);
       const brief = h.reviewer.promptCalls[0] ?? "";
       expect(brief).toContain(`Review branch fm/task-${h.taskId} at head ${APPROVED}`);
       expect(brief).toContain("Ready to merge");
@@ -6125,7 +6127,7 @@ describe("CrewSupervisor", () => {
       expect(h.forge.merges).toEqual([]);
       const other = await approved();
       editPolicies(other, { autonomy: true });
-      other.tasks.setGate(other.taskId, { kind: "captain", ref: "unrelated-decision" });
+      other.tasks.placement.setGate(other.taskId, { kind: "captain", ref: "unrelated-decision" });
       expect((await other.supervisor.settleTaskDetailed(other.taskId, "merge-pr")).text).toContain(
         "another decision",
       );
@@ -6392,7 +6394,7 @@ describe("CrewSupervisor", () => {
         number === 65
           ? { number, state: "closed", merged: true, mergedSha: "squash65", headSha: "head65", base: "main", readiness: "clean" }
           : { number, state: "closed", merged: false, headSha: h.forge.headSha, base: "main", readiness: "clean" };
-      h.tasks.recordReport(h.taskId, { text: "Its work merged in #65 with the other fix." });
+      h.tasks.turns.recordReport(h.taskId, { text: "Its work merged in #65 with the other fix." });
       await tick();
       const carrier = seedTask(h.tasks, { id: "carrier", title: "Fix both in one pull request", status: "idle" });
       seedDelivery(h.tasks, carrier.id, { prNumber: 65, ci: "merged" });
@@ -6407,7 +6409,7 @@ describe("CrewSupervisor", () => {
       await tick();
       expect(text).toContain(`${carrier.key} carries on its work.`);
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "superseded" });
-      expect(h.tasks.replacementOf(h.taskId)).toBe(carrier.key);
+      expect(h.tasks.graph.replacementOf(h.taskId)).toBe(carrier.key);
       expect(h.forge.merges).toEqual([]);
     });
 
@@ -8407,7 +8409,7 @@ describe("CrewSupervisor", () => {
       const h = setup(crewmate);
       const { taskId } = await h.supervisor.commission({ title: "Update observation", intent: intentOf("keep working") });
       await tick();
-      h.tasks.setDevice(taskId, "mac-mini");
+      h.tasks.placement.setDevice(taskId, "mac-mini");
       const wakesBefore = h.ops.length;
       await h.supervisor.pauseForUpdate("mac-mini");
       const paused = h.supervisor.crewStatus(taskId)[0]?.restart;
@@ -8580,8 +8582,8 @@ describe("CrewSupervisor", () => {
         await tick();
         // Its next turn has begun and not reached its model when the save begins.
         let saving: Promise<string> | undefined;
-        const setActivity = h.tasks.setActivity.bind(h.tasks);
-        vi.spyOn(h.tasks, "setActivity").mockImplementation((...args) => {
+        const setActivity = h.tasks.turns.setActivity.bind(h.tasks.turns);
+        vi.spyOn(h.tasks.turns, "setActivity").mockImplementation((...args) => {
           const result = setActivity(...args);
           if (args[0] === taskId && args[1] === "running" && !saving)
             saving = h.supervisor.saveForUpdate();
@@ -8614,7 +8616,7 @@ describe("CrewSupervisor", () => {
         intent: intentOf("keep working"),
       });
       await tick();
-      h.tasks.setDevice(taskId, "mac-mini");
+      h.tasks.placement.setDevice(taskId, "mac-mini");
       const wakesBefore = h.ops.length;
       h.supervisor.placedReopened(taskId);
       expect(h.supervisor.crewStatus(taskId)[0]?.restart?.text).toContain(
@@ -8647,10 +8649,10 @@ describe("CrewSupervisor", () => {
           strict: true,
           now: () => now,
         });
-        if (outcome === "missing conversation") h.tasks.setSessionFile(taskId, null);
+        if (outcome === "missing conversation") h.tasks.turns.setSessionFile(taskId, null);
         if (outcome === "remote running") {
-          h.tasks.setDevice(taskId, "mac-mini");
-          h.tasks.setActivity(taskId, "running");
+          h.tasks.placement.setDevice(taskId, "mac-mini");
+          h.tasks.turns.setActivity(taskId, "running");
           h.inbox.deleteFor(taskId);
         }
         const resumed = fakeCrewmate();
@@ -8685,7 +8687,7 @@ describe("CrewSupervisor", () => {
         expect(fresh.crewStatus(taskId)[0]?.restart?.text).toContain(
           "has not started a request yet",
         );
-        if (outcome === "held") h.tasks.setAccountId(taskId, "test-account");
+        if (outcome === "held") h.tasks.placement.setAccountId(taskId, "test-account");
         now += 100_000;
         if (outcome === "guided")
           await fresh.steerCrewmate(taskId, "Please check the restart", "captain");
@@ -8759,7 +8761,7 @@ describe("CrewSupervisor", () => {
       await tick();
       await h.supervisor.disposeAll();
       // The record now names the Mac mini, where its working copy lives.
-      h.tasks.setDevice(taskId, "mac-mini");
+      h.tasks.placement.setDevice(taskId, "mac-mini");
       const boot = fakeCrewmate({ model: fable });
       const opened: SessionSpec[] = [];
       const factory = {
@@ -8811,7 +8813,7 @@ describe("CrewSupervisor", () => {
     });
 
     const earlierToken = tasks.get("t-foreign")?.sessionFile ?? "";
-    tasks.setSessionFile("t-foreign", earlierToken, {
+    tasks.turns.setSessionFile("t-foreign", earlierToken, {
       file: `/tmp/records/${earlierToken}.jsonl`, computer: HOME.the, device_id: "local",
       provider: "anthropic-claude", model: "claude-fable-5", account_id: null, began: "start",
     });
@@ -8827,7 +8829,7 @@ describe("CrewSupervisor", () => {
       "its earlier conversation could not be reopened, so it starts a fresh one",
     );
     expect(crewmate.promptCalls.at(-1)).toContain("carry on");
-    const replacedSessions = tasks.sessions("t-foreign");
+    const replacedSessions = tasks.archive.sessions("t-foreign");
     expect(replacedSessions).toMatchObject([
       { conversation: earlierToken, began: "start", current: false },
       { conversation: "s1", began: "unopenable", current: true },
@@ -8836,9 +8838,9 @@ describe("CrewSupervisor", () => {
     await tick();
     await supervisor.steerCrewmate("t-foreign", "Inspect the header too.");
     await tick();
-    expect(tasks.sessions("t-foreign")).toHaveLength(2);
-    expect(tasks.sessions("t-foreign").filter((session) => session.current)).toHaveLength(1);
-    console.info("INF-1295 failed reopen association lifecycle", JSON.stringify({ replacedSessions, continuedSessions: tasks.sessions("t-foreign") }));
+    expect(tasks.archive.sessions("t-foreign")).toHaveLength(2);
+    expect(tasks.archive.sessions("t-foreign").filter((session) => session.current)).toHaveLength(1);
+    console.info("INF-1295 failed reopen association lifecycle", JSON.stringify({ replacedSessions, continuedSessions: tasks.archive.sessions("t-foreign") }));
   });
 
   it("carries a crewmate whose conversation renewed under changed instructions into its new one", async () => {
@@ -8865,7 +8867,7 @@ describe("CrewSupervisor", () => {
       createdAt: Date.now(),
     });
     tasks.recordBrief("t-renew", ["Goal: count the rivets."]);
-    tasks.setSessionFile("t-renew", earlier, {
+    tasks.turns.setSessionFile("t-renew", earlier, {
       file: earlier, computer: HOME.the, device_id: "local", provider: "fm-mock",
       model: "mock-1", account_id: null, began: "start",
     });
@@ -8879,11 +8881,11 @@ describe("CrewSupervisor", () => {
     expect(note?.data).toMatchObject({ conversation: { from: earlier, changed: ["prompt"] } });
     expect(tasks.get("t-renew")?.sessionFile).toBe("/tmp/s-new.jsonl");
     // INF-1288: renewal is recorded before the first turn completes.
-    expect(tasks.sessions("t-renew")).toMatchObject([
+    expect(tasks.archive.sessions("t-renew")).toMatchObject([
       { conversation: "earlier", began: "start", file: earlier, current: false },
       { conversation: "s-new", began: "renewal", file: "/tmp/s-new.jsonl", current: true },
     ]);
-    console.info("INF-1295 local renewal associations", JSON.stringify(tasks.sessions("t-renew")));
+    console.info("INF-1295 local renewal associations", JSON.stringify(tasks.archive.sessions("t-renew")));
     // Its first prompt says why, where its record and earlier conversation
     // are, and its brief, then the message that woke it.
     expect(crewmate.promptCalls).toHaveLength(1);
@@ -9284,7 +9286,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       const earlier = `${taskId}-${"c".repeat(32)}.mp4`;
       writeFileSync(join(dir, earlier), DEMO_RECORDING.bytes);
       if (refusal === "unreadable change")
-        tasks.updateChangePresentation(taskId, () => ({
+        tasks.delivery.updateChangePresentation(taskId, () => ({
           revisions: [],
           receipts: [],
           published: {
@@ -9371,7 +9373,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       regionHash: createHash("sha256").update(region).digest("hex"),
       number: 1,
     };
-    tasks.updateChangePresentation(taskId, () => ({
+    tasks.delivery.updateChangePresentation(taskId, () => ({
       revisions: [story],
       receipts: [],
       ...(destination === "hosted" ? { publication, published: publication } : { completion: { revision: 1, head, contentHash: "fixture-story-content" } }),
@@ -9402,7 +9404,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(splitSettleFacts(card?.body ?? "")?.body).toBe(presentationCardBody(story));
     expect(tasks.get(taskId)?.delivery?.completionOffers?.at(-1)?.presentationRevision).toBe(1);
     if (destination !== "hosted") expect(tasks.get(taskId)?.delivery?.completionOffers?.at(-1)?.prNumber).toBeUndefined();
-    tasks.updateChangePresentation(taskId, (record) => {
+    tasks.delivery.updateChangePresentation(taskId, (record) => {
       if (!record) throw new Error("Missing story");
       return { ...record, revisions: [...record.revisions, { ...story, revision: 2 }] };
     });
@@ -9473,7 +9475,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       refreshOf: 1,
       number: 1,
     };
-    tasks.updateChangePresentation(taskId, () => ({
+    tasks.delivery.updateChangePresentation(taskId, () => ({
       revisions: [story],
       receipts: [],
       publication,
@@ -9562,7 +9564,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       regionHash: createHash("sha256").update(region).digest("hex"),
       number: 1,
     };
-    tasks.updateChangePresentation(taskId, () => ({ revisions: [story], receipts: [] }));
+    tasks.delivery.updateChangePresentation(taskId, () => ({ revisions: [story], receipts: [] }));
     seedDelivery(tasks, taskId, { headSha: head, prNumber: 1, ci: "green" });
     // INF-2490, the captain's q8: the first mate may offer the merge on any
     // change card. While the story is not published at its newest revision,
@@ -9598,7 +9600,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       expect(tasks.get(taskId)?.delivery).toEqual(unchangedDelivery);
     }
     // Published, the same offer shows with the app's line and binds the story it carries.
-    tasks.updateChangePresentation(taskId, () => ({
+    tasks.delivery.updateChangePresentation(taskId, () => ({
       revisions: [story],
       receipts: [],
       publication,
@@ -9720,7 +9722,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       regionHash: createHash("sha256").update(region).digest("hex"),
       number: 1,
     };
-    tasks.updateChangePresentation(taskId, () => ({
+    tasks.delivery.updateChangePresentation(taskId, () => ({
       revisions: [story],
       receipts: [],
       publication,
@@ -9802,7 +9804,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         number: 1,
       };
     };
-    tasks.updateChangePresentation(taskId, () => ({
+    tasks.delivery.updateChangePresentation(taskId, () => ({
       revisions: [story],
       receipts: [],
       publication: published(story),
@@ -9822,7 +9824,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const cardId = supervisor.addFirstmateCard(mergeOffer);
     // A newer revision prepared after the offer refuses its click.
     const second = { ...story, revision: 2 };
-    tasks.updateChangePresentation(taskId, (record) => {
+    tasks.delivery.updateChangePresentation(taskId, (record) => {
       if (!record) throw new Error("Missing story");
       return { ...record, revisions: [...record.revisions, second] };
     });
@@ -9830,7 +9832,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(mergePullRequest).not.toHaveBeenCalled();
     expect(tasks.get(taskId)?.status).not.toBe("done");
     // Published, the revised offer binds the newer story and its click merges.
-    tasks.updateChangePresentation(taskId, (record) => {
+    tasks.delivery.updateChangePresentation(taskId, (record) => {
       if (!record) throw new Error("Missing story");
       return { ...record, publication: published(second), published: published(second) };
     });
@@ -10222,7 +10224,7 @@ describe("the task record (task-system P0)", () => {
       startAfter: { afterTask: first.taskId },
     });
     expect(tasks.get(second.taskId)).toMatchObject({ status: "open", gate: null });
-    expect(tasks.blockers(second.taskId).map((record) => record.id)).toEqual([first.taskId]);
+    expect(tasks.graph.blockers(second.taskId).map((record) => record.id)).toEqual([first.taskId]);
     // INF-1605: the crew line reads the same dated wait as the task query.
     expect(supervisor.crewStatus().find((entry) => entry.taskId === second.taskId)?.gate).toBe(
       queryTasks(tasks, { key: second.taskId }, () => undefined).rows[0]?.waiting,
@@ -10684,7 +10686,7 @@ describe("the task graph (R1)", () => {
       repoId: null,
       startPolicy: "on-request",
     });
-    tasks.recordReport(spec.id, { text: "Replacement-only shell-height interpolation." });
+    tasks.turns.recordReport(spec.id, { text: "Replacement-only shell-height interpolation." });
     const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
     const starting = supervisor.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { basis: spec.key }, "firstmate");
@@ -10711,8 +10713,8 @@ describe("the task graph (R1)", () => {
       repoId: null,
     });
     const specification = `Full specification: stable external pager and intrinsic iframe isolation. ${"Each scoped clause stays word for word. ".repeat(30)}`;
-    tasks.recordReport(source.id, { text: specification });
-    tasks.recordReport(source.id, { text: "Complete; no investigation remains." });
+    tasks.turns.recordReport(source.id, { text: specification });
+    tasks.turns.recordReport(source.id, { text: "Complete; no investigation remains." });
     // The source is verified by its report, not by an invented approval.
     await supervisor.commission({
       title: "Build transitions",
@@ -10796,7 +10798,7 @@ describe("the task graph (R1)", () => {
       prompt: "p",
       repoId: null,
     });
-    tasks.recordReport(origin.id, { text: "Recorded finding: claim query omits queued rows." });
+    tasks.turns.recordReport(origin.id, { text: "Recorded finding: claim query omits queued rows." });
     const filing = tasks.fileFollowup({
       id: "filing",
       originId: origin.id,
@@ -10955,7 +10957,7 @@ describe("the task graph (R1)", () => {
       parentId: parent.id,
       model: "openai-codex/gpt-6-astra",
     });
-    expect(tasks.linksTo(filed.id)).toEqual([
+    expect(tasks.graph.linksTo(filed.id)).toEqual([
       expect.objectContaining({ fromId: spec.id, type: "related" }),
     ]);
     // No replacement: the same row started, and nothing was dropped.
@@ -11072,7 +11074,7 @@ describe("the task graph (R1)", () => {
         autonomy: false,
       },
     });
-    tasks.markWorkspaceRemoved(old.id);
+    tasks.placement.markWorkspaceRemoved(old.id);
     tasks.note(old.id, "working copy removed; its work is saved", {
       news: false,
       data: { saved: { ref: "refs/infinitary/kept/dropped-chart" } },
@@ -11091,7 +11093,7 @@ describe("the task graph (R1)", () => {
       prompt: "old",
       repoId: null,
     });
-    tasks.link(old.id, closed.id, "blocks", "host");
+    tasks.graph.link(old.id, closed.id, "blocks", "host");
     tasks.close(closed.id, { status: "dropped", reason: "cancelled", actor: "host" });
     const result = supervisor.startAgain(old.key, "captain");
     expect(result.ok).toBe(true);
@@ -11125,11 +11127,11 @@ describe("the task graph (R1)", () => {
       closedReason: "cancelled",
       outcome: null,
     });
-    expect(tasks.linksTo(fresh?.id ?? "")).toEqual(
+    expect(tasks.graph.linksTo(fresh?.id ?? "")).toEqual(
       expect.arrayContaining([expect.objectContaining({ fromId: old.id, type: "replaced-by" })]),
     );
-    expect(tasks.blockers(waiter.id).map((row) => row.id)).toEqual([fresh?.id]);
-    expect(tasks.blockers(closed.id).map((row) => row.id)).toEqual([old.id]);
+    expect(tasks.graph.blockers(waiter.id).map((row) => row.id)).toEqual([fresh?.id]);
+    expect(tasks.graph.blockers(closed.id).map((row) => row.id)).toEqual([old.id]);
     expect(crewmate.promptCalls[0]).toContain(`starts dropped work ${old.key}`);
     expect(crewmate.promptCalls[0]).toContain("refs/infinitary/kept/dropped-chart");
     expect(crewmate.promptCalls[0]).toContain("start from it");
@@ -11155,7 +11157,7 @@ describe("the task graph (R1)", () => {
     const parent = seedTask(tasks, { id: "parent-again", title: "Parent", status: "cancelled" });
     seedTask(tasks, { id: "part-again", parentId: parent.id, title: "Part", status: "cancelled" });
     const retry = seedTask(tasks, { id: "retry-again", title: "Retry", status: "cancelled" });
-    tasks.recordEscalation({
+    tasks.turns.recordEscalation({
       from: { id: retry.id, key: retry.key },
       to: { id: open.id, key: open.key },
       attempt: 1,
@@ -11180,7 +11182,7 @@ describe("the task graph (R1)", () => {
       status: "cancelled",
       outcome: "The draft is written; tests remain.",
     });
-    tasks.markWorkspaceRemoved(old.id);
+    tasks.placement.markWorkspaceRemoved(old.id);
     expect(await supervisor.startQueuedNow(old.key)).toContain("start_again");
     await expect(supervisor.steerCrewmate(old.id, "continue")).rejects.toThrow("start_again");
     const result = supervisor.startAgain(old.id);
@@ -11209,7 +11211,7 @@ describe("the task graph (R1)", () => {
       const { supervisor, tasks, inbox, task } = hooked();
       expect(supervisor.runTaskOp(task.id, "start-task")).toBeUndefined();
       await tick();
-      expect(tasks.startAttemptOf(task.id)?.phase).toBe("preparing");
+      expect(tasks.starts.startAttemptOf(task.id)?.phase).toBe("preparing");
       expect(tasks.get(task.id)?.status).toBe("open");
       const rows = inbox.allFor(FIRSTMATE_RECIPIENT);
       expect(rows).toHaveLength(1);
@@ -11271,7 +11273,7 @@ describe("the task graph (R1)", () => {
         task.id,
       );
       supervisor.reconcileCutOffs();
-      expect(tasks.startAttemptOf(task.id)?.phase).toBe("preparing");
+      expect(tasks.starts.startAttemptOf(task.id)?.phase).toBe("preparing");
       expect(tasks.get(task.id)?.status).toBe("open");
       supervisor.firstmateTurnEnded([id ?? 0], "clean");
       await tick();
@@ -11304,7 +11306,7 @@ describe("the task graph (R1)", () => {
     expect(supervisor.runTaskOp(waits.id, "queue-task")).toBeUndefined();
     await tick();
     expect(tasks.get(waits.id)).toMatchObject({ status: "open", startPolicy: "when-ready" });
-    expect(tasks.blockers(waits.id).map((row) => row.id)).toEqual([blocker.id]);
+    expect(tasks.graph.blockers(waits.id).map((row) => row.id)).toEqual([blocker.id]);
     // Back to the backlog at once. Only the queue told the Firstmate, so his
     // standing directions apply to it before its wait ends.
     expect(supervisor.runTaskOp(waits.id, "unqueue-task")).toBeUndefined();
@@ -11447,7 +11449,7 @@ describe("the task graph (R1)", () => {
     const record = tasks.get(taskId);
     expect(record?.shape).toMatchObject({ basis: spec?.key });
     expect(record?.shape).not.toHaveProperty("basis_verified");
-    expect(record && tasks.basisOf(record)).toEqual({ ref: spec?.key, verified: true });
+    expect(record && tasks.graph.basisOf(record)).toEqual({ ref: spec?.key, verified: true });
   });
 
   it("treats an unknown or still-running basis as unverified, never as a cheaper tier (S2)", async () => {
@@ -11600,7 +11602,7 @@ describe("the task graph (R1)", () => {
     );
 
     // The lineage edge and the one feed line.
-    expect(tasks.discoveredOrigins(taskId).map((row) => row.id)).toContain(previous.id);
+    expect(tasks.graph.discoveredOrigins(taskId).map((row) => row.id)).toContain(previous.id);
     const timeline = tasks.timeline(previous.id);
     const escalated = timeline.find((event) => event.kind === "escalated");
     expect(escalated).toMatchObject({ feed: true, data: { escalated_to: fresh?.key } });
@@ -12366,7 +12368,7 @@ describe("background job results (R2)", () => {
     expect(supervisor.workPosture(record)).toEqual({ state: "active", reason: "job" });
     expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
     running = false;
-    tasks.setGate(taskId, { kind: "captain" });
+    tasks.placement.setGate(taskId, { kind: "captain" });
     expect(supervisor.workPosture(tasks.get(taskId) ?? record)).toEqual({
       state: "idle",
       reason: "captain",
@@ -12374,7 +12376,7 @@ describe("background job results (R2)", () => {
     const row = inbox.enqueue(taskId, "Reply already captured");
     expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
     inbox.ack([row]);
-    tasks.setGate(taskId, null);
+    tasks.placement.setGate(taskId, null);
     crewmate.emit({ type: "background_work_changed", count: 1 });
     expect(supervisor.workPosture(tasks.get(taskId) ?? record)).toEqual({
       state: "active",
@@ -13097,7 +13099,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
     const open = hostRows(tasks, "card-fm-no-headroom").filter((row) => row.status === "open");
     expect(open).toHaveLength(1);
     // And the other way: a row whose card never made it to the stack.
-    const orphan = tasks.fileHostCardTask({ id: "orphan-1", title: "Gone", cardId: "card-gone" });
+    const orphan = tasks.capture.fileHostCardTask({ id: "orphan-1", title: "Gone", cardId: "card-gone" });
     await supervisor.sweepGates(Date.now());
     expect(tasks.get(orphan.id)).toMatchObject({ status: "dropped", closedReason: "superseded" });
     expect(tasks.timeline(orphan.id).at(-1)).toMatchObject({
@@ -13298,7 +13300,7 @@ describe("the sign-in where a project lives", () => {
     const head = "41163dc192c032c622880d19e1ecc3759cf276ad";
     const check = "linux-e2e / journeys (desktop 3/4)";
     // What read_workflow kept of verify run 77's second attempt.
-    tasks.recordChangeEvidence(taskId, {
+    tasks.delivery.recordChangeEvidence(taskId, {
       ciRepair: {
         failures: [{ headSha: head, checks: ["mac", check] }],
         runs: [{ runId: 40862271620, headSha: head, attempt: 2, failed: ["mac", check] }],
@@ -13415,7 +13417,7 @@ describe("crew report answer ownership", () => {
       body: "<p>Choose the course.</p><p>This keeps the work moving.</p>",
       actions: [{ id: "choose", label: "Choose it", default: true }],
     });
-    tasks.fileDecision({ id: "decision-task", title: "Choose", cardId });
+    tasks.capture.fileDecision({ id: "decision-task", title: "Choose", cardId });
 
     supervisor.act(cardId, "choose");
 
@@ -13869,7 +13871,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     // A merge it waits on, promised by a must-merge-first mark, and planned
     // work that has not started, are no holds on its finding.
     const merging = seedTask(tasks, { id: "inf-550", title: "Show the story", status: "idle" });
-    tasks.link(taskId, merging.id, "blocks", "host", true);
+    tasks.graph.link(taskId, merging.id, "blocks", "host", true);
     const planned = seedTask(tasks, {
       id: "8bc93cc7",
       title: "Move phone checks off the Mac check lock",
@@ -14015,7 +14017,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
 
     // Once the work is underway nothing is the Firstmate's to start: the
     // crewmate moves again when that work closes (FI3-250).
-    tasks.dispatch(owner.id, {
+    tasks.starts.dispatch(owner.id, {
       workspace: { repoDir: "", worktreeDir: "", branch: "" },
       accountId: null,
       assignee: "crewmate",
@@ -14096,7 +14098,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
         status: "queued",
         startPolicy: "on-request",
       });
-      tasks.link(secrets.id, storage.id, "blocks", "firstmate");
+      tasks.graph.link(secrets.id, storage.id, "blocks", "firstmate");
       return { secrets, storage };
     }
 
@@ -14142,7 +14144,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
         startPolicy: "on-request",
       });
       tasks.close(secrets.id, { status: "dropped", reason: "cancelled", actor: "host" });
-      tasks.link(parked.id, storage.id, "blocks", "firstmate");
+      tasks.graph.link(parked.id, storage.id, "blocks", "firstmate");
       await report(clientSide, taskId, "Blocked on INF-1659.");
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
       expect(reportWakes(ops).at(-1)).toContain(
@@ -14196,25 +14198,25 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       expect(() =>
         onReport(text, undefined, { waitsOn: [secrets.key], finished: true }),
       ).toThrow("pass it without finished");
-      expect(tasks.linksTo(taskId)).toEqual([]);
+      expect(tasks.graph.linksTo(taskId)).toEqual([]);
 
       expect(onReport(text, undefined, { waitsOn: [secrets.key.toLowerCase()] })).toContain(
         `Recorded: your task waits on ${secrets.key}.`,
       );
-      expect(tasks.linksTo(taskId)).toEqual([
+      expect(tasks.graph.linksTo(taskId)).toEqual([
         expect.objectContaining({ fromId: secrets.id, type: "blocks", holdsMerge: false }),
       ]);
       // A recorded wait holds no merge.
-      expect(tasks.blockersHoldingClose(taskId)).toEqual([]);
+      expect(tasks.graph.blockersHoldingClose(taskId)).toEqual([]);
       expect(tasks.timeline(taskId).at(-1)).toMatchObject({ actor: "crewmate", kind: "linked" });
 
       // The task the report waits on already waits on it: a cycle.
       const waiter = seedTask(tasks, { id: "waiter", title: "Waits on this job", status: "idle" });
-      tasks.link(taskId, waiter.id, "blocks", "firstmate");
+      tasks.graph.link(taskId, waiter.id, "blocks", "firstmate");
       expect(() =>
         onReport(text, undefined, { waitsOn: [secrets.key, waiter.key] }),
       ).toThrow(/^Report refused: .*would close a cycle/);
-      expect(tasks.linksTo(taskId)).toHaveLength(1);
+      expect(tasks.graph.linksTo(taskId)).toHaveLength(1);
     });
 
     // INF-1826 (spec item 3): a wait named on replaced work is recorded on the
@@ -14240,7 +14242,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       expect(onReport("Waiting on runbooks.", undefined, { waitsOn: [old.key] })).toContain(
         `Recorded: your task waits on ${carrier.key}.`,
       );
-      expect(tasks.linksTo(taskId)).toEqual([
+      expect(tasks.graph.linksTo(taskId)).toEqual([
         expect.objectContaining({ fromId: carrier.id, type: "blocks" }),
       ]);
 
@@ -14273,11 +14275,11 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     await tick();
     await report(clientSide, taskId, "Still blocked.");
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
-    const blocker = tasks.blockersHoldingClose(taskId)[0];
+    const blocker = tasks.graph.blockersHoldingClose(taskId)[0];
     expect(reportWakes(ops).at(-1)).toContain(
       `It waits on ${blocker?.key} "Unblock" (not started)`,
     );
-    tasks.dispatch(blocker?.id ?? "", {
+    tasks.starts.dispatch(blocker?.id ?? "", {
       workspace: { repoDir: "", worktreeDir: "", branch: "" },
       accountId: null,
       assignee: "crewmate",
@@ -16034,7 +16036,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       {
         name: "a captured settle",
         arrange: ({ tasks, taskId }) =>
-          tasks.setPendingSettle(taskId, {
+          tasks.delivery.setPendingSettle(taskId, {
             mode: "land",
             actor: "captain",
             requestedAt: hostNow,
@@ -16139,7 +16141,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         status: "running",
       });
       if (wait === "blocks") {
-        tasks.link(owner.id, taskId, "blocks", "firstmate");
+        tasks.graph.link(owner.id, taskId, "blocks", "firstmate");
       } else {
         // The real producers: a failed reading, then the crewmate's declaration.
         const failed = [{ name: "linux-checks", state: "failure" as const }];
@@ -16392,7 +16394,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       "removes a baseline wait by task keys with graph edge %s without erasing check evidence",
       async (graph) => {
         const { supervisor, tasks, taskId, owner } = await waitingOn("baseline");
-        if (graph) tasks.link(owner.id, taskId, "blocks", "firstmate", true);
+        if (graph) tasks.graph.link(owner.id, taskId, "blocks", "firstmate", true);
         const before = tasks.get(taskId)?.delivery;
         const key = tasks.get(taskId)?.key;
         if (!key) throw new Error("missing waiting task");
@@ -16400,7 +16402,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         expect(supervisor.unlinkTasks(owner.key, key, "related")).toMatch(/^No such link/);
         expect(supervisor.unlinkTasks(owner.key, key, "blocks")).toMatch(/^Removed:/);
         const after = tasks.get(taskId)?.delivery;
-        expect(tasks.linksTo(taskId).filter((link) => link.type === "blocks")).toEqual([]);
+        expect(tasks.graph.linksTo(taskId).filter((link) => link.type === "blocks")).toEqual([]);
         expect(after?.ci).toBe("red");
         expect(after?.ciRepair?.failures).toEqual(before?.ciRepair?.failures);
         const { dependencyTask: _dependency, ...diagnosis } = before?.ciRepair?.diagnoses[0] ?? {};
@@ -16433,8 +16435,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         status: "running",
       });
       const loader = seedTask(tasks, { id: "inf-1479", title: "Runbook loader", status: "running" });
-      tasks.link(loader.id, carrier.id, "related", "firstmate");
-      tasks.link(old.id, waiting.id, "blocks", "crewmate");
+      tasks.graph.link(loader.id, carrier.id, "related", "firstmate");
+      tasks.graph.link(old.id, waiting.id, "blocks", "crewmate");
       supervisor.reconcileIdle(hostNow);
       hostNow += minutes(30);
       const before = crewmate.promptCalls.length;
@@ -16447,7 +16449,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await tick();
       // No premature "dropped, carry on": the wait is on the carrier now.
       expect(crewmate.promptCalls).toHaveLength(before);
-      expect(tasks.blockers(waiting.id).map((row) => row.id)).toEqual([carrier.id]);
+      expect(tasks.graph.blockers(waiting.id).map((row) => row.id)).toEqual([carrier.id]);
 
       hostNow += minutes(60);
       seedDelivery(tasks, carrier.id, { prNumber: 412 });
@@ -16481,7 +16483,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         title: "Publish Runbooks piece 0",
         status: "running",
       });
-      tasks.link(old.id, waiting.id, "blocks", "crewmate");
+      tasks.graph.link(old.id, waiting.id, "blocks", "crewmate");
       supervisor.reconcileIdle(hostNow);
       hostNow += minutes(30);
       tasks.close(old.id, { status: "dropped", reason: "cancelled", actor: "firstmate" });
@@ -16492,7 +16494,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const told = crewmate.promptCalls.length;
 
       hostNow += minutes(10);
-      tasks.link(old.id, carrier.id, "replaced-by", "firstmate");
+      tasks.graph.link(old.id, carrier.id, "replaced-by", "firstmate");
       await supervisor.sweepGates(hostNow);
       await tick();
       expect(crewmate.promptCalls.slice(told)).toEqual([
@@ -16531,7 +16533,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         title: "Fix the shared fixture",
         status: "running",
       });
-      tasks.link(owner.id, waiting.id, "blocks", "firstmate");
+      tasks.graph.link(owner.id, waiting.id, "blocks", "firstmate");
       supervisor.reconcileIdle(hostNow);
       hostNow += minutes(30);
       tasks.close(owner.id, { status: "done", reason: "merged", actor: "captain" });
@@ -16651,7 +16653,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         status: "queued",
         startPolicy: "on-request",
       });
-      tasks.link(planned.id, taskId, "blocks", "firstmate");
+      tasks.graph.link(planned.id, taskId, "blocks", "firstmate");
       await at(minutes(10));
       expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
     });
@@ -16671,7 +16673,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     it("a captain gate on the active record is read while it stands, and the sweep heals one nothing holds", async () => {
       const { supervisor, crewmate, ops, taskId, tasks, at } = await stopped();
-      tasks.setGate(taskId, { kind: "captain", ref: HEAD, reason: "the CI cap" });
+      tasks.placement.setGate(taskId, { kind: "captain", ref: HEAD, reason: "the CI cap" });
       const prompts = crewmate.promptCalls.length;
       await at(minutes(10));
       expect(crewmate.promptCalls).toHaveLength(prompts);
@@ -16697,8 +16699,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("a timed wait on the active record holds the ladder, and the sweep ends it with one steer", async () => {
       const { supervisor, crewmate, ops, taskId, tasks, idleSince, at } = await stopped();
       const until = idleSince + minutes(30);
-      tasks.setGate(taskId, { kind: "at-time", until, reason: "checks settle" });
-      expect(tasks.flagsOf(tasks.get(taskId) as TaskRecord).held).toBe(true);
+      tasks.placement.setGate(taskId, { kind: "at-time", until, reason: "checks settle" });
+      expect(tasks.graph.flagsOf(tasks.get(taskId) as TaskRecord).held).toBe(true);
       const prompts = crewmate.promptCalls.length;
       await at(minutes(29));
       expect(crewmate.promptCalls).toHaveLength(prompts);
@@ -18259,7 +18261,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     it("the wake a captain gate with no reason owes", async () => {
       const { ops, taskId, tasks, at } = await stopped();
-      tasks.setGate(taskId, { kind: "captain", ref: HEAD });
+      tasks.placement.setGate(taskId, { kind: "captain", ref: HEAD });
       await at(minutes(20));
       expect(ops.filter((line) => line.includes("is held for the captain"))).toEqual([
         `[fm-op] task ${taskId} "Job" is held for the captain and has had no card up for 20m: its crewmate cannot move until the captain answers one.${heldBlock(taskId, "captain-gate")}`,
@@ -18845,7 +18847,7 @@ describe("the task graph (task-system P2)", () => {
       startPolicy: "when-ready",
       priority: 1,
     });
-    expect(tasks.blockers(step.id).map((r) => r.id)).toEqual([planned.id]);
+    expect(tasks.graph.blockers(step.id).map((r) => r.id)).toEqual([planned.id]);
     await supervisor.sweepGates(Date.now());
     expect(sessions.open).not.toHaveBeenCalled();
     tasks.close(planned.id, { status: "done", reason: "landed", actor: "host" });
@@ -18925,7 +18927,7 @@ describe("the task graph (task-system P2)", () => {
     const a = supervisor.plan({ title: "A", intent: intentOf("a") });
     const b = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
     expect(supervisor.linkTasks(b.key, a.key, "blocks")).toMatch(/would close a cycle/);
-    expect(tasks.blockers(a.id)).toEqual([]);
+    expect(tasks.graph.blockers(a.id)).toEqual([]);
     expect(supervisor.linkTasks(a.key, b.key, "blocks")).toBe(
       "SCR-1 blocks SCR-2 (SCR-2 waits until SCR-1 closes) was already recorded.",
     );
@@ -18946,7 +18948,7 @@ describe("the task graph (task-system P2)", () => {
     );
     await tick();
     expect(tasks.get(b.id)?.gate).toBeNull();
-    expect(tasks.blockers(b.id)).toEqual([]);
+    expect(tasks.graph.blockers(b.id)).toEqual([]);
     expect(supervisor.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^No such link/);
   });
 
@@ -19014,7 +19016,7 @@ describe("the task graph (task-system P2)", () => {
       text: `dropped - ${NO_LONGER_WANTED}`,
     });
     expect(tasks.get(waiter.id)?.status).toBe("open");
-    expect(tasks.blockers(waiter.id).map((row) => row.id)).toEqual([planned.id]);
+    expect(tasks.graph.blockers(waiter.id).map((row) => row.id)).toEqual([planned.id]);
     expect(cards().some((card) => card.id === cardId)).toBe(false);
     expect(cardStore.chosenAction(cardId)).toBe("obsolete");
     expect(tasks.timeline(planned.id).some((event) => event.kind === "card_resolved")).toBe(false);
@@ -19076,7 +19078,7 @@ describe("the task graph (task-system P2)", () => {
     }
     crewmate.finishPrompt();
     await tick();
-    expect(tasks.discoveredFrom(taskId)).toHaveLength(3);
+    expect(tasks.graph.discoveredFrom(taskId)).toHaveLength(3);
     expect(await supervisor.landTask(taskId, "captain")).toBe(
       'Merged "Fix the keychain prompt" into main.',
     );
@@ -19084,7 +19086,7 @@ describe("the task graph (task-system P2)", () => {
     // The follow-ups outlive their origin as planned work of their own,
     // still traceable to where they were found.
     expect(tasks.byKey("SCR-2")).toMatchObject({ status: "open", parentId: null });
-    expect(tasks.discoveredOrigins(tasks.byKey("SCR-2")?.id ?? "").map((r) => r.id)).toEqual([
+    expect(tasks.graph.discoveredOrigins(tasks.byKey("SCR-2")?.id ?? "").map((r) => r.id)).toEqual([
       taskId,
     ]);
   });
@@ -19108,8 +19110,8 @@ describe("the task graph (task-system P2)", () => {
     expect(
       supervisor.linkTasks(waiter.key ?? waiter.id, tasks.get(taskId)?.key ?? taskId, "blocks"),
     ).toMatch(/^Recorded:/);
-    expect(tasks.blockers(taskId).map((row) => row.id)).toEqual([waiter.id]);
-    expect(tasks.linksTo(taskId).find((link) => link.type === "blocks")?.holdsMerge).toBe(false);
+    expect(tasks.graph.blockers(taskId).map((row) => row.id)).toEqual([waiter.id]);
+    expect(tasks.graph.linksTo(taskId).find((link) => link.type === "blocks")?.holdsMerge).toBe(false);
     crewmate.finishPrompt();
     await tick();
     expect(await supervisor.landTask(taskId, "captain")).toBe(
@@ -19183,10 +19185,10 @@ describe("the task graph (task-system P2)", () => {
     spec.onFollowup?.({ title: "Continue: show it in Settings", goal: "g", why: "w" });
     spec.onFollowup?.({ title: "Retry the upload later", goal: "g", why: "w" });
     const filed = (prefix: string) =>
-      tasks.discoveredFrom(taskId).find((t) => t.title.startsWith(prefix))?.id ?? "";
-    tasks.link(taskId, filed("Continue"), "blocks", "host");
+      tasks.graph.discoveredFrom(taskId).find((t) => t.title.startsWith(prefix))?.id ?? "";
+    tasks.graph.link(taskId, filed("Continue"), "blocks", "host");
     // Queued by its start policy, held so nothing starts it during the test.
-    tasks.setGate(filed("Retry"), { kind: "at-time", until: Date.now() + 60_000 });
+    tasks.placement.setGate(filed("Retry"), { kind: "at-time", until: Date.now() + 60_000 });
     tasks.updateFields(filed("Retry"), { startPolicy: "when-ready" }, "host");
     crewmate.finishPrompt();
     await tick();
@@ -19576,7 +19578,7 @@ describe("the task graph (task-system P2)", () => {
         });
 
       // INF-1235: remote work uses the computer's host reading, never the home branch.
-      if (remote) tasks.setDevice(taskId, "computer");
+      if (remote) tasks.placement.setDevice(taskId, "computer");
       // The offered version cannot be read here: no cell, never a zero.
       seedDelivery(tasks, taskId, { headSha: "9".repeat(40), ci: "green", ciAt: Date.now() });
       emit();
@@ -19779,7 +19781,7 @@ describe("the task graph (task-system P2)", () => {
     await tick();
     const spec = specs[0] as CrewmateSpec;
     spec.onFollowup?.({ title: "Live checks", goal: "g", why: "w", blocksMe: true });
-    const blocker = tasks.blockers(taskId)[0];
+    const blocker = tasks.graph.blockers(taskId)[0];
     const card = () => ({
       requiredActions: [],
       title: "The meter is fixed",
@@ -19794,7 +19796,7 @@ describe("the task graph (task-system P2)", () => {
     );
     expect(cards().some((c) => c.taskId === taskId && c.actions.length > 0)).toBe(false);
 
-    tasks.unlink(blocker?.id ?? "", taskId, "blocks", "firstmate");
+    tasks.graph.unlink(blocker?.id ?? "", taskId, "blocks", "firstmate");
     spec.onCard?.(card());
     await tick();
     expect(cards().some((c) => c.taskId === taskId && c.actions.length > 0)).toBe(true);
@@ -19828,8 +19830,8 @@ describe("the task graph (task-system P2)", () => {
     expect(followup?.prompt).toContain(
       'Filed as a follow-up by crewmate 1 while working on "Fix the meter" (SCR-1)',
     );
-    expect(tasks.discoveredFrom(taskId).map((r) => r.id)).toEqual([followup?.id]);
-    expect(tasks.blockers(taskId)).toEqual([]);
+    expect(tasks.graph.discoveredFrom(taskId).map((r) => r.id)).toEqual([followup?.id]);
+    expect(tasks.graph.blockers(taskId)).toEqual([]);
     expect(events).toContainEqual({
       type: "firstmate_note",
       text: "Task Fix the meter follow-up filed: SCR-2 Flaky meter test",
@@ -19838,17 +19840,17 @@ describe("the task graph (task-system P2)", () => {
     // feed line, never a wake of its own.
     expect(ops).toEqual([]);
     // Filing must never gate the work the captain actually asked for.
-    expect(tasks.openChildren(taskId)).toEqual([]);
-    expect(tasks.closeRefusal(taskId)).toBeUndefined();
-    expect(tasks.blockerRefusal(taskId)).toBeUndefined();
+    expect(tasks.graph.openChildren(taskId)).toEqual([]);
+    expect(tasks.graph.closeRefusal(taskId)).toBeUndefined();
+    expect(tasks.graph.blockerRefusal(taskId)).toBeUndefined();
 
     // blocks_me records that the origin waits on it - the one thing that does.
     expect(spec.onFollowup?.({ title: "Unblock", goal: "g", why: "w", blocksMe: true })).toContain(
       "and blocking it: your task cannot land until this one closes",
     );
-    expect(tasks.blockers(taskId).map((r) => r.key)).toEqual(["SCR-3"]);
+    expect(tasks.graph.blockers(taskId).map((r) => r.key)).toEqual(["SCR-3"]);
     expect(ops).toEqual([]);
-    expect(tasks.blockerRefusal(taskId)?.text).toMatch(/while it waits on: SCR-3 "Unblock"/);
+    expect(tasks.graph.blockerRefusal(taskId)?.text).toMatch(/while it waits on: SCR-3 "Unblock"/);
 
     // The Firstmate hears about both with the report, in one wake.
     crewmate.emit({ type: "assistant_delta", taskId, text: "Meter fixed; two follow-ups filed." });
@@ -20542,7 +20544,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
     await git(cwd, ["commit", "-m", "fix the meter"]);
     const original = await git(cwd, ["rev-parse", "HEAD"]);
     ownPull = { ...ownPull, headSha: original };
-    tasks.recordReport(taskId, { text: "Fixed the meter on PR #66" });
+    tasks.turns.recordReport(taskId, { text: "Fixed the meter on PR #66" });
     seedDelivery(tasks, taskId, { prUrl: "https://github.com/o/r/pull/66", prNumber: 66 });
     // Another task's pull request merged the same work by squash: main has
     // the content, but not this branch's commit.
@@ -22507,7 +22509,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         intent: intentOf("Fix the meter carefully."),
       });
       tasks.recordBrief("legacy-careful", ["Review before the pull request."]);
-      tasks.recordReport("legacy-careful", {
+      tasks.turns.recordReport("legacy-careful", {
         text: "The change is complete and its earlier review passed.",
         summary: "The change is complete.",
       });
@@ -22757,7 +22759,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         goal: "A routine install never touches the keychain settings",
         why: "every install re-asks for the keychain",
       });
-      const followup = tasks.discoveredFrom(taskId)[0];
+      const followup = tasks.graph.discoveredFrom(taskId)[0];
       expect(followup?.status).toBe("open");
       expect(await supervisor.startQueuedNow(followup?.key ?? "")).toContain("Started");
       await tick();
@@ -22774,7 +22776,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         goal: "The docs say when the keychain is touched",
         why: "nobody knew",
       });
-      const second = tasks.discoveredFrom(taskId).find((row) => row.id !== followup?.id);
+      const second = tasks.graph.discoveredFrom(taskId).find((row) => row.id !== followup?.id);
       await supervisor.startQueuedNow(second?.key ?? "");
       await tick();
       expect(tasks.get(second?.id ?? "")?.shape?.rigor).toBe("reviewed");
@@ -23222,18 +23224,18 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(brief).not.toContain("Care:");
       expect(review?.shape?.rigor).toBeUndefined();
       // No hold: the review carries no edge onto the builder (INF-1876).
-      expect(tasks.blockersHoldingClose(builderId)).toEqual([]);
+      expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);
       // No cache of the join on the builder: the parent edge is the one.
       const opened = tasks.get(builderId);
       expect(opened?.delivery).not.toHaveProperty("reviewTaskId");
-      expect(opened && tasks.verdictReviewOf(opened)).toBeUndefined();
+      expect(opened && tasks.graph.verdictReviewOf(opened)).toBeUndefined();
       expect(supervisor.crewStatus(builderId)[0]?.review).toBe(`review open (${review?.key})`);
       expect(supervisor.crewStatus(reviewId)[0]?.review).toBe(
         `reviews ${tasks.get(builderId)?.key}`,
       );
       // No refusal of the host's: the review is a delivery child, never
       // counted in the children-open gate, and holds no close of its own.
-      expect(tasks.blockerRefusal(builderId)).toBeUndefined();
+      expect(tasks.graph.blockerRefusal(builderId)).toBeUndefined();
       expect(mergePullRequest).not.toHaveBeenCalled();
       // The builder is idle while its reviewer reads: the open review is a
       // witness the ladder alone reads (INF-1876), so however long the
@@ -23278,7 +23280,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         reviewRiskNote: "one production line moves.",
       });
       const recorded = tasks.get(builderId);
-      expect(recorded && tasks.verdictReviewOf(recorded)?.id).toBe(reviewId);
+      expect(recorded && tasks.graph.verdictReviewOf(recorded)?.id).toBe(reviewId);
       const findingsWake = ops.find((line) => line.includes("with verdict findings"));
       expect(findingsWake).toContain(`reported on review task ${reviewId}`);
       expect(findingsWake).toContain(`the review of task ${builderId} "Fix the meter test"`);
@@ -23290,7 +23292,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(builder.promptCalls[0]).toContain(renderRigorSection("reviewed"));
       expect(inbox.allFor("supervision")).toHaveLength(0);
       expect(supervisor.crewStatus(builderId)[0]?.review).toBe(`review open (${review?.key})`);
-      expect(tasks.blockerRefusal(builderId)).toBeUndefined();
+      expect(tasks.graph.blockerRefusal(builderId)).toBeUndefined();
 
       // The builder's fix report names its open review, the verdict and
       // head it last read, and the re-review a new head asks for; the typed
@@ -23386,7 +23388,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(passWake).toContain(`review task ${tasks.get(reviewId)?.key} is closed`);
       expect(passWake?.endsWith(` ${REVIEW_PASSED_NEXT}`)).toBe(true);
       expect(supervisor.crewStatus(builderId)[0]?.review).toBe("review passed");
-      expect(tasks.blockersHoldingClose(builderId)).toEqual([]);
+      expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);
 
       // After the pass the builder pushes and opens the PR (the new
       // ordering); the completion card then publishes, with the review
@@ -23764,7 +23766,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(ops.find((line) => line.includes("with verdict"))).toBeUndefined();
       // Nothing to hold: failing toward the human costs no round, and the
       // review stays open.
-      expect(tasks.blockersHoldingClose(builderId)).toEqual([]);
+      expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);
       expect(supervisor.crewStatus(builderId)[0]?.review).toBe(
         `review open (${tasks.get(reviewId)?.key})`,
       );
@@ -23813,7 +23815,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
               event.text === "review passed at 0123456, risk low: notes only.",
           ),
       ).toBe(true);
-      expect(tasks.blockersHoldingClose(builderId)).toEqual([]);
+      expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);
     } finally {
       repo.dispose();
     }
@@ -24722,7 +24724,7 @@ describe("the deliverable axis (Task B)", () => {
       goal: "Find out why a cancelled check run keeps the version red",
       why: "A later run passed on the same version",
     });
-    const filed = harness.tasks.discoveredFrom(taskId)[0] as TaskRecord;
+    const filed = harness.tasks.graph.discoveredFrom(taskId)[0] as TaskRecord;
     expect(filed.intent).toBeNull();
     expect(filed.prompt).toContain("Delivery: direct-pr");
     await harness.supervisor.startQueuedNow(filed.key);
@@ -24806,7 +24808,7 @@ describe("the deliverable axis (Task B)", () => {
     supervisor.close(card.id);
     await tick();
     const key = tasks.get(answer.taskId)?.key ?? answer.taskId;
-    tasks.recordReport(answer.taskId, { text: "The investigation is complete." });
+    tasks.turns.recordReport(answer.taskId, { text: "The investigation is complete." });
     const earlyAmendment = `First-draw at final responsive width. ${"Exact scoped evidence. ".repeat(100)}Reduced motion.`;
     cardStore.appendMessage({ cardId: card.id, who: "captain", text: earlyAmendment, at: 1 });
     for (let i = 0; i < 15; i++)
@@ -24842,8 +24844,8 @@ describe("the deliverable axis (Task B)", () => {
     expect(brief).toContain("- crewmate: Later discussion 14");
     // A blank message says nothing, so the thread quotes none.
     expect(brief).not.toContain("- host:");
-    tasks.recordReport(answer.taskId, { text: "A later short closure." });
-    tasks.recordReport(built.taskId, { text: "Builder finished." });
+    tasks.turns.recordReport(answer.taskId, { text: "A later short closure." });
+    tasks.turns.recordReport(built.taskId, { text: "Builder finished." });
     for (let i = 0; i < 550; i++) tasks.noteProgress(built.taskId, `Later checkpoint ${i}`);
     const reread = await specs[1]?.onQueryTasks?.({ key: tasks.get(built.taskId)?.key });
     expect(reread?.rows[0]?.brief).toBe(brief);
@@ -24938,7 +24940,7 @@ describe("the deliverable axis (Task B)", () => {
       ],
     });
     cardStore.resolve(`${prototype.id}-built`, "merge");
-    tasks.recordReport(mock.taskId, { text: "Built as picked: layout B at 360 px." });
+    tasks.turns.recordReport(mock.taskId, { text: "Built as picked: layout B at 360 px." });
     tasks.close(mock.taskId, { status: "done", reason: "merged", actor: "captain" });
     const key = tasks.get(mock.taskId)?.key ?? mock.taskId;
 
@@ -25046,7 +25048,7 @@ describe("the deliverable axis (Task B)", () => {
     specs[0]?.onFollowup?.({ title: "Flaky meter test", goal: "unflake it", why: "it races" });
     finder.finishPrompt();
     await tick();
-    const filed = tasks.discoveredFrom(found.taskId)[0];
+    const filed = tasks.graph.discoveredFrom(found.taskId)[0];
     if (!filed) throw new Error("no follow-up was filed");
 
     expect(await supervisor.startQueuedNow(filed.key)).toContain("Started");
@@ -25074,8 +25076,8 @@ describe("the deliverable axis (Task B)", () => {
     specs[0]?.onFollowup?.({ title: "Flaky meter test", goal: "unflake it", why: "it races" });
     finder.finishPrompt();
     await tick();
-    tasks.recordReport(found.taskId, { text: "The meter test races its timer." });
-    const filed = tasks.discoveredFrom(found.taskId)[0];
+    tasks.turns.recordReport(found.taskId, { text: "The meter test races its timer." });
+    const filed = tasks.graph.discoveredFrom(found.taskId)[0];
     if (!filed) throw new Error("no follow-up was filed");
     const originKey = tasks.get(found.taskId)?.key ?? found.taskId;
     // Firstmate names the origin as the follow-up's basis. The stamp writer
@@ -25353,7 +25355,7 @@ describe("CrewSupervisor: the card thread", () => {
       title: "Update the setup files",
       status: "completed",
     });
-    h.tasks.declareRequiredActions(
+    h.tasks.delivery.declareRequiredActions(
       "required-source",
       {
         cardId: "card-source",
@@ -25530,7 +25532,7 @@ describe("CrewSupervisor: the card thread", () => {
     // The first mate was asked once, and nothing asked the captain again.
     expect(converse).toHaveBeenCalledTimes(1);
     // The confirmation offered at generation 1 cannot complete generation 2.
-    expect(h.tasks.completeCaptainAction(taskId, 1, "confirmed")).toBe(false);
+    expect(h.tasks.delivery.completeCaptainAction(taskId, 1, "confirmed")).toBe(false);
     expect(h.tasks.get(taskId)?.status).toBe("open");
     await tick();
   });
@@ -26155,8 +26157,8 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     const messageFiles: MessageFile[] = [];
     const content = "Date,Observation\r\n2026-10-25,Dialog cannot open\r\n".repeat(100);
     const text = withPastedFiles("Read this", [{ name: "notes.csv", text: content }], messageFiles);
-    tasks.openAsk({ id: "text-message", text, messageFiles });
-    tasks.attachAsk("text-message", build.id, "tool:create_task");
+    tasks.capture.openAsk({ id: "text-message", text, messageFiles });
+    tasks.capture.attachAsk("text-message", build.id, "tool:create_task");
     await supervisor.startQueuedNow(build.key);
     await tick();
     const brief = crewmate.promptCalls[0] ?? "";
@@ -26193,7 +26195,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     const message = (
       id: string,
       images: { mimeType: "image/png" | "image/jpeg"; data: string; name: string }[],
-    ) => tasks.openAsk({ id, text: id, attachments: keepImages(randomUUID(), images) });
+    ) => tasks.capture.openAsk({ id, text: id, attachments: keepImages(randomUUID(), images) });
     message("on-plan", [{ ...pngImage, name: "before.png" }]);
     message("on-build", [
       { ...jpegImage, name: "mock.jpg" },
@@ -26206,10 +26208,10 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
         data: Buffer.from([0xff, 0xd8, 0xff, 1]).toString("base64"),
       },
     ]);
-    tasks.attachAsk("on-plan", plan.id, "tool:create_task");
-    tasks.attachAsk("on-build", build.id, "tool:update_task");
-    tasks.attachAsk("gone", build.id, "tool:update_task");
-    rmSync(attachmentPath(tasks.getAsk("gone")?.attachments[0] as AttachmentRef));
+    tasks.capture.attachAsk("on-plan", plan.id, "tool:create_task");
+    tasks.capture.attachAsk("on-build", build.id, "tool:update_task");
+    tasks.capture.attachAsk("gone", build.id, "tool:update_task");
+    rmSync(attachmentPath(tasks.capture.getAsk("gone")?.attachments[0] as AttachmentRef));
 
     await supervisor.startQueuedNow(build.key);
     await tick();
@@ -26941,7 +26943,7 @@ describe("parent tasks with planned children", () => {
     } = await plannedBehindAPlan();
     // Planned while the plan was still running: recorded, not believed yet.
     expect(tasks.get(implement.id)?.shape).toMatchObject({ basis: planKey });
-    expect(tasks.basisOf(implement)).toEqual({ ref: planKey, verified: false });
+    expect(tasks.graph.basisOf(implement)).toEqual({ ref: planKey, verified: false });
 
     const asked = supervisor.addCardMessage(
       card.id,
@@ -26977,7 +26979,7 @@ describe("parent tasks with planned children", () => {
     // as named, and the row's tier follows the grounded route.
     const started = tasks.get(implement.id);
     expect(started?.shape).not.toHaveProperty("basis_verified");
-    expect(started && tasks.basisOf(started)).toEqual({ ref: planKey, verified: true });
+    expect(started && tasks.graph.basisOf(started)).toEqual({ ref: planKey, verified: true });
     expect(started?.difficulty).toBe("medium");
     expect(sessionSpecs[0]?.thinking.level).toBe("xhigh");
     expect(sessionSpecs[1]?.thinking.level).toBe("medium");
@@ -27028,7 +27030,7 @@ describe("parent tasks with planned children", () => {
     });
     planner.finishPrompt();
     await tick();
-    tasks.recordReport(plan.taskId, {
+    tasks.turns.recordReport(plan.taskId, {
       text: "Task cards: one record proposed; count still unresolved.",
     });
     const answers = [
@@ -27077,7 +27079,7 @@ describe("parent tasks with planned children", () => {
     await tick();
     expect(sessions.open.mock.calls).toHaveLength(starts);
     expect(
-      tasks.children(parent.id).filter((child) => child.shape?.basis === planKey),
+      tasks.graph.children(parent.id).filter((child) => child.shape?.basis === planKey),
     ).toHaveLength(1);
     expect(tasks.get(parent.id)).toMatchObject({
       status: "open",
@@ -27122,7 +27124,7 @@ describe("parent tasks with planned children", () => {
     expect(shape).toMatchObject({ kind: "implement", basis: planKey, basis_verified: false });
     expect(tierFor(shape)).toMatchObject({ rule: "R3", bucket: "high" });
     const started = tasks.get(implement.id);
-    expect(started && tasks.basisOf(started)).toEqual({ ref: planKey, verified: false });
+    expect(started && tasks.graph.basisOf(started)).toEqual({ ref: planKey, verified: false });
     expect(builder.promptCalls[0] ?? "").not.toContain("grounded in");
   });
 
@@ -27248,7 +27250,7 @@ describe("parent tasks with planned children", () => {
       outcome: "reproduced: yes",
     });
     tasks.close("rep2", { status: "dropped", reason: "superseded", actor: "firstmate" });
-    tasks.markWorkspaceRemoved("rep2");
+    tasks.placement.markWorkspaceRemoved("rep2");
     tasks.note("rep2", "working copy removed - 1 commit not in yet saved first", {
       news: false,
       data: {
@@ -27426,13 +27428,13 @@ describe("closing an answer task another task builds on", () => {
       intent: intentOf("build the meter"),
     });
     await tick();
-    tasks.link(check.taskId, build.taskId, "blocks", "firstmate");
+    tasks.graph.link(check.taskId, build.taskId, "blocks", "firstmate");
     await reportAndIdle(checker, check.taskId, "checks: pass - ten of ten.");
     const checkKey = tasks.get(check.taskId)?.key ?? check.taskId;
     const buildKey = tasks.get(build.taskId)?.key ?? build.taskId;
     // A recorded wait holds the start, not the merge (INF-416 piece E).
-    expect(tasks.blocking(check.taskId).map((row) => row.id)).toEqual([build.taskId]);
-    expect(tasks.blockerRefusal(build.taskId)).toBeUndefined();
+    expect(tasks.graph.blocking(check.taskId).map((row) => row.id)).toEqual([build.taskId]);
+    expect(tasks.graph.blockerRefusal(build.taskId)).toBeUndefined();
 
     const result = await supervisor.closeAnswerUsedAsBasis(checkKey);
     expect(result).toMatchObject({ ok: true });
@@ -27447,8 +27449,8 @@ describe("closing an answer task another task builds on", () => {
     expect(line?.kind).toBe("ok");
     expect(line?.text).toBe(`Answered: its answer carries on in ${buildKey} "Implement the meter"`);
     // Done is what clears a wait: the build carries on, and nothing holds its merge.
-    expect(tasks.blockerRefusal(build.taskId)).toBeUndefined();
-    expect(tasks.waitingOn(build.taskId)).toEqual([]);
+    expect(tasks.graph.blockerRefusal(build.taskId)).toBeUndefined();
+    expect(tasks.graph.waitingOn(build.taskId)).toEqual([]);
     expect(tasks.get(build.taskId)?.status).toBe("active");
 
     // A link to work that already closed carries the answer nowhere: the
@@ -27460,7 +27462,7 @@ describe("closing an answer task another task builds on", () => {
     });
     await tick();
     const gone = supervisor.plan({ title: "Fix the dock", intent: intentOf("fix the dock") });
-    tasks.link(late.taskId, gone.id, "blocks", "firstmate");
+    tasks.graph.link(late.taskId, gone.id, "blocks", "firstmate");
     tasks.close(gone.id, { status: "dropped", reason: "cancelled", actor: "host" });
     await reportAndIdle(lateChecker, late.taskId, "checks: pass - eight of eight.");
     const closedLate = await supervisor.closeAnswerUsedAsBasis(late.taskId);
@@ -27963,12 +27965,12 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     crewmate.finishPrompt();
     await tick();
     const before = crewmate.promptCalls.length;
-    tasks.setGate(taskId, { kind: "at-time", until: Date.now() - 1, reason: "checks settle" });
+    tasks.placement.setGate(taskId, { kind: "at-time", until: Date.now() - 1, reason: "checks settle" });
     await supervisor.sweepGates(Date.now());
     await tick();
     crewmate.finishPrompt();
     await tick();
-    tasks.setGate(taskId, { kind: "at-time", until: Date.now() - 1 });
+    tasks.placement.setGate(taskId, { kind: "at-time", until: Date.now() - 1 });
     await supervisor.sweepGates(Date.now());
     await tick();
     expect(crewmate.promptCalls.slice(before)).toEqual([
@@ -28040,7 +28042,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     // Streaming on a backend that cannot take a steer mid-turn: the rows wait.
     specs[0]?.onReport?.("The decision is ready.");
     supervisor.replyToCard(card ?? "", "see this", [pngImage]);
-    tasks.setGate(timed.taskId, { kind: "at-time", until: Date.now() - 1 });
+    tasks.placement.setGate(timed.taskId, { kind: "at-time", until: Date.now() - 1 });
     await supervisor.sweepGates(Date.now());
     await tick();
     expect(inbox.allFor(taskId).map((row) => [row.facts?.kind, row.text])).toEqual([
@@ -28365,7 +28367,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
       title: "Prove every project's Mac jobs in a virtual Mac",
       status: "running",
     });
-    tasks.link(owner.id, taskId, "blocks", "firstmate");
+    tasks.graph.link(owner.id, taskId, "blocks", "firstmate");
     const record = () => tasks.get(taskId) as TaskRecord;
     expect(supervisor.workPosture(record())).toEqual({ state: "idle", reason: "dependency" });
     const ciRows = () => tasks.timeline(taskId).filter((event) => event.kind === "ci").length;
@@ -28881,7 +28883,7 @@ describe("ready-card choice admission", () => {
           { id: "open", label: "Open settings", effect: { kind: "open", target: "settings" } },
         ],
       });
-      if (byGate) tasks.fileDecision({ id: "closed", title: "Route", cardId: id });
+      if (byGate) tasks.capture.fileDecision({ id: "closed", title: "Route", cardId: id });
       else seedTask(tasks, { id: "closed", title: "Route", status: "idle" });
       tasks.close("closed", { status: "done", reason: "answered", actor: "captain" });
       const timeline = tasks.timeline("closed");
@@ -30913,10 +30915,10 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
     it("INF-1550: takes over a host-blocked branch without a merge or captain card, keeping the origin's evidence", async () => {
       const h = await firstStage();
       // The origin's own check evidence: a failed check at its committed version.
-      h.tasks.recordChangeEvidence(h.first.id, {
+      h.tasks.delivery.recordChangeEvidence(h.first.id, {
         ciRepair: { failures: [{ headSha: h.head, checks: ["unit-tests"] }], diagnoses: [], repairs: [] },
       });
-      h.tasks.recordReport(h.first.id, {
+      h.tasks.turns.recordReport(h.first.id, {
         text: "The running host record blocks this task; use branch_from instead of waiting for an alpha.",
       });
       const original = h.tasks.get(h.first.id);
@@ -30956,10 +30958,10 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
     it("INF-1550 F9: runs the served spawn, file-steer and relationship tools for an immediate takeover", async () => {
       const h = await firstStage();
       // The origin's own check evidence: a failed check at its committed version.
-      h.tasks.recordChangeEvidence(h.first.id, {
+      h.tasks.delivery.recordChangeEvidence(h.first.id, {
         ciRepair: { failures: [{ headSha: h.head, checks: ["unit-tests"] }], diagnoses: [], repairs: [] },
       });
-      h.tasks.recordReport(h.first.id, {
+      h.tasks.turns.recordReport(h.first.id, {
         text: "The host record refused further work; the committed meter change can continue in a fresh task.",
       });
       const original = h.tasks.get(h.first.id)!;
@@ -31026,10 +31028,10 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
         expect(readFileSync(join(next.worktreeDir!, "meter.ts"), "utf8")).toBe(
           "export const meter = 2;\n",
         );
-        expect(h.tasks.blockers(next.id)).toEqual([]);
-        expect(h.tasks.blockers(h.first.id).map((task) => task.id)).toContain(next.id);
-        expect(h.tasks.relationshipsOf(h.first.id)).toContainEqual(
-          expect.objectContaining({ kind: "related", from: h.first.id, to: next.id }),
+        expect(h.tasks.graph.blockers(next.id)).toEqual([]);
+        expect(h.tasks.graph.blockers(h.first.id).map((task) => task.id)).toContain(next.id);
+        expect(h.tasks.graph.linksFrom(h.first.id)).toContainEqual(
+          expect.objectContaining({ type: "related", fromId: h.first.id, toId: next.id }),
         );
         expect(h.tasks.get(h.first.id)).toMatchObject({
           status: "active",
@@ -31042,8 +31044,8 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
             started: next.status,
             committedWorkPreserved: git(next.worktreeDir!, "rev-parse", "HEAD") === h.head,
             handoverBytesPreserved: readFileSync(delivered).equals(readFileSync(artifact)),
-            successorBlockers: h.tasks.blockers(next.id).length,
-            originWaitsForSuccessor: h.tasks.blockers(h.first.id).some((task) => task.id === next.id),
+            successorBlockers: h.tasks.graph.blockers(next.id).length,
+            originWaitsForSuccessor: h.tasks.graph.blockers(h.first.id).some((task) => task.id === next.id),
             captainCards: h.supervisor.cardsSnapshot().length,
           }),
         );
@@ -31166,7 +31168,7 @@ describe("programs (INF-799 piece 2)", () => {
     const part = (call: number) =>
       vi.waitFor(() => {
         const found = harness.tasks
-          .children(program.id)
+          .graph.children(program.id)
           .find((child) => child.shape?.program_part?.call === call);
         if (found?.status !== "active" || !sessions[call]?.promptCalls.length)
           throw new Error(`part ${call} has not started`);
@@ -31205,7 +31207,7 @@ describe("programs (INF-799 piece 2)", () => {
     const script = `await task("Investigate the meter.", { intelligence: "premium" }); return "checked";`;
     const denied = await programHarness(script, 1);
     await vi.waitFor(() => expect(denied.tasks.get(denied.program.id)?.status).toBe("dropped"), PROGRAM_WAIT);
-    expect(denied.tasks.children(denied.program.id)).toEqual([]);
+    expect(denied.tasks.graph.children(denied.program.id)).toEqual([]);
     expect(denied.ops.join(" ")).toContain("the captain must request premium for the program first");
     const allowed = await programHarness(script, 1, { premium: true });
     const part = await allowed.part(0);
@@ -31242,7 +31244,7 @@ describe("programs (INF-799 piece 2)", () => {
     // Both capping parts run at once, each waiting on the finder's result.
     const meter = await h.part(1);
     const gauge = await h.part(2);
-    expect(h.tasks.blockers(meter.id).map((row) => row.id)).toEqual([finder.id]);
+    expect(h.tasks.graph.blockers(meter.id).map((row) => row.id)).toEqual([finder.id]);
     await h.report(2, "Capped src/gauge.ts at 4 KiB.");
     await h.report(1, "Capped src/meter.ts at 4 KiB.");
 
@@ -31277,7 +31279,7 @@ describe("programs (INF-799 piece 2)", () => {
     const bound = h.ops.filter((line) => line.includes("reached the bound you proposed"));
     expect(bound).toHaveLength(1);
     expect(bound[0]).toContain("on the captain's words raise it with update_task program_bound, or drop the program");
-    expect(h.tasks.children(h.program.id)).toHaveLength(1);
+    expect(h.tasks.graph.children(h.program.id)).toHaveLength(1);
     expect(h.tasks.updateFields(h.program.id, { programBound: 2 }, "firstmate")).toEqual(["bound 2"]);
     await h.report(1, "Capped gauge.ts.");
     await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
@@ -31336,7 +31338,7 @@ describe("programs (INF-799 piece 2)", () => {
     await h.part(1);
     await h.report(0, "Capped the meter.");
     await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
-    const gauge = h.tasks.children(h.program.id).find((part) => part.shape?.program_part?.call === 1);
+    const gauge = h.tasks.graph.children(h.program.id).find((part) => part.shape?.program_part?.call === 1);
     expect(gauge?.status).toBe("dropped");
     // The dropped part's close swept the graph while the program finished: no second runner.
     await tick();
@@ -31411,7 +31413,7 @@ describe("programs (INF-799 piece 2)", () => {
     const h = await programHarness(`return await task("Cap the meter.");`, 1);
     h.open.mockRejectedValueOnce(new Error("the provider did not answer"));
     const part = await vi.waitFor(() => {
-      const found = h.tasks.children(h.program.id)[0];
+      const found = h.tasks.graph.children(h.program.id)[0];
       if (!found || !h.tasks.timeline(found.id).some((event) => event.text.includes("could not start")))
         throw new Error("the part has not been returned to the queue");
       return found;
@@ -31452,17 +31454,17 @@ describe("programs (INF-799 piece 2)", () => {
       startPolicy: "on-request",
     });
     await tick();
-    expect(h.tasks.children(h.program.id)).toHaveLength(0);
+    expect(h.tasks.graph.children(h.program.id)).toHaveLength(0);
     expect(await h.supervisor.startQueuedNow(h.program.key)).toBe(
       `Started ${h.program.key} "Cap the meter's rendered results".`,
     );
     expect(h.tasks.get(h.program.id)).toMatchObject({ status: "open" });
-    expect(h.tasks.programStarted(h.program.id)).toBe(true);
+    expect(h.tasks.starts.programStarted(h.program.id)).toBe(true);
     // No crewmate holds a program: its start is not the crewmate fact that draws the Crewmate tab (INF-866 N3).
     expect(h.tasks.get(h.program.id)?.startedAt).toBeNull();
     const part = await h.part(0);
     // The part reports, and the app quits before the program reads it.
-    h.tasks.recordReport(part.id, { text: "Capped the meter." });
+    h.tasks.turns.recordReport(part.id, { text: "Capped the meter." });
     await h.supervisor.disposeAll();
 
     const restartedTasks = new TaskService({ db: h.db, strict: true });
@@ -31488,7 +31490,7 @@ describe("programs (INF-799 piece 2)", () => {
       expect(restartedTasks.latestResult(h.program.id)?.value).toEqual({
         value: "Capped the meter.",
       });
-      expect(restartedTasks.children(h.program.id)).toHaveLength(1);
+      expect(restartedTasks.graph.children(h.program.id)).toHaveLength(1);
     } finally {
       await restarted.disposeAll();
     }
@@ -31586,7 +31588,7 @@ describe("the first mate's integration approval card (INF-1108)", () => {
     expect(card?.actions.find((action) => action.default)?.label).toBe(
       INTEGRATION_APPROVAL_WORDS.once,
     );
-    const row = tasks.openCardTaskFor(cardId);
+    const row = tasks.capture.openCardTaskFor(cardId);
     expect(row?.delivery?.writeAsks).toEqual([expect.objectContaining({ id: ask.id })]);
 
     supervisor.act(cardId, "once");
@@ -31611,7 +31613,7 @@ describe("the first mate's integration approval card (INF-1108)", () => {
     const { supervisor, tasks, sent, wakes } = firstmateSetup();
     const ask = heldCall("ia0000000002");
     const cardId = supervisor.askIntegrationForFirstmate(ask);
-    const row = tasks.openCardTaskFor(cardId);
+    const row = tasks.capture.openCardTaskFor(cardId);
     supervisor.close(cardId);
     await tick();
     expect(sent).toEqual([]);
@@ -32625,7 +32627,7 @@ describe("finding context is not starting code (INF-1964)", () => {
     });
     const finding =
       "The count races detached cleanup; await the probe disconnect before asserting the count.";
-    tasks.recordReport(origin.id, { text: finding });
+    tasks.turns.recordReport(origin.id, { text: finding });
     cardStore.upsert({
       id: "origin-finding",
       taskId: origin.id,
@@ -32662,12 +32664,12 @@ describe("finding context is not starting code (INF-1964)", () => {
       prompt: "Wait for the probe disconnect",
     }).record;
     if (moved) tasks.moveToProject(filing.id, tasks.projects.forRepo(ssh.id)!.id, "firstmate");
-    tasks.recordShape(filing.id, { kind: "fix", deliverable: "change" }, null);
+    tasks.placement.recordShape(filing.id, { kind: "fix", deliverable: "change" }, null);
     if (recovery === "basis") {
       tasks.updateFields(filing.id, { basis: origin.key }, "firstmate");
       expect(tasks.get(filing.id)?.shape?.basis).toBe(origin.key);
     }
-    if (recovery === "replacement") tasks.link(origin.id, filing.id, "replaced-by", "firstmate");
+    if (recovery === "replacement") tasks.graph.link(origin.id, filing.id, "replaced-by", "firstmate");
     if (remote)
       tasks.updateFields(
         filing.id,
@@ -32678,7 +32680,7 @@ describe("finding context is not starting code (INF-1964)", () => {
       tasks,
       repos,
       cards: { listOpen: () => [], snapshot: () => [] },
-      startAttempt: (id) => tasks.startAttemptOf(id),
+      startAttempt: (id) => tasks.starts.startAttemptOf(id),
       broadcastEvent: () => {},
       emit: () => {},
     });
@@ -32761,7 +32763,7 @@ describe("finding context is not starting code (INF-1964)", () => {
           .map((stage) => stage.split(" => ")[1])
           .filter((group, index, groups) => group !== groups[index - 1]),
       ).toEqual(["backlog", "queued", "working"]);
-      expect(tasks.replacedPredecessors(filing.id)).toHaveLength(
+      expect(tasks.graph.replacedPredecessors(filing.id)).toHaveLength(
         recovery === "replacement" ? 1 : 0,
       );
       if (recovery) {

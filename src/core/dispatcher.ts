@@ -271,7 +271,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return { ok: true as const };
     },
 
-    "inf:conversation:last-turn": () => services.tasks.lastTurn(),
+    "inf:conversation:last-turn": () => services.tasks.capture.lastTurn(),
     "inf:conversation:state": () => ({ busy: services.firstmate.isBusy() }),
 
     "inf:task:abort": async (taskId) => {
@@ -1355,7 +1355,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     const at = services.ticker.now();
     if (run && isDeepStrictEqual(run.from, step.to)) {
       openRun = null;
-      services.tasks.withdrawOperation(run.operationId);
+      services.tasks.archive.withdrawOperation(run.operationId);
       services.broadcastEvent({
         type: "personalized",
         text,
@@ -1366,7 +1366,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     }
     if (run) {
       run.at = at;
-      services.tasks.reviseOperation(run.operationId, { title: text, outcome: text });
+      services.tasks.capture.reviseOperation(run.operationId, { title: text, outcome: text });
       services.broadcastEvent({
         type: "personalized",
         text,
@@ -1375,7 +1375,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       });
       return;
     }
-    const row = services.tasks.fileOperation({
+    const row = services.tasks.capture.fileOperation({
       id: randomUUID().slice(0, 8),
       title: text,
       outcome: text,
@@ -1409,7 +1409,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return;
     }
     const text = ACTIONS[name].done(value);
-    const row = services.tasks.fileOperation({
+    const row = services.tasks.capture.fileOperation({
       id: randomUUID().slice(0, 8),
       title:
         name === "project-settings" ||

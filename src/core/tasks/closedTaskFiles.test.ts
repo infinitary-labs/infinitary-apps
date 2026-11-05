@@ -257,7 +257,7 @@ describe("a closed task's leftover files", () => {
     const origin = closed("chain-origin");
     const follow = closed("chain-follow");
     const blocker = closed("chain-blocker", follow.key);
-    tasks.link(follow.id, origin.id, "discovered-from", "host");
+    tasks.graph.link(follow.id, origin.id, "discovered-from", "host");
     const later = tasks.create({
       id: "chain-later",
       title: "later",

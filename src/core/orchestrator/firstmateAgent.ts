@@ -126,13 +126,9 @@ import {
 import type { FirstmatePaused, SettingsStore } from "../storage/settingsStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { standingDependencyWaits } from "../tasks/dependencyWaits";
+import { type SettleRefusal, TaskGraphRefusal } from "../tasks/taskGraph";
 import { queryTasks } from "../tasks/taskQuery";
-import {
-  type SettleRefusal,
-  type TaskCardClick,
-  TaskGraphRefusal,
-  TaskService,
-} from "../tasks/taskService";
+import { type TaskCardClick, TaskService } from "../tasks/taskService";
 import { locateProject, renderLocated } from "../workspace/projectLocator";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import {
@@ -698,7 +694,7 @@ export class FirstmateAgent {
    * the captain's own authority like any turn of theirs.
    */
   private async askAgain(askId: string): Promise<void> {
-    const ask = this.options.tasks.getAsk(askId);
+    const ask = this.options.tasks.capture.getAsk(askId);
     if (!ask) return;
     try {
       // Read and verify every retained copy before accepting a fresh turn.
@@ -868,7 +864,7 @@ export class FirstmateAgent {
     });
     // A quit mid-turn left asks open; they land now, marked failed. One whose
     // words still wait on the lane stays open for the turn that reads them.
-    const stranded = options.tasks.listOpenAsks().map((ask) => ask.id);
+    const stranded = options.tasks.capture.listOpenAsks().map((ask) => ask.id);
     this.asks.reconcileStranded(this.delivery.waitingOnLane());
     this.delivery.reconcile(stranded);
     options.supervisor.setFirstmateHooks({
@@ -1194,7 +1190,7 @@ export class FirstmateAgent {
     const card = this.options.supervisor.cardsSnapshot().find((c) => c.id === visibleCardId);
     if (!card) return undefined;
     if (card.taskId && tasks.get(card.taskId)) return card.taskId;
-    return tasks.openDecisionFor(card.id)?.id;
+    return tasks.capture.openDecisionFor(card.id)?.id;
   }
 
   /**
@@ -2869,7 +2865,7 @@ export class FirstmateAgent {
               this.noteDelivery({ outcome: "action", kind: "record", tool: "use_integration" });
               return;
             }
-            const row = this.options.tasks.openCardTaskFor(fact.card);
+            const row = this.options.tasks.capture.openCardTaskFor(fact.card);
             if (row) this.asks.attach(row.id, "use_integration");
             this.noteDelivery({
               outcome: "action",
@@ -2923,7 +2919,7 @@ export class FirstmateAgent {
                 const proposed = await this.options.proposeProject?.(value);
                 if (!proposed) return "";
                 if (proposed.cardId) {
-                  const row = this.options.tasks.openCardTaskFor(proposed.cardId);
+                  const row = this.options.tasks.capture.openCardTaskFor(proposed.cardId);
                   if (row) this.asks.attach(row.id, "app_change");
                   this.noteDelivery({
                     outcome: "action",
@@ -2940,7 +2936,7 @@ export class FirstmateAgent {
           if (!this.options.changeProject) throw new Error("Project changes are not connected.");
           const result = await this.options.changeProject(action, value, actor);
           if (result.cardId) {
-            const row = this.options.tasks.openCardTaskFor(result.cardId);
+            const row = this.options.tasks.capture.openCardTaskFor(result.cardId);
             if (row) this.asks.attach(row.id, "app_change");
             this.noteDelivery({
               outcome: "action",
@@ -3038,9 +3034,13 @@ export class FirstmateAgent {
     const decision = card.actions.length > 0;
     if (card.taskId) {
       if (decision) {
-        tasks.recordCardRaised(card.taskId, { cardId, kind: "decision", title: card.title });
+        tasks.capture.recordCardRaised(card.taskId, {
+          cardId,
+          kind: "decision",
+          title: card.title,
+        });
       } else {
-        tasks.recordAnswer(card.taskId, { cardId, title: card.title, body: card.body });
+        tasks.capture.recordAnswer(card.taskId, { cardId, title: card.title, body: card.body });
       }
       this.asks.attach(card.taskId, "emit_card", false);
       return;
@@ -3048,13 +3048,13 @@ export class FirstmateAgent {
     if (decision) {
       // A revision in place keeps its row; a fresh decision files one in the
       // hinted task's project, else Scratch.
-      const existing = tasks.openDecisionFor(cardId);
+      const existing = tasks.capture.openDecisionFor(cardId);
       if (existing) {
         this.asks.attach(existing.id, "emit_card", false);
         return;
       }
       const hinted = this.asks.hintedTask();
-      const row = tasks.fileDecision({
+      const row = tasks.capture.fileDecision({
         id: randomUUID().slice(0, 8),
         title: clipTitle(card.title),
         cardId,
@@ -3065,9 +3065,9 @@ export class FirstmateAgent {
       return;
     }
     // A standalone note: the model asserted the ask is about no other work.
-    const revised = tasks.taskForCard(cardId);
+    const revised = tasks.capture.taskForCard(cardId);
     if (revised) {
-      tasks.recordAnswer(revised.id, {
+      tasks.capture.recordAnswer(revised.id, {
         cardId,
         title: card.title,
         body: card.body,
@@ -3076,7 +3076,7 @@ export class FirstmateAgent {
       this.asks.attach(revised.id, "emit_card", false);
       return;
     }
-    const row = tasks.fileQuestion({
+    const row = tasks.capture.fileQuestion({
       id: randomUUID().slice(0, 8),
       title: clipTitle(card.title),
       outcome: card.body,
@@ -3105,7 +3105,7 @@ export class FirstmateAgent {
           const output = await tool.run(params);
           try {
             const described = describer((params ?? {}) as Record<string, unknown>);
-            const row = this.options.tasks.fileOperation({
+            const row = this.options.tasks.capture.fileOperation({
               id: randomUUID().slice(0, 8),
               title: clipTitle(described.title),
               outcome: output.text.trim(),
@@ -3282,12 +3282,12 @@ export class FirstmateAgent {
                 if (refused) throw new TaskGraphRefusal(refused);
                 const added: string[] = [];
                 if (declared) {
-                  const linked = new Set(tasks.blockers(record.id).map((row) => row.id));
+                  const linked = new Set(tasks.graph.blockers(record.id).map((row) => row.id));
                   for (const blockerId of declared) {
                     if (linked.has(blockerId)) continue;
                     // A cycle throws inside this transaction, so the field edits
                     // above and below roll back with the link.
-                    if (!tasks.link(blockerId, record.id, "blocks", "firstmate")) continue;
+                    if (!tasks.graph.link(blockerId, record.id, "blocks", "firstmate")) continue;
                     const blocker = tasks.get(blockerId);
                     added.push(`waits for ${blocker?.key || blockerId}`);
                   }
@@ -3513,7 +3513,9 @@ export class FirstmateAgent {
         this.asks.attach(to.id, "link_tasks");
         this.asks.attach(from.id, "link_tasks");
         const linked = () =>
-          tasks.linksTo(to.id).some((link) => link.fromId === from.id && link.type === input.type);
+          tasks.graph
+            .linksTo(to.id)
+            .some((link) => link.fromId === from.id && link.type === input.type);
         const before = linked();
         const text = input.remove
           ? supervisor.unlinkTasks(from.id, to.id, input.type)
@@ -3680,7 +3682,7 @@ export class FirstmateAgent {
     const age = panel ? `from the ${panel} panel, ${ageText(now - at)}` : ageText(now - at);
     const what =
       op === "start-again"
-        ? `the captain started it again as ${this.options.tasks.replacementOf(taskId) ?? "a new task"} (Start again), ${age}; the old task stays dropped`
+        ? `the captain started it again as ${this.options.tasks.graph.replacementOf(taskId) ?? "a new task"} (Start again), ${age}; the old task stays dropped`
         : op === "start-task"
           ? `the captain started it ${panel ? "" : "from its task card, "}${age}${task?.status === "active" ? "; a crewmate is on it" : ""}`
           : op === "continue-task"
@@ -3904,7 +3906,7 @@ export class FirstmateAgent {
     const threadActivity = this.renderThreadActivity(Date.now());
     const introductionId = this.options.settings.getFirstRun().welcomeCardId;
     const introduction = introductionId
-      ? this.options.tasks.taskForCard(introductionId)
+      ? this.options.tasks.capture.taskForCard(introductionId)
       : undefined;
     const whole = (value: unknown): ContextSection => ({ kind: "whole", value });
     const rows = (entries: { id: string; value: unknown }[]): ContextSection => ({
@@ -4171,7 +4173,7 @@ export class FirstmateAgent {
           },
         });
       }
-      for (const ask of this.options.tasks.listAsksByDelivery("unresolved")) {
+      for (const ask of this.options.tasks.capture.listAsksByDelivery("unresolved")) {
         if (!ask.followed || !ask.noticeCardId || !shown.has(ask.noticeCardId)) continue;
         rows.push({
           at: ask.at,
@@ -4368,7 +4370,7 @@ export class FirstmateAgent {
     if (parent) parts.push(`under ${parent.key || parent.id}`);
     // A parent no crewmate holds is a container: say so, and how the work
     // under it stands, since nothing else on its row would.
-    const children = record.status === "open" ? tasks.children(record.id) : [];
+    const children = record.status === "open" ? tasks.graph.children(record.id) : [];
     const container = children.length > 0;
     if (container) {
       const count = (status: TaskRecord["status"]) =>
@@ -4379,12 +4381,12 @@ export class FirstmateAgent {
     }
     // A follow-up is no longer a child of the task it was found on, so its
     // discovered-from edge is the only thing that places it.
-    const origins = tasks.discoveredOrigins(record.id);
+    const origins = tasks.graph.discoveredOrigins(record.id);
     if (origins.length > 0) {
       parts.push(`found on ${origins.map((origin) => origin.key || origin.id).join(", ")}`);
     }
     if (record.status === "active") {
-      const holding = tasks.blockersHoldingClose(record.id);
+      const holding = tasks.graph.blockersHoldingClose(record.id);
       if (holding.length > 0) {
         parts.push(
           `cannot land until ${holding.map((blocker) => blocker.key || blocker.id).join(", ")}`,
@@ -4401,7 +4403,7 @@ export class FirstmateAgent {
       }
     }
     if (record.status === "open" && record.kind === "work") {
-      const waiting = tasks.waitingOn(record.id);
+      const waiting = tasks.graph.waitingOn(record.id);
       if (waiting.length > 0) {
         const dead = waiting.some((blocker) => blocker.status === "dropped");
         parts.push(
@@ -4477,7 +4479,7 @@ export class FirstmateAgent {
       if (
         localTurn &&
         !this.turnFailed &&
-        this.options.tasks.listOpenAsks().some((ask) => this.readThisTurn.has(ask.id)) &&
+        this.options.tasks.capture.listOpenAsks().some((ask) => this.readThisTurn.has(ask.id)) &&
         !this.deliveredThisTurn &&
         !(this.turnAboutCardId && String(this.lastTurnText ?? "").trim())
       ) {
@@ -4607,7 +4609,7 @@ export class FirstmateAgent {
     // retry: the turn that serves them again attaches and closes it.
     // Never lets a bookkeeping fault take the turn down with it.
     try {
-      const turnAsks = this.options.tasks.listOpenAsks().map((ask) => ask.id);
+      const turnAsks = this.options.tasks.capture.listOpenAsks().map((ask) => ask.id);
       readAsks = turnAsks.filter((id) => this.readThisTurn.has(id));
       const waiting = this.delivery.waitingOnLane();
       this.asks.endTurn({
@@ -4617,7 +4619,7 @@ export class FirstmateAgent {
         error: this.turnError,
       });
       asks = readAsks.map((id) => {
-        const ask = this.options.tasks.getAsk(id);
+        const ask = this.options.tasks.capture.getAsk(id);
         return { id, taskId: ask?.taskId ?? null, via: ask?.attachedVia ?? null };
       });
     } catch (caught) {
@@ -4748,9 +4750,9 @@ export class FirstmateAgent {
   /** Keeps a reply line beside the newest message, when it is one of `read`, and sends it. */
   private keepReplyLine(read: readonly string[], reply: LastTurnReply): void {
     try {
-      const latest = this.options.tasks.latestAskId();
+      const latest = this.options.tasks.capture.latestAskId();
       if (!latest || !read.includes(latest)) return;
-      this.options.tasks.setAskReply(latest, reply);
+      this.options.tasks.capture.setAskReply(latest, reply);
       this.options.broadcastEvent({ type: "firstmate_reply", ...reply });
     } catch (caught) {
       console.warn("[firstmate] the reply line could not be kept:", caught);
@@ -5058,7 +5060,7 @@ export class FirstmateAgent {
       }
       for (const id of input.asks) this.readThisTurn.add(id);
       this.asks.select([...this.readThisTurn].at(-1));
-      if (input.asks.includes(this.options.tasks.latestAskId() ?? "")) this.replyFacts = {};
+      if (input.asks.includes(this.options.tasks.capture.latestAskId() ?? "")) this.replyFacts = {};
       return;
     }
     // A session's owner-only events other than a turn's close say nothing

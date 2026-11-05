@@ -251,7 +251,7 @@ async function world() {
     crewmateSessionsDir(paths, "task-1"),
     "2026-09-20T16-05-00-000Z_01a09ddd.jsonl",
   );
-  tasks.setSessionFile("task-1", piFile);
+  tasks.turns.setSessionFile("task-1", piFile);
   const append = (file: string, text: string) => {
     mkdirSync(dirname(file), { recursive: true });
     let before = "";

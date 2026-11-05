@@ -33,7 +33,7 @@ export const ONE_TIME_CALLERS: Record<string, string> = {
     "the one-time folder move rewrites and counts every table of its staged copy",
   "src/core/folderMove/taskFolders.ts repairMovedTaskFolders":
     "runs at an open only after a folder move, and rewrites nothing once the rows name the new folder",
-  "src/core/tasks/taskService.ts TaskService.purge": "the D-13 purge deletes every task at once",
+  "src/core/tasks/taskArchive.ts TaskArchive.purge": "the D-13 purge deletes every task at once",
   "src/core/knowledge/directions.ts StandingDirections.carry":
     "carries the older record's standing directions into the knowledge collection once, then removes the old tables",
 };
@@ -146,7 +146,7 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
   "SELECT * FROM task_links ORDER BY created_at, from_id, to_id": {
     walks: ["SCAN task_links", "USE TEMP B-TREE FOR ORDER BY"],
     reason:
-      "every link, for a builder that resolves them in one pass (TaskService.allLinks); links grow with tasks, so the scale check counts it",
+      "every link, for a builder that resolves them in one pass (TaskService.graph.allLinks); links grow with tasks, so the scale check counts it",
   },
   "SELECT task_id, kind, ref FROM task_references": {
     walks: ["SCAN task_references"],

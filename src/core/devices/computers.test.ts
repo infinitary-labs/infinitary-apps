@@ -338,7 +338,7 @@ describe("your devices after a task changes", () => {
     // A task change pushes the list with the count it moved to.
     seed("started", "idle", deviceId);
     expect(tasksOn(pushed.at(-1))).toBe(23);
-    tasks.setDevice("more-0", null);
+    tasks.placement.setDevice("more-0", null);
     expect(tasksOn(pushed.at(-1))).toBe(22);
     tasks.close("there-0", { status: "dropped", reason: "cancelled", actor: "host" });
     expect(tasksOn(pushed.at(-1))).toBe(21);

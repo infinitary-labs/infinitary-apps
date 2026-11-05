@@ -149,7 +149,7 @@ function seedBusyBoard(userDataDir: string): void {
       status: "completed",
       worktreeDir: worktree(`y-${i}`),
     });
-    tasks.recordReport(`y-${i}`, {
+    tasks.turns.recordReport(`y-${i}`, {
       text: "Ready for your review.",
       declared: { wait: { reason: "review it" } },
     });

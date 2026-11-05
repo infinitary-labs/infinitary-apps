@@ -67,7 +67,7 @@ it("shows a placed Claude tool result in the Crewmate tab before its prompt ends
       }),
     ],
   });
-  tasks.setSessionFile(CREWMATE_TASK, session.sessionId);
+  tasks.turns.setSessionFile(CREWMATE_TASK, session.sessionId);
   const events: string[] = [];
   session.subscribe((event) => events.push(event.type));
   inner.answer({ tool: CONTRACT_TOOL, answer: "Not reached while held." });
@@ -146,7 +146,7 @@ it("shows a placed Claude call as running before its tool_end", async () => {
       }),
     ],
   });
-  tasks.setSessionFile(CREWMATE_TASK, session.sessionId);
+  tasks.turns.setSessionFile(CREWMATE_TASK, session.sessionId);
   const events: string[] = [];
   session.subscribe((event) => events.push(event.type));
   const recordDirOf = (id: string) => crewmateSessionsDir(paths, id);
@@ -273,7 +273,7 @@ it.each([
       }),
     ],
   });
-  tasks.setSessionFile(CREWMATE_TASK, session.sessionId);
+  tasks.turns.setSessionFile(CREWMATE_TASK, session.sessionId);
   const events: string[] = [];
   session.subscribe((event) => {
     events.push(event.type);

@@ -29,7 +29,7 @@ it("reuses compaction statements while reading fresh history and parameters", ()
     expect(first.oldest).toHaveLength(1);
 
     // A different task and new rows go through the same statements.
-    tasks.recordSteer("review", {
+    tasks.turns.recordSteer("review", {
       text: "Report when you will check the running job again.",
       actor: "supervisor",
       outcome: "queued-next-turn",

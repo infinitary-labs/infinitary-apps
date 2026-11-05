@@ -190,7 +190,7 @@ test("cached Tasks positions follow dependency inspection, folding and filtering
         status: "queued",
         startPolicy: "on-request",
       });
-      tasks.link(pair.blocker, pair.task, "blocks", "host");
+      tasks.graph.link(pair.blocker, pair.task, "blocks", "host");
     }
   } finally {
     db.close();

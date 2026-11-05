@@ -122,7 +122,7 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     worktreeDir: worktree("verify"),
     outcome: "Reproduced one of the two.",
   });
-  tasks.link("find", "verify", "blocks", "host");
+  tasks.graph.link("find", "verify", "blocks", "host");
   seedTask(tasks, {
     id: "check",
     title: "Check the finder's second lost turn",
@@ -131,7 +131,7 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     worktreeDir: worktree("check"),
     outcome: "Reading the resume path.",
   });
-  tasks.link("find", "check", "blocks", "host");
+  tasks.graph.link("find", "check", "blocks", "host");
   seedTask(tasks, {
     id: "synthesize",
     title: "Write up the verified lost turns",
@@ -139,7 +139,7 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     status: "queued",
     startPolicy: "on-request",
   });
-  tasks.link("verify", "synthesize", "blocks", "host");
+  tasks.graph.link("verify", "synthesize", "blocks", "host");
   // Two crewmates with no wait between them yet.
   seedTask(tasks, {
     id: "owner",

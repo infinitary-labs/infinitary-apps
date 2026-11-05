@@ -63,7 +63,7 @@ The realm bounds the script; it is not a security boundary, since its author is 
 Each host function the script names is one message to the core's runner (`src/core/program/programRunner.ts`, `programProtocol.ts`), answered with a value or with an error its await throws.
 
 The sweep that starts queued tasks runs a ready program (`dispatchQueuedTask`), and running one that already runs does nothing, so a program a quit stopped runs again at the next start.
-A program counts as started when its runner first runs it, an event on its timeline (`TaskService.markProgramStarted`, read by `programStarted`), never `startedAt`, which says a crewmate started and draws the Crewmate tab; it stays open while its script runs, so an on-request program the captain's Start ran is run again by the same sweep after a quit.
+A program counts as started when its runner first runs it, an event on its timeline (`TaskService.starts.markProgramStarted`, read by `programStarted`), never `startedAt`, which says a crewmate started and draws the Crewmate tab; it stays open while its script runs, so an on-request program the captain's Start ran is run again by the same sweep after a quit.
 It stays running until its end is recorded, so a part's close during that end never starts a second runner.
 
 ## Parts

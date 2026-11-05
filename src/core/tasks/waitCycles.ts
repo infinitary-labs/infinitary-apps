@@ -3,7 +3,7 @@ import { standingDependencyWaits } from "./dependencyWaits";
 
 export type WaitGraph = {
   get(id: string): TaskRecord | undefined;
-  blockers(id: string): TaskRecord[];
+  graph: { blockers(id: string): TaskRecord[] };
 };
 
 /** Before accepting waiter → prerequisite, follow only current, live waits back to waiter. */
@@ -26,7 +26,7 @@ export function liveWaitCycle(
     const task = tasks.get(id);
     if (!live(task)) continue;
     const prerequisites = [
-      ...tasks.blockers(id),
+      ...tasks.graph.blockers(id),
       ...standingDependencyWaits(tasks, task.delivery).map((wait) => wait.task),
     ];
     for (const next of prerequisites) {

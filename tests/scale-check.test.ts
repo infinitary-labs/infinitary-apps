@@ -240,9 +240,9 @@ async function buildRecord() {
             outcome: `Finished closed work ${index}.`,
           });
           const askId = `closed-ask-${index}`;
-          tasks.openAsk({ id: askId, text: `Please do closed work ${index}.` });
-          tasks.attachAsk(askId, id, "tool:spawn_task");
-          tasks.closeAsk(askId, "closed");
+          tasks.capture.openAsk({ id: askId, text: `Please do closed work ${index}.` });
+          tasks.capture.attachAsk(askId, id, "tool:spawn_task");
+          tasks.capture.closeAsk(askId, "closed");
           // Seeding wrote about five events; the rest are the crewmate's notes.
           for (let event = 5; event < EVENTS_PER_TASK - 1; event += 1)
             taskEvents.insert({
@@ -258,7 +258,7 @@ async function buildRecord() {
           cardStore.upsert(card(cardId, id, `Closed work ${index} is done`));
           cardStore.appendMessage({ cardId, who: "captain", text: "Looks good." });
           cardStore.resolve(cardId, "merge");
-          tasks.markAnswered([askId], cardId);
+          tasks.capture.markAnswered([askId], cardId);
           tasks.close(id, { status: "done", reason: "merged", actor: "host" });
         }
       }),
@@ -291,10 +291,10 @@ async function buildRecord() {
     for (let member = 0; member < members; member += 1) {
       vi.setSystemTime(Date.now() + 60_000);
       const askId = `open-ask-${message++}`;
-      tasks.openAsk({ id: askId, text: `About running work ${chain}, part ${member}.` });
-      tasks.attachAsk(askId, id, "tool:spawn_task");
-      tasks.closeAsk(askId, "closed");
-      tasks.setAskDelivery(askId, "covered");
+      tasks.capture.openAsk({ id: askId, text: `About running work ${chain}, part ${member}.` });
+      tasks.capture.attachAsk(askId, id, "tool:spawn_task");
+      tasks.capture.closeAsk(askId, "closed");
+      tasks.capture.setAskDelivery(askId, "covered");
     }
     cardStore.upsert(card(`card-${id}`, id, `Running work ${chain} has a question`));
   }

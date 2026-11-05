@@ -89,7 +89,7 @@ describe("files one task hands another", () => {
     const tasks = new TaskService({ db: openInMemoryDatabase(), now: () => 1, strict: true });
     seedTask(tasks, { id: "t-here", title: "Find the W-9", status: "cancelled" });
     seedTask(tasks, { id: "t-there", title: "Find the client file", status: "cancelled" });
-    tasks.setDevice("t-there", "mac-mini");
+    tasks.placement.setDevice("t-there", "mac-mini");
     seedTask(tasks, { id: "t-live", title: "Find the log", status: "running" });
     for (const id of ["t-here", "t-there", "t-live"]) {
       mkdirSync(crewmateHandoverDir(paths, id), { recursive: true });

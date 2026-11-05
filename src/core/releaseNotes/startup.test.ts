@@ -145,7 +145,10 @@ describe("an upgrade", () => {
     expect(atPublish).toEqual({ stored: 3, baseline: "0.1.27" });
     expect(f.published).toHaveLength(1);
     expect(f.published[0]?.[0]).toBe(note?.id);
-    expect(f.tasks.taskForCard(note?.id ?? "")).toMatchObject({ kind: "question", status: "done" });
+    expect(f.tasks.capture.taskForCard(note?.id ?? "")).toMatchObject({
+      kind: "question",
+      status: "done",
+    });
     expect(f.tracking()).toMatchObject({
       baseline: { version: "0.1.27" },
       previous: { version: "0.1.25" },

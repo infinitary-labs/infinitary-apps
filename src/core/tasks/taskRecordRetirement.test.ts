@@ -57,10 +57,10 @@ describe("retiring mixed task storage", () => {
     });
     expect(revised?.data?.journal).toBe(true);
     const before = tasks.get("goal");
-    expect(() => tasks.recordChangeEvidence("goal", { completionOffers: [] } as never)).toThrow(
-      "Change evidence cannot write permissions",
-    );
-    expect(() => tasks.recordPermissionRecords("goal", { ci: "green" } as never)).toThrow(
+    expect(() =>
+      tasks.delivery.recordChangeEvidence("goal", { completionOffers: [] } as never),
+    ).toThrow("Change evidence cannot write permissions");
+    expect(() => tasks.delivery.recordPermissionRecords("goal", { ci: "green" } as never)).toThrow(
       "A permission write can only replace permission records",
     );
     expect(tasks.get("goal")).toEqual(before);
@@ -90,7 +90,7 @@ describe("retiring mixed task storage", () => {
     const olderIntent = JSON.stringify(tasks.get("practice")?.intent, null, 2);
     old.prepare("UPDATE tasks SET intent_json = ? WHERE id = 'practice'").run(olderIntent);
     tasks.recordBrief("practice", ["The practice release passes."]);
-    tasks.recordReport("practice", {
+    tasks.turns.recordReport("practice", {
       text: "The Mac check passes.",
       declared: { result: { passed: true } },
     });
@@ -157,8 +157,8 @@ describe("retiring mixed task storage", () => {
       title: "An earlier unfinished filing",
       status: "queued",
     });
-    imported.discardFailedSpawn("earlier-purged");
-    imported.importRecords(parseTaskExport(exported));
+    imported.archive.discardFailedSpawn("earlier-purged");
+    imported.archive.importRecords(parseTaskExport(exported));
     const originalTimeline = new TaskTimeline({ tasks: reopened });
     const importedTimeline = new TaskTimeline({ tasks: imported });
     expect(imported.timeline("practice")[0]?.id).not.toBe(reopened.timeline("practice")[0]?.id);
@@ -241,7 +241,7 @@ describe("retiring mixed task storage", () => {
       status: "queued",
     });
     const file = "/work/practice/sessions/2026-10-20_pi.jsonl";
-    tasks.setSessionFile(task.id, file);
+    tasks.turns.setSessionFile(task.id, file);
     const timeline = new TaskTimeline({ tasks });
     expect(
       timeline.entries(task.id).some((entry) => entry.content.kind === "session-observation"),
@@ -255,10 +255,10 @@ describe("retiring mixed task storage", () => {
       account_id: null,
       began: "resume",
     };
-    tasks.setSessionFile(task.id, file, facts);
+    tasks.turns.setSessionFile(task.id, file, facts);
     const cut = timeline.read(task.id, { limit: 1 });
     const atCut = timeline.entries(task.id).map((entry) => entry.id);
-    tasks.setSessionFile(task.id, file, { ...facts, model: "gpt-6" });
+    tasks.turns.setSessionFile(task.id, file, { ...facts, model: "gpt-6" });
     const paged = cut.entries.map((entry) => entry.id);
     let cursor = cut.cursor;
     while (cursor) {
@@ -273,8 +273,8 @@ describe("retiring mixed task storage", () => {
     expect(observations).toHaveLength(2);
     expect(observations[0]?.record).toMatchObject({ observation: { model: "gpt-5.5" } });
     expect(observations[1]?.record).toMatchObject({ observation: { model: "gpt-6" } });
-    expect(tasks.sessions(task.id)).toHaveLength(1);
-    expect(tasks.sessions(task.id)[0]?.model).toBe("gpt-6");
+    expect(tasks.archive.sessions(task.id)).toHaveLength(1);
+    expect(tasks.archive.sessions(task.id)[0]?.model).toBe("gpt-6");
     expect(timeline.expand(task.id, observations[0]!.entry.id)).toMatchObject({
       status: "available",
       record: { observation: { model: "gpt-5.5" } },

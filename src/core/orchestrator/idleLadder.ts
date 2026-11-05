@@ -338,7 +338,7 @@ export class IdleLadder {
    * Firstmate. The ladder alone reads it; the sort reads the verdict.
    */
   private reviewOpen(record: TaskRecord): boolean {
-    return this.host.tasks
+    return this.host.tasks.graph
       .openChildren(record.id)
       .some((child) => TaskService.isDeliveryChild(child) && !TaskService.isClosed(child));
   }
@@ -438,7 +438,7 @@ export class IdleLadder {
 
   private readDependencyWaits(record: TaskRecord): TaskWait[] {
     const tasks = this.host.tasks;
-    const blocks = tasks.linksTo(record.id).flatMap((link): TaskWait[] => {
+    const blocks = tasks.graph.linksTo(record.id).flatMap((link): TaskWait[] => {
       const task = link.type === "blocks" ? tasks.get(link.fromId) : undefined;
       return task ? [{ task, since: link.createdAt, kind: "blocks" }] : [];
     });
@@ -500,7 +500,7 @@ export class IdleLadder {
   }
 
   private readLiveWaits(record: TaskRecord): TaskWait[] {
-    const blocks = this.host.tasks
+    const blocks = this.host.tasks.graph
       .liveBlocks(record.id)
       .map(({ link, task }): TaskWait => ({ task, since: link.createdAt, kind: "blocks" }));
     return [...this.baselineWaits(record), ...blocks].filter(
@@ -518,9 +518,9 @@ export class IdleLadder {
    */
   private chainOf(task: TaskRecord, path: ReadonlySet<string>): { unstarted: TaskRecord[] } {
     const tasks = this.host.tasks;
-    if (!tasks.awaitsStart(task)) return { unstarted: [] };
+    if (!tasks.graph.awaitsStart(task)) return { unstarted: [] };
     if (task.status !== "open") return { unstarted: [task] };
-    const blockers = tasks.waitingOn(task.id);
+    const blockers = tasks.graph.waitingOn(task.id);
     if (blockers.length === 0 || blockers.some((blocker) => blocker.status === "dropped"))
       return { unstarted: [task] };
     const onPath = new Set([...path, task.id]);
@@ -539,7 +539,7 @@ export class IdleLadder {
    * are waits on its merge, and its close still ends them.
    */
   heldOn(record: TaskRecord): TaskRecord[] {
-    return this.host.tasks.activeWaiters(record.id);
+    return this.host.tasks.graph.activeWaiters(record.id);
   }
 
   /**
@@ -668,7 +668,12 @@ export class IdleLadder {
     if (!ask || lastAct == null || lastAct < ask.at || record.idleSince == null) return false;
     const acted = this.firstmateActedSince(record, ask.at);
     if (acted === undefined || lastAct >= acted) return false;
-    this.host.tasks.recordRecovery(record.id, { rung: 0, count: 0, at: null, idleSince: now });
+    this.host.tasks.turns.recordRecovery(record.id, {
+      rung: 0,
+      count: 0,
+      at: null,
+      idleSince: now,
+    });
     return true;
   }
 
@@ -955,7 +960,7 @@ export class IdleLadder {
     if (idleSince == null) {
       // Idle with no clock: a record from before the clock, or one a quit
       // interrupted mid-turn. Its clock starts here.
-      this.host.tasks.markIdle(record.id, { at: now });
+      this.host.tasks.turns.markIdle(record.id, { at: now });
       return;
     }
     const rung = record.recoveryRung ?? 0;
@@ -984,7 +989,7 @@ export class IdleLadder {
     // delivery, kept at the last tick the wake still waited. So a paused
     // seat's one card speaks for the pause, never a stall card per crewmate.
     if (this.host.inbox.holdsUndelivered(FIRSTMATE_RECIPIENT, record.id)) {
-      this.host.tasks.recordRecovery(record.id, { rung, count, at: now });
+      this.host.tasks.turns.recordRecovery(record.id, { rung, count, at: now });
       return;
     }
     const since = Math.max(lastAct ?? idleSince, this.lastFirstmateActionAt(record.id));
@@ -1023,7 +1028,7 @@ export class IdleLadder {
     if (count >= ASKED_WAKES) return;
     const since = ours ? (record.recoveryAt ?? ask.at) : ask.at;
     if (this.host.inbox.holdsUndelivered(FIRSTMATE_RECIPIENT, record.id)) {
-      this.host.tasks.recordRecovery(record.id, { rung: 2, count, at: now });
+      this.host.tasks.turns.recordRecovery(record.id, { rung: 2, count, at: now });
       return;
     }
     if (now - since < IDLE_IGNORED_MS) return;
@@ -1060,7 +1065,7 @@ export class IdleLadder {
       waiting,
       deliversAnswer(record),
     );
-    this.host.tasks.recordRecovery(record.id, { rung: 1, count: 0, at: now });
+    this.host.tasks.turns.recordRecovery(record.id, { rung: 1, count: 0, at: now });
     this.host.recordSort(
       record.id,
       record.title,
@@ -1102,7 +1107,7 @@ export class IdleLadder {
         : turn === "asked"
           ? this.askedWake(record, runtime, now, count)
           : this.stallWake(record, runtime, idleMs, count, turn === "thread", note);
-    this.host.tasks.recordRecovery(record.id, { rung: 2, count, at: now });
+    this.host.tasks.turns.recordRecovery(record.id, { rung: 2, count, at: now });
     this.host.recordSort(
       record.id,
       record.title,
@@ -1244,7 +1249,7 @@ export class IdleLadder {
       .at(-1);
     const typedWait = workWaitSchema.safeParse(observed?.data?.workWait);
     const id = stallCardId(record.id);
-    this.host.tasks.recordRecovery(record.id, {
+    this.host.tasks.turns.recordRecovery(record.id, {
       rung: 3,
       count: record.recoveryCount ?? 0,
       at: now,
@@ -1341,7 +1346,7 @@ export class IdleLadder {
       "idle-card",
       () => {
         this.host.raiseCard(card);
-        this.host.tasks.recordCardRaised(record.id, {
+        this.host.tasks.capture.recordCardRaised(record.id, {
           cardId: id,
           kind: cardWord(card),
           title: card.title,
@@ -1385,7 +1390,7 @@ export class IdleLadder {
     const want = this.captainGateFor(record);
     if (!want && have?.kind !== "captain") return;
     if (sameGate(want, have)) return;
-    this.host.tasks.setGate(taskId, want);
+    this.host.tasks.placement.setGate(taskId, want);
     this.restartClock(record, now);
   }
 
@@ -1404,7 +1409,12 @@ export class IdleLadder {
 
   private restartClock(record: TaskRecord, now: number): void {
     if (record.idleSince == null || (record.recoveryRung ?? 0) >= 3) return;
-    this.host.tasks.recordRecovery(record.id, { rung: 0, count: 0, at: null, idleSince: now });
+    this.host.tasks.turns.recordRecovery(record.id, {
+      rung: 0,
+      count: 0,
+      at: null,
+      idleSince: now,
+    });
   }
 
   // ---- the ready sweep ----------------------------------------------------
@@ -1482,13 +1492,13 @@ export class IdleLadder {
     // A wait that can never end (a dropped blocker) is one wake to the
     // Firstmate, whose tools already express every way out; the row stays
     // as it is - no hold, no card (cards/tasks/agents P0, WI-3).
-    for (const record of tasks.listDeadBlocked()) {
-      const dead = tasks.waitingOn(record.id).find((blocker) => blocker.status === "dropped");
+    for (const record of tasks.graph.listDeadBlocked()) {
+      const dead = tasks.graph.waitingOn(record.id).find((blocker) => blocker.status === "dropped");
       if (dead) this.host.wakeDeadGate(record, dead);
     }
     // The ready query (design section 7): everything it lists starts now,
     // in priority order. On-request rows never appear in it.
-    for (const record of tasks.listReady()) {
+    for (const record of tasks.graph.listReady()) {
       await this.host.dispatchQueuedTask(record.id);
     }
     // A program a Start ran is started: after a quit it runs again from its record.
@@ -1496,7 +1506,7 @@ export class IdleLadder {
       if (
         record.shape?.program &&
         record.startPolicy === "on-request" &&
-        tasks.programStarted(record.id)
+        tasks.starts.programStarted(record.id)
       )
         await this.host.dispatchQueuedTask(record.id);
     }
@@ -1511,12 +1521,12 @@ export class IdleLadder {
   private endTimedWait(taskId: string, gate: TaskGate, now: number): void {
     const record = this.host.tasks.get(taskId);
     const unowned = record ? this.unownedTimer(record) : false;
-    this.host.tasks.setGate(taskId, null);
+    this.host.tasks.placement.setGate(taskId, null);
     // A check-back with no job owned nothing, so its end is no move of the
     // task: the episode and its rungs go on, and the ladder's own nudge is
     // the look again (R1 of INF-1644).
     if (unowned) return;
-    this.host.tasks.endIdle(taskId);
+    this.host.tasks.turns.endIdle(taskId);
     const job = this.host.hasRunningJobs?.(taskId)
       ? this.host.oldestRunningJob?.(taskId)
       : undefined;
@@ -1537,7 +1547,7 @@ export class IdleLadder {
     const tried = `${taskId}\n${once}`;
     if (this.resumesTried.has(tried) || this.host.inbox.woken(taskId, once)) return;
     this.resumesTried.add(tried);
-    this.host.tasks.endIdle(taskId);
+    this.host.tasks.turns.endIdle(taskId);
     const pullRequest = ended.task.delivery?.prNumber;
     const carried =
       ended.kind === "blocks"
@@ -1583,7 +1593,7 @@ export class IdleLadder {
     const tasks = this.host.tasks;
     return this.liveWaits(record).flatMap(({ task, kind }) => {
       if (kind !== "blocks") return [];
-      const told = tasks
+      const told = tasks.graph
         .replacedPredecessors(task.id)
         .filter(
           (old) =>
@@ -1608,7 +1618,7 @@ export class IdleLadder {
     const tried = `${taskId}\n${once}`;
     if (this.resumesTried.has(tried)) return;
     this.resumesTried.add(tried);
-    this.host.tasks.endIdle(taskId);
+    this.host.tasks.turns.endIdle(taskId);
     void this.host
       .steer(taskId, waitMovedWake(moved.replaced, moved.carrier))
       .catch((caught: unknown) => {

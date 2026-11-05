@@ -184,7 +184,7 @@ function startCrewTask(userDataDir: string): string {
         ],
       },
     });
-    tasks.dispatch(id, {
+    tasks.starts.dispatch(id, {
       workspace: { repoDir: "", worktreeDir: "", branch: "" },
       accountId: CLAUDE_ACCOUNT,
       assignee: "crewmate",

@@ -716,7 +716,7 @@ export class CardThreads {
 
   /**
    * Correct a required action's words on its card (docs/required-actions.md,
-   * "Correcting the words"): `TaskService.reviseRequiredAction` writes the
+   * "Correcting the words"): `TaskService.delivery.reviseRequiredAction` writes the
    * correction, and a card on the stack shows the new words and generation
    * at once with a thread line naming who corrected it. Every refusal
    * writes nothing.
@@ -745,7 +745,7 @@ export class CardThreads {
     let updated: Card | undefined;
     const result = this.host.tasks.atomic(
       () => {
-        const revision = this.host.tasks.reviseRequiredAction(ref, {
+        const revision = this.host.tasks.delivery.reviseRequiredAction(ref, {
           source: input.source,
           actionId: input.actionId,
           expectedGeneration: input.expectedGeneration,

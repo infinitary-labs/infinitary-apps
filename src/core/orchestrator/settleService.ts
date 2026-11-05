@@ -13,7 +13,8 @@ import type { ForgePull } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type { MergeWait, TaskRecord } from "../storage/taskStore";
 import { SETTLE_FOLD } from "../tasks/taskFeed";
-import { type SettleRefusal, TaskService } from "../tasks/taskService";
+import type { SettleRefusal } from "../tasks/taskGraph";
+import { TaskService } from "../tasks/taskService";
 import { type MergeGuard, mergedReceipt, type PrOutcome } from "./changeMerge";
 import type { KeptApproval } from "./keptApproval";
 import { candidateHead, keptFeedLine, keptNote, standingAuthorization } from "./mergeAuthorization";
@@ -336,7 +337,7 @@ export class SettleService {
     const stillOpen = await this.stillOpen(record, merged);
     if (stillOpen) {
       const head = result.receipt?.head ?? record.delivery?.headSha;
-      this.host.tasks.recordChangeEvidence(taskId, {
+      this.host.tasks.delivery.recordChangeEvidence(taskId, {
         ci: "merged",
         ...(head ? { headSha: head } : {}),
         ciAt: this.host.now(),
@@ -396,7 +397,7 @@ export class SettleService {
         currentChange(current.delivery, current.branch).number !== pull.number
       )
         return false;
-      this.host.tasks.recordChangeEvidence(taskId, {
+      this.host.tasks.delivery.recordChangeEvidence(taskId, {
         ci: "merged",
         headSha: pull.headSha,
         ciAt: this.host.now(),
@@ -667,7 +668,7 @@ export class SettleService {
             "the pull request merged at a different version",
             { feed: true },
           );
-        this.host.tasks.activateRequiredActions(taskId);
+        this.host.tasks.delivery.activateRequiredActions(taskId);
         this.host.tasks.note(taskId, result.text, { news: true, feed: true, actor: "host" });
       },
       () => {},
@@ -836,7 +837,7 @@ export class SettleService {
     } finally {
       if (mode === "merge-pr" || mode === "land") {
         const record = this.host.tasks.get(taskId);
-        if (record?.pendingSettle) this.host.tasks.setPendingSettle(taskId, null);
+        if (record?.pendingSettle) this.host.tasks.delivery.setPendingSettle(taskId, null);
       }
       this.locks.settlingTasks.delete(taskId);
       this.locks.sentMerges.delete(taskId);
@@ -1089,7 +1090,7 @@ export class SettleService {
   /**
    * Whether this merged task held open work that now waits on nothing and
    * that the ready sweep will not start - on request, or held by a gate
-   * (`TaskService.awaitsStart`). Only the Firstmate or the captain begins
+   * (`TaskService.graph.awaitsStart`). Only the Firstmate or the captain begins
    * it, and a task the Firstmate linked to wait on this merge - one its
    * report says it covers - is such work, so its after-merge check runs.
    * An active waiter needs no wake: the ready sweep steers it when this
@@ -1097,13 +1098,13 @@ export class SettleService {
    */
   private freesWorkAwaitingStart(taskId: string): boolean {
     const tasks = this.host.tasks;
-    return tasks
+    return tasks.graph
       .blocking(taskId)
       .some(
         (record) =>
           record.status === "open" &&
-          tasks.waitingOn(record.id).length === 0 &&
-          tasks.awaitsStart(record),
+          tasks.graph.waitingOn(record.id).length === 0 &&
+          tasks.graph.awaitsStart(record),
       );
   }
 

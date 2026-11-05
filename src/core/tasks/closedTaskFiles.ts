@@ -20,10 +20,9 @@ import { TaskService } from "./taskService";
 /** How long a closed task's leftover files stay after its close. */
 export const CLOSED_TASK_FILES_KEPT_MS = 7 * 24 * 60 * 60 * 1000;
 
-type TasksReader = Pick<
-  TaskService,
-  "get" | "list" | "allLinks" | "note" | "onChange" | "timeline"
->;
+type TasksReader = Pick<TaskService, "get" | "list" | "note" | "onChange" | "timeline"> & {
+  graph: Pick<TaskService["graph"], "allLinks">;
+};
 
 export type ClosedTaskFilesOptions = {
   paths: Pick<AppPaths, "crewmatesDir" | "worktreeTrashDir">;
@@ -145,7 +144,7 @@ export class ClosedTaskFiles {
     const now = this.options.now();
     this.lastPassAt = now;
     const records = this.options.tasks.list();
-    const held = heldByLiveWork(records, this.options.tasks.allLinks());
+    const held = heldByLiveWork(records, this.options.tasks.graph.allLinks());
     for (const record of records) {
       if (!closedTaskFilesDue(record, held, now)) continue;
       const key = `${record.id}@${record.closedAt}`;

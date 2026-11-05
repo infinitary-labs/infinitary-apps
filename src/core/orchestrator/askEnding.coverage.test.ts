@@ -78,13 +78,13 @@ it.each(["close", "choice"] as const)(
           const ids = [`ask-${chain}`];
           if (chain < 10) ids.push(`detail-${chain}`, `clarification-${chain}`);
           for (const id of ids) {
-            tasks.openAsk({
+            tasks.capture.openAsk({
               id,
               text: "Keep the card dismissal responsive without losing its answer.",
             });
-            tasks.attachAsk(id, root, "tool:steer_crewmate");
-            tasks.closeAsk(id, "closed");
-            tasks.setAskDelivery(id, "covered");
+            tasks.capture.attachAsk(id, root, "tool:steer_crewmate");
+            tasks.capture.closeAsk(id, "closed");
+            tasks.capture.setAskDelivery(id, "covered");
           }
           groups.push(ids);
         }
@@ -107,7 +107,7 @@ it.each(["close", "choice"] as const)(
       const respond = () =>
         ending.captainResponded(card, response, response === "choice" ? "keep" : undefined);
       const reads = readsDuring(db, respond);
-      const accepted = groups[0]!.map((id) => tasks.getAsk(id));
+      const accepted = groups[0]!.map((id) => tasks.capture.getAsk(id));
       const samplesMs: number[] = [];
       const samplesCpuMs: number[] = [];
       outsideCensus(() => {
@@ -146,7 +146,7 @@ it.each(["close", "choice"] as const)(
         groups
           .slice(1)
           .flat()
-          .every((id) => tasks.getAsk(id)?.acceptedAt === null),
+          .every((id) => tasks.capture.getAsk(id)?.acceptedAt === null),
       ).toBe(true);
       expect(reads.asks.toSorted()).toEqual(groups.flat().toSorted());
       expect(reads.fullTasks).toEqual(response === "choice" ? [card.taskId] : []);

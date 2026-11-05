@@ -56,61 +56,61 @@ describe("task conversation associations (INF-1288)", () => {
   ] as const)("records a changed %s but not identical turn-end facts", (_field, changed, token) => {
     const { db, tasks, advance } = setup();
     const file = "/work/crewmates/crew/sessions/pi-1.jsonl";
-    tasks.setSessionFile("crew", file, facts(file));
-    const original = tasks.sessionObservations("crew");
+    tasks.turns.setSessionFile("crew", file, facts(file));
+    const original = tasks.archive.sessionObservations("crew");
     advance();
-    tasks.setSessionFile("crew", file, facts(file, "resume"));
-    expect(tasks.sessionObservations("crew")).toEqual(original);
-    expect(tasks.recordedSessions("crew")[0]?.last_at).toBe(1_100);
+    tasks.turns.setSessionFile("crew", file, facts(file, "resume"));
+    expect(tasks.archive.sessionObservations("crew")).toEqual(original);
+    expect(tasks.archive.recordedSessions("crew")[0]?.last_at).toBe(1_100);
     advance();
-    tasks.setSessionFile("crew", token ?? file, { ...facts(file), ...changed });
-    expect(tasks.sessionObservations("crew")).toHaveLength(2);
+    tasks.turns.setSessionFile("crew", token ?? file, { ...facts(file), ...changed });
+    expect(tasks.archive.sessionObservations("crew")).toHaveLength(2);
     advance();
-    tasks.setSessionFile("crew", file, facts(file));
-    const restored = tasks.sessionObservations("crew");
+    tasks.turns.setSessionFile("crew", file, facts(file));
+    const restored = tasks.archive.sessionObservations("crew");
     expect(restored).toHaveLength(3);
     expect(restored[0]).toEqual(original[0]);
     advance();
-    tasks.setSessionFile("crew", file, facts(file));
-    expect(tasks.sessionObservations("crew")).toEqual(restored);
+    tasks.turns.setSessionFile("crew", file, facts(file));
+    expect(tasks.archive.sessionObservations("crew")).toEqual(restored);
     db.close();
   });
 
   it("restores identical historical observations without applying prospective deduplication", () => {
     const { db, tasks } = setup();
     const file = "/work/crewmates/crew/sessions/pi-1.jsonl";
-    tasks.setSessionFile("crew", file, facts(file));
-    const first = tasks.sessionObservations("crew")[0];
+    tasks.turns.setSessionFile("crew", file, facts(file));
+    const first = tasks.archive.sessionObservations("crew")[0];
     if (!first) throw new Error("The initial supplied facts were not observed");
     const { id: _id, seq: _seq, taskId: _task, ...retained } = first;
     new TaskSessionStore(db).observe("crew", retained, "retained-duplicate-observation");
     const lines = exportTaskRecords(tasks, 2_000);
     const other = openInMemoryDatabase();
     const imported = new TaskService({ db: other });
-    imported.importRecords(parseTaskExport(lines));
-    expect(imported.sessionObservations("crew")).toHaveLength(2);
+    imported.archive.importRecords(parseTaskExport(lines));
+    expect(imported.archive.sessionObservations("crew")).toHaveLength(2);
     expect(exportTaskRecords(imported, 2_000)).toEqual(lines);
-    imported.setSessionFile("crew", file, facts(file));
-    expect(imported.sessionObservations("crew")).toHaveLength(2);
+    imported.turns.setSessionFile("crew", file, facts(file));
+    expect(imported.archive.sessionObservations("crew")).toHaveLength(2);
     other.close();
     db.close();
   });
   it("retains one row across turns, restarts and model changes, with a separate row for a replacement", () => {
     const { db, tasks, advance } = setup();
     const pi = "/work/crewmates/crew/sessions/2026-09-26_pi-1.jsonl";
-    tasks.setSessionFile("crew", pi, facts(pi));
+    tasks.turns.setSessionFile("crew", pi, facts(pi));
     advance();
-    tasks.setSessionFile("crew", pi, { ...facts(pi, "resume"), model: "gpt-6" });
+    tasks.turns.setSessionFile("crew", pi, { ...facts(pi, "resume"), model: "gpt-6" });
     const restarted = new TaskService({ db, repos: { get: () => undefined }, now: () => 1_200 });
-    restarted.setSessionFile("crew", pi, facts(pi, "resume"));
+    restarted.turns.setSessionFile("crew", pi, facts(pi, "resume"));
     const claude = "5f0c2a4e-1111-4222-8333-944455556666";
     const file = `/work/crewmates/crew/sessions/${claude}.jsonl`;
-    restarted.setSessionFile("crew", claude, {
+    restarted.turns.setSessionFile("crew", claude, {
       ...facts(file, "move"),
       provider: "anthropic-claude",
       model: "claude-opus-4-1",
     });
-    expect(restarted.sessions("crew")).toEqual([
+    expect(restarted.archive.sessions("crew")).toEqual([
       {
         ...facts(pi),
         conversation: "2026-09-26_pi-1",
@@ -149,7 +149,7 @@ describe("task conversation associations (INF-1288)", () => {
       join(dir, `${claude}.served.jsonl`),
       `${JSON.stringify({ kind: "contract", at: 1_000, version: "crewmate" })}\n`,
     );
-    tasks.setSessionFile(task.id, claude);
+    tasks.turns.setSessionFile(task.id, claude);
     const reach = { sessionFolderOf: () => ({ dir, computer: "Home computer" }) };
     const query = () =>
       queryTasks(tasks, { key: task.key }, undefined, undefined, undefined, undefined, reach);
@@ -162,7 +162,7 @@ describe("task conversation associations (INF-1288)", () => {
       opened_at: null,
       last_at: null,
     });
-    tasks.setSessionFile(task.id, pi, facts(pi));
+    tasks.turns.setSessionFile(task.id, pi, facts(pi));
     expect(query().rows[0]?.sessions).toHaveLength(2);
     console.info(
       "By-key task read with one recorded and one historical conversation:\n" +
@@ -174,7 +174,7 @@ describe("task conversation associations (INF-1288)", () => {
   it("names the earlier attempt by key, keeping its sessions on its own by-key read and off list reads", () => {
     const { db, tasks, task } = setup();
     const pi = "/work/crewmates/crew/sessions/pi-1.jsonl";
-    tasks.setSessionFile(task.id, pi, facts(pi));
+    tasks.turns.setSessionFile(task.id, pi, facts(pi));
     const retry = tasks.create({
       id: "retry",
       title: "A stronger-model attempt",
@@ -196,12 +196,12 @@ describe("task conversation associations (INF-1288)", () => {
   it("exports and reloads every recorded conversation, preserving the exact association", () => {
     const { db, tasks } = setup();
     const pi = "/work/crewmates/crew/sessions/pi-1.jsonl";
-    tasks.setSessionFile("crew", pi, facts(pi));
+    tasks.turns.setSessionFile("crew", pi, facts(pi));
     const lines = exportTaskRecords(tasks, 2_000);
     const other = openInMemoryDatabase();
     const imported = new TaskService({ db: other, repos: { get: () => undefined } });
-    imported.importRecords(parseTaskExport(lines));
-    expect(imported.sessions("crew")).toEqual(tasks.sessions("crew"));
+    imported.archive.importRecords(parseTaskExport(lines));
+    expect(imported.archive.sessions("crew")).toEqual(tasks.archive.sessions("crew"));
     expect(exportTaskRecords(imported, 2_000)).toEqual(lines);
     other.close();
     db.close();
@@ -212,15 +212,15 @@ describe("task conversation associations (INF-1288)", () => {
     const old = openDatabase(dir, DATABASE_VERSION - 1);
     const tasks = new TaskService({ db: old, repos: { get: () => undefined } });
     tasks.create({ id: "old", title: "Earlier work", prompt: "p", repoId: null });
-    tasks.setSessionFile("old", "/work/old.jsonl");
+    tasks.turns.setSessionFile("old", "/work/old.jsonl");
     old.close();
     const upgraded = openDatabase(dir);
     const current = new TaskService({ db: upgraded, repos: { get: () => undefined } });
     expect(current.get("old")?.sessionFile).toBe("/work/old.jsonl");
-    expect(current.sessions("old")).toEqual([]);
-    current.setSessionFile("old", "/work/old.jsonl", facts("/work/old.jsonl", "resume"));
-    expect(current.sessions("old")).toHaveLength(1);
-    expect(current.purge()).toBe(1);
+    expect(current.archive.sessions("old")).toEqual([]);
+    current.turns.setSessionFile("old", "/work/old.jsonl", facts("/work/old.jsonl", "resume"));
+    expect(current.archive.sessions("old")).toHaveLength(1);
+    expect(current.archive.purge()).toBe(1);
     expect(upgraded.prepare("SELECT COUNT(*) AS n FROM task_sessions").get()).toEqual({ n: 0 });
     upgraded.close();
   });

@@ -303,7 +303,7 @@ describe("a task that runs on a computer that runs work", () => {
       repoId: null,
       startPolicy: "on-request",
     });
-    home.tasks.recordReport(spec.id, { text: "The footer reads the year from the clock." });
+    home.tasks.turns.recordReport(spec.id, { text: "The footer reads the year from the clock." });
     queued("t-basis");
     const grounded = holdServed();
     model([{ tools: [{ name: "report", args: { text: "The footer is grounded." } }] }]);

@@ -374,7 +374,7 @@ export type TaskDelivery = {
    * rigor phase 2), recorded on the BUILDER: the verdict, the head the
    * reviewer read, and the risk it named beside CI (never a hold, Q4). The
    * review that recorded it is read off the parent edge
-   * (`TaskService.verdictReviewOf`), never cached here.
+   * (`TaskService.graph.verdictReviewOf`), never cached here.
    */
   reviewVerdict?: ReviewVerdict;
   reviewSha?: string;
@@ -719,7 +719,7 @@ type Row = {
 
 /**
  * The shape as the record stores it. The basis verdict is derived at every
- * read (`TaskService.basisHolds`) and never stored: a stamp goes stale the
+ * read (`TaskService.graph.basisHolds`) and never stored: a stamp goes stale the
  * moment the basis answers. The relationships a shape is read with live in
  * `task_references` (INF-1296 piece 2), so they never reach the column.
  */
@@ -1807,6 +1807,23 @@ export class TaskStore {
       )
       .get() as { n: number };
     return row.n;
+  }
+
+  /** The board sequence of the last committed mutation (0 on a fresh database). */
+  boardSeq(): number {
+    const row = this.db.prepare("SELECT seq FROM task_board WHERE id = 1").get() as
+      | { seq: number }
+      | undefined;
+    return row?.seq ?? 0;
+  }
+
+  /** Move the board sequence on by one inside the committing write, and read it. */
+  bumpBoardSeq(): number {
+    const row = this.db
+      .prepare("UPDATE task_board SET seq = seq + 1 WHERE id = 1 RETURNING seq")
+      .get() as { seq: number } | undefined;
+    if (!row) throw new Error("task_board row missing; migration 20 did not run.");
+    return row.seq;
   }
 
   /** Hard delete: a spawn that never ran, or the D-13 purge. */

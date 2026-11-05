@@ -21,9 +21,9 @@ export default function seed(userDataDir: string, { ask, reply }: Input): void {
       firstTurnAt: at,
     });
     const tasks = new TaskService({ db, strict: true });
-    tasks.openAsk({ id: "ask-pause", text: ask, at });
-    tasks.setAskReply("ask-pause", { text: reply, eligibility: "completed" });
-    tasks.closeAsk("ask-pause", "closed");
+    tasks.capture.openAsk({ id: "ask-pause", text: ask, at });
+    tasks.capture.setAskReply("ask-pause", { text: reply, eligibility: "completed" });
+    tasks.capture.closeAsk("ask-pause", "closed");
   } finally {
     db.close();
   }

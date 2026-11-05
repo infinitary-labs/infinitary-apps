@@ -110,7 +110,7 @@ export class AskCapture {
    */
   open(input: OpenTurnAsk): AskRecord {
     const hint = input.hintTaskId && this.tasks.get(input.hintTaskId) ? input.hintTaskId : null;
-    const record = this.tasks.openAsk({
+    const record = this.tasks.capture.openAsk({
       id: randomUUID().slice(0, 8),
       text: input.text,
       messageFiles: input.messageFiles ?? [],
@@ -129,7 +129,7 @@ export class AskCapture {
    * open ask is an operational wake and attaches nothing.
    */
   beginTurn(): void {
-    const open = this.tasks.listOpenAsks();
+    const open = this.tasks.capture.listOpenAsks();
     this.currentAskId = open.at(-1)?.id;
   }
 
@@ -168,7 +168,7 @@ export class AskCapture {
   current(): AskRecord | undefined {
     const scope = this.actionAsk.getStore();
     const askId = scope ? scope.askId : this.currentAskId;
-    return askId ? this.tasks.getAsk(askId) : undefined;
+    return askId ? this.tasks.capture.getAsk(askId) : undefined;
   }
 
   /** The copies of the current message's pictures: what a tool acting on it carries along. */
@@ -195,10 +195,10 @@ export class AskCapture {
       // Work filed or started with no message of the captain's keeps the
       // automation run, click or report it answered (INF-2326).
       const origin = starts ? this.actionOrigin() : undefined;
-      if (origin) this.tasks.saveOrigin(taskId, origin);
+      if (origin) this.tasks.capture.saveOrigin(taskId, origin);
       return false;
     }
-    return this.tasks.attachAsk(ask.id, taskId, `tool:${tool}` as AskAttachedVia, starts);
+    return this.tasks.capture.attachAsk(ask.id, taskId, `tool:${tool}` as AskAttachedVia, starts);
   }
 
   /**
@@ -208,11 +208,11 @@ export class AskCapture {
    */
   endTurn(input: EndTurnInput): FallbackResult[] {
     const fallbacks: FallbackResult[] = [];
-    for (const ask of this.tasks.listOpenAsks()) {
+    for (const ask of this.tasks.capture.listOpenAsks()) {
       if (!input.asks.includes(ask.id)) continue;
       const fallback = this.settle(ask, input);
       if (fallback) fallbacks.push(fallback);
-      this.tasks.closeAsk(ask.id, input.failed ? "failed" : "closed");
+      this.tasks.capture.closeAsk(ask.id, input.failed ? "failed" : "closed");
     }
     this.currentAskId = undefined;
     return fallbacks;
@@ -225,7 +225,7 @@ export class AskCapture {
    * turn that serves them reads it, attaches it and closes it.
    */
   reconcileStranded(waiting: readonly string[]): FallbackResult[] {
-    const stranded = this.tasks
+    const stranded = this.tasks.capture
       .listOpenAsks()
       .map((ask) => ask.id)
       .filter((id) => !waiting.includes(id));
@@ -241,20 +241,20 @@ export class AskCapture {
     if (ask.taskId) return undefined;
     const hinted = ask.hintTaskId ? this.tasks.get(ask.hintTaskId) : undefined;
     if (hinted) {
-      this.tasks.attachAsk(ask.id, hinted.id, "host:fallback", false);
+      this.tasks.capture.attachAsk(ask.id, hinted.id, "host:fallback", false);
       return { askId: ask.id, via: "hint", taskId: hinted.id };
     }
     const outcome = input.failed
       ? `hit a problem: ${input.error ?? "unknown error"}`
       : input.closingText?.trim() || null;
-    const task = this.tasks.fileQuestion({
+    const task = this.tasks.capture.fileQuestion({
       id: randomUUID().slice(0, 8),
       title: askTitle(ask.text, ask.images),
       outcome,
       actor: "host",
       fallback: "question",
     });
-    this.tasks.attachAsk(ask.id, task.id, "host:fallback", true);
+    this.tasks.capture.attachAsk(ask.id, task.id, "host:fallback", true);
     return { askId: ask.id, via: "question", taskId: task.id };
   }
 }

@@ -62,15 +62,24 @@ describe("first-release reports (INF-1607)", () => {
       expect(read(tasks, "fix")?.first_release).toBeNull();
       expect(read(tasks, "fix")?.merge_commit).toBe("a".repeat(40));
       expect(
-        tasks.recordFirstRelease("reporter", { ...release, tasks: ["fix", "internal", "fix"] }),
+        tasks.delivery.recordFirstRelease("reporter", {
+          ...release,
+          tasks: ["fix", "internal", "fix"],
+        }),
       ).toBe(2);
       const reopened = new TaskService({ db });
       expect(read(reopened, "fix")?.first_release).toEqual(release);
       expect(read(reopened, "internal")?.first_release).toEqual(release);
       const count = reopened.timeline("fix").length;
-      expect(reopened.recordFirstRelease("reporter", { ...release, tasks: ["fix"] })).toBe(0);
+      expect(reopened.delivery.recordFirstRelease("reporter", { ...release, tasks: ["fix"] })).toBe(
+        0,
+      );
       expect(
-        reopened.recordFirstRelease("reporter", { ...release, version: "0.6.0", tasks: ["fix"] }),
+        reopened.delivery.recordFirstRelease("reporter", {
+          ...release,
+          version: "0.6.0",
+          tasks: ["fix"],
+        }),
       ).toBe(0);
       expect(reopened.timeline("fix")).toHaveLength(count);
       expect(read(reopened, "fix")?.first_release).toEqual(release);
@@ -80,7 +89,7 @@ describe("first-release reports (INF-1607)", () => {
         evidence: "Recovered earlier published source proves the merge was already included.",
       };
       expect(
-        reopened.recordFirstRelease("reporter", {
+        reopened.delivery.recordFirstRelease("reporter", {
           ...correction,
           tasks: ["fix"],
           corrects: release.version,
@@ -103,7 +112,7 @@ describe("first-release reports (INF-1607)", () => {
     try {
       for (const id of ["missing", "open", "answered", "other-project"]) {
         expect(() =>
-          tasks.recordFirstRelease("reporter", { ...release, tasks: ["fix", id] }),
+          tasks.delivery.recordFirstRelease("reporter", { ...release, tasks: ["fix", id] }),
         ).toThrow();
         expect(read(tasks, "fix")?.first_release).toBeNull();
       }
@@ -112,11 +121,11 @@ describe("first-release reports (INF-1607)", () => {
         { ...release, url: "unknown" },
       ])
         expect(() =>
-          tasks.recordFirstRelease("reporter", { ...invalid, tasks: ["fix"] }),
+          tasks.delivery.recordFirstRelease("reporter", { ...invalid, tasks: ["fix"] }),
         ).toThrow();
-      tasks.recordFirstRelease("reporter", { ...release, tasks: ["fix"] });
+      tasks.delivery.recordFirstRelease("reporter", { ...release, tasks: ["fix"] });
       expect(() =>
-        tasks.recordFirstRelease("reporter", {
+        tasks.delivery.recordFirstRelease("reporter", {
           ...release,
           tasks: ["internal", "fix"],
           corrects: "0.4.0",

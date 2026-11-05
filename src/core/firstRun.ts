@@ -41,13 +41,13 @@ export type FirstRunStep = "gate_shown" | "signed_in" | "first_turn";
  * ready - or a host card's gate row, whose card already counts.
  */
 export function hasPriorActivity(sources: {
-  tasks: Pick<TaskService, "list" | "listAsks">;
+  tasks: Pick<TaskService, "list"> & { capture: Pick<TaskService["capture"], "listAsks"> };
   cards: Pick<CardStore, "hasHistory">;
   repos: Pick<RepoRegistry, "list">;
 }): boolean {
   return (
     sources.tasks.list().some((task) => task.kind !== "operation") ||
-    sources.tasks.listAsks().length > 0 ||
+    sources.tasks.capture.listAsks().length > 0 ||
     sources.cards.hasHistory() ||
     sources.repos.list().some((repo) => repo.kind !== "personal")
   );

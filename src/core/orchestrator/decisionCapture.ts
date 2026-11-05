@@ -197,7 +197,7 @@ export class DecisionCapture {
       },
     };
     try {
-      this.tasks.recordDecision(record);
+      this.tasks.turns.recordDecision(record);
     } catch (caught) {
       console.warn("[provenance] decision capture failed:", caught);
     }

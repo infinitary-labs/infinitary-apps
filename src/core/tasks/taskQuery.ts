@@ -105,7 +105,7 @@ export type TaskQueryRow = {
   /** Retained entries and exact sources, shared with Activity. Explicit timeline field reads only. */
   timeline?: ReturnType<TaskTimeline["sources"]>;
   /** Every conversation on this task; earlier attempts keep their own lists. By-key only. */
-  sessions?: ReturnType<TaskService["sessions"]>;
+  sessions?: ReturnType<TaskService["archive"]["sessions"]>;
   earlier_attempt?: string;
   policies?: EffectiveTaskPolicies;
   required_action?: CaptainAction;
@@ -183,7 +183,7 @@ export type TaskQueryRow = {
   resolution?: TaskQueryResolution;
   /**
    * The captain's pictures that came with the task's messages, by name and
-   * the app's own copy (`TaskService.pictures`). By-key only.
+   * the app's own copy (`TaskService.capture.pictures`). By-key only.
    */
   pictures?: { name: string; path: string }[];
   live_validation?: LiveValidation;
@@ -208,7 +208,7 @@ export type TaskQueryBuiltOn = {
 
 /** The work built on a task, open or closed, as the by-key read and the wakes name it. */
 export function builtOnRows(tasks: TaskService, id: string): TaskQueryBuiltOn[] {
-  return tasks.builtOn(id).map((record) => {
+  return tasks.graph.builtOn(id).map((record) => {
     const change = record.delivery ? taskChangeOf(record.delivery) : null;
     return {
       key: record.key || record.id,
@@ -291,7 +291,7 @@ export function queryTasks(
   if (input.key?.trim() && !one) return { rows: [], total: 0 };
   const typed = input.text?.trim();
   const needle = typed ? foldForSearch(typed) : undefined;
-  const pool = one ? [one] : parent ? tasks.children(parent.id) : tasks.list();
+  const pool = one ? [one] : parent ? tasks.graph.children(parent.id) : tasks.list();
   const matched = pool
     .filter((record) => !project || record.projectId === project.id)
     .filter((record) => matchesStatus(record, input.status))
@@ -326,7 +326,7 @@ export function queryTasks(
               ...(reach.pendingResponses
                 ? { response_requests: reach.pendingResponses(record.id) }
                 : {}),
-              sessions: tasks.sessions(record.id, reach.sessionFolderOf?.(record)),
+              sessions: tasks.archive.sessions(record.id, reach.sessionFolderOf?.(record)),
               ...(record.shape?.escalate_from
                 ? {
                     earlier_attempt:
@@ -380,7 +380,7 @@ function toRow(
   const decisions = history
     .filter((event) => event.kind === "card_resolved")
     .map((event) => ({ event_id: event.id, text: event.text, data: decisionData(event.data) }));
-  const flags = tasks.flagsOf(record);
+  const flags = tasks.graph.flagsOf(record);
   const parent = record.parentId ? tasks.get(record.parentId) : undefined;
   // An active row names what holds it now, by the board's own rule
   // (./holdingWaits.ts); an open row also names a dropped blocker, which
@@ -388,20 +388,25 @@ function toRow(
   const now = record.status === "active" ? posture(record) : undefined;
   const blockedBy = (
     record.status === "active"
-      ? tasks.waitsHolding(record.id, now?.state === "idle" && now.reason === "dependency")
-      : tasks.waitingOn(record.id)
+      ? tasks.graph.waitsHolding(record.id, now?.state === "idle" && now.reason === "dependency")
+      : tasks.graph.waitingOn(record.id)
   ).map((blocker) => blocker.key || blocker.id);
-  const blocks = tasks.blocking(record.id).map((blocked) => blocked.key || blocked.id);
-  const children = tasks.children(record.id);
+  const blocks = tasks.graph.blocking(record.id).map((blocked) => blocked.key || blocked.id);
+  const children = tasks.graph.children(record.id);
   const openChildren = children.filter((child) => !TaskService.isClosed(child));
-  const origins = tasks.discoveredOrigins(record.id);
-  const followUps = tasks.discoveredFrom(record.id);
+  const origins = tasks.graph.discoveredOrigins(record.id);
+  const followUps = tasks.graph.discoveredFrom(record.id);
   const openFollowUps = followUps.filter((followUp) => !TaskService.isClosed(followUp));
   const repo = record.repoId ? repoName(record.repoId) : undefined;
   const change = record.delivery ? taskChangeOf(record.delivery) : null;
   const waiting =
-    (record.status === "open" && record.kind === "work" && !tasks.startAttemptOf(record.id)
-      ? queueWaitOf(record, tasks.blockers(record.id), tasks.linksTo(record.id), children)?.line
+    (record.status === "open" && record.kind === "work" && !tasks.starts.startAttemptOf(record.id)
+      ? queueWaitOf(
+          record,
+          tasks.graph.blockers(record.id),
+          tasks.graph.linksTo(record.id),
+          children,
+        )?.line
       : undefined) ??
     (record.gate
       ? record.gate.kind === "captain"
@@ -491,7 +496,7 @@ function projectRows(tasks: TaskService, reach: TaskQueryReach): TaskQueryProjec
 
 /** The task's pictures by name and copy; a saved reference that points nowhere is left out. */
 function picturesOf(tasks: TaskService, taskId: string): { name: string; path: string }[] {
-  return tasks.pictures(taskId).flatMap((ref) => {
+  return tasks.capture.pictures(taskId).flatMap((ref) => {
     try {
       return [{ name: ref.name, path: attachmentPath(ref) }];
     } catch {

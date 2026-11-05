@@ -539,16 +539,16 @@ describe("words typed on a paired Mac are the captain's own words", () => {
 
   /** One captain turn the view sent: the ask it opened, once the turn ends. */
   async function turnFrom(send: () => Promise<unknown>): Promise<AskRecord> {
-    const before = new Set(core.services.tasks.listAsks().map((ask) => ask.id));
+    const before = new Set(core.services.tasks.capture.listAsks().map((ask) => ask.id));
     await send();
     let opened: AskRecord | undefined;
     await waitFor(() => {
-      opened = core.services.tasks.listAsks().find((ask) => !before.has(ask.id));
+      opened = core.services.tasks.capture.listAsks().find((ask) => !before.has(ask.id));
       return opened !== undefined;
     });
     const id = opened?.id ?? "";
-    await waitFor(() => core.services.tasks.getAsk(id)?.turnState !== "open", 60_000);
-    const closed = core.services.tasks.getAsk(id);
+    await waitFor(() => core.services.tasks.capture.getAsk(id)?.turnState !== "open", 60_000);
+    const closed = core.services.tasks.capture.getAsk(id);
     if (!closed) throw new Error("the ask vanished");
     return closed;
   }

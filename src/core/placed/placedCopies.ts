@@ -150,11 +150,13 @@ export class PlacedCopies {
     if ("refused" in answer && answer.refused === "preparation-unknown")
       throw new PreparationUnknown();
     if ("refused" in answer && answer.refused === "preparation-failed") {
-      if (committed) this.options.tasks.releasePlacement(taskId, committed.orderId, "ended");
+      if (committed)
+        this.options.tasks.placement.releasePlacement(taskId, committed.orderId, "ended");
       throw new PreparationFailed(answer.message);
     }
     if ("refused" in answer) {
-      if (committed) this.options.tasks.releasePlacement(taskId, committed.orderId, "ended");
+      if (committed)
+        this.options.tasks.placement.releasePlacement(taskId, committed.orderId, "ended");
       throw new ForgeAuthRequiredError(
         `${answer.name} requires ${name}'s own sign-in to fetch this project.`,
       );
@@ -629,7 +631,7 @@ export class PlacedCopies {
   forget(taskId: string): void {
     const record = this.options.tasks.get(taskId);
     if (record?.workspaceState === "present" && TaskService.isClosed(record))
-      this.options.tasks.markWorkspaceRemoved(taskId);
+      this.options.tasks.placement.markWorkspaceRemoved(taskId);
   }
 
   writesEvidenceFiles(deviceId: string): boolean {
@@ -814,8 +816,13 @@ export class PlacedCopies {
     this.retiredThere.add(taskId);
     const record = this.options.tasks.get(taskId);
     if (record?.placement)
-      this.options.tasks.releasePlacement(taskId, record.placement.snapshot.orderId, "ended");
-    if (record?.workspaceState === "present") this.options.tasks.markWorkspaceRemoved(taskId);
+      this.options.tasks.placement.releasePlacement(
+        taskId,
+        record.placement.snapshot.orderId,
+        "ended",
+      );
+    if (record?.workspaceState === "present")
+      this.options.tasks.placement.markWorkspaceRemoved(taskId);
     if (kept)
       this.options.tasks.note(
         taskId,
@@ -854,7 +861,8 @@ export class PlacedCopies {
       { orderId: `retire:${taskId}`, task: taskId, kept: kept?.sha ?? null },
     ]);
     const placement = this.options.tasks.get(taskId)?.placement;
-    if (placement) this.options.tasks.releasePlacement(taskId, placement.snapshot.orderId, "ended");
+    if (placement)
+      this.options.tasks.placement.releasePlacement(taskId, placement.snapshot.orderId, "ended");
     return true;
   }
 

@@ -369,7 +369,7 @@ export class Computers {
     for (const record of this.options.tasks.list()) {
       if (record.deviceId !== device.id || record.workspaceState !== "present") continue;
       if (!TaskService.isClosed(record)) continue;
-      this.options.tasks.markWorkspaceRemoved(record.id);
+      this.options.tasks.placement.markWorkspaceRemoved(record.id);
       this.options.tasks.note(
         record.id,
         `working copy left on ${label} - it was removed while out of reach, so any unmerged work stays there`,

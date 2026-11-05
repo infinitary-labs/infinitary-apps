@@ -153,7 +153,7 @@ function inf812(observedReason: string) {
   });
   seedDelivery(tasks, "builder", { liveValidation: proof(observedReason) });
   tick();
-  tasks.recordReport("review", { text: `verdict: findings\n${F5}\n${F6}\nrisk: medium` });
+  tasks.turns.recordReport("review", { text: `verdict: findings\n${F5}\n${F6}\nrisk: medium` });
   seedDelivery(
     tasks,
     "builder",
@@ -161,12 +161,12 @@ function inf812(observedReason: string) {
     { kind: "review", text: "review findings", data: { reviewTaskId: "review" } },
   );
   tick();
-  tasks.recordCardRaised("builder", {
+  tasks.capture.recordCardRaised("builder", {
     cardId: "card-review-f5-f6",
     kind: "decision",
     title: "Review of INF-812: two findings",
   });
-  tasks.recordCardResolved("builder", {
+  tasks.capture.recordCardResolved("builder", {
     cardId: "card-review-f5-f6",
     title: "Review of INF-812: two findings",
     action: "decide",
@@ -186,7 +186,7 @@ function inf812(observedReason: string) {
     ],
   });
   tick(10_000);
-  tasks.recordReport("review", { text: `verdict: findings\n${F7}\nrisk: medium` });
+  tasks.turns.recordReport("review", { text: `verdict: findings\n${F7}\nrisk: medium` });
   seedDelivery(
     tasks,
     "builder",

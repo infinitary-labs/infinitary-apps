@@ -93,14 +93,14 @@ export async function seedCaptainSizedRecord(
     await inTurns(0, CAPTAIN_RECORD.openMessages, (index) => {
       const askId = `open-message-${index}`;
       const taskId = chainTasks[index % CAPTAIN_RECORD.chains] as string;
-      tasks.openAsk({
+      tasks.capture.openAsk({
         id: askId,
         text: `How is piece ${index} going?`,
         at: now - (CAPTAIN_RECORD.openMessages - index) * 60_000,
       });
-      tasks.attachAsk(askId, taskId, "tool:spawn_task");
-      tasks.closeAsk(askId, "closed");
-      tasks.setAskDelivery(askId, "covered");
+      tasks.capture.attachAsk(askId, taskId, "tool:spawn_task");
+      tasks.capture.closeAsk(askId, "closed");
+      tasks.capture.setAskDelivery(askId, "covered");
     });
     // The rest of the history: progress lines spread over every task.
     const events = () =>

@@ -163,7 +163,7 @@ export class CardEmits {
     return this.host.tasks.atomic(
       () => {
         this.stack.evidence.write(stamped, { basis: "emitted", source: "host", cause: "emit" });
-        this.host.tasks.fileQuestion({
+        this.host.tasks.capture.fileQuestion({
           id: randomUUID().slice(0, 8),
           title: input.title,
           outcome: input.answer ?? input.body,

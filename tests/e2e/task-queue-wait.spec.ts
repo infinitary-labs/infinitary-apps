@@ -32,7 +32,7 @@ test("a queued task names its prerequisite and time on every task surface", asyn
     title: "Build the approved project",
     status: "queued",
   });
-  tasks.link(plan.id, build.id, "blocks", "firstmate");
+  tasks.graph.link(plan.id, build.id, "blocks", "firstmate");
   db.close();
   const launched = await launchApp({ userDataDir, withMockProvider: true });
   const { page } = launched;

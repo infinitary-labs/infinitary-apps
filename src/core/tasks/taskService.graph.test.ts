@@ -14,8 +14,9 @@ import { describe, expect, it } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { seedTask } from "./seedTask";
+import { TaskGraphRefusal } from "./taskGraph";
 import { queryTasks } from "./taskQuery";
-import { TaskGraphRefusal, TaskService } from "./taskService";
+import { TaskService } from "./taskService";
 
 /**
  * The task graph (task-system P2, design sections 7 to 9): hierarchy with
@@ -59,19 +60,19 @@ describe("the task graph (task-system P2)", () => {
         shape: { kind: "implement", basis: answer.key },
         startPolicy: "when-ready",
       });
-      expect(tasks.listReady().map((row) => row.id)).toContain(piece.id);
+      expect(tasks.graph.listReady().map((row) => row.id)).toContain(piece.id);
       if (change === "backlog")
-        expect(tasks.setQueued(piece.id, "unqueue-task", { actor: "captain" })).toEqual({
+        expect(tasks.starts.setQueued(piece.id, "unqueue-task", { actor: "captain" })).toEqual({
           ok: true,
           changed: true,
         });
       else tasks.updateFields(piece.id, { startPolicy: "on-request" }, "firstmate");
-      tasks.recordShape(piece.id, piece.shape!, null);
+      tasks.placement.recordShape(piece.id, piece.shape!, null);
       expect(queryTasks(tasks, { key: piece.key }).rows[0]).toMatchObject({
         status: "open",
         start_policy: "on-request",
       });
-      expect(tasks.listReady().map((row) => row.id)).not.toContain(piece.id);
+      expect(tasks.graph.listReady().map((row) => row.id)).not.toContain(piece.id);
     },
   );
 
@@ -84,22 +85,25 @@ describe("the task graph (task-system P2)", () => {
       work("held", { gate: { kind: "at-time", until: 9 } });
       work("later", { startPolicy: "on-request" });
       tasks.create({ id: "q", kind: "question", title: "Q", prompt: "", repoId: null });
-      expect(tasks.listReady().map((r) => r.id)).toEqual(["b", "a"]);
-      expect(tasks.flagsOf(tasks.get("c") as never)).toEqual({
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["b", "a"]);
+      expect(tasks.graph.flagsOf(tasks.get("c") as never)).toEqual({
         blocked: true,
         held: false,
         ready: false,
         deadBlocker: false,
       });
-      expect(tasks.flagsOf(tasks.get("held") as never)).toMatchObject({ held: true, ready: false });
+      expect(tasks.graph.flagsOf(tasks.get("held") as never)).toMatchObject({
+        held: true,
+        ready: false,
+      });
       // On-request work is unblocked and unheld - ready in the derived sense,
       // but the ready query never dispatches it.
-      expect(tasks.flagsOf(tasks.get("later") as never)).toMatchObject({ ready: true });
-      expect(tasks.waitingOn("c").map((r) => r.id)).toEqual(["a"]);
+      expect(tasks.graph.flagsOf(tasks.get("later") as never)).toMatchObject({ ready: true });
+      expect(tasks.graph.waitingOn("c").map((r) => r.id)).toEqual(["a"]);
 
       tasks.close("a", { status: "done", reason: "landed", actor: "host" });
-      expect(tasks.listReady().map((r) => r.id)).toEqual(["b", "c"]);
-      expect(tasks.flagsOf(tasks.get("c") as never).blocked).toBe(false);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["b", "c"]);
+      expect(tasks.graph.flagsOf(tasks.get("c") as never).blocked).toBe(false);
     });
 
     it("a dropped blocker is a dead wait, never a cleared one", () => {
@@ -107,16 +111,16 @@ describe("the task graph (task-system P2)", () => {
       work("doomed");
       work("dependent", { blockedBy: ["doomed"] });
       tasks.close("doomed", { status: "dropped", reason: "failed", actor: "host" });
-      expect(tasks.listReady()).toEqual([]);
-      expect(tasks.listDeadBlocked().map((r) => r.id)).toEqual(["dependent"]);
-      expect(tasks.flagsOf(tasks.get("dependent") as never)).toMatchObject({
+      expect(tasks.graph.listReady()).toEqual([]);
+      expect(tasks.graph.listDeadBlocked().map((r) => r.id)).toEqual(["dependent"]);
+      expect(tasks.graph.flagsOf(tasks.get("dependent") as never)).toMatchObject({
         blocked: true,
         deadBlocker: true,
       });
       // Unlinking the dead edge frees it; a held row is never listed dead.
-      tasks.unlink("doomed", "dependent", "blocks", "firstmate");
-      expect(tasks.listDeadBlocked()).toEqual([]);
-      expect(tasks.listReady().map((r) => r.id)).toEqual(["dependent"]);
+      tasks.graph.unlink("doomed", "dependent", "blocks", "firstmate");
+      expect(tasks.graph.listDeadBlocked()).toEqual([]);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["dependent"]);
     });
   });
 
@@ -126,18 +130,18 @@ describe("the task graph (task-system P2)", () => {
       work("a");
       work("b", { blockedBy: ["a"] });
       work("c", { blockedBy: ["b"] });
-      expect(() => tasks.link("c", "a", "blocks", "firstmate")).toThrow(TaskGraphRefusal);
-      expect(() => tasks.link("c", "a", "blocks", "firstmate")).toThrow(
+      expect(() => tasks.graph.link("c", "a", "blocks", "firstmate")).toThrow(TaskGraphRefusal);
+      expect(() => tasks.graph.link("c", "a", "blocks", "firstmate")).toThrow(
         /SCR-1 already blocks SCR-3.*would close a cycle/,
       );
-      expect(() => tasks.link("b", "a", "blocks", "firstmate")).toThrow(/close a cycle/);
-      expect(() => tasks.link("a", "a", "blocks", "firstmate")).toThrow(/linked to itself/);
+      expect(() => tasks.graph.link("b", "a", "blocks", "firstmate")).toThrow(/close a cycle/);
+      expect(() => tasks.graph.link("a", "a", "blocks", "firstmate")).toThrow(/linked to itself/);
       // Nothing was written by the refusals.
-      expect(tasks.blockers("a")).toEqual([]);
+      expect(tasks.graph.blockers("a")).toEqual([]);
       expect(tasks.timeline("a").map((e) => e.kind)).toEqual(["created"]);
       // Informational edges never cycle-check: related both ways is fine.
-      expect(tasks.link("c", "a", "related", "firstmate")).toBe(true);
-      expect(tasks.link("a", "c", "related", "firstmate")).toBe(true);
+      expect(tasks.graph.link("c", "a", "related", "firstmate")).toBe(true);
+      expect(tasks.graph.link("a", "c", "related", "firstmate")).toBe(true);
       // The refusal at create rolls the whole create back.
       expect(() => work("d", { blockedBy: ["nope"] })).toThrow(/Unknown task/);
       expect(tasks.get("d")).toBeUndefined();
@@ -152,9 +156,9 @@ describe("the task graph (task-system P2)", () => {
       expect(child).toMatchObject({ key: "NIA-2", projectId: "proj-r1", repoId: "r1" });
       expect(parent.key).toBe("NIA-1");
       const grandchild = work("grandchild", { parentId: "child" });
-      expect(tasks.ancestors("grandchild").map((r) => r.id)).toEqual(["child", "parent"]);
-      expect(tasks.children("parent").map((r) => r.id)).toEqual(["child"]);
-      expect(tasks.descendants("parent").map((r) => r.id)).toEqual(["child", "grandchild"]);
+      expect(tasks.graph.ancestors("grandchild").map((r) => r.id)).toEqual(["child", "parent"]);
+      expect(tasks.graph.children("parent").map((r) => r.id)).toEqual(["child"]);
+      expect(tasks.graph.descendants("parent").map((r) => r.id)).toEqual(["child", "grandchild"]);
       expect(() => tasks.setParent("parent", "grandchild", "firstmate")).toThrow(TaskGraphRefusal);
       expect(() => tasks.setParent("parent", "grandchild", "firstmate")).toThrow(
         /already under NIA-1; making it the parent would close a cycle/,
@@ -243,7 +247,7 @@ describe("the task graph (task-system P2)", () => {
 
       // Scratch has no repository: each task keeps the one it works in.
       tasks.updateFields("step", { project: "SCR" }, "firstmate");
-      const subtree = [tasks.get("step"), ...tasks.descendants("step")];
+      const subtree = [tasks.get("step"), ...tasks.graph.descendants("step")];
       expect(
         Object.fromEntries(subtree.map((row) => [row?.id, [row?.projectId, row?.repoId]])),
       ).toEqual({
@@ -361,7 +365,7 @@ describe("the task graph (task-system P2)", () => {
       work("c2", { parentId: "parent" });
       work("c2a", { parentId: "c2" });
       tasks.close("c1", { status: "done", reason: "landed", actor: "host" });
-      const refusal = tasks.closeRefusal("parent");
+      const refusal = tasks.graph.closeRefusal("parent");
       expect(refusal).toMatchObject({
         refused: "children-open",
         task: { key: "SCR-1" },
@@ -375,7 +379,7 @@ describe("the task graph (task-system P2)", () => {
         ["update_task", { task: "SCR-3", start_policy: "when-ready", blocked_by: [] }],
         ["update_task", { task: "SCR-3", drop: true, reason: "superseded", confirm: true }],
       ]);
-      expect(tasks.closeRefusal("c1")).toBeUndefined();
+      expect(tasks.graph.closeRefusal("c1")).toBeUndefined();
       const dropped = tasks.dropWithChildren("parent", {
         reason: "the captain changed course",
         actor: "firstmate",
@@ -387,26 +391,31 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.get("parent")).toMatchObject({ status: "dropped", closedReason: "cancelled" });
       expect(tasks.timeline("parent").at(-1)?.text).toBe("dropped - the captain changed course");
       expect(tasks.timeline("c2").at(-1)?.text).toBe('superseded - "PARENT" (SCR-1) was dropped');
-      expect(tasks.closeRefusal("parent")).toBeUndefined();
+      expect(tasks.graph.closeRefusal("parent")).toBeUndefined();
     });
 
     it("drops never-started work for the captain and refuses open parts without writing", () => {
       const { tasks, work } = setup();
       const leaf = work("leaf");
       const waiter = work("waiter");
-      tasks.link(leaf.id, waiter.id, "blocks", "captain");
-      tasks.link(leaf.id, waiter.id, "related", "captain");
+      tasks.graph.link(leaf.id, waiter.id, "blocks", "captain");
+      tasks.graph.link(leaf.id, waiter.id, "related", "captain");
       const review = dropReviewKeys(tasks.dropEffects(leaf.id));
       expect(review.waiting).toEqual([waiter.key]);
       expect(
-        tasks.dropUnstarted(leaf.id, { actor: "captain", review: { ...review, waiting: [] } }),
+        tasks.starts.dropUnstarted(leaf.id, {
+          actor: "captain",
+          review: { ...review, waiting: [] },
+        }),
       ).toEqual({
         ok: false,
         text: DROP_REVIEW_STALE,
       });
       expect(tasks.get(leaf.id)?.status).toBe("open");
 
-      expect(tasks.dropUnstarted(leaf.id, { actor: "captain", review })).toEqual({ ok: true });
+      expect(tasks.starts.dropUnstarted(leaf.id, { actor: "captain", review })).toEqual({
+        ok: true,
+      });
       expect(tasks.get(leaf.id)).toMatchObject({
         status: "dropped",
         closedReason: "cancelled",
@@ -417,9 +426,9 @@ describe("the task graph (task-system P2)", () => {
         data: { beforeStart: true, status: "dropped", reason: "cancelled" },
       });
       expect(tasks.get(waiter.id)?.status).toBe("open");
-      expect(tasks.blockers(waiter.id).map((row) => row.id)).toEqual([leaf.id]);
-      expect(tasks.linksTo(waiter.id).some((link) => link.type === "related")).toBe(true);
-      expect(tasks.dropUnstarted(leaf.id, { actor: "captain", review })).toMatchObject({
+      expect(tasks.graph.blockers(waiter.id).map((row) => row.id)).toEqual([leaf.id]);
+      expect(tasks.graph.linksTo(waiter.id).some((link) => link.type === "related")).toBe(true);
+      expect(tasks.starts.dropUnstarted(leaf.id, { actor: "captain", review })).toMatchObject({
         ok: false,
       });
 
@@ -427,7 +436,7 @@ describe("the task graph (task-system P2)", () => {
       const openPart = work("part", { parentId: parent.id });
       const closedPart = work("done-part", { parentId: parent.id });
       tasks.close(closedPart.id, { status: "done", reason: "landed", actor: "host" });
-      const refused = tasks.dropUnstarted(parent.id, {
+      const refused = tasks.starts.dropUnstarted(parent.id, {
         actor: "captain",
         review: dropReviewKeys(tasks.dropEffects(parent.id)),
       });
@@ -439,7 +448,7 @@ describe("the task graph (task-system P2)", () => {
 
       tasks.close(openPart.id, { status: "dropped", reason: "cancelled", actor: "captain" });
       expect(
-        tasks.dropUnstarted(parent.id, {
+        tasks.starts.dropUnstarted(parent.id, {
           actor: "captain",
           review: dropReviewKeys(tasks.dropEffects(parent.id)),
         }),
@@ -451,15 +460,15 @@ describe("the task graph (task-system P2)", () => {
       const { tasks, work, tick } = setup();
       const blocker = work("blocker");
       const leaf = work("leaf", { startPolicy: "on-request", priority: 2 });
-      tasks.link(blocker.id, leaf.id, "blocks", "captain");
-      tasks.setGate(leaf.id, { kind: "at-time", until: 9_999_999 }, "held for later");
+      tasks.graph.link(blocker.id, leaf.id, "blocks", "captain");
+      tasks.placement.setGate(leaf.id, { kind: "at-time", until: 9_999_999 }, "held for later");
       const before = tasks.get(leaf.id);
       tick();
 
       // Queue: the start policy alone changes; its blocker, hold, priority,
       // project and parent stay, and the history says so in the captain's words.
       expect(
-        tasks.setQueued(leaf.id, "queue-task", { actor: "captain", via: "task-card" }),
+        tasks.starts.setQueued(leaf.id, "queue-task", { actor: "captain", via: "task-card" }),
       ).toEqual({ ok: true, changed: true });
       const queued = tasks.get(leaf.id);
       expect(queued).toMatchObject({
@@ -470,7 +479,7 @@ describe("the task graph (task-system P2)", () => {
         parentId: before?.parentId,
         gate: before?.gate,
       });
-      expect(tasks.blockers(leaf.id).map((row) => row.id)).toEqual([blocker.id]);
+      expect(tasks.graph.blockers(leaf.id).map((row) => row.id)).toEqual([blocker.id]);
       expect(tasks.timeline(leaf.id).at(-1)).toMatchObject({
         actor: "captain",
         kind: "note",
@@ -479,7 +488,7 @@ describe("the task graph (task-system P2)", () => {
       });
       // The same move again writes nothing.
       const entries = tasks.timeline(leaf.id).length;
-      expect(tasks.setQueued(leaf.id, "queue-task", { actor: "captain" })).toEqual({
+      expect(tasks.starts.setQueued(leaf.id, "queue-task", { actor: "captain" })).toEqual({
         ok: true,
         changed: false,
       });
@@ -487,7 +496,7 @@ describe("the task graph (task-system P2)", () => {
 
       // Unqueue: back to the backlog, waiting for the captain's word.
       expect(
-        tasks.setQueued(leaf.id, "unqueue-task", { actor: "captain", via: "task-card" }),
+        tasks.starts.setQueued(leaf.id, "unqueue-task", { actor: "captain", via: "task-card" }),
       ).toEqual({ ok: true, changed: true });
       expect(tasks.get(leaf.id)?.startPolicy).toBe("on-request");
       expect(tasks.timeline(leaf.id).at(-1)?.text).toBe(UNQUEUED_ACTIVITY);
@@ -500,25 +509,29 @@ describe("the task graph (task-system P2)", () => {
       // A parent whose parts do the work is refused, and so is started or closed work.
       const parent = work("parent", { startPolicy: "on-request" });
       work("part", { parentId: parent.id, startPolicy: "on-request" });
-      expect(tasks.setQueued(parent.id, "queue-task", { actor: "captain" })).toEqual({
+      expect(tasks.starts.setQueued(parent.id, "queue-task", { actor: "captain" })).toEqual({
         ok: false,
         text: queuePartsRefusal(parent.key),
       });
       expect(tasks.get(parent.id)?.startPolicy).toBe("on-request");
       const started = work("started", { startPolicy: "on-request" });
-      expect(tasks.claimForDispatch(started.id)).toBe(true);
-      tasks.requeue(started.id, { kind: "at-time", until: 9_999_999 }, "no account was free");
+      expect(tasks.starts.claimForDispatch(started.id)).toBe(true);
+      tasks.starts.requeue(
+        started.id,
+        { kind: "at-time", until: 9_999_999 },
+        "no account was free",
+      );
       expect(tasks.get(started.id)).toMatchObject({ status: "open" });
-      expect(tasks.setQueued(started.id, "queue-task", { actor: "captain" })).toEqual({
+      expect(tasks.starts.setQueued(started.id, "queue-task", { actor: "captain" })).toEqual({
         ok: false,
         text: queueStartedRefusal(started.key),
       });
       tasks.close(blocker.id, { status: "done", reason: "landed", actor: "host" });
-      expect(tasks.setQueued(blocker.id, "unqueue-task", { actor: "captain" })).toEqual({
+      expect(tasks.starts.setQueued(blocker.id, "unqueue-task", { actor: "captain" })).toEqual({
         ok: false,
         text: queueClosedRefusal(blocker.key),
       });
-      expect(tasks.setQueued("nowhere", "queue-task", { actor: "captain" })).toEqual({
+      expect(tasks.starts.setQueued("nowhere", "queue-task", { actor: "captain" })).toEqual({
         ok: false,
         text: queueMissingRefusal("nowhere"),
       });
@@ -529,13 +542,13 @@ describe("the task graph (task-system P2)", () => {
   it("moves started work to the backlog and back out, keeping its run and noting who and why", () => {
     const { tasks, work, tick } = setup();
     const started = work("started", { startPolicy: "on-request" });
-    expect(tasks.claimForDispatch(started.id)).toBe(true);
-    tasks.recordRecovery(started.id, { rung: 2, count: 3, at: 900 });
+    expect(tasks.starts.claimForDispatch(started.id)).toBe(true);
+    tasks.turns.recordRecovery(started.id, { rung: 2, count: 3, at: 900 });
     const before = tasks.get(started.id);
     expect(before?.status).toBe("active");
     tick(10);
     expect(
-      tasks.setQueued(started.id, "unqueue-task", {
+      tasks.starts.setQueued(started.id, "unqueue-task", {
         actor: "captain",
         via: "task-card",
         reason: "Pause it until the design settles.",
@@ -559,18 +572,18 @@ describe("the task graph (task-system P2)", () => {
     });
     // Again writes nothing, and Queue it is refused: only Start picks it up.
     const entries = tasks.timeline(started.id).length;
-    expect(tasks.setQueued(started.id, "unqueue-task", { actor: "firstmate" })).toEqual({
+    expect(tasks.starts.setQueued(started.id, "unqueue-task", { actor: "firstmate" })).toEqual({
       ok: true,
       changed: false,
     });
-    expect(tasks.setQueued(started.id, "queue-task", { actor: "captain" })).toEqual({
+    expect(tasks.starts.setQueued(started.id, "queue-task", { actor: "captain" })).toEqual({
       ok: false,
       text: queueStartedBacklogRefusal(started.key),
     });
     expect(tasks.timeline(started.id)).toHaveLength(entries);
 
     tick(50);
-    expect(tasks.leaveBacklog(started.id, { actor: "firstmate" })).toBe(true);
+    expect(tasks.starts.leaveBacklog(started.id, { actor: "firstmate" })).toBe(true);
     expect(tasks.get(started.id)).toMatchObject({
       status: "active",
       backlogSince: null,
@@ -581,7 +594,7 @@ describe("the task graph (task-system P2)", () => {
       text: leftBacklogActivity("firstmate"),
       data: { backlog: "left", waited: 50 },
     });
-    expect(tasks.leaveBacklog(started.id, { actor: "firstmate" })).toBe(false);
+    expect(tasks.starts.leaveBacklog(started.id, { actor: "firstmate" })).toBe(false);
   });
 
   describe("fields, follow-ups and progress", () => {
@@ -625,11 +638,11 @@ describe("the task graph (task-system P2)", () => {
         startPolicy: "on-request",
         goal: "The meter test passes ten times in a row",
       });
-      expect(tasks.discoveredFrom("origin").map((r) => r.id)).toEqual(["fu"]);
-      expect(tasks.discoveredOrigins("fu").map((r) => r.id)).toEqual(["origin"]);
-      expect(tasks.openChildren("origin")).toEqual([]);
-      expect(tasks.blockers("origin")).toEqual([]);
-      expect(tasks.listReady()).toEqual([]);
+      expect(tasks.graph.discoveredFrom("origin").map((r) => r.id)).toEqual(["fu"]);
+      expect(tasks.graph.discoveredOrigins("fu").map((r) => r.id)).toEqual(["origin"]);
+      expect(tasks.graph.openChildren("origin")).toEqual([]);
+      expect(tasks.graph.blockers("origin")).toEqual([]);
+      expect(tasks.graph.listReady()).toEqual([]);
       expect(tasks.timeline("fu").map((e) => [e.kind, e.actor])).toEqual([
         ["created", "crewmate"],
         ["note", "crewmate"],
@@ -640,9 +653,9 @@ describe("the task graph (task-system P2)", () => {
       });
       // The regression this rule exists for: a filed follow-up must not
       // stop the work the captain asked for from closing.
-      expect(tasks.closeRefusal("origin")).toBeUndefined();
-      expect(tasks.blockerRefusal("origin")).toBeUndefined();
-      expect(tasks.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
+      expect(tasks.graph.closeRefusal("origin")).toBeUndefined();
+      expect(tasks.graph.blockerRefusal("origin")).toBeUndefined();
+      expect(tasks.graph.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
 
       const { record: blocking } = tasks.fileFollowup({
         id: "fu2",
@@ -655,9 +668,9 @@ describe("the task graph (task-system P2)", () => {
       });
       // blocks_me is now the only thing that holds the origin, and it says
       // which task rather than counting anonymous children.
-      expect(tasks.blockers("origin").map((r) => r.id)).toEqual([blocking.id]);
-      expect(tasks.closeRefusal("origin")).toBeUndefined();
-      const waitsOn = tasks.blockerRefusal("origin");
+      expect(tasks.graph.blockers("origin").map((r) => r.id)).toEqual([blocking.id]);
+      expect(tasks.graph.closeRefusal("origin")).toBeUndefined();
+      const waitsOn = tasks.graph.blockerRefusal("origin");
       expect(waitsOn).toMatchObject({
         refused: "waits-on",
         task: { key: "NIA-1" },
@@ -670,7 +683,7 @@ describe("the task graph (task-system P2)", () => {
       expect(waitsOn?.ways.map((way) => ("tool" in way ? way.tool : way))).toEqual(["link_tasks"]);
       // An active origin must SHOW that it is held, not look free until the
       // merge refuses.
-      expect(tasks.flagsOf(tasks.get("origin") as never)).toMatchObject({
+      expect(tasks.graph.flagsOf(tasks.get("origin") as never)).toMatchObject({
         blocked: true,
         ready: false,
       });
@@ -678,8 +691,8 @@ describe("the task graph (task-system P2)", () => {
       // A blocker that is not happening cannot hold a merge hostage: for
       // closing (and only there) a dropped blocker clears.
       tasks.close("fu2", { status: "dropped", reason: "cancelled", actor: "firstmate" });
-      expect(tasks.blockerRefusal("origin")).toBeUndefined();
-      expect(tasks.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
+      expect(tasks.graph.blockerRefusal("origin")).toBeUndefined();
+      expect(tasks.graph.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
     });
 
     it("a recorded wait on running work draws the arrow and holds no merge", () => {
@@ -689,17 +702,17 @@ describe("the task graph (task-system P2)", () => {
       work("origin", { repoId: "r1", status: "active" });
       work("waiter");
       const queued = work("queued");
-      tasks.link("waiter", "origin", "blocks", "firstmate");
-      tasks.link("waiter", queued.id, "blocks", "firstmate");
-      expect(tasks.blockers("origin").map((row) => row.id)).toEqual(["waiter"]);
-      expect(tasks.linksTo("origin").find((link) => link.fromId === "waiter")).toMatchObject({
+      tasks.graph.link("waiter", "origin", "blocks", "firstmate");
+      tasks.graph.link("waiter", queued.id, "blocks", "firstmate");
+      expect(tasks.graph.blockers("origin").map((row) => row.id)).toEqual(["waiter"]);
+      expect(tasks.graph.linksTo("origin").find((link) => link.fromId === "waiter")).toMatchObject({
         type: "blocks",
         holdsMerge: false,
       });
-      expect(tasks.blockerRefusal("origin")).toBeUndefined();
-      expect(tasks.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
+      expect(tasks.graph.blockerRefusal("origin")).toBeUndefined();
+      expect(tasks.graph.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
       // The same edge still holds the start of work that has not begun.
-      expect(tasks.listReady().map((row) => row.id)).not.toContain(queued.id);
+      expect(tasks.graph.listReady().map((row) => row.id)).not.toContain(queued.id);
 
       const { record: blocking } = tasks.fileFollowup({
         id: "fu",
@@ -710,11 +723,13 @@ describe("the task graph (task-system P2)", () => {
         prompt: "brief",
         blocksOrigin: true,
       });
-      expect(tasks.linksTo("origin").find((link) => link.fromId === blocking.id)?.holdsMerge).toBe(
-        true,
-      );
-      expect(tasks.blockerRefusal("origin")?.tasks.map((row) => row.key)).toEqual([blocking.key]);
-      expect(tasks.flagsOf(tasks.get("origin") as never).blocked).toBe(true);
+      expect(
+        tasks.graph.linksTo("origin").find((link) => link.fromId === blocking.id)?.holdsMerge,
+      ).toBe(true);
+      expect(tasks.graph.blockerRefusal("origin")?.tasks.map((row) => row.key)).toEqual([
+        blocking.key,
+      ]);
+      expect(tasks.graph.flagsOf(tasks.get("origin") as never).blocked).toBe(true);
     });
 
     // INF-1826 (the captain's Approve and build, q1 A and q2 yes): a replaced-by
@@ -734,14 +749,14 @@ describe("the task graph (task-system P2)", () => {
         status: "active",
         shape: { kind: "review", kind_source: "host:review" },
       });
-      tasks.link(old.id, waiter.id, "blocks", "crewmate");
-      tasks.link(old.id, held.id, "blocks", "firstmate", true);
-      tasks.link(old.id, finished.id, "blocks", "crewmate");
-      tasks.link(prerequisite.id, old.id, "blocks", "firstmate");
-      tasks.link(done.id, old.id, "blocks", "firstmate");
-      tasks.link(review.id, old.id, "blocks", "host");
-      tasks.link(old.id, carrier.id, "related", "firstmate");
-      const began = tasks.linksTo(waiter.id)[0]?.createdAt;
+      tasks.graph.link(old.id, waiter.id, "blocks", "crewmate");
+      tasks.graph.link(old.id, held.id, "blocks", "firstmate", true);
+      tasks.graph.link(old.id, finished.id, "blocks", "crewmate");
+      tasks.graph.link(prerequisite.id, old.id, "blocks", "firstmate");
+      tasks.graph.link(done.id, old.id, "blocks", "firstmate");
+      tasks.graph.link(review.id, old.id, "blocks", "host");
+      tasks.graph.link(old.id, carrier.id, "related", "firstmate");
+      const began = tasks.graph.linksTo(waiter.id)[0]?.createdAt;
       tasks.close(finished.id, { status: "done", reason: "merged", actor: "captain" });
       tasks.close(done.id, { status: "done", reason: "merged", actor: "captain" });
       tick(60_000);
@@ -753,14 +768,14 @@ describe("the task graph (task-system P2)", () => {
       });
 
       const waitsOf = (id: string) =>
-        tasks
+        tasks.graph
           .linksTo(id)
           .filter((link) => link.type === "blocks")
           .map((link) => ({ from: link.fromId, holdsMerge: link.holdsMerge }));
       expect(waitsOf(waiter.id)).toEqual([{ from: carrier.id, holdsMerge: false }]);
-      expect(tasks.linksTo(waiter.id)[0]?.createdAt).toBe(began);
+      expect(tasks.graph.linksTo(waiter.id)[0]?.createdAt).toBe(began);
       expect(waitsOf(held.id)).toEqual([{ from: carrier.id, holdsMerge: true }]);
-      expect(tasks.blockerRefusal(held.id)?.tasks.map((row) => row.id)).toEqual([carrier.id]);
+      expect(tasks.graph.blockerRefusal(held.id)?.tasks.map((row) => row.id)).toEqual([carrier.id]);
       // A closed waiter keeps its history; done work holds nothing to move.
       expect(waitsOf(finished.id)).toEqual([{ from: old.id, holdsMerge: false }]);
       expect(waitsOf(carrier.id)).toEqual([{ from: prerequisite.id, holdsMerge: false }]);
@@ -770,7 +785,7 @@ describe("the task graph (task-system P2)", () => {
           .sort(),
       ).toEqual([done.id, review.id].sort());
       expect(
-        tasks
+        tasks.graph
           .linksFrom(old.id)
           .map((link) => link.type)
           .sort(),
@@ -779,8 +794,8 @@ describe("the task graph (task-system P2)", () => {
         { data: { fromId: old.id, type: "blocks", movedTo: carrier.id } },
       ]);
       // Nothing waits on the dropped task any more, so no dead gate is left behind.
-      expect(tasks.listDeadBlocked().map((row) => row.id)).not.toContain(held.id);
-      expect(tasks.carrierOf(old.id)?.id).toBe(carrier.id);
+      expect(tasks.graph.listDeadBlocked().map((row) => row.id)).not.toContain(held.id);
+      expect(tasks.graph.carrierOf(old.id)?.id).toBe(carrier.id);
     });
 
     it("leaves a wait on the replaced task when moving it would close a cycle", () => {
@@ -788,32 +803,34 @@ describe("the task graph (task-system P2)", () => {
       const old = work("old", { status: "active" });
       const carrier = work("carrier", { status: "active" });
       const waiter = work("waiter", { status: "active" });
-      tasks.link(old.id, waiter.id, "blocks", "crewmate");
-      tasks.link(waiter.id, carrier.id, "blocks", "firstmate");
-      tasks.link(old.id, carrier.id, "replaced-by", "firstmate");
-      expect(tasks.linksTo(waiter.id).map((link) => link.fromId)).toEqual([old.id]);
-      expect(tasks.replacementOf(old.id)).toBe(carrier.key);
+      tasks.graph.link(old.id, waiter.id, "blocks", "crewmate");
+      tasks.graph.link(waiter.id, carrier.id, "blocks", "firstmate");
+      tasks.graph.link(old.id, carrier.id, "replaced-by", "firstmate");
+      expect(tasks.graph.linksTo(waiter.id).map((link) => link.fromId)).toEqual([old.id]);
+      expect(tasks.graph.replacementOf(old.id)).toBe(carrier.key);
     });
 
     it("copies a merge mark when dropped work starts again, and a required action's prerequisite holds", () => {
       const { tasks, work } = setup();
       const old = work("old", { status: "active" });
       const waiting = work("waiting", { status: "active" });
-      tasks.link(old.id, waiting.id, "blocks", "host", true);
+      tasks.graph.link(old.id, waiting.id, "blocks", "host", true);
       tasks.close(old.id, { status: "dropped", reason: "discarded", actor: "captain" });
-      const fresh = tasks.startAgain(old.id, {
+      const fresh = tasks.starts.startAgain(old.id, {
         id: "fresh",
         shape: { kind: "unclear" },
         actor: "captain",
       });
-      expect(tasks.linksTo(waiting.id).find((link) => link.fromId === fresh.id)?.holdsMerge).toBe(
-        true,
-      );
-      expect(tasks.blockerRefusal(waiting.id)?.tasks.map((row) => row.id)).toEqual([fresh.id]);
+      expect(
+        tasks.graph.linksTo(waiting.id).find((link) => link.fromId === fresh.id)?.holdsMerge,
+      ).toBe(true);
+      expect(tasks.graph.blockerRefusal(waiting.id)?.tasks.map((row) => row.id)).toEqual([
+        fresh.id,
+      ]);
 
       const source = work("source");
       const prerequisite = work("prerequisite");
-      tasks.declareRequiredActions(
+      tasks.delivery.declareRequiredActions(
         source.id,
         {
           cardId: "card-source",
@@ -836,9 +853,10 @@ describe("the task graph (task-system P2)", () => {
       const action = tasks.listOpen().find((row) => row.delivery?.captainAction);
       expect(action).toBeDefined();
       expect(
-        tasks.linksTo(action?.id ?? "").find((link) => link.fromId === prerequisite.id)?.holdsMerge,
+        tasks.graph.linksTo(action?.id ?? "").find((link) => link.fromId === prerequisite.id)
+          ?.holdsMerge,
       ).toBe(true);
-      expect(tasks.blockerRefusal(action?.id ?? "")).toBeDefined();
+      expect(tasks.graph.blockerRefusal(action?.id ?? "")).toBeDefined();
     });
 
     it("dedupes an open filing that names the same test, and refuses a test failure with no path", () => {

@@ -486,10 +486,10 @@ describe("SharingService - contribution", () => {
       const record = decision(`d${index}`, 10_000 + index + 1, ["t1"]);
       // A field the corpus export blanks must never survive into a record.
       record.producer.accountId = "sk-ant-api03-VERYSECRET";
-      tasks.recordDecision(record);
+      tasks.turns.recordDecision(record);
     }
     tick();
-    tasks.recordDecision(decision("last", 20_000, ["t1", "t2"]));
+    tasks.turns.recordDecision(decision("last", 20_000, ["t1", "t2"]));
 
     const preview = service.preview();
     expect(preview.contribution.pendingCount).toBe(CONTRIBUTION_PREVIEW_LIMIT + 3 + 2);
@@ -515,7 +515,7 @@ describe("SharingService - contribution", () => {
     });
     tasks.create({ id: "t1", title: "one", prompt: "p", repoId: "r1", status: "active" });
     tick();
-    tasks.recordDecision(decision("d1", 10_001, ["t1"]));
+    tasks.turns.recordDecision(decision("d1", 10_001, ["t1"]));
     service.setSwitch("contribution", true);
     expect(batches).toEqual([]);
     tick();
@@ -531,7 +531,7 @@ describe("SharingService - contribution", () => {
     const { service, tasks, tick } = setup({ terms: { published: true, version: "1" } });
     tasks.create({ id: "t1", title: "one", prompt: "p", repoId: "r1", status: "active" });
     tick();
-    tasks.recordDecision(decision("d1", 10_001, ["t1"]));
+    tasks.turns.recordDecision(decision("d1", 10_001, ["t1"]));
     service.setSwitch("contribution", true);
     service.markViewed("contribution");
     expect(service.get().contribution.sentAt).toBeNull();

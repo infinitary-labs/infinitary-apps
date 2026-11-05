@@ -587,7 +587,7 @@ describe("a task on another computer, on that computer's own sign-in", () => {
     await expect.poll(() => home.recordUsage.mock.calls.length).toBe(1);
     await expect.poll(() => home.tasks.get("t-placed")?.activity).toBe("idle");
     // A task an earlier build started there still names this Mac's account.
-    home.tasks.setAccountId("t-placed", at.thisMacAccount);
+    home.tasks.placement.setAccountId("t-placed", at.thisMacAccount);
     // This Mac's own Claude is refused here, by work of its own.
     home.vault.noteCutOff(at.thisMacAccount, { class: "refused" });
     home.supervisor.reconcileCutOffs();

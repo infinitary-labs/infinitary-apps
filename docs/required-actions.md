@@ -61,7 +61,7 @@ Ordinary crewmate continuation tasks remain separate.
 A required action's words can be wrong: DOP-217 named a remover the captain could not find, and the crewmate that knew the right path had no way to say it on the card.
 The captain approved that the words stay correctable, with who corrected them and why (INF-2214, built by INF-2225).
 
-The first mate corrects them with `update_task revise_required_action`, a crewmate with its own `revise_required_action` output, and both go through `CardService.reviseRequiredAction` to `TaskService.reviseRequiredAction`.
+The first mate corrects them with `update_task revise_required_action`, a crewmate with its own `revise_required_action` output, and both go through `CardService.reviseRequiredAction` to `TaskService.delivery.reviseRequiredAction`.
 The writer names the requirement by its source task and action id, the generation it read, only the fields it changes, a reason, a stable operation id, and `same_action` true, declaring it is still the same intended action.
 Only the title, consequence, instructions and criterion change, and only on that requirement.
 Its target, ids, source filing, prerequisites and completion mode stay, as do the other requirements of a shared action, its state (blocked, ready or deferred) and its card's thread.

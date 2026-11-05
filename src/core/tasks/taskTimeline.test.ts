@@ -105,7 +105,7 @@ function history(world: ReturnType<typeof setup>) {
   cards.addMessage(id, "captain", "does the flush cover windows too?");
   cards.addMessage(id, "crewmate", "Yes: the flush runs on every platform.");
   cards.resolve(cards.get(id) as Card, "flush", "flush");
-  tasks.recordReport("rerun", {
+  tasks.turns.recordReport("rerun", {
     text: "The Mac check passes with the queue flush. I kept it and removed the retry.",
     summary: "The Mac check passes with the queue flush.",
     declared: { result: { kept: "flush", runs: 10 } },
@@ -313,7 +313,7 @@ describe("the unified task timeline (INF-1296 piece 1)", () => {
     const world = setup();
     history(world);
     seedTask(world.tasks, { id: "followup", title: "Flaky meter test", status: "queued" });
-    world.tasks.link("followup", "rerun", "discovered-from", "crewmate");
+    world.tasks.graph.link("followup", "rerun", "discovered-from", "crewmate");
     world.tasks.close("followup", { status: "dropped", reason: "cancelled", actor: "captain" });
     const concerned = world.timeline
       .entries("rerun")
@@ -367,8 +367,8 @@ it("keeps exact raw brief, conversation and script contents beneath the captain-
     account_id: "work-account",
     began: "resume",
   };
-  world.tasks.setSessionFile("plain", "practice-resume", facts);
-  world.tasks.setSessionFile("plain", "practice-resume", { ...facts, model: "gpt-6" });
+  world.tasks.turns.setSessionFile("plain", "practice-resume", facts);
+  world.tasks.turns.setSessionFile("plain", "practice-resume", { ...facts, model: "gpt-6" });
   const observed = world.timeline
     .history("plain")
     .filter((reading) => reading.entry.content.kind === "session-observation");

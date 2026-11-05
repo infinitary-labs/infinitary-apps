@@ -85,7 +85,7 @@ describe("ChangePublication", () => {
         signal: `The host confirms the ${publication}.`,
         boundary: "Actual forge publication",
       };
-      tasks.recordLiveValidation(
+      tasks.delivery.recordLiveValidation(
         task.id,
         {
           kind: "plan",
@@ -95,7 +95,7 @@ describe("ChangePublication", () => {
         },
         { head },
       );
-      tasks.recordLiveValidation(
+      tasks.delivery.recordLiveValidation(
         task.id,
         {
           kind: "request",
@@ -120,7 +120,7 @@ describe("ChangePublication", () => {
         },
         { head },
       );
-      tasks.recordLiveValidation(
+      tasks.delivery.recordLiveValidation(
         task.id,
         {
           kind: "review",
@@ -140,12 +140,12 @@ describe("ChangePublication", () => {
           assignment: { head, revision: 0, scenarioRevision: 1, effects: ["draft-once"] },
         },
       );
-      tasks.recordLiveValidation(
+      tasks.delivery.recordLiveValidation(
         task.id,
         { kind: "decision", request: "draft-once", card: "approve-draft", action: "approve" },
         { head, decision: { offer: "shown" } },
       );
-      tasks.decideLiveValidation(task.id, {
+      tasks.delivery.decideLiveValidation(task.id, {
         card: "approve-draft",
         offer: "shown",
         action: "approve",

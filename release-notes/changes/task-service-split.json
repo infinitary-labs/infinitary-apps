@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-service-split",
+      "reason": "Internal: the task service and its protocol test are split into smaller files by owner, and two unused task reads are removed; nothing a person sees changes."
+    }
+  ]
+}

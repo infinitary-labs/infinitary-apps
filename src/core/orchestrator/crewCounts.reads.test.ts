@@ -51,7 +51,7 @@ it("reads a finished blocker's edge once and never its record when it counts the
     seedTask(tasks, { id: "running", title: "Running work", status: "idle", worktreeDir: "/w" });
     // A follow-up it must merge after, still planned: the running task waits on it.
     seedTask(tasks, { id: "planned", title: "Planned follow-up", status: "queued" });
-    tasks.link("planned", "running", "blocks", "crewmate", true);
+    tasks.graph.link("planned", "running", "blocks", "crewmate", true);
     let finished = 0;
     // Follow-ups filed with blocks_me and recorded waits, each merged through its own pull request.
     const finishBlockers = (count: number) => {
@@ -59,8 +59,8 @@ it("reads a finished blocker's edge once and never its record when it counts the
         clock += 60_000;
         const id = `follow-up-${finished}`;
         seedTask(tasks, { id, title: `Follow-up ${finished}`, status: "idle", worktreeDir: "/f" });
-        tasks.link(id, "running", "blocks", "crewmate", finished % 2 === 0);
-        tasks.recordChangeEvidence(id, {
+        tasks.graph.link(id, "running", "blocks", "crewmate", finished % 2 === 0);
+        tasks.delivery.recordChangeEvidence(id, {
           prUrl: `https://github.com/acme/app/pull/${100 + finished}`,
           prNumber: 100 + finished,
           headSha: `${finished}`.padStart(40, "a"),

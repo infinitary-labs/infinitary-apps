@@ -315,7 +315,7 @@ export const readCatalog = {
   // The task protocol (task-system P3). The board rides its own push, and
   // the push carries the board itself - the snapshot the core rebuilt from
   // SQLite after the commit, equal to a fresh read by construction
-  // (taskProtocol.test.ts) - so a subscriber takes the pushed value as it
+  // (taskProtocol.push.test.ts) - so a subscriber takes the pushed value as it
   // lands (P4: the now panel paints a row within one coalescing window of
   // the write) rather than re-reading on every task event; a detail
   // re-reads only when ITS task changes or gains a timeline event.

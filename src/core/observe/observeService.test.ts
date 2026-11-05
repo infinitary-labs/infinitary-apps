@@ -869,7 +869,7 @@ describe("ObserveService", () => {
       actor: "captain",
       delivery: { landedMode: "merge" },
     });
-    tasks.markWorkspaceRemoved("done1");
+    tasks.placement.markWorkspaceRemoved("done1");
     expect(tasks.get("done1")).toMatchObject({ status: "done", workspaceState: "removed" });
 
     const service = new ObserveService({ enabled: true, db, tasks, settings, repos });
@@ -924,7 +924,9 @@ describe("ObserveService", () => {
       const settings = new SettingsStore(db);
       const id = kind === "main" ? FIRSTMATE_SESSION_ID : "live";
       const point = (path: string) =>
-        kind === "main" ? settings.setFirstmateSessionFile(path) : tasks.setSessionFile(id, path);
+        kind === "main"
+          ? settings.setFirstmateSessionFile(path)
+          : tasks.turns.setSessionFile(id, path);
       if (kind !== "main")
         seedTask(tasks, taskRow({ id, title: "Running", status: "running", sessionFile: file }));
       else point(file);

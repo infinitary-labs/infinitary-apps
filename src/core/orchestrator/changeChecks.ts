@@ -137,7 +137,7 @@ export class ChangeChecks {
         this.assertCheckTarget(record);
         this.record(record.id, pull?.merged ? "merged" : "no-pr");
         if (pull?.merged)
-          this.options.tasks.recordChangeEvidence(record.id, { headSha: pull.headSha });
+          this.options.tasks.delivery.recordChangeEvidence(record.id, { headSha: pull.headSha });
         return { kind: "gone" };
       }
       change = await this.readiness.readyPrerequisite(taskId, forge, change);
@@ -331,7 +331,7 @@ export class ChangeChecks {
         this.assertCheckTarget(record);
         if (pull?.merged) {
           this.record(record.id, "merged");
-          this.options.tasks.recordChangeEvidence(record.id, { headSha: pull.headSha });
+          this.options.tasks.delivery.recordChangeEvidence(record.id, { headSha: pull.headSha });
           return {
             text: mergedWords(forge, pull, audience),
             recorded: true,
@@ -539,7 +539,7 @@ export class ChangeChecks {
       at,
       checks.some((check) => isRedCheckState(check.state)),
     );
-    this.options.tasks.recordChangeEvidence(
+    this.options.tasks.delivery.recordChangeEvidence(
       taskId,
       {
         ci: actual === "none" ? undefined : actual,
@@ -586,7 +586,7 @@ export class ChangeChecks {
       task.delivery?.changeLabel ??
       (task.delivery?.prNumber !== undefined ? `#${task.delivery.prNumber}` : undefined);
     if (known === label) return;
-    this.options.tasks.recordChangeEvidence(
+    this.options.tasks.delivery.recordChangeEvidence(
       taskId,
       {
         changeLabel: label,
@@ -627,7 +627,7 @@ export class ChangeChecks {
         : { id: randomUUID(), signature, forwarded: false };
     if (forwarded && !observation.forwarded) observation = { ...observation, forwarded: true };
     if (observation !== previous)
-      this.options.tasks.recordChangeEvidence(taskId, { ciObservation: observation });
+      this.options.tasks.delivery.recordChangeEvidence(taskId, { ciObservation: observation });
     return observation.id;
   }
 }

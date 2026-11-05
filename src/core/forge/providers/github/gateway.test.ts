@@ -615,7 +615,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     ] as const)("refuses a raw description write through %s %s", async (method, rest) => {
       const f = await fixture({ host });
       seedDelivery(f.tasks, "task-1", { prNumber: 36 });
-      f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+      f.tasks.delivery.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
       const result = await f.write.run({
         method,
         path: `/repos/octo/meter/${rest}`,
@@ -654,7 +654,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     });
     expect(f.seen).toHaveLength(1);
     seedDelivery(f.tasks, "task-1", { prNumber: 1 });
-    f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+    f.tasks.delivery.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
     const changed = await f.write.run({
       method: "PATCH",
       path: "/repos/octo/meter/pulls/1",
@@ -686,7 +686,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       number,
     });
     seedDelivery(f.tasks, "task-1", { prNumber: 1 });
-    f.tasks.updateChangePresentation("task-1", () => ({
+    f.tasks.delivery.updateChangePresentation("task-1", () => ({
       revisions: [],
       receipts: [],
       publication: published(1),
@@ -712,7 +712,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       checkTarget: release,
       prNumber: 57,
     });
-    f.tasks.updateChangePresentation("task-1", () => ({
+    f.tasks.delivery.updateChangePresentation("task-1", () => ({
       revisions: [],
       receipts: [],
       publication: published(57),
@@ -860,13 +860,14 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
         join(scratchDir("fm-enterprise-integrations-"), "settings"),
       ),
       asks: {
-        keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+        keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
         keepForFirstmate: (ask) => {
           firstmateAsks.push(ask);
           return `integration-ask-${ask.id}`;
         },
-        take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
-        record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+        take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
+        record: (taskId, askId, outcome) =>
+          tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
       },
       secrets: new FileIntegrationSecrets(join(scratchDir("fm-enterprise-secrets-"), "secrets")),
     });
@@ -985,13 +986,14 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       ],
       store: new IntegrationSettingsStore(join(scratchDir("fm-integrations-"), "integrations")),
       asks: {
-        keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+        keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
         keepForFirstmate: (ask) => {
           firstmateAsks.push(ask);
           return `integration-ask-${ask.id}`;
         },
-        take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
-        record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+        take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
+        record: (taskId, askId, outcome) =>
+          tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
       },
       secrets: new FileIntegrationSecrets(join(scratchDir("fm-integration-keys-"), "secrets")),
     });

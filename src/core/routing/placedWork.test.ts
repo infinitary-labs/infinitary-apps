@@ -405,7 +405,7 @@ describe("INF-443 learned placed-work ranking", () => {
     w.seed("claude-work");
     w.route("claude-work", { ...GROK, provider: "anthropic-claude", id: "claude-fable-5-1" });
     // Bind through the task owner; the other login must not inherit this work.
-    w.tasks.dispatch("claude-work", {
+    w.tasks.starts.dispatch("claude-work", {
       workspace: { repoDir: "", worktreeDir: "", branch: "" },
       accountId: "c1",
       assignee: "crewmate",

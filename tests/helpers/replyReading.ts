@@ -26,16 +26,16 @@ export function seedReplyReading(tasks: TaskService) {
     },
     { id: "reading-picture", text: "", reply: { text: problemWords, problem: true } },
   ].entries()) {
-    tasks.openAsk({
+    tasks.capture.openAsk({
       id: round.id,
       at: at + index,
       text: round.text,
       ...(round.text ? {} : { images: [{ mimeType: "image/png" }] }),
     });
-    tasks.setAskReply(round.id, round.reply);
-    tasks.setAskDelivery(round.id, "covered");
-    tasks.closeAsk(round.id, "closed");
-    tasks.markAnswered([round.id], null);
+    tasks.capture.setAskReply(round.id, round.reply);
+    tasks.capture.setAskDelivery(round.id, "covered");
+    tasks.capture.closeAsk(round.id, "closed");
+    tasks.capture.markAnswered([round.id], null);
   }
   return { question: REPLY_READING_QUESTION, words: REPLY_NOTE_WORDS, problemWords };
 }

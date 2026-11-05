@@ -8,7 +8,7 @@ import type { TaskEvent, TaskEventActor } from "../storage/taskEventStore";
 
 /**
  * A report as a typed durable entry (INF-1296 piece 1, docs/task-record.md
- * "Reports and results"): the `report` event `TaskService.recordReport`
+ * "Reports and results"): the `report` event `TaskService.turns.recordReport`
  * commits is the one record of a report and the result it carried. The
  * task row's `outcome` columns are the newest report's index, kept in the
  * same transaction, and the latest result is read from the entries

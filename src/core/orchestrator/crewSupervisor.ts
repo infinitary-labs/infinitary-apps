@@ -375,6 +375,7 @@ import {
 } from "../tasks/liveValidation";
 import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
 import { carryOnWords, modelMoveWords, RESTART_RESUMED_WORDS } from "../tasks/recordActivity";
+import { type SettleRefusal, TaskGraphRefusal } from "../tasks/taskGraph";
 import {
   builtOnRows,
   queryTasks,
@@ -383,13 +384,9 @@ import {
   type TaskQueryRow,
 } from "../tasks/taskQuery";
 import { resultRefusal, resultSchemaRefusal } from "../tasks/taskResult";
-import {
-  type ReportDeclaration,
-  type SettleRefusal,
-  TaskGraphRefusal,
-  TaskService,
-} from "../tasks/taskService";
+import { TaskService } from "../tasks/taskService";
 import { provisionTaskTemp } from "../tasks/taskTemp";
+import type { ReportDeclaration } from "../tasks/taskTurns";
 import { crewTally } from "../tasks/workPresentation";
 import { compareSemver } from "../update/semver";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
@@ -1949,7 +1946,7 @@ export class CrewSupervisor {
           inbox: options.inbox,
           read: readMainChecks,
           steer: async (taskId, wake) => {
-            this.options.tasks.endIdle(taskId);
+            this.options.tasks.turns.endIdle(taskId);
             await this.steerInternal(taskId, wake, {
               actor: "supervisor",
               via: "supervision",
@@ -2387,7 +2384,7 @@ export class CrewSupervisor {
   private sayAutomaticWait(record: TaskRecord, wait = UNCOMPARED_WAIT): void {
     // The record, not this process: a restart still knows what was said.
     const said = this.options.tasks.get(record.id)?.shape?.placement_wait;
-    this.options.tasks.setPlacementWait(record.id, wait);
+    this.options.tasks.placement.setPlacementWait(record.id, wait);
     if (said?.kind === wait.kind) return;
     this.options.broadcastEvent({
       type: "firstmate_note",
@@ -2444,7 +2441,7 @@ export class CrewSupervisor {
     if (this.runsOnlyHere(record)) return undefined;
     const { tasks } = this.options;
     const parents = record.parentId
-      ? [tasks.get(record.parentId), ...tasks.ancestors(record.parentId)]
+      ? [tasks.get(record.parentId), ...tasks.graph.ancestors(record.parentId)]
       : [];
     for (const [index, at] of [record, ...parents].entries()) {
       const ask = at?.shape?.runs_on_ask;
@@ -2469,7 +2466,8 @@ export class CrewSupervisor {
     if (record.status !== "open" || record.kind !== "work" || this.started(record)) return;
     const requested = this.runsOnFor(record);
     const target = requested === AUTOMATIC_COMPUTER ? null : requested;
-    if (target !== (record.deviceId ?? null)) this.options.tasks.setDevice(record.id, target);
+    if (target !== (record.deviceId ?? null))
+      this.options.tasks.placement.setDevice(record.id, target);
   }
 
   /**
@@ -2491,7 +2489,8 @@ export class CrewSupervisor {
   runsOnChanged(taskId: string): void {
     const record = this.options.tasks.get(taskId);
     if (!record) return;
-    for (const task of [record, ...this.options.tasks.descendants(taskId)]) this.repoint(task);
+    for (const task of [record, ...this.options.tasks.graph.descendants(taskId)])
+      this.repoint(task);
   }
 
   /**
@@ -2699,7 +2698,7 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     if (!record) return false;
     const target = this.placementOf(record);
-    if (target && !record.deviceId) this.options.tasks.setDevice(taskId, target);
+    if (target && !record.deviceId) this.options.tasks.placement.setDevice(taskId, target);
     if (!this.outOfReach(taskId)) return false;
     if (target) this.sayPlacedWait(this.waitSubject(record), target);
     return true;
@@ -2716,7 +2715,7 @@ export class CrewSupervisor {
     const held = this.options.machines?.signInWait(target);
     const record = this.options.tasks.get(taskId);
     if (!held || !record) return false;
-    if (!record.deviceId) this.options.tasks.setDevice(taskId, target);
+    if (!record.deviceId) this.options.tasks.placement.setDevice(taskId, target);
     this.sayPlacedWait(this.waitSubject(record), target, { ...held, kind: "cut-off" });
     return true;
   }
@@ -2769,7 +2768,7 @@ export class CrewSupervisor {
   ): void {
     const record = this.options.tasks.get(taskId);
     if (!record) return;
-    if (!record.deviceId) this.options.tasks.setDevice(taskId, target);
+    if (!record.deviceId) this.options.tasks.placement.setDevice(taskId, target);
     if (waitFor.kind === "forge") this.holdForDeviceForge(taskId, target, waitFor.host);
     this.sayPlacedWait(this.waitSubject(record), target, waitFor);
   }
@@ -2785,8 +2784,8 @@ export class CrewSupervisor {
     };
     const record = this.options.tasks.get(taskId);
     if (record?.gate?.ref === gate.ref) return;
-    if (record?.status === "open") this.options.tasks.setGate(taskId, gate, gate.reason);
-    else this.options.tasks.requeue(taskId, gate, gate.reason);
+    if (record?.status === "open") this.options.tasks.placement.setGate(taskId, gate, gate.reason);
+    else this.options.tasks.starts.requeue(taskId, gate, gate.reason);
   }
 
   /**
@@ -2969,21 +2968,21 @@ export class CrewSupervisor {
    * confirmed failure, and Start stays unavailable until that is known.
    */
   private reconcileStartChecks(): void {
-    for (const id of this.options.tasks.startAttemptIds()) {
-      const attempt = this.options.tasks.startAttemptOf(id);
+    for (const id of this.options.tasks.starts.startAttemptIds()) {
+      const attempt = this.options.tasks.starts.startAttemptOf(id);
       if (attempt?.phase !== "checking") continue;
       const record = this.options.tasks.get(id);
       if (!record) {
-        this.options.tasks.clearStartAttempt(id);
+        this.options.tasks.starts.clearStartAttempt(id);
         continue;
       }
       if (record.sessionFile || this.tasks.has(id)) {
-        this.options.tasks.clearStartAttempt(id);
+        this.options.tasks.starts.clearStartAttempt(id);
         continue;
       }
       if (record.placement) continue; // its durable order, not roster absence, owns reconciliation
       if (record.deviceId && this.outOfReach(id)) continue;
-      this.options.tasks.releaseUnconfirmedStart(id);
+      this.options.tasks.starts.releaseUnconfirmedStart(id);
     }
   }
 
@@ -3070,9 +3069,9 @@ export class CrewSupervisor {
   addFirstmateCard(input: EmittedCardInput): string {
     if (input.requiredActions !== undefined) {
       const priorSource = input.id
-        ? this.options.tasks.taskForCard(resolveFirstmateCardId(input.id))
+        ? this.options.tasks.capture.taskForCard(resolveFirstmateCardId(input.id))
         : undefined;
-      this.options.tasks.validateRequiredActions(
+      this.options.tasks.delivery.validateRequiredActions(
         input.taskId ?? priorSource?.id ?? "",
         input.requiredActions,
       );
@@ -3085,7 +3084,7 @@ export class CrewSupervisor {
       const merges = input.actions.some(
         (action) => settleEffectOf(action)?.mode === "merge" || requestMergeEffectOf(action),
       );
-      this.options.tasks.declareRequiredActions(
+      this.options.tasks.delivery.declareRequiredActions(
         input.taskId,
         {
           cardId: id,
@@ -3142,7 +3141,7 @@ export class CrewSupervisor {
       ...offers.filter((entry) => entry.cardId !== offer.cardId || entry.offerId !== offer.offerId),
       offer,
     ];
-    this.options.tasks.recordPermissionRecords(taskId, {
+    this.options.tasks.delivery.recordPermissionRecords(taskId, {
       completionOffers: all.filter(
         (entry, index) =>
           index >= all.length - 4 || this.cards.get(entry.cardId)?.offerId === entry.offerId,
@@ -3152,10 +3151,10 @@ export class CrewSupervisor {
 
   declareStandaloneRequiredActions(input: EmittedCardInput, cardId: string): void {
     if (input.taskId || input.requiredActions === undefined) return;
-    const source = this.options.tasks.taskForCard(cardId);
+    const source = this.options.tasks.capture.taskForCard(cardId);
     const card = this.cards.get(cardId);
     if (!source || !card?.offerId) throw new Error("Required actions have no source record.");
-    this.options.tasks.declareRequiredActions(
+    this.options.tasks.delivery.declareRequiredActions(
       source.id,
       { cardId, offerId: card.offerId, actions: input.requiredActions },
       true,
@@ -3211,7 +3210,7 @@ export class CrewSupervisor {
     if (!version.app || !version.takesWork) return;
     for (const record of this.options.tasks.listOpen()) {
       const action = record.delivery?.captainAction;
-      if (!action || !this.options.tasks.captainActionReady(record.id)) continue;
+      if (!action || !this.options.tasks.delivery.captainActionReady(record.id)) continue;
       const matches = action.requirements.every(({ action: requirement }) => {
         const criterion = requirement.completion;
         if (criterion.kind !== "device-version" || criterion.deviceId !== deviceId) return false;
@@ -3220,7 +3219,7 @@ export class CrewSupervisor {
       });
       if (
         matches &&
-        this.options.tasks.completeCaptainAction(record.id, action.generation, "checked")
+        this.options.tasks.delivery.completeCaptainAction(record.id, action.generation, "checked")
       )
         this.cards.retireTaskCards(record.id, "answered");
     }
@@ -3393,7 +3392,7 @@ export class CrewSupervisor {
       ([key, wait]) => wait.on === "no-sign-ins" && key.endsWith(`\n${deviceId}`),
     );
     if (!waiting) return;
-    for (const record of this.options.tasks.listReady()) {
+    for (const record of this.options.tasks.graph.listReady()) {
       if (record.kind !== "work" || record.deviceId !== deviceId) continue;
       void this.dispatchQueuedTask(record.id).catch((caught: unknown) => {
         console.warn("[crew] a placed task's start after a sign-in failed:", caught);
@@ -3412,7 +3411,11 @@ export class CrewSupervisor {
       if (said.startsWith(`${ref}\n`)) this.deviceForgeSaid.delete(said);
     for (const record of this.options.tasks.listOpen()) {
       if (record.kind !== "work" || record.gate?.ref !== ref) continue;
-      this.options.tasks.setGate(record.id, null, "its computer's own GitHub sign-in is ready");
+      this.options.tasks.placement.setGate(
+        record.id,
+        null,
+        "its computer's own GitHub sign-in is ready",
+      );
       await this.dispatchQueuedTask(record.id);
     }
   }
@@ -3637,7 +3640,7 @@ export class CrewSupervisor {
         ...graph,
       });
       this.announcePlanSkip(shape);
-      const blockers = this.options.tasks.blockers(taskId);
+      const blockers = this.options.tasks.graph.blockers(taskId);
       if (escalation) await this.applyEscalation(escalation, taskId);
       this.options.broadcastEvent({
         type: "firstmate_note",
@@ -3730,7 +3733,7 @@ export class CrewSupervisor {
     // sign-in serves again, never on this Mac instead.
     if (target && (waitsThere || signInThere)) {
       this.insertQueuedWork(taskId, title, brief, input.intent, boundRepoId, classified, graph);
-      this.options.tasks.setDevice(taskId, target);
+      this.options.tasks.placement.setDevice(taskId, target);
       if (signInThere?.kind === "forge") this.holdForDeviceForge(taskId, target, signInThere.host);
       if (escalation) await this.applyEscalation(escalation, taskId);
       this.announcePlanSkip(classified);
@@ -3919,8 +3922,8 @@ export class CrewSupervisor {
       parentId: builder.id,
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
     });
-    this.options.tasks.setDevice(taskId, builder.deviceId ?? null);
-    this.options.tasks.recordChangeEvidence(taskId, {
+    this.options.tasks.placement.setDevice(taskId, builder.deviceId ?? null);
+    this.options.tasks.delivery.recordChangeEvidence(taskId, {
       headSha,
       ...(facts.changeReading ? { reviewChange: facts.changeReading } : {}),
       ...(passedHead ? { passedHead } : {}),
@@ -3929,7 +3932,7 @@ export class CrewSupervisor {
     // No hold: the parent edge is the one join, a child out of the close
     // gate holds nothing, and whether a merge waits for the verdict is the
     // care runbook's guidance, never a host edge (INF-1876).
-    this.options.tasks.recordChangeEvidence(
+    this.options.tasks.delivery.recordChangeEvidence(
       builder.id,
       {},
       {
@@ -3956,7 +3959,7 @@ export class CrewSupervisor {
    * 2). A repair assessment (FI3-663) is not its review.
    */
   private openReviewOf(builderId: string): TaskRecord | undefined {
-    return this.options.tasks
+    return this.options.tasks.graph
       .openChildren(builderId)
       .find(
         (record) =>
@@ -3975,7 +3978,8 @@ export class CrewSupervisor {
     const verdict = builder.delivery?.reviewVerdict;
     if (verdict !== "findings" && verdict !== "blocked") return undefined;
     const open = this.openReviewOf(builder.id);
-    if (!open || this.options.tasks.verdictReviewOf(builder)?.id !== open.id) return undefined;
+    if (!open || this.options.tasks.graph.verdictReviewOf(builder)?.id !== open.id)
+      return undefined;
     const head = builder.delivery?.reviewSha;
     return {
       key: open.key || open.id,
@@ -4012,7 +4016,7 @@ export class CrewSupervisor {
     // Keep it through retries; only a later review turn takes a new head.
     if (review.delivery?.headSha && !review.outcome) return undefined;
     const facts = await this.reviewFacts(builder);
-    this.options.tasks.recordChangeEvidence(review.id, {
+    this.options.tasks.delivery.recordChangeEvidence(review.id, {
       validationAssignment: validationAssignment(builder.delivery?.liveValidation, facts.headSha),
     });
     const previousHead = review.delivery?.headSha;
@@ -4032,7 +4036,7 @@ export class CrewSupervisor {
           base,
         );
       }
-      this.options.tasks.recordChangeEvidence(
+      this.options.tasks.delivery.recordChangeEvidence(
         review.id,
         {
           headSha: facts.headSha,
@@ -4089,7 +4093,7 @@ export class CrewSupervisor {
     const assessorId = randomUUID().slice(0, 8);
     // Recorded before it exists, so a second read finds it and starts none,
     // and one that cannot be made ends the approval like one that cannot finish.
-    this.options.tasks.recordPermissionRecords(builder.id, {
+    this.options.tasks.delivery.recordPermissionRecords(builder.id, {
       mergeAuthorization: {
         ...authorization,
         undecided: { ...undecided, assessment: { taskId: assessorId, at: this.now() } },
@@ -4301,7 +4305,7 @@ export class CrewSupervisor {
       }
       const kept =
         isFolderRepair(prior) && prior.started_in ? { started_in: prior.started_in } : {};
-      this.options.tasks.recordShape(
+      this.options.tasks.placement.recordShape(
         standing.id,
         { in_place: { ...facts, ...kept } },
         standing.difficulty,
@@ -4380,7 +4384,7 @@ export class CrewSupervisor {
     const { started_in: before, ...rest } = facts;
     const started_in = existsSync(folder) ? undefined : nearestFolderAbove(folder);
     if (started_in !== before) {
-      this.options.tasks.recordShape(
+      this.options.tasks.placement.recordShape(
         taskId,
         { in_place: started_in ? { ...rest, started_in } : rest },
         record.difficulty,
@@ -4571,7 +4575,7 @@ export class CrewSupervisor {
 
   /** Stop a builder's live repair assessments, silently: their verdict would answer nothing. */
   private async retireAssessments(builderId: string, why: string): Promise<void> {
-    const live = this.options.tasks
+    const live = this.options.tasks.graph
       .children(builderId)
       .filter((child) => !TaskService.isClosed(child) && isRepairAssessment(child.shape));
     for (const child of live) {
@@ -4747,7 +4751,7 @@ export class CrewSupervisor {
   /** How an open row waits, phrased for the feed and the crew status. */
   private waitingText(record: TaskRecord): string {
     if (record.gate) return gateText(record.gate);
-    const waiting = this.options.tasks.waitingOn(record.id);
+    const waiting = this.options.tasks.graph.waitingOn(record.id);
     if (waiting.length > 0) return blockedText(waiting);
     return record.startPolicy === "on-request" ? "starts on request" : "starts now";
   }
@@ -4935,8 +4939,8 @@ export class CrewSupervisor {
     // The captain's chosen link: provenance only. A discovered-from edge
     // gates no readiness and holds no close, so the fresh attempt starts
     // although its origin is still being closed below.
-    this.options.tasks.link(fresh.id, plan.previous.id, "discovered-from", "captain");
-    this.options.tasks.recordEscalation({
+    this.options.tasks.graph.link(fresh.id, plan.previous.id, "discovered-from", "captain");
+    this.options.tasks.turns.recordEscalation({
       from: { id: plan.previous.id, key: plan.previous.key || plan.previous.id },
       to: { id: fresh.id, key: fresh.key || fresh.id },
       attempt: plan.stamp.attempt,
@@ -5688,7 +5692,7 @@ export class CrewSupervisor {
    */
   private async finishProgram(program: TaskRecord, end: ProgramEnd): Promise<void> {
     const tasks = this.options.tasks;
-    for (const part of tasks.children(program.id)) {
+    for (const part of tasks.graph.children(program.id)) {
       if (TaskService.isClosed(part) || !part.shape?.program_part) continue;
       await this.settling.closing.closeTask(part.id, {
         status: "dropped",
@@ -5698,7 +5702,7 @@ export class CrewSupervisor {
         feed: false,
       });
     }
-    const parts = tasks
+    const parts = tasks.graph
       .children(program.id)
       .filter((part) => part.shape?.program_part)
       .sort((a, b) => (a.shape?.program_part?.call ?? 0) - (b.shape?.program_part?.call ?? 0));
@@ -5742,7 +5746,7 @@ export class CrewSupervisor {
           : value === null
             ? undefined
             : { value };
-      tasks.recordReport(program.id, {
+      tasks.turns.recordReport(program.id, {
         text: programReportText(parts.length, result, branch),
         actor: "host",
         ...(result ? { declared: { result } } : {}),
@@ -5800,7 +5804,7 @@ export class CrewSupervisor {
 
   /**
    * A shape with its basis verdict derived now, for the routing table. The
-   * record never stores the verdict (`TaskService.basisHolds`): a step
+   * record never stores the verdict (`TaskService.graph.basisHolds`): a step
    * planned behind the task it builds on names a basis that has not
    * answered yet, and the verdict that counts is the one at the moment the
    * work routes.
@@ -5821,12 +5825,12 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     const bucket = tierFor(shape).bucket ?? null;
     if (!record || record.difficulty === bucket) return;
-    this.options.tasks.recordShape(taskId, {}, bucket);
+    this.options.tasks.placement.recordShape(taskId, {}, bucket);
   }
 
   /** Whether a named basis really carries a spec, a plan or a reproduction. */
   private basisHolds(ref: string): boolean {
-    return this.options.tasks.basisHolds(ref);
+    return this.options.tasks.graph.basisHolds(ref);
   }
 
   /** A task by id or key, or a loud error naming the parameter at fault. */
@@ -6033,7 +6037,7 @@ export class CrewSupervisor {
           );
         const builder = this.reviewBuilderOf(record);
         const headSha = builder ? record?.delivery?.headSha : undefined;
-        this.options.tasks.beginPlacementPreparation(taskId);
+        this.options.tasks.placement.beginPlacementPreparation(taskId);
         elsewhere = await machines.prepare(
           machine,
           taskId,
@@ -6067,7 +6071,7 @@ export class CrewSupervisor {
         // A task that branches from another starts at that task's last commit (INF-799).
         const branchFrom =
           !headSha && repoDir ? await this.branchFromBase(record, repoDir) : undefined;
-        this.options.tasks.beginPlacementPreparation(taskId);
+        this.options.tasks.placement.beginPlacementPreparation(taskId);
         task.workspace = await this.options.workspace.createTaskWorktree(
           taskId,
           repoDir,
@@ -6141,7 +6145,7 @@ export class CrewSupervisor {
       task.session = session;
       // The record's dispatch facts, once the crewmate really exists: the
       // model the session runs on outranks the routing choice it came from.
-      this.options.tasks.dispatch(taskId, {
+      this.options.tasks.starts.dispatch(taskId, {
         workspace: {
           // A task with no project elsewhere merges into this Mac's default workspace.
           repoDir:
@@ -6195,8 +6199,8 @@ export class CrewSupervisor {
         // A missing reply proves neither success nor failure. Keep the choice,
         // order and demand; the next attempt reconciles this same preparation.
         this.tasks.delete(taskId);
-        this.options.tasks.releaseUnconfirmedStart(taskId);
-        this.options.tasks.markStartChecking(taskId);
+        this.options.tasks.starts.releaseUnconfirmedStart(taskId);
+        this.options.tasks.starts.markStartChecking(taskId);
         this.sayAutomaticWait(this.options.tasks.get(taskId) ?? record);
         return { taskId, crewmate: "queued" };
       }
@@ -6204,7 +6208,11 @@ export class CrewSupervisor {
         record?.placement &&
         (!placed || elsewhere || !this.options.tasks.get(taskId)?.placement?.preparationStarted)
       )
-        this.options.tasks.releasePlacement(taskId, record.placement.snapshot.orderId, "ended");
+        this.options.tasks.placement.releasePlacement(
+          taskId,
+          record.placement.snapshot.orderId,
+          "ended",
+        );
       if (caught instanceof ForgeAuthRequiredError && this.tasks.get(taskId) === task) {
         await task.unsubscribe?.();
         task.session?.dispose();
@@ -6228,7 +6236,7 @@ export class CrewSupervisor {
           this.broadcastCrewCounts();
           return { taskId, crewmate: "queued" };
         }
-        this.options.tasks.requeue(
+        this.options.tasks.starts.requeue(
           taskId,
           {
             kind: "captain",
@@ -6262,7 +6270,7 @@ export class CrewSupervisor {
         if (task.workspace) {
           await this.options.workspace.removeTaskWorktree(task.workspace).catch(() => {});
         }
-        this.options.tasks.requeue(
+        this.options.tasks.starts.requeue(
           taskId,
           { kind: "captain", ref: "dispatch-failed", reason: message },
           `could not start: ${message}`,
@@ -6426,7 +6434,7 @@ export class CrewSupervisor {
         : undefined;
     if (!file) return;
     const model = session.modelRef();
-    this.options.tasks.setSessionFile(task.id, token, {
+    this.options.tasks.turns.setSessionFile(task.id, token, {
       file,
       computer:
         machine === LOCAL_MACHINE_ID
@@ -7026,16 +7034,18 @@ export class CrewSupervisor {
     const sources = [
       taskId,
       ...(basis ? [basis.id] : []),
-      ...tasks.discoveredOrigins(taskId).map((origin) => origin.id),
-      ...tasks.replacedPredecessors(taskId).map((predecessor) => predecessor.id),
+      ...tasks.graph.discoveredOrigins(taskId).map((origin) => origin.id),
+      ...tasks.graph.replacedPredecessors(taskId).map((predecessor) => predecessor.id),
     ];
     const seen = new Set<string>();
-    const refs = [...sources.flatMap((id) => tasks.pictures(id)), ...extra].filter((ref) => {
-      if (seen.has(ref.sha256)) return false;
-      seen.add(ref.sha256);
-      return true;
-    });
-    const files = [...sources.flatMap((id) => tasks.messageFiles(id)), ...extraFiles];
+    const refs = [...sources.flatMap((id) => tasks.capture.pictures(id)), ...extra].filter(
+      (ref) => {
+        if (seen.has(ref.sha256)) return false;
+        seen.add(ref.sha256);
+        return true;
+      },
+    );
+    const files = [...sources.flatMap((id) => tasks.capture.messageFiles(id)), ...extraFiles];
     const here = this.machineOf(taskId) === LOCAL_MACHINE_ID;
     const machines = this.options.machines;
     if (
@@ -7165,7 +7175,7 @@ export class CrewSupervisor {
       // A filing's discovered-from links are truthful provenance, not an
       // inferred accepted basis or a routing discount. Preserve same-session
       // direct builds/prototypes that legitimately have no external source.
-      for (const origin of this.options.tasks.discoveredOrigins(taskId)) {
+      for (const origin of this.options.tasks.graph.discoveredOrigins(taskId)) {
         if (origin.id === taskId) continue;
         if (origin.id === this.options.tasks.resolve(record?.shape?.basis ?? "")?.id) {
           if (basis) base = withoutOriginReadLine(base, origin.key);
@@ -7180,7 +7190,7 @@ export class CrewSupervisor {
     }
     // Dropped work can have saved edits without ever reporting. Its replacement
     // carries that work independently of basisHolds and of the deliverable.
-    for (const predecessor of this.options.tasks.replacedPredecessors(taskId)) {
+    for (const predecessor of this.options.tasks.graph.replacedPredecessors(taskId)) {
       if (predecessor.id === taskId) continue;
       sections.push(
         basisSectionParts(
@@ -7230,7 +7240,7 @@ export class CrewSupervisor {
     // A quiet write, like the kind stamp (S3): the rigor explains what the
     // crewmate was told, it is not a state change, and the facts it was
     // derived from - posture, ask, repo rigor - are all on the record.
-    this.options.tasks.recordShape(taskId, { rigor: decision.rigor }, record.difficulty);
+    this.options.tasks.placement.recordShape(taskId, { rigor: decision.rigor }, record.difficulty);
     return decision.rigor;
   }
 
@@ -7263,7 +7273,7 @@ export class CrewSupervisor {
     }
     if (shape?.autonomy !== undefined) return;
     const autonomy = this.policiesOf(record)?.autonomy.value ?? false;
-    this.options.tasks.recordShape(taskId, { autonomy }, record.difficulty);
+    this.options.tasks.placement.recordShape(taskId, { autonomy }, record.difficulty);
   }
 
   /**
@@ -7404,7 +7414,7 @@ export class CrewSupervisor {
         record.delivery?.captainWait?.cardId &&
         released.includes(record.delivery.captainWait.cardId)
       ) {
-        this.options.tasks.clearCaptainWait(taskId);
+        this.options.tasks.delivery.clearCaptainWait(taskId);
       }
       this.ladder.syncCaptainGate(taskId, this.now());
       // The existing Firstmate/settle path rechecks ready work; no new runner.
@@ -7428,7 +7438,7 @@ export class CrewSupervisor {
           `The captain made this task ${CARE_WORDS[policies.rigor.value]}.`,
         );
         if (record.delivery?.captainWait?.cardId === card.id)
-          this.options.tasks.clearCaptainWait(taskId);
+          this.options.tasks.delivery.clearCaptainWait(taskId);
       }
       this.ladder.syncCaptainGate(taskId, this.now());
     }
@@ -7461,7 +7471,7 @@ export class CrewSupervisor {
     this.tasks.delete(task.id);
     this.cards.deleteRowsForTask(task.id);
     if (this.options.tasks.get(task.id)) {
-      this.options.tasks.discardFailedSpawn(task.id);
+      this.options.tasks.archive.discardFailedSpawn(task.id);
     }
     if (task.workspace) {
       await this.options.workspace.removeTaskWorktree(task.workspace).catch(() => {});
@@ -7584,17 +7594,17 @@ export class CrewSupervisor {
     // that does not is the ladder's own nudge - that turn is the ladder
     // acting, and its episode goes on until something else moves the task.
     if (!this.isLadderTurn(task.id, inboxIds)) {
-      this.options.tasks.endIdle(task.id);
+      this.options.tasks.turns.endIdle(task.id);
       this.ladder.withdrawStallCard(task.id);
     }
     // Whatever the last report declared about whose turn followed it no
     // longer stands once a turn runs: a delivered input started this one,
     // and its own report says it again if it still holds.
-    if (this.options.tasks.clearDeclaration(task.id)) {
+    if (this.options.tasks.turns.clearDeclaration(task.id)) {
       this.ladder.syncCaptainGate(task.id, this.now());
     }
     this.broadcastCrewCounts();
-    this.options.tasks.setActivity(task.id, "running");
+    this.options.tasks.turns.setActivity(task.id, "running");
   }
 
   /**
@@ -7642,7 +7652,7 @@ export class CrewSupervisor {
   private isLadderTurn(taskId: string, inboxIds: number[]): boolean {
     const record = this.options.tasks.get(taskId);
     if (!record || record.recoveryAt == null) return false;
-    return this.options.tasks.onlyLadderSteers(taskId, inboxIds);
+    return this.options.tasks.turns.onlyLadderSteers(taskId, inboxIds);
   }
 
   /**
@@ -7779,7 +7789,7 @@ export class CrewSupervisor {
     this.clearWait(task);
     const placement = this.options.tasks.get(task.id)?.placement;
     if (placement)
-      this.options.tasks.releasePlacement(task.id, placement.snapshot.orderId, "ended");
+      this.options.tasks.placement.releasePlacement(task.id, placement.snapshot.orderId, "ended");
     // A turn the app stopped for its computer's update ends as a pause
     // (`pauseForUpdate`): whatever cut it there is the update, never the
     // provider, so it fails nothing and wakes nobody.
@@ -7911,9 +7921,9 @@ export class CrewSupervisor {
         // class too, so the feed line reads the class and not the words.
         typed = { cutOff };
       }
-      this.options.tasks.recordTurnFailure(task.id, turnError, typed);
+      this.options.tasks.turns.recordTurnFailure(task.id, turnError, typed);
     } else if (report) {
-      reportEventId = this.options.tasks.recordReport(task.id, {
+      reportEventId = this.options.tasks.turns.recordReport(task.id, {
         text: report,
         ...(candidateSummary ? { summary: candidateSummary } : {}),
         ...(declared ? { declared } : {}),
@@ -7940,8 +7950,8 @@ export class CrewSupervisor {
       });
       if (missing.length) this.hooks.pokeInbox?.();
     }
-    this.options.tasks.setActivity(task.id, "idle");
-    this.options.tasks.markIdle(task.id, { providerFailed: providerError !== undefined });
+    this.options.tasks.turns.setActivity(task.id, "idle");
+    this.options.tasks.turns.markIdle(task.id, { providerFailed: providerError !== undefined });
     // Going idle is the crewmate's close-out: a card the captain already had
     // comes back or redraws with its last write, and a new card no report
     // released reaches the stage.
@@ -8387,7 +8397,7 @@ export class CrewSupervisor {
       reviewedAt: at,
     };
     if (verdict === "pass") {
-      this.options.tasks.recordChangeEvidence(builder.id, facts, {
+      this.options.tasks.delivery.recordChangeEvidence(builder.id, facts, {
         kind: "review",
         text: `review passed at ${shortSha}, ${riskText}`,
         feed: true,
@@ -8432,7 +8442,7 @@ export class CrewSupervisor {
       return;
     }
     // The verdict is recorded without a host-owned review allowance.
-    this.options.tasks.recordChangeEvidence(builder.id, facts, {
+    this.options.tasks.delivery.recordChangeEvidence(builder.id, facts, {
       kind: "review",
       text: `review ${verdict} at ${shortSha}, ${riskText}`,
       feed: false,
@@ -8733,7 +8743,7 @@ export class CrewSupervisor {
       lines.push(`${path} (${fileSizeWords(file.size)})`);
     }
     // Only a complete, verified delivery is a receipt; failed copies leave none.
-    this.options.tasks.recordResultHandoff(from.id, { taskId: to.id });
+    this.options.tasks.capture.recordResultHandoff(from.id, { taskId: to.id });
     // Paths and sizes only: a handed file may hold secrets (the captain's words on INF-992).
     return `Files handed to you from ${handle(from)}, verified byte for byte, in your hand-over folder: ${lines.join(", ")}. They may hold secrets: never print, quote or paste their content anywhere, and read only what your work needs. They are removed when this task closes.`;
   }
@@ -9002,7 +9012,7 @@ export class CrewSupervisor {
     inboxId: number,
   ): void {
     try {
-      this.options.tasks.recordSteer(taskId, {
+      this.options.tasks.turns.recordSteer(taskId, {
         text: message,
         actor: source.actor,
         outcome,
@@ -9101,7 +9111,7 @@ export class CrewSupervisor {
               changed: false,
             });
     if (attachment.changed) {
-      this.options.tasks.setAccountId(record.id, attachment.accountId ?? null);
+      this.options.tasks.placement.setAccountId(record.id, attachment.accountId ?? null);
       const moved = attachment.accountId
         ? `moved to ${this.options.accounts?.labelOf(attachment.accountId) ?? "another account"}`
         : "continuing without a bound account";
@@ -9196,17 +9206,17 @@ export class CrewSupervisor {
     const opened = this.options.tasks.get(record.id)?.shape?.computer_move;
     if (opened?.restartFrom !== undefined) {
       const { restartFrom: _told, ...rest } = opened;
-      this.options.tasks.setComputerMove(record.id, rest);
+      this.options.tasks.placement.setComputerMove(record.id, rest);
     }
     livePersonal?.beginLiveTask(record.id);
     // A conversation on another computer may be in a turn this Mac follows
     // from here (`continuation_started`), which is no idle boundary.
     if (task.state === "idle") {
-      this.options.tasks.setActivity(record.id, "idle");
+      this.options.tasks.turns.setActivity(record.id, "idle");
       // A resume that went idle is an idle boundary: the record's own clock
       // carries across the restart, and a record a quit interrupted mid-turn
       // starts one now.
-      this.options.tasks.markIdle(record.id);
+      this.options.tasks.turns.markIdle(record.id);
     }
     this.broadcastCrewCounts();
     return task;
@@ -9398,7 +9408,7 @@ export class CrewSupervisor {
       }
       const fromName = from ? this.providerName(from) : "its provider";
       const toName = this.providerName(choice.provider);
-      this.options.tasks.recordMove(taskId, {
+      this.options.tasks.placement.recordMove(taskId, {
         model: choice,
         accountId: accountId ?? null,
         actor: ask.by,
@@ -9507,7 +9517,7 @@ export class CrewSupervisor {
     if (again) return { ok: false, text: again };
     const who = by === "captain" ? "the captain" : "the first mate";
     const toName = this.computerName(to);
-    this.options.tasks.setComputerMove(
+    this.options.tasks.placement.setComputerMove(
       record.id,
       { from, to, by, at: this.now(), phase: "waiting", ...(kept.length ? { keep: kept } : {}) },
       {
@@ -9540,7 +9550,7 @@ export class CrewSupervisor {
         text: `${handle} is already moving to ${this.computerName(move.to)}, so the move can no longer be cancelled.`,
       };
     const who = by === "captain" ? "the captain" : "the first mate";
-    this.options.tasks.setComputerMove(record.id, null, {
+    this.options.tasks.placement.setComputerMove(record.id, null, {
       text: `${who} cancelled its move to ${this.computerName(move.to)}; it stays on ${this.computerName(move.from)}`,
       actor: by,
     });
@@ -9695,7 +9705,7 @@ export class CrewSupervisor {
     )
       blockers.push("its browser is closed");
     if (
-      this.options.tasks
+      this.options.tasks.graph
         .children(taskId)
         .some((child) => child.shape?.kind === "review" && !TaskService.isClosed(child))
     )
@@ -9747,7 +9757,7 @@ export class CrewSupervisor {
     for (const record of this.options.tasks.listWithComputerMove()) {
       if (!TaskService.isClosed(record)) continue;
       if (this.computerMoving.has(record.id)) continue;
-      this.options.tasks.setComputerMove(record.id, null);
+      this.options.tasks.placement.setComputerMove(record.id, null);
     }
   }
 
@@ -9793,7 +9803,11 @@ export class CrewSupervisor {
         this.tasks.delete(taskId);
         await runtime.session?.closed().catch(() => {});
       }
-      this.options.tasks.setComputerMove(taskId, { ...move, phase: "moving", problem: undefined });
+      this.options.tasks.placement.setComputerMove(taskId, {
+        ...move,
+        phase: "moving",
+        problem: undefined,
+      });
       this.broadcastCrewCounts();
       mkdirSync(dirname(pack), { recursive: true, mode: 0o700 });
       let out: { head: string; branch: string; repoDir: string };
@@ -9813,7 +9827,7 @@ export class CrewSupervisor {
         }
       } catch (caught) {
         // Nothing has changed anywhere yet: the move waits, and says why.
-        this.options.tasks.setComputerMove(taskId, {
+        this.options.tasks.placement.setComputerMove(taskId, {
           ...move,
           problem: `its work could not be packed: ${messageOf(caught)}`,
         });
@@ -9851,7 +9865,7 @@ export class CrewSupervisor {
       }
       if (move.from !== RUNS_ON_THIS_MAC) machines?.forgetExecution?.(taskId);
       const who = move.by === "captain" ? "the captain" : "the first mate";
-      this.options.tasks.commitComputerMove(taskId, {
+      this.options.tasks.placement.commitComputerMove(taskId, {
         deviceId: move.to === RUNS_ON_THIS_MAC ? null : move.to,
         repoDir: out.repoDir,
         worktreeDir: move.to === RUNS_ON_THIS_MAC ? cwd : "",
@@ -9871,7 +9885,7 @@ export class CrewSupervisor {
       });
       committed = true;
       // A computer that runs work binds its own account there again.
-      this.options.tasks.setAccountId(taskId, accountId ?? null);
+      this.options.tasks.placement.setAccountId(taskId, accountId ?? null);
       this.broadcastCrewCounts();
       await rm(pack, { force: true });
       // Still held: nothing on its lane starts a turn before it reopened there.
@@ -9944,14 +9958,14 @@ export class CrewSupervisor {
       const prepared = this.options.tasks.get(taskId)?.shape?.computer_move;
       if (prepared?.preparing) {
         const { preparing: _done, ...rest } = prepared;
-        this.options.tasks.setComputerMove(taskId, rest);
+        this.options.tasks.placement.setComputerMove(taskId, rest);
       }
     } catch (caught) {
       // Its record names the destination: the next tick reopens it there.
       const problem = `it moved, but could not reopen yet: ${messageOf(caught)}`;
       const move = this.options.tasks.get(taskId)?.shape?.computer_move;
       if (move && move.problem !== problem) {
-        this.options.tasks.setComputerMove(taskId, { ...move, problem });
+        this.options.tasks.placement.setComputerMove(taskId, { ...move, problem });
         this.options.tasks.note(taskId, problem, { news: true });
       }
     } finally {
@@ -9973,7 +9987,7 @@ export class CrewSupervisor {
     const move = record?.shape?.computer_move;
     if (!record || !move) return;
     const from = this.computerName(move.from);
-    this.options.tasks.setComputerMove(
+    this.options.tasks.placement.setComputerMove(
       taskId,
       { ...move, phase: "undoing", problem: reason },
       {
@@ -10010,7 +10024,7 @@ export class CrewSupervisor {
       } else {
         await this.options.machines?.retireMoved?.(move.to, taskId);
       }
-      if (this.sameMove(taskId, move)) this.options.tasks.setComputerMove(taskId, null);
+      if (this.sameMove(taskId, move)) this.options.tasks.placement.setComputerMove(taskId, null);
     } catch (caught) {
       // Kept, and tried again on the next tick.
       console.warn("[crew] a moved copy could not be removed yet:", caught);
@@ -10054,14 +10068,14 @@ export class CrewSupervisor {
         await this.options.machines.retireMoved(move.from, taskId);
       }
       if (this.sameMove(taskId, move))
-        this.options.tasks.setComputerMove(taskId, null, {
+        this.options.tasks.placement.setComputerMove(taskId, null, {
           text: `the working copy it left on ${this.computerName(move.from)} was removed`,
           actor: "host",
         });
     } catch (caught) {
       const problem = `the working copy it left on ${this.computerName(move.from)} is not removed yet: ${messageOf(caught)}`;
       if (move.problem !== problem && this.sameMove(taskId, move))
-        this.options.tasks.setComputerMove(taskId, { ...move, problem });
+        this.options.tasks.placement.setComputerMove(taskId, { ...move, problem });
     } finally {
       this.clearingMoves.delete(taskId);
       this.broadcastCrewCounts();
@@ -10264,7 +10278,7 @@ export class CrewSupervisor {
       ...(input.mergeClick ? { mergeClick: true as const } : {}),
       at: this.now(),
     };
-    this.options.tasks.recordPermissionRecords(
+    this.options.tasks.delivery.recordPermissionRecords(
       taskId,
       { override },
       {
@@ -10294,7 +10308,7 @@ export class CrewSupervisor {
     const handle = `${record.key || record.id} "${record.title}"`;
     const override = record.delivery?.override;
     if (!override) return { ok: false, text: `${handle} has no override to take back.` };
-    this.options.tasks.recordPermissionRecords(
+    this.options.tasks.delivery.recordPermissionRecords(
       taskId,
       { override: undefined },
       {
@@ -10473,7 +10487,7 @@ export class CrewSupervisor {
         : "the first mate interrupted the crewmate",
     );
     try {
-      this.options.tasks.recordInterrupt(taskId, {
+      this.options.tasks.turns.recordInterrupt(taskId, {
         actor: source.actor,
         mode,
         effect,
@@ -10557,15 +10571,15 @@ export class CrewSupervisor {
       const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
       const reportText = runtime?.lastCompleteText || record.outcome || "";
       const lastReport = reportText ? capWithOverflow(reportText, "crew-status-report") : undefined;
-      const starting = this.options.tasks.startAttemptOf(record.id);
+      const starting = this.options.tasks.starts.startAttemptOf(record.id);
       const queueWait =
         starting || !hasStartQueueWait(record)
           ? undefined
           : queueWaitOf(
               record,
-              this.options.tasks.blockers(record.id),
-              this.options.tasks.linksTo(record.id),
-              this.options.tasks.children(record.id),
+              this.options.tasks.graph.blockers(record.id),
+              this.options.tasks.graph.linksTo(record.id),
+              this.options.tasks.graph.children(record.id),
             );
       // A started task in the backlog (INF-2062) waits for start_now, with how long it has.
       const backlog =
@@ -10742,7 +10756,7 @@ export class CrewSupervisor {
 
   /** An open row's wait on its blockers, phrased; empty when none remain. */
   private waitingOnBlockers(record: TaskRecord): string | undefined {
-    const waiting = this.options.tasks
+    const waiting = this.options.tasks.graph
       .blockers(record.id)
       .filter((blocker) => !TaskService.blockerCleared(blocker));
     return waiting.length > 0 ? blockedText(waiting) : undefined;
@@ -11045,7 +11059,7 @@ export class CrewSupervisor {
               task.id,
             );
         }
-        this.options.tasks.recordChangeEvidence(task.id, { validationHead: head });
+        this.options.tasks.delivery.recordChangeEvidence(task.id, { validationHead: head });
         return this.addCrewmateCard(task, input, head, presentationChecked);
       });
     }
@@ -11108,13 +11122,13 @@ export class CrewSupervisor {
         "required_actions is missing",
       );
     if (input.requiredActions !== undefined)
-      this.options.tasks.validateRequiredActions(task.id, input.requiredActions);
+      this.options.tasks.delivery.validateRequiredActions(task.id, input.requiredActions);
     // A merge the blocks rule would refuse on the click is refused here
     // instead: only Firstmate can clear the wait, so the card would be a
     // button that cannot work. (Open children stay a click-time decision:
     // the captain can override that one.)
     if ((input.actions ?? []).some((action) => settleEffectOf(action)?.mode === "merge")) {
-      const waiting = this.options.tasks.blockerRefusal(task.id);
+      const waiting = this.options.tasks.graph.blockerRefusal(task.id);
       if (waiting) {
         throw new Error(
           `Card refused: this task still waits on open work, so the merge would be refused. ${waiting.text} Report under the five headings with report instead; the first mate clears the wait and tells you when to emit the completion card. ${softHoldWords("waits", "crewmate")}`,
@@ -11259,7 +11273,7 @@ export class CrewSupervisor {
         const offered = this.cards.get(id);
         if (!offered?.offerId) throw new Error("The validation decision has no kept offer.");
         for (const request of validationRequestsOf(input.validationDecision))
-          this.options.tasks.recordLiveValidation(
+          this.options.tasks.delivery.recordLiveValidation(
             task.id,
             {
               kind: "decision",
@@ -11278,7 +11292,7 @@ export class CrewSupervisor {
       }
       // A completion card is up: an earlier refusal no longer stands.
       if (card.actions.some((action) => settleEffectOf(action))) {
-        this.options.tasks.clearCardRefusal(task.id);
+        this.options.tasks.delivery.clearCardRefusal(task.id);
       }
       if (
         card.actions.some(
@@ -11295,7 +11309,7 @@ export class CrewSupervisor {
           );
         const offered = this.cards.get(id);
         if (card.requiredActions !== undefined && offered?.offerId)
-          this.options.tasks.declareRequiredActions(task.id, {
+          this.options.tasks.delivery.declareRequiredActions(task.id, {
             cardId: id,
             offerId: offered.offerId,
             head:
@@ -11311,10 +11325,10 @@ export class CrewSupervisor {
         // The task keeps the risk of its newest completion card; one
         // without any leaves none standing.
         if (risk || current.delivery?.risk)
-          this.options.tasks.recordChangeEvidence(task.id, { risk });
+          this.options.tasks.delivery.recordChangeEvidence(task.id, { risk });
       } else if (selfMergeNote && risk) {
         // So does the story note of a task that merges on its own.
-        this.options.tasks.recordChangeEvidence(task.id, { risk });
+        this.options.tasks.delivery.recordChangeEvidence(task.id, { risk });
       }
       return `${id}${revisionNotice(this.cards.revisionChanges(id))}`;
     };
@@ -11592,7 +11606,7 @@ export class CrewSupervisor {
       (prNumber !== undefined || presentation !== undefined);
     if (!baseline && prNumber === undefined) {
       if (ambiguous)
-        this.options.tasks.recordPermissionRecords(taskId, {
+        this.options.tasks.delivery.recordPermissionRecords(taskId, {
           completionOffers: offers.filter((offer) => !same(offer)),
         });
       return;
@@ -11879,7 +11893,7 @@ export class CrewSupervisor {
     if (!record || TaskService.isClosed(record)) return;
     if (this.isPersonalTask(task.id) || this.deliverableOf(record) !== "change") return;
     if (record.shape?.in_place) return;
-    this.options.tasks.recordCardRefusal(task.id, refusal);
+    this.options.tasks.delivery.recordCardRefusal(task.id, refusal);
   }
 
   /**
@@ -12240,7 +12254,7 @@ export class CrewSupervisor {
     if (record.model === served) return;
     this.noticeUnaskedModel(task, record, event);
     if (!record.model) {
-      this.options.tasks.recordServedModel(task.id, event.model);
+      this.options.tasks.starts.recordServedModel(task.id, event.model);
       return;
     }
     const name = (ref: { provider: string; id: string }) =>
@@ -12252,7 +12266,7 @@ export class CrewSupervisor {
         : undefined;
     const fallback = event.fallback;
     const from = fallback?.from ?? was;
-    this.options.tasks.recordServedModel(task.id, event.model, {
+    this.options.tasks.starts.recordServedModel(task.id, event.model, {
       text: modelMoveWords({
         from: from ? name(from) : record.model,
         to: name(event.model),
@@ -12539,7 +12553,7 @@ export class CrewSupervisor {
         kept.deleted === reading.deleted
       )
         return;
-      this.options.tasks.recordChangeEvidence(record.id, {
+      this.options.tasks.delivery.recordChangeEvidence(record.id, {
         changeLines: { ...reading, head, at: this.now() },
       });
     })()
@@ -12571,10 +12585,10 @@ export class CrewSupervisor {
    */
   private followupNotice(taskId: string): string | undefined {
     const holding = new Set(
-      this.options.tasks.blockersHoldingClose(taskId).map((blocker) => blocker.id),
+      this.options.tasks.graph.blockersHoldingClose(taskId).map((blocker) => blocker.id),
     );
-    const waiting = new Set(this.options.tasks.blocking(taskId).map((task) => task.id));
-    const rows = this.options.tasks
+    const waiting = new Set(this.options.tasks.graph.blocking(taskId).map((task) => task.id));
+    const rows = this.options.tasks.graph
       .discoveredFrom(taskId)
       .filter((followUp) => !TaskService.isClosed(followUp))
       .map((followUp) => {
@@ -13607,7 +13621,7 @@ export class CrewSupervisor {
     const ref = `forge-sign-in:${host}`;
     for (const record of this.options.tasks.listOpen()) {
       if (record.kind !== "work" || record.gate?.ref !== ref) continue;
-      this.options.tasks.setGate(record.id, null, "the GitHub sign-in is ready");
+      this.options.tasks.placement.setGate(record.id, null, "the GitHub sign-in is ready");
       await this.dispatchQueuedTask(record.id);
     }
   }
@@ -13633,7 +13647,7 @@ export class CrewSupervisor {
       const action = record.delivery?.captainAction;
       if (
         action &&
-        this.options.tasks.captainActionReady(record.id) &&
+        this.options.tasks.delivery.captainActionReady(record.id) &&
         (action.presentedGeneration < action.generation || action.state === "blocked")
       )
         this.showRequiredAction(record.id);
@@ -13672,7 +13686,7 @@ export class CrewSupervisor {
       if (record.startedAt !== null || record.worktreeDir || this.tasks.has(record.id)) continue;
       // A program closes when its script ends, not when its parts so far have.
       if (record.shape?.program) continue;
-      const children = this.options.tasks.children(record.id);
+      const children = this.options.tasks.graph.children(record.id);
       if (children.length === 0 || children.some((child) => !TaskService.isClosed(child))) {
         continue;
       }
@@ -13703,7 +13717,7 @@ export class CrewSupervisor {
     const to = this.resolveTaskRef(toRef, "to");
     let created: boolean;
     try {
-      created = this.options.tasks.link(from.id, to.id, type, "firstmate");
+      created = this.options.tasks.graph.link(from.id, to.id, type, "firstmate");
     } catch (caught) {
       if (caught instanceof TaskGraphRefusal) return caught.message;
       throw caught;
@@ -13725,7 +13739,7 @@ export class CrewSupervisor {
   unlinkTasks(fromRef: string, toRef: string, type: TaskLinkType): string {
     const from = this.resolveTaskRef(fromRef, "from");
     const to = this.resolveTaskRef(toRef, "to");
-    const removed = this.options.tasks.unlink(from.id, to.id, type, "firstmate");
+    const removed = this.options.tasks.graph.unlink(from.id, to.id, type, "firstmate");
     const phrase = linkPhrase(from, to, type);
     if (!removed) return `No such link: ${phrase}.`;
     this.announceReach(from.id);
@@ -13764,12 +13778,13 @@ export class CrewSupervisor {
         ? `Cannot drop ${handle} here: a crewmate holds it. Use settle_task (discard) for work that has started, or carried_on when another task carries its work.`
         : `${handle} is already ${describeStatus(record)}.`;
     }
-    const started = this.options.tasks
+    const started = this.options.tasks.graph
       .descendants(record.id)
       .filter((child) => child.status === "active");
     if (record.shape?.program) {
       // With no part started, the close below may refuse for its open parts: then the program runs on.
-      const refusal = started.length === 0 ? this.options.tasks.closeRefusal(record.id) : undefined;
+      const refusal =
+        started.length === 0 ? this.options.tasks.graph.closeRefusal(record.id) : undefined;
       if (refusal && !input.confirm) return refusal.text;
       // A dropped program stops at once and files nothing more; its started
       // parts close first, their work saved, and then it drops (INF-799).
@@ -13793,9 +13808,12 @@ export class CrewSupervisor {
       const names = started.map((child) => `${child.key || child.id} "${child.title}"`).join(", ");
       return `Cannot drop ${handle}: ${started.length === 1 ? "its child has" : "children have"} started (${names}). Settle them first.`;
     }
-    const refusal = this.options.tasks.closeRefusal(record.id);
+    const refusal = this.options.tasks.graph.closeRefusal(record.id);
     if (refusal && !input.confirm) return refusal.text;
-    const affected = [record.id, ...this.options.tasks.descendants(record.id).map((c) => c.id)];
+    const affected = [
+      record.id,
+      ...this.options.tasks.graph.descendants(record.id).map((c) => c.id),
+    ];
     const dropped = this.settling.closing.closeAndPurge(affected, () =>
       this.options.tasks.dropWithChildren(record.id, {
         reason: input.reason,
@@ -14018,7 +14036,7 @@ export class CrewSupervisor {
     const head = await this.validationHead(task);
     await this.requireCleanValidationWork(task, head);
     if (!head) throw new Error("The current version cannot be read; nothing was sent.");
-    this.options.tasks.recordLiveValidation(
+    this.options.tasks.delivery.recordLiveValidation(
       taskId,
       {
         kind: "effect-state",
@@ -14028,7 +14046,7 @@ export class CrewSupervisor {
       },
       { head },
     );
-    this.options.tasks.recordLiveValidation(
+    this.options.tasks.delivery.recordLiveValidation(
       taskId,
       {
         kind: "effect-state",
@@ -14128,12 +14146,12 @@ export class CrewSupervisor {
         crewmateCardPicturesDir(this.options.paths, owner.id),
         owner.id,
       );
-    this.options.tasks.recordLiveValidation(owner.id, input, {
+    this.options.tasks.delivery.recordLiveValidation(owner.id, input, {
       head,
       ...(builder ? { reviewer: task.id, assignment: record.delivery?.validationAssignment } : {}),
     });
     if (currentHead !== undefined)
-      this.options.tasks.recordChangeEvidence(owner.id, { validationHead: currentHead });
+      this.options.tasks.delivery.recordChangeEvidence(owner.id, { validationHead: currentHead });
     // The reviewer's typed review is this turn's verdict (INF-1875); the
     // turn's end records it on the builder.
     if (input.kind === "review") task.turnReview = input;
@@ -14193,7 +14211,7 @@ export class CrewSupervisor {
           ),
         ),
         recordedReleases: declaration?.firstRelease
-          ? this.options.tasks.recordFirstRelease(task.id, declaration.firstRelease)
+          ? this.options.tasks.delivery.recordFirstRelease(task.id, declaration.firstRelease)
           : undefined,
         linked: this.linkReportedWaits(task, declaration?.waitsOn),
       }),
@@ -14426,7 +14444,7 @@ export class CrewSupervisor {
         );
       }
       // A replaced task's wait is recorded on the task carrying its work (INF-1826).
-      const record = this.options.tasks.carrierOf(named.id) ?? named;
+      const record = this.options.tasks.graph.carrierOf(named.id) ?? named;
       if (record.id !== named.id && record.status === "done") {
         throw new Error(
           `Report refused: waits_on names ${named.key || named.id}, whose work moved to ${record.key || record.id}, which is already done, so nothing waits on it any more.`,
@@ -14455,7 +14473,7 @@ export class CrewSupervisor {
     if (!waitsOn?.length) return undefined;
     let linked: string[];
     try {
-      linked = this.options.tasks.linkWaits(task.id, waitsOn, "crewmate");
+      linked = this.options.tasks.graph.linkWaits(task.id, waitsOn, "crewmate");
     } catch (caught) {
       if (caught instanceof TaskGraphRefusal) throw new Error(`Report refused: ${caught.message}`);
       throw caught;
@@ -14630,7 +14648,7 @@ export class CrewSupervisor {
     };
     const stamped: WorkShape = { ...now, ...stamp };
     if (stamped.kind_source === now.kind_source && stamped.deliverable === now.deliverable) return;
-    this.options.tasks.recordShape(record.id, stamp, tierFor(stamped).bucket ?? null);
+    this.options.tasks.placement.recordShape(record.id, stamp, tierFor(stamped).bucket ?? null);
   }
 
   /**
@@ -14724,7 +14742,7 @@ export class CrewSupervisor {
     }
     const originalTitle = record.title;
     const gate = record.gate;
-    const blockers = this.options.tasks.blockers(taskId);
+    const blockers = this.options.tasks.graph.blockers(taskId);
     try {
       await this.classifyQueued(record);
       // Classification awaits a provider. An edit during that await must
@@ -14747,7 +14765,7 @@ export class CrewSupervisor {
       // A task that waits for its computer chooses its model once that
       // computer is back, among its own subscriptions.
       const automatic = this.automaticFor(record);
-      if (!automatic) this.options.tasks.setPlacementWait(taskId, null);
+      if (!automatic) this.options.tasks.placement.setPlacementWait(taskId, null);
       const ignoreAsk = options.ignoreAsk || record.shape?.placement_fallback_accepted === true;
       const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
       const choice =
@@ -14782,7 +14800,7 @@ export class CrewSupervisor {
         const waiting = choice && "wait" in choice ? choice : undefined;
         const wait =
           waiting?.wait ?? this.options.tasks.get(taskId)?.shape?.placement_wait ?? UNCOMPARED_WAIT;
-        this.options.tasks.waitForPlacement(taskId, ignoreAsk, wait.words);
+        this.options.tasks.placement.waitForPlacement(taskId, ignoreAsk, wait.words);
         this.sayAutomaticWait(record, wait);
         // No computer runs a system it requires, which no room or reading
         // changes: the first mate hears it at once, once (INF-720).
@@ -14803,7 +14821,7 @@ export class CrewSupervisor {
         }
         return;
       }
-      if (selected) this.options.tasks.setPlacementWait(taskId, null);
+      if (selected) this.options.tasks.placement.setPlacementWait(taskId, null);
       const target = selected ? selected.computerId : this.placementOf(record);
       const ready = !target || this.options.machines?.ready(target, taskId) === true;
       // One that waits for its own sign-in there tries nothing until it
@@ -14851,7 +14869,7 @@ export class CrewSupervisor {
       // It runs on a computer that is out of reach: it waits, and never starts here instead.
       if (this.placeForStart(taskId)) return;
       if (
-        !this.options.tasks.claimForDispatch(
+        !this.options.tasks.starts.claimForDispatch(
           taskId,
           options.requested?.from,
           options.requested?.panel,
@@ -14930,7 +14948,7 @@ export class CrewSupervisor {
         });
         this.cards.scheduleBroadcast();
       } else if (caught instanceof ForgeAuthRequiredError && current?.status === "active") {
-        this.options.tasks.requeue(
+        this.options.tasks.starts.requeue(
           taskId,
           {
             kind: "captain",
@@ -14949,9 +14967,9 @@ export class CrewSupervisor {
         this.cards.scheduleBroadcast();
       } else if (current?.status === "active" && !current.worktreeDir && !this.tasks.has(taskId)) {
         if (options.requested?.by === "captain" && current.startPolicy === "on-request") {
-          this.options.tasks.failManualStart(taskId, message);
+          this.options.tasks.starts.failManualStart(taskId, message);
         } else {
-          this.options.tasks.requeue(
+          this.options.tasks.starts.requeue(
             taskId,
             { kind: "captain", ref: "dispatch-failed", reason: message },
             `could not start: ${message}`,
@@ -14971,10 +14989,10 @@ export class CrewSupervisor {
     record: TaskRecord,
     audience: "tool" | "captain",
   ): Promise<void> {
-    if (!this.options.tasks.startAttemptOf(record.id)) return;
+    if (!this.options.tasks.starts.startAttemptOf(record.id)) return;
     const now = this.options.tasks.get(record.id);
     if (!now) {
-      this.options.tasks.clearStartAttempt(record.id);
+      this.options.tasks.starts.clearStartAttempt(record.id);
       return;
     }
     if (now.status === "active") {
@@ -14984,27 +15002,27 @@ export class CrewSupervisor {
         now.deviceId &&
         this.outOfReach(now.id)
       ) {
-        this.options.tasks.markStartChecking(now.id);
+        this.options.tasks.starts.markStartChecking(now.id);
         return;
       }
-      this.options.tasks.clearStartAttempt(now.id);
+      this.options.tasks.starts.clearStartAttempt(now.id);
       return;
     }
     if (now.shape?.placement_wait) {
-      this.options.tasks.clearStartAttempt(now.id);
+      this.options.tasks.starts.clearStartAttempt(now.id);
       return;
     }
     const signIn = now.deviceId ? this.options.machines?.signInWait(now.deviceId) : undefined;
     const setup = now.deviceId ? await this.placedWaitFor(now.deviceId, now.repoId) : undefined;
     if (now.gate || signIn || setup || (now.deviceId && this.outOfReach(now.id))) {
-      this.options.tasks.clearStartAttempt(now.id);
+      this.options.tasks.starts.clearStartAttempt(now.id);
       return;
     }
     if (audience === "captain" && record.startPolicy === "on-request" && !now.startNotice) {
-      this.options.tasks.failManualStart(now.id, "it did not start");
+      this.options.tasks.starts.failManualStart(now.id, "it did not start");
       return;
     }
-    this.options.tasks.clearStartAttempt(now.id);
+    this.options.tasks.starts.clearStartAttempt(now.id);
   }
 
   /**
@@ -15049,9 +15067,9 @@ export class CrewSupervisor {
     // Backlog while that work is still going. A known refusal above never
     // publishes. startOnRequest may already hold `starting`; this is the
     // shared board's copy of that attempt.
-    if (!this.options.tasks.startAttemptOf(record.id))
-      this.options.tasks.beginStartAttempt(record.id);
-    if (record.gate) this.options.tasks.setGate(record.id, null, "started on request");
+    if (!this.options.tasks.starts.startAttemptOf(record.id))
+      this.options.tasks.starts.beginStartAttempt(record.id);
+    if (record.gate) this.options.tasks.placement.setGate(record.id, null, "started on request");
     await this.dispatchQueuedTask(record.id, {
       ignoreAsk: true,
       requested: {
@@ -15063,15 +15081,15 @@ export class CrewSupervisor {
     // A program stays open while the runner holds it; its first run is recorded on its timeline.
     const program = this.options.tasks.get(record.id);
     if (program?.shape?.program) {
-      if (this.options.tasks.startAttemptOf(record.id))
-        this.options.tasks.clearStartAttempt(record.id);
-      return this.options.tasks.programStarted(record.id)
+      if (this.options.tasks.starts.startAttemptOf(record.id))
+        this.options.tasks.starts.clearStartAttempt(record.id);
+      return this.options.tasks.starts.programStarted(record.id)
         ? `Started ${handle}.`
         : `${handle} could not start.`;
     }
     await this.settleStartAttempt(record, asCaptain ? "captain" : "tool");
     const now = this.options.tasks.get(record.id);
-    if (this.options.tasks.startAttemptOf(record.id)?.phase === "checking") {
+    if (this.options.tasks.starts.startAttemptOf(record.id)?.phase === "checking") {
       return `${handle} is still starting. Checking whether it started.`;
     }
     if (now?.status !== "active" && now?.deviceId && this.outOfReach(record.id)) {
@@ -15128,7 +15146,7 @@ export class CrewSupervisor {
     panel?: string,
   ): { ok: false; text: string } | { ok: true; task: TaskRecord; started: Promise<string> } {
     const old = this.resolveTaskRef(taskRef, "task");
-    const refusal = this.options.tasks.startAgainRefusal(old.id);
+    const refusal = this.options.tasks.starts.startAgainRefusal(old.id);
     if (refusal) return { ok: false, text: refusal };
     // Only declarations carry over: dispatch stamps, chosen accounts/models,
     // escalation floors and delivery outcomes all belong to the old attempt.
@@ -15140,7 +15158,7 @@ export class CrewSupervisor {
         : {}),
     });
     if (old.shape?.policies) shape.policies = { ...old.shape.policies, revision: 0 };
-    const fresh = this.options.tasks.startAgain(old.id, {
+    const fresh = this.options.tasks.starts.startAgain(old.id, {
       id: randomUUID().slice(0, 8),
       shape: old.intent ? this.withDeliverable(shape, old.intent) : shape,
       actor: audience === "tool" ? "firstmate" : "captain",
@@ -15189,7 +15207,7 @@ export class CrewSupervisor {
   ): void {
     const waitGate = reasoningWaitGate(routed.bucket);
     if (gate?.kind === waitGate.kind && gate.ref === waitGate.ref) return;
-    this.options.tasks.setGate(
+    this.options.tasks.placement.setGate(
       taskId,
       waitGate,
       routed.emptyBucket
@@ -15308,7 +15326,7 @@ export class CrewSupervisor {
         liveJobs: this.options.hasRunningJobs?.(record.id) === true,
         clientJobs: runtime?.session ? runtime.clientJobs : undefined,
         observable: runtime?.session?.controlProfile.backgroundWork === "host",
-        blocked: this.options.tasks.flagsOf(record).blocked,
+        blocked: this.options.tasks.graph.flagsOf(record).blocked,
         ...(hold ? { hold } : {}),
       };
     });
@@ -15437,7 +15455,7 @@ export class CrewSupervisor {
           : [],
       ),
     );
-    this.options.tasks.purge();
+    this.options.tasks.archive.purge();
     this.cards.scheduleBroadcast();
     this.broadcastCrewCounts();
     return records.length;
@@ -15569,7 +15587,8 @@ export class CrewSupervisor {
     if (!card) return {};
     const associated = card.taskId
       ? this.options.tasks.get(card.taskId)
-      : (this.options.tasks.openCardTaskFor(card.id) ?? this.options.tasks.taskForCard(card.id));
+      : (this.options.tasks.capture.openCardTaskFor(card.id) ??
+        this.options.tasks.capture.taskForCard(card.id));
     const taskUnavailable = Boolean(
       (card.taskId && !associated) || (associated && TaskService.isClosed(associated)),
     );
@@ -15597,7 +15616,9 @@ export class CrewSupervisor {
     }
     // The record keeps the task as it stood before this choice moves it
     // (docs/card-evidence.md), beside what the shell said it showed.
-    const context = decisionTaskId ? this.options.tasks.decisionContext(decisionTaskId) : undefined;
+    const context = decisionTaskId
+      ? this.options.tasks.capture.decisionContext(decisionTaskId)
+      : undefined;
     const evidence: CardInteractionEvidence = {
       source,
       ...(submission !== undefined ? { submission } : {}),
@@ -15686,9 +15707,9 @@ export class CrewSupervisor {
         !action ||
         action.generation !== Number(generation) ||
         action.presentedGeneration !== Number(generation) ||
-        !this.options.tasks.captainActionReady(id)
+        !this.options.tasks.delivery.captainActionReady(id)
       ) {
-        if (id && this.options.tasks.captainActionReady(id)) {
+        if (id && this.options.tasks.delivery.captainActionReady(id)) {
           this.showRequiredAction(id);
           this.cards.showOpenCard(action?.cardId ?? card.id);
         }
@@ -15702,7 +15723,7 @@ export class CrewSupervisor {
       card.taskId
         ? () => {
             if (card.requiredActions !== undefined && card.offerId)
-              this.options.tasks.declareRequiredActions(card.taskId as string, {
+              this.options.tasks.delivery.declareRequiredActions(card.taskId as string, {
                 cardId: card.id,
                 offerId: card.offerId,
                 actions: card.requiredActions,
@@ -15713,7 +15734,7 @@ export class CrewSupervisor {
                       associated?.delivery?.headSha),
               });
             else if (associated?.delivery?.requiredActionOffer)
-              this.options.tasks.recordPermissionRecords(card.taskId as string, {
+              this.options.tasks.delivery.recordPermissionRecords(card.taskId as string, {
                 requiredActionOffer: undefined,
               });
             approve?.();
@@ -15764,9 +15785,12 @@ export class CrewSupervisor {
     try {
       closedAnswer = this.cards.resolve(card, actionId, actionId, answers, by, evidence, () => {
         if (firstmateAsk)
-          takenFirstmateAsk = this.options.tasks.takeWriteAsk(firstmateAsk.rowId, firstmateAsk.ask);
+          takenFirstmateAsk = this.options.tasks.delivery.takeWriteAsk(
+            firstmateAsk.rowId,
+            firstmateAsk.ask,
+          );
         if (validationDecision && card.taskId && card.offerId)
-          this.options.tasks.decideLiveValidation(card.taskId, {
+          this.options.tasks.delivery.decideLiveValidation(card.taskId, {
             card: card.id,
             offer: card.offerId,
             action: actionId,
@@ -15779,14 +15803,18 @@ export class CrewSupervisor {
           if (effect?.kind === "host" && effect.op === "confirm-required-action") {
             const [id, generation] = (effect.arg ?? "").split(":");
             if (id === card.taskId)
-              this.options.tasks.completeCaptainAction(id, Number(generation), "confirmed");
-          } else this.options.tasks.deferCaptainAction(card.taskId);
+              this.options.tasks.delivery.completeCaptainAction(
+                id,
+                Number(generation),
+                "confirmed",
+              );
+          } else this.options.tasks.delivery.deferCaptainAction(card.taskId);
         }
       });
     } catch (error) {
       if (!(error instanceof StaleValidationDecisionError) || !card.taskId || !card.offerId)
         throw error;
-      this.options.tasks.expireValidationDecision(
+      this.options.tasks.delivery.expireValidationDecision(
         card.taskId,
         card.id,
         card.offerId,
@@ -16031,7 +16059,7 @@ export class CrewSupervisor {
       ...(prNumber !== undefined ? { prNumber } : {}),
       at: this.now(),
     };
-    this.options.tasks.recordPermissionRecords(
+    this.options.tasks.delivery.recordPermissionRecords(
       taskId,
       { override },
       {
@@ -16202,7 +16230,7 @@ export class CrewSupervisor {
   browserReturned(taskId: string, returned: BrowserReturned): void {
     this.takeDownAnsweredRequests(taskId);
     if (this.options.inbox.woken(taskId, returned.once)) return;
-    this.options.tasks.endIdle(taskId);
+    this.options.tasks.turns.endIdle(taskId);
     const wake: TypedWake = {
       facts: {
         kind: "browser-returned",
@@ -16309,18 +16337,18 @@ export class CrewSupervisor {
   /**
    * The first mate's held integration call (INF-1108): it has no task, so
    * its card is a host card with no task, whose own row the host files
-   * (`TaskService.fileHostCardTask`, through the card's placement) and keeps
+   * (`TaskService.capture.fileHostCardTask`, through the card's placement) and keeps
    * the exact call on, the way a crewmate's task keeps its own.
    */
   askIntegrationForFirstmate(ask: IntegrationAsk): string {
     const card = integrationApprovalCard(ask);
     this.cards.put(card);
-    const row = this.options.tasks.openCardTaskFor(card.id);
+    const row = this.options.tasks.capture.openCardTaskFor(card.id);
     if (!row) {
       this.cards.takeDown(card.id, "no-row");
       throw new Error("its approval card has no task row to keep the call on.");
     }
-    this.options.tasks.keepWriteAsk(row.id, ask);
+    this.options.tasks.delivery.keepWriteAsk(row.id, ask);
     return card.id;
   }
 
@@ -16383,7 +16411,8 @@ export class CrewSupervisor {
       .then(tell, (caught: unknown) => {
         const why = caught instanceof Error ? caught.message : String(caught);
         const ask = "ask" in taken ? taken.ask : undefined;
-        if (ask) this.options.tasks.recordWriteAskOutcome(rowId, askId, { kind: "unknown", why });
+        if (ask)
+          this.options.tasks.delivery.recordWriteAskOutcome(rowId, askId, { kind: "unknown", why });
         tell({
           ok: false,
           ...(ask ? { ask } : {}),
@@ -16451,7 +16480,7 @@ export class CrewSupervisor {
         return {};
       }
       case "defer-required-action":
-        if (effect.arg) this.options.tasks.deferCaptainAction(effect.arg);
+        if (effect.arg) this.options.tasks.delivery.deferCaptainAction(effect.arg);
         return {};
       case "retry-firstmate":
         this.hooks.retryConverse();
@@ -16559,7 +16588,7 @@ export class CrewSupervisor {
             .find(
               (card) =>
                 (card.taskId === taskId ||
-                  this.options.tasks.openCardTaskFor(card.id)?.id === taskId) &&
+                  this.options.tasks.capture.openCardTaskFor(card.id)?.id === taskId) &&
                 card.status === "ready" &&
                 card.actions.length,
             )?.id;
@@ -16616,7 +16645,7 @@ export class CrewSupervisor {
       return dropStartedRefusal(key);
     try {
       this.settling.closing.closeAndPurge([taskId], () => {
-        const result = this.options.tasks.dropUnstarted(taskId, {
+        const result = this.options.tasks.starts.dropUnstarted(taskId, {
           actor: "captain",
           review,
           reason: NO_LONGER_WANTED,
@@ -16668,7 +16697,7 @@ export class CrewSupervisor {
       return moved.ok ? undefined : moved.text;
     }
     if (this.tasks.has(taskId)) return queueStartedRefusal(key);
-    const result = this.options.tasks.setQueued(taskId, op, {
+    const result = this.options.tasks.starts.setQueued(taskId, op, {
       actor: "captain",
       via: TASK_CARD_VIA,
       ...(panel ? { panel } : {}),
@@ -16679,7 +16708,7 @@ export class CrewSupervisor {
       // Queued work that nothing holds would start at once: that is a
       // Start, and goes through the Firstmate like one. Work that waits
       // has his directions applied now, so the sweep starts it carrying them.
-      if (this.options.tasks.listReady().some((ready) => ready.id === taskId)) {
+      if (this.options.tasks.graph.listReady().some((ready) => ready.id === taskId)) {
         return this.startOnRequest(taskId, TASK_CARD_VIA, panel);
       }
       this.tellFirstmate(taskId, "queue");
@@ -16705,7 +16734,7 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     if (!record) return { ok: false, text: queueMissingRefusal(taskId) };
     const handle = `${record.key || record.id} "${record.title}"`;
-    const result = this.options.tasks.setQueued(taskId, "unqueue-task", {
+    const result = this.options.tasks.starts.setQueued(taskId, "unqueue-task", {
       actor: source.actor,
       ...(source.via === TASK_CARD_VIA ? { via: TASK_CARD_VIA } : {}),
       ...(source.panel ? { panel: source.panel } : {}),
@@ -16738,7 +16767,7 @@ export class CrewSupervisor {
     panel?: string,
   ): string {
     const handle = `${record.key || record.id} "${record.title}"`;
-    const left = this.options.tasks.leaveBacklog(record.id, {
+    const left = this.options.tasks.starts.leaveBacklog(record.id, {
       actor,
       ...(from ? { via: from } : {}),
       ...(panel ? { panel } : {}),
@@ -16777,10 +16806,10 @@ export class CrewSupervisor {
     const awaitsFirstmate = audience === "tool" && this.pendingStarts.has(record.id);
     if (
       this.tasks.has(record.id) ||
-      (this.options.tasks.startAttemptOf(record.id) && !awaitsFirstmate)
+      (this.options.tasks.starts.startAttemptOf(record.id) && !awaitsFirstmate)
     )
       return `${handle} is already starting.`;
-    const blockers = this.options.tasks
+    const blockers = this.options.tasks.graph
       .blockers(record.id)
       .filter((blocker) => !TaskService.blockerCleared(blocker));
     if (blockers.length > 0) return startWaitRefusal(record, handle, blockers, audience);
@@ -16837,7 +16866,7 @@ export class CrewSupervisor {
       ...(from ? { from } : {}),
       ...(panel ? { panel } : {}),
     });
-    this.options.tasks.beginStartAttempt(record.id);
+    this.options.tasks.starts.beginStartAttempt(record.id);
     return true;
   }
 
@@ -16852,7 +16881,7 @@ export class CrewSupervisor {
     const pending = this.pendingStarts.get(taskId);
     if (!pending) return;
     this.pendingStarts.delete(taskId);
-    this.options.tasks.clearStartAttempt(taskId);
+    this.options.tasks.starts.clearStartAttempt(taskId);
     this.sayStartedAsIs(taskId, why);
     this.starting.add(taskId);
     void this.startQueuedNow(taskId, "captain", pending.from, pending.panel, true)
@@ -16916,7 +16945,7 @@ export class CrewSupervisor {
           ...(facts.from === TASK_CARD_VIA ? { from: TASK_CARD_VIA } : {}),
           ...(facts.panel ? { panel: facts.panel } : {}),
         });
-        this.options.tasks.beginStartAttempt(record.id);
+        this.options.tasks.starts.beginStartAttempt(record.id);
       }
     }
     for (const [taskId, pending] of [...this.pendingStarts]) {
@@ -17007,7 +17036,8 @@ export class CrewSupervisor {
    * runs there follows its parent's or its project's again.
    */
   async stopTasksOn(deviceId: string, boundMs = 60_000): Promise<void> {
-    for (const taskId of this.options.tasks.forgetRunsOn(deviceId)) this.runsOnChanged(taskId);
+    for (const taskId of this.options.tasks.placement.forgetRunsOn(deviceId))
+      this.runsOnChanged(taskId);
     const source: InterruptSource = { actor: "captain", via: "shell", decision: null };
     const started = this.options.tasks
       .listLive()

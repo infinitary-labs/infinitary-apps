@@ -104,7 +104,7 @@ describe("the tasks query by key (Task B)", () => {
       prompt: "p",
       repoId: null,
     });
-    tasks.recordReport(record.id, { text: "The claim query filters on repo_id." });
+    tasks.turns.recordReport(record.id, { text: "The claim query filters on repo_id." });
     bodies.set(record.id, "<p>The claim query filters on repo_id.</p>");
 
     const [row] = query({ key: record.key || record.id }).rows;
@@ -120,8 +120,8 @@ describe("the tasks query by key (Task B)", () => {
     const { tasks, query } = setup();
     const record = tasks.create({ id: "pic", title: "Fix the dialog", prompt: "p", repoId: null });
     const [kept] = keepImages(randomUUID(), [{ ...pngImage, name: "dialog.png" }]);
-    tasks.openAsk({ id: "m1", text: "fix this", attachments: kept ? [kept] : [] });
-    tasks.attachAsk("m1", record.id, "tool:create_task");
+    tasks.capture.openAsk({ id: "m1", text: "fix this", attachments: kept ? [kept] : [] });
+    tasks.capture.attachAsk("m1", record.id, "tool:create_task");
     const [row] = query({ key: record.key }).rows;
     expect(row?.pictures).toEqual([{ name: "dialog.png", path: kept ? attachmentPath(kept) : "" }]);
     expect(query({}).rows[0]?.pictures).toBeUndefined();
@@ -136,10 +136,10 @@ describe("the tasks query by key (Task B)", () => {
       repoId: null,
     });
     const full = `Stable external pager. ${"Complete clause. ".repeat(1200)}Reduced motion.`;
-    tasks.recordReport(source.id, { text: full });
-    tasks.recordReport(source.id, { text: "Finished." });
+    tasks.turns.recordReport(source.id, { text: full });
+    tasks.turns.recordReport(source.id, { text: "Finished." });
     const answers = [{ name: "orientation", values: ["compact"], changed: true }];
-    tasks.recordCardResolved(source.id, {
+    tasks.capture.recordCardResolved(source.id, {
       cardId: "welcome",
       title: "Welcome",
       action: "Build compact",
@@ -161,7 +161,7 @@ describe("the tasks query by key (Task B)", () => {
       prompt: "p",
       repoId: null,
     });
-    tasks.recordReport(record.id, { text: "The claim query filters on repo_id." });
+    tasks.turns.recordReport(record.id, { text: "The claim query filters on repo_id." });
     bodies.set(record.id, "<p>Found it.</p>");
 
     const [row] = query({ text: "meter" }).rows;
@@ -179,7 +179,7 @@ describe("the tasks query by key (Task B)", () => {
       prompt: "p",
       repoId: null,
     });
-    tasks.recordReport(plan.id, { text: "Two choices unresolved: copy and race." });
+    tasks.turns.recordReport(plan.id, { text: "Two choices unresolved: copy and race." });
     cards.upsert({
       id: "card-welcome",
       taskId: plan.id,
@@ -290,7 +290,7 @@ describe("the tasks query's work built on a task (INF-976)", () => {
       prompt: "p",
       repoId: null,
     });
-    tasks.recordReport("answer", { text: "Use the same task facts everywhere." });
+    tasks.turns.recordReport("answer", { text: "Use the same task facts everywhere." });
     const answerKey = tasks.get("answer")?.key ?? "";
     tasks.create({
       id: "builder",

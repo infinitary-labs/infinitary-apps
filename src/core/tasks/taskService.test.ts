@@ -13,7 +13,8 @@ import { savedDeliveryReader } from "../storage/taskDeliveryFields";
 import type { TaskRecord } from "../storage/taskStore";
 import { reportEntryOf } from "./reportEntry";
 import { seedTask } from "./seedTask";
-import { TaskService, TIMELINE_CAP, TIMELINE_KEEP } from "./taskService";
+import { TaskService } from "./taskService";
+import { TIMELINE_CAP, TIMELINE_KEEP } from "./timelineCompaction";
 
 function setup() {
   const db = freshDatabase();
@@ -97,11 +98,11 @@ describe("starting dropped work again", () => {
     const seen: string[][] = [];
     tasks.onChange(() =>
       seen.push([
-        tasks.replacementOf(old.id) ?? "missing",
-        ...tasks.blockers(waiter.id).map((row) => row.key),
+        tasks.graph.replacementOf(old.id) ?? "missing",
+        ...tasks.graph.blockers(waiter.id).map((row) => row.key),
       ]),
     );
-    const fresh = tasks.startAgain(old.id, {
+    const fresh = tasks.starts.startAgain(old.id, {
       id: "fresh",
       shape: { kind: "unclear" },
       actor: "captain",
@@ -125,7 +126,11 @@ describe("starting dropped work again", () => {
     expect(tasks.get(old.id)).toMatchObject({ status: "dropped", closedReason: "discarded" });
     const seq = tasks.boardSeq();
     expect(() =>
-      tasks.startAgain(old.id, { id: "duplicate", shape: { kind: "unclear" }, actor: "captain" }),
+      tasks.starts.startAgain(old.id, {
+        id: "duplicate",
+        shape: { kind: "unclear" },
+        actor: "captain",
+      }),
     ).toThrow("already replaces");
     expect(tasks.boardSeq()).toBe(seq);
     expect(tasks.get("duplicate")).toBeUndefined();
@@ -192,7 +197,7 @@ describe("recovering a basis before implementation starts", () => {
       );
     }
     seedTask(tasks, { id: "started", title: "Started", status: "running" });
-    tasks.requeue("started", { kind: "captain" }, "failed start");
+    tasks.starts.requeue("started", { kind: "captain" }, "failed start");
     expect(() => tasks.updateFields("started", { basis: plan.key }, "firstmate")).toThrow(
       "has not started",
     );
@@ -265,7 +270,7 @@ describe("naming a model for a filed task (FI3-436)", () => {
   it("names a model on queued work a failed start returned, but not on work a crewmate holds or closed", () => {
     const { tasks } = setup();
     seedTask(tasks, { id: "requeued", title: "Requeued", status: "running" });
-    tasks.requeue("requeued", { kind: "captain" }, "failed start");
+    tasks.starts.requeue("requeued", { kind: "captain" }, "failed start");
     expect(tasks.updateFields("requeued", { model: "gpt-6-astra" }, "firstmate")).toEqual([
       "model gpt-6-astra",
     ]);
@@ -318,14 +323,14 @@ describe("scope edits", () => {
       intent: null,
       prompt: "Goal: Expanded finding\n\nRecorded filing provenance.",
     });
-    expect(tasks.discoveredOrigins(filing.id).map((row) => row.id)).toEqual([origin.id]);
+    expect(tasks.graph.discoveredOrigins(filing.id).map((row) => row.id)).toEqual([origin.id]);
   });
 });
 
 describe("close invariants (interaction P0, WI-7)", () => {
   function dispatched(tasks: TaskService, id: string) {
     tasks.create({ id, title: `Task ${id}`, prompt: "p", repoId: "r1", status: "active" });
-    tasks.dispatch(id, {
+    tasks.starts.dispatch(id, {
       workspace: {
         repoDir: "/fleet/nimbus-api",
         worktreeDir: `/wt/${id}`,
@@ -345,9 +350,9 @@ describe("close invariants (interaction P0, WI-7)", () => {
     tick();
     tasks.dropWithChildren("parent", { reason: "not needed", actor: "captain" });
     tick();
-    tasks.fileQuestion({ id: "question", title: "Why", outcome: "Because." });
+    tasks.capture.fileQuestion({ id: "question", title: "Why", outcome: "Because." });
     tick();
-    tasks.fileOperation({
+    tasks.capture.fileOperation({
       id: "operation",
       title: "Adopt",
       outcome: "Adopted.",
@@ -400,7 +405,7 @@ describe("TaskService (task-system P0)", () => {
     tasks.create({ id: "t", title: "T", prompt: "p", repoId: "r1", status: "active" });
     expect(tasks.get("t")).toMatchObject({ status: "active", activity: "starting" });
     tick();
-    tasks.dispatch("t", {
+    tasks.starts.dispatch("t", {
       workspace: { repoDir: "/fleet/nimbus-api", worktreeDir: "/wt/t", branch: "fm/task-t" },
       accountId: "acct_1",
       assignee: "crewmate 1",
@@ -415,9 +420,9 @@ describe("TaskService (task-system P0)", () => {
       startedAt: 1_001,
     });
     tick();
-    tasks.setActivity("t", "running");
-    tasks.recordReport("t", { text: "Fixed the flake. Two files changed." });
-    tasks.setActivity("t", "idle");
+    tasks.turns.setActivity("t", "running");
+    tasks.turns.recordReport("t", { text: "Fixed the flake. Two files changed." });
+    tasks.turns.setActivity("t", "idle");
     expect(tasks.get("t")).toMatchObject({
       activity: "idle",
       outcome: "Fixed the flake. Two files changed.",
@@ -432,7 +437,7 @@ describe("TaskService (task-system P0)", () => {
       actor: "captain",
       delivery: { landedMode: "fast-forward" },
     });
-    tasks.markWorkspaceRemoved("t");
+    tasks.placement.markWorkspaceRemoved("t");
     const closed = tasks.get("t");
     expect(closed).toMatchObject({
       status: "done",
@@ -454,26 +459,26 @@ describe("TaskService (task-system P0)", () => {
   it("claimForDispatch takes open work off the ready query once", () => {
     const { tasks } = setup();
     tasks.create({ id: "t", title: "T", prompt: "p", repoId: null });
-    expect(tasks.listReady().map((r) => r.id)).toEqual(["t"]);
-    expect(tasks.claimForDispatch("t")).toBe(true);
+    expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["t"]);
+    expect(tasks.starts.claimForDispatch("t")).toBe(true);
     expect(tasks.get("t")).toMatchObject({
       status: "active",
       activity: "starting",
       gate: null,
       startedAt: 1_000,
     });
-    expect(tasks.listReady()).toEqual([]);
-    expect(tasks.claimForDispatch("t")).toBe(false);
+    expect(tasks.graph.listReady()).toEqual([]);
+    expect(tasks.starts.claimForDispatch("t")).toBe(false);
     expect(tasks.timeline("t").at(-1)).toMatchObject({ kind: "status", text: "starting" });
   });
 
   it("boot returns a claimed-but-unstarted row to the ready query", () => {
     const { db, tasks } = setup();
     tasks.create({ id: "t", title: "T", prompt: "p", repoId: null });
-    expect(tasks.claimForDispatch("t")).toBe(true);
+    expect(tasks.starts.claimForDispatch("t")).toBe(true);
     const again = new TaskService({ db, now: () => 2_000, strict: true });
     expect(again.get("t")).toMatchObject({ status: "open", activity: null, gate: null });
-    expect(again.listReady().map((r) => r.id)).toEqual(["t"]);
+    expect(again.graph.listReady().map((r) => r.id)).toEqual(["t"]);
     expect(again.timeline("t").at(-1)).toMatchObject({
       kind: "status",
       text: "returned to the queue - the start did not finish",
@@ -489,12 +494,12 @@ describe("TaskService (task-system P0)", () => {
       repoId: null,
       gate: { kind: "at-time", until: 5 },
     });
-    tasks.dispatch("q", {
+    tasks.starts.dispatch("q", {
       workspace: { repoDir: "/r", worktreeDir: "/wt/q", branch: "fm/task-q" },
       accountId: null,
       assignee: "crewmate 2",
     });
-    tasks.requeue(
+    tasks.starts.requeue(
       "q",
       { kind: "captain", ref: "dispatch-failed", reason: "boom" },
       "could not start: boom",
@@ -592,7 +597,7 @@ describe("TaskService (task-system P0)", () => {
     expect(tasks.get("older")?.shape).not.toHaveProperty("knowledge_access");
     expect(tasks.get("older")?.delivery).not.toHaveProperty("landedAt");
 
-    tasks.recordShape("older", { deliverable: "change" }, null);
+    tasks.placement.recordShape("older", { deliverable: "change" }, null);
     seedDelivery(tasks, "older", { ci: "merged" });
     expect(saved()).toEqual({
       shape: { ...shape, deliverable: "change" },
@@ -613,7 +618,7 @@ describe("TaskService (task-system P0)", () => {
 
   it("revises a settled run's operation in place and withdraws it, and refuses other rows", () => {
     const { tasks, tick } = setup();
-    const filed = tasks.fileOperation({
+    const filed = tasks.capture.fileOperation({
       id: "run",
       title: "window wash 48% → 50%",
       outcome: "window wash 48% → 50%",
@@ -621,7 +626,7 @@ describe("TaskService (task-system P0)", () => {
       actor: "captain",
     });
     tick(500);
-    tasks.reviseOperation("run", {
+    tasks.capture.reviseOperation("run", {
       title: "window wash 48% → 76%",
       outcome: "window wash 48% → 76%",
     });
@@ -634,11 +639,11 @@ describe("TaskService (task-system P0)", () => {
       closedAt: filed.createdAt + 500,
     });
     tasks.create({ id: "work", title: "Work", prompt: "p", repoId: "r1" });
-    expect(() => tasks.withdrawOperation("work")).toThrow("is not an operation");
-    expect(() => tasks.reviseOperation("work", { title: "x", outcome: "x" })).toThrow(
+    expect(() => tasks.archive.withdrawOperation("work")).toThrow("is not an operation");
+    expect(() => tasks.capture.reviseOperation("work", { title: "x", outcome: "x" })).toThrow(
       "is not an operation",
     );
-    tasks.withdrawOperation("run");
+    tasks.archive.withdrawOperation("run");
     expect(tasks.get("run")).toBeUndefined();
     expect(tasks.timeline("run")).toEqual([]);
     expect(tasks.get("work")?.title).toBe("Work");
@@ -647,12 +652,12 @@ describe("TaskService (task-system P0)", () => {
   it("hard-deletes only a spawn that never ran, and the D-13 purge keeps projects", () => {
     const { db, tasks } = setup();
     tasks.create({ id: "dead", title: "never ran", prompt: "p", repoId: "r1", status: "active" });
-    tasks.discardFailedSpawn("dead");
+    tasks.archive.discardFailedSpawn("dead");
     expect(tasks.get("dead")).toBeUndefined();
     expect(tasks.timeline("dead")).toEqual([]);
     tasks.create({ id: "x", title: "X", prompt: "p", repoId: "r1" });
     tasks.create({ id: "y", title: "Y", prompt: "p", repoId: null, blockedBy: ["x"] });
-    expect(tasks.purge()).toBe(2);
+    expect(tasks.archive.purge()).toBe(2);
     expect(tasks.list()).toEqual([]);
     expect(db.prepare("SELECT COUNT(*) AS n FROM task_events").get()).toEqual({ n: 0 });
     expect(db.prepare("SELECT COUNT(*) AS n FROM task_links").get()).toEqual({ n: 0 });
@@ -732,7 +737,7 @@ describe("TaskService (task-system P0)", () => {
 
     for (let index = 0; index <= TIMELINE_CAP; index += 1) {
       tick();
-      tasks.recordInterrupt("t", {
+      tasks.turns.recordInterrupt("t", {
         actor: "captain",
         mode: "interrupt",
         effect: "no-turn",
@@ -779,9 +784,9 @@ describe("TaskService (task-system P0)", () => {
       },
     };
     tick();
-    tasks.recordDecision(decision);
+    tasks.turns.recordDecision(decision);
     tick();
-    tasks.recordSteer("t", {
+    tasks.turns.recordSteer("t", {
       text: "keep the exact control evidence",
       actor: "captain",
       outcome: "mid-turn",
@@ -791,7 +796,7 @@ describe("TaskService (task-system P0)", () => {
       inboxId: 42,
     });
     tick();
-    tasks.recordInterrupt("t", {
+    tasks.turns.recordInterrupt("t", {
       actor: "captain",
       mode: "interrupt",
       effect: "aborted-turn",
@@ -847,12 +852,12 @@ describe("the basis (primitives review P1)", () => {
       shape: { ...shape, basis: "NIA-404" },
     });
     // A later shape write carries no stamp either.
-    tasks.recordShape("k", shape, "low");
+    tasks.placement.recordShape("k", shape, "low");
     for (const record of [byKey, byId, ghost]) {
       expect(tasks.get(record.id)?.shape).not.toHaveProperty("basis_verified");
     }
     const verdicts = () =>
-      [byKey, byId, ghost].map((record) => tasks.basisOf(tasks.get(record.id) ?? record));
+      [byKey, byId, ghost].map((record) => tasks.graph.basisOf(tasks.get(record.id) ?? record));
     // The plan is running and has said nothing: nothing holds.
     expect(verdicts()).toEqual([
       { ref: plan.key, verified: false },
@@ -860,9 +865,9 @@ describe("the basis (primitives review P1)", () => {
       { ref: "NIA-404", verified: false },
     ]);
     tick();
-    tasks.recordReport("plan", { text: "Group the rows." });
+    tasks.turns.recordReport("plan", { text: "Group the rows." });
     expect(verdicts().map((basis) => basis?.verified)).toEqual([true, true, false]);
-    expect(tasks.basisOf(plan)).toBeNull();
+    expect(tasks.graph.basisOf(plan)).toBeNull();
   });
 });
 
@@ -876,7 +881,7 @@ describe("INF-125 validation persistence", () => {
       prompt: "Review the static explanation",
       repoId: "r1",
     });
-    tasks.recordLiveValidation(
+    tasks.delivery.recordLiveValidation(
       "proof-task",
       {
         kind: "plan",
@@ -886,7 +891,7 @@ describe("INF-125 validation persistence", () => {
       },
       { head },
     );
-    tasks.recordLiveValidation(
+    tasks.delivery.recordLiveValidation(
       "proof-task",
       {
         kind: "run",
@@ -919,7 +924,7 @@ describe("INF-125 validation persistence", () => {
       verdict: "no-surface",
     });
     expect(() =>
-      restored.recordLiveValidation(
+      restored.delivery.recordLiveValidation(
         "proof-task",
         {
           kind: "plan",
@@ -949,7 +954,7 @@ it("INF-203 F4: keeps transcript bytes out of delivery rewrites and validation t
     bytes: Buffer.byteLength(text),
     file: `lean-proof-${digest}.json`,
   };
-  tasks.recordLiveValidation(
+  tasks.delivery.recordLiveValidation(
     "lean-proof",
     {
       kind: "plan",
@@ -961,7 +966,7 @@ it("INF-203 F4: keeps transcript bytes out of delivery rewrites and validation t
   );
   const { revision: _revision, at: _at, deviceId: _device, ...run } = proof.runs[0]!;
   for (let index = 0; index < 12; index++) {
-    tasks.recordLiveValidation(
+    tasks.delivery.recordLiveValidation(
       "lean-proof",
       { ...run, id: `run-${index}`, evidence: [evidence] },
       { head },
@@ -1079,7 +1084,7 @@ describe("reading many tasks (INF-940)", () => {
         () => tasks.getMany(["shipped", "stepped", "piece"]),
         ["stepped", "piece", "shipped"],
       ],
-      ["children", () => tasks.children(plan.id), ["stepped", "piece"]],
+      ["children", () => tasks.graph.children(plan.id), ["stepped", "piece"]],
     ];
     for (const [name, read, oldestFirst] of reads) {
       let rows: TaskRecord[] = [];
@@ -1126,7 +1131,7 @@ describe("review F4/F5 recovery report bounds", () => {
       evidence: history,
       nextFact: "The named owner starts its takeover.",
     }));
-    tasks.recordReport("recovery", {
+    tasks.turns.recordReport("recovery", {
       text: "The work still waits on its host record.",
       declared: { workWait, recoveryWays },
     });
@@ -1167,7 +1172,7 @@ describe("review F4/F5 recovery report bounds", () => {
       cheapestWay: "Start the takeover",
     };
     const record = (observation: string) => {
-      tasks.recordReport("recovery", {
+      tasks.turns.recordReport("recovery", {
         text: "Read the owner's next fact.",
         declared: { workWait: { ...workWait, observation } },
       });
@@ -1195,7 +1200,7 @@ describe("review F4/F5 recovery report bounds", () => {
       evidence: "The running first mate serves branch_from",
       nextFact: "The takeover starts on the branch",
     };
-    tasks.recordReport("recovery", {
+    tasks.turns.recordReport("recovery", {
       text: "A takeover works around the host record.",
       declared: { recoveryWays: [{ ...way, approach: "workaround" }] },
     });
@@ -1219,7 +1224,7 @@ describe("review F4/F5 recovery report bounds", () => {
   it("reads a saved recovery way whose hold this build retired as captain-owned", () => {
     const { tasks, db } = setup();
     seedTask(tasks, { id: "recovery", title: "Repair the failing checks", status: "idle" });
-    tasks.recordReport("recovery", { text: "The checks still fail on the same version." });
+    tasks.turns.recordReport("recovery", { text: "The checks still fail on the same version." });
     const event = tasks
       .timeline("recovery")
       .filter((entry) => entry.kind === "report")
@@ -1242,7 +1247,7 @@ describe("review F4/F5 recovery report bounds", () => {
   it("omits empty findings at the durable writer and when reading an older report", () => {
     const { tasks, db } = setup();
     seedTask(tasks, { id: "recovery", title: "Wait for the check owner", status: "idle" });
-    tasks.recordReport("recovery", {
+    tasks.turns.recordReport("recovery", {
       text: "The checks remain watched.",
       declared: { recoveryWays: [] },
     });

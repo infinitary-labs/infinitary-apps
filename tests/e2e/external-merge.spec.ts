@@ -71,7 +71,7 @@ for (const complete of [true, false]) {
       ciWatch: { head, since: 0, nextAt: 0, tries: 0 },
     });
     if (complete) {
-      tasks.recordReport(taskId, {
+      tasks.turns.recordReport(taskId, {
         text: "The meter fix is complete; merging finishes this task.",
         declared: { mergeCompletesTask: { prNumber: 71, headSha: head } },
       });

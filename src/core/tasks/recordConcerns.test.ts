@@ -6,8 +6,10 @@ import { openInMemoryDatabase } from "../storage/db";
 import { ACTIVITY_PLACES } from "./recordActivity";
 import { seedTask } from "./seedTask";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
+import { TaskGraphRefusal } from "./taskGraph";
 import { TaskProtocol } from "./taskProtocol";
-import { carriedOnClose, TaskGraphRefusal, TaskService, TIMELINE_CAP } from "./taskService";
+import { carriedOnClose, TaskService } from "./taskService";
+import { TIMELINE_CAP } from "./timelineCompaction";
 
 /**
  * Whom an event concerns (FI3-1189's rule 1; docs/task-record.md). Each
@@ -55,7 +57,7 @@ function work(tasks: TaskService, id: string, title: string, parentId?: string) 
     actor: "firstmate",
     ...(parentId ? { parentId } : {}),
   });
-  tasks.dispatch(id, {
+  tasks.starts.dispatch(id, {
     workspace: { repoDir: "", worktreeDir: `/w/${id}`, branch: `fm/task-${id}` },
     accountId: null,
     assignee: `crewmate ${id}`,
@@ -84,7 +86,7 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
       prompt: "p",
       why: "It hung.",
     });
-    tasks.dispatch("hang", {
+    tasks.starts.dispatch("hang", {
       workspace: { repoDir: "", worktreeDir: "/w/hang", branch: "fm/task-hang" },
       accountId: null,
       assignee: "crewmate 4",
@@ -110,9 +112,9 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
     const { tasks, keyOf, fromOthers, detail } = setup();
     seedTask(tasks, { id: "waiter", title: "Ship the alpha", status: "idle" });
     work(tasks, "runner", "Bring the Mac runner back");
-    tasks.link("runner", "waiter", "blocks", "firstmate");
+    tasks.graph.link("runner", "waiter", "blocks", "firstmate");
     tasks.close("runner", { status: "done", reason: "finished", actor: "host" });
-    tasks.unlink("runner", "waiter", "blocks", "firstmate");
+    tasks.graph.unlink("runner", "waiter", "blocks", "firstmate");
     const [waiter, runner] = [keyOf("waiter"), keyOf("runner")];
     // The waiting task's own lines, and the blocker's close.
     expect(detail("waiter").activityLog.map((row) => row.text)).toEqual(
@@ -182,7 +184,7 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
       [fix, `${fix}, which replaced ${hang}, merged pull request #977.`],
     ]);
     // The link reads on both ends, and the dropped task hears its replacement.
-    expect(tasks.linksTo("fix")).toContainEqual(
+    expect(tasks.graph.linksTo("fix")).toContainEqual(
       expect.objectContaining({ fromId: "hang", toId: "fix", type: "replaced-by" }),
     );
     expect(detail("fix").activityLog.map((row) => row.text)).toContainEqual(
@@ -203,7 +205,7 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
     const { tasks, keyOf, detail } = setup();
     work(tasks, "old", "Fix the notice");
     work(tasks, "next", "Fix the notice in its own pull request");
-    tasks.link("old", "next", "replaced-by", "firstmate");
+    tasks.graph.link("old", "next", "replaced-by", "firstmate");
     tasks.close("old", carriedOnClose({ id: "next", key: keyOf("next") }, "firstmate"));
     const [old, next] = [keyOf("old"), keyOf("next")];
     const reads = (id: string) => ({
@@ -223,7 +225,7 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
 
     // The task carrying it was carried on in turn: the last one is named.
     work(tasks, "last", "Finish the notice");
-    tasks.link("next", "last", "replaced-by", "firstmate");
+    tasks.graph.link("next", "last", "replaced-by", "firstmate");
     tasks.close("next", carriedOnClose({ id: "last", key: keyOf("last") }, "firstmate"));
     const last = keyOf("last");
     expect(detail("old").closing?.note).toBe(`Carried on by ${last}`);
@@ -235,7 +237,7 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
     // A carrier dropped later is said as it is; the close stays done.
     work(tasks, "lost", "Fix the banner");
     work(tasks, "taker", "Fix the banner elsewhere");
-    tasks.link("lost", "taker", "replaced-by", "firstmate");
+    tasks.graph.link("lost", "taker", "replaced-by", "firstmate");
     tasks.close("lost", carriedOnClose({ id: "taker", key: keyOf("taker") }, "firstmate"));
     tasks.close("taker", { status: "dropped", reason: "cancelled", actor: "firstmate" });
     expect(detail("lost")).toMatchObject({
@@ -263,7 +265,7 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
       actor: "firstmate",
       shape: { kind: "implement", basis: keyOf("answer") },
     });
-    tasks.dispatch("builder", {
+    tasks.starts.dispatch("builder", {
       workspace: { repoDir: "", worktreeDir: "/w/builder", branch: "fm/task-builder" },
       accountId: null,
       assignee: "crewmate builder",
@@ -302,7 +304,7 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
     }
     expect(tasks.get("a")?.status).toBe("open");
     expect(tasks.timeline("a")).toHaveLength(before);
-    expect(tasks.allLinks().filter((link) => link.type === "replaced-by")).toEqual([]);
+    expect(tasks.graph.allLinks().filter((link) => link.type === "replaced-by")).toEqual([]);
   });
 
   it("a refused merge reads on the tasks it names, by the link that joins them", () => {
@@ -310,7 +312,7 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
     seedTask(tasks, { id: "waiter", title: "Ship", status: "idle" });
     seedTask(tasks, { id: "runner", title: "Runner", status: "idle" });
     seedTask(tasks, { id: "stranger", title: "Unlinked", status: "idle" });
-    tasks.link("runner", "waiter", "blocks", "firstmate");
+    tasks.graph.link("runner", "waiter", "blocks", "firstmate");
     tasks.note("waiter", "Cannot merge: it waits on Runner.", {
       news: true,
       data: { refused: "merge-pr" },
@@ -369,7 +371,7 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
     merge(source.tasks, "part", 8);
     const lines = exportTaskRecords(source.tasks, 5_000);
     const target = setup();
-    target.tasks.importRecords(parseTaskExport(lines));
+    target.tasks.archive.importRecords(parseTaskExport(lines));
     expect(target.fromOthers("origin")).toEqual(source.fromOthers("origin"));
     expect(exportTaskRecords(target.tasks, 5_000)).toEqual(lines);
   });

@@ -27,9 +27,9 @@ it("seeks a message's and a card's tasks by kind and ref on saved data opened ag
   const tasks = new TaskService({ db: before, now: () => 1000 });
   seedTask(tasks, { id: "panels", title: "Build personal panels", status: "running" });
   seedTask(tasks, { id: "meter", title: "Fix the meter", status: "running" });
-  tasks.openAsk({ id: "m1", text: "build the personal panels" });
-  tasks.attachAsk("m1", "panels", "tool:spawn_crewmate");
-  tasks.attachAsk("m1", "meter", "tool:steer_crewmate");
+  tasks.capture.openAsk({ id: "m1", text: "build the personal panels" });
+  tasks.capture.attachAsk("m1", "panels", "tool:spawn_crewmate");
+  tasks.capture.attachAsk("m1", "meter", "tool:steer_crewmate");
   tasks.note("panels", "Started the panels.", { news: false });
   // Saved data from a build without the index.
   before.exec("DROP INDEX IF EXISTS task_events_ref");
@@ -64,13 +64,13 @@ it("seeks every stronger-model move by kind and ref on saved data opened again",
   const tasks = new TaskService({ db: before, now: () => 1000 });
   for (const id of ["first", "second", "third"])
     seedTask(tasks, { id, title: `Attempt ${id}`, status: "running" });
-  tasks.recordEscalation({
+  tasks.turns.recordEscalation({
     from: { id: "first", key: "first" },
     to: { id: "second", key: "second" },
     attempt: 1,
     tier: "premium",
   });
-  tasks.recordEscalation({
+  tasks.turns.recordEscalation({
     from: { id: "second", key: "second" },
     to: { id: "third", key: "third" },
     attempt: 2,

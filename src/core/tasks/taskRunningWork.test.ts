@@ -65,7 +65,7 @@ function olderProfile() {
     shape: { kind: "implement", autonomy_ask: "yes" as unknown as boolean },
   });
   const boundFile = "/fleet/crewmates/bound/sessions/a1.jsonl";
-  tasks.setSessionFile("bound", boundFile, {
+  tasks.turns.setSessionFile("bound", boundFile, {
     file: boundFile,
     computer: "this-mac",
     device_id: null,
@@ -142,7 +142,7 @@ function readEverything(tasks: TaskService, legacyFolder: string) {
         shape: record.shape,
         policies: tasks.policiesOf(record),
         current:
-          tasks
+          tasks.archive
             .sessions(record.id, { dir: legacyFolder, computer: "this-mac" })
             .find((session) => session.current)?.conversation ?? null,
       },
@@ -164,7 +164,7 @@ describe("the migration of an older release's running work and policy inputs", (
     const { tasks } = setup(upgraded);
     expect(readEverything(tasks, legacyFolder)).toEqual(readBefore);
     expect(upgraded.prepare("SELECT * FROM v_placements_v1").all()).toEqual(placementsBefore);
-    expect(tasks.pendingPlacements().map((record) => record.id)).toEqual(["placed"]);
+    expect(tasks.placement.pendingPlacements().map((record) => record.id)).toEqual(["placed"]);
 
     // The binding names the conversation it resumes; a token none records keeps none.
     expect(
@@ -244,13 +244,13 @@ describe("the migration of an older release's running work and policy inputs", (
     const upgraded = openDatabase(dir);
     const { tasks } = setup(upgraded);
     // A new turn clears the declarations and the idle clock, as before.
-    tasks.recordReport("legacy", { text: "Done.", declared: { finished: true } });
+    tasks.turns.recordReport("legacy", { text: "Done.", declared: { finished: true } });
     const legacy = tasks.get("legacy")!;
     expect(legacy.delivery).toMatchObject({ pr: 41, finishedAt: expect.any(Number) });
     expect(legacy.delivery).not.toHaveProperty("captainWait");
     // A new resume token that its conversation records is now named by it.
     const next = "/fleet/crewmates/legacy/sessions/b2.jsonl";
-    tasks.setSessionFile("legacy", next, {
+    tasks.turns.setSessionFile("legacy", next, {
       file: next,
       computer: "this-mac",
       device_id: null,
@@ -259,9 +259,11 @@ describe("the migration of an older release's running work and policy inputs", (
       account_id: null,
       began: "resume",
     });
-    expect(tasks.sessions("legacy").find((session) => session.current)?.conversation).toBe("b2");
+    expect(tasks.archive.sessions("legacy").find((session) => session.current)?.conversation).toBe(
+      "b2",
+    );
     // A policy edit lands in its own row and reads back on the shape.
-    tasks.recordShape("asked", { kind: "fix", kind_source: "classifier:test" }, "medium");
+    tasks.placement.recordShape("asked", { kind: "fix", kind_source: "classifier:test" }, "medium");
     expect(tasks.get("asked")?.shape).toMatchObject({
       kind: "fix",
       delivery_ask: "local-only",
@@ -302,7 +304,7 @@ describe("a record export of running work", () => {
     const { tasks } = setup();
     seedTask(tasks, { id: "bound", title: "Draw the chart", status: "idle" });
     const file = "/fleet/crewmates/bound/sessions/a1.jsonl";
-    tasks.setSessionFile("bound", file, {
+    tasks.turns.setSessionFile("bound", file, {
       file,
       computer: "this-mac",
       device_id: null,
@@ -312,7 +314,7 @@ describe("a record export of running work", () => {
       began: "start",
     });
     seedTask(tasks, { id: "legacy", title: "Fix the axis", status: "idle" });
-    tasks.setSessionFile("legacy", "/fleet/crewmates/legacy/sessions/old.jsonl");
+    tasks.turns.setSessionFile("legacy", "/fleet/crewmates/legacy/sessions/old.jsonl");
     const lines = exportTaskRecords(tasks, 1);
     const taskLines = lines.map((line) => JSON.parse(line)).filter((line) => line.kind === "task");
     expect(taskLines.map((line) => [line.id, line.conversation])).toEqual([
@@ -321,13 +323,13 @@ describe("a record export of running work", () => {
     ]);
     const restore = (bundle: string[]) => {
       const { tasks: fresh } = setup();
-      fresh.importRecords(parseTaskExport(bundle));
+      fresh.archive.importRecords(parseTaskExport(bundle));
       return fresh;
     };
     const restored = restore(lines);
-    expect(restored.recordedConversation("bound")).toBe("a1");
-    expect(restored.recordedConversation("legacy")).toBeNull();
-    expect(restored.sessions("bound").find((s) => s.current)?.conversation).toBe("a1");
+    expect(restored.archive.recordedConversation("bound")).toBe("a1");
+    expect(restored.archive.recordedConversation("legacy")).toBeNull();
+    expect(restored.archive.sessions("bound").find((s) => s.current)?.conversation).toBe("a1");
     expect(exportTaskRecords(restored, 1)).toEqual(lines);
     // An export written before this field has no conversation on its task lines.
     const older = lines.map((line) => {
@@ -337,7 +339,7 @@ describe("a record export of running work", () => {
       return JSON.stringify(rest);
     });
     const fromOlder = restore(older);
-    expect(fromOlder.recordedConversation("bound")).toBe("a1");
-    expect(fromOlder.recordedConversation("legacy")).toBeNull();
+    expect(fromOlder.archive.recordedConversation("bound")).toBe("a1");
+    expect(fromOlder.archive.recordedConversation("legacy")).toBeNull();
   });
 });

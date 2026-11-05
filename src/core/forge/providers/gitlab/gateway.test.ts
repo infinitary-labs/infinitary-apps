@@ -326,7 +326,7 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     ] as const)("refuses a raw merge request write through %s %s", async (method, rest) => {
       const f = await fixture({ host });
       seedDelivery(f.tasks, "task-1", { prNumber: 36 });
-      f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+      f.tasks.delivery.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
       const result = await f.write.run({
         method,
         path: `${OWN}/${rest}`,
@@ -351,7 +351,7 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     ])("refuses a description named in the query string: %s", async (rest, body) => {
       const f = await fixture({ host });
       seedDelivery(f.tasks, "task-1", { prNumber: 36 });
-      f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+      f.tasks.delivery.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
       const result = await f.write.run({
         method: "PUT",
         path: `${OWN}/${rest}`,
@@ -404,13 +404,14 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
         ],
         store: new IntegrationSettingsStore(join(scratchDir("fm-host-integrations-"), "settings")),
         asks: {
-          keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+          keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
           keepForFirstmate: (ask) => {
             firstmateAsks.push(ask);
             return `integration-ask-${ask.id}`;
           },
-          take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
-          record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+          take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
+          record: (taskId, askId, outcome) =>
+            tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
         },
         secrets: new FileIntegrationSecrets(join(scratchDir("fm-host-secrets-"), "secrets")),
       });
@@ -539,7 +540,7 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
   it("keeps other writes but requires a saved story even when a server's opening omits its description (INF-1965)", async () => {
     const f = await fixture();
     seedDelivery(f.tasks, "task-1", { prNumber: 36 });
-    f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
+    f.tasks.delivery.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
     // A title or label change is not the description; another merge request is not this task's.
     await f.write.run({
       method: "PUT",

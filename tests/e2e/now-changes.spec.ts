@@ -51,9 +51,9 @@ test("a board change paints and measures only the rows it touched", { tag: PERF_
         });
       }
       for (let i = 0; i < PAIRS; i++) {
-        tasks.link(`change-${i * 2}`, `change-${i * 2 + 1}`, "blocks", "host");
+        tasks.graph.link(`change-${i * 2}`, `change-${i * 2 + 1}`, "blocks", "host");
       }
-      tasks.link(`change-${MOVED - 1}`, `change-${MOVED}`, "blocks", "host");
+      tasks.graph.link(`change-${MOVED - 1}`, `change-${MOVED}`, "blocks", "host");
     })();
   } finally {
     db.close();

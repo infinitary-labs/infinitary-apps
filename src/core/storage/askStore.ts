@@ -293,14 +293,6 @@ export class AskStore {
     this.db.prepare("UPDATE captain_asks SET crewmate_asked_at = ? WHERE id = ?").run(at, id);
   }
 
-  /** Followed messages that have not ended, oldest first. */
-  listNotEnded(): AskRecord[] {
-    const rows = this.db
-      .prepare(`SELECT * FROM captain_asks WHERE ${NOT_ENDED} ORDER BY at, rowid`)
-      .all() as Row[];
-    return rows.map(fromRow);
-  }
-
   /**
    * Complete chains with an unfinished member, in one read. The unfinished
    * rows select roots, not members: an open turn or an already-ended member

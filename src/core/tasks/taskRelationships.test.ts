@@ -3,8 +3,9 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { openDatabase, openInMemoryDatabase, TASK_REFERENCES_VERSION } from "../storage/db";
 import { seedTask } from "./seedTask";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
+import { TaskGraphRefusal } from "./taskGraph";
 import { TASK_RELATIONSHIP_RULES, type TaskRelationshipKind } from "./taskRelationships";
-import { TaskGraphRefusal, TaskService } from "./taskService";
+import { TaskService } from "./taskService";
 
 // INF-1296 piece 2, the captain's approved plan B: parent, dependencies,
 // basis, branch source and retry provenance behind one checked relationship
@@ -41,64 +42,15 @@ describe("the relationship contract", () => {
         });
       else {
         seedTask(tasks, { id, title: kind, status: "queued" });
-        tasks.link(named.id, id, kind, "firstmate");
+        tasks.graph.link(named.id, id, kind, "firstmate");
       }
-      return tasks.listReady().some((record) => record.id === id);
+      return tasks.graph.listReady().some((record) => record.id === id);
     };
     for (const [kind, rule] of Object.entries(TASK_RELATIONSHIP_RULES))
       expect({ kind, ready: shown(kind as TaskRelationshipKind) }).toEqual({
         kind,
         ready: !rule.holdsStart,
       });
-  });
-
-  it("reads every family through one call, with who recorded each and when", () => {
-    const { tasks } = setup();
-    const plan = seedTask(tasks, { id: "plan", title: "Plan", status: "completed", outcome: "B." });
-    const first = seedTask(tasks, {
-      id: "first",
-      title: "First go",
-      status: "completed",
-      outcome: "x",
-    });
-    const parent = seedTask(tasks, { id: "parent", title: "Ship it", status: "idle" });
-    const build = tasks.create({
-      id: "build",
-      title: "Build B",
-      prompt: "p",
-      repoId: null,
-      parentId: parent.id,
-      shape: {
-        kind: "implement",
-        basis: plan.key,
-        branch_from: first.key,
-        escalate_from: first.key,
-      },
-      blockedBy: [plan.id],
-      actor: "firstmate",
-    });
-    const relationships = tasks.relationshipsOf(build.id);
-    expect(
-      relationships.map(({ kind, from, to, ref, actor }) => ({ kind, from, to, ref, actor })),
-    ).toEqual([
-      { kind: "parent", from: build.id, to: parent.id, ref: undefined, actor: null },
-      { kind: "blocks", from: plan.id, to: build.id, ref: undefined, actor: "firstmate" },
-      { kind: "basis", from: build.id, to: plan.id, ref: plan.key, actor: "firstmate" },
-      { kind: "branch-source", from: build.id, to: first.id, ref: first.key, actor: "firstmate" },
-      { kind: "retry-of", from: build.id, to: first.id, ref: first.key, actor: "firstmate" },
-    ]);
-    expect(relationships.find((edge) => edge.kind === "basis")?.at).toBe(build.createdAt);
-    // The named end reads the same edges from its side.
-    expect(tasks.relationshipsOf(first.id).map((edge) => [edge.kind, edge.from])).toEqual([
-      ["branch-source", build.id],
-      ["retry-of", build.id],
-    ]);
-    // The record still reads them under the shape's fields.
-    expect(tasks.get(build.id)?.shape).toMatchObject({
-      basis: plan.key,
-      branch_from: first.key,
-      escalate_from: first.key,
-    });
   });
 
   it("keeps each reference to one, and refuses what each kind's rule refuses", () => {
@@ -119,9 +71,11 @@ describe("the relationship contract", () => {
     });
     tasks.updateFields(step.id, { basis: a.key }, "firstmate");
     tasks.updateFields(step.id, { basis: b.key }, "firstmate");
-    expect(tasks.relationshipsOf(step.id).filter((edge) => edge.kind === "basis")).toMatchObject([
-      { to: b.id, ref: b.key },
-    ]);
+    const bases = tasks.archive
+      .recordedReferences(step.id)
+      .filter((reference) => reference.kind === "basis");
+    expect(bases).toMatchObject([{ ref: b.key }]);
+    expect(bases.map((reference) => tasks.graph.referenceTarget(reference)?.id)).toEqual([b.id]);
     expect(() => tasks.updateFields(step.id, { basis: step.key }, "firstmate")).toThrow(
       "A task cannot be its own basis.",
     );
@@ -149,7 +103,7 @@ describe("the relationship contract", () => {
     // Clearing removes the row and the shape field with it.
     tasks.updateFields(step.id, { basis: "" }, "firstmate");
     expect(tasks.get(step.id)?.shape).toEqual({ kind: "fix" });
-    expect(tasks.relationshipsOf(step.id)).toEqual([]);
+    expect(tasks.archive.recordedReferences(step.id)).toEqual([]);
   });
 
   it("keeps a spawn's basis as named until it names a task, which it then reads as verified", () => {
@@ -161,7 +115,7 @@ describe("the relationship contract", () => {
       repoId: null,
       shape: { kind: "implement", basis: "SCR-2" },
     });
-    expect(tasks.basisOf(step)).toEqual({ ref: "SCR-2", verified: false });
+    expect(tasks.graph.basisOf(step)).toEqual({ ref: "SCR-2", verified: false });
     const later = seedTask(tasks, {
       id: "later",
       title: "Spec",
@@ -169,8 +123,8 @@ describe("the relationship contract", () => {
       outcome: "Spec.",
     });
     expect(later.key).toBe("SCR-2");
-    expect(tasks.basisOf(step)).toEqual({ ref: "SCR-2", verified: true });
-    expect(tasks.builtOn(later.id).map((record) => record.id)).toEqual([step.id]);
+    expect(tasks.graph.basisOf(step)).toEqual({ ref: "SCR-2", verified: true });
+    expect(tasks.graph.builtOn(later.id).map((record) => record.id)).toEqual([step.id]);
   });
 
   it("refuses a shape write that names another relationship, and keeps one a write leaves out", () => {
@@ -183,9 +137,9 @@ describe("the relationship contract", () => {
       shape: { kind: "implement", basis: plan.key },
     });
     // A routing stamp rewrites the shape as it stands; the basis stays.
-    tasks.recordShape(step.id, { kind: "fix", kind_source: "classifier:test" }, "medium");
+    tasks.placement.recordShape(step.id, { kind: "fix", kind_source: "classifier:test" }, "medium");
     expect(tasks.get(step.id)?.shape).toMatchObject({ kind: "fix", basis: plan.key });
-    expect(tasks.basisOf(tasks.get(step.id)!)).toEqual({ ref: plan.key, verified: true });
+    expect(tasks.graph.basisOf(tasks.get(step.id)!)).toEqual({ ref: plan.key, verified: true });
   });
 });
 
@@ -249,9 +203,9 @@ describe("the migration of an older release's relationships", () => {
       return {
         view: view(before),
         shapes: Object.fromEntries(tasks.list().map((record) => [record.id, record.shape])),
-        ready: tasks.listReady().map((record) => record.id),
-        blockers: tasks.blockers("guess").map((record) => record.id),
-        children: tasks.children(parent.id).map((record) => record.id),
+        ready: tasks.graph.listReady().map((record) => record.id),
+        blockers: tasks.graph.blockers("guess").map((record) => record.id),
+        children: tasks.graph.children(parent.id).map((record) => record.id),
       };
     })();
     before.close();
@@ -310,16 +264,16 @@ describe("the migration of an older release's relationships", () => {
     // Every reader: the shape as read, the published view, readiness, the graph.
     for (const [id, shape] of Object.entries(shapes)) expect(tasks.get(id)?.shape).toEqual(shape);
     expect(view(upgraded)).toEqual(readBefore.view);
-    expect(tasks.listReady().map((record) => record.id)).toEqual(readBefore.ready);
-    expect(tasks.blockers("guess").map((record) => record.id)).toEqual(readBefore.blockers);
-    expect(tasks.children(parent.id).map((record) => record.id)).toEqual(readBefore.children);
+    expect(tasks.graph.listReady().map((record) => record.id)).toEqual(readBefore.ready);
+    expect(tasks.graph.blockers("guess").map((record) => record.id)).toEqual(readBefore.blockers);
+    expect(tasks.graph.children(parent.id).map((record) => record.id)).toEqual(readBefore.children);
     for (const id of ["retry", "guess", "loose"])
       expect(tasks.get(id)?.shape).toEqual(readBefore.shapes[id]);
-    expect(tasks.basisOf(tasks.get("retry")!)).toEqual({ ref: plan.key, verified: true });
-    expect(tasks.basisOf(tasks.get("guess")!)).toEqual({ ref: wip.id, verified: false });
-    expect(tasks.basisOf(tasks.get("loose")!)).toEqual({ ref: "SCR-404", verified: false });
-    expect(tasks.builtOn(plan.id).map((record) => record.id)).toEqual(["retry"]);
-    expect(tasks.builtOn(wip.id).map((record) => record.id)).toEqual(["guess"]);
+    expect(tasks.graph.basisOf(tasks.get("retry")!)).toEqual({ ref: plan.key, verified: true });
+    expect(tasks.graph.basisOf(tasks.get("guess")!)).toEqual({ ref: wip.id, verified: false });
+    expect(tasks.graph.basisOf(tasks.get("loose")!)).toEqual({ ref: "SCR-404", verified: false });
+    expect(tasks.graph.builtOn(plan.id).map((record) => record.id)).toEqual(["retry"]);
+    expect(tasks.graph.builtOn(wip.id).map((record) => record.id)).toEqual(["guess"]);
     upgraded.close();
     // A restart reads the same, and migrates nothing twice.
     const again = openDatabase(dir);
@@ -352,7 +306,7 @@ describe("the migration of an older release's relationships", () => {
       },
     ]);
     const restored = setup().tasks;
-    restored.importRecords(parseTaskExport(lines));
+    restored.archive.importRecords(parseTaskExport(lines));
     expect(exportTaskRecords(restored, 1)).toEqual(lines);
 
     // An export written before the references: only the shape names it.
@@ -363,11 +317,15 @@ describe("the migration of an older release's relationships", () => {
       return JSON.stringify(kept);
     });
     const fromOlder = setup().tasks;
-    fromOlder.importRecords(parseTaskExport(older));
+    fromOlder.archive.importRecords(parseTaskExport(older));
     expect(fromOlder.get("build")?.shape).toEqual({ kind: "implement", basis: plan.key });
-    expect(fromOlder.relationshipsOf("build")).toMatchObject([
-      { kind: "basis", to: plan.id, ref: plan.key, actor: null, at: null },
+    const references = fromOlder.archive.recordedReferences("build");
+    expect(references).toMatchObject([
+      { kind: "basis", ref: plan.key, actor: null, recordedAt: null },
     ]);
-    expect(fromOlder.builtOn(plan.id).map((record) => record.id)).toEqual(["build"]);
+    expect(references.map((reference) => fromOlder.graph.referenceTarget(reference)?.id)).toEqual([
+      plan.id,
+    ]);
+    expect(fromOlder.graph.builtOn(plan.id).map((record) => record.id)).toEqual(["build"]);
   });
 });

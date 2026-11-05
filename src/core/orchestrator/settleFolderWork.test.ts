@@ -99,7 +99,7 @@ describe("verified folder-work completion", () => {
   it("records done/finished and evidence, keeps a note, and clears a dependent task through the owner", async () => {
     const h = setup();
     seedTask(h.tasks, { id: "next", title: "Use the checked folder", status: "queued" });
-    h.tasks.link(h.task.id, "next", "blocks", "firstmate");
+    h.tasks.graph.link(h.task.id, "next", "blocks", "firstmate");
     const note = h.cards.addFirstmateCard({
       taskId: h.task.id,
       title: "The folder was checked",
@@ -120,7 +120,7 @@ describe("verified folder-work completion", () => {
         ?.data,
     ).toMatchObject({ completionEvidence: evidence });
     expect(h.cards.get(note)).toBeDefined();
-    expect(h.tasks.flagsOf(h.tasks.get("next")!).blocked).toBe(false);
+    expect(h.tasks.graph.flagsOf(h.tasks.get("next")!).blocked).toBe(false);
     expect(h.host.sweepGates).toHaveBeenCalled();
     expect(h.host.mergePullRequest).not.toHaveBeenCalled();
     expect(h.host.closePullRequest).not.toHaveBeenCalled();
@@ -134,9 +134,9 @@ describe("verified folder-work completion", () => {
   it("leaves a finished closing note rather than a discarded one", async () => {
     const h = setup();
     // The captain asked for the folder work, so its close answers them.
-    h.tasks.openAsk({ id: "ask-folder", text: "tidy the notes folder" });
-    h.tasks.attachAsk("ask-folder", h.task.id, "tool:create_task");
-    h.tasks.closeAsk("ask-folder", "closed");
+    h.tasks.capture.openAsk({ id: "ask-folder", text: "tidy the notes folder" });
+    h.tasks.capture.attachAsk("ask-folder", h.task.id, "tool:create_task");
+    h.tasks.capture.closeAsk("ask-folder", "closed");
     await h.closing.withClosingSentence(
       h.task.id,
       "The folder was checked and your edits remain intact.",
@@ -197,7 +197,7 @@ describe("verified folder-work completion", () => {
     );
     h.tasks.close("child", { status: "done", reason: "finished", actor: "host" });
     seedTask(h.tasks, { id: "blocker", title: "Required check", status: "idle" });
-    h.tasks.link("blocker", h.task.id, "blocks", "firstmate", true);
+    h.tasks.graph.link("blocker", h.task.id, "blocks", "firstmate", true);
     expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).refusal).toBeDefined();
     expect(h.tasks.get(h.task.id)?.status).toBe("active");
   });
@@ -254,7 +254,7 @@ describe("verified folder-work completion", () => {
       "Cannot close",
     );
     seedDelivery(h.tasks, h.task.id, { checkBack: undefined });
-    h.tasks.setGate(h.task.id, { kind: "captain", reason: "A decision is pending" });
+    h.tasks.placement.setGate(h.task.id, { kind: "captain", reason: "A decision is pending" });
     expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
       "Cannot close",
     );
@@ -268,7 +268,7 @@ describe("verified folder-work completion", () => {
       "pull request",
     );
     seedDelivery(h.tasks, h.task.id, { prNumber: undefined });
-    h.tasks.setPendingSettle(h.task.id, {
+    h.tasks.delivery.setPendingSettle(h.task.id, {
       mode: "land",
       actor: "captain",
       requestedAt: 1000,

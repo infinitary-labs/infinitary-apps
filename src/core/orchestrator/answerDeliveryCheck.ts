@@ -97,8 +97,8 @@ export class AnswerDeliveryCheck {
         this.adopted.add(facts.askId);
         this.noteAbout(facts.askId, facts.aboutCard?.id);
         this.retryAsk = facts.askId;
-        if (this.host.tasks.getAsk(facts.askId)?.delivery !== "retrying") {
-          this.host.tasks.setAskDelivery(facts.askId, "retrying");
+        if (this.host.tasks.capture.getAsk(facts.askId)?.delivery !== "retrying") {
+          this.host.tasks.capture.setAskDelivery(facts.askId, "retrying");
         }
       }
     }
@@ -111,7 +111,9 @@ export class AnswerDeliveryCheck {
 
   /** The messages the running turn has read so far. */
   private scope(): string[] {
-    return [...new Set([...this.host.tasks.listOpenAsks().map((ask) => ask.id), ...this.adopted])];
+    return [
+      ...new Set([...this.host.tasks.capture.listOpenAsks().map((ask) => ask.id), ...this.adopted]),
+    ];
   }
 
   /**
@@ -134,7 +136,10 @@ export class AnswerDeliveryCheck {
   private save(askIds: readonly string[], entry: DeliveryNote): void {
     if (askIds.length === 0) return;
     try {
-      this.host.tasks.noteDelivery(askIds, { ...entry, at: this.host.now() } as DeliveryEntry);
+      this.host.tasks.capture.noteDelivery(askIds, {
+        ...entry,
+        at: this.host.now(),
+      } as DeliveryEntry);
     } catch (caught) {
       console.warn("[firstmate] answer delivery could not save a fact:", caught);
     }
@@ -153,7 +158,7 @@ export class AnswerDeliveryCheck {
       if (this.host.observe) return;
       for (const id of scope) {
         try {
-          if (unread.has(id)) this.host.tasks.releaseAskDelivery(id);
+          if (unread.has(id)) this.host.tasks.capture.releaseAskDelivery(id);
           else if (end.held) this.hold(id);
           else this.judge(id);
         } catch (caught) {
@@ -171,8 +176,8 @@ export class AnswerDeliveryCheck {
    * and a message nobody can retry gets no notice either - it ends unresolved.
    */
   lanePurged(): void {
-    for (const ask of this.host.tasks.listAsksByDelivery("retrying")) {
-      this.host.tasks.setAskDelivery(ask.id, "unresolved");
+    for (const ask of this.host.tasks.capture.listAsksByDelivery("retrying")) {
+      this.host.tasks.capture.setAskDelivery(ask.id, "unresolved");
     }
   }
 
@@ -184,8 +189,8 @@ export class AnswerDeliveryCheck {
   }
 
   private hold(id: string): void {
-    const ask = this.host.tasks.getAsk(id);
-    if (ask?.delivery === "pending") this.host.tasks.setAskDelivery(id, "held");
+    const ask = this.host.tasks.capture.getAsk(id);
+    if (ask?.delivery === "pending") this.host.tasks.capture.setAskDelivery(id, "held");
   }
 
   /**
@@ -198,11 +203,11 @@ export class AnswerDeliveryCheck {
    * is asked once, and after that the one notice goes up.
    */
   private judge(id: string): void {
-    const ask = this.host.tasks.getAsk(id);
+    const ask = this.host.tasks.capture.getAsk(id);
     if (!ask) return;
     if (!ask.followed) {
       const verdict = judgeDelivery(ask.delivery, ask.deliveryFacts.entries);
-      if (verdict === "covered") this.host.tasks.setAskDelivery(id, "covered");
+      if (verdict === "covered") this.host.tasks.capture.setAskDelivery(id, "covered");
       else if (verdict === "retry") this.retry(id);
       else if (verdict === "notice") this.notify(id);
       return;
@@ -218,7 +223,7 @@ export class AnswerDeliveryCheck {
       return;
     }
     if (state.kind === "accepted") this.finalize(chain, state.cardId);
-    this.host.tasks.setAskDelivery(id, "covered");
+    this.host.tasks.capture.setAskDelivery(id, "covered");
   }
 
   /**
@@ -260,7 +265,7 @@ export class AnswerDeliveryCheck {
     if (this.host.observe || !withdraw) return;
     for (const notice of this.host.ending.noticesUp()) {
       try {
-        const ask = this.host.tasks.getAsk(notice.askId);
+        const ask = this.host.tasks.capture.getAsk(notice.askId);
         if (!ask?.followed || ask.delivery !== "unresolved") continue;
         if (ask.noticeCardId !== noticeCardId(ask.id)) continue;
         const chain = this.host.ending.chain(ask.id);
@@ -268,7 +273,8 @@ export class AnswerDeliveryCheck {
         if (!chain || !card || !onStage(card)) continue;
         if (this.host.ending.offeredAt(card) < notice.shownAt) continue;
         const unresolved = chain.members.filter((member) => member.delivery === "unresolved");
-        for (const member of unresolved) this.host.tasks.setAskDelivery(member.id, "covered");
+        for (const member of unresolved)
+          this.host.tasks.capture.setAskDelivery(member.id, "covered");
         withdraw(noticeCardId(ask.id));
       } catch (caught) {
         console.warn("[firstmate] answer delivery could not take back a notice:", caught);
@@ -284,7 +290,7 @@ export class AnswerDeliveryCheck {
   /** The accepted answer is final, for every message of the chain. */
   private finalize(chain: AskChain, cardId: string | null): void {
     if (!this.laneEmpty()) return;
-    this.host.tasks.markAnswered(chain.ids, cardId);
+    this.host.tasks.capture.markAnswered(chain.ids, cardId);
   }
 
   /**
@@ -303,7 +309,7 @@ export class AnswerDeliveryCheck {
    * name `inbox_once` keeps for every retry queued.
    */
   private retry(id: string, chain?: AskChain): void {
-    const ask = this.host.tasks.getAsk(id);
+    const ask = this.host.tasks.capture.getAsk(id);
     if (!ask) return;
     // A message whose notice was taken back already had its retry: the notice
     // returns. A newer message that joined after has its own retry.
@@ -341,7 +347,7 @@ export class AnswerDeliveryCheck {
       this.notify(id, chain);
       return;
     }
-    this.host.tasks.setAskDelivery(id, "retrying");
+    this.host.tasks.capture.setAskDelivery(id, "retrying");
   }
 
   /**
@@ -350,12 +356,12 @@ export class AnswerDeliveryCheck {
    * unanswered with it. One taken back comes back under the same id.
    */
   private notify(id: string, chain?: AskChain): void {
-    const ask = this.host.tasks.getAsk(id);
+    const ask = this.host.tasks.capture.getAsk(id);
     if (!ask || ask.delivery === "unresolved") return;
     this.host.raiseNotice(noticeCard(id, ask.text, ask.deliveryFacts.entries));
-    this.host.tasks.markAskUnresolved(id, noticeCardId(id));
+    this.host.tasks.capture.markAskUnresolved(id, noticeCardId(id));
     for (const other of chain?.ids ?? []) {
-      if (other !== id) this.host.tasks.setAskDelivery(other, "unresolved");
+      if (other !== id) this.host.tasks.capture.setAskDelivery(other, "unresolved");
     }
   }
 
@@ -395,7 +401,7 @@ export class AnswerDeliveryCheck {
         console.warn("[firstmate] answer delivery could not judge a stranded message:", caught);
       }
     }
-    for (const ask of this.host.tasks.listAsksByDelivery("retrying")) {
+    for (const ask of this.host.tasks.capture.listAsksByDelivery("retrying")) {
       // A message just judged above has its retry queued now, not served.
       if (queued.has(ask.id) || stranded.includes(ask.id)) continue;
       try {

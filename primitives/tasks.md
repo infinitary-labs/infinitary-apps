@@ -24,10 +24,12 @@ When a script should decide the steps (a loop, a fan-out, retries), use a progra
 
 One writer each: `TaskService` over the task tables (`docs/task-record.md`).
 `TaskService` ([`../src/core/tasks/taskService.ts`](../src/core/tasks/taskService.ts)) is the one writer over `tasks`, `task_events`, `task_links`, `task_references`, `task_sessions`, `task_session_observations`, `task_execution`, `task_policies`, `task_delivery_evidence`, `task_permissions`, `changes`, `change_versions` and `captain_asks`, the immutable specifications and typed shape records described in the task-record manual, and every change commits with the timeline event that explains it.
+Every write goes through one `TaskWriter` ([`../src/core/tasks/taskWriter.ts`](../src/core/tasks/taskWriter.ts)), whose outermost transaction moves the board's seq and tells listeners after the commit; the timeline's fold of old events is [`../src/core/tasks/timelineCompaction.ts`](../src/core/tasks/timelineCompaction.ts).
+Beside its own record writes, the service reaches seven parts over that writer, each in its own file: `tasks.graph` (links, waits and derived reads, `taskGraph.ts`), `tasks.capture` (asks, cards and origins, `taskCapture.ts`), `tasks.starts` (dispatch, start attempts and the backlog, `taskStarts.ts`), `tasks.placement` (where work runs, its gate and moves, `taskPlacement.ts`), `tasks.delivery` (change evidence, required actions and write asks, `taskDeliveries.ts`), `tasks.turns` (reports, steers and idle, `taskTurns.ts`) and `tasks.archive` (conversations, recorded references, import and purge, `taskArchive.ts`).
 `TaskStore` ([`../src/core/storage/taskStore.ts`](../src/core/storage/taskStore.ts)) sits beneath it; `TaskStore.listReady` is the ready query.
-Conversation associations: `setSessionFile` writes the resume pointer and conversation row together; by-key `tasks` reads list recorded conversations and retained older files, and name an earlier stronger-model attempt without copying its sessions ([task record](../docs/task-record.md), "Conversations on a task").
-Graph writes: `create`, `setParent`, `moveToProject`, `link`, `unlink`, `fileFollowup`, `startAgain`, `updateFields`, `setGate`, `close`, `dropWithChildren`.
-Derived reads: `flagsOf` (`blocked`, `held`, `ready`, `deadBlocker`), `relationshipsOf`, `basisHolds` / `basisOf`, `builtOn`, `verdictReviewOf`, `closeRefusal`, `blockersHoldingClose`, `blockerRefusal`.
+Conversation associations: `turns.setSessionFile` writes the resume pointer and conversation row together; by-key `tasks` reads list recorded conversations and retained older files, and name an earlier stronger-model attempt without copying its sessions ([task record](../docs/task-record.md), "Conversations on a task").
+Graph writes: `create`, `setParent`, `moveToProject`, `fileFollowup`, `updateFields`, `close` and `dropWithChildren` on the service, with `graph.link`, `graph.unlink`, `starts.startAgain` and `placement.setGate`.
+Derived reads, all on `graph`: `flagsOf` (`blocked`, `held`, `ready`, `deadBlocker`), `basisHolds` / `basisOf`, `builtOn`, `verdictReviewOf`, `closeRefusal`, `blockersHoldingClose`, `blockerRefusal`.
 Typed results: `resultSchemaRefusal` and `resultRefusal` in [`../src/core/tasks/taskResult.ts`](../src/core/tasks/taskResult.ts).
 Reports and results as entries: `reportEntryOf` and `latestResultOf` in [`../src/core/tasks/reportEntry.ts`](../src/core/tasks/reportEntry.ts); one task's entries from every owner, read only: `TaskTimeline` in [`../src/core/tasks/taskTimeline.ts`](../src/core/tasks/taskTimeline.ts), its shape in [`../src/shared/timeline.ts`](../src/shared/timeline.ts).
 Settling and its refusals: the settle owners `createSettleOwners` composes ([`../src/core/orchestrator/settleOwners.ts`](../src/core/orchestrator/settleOwners.ts)) - land, merge-pr and discard in `SettleService` ([`../src/core/orchestrator/settleService.ts`](../src/core/orchestrator/settleService.ts)), a task's close in `TaskClosing` ([`../src/core/orchestrator/taskClose.ts`](../src/core/orchestrator/taskClose.ts)), the kept merge approval in `KeptApproval` and `KeptMerge`, the first mate's declared closes in `DeclaredCloses` - each returning a structured `SettleRefusal` built in [`../src/core/orchestrator/settleRefusals.ts`](../src/core/orchestrator/settleRefusals.ts).
@@ -38,7 +40,7 @@ Agent tools: the first mate's `create_task`, `update_task`, `link_tasks` and `ta
 Status is `open | active | done | dropped`, with `activity` and `closed_reason` beside it; settling closes a row, it never deletes it.
 An open row waits on a gate (`quota-reset | at-time | captain`), on `blocks` links, or on request (`start_policy`).
 The ready query is the dispatch list: open work, no gate, `when-ready`, every blocker `done`; on-request rows never dispatch on their own.
-An active work row may wait in the backlog too (INF-2062): `backlog_since` on its running work (`TaskService.setQueued`, `leaveBacklog`) keeps its work while nothing the host sends wakes it, and the idle ladder and the sort read it as the witness `inBacklog` ([task board](../docs/task-board.md), "A started task in the backlog").
+An active work row may wait in the backlog too (INF-2062): `backlog_since` on its running work (`TaskService.starts.setQueued`, `leaveBacklog`) keeps its work while nothing the host sends wakes it, and the idle ladder and the sort read it as the witness `inBacklog` ([task board](../docs/task-board.md), "A started task in the backlog").
 It runs on the shared tick, after any close, after any graph change, on quota refresh and at boot (`CrewSupervisor.sweepGates`).
 The gate is a witness: every card with actions, and a wait on the captain a crewmate declares in its report, places the `captain` gate on its task (a task-less host card files an `operation` row) (`docs/task-graph.md`).
 The whose-turn sort and the idle ladder read that gate as one witness among their shared set (`IdleLadder.witnesses`, [report-sort](../docs/report-sort.md)), which stays documented there.
@@ -80,7 +82,7 @@ Overriding a soft hold needs the captain's words in that turn.
 - A `Continue: …` filing waits on its origin through a `blocks` edge set from origin to continuation before it is made `when-ready`.
 - Cards with actions hold their task through the `captain` gate ([cards-and-consent.md](cards-and-consent.md)).
 - Captain-owned required actions are durable operation records whose prerequisites are ordinary `blocks` links ([required actions](../docs/required-actions.md)).
-  Their words change only through `TaskService.reviseRequiredAction`, which moves the requirement's generation and refuses a completed action ([required actions](../docs/required-actions.md), "Correcting the words").
+  Their words change only through `TaskService.delivery.reviseRequiredAction`, which moves the requirement's generation and refuses a completed action ([required actions](../docs/required-actions.md), "Correcting the words").
 
 ## Failure and recovery
 
@@ -90,7 +92,7 @@ A close refused by the rules returns a `SettleRefusal` with typed ways out that 
 A declared work wait no owner moves wakes the self-resolving loop: the first mate tries consent-free alternatives, then commissions a bounded read-only internal step before asking the captain ([report sort](../docs/report-sort.md), "Self-resolving work waits").
 A host-record takeover uses `branch_from` and `files_from` immediately, with a related link rather than a must-merge-first edge from the stalled task.
 A dropped blocker produces one deduped `[fm-op]` wake (`wakeDeadGate`); `link_tasks remove` or `update_task drop` are the ways out, and `start_now` refuses while the dead edge stands.
-Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.startAgain`), never by reviving the old row.
+Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.starts.startAgain`), never by reviving the old row.
 
 ## Uses
 
@@ -105,6 +107,7 @@ Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.
 - [`../src/core/tasks/taskService.test.ts`](../src/core/tasks/taskService.test.ts) and [`../src/core/tasks/taskService.graph.test.ts`](../src/core/tasks/taskService.graph.test.ts): the record, graph, refusals and close rules.
 - [`../src/core/tasks/taskService.releases.test.ts`](../src/core/tasks/taskService.releases.test.ts): a start whose contact was lost or came back unconfirmed, and a message the first mate's turn never read.
 - [`../src/core/tasks/taskService.edits.test.ts`](../src/core/tasks/taskService.edits.test.ts): `update_task`'s edits to a task's shape, each keeping the rest, and the edits started work refuses.
+- `taskProtocol.presentation`, `.cache`, `.push`, `.view` and `.detail` tests beside [`../src/core/tasks/taskProtocol.ts`](../src/core/tasks/taskProtocol.ts), over one fixture in [`../tests/helpers/taskProtocol.ts`](../tests/helpers/taskProtocol.ts): the board's rows and words, what a board read reads and keeps, its pushes, and a record's detail and search.
 - [`../src/core/orchestrator/settleService.test.ts`](../src/core/orchestrator/settleService.test.ts): settle modes and `SettleRefusal`.
 - [`../src/core/orchestrator/settleService.boundary.test.ts`](../src/core/orchestrator/settleService.boundary.test.ts): the last look before a merge goes out, and a merge's, land's and discard's refusals.
 - [`../src/core/orchestrator/settleService.keptMerge.test.ts`](../src/core/orchestrator/settleService.keptMerge.test.ts): the captain's kept merge approval - its guard, its waits, a host-run merge's first checks and an attempt read back.

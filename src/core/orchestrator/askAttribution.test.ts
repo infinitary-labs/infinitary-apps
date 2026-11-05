@@ -60,8 +60,8 @@ describe("per-action request attribution", () => {
       await tool.run({ task: "prototype", ask_id: request.id });
       resume.resolve();
       await operational;
-      expect(tasks.asksFor("measurement")).toEqual([]);
-      expect(tasks.asksFor("prototype").map((ask) => ask.id)).toEqual([request.id]);
+      expect(tasks.capture.asksFor("measurement")).toEqual([]);
+      expect(tasks.capture.asksFor("prototype").map((ask) => ask.id)).toEqual([request.id]);
       expect(actedOn).toEqual(["prototype", "measurement"]);
       expect(capture.current()?.id).toBe(request.id);
     } finally {
@@ -104,7 +104,7 @@ describe("per-action request attribution", () => {
       capture.select(undefined); // A read witness changes the turn while this action awaits.
       resume.resolve();
       await action;
-      expect(tasks.asksFor("prototype").map((ask) => ask.id)).toEqual([request.id]);
+      expect(tasks.capture.asksFor("prototype").map((ask) => ask.id)).toEqual([request.id]);
       expect(capture.current()).toBeUndefined();
     } finally {
       resume.resolve();

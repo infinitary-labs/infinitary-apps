@@ -109,8 +109,8 @@ function fixture(): string {
     const worktreeDir = join(userDataDir, "worktrees", id);
     mkdirSync(worktreeDir, { recursive: true });
     seedTask(tasks, { id, title, status: "idle", worktreeDir });
-    tasks.recordReport(id, { text, summary: text, declared: { wait: { reason: text } } });
-    tasks.setGate(id, { kind: "captain" });
+    tasks.turns.recordReport(id, { text, summary: text, declared: { wait: { reason: text } } });
+    tasks.placement.setGate(id, { kind: "captain" });
   }
   // The durable watch reads a real head; no forge request is due during this journey.
   const git = (...args: string[]) =>
@@ -155,7 +155,11 @@ function fixture(): string {
   };
   cards.upsert(note);
   cards.resolve(note.id, "dismissed");
-  tasks.recordCardResolved("blocked", { cardId: note.id, title: note.title, action: "dismissed" });
+  tasks.capture.recordCardResolved("blocked", {
+    cardId: note.id,
+    title: note.title,
+    action: "dismissed",
+  });
   cards.upsert({
     id: "real-choice",
     taskId: "choice",
@@ -347,11 +351,13 @@ test("grouped waits reconcile into kanban and task card, the hover stays short, 
     status: "completed",
     worktreeDir,
   });
-  tasks.recordReport("waiter", { text: "The website update is ready after its prerequisite." });
-  tasks.link("owner", "waiter", "blocks", "crewmate", true);
+  tasks.turns.recordReport("waiter", {
+    text: "The website update is ready after its prerequisite.",
+  });
+  tasks.graph.link("owner", "waiter", "blocks", "crewmate", true);
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  tasks.setGate("waiter", { kind: "at-time", until: tomorrow.getTime() });
+  tasks.placement.setGate("waiter", { kind: "at-time", until: tomorrow.getTime() });
   db.close();
   const launched = await launchApp({ userDataDir: dir, withMockProvider: true });
   const { app, page } = launched;

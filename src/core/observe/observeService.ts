@@ -299,7 +299,7 @@ export class ObserveService {
       task,
       routed,
       builder,
-      builder ? this.options.tasks.verdictReviewOf(builder)?.id : undefined,
+      builder ? this.options.tasks.graph.verdictReviewOf(builder)?.id : undefined,
     );
   }
 

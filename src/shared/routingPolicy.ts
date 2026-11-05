@@ -133,7 +133,7 @@ export const workShapeSchema = z.object({
    * Whether that basis resolved to a real task that is done or carries an
    * outcome. A claimed spec never buys a cheaper tier by itself, so an
    * unverified basis is treated as absent. Derived by the host at every
-   * read (`TaskService.basisHolds`) and handed to the table with the
+   * read (`TaskService.graph.basisHolds`) and handed to the table with the
    * shape; the task record never stores it.
    */
   basis_verified: z.boolean().optional(),

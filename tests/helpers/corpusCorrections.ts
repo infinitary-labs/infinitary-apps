@@ -422,14 +422,14 @@ function seedCard(
     db.prepare("UPDATE cards SET kind = 'decision' WHERE id = ?").run(card.id);
   }
   if (card.raised && card.taskId) {
-    tasks.recordCardRaised(card.taskId, {
+    tasks.capture.recordCardRaised(card.taskId, {
       cardId: card.id,
       kind: card.raised.kind,
       title: card.raised.title ?? card.title,
     });
   }
   const decision = card.decision
-    ? tasks.fileDecision({
+    ? tasks.capture.fileDecision({
         id: card.decision.id,
         title: card.title,
         cardId: card.id,
@@ -447,7 +447,7 @@ function seedCard(
   }
   cards.resolve(card.id, card.chosen);
   if (card.resolved && card.taskId) {
-    tasks.recordCardResolved(card.taskId, {
+    tasks.capture.recordCardResolved(card.taskId, {
       cardId: card.id,
       title: card.resolved.title ?? card.title,
       action: card.resolved.action ?? card.chosen,
@@ -934,7 +934,7 @@ export function buildFixture(dir: string): void {
     shape: { kind: "review", kind_source: "host:review" },
   });
   // The reviewer's own report is what the findings are counted from.
-  tasks.recordReport("t-review", {
+  tasks.turns.recordReport("t-review", {
     text: [
       "verdict: findings",
       "F1 error src/meter.ts:20 the window is never bounded - auto-fix",
@@ -984,7 +984,7 @@ export function buildFixture(dir: string): void {
     status: "ready",
     createdAt: 40,
   });
-  tasks.recordCardRaised("t-work", {
+  tasks.capture.recordCardRaised("t-work", {
     cardId: "card-t-work-supervision-revised",
     kind: "decision",
     title: "Original escalation",
@@ -1020,7 +1020,7 @@ export function buildFixture(dir: string): void {
     createdAt: 40,
   });
   cards.resolve("card-t-work-supervision-revised", "merge-revised");
-  tasks.recordCardResolved("t-work", {
+  tasks.capture.recordCardResolved("t-work", {
     cardId: "card-t-work-supervision-revised",
     title: "Revised escalation",
     action: "merge-revised",

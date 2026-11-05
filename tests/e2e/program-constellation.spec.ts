@@ -100,7 +100,7 @@ test("a task with parts draws its running parts as a constellation, and its ring
       // A routed model, so the stage names the crewmate and the pointer can find it.
       model: { provider: MOCK_PROVIDER_ID, id: MOCK_MODEL_ID },
     });
-    tasks.link(finder, id, "blocks", "host");
+    tasks.graph.link(finder, id, "blocks", "host");
   }
   seedTask(tasks, {
     id: "synthesize",
@@ -109,8 +109,8 @@ test("a task with parts draws its running parts as a constellation, and its ring
     status: "queued",
     startPolicy: "on-request",
   });
-  tasks.link("verify-a", "synthesize", "blocks", "host");
-  tasks.link("verify-b", "synthesize", "blocks", "host");
+  tasks.graph.link("verify-a", "synthesize", "blocks", "host");
+  tasks.graph.link("verify-b", "synthesize", "blocks", "host");
   db.pragma("query_only = ON");
 
   const app = await launchApp({ withMockProvider: true, userDataDir });

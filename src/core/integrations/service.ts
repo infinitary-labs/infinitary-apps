@@ -128,7 +128,7 @@ export type IntegrationAskStore = {
   present?: (taskId: string, ask: IntegrationAsk) => void;
   /**
    * The first mate has no task (INF-1108): the host files the row its card
-   * gates (`TaskService.fileHostCardTask`), keeps the ask there and
+   * gates (`TaskService.capture.fileHostCardTask`), keeps the ask there and
    * presents the card, answering with its id. Absent, the first mate's call
    * is refused.
    */

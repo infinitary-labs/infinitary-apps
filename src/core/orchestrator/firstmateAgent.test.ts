@@ -973,7 +973,7 @@ describe("FirstmateAgent", () => {
           }),
         );
         expect(summary).toHaveBeenCalledTimes(1);
-        f.tasks.recordChangeEvidence("checked", {
+        f.tasks.delivery.recordChangeEvidence("checked", {
           ci: "green",
           checks: { ...checks, items: [{ name: "unit-tests", state: "success" }] },
         });
@@ -1022,7 +1022,7 @@ describe("FirstmateAgent", () => {
       status: "queued",
       parentId: "queued-parent",
     });
-    const children = vi.spyOn(f.tasks, "children");
+    const children = vi.spyOn(f.tasks.graph, "children");
     const threadStats = vi.spyOn(CardStore.prototype, "threadStat");
     const threadBatch = vi.spyOn(CardStore.prototype, "threadStats");
     const messages = vi.spyOn(CardStore.prototype, "messageById");
@@ -1068,7 +1068,7 @@ describe("FirstmateAgent", () => {
         f.tasks.get("queued-parent")!,
         [],
         [],
-        f.tasks.children("queued-parent"),
+        f.tasks.graph.children("queued-parent"),
       );
       expect(queued?.gate).toBe(expected?.line);
       f.tasks.close("queued-part", { status: "done", reason: "settled", actor: "host" });
@@ -1472,7 +1472,7 @@ describe("FirstmateAgent", () => {
       },
     });
     await f.agent.converse("Do the task");
-    expect(f.tasks.listAsks()).toHaveLength(1);
+    expect(f.tasks.capture.listAsks()).toHaveLength(1);
     expect(f.session.prompts).toHaveLength(1);
     f.session.emitTurnEnd("Ready.");
     f.session.resolveNextPrompt();
@@ -1521,7 +1521,7 @@ describe("FirstmateAgent", () => {
     expect(accepted).not.toHaveBeenCalled();
     const main = f.agent.converse("Start here");
     expect(accepted).toHaveBeenCalledTimes(1);
-    expect(f.tasks.listAsks()).toHaveLength(1);
+    expect(f.tasks.capture.listAsks()).toHaveLength(1);
     await main;
     f.session.emitTurnEnd("Ready.");
     f.session.resolveNextPrompt();
@@ -1551,7 +1551,7 @@ describe("FirstmateAgent", () => {
     expect(() => f.supervisor.replyToCard(id, "Where should I begin?")).toThrow("takes no reply");
     expect(accepted).not.toHaveBeenCalled();
     expect(f.supervisor.cardThread(id).messages).toEqual([]);
-    expect(f.tasks.listAsks()).toEqual([]);
+    expect(f.tasks.capture.listAsks()).toEqual([]);
     expect(f.specs).toEqual([]);
     // Await the supervisor's boot microtask before retiring its database.
     await Promise.resolve();
@@ -1572,7 +1572,7 @@ describe("FirstmateAgent", () => {
   it("INF-1137 serves required-action repair guidance only on that card's reply turn", async () => {
     const f = setup();
     seedTask(f.tasks, { id: "action-source", title: "Update setup", status: "completed" });
-    f.tasks.declareRequiredActions(
+    f.tasks.delivery.declareRequiredActions(
       "action-source",
       {
         cardId: "card-source",
@@ -2543,7 +2543,7 @@ describe("FirstmateAgent", () => {
     expect(card.actions[0]?.effect).toEqual({ kind: "open", target: "subscriptions" });
     // The ask the turn opened is not stranded until the next boot: it ends
     // now, failed, as its own question task (task-system P1).
-    expect(tasks.listOpenAsks()).toEqual([]);
+    expect(tasks.capture.listOpenAsks()).toEqual([]);
     const filed = tasks.list().find((record) => record.kind === "question");
     expect(filed?.title).toBe("hello");
     expect(filed?.outcome).toContain("No signed-in model");
@@ -3524,7 +3524,7 @@ describe("FirstmateAgent", () => {
     });
     expect(supervisor.runTaskOp("t1", "start-task")).toBeUndefined();
     // Starting at once, and no crewmate yet.
-    expect(tasks.startAttemptOf("t1")?.phase).toBe("preparing");
+    expect(tasks.starts.startAttemptOf("t1")?.phase).toBe("preparing");
     expect(tasks.get("t1")?.status).toBe("open");
     await tick();
     expect(session.prompts).toHaveLength(1);
@@ -3577,11 +3577,11 @@ describe("FirstmateAgent", () => {
         { id: "check", title: "Check the repair", status: "queued", startPolicy: "on-request" },
       ],
     });
-    tasks.link("fix", "check", "blocks", "host");
+    tasks.graph.link("fix", "check", "blocks", "host");
     expect(supervisor.runTaskOp("check", "queue-task")).toBeUndefined();
     await tick();
     expect(session.prompts).toHaveLength(0);
-    expect(tasks.startAttemptOf("check")).toBeUndefined();
+    expect(tasks.starts.startAttemptOf("check")).toBeUndefined();
     await admissionClock.advance(WAKE_COALESCE_MS);
     expect(session.prompts).toHaveLength(1);
     expect(tasks.get("check")?.status).toBe("open");
@@ -3596,7 +3596,7 @@ describe("FirstmateAgent", () => {
     });
     expect(supervisor.runTaskOp("dropped-restart", "start-again")).toBeUndefined();
     await endStartTurn(session);
-    const replacement = tasks.replacementOf("dropped-restart");
+    const replacement = tasks.graph.replacementOf("dropped-restart");
     expect(replacement).toBeTruthy();
     await agent.converse("what changed?");
     const lines = decodeContext(session.prompts[0] as string).captain_resolutions as string[];
@@ -3625,7 +3625,7 @@ describe("FirstmateAgent", () => {
     expect(tasks.get("t1")?.status).toBe("active");
     // Continue and Drop task on started work, as the supervisor writes them.
     vi.setSystemTime(start + 60_000);
-    tasks.recordSteer("t2", {
+    tasks.turns.recordSteer("t2", {
       actor: "captain",
       text: "carry on",
       outcome: "next-turn",
@@ -3635,7 +3635,7 @@ describe("FirstmateAgent", () => {
       inboxId: null,
     });
     vi.setSystemTime(start + 2 * 60_000);
-    tasks.recordInterrupt("t3", {
+    tasks.turns.recordInterrupt("t3", {
       actor: "captain",
       mode: "cancel",
       effect: "cancelled-record",
@@ -3648,9 +3648,9 @@ describe("FirstmateAgent", () => {
     expect(tasks.get("t4")?.status).toBe("dropped");
     // The task board's queue and unqueue, as the supervisor writes them.
     vi.setSystemTime(start + 3 * 60_000 + 10_000);
-    tasks.setQueued("t5", "queue-task", { actor: "captain", via: "task-card" });
+    tasks.starts.setQueued("t5", "queue-task", { actor: "captain", via: "task-card" });
     vi.setSystemTime(start + 3 * 60_000 + 20_000);
-    tasks.setQueued("t5", "unqueue-task", { actor: "captain", via: "task-card" });
+    tasks.starts.setQueued("t5", "unqueue-task", { actor: "captain", via: "task-card" });
     await tick();
     expect(session.prompts).toHaveLength(1);
 
@@ -3701,7 +3701,7 @@ describe("FirstmateAgent", () => {
     });
     for (let click = 0; click < 34; click += 1) {
       vi.setSystemTime(start + click * 1_000);
-      tasks.recordSteer("t1", {
+      tasks.turns.recordSteer("t1", {
         actor: "captain",
         text: "carry on",
         outcome: "next-turn",
@@ -6589,9 +6589,9 @@ describe("FirstmateAgent capture", () => {
         { id: "prior", title: "Measure task list latency", parentId: "panel", status: "idle" },
       ],
     });
-    tasks.openAsk({ id: "panel-ask", text: panelWords });
-    tasks.attachAsk("panel-ask", "panel", "tool:create_task");
-    tasks.closeAsk("panel-ask", "closed");
+    tasks.capture.openAsk({ id: "panel-ask", text: panelWords });
+    tasks.capture.attachAsk("panel-ask", "panel", "tool:create_task");
+    tasks.capture.closeAsk("panel-ask", "closed");
     await agent.converse(prototypeWords);
     const tools = toolsOf(specs);
     await tools.get("spawn_crewmate")?.execute("measure", {
@@ -6634,12 +6634,12 @@ describe("FirstmateAgent capture", () => {
       .find((card) => card.title === "Visible-app latency findings");
     expect(card?.asked?.text).toBe(panelWords);
     const quoted = (id: string) => {
-      const line = tasks.originAbout(id);
+      const line = tasks.capture.originAbout(id);
       return line && "text" in line ? line.text : undefined;
     };
     expect(quoted("prior")).toBe(panelWords);
     expect(quoted(prototype?.id ?? "")).toBe(prototypeWords);
-    const request = tasks.listAsks().find((ask) => ask.text === prototypeWords);
+    const request = tasks.capture.listAsks().find((ask) => ask.text === prototypeWords);
     expect(request?.taskId).toBe(prototype?.id);
     session.emitTurnEnd("Recorded both independent outcomes.");
     session.resolveNextPrompt();
@@ -6673,7 +6673,7 @@ describe("FirstmateAgent capture", () => {
       user_words: "check every package for a newer version",
     });
     const filed = tasks.list().find((task) => task.title === "Check package versions");
-    expect(tasks.originAbout(filed?.id ?? "")).toMatchObject({
+    expect(tasks.capture.originAbout(filed?.id ?? "")).toMatchObject({
       kind: "automation",
       name: "Nightly product audit",
       through: 0,
@@ -6733,7 +6733,7 @@ describe("FirstmateAgent capture", () => {
       origin: audit?.key,
     });
     const named = tasks.list().find((task) => task.title === "Read the slow journeys' logs");
-    expect(tasks.originAbout(named?.id ?? "")).toEqual({
+    expect(tasks.capture.originAbout(named?.id ?? "")).toEqual({
       kind: "from",
       at: audit?.createdAt,
       key: audit?.key,
@@ -6759,7 +6759,7 @@ describe("FirstmateAgent capture", () => {
         title: "Add pagination",
       }),
     );
-    const [ask] = tasks.listOpenAsks();
+    const [ask] = tasks.capture.listOpenAsks();
     expect(ask?.text).toBe("how is pagination going?");
     expect(ask?.taskId).toBeNull();
 
@@ -6772,14 +6772,14 @@ describe("FirstmateAgent capture", () => {
     const answered = tasks.timeline("t1").find((event) => event.kind === "answered");
     expect(answered?.text).toBe("Pagination is under way");
     expect(answered?.data?.body).toBe("<p>The crewmate is on the second endpoint.</p>");
-    expect(tasks.getAsk(ask?.id ?? "")?.taskId).toBe("t1");
-    expect(tasks.getAsk(ask?.id ?? "")?.attachedVia).toBe("tool:emit_card");
+    expect(tasks.capture.getAsk(ask?.id ?? "")?.taskId).toBe("t1");
+    expect(tasks.capture.getAsk(ask?.id ?? "")?.attachedVia).toBe("tool:emit_card");
 
     session.emitTurnEnd("Answered.");
     session.resolveNextPrompt();
     await tick();
-    expect(tasks.getAsk(ask?.id ?? "")?.turnState).toBe("closed");
-    expect(tasks.listOpenAsks()).toEqual([]);
+    expect(tasks.capture.getAsk(ask?.id ?? "")?.turnState).toBe("closed");
+    expect(tasks.capture.listOpenAsks()).toEqual([]);
     // Attached to existing work: no question task of its own (D1).
     expect(tasks.list().filter((record) => record.kind === "question")).toHaveLength(0);
   });
@@ -6802,7 +6802,7 @@ describe("FirstmateAgent capture", () => {
     expect(question?.projectId).toBe("scratch");
     const raised = tasks.timeline(question?.id ?? "").find((e) => e.kind === "card_raised");
     expect(raised?.ref).toBe(cardId);
-    const [ask] = tasks.listAsks();
+    const [ask] = tasks.capture.listAsks();
     expect(ask?.taskId).toBe(question?.id);
     expect(ask?.attachedVia).toBe("tool:emit_card");
     // The card itself carries no task id: a question task is the record of
@@ -6852,7 +6852,7 @@ describe("FirstmateAgent capture", () => {
     const decision = tasks.list().find((record) => record.kind === "decision");
     expect(decision?.status).toBe("open");
     expect(decision?.gate).toEqual({ kind: "captain", ref: cardId });
-    expect(tasks.listAsks()[0]?.taskId).toBe(decision?.id);
+    expect(tasks.capture.listAsks()[0]?.taskId).toBe(decision?.id);
     // On screen, it is waiting on the captain - not a strip count.
     expect(supervisor.crewCounts()).toEqual({ working: 0, idle: 0, queued: 0 });
     session.emitTurnEnd("Asked.");
@@ -6903,7 +6903,7 @@ describe("FirstmateAgent capture", () => {
     const firstId = first?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
     const secondId = second?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
     supervisor.close(firstId);
-    const firstQuestion = tasks.openDecisionFor(firstId)!;
+    const firstQuestion = tasks.capture.openDecisionFor(firstId)!;
     expect(firstQuestion.status).toBe("open");
     expect(supervisor.cardsSnapshot().find((card) => card.id === firstId)).toMatchObject({
       minimized: true,
@@ -6932,7 +6932,7 @@ describe("FirstmateAgent capture", () => {
     session.emitTurnEnd("They pass.");
     session.resolveNextPrompt();
     await tick();
-    const [ask] = tasks.listAsks();
+    const [ask] = tasks.capture.listAsks();
     expect(ask?.hintTaskId).toBe("t1");
     expect(ask?.taskId).toBe("t1");
     expect(ask?.attachedVia).toBe("host:fallback");
@@ -6949,7 +6949,7 @@ describe("FirstmateAgent capture", () => {
     session.emitTurnEnd("Fine.");
     session.resolveNextPrompt();
     await tick();
-    expect(tasks.listAsks()[0]?.taskId).toBe("t1");
+    expect(tasks.capture.listAsks()[0]?.taskId).toBe("t1");
   });
 
   it("files a question task with the turn's closing text when nothing attached", async () => {
@@ -6962,7 +6962,7 @@ describe("FirstmateAgent capture", () => {
     expect(question?.title).toBe("hello there");
     expect(question?.outcome).toBe("All quiet on deck.");
     expect(question?.closedReason).toBe("answered");
-    const [ask] = tasks.listAsks();
+    const [ask] = tasks.capture.listAsks();
     expect(ask?.taskId).toBe(question?.id);
     expect(ask?.attachedVia).toBe("host:fallback");
     expect(ask?.turnState).toBe("closed");
@@ -6986,8 +6986,8 @@ describe("FirstmateAgent capture", () => {
     expect(operation?.closedReason).toBe("settled");
     expect(operation?.outcome).toBe(noted?.content[0]?.text);
     expect(operation?.projectId).toBe("scratch");
-    expect(tasks.listAsks()[0]?.taskId).toBe(operation?.id);
-    expect(tasks.listAsks()[0]?.attachedVia).toBe("tool:record_knowledge");
+    expect(tasks.capture.listAsks()[0]?.taskId).toBe(operation?.id);
+    expect(tasks.capture.listAsks()[0]?.attachedVia).toBe("tool:record_knowledge");
     session.emitTurnEnd("Noted.");
     session.resolveNextPrompt();
     await tick();
@@ -7012,7 +7012,7 @@ describe("FirstmateAgent capture", () => {
       messageFiles,
     );
     await agent.converse({ text, images: [pngImage], messageFiles });
-    const [kept] = tasks.listAsks()[0]?.attachments ?? [];
+    const [kept] = tasks.capture.listAsks()[0]?.attachments ?? [];
     expect(kept).toMatchObject({ mimeType: "image/png", bytes: expect.any(Number) });
     const tools = toolsOf(specs);
     const started = await tools.get("spawn_crewmate")?.execute("s1", {
@@ -7023,11 +7023,11 @@ describe("FirstmateAgent capture", () => {
     const taskId = started?.content[0]?.text?.match(/task (\w{8})/)?.[1] ?? "";
     // The brief goes out with the message's pictures, before the message attaches.
     expect(commission.mock.calls[0]?.[0]).toMatchObject({ attachments: [kept], messageFiles });
-    expect(tasks.messageFiles(taskId)).toEqual(messageFiles);
-    expect(tasks.pictures(taskId)).toEqual([kept]);
+    expect(tasks.capture.messageFiles(taskId)).toEqual(messageFiles);
+    expect(tasks.capture.pictures(taskId)).toEqual([kept]);
     await tools.get("steer_crewmate")?.execute("s2", { task_id: "t1", message: "see the dialog" });
     expect(steer.mock.calls[0]?.[3]).toMatchObject({ images: [pngImage], attachments: [kept] });
-    expect(tasks.pictures("t1")).toEqual([kept]);
+    expect(tasks.capture.pictures("t1")).toEqual([kept]);
     session.emitTurnEnd("On it.");
     session.resolveNextPrompt();
     await tick();
@@ -7045,8 +7045,8 @@ describe("FirstmateAgent capture", () => {
     });
     const taskId = queued?.content[0]?.text?.match(/Queued task (\w+)/)?.[1] ?? "";
     expect(tasks.get(taskId)?.kind).toBe("work");
-    expect(tasks.listAsks()[0]?.taskId).toBe(taskId);
-    expect(tasks.listAsks()[0]?.attachedVia).toBe("tool:spawn_crewmate");
+    expect(tasks.capture.listAsks()[0]?.taskId).toBe(taskId);
+    expect(tasks.capture.listAsks()[0]?.attachedVia).toBe("tool:spawn_crewmate");
     const askEvent = tasks.timeline(taskId).find((event) => event.kind === "ask");
     expect(askEvent?.text).toBe("queue up the flaky test fix for later");
     session.emitTurnEnd("Queued.");
@@ -7072,7 +7072,7 @@ describe("FirstmateAgent capture", () => {
     await settle
       ?.execute("s1", { task_id: "t1", mode: "finish", closing_sentence: "Pagination is done." })
       .catch(() => undefined);
-    const [ask] = tasks.listAsks();
+    const [ask] = tasks.capture.listAsks();
     expect(ask?.taskId).toBe("t2");
     expect(ask?.attachedVia).toBe("tool:interrupt_crewmate");
     expect(tasks.timeline("t1").some((event) => event.kind === "ask")).toBe(true);
@@ -7095,11 +7095,11 @@ describe("FirstmateAgent capture", () => {
     );
     await tick();
     expect(session.prompts).toHaveLength(1);
-    expect(tasks.listAsks()).toEqual([]);
+    expect(tasks.capture.listAsks()).toEqual([]);
     session.emitTurnEnd("Noted.");
     session.resolveNextPrompt();
     await tick();
-    expect(tasks.listAsks()).toEqual([]);
+    expect(tasks.capture.listAsks()).toEqual([]);
     expect(tasks.list().filter((record) => record.kind === "question")).toHaveLength(0);
   });
 
@@ -7108,7 +7108,7 @@ describe("FirstmateAgent capture", () => {
     await agent.converse("ship it");
     session.rejectNextPrompt("mock provider exploded");
     await tick();
-    const [ask] = tasks.listAsks();
+    const [ask] = tasks.capture.listAsks();
     expect(ask?.turnState).toBe("failed");
     const question = tasks.get(ask?.taskId ?? "");
     expect(question?.kind).toBe("question");
@@ -7123,7 +7123,7 @@ describe("FirstmateAgent capture", () => {
     session.resolveNextPrompt();
     await tick();
     // Its words wait on the lane beside the failure card: nothing is filed yet.
-    const [ask] = tasks.listAsks();
+    const [ask] = tasks.capture.listAsks();
     expect(ask).toMatchObject({ turnState: "open", taskId: null });
     expect(tasks.list().filter((record) => record.kind === "question")).toEqual([]);
     supervisor.act("card-fm-turn-failure", "retry-firstmate");
@@ -7138,7 +7138,7 @@ describe("FirstmateAgent capture", () => {
     session.resolveNextPrompt();
     await tick();
     // The retry that answered it files it, once, with its own answer.
-    expect(tasks.getAsk(ask?.id ?? "")).toMatchObject({
+    expect(tasks.capture.getAsk(ask?.id ?? "")).toMatchObject({
       turnState: "closed",
       attachedVia: "tool:emit_card",
     });
@@ -7154,10 +7154,10 @@ describe("FirstmateAgent capture", () => {
     before.agent.dispose();
     before.session.resolveNextPrompt();
     await tick();
-    expect(before.tasks.listAsks()).toMatchObject([{ turnState: "open", taskId: null }]);
+    expect(before.tasks.capture.listAsks()).toMatchObject([{ turnState: "open", taskId: null }]);
     expect(before.tasks.list().filter((record) => record.kind === "question")).toEqual([]);
     const after = setup({ silent: true, db: before.db });
-    expect(after.tasks.listAsks()).toMatchObject([{ turnState: "failed" }]);
+    expect(after.tasks.capture.listAsks()).toMatchObject([{ turnState: "failed" }]);
     expect(after.tasks.list().filter((record) => record.kind === "question")).toMatchObject([
       {
         title: "How is the crew doing?",
@@ -7195,15 +7195,15 @@ describe("FirstmateAgent capture", () => {
     const { agent, session, tasks } = setup();
     await agent.converse("first question");
     await agent.converse("second, unrelated");
-    expect(tasks.listOpenAsks().map((ask) => ask.text)).toEqual([
+    expect(tasks.capture.listOpenAsks().map((ask) => ask.text)).toEqual([
       "first question",
       "second, unrelated",
     ]);
     session.emitTurnEnd("Both answered in passing.");
     session.resolveNextPrompt();
     await tick();
-    expect(tasks.listOpenAsks()).toEqual([]);
-    expect(tasks.listAsks().every((ask) => ask.taskId !== null)).toBe(true);
+    expect(tasks.capture.listOpenAsks()).toEqual([]);
+    expect(tasks.capture.listAsks().every((ask) => ask.taskId !== null)).toBe(true);
     expect(tasks.list().filter((record) => record.kind === "question")).toHaveLength(2);
   });
 
@@ -7213,7 +7213,7 @@ describe("FirstmateAgent capture", () => {
     const words = "is the flaky login test fixed yet?";
     const { agent, session, specs, tasks } = setup({
       beforeBoot: ({ db, tasks }) => {
-        const ask = tasks.openAsk({ id: "waiting", text: words });
+        const ask = tasks.capture.openAsk({ id: "waiting", text: words });
         new InboxStore(db).enqueue(
           FIRSTMATE_RECIPIENT,
           captainTurn(words, false, undefined, ask.id),
@@ -7223,7 +7223,7 @@ describe("FirstmateAgent capture", () => {
       },
     });
     // Booting files nothing for it: no turn has read it yet.
-    expect(tasks.getAsk("waiting")).toMatchObject({ turnState: "open", taskId: null });
+    expect(tasks.capture.getAsk("waiting")).toMatchObject({ turnState: "open", taskId: null });
     expect(tasks.list().filter((record) => record.kind === "question")).toEqual([]);
     agent.pokeInbox();
     await drained(session, 1);
@@ -7237,7 +7237,7 @@ describe("FirstmateAgent capture", () => {
     session.resolveNextPrompt();
     await tick();
     // The turn that read it attached and closed it, with its own answer.
-    expect(tasks.getAsk("waiting")).toMatchObject({
+    expect(tasks.capture.getAsk("waiting")).toMatchObject({
       turnState: "closed",
       attachedVia: "tool:emit_card",
     });
@@ -7253,7 +7253,7 @@ describe("FirstmateAgent capture", () => {
     // The captain's words land as the wake turn closes: parked, unread.
     session.holdSteers();
     await agent.converse("is the flaky login test fixed yet?");
-    const [waiting] = tasks.listOpenAsks();
+    const [waiting] = tasks.capture.listOpenAsks();
     // Standing directions cannot be read: the drain holds the parked words,
     // and the next message is refused before any turn.
     const unreadable = vi
@@ -7263,7 +7263,10 @@ describe("FirstmateAgent capture", () => {
     session.resolveNextPrompt();
     await tick();
     await agent.converse("and the alpha?");
-    expect(tasks.getAsk(waiting?.id ?? "")).toMatchObject({ turnState: "open", taskId: null });
+    expect(tasks.capture.getAsk(waiting?.id ?? "")).toMatchObject({
+      turnState: "open",
+      taskId: null,
+    });
     expect(tasks.list().filter((record) => record.kind === "question")).toMatchObject([
       { title: "and the alpha?" },
     ]);
@@ -7278,7 +7281,7 @@ describe("FirstmateAgent capture", () => {
     session.emitTurnEnd("Answered.");
     session.resolveNextPrompt();
     await tick();
-    expect(tasks.getAsk(waiting?.id ?? "")).toMatchObject({
+    expect(tasks.capture.getAsk(waiting?.id ?? "")).toMatchObject({
       turnState: "closed",
       attachedVia: "tool:emit_card",
     });
@@ -7294,7 +7297,11 @@ describe("FirstmateAgent capture", () => {
     const { agent, session, specs, tasks } = setup({ seedTasks });
     // A chatty day: closed one-offs are in neither the roster nor the count.
     for (let index = 0; index < 5; index += 1) {
-      tasks.fileQuestion({ id: `q${index}`, title: `Question ${index}`, outcome: "answered" });
+      tasks.capture.fileQuestion({
+        id: `q${index}`,
+        title: `Question ${index}`,
+        outcome: "answered",
+      });
     }
     await agent.converse("what is open?");
     const context = decodeContext(session.prompts[0] ?? "");
@@ -7655,10 +7662,12 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     });
     const plan = tasks.byKey("SCR-2");
     if (!plan) throw new Error("missing plan");
-    tasks.recordReport(plan.id, {
+    tasks.turns.recordReport(plan.id, {
       text: "The full ready specification is recorded; selections are authoritative.",
     });
-    tasks.recordReport(plan.id, { text: "Later evidence preserves the original accepted scope." });
+    tasks.turns.recordReport(plan.id, {
+      text: "Later evidence preserves the original accepted scope.",
+    });
     await text("create_task", {
       title: "Existing implementation",
       goal: "Implement the accepted specification",
@@ -7698,7 +7707,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       user_words: "Hold until welcome merges",
     });
     await text("link_tasks", { from: "SCR-4", to: "SCR-3", type: "blocks" });
-    expect(tasks.waitingOn(build.id).map((task) => task.key)).toEqual(["SCR-4"]);
+    expect(tasks.graph.waitingOn(build.id).map((task) => task.key)).toEqual(["SCR-4"]);
     expect(tasks.get(build.id)?.startPolicy).toBe("on-request");
     const question = cards().find((card) => card.title === "Choose reduced-motion reveal");
     if (!question) throw new Error("missing question");
@@ -7739,7 +7748,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       undefined,
       {},
     );
-    const replacement = tasks.replacementOf("old-draft");
+    const replacement = tasks.graph.replacementOf("old-draft");
     expect(replacement).toBeTruthy();
     expect(answer.content[0]?.text).toContain(`${replacement} replaces`);
     expect(tasks.resolve(replacement ?? "")?.status).toBe("active");
@@ -7791,7 +7800,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       parentId: tasks.byKey("SCR-1")?.id,
       shape: { override_model_id: "claude-fable-5-1" },
     });
-    expect(tasks.linksTo(filed.id)).toEqual([
+    expect(tasks.graph.linksTo(filed.id)).toEqual([
       expect.objectContaining({ fromId: tasks.byKey("SCR-3")?.id, type: "related" }),
     ]);
     expect(tasks.list()).toHaveLength(before);
@@ -7872,7 +7881,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     const step = tasks.byKey("FI3-1");
     expect(step?.repoId).toBe(archive.repo.id);
     // Where firstmate-3000-archive ran, as its Runs on placed the task before it started.
-    tasks.setDevice(step?.id as string, "mini-mac");
+    tasks.placement.setDevice(step?.id as string, "mini-mac");
 
     expect(await text("update_task", { task: "FI3-1", project: "INF" })).toBe(
       "Updated INF-1: moved to infinitary as INF-1.",
@@ -7956,7 +7965,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     const wait = queryTasks(tasks, { key: adr.id }, () => undefined).rows[0]?.waiting;
     expect(planned).toBe(`Planned ${adr.key} "Write the ADR" (task_id ${adr.id}) - ${wait}.`);
     expect(adr).toMatchObject({ status: "open", startPolicy: "on-request" });
-    expect(tasks.asksFor(adr?.id as string).map((ask) => ask.attachedVia)).toEqual([
+    expect(tasks.capture.asksFor(adr?.id as string).map((ask) => ask.attachedVia)).toEqual([
       "tool:create_task",
     ]);
     // The same turn's second plan is about the same ask; it lands there too.
@@ -7970,7 +7979,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     });
     const impl = tasks.byKey("SCR-2");
     expect(impl).toMatchObject({ parentId: adr?.id, startPolicy: "when-ready" });
-    expect(tasks.waitingOn(impl?.id as string).map((r) => r.key)).toEqual(["SCR-1"]);
+    expect(tasks.graph.waitingOn(impl?.id as string).map((r) => r.key)).toEqual(["SCR-1"]);
     expect(tasks.timeline(impl?.id as string).filter((e) => e.kind === "ask")).toHaveLength(1);
 
     // Refusals are text the agent reads, never thrown tool errors.
@@ -8024,7 +8033,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       { name: "race", values: ["skip"], changed: true },
     ];
     store.resolve("card-welcome-recovery", "agree", answers);
-    tasks.recordReport(adr?.id as string, { text: "Copy and race still unresolved." });
+    tasks.turns.recordReport(adr?.id as string, { text: "Copy and race still unresolved." });
     const recovered = await text("tasks", { key: "SCR-1" });
     const recoveredRow = readTaskQueryText(recovered)[0]!;
     expect(recoveredRow.resolution).toMatchObject({ action: "agree", answers });
@@ -8109,7 +8118,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       startPolicy: "when-ready",
       title: "Build it",
     });
-    expect(tasks.waitingOn(piece.id).map((row) => row.key)).toEqual(["SCR-1"]);
+    expect(tasks.graph.waitingOn(piece.id).map((row) => row.key)).toEqual(["SCR-1"]);
     // An empty declaration does not remove the link the update just added.
     expect(
       await text("update_task", {
@@ -8118,7 +8127,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
         goal: "The ADR is implemented",
       }),
     ).toMatch(/^Updated SCR-2: goal /);
-    expect(tasks.blockers(piece.id).map((row) => row.id)).toEqual([prerequisite.id]);
+    expect(tasks.graph.blockers(piece.id).map((row) => row.id)).toEqual([prerequisite.id]);
     // Ids and keys name the same prerequisite; duplicate references add nothing.
     expect(
       await text("update_task", {
@@ -8126,7 +8135,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
         blocked_by: [prerequisite.id, prerequisite.key.toLowerCase()],
       }),
     ).toBe("SCR-2 is unchanged.");
-    expect(tasks.blockers(piece.id).map((row) => row.id)).toEqual([prerequisite.id]);
+    expect(tasks.graph.blockers(piece.id).map((row) => row.id)).toEqual([prerequisite.id]);
     expect(
       await text("update_task", {
         task: prerequisite.key,
@@ -8138,7 +8147,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       title: "Write the ADR",
       startPolicy: "on-request",
     });
-    expect(tasks.blockers(prerequisite.id)).toEqual([]);
+    expect(tasks.graph.blockers(prerequisite.id)).toEqual([]);
     // Explicit independence keeps the existing automatic-start capability.
     expect(
       await text("update_task", {
@@ -8217,7 +8226,11 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     // The receipt describes filing, before the plan's immediate sweep starts work.
     const filed = filing.mock.results[0]?.value;
     if (!filed) throw new Error("The filing snapshot was not recorded");
-    const wait = queueWaitOf(filed, tasks.blockers(filed.id), tasks.linksTo(filed.id))?.line;
+    const wait = queueWaitOf(
+      filed,
+      tasks.graph.blockers(filed.id),
+      tasks.graph.linksTo(filed.id),
+    )?.line;
     expect(planned.content[0]?.text).toBe(
       `Planned ${record.key} "Fix the meter" (task_id ${record.id}) - ${wait}.`,
     );
@@ -8235,7 +8248,7 @@ describe("the idle ladder's standing line in the context block", () => {
     });
     const now = Date.now();
     // The ladder has acted on "stuck": idle 1 h 20 m, and two wakes went out.
-    tasks.recordRecovery("stuck", {
+    tasks.turns.recordRecovery("stuck", {
       rung: 2,
       count: 2,
       at: now - 30 * 60_000,
@@ -8354,7 +8367,7 @@ describe("FirstmateAgent provenance (R2)", () => {
     });
     expect([...record.disposition.tasks].sort()).toEqual(["t1", "t2"]);
     expect(record.disposition.asks).toEqual([
-      { id: tasks.listAsks()[0]?.id, taskId: "t2", via: "tool:interrupt_crewmate" },
+      { id: tasks.capture.listAsks()[0]?.id, taskId: "t2", via: "tool:interrupt_crewmate" },
     ]);
     // The interrupt the decision issued points back at it.
     const interrupted = tasks.timeline("t2").find((event) => event.kind === "interrupted");
@@ -8703,7 +8716,7 @@ describe("FirstmateAgent answer delivery", () => {
     f.session.resolveNextPrompt();
     await tick();
   };
-  const states = (f: Fixture) => f.tasks.listAsks().map((ask) => ask.delivery);
+  const states = (f: Fixture) => f.tasks.capture.listAsks().map((ask) => ask.delivery);
   const note = (id: string, title: string) => ({
     id,
     title,
@@ -8737,11 +8750,11 @@ describe("FirstmateAgent answer delivery", () => {
           store: new IntegrationSettingsStore(scratchDir("infinitary-agent-integrations-")),
           secrets: new FileIntegrationSecrets(scratchDir("infinitary-agent-integration-keys-")),
           asks: {
-            keep: (taskId, ask) => f.tasks.keepWriteAsk(taskId, ask),
+            keep: (taskId, ask) => f.tasks.delivery.keepWriteAsk(taskId, ask),
             keepForFirstmate: (ask) => supervisor.askIntegrationForFirstmate(ask),
-            take: (taskId, askId) => f.tasks.takeWriteAsk(taskId, askId),
+            take: (taskId, askId) => f.tasks.delivery.takeWriteAsk(taskId, askId),
             record: (taskId, askId, outcome) =>
-              f.tasks.recordWriteAskOutcome(taskId, askId, outcome),
+              f.tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
           },
         }),
     });
@@ -8762,7 +8775,9 @@ describe("FirstmateAgent answer delivery", () => {
       .cardsSnapshot()
       .find((shown) => shown.id.startsWith("integration-ask-"));
     expect(card).toBeDefined();
-    expect(f.tasks.listAsks()[0]?.taskId).toBe(f.tasks.openCardTaskFor(card?.id ?? "")?.id);
+    expect(f.tasks.capture.listAsks()[0]?.taskId).toBe(
+      f.tasks.capture.openCardTaskFor(card?.id ?? "")?.id,
+    );
   });
 
   it("counts a steer the app only saved for a held account as an action", async () => {
@@ -8860,7 +8875,7 @@ describe("FirstmateAgent answer delivery", () => {
     // The retry shows nothing either: one notice, and no second retry.
     await finish(f, "Still nothing.");
     await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
-    const ask = f.tasks.listAsks()[0];
+    const ask = f.tasks.capture.listAsks()[0];
     const notice = noticeOf(f);
     expect(notice).toMatchObject({
       id: `card-ask-${ask?.id}`,
@@ -8888,14 +8903,14 @@ describe("FirstmateAgent answer delivery", () => {
     await drained(f.session, 2);
     await finish(f);
     await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
-    const first = f.tasks.listAsks()[0];
+    const first = f.tasks.capture.listAsks()[0];
     const prompts = f.session.prompts.length;
 
     f.supervisor.act(`card-ask-${first?.id}`, "leave-it");
     await tick();
     expect(f.session.prompts).toHaveLength(prompts);
     expect(noticeOf(f)).toBeUndefined();
-    expect(f.tasks.getAsk(first?.id ?? "")?.delivery).toBe("unresolved");
+    expect(f.tasks.capture.getAsk(first?.id ?? "")?.delivery).toBe("unresolved");
 
     // Ask again on a second notice (the first is gone): a fresh turn, linked.
     const g = setup({
@@ -8910,11 +8925,11 @@ describe("FirstmateAgent answer delivery", () => {
     await drained(g.session, 2);
     await finish(g);
     await vi.waitFor(() => expect(noticeOf(g)).toBeDefined());
-    const original = g.tasks.listAsks()[0];
+    const original = g.tasks.capture.listAsks()[0];
     g.supervisor.act(`card-ask-${original?.id}`, "ask-again");
     await vi.waitFor(() => expect(g.session.prompts).toHaveLength(3));
     expect(g.session.prompts[2]).toContain("[user]\nis PR 58 merged?");
-    const again = g.tasks.listAsks().at(-1);
+    const again = g.tasks.capture.listAsks().at(-1);
     expect(again?.id).not.toBe(original?.id);
     expect(again).toMatchObject({
       text: "is PR 58 merged?",
@@ -8925,7 +8940,7 @@ describe("FirstmateAgent answer delivery", () => {
     });
     expect(noticeOf(g)).toBeUndefined();
     // The original stays unresolved, and is never retried or noticed again.
-    expect(g.tasks.getAsk(original?.id ?? "")?.delivery).toBe("unresolved");
+    expect(g.tasks.capture.getAsk(original?.id ?? "")?.delivery).toBe("unresolved");
   });
 
   // INF-2664, the captain's recorded case: they chose on the first mate's
@@ -8934,7 +8949,7 @@ describe("FirstmateAgent answer delivery", () => {
   it("counts a choice made before the reply finishes, and the card of work named for the message as its answer (INF-2664)", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("why is my mac mini having memory pressure warning?");
-    const ask = f.tasks.listAsks()[0];
+    const ask = f.tasks.capture.listAsks()[0];
     const shown = await toolsOf(f.specs)
       .get("emit_card")
       ?.execute("c1", {
@@ -8948,7 +8963,7 @@ describe("FirstmateAgent answer delivery", () => {
     const cardId = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
     // The captain's choice lands while the reply that showed the card still runs.
     f.supervisor.act(cardId, "find");
-    expect(f.tasks.getAsk(ask?.id ?? "")?.answerCardId).toBe(cardId);
+    expect(f.tasks.capture.getAsk(ask?.id ?? "")?.answerCardId).toBe(cardId);
     await finish(f, "Here is what I found.");
     await drained(f.session, 2);
     expect(retries(f)).toEqual([]);
@@ -8983,7 +8998,7 @@ describe("FirstmateAgent answer delivery", () => {
       ?.run({ text: "The indexer holds the memory.", summary: "Found the indexer." });
     const answer = f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "";
     f.supervisor.act(answer, "pause");
-    expect(f.tasks.getAsk(ask?.id ?? "")?.answerCardId).toBe(answer);
+    expect(f.tasks.capture.getAsk(ask?.id ?? "")?.answerCardId).toBe(answer);
     expect(retries(f)).toEqual([]);
     expect(noticeOf(f)).toBeUndefined();
   });
@@ -8998,7 +9013,7 @@ describe("FirstmateAgent answer delivery", () => {
     await drained(f.session, 2);
     await finish(f);
     await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
-    const ask = f.tasks.listAsks()[0];
+    const ask = f.tasks.capture.listAsks()[0];
     const notice = `card-ask-${ask?.id}`;
 
     // A later step names the message, its notice up, on the work it starts.
@@ -9038,7 +9053,7 @@ describe("FirstmateAgent answer delivery", () => {
       ?.run({ text: "PR 58 merged.", summary: "PR 58 merged." });
     expect(crewCard()?.awaiting).toBeUndefined();
     expect(noticeOf(f)).toBeUndefined();
-    expect(f.tasks.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
+    expect(f.tasks.capture.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
 
     // The approved minus rule preserves this unanswered decision and its coverage.
     const answerId = f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "";
@@ -9047,7 +9062,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.supervisor.cardsSnapshot().find((card) => card.id === answerId)).toMatchObject({
       minimized: true,
     });
-    expect(f.tasks.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
+    expect(f.tasks.capture.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
     expect(noticeOf(f)).toBeUndefined();
     // Notice retraction requires a genuinely absent answering card. Its author
     // withdraws the unanswered offer; no captain choice or receipt is invented.
@@ -9058,7 +9073,7 @@ describe("FirstmateAgent answer delivery", () => {
     );
     expect(f.supervisor.cardsSnapshot().some((card) => card.id === answerId)).toBe(false);
     await vi.waitFor(() => expect(noticeOf(f)?.id).toBe(notice));
-    expect(f.tasks.getAsk(ask?.id ?? "")).toMatchObject({
+    expect(f.tasks.capture.getAsk(ask?.id ?? "")).toMatchObject({
       delivery: "unresolved",
       noticeCardId: notice,
     });
@@ -9079,7 +9094,7 @@ describe("FirstmateAgent answer delivery", () => {
   it("says in close_card's answer when the close leaves an open message with no answering card (INF-2664)", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("what is two plus two?");
-    const ask = f.tasks.listAsks()[0];
+    const ask = f.tasks.capture.listAsks()[0];
     const tools = toolsOf(f.specs);
     const idOf = (shown: { content: { text?: string }[] } | undefined) =>
       shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
@@ -9107,7 +9122,7 @@ describe("FirstmateAgent answer delivery", () => {
     await drained(f.session, 2);
     await finish(f);
     await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
-    const ask = f.tasks.listAsks()[0];
+    const ask = f.tasks.capture.listAsks()[0];
 
     notifyProse(f.db, f.agent, "[fm-op] a crewmate reported on PR 58", "agent");
     await drained(f.session, 3);
@@ -9136,10 +9151,10 @@ describe("FirstmateAgent answer delivery", () => {
 
     // A newer message about that work joins the message's chain.
     await f.agent.converse({ text: "and did its checks pass?", taskId: work?.id ?? "" });
-    await vi.waitFor(() => expect(f.tasks.listAsks()).toHaveLength(2));
-    const newer = f.tasks.listAsks()[1];
+    await vi.waitFor(() => expect(f.tasks.capture.listAsks()).toHaveLength(2));
+    const newer = f.tasks.capture.listAsks()[1];
     await finish(f);
-    expect(f.tasks.getAsk(newer?.id ?? "")?.continues).toBe(ask?.id);
+    expect(f.tasks.capture.getAsk(newer?.id ?? "")?.continues).toBe(ask?.id);
 
     // The approved minus rule keeps this decision available to the newer message.
     const answerId = f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "";
@@ -9148,7 +9163,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.supervisor.cardsSnapshot().find((card) => card.id === answerId)).toMatchObject({
       minimized: true,
     });
-    expect(f.tasks.getAsk(newer?.id ?? "")?.delivery).toBe("covered");
+    expect(f.tasks.capture.getAsk(newer?.id ?? "")?.delivery).toBe("covered");
     expect(noticeOf(f)).toBeUndefined();
     // The author removes the unanswered offer, so the newer message now needs
     // its own retry, with its own words; the older notice is not substituted.
@@ -9158,13 +9173,15 @@ describe("FirstmateAgent answer delivery", () => {
       "Withdraw the unanswered offer",
     );
     expect(f.supervisor.cardsSnapshot().some((card) => card.id === answerId)).toBe(false);
-    await vi.waitFor(() => expect(f.tasks.getAsk(newer?.id ?? "")?.delivery).toBe("retrying"));
+    await vi.waitFor(() =>
+      expect(f.tasks.capture.getAsk(newer?.id ?? "")?.delivery).toBe("retrying"),
+    );
     const wakes = new InboxStore(f.db)
       .allFor(FIRSTMATE_RECIPIENT)
       .flatMap((row) => (row.facts?.kind === "answer-missing" ? [row.facts.askId] : []));
     expect(wakes).toEqual([newer?.id]);
     expect(noticeOf(f)).toBeUndefined();
-    expect(f.tasks.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
+    expect(f.tasks.capture.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
   });
 
   // INF-2664, found running the app: a decision card files its own task, which
@@ -9173,7 +9190,7 @@ describe("FirstmateAgent answer delivery", () => {
   it("says so in close_card's answer for a decision card closed in the step that showed it (INF-2664)", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("what is two plus two?");
-    const ask = f.tasks.listAsks()[0];
+    const ask = f.tasks.capture.listAsks()[0];
     const tools = toolsOf(f.specs);
     const shown = await tools.get("emit_card")?.execute("c1", {
       title: "Two plus two is four",
@@ -9198,17 +9215,17 @@ describe("FirstmateAgent answer delivery", () => {
   it("names in close_card's answer only the messages waiting on that card (INF-2664)", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("is PR 58 merged?");
-    const first = f.tasks.listAsks()[0];
+    const first = f.tasks.capture.listAsks()[0];
     const shown = await toolsOf(f.specs).get("emit_card")?.execute("c1", note("merged", "Merged"));
     const card = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
     await finish(f);
     // A newer message about the card's work joins the chain; the card came before it.
-    const work = f.tasks.getAsk(first?.id ?? "")?.taskId ?? "";
+    const work = f.tasks.capture.getAsk(first?.id ?? "")?.taskId ?? "";
     await f.agent.converse({ text: "and did its checks pass?", taskId: work });
     await drained(f.session, 2);
     await finish(f);
-    const newer = f.tasks.listAsks()[1];
-    expect(f.tasks.getAsk(newer?.id ?? "")?.continues).toBe(first?.id);
+    const newer = f.tasks.capture.listAsks()[1];
+    expect(f.tasks.capture.getAsk(newer?.id ?? "")?.continues).toBe(first?.id);
     const chain = f.supervisor.askEnding.chain(first?.id ?? "");
     expect(chain && f.supervisor.askEnding.state(chain).kind).not.toBe("waiting");
     notifyProse(f.db, f.agent, "[fm-op] a crewmate reported on PR 58", "agent");
@@ -9233,13 +9250,13 @@ describe("FirstmateAgent answer delivery", () => {
       await drained(f.session, 2);
       await finish(f);
       await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
-      const original = f.tasks.listAsks()[0];
+      const original = f.tasks.capture.listAsks()[0];
       expect(original?.attachments).toHaveLength(2);
 
       f.supervisor.act(`card-ask-${original?.id}`, "ask-again");
       await vi.waitFor(() => expect(f.session.prompts).toHaveLength(3));
       expect(f.session.promptImages[2]).toEqual(images);
-      const again = f.tasks.listAsks().at(-1);
+      const again = f.tasks.capture.listAsks().at(-1);
       expect(again).toMatchObject({ text, deliveryFacts: { retryOf: original?.id } });
       expect(
         again?.attachments?.map(({ name, mimeType, bytes, sha256 }) => ({
@@ -9281,7 +9298,7 @@ describe("FirstmateAgent answer delivery", () => {
       await drained(f.session, 2);
       await finish(f);
       await vi.waitFor(() => expect(noticeOf(f)).toBeDefined());
-      const original = f.tasks.listAsks()[0];
+      const original = f.tasks.capture.listAsks()[0];
       const attachment = original?.attachments?.[1] as AttachmentRef;
       if (condition === "missing") rmSync(attachmentPath(attachment));
       else writeFileSync(attachmentPath(attachment), Buffer.from(pngImage.data, "base64"));
@@ -9289,7 +9306,7 @@ describe("FirstmateAgent answer delivery", () => {
       f.supervisor.act(`card-ask-${original?.id}`, "ask-again");
       await tick();
       expect(f.session.prompts).toHaveLength(2);
-      expect(f.tasks.listAsks()).toHaveLength(1);
+      expect(f.tasks.capture.listAsks()).toHaveLength(1);
       expect(f.events).toContainEqual({
         type: "firstmate_note",
         text: expect.stringContaining('The picture "second.jpg" is not available'),
@@ -9305,7 +9322,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.session.steers).toHaveLength(1);
     await finish(f);
     await drained(f.session, 2);
-    const [first, second] = f.tasks.listAsks();
+    const [first, second] = f.tasks.capture.listAsks();
     expect(first?.delivery).toBe("covered");
     expect(second?.delivery).toBe("retrying");
     // The retry asks about the second message alone; the first, whose card is
@@ -9333,14 +9350,14 @@ describe("FirstmateAgent answer delivery", () => {
         | undefined;
     expect(open()?.asks).toEqual([
       expect.objectContaining({
-        ask_id: f.tasks.listAsks()[0]?.id,
+        ask_id: f.tasks.capture.listAsks()[0]?.id,
         state: "working",
         running: [`${task?.key}: Build personal panels in isolation`],
       }),
     ]);
-    const ask = f.tasks.listAsks()[0];
+    const ask = f.tasks.capture.listAsks()[0];
     f.tasks.close(task?.id ?? "", { status: "done", reason: "answered", actor: "host" });
-    f.tasks.markAnswered([ask?.id ?? ""], null);
+    f.tasks.capture.markAnswered([ask?.id ?? ""], null);
     expect(open()).toBeUndefined();
   });
 
@@ -9361,7 +9378,7 @@ describe("FirstmateAgent answer delivery", () => {
     await f.agent.converse("second question");
     await toolsOf(f.specs).get("emit_card")?.execute("c1", note("first", "First answer"));
     await finish(f);
-    const [first, second] = f.tasks.listAsks();
+    const [first, second] = f.tasks.capture.listAsks();
     expect(first?.delivery).toBe("covered");
     // Not judged, and the card shown after it was steered in never counted for it.
     expect(second).toMatchObject({ delivery: "pending", deliveryFacts: { entries: [] } });
@@ -9445,7 +9462,7 @@ describe("FirstmateAgent answer delivery", () => {
     await finish(f);
     expect(states(f)).toEqual(["covered", "pending"]);
     // Still open: the turn that serves it attaches it to the work it acts on.
-    expect(f.tasks.listAsks().map((ask) => ask.turnState)).toEqual(["closed", "open"]);
+    expect(f.tasks.capture.listAsks().map((ask) => ask.turnState)).toEqual(["closed", "open"]);
 
     // Its own turn serves it as the captain's words, and the steer lands.
     await drained(f.session, 3);
@@ -9456,7 +9473,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(steered?.content[0]?.text).not.toBe(ANSWER_ONLY_REFUSAL);
     await finish(f);
     expect(states(f)).toEqual(["covered", "covered"]);
-    expect(f.tasks.listAsks().at(-1)).toMatchObject({
+    expect(f.tasks.capture.listAsks().at(-1)).toMatchObject({
       turnState: "closed",
       taskId: "t1",
       attachedVia: "tool:steer_crewmate",
@@ -9471,7 +9488,7 @@ describe("FirstmateAgent answer delivery", () => {
     f.agent.pokeInbox();
     await tick();
     expect(f.session.prompts).toHaveLength(1);
-    expect(f.tasks.listAsks()).toEqual([]);
+    expect(f.tasks.capture.listAsks()).toEqual([]);
   });
 });
 
@@ -9502,7 +9519,7 @@ describe("FirstmateAgent emote", () => {
     f.session.resolveNextPrompt();
     await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
     expect(new CardStore(f.db).get("card-fm-turn-failure")).toBeUndefined();
-    expect(f.tasks.listAsks().map((ask) => ask.delivery)).toEqual(["covered"]);
+    expect(f.tasks.capture.listAsks().map((ask) => ask.delivery)).toEqual(["covered"]);
     f.agent.dispose();
     f.db.close();
   });
@@ -9561,7 +9578,7 @@ describe("FirstmateAgent reply line", () => {
   };
   /** The newest message and its reply line, without the round before it. */
   const newestRound = (f: Fixture) => {
-    const turn = f.tasks.lastTurn();
+    const turn = f.tasks.capture.lastTurn();
     return turn && { you: turn.you, reply: turn.reply };
   };
   /** The reply lines and busy signals, in the order the window hears them. */
@@ -9596,7 +9613,7 @@ describe("FirstmateAgent reply line", () => {
       expect(filed?.status).toBe("open");
       const words = `Filed ${filed?.key} for the panel build.`;
       await finish(f, closing === "closing" ? words : "");
-      expect(f.tasks.lastTurn()?.reply).toEqual({
+      expect(f.tasks.capture.lastTurn()?.reply).toEqual({
         text: closing === "closing" ? words : `Filed ${filed?.key}: ${title}`,
         eligibility: "completed",
       });
@@ -9639,7 +9656,7 @@ describe("FirstmateAgent reply line", () => {
           : action === "drop"
             ? `Dropped ${build?.key}: Panel build`
             : `${action === "link" ? "Linked" : "Unlinked"} ${build?.key} and ${check?.key}`;
-      expect(f.tasks.lastTurn()?.reply?.text).toBe(expected);
+      expect(f.tasks.capture.lastTurn()?.reply?.text).toBe(expected);
     },
   );
 
@@ -9679,7 +9696,7 @@ describe("FirstmateAgent reply line", () => {
         ...(action === "withdraw-without-approval" ? { withdraw_merge: true } : {}),
       });
     await finish(f);
-    expect(f.tasks.lastTurn()?.reply).toBeNull();
+    expect(f.tasks.capture.lastTurn()?.reply).toBeNull();
   });
 
   // INF-759, the captain's answer "a spark anyway, because its task changed".
@@ -9715,7 +9732,7 @@ describe("FirstmateAgent reply line", () => {
       deletes.push([channel, args, actor]);
       const [id] = args as [string];
       scheduler.cancel(id, { say: () => {} });
-      const row = f.tasks.fileOperation({
+      const row = f.tasks.capture.fileOperation({
         id: "cancel-1",
         title: "Schedule cancelled",
         outcome: "Schedule cancelled",
@@ -9732,7 +9749,7 @@ describe("FirstmateAgent reply line", () => {
       ?.execute("schedule", { prompt: "Check the panel", every_minutes: 30 });
     const schedule = store.list()[0];
     await finish(f);
-    expect(f.tasks.lastTurn()?.reply?.text).toBe("Scheduled: Check the panel");
+    expect(f.tasks.capture.lastTurn()?.reply?.text).toBe("Scheduled: Check the panel");
     // Each message still owes the captain its card: the retry shows it.
     const answerRetry = async (count: number) => {
       await drained(f.session, count);
@@ -9743,7 +9760,7 @@ describe("FirstmateAgent reply line", () => {
     await f.agent.converse("cancel that reminder");
     await tools.get("cancel_schedule")?.execute("cancel", { schedule_id: schedule?.id });
     await finish(f);
-    expect(f.tasks.lastTurn()?.reply?.text).toBe("Cancelled schedule: Check the panel");
+    expect(f.tasks.capture.lastTurn()?.reply?.text).toBe("Cancelled schedule: Check the panel");
     await answerRetry(4);
     expect(deletes).toEqual([
       [
@@ -9760,7 +9777,7 @@ describe("FirstmateAgent reply line", () => {
     await f.agent.converse("cancel it again");
     await tools.get("cancel_schedule")?.execute("noop", { schedule_id: schedule?.id });
     await finish(f);
-    expect(f.tasks.lastTurn()?.reply).toBeNull();
+    expect(f.tasks.capture.lastTurn()?.reply).toBeNull();
     expect(deletes).toHaveLength(1);
   });
 
@@ -9783,7 +9800,7 @@ describe("FirstmateAgent reply line", () => {
       }
       expect(f.tasks.list().find((task) => task.title === title)?.status).toBe("active");
       await finish(f);
-      expect(f.tasks.lastTurn()?.reply?.text).not.toBe(title);
+      expect(f.tasks.capture.lastTurn()?.reply?.text).not.toBe(title);
       expect(newestRound(f)).toEqual({
         you: words,
         reply: { text: `Started: ${title}`, eligibility: "completed" },
@@ -9802,7 +9819,7 @@ describe("FirstmateAgent reply line", () => {
       user_words: "start the release",
     });
     await finish(f, "Started the alpha's promotion.");
-    expect(f.tasks.lastTurn()?.reply).toEqual({
+    expect(f.tasks.capture.lastTurn()?.reply).toEqual({
       text: "Started the alpha's promotion.",
       eligibility: "completed",
     });
@@ -9853,7 +9870,7 @@ describe("FirstmateAgent reply line", () => {
     await finish(f, "PR 58 merged an hour ago.");
     await drained(f.session, 2);
     expect(newestRound(f)).toEqual({ you: "what is PR 58's state?", reply: null });
-    expect(f.tasks.listAsks().at(-1)?.delivery).toBe("retrying");
+    expect(f.tasks.capture.listAsks().at(-1)?.delivery).toBe("retrying");
   });
 
   it("shows the closing words of a reply under its own card on the line and in the thread", async () => {
@@ -9867,7 +9884,7 @@ describe("FirstmateAgent reply line", () => {
     f.supervisor.replyToCard(cardId, "why A?");
     await drained(f.session, 1);
     await finish(f, "A keeps the queue in order.");
-    expect(f.tasks.lastTurn()?.reply).toEqual({
+    expect(f.tasks.capture.lastTurn()?.reply).toEqual({
       text: "A keeps the queue in order.",
       eligibility: "completed",
     });
@@ -9901,7 +9918,7 @@ describe("FirstmateAgent reply line", () => {
     await tools.get("emit_card")?.execute("c1", note("alpha", "The alpha is cut"));
     await tools.get("emote")?.execute("e1", { emote: "salute" });
     await finish(f);
-    expect(f.tasks.lastTurn()?.reply).toEqual({
+    expect(f.tasks.capture.lastTurn()?.reply).toEqual({
       text: "The alpha is cut",
       eligibility: "completed",
     });
@@ -9936,7 +9953,7 @@ describe("FirstmateAgent reply line", () => {
     f.session.readSteers();
     await tools.get("emit_card")?.execute("answer", note("next", "The next task"));
     await finish(f);
-    expect(f.tasks.lastTurn()?.reply).toEqual({
+    expect(f.tasks.capture.lastTurn()?.reply).toEqual({
       text: "The next task",
       eligibility: "completed",
     });
@@ -9946,7 +9963,7 @@ describe("FirstmateAgent reply line", () => {
     await toolsOf(g.specs).get("emote")?.execute("first", { emote: "salute" });
     await toolsOf(g.specs).get("emit_card")?.execute("last", note("answer", "The latest answer"));
     await finish(g);
-    expect(g.tasks.lastTurn()?.reply).toEqual({
+    expect(g.tasks.capture.lastTurn()?.reply).toEqual({
       text: "The latest answer",
       eligibility: "completed",
     });
@@ -9961,7 +9978,7 @@ describe("FirstmateAgent reply line", () => {
     await drained(f.session, 2);
     expect(newestRound(f)).toEqual({ you: "second question", reply: null });
     expect(heard(f).filter((line) => line.startsWith("reply:"))).toEqual([]);
-    expect(f.tasks.listAsks().at(-1)?.delivery).toBe("retrying");
+    expect(f.tasks.capture.listAsks().at(-1)?.delivery).toBe("retrying");
   });
 
   it("keeps a late unread message open with no earlier turn's reply or task attachment", async () => {
@@ -9970,20 +9987,26 @@ describe("FirstmateAgent reply line", () => {
     await toolsOf(f.specs).get("emote")?.execute("old", { emote: "salute" });
     f.session.holdSteers();
     await f.agent.converse("late question");
-    const late = f.tasks.listAsks().at(-1);
+    const late = f.tasks.capture.listAsks().at(-1);
     // A tool in the earlier step still belongs to the first question.
     await toolsOf(f.specs).get("emit_card")?.execute("first", note("first", "First answer"));
-    expect(f.tasks.getAsk(late?.id ?? "")?.taskId).toBeNull();
+    expect(f.tasks.capture.getAsk(late?.id ?? "")?.taskId).toBeNull();
     await finish(f);
     await drained(f.session, 2);
-    expect(f.tasks.getAsk(late?.id ?? "")).toMatchObject({ turnState: "open", taskId: null });
+    expect(f.tasks.capture.getAsk(late?.id ?? "")).toMatchObject({
+      turnState: "open",
+      taskId: null,
+    });
     expect(newestRound(f)).toEqual({ you: "late question", reply: null });
     expect(heard(f).filter((line) => line.startsWith("reply:"))).toEqual([]);
     await toolsOf(f.specs).get("emit_card")?.execute("answer", note("late", "Late answer"));
     await finish(f);
-    expect(f.tasks.getAsk(late?.id ?? "")).toMatchObject({ turnState: "closed" });
-    expect(f.tasks.lastTurn()?.reply).toEqual({ text: "Late answer", eligibility: "completed" });
-    const attached = f.tasks.getAsk(late?.id ?? "")?.taskId;
+    expect(f.tasks.capture.getAsk(late?.id ?? "")).toMatchObject({ turnState: "closed" });
+    expect(f.tasks.capture.lastTurn()?.reply).toEqual({
+      text: "Late answer",
+      eligibility: "completed",
+    });
+    const attached = f.tasks.capture.getAsk(late?.id ?? "")?.taskId;
     expect(f.tasks.get(attached ?? "")).toMatchObject({
       title: "Late answer",
       outcome: "<p>Here is the answer.</p>",
@@ -9998,7 +10021,7 @@ describe("FirstmateAgent reply line", () => {
     await tick();
     const line = plainProblem(f.events.find((e) => e.type === "turn_failed")?.error);
     expect(heard(f)).toEqual(["busy:true", `reply:${line}:problem`, "busy:false"]);
-    expect(f.tasks.lastTurn()?.reply).toEqual({ text: line, problem: true });
+    expect(f.tasks.capture.lastTurn()?.reply).toEqual({ text: line, problem: true });
   });
 
   it("leaves the line alone for an operational wake, which answers nobody", async () => {
@@ -10017,7 +10040,7 @@ describe("FirstmateAgent reply line", () => {
       "busy:true",
       "busy:false",
     ]);
-    expect(f.tasks.lastTurn()?.reply).toEqual({
+    expect(f.tasks.capture.lastTurn()?.reply).toEqual({
       text: "The alpha is cut",
       eligibility: "completed",
     });
@@ -10079,7 +10102,7 @@ describe("FirstmateAgent with knowledge", () => {
 
   it("keeps a write that changed knowledge as the turn's fact, and still asks for the card that answers the message", async () => {
     const f = setup({ silent: true, knowledge: true });
-    const states = () => f.tasks.listAsks().map((ask) => ask.delivery);
+    const states = () => f.tasks.capture.listAsks().map((ask) => ask.delivery);
     await f.agent.converse("note that deploys happen on Tuesdays");
     const tools = toolsOf(f.specs);
     const call = {
@@ -10093,7 +10116,7 @@ describe("FirstmateAgent with knowledge", () => {
     await finish(f);
     // The write took effect and is the turn's reply line, but a message is
     // answered on a card (docs/task-capture.md "How a message ends").
-    expect(f.tasks.listAsks()[0]?.deliveryFacts.entries).toMatchObject([
+    expect(f.tasks.capture.listAsks()[0]?.deliveryFacts.entries).toMatchObject([
       { outcome: "action", kind: "record", tool: "record_knowledge" },
     ]);
     expect(states()).toEqual(["retrying"]);
@@ -10859,12 +10882,12 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     });
     const count = OPEN_ASKS_LISTED + 2;
     for (let index = 0; index < count; index += 1) {
-      tasks.openAsk({
+      tasks.capture.openAsk({
         id: `ask-${index}`,
         text: `Message ${index}: ${"keep the meter steady ".repeat(40)}`,
       });
-      tasks.attachAsk(`ask-${index}`, "t1", "tool:steer_crewmate");
-      tasks.closeAsk(`ask-${index}`, "closed");
+      tasks.capture.attachAsk(`ask-${index}`, "t1", "tool:steer_crewmate");
+      tasks.capture.closeAsk(`ask-${index}`, "closed");
     }
     const loose = supervisor.addFirstmateCard({
       title: "A note of mine",
@@ -10951,7 +10974,7 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     // INF-1746 R5: a read past one part comes in parts of one version, and
     // a part of a version that changed since is refused, never stitched.
     const words = "steady ".repeat(20_000);
-    tasks.openAsk({ id: "ask-long", text: words });
+    tasks.capture.openAsk({ id: "ask-long", text: words });
     const parts: string[] = [];
     let next: string | undefined;
     do {
@@ -10962,7 +10985,7 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     expect(parts.length).toBeGreaterThan(1);
     expect(JSON.parse(parts.join("")).messages[0].words).toBe(words);
     const first = textOf(await read?.execute("q", { ask: "ask-long" }));
-    tasks.attachAsk("ask-long", "t1", "tool:steer_crewmate");
+    tasks.capture.attachAsk("ask-long", "t1", "tool:steer_crewmate");
     const stale = textOf(
       await read?.execute("r", { next: first.match(/with next "([^"]+)"/)?.[1] ?? "" }),
     );

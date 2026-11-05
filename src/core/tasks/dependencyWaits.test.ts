@@ -3,7 +3,8 @@ import { freshDatabase } from "../../../tests/helpers/database";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { declareCheckAction } from "../orchestrator/checkRepair";
 import { standingDependencyWaits } from "./dependencyWaits";
-import { TaskGraphRefusal, TaskService } from "./taskService";
+import { TaskGraphRefusal } from "./taskGraph";
+import { TaskService } from "./taskService";
 
 // Reproduction of reciprocal baseline waits and mixed ordinary/baseline loops.
 function setup() {
@@ -35,7 +36,7 @@ function setup() {
   const path = (...ids: string[]) => ids.map((id) => tasks.get(id)?.key).join(" → ");
   const state = () => ({
     tasks: tasks.list(),
-    links: tasks.allLinks(),
+    links: tasks.graph.allLinks(),
     events: tasks.list().map((task) => tasks.timeline(task.id)),
   });
   return { db, tasks, diagnose, path, state };
@@ -148,7 +149,7 @@ describe("refusing newly accepted circular waits", () => {
   it("refuses a baseline wait that closes an ordinary-blocker loop", () => {
     const { db, tasks, diagnose, path, state } = setup();
     try {
-      tasks.link("b", "a", "blocks", "firstmate");
+      tasks.graph.link("b", "a", "blocks", "firstmate");
       const before = state();
       expect(diagnose("b", "a").text).toContain(path("b", "a", "b"));
       expect(state()).toEqual(before);
@@ -162,8 +163,8 @@ describe("refusing newly accepted circular waits", () => {
     try {
       expect(diagnose("a", "b").text).toContain("Diagnosis recorded");
       const before = state();
-      expect(() => tasks.link("a", "b", "blocks", "firstmate")).toThrow(TaskGraphRefusal);
-      expect(() => tasks.link("a", "b", "blocks", "firstmate")).toThrow(path("b", "a", "b"));
+      expect(() => tasks.graph.link("a", "b", "blocks", "firstmate")).toThrow(TaskGraphRefusal);
+      expect(() => tasks.graph.link("a", "b", "blocks", "firstmate")).toThrow(path("b", "a", "b"));
       expect(state()).toEqual(before);
     } finally {
       db.close();

@@ -528,7 +528,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
         `POST ${project}/merge_requests`,
       ]);
       // Each upload is the exact retained file, served back from the address GitLab named.
-      const story = at.tasks.changePresentation(TASK)?.revisions.at(-1);
+      const story = at.tasks.delivery.changePresentation(TASK)?.revisions.at(-1);
       if (!story) throw new Error("The prepared story is missing");
       const uploads = at.gitlab.uploads();
       expect(uploads.map((upload) => upload.filename)).toEqual([
@@ -597,7 +597,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       expect(description).toBe(opened.body);
       expect(description.startsWith("Closes #24\n\n")).toBe(true);
       expect(description.split("\n\n")).toContain("\\/merge");
-      expect(at.tasks.changePresentation(TASK)).toMatchObject({
+      expect(at.tasks.delivery.changePresentation(TASK)).toMatchObject({
         publication: { state: "confirmed", revision },
         published: { state: "confirmed", revision, number: 1 },
       });
@@ -641,7 +641,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       await expect(open()).rejects.toThrow(/may already exist on GitLab/);
       expect(at.gitlab.uploads()).toHaveLength(1);
       expect(at.gitlab.descriptions().size).toBe(0);
-      const uncertain = at.tasks
+      const uncertain = at.tasks.delivery
         .changePresentation(TASK)
         ?.receipts.find((receipt) => receipt.state === "uncertain");
       if (!uncertain) throw new Error("The lost upload is not kept as uncertain");
@@ -657,7 +657,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       // The deliberate retry sent that file once more; the possible orphan stays on its receipt.
       expect(at.gitlab.uploads()).toHaveLength(4);
       expect(
-        at.tasks
+        at.tasks.delivery
           .changePresentation(TASK)
           ?.receipts.find((receipt) => receipt.digest === uncertain.digest),
       ).toMatchObject({ state: "confirmed", possibleOrphan: true });
@@ -721,7 +721,7 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
       expect(description.split(start)).toHaveLength(2);
       expect(description.split(end)).toHaveLength(2);
       expect(description).toContain("The pipeline passed for this version\\.");
-      expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(second);
+      expect(at.tasks.delivery.changePresentation(TASK)?.published?.revision).toBe(second);
       expect(description).not.toContain("Story ");
 
       const change = await at.forge.changeFor(STORY_BRANCH);

@@ -19,7 +19,7 @@ describe("approved desktop task wait projection", () => {
         startPolicy: "on-request",
       });
       seedTask(tasks, { id: "work", title: "Publish the website", status: "completed" });
-      tasks.recordReport("work", {
+      tasks.turns.recordReport("work", {
         text: "Waiting for the website build.",
         declared: { checkBack: { minutes: 5, waitingFor: "Website build" } },
       });
@@ -61,7 +61,7 @@ describe("approved desktop task wait projection", () => {
     try {
       const tasks = new TaskService({ db, strict: true, now: () => 1_000_000 });
       seedTask(tasks, { id: "work", title: "Wait for the build", status: "completed" });
-      tasks.recordReport("work", {
+      tasks.turns.recordReport("work", {
         text: "Look again later.",
         declared: { checkBack: { minutes: 5, waitingFor: "Build" } },
       });
@@ -78,7 +78,7 @@ describe("approved desktop task wait projection", () => {
           facts: { job: false, timerOwned: false },
         });
       expect(project()).toEqual([]);
-      tasks.setGate("work", null);
+      tasks.placement.setGate("work", null);
       expect(project()).toEqual([]);
       const job = taskWaitsOf({
         record: mustTask(tasks, "work"),
@@ -88,7 +88,7 @@ describe("approved desktop task wait projection", () => {
         facts: { job: true, timerOwned: false },
       });
       expect(job).toEqual([{ id: "job", kind: "job", label: "Background work" }]);
-      tasks.setGate("work", { kind: "captain" });
+      tasks.placement.setGate("work", { kind: "captain" });
       seedDelivery(tasks, "work", { captainWait: { at: 1000000, reason: "Review the build" } });
       const active = taskWaitsOf({
         record: mustTask(tasks, "work"),
@@ -134,25 +134,25 @@ describe("approved desktop task wait projection", () => {
       // INF-2215 retains each source's recorded-since time, never a creation-time guess.
       expect(project().find((wait) => wait.kind === "backlog")?.since).toBeUndefined();
       now = 1_010_000;
-      expect(tasks.setQueued("work", "queue-task", { actor: "captain" })).toEqual({
+      expect(tasks.starts.setQueued("work", "queue-task", { actor: "captain" })).toEqual({
         ok: true,
         changed: true,
       });
       const policyAt = 1_020_000;
       now = policyAt;
-      expect(tasks.setQueued("work", "unqueue-task", { actor: "captain" })).toEqual({
+      expect(tasks.starts.setQueued("work", "unqueue-task", { actor: "captain" })).toEqual({
         ok: true,
         changed: true,
       });
       expect(project().find((wait) => wait.kind === "backlog")?.since).toBe(policyAt);
-      tasks.setGate("work", { kind: "quota-reset", ref: "openai-codex" });
+      tasks.placement.setGate("work", { kind: "quota-reset", ref: "openai-codex" });
       expect(project().find((wait) => wait.kind === "allowance")?.next).toBeUndefined();
       seedTask(tasks, { id: "parked", title: "Keep the website work", status: "completed" });
-      tasks.recordReport("parked", {
+      tasks.turns.recordReport("parked", {
         text: "The build continues.",
         declared: { checkBack: { minutes: 5, waitingFor: "Website build" } },
       });
-      tasks.setQueued("parked", "unqueue-task", { actor: "captain" });
+      tasks.starts.setQueued("parked", "unqueue-task", { actor: "captain" });
       const parked = taskWaitsOf({
         record: mustTask(tasks, "parked"),
         holding: [],
@@ -194,7 +194,7 @@ it("publishes fresh dependency waits from the cached graph and retains untouched
     });
     seedTask(tasks, { id: "work", title: "Publish website", status: "completed" });
     seedTask(tasks, { id: "other", title: "Read release notes", status: "completed" });
-    tasks.link("owner", "work", "blocks", "crewmate", true);
+    tasks.graph.link("owner", "work", "blocks", "crewmate", true);
     const first = protocol.board();
     const kept = first.tasks.find((row) => row.id === "other");
     expect(first.tasks.find((row) => row.id === "work")?.waits?.[0]?.kind).toBe("dependency");

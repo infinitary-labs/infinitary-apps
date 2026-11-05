@@ -106,11 +106,11 @@ export class KeptApproval {
     if (minted) {
       // The approved review is the task's current change from the click on (INF-2490).
       const own = minted.review?.branch === record.branch;
-      this.host.tasks.recordPermissionRecords(taskId, {
+      this.host.tasks.delivery.recordPermissionRecords(taskId, {
         mergeAuthorization: minted,
         ...(minted.review && !own ? { checkTarget: minted.review } : {}),
       });
-      if (minted.review && own) this.host.tasks.selectOwnChange(taskId, minted.review);
+      if (minted.review && own) this.host.tasks.delivery.selectOwnChange(taskId, minted.review);
       this.host.tasks.note(
         taskId,
         `The captain approved merging ${changeName(record, minted.target.prNumber)} at ${minted.approvedHead}.`,
@@ -200,7 +200,7 @@ export class KeptApproval {
     const record = this.host.tasks.get(taskId);
     const authorization = standingAuthorization(record?.delivery);
     if (!record || !authorization) return;
-    this.host.tasks.recordPermissionRecords(taskId, {
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
       mergeAuthorization: { ...authorization, ...patch },
     });
   }
@@ -210,7 +210,7 @@ export class KeptApproval {
     const now = this.host.now();
     const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
     if (!authorization) return;
-    this.host.tasks.recordPermissionRecords(taskId, {
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
       mergeAuthorization: endedAuthorization(authorization, {
         status: "consumed",
         endedAt: now,
@@ -244,7 +244,7 @@ export class KeptApproval {
     const record = this.host.tasks.get(taskId);
     const authorization = standingAuthorization(record?.delivery);
     if (!record || !authorization) return false;
-    this.host.tasks.recordPermissionRecords(taskId, {
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
       mergeAuthorization: endedAuthorization(authorization, {
         status,
         reason: why,
@@ -288,7 +288,7 @@ export class KeptApproval {
     const before = authorization.guidance ?? { latest: 0, declared: 0, at: now };
     const mark = before.latest + 1;
     const began = outstandingGuidance(authorization) === undefined;
-    this.host.tasks.recordPermissionRecords(taskId, {
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
       mergeAuthorization: { ...authorization, guidance: { ...before, latest: mark, at: now } },
     });
     this.host.tasks.note(
@@ -349,7 +349,7 @@ export class KeptApproval {
           return "a new completion card is up";
         }
         if (mark) return undefined;
-        this.host.tasks.recordPermissionRecords(taskId, {
+        this.host.tasks.delivery.recordPermissionRecords(taskId, {
           mergeAuthorization: {
             ...now,
             attempt: { token: randomUUID(), head: dispatchHead, at: this.host.now() },
@@ -398,7 +398,7 @@ export class KeptApproval {
     const changed = current.waiting?.on !== wait || current.waiting.head !== head;
     const retries = changed ? 0 : (current.retries ?? 0) + 1;
     const retryAt = retryAfter(wait, retries, now);
-    this.host.tasks.recordPermissionRecords(taskId, {
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
       mergeAuthorization: {
         ...current,
         waiting: { on: wait, head, at: now },
@@ -511,7 +511,7 @@ export class KeptApproval {
         return;
       }
       const delivery = this.host.tasks.get(taskId)?.delivery;
-      this.host.tasks.recordApprovedChangeReading(taskId, {
+      this.host.tasks.delivery.recordApprovedChangeReading(taskId, {
         mergeAuthorization: { ...current, changeReading: reading },
         versionReadings: { ...delivery?.versionReadings, [authorization.approvedHead]: reading },
       });
@@ -528,7 +528,7 @@ export class KeptApproval {
     const now = this.host.now();
     const changed = current.waiting?.on !== wait || current.waiting.head !== head;
     const retries = changed ? 0 : (current.retries ?? 0) + 1;
-    this.host.tasks.recordPermissionRecords(taskId, {
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
       mergeAuthorization: {
         ...current,
         waiting: { on: wait, head, at: now },

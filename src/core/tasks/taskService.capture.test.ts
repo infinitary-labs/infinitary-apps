@@ -24,37 +24,37 @@ describe("TaskService capture", () => {
     const { tasks, tick } = setup();
     seedTask(tasks, { id: "t1", title: "Add pagination", status: "running" });
     seedTask(tasks, { id: "t2", title: "Fix the meter", status: "running" });
-    tasks.openAsk({ id: "askA", text: "add pagination", images: [] });
-    tasks.attachAsk("askA", "t1", "tool:spawn_crewmate");
+    tasks.capture.openAsk({ id: "askA", text: "add pagination", images: [] });
+    tasks.capture.attachAsk("askA", "t1", "tool:spawn_crewmate");
     tick();
-    tasks.openAsk({ id: "askB", text: "fix the meter", images: [] });
-    tasks.attachAsk("askB", "t2", "tool:spawn_crewmate");
+    tasks.capture.openAsk({ id: "askB", text: "fix the meter", images: [] });
+    tasks.capture.attachAsk("askB", "t2", "tool:spawn_crewmate");
     tick();
     // A message first attached to askA's work joins it.
-    tasks.openAsk({ id: "askC", text: "and the page size?", images: [] });
-    tasks.attachAsk("askC", "t1", "host:fallback");
-    expect(tasks.getAsk("askC")?.continues).toBe("askA");
+    tasks.capture.openAsk({ id: "askC", text: "and the page size?", images: [] });
+    tasks.capture.attachAsk("askC", "t1", "host:fallback");
+    expect(tasks.capture.getAsk("askC")?.continues).toBe("askA");
     tick();
     // askB named later on askA's work stays the root of its own chain.
-    expect(tasks.attachAsk("askB", "t1", "tool:create_task")).toBe(true);
-    expect(tasks.getAsk("askB")?.continues).toBeNull();
+    expect(tasks.capture.attachAsk("askB", "t1", "tool:create_task")).toBe(true);
+    expect(tasks.capture.getAsk("askB")?.continues).toBeNull();
   });
 
   it("opens an ask, attaches it once per task with an ask event, and closes it", () => {
     const { tasks, tick } = setup();
     seedTask(tasks, { id: "t1", title: "Add pagination", status: "running" });
-    const ask = tasks.openAsk({
+    const ask = tasks.capture.openAsk({
       id: "ask1",
       text: "how is it going?",
       images: [{ mimeType: "image/png" }],
       hintTaskId: "t1",
     });
     expect(ask.turnState).toBe("open");
-    expect(tasks.listOpenAsks().map((row) => row.id)).toEqual(["ask1"]);
+    expect(tasks.capture.listOpenAsks().map((row) => row.id)).toEqual(["ask1"]);
     tick();
-    expect(tasks.attachAsk("ask1", "t1", "tool:emit_card")).toBe(true);
-    expect(tasks.attachAsk("ask1", "t1", "tool:steer_crewmate")).toBe(false);
-    const stored = tasks.getAsk("ask1");
+    expect(tasks.capture.attachAsk("ask1", "t1", "tool:emit_card")).toBe(true);
+    expect(tasks.capture.attachAsk("ask1", "t1", "tool:steer_crewmate")).toBe(false);
+    const stored = tasks.capture.getAsk("ask1");
     expect(stored?.taskId).toBe("t1");
     expect(stored?.attachedVia).toBe("tool:emit_card");
     expect(stored?.attachedAt).toBe(1_001);
@@ -64,11 +64,13 @@ describe("TaskService capture", () => {
     expect(events[0]?.actor).toBe("captain");
     expect(events[0]?.data).toMatchObject({ askId: "ask1", via: "tool:emit_card", first: true });
     expect(events[0]?.feed).toBe(false);
-    expect(tasks.asksFor("t1").map((row) => row.id)).toEqual(["ask1"]);
-    expect(tasks.closeAsk("ask1", "closed")?.turnState).toBe("closed");
-    expect(tasks.listOpenAsks()).toEqual([]);
-    expect(() => tasks.attachAsk("missing", "t1", "host:fallback")).toThrow(/Unknown ask/);
-    expect(() => tasks.attachAsk("ask1", "missing", "host:fallback")).toThrow(/Unknown task/);
+    expect(tasks.capture.asksFor("t1").map((row) => row.id)).toEqual(["ask1"]);
+    expect(tasks.capture.closeAsk("ask1", "closed")?.turnState).toBe("closed");
+    expect(tasks.capture.listOpenAsks()).toEqual([]);
+    expect(() => tasks.capture.attachAsk("missing", "t1", "host:fallback")).toThrow(/Unknown ask/);
+    expect(() => tasks.capture.attachAsk("ask1", "missing", "host:fallback")).toThrow(
+      /Unknown task/,
+    );
   });
 
   // INF-1610: every card about one of the captain's messages shows that
@@ -76,16 +78,16 @@ describe("TaskService capture", () => {
   it("finds the captain's message a task's cards are about through the task graph", () => {
     const { tasks, tick } = setup();
     const said = (id: string, text: string, taskId: string) => {
-      tasks.openAsk({ id, text });
+      tasks.capture.openAsk({ id, text });
       tick();
-      tasks.attachAsk(id, taskId, "tool:spawn_crewmate");
+      tasks.capture.attachAsk(id, taskId, "tool:spawn_crewmate");
       tick();
     };
     const fix = seedTask(tasks, { id: "fix", title: "Fix the footer", status: "running" });
     said("ask-fix", "the footer overlaps the composer on small windows", fix.id);
     said("ask-later", "how is the footer going?", fix.id);
     const quoted = (id: string) => {
-      const line = tasks.originAbout(id);
+      const line = tasks.capture.originAbout(id);
       return line && "text" in line ? line.text : undefined;
     };
     expect(quoted(fix.id)).toBe("the footer overlaps the composer on small windows");
@@ -123,12 +125,12 @@ describe("TaskService capture", () => {
     expect(quoted(retry.id)).toBe("the footer overlaps the composer on small windows");
     const fresh = seedTask(tasks, { id: "fresh", title: "Fix the footer anew", status: "queued" });
     said("ask-move", "start over on a new branch", fresh.id);
-    tasks.link(fix.id, fresh.id, "replaced-by", "firstmate");
+    tasks.graph.link(fix.id, fresh.id, "replaced-by", "firstmate");
     expect(quoted(fresh.id)).toBe("the footer overlaps the composer on small windows");
     // Work no message reached has none.
     const chore = seedTask(tasks, { id: "chore", title: "Rotate the logs", status: "queued" });
-    expect(tasks.originAbout(chore.id)).toBeUndefined();
-    expect(tasks.originAbout("missing")).toBeUndefined();
+    expect(tasks.capture.originAbout(chore.id)).toBeUndefined();
+    expect(tasks.capture.originAbout("missing")).toBeUndefined();
   });
 
   it("keeps a message's picture copies on its ask, and a task's pictures are those of every message attached to it", () => {
@@ -144,32 +146,32 @@ describe("TaskService capture", () => {
       sha256: String(n).repeat(64),
       file: `message-${n}/1-abc.png`,
     });
-    tasks.openAsk({
+    tasks.capture.openAsk({
       id: "ask1",
       text: "this dialog and this footer",
       images: [{ mimeType: "image/png" }, { mimeType: "image/png" }],
       attachments: [ref(1), ref(2)],
     });
-    tasks.openAsk({ id: "ask2", text: "and this", attachments: [ref(3)] });
-    tasks.openAsk({ id: "ask3", text: "no picture here" });
+    tasks.capture.openAsk({ id: "ask2", text: "and this", attachments: [ref(3)] });
+    tasks.capture.openAsk({ id: "ask3", text: "no picture here" });
     // The copies survive the row: read back as they were written.
-    expect(tasks.getAsk("ask1")?.attachments).toEqual([ref(1), ref(2)]);
-    expect(tasks.getAsk("ask1")?.images).toEqual([
+    expect(tasks.capture.getAsk("ask1")?.attachments).toEqual([ref(1), ref(2)]);
+    expect(tasks.capture.getAsk("ask1")?.images).toEqual([
       { mimeType: "image/png" },
       { mimeType: "image/png" },
     ]);
     // One message about two tasks lands its pictures on both; a later one adds its own.
-    tasks.attachAsk("ask1", "t1", "tool:create_task");
-    tasks.attachAsk("ask1", "t2", "tool:create_task");
-    tasks.attachAsk("ask2", "t1", "tool:update_task");
-    tasks.attachAsk("ask3", "t1", "tool:update_task");
-    expect(tasks.pictures("t1")).toEqual([ref(1), ref(2), ref(3)]);
-    expect(tasks.pictures("t2")).toEqual([ref(1), ref(2)]);
+    tasks.capture.attachAsk("ask1", "t1", "tool:create_task");
+    tasks.capture.attachAsk("ask1", "t2", "tool:create_task");
+    tasks.capture.attachAsk("ask2", "t1", "tool:update_task");
+    tasks.capture.attachAsk("ask3", "t1", "tool:update_task");
+    expect(tasks.capture.pictures("t1")).toEqual([ref(1), ref(2), ref(3)]);
+    expect(tasks.capture.pictures("t2")).toEqual([ref(1), ref(2)]);
     // A row an older build saved holds the shapes alone: it has no copies.
     db.prepare(
       "INSERT INTO captain_asks (id, at, text, images_json, turn_state) VALUES ('old', 1, 'before', ?, 'closed')",
     ).run(JSON.stringify([{ mimeType: "image/jpeg" }]));
-    expect(tasks.getAsk("old")).toMatchObject({
+    expect(tasks.capture.getAsk("old")).toMatchObject({
       images: [{ mimeType: "image/jpeg" }],
       attachments: [],
     });
@@ -177,7 +179,7 @@ describe("TaskService capture", () => {
 
   it("files a question task born closed, with its card and answer on record", () => {
     const { tasks } = setup();
-    const question = tasks.fileQuestion({
+    const question = tasks.capture.fileQuestion({
       id: "q1",
       title: "The port flag",
       outcome: "<p>It picks the port.</p>",
@@ -200,10 +202,10 @@ describe("TaskService capture", () => {
       "card_raised",
       "status",
     ]);
-    expect(tasks.taskForCard("card-fm-1")?.id).toBe("q1");
-    expect(tasks.taskForCard("card-fm-none")).toBeUndefined();
+    expect(tasks.capture.taskForCard("card-fm-1")?.id).toBe("q1");
+    expect(tasks.capture.taskForCard("card-fm-none")).toBeUndefined();
     // A host fallback carries its provenance and may have no answer text.
-    const fallback = tasks.fileQuestion({
+    const fallback = tasks.capture.fileQuestion({
       id: "q2",
       title: "hello",
       outcome: null,
@@ -223,7 +225,7 @@ describe("TaskService capture", () => {
       "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES ('r1', '/fleet/api', 'api', 1, 'adopt', NULL, 'local-only', 0)",
     ).run();
     tasks.projects.ensureForRepo({ id: "r1", name: "api" });
-    const operation = tasks.fileOperation({
+    const operation = tasks.capture.fileOperation({
       id: "o1",
       title: "Configured repository api",
       outcome: "api now ships direct-pr with autonomy on.",
@@ -243,14 +245,18 @@ describe("TaskService capture", () => {
     expect(status?.text).toBe("settled by configure_repo");
     // No repo: Scratch.
     expect(
-      tasks.fileOperation({ id: "o2", title: "Noted x", outcome: "Noted.", tool: "remember" })
-        .projectId,
+      tasks.capture.fileOperation({
+        id: "o2",
+        title: "Noted x",
+        outcome: "Noted.",
+        tool: "remember",
+      }).projectId,
     ).toBe("scratch");
   });
 
   it("files a decision task open on a captain gate keyed by its card, found by that card", () => {
     const { tasks } = setup();
-    const decision = tasks.fileDecision({
+    const decision = tasks.capture.fileDecision({
       id: "d1",
       title: "Ship now or wait",
       cardId: "card-fm-9",
@@ -261,21 +267,33 @@ describe("TaskService capture", () => {
       gate: { kind: "captain", ref: "card-fm-9" },
       projectId: "scratch",
     });
-    expect(tasks.openDecisionFor("card-fm-9")?.id).toBe("d1");
-    expect(tasks.openDecisionFor("card-fm-other")).toBeUndefined();
+    expect(tasks.capture.openDecisionFor("card-fm-9")?.id).toBe("d1");
+    expect(tasks.capture.openDecisionFor("card-fm-other")).toBeUndefined();
     const raised = tasks.timeline("d1").find((event) => event.kind === "card_raised");
     expect(raised?.ref).toBe("card-fm-9");
     expect(raised?.data).toMatchObject({ cardId: "card-fm-9", kind: "decision" });
     tasks.close("d1", { status: "done", reason: "answered", actor: "captain", text: 'chose "A"' });
-    expect(tasks.openDecisionFor("card-fm-9")).toBeUndefined();
+    expect(tasks.capture.openDecisionFor("card-fm-9")).toBeUndefined();
   });
 
   it("records answers and card raise/resolve on an existing task's timeline", () => {
     const { tasks } = setup();
     seedTask(tasks, { id: "t1", title: "Add pagination", status: "idle" });
-    tasks.recordAnswer("t1", { cardId: "card-fm-2", title: "Under way", body: "<p>Step 2.</p>" });
-    tasks.recordCardRaised("t1", { cardId: "card-fm-3", kind: "decision", title: "Settle it?" });
-    tasks.recordCardResolved("t1", { cardId: "card-fm-3", title: "Settle it?", action: "keep" });
+    tasks.capture.recordAnswer("t1", {
+      cardId: "card-fm-2",
+      title: "Under way",
+      body: "<p>Step 2.</p>",
+    });
+    tasks.capture.recordCardRaised("t1", {
+      cardId: "card-fm-3",
+      kind: "decision",
+      title: "Settle it?",
+    });
+    tasks.capture.recordCardResolved("t1", {
+      cardId: "card-fm-3",
+      title: "Settle it?",
+      action: "keep",
+    });
     const kinds = tasks.timeline("t1").map((event) => `${event.kind}:${event.ref ?? ""}`);
     expect(kinds).toEqual([
       "created:",
@@ -288,7 +306,7 @@ describe("TaskService capture", () => {
     expect(answered?.data).toEqual({ cardId: "card-fm-2", body: "<p>Step 2.</p>" });
     expect(tasks.get("t1")?.outcome).toBeNull();
     // A revised standalone answer also becomes the record's outcome.
-    tasks.recordAnswer("t1", {
+    tasks.capture.recordAnswer("t1", {
       cardId: "card-fm-2",
       title: "Under way",
       body: "<p>Step 3.</p>",
@@ -297,17 +315,17 @@ describe("TaskService capture", () => {
     expect(tasks.get("t1")?.outcome).toBe("<p>Step 3.</p>");
     // Records on a task that is gone are dropped, never thrown.
     expect(() =>
-      tasks.recordCardResolved("nope", { cardId: "c", title: "t", action: "a" }),
+      tasks.capture.recordCardResolved("nope", { cardId: "c", title: "t", action: "a" }),
     ).not.toThrow();
   });
 
   it("the purge clears asks with everything else", () => {
     const { tasks } = setup();
-    tasks.openAsk({ id: "ask1", text: "hi" });
-    tasks.fileQuestion({ id: "q1", title: "hi", outcome: "hello" });
-    tasks.attachAsk("ask1", "q1", "host:fallback");
-    expect(tasks.purge()).toBe(1);
-    expect(tasks.listAsks()).toEqual([]);
+    tasks.capture.openAsk({ id: "ask1", text: "hi" });
+    tasks.capture.fileQuestion({ id: "q1", title: "hi", outcome: "hello" });
+    tasks.capture.attachAsk("ask1", "q1", "host:fallback");
+    expect(tasks.archive.purge()).toBe(1);
+    expect(tasks.capture.listAsks()).toEqual([]);
     expect(tasks.list()).toEqual([]);
   });
 });

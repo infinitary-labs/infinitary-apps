@@ -52,10 +52,10 @@ for (const kind of ["question", "operation"] as const) {
     };
     const task =
       kind === "question"
-        ? tasks.fileQuestion(input)
-        : tasks.fileOperation({ ...input, tool: "archive_task" });
+        ? tasks.capture.fileQuestion(input)
+        : tasks.capture.fileOperation({ ...input, tool: "archive_task" });
     if (kind === "operation")
-      tasks.fileQuestion({
+      tasks.capture.fileQuestion({
         id: "navigation",
         title: "Where can I find completed work?",
         outcome: "Tasks search includes completed work.",

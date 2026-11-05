@@ -40,7 +40,7 @@ function fixture() {
   });
   seedDelivery(tasks, "meter", { prNumber: 71, headSha: "a".repeat(40), ci: "green", ciAt: 0 });
   const declare = () =>
-    tasks.recordReport("meter", {
+    tasks.turns.recordReport("meter", {
       text: "The meter fix is complete; only its merge remains.",
       declared: { mergeCompletesTask: { prNumber: 71, headSha: "a".repeat(40) } },
     });
@@ -207,7 +207,7 @@ describe("external merge reconciliation", () => {
 
   it("records a prerequisite merge without closing, then closes after the remaining work explicitly finishes", async () => {
     const h = fixture();
-    h.tasks.recordReport("meter", {
+    h.tasks.turns.recordReport("meter", {
       text: "Deployment verification still remains after this merge.",
     });
     h.merged();
@@ -281,7 +281,7 @@ describe("external merge reconciliation", () => {
     "keeps unfinished guidance when the inbox sweeps %s a prerequisite merge",
     async (order) => {
       const h = fixture();
-      h.tasks.recordReport("meter", { text: "Deployment verification remains." });
+      h.tasks.turns.recordReport("meter", { text: "Deployment verification remains." });
       seedTask(h.tasks, {
         id: "verify",
         title: "Verify deployment",
@@ -335,7 +335,7 @@ describe("external merge reconciliation", () => {
       const h = fixture();
       let guidance: number | undefined;
       if (remaining === "turn") h.host.runtimeState = () => "streaming";
-      if (remaining === "interrupted") h.tasks.setActivity("meter", "interrupted");
+      if (remaining === "interrupted") h.tasks.turns.setActivity("meter", "interrupted");
       if (remaining === "job") h.host.hasRunningJobs = () => true;
       if (remaining === "question") {
         h.host.cards.values = function* () {
@@ -364,11 +364,11 @@ describe("external merge reconciliation", () => {
           status: "queued",
           parentId: "meter",
         });
-        expect(h.tasks.closeRefusal("meter")?.refused).toBe("children-open");
+        expect(h.tasks.graph.closeRefusal("meter")?.refused).toBe("children-open");
       }
       if (remaining === "dependency") {
         seedTask(h.tasks, { id: "verify", title: "Verify deployment", status: "queued" });
-        h.tasks.link("verify", "meter", "blocks", "crewmate", true);
+        h.tasks.graph.link("verify", "meter", "blocks", "crewmate", true);
       }
       h.merged();
       await h.watcher().poll(h.now());
@@ -393,7 +393,7 @@ describe("external merge reconciliation", () => {
     const h = fixture();
     const tool = REPORT_TOOL.bind({
       onReport: (text, summary, declared) => {
-        h.tasks.recordReport("meter", { text, summary, declared });
+        h.tasks.turns.recordReport("meter", { text, summary, declared });
         return "Reported.";
       },
     })!;
@@ -407,10 +407,10 @@ describe("external merge reconciliation", () => {
       prNumber: 71,
       headSha: h.pull().headSha,
     });
-    h.tasks.clearDeclaration("meter");
+    h.tasks.turns.clearDeclaration("meter");
     expect(h.tasks.get("meter")?.delivery?.mergeCompletion).toBeUndefined();
     await report();
-    h.tasks.recordReport("meter", { text: "More work now remains." });
+    h.tasks.turns.recordReport("meter", { text: "More work now remains." });
     expect(h.tasks.get("meter")?.delivery?.mergeCompletion).toBeUndefined();
     h.declare();
     h.answer({ ...h.pull(), headSha: "c".repeat(40), merged: true });
@@ -446,7 +446,7 @@ describe("external merge reconciliation", () => {
 
   it("keeps an unreachable working copy pending for its existing owner instead of touching its path here", async () => {
     const h = fixture();
-    h.tasks.setDevice("meter", "mini");
+    h.tasks.placement.setDevice("meter", "mini");
     h.merged();
     await h.watcher().poll(h.now());
     expect(h.tasks.get("meter")).toMatchObject({
@@ -488,7 +488,7 @@ describe("external merge reconciliation", () => {
       headSha: theirs,
       ci: "green",
     });
-    h.tasks.recordReport("meter", {
+    h.tasks.turns.recordReport("meter", {
       text: "The release is the finishing change; only its merge remains.",
       declared: { mergeCompletesTask: { prNumber: 94, headSha: theirs } },
     });

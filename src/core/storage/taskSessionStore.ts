@@ -106,6 +106,16 @@ export class TaskSessionStore {
     `)
       .all(taskId) as TaskSession[];
   }
+
+  /** One task's conversations, gone with a spawn that never ran. */
+  deleteFor(taskId: string): void {
+    this.db.prepare("DELETE FROM task_sessions WHERE task_id = ?").run(taskId);
+  }
+
+  /** Every conversation, for the D-13 purge. */
+  deleteAll(): void {
+    this.db.prepare("DELETE FROM task_sessions").run();
+  }
 }
 
 /** Immutable observed facts, never a reconstruction from the conversation's changing row. */

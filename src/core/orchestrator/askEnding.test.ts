@@ -38,9 +38,9 @@ function fixture() {
     via: `tool:${string}` = "tool:spawn_crewmate",
   ) => {
     later();
-    tasks.openAsk({ id, text });
-    if (taskId) tasks.attachAsk(id, taskId, via);
-    tasks.closeAsk(id, "closed");
+    tasks.capture.openAsk({ id, text });
+    if (taskId) tasks.capture.attachAsk(id, taskId, via);
+    tasks.capture.closeAsk(id, "closed");
     return id;
   };
   const work = (id: string, title: string, status: "running" | "idle" | "queued" = "running") => {
@@ -108,7 +108,7 @@ describe("how a captain's message ends", () => {
     f.ending.captainResponded(answer, "close");
     f.closeCard(answer.id);
     expect(f.state("m1")).toEqual({ kind: "accepted", cardId: answer.id });
-    f.tasks.markAnswered(["m1"], answer.id);
+    f.tasks.capture.markAnswered(["m1"], answer.id);
     expect(f.state("m1")).toEqual({ kind: "answered", cardId: answer.id });
     expect(f.ending.openChains()).toEqual([]);
   });
@@ -119,9 +119,9 @@ describe("how a captain's message ends", () => {
     const f = fixture();
     f.message("read", "why is my mac mini having memory pressure warning?");
     expect(f.ending.nameRefusal("read")).toBeUndefined();
-    f.tasks.openAsk({ id: "parked", text: "and the other mac?" });
+    f.tasks.capture.openAsk({ id: "parked", text: "and the other mac?" });
     expect(f.ending.nameRefusal("parked")).toMatch(/a step has read/);
-    f.tasks.markAnswered(["read"], null);
+    f.tasks.capture.markAnswered(["read"], null);
     expect(f.ending.nameRefusal("read")).toMatch(/has ended/);
   });
 
@@ -137,7 +137,7 @@ describe("how a captain's message ends", () => {
     f.work("taps", "Keep taps on the phone");
     f.message("m1", "the taps on the phone get lost", "taps");
     f.message("m2", "also the long press", "taps", "tool:steer_crewmate");
-    expect(f.tasks.getAsk("m2")?.continues).toBe("m1");
+    expect(f.tasks.capture.getAsk("m2")?.continues).toBe("m1");
     expect(f.ending.openChains().map((chain) => chain.ids)).toEqual([["m1", "m2"]]);
     expect(f.ending.chain("m2")?.root.id).toBe("m1");
   });
@@ -157,7 +157,7 @@ describe("how a captain's message ends", () => {
     // The card predates the second message: it cannot answer it.
     expect(f.state("m1")).toEqual({ kind: "missing" });
     f.ending.captainResponded(early, "close");
-    expect(f.tasks.getAsk("m1")?.answerCardId).toBeNull();
+    expect(f.tasks.capture.getAsk("m1")?.answerCardId).toBeNull();
   });
 
   it("is not answered by a decision closed without a choice, by a card awaiting its author's answer, or by a choice on a question", () => {
@@ -175,10 +175,10 @@ describe("how a captain's message ends", () => {
     f.ending.captainResponded(decision, "close");
     f.ending.captainResponded({ ...decision, awaiting: "answer" }, "choice");
     f.ending.captainResponded({ ...decision, asking: true }, "choice");
-    expect(f.tasks.getAsk("m1")?.acceptedAt).toBeNull();
+    expect(f.tasks.capture.getAsk("m1")?.acceptedAt).toBeNull();
     // Their choice on the decision is the answer.
     f.ending.captainResponded(decision, "choice");
-    expect(f.tasks.getAsk("m1")?.answerCardId).toBe(decision.id);
+    expect(f.tasks.capture.getAsk("m1")?.answerCardId).toBe(decision.id);
   });
 
   // INF-2242: the exception requires the actual terminal answer-task choice,
@@ -248,8 +248,8 @@ describe("how a captain's message ends", () => {
       scenario === "dismissed decision" ? "close" : "choice",
       scenario === "invalid action" ? "not-an-offer" : "start",
     );
-    expect(f.tasks.getAsk("other-ask")?.answerCardId).toBeNull();
-    expect(f.tasks.getAsk("reading-ask")?.answerCardId).toBe(
+    expect(f.tasks.capture.getAsk("other-ask")?.answerCardId).toBeNull();
+    expect(f.tasks.capture.getAsk("reading-ask")?.answerCardId).toBe(
       scenario === "ready plan" || scenario === "unrelated ask" ? card.id : null,
     );
   });
@@ -315,7 +315,7 @@ describe("how a captain's message ends", () => {
     f.work("first", "Rename the notice");
     f.message("m1", "rename the notice", "first");
     f.work("second", "Rename the notice in the app project");
-    f.tasks.link("first", "second", "replaced-by", "firstmate");
+    f.tasks.graph.link("first", "second", "replaced-by", "firstmate");
     f.finish("first");
     expect(f.ending.closingPlace("first")).toEqual({ kind: "quiet" });
     expect(f.ending.crewmateStep("first")).toBeUndefined();

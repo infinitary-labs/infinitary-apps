@@ -50,9 +50,9 @@ export default function seed(
         title: answered.title,
         status: "completed",
       });
-      tasks.openAsk({ id: `ask-${name}`, text: answered.ask });
-      tasks.attachAsk(`ask-${name}`, task.id, "tool:emit_card", true);
-      tasks.closeAsk(`ask-${name}`, "closed");
+      tasks.capture.openAsk({ id: `ask-${name}`, text: answered.ask });
+      tasks.capture.attachAsk(`ask-${name}`, task.id, "tool:emit_card", true);
+      tasks.capture.closeAsk(`ask-${name}`, "closed");
       cards.upsert({
         id: `asked-${name}`,
         taskId: task.id,
@@ -67,13 +67,13 @@ export default function seed(
       });
     }
     seedTask(tasks, { id: "asked-automation-task", title: automation.title, status: "completed" });
-    tasks.saveOrigin("asked-automation-task", {
+    tasks.capture.saveOrigin("asked-automation-task", {
       kind: "automation",
       ruleId: "rule-nightly",
       name: automation.name,
     });
     seedTask(tasks, { id: "asked-click-task", title: click.title, status: "completed" });
-    tasks.saveOrigin("asked-click-task", {
+    tasks.capture.saveOrigin("asked-click-task", {
       kind: "chose",
       cardId: "card-plan",
       card: click.card,

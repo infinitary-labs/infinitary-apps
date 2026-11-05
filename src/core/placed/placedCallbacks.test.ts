@@ -305,10 +305,10 @@ describe("a task that runs on a computer that runs work", () => {
       status: "queued",
       deviceId: at.deviceId,
     });
-    home.tasks.openAsk({ id: "message-files", text, attachments, messageFiles });
-    home.tasks.attachAsk("message-files", task, "tool:create_task");
+    home.tasks.capture.openAsk({ id: "message-files", text, attachments, messageFiles });
+    home.tasks.capture.attachAsk("message-files", task, "tool:create_task");
     // Read the durable references again at dispatch, not the initial input objects.
-    expect(home.tasks.getAsk("message-files")?.messageFiles).toEqual(messageFiles);
+    expect(home.tasks.capture.getAsk("message-files")?.messageFiles).toEqual(messageFiles);
     const dir = join(at.folders(task).temp, "handover");
     const picture = attachments[0];
     const file = messageFiles[0];
@@ -451,8 +451,8 @@ describe("a task that runs on a computer that runs work", () => {
         status: "queued",
         deviceId: at.deviceId,
       });
-      home.tasks.openAsk({ id: "old-attachments", text, messageFiles });
-      home.tasks.attachAsk("old-attachments", "t-old-attachments", "tool:create_task");
+      home.tasks.capture.openAsk({ id: "old-attachments", text, messageFiles });
+      home.tasks.capture.attachAsk("old-attachments", "t-old-attachments", "tool:create_task");
       const requests = api.requests.length;
       await home.supervisor.dispatchQueuedTask("t-old-attachments");
       expect(home.tasks.get("t-old-attachments")).toMatchObject({ status: "open", activity: null });
@@ -543,7 +543,7 @@ describe("a task that runs on a computer that runs work", () => {
         userWords: "read the saved practice release checks",
       },
     });
-    home.tasks.recordReport(target.id, {
+    home.tasks.turns.recordReport(target.id, {
       text: "The Mac check stopped the practice release. The saved work is unchanged.",
     });
     const expected = new TaskTimeline({ tasks: home.tasks }).sources(target.id);

@@ -84,8 +84,8 @@ function fixture(): string {
   }
   seedTask(tasks, { id: "queued", title: "Print the harbour map", status: "queued" });
   // The waiter started first; its blocker is linked afterwards.
-  tasks.link("blocker", "waiter", "blocks", "crewmate");
-  tasks.link("waiter", "queued", "blocks", "host");
+  tasks.graph.link("blocker", "waiter", "blocks", "crewmate");
+  tasks.graph.link("waiter", "queued", "blocks", "host");
   db.close();
   return userDataDir;
 }

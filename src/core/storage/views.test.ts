@@ -153,7 +153,7 @@ function migratedFixture(): AppDatabase {
   seedTask(tasks, { id: "t-fail", title: "Fix the flake", status: "failed" });
   now += MIN;
   seedTask(tasks, { id: "t-ask", title: "What broke?", kind: "question", status: "queued" });
-  tasks.recordTurnFailure("t-build", "401 Unauthorized: token expired");
+  tasks.turns.recordTurnFailure("t-build", "401 Unauthorized: token expired");
   // Two routing decisions for the builder: the newest that chose a model is
   // the one the task row reads, served a slot below the one it asked for.
   const route = before.prepare(
@@ -433,7 +433,7 @@ it.each([undefined, TASK_RECORD_RETIREMENT_VERSION - 1])(
       startPolicy: "on-request",
     });
     for (const task of tasks.list())
-      tasks.recordReport(task.id, { text: "Research queued for review." });
+      tasks.turns.recordReport(task.id, { text: "Research queued for review." });
     expect(tasks.listFeedEvents(10).map((event) => event.taskId)).toEqual([
       "ordinary",
       "linux-question",

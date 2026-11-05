@@ -128,7 +128,7 @@ The run's first step writes its line and files its operation, and each later ste
 A scale setting's line says where the run started and where it settled (`settled` on the catalog line: `window wash 48% → 76%`, `window size 100% → 125%`); every other line says the setting's settled state in its usual words, and a panel's says what changed since the run's first step.
 A run ends when `SETTLE_MS` (10 seconds) pass with no further step, when any other line enters Activity, or when the captain changes another setting; the next step starts a new run with a new line.
 A first mate change on the same setting writes its own line, so it ends the captain's run too.
-A run that comes back where it started is withdrawn at once: its line leaves Activity and its operation leaves the record, because nothing changed (`TaskService.withdrawOperation`; its task key is not reused).
+A run that comes back where it started is withdrawn at once: its line leaves Activity and its operation leaves the record, because nothing changed (`TaskService.archive.withdrawOperation`; its task key is not reused).
 Only the captain's changes settle.
 Each change the first mate makes stays one line and one operation, so the answer check still finds one action per captain message (`docs/task-capture.md`).
 Acts rather than values never settle or withdraw: every `alwaysTrail` line, the usage refresh, an account renamed or disconnected, a device removed and crew slots reset.

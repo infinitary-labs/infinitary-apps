@@ -296,7 +296,7 @@ export class TaskTimeline {
         return { id, status: "available", record: { source: "card-message", message } };
       }
       case "session-observation": {
-        const observed = tasks.sessionObservation(tail);
+        const observed = tasks.archive.sessionObservation(tail);
         if (!observed) return gone;
         if (observed.taskId !== taskId) return unknown;
         return {
@@ -340,7 +340,7 @@ export class TaskTimeline {
     const concerned = tasks.concerning(taskId).filter((event) => upTo(event.id, cut?.event));
     const observations = cards?.observationsForTask(taskId, cut?.observation) ?? [];
     const messages = cards?.messagesForTask(taskId, cut?.message) ?? [];
-    const observedSessions = tasks
+    const observedSessions = tasks.archive
       .sessionObservations(taskId)
       .filter((observed) => !cut || observed.seq <= (cut.sessions ?? 0));
     const task = tasks.get(taskId);
@@ -408,7 +408,7 @@ export class TaskTimeline {
     }
     const placed = new Map<string, Placed>();
     const eventSummary = (event: TaskEvent) =>
-      tasks.specificationFor(event) ? TIMELINE_BRIEF_REVISED : summaries.get(event.id);
+      tasks.archive.specificationFor(event) ? TIMELINE_BRIEF_REVISED : summaries.get(event.id);
     for (const event of own)
       placed.set(eventId(event), eventEntry(taskId, event, eventSummary(event)));
     for (const event of concerned) {
@@ -549,7 +549,7 @@ function entry(
 }
 
 function eventRecord(tasks: TaskService, event: TaskEvent): TimelineRecord {
-  const specification = tasks.specificationFor(event);
+  const specification = tasks.archive.specificationFor(event);
   return {
     source: "task-event",
     event,

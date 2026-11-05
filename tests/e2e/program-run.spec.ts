@@ -78,7 +78,7 @@ test("a program files its parts as child tasks, hands each result on, and closes
     // Section 2: the script's three task() calls run as child tasks, the
     // finder first and both parts after it on its result.
     await expect.poll(() => tasks.get(programId)?.status, { timeout: 90_000 }).toBe("done");
-    const parts = tasks.children(programId);
+    const parts = tasks.graph.children(programId);
     const finder = parts.find((part) => part.title === FIND_PROMPT);
     expect(finder?.shape).toMatchObject({ internal_step: true, program_part: { call: 0 } });
     // INF-974: the running app persists the script's choice and routes with it.
@@ -96,7 +96,7 @@ test("a program files its parts as child tasks, hands each result on, and closes
         rule: "R11",
         bucket: CAP_INTELLIGENCE,
       });
-      expect(tasks.blockers(part?.id ?? "").map((row) => row.id)).toEqual([finder?.id]);
+      expect(tasks.graph.blockers(part?.id ?? "").map((row) => row.id)).toEqual([finder?.id]);
     }
     expect(parts.map((part) => part.status)).toEqual(["done", "done", "done"]);
     expect(parts.map((part) => part.shape?.program_part?.call).sort()).toEqual([0, 1, 2]);
@@ -140,9 +140,9 @@ test("a program files its parts as child tasks, hands each result on, and closes
         {
           program: programId ? tasks.get(programId) : null,
           timeline: programId ? tasks.timeline(programId) : [],
-          parts: programId ? tasks.children(programId) : [],
+          parts: programId ? tasks.graph.children(programId) : [],
           routing: programId
-            ? decisions.routing({ taskIds: tasks.children(programId).map((part) => part.id) })
+            ? decisions.routing({ taskIds: tasks.graph.children(programId).map((part) => part.id) })
             : [],
         },
         null,

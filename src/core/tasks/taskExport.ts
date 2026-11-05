@@ -43,7 +43,7 @@ import type { TaskRecord } from "../storage/taskStore";
  * they are). Timeline event ids are storage-local and left out; order is
  * the timeline's.
  *
- * Round trip: `TaskService.importRecords(parseTaskExport(lines))` on a
+ * Round trip: `TaskService.archive.importRecords(parseTaskExport(lines))` on a
  * database holding none of these rows reproduces them, and exporting that
  * database again yields the same lines (taskExport.test.ts). The importer
  * refuses to overwrite: a task id or key, or a project key, already taken
@@ -249,18 +249,20 @@ export type TaskExportBundle = {
 export type TaskExportSource = {
   projects: { list(): ProjectRecord[] };
   list(): TaskRecord[];
-  recordedSessions?(id: string): TaskSession[];
-  sessionObservations?(
-    id: string,
-  ): (TaskSessionObservation & { id: string; taskId: string; seq: number })[];
-  recordedSpecifications?(id: string): SavedSpecification[];
-  recordedReferences?(id: string): TaskReference[];
-  recordedConversation?(id: string): string | null;
+  archive?: {
+    recordedSessions?(id: string): TaskSession[];
+    sessionObservations?(
+      id: string,
+    ): (TaskSessionObservation & { id: string; taskId: string; seq: number })[];
+    recordedSpecifications?(id: string): SavedSpecification[];
+    recordedReferences?(id: string): TaskReference[];
+    recordedConversation?(id: string): string | null;
+  };
   timeline(id: string): TaskEvent[];
   /** Whom each event concerns, by event id. */
   eventConcerns(): Map<number, TaskConcern[]>;
-  allLinks(): TaskLink[];
-  listAsks(): AskRecord[];
+  graph: { allLinks(): TaskLink[] };
+  capture: { listAsks(): AskRecord[] };
 };
 
 /** The record as JSONL lines: a header, then every row, oldest first. */
@@ -269,8 +271,8 @@ export function exportTaskRecords(source: TaskExportSource, now = Date.now()): s
   const tasks = source.list();
   const events = tasks.flatMap((task) => source.timeline(task.id));
   const concerns = source.eventConcerns();
-  const links = source.allLinks();
-  const asks = source.listAsks();
+  const links = source.graph.allLinks();
+  const asks = source.capture.listAsks();
   const lines: TaskExportLine[] = [
     {
       kind: "header",
@@ -299,7 +301,7 @@ export function exportTaskRecords(source: TaskExportSource, now = Date.now()): s
     ),
     ...tasks.map((task): TaskExportLine => {
       const { kind, ...rest } = task;
-      const specifications = source.recordedSpecifications?.(task.id) ?? [];
+      const specifications = source.archive?.recordedSpecifications?.(task.id) ?? [];
       const first = specifications[0];
       // A single canonical revision is already carried by the compatible
       // task line. Keep its raw payload too when that line cannot reproduce
@@ -311,13 +313,15 @@ export function exportTaskRecords(source: TaskExportSource, now = Date.now()): s
             first.prompt !== task.prompt ||
             first.intentJson !==
               (task.intent ? JSON.stringify(taskIntentViewSchema.parse(task.intent)) : null)));
-      const sessions = source.recordedSessions?.(task.id) ?? [];
+      const sessions = source.archive?.recordedSessions?.(task.id) ?? [];
       const sessionObservations =
-        source
-          .sessionObservations?.(task.id)
+        source.archive
+          ?.sessionObservations?.(task.id)
           .map(({ taskId: _taskId, seq: _seq, ...observed }) => observed) ?? [];
-      const references = source.recordedReferences?.(task.id) ?? [];
-      const conversation = task.sessionFile ? source.recordedConversation?.(task.id) : undefined;
+      const references = source.archive?.recordedReferences?.(task.id) ?? [];
+      const conversation = task.sessionFile
+        ? source.archive?.recordedConversation?.(task.id)
+        : undefined;
       return {
         kind: "task",
         ...rest,

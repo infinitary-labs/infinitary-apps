@@ -125,7 +125,7 @@ export class AutomaticPlacement {
         this.generations.set(deviceId, (this.generations.get(deviceId) ?? 0) + 1);
         for (const key of this.reads.keys())
           if (key.startsWith(`${deviceId}\n`)) this.reads.delete(key);
-        for (const record of options.tasks.pendingPlacements())
+        for (const record of options.tasks.placement.pendingPlacements())
           if (record.deviceId === deviceId) this.runningSince.delete(record.id);
       }),
       // Witnessed before every sample, so the next reading can free a running
@@ -288,7 +288,7 @@ export class AutomaticPlacement {
     let wait: AutomaticWait | undefined;
     let onDefault: { computerId: string | null; name: string } | undefined;
     let leftOut: NamedLeftOut[] = [];
-    const committed = this.options.tasks.commitPlacement(record.id, (pending) => {
+    const committed = this.options.tasks.placement.commitPlacement(record.id, (pending) => {
       now = this.now();
       const atCommit = this.options.resources.snapshot();
       for (const [index, candidate] of candidates.entries()) {
@@ -306,7 +306,7 @@ export class AutomaticPlacement {
       // commitment, after all asynchronous facts. A null device is home only
       // once execution is recorded; an unstarted answer supplies no locality.
       const current = this.options.tasks.get(record.id);
-      const relation = current && !existing ? this.options.tasks.basisOf(current) : null;
+      const relation = current && !existing ? this.options.tasks.graph.basisOf(current) : null;
       const basis = relation?.verified ? this.options.tasks.resolve(relation.ref) : undefined;
       const basisComputer =
         basis && basis.startedAt !== null ? { computerId: basis.deviceId ?? null } : undefined;
@@ -463,7 +463,7 @@ export class AutomaticPlacement {
    */
   reconcile(): void {
     const now = this.now();
-    for (const task of this.options.tasks.pendingPlacements()) {
+    for (const task of this.options.tasks.placement.pendingPlacements()) {
       const placement = task.placement;
       if (!placement || !this.options.running(task)) {
         this.runningSince.delete(task.id);
@@ -477,7 +477,11 @@ export class AutomaticPlacement {
       const began = this.options.resources.sampledAt(placement.snapshot.computerId);
       // A witness taken just before a sample was asked for counts for that sample.
       if (began !== undefined && began >= since) {
-        this.options.tasks.releasePlacement(task.id, placement.snapshot.orderId, "observed");
+        this.options.tasks.placement.releasePlacement(
+          task.id,
+          placement.snapshot.orderId,
+          "observed",
+        );
         this.runningSince.delete(task.id);
       }
     }
@@ -486,7 +490,7 @@ export class AutomaticPlacement {
   /** Notes each pending task running now, before a sample that will include it. */
   private witness(): void {
     const now = this.now();
-    for (const task of this.options.tasks.pendingPlacements()) {
+    for (const task of this.options.tasks.placement.pendingPlacements()) {
       if (!this.options.running(task)) this.runningSince.delete(task.id);
       else if (!this.runningSince.has(task.id)) this.runningSince.set(task.id, now);
     }

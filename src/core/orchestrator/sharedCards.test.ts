@@ -72,7 +72,7 @@ function noteOnT1(cards: CardService): string {
 /** The DOP-217 required action, filed from a completed source task and shown. */
 function requiredAction(f: ReturnType<typeof setup>) {
   seedTask(f.tasks, { id: "dop208", title: "Retire the job host", status: "completed" });
-  f.tasks.declareRequiredActions(
+  f.tasks.delivery.declareRequiredActions(
     "dop208",
     {
       cardId: "card-dop208-1",
@@ -94,7 +94,7 @@ function requiredAction(f: ReturnType<typeof setup>) {
   );
   const row = f.tasks.listOpen().find((task) => task.delivery?.captainAction);
   if (!row) throw new Error("no required action");
-  const action = f.tasks.presentCaptainAction(row.id);
+  const action = f.tasks.delivery.presentCaptainAction(row.id);
   if (!action) throw new Error("not presented");
   f.cards.put(requiredActionCard(row.id, action, 1_000, { filedFrom: () => "DOP-208" }));
   return { taskId: row.id, cardId: action.cardId };
@@ -487,7 +487,7 @@ describe("shared cards", () => {
     const risk = Object.fromEntries(
       RISK_DIMENSIONS.map((dimension) => [dimension, { level: "low", why: "One script path" }]),
     );
-    f.tasks.updateChangePresentation("t1", () => ({
+    f.tasks.delivery.updateChangePresentation("t1", () => ({
       revisions: [
         changePresentationSchema.parse({
           version: 2,
@@ -585,7 +585,7 @@ describe("shared cards", () => {
     expect(f.cards.get(cardId)?.awaiting).toBe("answer");
 
     // The confirmation offered at generation 1 no longer completes it.
-    expect(f.tasks.completeCaptainAction(taskId, 1, "confirmed")).toBe(false);
+    expect(f.tasks.delivery.completeCaptainAction(taskId, 1, "confirmed")).toBe(false);
 
     // A stale read, the same words again, and the same operation again.
     expect(correct(1, "op-2", ["Something else."])).toMatchObject({

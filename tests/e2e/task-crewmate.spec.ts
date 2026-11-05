@@ -103,7 +103,7 @@ function seededReplay(): string {
     const typed = typedLine(TYPED);
     at = base + 6 * 60_000;
     const words = replyWordsSpan(typed);
-    tasks.recordSteer(id, {
+    tasks.turns.recordSteer(id, {
       text: renderWake(typed),
       actor: "captain",
       outcome: "mid-turn",
@@ -135,7 +135,7 @@ function seededReplay(): string {
   });
   new CardStore(db).resolve(`card-${REPLAY}-${CARD.id}`, "merge");
   at = base + 10 * 60_000;
-  tasks.recordReport(REPLAY, REPORT);
+  tasks.turns.recordReport(REPLAY, REPORT);
   at = base + 12 * 60_000;
   tasks.close(REPLAY, { status: "done", reason: "merged", actor: "host" });
   db.close();

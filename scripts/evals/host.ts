@@ -166,7 +166,7 @@ export async function approvalHost(
     });
     aliases[tasks.get(ids[alias]!)!.key] = alias;
     if (task.outcome)
-      tasks.recordReport(ids[alias]!, {
+      tasks.turns.recordReport(ids[alias]!, {
         text: task.outcome,
         ...(task.summary ? { summary: task.summary } : {}),
       });
@@ -541,7 +541,7 @@ export async function approvalHost(
         const to = tasks.resolve(String(args.to));
         const from = tasks.resolve(String(args.from));
         if (!to || !from) return "refused";
-        const linked = tasks.blockers(to.id).some((task) => task.id === from.id);
+        const linked = tasks.graph.blockers(to.id).some((task) => task.id === from.id);
         return linked !== (args.remove === true) ? "success" : "refused";
       }
       if (name === "settle_task" && args.mode === "answered") {
@@ -589,7 +589,7 @@ export async function approvalHost(
                 startPolicy: task.startPolicy,
                 parent: task.parentId ? String(normalize(task.parentId)) : undefined,
                 basis: task.shape?.basis ? String(normalize(taskRef(task.shape.basis))) : undefined,
-                blockers: tasks.blockers(task.id).map((row) => String(normalize(row.id))),
+                blockers: tasks.graph.blockers(task.id).map((row) => String(normalize(row.id))),
               })),
             }
           : {}),
@@ -599,7 +599,7 @@ export async function approvalHost(
               basis: build.shape?.basis ? String(normalize(build.shape.basis)) : undefined,
             }
           : {}),
-        blockers: build ? tasks.blockers(build.id).map((t) => String(normalize(t.id))) : [],
+        blockers: build ? tasks.graph.blockers(build.id).map((t) => String(normalize(t.id))) : [],
         planned: tasks
           .list()
           .filter(

@@ -17,7 +17,7 @@ import {
  * 9.1): applying the diff of two boards to the first reproduces the
  * second, exactly, for boards of every shape a seeded generator can make -
  * rows added, changed and removed, edges added and removed, project counts
- * moved. The contract test in taskProtocol.test.ts proves the same over
+ * moved. The contract test in taskProtocol.push.test.ts proves the same over
  * the real writer; this one proves the pure functions the client relies
  * on, including the two refusals (a stale delta, a gap).
  */

@@ -62,24 +62,28 @@ function populated() {
     gate: { kind: "captain", ref: "card-1", reason: "parked" },
   });
   tick();
-  tasks.dispatch("a", {
+  tasks.starts.dispatch("a", {
     workspace: { repoDir: "/fleet/nimbus-api", worktreeDir: "/wt/a", branch: "fm/a" },
     accountId: "acct_1",
     assignee: "crewmate 1",
     model: { provider: "openai", id: "gpt-5" },
   });
   tick();
-  tasks.setSessionFile("a", "/ud/crewmates/a/sessions/s.jsonl");
+  tasks.turns.setSessionFile("a", "/ud/crewmates/a/sessions/s.jsonl");
   tick();
-  tasks.openAsk({ id: "turn-1", text: "how is a going?", images: [{ mimeType: "image/png" }] });
-  tasks.attachAsk("turn-1", "a", "tool:steer_crewmate");
-  tasks.closeAsk("turn-1", "closed");
+  tasks.capture.openAsk({
+    id: "turn-1",
+    text: "how is a going?",
+    images: [{ mimeType: "image/png" }],
+  });
+  tasks.capture.attachAsk("turn-1", "a", "tool:steer_crewmate");
+  tasks.capture.closeAsk("turn-1", "closed");
   tick();
-  tasks.recordReport("a", { text: "Done the thing. Details follow." });
+  tasks.turns.recordReport("a", { text: "Done the thing. Details follow." });
   tick();
   tasks.noteProgress("a", "halfway");
   tick();
-  tasks.link("c", "a", "related", "firstmate");
+  tasks.graph.link("c", "a", "related", "firstmate");
   tick();
   seedDelivery(
     tasks,
@@ -95,13 +99,13 @@ function populated() {
     delivery: { landedMode: "fast-forward" },
   });
   tick();
-  tasks.markWorkspaceRemoved("a");
+  tasks.placement.markWorkspaceRemoved("a");
   tick();
-  tasks.fileDecision({ id: "d", title: "Which way?", cardId: "card-d" });
+  tasks.capture.fileDecision({ id: "d", title: "Which way?", cardId: "card-d" });
   tick();
-  tasks.fileOperation({ id: "o", title: "set up repo", outcome: "ok", tool: "setup_repo" });
+  tasks.capture.fileOperation({ id: "o", title: "set up repo", outcome: "ok", tool: "setup_repo" });
   tick();
-  tasks.fileQuestion({
+  tasks.capture.fileQuestion({
     id: "q",
     title: "What time is it?",
     outcome: "Late.",
@@ -151,7 +155,7 @@ describe("the task export (task-system P5)", () => {
     const db = openInMemoryDatabase();
     const target = new TaskService({ db, strict: true });
     const seqBefore = target.boardSeq();
-    const written = target.importRecords(bundle);
+    const written = target.archive.importRecords(bundle);
     // Scratch already existed (migration 17); the repo's project was new.
     expect(written).toEqual({
       projects: 1,
@@ -168,9 +172,9 @@ describe("the task export (task-system P5)", () => {
     // The reloaded record behaves as the record: keys resolve, the graph
     // holds, the next key continues the sequence rather than reusing one.
     expect(target.byKey("NIA-1")?.id).toBe("a");
-    expect(target.blockers("b").map((task) => task.id)).toEqual(["a"]);
-    expect(target.children("b").map((task) => task.id)).toEqual(["c"]);
-    expect(target.asksFor("a")).toHaveLength(1);
+    expect(target.graph.blockers("b").map((task) => task.id)).toEqual(["a"]);
+    expect(target.graph.children("b").map((task) => task.id)).toEqual(["c"]);
+    expect(target.capture.asksFor("a")).toHaveLength(1);
     expect(target.timeline("a").map((event) => event.kind)).toEqual(
       source.tasks.timeline("a").map((event) => event.kind),
     );
@@ -205,7 +209,7 @@ describe("the task export (task-system P5)", () => {
     expect(task?.shape).not.toHaveProperty("knowledge_access");
     expect(task?.delivery).not.toHaveProperty("landedAt");
     const target = new TaskService({ db: openInMemoryDatabase(), strict: true });
-    target.importRecords(bundle);
+    target.archive.importRecords(bundle);
     expect(exportTaskRecords(target, 5_000)).toEqual(exported);
   });
 
@@ -216,7 +220,7 @@ describe("the task export (task-system P5)", () => {
 
     // Into itself: every task already exists, and nothing moved.
     const seq = source.tasks.boardSeq();
-    expect(() => source.tasks.importRecords(bundle)).toThrow(
+    expect(() => source.tasks.archive.importRecords(bundle)).toThrow(
       /Import refused: task "a" already exists/,
     );
     expect(source.tasks.boardSeq()).toBe(seq);
@@ -226,7 +230,9 @@ describe("the task export (task-system P5)", () => {
     const db = openInMemoryDatabase();
     const target = new TaskService({ db, strict: true });
     target.projects.ensureForRepo({ id: "other", name: "nimbus-api" });
-    expect(() => target.importRecords(bundle)).toThrow(/project key NIA belongs to "proj-other"/);
+    expect(() => target.archive.importRecords(bundle)).toThrow(
+      /project key NIA belongs to "proj-other"/,
+    );
     expect(target.list()).toEqual([]);
 
     // A dangling reference is a refusal too.
@@ -235,7 +241,7 @@ describe("the task export (task-system P5)", () => {
       events: [{ ...bundle.events[0], taskId: "ghost" }],
     } as typeof bundle;
     const clean = new TaskService({ db: openInMemoryDatabase(), strict: true });
-    expect(() => clean.importRecords(orphan)).toThrow(/unknown task "ghost"/);
+    expect(() => clean.archive.importRecords(orphan)).toThrow(/unknown task "ghost"/);
     expect(clean.list()).toEqual([]);
   });
 
@@ -282,7 +288,7 @@ describe("the task export (task-system P5)", () => {
     for (const [name, broken, refusal] of cases) {
       const target = new TaskService({ db: openInMemoryDatabase(), strict: true });
       const seq = target.boardSeq();
-      expect(() => target.importRecords(broken), name).toThrow(refusal);
+      expect(() => target.archive.importRecords(broken), name).toThrow(refusal);
       expect(target.list()).toEqual([]);
       expect(target.boardSeq()).toBe(seq);
     }
@@ -297,12 +303,12 @@ describe("the task export (task-system P5)", () => {
         entry.id === "proj-r1" ? { ...entry, key: "ZZZ" } : entry,
       ),
     };
-    expect(() => project.importRecords(rekeyed)).toThrow(
+    expect(() => project.archive.importRecords(rekeyed)).toThrow(
       /Import refused: project "proj-r1" is keyed NIA here, not ZZZ/,
     );
     expect(project.list()).toEqual([]);
     const keyed = new TaskService({ db: openInMemoryDatabase(), strict: true });
-    keyed.importRecords({ ...bundle, events: [], links: [], asks: [] });
+    keyed.archive.importRecords({ ...bundle, events: [], links: [], asks: [] });
     const renamed = {
       ...bundle,
       tasks: [{ ...first, id: "fresh" }],
@@ -310,13 +316,13 @@ describe("the task export (task-system P5)", () => {
       links: [],
       asks: [],
     };
-    expect(() => keyed.importRecords(renamed)).toThrow(
+    expect(() => keyed.archive.importRecords(renamed)).toThrow(
       new RegExp(`task key ${first.key} is already taken`),
     );
     const asked = new TaskService({ db: openInMemoryDatabase(), strict: true });
-    asked.importRecords(bundle);
+    asked.archive.importRecords(bundle);
     expect(() =>
-      asked.importRecords({ ...bundle, projects: [], tasks: [], events: [], links: [] }),
+      asked.archive.importRecords({ ...bundle, projects: [], tasks: [], events: [], links: [] }),
     ).toThrow(new RegExp(`ask "${ask.id}" already exists`));
   });
 
@@ -338,8 +344,8 @@ describe("the task export (task-system P5)", () => {
     const source = new TaskService({ db: openInMemoryDatabase(), strict: true });
     source.create({ id: "plan", title: "Plan the meter", prompt: "p", repoId: null });
     const spec = `The agreed spec. ${"A clause kept word for word. ".repeat(40)}`;
-    source.recordReport("plan", { text: "A first draft." });
-    source.recordReport("plan", { text: spec });
+    source.turns.recordReport("plan", { text: "A first draft." });
+    source.turns.recordReport("plan", { text: spec });
     const report = source.timeline("plan").findLast((event) => event.kind === "report");
     source.create({ id: "build", title: "Build the meter", prompt: "p", repoId: null });
     const brief = [
@@ -370,7 +376,7 @@ describe("the task export (task-system P5)", () => {
     target.projects.ensureForRepo({ id: "r9", name: "other" });
     target.create({ id: "earlier", title: "Earlier work", prompt: "p", repoId: "r9" });
     for (let i = 0; i < 5; i++) target.noteProgress("earlier", `checkpoint ${i}`);
-    target.importRecords(parseTaskExport(exportTaskRecords(source, 5_000)));
+    target.archive.importRecords(parseTaskExport(exportTaskRecords(source, 5_000)));
     const reloaded = target.timeline("plan").findLast((event) => event.kind === "report");
     expect(reloaded?.id).not.toBe(report?.id);
     const receipt = target.timeline("build").find((event) => event.kind === "briefed");

@@ -112,7 +112,7 @@ test("a task held on another's finding carries on when that task reports it with
         { timeout: 30_000 },
       )
       .toBe(true);
-    expect(tasks.blockers(held)).toEqual([]);
+    expect(tasks.graph.blockers(held)).toEqual([]);
     expect(tasks.get(reader)?.status).toBe("active");
     await expect
       .poll(async () =>
@@ -141,7 +141,7 @@ test("a task held on another's finding carries on when that task reports it with
         {
           reader: tasks.timeline(reader),
           held: tasks.timeline(held),
-          blockers: tasks.blockers(held).map((task) => task.key),
+          blockers: tasks.graph.blockers(held).map((task) => task.key),
           sorts: new DecisionStore(db)
             .recent(200)
             .filter((row) => row.taskId === reader || row.taskId === held),

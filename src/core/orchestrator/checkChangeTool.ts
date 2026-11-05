@@ -78,7 +78,7 @@ export class CheckChangeTool {
       if (record && named.head.branch !== record.branch && review)
         this.context.select(record, review);
       else if (record && named.head.branch === record.branch)
-        this.options.tasks.selectOwnChange(record.id, {
+        this.options.tasks.delivery.selectOwnChange(record.id, {
           number: named.handle?.number,
           headSha: named.versions.at(-1)?.head,
           base: named.base ?? undefined,

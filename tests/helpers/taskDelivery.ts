@@ -1,5 +1,6 @@
 import type { TaskDelivery } from "../../src/core/storage/taskStore";
-import type { DeliveryObservation, TaskService } from "../../src/core/tasks/taskService";
+import type { TaskService } from "../../src/core/tasks/taskService";
+import type { DeliveryObservation, TaskWriter } from "../../src/core/tasks/taskWriter";
 
 /**
  * Deliberate fixture injection of saved facts, including older mixed records.
@@ -13,12 +14,6 @@ export function seedDelivery(
   saved: Partial<TaskDelivery>,
   event?: DeliveryObservation,
 ): void {
-  const fixture = tasks as unknown as {
-    writeDeliveryRecords(
-      id: string,
-      saved: Partial<TaskDelivery>,
-      event?: DeliveryObservation,
-    ): void;
-  };
-  fixture.writeDeliveryRecords(id, saved, event);
+  const fixture = tasks as unknown as { writer: TaskWriter };
+  fixture.writer.writeDeliveryRecords(id, saved, event);
 }

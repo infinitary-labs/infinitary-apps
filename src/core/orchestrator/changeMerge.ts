@@ -408,7 +408,7 @@ export class ChangeMerge {
     change: ForgeChange,
     guard?: MergeGuard,
   ): Promise<{ change: ForgeChange } | { held: string }> {
-    const ledger = this.options.tasks.changePresentation(taskId, change.branch);
+    const ledger = this.options.tasks.delivery.changePresentation(taskId, change.branch);
     const published = ledger?.published ?? ledger?.publication;
     // A publication names the pull request it went to.
     if (!ledger || (published?.number !== undefined && published.number !== change.number))

@@ -87,10 +87,10 @@ function fixture() {
     shape: { kind: "plan", deliverable: "answer" },
   });
   clock += 1_000;
-  tasks.openAsk({ id: "reading-style", text: "How could a reading-style feature work?" });
-  tasks.attachAsk("reading-style", "reading", "tool:spawn_crewmate");
-  tasks.closeAsk("reading-style", "closed");
-  tasks.setAskDelivery("reading-style", "covered");
+  tasks.capture.openAsk({ id: "reading-style", text: "How could a reading-style feature work?" });
+  tasks.capture.attachAsk("reading-style", "reading", "tool:spawn_crewmate");
+  tasks.capture.closeAsk("reading-style", "closed");
+  tasks.capture.setAskDelivery("reading-style", "covered");
   clock += 1_000;
   const id = cards.emitCrewmateCard(
     "reading",
@@ -122,7 +122,7 @@ describe("choosing a delivered answer", () => {
       const close = tasks.close.bind(tasks);
       vi.spyOn(tasks, "close").mockImplementation((...args) => {
         if (args[0] === "reading")
-          acceptanceAtClose.push(tasks.getAsk("reading-style")?.answerCardId);
+          acceptanceAtClose.push(tasks.capture.getAsk("reading-style")?.answerCardId);
         return close(...args);
       });
       let closing: Promise<void> | undefined;
@@ -136,7 +136,7 @@ describe("choosing a delivered answer", () => {
       await closing;
       expect(acceptanceAtClose).toEqual([card.id]);
       expect(tasks.get("reading")).toMatchObject({ status: "done", closedReason: "answered" });
-      expect(tasks.getAsk("reading-style")).toMatchObject({
+      expect(tasks.capture.getAsk("reading-style")).toMatchObject({
         answerCardId: card.id,
         acceptedAt: expect.any(Number),
       });
@@ -175,26 +175,28 @@ describe("choosing a delivered answer", () => {
       });
       check.sweep();
       expect(handoffs().some((facts) => facts?.kind === "answer-missing")).toBe(false);
-      expect(restartedTasks.getAsk("reading-style")?.answeredAt).toBeNull();
+      expect(restartedTasks.capture.getAsk("reading-style")?.answeredAt).toBeNull();
       // Re-delivery finds neither an open offer nor an answer task to close.
-      const acceptedAt = restartedTasks.getAsk("reading-style")?.acceptedAt;
+      const acceptedAt = restartedTasks.capture.getAsk("reading-style")?.acceptedAt;
       const handoff = handoffs();
       expect(restored.get(card.id)).toBeUndefined();
       expect(settle.declared.closeAnsweredTask(card, action, "captain")).toBe(false);
-      expect(restartedTasks.getAsk("reading-style")?.acceptedAt).toBe(acceptedAt);
+      expect(restartedTasks.capture.getAsk("reading-style")?.acceptedAt).toBe(acceptedAt);
       expect(handoffs()).toHaveLength(1);
       inbox.ack(inbox.pending(FIRSTMATE_RECIPIENT).map((row) => row.id));
       check.sweep();
-      expect(restartedTasks.getAsk("reading-style")?.answeredAt).toEqual(expect.any(Number));
+      expect(restartedTasks.capture.getAsk("reading-style")?.answeredAt).toEqual(
+        expect.any(Number),
+      );
       expect([...restored.values()]).toEqual([]);
       console.info(
         "Chosen-answer receipt",
         JSON.stringify({
           action,
           task: restartedTasks.get("reading")?.closedReason,
-          acceptedCardId: restartedTasks.getAsk("reading-style")?.answerCardId,
+          acceptedCardId: restartedTasks.capture.getAsk("reading-style")?.answerCardId,
           acceptedAt,
-          answeredAt: restartedTasks.getAsk("reading-style")?.answeredAt,
+          answeredAt: restartedTasks.capture.getAsk("reading-style")?.answeredAt,
           savedChoice: cardStore.chosenAction(card.id),
           savedAnswers: cardStore.past(card.id)?.answers,
           handoff,

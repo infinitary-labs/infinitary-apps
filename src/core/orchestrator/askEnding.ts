@@ -105,15 +105,15 @@ export class AskEnding {
 
   /** A message's chain: its root, and every message that joined the root's work. */
   chain(askId: string): AskChain | undefined {
-    const ask = this.host.tasks.getAsk(askId);
+    const ask = this.host.tasks.capture.getAsk(askId);
     if (!ask) return undefined;
-    const root = ask.continues ? (this.host.tasks.getAsk(ask.continues) ?? ask) : ask;
-    return this.withCoverage(root, this.host.tasks.askMembers(root.id));
+    const root = ask.continues ? (this.host.tasks.capture.getAsk(ask.continues) ?? ask) : ask;
+    return this.withCoverage(root, this.host.tasks.capture.askMembers(root.id));
   }
 
   private withCoverage(root: AskRecord, members: AskRecord[]): AskChain {
     const ids = members.map((member) => member.id);
-    const { work, acted } = this.host.tasks.askCoverage(ids);
+    const { work, acted } = this.host.tasks.capture.askCoverage(ids);
     return {
       root,
       members,
@@ -130,7 +130,7 @@ export class AskEnding {
    */
   openChains(running = false): AskChain[] {
     return this.host.tasks.readProjection(() =>
-      this.host.tasks
+      this.host.tasks.capture
         .openAskChains(running)
         .map(({ root, members }) => this.withCoverage(root, members)),
     );
@@ -143,7 +143,7 @@ export class AskEnding {
    * facts only - which message the work serves is the first mate's to say.
    */
   nameRefusal(askId: string): string | undefined {
-    const ask = this.host.tasks.getAsk(askId);
+    const ask = this.host.tasks.capture.getAsk(askId);
     if (!ask) return "ask_id must name an open message (open_asks id), or be empty.";
     if (ask.turnState === "open") {
       return "ask_id must name a message a step has read; this one waits for its own step.";
@@ -184,7 +184,7 @@ export class AskEnding {
   chainsOf(taskId: string): AskChain[] {
     const roots = new Set<string>();
     const chains: AskChain[] = [];
-    for (const ask of this.host.tasks.asksAbove(taskId)) {
+    for (const ask of this.host.tasks.capture.asksAbove(taskId)) {
       const chain = this.chain(ask.id);
       if (!chain || roots.has(chain.root.id)) continue;
       roots.add(chain.root.id);
@@ -194,7 +194,7 @@ export class AskEnding {
   }
 
   private cardTask(card: Card): string | undefined {
-    return card.taskId ?? this.host.tasks.taskForCard(card.id)?.id;
+    return card.taskId ?? this.host.tasks.capture.taskForCard(card.id)?.id;
   }
 
   /** The cards the first mate showed for the chain's messages, by its own facts. */
@@ -314,7 +314,7 @@ export class AskEnding {
       // note answers it only when shaped as its answer, not a note along the way.
       const answers = response === "choice" ? this.about(chain, card) : this.candidate(chain, card);
       if (!answers || this.host.shownAt(card) < chain.newestAt) continue;
-      this.host.tasks.acceptAnswer(chain.ids, card.id);
+      this.host.tasks.capture.acceptAnswer(chain.ids, card.id);
     }
   }
 
@@ -331,7 +331,7 @@ export class AskEnding {
       if (root.crewmateAskedAt !== null) continue;
       const others = chain.work.some((task) => task.id !== taskId && !TaskService.isClosed(task));
       if (others || this.acceptance(chain) || this.waitingCard(chain)) continue;
-      this.host.tasks.markCrewmateAsked(root.id);
+      this.host.tasks.capture.markCrewmateAsked(root.id);
       return chain;
     }
     return undefined;

@@ -510,6 +510,16 @@ export class TaskEventStore {
     return rows.map(fromRow);
   }
 
+  /** One task's timeline, and every concern its events name or other events name of it. */
+  deleteFor(taskId: string): void {
+    this.db
+      .prepare(
+        "DELETE FROM task_event_concerns WHERE task_id = ? OR event_id IN (SELECT id FROM task_events WHERE task_id = ?)",
+      )
+      .run(taskId, taskId);
+    this.db.prepare("DELETE FROM task_events WHERE task_id = ?").run(taskId);
+  }
+
   deleteAll(): void {
     this.db.prepare("DELETE FROM task_event_concerns").run();
     this.db.prepare("DELETE FROM task_events").run();

@@ -136,7 +136,7 @@ describe("live task policies", () => {
     const { tasks } = setup();
     const task = seedTask(tasks, { id: "ask", title: "Ask", repoId: "project", status: "idle" });
     for (let revision = 1; revision <= 2; revision++) {
-      tasks.setPendingSettle(task.id, {
+      tasks.delivery.setPendingSettle(task.id, {
         mode: "merge-pr",
         actor: "captain",
         requestedAt: 1,
@@ -173,7 +173,7 @@ describe("live task policies", () => {
       repoId: "project",
       status: "idle",
     });
-    tasks.link(dependency.id, task.id, "blocks", "firstmate");
+    tasks.graph.link(dependency.id, task.id, "blocks", "firstmate");
     seedDelivery(tasks, task.id, {
       reviewVerdict: "findings",
       reviewRounds: 3,
@@ -188,10 +188,10 @@ describe("live task policies", () => {
     for (const rigor of ["quick", "reviewed", "standard"] as const) {
       tasks.updateFields(task.id, { policies: { rigor } }, "firstmate");
       expect(tasks.policiesOf(current(tasks, task.id))?.rigor.value).toBe(rigor);
-      expect(tasks.blockers(task.id).map((row) => row.id)).toEqual([dependency.id]);
-      expect(tasks.blockersHoldingClose(task.id)).toEqual([]);
+      expect(tasks.graph.blockers(task.id).map((row) => row.id)).toEqual([dependency.id]);
+      expect(tasks.graph.blockersHoldingClose(task.id)).toEqual([]);
       expect(tasks.get(review.id)?.parentId).toBe(task.id);
-      expect(tasks.blockerRefusal(task.id)).toBeUndefined();
+      expect(tasks.graph.blockerRefusal(task.id)).toBeUndefined();
     }
     expect(tasks.get(task.id)?.delivery).toMatchObject({
       reviewVerdict: "findings",
@@ -284,7 +284,11 @@ describe("live task policies", () => {
       shape: { kind: "unclear" },
     });
     tasks.updateFields(task.id, { policies: { rigor: "reviewed" } }, "firstmate");
-    tasks.recordShape(task.id, { ...(task.shape ?? { kind: "unclear" }), kind: "fix" }, "high");
+    tasks.placement.recordShape(
+      task.id,
+      { ...(task.shape ?? { kind: "unclear" }), kind: "fix" },
+      "high",
+    );
     expect(tasks.policiesOf(current(tasks, task.id))?.rigor.value).toBe("reviewed");
   });
 
@@ -299,10 +303,10 @@ describe("live task policies", () => {
     });
     const stale = { ...(task.shape ?? { kind: "unclear" as const }), kind: "fix" as const };
     tasks.updateFields(task.id, { runsOn: { ask: "this-mac", words: "This Mac" } }, "firstmate");
-    tasks.recordShape(task.id, stale, "high");
+    tasks.placement.recordShape(task.id, stale, "high");
     expect(current(tasks, task.id).shape).toMatchObject({ kind: "fix", runs_on_ask: "this-mac" });
     tasks.updateFields(task.id, { runsOn: { ask: null, words: "Mac mini" } }, "firstmate");
-    tasks.recordShape(task.id, stale, "high");
+    tasks.placement.recordShape(task.id, stale, "high");
     expect(current(tasks, task.id).shape?.runs_on_ask).toBeUndefined();
   });
 
@@ -319,14 +323,14 @@ describe("live task policies", () => {
     });
     const stale = { ...(task.shape ?? { kind: "unclear" as const }), kind: "fix" as const };
     tasks.updateFields(task.id, { speed: "ultrafast", reasoning: "xhigh" }, "firstmate");
-    tasks.recordShape(task.id, stale, "high");
+    tasks.placement.recordShape(task.id, stale, "high");
     expect(current(tasks, task.id).shape).toMatchObject({
       kind: "fix",
       override_speed: "ultrafast",
       override_reasoning: "xhigh",
     });
     tasks.updateFields(task.id, { speed: null, reasoning: null }, "firstmate");
-    tasks.recordShape(task.id, stale, "high");
+    tasks.placement.recordShape(task.id, stale, "high");
     expect(current(tasks, task.id).shape).not.toHaveProperty("override_speed");
     expect(current(tasks, task.id).shape).not.toHaveProperty("override_reasoning");
   });
@@ -369,7 +373,7 @@ describe("live task policies", () => {
     tasks.updateFields(task.id, { model: "new-model" }, "firstmate");
     tasks.updateFields(task.id, { speed: "ultrafast", reasoning: "xhigh" }, "firstmate");
     tasks.updateFields(task.id, { runsOn: { ask: "this-mac", words: "This Mac" } }, "firstmate");
-    tasks.recordShape(
+    tasks.placement.recordShape(
       task.id,
       { ...old, kind: "fix", kind_source: "classifier:test", deliverable: "change" },
       "high",

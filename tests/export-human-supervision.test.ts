@@ -152,7 +152,7 @@ function buildUserData(dir: string): { first: Card; revisedTitle: string } {
         reading: "fresh",
         questions: [scopeQuestion],
       },
-      context: tasks.decisionContext("t1"),
+      context: tasks.capture.decisionContext("t1"),
     },
   );
   // A Firstmate card the captain closed without a choice.

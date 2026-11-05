@@ -210,7 +210,7 @@ export class CheckWatcher {
     }
     // A new push whose checks are running gets the existing bounded watch.
     if (read.kind === "pending" && read.head !== head) {
-      this.host.tasks.recordChangeEvidence(taskId, {
+      this.host.tasks.delivery.recordChangeEvidence(taskId, {
         ciWatch: armWatch(undefined, read.head, now),
       });
       // Its armed watch owns the next failure/finish notice, not a second initial wake.
@@ -250,7 +250,7 @@ export class CheckWatcher {
   private forwardedObservation(taskId: string, id: string | undefined): void {
     const current = this.host.tasks.get(taskId)?.delivery?.ciObservation;
     if (id && current?.id === id && !current.forwarded)
-      this.host.tasks.recordChangeEvidence(taskId, {
+      this.host.tasks.delivery.recordChangeEvidence(taskId, {
         ciObservation: { ...current, forwarded: true },
       });
   }
@@ -259,7 +259,7 @@ export class CheckWatcher {
   private notifyObservation(taskId: string, wake: TypedWake, id: string | undefined): void {
     const current = this.host.tasks.get(taskId)?.delivery?.ciObservation;
     if (id && current?.id === id && wake.once && current.notice !== wake.once)
-      this.host.tasks.recordChangeEvidence(taskId, {
+      this.host.tasks.delivery.recordChangeEvidence(taskId, {
         ciObservation: { ...current, notice: wake.once, forwarded: false },
       });
     if (wake.once && this.host.inbox.woken(taskId, wake.once)) {
@@ -416,7 +416,7 @@ export class CheckWatcher {
     const same = (a: CiWatch) => a.head === standing.head && a.since === standing.since;
     if (!same(started) && !same(watch)) return;
     const sameHead = standing.head === watch.head && standing.since === watch.since;
-    this.host.tasks.recordChangeEvidence(taskId, {
+    this.host.tasks.delivery.recordChangeEvidence(taskId, {
       ciWatch: {
         ...watch,
         ...(watch.failureSeen || (sameHead && standing.failureSeen) ? { failureSeen: true } : {}),
@@ -434,7 +434,7 @@ export class CheckWatcher {
   private waitForAllowance(taskId: string, resetAt: number, now: number): void {
     const watch = this.watchOf(taskId);
     if (watch) {
-      this.host.tasks.recordChangeEvidence(taskId, {
+      this.host.tasks.delivery.recordChangeEvidence(taskId, {
         ciWatch: { ...watch, nextAt: Math.max(watch.nextAt, resetAt) },
       });
       return;
@@ -449,7 +449,7 @@ export class CheckWatcher {
    */
   private end(taskId: string, watch: CiWatch, facts: SettledFacts, observationId?: string): void {
     const once = checkWatchOnce(watch);
-    if (!this.host.inbox.woken(taskId, once)) this.host.tasks.endIdle(taskId);
+    if (!this.host.inbox.woken(taskId, once)) this.host.tasks.turns.endIdle(taskId);
     this.notifyObservation(
       taskId,
       { facts: { kind: "checks-settled", ...facts }, once },
@@ -459,7 +459,7 @@ export class CheckWatcher {
   }
 
   private clear(taskId: string): void {
-    this.host.tasks.recordChangeEvidence(taskId, { ciWatch: undefined });
+    this.host.tasks.delivery.recordChangeEvidence(taskId, { ciWatch: undefined });
   }
 
   private watchOf(taskId: string): CiWatch | undefined {

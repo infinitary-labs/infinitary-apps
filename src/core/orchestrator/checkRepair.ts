@@ -19,7 +19,7 @@ function dependencyWords(tasks: TaskService, dependency: TaskRecord): string {
     return ` ${name} was dropped: inspect its outcome and name the current owner if a fix is still needed.`;
   if (dependency.status === "active")
     return ` ${name} is underway: report the wait once and end your turn; ${resumed}`;
-  if (!tasks.awaitsStart(dependency))
+  if (!tasks.graph.awaitsStart(dependency))
     return ` ${name} is queued and starts by itself: report the wait once and end your turn; ${resumed}`;
   return ` Nobody has started ${name}. Lead your report with its key, that it has not started and what starting it unblocks: that report wakes the first mate, which starts it or steers you.`;
 }
@@ -133,7 +133,7 @@ export function declareCheckAction(
     ledger.rerun = { ...input.rerun, ...(run ? { runId: run.runId } : {}) };
     ledger.declarations = [...(ledger.declarations ?? []), { ...ledger.rerun, kind: "rerun", at }];
   }
-  tasks.recordChangeEvidence(
+  tasks.delivery.recordChangeEvidence(
     taskId,
     { ciRepair: ledger },
     {

@@ -180,7 +180,7 @@ function olderProfile() {
     liveValidation: LIVE_VALIDATION,
     validationHead: REPAIRED,
   });
-  tasks.setPendingSettle("kept", {
+  tasks.delivery.setPendingSettle("kept", {
     mode: "merge-pr",
     actor: "captain",
     requestedAt: 6_100,
@@ -417,7 +417,7 @@ describe("a record export of delivery facts", () => {
     });
 
     const { db: fresh, tasks: restored } = setup();
-    restored.importRecords(parseTaskExport(lines));
+    restored.archive.importRecords(parseTaskExport(lines));
     expect(restored.get("kept")?.delivery).toEqual(kept?.delivery);
     expect(parsed(exportTaskRecords(restored, 1))).toEqual(parsed(lines));
     // The export carries the change, never a permission: an import approves nothing.

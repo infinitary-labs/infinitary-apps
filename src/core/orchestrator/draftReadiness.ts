@@ -56,7 +56,7 @@ export class DraftReadiness {
           );
         change = current;
         if (change.draft)
-          this.options.tasks.recordChangeEvidence(
+          this.options.tasks.delivery.recordChangeEvidence(
             taskId,
             {
               validationReadiness: {
@@ -73,7 +73,7 @@ export class DraftReadiness {
       }
       if (!change.draft) {
         if (readiness && readiness.number === change.number)
-          this.options.tasks.recordChangeEvidence(taskId, {
+          this.options.tasks.delivery.recordChangeEvidence(taskId, {
             validationReadiness: { head: change.headSha, number: readiness.number, state: "ready" },
           });
         return change;
@@ -93,11 +93,11 @@ export class DraftReadiness {
             "Validation changed; the prerequisite draft stays held until review.",
           );
         this.options.verifyValidationEvidence?.(taskId);
-        this.options.tasks.recordChangeEvidence(taskId, {
+        this.options.tasks.delivery.recordChangeEvidence(taskId, {
           validationReadiness: { head: change.headSha, number: change.number!, state: "unknown" },
         });
       });
-      this.options.tasks.recordChangeEvidence(taskId, {
+      this.options.tasks.delivery.recordChangeEvidence(taskId, {
         validationReadiness: { head: ready.headSha, number: ready.number!, state: "ready" },
       });
       return ready;
@@ -105,7 +105,7 @@ export class DraftReadiness {
       const previous = this.options.tasks.get(taskId)?.delivery?.validationReadiness;
       const problem = caught instanceof Error ? caught.message : String(caught);
       // Readiness is delivery bookkeeping, never a replacement for the host's check reading.
-      this.options.tasks.recordChangeEvidence(
+      this.options.tasks.delivery.recordChangeEvidence(
         taskId,
         {
           validationReadiness: {

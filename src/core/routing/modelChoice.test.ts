@@ -79,7 +79,7 @@ describe("modelChoiceOf (INF-1714)", () => {
     expect(modelChoiceOf(w.record("audit-1"), new DecisionStore(w.db))).toBeUndefined();
     const routed = w.router.decide("audit-1", "Audit the release notes", BUILD);
     expect(routed?.choice).toEqual(CLAUDE);
-    w.tasks.dispatch("audit-1", {
+    w.tasks.starts.dispatch("audit-1", {
       workspace: WORKSPACE,
       accountId: null,
       assignee: "crewmate",
@@ -123,7 +123,7 @@ describe("modelChoiceOf (INF-1714)", () => {
       rule: "R4",
       reasons: [],
     });
-    w.tasks.dispatch("older", {
+    w.tasks.starts.dispatch("older", {
       workspace: WORKSPACE,
       accountId: null,
       assignee: "crewmate",

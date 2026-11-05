@@ -247,7 +247,7 @@ The crewmate reads the refusal as the tool's error text, and the card never reac
 FI3-401 is why that is not enough: on PR #549 the gate refused a card a second after the crewmate asked, the crewmate still reported "Completion card emitted", and the first mate relayed the card and later explained its absence with a mechanism that does not exist.
 
 So the host keeps the refusal as a fact.
-The card tool hands every refusal of such a card to `CrewmateToolDelegate.onCardRefused`, whichever step made it, and the supervisor records it on the task (`TaskService.recordCardRefusal`): `delivery.cardRefusal` holds the card's title, when, a typed `reason` (`checks`, `ci-cap`, `review`, `shape` or `other`) and `why`, the host's own words, and the timeline gets a host note.
+The card tool hands every refusal of such a card to `CrewmateToolDelegate.onCardRefused`, whichever step made it, and the supervisor records it on the task (`TaskService.delivery.recordCardRefusal`): `delivery.cardRefusal` holds the card's title, when, a typed `reason` (`checks`, `ci-cap`, `review`, `shape` or `other`) and `why`, the host's own words, and the timeline gets a host note.
 It stands until a completion card goes up, which clears it.
 While it stands, the crewmate's report wake names it after the report - the card, when, why, that it did not reach the captain, and that none of the crewmate's cards is on the screen when none is - and `crew_status` carries it as `cardRefused`.
 Nothing reads the report's words; the fact sits beside them.
@@ -730,7 +730,7 @@ Prefer closing an obsolete card over stacking a correction, and prefer revising 
 
 A card with actions is a captain decision, so it is on the record the way every captain decision is (the owner's call 3 on the primitives review, 2026-09-26: "every card with actions places the captain gate on its task; host cards file an operation task").
 A card with actions and a task id - a crewmate's (`addCrewmateCard`), the first mate's (`addFirstmateCard`), or the host's own, including the stall card and the crewmate's sign-in card, which now carries its task - places the `captain` gate on that task with the card id as its ref (`IdleLadder.syncCaptainGate`; `docs/task-graph.md` "Gates on active rows").
-A host card with actions and no task files an open `operation` row gated on the card (`TaskService.fileHostCardTask`), so it has a row for "waiting on you" to count.
+A host card with actions and no task files an open `operation` row gated on the card (`TaskService.capture.fileHostCardTask`), so it has a row for "waiting on you" to count.
 A note places nothing on its own; its crewmate places the gate by declaring `waiting_on_captain` in its report, naming the note (`docs/report-sort.md`).
 
 A choice releases its gate with the action on the `card_resolved` event.
@@ -943,7 +943,7 @@ INF-2326 makes the line say where the card's work came from when that was an aut
 The visual rules are the design skill's (`components/cards/ResponseCard.prompt.md`, "The You asked line").
 
 - **From the saved message, never the card's words.**
-  The snapshot carries `Card.asked`, which `CardService.snapshot` reads through the card's task (the task it names, or the one it was raised on) with `TaskService.originAbout` (`src/core/tasks/taskOrigin.ts`).
+  The snapshot carries `Card.asked`, which `CardService.snapshot` reads through the card's task (the task it names, or the one it was raised on) with `TaskService.capture.originAbout` (`src/core/tasks/taskOrigin.ts`).
   It is never saved on the card, and a crewmate's Why, however it is written, changes nothing about the line.
 - **Where the work came from, nearest first (INF-2326).**
   The walk goes out from the card's task, each task before any task one step further away: the work it took over (the task it replaced, retried at a stronger model or branched from, tried ahead of the task itself), its parent, its plan (basis), and the task it follows up (discovered from, or whose report it was filed after).
@@ -957,7 +957,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
 - **What the app saves.**
   Each `ask` event says whether its message filed or started the task (`starts`): `spawn_crewmate`, `create_task`, a start through `update_task`, a card or operation the first mate filed for it, and the host's fallback question.
   An event saved before `starts` counts when `spawn_crewmate` or `create_task` attached it, or when it was the message's first task and a card the first mate filed or the fallback attached it.
-  A task the first mate files or starts while answering an automation run, a card click or a crewmate's report, with no message of the captain's, saves that origin on a `note` event (`TaskService.saveOrigin`): the automation's id and its name as it ran, since a one-time automation leaves Settings and runs are kept only 30 days; the card, the button's words and what was written; or the reporting task, whose own origin the line reads.
+  A task the first mate files or starts while answering an automation run, a card click or a crewmate's report, with no message of the captain's, saves that origin on a `note` event (`TaskService.capture.saveOrigin`): the automation's id and its name as it ran, since a one-time automation leaves Settings and runs are kept only 30 days; the card, the button's words and what was written; or the reporting task, whose own origin the line reads.
   When one turn read several, the first mate names the one it answers with `origin` on `spawn_crewmate` or `create_task`, and the host refuses a name the turn did not read; with several and none named it saves none.
   The host never guesses an origin from timing, and tasks filed before the change are not filled in afterwards.
 - **A long message.**

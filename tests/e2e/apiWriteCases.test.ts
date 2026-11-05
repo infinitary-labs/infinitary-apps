@@ -30,17 +30,17 @@ it("reads pending, sent and answered write asks through the saved task without c
     expect(savedWriteAsks(userDataDir, taskId)).toEqual([]);
 
     // Use the real writer, so a future storage move still exercises its reader.
-    tasks.keepWriteAsk(taskId, ask);
+    tasks.delivery.keepWriteAsk(taskId, ask);
     expect(savedWriteAsks(userDataDir, taskId)).toEqual([ask]);
     expect(savedWriteAsks(userDataDir, "another-task")).toEqual([]);
 
     now += 1_000;
     const sent = { ...ask, sentAt: now };
-    expect(tasks.takeWriteAsk(taskId, ask.id)).toEqual({ ask: sent });
+    expect(tasks.delivery.takeWriteAsk(taskId, ask.id)).toEqual({ ask: sent });
     expect(savedWriteAsks(userDataDir, taskId)).toEqual([sent]);
 
     const outcome = { kind: "answered", status: 201, requestId: "website-created" } as const;
-    tasks.recordWriteAskOutcome(taskId, ask.id, outcome);
+    tasks.delivery.recordWriteAskOutcome(taskId, ask.id, outcome);
     const beforeRead = db.serialize();
     expect(savedWriteAsks(userDataDir, taskId)).toEqual([{ ...sent, outcome }]);
     expect(db.serialize().equals(beforeRead)).toBe(true);

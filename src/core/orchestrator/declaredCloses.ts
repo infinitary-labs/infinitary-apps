@@ -2,7 +2,8 @@ import type { Card } from "@shared/cards";
 import { overridePasses, softHoldWords } from "@shared/holds";
 import { isFolderWork } from "@shared/routingPolicy";
 import type { TaskRecord } from "../storage/taskStore";
-import { carriedOnClose, type SettleRefusal, TaskService } from "../tasks/taskService";
+import type { SettleRefusal } from "../tasks/taskGraph";
+import { carriedOnClose, TaskService } from "../tasks/taskService";
 import { taskResultResponse } from "./answerTaskResponse";
 import { cardEmitter } from "./cardEmit";
 import type { SettleServiceHost } from "./settleHost";
@@ -72,7 +73,7 @@ export class DeclaredCloses {
     // A plain result choice is a receipt, never consent or a merge effect.
     // Change tasks still wait for an explicit answered settle and a clean-work check.
     if (choice && !choice.effect)
-      this.host.tasks.recordResultHandoff(record.id, { cardId: card.id, action });
+      this.host.tasks.capture.recordResultHandoff(record.id, { cardId: card.id, action });
     if (this.host.deliverableOf(record) !== "answer") return false;
     const text = !choice ? "marked answer Done" : `chose "${choice.label}"`;
     // An invalid action never produces a closure-choice wake.
@@ -126,7 +127,7 @@ export class DeclaredCloses {
       text: `Cannot close ${handle} as carried on by ${other}: ${why}`,
     });
     if (TaskService.isClosed(record)) return refuse(`it is already ${describeStatus(record)}.`);
-    const refusal = this.host.tasks.carrierRefusal(record.id, carrier.id);
+    const refusal = this.host.tasks.graph.carrierRefusal(record.id, carrier.id);
     if (refusal) return { ok: false, text: refusal };
     const card = this.host.cards
       .snapshot()
@@ -135,15 +136,15 @@ export class DeclaredCloses {
       return refuse(
         `its card "${card.title}" still waits on the captain, and their choice there comes first.`,
       );
-    const gate = this.host.tasks.closeRefusal(record.id);
+    const gate = this.host.tasks.graph.closeRefusal(record.id);
     if (gate) return refuse(gate.text);
     const pending = this.locks.settlingTasks.get(record.id);
     if (pending) return refuse(`${pending} is already in progress. Wait for its outcome.`);
     this.locks.settlingTasks.set(record.id, "carried_on");
     let pullRequest = "";
     try {
-      this.host.tasks.link(record.id, carrier.id, "replaced-by", "firstmate");
-      const end = this.host.tasks.carrierOf(record.id);
+      this.host.tasks.graph.link(record.id, carrier.id, "replaced-by", "firstmate");
+      const end = this.host.tasks.graph.carrierOf(record.id);
       const shared = [carrier, end].some((next) => next && sameChange(record, next));
       if (!shared) pullRequest = (await this.closing.closeOpenPullRequest(record.id)).text;
       await this.closing.closeTask(record.id, carriedOnClose(carrier, "firstmate"));
@@ -164,7 +165,7 @@ export class DeclaredCloses {
    * carrier's outcome is placed once, where it would have gone.
    */
   private placeHeldOutcome(oldId: string): void {
-    const carrier = this.host.tasks.carrierOf(oldId);
+    const carrier = this.host.tasks.graph.carrierOf(oldId);
     if (!carrier || carrier.id === oldId || !TaskService.isClosed(carrier)) return;
     if (!carrier.closedReason) return;
     const chain = this.host.askEnding.chainsOf(carrier.id)[0];
@@ -227,7 +228,7 @@ export class DeclaredCloses {
       return refuse(
         "it delivers an effect, not an answer - verify it and close it finished with completion_evidence.",
       );
-    const handedOn = this.host.tasks.resultHandoffOf(record.id);
+    const handedOn = this.host.tasks.capture.resultHandoffOf(record.id);
     const change = this.host.deliverableOf(record) !== "answer";
     if (change && !handedOn) {
       return refuse(
@@ -255,7 +256,8 @@ export class DeclaredCloses {
       if (record.delivery?.prUrl || record.delivery?.prNumber || record.delivery?.changeLabel)
         return refuse("it has its own pull request; use its delivery path instead.");
       const gate =
-        this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
+        this.host.tasks.graph.closeRefusal(record.id) ??
+        this.host.tasks.graph.blockerRefusal(record.id);
       if (gate) return refuse(gate.text);
       if (record.worktreeDir || record.branch || record.deviceId) {
         const work = await (record.deviceId
@@ -288,7 +290,7 @@ export class DeclaredCloses {
     // closing it done is what clears the wait.
     const waitedOnBy = builtOn
       ? undefined
-      : this.host.tasks.blocking(record.id).find((task) => !TaskService.isClosed(task));
+      : this.host.tasks.graph.blocking(record.id).find((task) => !TaskService.isClosed(task));
     const carriedBy = builtOn ?? waitedOnBy;
     // A step whose crewmate reported its answer has done its job even when
     // no task builds on it: the first mate passed the answer on itself, by a
@@ -309,7 +311,8 @@ export class DeclaredCloses {
     }
     if (handedOn) {
       const gate =
-        this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
+        this.host.tasks.graph.closeRefusal(record.id) ??
+        this.host.tasks.graph.blockerRefusal(record.id);
       if (gate) return refuse(gate.text);
       if (
         this.host.hasRunningJobs?.(record.id) ||
@@ -422,7 +425,8 @@ export class DeclaredCloses {
         `another decision or hold still needs attention. ${softHoldWords("decisions", "firstmate")}`,
       );
     const gate =
-      this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
+      this.host.tasks.graph.closeRefusal(record.id) ??
+      this.host.tasks.graph.blockerRefusal(record.id);
     if (gate) return { text: gate.text, refusal: gate };
     this.locks.settlingTasks.set(record.id, "finished");
     try {
@@ -486,7 +490,8 @@ export class DeclaredCloses {
     if ((!record.deviceId && !record.worktreeDir) || record.workspaceState !== "present")
       return refuse("its working copy is unavailable; check the work before closing it.");
     const gate =
-      this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
+      this.host.tasks.graph.closeRefusal(record.id) ??
+      this.host.tasks.graph.blockerRefusal(record.id);
     if (gate) return { text: gate.text, refusal: gate };
     this.locks.settlingTasks.set(record.id, "external release");
     try {
@@ -535,7 +540,8 @@ export class DeclaredCloses {
       )
         return refuse("its state changed while the working copy was checked; try again.");
       const newGate =
-        this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
+        this.host.tasks.graph.closeRefusal(record.id) ??
+        this.host.tasks.graph.blockerRefusal(record.id);
       if (newGate) return { text: newGate.text, refusal: newGate };
       await this.closing.closeTask(record.id, {
         status: "done",

@@ -21,7 +21,7 @@ import type { PanelCaptureResult, PanelPlaceResult } from "../personal/personalE
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import type { CardRefusal, CardRefusalReason } from "../storage/taskStore";
 import type { TaskQueryInput, TaskQueryProject, TaskQueryRow } from "../tasks/taskQuery";
-import type { ReportDeclaration } from "../tasks/taskService";
+import type { ReportDeclaration } from "../tasks/taskTurns";
 
 /**
  * One tool spec for every seat and both runtimes (primitives P7). A tool is

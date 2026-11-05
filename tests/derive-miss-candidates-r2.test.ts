@@ -15,7 +15,7 @@ import { scratchDir } from "./helpers/scratchDirs";
 /**
  * C2 consuming R2's forward events (supervision coverage W2): the fixture is
  * written through the app's own migrations and its one task writer -
- * `TaskService.recordSteer` / `recordInterrupt` / `recordDecision` are exactly
+ * `TaskService.turns.recordSteer` / `recordInterrupt` / `recordDecision` are exactly
  * what the crew control plane and `DecisionCapture` call - and the REAL CLI
  * derives over it. Only the rows are ours.
  */
@@ -213,7 +213,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
 
     // Counted: the captain steers via a card, the Firstmate via its tool, the captain aborts.
     setNow(T0 + 5 * MINUTE);
-    tasks.recordSteer("t-card", {
+    tasks.turns.recordSteer("t-card", {
       text: "use the blue one",
       actor: "captain",
       outcome: "queued-next-turn",
@@ -223,7 +223,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       inboxId: 11,
     });
     // The task card's Continue is the captain's own steer too (FI3-695).
-    tasks.recordSteer("t-card", {
+    tasks.turns.recordSteer("t-card", {
       text: "carry on",
       actor: "captain",
       outcome: "queued-next-turn",
@@ -233,7 +233,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       inboxId: 15,
     });
     setNow(T0 + 6 * MINUTE);
-    tasks.recordSteer("t-tool", {
+    tasks.turns.recordSteer("t-tool", {
       text: "rebase first",
       actor: "firstmate",
       outcome: "mid-turn",
@@ -243,14 +243,14 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       inboxId: 12,
     });
     setNow(T0 + 7 * MINUTE);
-    tasks.recordInterrupt("t-abort", {
+    tasks.turns.recordInterrupt("t-abort", {
       actor: "captain",
       mode: "interrupt",
       effect: "requested",
       via: "shell",
       decision: null,
     });
-    tasks.recordInterrupt("t-abort", {
+    tasks.turns.recordInterrupt("t-abort", {
       actor: "captain",
       mode: "interrupt",
       effect: "aborted-turn",
@@ -260,7 +260,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
 
     // Not counted: supervision's own steer, and the Firstmate interrupting on its own call.
     setNow(T0 + 8 * MINUTE);
-    tasks.recordSteer("t-quiet", {
+    tasks.turns.recordSteer("t-quiet", {
       text: "carry on",
       actor: "supervisor",
       outcome: "mid-turn",
@@ -269,7 +269,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       cardId: null,
       inboxId: 13,
     });
-    tasks.recordInterrupt("t-quiet", {
+    tasks.turns.recordInterrupt("t-quiet", {
       actor: "firstmate",
       mode: "interrupt",
       effect: "aborted-turn",
@@ -278,7 +278,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
     });
     // Not subsequent: a steer before the routine verdict.
     setNow(T0 - MINUTE);
-    tasks.recordSteer("t-quiet", {
+    tasks.turns.recordSteer("t-quiet", {
       text: "earlier",
       actor: "captain",
       outcome: "mid-turn",
@@ -297,7 +297,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       summary: "CI is red.",
       at: T0 + 10 * MINUTE,
     });
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "sv-esc",
         role: "supervision",
@@ -308,7 +308,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
         wakeInboxIds: [500],
       }),
     );
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "fm-consumer",
         role: "firstmate",
@@ -328,7 +328,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       summary: "Stuck.",
       at: T0 + 20 * MINUTE,
     });
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "sv-2",
         role: "supervision",
@@ -338,7 +338,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
         handoffInboxId: 601,
       }),
     );
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "fm-2",
         role: "firstmate",
@@ -349,7 +349,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       }),
     );
     setNow(T0 + 21 * MINUTE);
-    tasks.recordSteer("t-tool", {
+    tasks.turns.recordSteer("t-tool", {
       text: "try again",
       actor: "firstmate",
       outcome: "mid-turn",
@@ -365,7 +365,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       summary: "Help.",
       at: T0 + 30 * MINUTE,
     });
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "sv-3",
         role: "supervision",
@@ -493,7 +493,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       summary: "Needs Firstmate handling.",
       at: T0 + 10 * MINUTE,
     });
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "sv-retry",
         role: "supervision",
@@ -503,7 +503,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
         handoffInboxId: 801,
       }),
     );
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "fm-released",
         role: "firstmate",
@@ -516,7 +516,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       }),
     );
     setNow(T0 + 11 * MINUTE);
-    tasks.recordSteer("t-escalated", {
+    tasks.turns.recordSteer("t-escalated", {
       text: "preserve this guidance",
       actor: "firstmate",
       outcome: "mid-turn",
@@ -525,7 +525,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       cardId: null,
       inboxId: 802,
     });
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "fm-retry",
         role: "firstmate",
@@ -569,7 +569,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
   it("keeps an in-window interrupt request when its completion falls outside the window", () => {
     const { db, tasks, setNow } = buildBase();
     setNow(T0 + 23 * 60 * MINUTE);
-    tasks.recordInterrupt("t-abort", {
+    tasks.turns.recordInterrupt("t-abort", {
       actor: "captain",
       mode: "interrupt",
       effect: "requested",
@@ -577,7 +577,7 @@ describe("miss deriver - R2 direct-control evidence and the escalation chain", (
       decision: null,
     });
     setNow(T0 + 25 * 60 * MINUTE);
-    tasks.recordInterrupt("t-abort", {
+    tasks.turns.recordInterrupt("t-abort", {
       actor: "captain",
       mode: "interrupt",
       effect: "aborted-turn",

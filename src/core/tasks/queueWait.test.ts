@@ -52,10 +52,10 @@ describe("queued task wait facts (nightly audit finding 4)", () => {
       for (let index = 0; index < 40; index++) {
         const part = f.create(`prerequisite-${index}`);
         f.tick();
-        f.tasks.link(part.id, build.id, "blocks", "firstmate");
+        f.tasks.graph.link(part.id, build.id, "blocks", "firstmate");
       }
-      const blockers = f.tasks.blockers(build.id);
-      const links = f.tasks.linksTo(build.id);
+      const blockers = f.tasks.graph.blockers(build.id);
+      const links = f.tasks.graph.linksTo(build.id);
       let visits = 0;
       const tracked = links.map(
         (link) =>
@@ -115,21 +115,24 @@ describe("queued task wait facts (nightly audit finding 4)", () => {
       f.create("build", "when-ready");
       f.tick();
       const since = f.now();
-      f.tasks.setPlacementWait("build", {
+      f.tasks.placement.setPlacementWait("build", {
         kind: "room",
         words: "Waiting for a computer with room",
       });
       expect(f.line("build")).toMatchObject({ since });
       f.tick();
-      f.tasks.setPlacementWait("build", { kind: "room", words: "Waiting for room on Studio" });
+      f.tasks.placement.setPlacementWait("build", {
+        kind: "room",
+        words: "Waiting for room on Studio",
+      });
       expect(f.line("build")).toMatchObject({ since });
       expect(f.line("build")?.line).toContain("Studio");
-      f.tasks.setPlacementWait("build", {
+      f.tasks.placement.setPlacementWait("build", {
         kind: "model",
         words: "Waiting for a computer with a model",
       });
       expect(f.line("build")).toMatchObject({ since: f.now() });
-      f.tasks.dispatch("build", {
+      f.tasks.starts.dispatch("build", {
         workspace: { repoDir: "", worktreeDir: "", branch: "" },
         accountId: null,
         assignee: "crewmate",
@@ -149,9 +152,9 @@ describe("queued task wait facts (nightly audit finding 4)", () => {
       f.create("build", "when-ready");
       f.tick();
       const since = f.now();
-      f.tasks.link("plan", "build", "blocks", "firstmate");
+      f.tasks.graph.link("plan", "build", "blocks", "firstmate");
       f.tick();
-      f.tasks.link("design", "build", "blocks", "firstmate");
+      f.tasks.graph.link("design", "build", "blocks", "firstmate");
       expect(f.line("build")).toMatchObject({ since });
       expect(f.line("build")?.line).toContain(plan.key);
       expect(f.line("build")?.line).toContain(design.key);
@@ -202,19 +205,19 @@ describe("queued task wait facts (nightly audit finding 4)", () => {
       f.create("build", "when-ready");
       f.tick();
       const since = f.now();
-      f.tasks.setGate("build", { kind: "at-time", until: since + 60_000 });
+      f.tasks.placement.setGate("build", { kind: "at-time", until: since + 60_000 });
       expect(f.line("build")).toMatchObject({ since });
       expect(f.line("build")?.line).toContain("Waiting for its start time");
       f.tick();
       f.tasks.updateFields("build", { priority: 0 }, "firstmate");
       expect(f.line("build")?.since).toBe(since);
-      f.tasks.setGate("build", {
+      f.tasks.placement.setGate("build", {
         kind: "at-time",
         until: since + 60_000,
         reason: "Updated explanation",
       });
       expect(f.line("build")?.since).toBe(since);
-      f.tasks.setGate("build", null);
+      f.tasks.placement.setGate("build", null);
       expect(f.line("build")?.since).toBe(f.now());
     } finally {
       f.protocol.dispose();
@@ -226,17 +229,17 @@ describe("queued task wait facts (nightly audit finding 4)", () => {
     try {
       f.create("plan");
       f.create("build");
-      f.tasks.link("plan", "build", "blocks", "firstmate");
+      f.tasks.graph.link("plan", "build", "blocks", "firstmate");
       f.tick();
-      f.tasks.unlink("plan", "build", "blocks", "firstmate");
+      f.tasks.graph.unlink("plan", "build", "blocks", "firstmate");
       expect(f.line("build")?.since).toBe(f.now());
-      f.tasks.beginStartAttempt("build");
+      f.tasks.starts.beginStartAttempt("build");
       expect(f.view("build").queueWait).toBeUndefined();
       expect(
         queryTasks(f.tasks, { key: "build" }, () => undefined).rows[0]?.waiting,
       ).toBeUndefined();
       f.tick();
-      f.tasks.failManualStart("build", "The project folder could not be prepared");
+      f.tasks.starts.failManualStart("build", "The project folder could not be prepared");
       expect(f.view("build").queueWait?.since).toBe(f.now());
     } finally {
       f.protocol.dispose();

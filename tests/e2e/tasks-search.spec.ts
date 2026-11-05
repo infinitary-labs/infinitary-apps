@@ -201,7 +201,11 @@ test("Search tasks opens the search in a panel that lists no row, and its words 
   const userDataDir = scratchDir("infinitary-tasks-search-answers-");
   const db = openDatabase(userDataDir);
   const tasks = new TaskService({ db, strict: true });
-  tasks.fileQuestion({ id: "answer", title: ANSWER_TITLE, outcome: "<p>The one you pick.</p>" });
+  tasks.capture.fileQuestion({
+    id: "answer",
+    title: ANSWER_TITLE,
+    outcome: "<p>The one you pick.</p>",
+  });
   db.close();
   const launched = await launchApp({ userDataDir });
   const { page } = launched;

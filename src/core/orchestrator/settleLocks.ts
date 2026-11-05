@@ -32,7 +32,7 @@ export class SettleLocks {
   /** Capture a merge/land intent and wait until the current turn is safely idle. */
   waitForSettleBoundary(taskId: string, intent: PendingSettleIntent): Promise<void> {
     if (!this.working(taskId)) return Promise.resolve();
-    this.host.tasks.setPendingSettle(taskId, intent);
+    this.host.tasks.delivery.setPendingSettle(taskId, intent);
     return new Promise((resolve) => {
       const waiters = this.settleBoundaryWaiters.get(taskId) ?? new Set<() => void>();
       waiters.add(resolve);

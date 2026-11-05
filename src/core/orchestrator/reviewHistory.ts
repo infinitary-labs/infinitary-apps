@@ -47,7 +47,7 @@ export type ReviewHistoryEntry =
 /** What the history reads: the task record's own readers, nothing new. */
 export type ReviewHistoryReader = {
   timeline(id: string): TaskEvent[];
-  children(id: string): TaskRecord[];
+  graph: { children(id: string): TaskRecord[] };
 };
 
 /** A card resolution that is not an answer: the captain put the card away without choosing. */
@@ -68,7 +68,7 @@ export function reviewHistory(
   const verdicts = own.filter(
     (event) => event.kind === "review" && typeof event.data?.reviewVerdict === "string",
   );
-  const reviews = reader
+  const reviews = reader.graph
     .children(builder.id)
     .filter((child) => child.shape?.kind === "review" && !isRepairAssessment(child.shape));
   const typed = builder.delivery?.liveValidation?.reviews ?? [];

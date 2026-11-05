@@ -506,7 +506,7 @@ describe("supervision-turn extractor - R2 framed sessions and decisions", () => 
     });
 
     now = T0 + 3000;
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "sv-r2",
         taskId: "t-r2",
@@ -525,7 +525,7 @@ describe("supervision-turn extractor - R2 framed sessions and decisions", () => 
         inboxId: 31,
       }),
     );
-    tasks.recordDecision(
+    tasks.turns.recordDecision(
       decision({
         id: "sv-repeat",
         actor: "host",
@@ -541,7 +541,7 @@ describe("supervision-turn extractor - R2 framed sessions and decisions", () => 
         served: false,
       }),
     );
-    tasks.recordSteer("t-r2", {
+    tasks.turns.recordSteer("t-r2", {
       text: "rerun the suite",
       actor: "captain",
       outcome: "queued-next-turn",

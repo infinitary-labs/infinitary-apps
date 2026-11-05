@@ -33,7 +33,7 @@ Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/key
 - Read: `app_state` returns each line's current value from its `current` channel.
 - Execute: the dispatcher checks the actor, parses the request, reads the value before, runs the handler and, for an applied change, writes one attributed feed line and one operation (never a card).
 - Unchanged values and refusals leave no success trail; acts rather than values (`alwaysTrail`) always leave one.
-- Settle: a run of the captain's own steps on one setting is one feed line and one operation, rewritten in place until `SETTLE_MS` (10 seconds) pass, another line enters Activity, or another setting changes; a run that returns to its start is withdrawn (`TaskService.withdrawOperation`).
+- Settle: a run of the captain's own steps on one setting is one feed line and one operation, rewritten in place until `SETTLE_MS` (10 seconds) pass, another line enters Activity, or another setting changes; a run that returns to its start is withdrawn (`TaskService.archive.withdrawOperation`).
 - Each first mate change stays its own line and operation, so the answer check finds one action per captain message (`docs/task-capture.md`).
 - Propose: a `proposes` line (such as `project-setup`) changes nothing; the host puts up its own card from typed facts, and only that card's button runs the change.
 - Hand over: a `hands` line the first mate asks for becomes a host-written card (`HandoverOffer`) whose button opens the relevant Settings section; it never submits credentials.

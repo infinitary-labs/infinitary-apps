@@ -706,7 +706,7 @@ describe("Automatic starts beside their direct answered basis", () => {
     return w.tasks.get(task.id)!;
   };
   const move = (w: ReturnType<typeof basisWorld>, id: string, deviceId: string | null) =>
-    w.tasks.commitComputerMove(id, {
+    w.tasks.placement.commitComputerMove(id, {
       deviceId,
       repoDir: "/ledger",
       worktreeDir: "/ledger/work",
@@ -748,7 +748,7 @@ describe("Automatic starts beside their direct answered basis", () => {
     const w = basisWorld();
     try {
       const cold = w.task("cold", "An unstarted answer");
-      w.tasks.recordReport(cold.id, { text: "The answer is ready without execution." });
+      w.tasks.turns.recordReport(cold.id, { text: "The answer is ready without execution." });
       // Occupy home first, so ordinary ranking chooses the remote.
       await w.start(w.task("occupy", "Preparing here"));
       const task = continuation(w, "next", cold.key);
@@ -863,7 +863,7 @@ describe("Automatic starts beside their direct answered basis", () => {
     const w = basisWorld();
     try {
       const basis = answered(w, "basis", macMini.id);
-      w.tasks.setComputerMove(basis.id, {
+      w.tasks.placement.setComputerMove(basis.id, {
         from: macMini.id,
         to: "this-mac",
         by: "firstmate",
@@ -883,7 +883,7 @@ describe("Automatic starts beside their direct answered basis", () => {
       const basis = answered(w, "basis", macMini.id);
       const next = continuation(w, "next", basis.key);
       await w.start(next);
-      w.tasks.beginPlacementPreparation(next.id);
+      w.tasks.placement.beginPlacementPreparation(next.id);
       const before = w.tasks.get(next.id)?.placement;
       move(w, basis.id, null);
       const recovered = new TaskService({ db: w.db, strict: true });

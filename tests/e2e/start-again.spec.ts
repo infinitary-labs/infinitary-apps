@@ -18,14 +18,14 @@ test("keyboard Start again replaces dropped work, moves its wait and leaves the 
     status: "cancelled",
     intent: { goal: "The harbour chart is ready to share.", userWords: "finish the harbour chart" },
   });
-  tasks.markWorkspaceRemoved(old.id);
+  tasks.placement.markWorkspaceRemoved(old.id);
   const waiter = seedTask(tasks, {
     id: "share-chart",
     title: "Share the chart",
     status: "queued",
     startPolicy: "on-request",
   });
-  tasks.link(old.id, waiter.id, "blocks", "host");
+  tasks.graph.link(old.id, waiter.id, "blocks", "host");
   db.close();
   const app = await launchApp({ userDataDir, withMockProvider: true });
   try {

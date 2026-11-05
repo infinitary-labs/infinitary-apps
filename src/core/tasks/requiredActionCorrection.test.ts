@@ -35,7 +35,7 @@ function setup() {
   const tasks = new TaskService({ db, strict: true, now: () => at });
   const file = (source: string, actions: RequiredAction[]) => {
     seedTask(tasks, { id: source, title: `Source ${source}`, status: "completed" });
-    tasks.declareRequiredActions(
+    tasks.delivery.declareRequiredActions(
       source,
       { cardId: `card-${source}-1`, offerId: `offer-${source}`, actions },
       true,
@@ -48,9 +48,11 @@ function setup() {
   };
   const by = { actor: "crewmate" as const, taskId: "helper", label: "the crewmate on INF-9" };
   const correct = (
-    input: Partial<Parameters<TaskService["reviseRequiredAction"]>[1]> & { generation: number },
+    input: Partial<Parameters<TaskService["delivery"]["reviseRequiredAction"]>[1]> & {
+      generation: number;
+    },
   ) =>
-    tasks.reviseRequiredAction(row().id, {
+    tasks.delivery.reviseRequiredAction(row().id, {
       source: "dop208",
       actionId: "remove-job-host",
       expectedGeneration: input.generation,
@@ -122,8 +124,8 @@ describe("correcting a required action's words", () => {
     const f = setup();
     f.file("dop208", [removal()]);
     const id = f.row().id;
-    f.tasks.presentCaptainAction(id);
-    f.tasks.deferCaptainAction(id);
+    f.tasks.delivery.presentCaptainAction(id);
+    f.tasks.delivery.deferCaptainAction(id);
     const generation = f.row().delivery?.captainAction?.generation ?? 0;
     f.correct({ generation, presented: true });
     expect(f.row().delivery?.captainAction).toMatchObject({
@@ -131,7 +133,7 @@ describe("correcting a required action's words", () => {
       generation: generation + 1,
       presentedGeneration: generation + 1,
     });
-    expect(f.tasks.completeCaptainAction(id, generation, "confirmed")).toBe(false);
+    expect(f.tasks.delivery.completeCaptainAction(id, generation, "confirmed")).toBe(false);
     expect(f.row().status).toBe("open");
 
     const g = setup();
@@ -144,7 +146,7 @@ describe("correcting a required action's words", () => {
       state: "blocked",
       requirements: [{ action: { prerequisites: ["pc-online"] } }],
     });
-    expect(g.tasks.blockers(g.row().id).map((task) => task.id)).toEqual(["pc-online"]);
+    expect(g.tasks.graph.blockers(g.row().id).map((task) => task.id)).toEqual(["pc-online"]);
   });
 
   it("refuses a stale generation, a different action and a completed action, writing nothing", () => {
@@ -164,9 +166,9 @@ describe("correcting a required action's words", () => {
     });
     expect(JSON.stringify(f.row().delivery?.captainAction)).toBe(kept);
 
-    f.tasks.presentCaptainAction(id);
-    expect(f.tasks.completeCaptainAction(id, generation, "confirmed")).toBe(true);
-    const completed = f.tasks.reviseRequiredAction(id, {
+    f.tasks.delivery.presentCaptainAction(id);
+    expect(f.tasks.delivery.completeCaptainAction(id, generation, "confirmed")).toBe(true);
+    const completed = f.tasks.delivery.reviseRequiredAction(id, {
       source: "dop208",
       actionId: "remove-job-host",
       expectedGeneration: generation,

@@ -18,9 +18,9 @@ export default function seed(userDataDir: string, { cardId, title, ask }: Input)
   const db = openDatabase(userDataDir);
   try {
     const tasks = new TaskService({ db, strict: true });
-    tasks.openAsk({ id: "ask-thread", text: ask });
-    tasks.setAskReply("ask-thread", { text: title });
-    tasks.closeAsk("ask-thread", "closed");
+    tasks.capture.openAsk({ id: "ask-thread", text: ask });
+    tasks.capture.setAskReply("ask-thread", { text: title });
+    tasks.capture.closeAsk("ask-thread", "closed");
     new CardStore(db).upsert({
       id: cardId,
       author: "firstmate",

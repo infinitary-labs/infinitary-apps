@@ -4,7 +4,7 @@ import { opensPullRequest } from "@shared/repos";
 import { MERGE_WORDS } from "@shared/vocabulary";
 import { signInRefusal } from "../forge";
 import type { TaskRecord } from "../storage/taskStore";
-import type { SettleRefusal, SettleWay } from "../tasks/taskService";
+import type { SettleRefusal, SettleWay } from "../tasks/taskGraph";
 import { mergeHold } from "./mergeAuthorization";
 import type { SettleServiceHost } from "./settleHost";
 import { unlandedWorkText } from "./settleWords";
@@ -40,14 +40,14 @@ export function closeGateRefusal(
   // The captain's override on the open parts is his leave to settle
   // keeping them planned, the same as `proceed_with_open`.
   if (!proceedWithOpen && !overridePasses(delivery, "parts", delivery?.headSha)) {
-    const children = host.tasks.closeRefusal(taskId);
+    const children = host.tasks.graph.closeRefusal(taskId);
     if (children) {
       const refusal = withProceedWay(children, taskId, mode);
       return { ...refusal, text: `${refusal.text} ${softHoldWords("parts", "firstmate")}` };
     }
   }
   if (mode === "discard") return undefined;
-  const waits = host.tasks.blockerRefusal(taskId);
+  const waits = host.tasks.graph.blockerRefusal(taskId);
   return waits ? { ...waits, text: `${waits.text} ${softHoldWords("waits", "firstmate")}` } : waits;
 }
 

@@ -31,7 +31,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - The wire shape, actions and effects: `cardSchema`, `cardActionSchema`, `cardPresentation` and `isPreviewBody` in [`src/shared/cards.ts`](../src/shared/cards.ts).
 - Agent entry: `emit_card` ([`src/core/pi/cardTool.ts`](../src/core/pi/cardTool.ts)), the crewmate's `reply(card_id, text)`, and `close_card` for an author's own card.
 - A write on someone else's card: `tasks card` reads it first (`CardService.cardRead`); `emit_card` with `expected_revision` revises it and without it writes its `reply` alone (`CardService.contribute`); a crewmate's `reply` writes a line (`CardService.replyAs`); `answers_message` names the captain message a line ends, and `operation_id` returns the first result when sent again.
-- A required action's words: the first mate's `update_task revise_required_action` and the crewmate's `revise_required_action`, through `CardService.reviseRequiredAction` to `TaskService.reviseRequiredAction` (`docs/required-actions.md`, "Correcting the words").
+- A required action's words: the first mate's `update_task revise_required_action` and the crewmate's `revise_required_action`, through `CardService.reviseRequiredAction` to `TaskService.delivery.reviseRequiredAction` (`docs/required-actions.md`, "Correcting the words").
 - The shape lint at both emit boundaries: [`src/core/pi/cardLint.ts`](../src/core/pi/cardLint.ts).
 - Card pictures: `verifyCardImages` in [`src/core/pi/cardImages.ts`](../src/core/pi/cardImages.ts).
 - A click: `CrewSupervisor.act` in [`src/core/orchestrator/crewSupervisor.ts`](../src/core/orchestrator/crewSupervisor.ts) dispatches on the action's `effect`, never on its id.
@@ -52,7 +52,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - Contribute: a write on someone else's card keeps its author, task, lifecycle, source offer and answerer; a revision names the revision it read, and a closed card takes a dated clarification alone.
   Any writer's line, the answerer's own included, ends a captain question only when `answers_message` names the one the card waits on; a handoff stays open.
 - Withdraw: only a card's own author withdraws it (`CardService.close` refuses the first mate closing someone else's card).
-- Every card with actions places the `captain` gate on its task (`IdleLadder.syncCaptainGate`); a task-less host card files an `operation` row (`TaskService.fileHostCardTask`); a choice or explicit ending releases the gate; putting a card away preserves it (`docs/card-authoring.md` "A card places the gate").
+- Every card with actions places the `captain` gate on its task (`IdleLadder.syncCaptainGate`); a task-less host card files an `operation` row (`TaskService.capture.fileHostCardTask`); a choice or explicit ending releases the gate; putting a card away preserves it (`docs/card-authoring.md` "A card places the gate").
 - Evidence: every offer, availability change, admitted action, thread line, exit and stage sighting is appended to `card_observations` by `CardStore.observe`, inside the same transaction as the write it describes (`docs/card-evidence.md`).
 
 ## Authority

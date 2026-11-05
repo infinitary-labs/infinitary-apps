@@ -1545,7 +1545,7 @@ class Replay {
                   title: record.title,
                   parent: record.parentId !== null,
                   bound: record.shape.program.bound,
-                  started: this.tasks.programStarted(record.id),
+                  started: this.tasks.starts.programStarted(record.id),
                 },
               ]
             : [],

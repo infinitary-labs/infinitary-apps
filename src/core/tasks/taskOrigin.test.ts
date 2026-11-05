@@ -26,10 +26,10 @@ function setup() {
     starts?: boolean,
   ) => {
     now += 1;
-    tasks.openAsk({ id, text, at: now });
+    tasks.capture.openAsk({ id, text, at: now });
     now += 1;
-    tasks.attachAsk(id, taskId, via, starts);
-    tasks.closeAsk(id, "closed");
+    tasks.capture.attachAsk(id, taskId, via, starts);
+    tasks.capture.closeAsk(id, "closed");
   };
   return { tasks, said, tick: () => (now += 1) };
 }
@@ -53,7 +53,7 @@ describe("where a card's work came from", () => {
       parentId: "assess",
     });
     said("steer", "also look at the phone lane", "compare", "tool:steer_crewmate");
-    expect(tasks.originAbout("compare")).toMatchObject({
+    expect(tasks.capture.originAbout("compare")).toMatchObject({
       kind: "asked",
       text: expect.stringContaining("i want an assessment"),
       through: 1,
@@ -86,10 +86,10 @@ describe("where a card's work came from", () => {
     });
     seedTask(tasks, { id: "fix", title: "Fix the story", status: "completed", parentId: "build" });
     seedTask(tasks, { id: "again", title: "Fix the story again", status: "idle" });
-    tasks.link("fix", "again", "replaced-by", "firstmate");
+    tasks.graph.link("fix", "again", "replaced-by", "firstmate");
     said("merge", "merge it", "again", "tool:settle_task");
     said("stop", "stop that", "again", "tool:interrupt_crewmate");
-    expect(tasks.originAbout("again")).toMatchObject({
+    expect(tasks.capture.originAbout("again")).toMatchObject({
       kind: "asked",
       text: expect.stringContaining("merged on its own"),
       through: 4,
@@ -100,14 +100,14 @@ describe("where a card's work came from", () => {
     // A nightly audit's card had no line at all.
     const { tasks } = setup();
     seedTask(tasks, { id: "audit", title: "Check package versions", status: "idle" });
-    tasks.saveOrigin("audit", {
+    tasks.capture.saveOrigin("audit", {
       kind: "automation",
       ruleId: "r-night",
       name: "Nightly product audit",
     });
     // A later origin adds nothing: the first one saved stands.
-    expect(tasks.saveOrigin("audit", { kind: "report", taskId: "audit" })).toBe(false);
-    expect(tasks.originAbout("audit")).toEqual({
+    expect(tasks.capture.saveOrigin("audit", { kind: "report", taskId: "audit" })).toBe(false);
+    expect(tasks.capture.originAbout("audit")).toEqual({
       kind: "automation",
       at: expect.any(Number),
       name: "Nightly product audit",
@@ -119,14 +119,14 @@ describe("where a card's work came from", () => {
       status: "idle",
       parentId: "audit",
     });
-    expect(tasks.originAbout("part")).toMatchObject({ kind: "automation", through: 1 });
+    expect(tasks.capture.originAbout("part")).toMatchObject({ kind: "automation", through: 1 });
   });
 
   it("reads a click the work was filed from, with the button's words and what the captain wrote", () => {
     // INF-2326's own cards: the captain's click on INF-2299's card, with what they wrote.
     const { tasks, said } = setup();
     seedTask(tasks, { id: "file", title: "File card improvements", status: "idle" });
-    tasks.saveOrigin("file", {
+    tasks.capture.saveOrigin("file", {
       kind: "chose",
       cardId: "card-plan",
       card: "Plan for clearer cards",
@@ -137,7 +137,7 @@ describe("where a card's work came from", () => {
     seedTask(tasks, { id: "other", title: "Another task", status: "idle" });
     said("sweep", "how are these going?", "file", "tool:steer_crewmate");
     said("sweep2", "and these?", "other", "tool:steer_crewmate");
-    expect(tasks.originAbout("file")).toMatchObject({
+    expect(tasks.capture.originAbout("file")).toMatchObject({
       kind: "chose",
       choice: "File the picked improvements",
       text: expect.stringContaining("ran by an automation"),
@@ -156,8 +156,8 @@ describe("where a card's work came from", () => {
       true,
     );
     seedTask(tasks, { id: "slow", title: "Fix the slow journey", status: "idle" });
-    tasks.saveOrigin("slow", { kind: "report", taskId: "alpha" });
-    expect(tasks.originAbout("slow")).toMatchObject({
+    tasks.capture.saveOrigin("slow", { kind: "report", taskId: "alpha" });
+    expect(tasks.capture.originAbout("slow")).toMatchObject({
       kind: "asked",
       text: "cut an alpha tonight and tell me what is slow",
       through: 1,
@@ -179,14 +179,14 @@ describe("where a card's work came from", () => {
       parentId: "alpha",
     });
     const alpha = tasks.get("alpha");
-    expect(tasks.originAbout("slow")).toEqual({
+    expect(tasks.capture.originAbout("slow")).toEqual({
       kind: "from",
       at: alpha?.createdAt,
       key: alpha?.key,
       title: "Cut tonight's alpha and report slow and new failures",
     });
     said("note", "keep the timeout as it is", "slow", "tool:steer_crewmate");
-    expect(tasks.originAbout("slow")).toMatchObject({
+    expect(tasks.capture.originAbout("slow")).toMatchObject({
       kind: "said",
       text: "keep the timeout as it is",
       through: 0,

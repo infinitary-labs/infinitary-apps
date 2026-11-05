@@ -239,7 +239,7 @@ export function recentFeed(tasks: TaskService, activity: ActivityStore, limit: n
     const parent = record.parentId ? tasks.get(record.parentId) : undefined;
     const program = parent?.shape?.program ? parent : record.shape?.program ? record : undefined;
     if (program) {
-      const parts = tasks.children(program.id);
+      const parts = tasks.graph.children(program.id);
       const done = parts.filter((part) => part.status === "done").length;
       const dropped = parts.filter((part) => part.status === "dropped").length;
       return [

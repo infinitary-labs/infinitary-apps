@@ -43,7 +43,7 @@ function seed(userDataDir: string): { key: string; id: string } {
       title: "Add the device link to Settings",
       status: "completed",
     });
-    tasks.declareRequiredActions(
+    tasks.delivery.declareRequiredActions(
       source.id,
       {
         cardId: "card-row-source-1",
@@ -66,8 +66,8 @@ function seed(userDataDir: string): { key: string; id: string } {
     const row = tasks.listOpen().find((record) => record.delivery?.captainAction);
     if (!row) throw new Error("The required action filed no row");
     // Presented once, as the card was, then Not now: the card is gone, the row stays.
-    tasks.presentCaptainAction(row.id);
-    tasks.deferCaptainAction(row.id);
+    tasks.delivery.presentCaptainAction(row.id);
+    tasks.delivery.deferCaptainAction(row.id);
     return { key: row.key, id: row.id };
   } finally {
     db.close();

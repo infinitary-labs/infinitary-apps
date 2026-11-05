@@ -27,12 +27,12 @@ export function exportToFile(userDataDir: string, outPath: string): number {
 export function importFromFile(
   userDataDir: string,
   importPath: string,
-): ReturnType<TaskService["importRecords"]> {
+): ReturnType<TaskService["archive"]["importRecords"]> {
   const bundle = parseTaskExport(readFileSync(importPath, "utf8"));
   const db = openDatabase(userDataDir);
   try {
     const tasks = new TaskService({ db });
-    return tasks.importRecords(bundle);
+    return tasks.archive.importRecords(bundle);
   } finally {
     db.close();
   }

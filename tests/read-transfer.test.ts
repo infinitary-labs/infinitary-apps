@@ -56,7 +56,7 @@ describe("read values across the frame boundary (INF-2221)", () => {
       expect(held).toEqual(first);
       expect(held.tasks[0]).not.toBe(first.tasks[0]);
 
-      f.tasks.setActivity("writing", "running");
+      f.tasks.turns.setActivity("writing", "running");
       seedTask(f.tasks, { id: "queued", title: "Check the updated frame", status: "queued" });
       const next = f.protocol.board();
       const message = transferReadValue(first, next);
@@ -89,7 +89,7 @@ describe("read values across the frame boundary (INF-2221)", () => {
         undefined,
         structuredClone(transferReadValue(undefined, first)),
       ) as TaskView[];
-      f.tasks.setActivity("writing", "running");
+      f.tasks.turns.setActivity("writing", "running");
       const next = f.protocol.board().tasks;
       const message = transferReadValue(first, next);
       const received = receive(held, structuredClone(message)) as TaskView[];

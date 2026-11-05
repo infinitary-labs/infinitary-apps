@@ -13,7 +13,7 @@ A task of its own exists only for a genuinely standalone one-off, and only when 
 
 ## Mechanics
 
-1. `inf:converse` opens a `captain_asks` row before the first mate turn runs (`TaskService.openAsk`, policy in `src/core/orchestrator/askCapture.ts`).
+1. `inf:converse` opens a `captain_asks` row before the first mate turn runs (`TaskService.capture.openAsk`, policy in `src/core/orchestrator/askCapture.ts`).
    The hint is the task the open card points at: an explicit `taskId` on the turn (the P4 record card), else the visible card's `taskId`, else the decision row a visible first mate decision card carries.
 2. The first mate's attributing tools accept `ask_id`: a message this turn has read, any open message a finished reply has read (INF-2664), or the empty string for operational work unrelated to a captain message.
    Which message work serves is the first mate's to declare: its description tells it to name the message on work that comes from a click on its card or a report on its work.
@@ -113,7 +113,7 @@ The host reads only typed facts: the saved message, the task graph, the cards an
 What piece 2's migration adds to `captain_asks`: `followed` (every message saved from then on), `continues`, `answer_card_id` with `accepted_at`, `answered_at` and `crewmate_asked_at`.
 
 - **Its work.**
-  The tasks the message attached to, and every task that carries their work on: parts, builds on a plan (`basis`), retries, branches taken from them, replacements (`replaced-by`) and a stronger model (`escalated_to`), walked by `TaskService.askCoverage`, which reads each message's tasks once for the whole chain.
+  The tasks the message attached to, and every task that carries their work on: parts, builds on a plan (`basis`), retries, branches taken from them, replacements (`replaced-by`) and a stronger model (`escalated_to`), walked by `TaskService.capture.askCoverage`, which reads each message's tasks once for the whole chain.
   Attribution and escalation edges are read as typed metadata, without decoding each task's entire timeline.
   Coverage reads only task identity, title, status, close reason and creation/start times from the task row, and child identities in their existing order, without composing specifications, shapes, execution or delivery payloads.
   One `openChains` read shares these task fields and successor edges across its roots; these facts are discarded after the synchronous read and invalidated by task writes, including rollback.
@@ -160,7 +160,7 @@ At most one closing note: when work closes without the captain's click, `TaskClo
 - Otherwise the app's one closing note goes up, marked as the answer.
 - Work no message of the captain's covers, such as work the fleet started, puts up a note only when it merged or released and nothing of the task is on the stack.
 
-Open-chain reads select unfinished roots and their complete membership together through `TaskService.openAskChains`, decoding each message once instead of reloading each root and its members after listing the open messages.
+Open-chain reads select unfinished roots and their complete membership together through `TaskService.capture.openAskChains`, decoding each message once instead of reloading each root and its members after listing the open messages.
 Open turns and already-ended members remain in those chains, so freshness and pending-delivery checks still read the newest message; each call reads current storage, with no retained chain cache.
 The first mate's turn facts list the open messages (`open_asks`): each one's id, when it was sent, how it stands and the work that still runs for it, newest first and bounded like the task list, with a notice still up counted as unanswered.
 They never repeat the captain's words, which are in its conversation.
@@ -169,7 +169,7 @@ They never repeat the captain's words, which are in its conversation.
 
 A captain message's pictures, however they reached the input (pasted, dropped or chosen), are kept as the message's own copies when it is accepted (`docs/composer.md`, "Files"), and its ask row keeps their references in `images_json` (id, name, type, size, SHA-256 and the copy's path under `<userData>/attachments/`, never the bytes).
 A row an older build saved holds the types alone and has no copies to name.
-Whatever task the message attaches to, by a tool or by the fallback, holds its pictures: `TaskService.pictures` reads them from every `ask` event on the task, in the order the messages attached, so a message about two tasks lands on both.
+Whatever task the message attaches to, by a tool or by the fallback, holds its pictures: `TaskService.capture.pictures` reads them from every `ask` event on the task, in the order the messages attached, so a message about two tasks lands on both.
 The `tasks` query by key lists them by name and copy (`pictures`).
 
 The crewmate that takes the task is briefed with them (`CrewSupervisor.briefPictures`): the task's own pictures, then those of the work its brief carries forward - its basis, the task it was discovered or escalated from, the attempt it replaces - each picture once by digest.
@@ -195,7 +195,7 @@ An open first mate decision card does not light the rail: the strip counts worki
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
-- Capture (task-system P1, design section 6, captain decision D1 - "attach first"; `docs/task-capture.md`): every `inf:converse` opens a `captain_asks` row BEFORE the turn runs (`src/core/orchestrator/askCapture.ts` over `TaskService.openAsk`); the first mate's tools select the read message they address through `ask_id` (empty for unrelated operational work) and attach it to the task they act on (`attached_via = tool:<name>`), and `AskCapture.endTurn` files whatever is still loose - on the hinted task (the open card's task, or the turn's `taskId`), else as a standalone `question` task in Scratch (`host:fallback`; the share of these is the attribution metric).
+- Capture (task-system P1, design section 6, captain decision D1 - "attach first"; `docs/task-capture.md`): every `inf:converse` opens a `captain_asks` row BEFORE the turn runs (`src/core/orchestrator/askCapture.ts` over `TaskService.capture.openAsk`); the first mate's tools select the read message they address through `ask_id` (empty for unrelated operational work) and attach it to the task they act on (`attached_via = tool:<name>`), and `AskCapture.endTurn` files whatever is still loose - on the hinted task (the open card's task, or the turn's `taskId`), else as a standalone `question` task in Scratch (`host:fallback`; the share of these is the attribution metric).
   `emit_card` needs `task_id` or `standalone: true` for a note (lint refusal), a task-less decision files an open `decision` task keyed by its card id (a choice, explicit Dismiss or close_card closes it; putting it away does not), and the operate tools file `operation` tasks through one helper.
   `[fm-op]` wakes open no ask.
   Never add a second ask writer, and never let a first mate card with `task_id` count as the crewmate's card (`cardEmitter` in `crewSupervisor.ts` reads the emitter off the id: `card-fm-` vs `card-<taskId>-`).

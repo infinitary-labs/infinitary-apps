@@ -87,7 +87,7 @@ test("a task waiting on work underway stays waiting past every idle rung and res
       )
       .not.toBe("");
     await expect
-      .poll(() => tasks.blockers(waitingId).map((task) => task.id), {
+      .poll(() => tasks.graph.blockers(waitingId).map((task) => task.id), {
         timeout: 30_000,
       })
       .toEqual([owner.id]);
@@ -104,7 +104,7 @@ test("a task waiting on work underway stays waiting past every idle rung and res
     const now = Date.now();
     // The app is stopped; only the offline recovery setup may write here.
     db.pragma("query_only = OFF");
-    tasks.recordRecovery(waitingId, {
+    tasks.turns.recordRecovery(waitingId, {
       rung: 2,
       count: 2,
       at: now - 35 * 60_000,

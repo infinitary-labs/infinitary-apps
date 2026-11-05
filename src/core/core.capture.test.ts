@@ -80,7 +80,7 @@ describe("capture: every captain ask lands in a task", () => {
    * file's turns opened, one per turn, and none is left open or unattached.
    */
   afterEach(() => {
-    const asks = core.services.tasks.listAsks();
+    const asks = core.services.tasks.capture.listAsks();
     expect(asks.map((ask) => ask.id)).toEqual(turnAsks);
     expect(asks.every((ask) => ask.taskId !== null && ask.turnState === "closed")).toBe(true);
   });
@@ -102,13 +102,16 @@ describe("capture: every captain ask lands in a task", () => {
 
   /** One captain turn: the ask closes when the turn ends. */
   async function turn(payload: string | { text: string; taskId?: string }): Promise<AskRecord> {
-    const before = new Set(core.services.tasks.listAsks().map((ask) => ask.id));
+    const before = new Set(core.services.tasks.capture.listAsks().map((ask) => ask.id));
     await core.dispatch("inf:converse", [payload]);
-    const opened = core.services.tasks.listAsks().find((ask) => !before.has(ask.id));
+    const opened = core.services.tasks.capture.listAsks().find((ask) => !before.has(ask.id));
     if (!opened) throw new Error("the turn opened no ask");
     turnAsks.push(opened.id);
-    await waitFor(() => core.services.tasks.getAsk(opened.id)?.turnState !== "open", 60_000);
-    const closed = core.services.tasks.getAsk(opened.id);
+    await waitFor(
+      () => core.services.tasks.capture.getAsk(opened.id)?.turnState !== "open",
+      60_000,
+    );
+    const closed = core.services.tasks.capture.getAsk(opened.id);
     if (!closed) throw new Error("the ask vanished");
     return closed;
   }

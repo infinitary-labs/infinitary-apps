@@ -69,7 +69,7 @@ Always allowed (`allow`) runs it without a card; Off (`never`) refuses it.
 Agents see every action and its state, including Off actions.
 A call at Asks you must carry a reason; without one the service refuses it and asks for the reason.
 The service keeps its exact checked input as an `IntegrationAsk` on the crewmate's task and raises its own card from typed facts: caller, action, description, effect, exact input and the reason marked as the crewmate's words.
-The first mate's calls follow the same rule (INF-1108): it has no task, so its card is a host card with no task, the host files that card's own row (`TaskService.fileHostCardTask`), and the ask, marked `by: "firstmate"`, waits on it with the reason marked as the first mate's words.
+The first mate's calls follow the same rule (INF-1108): it has no task, so its card is a host card with no task, the host files that card's own row (`TaskService.capture.fileHostCardTask`), and the ask, marked `by: "firstmate"`, waits on it with the reason marked as the first mate's words.
 The buttons are Always allow, Only this time and Not now; reads highlight Always allow, while changes and sends highlight Only this time.
 Always allow runs the call and saves its action's grant; Only this time runs it once and leaves Asks you; Not now refuses the call without running it.
 The minus only puts the card aside: the ask and its row remain pending, with no grant, refusal or outcome notification.

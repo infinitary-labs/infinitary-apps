@@ -77,7 +77,7 @@ export class ChangePublication {
         // checked out; each change keeps its own (INF-2490).
         const current = currentChange(located.record.delivery, located.branch);
         const branch = (await this.presentationBranch(taskId)) ?? current.branch;
-        const ledger = this.options.tasks.changePresentation(taskId, branch);
+        const ledger = this.options.tasks.delivery.changePresentation(taskId, branch);
         // Only a pull request still open for the branch predates saved stories;
         // a recorded one that has closed is forgotten, as for any new task.
         if (
@@ -92,7 +92,7 @@ export class ChangePublication {
             : undefined;
         if (merged) return merged;
         const revision = await this.options.presentations.prepare(taskId, staged, located.forge);
-        const destination = this.options.tasks
+        const destination = this.options.tasks.delivery
           .changePresentation(taskId, branch)
           ?.revisions.find((saved) => saved.revision === revision)?.destination;
         return `Prepared presentation ${revision} for ${staged.head}. ${destination ? `${storyAudience(destination)} ` : ""}No file was uploaded and no card was shown. Pass presentation: ${revision} to open_change after review and pushing; pass the same current published revision to emit_card after checks pass.`;
@@ -261,7 +261,7 @@ export class ChangePublication {
     try {
       requireConventional(input.title, "pull request title", this.options.namingRule?.());
       if (own) {
-        this.options.tasks.selectOwnChange(taskId);
+        this.options.tasks.delivery.selectOwnChange(taskId);
         await this.context.branchHome(record);
       }
       // Where this Mac's git reads the branch: by its name, or another
@@ -320,7 +320,7 @@ export class ChangePublication {
           head,
         });
         validationHead = head;
-        this.options.tasks.recordChangeEvidence(taskId, { validationHead: head });
+        this.options.tasks.delivery.recordChangeEvidence(taskId, { validationHead: head });
         const early =
           earlyPublication(current.delivery?.liveValidation, head, Boolean(existing)) ??
           (existing
@@ -343,7 +343,7 @@ export class ChangePublication {
       }
       const presentations = this.options.presentations;
       // The story of the change on this branch: each change keeps its own (INF-2490).
-      const ledger = this.options.tasks.changePresentation(taskId, branch);
+      const ledger = this.options.tasks.delivery.changePresentation(taskId, branch);
       if (own && !existing && presentations && hasChangeRequests(forge.kind)) {
         const merged = await this.mergedBeforeStories(ledger, current.delivery?.prNumber, forge);
         if (merged) return merged;
@@ -391,7 +391,7 @@ export class ChangePublication {
         // The transition rechecks the current approval, code clearance and
         // scenario. For saved stories this runs after their preflight, before
         // any attachment leaves the computer, not before a possibly long read.
-        this.options.tasks.recordLiveValidation(
+        this.options.tasks.delivery.recordLiveValidation(
           taskId,
           {
             kind: "effect-state",
@@ -401,7 +401,7 @@ export class ChangePublication {
           },
           { head },
         );
-        this.options.tasks.recordLiveValidation(
+        this.options.tasks.delivery.recordLiveValidation(
           taskId,
           {
             kind: "effect-state",
@@ -474,7 +474,7 @@ export class ChangePublication {
             ?.state ?? "",
         )
       )
-        this.options.tasks.recordLiveValidation(
+        this.options.tasks.delivery.recordLiveValidation(
           taskId,
           {
             kind: "effect-state",

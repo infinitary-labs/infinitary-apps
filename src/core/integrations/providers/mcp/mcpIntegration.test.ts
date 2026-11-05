@@ -81,9 +81,10 @@ function serviceIn(root: string): {
     store: new IntegrationSettingsStore(root),
     secrets: new FileIntegrationSecrets(join(root, "secrets")),
     asks: {
-      keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
-      take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
-      record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+      keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
+      take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
+      record: (taskId, askId, outcome) =>
+        tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
     },
   });
   return { service, tasks, close: () => db.close() };
@@ -300,10 +301,10 @@ it("keeps an old MCP ask and its event on the server after the GitHub name repai
       store: new IntegrationSettingsStore(root),
       secrets: new FileIntegrationSecrets(join(root, "secrets")),
       asks: {
-        keep: (taskId, kept) => legacy.tasks.keepWriteAsk(taskId, kept),
-        take: (taskId, askId) => legacy.tasks.takeWriteAsk(taskId, askId),
+        keep: (taskId, kept) => legacy.tasks.delivery.keepWriteAsk(taskId, kept),
+        take: (taskId, askId) => legacy.tasks.delivery.takeWriteAsk(taskId, askId),
         record: (taskId, askId, outcome) =>
-          legacy.tasks.recordWriteAskOutcome(taskId, askId, outcome),
+          legacy.tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
       },
     });
     expect(upgraded.show("GitHub")).toMatchObject({ refused: "invalid" });
@@ -417,9 +418,10 @@ describe("a server removed and replaced under the same name (INF-947)", () => {
       store: new IntegrationSettingsStore(root),
       secrets: new FileIntegrationSecrets(join(root, "secrets")),
       asks: {
-        keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
-        take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
-        record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+        keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
+        take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
+        record: (taskId, askId, outcome) =>
+          tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
       },
     });
     opened.push({ service: restarted, close: () => {} });
@@ -437,7 +439,7 @@ describe("a server removed and replaced under the same name (INF-947)", () => {
     opened.push({ service, http, close });
     await service.add("mcp", { name: "Studio notes", runs: http.url });
     // An older build kept the destination by its id alone.
-    tasks.keepWriteAsk(task.taskId, {
+    tasks.delivery.keepWriteAsk(task.taskId, {
       id: "ia0123456789ab",
       kind: "integration",
       integration: "mcp-studio-notes",

@@ -272,7 +272,7 @@ describe("a task that runs on a computer that runs work", () => {
     const earlier = home.tasks.get("t-renew")?.sessionFile ?? "";
     expect(earlier).not.toBe("");
     // INF-1295/F1: identity follows the resume token, not a placed proxy's construction id.
-    const initialSessions = home.tasks.sessions("t-renew");
+    const initialSessions = home.tasks.archive.sessions("t-renew");
     expect(initialSessions).toMatchObject([
       { conversation: earlier, device_id: at.deviceId, began: "start", current: true },
     ]);
@@ -289,7 +289,7 @@ describe("a task that runs on a computer that runs work", () => {
     // The record names the new conversation before any turn of it, and the timeline says why.
     await expect.poll(() => home.tasks.get("t-renew")?.sessionFile).not.toBe(earlier);
     const renewed = home.tasks.get("t-renew")?.sessionFile;
-    const renewedSessions = home.tasks.sessions("t-renew");
+    const renewedSessions = home.tasks.archive.sessions("t-renew");
     expect(renewedSessions).toHaveLength(2);
     expect(renewedSessions).toMatchObject([
       {
@@ -331,7 +331,7 @@ describe("a task that runs on a computer that runs work", () => {
     expect(claude.served().at(-1)?.said).toBe(`${told}\n\nMake it blue too.`);
     await expect.poll(() => home.tasks.get("t-renew")?.activity).toBe("idle");
 
-    const completedSessions = home.tasks.sessions("t-renew");
+    const completedSessions = home.tasks.archive.sessions("t-renew");
     // The serving model becomes known on its first completed turn, before the home restarts.
     expect(completedSessions[1]?.provider).toBe(CLAUDE_PROVIDER_ID);
     // A home restart while that computer still holds it: the same conversation, said nothing again.
@@ -344,7 +344,7 @@ describe("a task that runs on a computer that runs work", () => {
     // What it was told stands once, in the conversation it goes on with.
     expect(since.split(told)).toHaveLength(2);
     expect(after.tasks.get("t-renew")?.sessionFile).toBe(renewed);
-    const restartedSessions = after.tasks.sessions("t-renew");
+    const restartedSessions = after.tasks.archive.sessions("t-renew");
     expect(restartedSessions).toHaveLength(2);
     expect(restartedSessions.filter((session) => session.current)).toHaveLength(1);
     expect(restartedSessions.map(({ last_at: _last, ...row }) => row)).toEqual(
@@ -384,7 +384,7 @@ describe("a task that runs on a computer that runs work", () => {
     const before = at.home().tasks.get("t-moved")?.sessionFile ?? "";
     expect(before.startsWith(`${older.sessions}/`)).toBe(true);
     const kept = readFileSync(before, "utf8");
-    const initialSessions = at.home().tasks.sessions("t-moved");
+    const initialSessions = at.home().tasks.archive.sessions("t-moved");
     expect(initialSessions).toHaveLength(1);
 
     await at.stopComputer();
@@ -433,7 +433,7 @@ describe("a task that runs on a computer that runs work", () => {
       expect(readFileSync(file, "utf8")).toContain(text);
     }
     expect(readFileSync(before, "utf8")).toBe(kept);
-    const restartedSessions = at.home().tasks.sessions("t-moved");
+    const restartedSessions = at.home().tasks.archive.sessions("t-moved");
     expect(restartedSessions).toHaveLength(1);
     expect(restartedSessions[0]).toMatchObject({
       conversation: initialSessions[0]?.conversation,

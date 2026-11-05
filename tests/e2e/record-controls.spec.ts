@@ -122,7 +122,7 @@ function seeded(): string {
     status: "queued",
     createdAt: next(),
   });
-  tasks.link("rc-first", "rc-blocked", "blocks", "host");
+  tasks.graph.link("rc-first", "rc-blocked", "blocks", "host");
   seedTask(tasks, {
     id: "rc-drop",
     title: "Fold the chart",
@@ -139,7 +139,7 @@ function seeded(): string {
     status: "queued",
     createdAt: next(),
   });
-  tasks.link("rc-drop", "rc-waiter", "blocks", "host");
+  tasks.graph.link("rc-drop", "rc-waiter", "blocks", "host");
   seedTask(tasks, {
     id: "rc-parent",
     title: "Survey the bay",
@@ -244,7 +244,7 @@ test.beforeAll(async () => {
   await first.close();
   // The app quit while that crewmate's turn was still running.
   const db = openDatabase(userDataDir);
-  new TaskService({ db, strict: true }).setActivity(interruptedId, "running");
+  new TaskService({ db, strict: true }).turns.setActivity(interruptedId, "running");
   db.close();
 
   launched = await launchApp({ userDataDir, withMockProvider: true });

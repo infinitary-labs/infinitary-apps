@@ -46,12 +46,12 @@ function seeded(): string {
   seed("clear", "All dependencies are closed", true);
   seed("dead-start", "A stopped dependency needs a decision before starting");
   for (const blocker of ["merged", "dropped", "discarded"]) {
-    tasks.link(blocker, "mixed", "blocks", "host");
-    tasks.link(blocker, "clear", "blocks", "host");
-    tasks.link(blocker, "dead-start", "blocks", "host");
+    tasks.graph.link(blocker, "mixed", "blocks", "host");
+    tasks.graph.link(blocker, "clear", "blocks", "host");
+    tasks.graph.link(blocker, "dead-start", "blocks", "host");
   }
   for (const blocker of ["live-open", "live-active"]) {
-    tasks.link(blocker, "mixed", "blocks", "host");
+    tasks.graph.link(blocker, "mixed", "blocks", "host");
   }
   db.close();
   return userDataDir;

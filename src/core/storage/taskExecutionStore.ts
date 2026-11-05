@@ -30,7 +30,7 @@ export type TaskExecution = {
   startNotice: string | null;
   /**
    * When this started task went back to the backlog (INF-2062,
-   * `TaskService.setQueued`): it waits there for a Start, its work kept,
+   * `TaskService.starts.setQueued`): it waits there for a Start, its work kept,
    * and nothing the host sends wakes it. Null while it is not there.
    */
   backlogSince: number | null;

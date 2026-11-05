@@ -51,7 +51,7 @@ function fixture(observe = false) {
       }),
       observe,
     });
-  const ask = (id: string, text = `message ${id}`) => tasks.openAsk({ id, text });
+  const ask = (id: string, text = `message ${id}`) => tasks.capture.openAsk({ id, text });
   const retryRows = () =>
     inbox
       .allFor(FIRSTMATE_RECIPIENT)
@@ -65,7 +65,7 @@ describe("the answer-delivery check across a restart", () => {
     f.ask("m1");
     const check = f.boot();
     check.endTurn({ asks: ["m1"], held: false, unread: [] });
-    expect(f.tasks.getAsk("m1")?.delivery).toBe("retrying");
+    expect(f.tasks.capture.getAsk("m1")?.delivery).toBe("retrying");
     expect(f.retryRows()).toEqual(["m1"]);
     // A second look at the same message (a replayed turn end) finds it retrying
     // with its wake on the lane: that is a notice, never a second wake.
@@ -79,7 +79,7 @@ describe("the answer-delivery check across a restart", () => {
     f.ask("covered");
     f.ask("silent");
     const card = f.answer("card-firstmate-covered");
-    f.tasks.noteDelivery(["covered"], {
+    f.tasks.capture.noteDelivery(["covered"], {
       outcome: "action",
       kind: "card",
       tool: "emit_card",
@@ -87,8 +87,8 @@ describe("the answer-delivery check across a restart", () => {
       at: 1,
     });
     f.boot().reconcile(["covered", "silent"]);
-    expect(f.tasks.getAsk("covered")?.delivery).toBe("covered");
-    expect(f.tasks.getAsk("silent")?.delivery).toBe("retrying");
+    expect(f.tasks.capture.getAsk("covered")?.delivery).toBe("covered");
+    expect(f.tasks.capture.getAsk("silent")?.delivery).toBe("retrying");
     expect(f.retryRows()).toEqual(["silent"]);
     // Booting again changes nothing.
     f.boot().reconcile([]);
@@ -106,7 +106,7 @@ describe("the answer-delivery check across a restart", () => {
       "captain",
     );
     f.boot().reconcile(["parked"]);
-    expect(f.tasks.getAsk("parked")?.delivery).toBe("pending");
+    expect(f.tasks.capture.getAsk("parked")?.delivery).toBe("pending");
     expect(f.retryRows()).toEqual([]);
   });
 
@@ -119,7 +119,7 @@ describe("the answer-delivery check across a restart", () => {
     f.inbox.ack([row?.id as number]);
     f.boot().reconcile([]);
     expect(f.notices).toEqual(["card-ask-m1"]);
-    expect(f.tasks.getAsk("m1")).toMatchObject({
+    expect(f.tasks.capture.getAsk("m1")).toMatchObject({
       delivery: "unresolved",
       noticeCardId: "card-ask-m1",
     });
@@ -135,7 +135,7 @@ describe("the answer-delivery check across a restart", () => {
     const [row] = f.inbox.allFor(FIRSTMATE_RECIPIENT);
     f.inbox.ack([row?.id as number]);
     const card = f.answer("card-firstmate-m1");
-    f.tasks.noteDelivery(["m1"], {
+    f.tasks.capture.noteDelivery(["m1"], {
       outcome: "action",
       kind: "card",
       tool: "emit_card",
@@ -143,7 +143,7 @@ describe("the answer-delivery check across a restart", () => {
       at: 2,
     });
     f.boot().reconcile([]);
-    expect(f.tasks.getAsk("m1")?.delivery).toBe("covered");
+    expect(f.tasks.capture.getAsk("m1")?.delivery).toBe("covered");
     expect(f.notices).toEqual([]);
   });
 
@@ -156,9 +156,9 @@ describe("the answer-delivery check across a restart", () => {
       "agent",
       ANSWER_MISSING_REF,
     );
-    f.tasks.setAskDelivery("m1", "retrying");
+    f.tasks.capture.setAskDelivery("m1", "retrying");
     f.boot().reconcile([]);
-    expect(f.tasks.getAsk("m1")?.delivery).toBe("retrying");
+    expect(f.tasks.capture.getAsk("m1")?.delivery).toBe("retrying");
     expect(f.notices).toEqual([]);
   });
 
@@ -169,7 +169,10 @@ describe("the answer-delivery check across a restart", () => {
     f.inbox.deleteFor(FIRSTMATE_RECIPIENT);
     f.boot().lanePurged();
     f.boot().reconcile([]);
-    expect(f.tasks.getAsk("m1")).toMatchObject({ delivery: "unresolved", noticeCardId: null });
+    expect(f.tasks.capture.getAsk("m1")).toMatchObject({
+      delivery: "unresolved",
+      noticeCardId: null,
+    });
     expect(f.notices).toEqual([]);
   });
 
@@ -184,10 +187,10 @@ describe("the answer-delivery check across a restart", () => {
       status: "running",
     });
     f.ask("m1", "build the personal panels in isolation");
-    f.tasks.attachAsk("m1", "panels", "tool:spawn_crewmate");
-    f.tasks.closeAsk("m1", "closed");
+    f.tasks.capture.attachAsk("m1", "panels", "tool:spawn_crewmate");
+    f.tasks.capture.closeAsk("m1", "closed");
     f.boot().endTurn({ asks: ["m1"], held: false, unread: [] });
-    expect(f.tasks.getAsk("m1")?.delivery).toBe("covered");
+    expect(f.tasks.capture.getAsk("m1")?.delivery).toBe("covered");
     expect(f.retryRows()).toEqual([]);
 
     f.tasks.close("panels", { status: "done", reason: "answered", actor: "host" });
@@ -198,7 +201,7 @@ describe("the answer-delivery check across a restart", () => {
       askId: "m1",
       workEnded: [{ id: "panels", title: "Build personal panels in isolation" }],
     });
-    expect(f.tasks.getAsk("m1")?.delivery).toBe("retrying");
+    expect(f.tasks.capture.getAsk("m1")?.delivery).toBe("retrying");
     // A second sweep finds it already asked about.
     f.boot().sweep();
     expect(f.retryRows()).toEqual(["m1"]);
@@ -211,7 +214,6 @@ describe("the answer-delivery check across a restart", () => {
     f.boot().sweep();
     expect(f.notices).toEqual(["card-ask-m1"]);
     expect(f.retryRows()).toEqual([]);
-    expect(f.tasks.listAsksNotEnded()).toEqual([]);
   });
 
   it("judges nothing in observe mode", () => {
@@ -219,7 +221,7 @@ describe("the answer-delivery check across a restart", () => {
     f.ask("m1");
     f.boot(); // reconcile is the boot's own call; endTurn is the turn's.
     f.boot().endTurn({ asks: ["m1"], held: false, unread: [] });
-    expect(f.tasks.getAsk("m1")?.delivery).toBe("pending");
+    expect(f.tasks.capture.getAsk("m1")?.delivery).toBe("pending");
     expect(f.retryRows()).toEqual([]);
   });
 
@@ -232,9 +234,9 @@ describe("the answer-delivery check across a restart", () => {
     seedTask(f.tasks, { id: "meter", title: "Fix the meter", status: "running" });
     const covered = (id: string, taskId: string) => {
       f.ask(id);
-      f.tasks.attachAsk(id, taskId, "tool:spawn_crewmate");
-      f.tasks.closeAsk(id, "closed");
-      f.tasks.setAskDelivery(id, "covered");
+      f.tasks.capture.attachAsk(id, taskId, "tool:spawn_crewmate");
+      f.tasks.capture.closeAsk(id, "closed");
+      f.tasks.capture.setAskDelivery(id, "covered");
     };
     covered("m1", "panels");
     covered("m2", "panels");

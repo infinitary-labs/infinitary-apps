@@ -365,13 +365,13 @@ describe("host cards", () => {
     );
     cardStore.upsert(restored("card-old-note", []));
     const cards = make();
-    expect(tasks.openCardTaskFor("card-old-decision")).toBeUndefined();
+    expect(tasks.capture.openCardTaskFor("card-old-decision")).toBeUndefined();
     cards.fileMissingHostCardTasks();
-    expect(tasks.openCardTaskFor("card-old-decision")).toMatchObject({
+    expect(tasks.capture.openCardTaskFor("card-old-decision")).toMatchObject({
       kind: "operation",
       title: "Restored card-old-decision",
     });
-    expect(tasks.openCardTaskFor("card-old-note")).toBeUndefined();
+    expect(tasks.capture.openCardTaskFor("card-old-note")).toBeUndefined();
     cards.fileMissingHostCardTasks();
     expect(
       tasks.listOpen().filter((task) => task.title === "Restored card-old-decision"),
@@ -384,7 +384,7 @@ describe("host cards", () => {
     const cards = make();
     expect(cards.presentRequiredAction("nothing")).toBe(false);
     seedTask(tasks, { id: "dop208", title: "Retire the job host", status: "completed" });
-    tasks.declareRequiredActions(
+    tasks.delivery.declareRequiredActions(
       "dop208",
       {
         cardId: "card-dop208-1",

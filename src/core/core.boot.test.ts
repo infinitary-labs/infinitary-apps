@@ -748,7 +748,7 @@ describe("the idle ladder across a restart", () => {
       branch: tree.branch,
     });
     const now = Date.now();
-    tasks.recordRecovery("stuck-task", {
+    tasks.turns.recordRecovery("stuck-task", {
       rung: 2,
       count: 2,
       at: now - 35 * 60_000,

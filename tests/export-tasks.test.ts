@@ -47,7 +47,7 @@ function seeded(): string {
     outcome: "Green.",
   });
   seedTask(tasks, { id: "bb22", title: "Write the notes", status: "idle" });
-  tasks.link("aa11", "bb22", "related", "firstmate");
+  tasks.graph.link("aa11", "bb22", "related", "firstmate");
   db.close();
   return dir;
 }

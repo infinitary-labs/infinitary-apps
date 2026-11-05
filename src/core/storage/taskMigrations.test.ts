@@ -85,9 +85,9 @@ describe("migration 46 (the two graph gaps)", () => {
       start_wait_since: { policy: build?.updatedAt },
     });
     expect(build?.delivery).toMatchObject({ reviewVerdict: "findings" });
-    expect(build && tasks.basisOf(build)).toEqual({ ref: "plan", verified: true });
-    expect(guess && tasks.basisOf(guess)).toEqual({ ref: "wip", verified: false });
-    expect(build && tasks.verdictReviewOf(build)?.id).toBe("review");
+    expect(build && tasks.graph.basisOf(build)).toEqual({ ref: "plan", verified: true });
+    expect(guess && tasks.graph.basisOf(guess)).toEqual({ ref: "wip", verified: false });
+    expect(build && tasks.graph.verdictReviewOf(build)?.id).toBe("review");
     upgraded.close();
   });
 });
@@ -114,7 +114,7 @@ describe("migration 47 (the gate becomes a witness, the primitives review P2)", 
     // A row that already has a gate keeps it.
     active("gated");
     seedDelivery(tasks, "gated", { ciRounds: 3, ciCapAt: 100 });
-    tasks.setGate("gated", { kind: "at-time", until: 999 });
+    tasks.placement.setGate("gated", { kind: "at-time", until: 999 });
     active("uncapped");
     seedDelivery(tasks, "uncapped", { ciRounds: 1, ciRedHead: "abc1234" });
     at46.close();

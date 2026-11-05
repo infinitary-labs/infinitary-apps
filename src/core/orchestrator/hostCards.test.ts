@@ -45,18 +45,18 @@ describe("CardService", () => {
       body: "<p>It asks to read your tasks.</p>",
       actions: [{ id: "add", label: "Add it", variant: "primary" }],
     });
-    expect(tasks.openCardTaskFor("card-consent")?.kind).toBe("operation");
+    expect(tasks.capture.openCardTaskFor("card-consent")?.kind).toBe("operation");
 
     cards.withdrawHostCard("card-consent", "gone");
     expect(cards.has("card-consent")).toBe(false);
-    expect(tasks.openCardTaskFor("card-consent")).toBeUndefined();
+    expect(tasks.capture.openCardTaskFor("card-consent")).toBeUndefined();
   });
 
   it("files each paused-seat card's operation row, gated on the card, and drops it when the card leaves (W1 S9)", () => {
     const { tasks, make } = setup();
     const cards = make();
     const gatedOn = (id: string) => {
-      const row = tasks.openCardTaskFor(id);
+      const row = tasks.capture.openCardTaskFor(id);
       expect(row?.kind).toBe("operation");
       expect(row?.gate).toEqual({ kind: "captain", ref: id });
     };
@@ -98,11 +98,11 @@ describe("CardService", () => {
     cards.withdrawFirstmatePauseCards("serves again");
     for (const id of ids.slice(0, 3)) {
       expect(cards.has(id)).toBe(false);
-      expect(tasks.openCardTaskFor(id)).toBeUndefined();
+      expect(tasks.capture.openCardTaskFor(id)).toBeUndefined();
     }
     gatedOn("card-fm-move-back");
     cards.withdrawHostCard("card-fm-move-back", "moved");
-    expect(tasks.openCardTaskFor("card-fm-move-back")).toBeUndefined();
+    expect(tasks.capture.openCardTaskFor("card-fm-move-back")).toBeUndefined();
   });
 
   // The design skill's footer rule: the card's one primary is its default,
@@ -138,7 +138,7 @@ describe("CardService", () => {
     const { tasks, make } = setup();
     const cards = make();
     cards.addFirstmatePauseCard({ pause: "no_headroom", body: "Out.", providerName: "Codex" });
-    const row = tasks.openCardTaskFor("card-fm-no-headroom");
+    const row = tasks.capture.openCardTaskFor("card-fm-no-headroom");
     cards.addFirstmatePauseCard({
       pause: "signed_out",
       body: "Personal needs you to sign in again.",
@@ -149,7 +149,7 @@ describe("CardService", () => {
     expect(revised?.title).toBe("Your first mate needs you to sign in again");
     expect(revised?.actions.map((action) => action.id)).toEqual(["sign-in"]);
     // One question, revised: its row is the same row.
-    expect(tasks.openCardTaskFor("card-fm-no-headroom")?.id).toBe(row?.id);
+    expect(tasks.capture.openCardTaskFor("card-fm-no-headroom")?.id).toBe(row?.id);
 
     cards.withdrawFirstmatePauseCards("dismissed");
     cards.addFirstmatePauseCard(

@@ -455,7 +455,7 @@ The emit refuses an ask that is not the task's or was already taken, two asks on
 The host names the button "Send it to GitHub", after the host's own name ("Send it to GitLab", or a server's address), and draws the exact call at the end of the body (`.inf-call`, `writeAskStrip`): the method and path, the JSON body as kept, and whether it goes through the github.com sign-in.
 A card that asks is never a task's answer: the captain's click on it leaves an answer task open.
 Only the captain's click from the card's own controls sends it (`GithubGatewayService.sendAsk`); a script on the card, a reply, the who-merges setting and the first mate never do.
-`TaskService.takeWriteAsk` marks the ask taken in one transaction before anything is sent, so a second click, a restart or a revised card naming it sends nothing again, and the emit refuses it.
+`TaskService.delivery.takeWriteAsk` marks the ask taken in one transaction before anything is sent, so a second click, a restart or a revised card naming it sends nothing again, and the emit refuses it.
 The click sends exactly what was kept, through the same sign-in, after the same policy and merge guard; a host that changed since the ask sends nothing.
 It spends one of the task's 200 calls only when it is sent.
 The outcome is recorded on the ask: the host's status, nothing sent (a refusal or a missing sign-in), or unknown - a call that may have reached the host without an answer - which is never sent again.

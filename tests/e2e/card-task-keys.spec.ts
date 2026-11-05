@@ -433,10 +433,10 @@ function seedNamedWork(userDataDir: string) {
       title: "Audit the walrus notes",
       ...unstarted,
     });
-    tasks.link(format.id, ledger.id, "blocks", "host");
-    tasks.link(ledger.id, summary.id, "blocks", "host");
-    tasks.recordReport(ledger.id, { text: `Half done; continues as ${summary.key}.` });
-    tasks.recordReport(audit.id, { text: `${ledger.key} waits on ${format.key}.` });
+    tasks.graph.link(format.id, ledger.id, "blocks", "host");
+    tasks.graph.link(ledger.id, summary.id, "blocks", "host");
+    tasks.turns.recordReport(ledger.id, { text: `Half done; continues as ${summary.key}.` });
+    tasks.turns.recordReport(audit.id, { text: `${ledger.key} waits on ${format.key}.` });
     const cards = new CardStore(db);
     cards.upsert({
       id: "card-named-audit",

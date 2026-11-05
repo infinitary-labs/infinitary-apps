@@ -92,7 +92,7 @@ function seed(
   for (const source of WAITS_ON.filter((id) =>
     WORK.some((w) => w.id === id && repoIds.has(w.repoId)),
   )) {
-    tasks.declareRequiredActions(
+    tasks.delivery.declareRequiredActions(
       source,
       {
         cardId: `card-${source}`,
@@ -114,8 +114,8 @@ function seed(
     );
   }
   for (const row of tasks.listOpen().filter((r) => r.delivery?.captainAction)) {
-    tasks.presentCaptainAction(row.id);
-    tasks.deferCaptainAction(row.id);
+    tasks.delivery.presentCaptainAction(row.id);
+    tasks.delivery.deferCaptainAction(row.id);
   }
   db.close();
 }

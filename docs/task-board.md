@@ -14,7 +14,7 @@ The same folder added from elsewhere does everything below under its own id (`te
 | What a move does, and a tile's ⋯ menu | `src/panels/now/boardMoves.ts` (`boardMoveOf`, `boardMenuOf`, `dropAskOf`, `moveContextOf`) |
 | Picking a tile up with the pointer | `src/panels/now/boardDrag.ts` (`useTileDrag`) |
 | The card, its header button and its commands | the folder's `manifest.json`: `cards.board` (`wide`, `fill`), the header's `board` button, and the commands `board`, `board-find`, `board-backlog`, `board-done`, `board-dropped`, `board-move` |
-| Queue and unqueue, and their one guard | `inf:task:run`'s `queue-task` and `unqueue-task`, `TaskService.setQueued`, their words in `src/shared/taskQueue.ts` |
+| Queue and unqueue, and their one guard | `inf:task:run`'s `queue-task` and `unqueue-task`, `TaskService.starts.setQueued`, their words in `src/shared/taskQueue.ts` |
 | The stage entry and what it keeps | a panel's card (`OpenRecord`'s `{ panelCard }` in `src/renderer/src/app/stack.ts`), its place kept with `card.keep` |
 | The summary beside a tile | `src/renderer/src/plugins/point/PeekSummary.tsx`, from the board's `point.peekTask` |
 
@@ -121,18 +121,18 @@ A move counts only from the captain's own click or key in the board's page, and 
 - A waiting tile goes nowhere but Drop task; Done and Dropped tiles never move; a drop on a tile's own lane changes nothing.
 
 Queue is an operation for never-started work only; unqueue takes started work as well.
-`TaskService.setQueued` is their one guard, at write time: a parent whose parts do the work, closed work, and Queue it on started work are refused as text, and nothing is written.
+`TaskService.starts.setQueued` is their one guard, at write time: a parent whose parts do the work, closed work, and Queue it on started work are refused as text, and nothing is written.
 The start policy is the one field it writes, with one timeline entry in the captain's words and `via: "task-card"`, so the first mate's next context block lists it as it lists the captain's Start and Drop task (`docs/inbox.md`).
 A queued task that nothing holds starts on the ready sweep the move runs.
 
 ### A started task in the backlog
 
 Back to backlog on started work (INF-2062), from the board or the first mate's `update_task` `start_policy` on-request with a reason, runs `CrewSupervisor.moveToBacklog`.
-The task stays active: `TaskService.setQueued` records when it went (`backlogSince`, on its running work's row) and who moved it with one sentence why, and its idle ladder starts over.
+The task stays active: `TaskService.starts.setQueued` records when it went (`backlogSince`, on its running work's row) and who moved it with one sentence why, and its idle ladder starts over.
 Its running turn stops and a kept merge approval ends, as an interrupt does; its working copy, branch, conversation, pull request and background jobs stay.
 While it waits there, the host's own rows - a job's end, a check's result, a timed wait's end, a closed dependency - wait on its lane, the idle ladder never nudges, wakes or raises a card for it, a report wakes the first mate only to act on it, to close it or to triage what it filed, and a reopen does not carry its turn on.
 Words the captain or the first mate send still reach it, with a line that it waits in the backlog and stays there; that turn carries whatever waited on its lane with it.
-Start, from the board, the record or `start_now`, takes it out (`TaskService.leaveBacklog`) and delivers what waited, with one line that it left the backlog, in the same conversation.
+Start, from the board, the record or `start_now`, takes it out (`TaskService.starts.leaveBacklog`) and delivers what waited, with one line that it left the backlog, in the same conversation.
 The board lists it under Backlog, its status "Started", with how long it has waited; `crew_status` lists it with status `backlog`.
 
 A drag works as the Models board's does (`useTileDrag`): a press becomes a drag after 5 px, a ghost of the tile follows the pointer while the tile stays at 40%, Esc lets go and writes nothing, and the body scrolls while the pointer rests near one of its edges.
@@ -164,7 +164,7 @@ When a live change takes the focused tile away - another surface moved its task,
 
 ## Tests
 
-- Unit: `src/panels/now/boardTiles.test.ts` (lanes, words, chips, counts, pages, earlier matches and the arrows), `boardMoves.test.ts` (every drop and the menu, on the moves the app's own rule gives each row), `src/core/personal/appPanels.test.ts` (the folder compiles for the frame realm on the panel library alone, its card view as the app lists it, and the lint passes), `src/renderer/src/app/stackActions.test.ts` (a panel card's aim as the turn's hint), `src/renderer/src/plugins/panelCards.test.ts` (a card put up again is one more revision), `src/shared/keymap.test.ts` (keys saved under `tasks.board*` carried over); `src/core/tasks/taskService.graph.test.ts` and `src/core/orchestrator/crewSupervisor.test.ts` (queue and unqueue, and a refused Start's text); `src/core/tasks/taskProtocol.test.ts` (the search's limit of 50).
+- Unit: `src/panels/now/boardTiles.test.ts` (lanes, words, chips, counts, pages, earlier matches and the arrows), `boardMoves.test.ts` (every drop and the menu, on the moves the app's own rule gives each row), `src/core/personal/appPanels.test.ts` (the folder compiles for the frame realm on the panel library alone, its card view as the app lists it, and the lint passes), `src/renderer/src/app/stackActions.test.ts` (a panel card's aim as the turn's hint), `src/renderer/src/plugins/panelCards.test.ts` (a card put up again is one more revision), `src/shared/keymap.test.ts` (keys saved under `tasks.board*` carried over); `src/core/tasks/taskService.graph.test.ts` and `src/core/orchestrator/crewSupervisor.test.ts` (queue and unqueue, and a refused Start's text); `src/core/tasks/taskProtocol.detail.test.ts` (the search's limit of 50).
 - E2E: `tests/e2e/task-board.spec.ts`, the journey by keys with a decision waiting behind the board, the window coming forward included, `tests/e2e/task-board-moves.spec.ts`, the moves by drag and by menu, `tests/e2e/task-board-pages.spec.ts`, 60 in the backlog and 300 done this week paged and reached by keys, and `tests/e2e/tasks-from-elsewhere.spec.ts`, the same folder added from elsewhere under another id running the board's journey by keys, drag and menu.
   Their helpers are `tests/e2e/taskBoard.ts`: they read inside the board's page - a tile, a lane, a view and its count, a lane's pages - take the panel whose card it is, press and drag with events dispatched in that page, and read where focus is from the page's own active element and the window's.
   The keyboard, moves and pages journeys prepare the waiting card behind the board (`stagePrepared`) and complete the window's focus handoff (`windowComesForward`) before driving its keys, asserting that its tile keeps focus.

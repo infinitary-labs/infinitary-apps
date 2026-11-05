@@ -465,8 +465,8 @@ it.each([false, true])(
         prompt: fixture.userWords,
         repoId: null,
       });
-      tasks.recordReport(task.id, { text: fixture.report });
-      tasks.recordReport(task.id, { text: fixture.report });
+      tasks.turns.recordReport(task.id, { text: fixture.report });
+      tasks.turns.recordReport(task.id, { text: fixture.report });
       const card = {
         id: "card-plan",
         taskId: task.id,
@@ -482,7 +482,7 @@ it.each([false, true])(
       cards.upsert(card);
       cards.resolve("card-plan", "start-next", fixture.answers);
       if (revised) {
-        tasks.recordReport(task.id, { text: "Finished." });
+        tasks.turns.recordReport(task.id, { text: "Finished." });
         cards.upsert({
           ...card,
           id: "card-later",
@@ -566,7 +566,7 @@ it("leaves fitting reads byte for byte as before, including repeated report text
       prompt: "Finish the welcome plan.",
       repoId: null,
     });
-    tasks.recordReport(task.id, {
+    tasks.turns.recordReport(task.id, {
       text: readFileSync("tests/fixtures/approval-handoff/welcome-spec.md", "utf8"),
     });
     const result = queryTasks(tasks, { key: task.key }, () => undefined);

@@ -130,7 +130,7 @@ describe("immediate welcome", () => {
       width: "regular",
     });
     // Its record keeps the welcome in words, not its picture and script.
-    expect(f.tasks.taskForCard(view.welcomeCardId as string)).toMatchObject({
+    expect(f.tasks.capture.taskForCard(view.welcomeCardId as string)).toMatchObject({
       kind: "question",
       status: "done",
       outcome: WELCOME_ANSWER,
@@ -219,7 +219,13 @@ describe("immediate welcome", () => {
       ["slot", "custom/operator-model added to medium"],
       ["seat", "First mate model custom/operator-model"],
     ] as const)
-      f.tasks.fileOperation({ id, title, outcome: title, tool: "app_change", actor: "captain" });
+      f.tasks.capture.fileOperation({
+        id,
+        title,
+        outcome: title,
+        tool: "app_change",
+        actor: "captain",
+      });
     expect(f.service().view().welcomeState).toBe("pending");
     f.ready();
     const view = f.service().view();
@@ -371,13 +377,22 @@ describe("the first finished task (kept for a view on an older version)", () => 
     f.ready();
     // The welcome is a host note: a completed question that answers no message.
     expect(f.service().view().welcomeState).toBe("consumed");
-    f.tasks.fileOperation({ id: "theme", title: "Light theme", outcome: "ok", tool: "app_change" });
+    f.tasks.capture.fileOperation({
+      id: "theme",
+      title: "Light theme",
+      outcome: "ok",
+      tool: "app_change",
+    });
     expect(f.service().view().firstTaskDoneAt).toBeUndefined();
-    f.tasks.openAsk({ id: "turn-1", text: "what time is it in Tokyo?" });
+    f.tasks.capture.openAsk({ id: "turn-1", text: "what time is it in Tokyo?" });
     f.tick();
     expect(f.service().view().firstTaskDoneAt).toBeUndefined();
-    const answer = f.tasks.fileQuestion({ id: "tokyo", title: "Tokyo time", outcome: "9 AM" });
-    f.tasks.attachAsk("turn-1", answer.id, "tool:emit_card");
+    const answer = f.tasks.capture.fileQuestion({
+      id: "tokyo",
+      title: "Tokyo time",
+      outcome: "9 AM",
+    });
+    f.tasks.capture.attachAsk("turn-1", answer.id, "tool:emit_card");
     expect(f.service().view().firstTaskDoneAt).toBe(1001);
     f.tick();
     seedTask(f.tasks, { id: "later", title: "Later work", status: "queued" });
@@ -409,9 +424,13 @@ describe("the third finished crewmate", () => {
     seedTask(f.tasks, { id: "unstarted", title: "Closed before it started", status: "queued" });
     f.tasks.close("unstarted", { status: "done", reason: "finished", actor: "host" });
     seedTask(f.tasks, { id: "dropped", title: "Gave up", status: "cancelled" });
-    f.tasks.openAsk({ id: "turn-1", text: "what time is it in Tokyo?" });
-    const answer = f.tasks.fileQuestion({ id: "tokyo", title: "Tokyo time", outcome: "9 AM" });
-    f.tasks.attachAsk("turn-1", answer.id, "tool:emit_card");
+    f.tasks.capture.openAsk({ id: "turn-1", text: "what time is it in Tokyo?" });
+    const answer = f.tasks.capture.fileQuestion({
+      id: "tokyo",
+      title: "Tokyo time",
+      outcome: "9 AM",
+    });
+    f.tasks.capture.attachAsk("turn-1", answer.id, "tool:emit_card");
     for (const n of [1, 2]) {
       seedTask(f.tasks, { id: `crew-${n}`, title: `Finished work ${n}`, status: "completed" });
       f.tasks.close(`crew-${n}`, { status: "done", reason: "merged", actor: "captain" });

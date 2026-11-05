@@ -361,7 +361,7 @@ export class TaskClosing {
         // by any other close (FI3-304), in the close's own transaction.
         const standing = standingAuthorization(record.delivery);
         if (standing) {
-          this.host.tasks.recordPermissionRecords(taskId, {
+          this.host.tasks.delivery.recordPermissionRecords(taskId, {
             mergeAuthorization: endedAuthorization(standing, {
               status: close.reason === "merged" ? "consumed" : "revoked",
               reason: `the task closed ${close.reason}`,
@@ -437,7 +437,7 @@ export class TaskClosing {
    * idling against a closed builder was the bug this exists to end.
    */
   async retireDeliveryChildren(parentId: string, parentTitle?: string): Promise<void> {
-    const live = this.host.tasks
+    const live = this.host.tasks.graph
       .children(parentId)
       .filter((child) => !TaskService.isClosed(child) && TaskService.isDeliveryChild(child));
     for (const child of live) {
@@ -565,7 +565,7 @@ export class TaskClosing {
     const stillPresent = () => this.host.tasks.get(taskId)?.workspaceState === "present";
     if (this.host.deliverableOf(record) === "answer") {
       await this.host.workspace.removeTaskWorktree(workspace);
-      this.host.tasks.markWorkspaceRemoved(taskId);
+      this.host.tasks.placement.markWorkspaceRemoved(taskId);
       return "removed";
     }
     const retired = await this.host.workspace.retireTaskWorktree(
@@ -575,7 +575,7 @@ export class TaskClosing {
     if (retired.outcome === "kept") {
       if (options.force) {
         await this.host.workspace.removeTaskWorktree(workspace);
-        this.host.tasks.markWorkspaceRemoved(taskId);
+        this.host.tasks.placement.markWorkspaceRemoved(taskId);
         return "removed";
       }
       // Git was awaited: a concurrent close may have removed it meanwhile.
@@ -589,7 +589,7 @@ export class TaskClosing {
       }
       return "kept";
     }
-    if (stillPresent()) this.host.tasks.markWorkspaceRemoved(taskId);
+    if (stillPresent()) this.host.tasks.placement.markWorkspaceRemoved(taskId);
     if (retired.kept) {
       this.host.tasks.note(
         taskId,

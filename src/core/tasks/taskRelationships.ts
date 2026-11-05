@@ -1,4 +1,3 @@
-import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskReferenceKind } from "../storage/taskReferenceStore";
 import type { TaskRecord } from "../storage/taskStore";
@@ -70,7 +69,7 @@ export const TASK_RELATIONSHIP_RULES = {
     keepsUnresolved: false,
     store: "task_links",
   },
-  // A basis is derived verified at every read (`TaskService.basisHolds`),
+  // A basis is derived verified at every read (`TaskService.graph.basisHolds`),
   // so a spawn's name stands as named; update_task refuses an unknown one.
   basis: {
     cardinality: "one",
@@ -100,26 +99,6 @@ export const TASK_RELATIONSHIP_RULES = {
     store: "task_references",
   },
 } as const satisfies Record<TaskRelationshipKind, TaskRelationshipRule>;
-
-/**
- * One relationship as the contract reads it: `from` names `to`. A parent
- * edge reads child to parent, a link as its store keeps it (a dependency's
- * blocker first), and a reference task to the task it names, with `ref`
- * the name as given and `to` null when it resolved to none.
- */
-export type TaskRelationship = {
-  kind: TaskRelationshipKind;
-  from: string;
-  to: string | null;
-  /** A reference's name as given; absent on parent edges and links. */
-  ref?: string;
-  /** Who recorded it; null where nobody recorded who. */
-  actor: TaskEventActor | null;
-  /** When it was recorded; null where nobody recorded when. */
-  at: number | null;
-  /** A dependency that also holds the waiter's close. */
-  holdsMerge?: true;
-};
 
 /** What a reference's check reads: the task, and what its name resolved to. */
 export type ReferenceCheck = {

@@ -46,7 +46,7 @@ test("only programs fold their parts in Activity and the board, and Find keeps a
     startPolicy: "on-request",
   });
   for (const task of tasks.list())
-    tasks.recordReport(task.id, { text: "Research queued for review." });
+    tasks.turns.recordReport(task.id, { text: "Research queued for review." });
   const partKey = tasks.get("part-28")?.key ?? "";
   db.close();
   const app = await launchApp({ withMockProvider: true, userDataDir });

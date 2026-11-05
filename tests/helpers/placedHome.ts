@@ -412,10 +412,11 @@ export function startPlacedHome(options: {
           store: new IntegrationSettingsStore(paths.integrationsDir),
           secrets,
           asks: {
-            keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+            keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
             present: (taskId, ask) => supervisor.askIntegration(taskId, ask),
-            take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
-            record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+            take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
+            record: (taskId, askId, outcome) =>
+              tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
           },
           reads: outsideReads,
           files: {

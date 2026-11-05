@@ -59,7 +59,7 @@ it("preserves computer, hold and version scope and follows saved changes, includ
         .sort();
     expect(read()).toEqual(["closed", "lifetime", "version"]);
     expect(read()).toEqual(oldRead());
-    tasks.setDevice("lifetime", "studio");
+    tasks.placement.setDevice("lifetime", "studio");
     seedDelivery(tasks, "version", { override: undefined, headSha: "new-work" });
     expect(read()).toEqual(["closed"]);
     expect(read()).toEqual(oldRead());

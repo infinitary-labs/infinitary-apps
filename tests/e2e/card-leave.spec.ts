@@ -79,7 +79,7 @@ test("each registered corner puts away without ending work; only Done receipts t
             ],
     });
   }
-  keys.question = tasks.fileDecision({
+  keys.question = tasks.capture.fileDecision({
     id: "firstmate-question",
     title: "Choose when to review",
     cardId: "card-fm-launch-question",

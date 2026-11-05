@@ -29,7 +29,11 @@ describe("CardService evidence", () => {
     const { tasks, cardStore, make } = setup();
     const cards = make();
     const id = cards.addFirstmateCard({ ...decision, id: "card-fm-launch-review" });
-    const question = tasks.fileDecision({ id: "launch-review", title: decision.title, cardId: id });
+    const question = tasks.capture.fileDecision({
+      id: "launch-review",
+      title: decision.title,
+      cardId: id,
+    });
     try {
       cards.dismiss(cards.shown(id) as Card);
       expect(tasks.get(question.id)?.status).toBe("open");

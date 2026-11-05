@@ -100,7 +100,7 @@ The host judges nothing: no dispatch rule reads a row's children.
 
 ## The host pieces it runs on (all generic)
 
-- `create_task` takes `basis`, stored on the planned row's shape; its verdict is derived at every read and never stored (`TaskService.basisHolds`), because the task it names is usually still running when the step is planned.
+- `create_task` takes `basis`, stored on the planned row's shape; its verdict is derived at every read and never stored (`TaskService.graph.basisHolds`), because the task it names is usually still running when the step is planned.
   A step whose basis answered starts grounded (R4/R6).
 - A step whose answer the next step needs as data carries `result_schema`: its report's `result` is checked against it, reaches the first mate on the report wake, and reaches the next step through its basis section; a step that continues another's code names it in `branch_from`, so its working copy starts at that step's last commit (`docs/task-record.md`, "A typed result and where a working copy starts").
   The preamble says both once; the host advances nothing and reads no loop.

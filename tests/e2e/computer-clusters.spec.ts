@@ -219,8 +219,8 @@ test("a wait and a review between computers draw their arrows across the stage",
   const app = await launchApp({
     userDataDir: clusterFixture([2, 2], undefined, (tasks, ids) => {
       // This Mac's first task waits on both of the other computer's tasks.
-      tasks.link("sample-1-0", "sample-0-0", "blocks", "host");
-      tasks.link("sample-1-1", "sample-0-0", "blocks", "host");
+      tasks.graph.link("sample-1-0", "sample-0-0", "blocks", "host");
+      tasks.graph.link("sample-1-1", "sample-0-0", "blocks", "host");
       // The other computer reviews this Mac's second task.
       const worktreeDir = join(scratchDir("fm-cluster-review-"), "review");
       mkdirSync(worktreeDir, { recursive: true });

@@ -398,19 +398,19 @@ function buildFixture(dir: string): string {
     });
   }
   taskNow = T0 + 2 * HOUR;
-  tasks.recordCardResolved("t-close-dismissed", {
+  tasks.capture.recordCardResolved("t-close-dismissed", {
     cardId: "card-t-close-dismissed",
     title: "Current close action",
     action: "dismissed",
     actor: "captain",
   });
-  tasks.recordCardResolved("t-close-acted", {
+  tasks.capture.recordCardResolved("t-close-acted", {
     cardId: "card-t-close-acted",
     title: "Current close action",
     action: "close",
     actor: "captain",
   });
-  tasks.recordCardResolved("t-close-withdrawn", {
+  tasks.capture.recordCardResolved("t-close-withdrawn", {
     cardId: "card-t-close-withdrawn",
     title: "Current close action",
     action: "closed",

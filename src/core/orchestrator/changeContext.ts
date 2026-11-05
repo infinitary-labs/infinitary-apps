@@ -204,11 +204,11 @@ export class ChangeContext {
       ...(record.delivery?.mergeReviews ?? []).filter((item) => item.id !== review.id),
     ].slice(0, MERGE_REVIEW_CAP);
     const own = review.branch === record.branch;
-    this.options.tasks.recordPermissionRecords(record.id, {
+    this.options.tasks.delivery.recordPermissionRecords(record.id, {
       mergeReviews: kept,
       ...(own ? {} : { checkTarget: review }),
     });
-    if (own) this.options.tasks.selectOwnChange(record.id, review);
+    if (own) this.options.tasks.delivery.selectOwnChange(record.id, review);
   }
 
   async pullOf(forge: Forge, prNumber: number): Promise<ForgePull> {

@@ -9,7 +9,7 @@ This document is what keeps that durable record honest at scale: what is bounded
 
 - **The board push** (`inf:tasks`) is the live set - open, active, closed within seven days, plus the parents of shown rows - never history.
   Above the measured trigger (500 rows on the board, or a snapshot over 256 KB of JSON; `BOARD_DELTA_TRIGGER` in `src/shared/tasks.ts`) the core pushes `inf:tasks:delta` instead: the difference between the board it just brought up to date and the one it last pushed, on the same `seq`.
-  The delta is a diff of two snapshots (`diffTaskBoards`), never a replay of the writer's bookkeeping, so a derived change with no write of its own (a blocker closing, a card leaving the stack) crosses like any other, and `applyTaskBoardDelta(prev, diff(prev, next))` equals `next` by construction (`src/shared/tasks.test.ts`, 200 seeded pairs; `taskProtocol.test.ts` over the real writer).
+  The delta is a diff of two snapshots (`diffTaskBoards`), never a replay of the writer's bookkeeping, so a derived change with no write of its own (a blocker closing, a card leaving the stack) crosses like any other, and `applyTaskBoardDelta(prev, diff(prev, next))` equals `next` by construction (`src/shared/tasks.test.ts`, 200 seeded pairs; `taskProtocol.push.test.ts` over the real writer).
   A row the change did not reach is the same object on both boards (`docs/task-record.md`, the row cache), and the diff knows it by identity without serializing it, so the diff too costs the rows rebuilt and not the board.
   A client whose board does not carry the delta's `baseSeq` has missed a push and resyncs from `inf:tasks:board`; the read executor does exactly that (`deltaFromPush` in `src/shared/reads.ts`).
   The first push, and the first push after rows vanish (a purge, a failed spawn's discard), are snapshots: a delta needs a base.
@@ -34,7 +34,7 @@ This document is what keeps that durable record honest at scale: what is bounded
 Nothing derived rides along (no flags, views or feed lines) and nothing from outside the record does either: session JSONL stays where it is, knowledge (`docs/knowledge.md`) is not exported, and worktree and session paths are exported as the machine-local strings they are.
 Timeline event ids are storage-local and left out.
 
-`pnpm export:tasks --import tasks.jsonl --user-data <dir>` reloads an export through the one writer (`TaskService.importRecords`): one transaction, every row verbatim, refused before anything is written when a task id or key is already taken, a project key belongs to another id, or a row references a task that is neither in the file nor in the database.
+`pnpm export:tasks --import tasks.jsonl --user-data <dir>` reloads an export through the one writer (`TaskService.archive.importRecords`): one transaction, every row verbatim, refused before anything is written when a task id or key is already taken, a project key belongs to another id, or a row references a task that is neither in the file nor in the database.
 A project that already exists (Scratch, always) keeps its row; its sequence rises to what the imported rows used and its birth becomes the earlier of the two.
 The board resets, so a client takes a fresh snapshot.
 Run an import with the app closed.
@@ -210,7 +210,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `PROTOCOL_VERSION` 1.3.0; `tasks.onBoardDelta` is a sub-key, no new top-level `window.infinitary` key, no new tool.
   Ordinary timeline events fold past `TIMELINE_CAP` (500) toward `TIMELINE_KEEP` (400) into one `compacted` head that absorbs an earlier fold's counts (counts only, never content; inside the write that crossed the target); R2 provenance events are exempt, so evidence-heavy timelines may exceed the target.
   `task_changed` carries `kind`, `closedReason` and `from` (the status the emitter last saw): the character celebrates a landed/merged transition and is confused by a failed one, keyed on `from !== status` so a later write on a closed row never re-fires (`store.ts`; `task_landed` still flows for the feed and Observe).
-  The JSONL export (`pnpm export:tasks`, `src/core/tasks/taskExport.ts`) is the five record tables verbatim, keys in schema order, event ids omitted; `TaskService.importRecords` reloads it through the one writer and refuses before writing on any collision - round-trip tested.
+  The JSONL export (`pnpm export:tasks`, `src/core/tasks/taskExport.ts`) is the five record tables verbatim, keys in schema order, event ids omitted; `TaskService.archive.importRecords` reloads it through the one writer and refuses before writing on any collision - round-trip tested.
   `pnpm measure:sessions` (`scripts/measure-session-footprint.ts`) sizes every session file by byte class, read-only; sessions are durable (D2) and NOTHING prunes them - the scrubbing pass is a proposal in `docs/task-retention.md` awaiting a captain call.
   Observe lists every closed task's kept session at one parse per `(path, mtime, size)`.
 

@@ -108,7 +108,7 @@ function olderProfile() {
   }
   cards.resolve(cards.get(cardId) as Card, "flush", "flush", undefined, "crewmate");
   tasks.noteProgress(ID, "The Mac and Windows checks pass.");
-  tasks.recordReport(ID, {
+  tasks.turns.recordReport(ID, {
     text: "The queue flush passes both checks. I kept it and removed the retry.",
     summary: "The queue flush passes both checks.",
     declared: { result: { kept: "flush" } },
@@ -147,9 +147,9 @@ function olderProfile() {
       },
     },
   ]);
-  tasks.setSessionFile(ID, join(sessions, file));
+  tasks.turns.setSessionFile(ID, join(sessions, file));
   tasks.close(ID, { status: "done", reason: "finished", actor: "host" });
-  tasks.markWorkspaceRemoved(ID);
+  tasks.placement.markWorkspaceRemoved(ID);
   const actions = new CrewActions({ recordDirOf: () => sessions, appTools: new Set() });
   const timeline = new TaskTimeline({
     tasks,
@@ -331,16 +331,16 @@ test("existing-user history stays exact, complete and effect-free through upgrad
       account_id: null,
       began: "resume",
     };
-    tasks.setSessionFile(ID, token, observed);
-    const firstObservation = tasks.sessionObservations(ID);
-    tasks.setSessionFile(ID, token, observed);
-    expect(tasks.sessionObservations(ID)).toEqual(firstObservation);
-    tasks.setSessionFile(ID, token, { ...observed, model: LATER_MODEL });
-    const changedObservations = tasks.sessionObservations(ID);
-    tasks.setSessionFile(ID, token, { ...observed, model: LATER_MODEL });
-    expect(tasks.sessionObservations(ID)).toEqual(changedObservations);
-    expect(tasks.sessions(ID).filter((session) => session.current)).toHaveLength(1);
-    expect(tasks.sessions(ID).find((session) => session.current)?.model).toBe(LATER_MODEL);
+    tasks.turns.setSessionFile(ID, token, observed);
+    const firstObservation = tasks.archive.sessionObservations(ID);
+    tasks.turns.setSessionFile(ID, token, observed);
+    expect(tasks.archive.sessionObservations(ID)).toEqual(firstObservation);
+    tasks.turns.setSessionFile(ID, token, { ...observed, model: LATER_MODEL });
+    const changedObservations = tasks.archive.sessionObservations(ID);
+    tasks.turns.setSessionFile(ID, token, { ...observed, model: LATER_MODEL });
+    expect(tasks.archive.sessionObservations(ID)).toEqual(changedObservations);
+    expect(tasks.archive.sessions(ID).filter((session) => session.current)).toHaveLength(1);
+    expect(tasks.archive.sessions(ID).find((session) => session.current)?.model).toBe(LATER_MODEL);
     db.close();
     app = await launch();
     const observedHistory = await app.page.evaluate((id) => window.infinitary.tasks.detail(id), ID);

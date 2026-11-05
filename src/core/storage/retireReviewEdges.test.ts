@@ -37,15 +37,15 @@ describe("migration 107 (the review's edge, INF-1876)", () => {
     seedTask(older, { id: "prerequisite", title: "Rotate the key", status: "idle" });
     seedTask(older, { id: "finder", title: "Find the leak", status: "idle" });
     // The release before this one held the builder's close on its review.
-    older.link("review", "builder", "blocks", "host", true);
-    older.link("earlier", "builder", "blocks", "host", true);
+    older.graph.link("review", "builder", "blocks", "host", true);
+    older.graph.link("earlier", "builder", "blocks", "host", true);
     // A must-merge-first filing, a required action's prerequisite and a
     // wait the first mate recorded.
-    older.link("continue", "builder", "blocks", "crewmate", true);
-    older.link("prerequisite", "builder", "blocks", "host", true);
-    older.link("finder", "builder", "blocks", "firstmate");
+    older.graph.link("continue", "builder", "blocks", "crewmate", true);
+    older.graph.link("prerequisite", "builder", "blocks", "host", true);
+    older.graph.link("finder", "builder", "blocks", "firstmate");
     older.close("earlier", { status: "done", reason: "finished", actor: "firstmate" });
-    expect(older.blockersHoldingClose("builder").map((row) => row.id)).toEqual([
+    expect(older.graph.blockersHoldingClose("builder").map((row) => row.id)).toEqual([
       "review",
       "continue",
       "prerequisite",
@@ -55,7 +55,7 @@ describe("migration 107 (the review's edge, INF-1876)", () => {
     const upgraded = openDatabase(dir);
     const tasks = service(upgraded);
     expect(
-      tasks
+      tasks.graph
         .linksTo("builder")
         .filter((link) => link.type === "blocks")
         .map((link) => ({ from: link.fromId, actor: link.actor, holdsMerge: link.holdsMerge })),
@@ -64,7 +64,7 @@ describe("migration 107 (the review's edge, INF-1876)", () => {
       { from: "prerequisite", actor: "host", holdsMerge: true },
       { from: "finder", actor: "firstmate", holdsMerge: false },
     ]);
-    expect(tasks.blockersHoldingClose("builder").map((row) => row.id)).toEqual([
+    expect(tasks.graph.blockersHoldingClose("builder").map((row) => row.id)).toEqual([
       "continue",
       "prerequisite",
     ]);

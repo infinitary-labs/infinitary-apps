@@ -57,7 +57,7 @@ export const IN_TURN = "open: in a turn now, or waiting to be read";
  */
 export function asksInTurn(tasks: TaskService, chains: AskChain[]): AskRecord[] {
   const listed = new Set(chains.flatMap((chain) => chain.ids));
-  return tasks.listOpenAsks().filter((ask) => !listed.has(ask.id));
+  return tasks.capture.listOpenAsks().filter((ask) => !listed.has(ask.id));
 }
 
 export function readOpenWork(host: OpenWorkHost, input: OpenWorkInput): OpenWorkAnswer {
@@ -144,7 +144,7 @@ function overview(host: OpenWorkHost): string {
   const openCards = host.openCards();
   const shown = new Set(openCards.map((card) => card.id));
   const inTurn = asksInTurn(host.tasks, chains);
-  const notices = host.tasks
+  const notices = host.tasks.capture
     .listAsksByDelivery("unresolved")
     .filter((ask) => ask.followed && ask.noticeCardId && shown.has(ask.noticeCardId));
   return JSON.stringify(

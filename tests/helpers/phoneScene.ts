@@ -112,7 +112,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
         });
         const first = add("soundings", "Read the harbour soundings", { parentId: program });
         const second = add("tides", "Compare the harbour tides", { parentId: program });
-        tasks.link(first, second, "blocks", "host");
+        tasks.graph.link(first, second, "blocks", "host");
         const planned = add("planned", "Summarize the route", {
           parentId: program,
           status: "queued",

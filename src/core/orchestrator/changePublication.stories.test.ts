@@ -95,7 +95,7 @@ describe("shared story delivery boundaries", () => {
       contentHash: presentationContentHash(story),
       number: 23,
     };
-    at.tasks.updateChangePresentation("ab12cd34", () => ({
+    at.tasks.delivery.updateChangePresentation("ab12cd34", () => ({
       revisions: [story],
       receipts: [],
       publication: published,
@@ -157,7 +157,7 @@ describe("shared story delivery boundaries", () => {
      */
     async function stale(kind: "github" | "gitlab" = "github") {
       const at = await saved(kind);
-      at.tasks.updateChangePresentation("ab12cd34", (record) => ({
+      at.tasks.delivery.updateChangePresentation("ab12cd34", (record) => ({
         ...record!,
         revisions: [
           ...record!.revisions,
@@ -178,7 +178,7 @@ describe("shared story delivery boundaries", () => {
       async (kind) => {
         for (const scope of ["task", "version"] as const) {
           const at = await stale(kind);
-          const before = at.tasks.changePresentation("ab12cd34");
+          const before = at.tasks.delivery.changePresentation("ab12cd34");
           override(at, scope);
           const outcome = await at.service.merges.merge("ab12cd34");
           expect(outcome.ok).toBe(true);
@@ -192,7 +192,7 @@ describe("shared story delivery boundaries", () => {
             repaired,
           );
           // Nothing is published, uploaded, refreshed or rewritten on the override's account.
-          expect(at.tasks.changePresentation("ab12cd34")).toEqual(before);
+          expect(at.tasks.delivery.changePresentation("ab12cd34")).toEqual(before);
           expect(at.update).not.toHaveBeenCalled();
         }
       },
@@ -215,8 +215,11 @@ describe("shared story delivery boundaries", () => {
 
     it("merges with no publication at all under a task-wide override, marking none", async () => {
       const at = await saved();
-      at.tasks.updateChangePresentation("ab12cd34", () => ({ revisions: [], receipts: [] }));
-      const unpublished = at.tasks.changePresentation("ab12cd34");
+      at.tasks.delivery.updateChangePresentation("ab12cd34", () => ({
+        revisions: [],
+        receipts: [],
+      }));
+      const unpublished = at.tasks.delivery.changePresentation("ab12cd34");
       at.forge.change = { ...(at.forge.change as ForgeChange), body: "The plain description." };
       const putIn = vi.spyOn(at.forge, "putIn");
       expect((await at.service.merges.merge("ab12cd34")).text).toContain(
@@ -230,14 +233,14 @@ describe("shared story delivery boundaries", () => {
       );
       // Marking none: the ledger is exactly as it was before the merge.
       expect(unpublished).toMatchObject({ revisions: [], receipts: [] });
-      expect(at.tasks.changePresentation("ab12cd34")).toEqual(unpublished);
+      expect(at.tasks.delivery.changePresentation("ab12cd34")).toEqual(unpublished);
     });
 
     it("merges a description replaced on the override, leaving the old story record as it was", async () => {
       const at = await stale();
       at.bringBranchHome.mockResolvedValue("");
       override(at, "task");
-      const published = at.tasks.changePresentation("ab12cd34")?.published;
+      const published = at.tasks.delivery.changePresentation("ab12cd34")?.published;
       await at.service.publication.open("ab12cd34", {
         title: "fix: keep the saved story",
         body: "The repaired change is ready.",
@@ -248,7 +251,7 @@ describe("shared story delivery boundaries", () => {
         { ...at.forge.change, squashMessage: "The repaired change is ready." },
         repaired,
       );
-      expect(at.tasks.changePresentation("ab12cd34")?.published).toEqual(published);
+      expect(at.tasks.delivery.changePresentation("ab12cd34")?.published).toEqual(published);
     });
 
     // The owned merge past the branch rules reads the same override (FI3-1571 piece 2).
@@ -410,7 +413,7 @@ describe("shared story delivery boundaries", () => {
       number: 23,
     };
     const breaking = "fix!: ship it";
-    at.tasks.updateChangePresentation("ab12cd34", () => ({
+    at.tasks.delivery.updateChangePresentation("ab12cd34", () => ({
       revisions: [first, { ...first, revision: 2, title: breaking }],
       receipts: [],
       publication: published,
@@ -425,7 +428,7 @@ describe("shared story delivery boundaries", () => {
     expect(at.forge.change?.title).toBe(breaking);
 
     at.forge.change = { ...(at.forge.change as ForgeChange), title: "fix: ship it today" };
-    at.tasks.updateChangePresentation("ab12cd34", (current) => ({
+    at.tasks.delivery.updateChangePresentation("ab12cd34", (current) => ({
       ...current!,
       revisions: [...current!.revisions, { ...first, revision: 3, title: "fix: ship it" }],
     }));
@@ -446,7 +449,7 @@ describe("shared story delivery boundaries", () => {
     "publishes after %s preflight at any care; a changed proof is a recorded fact, not a hold (INF-1876)",
     async (mode) => {
       const at = await saved();
-      at.tasks.setDevice("ab12cd34", null);
+      at.tasks.placement.setDevice("ab12cd34", null);
       at.repos.configure(at.tasks.get("ab12cd34")!.repoId!, { rigor: "reviewed" });
       seedDelivery(at.tasks, "ab12cd34", {
         reviewVerdict: "pass",
@@ -455,7 +458,7 @@ describe("shared story delivery boundaries", () => {
       });
       const title = "fix: explain the publication recovery";
       if (mode === "story")
-        at.tasks.updateChangePresentation("ab12cd34", (current) => ({
+        at.tasks.delivery.updateChangePresentation("ab12cd34", (current) => ({
           ...current!,
           revisions: [...current!.revisions, { ...at.story, revision: 2, title }],
         }));
@@ -475,7 +478,7 @@ describe("shared story delivery boundaries", () => {
         }),
       ).toContain("pull request #23");
       expect(at.update).toHaveBeenCalledTimes(1);
-      expect(at.tasks.changePresentation("ab12cd34")?.published?.revision).toBe(
+      expect(at.tasks.delivery.changePresentation("ab12cd34")?.published?.revision).toBe(
         mode === "story" ? 2 : 1,
       );
       expect(at.tasks.get("ab12cd34")?.delivery?.liveValidation?.reviews).toEqual([]);
@@ -489,7 +492,7 @@ describe("shared story delivery boundaries", () => {
     "INF-1793: a %s story carries no-mistakes' attestation from the review and live proof at its version",
     async (rigor) => {
       const at = await saved();
-      at.tasks.setDevice("ab12cd34", null);
+      at.tasks.placement.setDevice("ab12cd34", null);
       at.repos.configure(at.tasks.get("ab12cd34")!.repoId!, { rigor });
       seedDelivery(at.tasks, "ab12cd34", {
         reviewVerdict: "pass",
@@ -497,13 +500,13 @@ describe("shared story delivery boundaries", () => {
         liveValidation: noSurfaceProof(original),
       });
       const title = "fix: explain the publication recovery";
-      at.tasks.updateChangePresentation("ab12cd34", (current) => ({
+      at.tasks.delivery.updateChangePresentation("ab12cd34", (current) => ({
         ...current!,
         revisions: [...current!.revisions, { ...at.story, revision: 2, title }],
       }));
       await at.service.publication.open("ab12cd34", { title, presentation: 2 });
       const body = at.forge.change?.body ?? "";
-      expect(at.tasks.changePresentation("ab12cd34")?.published?.revision).toBe(2);
+      expect(at.tasks.delivery.changePresentation("ab12cd34")?.published?.revision).toBe(2);
       expect(body).toContain(NO_MISTAKES_SIGNATURE);
       const start =
         body.indexOf(NO_MISTAKES_ATTESTATION_PREFIX) + NO_MISTAKES_ATTESTATION_PREFIX.length;
@@ -559,7 +562,7 @@ describe("shared story delivery boundaries", () => {
     expect(shown.body).toContain(`demonstrated version ${repaired}`);
     expect(at.update).toHaveBeenCalledTimes(1);
     expect(at.forge.change?.body).toContain(`demonstrated version ${repaired}`);
-    expect(at.tasks.changePresentation("ab12cd34")?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation("ab12cd34")?.published).toMatchObject({
       revision: 2,
       head: repaired,
       refreshOf: 1,
@@ -571,7 +574,7 @@ describe("shared story delivery boundaries", () => {
     expect(at.update).toHaveBeenCalledTimes(1);
 
     // A newer story its author prepared is theirs to publish.
-    at.tasks.updateChangePresentation("ab12cd34", (record) => ({
+    at.tasks.delivery.updateChangePresentation("ab12cd34", (record) => ({
       ...record!,
       revisions: [...record!.revisions, { ...at.story, revision: 3, head: repaired }],
     }));
@@ -600,7 +603,7 @@ describe("shared story delivery boundaries", () => {
     );
 
     // A story prepared at an earlier version and never published is not the host's to republish.
-    at.tasks.updateChangePresentation("ab12cd34", (record) => ({
+    at.tasks.delivery.updateChangePresentation("ab12cd34", (record) => ({
       ...record!,
       revisions: [...record!.revisions, { ...at.story, revision: 4, head: repaired }],
     }));
@@ -624,7 +627,7 @@ describe("shared story delivery boundaries", () => {
       repaired,
     );
     expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
-    expect(at.tasks.changePresentation("ab12cd34")?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation("ab12cd34")?.published).toMatchObject({
       revision: 2,
       head: repaired,
       refreshOf: 1,
@@ -681,7 +684,8 @@ describe("shared story delivery boundaries", () => {
           prNumber: 23,
           at: 1,
           presentationRevision: 1,
-          presentationContentHash: at.tasks.changePresentation("ab12cd34")?.published?.contentHash,
+          presentationContentHash:
+            at.tasks.delivery.changePresentation("ab12cd34")?.published?.contentHash,
         },
       ],
     });
@@ -700,14 +704,16 @@ describe("shared story delivery boundaries", () => {
     );
     expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
     expect(putIn.mock.calls[0]?.[0].body).not.toContain(`demonstrated version ${original}`);
-    expect(at.tasks.changePresentation("ab12cd34")?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation("ab12cd34")?.published).toMatchObject({
       revision: 2,
       head: repaired,
     });
     expect(at.bringBranchHome).not.toHaveBeenCalled();
     expect(at.readHead).not.toHaveBeenCalled();
     // A human-directed replacement is not the same-content exception.
-    const current = at.tasks.changePresentation("ab12cd34")?.revisions.at(-1) as ChangePresentation;
+    const current = at.tasks.delivery
+      .changePresentation("ab12cd34")
+      ?.revisions.at(-1) as ChangePresentation;
     at.readHead.mockResolvedValue(repaired);
     const revision = await at.presentations.prepare(
       "ab12cd34",
@@ -825,7 +831,7 @@ describe("shared story delivery boundaries", () => {
     });
     expect(putIn.mock.calls[0]?.[1]).toBe(repaired);
     expect(putIn.mock.calls[0]?.[0].body).toContain(`demonstrated version ${repaired}`);
-    expect(at.tasks.changePresentation("ab12cd34")?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation("ab12cd34")?.published).toMatchObject({
       revision: 2,
       head: repaired,
     });
@@ -838,7 +844,7 @@ describe("shared story delivery boundaries", () => {
   // merge reads its own story.
   it("keeps each change's own story: one prepared for another pull request leaves the published one as it was, and the own merge reads its own (INF-2546)", async () => {
     const at = await saved();
-    const own = at.tasks.changePresentation("ab12cd34");
+    const own = at.tasks.delivery.changePresentation("ab12cd34");
     expect(own).toMatchObject({ branch: "fm/task-ab12cd34", published: { number: 23 } });
     const release: MergeReview = {
       id: "mrrelease57",
@@ -860,8 +866,8 @@ describe("shared story delivery boundaries", () => {
       checkTarget: release,
       prNumber: 57,
     });
-    expect(at.tasks.changePresentation("ab12cd34")).toBeUndefined();
-    expect(at.tasks.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
+    expect(at.tasks.delivery.changePresentation("ab12cd34")).toBeUndefined();
+    expect(at.tasks.delivery.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
     // Its story starts at its own first revision, in its own ledger.
     at.readHead.mockResolvedValueOnce(repaired);
     const revision = await at.presentations.prepare(
@@ -870,10 +876,10 @@ describe("shared story delivery boundaries", () => {
       at.forge,
     );
     expect(revision).toBe(1);
-    const releaseStory = at.tasks.changePresentation("ab12cd34");
+    const releaseStory = at.tasks.delivery.changePresentation("ab12cd34");
     expect(releaseStory).toMatchObject({ branch: release.branch, revisions: [{ revision: 1 }] });
     expect(releaseStory?.published).toBeUndefined();
-    expect(at.tasks.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
+    expect(at.tasks.delivery.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
     // The own change current again: its story is back where older readers read it.
     seedDelivery(at.tasks, "ab12cd34", { checkTarget: undefined, prNumber: 23 });
     expect(at.tasks.get("ab12cd34")?.delivery).toMatchObject({
@@ -890,17 +896,19 @@ describe("shared story delivery boundaries", () => {
 
   it("does not attach a saved-story hold to an existing unrecorded legacy PR", async () => {
     const at = await saved();
-    const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+    const story = at.tasks.delivery.changePresentation("ab12cd34")
+      ?.revisions[0] as ChangePresentation;
     seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: undefined });
     expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
       "predates saved stories",
     );
-    expect(at.tasks.changePresentation("ab12cd34")).toBeUndefined();
+    expect(at.tasks.delivery.changePresentation("ab12cd34")).toBeUndefined();
   });
 
   it("starts a saved story when the recorded pre-story PR has closed (INF-92 F1, captain's choice)", async () => {
     const at = await saved();
-    const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+    const story = at.tasks.delivery.changePresentation("ab12cd34")
+      ?.revisions[0] as ChangePresentation;
     seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: 23 });
     const open = at.forge.change;
     let body = "";
@@ -955,7 +963,8 @@ describe("shared story delivery boundaries", () => {
     "tells the crewmate who reads a story prepared for a %s project (INF-2142's approved plan)",
     async (visibility, said) => {
       const at = await saved();
-      const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+      const story = at.tasks.delivery.changePresentation("ab12cd34")
+        ?.revisions[0] as ChangePresentation;
       seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: undefined });
       at.forge.change = null;
       const hosted = story.destination as HostedPresentationDestination;
@@ -984,7 +993,7 @@ describe("shared story delivery boundaries", () => {
   it("tells the crewmate who reads a story prepared for the checked-out branch from that branch's own ledger (INF-2587)", async () => {
     const otherBranch = "reading-fix";
     const at = await saved("github", async () => ({ branch: otherBranch, head: original }));
-    const own = at.tasks.changePresentation("ab12cd34");
+    const own = at.tasks.delivery.changePresentation("ab12cd34");
     const story = own?.revisions[0] as ChangePresentation;
     const hosted = story.destination as HostedPresentationDestination;
     expect(hosted.visibility).toBe("public");
@@ -1007,15 +1016,16 @@ describe("shared story delivery boundaries", () => {
     );
     expect(answer).not.toContain("anyone can read this story");
     // The revision went to reading-fix's own ledger; the task's own story is as it was.
-    expect(at.tasks.changePresentation("ab12cd34", otherBranch)?.revisions).toMatchObject([
+    expect(at.tasks.delivery.changePresentation("ab12cd34", otherBranch)?.revisions).toMatchObject([
       { revision: 1, destination },
     ]);
-    expect(at.tasks.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
+    expect(at.tasks.delivery.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
   });
 
   it("stops, opening nothing, when the recorded pre-story PR merged outside the app (INF-92 F3)", async () => {
     const at = await saved();
-    const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+    const story = at.tasks.delivery.changePresentation("ab12cd34")
+      ?.revisions[0] as ChangePresentation;
     seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: 23 });
     at.forge.change = null;
     at.bringBranchHome.mockResolvedValue("");
@@ -1036,7 +1046,8 @@ describe("shared story delivery boundaries", () => {
 
   it("fails closed when the recorded pre-story PR cannot be read, and when it merges between prepare and open (INF-292 F5, F6)", async () => {
     const at = await saved();
-    const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+    const story = at.tasks.delivery.changePresentation("ab12cd34")
+      ?.revisions[0] as ChangePresentation;
     seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: 23 });
     at.forge.change = null;
     at.bringBranchHome.mockResolvedValue("");
@@ -1071,7 +1082,8 @@ describe("shared story delivery boundaries", () => {
     "cleans staged copies when preparation refuses %s (INF-169 R4)",
     async (reason) => {
       const at = await saved();
-      const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
+      const story = at.tasks.delivery.changePresentation("ab12cd34")
+        ?.revisions[0] as ChangePresentation;
       seedDelivery(at.tasks, "ab12cd34", {
         presentation: undefined,
         prNumber: reason === "unrecorded legacy" ? undefined : 23,

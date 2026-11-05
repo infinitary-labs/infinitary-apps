@@ -346,7 +346,7 @@ export class KeptMerge {
       // Something else on the task still open keeps it open (INF-2525).
       const stillOpen = record ? await this.settle.stillOpen(record, pull.number) : undefined;
       if (stillOpen) {
-        this.host.tasks.recordChangeEvidence(taskId, {
+        this.host.tasks.delivery.recordChangeEvidence(taskId, {
           ci: "merged",
           headSha: pull.headSha,
           ciAt: this.host.now(),
@@ -403,7 +403,7 @@ export class KeptMerge {
   resumeMergeAuthorizations(): void {
     for (const record of this.host.tasks.listLive()) {
       if (record.delivery?.mergeOrder) {
-        this.host.tasks.recordPermissionRecords(record.id, { mergeOrder: undefined });
+        this.host.tasks.delivery.recordPermissionRecords(record.id, { mergeOrder: undefined });
         const text = `The kept merge click for "${record.title}" was made before this version and names no approved version, so it could not be carried forward. Its crewmate puts up its completion card again once the checks pass.`;
         this.host.tasks.note(record.id, text, { news: true, feed: true });
         this.settle.wakeOnSettle(record.id, record.title, "merge-pr (kept before this version)", {

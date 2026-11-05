@@ -35,7 +35,7 @@ test("plain history and deeper exact sources", async ({}, testInfo) => {
     shape: { kind: "implement" },
   });
   tasks.updateFields(task.id, { goal: "The Mac and Linux checks pass." }, "captain");
-  tasks.setSessionFile(task.id, "practice-resume", {
+  tasks.turns.setSessionFile(task.id, "practice-resume", {
     file: "/work/practice.jsonl",
     computer: "Work computer",
     device_id: "work",

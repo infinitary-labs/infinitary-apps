@@ -581,7 +581,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
 Its parts sit beside it in `src/core/placed/`: what the crew reads of the computers (`CrewMachines`, `crewMachines.ts`), the callbacks it answers (`placedCallbacks.ts`), what it keeps of them (`PlacedLedger`, `placedLedger.ts`), this Mac's copy of a record there (`RecordCopy`, `recordCopy.ts`), and each computer's own accounts (`PlacedAccounts`, `placedAccounts.ts`).
 
 - **Where a task runs.**
-  `task_execution.device_id` (migration 63, moved by migration 97, written by `TaskService.setDevice`) names the paired computer that runs work holding a task's conversation; null is this Mac.
+  `task_execution.device_id` (migration 63, moved by migration 97, written by `TaskService.placement.setDevice`) names the paired computer that runs work holding a task's conversation; null is this Mac.
   The supervisor reads it where it used to name this Mac: that computer makes the task's working copy (below, "Its working copies"), and the session opens on that computer's factories, with that computer's folders in the crewmate's instructions and its working copy as the crewmate's own; this Mac makes no working copy for it.
 - **Factories.**
   `factories(deviceId)` is one `SessionFactory` per backend for that computer, presenting the backend it runs there, so no third backend exists; each refuses another machine, another backend's binding, and anything but a crewmate's rolling coding conversation.
@@ -855,7 +855,7 @@ An eligible project has a cloneable origin and is not the personal workspace.
 New eligible projects default to `runs_on = automatic`; the additive migration changes every existing eligible project, preserving task overrides and every started task's recorded computer.
 The project select and `project-runs-on` accept `automatic`; `update_task runs_on` and `runs_on_ask` accept the same value for an unstarted task in an eligible project.
 Explicit task and parent choices, reviews following builders, origin-less projects and the personal workspace retain their existing owner.
-For an uncommitted start already using Automatic, the direct basis named by `TaskService.basisOf` contributes locality only when its answer holds and its `startedAt` records actual execution.
+For an uncommitted start already using Automatic, the direct basis named by `TaskService.graph.basisOf` contributes locality only when its answer holds and its `startedAt` records actual execution.
 An unstarted answer with an empty device field is not execution at home, and missing or unresolved bases add no preference or wait.
 After asynchronous compatibility and resource reads, the synchronous `commitPlacement` callback resolves that current relationship and reads its current `deviceId`, including a committed move but not a planned destination.
 Among fully admitted candidates at the best existing model preference, that account-specific computer wins before spare-room ranking; unavailable, incompatible, unreadable, stale, model-less or full candidates fall back to ordinary placement or its existing wait.
@@ -892,7 +892,7 @@ A project-access failure remains unknown; a generic forge sign-in cannot prove a
 
 Placement renews demand on the existing `ComputerResourceFeed`, shared with screens and permitted panels; it creates no sampler or second timer.
 A start awaits the shared in-flight resource round through `readCurrent`, so an initially empty cache cannot repeatedly miss the ready sweep.
-`TaskService.commitPlacement` evaluates all durable pending commitments and writes the choice and stable preparation order in one transaction before asynchronous preparation.
+`TaskService.placement.commitPlacement` evaluates all durable pending commitments and writes the choice and stable preparation order in one transaction before asynchronous preparation.
 Commitment records one bounded historical snapshot with the chosen computer, model, demand, candidate reading ages, pending capacity and typed rejection reasons.
 `preparationStarted` is written before work begins; a closed unsent commitment can be released without guessing.
 A missing preparation reply keeps the reservation and computer across retries and restarts, and reconciles the same preparation order.
@@ -983,7 +983,7 @@ The first mate sets it only from the captain's words, never by judging, and only
 - **Waiting.**
   A task whose own Runs on, or its parent's, names a computer out of reach waits as a project's task does, and the feed names the task by its quoted title (`waitSubject`).
   It says `"Fix the footer" waits for Mac mini. It never runs on this computer instead.` once, a day later `Mac mini has been out of reach for a day. "Fix the footer" still waits.` and `To run it here instead, ask Firstmate to run "Fix the footer" on this computer.`, and `"Fix the footer" started on Mac mini.` when it starts.
-  Removing that computer forgets each task's own Runs on that names it, as each project's moves home, so the task follows its parent's or its project's (`TaskService.forgetRunsOn`, called from `stopTasksOn`).
+  Removing that computer forgets each task's own Runs on that names it, as each project's moves home, so the task follows its parent's or its project's (`TaskService.placement.forgetRunsOn`, called from `stopTasksOn`).
 - **Where the captain sees it.**
   The task record's Details has a read-only Runs on row once a computer that runs work is on the list (for a task with no project, only once it or its parent has its own) (`TaskDetail.runsOn`, `CrewSupervisor.runsOnFact`): where it started, or where it would start now, then its source, "This task", "Parent task" or "Project setting" (design skill `components/cards/TaskRecord`).
   A card from the task names where it runs as before ("Fix the footer · on Mac mini").
@@ -1018,7 +1018,7 @@ Nothing moves work on its own, to balance load or to fail over.
   The side that unpacks checks each part's digest and then the restored index and working tree against the trees the packing side read, so what arrives is what left.
   A pack that cannot be made changes nothing: the move waits again and says why.
 - **One commit.**
-  Once the destination holds the work, `TaskService.commitComputerMove` writes the record once: the computer it runs on, its working copy there, and phase `retiring`, with a feed line ("the captain moved it from this computer to Mac mini").
+  Once the destination holds the work, `TaskService.placement.commitComputerMove` writes the record once: the computer it runs on, its working copy there, and phase `retiring`, with a feed line ("the captain moved it from this computer to Mac mini").
   Before that, what this computer kept of a conversation on the computer it leaves is set aside (`PlacedSessions.forgetExecution`), so the new one there starts fresh.
   The commit also writes the conversation it left (`restartFrom`), so whichever path resumes the task first - the move itself, the next tick or a quit's reopen - opens a new conversation on the destination through the same session factory, on the same model, told it moved, with its brief and where its earlier conversation is (`conversationRestartWake`, `changed: "computer"`), and never the old one.
   The lane stays held until the destination installed its dependencies, as a first turn's are (`prepareFirstTurn`): the commit marks the move `preparing`, the install's end clears it, and a quit before then installs again at the next launch; then what waited on it goes next.

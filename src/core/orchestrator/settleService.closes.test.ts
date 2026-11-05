@@ -156,7 +156,7 @@ describe("a release close rechecks after reading the working copy", () => {
   it("refuses when the crewmate started again while the working copy was read", async () => {
     const world = released();
     world.readWork = async () => {
-      world.tasks.setActivity(TASK, "running");
+      world.tasks.turns.setActivity(TASK, "running");
       return { dirty: false, unlandedCommits: 0 };
     };
     const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
@@ -170,7 +170,7 @@ describe("a release close rechecks after reading the working copy", () => {
     const world = released();
     seedTask(world.tasks, { id: "gauge", title: "Mount the gauge", status: "idle" });
     world.readWork = async () => {
-      world.tasks.link("gauge", TASK, "blocks", "crewmate", true);
+      world.tasks.graph.link("gauge", TASK, "blocks", "crewmate", true);
       return { dirty: false, unlandedCommits: 0 };
     };
     const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
@@ -206,7 +206,7 @@ describe("a handed-on answer's close rechecks after reading the working copy", (
   function handedOn(): SettleWorld {
     const world = settleWorld();
     seedDelivery(world.tasks, TASK, { prNumber: undefined, headSha: undefined });
-    world.tasks.recordResultHandoff(TASK, { cardId: "card-done", action: "keep" });
+    world.tasks.capture.recordResultHandoff(TASK, { cardId: "card-done", action: "keep" });
     return world;
   }
 
@@ -220,7 +220,7 @@ describe("a handed-on answer's close rechecks after reading the working copy", (
   it("refuses when its work changed while the working copy was read", async () => {
     const world = handedOn();
     world.readWork = async () => {
-      world.tasks.setActivity(TASK, "running");
+      world.tasks.turns.setActivity(TASK, "running");
       return { dirty: false, unlandedCommits: 0 };
     };
     const answer = await world.declared.closeAnswerUsedAsBasis(TASK);

@@ -35,10 +35,10 @@ function fixture() {
     cardTitle: () => undefined,
   });
   const message = (id: string, task: string, text: string) => {
-    tasks.openAsk({ id, text });
-    tasks.attachAsk(id, task, "tool:steer_crewmate");
-    tasks.closeAsk(id, "closed");
-    tasks.setAskDelivery(id, "covered");
+    tasks.capture.openAsk({ id, text });
+    tasks.capture.attachAsk(id, task, "tool:steer_crewmate");
+    tasks.capture.closeAsk(id, "closed");
+    tasks.capture.setAskDelivery(id, "covered");
   };
   return { db, tasks, inbox, ending, check, message };
 }
@@ -121,21 +121,21 @@ it("reads each ask once in a turn-end sweep and sees the next saved change", () 
     expect(reads.toSorted()).toEqual(expected.toSorted());
     expect(f.inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual([]);
     // No long-lived cache: a just-accepted, completed chain leaves the very next sweep.
-    f.tasks.acceptAnswer(groups[0]!, "card-work-0-answer");
+    f.tasks.capture.acceptAnswer(groups[0]!, "card-work-0-answer");
     f.tasks.close("work-0", { status: "done", reason: "answered", actor: "host" });
     f.check.sweep();
-    expect(groups[0]!.map((id) => f.tasks.getAsk(id)?.answerCardId)).toEqual(
+    expect(groups[0]!.map((id) => f.tasks.capture.getAsk(id)?.answerCardId)).toEqual(
       groups[0]!.map(() => "card-work-0-answer"),
     );
-    expect(groups[0]!.every((id) => f.tasks.getAsk(id)?.answeredAt !== null)).toBe(true);
+    expect(groups[0]!.every((id) => f.tasks.capture.getAsk(id)?.answeredAt !== null)).toBe(true);
     expect(f.ending.openChains().map((chain) => chain.ids)).toEqual(groups.slice(1));
     console.info(
       "Accepted-answer receipt",
       JSON.stringify({
         answered: groups[0]!.map((id) => ({
           id,
-          card: f.tasks.getAsk(id)?.answerCardId,
-          finalized: f.tasks.getAsk(id)?.answeredAt !== null,
+          card: f.tasks.capture.getAsk(id)?.answerCardId,
+          finalized: f.tasks.capture.getAsk(id)?.answeredAt !== null,
         })),
         remainingChains: f.ending.openChains().length,
         pendingWakes: f.inbox.allFor(FIRSTMATE_RECIPIENT).length,
@@ -154,15 +154,15 @@ it("keeps complete membership and freshness outside the unfinished-row filter", 
     seedTask(f.tasks, { id: "panels", title: "Plan personal panels", status: "running" });
     f.message("plan", "panels", "How could personal panels work?");
     f.message("detail", "panels", "Keep each panel isolated.");
-    f.tasks.openAsk({ id: "newest", text: "Also preserve keyboard navigation." });
-    f.tasks.attachAsk("newest", "panels", "tool:steer_crewmate");
-    f.tasks.setAskDelivery("detail", "unresolved");
+    f.tasks.capture.openAsk({ id: "newest", text: "Also preserve keyboard navigation." });
+    f.tasks.capture.attachAsk("newest", "panels", "tool:steer_crewmate");
+    f.tasks.capture.setAskDelivery("detail", "unresolved");
     expect(f.ending.openChains()).toEqual([f.ending.chain("plan")]);
     expect(f.ending.openChains()[0]?.ids).toEqual(["plan", "detail", "newest"]);
-    expect(f.ending.openChains()[0]?.newestAt).toBe(f.tasks.getAsk("newest")?.at);
+    expect(f.ending.openChains()[0]?.newestAt).toBe(f.tasks.capture.getAsk("newest")?.at);
     // A legacy/partially ended root must still be read for an unfinished child.
-    f.tasks.markAnswered(["plan"], "card-plan");
-    f.tasks.closeAsk("newest", "closed");
+    f.tasks.capture.markAnswered(["plan"], "card-plan");
+    f.tasks.capture.closeAsk("newest", "closed");
     expect(f.ending.openChains()).toEqual([f.ending.chain("newest")]);
   } finally {
     f.db.close();

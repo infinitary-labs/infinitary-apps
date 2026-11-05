@@ -76,9 +76,9 @@ export function seedTask(tasks: TaskService, seed: TaskSeed): TaskRecord {
     actor: "host",
     ...(seed.createdAt !== undefined ? { createdAt: seed.createdAt } : {}),
   });
-  if (seed.deviceId) tasks.setDevice(seed.id, seed.deviceId);
+  if (seed.deviceId) tasks.placement.setDevice(seed.id, seed.deviceId);
   if (seed.status === "queued") return tasks.get(seed.id) as TaskRecord;
-  tasks.dispatch(seed.id, {
+  tasks.starts.dispatch(seed.id, {
     workspace: {
       repoDir: seed.repoDir ?? "",
       worktreeDir,
@@ -89,17 +89,17 @@ export function seedTask(tasks: TaskService, seed: TaskSeed): TaskRecord {
     ...(seed.model ? { model: seed.model } : {}),
     ...(seed.reasoning ? { reasoning: seed.reasoning } : {}),
   });
-  if (seed.sessionFile !== undefined) tasks.setSessionFile(seed.id, seed.sessionFile);
-  if (seed.outcome) tasks.recordReport(seed.id, { text: seed.outcome });
+  if (seed.sessionFile !== undefined) tasks.turns.setSessionFile(seed.id, seed.sessionFile);
+  if (seed.outcome) tasks.turns.recordReport(seed.id, { text: seed.outcome });
   switch (seed.status) {
     case "running":
     case "interrupted":
-      tasks.setActivity(seed.id, seed.status);
+      tasks.turns.setActivity(seed.id, seed.status);
       break;
     case "idle":
     case "completed":
       // A finished crewmate is idle and resumable, not closed (WI-11).
-      tasks.setActivity(seed.id, "idle");
+      tasks.turns.setActivity(seed.id, "idle");
       break;
     case "cancelled":
       tasks.close(seed.id, { status: "dropped", reason: "cancelled", actor: "host" });

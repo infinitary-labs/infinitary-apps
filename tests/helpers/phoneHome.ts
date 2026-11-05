@@ -881,7 +881,7 @@ export async function startPhoneHome(
               { id: "thursday", label: "Thursday" },
             ],
           });
-          const question = core.services.tasks.fileDecision({
+          const question = core.services.tasks.capture.fileDecision({
             id: randomBytes(4).toString("hex"),
             title,
             cardId,
@@ -1015,15 +1015,18 @@ export async function startPhoneHome(
         }
         // INF-1610: a card about a long message of the captain's, which the phone draws as its "You asked" line.
         case "POST asked-card": {
-          const ask = core.services.tasks.openAsk({ id: "phone-ask", text: PHONE_ASKED_MESSAGE });
+          const ask = core.services.tasks.capture.openAsk({
+            id: "phone-ask",
+            text: PHONE_ASKED_MESSAGE,
+          });
           const asked = seedTask(core.services.tasks, {
             id: "phone-asked",
             title: "Check how the stack orders cards",
             status: "completed",
             outcome: "The stack keeps a card you replied under in its place.",
           });
-          core.services.tasks.attachAsk(ask.id, asked.id, "tool:spawn_crewmate");
-          core.services.tasks.closeAsk(ask.id, "closed");
+          core.services.tasks.capture.attachAsk(ask.id, asked.id, "tool:spawn_crewmate");
+          core.services.tasks.capture.closeAsk(ask.id, "closed");
           const title = "The stack keeps a card you replied under in its place";
           core.services.supervisor.addFirstmateCard({
             id: "phone-asked-card",
@@ -1266,7 +1269,7 @@ export async function startPhoneHome(
         // INF-944 item 4: an Activity list longer than the screen, so scrolling it makes the tabs recede.
         case "POST long-activity": {
           for (let line = 1; line <= 30; line++)
-            core.services.tasks.recordReport(task.id, {
+            core.services.tasks.turns.recordReport(task.id, {
               text: `Checked the harbour chart (${line})`,
               summary: `Checked the harbour chart (${line})`,
             });
@@ -1661,7 +1664,7 @@ export async function startPhoneHome(
             body: "<p>A change made while the phone could not see it.</p>",
             actions: [],
           });
-          core.services.tasks.recordReport(task.id, { text: title, summary: title });
+          core.services.tasks.turns.recordReport(task.id, { text: title, summary: title });
           result = { title };
           break;
         }
@@ -1803,7 +1806,7 @@ export async function startPhoneHome(
           break;
         case "POST context-sent":
           await until(() =>
-            core.services.tasks
+            core.services.tasks.capture
               .listAsks()
               .some(
                 (ask) => ask.text.startsWith("Keep this reference") && ask.turnState !== "open",
@@ -1866,20 +1869,20 @@ export async function startPhoneHome(
             writes,
             lastTurn: await core.dispatch("inf:conversation:last-turn", []),
             task: await core.dispatch("inf:tasks:detail", ["phone-work"]),
-            asks: core.services.tasks.listAsks(),
+            asks: core.services.tasks.capture.listAsks(),
             held: provider.heldRequests(),
           };
           break;
         case "POST talk-sent":
           await until(() =>
-            core.services.tasks
+            core.services.tasks.capture
               .listAsks()
               .some((ask) => ask.text.includes(ANSWER_PROMPT_MARKER) && ask.turnState !== "open"),
           );
           result = {
             writes,
             lastTurn: await core.dispatch("inf:conversation:last-turn", []),
-            asks: core.services.tasks.listAsks(),
+            asks: core.services.tasks.capture.listAsks(),
           };
           observations.push({ check: "captain-turn-from-phone", result });
           break;
@@ -1904,7 +1907,7 @@ export async function startPhoneHome(
         case "POST talk-resumable":
           // Continue belongs to a recovered Interrupted record, not a normal captain-interrupted turn.
           // Reuse this real task's workspace and session, in the persisted state recovery supplies.
-          core.services.tasks.setActivity("phone-work", "interrupted");
+          core.services.tasks.turns.setActivity("phone-work", "interrupted");
           result = { ok: true };
           break;
         case "POST talk-steered":

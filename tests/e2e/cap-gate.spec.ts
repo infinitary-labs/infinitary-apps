@@ -31,7 +31,7 @@ test("legacy repair and review caps no longer hold work after launch", async () 
       reviewRounds: 3,
       reviewCapAt: Date.now(),
     });
-    tasks.setGate(id, { kind: "captain", reason: "the CI cap" });
+    tasks.placement.setGate(id, { kind: "captain", reason: "the CI cap" });
   }
   db.close();
   const launched = await launchApp({ userDataDir });

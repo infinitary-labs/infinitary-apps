@@ -23,12 +23,12 @@ export function pointerRecordHome(options: { revisedBrief?: boolean } = {}): str
         { goal: "Task search opens the matching saved task." },
         "captain",
       );
-    tasks.recordReport(POINTER_TASK, {
+    tasks.turns.recordReport(POINTER_TASK, {
       summary: "Task search finds the matching task.",
       text: "Task search finds the matching task.\n\nChecked searching by title and task key. Both open the right task.",
     });
     tasks.close(POINTER_TASK, { status: "done", reason: "merged", actor: "host" });
-    tasks.markWorkspaceRemoved(POINTER_TASK);
+    tasks.placement.markWorkspaceRemoved(POINTER_TASK);
     return userDataDir;
   } finally {
     db.close();

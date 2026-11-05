@@ -89,7 +89,7 @@ function seedMoves(userDataDir: string): void {
   seed({ id: "queue-me", title: "Queue me", status: "queued" });
   seed({ id: "blocker", title: "Blocker", status: "queued" });
   seed({ id: "blocked", title: "Blocked", status: "queued" });
-  tasks.link("blocker", "blocked", "blocks", "host");
+  tasks.graph.link("blocker", "blocked", "blocks", "host");
   // FM3K-5: queued, held until next month.
   seed({
     id: "held",
@@ -119,7 +119,7 @@ function seedMoves(userDataDir: string): void {
   seed({ id: "changes", title: "Changes underneath", status: "queued" });
   // FM3K-14 waits on FM3K-11, so dropping it names what still waits.
   seed({ id: "waiter", title: "Waiter", status: "queued", startPolicy: "when-ready" });
-  tasks.link("drop-tray", "waiter", "blocks", "host");
+  tasks.graph.link("drop-tray", "waiter", "blocks", "host");
   new CardStore(db).upsert({
     id: COMPLETION_CARD,
     taskId: "ready",

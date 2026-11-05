@@ -29,7 +29,7 @@ import { FirstmateAgent } from "../src/core/orchestrator/firstmateAgent.ts";
 import { createAppTools } from "../src/core/pi/appTools.ts";
 import { FIRSTMATE_TOOLS } from "../src/core/session/tools.ts";
 import { SessionRecordStore } from "../src/core/storage/sessionRecordStore.ts";
-import { TaskService } from "../src/core/tasks/taskService.ts";
+import { TaskTurns } from "../src/core/tasks/taskTurns.ts";
 import { frameServedInput, type ServedSegmentInput } from "../src/shared/servedFrame.ts";
 import { claudeCrewTwin, crewSessionsDir, crewTwinTime, piCrewTwin } from "./helpers/crewTwins.ts";
 import { scratchDir } from "./helpers/scratchDirs";
@@ -310,7 +310,7 @@ describe("the plan-to-build handoff, on the real FI3-309 to FI3-310 recording", 
     });
     const replies = vi.spyOn(CrewSupervisor.prototype, "replyToCard");
     const lines = vi.spyOn(CardService.prototype, "addMessage");
-    const reports = vi.spyOn(TaskService.prototype, "recordReport");
+    const reports = vi.spyOn(TaskTurns.prototype, "recordReport");
     try {
       await replaySession(fixture("sep30-handoff-agree"));
       // The host's own reply path, on the planner's card as the replay showed it.
@@ -1010,10 +1010,10 @@ describe("crewmate turns", () => {
         cards: [],
       },
     );
-    const record = TaskService.prototype.recordReport;
+    const record = TaskTurns.prototype.recordReport;
     const reports: { at: number; text: string }[] = [];
-    const spy = vi.spyOn(TaskService.prototype, "recordReport").mockImplementation(function (
-      this: TaskService,
+    const spy = vi.spyOn(TaskTurns.prototype, "recordReport").mockImplementation(function (
+      this: TaskTurns,
       ...args
     ) {
       reports.push({ at: Date.now(), text: args[1].text });

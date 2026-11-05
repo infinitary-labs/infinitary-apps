@@ -17,21 +17,23 @@ describe("task projection reads", () => {
     try {
       seedTask(tasks, { id: "builder", title: "Keep task refreshes responsive", status: "idle" });
       seedTask(tasks, { id: "fix", title: "Fix the blocking check", status: "idle" });
-      tasks.link("fix", "builder", "blocks", "firstmate", true);
+      tasks.graph.link("fix", "builder", "blocks", "firstmate", true);
       tasks.readProjection(() => {
         tasks.listLive();
         const builder = tasks.get("builder")!;
         const rows = rowsRead(db, () => {
           for (let read = 0; read < 20; read += 1) {
-            expect(tasks.flagsOf(builder).blocked).toBe(true);
-            expect(tasks.waitsHolding(builder.id, true).map((task) => task.id)).toEqual(["fix"]);
+            expect(tasks.graph.flagsOf(builder).blocked).toBe(true);
+            expect(tasks.graph.waitsHolding(builder.id, true).map((task) => task.id)).toEqual([
+              "fix",
+            ]);
           }
         });
         console.info(JSON.stringify({ intent: "INF-2255 marked blockers", reads: 20, rows }));
-        expect(rows).toBe(tasks.linksTo(builder.id).length);
+        expect(rows).toBe(tasks.graph.linksTo(builder.id).length);
         tasks.close("fix", { status: "done", reason: "settled", actor: "host" });
-        expect(tasks.flagsOf(builder).blocked).toBe(false);
-        expect(tasks.waitsHolding(builder.id, true)).toEqual([]);
+        expect(tasks.graph.flagsOf(builder).blocked).toBe(false);
+        expect(tasks.graph.waitsHolding(builder.id, true)).toEqual([]);
       });
     } finally {
       db.close();
@@ -90,11 +92,11 @@ describe("task projection reads", () => {
         if (!record) throw new Error("Missing builder");
         const parse = vi.spyOn(JSON, "parse");
         const timelines = vi.spyOn(tasks, "timeline");
-        const children = vi.spyOn(tasks, "children");
+        const children = vi.spyOn(tasks.graph, "children");
         let parsed: number;
         try {
           expect(ladder.unansweredAsk(record)).toEqual(request);
-          expect(tasks.openChildren(record.id)).toEqual([]);
+          expect(tasks.graph.openChildren(record.id)).toEqual([]);
           parsed = parse.mock.calls.filter(
             ([value]) => typeof value === "string" && value.includes(retained),
           ).length;
@@ -135,18 +137,18 @@ describe("task projection reads", () => {
         status: "queued",
         startPolicy: "on-request",
       });
-      tasks.link("dependency", "builder", "blocks", "firstmate");
+      tasks.graph.link("dependency", "builder", "blocks", "firstmate");
       tasks.readProjection(() => {
         const record = tasks.get("builder");
         if (!record) throw new Error("Missing builder");
-        const links = vi.spyOn(tasks, "linksTo");
+        const links = vi.spyOn(tasks.graph, "linksTo");
         try {
           for (let reader = 0; reader < 20; reader += 1) {
             expect(ladder.unstartedWaits(record).map((task) => task.id)).toEqual(["dependency"]);
             expect(ladder.underwayWaits(record)).toEqual([]);
           }
           expect(links.mock.calls.filter(([id]) => id === record.id)).toHaveLength(1);
-          tasks.unlink("dependency", "builder", "blocks", "firstmate");
+          tasks.graph.unlink("dependency", "builder", "blocks", "firstmate");
           expect(ladder.unstartedWaits(record)).toEqual([]);
           expect(ladder.underwayWaits(record)).toEqual([]);
         } finally {
@@ -168,7 +170,7 @@ describe("task projection reads", () => {
     try {
       seedTask(tasks, { id: "finding", title: "Fix the Tasks refresh", status: "idle" });
       seedTask(tasks, { id: "active", title: "Verify the finding", status: "idle" });
-      tasks.link("finding", "active", "blocks", "firstmate");
+      tasks.graph.link("finding", "active", "blocks", "firstmate");
       for (let index = 0; index < 10; index += 1) {
         const id = `closed-${index}`;
         seedTask(tasks, { id, title: "An earlier verification", status: "cancelled" });
@@ -188,7 +190,7 @@ describe("task projection reads", () => {
             ],
           },
         });
-        tasks.link("finding", id, "blocks", "firstmate");
+        tasks.graph.link("finding", id, "blocks", "firstmate");
       }
       const finding = tasks.get("finding");
       if (!finding) throw new Error("Missing finding");
@@ -225,7 +227,7 @@ describe("task projection reads", () => {
         "Verified the wait dates.",
       ]) {
         tasks.note("builder", "The checks are running.", { news: false });
-        tasks.recordReport("builder", { text });
+        tasks.turns.recordReport("builder", { text });
       }
       let all: ReturnType<TaskService["reportEntries"]> = [];
       const baseline = rowsRead(db, () => {
@@ -251,9 +253,9 @@ describe("task projection reads", () => {
     try {
       seedTask(tasks, { id: "builder", title: "Keep task refreshes responsive", status: "idle" });
       seedTask(tasks, { id: "waits", title: "Fix the waits", parentId: "builder", status: "idle" });
-      tasks.openAsk({ id: "refresh", text: "Fix the Tasks list refresh." });
-      tasks.attachAsk("refresh", "builder", "host:fallback");
-      tasks.attachAsk("refresh", "waits", "tool:spawn_crewmate");
+      tasks.capture.openAsk({ id: "refresh", text: "Fix the Tasks list refresh." });
+      tasks.capture.attachAsk("refresh", "builder", "host:fallback");
+      tasks.capture.attachAsk("refresh", "waits", "tool:spawn_crewmate");
       tasks.note("builder", "Compared the wait dates.", {
         news: false,
         data: { check: "blockedSince" },
@@ -275,9 +277,9 @@ describe("task projection reads", () => {
         tasks.listLive();
         const parse = vi.spyOn(JSON, "parse");
         let calls: number;
-        let covered: ReturnType<TaskService["askCoverage"]>;
+        let covered: ReturnType<TaskService["capture"]["askCoverage"]>;
         try {
-          covered = tasks.askCoverage(["refresh"]);
+          covered = tasks.capture.askCoverage(["refresh"]);
           calls = parse.mock.calls.length;
         } finally {
           parse.mockRestore();
@@ -291,7 +293,7 @@ describe("task projection reads", () => {
           parentId: "builder",
           status: "idle",
         });
-        expect(tasks.askCoverage(["refresh"]).work.map((task) => task.id)).toEqual([
+        expect(tasks.capture.askCoverage(["refresh"]).work.map((task) => task.id)).toEqual([
           "builder",
           "waits",
           "places",
@@ -433,7 +435,7 @@ describe("task projection reads", () => {
         status: "running",
         shape: { kind: "review", kind_source: "host:review" },
       });
-      tasks.link("review", "builder", "blocks", "firstmate");
+      tasks.graph.link("review", "builder", "blocks", "firstmate");
       tasks.readProjection(() => {
         const live = tasks.listLive();
         const builder = live.find((row) => row.id === "builder");
@@ -441,19 +443,21 @@ describe("task projection reads", () => {
           for (let i = 0; i < live.length; i += 1) {
             expect(tasks.get("builder")).toBe(builder);
             expect(tasks.listLive()).toBe(live);
-            expect(tasks.blockers("builder")[0]).toBe(live.find((row) => row.id === "review"));
+            expect(tasks.graph.blockers("builder")[0]).toBe(
+              live.find((row) => row.id === "review"),
+            );
           }
         });
         // The blocker edges cross SQLite once for the whole projection, not per witness.
-        expect(reads).toBe(tasks.linksTo("builder").length);
+        expect(reads).toBe(tasks.graph.linksTo("builder").length);
         tasks.updateFields("builder", { title: "Keep the board responsive" }, "firstmate");
         expect(tasks.get("builder")?.title).toBe("Keep the board responsive");
         expect(tasks.get("builder")).not.toBe(builder);
         expect(tasks.listLive()).not.toBe(live);
-        expect(tasks.blockers("builder").map((row) => row.id)).toEqual(["review"]);
+        expect(tasks.graph.blockers("builder").map((row) => row.id)).toEqual(["review"]);
         seedTask(tasks, { id: "checks", title: "Verify the fix", status: "idle" });
-        tasks.link("checks", "builder", "blocks", "firstmate");
-        expect(tasks.blockers("builder").map((row) => row.id)).toEqual(["review", "checks"]);
+        tasks.graph.link("checks", "builder", "blocks", "firstmate");
+        expect(tasks.graph.blockers("builder").map((row) => row.id)).toEqual(["review", "checks"]);
       });
       tasks.updateFields("builder", { title: "The latest title" }, "firstmate");
       tasks.readProjection(() => expect(tasks.get("builder")?.title).toBe("The latest title"));

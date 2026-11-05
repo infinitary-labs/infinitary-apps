@@ -309,13 +309,15 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/tasks/taskProtocol.ts": {
     SEARCH_LIMIT: physical("older matches drop out unnamed; type more words to narrow"),
   },
+  "src/core/tasks/taskGraph.ts": {
+    MAX_HIERARCHY_WALK: physical("none yet: the ancestor walk stops silently at 64"),
+  },
   "src/core/tasks/taskQuery.ts": {
     TASK_QUERY_DEFAULT_LIMIT: physical("the answer says N of total; pass a larger limit, up to 100"),
     TASK_QUERY_MAX_LIMIT: physical("the answer says N of total; narrow by project, status, text, parent"),
   },
-  "src/core/tasks/taskService.ts": {
+  "src/core/tasks/timelineCompaction.ts": {
     TIMELINE_CAP: physical("the oldest fold into one counted head; their words are gone"),
-    MAX_HIERARCHY_WALK: physical("none yet: the ancestor walk stops silently at 64"),
   },
   "src/core/videoFormat.ts": {
     MAX_DEMO_LONG_SIDE: physical("refused in words naming 1920 by 1080; scale it down"),

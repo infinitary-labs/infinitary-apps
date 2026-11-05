@@ -35,7 +35,7 @@ it("holds an incomplete agent timeline read at its first cut when backdated hist
   // Extend the retained corpus to the transport's actual page boundary;
   // no invented prose or independently pinned character count.
   while (JSON.stringify(timeline.sources(task.id)).length <= TASK_QUERY_PAGE_CHARACTERS)
-    for (const text of reports) tasks.recordReport(task.id, { text });
+    for (const text of reports) tasks.turns.recordReport(task.id, { text });
   let reads = 0;
   const tool = createTasksQueryTool((input) => {
     reads++;
@@ -78,7 +78,7 @@ function pagedTask(tasks: TaskService, timeline: TaskTimeline, id: string) {
   expect(reports.length).toBeGreaterThan(0);
   const task = seedTask(tasks, { id, title: "Read the earlier release reports", status: "queued" });
   while (JSON.stringify(timeline.sources(task.id)).length <= TASK_QUERY_PAGE_CHARACTERS)
-    for (const text of reports) tasks.recordReport(task.id, { text });
+    for (const text of reports) tasks.turns.recordReport(task.id, { text });
   return task;
 }
 

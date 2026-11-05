@@ -78,7 +78,7 @@ test("a crewmate stuck past every nudge and wake is the app's own card, which ta
   });
   const now = Date.now();
   const idleSince = now - IDLE_MS;
-  tasks.recordRecovery("stuck-task", {
+  tasks.turns.recordRecovery("stuck-task", {
     rung: 2,
     count: 2,
     at: now - 35 * 60_000,
@@ -177,16 +177,16 @@ test("a crewmate's declared wait on the captain with no card up is put to him on
     outcome: "The docs are published.",
   });
   const reason = "decide whether to keep the old pages";
-  tasks.recordReport("waiting-task", {
+  tasks.turns.recordReport("waiting-task", {
     text: "The docs are published; the captain may still want the old pages kept.",
     declared: { wait: { reason } },
   });
   // The gate the wait placed when it was reported, so the launch reads the
   // same hold rather than placing it afresh.
-  tasks.setGate("waiting-task", { kind: "captain", reason });
+  tasks.placement.setGate("waiting-task", { kind: "captain", reason });
   const now = Date.now();
   const idleSince = now - IDLE_MS;
-  tasks.recordRecovery("waiting-task", {
+  tasks.turns.recordRecovery("waiting-task", {
     rung: 2,
     count: 2,
     at: now - 35 * 60_000,
@@ -253,7 +253,7 @@ test("a crewmate stopped behind its outcome note is nudged about that note, and 
   };
   // Idle past the nudge's ten minutes.
   const nudgedNote = seedWithNote("nudged-task", "Release the docs");
-  tasks.recordRecovery("nudged-task", {
+  tasks.turns.recordRecovery("nudged-task", {
     rung: 0,
     count: 0,
     at: null,
@@ -261,7 +261,7 @@ test("a crewmate stopped behind its outcome note is nudged about that note, and 
   });
   // Nudged ten minutes and more ago, and still idle.
   const wokenNote = seedWithNote("woken-task", "Release the guide");
-  tasks.recordRecovery("woken-task", {
+  tasks.turns.recordRecovery("woken-task", {
     rung: 1,
     count: 0,
     at: now - 15 * 60_000,

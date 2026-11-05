@@ -210,10 +210,10 @@ describe("a task that runs on a computer that runs work", () => {
     await home.supervisor.steerCrewmate("t-story", "Prepare the selected story now.");
     await expect.poll(() => home.tasks.get("t-story")?.outcome).toBe("The story is prepared.");
     expect(
-      home.tasks.changePresentation("t-story")?.revisions.length,
+      home.tasks.delivery.changePresentation("t-story")?.revisions.length,
       said(api.requests.at(-1)),
     ).toBe(1);
-    const story = home.tasks.changePresentation("t-story")?.revisions[0];
+    const story = home.tasks.delivery.changePresentation("t-story")?.revisions[0];
     const asset = story?.assets[0];
     if (!asset) throw new Error("No retained picture reached home");
     expect(readFileSync(join(crewmateCardPicturesDir(home.paths, "t-story"), asset.file))).toEqual(
@@ -225,7 +225,7 @@ describe("a task that runs on a computer that runs work", () => {
     // INF-169 F13: only the home retains prepared copies after transfer.
     expect(readdirSync(at.folders("t-story").cards)).toEqual([]);
     expect(readFileSync(picture)).toEqual(source);
-    expect(home.tasks.changePresentation("t-story")?.receipts[0]?.state).toBe("prepared");
+    expect(home.tasks.delivery.changePresentation("t-story")?.receipts[0]?.state).toBe("prepared");
     expect(upload).not.toHaveBeenCalled();
     expect(home.cards()).toEqual([]);
   });
@@ -287,7 +287,7 @@ describe("a task that runs on a computer that runs work", () => {
     expect(await git(project.home, ["rev-parse", "refs/heads/fm/task-t-copy"])).toBe(tip);
     expect(await git(project.origin, ["rev-parse", "refs/heads/fm/task-t-copy"])).toBe(tip);
     expect(said(api.requests.at(-2))).toContain("Opened the pushed branch fm/task-t-copy");
-    expect(home.tasks.changePresentation("t-copy")?.completion).toMatchObject({
+    expect(home.tasks.delivery.changePresentation("t-copy")?.completion).toMatchObject({
       revision: 1,
       head: tip,
     });
@@ -370,16 +370,20 @@ describe("a task that runs on a computer that runs work", () => {
 
     // The story is that branch's, at the commit checked out there.
     expect(said(api.requests.at(-2))).toContain("Prepared presentation 1 for");
-    expect(home.tasks.changePresentation("t-other", "reading-fix")?.revisions[0]?.head).toBe(tip);
     expect(
-      home.tasks.changePresentation("t-other", home.tasks.get("t-other")?.branch),
+      home.tasks.delivery.changePresentation("t-other", "reading-fix")?.revisions[0]?.head,
+    ).toBe(tip);
+    expect(
+      home.tasks.delivery.changePresentation("t-other", home.tasks.get("t-other")?.branch),
     ).toBeUndefined();
     // open_change ran here from the task's own ref for the branch, and sent it up.
     expect(said(api.requests.at(-1))).toContain("for reading-fix");
     expect(await git(project.home, ["rev-parse", checkedOutRefFor("t-other")])).toBe(tip);
     expect(await git(project.origin, ["rev-parse", "refs/heads/reading-fix"])).toBe(tip);
     expect(await git(project.home, ["rev-parse", "refs/heads/reading-fix"])).toBe(project.main);
-    expect(home.tasks.changePresentation("t-other", "reading-fix")?.completion).toMatchObject({
+    expect(
+      home.tasks.delivery.changePresentation("t-other", "reading-fix")?.completion,
+    ).toMatchObject({
       revision: 1,
       head: tip,
     });
@@ -679,7 +683,7 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => home.tasks.get("t-moved")?.activity).toBe("idle");
 
     expect(said(api.requests.at(-1))).toContain("Opened the pushed branch fm/task-t-moved");
-    expect(home.tasks.changePresentation("t-moved")?.completion).toMatchObject({
+    expect(home.tasks.delivery.changePresentation("t-moved")?.completion).toMatchObject({
       revision: 1,
       head: tip,
     });

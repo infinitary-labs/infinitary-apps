@@ -32,7 +32,7 @@ The former public `recordDelivery` field bag is private; fixture injection of ol
 
 ## Conversations on a task
 
-`TaskService.setSessionFile` commits the current resume pointer and its `task_sessions` association together.
+`TaskService.turns.setSessionFile` commits the current resume pointer and its `task_sessions` association together.
 `CrewSupervisor.recordCrewSession` supplies the resume token, durable transcript file, computer and device, provider and model, account, and why the conversation opened at start, renewal, move, recovery and turn completion.
 A conversation key comes from its resume token: a Pi file name without its suffix, or a Claude conversation id, never a placed proxy's construction id.
 One row belongs to one conversation on one task; reopening it updates its last observed activity and serving metadata without replacing its first observation or opening reason.
@@ -59,7 +59,7 @@ They do not copy resume tokens or reconstruct older assignments from the changin
 A task's running work is its own record, one `task_execution` row per task beside the conversations in `task_sessions` (INF-1296 piece 3, migration 97).
 It holds the resume binding, the computer and account the crewmate runs on, the committed placement, the idle clock and recovery rung, a manual start that did not begin (`start_notice`), and what the current turn's report declared about whose turn follows it (`turn_json`: `captainWait`, `finishedAt`, `mergeCompletion`, `needsFirstmate`, `checkBack`).
 The resume binding is the opaque token the backend resumes from (`session_file`) and, where `task_sessions` records the conversation that token belongs to, that conversation's key (`conversation`); a token from before conversations were recorded keeps none, and nothing makes one up for it.
-`TaskService.sessions` marks current the conversation the binding names, or for a token with none the conversation its file is.
+`TaskService.archive.sessions` marks current the conversation the binding names, or for a token with none the conversation its file is.
 `TaskStore` is the one writer, beneath `TaskService`, and a record still reads every one of these facts under the field it read before (`sessionFile`, `deviceId`, `accountId`, `placement`, `idleSince`, the `recovery*` fields, `startNotice`, and the turn's declarations on `delivery`), so no reader changed.
 A write of a task's whole delivery facts replaces the turn's declarations with the ones it carries, as the delivery column did before them.
 The task row's older execution columns are retired; `activity`, `assignee`, `model` and `started_at` stay on the task row, because the published views and the feed read them there, as do the scheduling facts already typed on it (`priority`, `start_policy`, `gate`, `test_path`).
@@ -73,7 +73,7 @@ What reads them is `CrewSupervisor.reconcileIdle` and the crew line's `stalled` 
 
 ## Where a task runs
 
-`device_id` on the execution record (migration 63, moved by migration 97, written only by `TaskService.setDevice`) names the paired computer that runs work holding the task's conversation, and null is this Mac (`docs/helper.md`, "The home's side").
+`device_id` on the execution record (migration 63, moved by migration 97, written only by `TaskService.placement.setDevice`) names the paired computer that runs work holding the task's conversation, and null is this Mac (`docs/helper.md`, "The home's side").
 Such a row has no working copy here, so the boot keeps it active once its conversation was recorded (`sessionFile`) rather than by its `worktreeDir`, never marks its turn interrupted, and reads it as resumable whatever its activity: a turn it was running went on there.
 
 ## A folder a merge left behind
@@ -131,7 +131,7 @@ A task stands to other tasks in three stores under one read and one check contra
 Its parent is the `tasks.parent_id` column; its typed links (`blocks`, `related`, `discovered-from`, `replaced-by`) are rows of `task_links`, with `holdsMerge` a mark on a `blocks` row; and the three references it names one of each are rows of `task_references`: its `basis`, the task it branches from (`branch-source`) and the earlier attempt it retries (`retry-of`).
 `TASK_RELATIONSHIP_RULES` keeps each kind's rule distinct: how many one task names, whether it holds a start, whether a cycle is refused, where the other task must be, and whether a name that resolves to no task is kept.
 Only `blocks` holds a start, so naming a basis or a branch source never adds a scheduling dependency; the ready query reads no reference.
-`TaskService.relationshipsOf` reads every relationship a task has, each way, with who recorded it and when, where the store kept that.
+Each family is read where it is kept: the parent and children through `TaskService.graph` (`children`, `ancestors`), the links each way through `TaskService.graph.linksFrom` and `linksTo`, and the references through `TaskService.archive.recordedReferences`, with who recorded each and when, where the store kept that.
 A reference row keeps the name as given (`ref`, a key or an id), the task it resolved to when it was recorded (`target_id`, provenance only), the actor and the time; a reference migrated from an older profile has no actor or time, since none was saved.
 Each reference is read by the name it gives, resolved at every read as before, so `target_id` decides nothing.
 The rules a reference is checked against (`referenceRefusal`): an empty name names nothing; a basis may name no task yet, as a spawn names a plan step still being filed, while a branch source or an earlier attempt must name a task; none names the task itself; and a branch source is in the same project.
@@ -142,10 +142,10 @@ Migration 95 moved each name out of the shape into its row in one transaction be
 ## Derived, never stored: the basis and the review join
 
 The record keeps no stamp of a fact the graph already holds (migration 46 removed the two it had).
-A task's `basis` is recorded as the first mate named it (a key or an id, "Relationships"); whether it holds - the named task is done or has reported - is derived at every read (`TaskService.basisHolds`, `basisOf`), so a step planned behind a still-running task reads grounded the moment that task answers, with no write.
+A task's `basis` is recorded as the first mate named it (a key or an id, "Relationships"); whether it holds - the named task is done or has reported - is derived at every read (`TaskService.graph.basisHolds`, `basisOf`), so a step planned behind a still-running task reads grounded the moment that task answers, with no write.
 The store strips `basis_verified` from any shape it is handed; the router still receives it, derived, beside the shape.
 The basis reads the same everywhere it is shown: `tasks.detail` carries `basis: { ref, verified }`, `v_tasks_v1` a `basis` column, and the export the name in the task's shape beside its reference rows.
-A review's builder is its parent (the one stored join), and which review a builder's verdict came from is read off that edge (`TaskService.verdictReviewOf`: the newest review child opened at or before `reviewedAt`), never cached in the builder's delivery facts; the verdict's timeline event still names the review in its data, which is what the replay scorer reads.
+A review's builder is its parent (the one stored join), and which review a builder's verdict came from is read off that edge (`TaskService.graph.verdictReviewOf`: the newest review child opened at or before `reviewedAt`), never cached in the builder's delivery facts; the verdict's timeline event still names the review in its data, which is what the replay scorer reads.
 
 ## Live task policies
 
@@ -224,7 +224,7 @@ Queued intent tasks render from saved intent at dispatch (escalations retain the
 A by-key `tasks` read carries the latest `outcome` and `card`, complete chronological `reports` with event ids, saved timeline `decisions`, the explicit `basis`, and the most recent pinned `brief`.
 It names `computer`, the computer the task's crewmate ran on, and `evidence_folder`, its evidence folder there, so a crewmate reports a file on another computer as a gap instead of searching for it (INF-1217, `docs/macos-privacy.md`).
 A crewmate's `tasks` also takes `projects`: true answers every project's key, name and folder instead of tasks; the first mate's has no such parameter, which keeps it out of the first mate's fixed context.
-It also carries `built_on_by`: every task whose basis names this one, by key or id, open, done or dropped alike, each with its status, closing reason, short outcome and change (`TaskService.builtOn`, INF-976); the host's delivery machinery, such as a review, is not among them.
+It also carries `built_on_by`: every task whose basis names this one, by key or id, open, done or dropped alike, each with its status, closing reason, short outcome and change (`TaskService.graph.builtOn`, INF-976); the host's delivery machinery, such as a review, is not among them.
 Lists carry no bodies.
 A short closure report still replaces the latest outcome but cannot hide earlier full specifications.
 Reports, closing choices and exact first-turn briefs are exempt from timeline compaction alongside existing provenance; no historical approval is inferred and no historical builder is restarted.
@@ -304,7 +304,7 @@ Done records have no bar, including work carried on by another task ("Work carri
 An accepted click removes that record from the stack, not from history; a refusal is inline and writes nothing.
 The old task stays dropped.
 
-`TaskService.startAgain` creates a fresh record and the old-to-new `replaced-by` link in one transaction, and the link moves the old task's live waits to the new task (`docs/task-graph.md`, "A wait follows moved work").
+`TaskService.starts.startAgain` creates a fresh record and the old-to-new `replaced-by` link in one transaction, and the link moves the old task's live waits to the new task (`docs/task-graph.md`, "A wait follows moved work").
 It copies title, goal, intent (including the captain's words and constraints), project, repository, priority and a parent that is still open or active.
 The supervisor carries the basis, captain-named model and task-level delivery, autonomy and care declarations, but no session, chosen model/account, delivery outcome or escalation stamp.
 It dispatches through the ordinary Start path with fresh routing, not a tier increase, after pending retirement has finished.
@@ -450,7 +450,7 @@ A reply the captain typed under a card is recorded as the whole message its crew
 The steer's `data.words` says where the captain's own words sit in that text, a span rather than a copy (`replyWordsSpan`, `src/core/orchestrator/wakes.ts`), and Activity reads the card's title by `cardId`.
 A reply recorded before the span, or one whose text redaction changed, reads as the whole message.
 A line the captain typed in the task card's Crewmate tab is the same kind of steer (`via: "crewmate-tab"`, `docs/task-card-tabs.md`, "Typing"), its words a span too, and reads `You told the crewmate: ...`.
-A reply its crewmate or the first mate writes in a card's thread is a `replied` event on the card's task (`TaskService.recordReply`, from `CardService.addMessage`), with the author's words.
+A reply its crewmate or the first mate writes in a card's thread is a `replied` event on the card's task (`TaskService.turns.recordReply`, from `CardService.addMessage`), with the author's words.
 A reply the captain types under a first mate card reaches the first mate as a turn, and its ask is the record of it (`docs/task-capture.md`).
 
 A feed line about a task whose fact the task's own timeline does not already hold is a row on that task: the writer names the task (`firstmate_note`'s `taskId`), and the `broadcastEvent` seam writes it as a news `note` that the feed reads back, with its words as written (`data.feedLine`).
@@ -486,9 +486,9 @@ Its unmerged commits are saved as every close saves them, and its own pull reque
 It closes with status `done` and reason `superseded`, an existing closing reason, so the published contract gains no member (`carriedOnClose`).
 `closedWithoutClick` gives that reason no outcome, so no closing note goes up; Activity shows one line, `Carried on by SCR-6`.
 The close is refused for the task itself, a task under it, a dropped task, a task already carried on by another, and while a decision card of the old task waits on the captain.
-The record's closed line follows the last task of the replacement chain (`TaskService.carriedOn`): `Carried on by SCR-6` while it runs, `Done through SCR-6` once it is done, and `Carried on by SCR-6, which was dropped` if it drops later.
+The record's closed line follows the last task of the replacement chain (`TaskService.graph.carriedOn`): `Carried on by SCR-6` while it runs, `Done through SCR-6` once it is done, and `Carried on by SCR-6, which was dropped` if it drops later.
 The task view publishes `replacedBy` on such a done row as it does on a dropped one.
-The board reads it for every row it shows at once (`TaskService.replacementsOf`): the `replaced-by` links, then the stronger-model moves through the event reference index, never a task's timeline.
+The board reads it for every row it shows at once (`TaskService.graph.replacementsOf`): the `replaced-by` links, then the stronger-model moves through the event reference index, never a task's timeline.
 When the task carrying the work closed first, its outcome was held back while the old task was open in the same message, so the old task's close places that outcome once, where it would have gone.
 Its crewmate goes home on the ring as any done task's does.
 An event another task reads is exempt from timeline compaction, so the row it makes there never folds away.
@@ -594,13 +594,13 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `crew_status` and the strip list resumable records (idle/interrupted) with the report from the `outcome` column, so a restart forgets nothing.
   Projects (`projects` table, `ProjectStore`): Scratch plus one per managed repo, born in `RepoRegistry.insert`'s transaction and archived on unregister; keys `<KEY>-<seq>` (`deriveProjectKey`, or the key chosen when the project was added, `docs/fleet.md` "Choosing a task key") are the conversational handle from P3 on.
 - The task protocol (task-system P3, `docs/ui-plugins.md` "The read catalog"; design section 9): `src/shared/tasks.ts` is the wire surface (board, detail, project views), `inf:tasks:board` / `inf:tasks:detail` / `inf:projects:list` the reads, `inf:tasks` the push, `task_changed` / `task_event` the two FmEvents, `tasks.board` / `tasks.detail` / `projects.list` the catalog entries.
-  ONE seam feeds all of it: every `TaskService` write goes through its private `write()`, whose outermost transaction bumps `task_board.seq` (migration 20, one row) in the same commit and notifies `onChange` listeners only AFTER the commit; `src/core/tasks/taskProtocol.ts` turns each change into the FmEvents through `broadcastEvent` and one coalesced (40 ms) `inf:tasks` board built from task records and the shown card projection, so a pushed board always equals a fresh read (`taskProtocol.test.ts` pins it).
+  ONE seam feeds all of it: every `TaskService` write goes through its writer's `write()` (`TaskWriter`, `src/core/tasks/taskWriter.ts`), whose outermost transaction bumps `task_board.seq` (migration 20, one row) in the same commit and notifies `onChange` listeners only AFTER the commit; `src/core/tasks/taskProtocol.ts` turns each change into the FmEvents through `broadcastEvent` and one coalesced (40 ms) `inf:tasks` board built from task records and the shown card projection, so a pushed board always equals a fresh read (`taskProtocol.push.test.ts` pins it).
   A nested write is one change with one seq; a no-op write bumps nothing; a refused write notifies nothing.
   The board is the LIVE set (open/active, closed within `BOARD_RECENT_MS`, plus shown rows' parents; links only across shown rows); history is `tasks.detail`, one task at a time.
-  Building it reads only those rows, the rows at the other ends of their links and their children's counts, never the older closed history, since every crew event pushes it and a long record is mostly that history (INF-703; `taskProtocol.test.ts` counts the rows read).
+  Building it reads only those rows, the rows at the other ends of their links and their children's counts, never the older closed history, since every crew event pushes it and a long record is mostly that history (INF-703; `taskProtocol.cache.test.ts` counts the rows read).
   Between pushes the board keeps what its last build read (`BoardCache` in `taskProtocol.ts`, the row cache of INF-2078): one change rebuilds only the rows it reached - the rows the writer touched, the rows at the other ends of their edges (a blocker, what it blocks, a filing's origin, a dropped row's carrier), their parents, the active rows whose standing waits name them, and any row whose card facts moved - and every other row keeps the view it had, the same object, so a change costs the rows it reached and not the board.
   A touched row closed before the board's window that no shown row holds is ruled out from the record its write left, with no read, so closed history written since the last push costs the update nothing (the scale check, `tests/scale-check.test.ts`).
-  A rebuilt row is still derived from SQLite and the live host facts at that read; a host fact that moved with no row written (`TaskService.invalidatePresentation`, carried as `TaskChange.presentation`) has every shown row's live facts read again and the rows they moved on rebuilt; a purge or an import rebuilds from nothing; `taskProtocol.test.ts` pins the kept board against a build from nothing after every shape of write, and the rows read and views built per change against a board four times the size.
+  A rebuilt row is still derived from SQLite and the live host facts at that read; a host fact that moved with no row written (`TaskService.invalidatePresentation`, carried as `TaskChange.presentation`) has every shown row's live facts read again and the rows they moved on rebuilt; a purge or an import rebuilds from nothing; `taskProtocol.cache.test.ts` pins the kept board against a build from nothing after every shape of write, and the rows read and views built per change against a board four times the size.
   A record's `tasks.detail` reads the same way: the record, the rows its concerning events, standing waits and gate's card name, the rows at the other ends of their links, and one row on its own for any other task its Activity names, never the whole history, since each open of the Info tab reads it several times (INF-939).
   The one exception is the Tasks filter: typed text also asks `inf:tasks:search` / `tasks.search` (`TaskProtocol.search`) for closed work older than the window, for dropped work, and for questions, decisions and operations closed within the window (the panel never lists those), matched on key, title and goal only, newest closed first, at most 50, empty text finding nothing, with the graph read around the found rows alone; the panel paints them as an `earlier` group and a row opens the record through `tasks.detail` like any row.
   Every task search - the filter's board rows, this search, the task board's Find (`docs/task-board.md`) and the `tasks` query's `text` - compares through `foldForSearch` (`src/shared/searchText.ts`): lowercase, with a curly apostrophe or quote read as the plain one a keyboard types, so `what's new` finds `What’s new in …`.
@@ -654,7 +654,7 @@ The button names that model by its Settings name (`ModelSlots.nameOf`), the mode
 Its `move-task` effect names the task, the provider it moves off and the model offered, so a card left up after another move, or after the app's pick changed, refuses in a feed line rather than move somewhere the card did not name.
 `update_task override_model_id` on started work is the first mate's, on the captain's words: the router pins the named model as R0 does, and a model that cannot serve is refused as text.
 A crewmate mid-turn moves once that turn ends; a turn is never cut short.
-The move commits the routing decision with who asked, selects the account (`selectForSpawn`), lets go of the old session, and writes the record's model and account with one timeline row and feed line naming who moved it (`TaskService.recordMove`).
+The move commits the routing decision with who asked, selects the account (`selectForSpawn`), lets go of the old session, and writes the record's model and account with one timeline row and feed line naming who moved it (`TaskService.placement.recordMove`).
 The sign-in card comes down, the lane's waiting rows are due at once with their spent attempts given back (`InboxStore.movedProvider`), and the task reopens in the same working copy.
 Between two Pi providers the same conversation resumes on the new model.
 To or from Claude, the new backend cannot reopen the conversation, so a new one starts and is told it moved (`CrewmateRestart` `moved`), with the brief and the earlier transcript's path, as an unopenable one is.
@@ -703,7 +703,7 @@ A task-less first mate question keeps that button beside explicit Dismiss, which
 ## Live validation
 
 A change's `delivery.liveValidation` retains scenario revisions, version-bound observations and digested selected proof, independent reviewer judgments, and separate captain permissions.
-`TaskService.recordLiveValidation` and `decideLiveValidation` are the only writers; no prose parser grants proof or consent.
+`TaskService.delivery.recordLiveValidation` and `decideLiveValidation` are the only writers; no prose parser grants proof or consent.
 The merge completion card presents the live-validation result, evidence and limitations beside the merge decision; the captain need not open the task record to understand what was demonstrated.
 The task-detail read keeps the Live validation summary and keyboard-openable evidence rows as supporting history under the Info tab's More row in the existing record frame.
 More starts closed, so validation does not displace the record's overview and ordinary rows.
@@ -726,7 +726,7 @@ A merged or locally landed task's `tasks` read exposes `merge_commit` when known
 A crewmate verifying a published release declares `report.first_release`: its earliest published version, release page, included merged task keys and evidence of membership and earliest publication.
 The agent verifies publication and source membership; the host stores that declaration rather than guessing from merge time, release names or version ordering.
 The report parameter instructs the releasing crewmate to verify every included merged task, including changes with no release note, and report groups sharing an earliest release.
-`TaskService.recordFirstRelease` records an entire same-project batch atomically with the reporting task as provenance, and refuses unknown, unmerged or other-project tasks before writing any attribution.
+`TaskService.delivery.recordFirstRelease` records an entire same-project batch atomically with the reporting task as provenance, and refuses unknown, unmerged or other-project tasks before writing any attribution.
 Later release reports preserve existing first releases; an explicit `corrects` names the previous version before replacing an attribution and keeps both declarations in the timeline.
 Repeating an attribution adds no event.
 Old tasks and projects with no verified release remain unknown until that verification, and no release attribution changes their closed status or merge permissions.

@@ -110,7 +110,7 @@ function seedBoard(userDataDir: string): void {
     status: "completed",
     worktreeDir: worktree("waits"),
   });
-  tasks.recordReport("waits", {
+  tasks.turns.recordReport("waits", {
     text: "Ready for your review.",
     declared: { wait: { reason: "review the plan" } },
   });

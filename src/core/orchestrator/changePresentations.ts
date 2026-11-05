@@ -50,10 +50,9 @@ import { storyLedgers } from "../storage/changeProjection";
 import type { TaskService } from "../tasks/taskService";
 import { requireConventional } from "../workspace/conventional";
 
-export type PresentationLedger = Pick<
-  TaskService,
-  "get" | "changePresentation" | "updateChangePresentation"
->;
+export type PresentationLedger = Pick<TaskService, "get"> & {
+  delivery: Pick<TaskService["delivery"], "changePresentation" | "updateChangePresentation">;
+};
 const hash = (text: string | Uint8Array) => createHash("sha256").update(text).digest("hex");
 /** GitHub's body limit covers the rendered region and all surrounding project/human text. */
 export const GITHUB_STORY_BODY_LIMIT = presentationBodyLimit("github.com");
@@ -127,7 +126,7 @@ export class ChangePresentations {
             throw new Error("The code changed. Prepare a story for the current committed version.");
           const branch = await this.options.branch?.(taskId);
           const destination = await storyDestination(target);
-          const current = this.options.tasks.changePresentation(taskId, branch);
+          const current = this.options.tasks.delivery.changePresentation(taskId, branch);
           if (
             current?.publication &&
             current.publication.state !== "confirmed" &&
@@ -222,7 +221,7 @@ export class ChangePresentations {
     opening?: PublicationOpening,
   ): Promise<ForgeChange> {
     // INF-2509: the revision the author named stands for the host's republication of it.
-    const record = this.options.tasks.changePresentation(taskId, branch);
+    const record = this.options.tasks.delivery.changePresentation(taskId, branch);
     const named = (record && shownRevision(record, revision)) ?? revision;
     return this.serial(taskId, () =>
       this.publishLocked(
@@ -476,7 +475,7 @@ export class ChangePresentations {
       ...(story.version === 2 || !fresh ? { title } : {}),
       ...(fresh?.number ? { number: fresh.number } : {}),
     };
-    this.options.tasks.updateChangePresentation(
+    this.options.tasks.delivery.updateChangePresentation(
       taskId,
       (record) => ({
         ...this.required(record),
@@ -513,7 +512,7 @@ export class ChangePresentations {
         );
       await this.confirm(taskId, branch, { ...publication, number: read.number });
     } catch (error) {
-      this.options.tasks.updateChangePresentation(
+      this.options.tasks.delivery.updateChangePresentation(
         taskId,
         (record) => ({
           ...this.required(record),
@@ -703,7 +702,7 @@ export class ChangePresentations {
         (ledger.published && region === presentationLines(ledger.published.region)) ||
         (ledger.reconciled && region === presentationLines(ledger.reconciled.region))
       ) {
-        this.options.tasks.updateChangePresentation(
+        this.options.tasks.delivery.updateChangePresentation(
           story.taskId,
           (record) => ({
             ...this.required(record),
@@ -725,7 +724,7 @@ export class ChangePresentations {
         region === presentationLines(recovery.replaceRegion) &&
         found.number !== undefined
       ) {
-        this.options.tasks.updateChangePresentation(
+        this.options.tasks.delivery.updateChangePresentation(
           story.taskId,
           (record) => ({
             ...this.required(record),
@@ -750,7 +749,7 @@ export class ChangePresentations {
     }
     if (recovery?.retryOpening || publication.retryOpening) {
       // The host permits only one open change for the branch and its target; the fresh read above found none.
-      this.options.tasks.updateChangePresentation(
+      this.options.tasks.delivery.updateChangePresentation(
         story.taskId,
         (record) => ({
           ...this.required(record),
@@ -818,8 +817,8 @@ export class ChangePresentations {
     branch: string | undefined,
     update: (record: ChangePresentationRecord | undefined) => ChangePresentationRecord,
   ): Promise<void> {
-    const previous = this.options.tasks.changePresentation(taskId, branch);
-    this.options.tasks.updateChangePresentation(
+    const previous = this.options.tasks.delivery.changePresentation(taskId, branch);
+    this.options.tasks.delivery.updateChangePresentation(
       taskId,
       (record) => {
         const next = update(record);
@@ -1037,7 +1036,7 @@ export class ChangePresentations {
   }
   /** The story ledger of the change on `branch`; undefined names the task's current change. */
   private ledger(taskId: string, branch: string | undefined): ChangePresentationRecord {
-    return this.required(this.options.tasks.changePresentation(taskId, branch));
+    return this.required(this.options.tasks.delivery.changePresentation(taskId, branch));
   }
   private required(record: ChangePresentationRecord | undefined): ChangePresentationRecord {
     if (!record) throw new Error("Prepare the change story before opening its pull request.");
@@ -1060,7 +1059,7 @@ export class ChangePresentations {
     );
   }
   private keepReceipt(story: ChangePresentation, branch: string, next: PresentationReceipt): void {
-    this.options.tasks.updateChangePresentation(
+    this.options.tasks.delivery.updateChangePresentation(
       story.taskId,
       (record) => ({
         ...this.required(record),

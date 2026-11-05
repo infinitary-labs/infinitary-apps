@@ -225,7 +225,7 @@ export function plainProblem(error: string | undefined, typed?: TypedFailure): s
 }
 
 /**
- * The typed failure a timeline event recorded (`TaskService.recordTurnFailure`),
+ * The typed failure a timeline event recorded (`TaskService.turns.recordTurnFailure`),
  * or undefined for a failure recorded as prose.
  */
 export function typedFailureOf(

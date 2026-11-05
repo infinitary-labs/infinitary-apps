@@ -35,18 +35,23 @@ it("marks every captain message from before the answer-delivery check legacy, an
   legacy.close();
   const upgraded = openDatabase(dir);
   const tasks = new TaskService({ db: upgraded, strict: true });
-  const old = tasks.getAsk("old1");
+  const old = tasks.capture.getAsk("old1");
   expect(old).toMatchObject({
     delivery: "legacy",
     deliveryFacts: { entries: [] },
     noticeCardId: null,
   });
   // A legacy message takes no fact and is never judged.
-  tasks.noteDelivery(["old1"], { outcome: "action", kind: "card", tool: "emit_card", at: 2 });
-  expect(tasks.getAsk("old1")?.deliveryFacts.entries).toEqual([]);
-  const fresh = tasks.openAsk({ id: "new1", text: "after the check" });
+  tasks.capture.noteDelivery(["old1"], {
+    outcome: "action",
+    kind: "card",
+    tool: "emit_card",
+    at: 2,
+  });
+  expect(tasks.capture.getAsk("old1")?.deliveryFacts.entries).toEqual([]);
+  const fresh = tasks.capture.openAsk({ id: "new1", text: "after the check" });
   expect(fresh.delivery).toBe("pending");
-  expect(tasks.getAsk("new1")?.delivery).toBe("pending");
+  expect(tasks.capture.getAsk("new1")?.delivery).toBe("pending");
   upgraded.close();
 });
 
@@ -343,15 +348,19 @@ describe("migration 68 (the reply line beside each captain message, FI3-1089)", 
     expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
     const tasks = new TaskService({ db: upgraded, strict: true, now: () => 2 });
     // A message written before the column has no reply line.
-    expect(tasks.lastTurn()).toEqual({ you: "before the line", reply: null, previous: null });
-    tasks.openAsk({ id: "new1", text: "how is the alpha?" });
-    tasks.setAskReply("new1", { text: "The alpha is cut" });
+    expect(tasks.capture.lastTurn()).toEqual({
+      you: "before the line",
+      reply: null,
+      previous: null,
+    });
+    tasks.capture.openAsk({ id: "new1", text: "how is the alpha?" });
+    tasks.capture.setAskReply("new1", { text: "The alpha is cut" });
     upgraded.close();
 
     // An app restart reads the last turn back from disk, with the round
     // before it (INF-1771: the last two rounds above the input).
     const reopened = openDatabase(dir);
-    expect(new TaskService({ db: reopened, strict: true }).lastTurn()).toEqual({
+    expect(new TaskService({ db: reopened, strict: true }).capture.lastTurn()).toEqual({
       you: "how is the alpha?",
       reply: { text: "The alpha is cut" },
       previous: { you: "before the line", reply: null },
@@ -468,20 +477,17 @@ it("INF-1610 leaves every older captain message unfollowed, follows a new one, k
   const upgraded = openDatabase(dir);
   expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
   const tasks = new TaskService({ db: upgraded, strict: true });
-  expect(tasks.getAsk("stack")).toMatchObject({ followed: false, answeredAt: null });
-  expect(tasks.listAsksNotEnded()).toEqual([]);
-  tasks.openAsk({ id: "taps", text: "the taps on the phone get lost" });
-  tasks.closeAsk("taps", "closed");
-  expect(tasks.listAsksNotEnded().map((ask) => ask.id)).toEqual(["taps"]);
-  tasks.markAnswered(["taps"], "card-firstmate-taps");
+  expect(tasks.capture.getAsk("stack")).toMatchObject({ followed: false, answeredAt: null });
+  tasks.capture.openAsk({ id: "taps", text: "the taps on the phone get lost" });
+  tasks.capture.closeAsk("taps", "closed");
+  tasks.capture.markAnswered(["taps"], "card-firstmate-taps");
   upgraded.close();
   const reopened = openDatabase(dir);
   const again = new TaskService({ db: reopened, strict: true });
-  expect(again.getAsk("taps")).toMatchObject({
+  expect(again.capture.getAsk("taps")).toMatchObject({
     followed: true,
     answerCardId: "card-firstmate-taps",
   });
-  expect(again.listAsksNotEnded()).toEqual([]);
   reopened.exec(REVERSE_MIGRATION_102);
   expect(columnNames(reopened, "captain_asks")).toEqual(columns);
   expect(reopened.prepare("SELECT COUNT(*) AS n FROM captain_asks").get()).toEqual({ n: 2 });

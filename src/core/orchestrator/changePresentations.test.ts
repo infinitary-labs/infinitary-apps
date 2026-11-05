@@ -242,7 +242,7 @@ describe("saved change publication", () => {
     );
     expect(staged.verification).toEqual([`The inspected code is ${HEAD}.`]);
     await expect(at.service.prepare(TASK, staged, at.forge)).resolves.toBe(1);
-    expect(at.tasks.changePresentation(TASK)?.revisions[0]?.why).toEqual(why);
+    expect(at.tasks.delivery.changePresentation(TASK)?.revisions[0]?.why).toEqual(why);
     await expect(
       at.service.publish(TASK, 1, at.forge, BRANCH, "fix: a different name"),
     ).rejects.toThrow("saved title");
@@ -271,7 +271,7 @@ describe("saved change publication", () => {
     expect(at.order[0]).toBe("authority");
     expect(at.open).toHaveBeenCalledWith(expect.objectContaining({ draft: true }));
     expect(change.draft).toBe(true);
-    expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(revision);
+    expect(at.tasks.delivery.changePresentation(TASK)?.published?.revision).toBe(revision);
   });
 
   it("INF-125: an expired prerequisite permission stops the story before any upload or opening", async () => {
@@ -297,7 +297,7 @@ describe("saved change publication", () => {
     ).rejects.toThrow("permission expired");
     expect(at.upload).not.toHaveBeenCalled();
     expect(at.open).not.toHaveBeenCalled();
-    expect(at.tasks.changePresentation(TASK)?.publication).toBeUndefined();
+    expect(at.tasks.delivery.changePresentation(TASK)?.publication).toBeUndefined();
   });
 
   // INF-285 F3: the complete rendered description must fit before any upload.
@@ -317,7 +317,7 @@ describe("saved change publication", () => {
     await expect(at.publish()).rejects.toThrow(/65,536/);
     expect(at.upload).not.toHaveBeenCalled();
     expect(at.open).not.toHaveBeenCalled();
-    expect(at.tasks.changePresentation(TASK)?.publication).toBeUndefined();
+    expect(at.tasks.delivery.changePresentation(TASK)?.publication).toBeUndefined();
   });
 
   it.each([false, true])(
@@ -356,7 +356,7 @@ describe("saved change publication", () => {
       expect(at.upload).not.toHaveBeenCalled();
       expect(at.update).not.toHaveBeenCalled();
       expect(at.change.body).toBe(body);
-      expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(1);
+      expect(at.tasks.delivery.changePresentation(TASK)?.published?.revision).toBe(1);
     },
   );
 
@@ -373,7 +373,7 @@ describe("saved change publication", () => {
         projectText: "",
       };
       await at.service.prepare(TASK, staged, at.forge);
-      const story = at.tasks.changePresentation(TASK)?.revisions[0];
+      const story = at.tasks.delivery.changePresentation(TASK)?.revisions[0];
       if (!story) throw new Error("Missing prepared story");
       const url = "https://github.com/user-attachments/assets/846dced7-16ad-44c0-b6f5-f0e5581165b2";
       const region = presentationMarkdown(
@@ -398,7 +398,7 @@ describe("saved change publication", () => {
           const receipt = await upload.value;
           expect(published.body).toContain(receipt.url);
         }
-        expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(revision);
+        expect(at.tasks.delivery.changePresentation(TASK)?.published?.revision).toBe(revision);
       }
     },
   );
@@ -433,7 +433,7 @@ describe("saved change publication", () => {
     await expect(at.publish(revision)).rejects.toThrow(/65,536/);
     expect(at.update).not.toHaveBeenCalled();
     expect(at.change?.body).toContain("A person's new notes.");
-    expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(1);
+    expect(at.tasks.delivery.changePresentation(TASK)?.published?.revision).toBe(1);
   });
 
   it("opens only after every upload and uses the same ordered views, words and risks on the card", async () => {
@@ -561,7 +561,7 @@ describe("saved change publication", () => {
       /audience changed/,
     );
     at.setVisibility("public");
-    at.tasks.updateChangePresentation(TASK, (record) => {
+    at.tasks.delivery.updateChangePresentation(TASK, (record) => {
       if (!record) throw new Error("Missing ledger");
       return { ...record, receipts: [] };
     });
@@ -582,10 +582,9 @@ describe("saved change publication", () => {
     at.restart();
     await at.publish();
     expect(at.upload).toHaveBeenCalledTimes(3);
-    expect(at.tasks.changePresentation(TASK)?.receipts.map((receipt) => receipt.state)).toEqual([
-      "confirmed",
-      "confirmed",
-    ]);
+    expect(
+      at.tasks.delivery.changePresentation(TASK)?.receipts.map((receipt) => receipt.state),
+    ).toEqual(["confirmed", "confirmed"]);
   });
 
   it("never resends an uncertain attachment after restart and never opens a partial PR", async () => {
@@ -615,7 +614,7 @@ describe("saved change publication", () => {
     expect(found.number).toBe(1);
     expect(at.open).toHaveBeenCalledTimes(1);
     expect(at.upload).toHaveBeenCalledTimes(2);
-    expect(at.tasks.changePresentation(TASK)?.published?.state).toBe("confirmed");
+    expect(at.tasks.delivery.changePresentation(TASK)?.published?.state).toBe("confirmed");
   });
 
   it("reconciles an earlier write after a later push without treating its story as current (INF-92)", async () => {
@@ -633,7 +632,7 @@ describe("saved change publication", () => {
     at.setHead(nextHead);
     at.restart();
     await expect(at.publish()).resolves.toMatchObject({ headSha: nextHead, number: 1 });
-    expect(at.tasks.changePresentation(TASK)?.published?.head).toBe(HEAD);
+    expect(at.tasks.delivery.changePresentation(TASK)?.published?.head).toBe(HEAD);
     await expect(at.service.completion(TASK, 1, nextHead)).rejects.toThrow(/must be published/);
     await at.service.prepare(
       TASK,
@@ -654,7 +653,7 @@ describe("saved change publication", () => {
     expect(at.open).toHaveBeenCalledTimes(1);
     expect(at.upload).toHaveBeenCalledTimes(2);
     expect(at.update).toHaveBeenCalledTimes(1);
-    expect(at.tasks.changePresentation(TASK)?.published?.head).toBe(nextHead);
+    expect(at.tasks.delivery.changePresentation(TASK)?.published?.head).toBe(nextHead);
   });
 
   it("reuses confirmed uploads after a definite PR refusal without pretending it was an uncertain send", async () => {
@@ -664,7 +663,7 @@ describe("saved change publication", () => {
       new ForgeWriteError("failed", "permission", "GitHub refused the opening."),
     );
     await expect(at.publish()).rejects.toThrow(/refused the opening/);
-    expect(at.tasks.changePresentation(TASK)?.publication).toBeUndefined();
+    expect(at.tasks.delivery.changePresentation(TASK)?.publication).toBeUndefined();
     at.restart();
     await at.publish();
     expect(at.open).toHaveBeenCalledTimes(2);
@@ -695,7 +694,7 @@ describe("saved change publication", () => {
     await at.publish(2);
     expect(at.change?.body).toMatch(/^Human introduction/);
     expect(at.change?.body).toMatch(/Human footnote$/);
-    expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(2);
+    expect(at.tasks.delivery.changePresentation(TASK)?.published?.revision).toBe(2);
     expect(at.change?.body).not.toContain("Story 1");
     expect(at.upload).toHaveBeenCalledTimes(2);
     if (!at.change) throw new Error("Missing updated change");
@@ -863,7 +862,7 @@ describe("no-mistakes' attestation on a Careful story", () => {
     expect(attested(body)?.head_sha).toBe(HEAD);
     expect(body).toContain("Closes #24");
     expect(readPresentationRegion(body, TASK)).toBe(
-      at.tasks.changePresentation(TASK)?.published?.region,
+      at.tasks.delivery.changePresentation(TASK)?.published?.region,
     );
   });
 
@@ -923,7 +922,7 @@ describe("the words around a published story", () => {
     expect(changed.body).toBe(`${corrected}\n\n${footer}\n\n${region}\n\nA person's closing note.`);
     expect(at.upload).toHaveBeenCalledTimes(2);
     expect(at.update).toHaveBeenCalledTimes(1);
-    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation(TASK)?.published).toMatchObject({
       revision: 1,
       state: "confirmed",
       region,
@@ -943,7 +942,7 @@ describe("the words around a published story", () => {
     );
     expect(at.update).not.toHaveBeenCalled();
     expect(at.change?.body).toBe(theirs);
-    expect(at.tasks.changePresentation(TASK)?.publication?.state).toBe("confirmed");
+    expect(at.tasks.delivery.changePresentation(TASK)?.publication?.state).toBe("confirmed");
   });
 
   it("keeps the existing refusal for an edit inside the story", async () => {
@@ -975,7 +974,7 @@ describe("the words around a published story", () => {
     await expect(at.publish(1, undefined, { from: obsolete, to: corrected })).rejects.toThrow(
       /shows different words around it than you sent/,
     );
-    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation(TASK)?.published).toMatchObject({
       state: "confirmed",
       region,
     });
@@ -993,7 +992,7 @@ describe("the title of a republished story", () => {
 
   /** What a publication before INF-717 left on record: no title it set. */
   function forgetTitles(at: Awaited<ReturnType<typeof arrange>>) {
-    at.tasks.updateChangePresentation(TASK, (record) => {
+    at.tasks.delivery.updateChangePresentation(TASK, (record) => {
       if (!record?.published) throw new Error("Missing publication");
       const { title: _kept, ...published } = record.published;
       return { ...record, publication: published, published };
@@ -1008,7 +1007,7 @@ describe("the title of a republished story", () => {
     await republish(at);
     expect(at.update).toHaveBeenCalledWith(expect.anything(), expect.any(String), BREAKING);
     expect(at.change?.title).toBe(BREAKING);
-    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation(TASK)?.published).toMatchObject({
       revision: 2,
       title: BREAKING,
     });
@@ -1032,7 +1031,7 @@ describe("the title of a republished story", () => {
     // The crewmate set the story's title alone, after asking the captain.
     at.change = { ...at.change, title: BREAKING };
     await republish(at);
-    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation(TASK)?.published).toMatchObject({
       revision: 4,
       title: BREAKING,
     });
@@ -1074,7 +1073,7 @@ describe("the title of a republished story", () => {
     );
     expect(at.update).not.toHaveBeenCalled();
     expect(at.upload).toHaveBeenCalledTimes(3);
-    expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(1);
+    expect(at.tasks.delivery.changePresentation(TASK)?.published?.revision).toBe(1);
   });
 
   it("says so when the pull request reads another title right after the write", async () => {
@@ -1089,7 +1088,7 @@ describe("the title of a republished story", () => {
       `The story is published, but GitHub shows the title "feat: a simultaneous rename" rather than "${BREAKING}"`,
     );
     // The story landed; the next publication names that rename as a person's.
-    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation(TASK)?.published).toMatchObject({
       revision: 2,
       state: "confirmed",
       title: BREAKING,
@@ -1109,12 +1108,12 @@ describe("deliberate publication recovery", () => {
     await expect(at.publish(2)).rejects.toThrow("Lost PATCH");
     at.restart();
     await expect(at.publish(2)).rejects.toThrow("last confirmed story is still");
-    expect(at.tasks.changePresentation(TASK)?.publication).toMatchObject({
+    expect(at.tasks.delivery.changePresentation(TASK)?.publication).toMatchObject({
       state: "confirmed",
       revision: 1,
     });
     await at.publish(2);
-    expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(2);
+    expect(at.tasks.delivery.changePresentation(TASK)?.published?.revision).toBe(2);
     expect(at.update).toHaveBeenCalledTimes(2);
     expect(at.upload).toHaveBeenCalledTimes(2);
   });
@@ -1145,7 +1144,9 @@ describe("deliberate publication recovery", () => {
     await at.publish(1, { retryUploads: [digest] });
     expect(at.upload).toHaveBeenCalledTimes(3);
     expect(
-      at.tasks.changePresentation(TASK)?.receipts.find((receipt) => receipt.digest === digest),
+      at.tasks.delivery
+        .changePresentation(TASK)
+        ?.receipts.find((receipt) => receipt.digest === digest),
     ).toMatchObject({ state: "confirmed", possibleOrphan: true });
   });
 
@@ -1220,7 +1221,7 @@ describe("deliberate publication recovery", () => {
       BRANCH,
       "feat: share the change story",
     );
-    const record = at.tasks.changePresentation(TASK);
+    const record = at.tasks.delivery.changePresentation(TASK);
     expect(record?.published).toMatchObject({ head: next, revision: 2 });
     expect(record?.revisions[0]).toMatchObject({
       why: at.draft.why,
@@ -1240,13 +1241,13 @@ describe("deliberate publication recovery", () => {
     const at = await arrange();
     await at.prepare();
     const change = await at.publish();
-    const approved = at.tasks.changePresentation(TASK)?.published?.contentHash;
+    const approved = at.tasks.delivery.changePresentation(TASK)?.published?.contentHash;
     const squash = (await at.service.assertPublished(TASK, change, at.forge, 1)).squashMessage;
     const pushed = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
     at.change = { ...change, headSha: pushed };
     at.setHead(pushed);
     expect(await at.service.atPushedVersion(TASK, 1, at.change, at.forge)).toBe(2);
-    const record = at.tasks.changePresentation(TASK);
+    const record = at.tasks.delivery.changePresentation(TASK);
     expect(record?.published).toMatchObject({
       revision: 2,
       head: pushed,
@@ -1294,11 +1295,11 @@ describe("deliberate publication recovery", () => {
     at.setHead(later);
     await at.service.republishMoved(TASK, at.change, at.forge);
     expect(await at.service.atPushedVersion(TASK, 1, at.change, at.forge)).toBe(1);
-    expect(at.tasks.changePresentation(TASK)?.revisions.at(-1)).toMatchObject({
+    expect(at.tasks.delivery.changePresentation(TASK)?.revisions.at(-1)).toMatchObject({
       revision: 3,
       head: pushed,
     });
-    expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({
+    expect(at.tasks.delivery.changePresentation(TASK)?.published).toMatchObject({
       revision: 2,
       head: pushed,
     });
@@ -1330,7 +1331,7 @@ describe("deliberate publication recovery", () => {
 
     const staged = await stageChangePresentation(older(because), root);
     expect(await at.service.prepare(TASK, staged, at.forge)).toBe(1);
-    const saved = at.tasks.changePresentation(TASK)?.revisions.at(-1);
+    const saved = at.tasks.delivery.changePresentation(TASK)?.revisions.at(-1);
     expect(saved?.base).toBe(base);
     expect(saved?.views[0]?.before[0]).toMatchObject({
       captureHead: taken,
@@ -1346,7 +1347,7 @@ describe("deliberate publication recovery", () => {
     at.change = { ...published, headSha: pushed };
     at.setHead(pushed);
     expect(await at.service.atPushedVersion(TASK, 1, at.change, at.forge)).toBe(2);
-    const republished = at.tasks.changePresentation(TASK)?.revisions.at(-1);
+    const republished = at.tasks.delivery.changePresentation(TASK)?.revisions.at(-1);
     expect(republished?.base).toBe(base);
     expect(republished?.views[0]?.before[0]).toMatchObject({
       captureHead: taken,
@@ -1364,15 +1365,15 @@ describe("deliberate publication recovery", () => {
     await at.service.prepare(TASK, second, at.forge);
     const third = await stage();
     await at.service.prepare(TASK, third, at.forge);
-    expect(at.tasks.changePresentation(TASK)?.revisions.map((story) => story.revision)).toEqual([
-      1, 3,
-    ]);
+    expect(
+      at.tasks.delivery.changePresentation(TASK)?.revisions.map((story) => story.revision),
+    ).toEqual([1, 3]);
     expect(second.assets.every((asset) => !existsSync(join(at.media, asset.file)))).toBe(true);
     expect(at.staged.assets.every((asset) => existsSync(join(at.media, asset.file)))).toBe(true);
     await at.publish(3);
-    expect(at.tasks.changePresentation(TASK)?.revisions.map((story) => story.revision)).toEqual([
-      3,
-    ]);
+    expect(
+      at.tasks.delivery.changePresentation(TASK)?.revisions.map((story) => story.revision),
+    ).toEqual([3]);
     expect(at.staged.assets.every((asset) => !existsSync(join(at.media, asset.file)))).toBe(true);
     expect(third.assets.every((asset) => existsSync(join(at.media, asset.file)))).toBe(true);
     expect(existsSync(join(at.worktree, "dark.webp"))).toBe(true);
@@ -1400,7 +1401,7 @@ it("reconciles an edited uncertain opening before preparing the newer version", 
   };
   const region = readPresentationRegion(at.change.body ?? "", TASK);
   await expect(at.publish(1, { replaceRegion: region })).rejects.toThrow("code changed");
-  expect(at.tasks.changePresentation(TASK)?.publication).toBeUndefined();
+  expect(at.tasks.delivery.changePresentation(TASK)?.publication).toBeUndefined();
   const revision = await at.service.prepare(
     TASK,
     {
@@ -1420,7 +1421,7 @@ it("reconciles an edited uncertain opening before preparing the newer version", 
   expect(updated.body).toMatch(/^Human introduction/);
   expect(at.open).toHaveBeenCalledTimes(1);
   expect(at.update).toHaveBeenCalledTimes(1);
-  expect(at.tasks.changePresentation(TASK)?.reconciled).toBeUndefined();
+  expect(at.tasks.delivery.changePresentation(TASK)?.reconciled).toBeUndefined();
 });
 
 it("discards fresh staging copies when preparation fails, not the source files (INF-169 F13)", async () => {
@@ -1454,10 +1455,10 @@ it("keeps the earlier opening identity through a deliberate retry and a newer pr
     },
     at.forge,
   );
-  expect(at.tasks.changePresentation(TASK)?.revisions.map((story) => story.revision)).toEqual([
-    1, 2,
-  ]);
-  const earlier = at.tasks.changePresentation(TASK)?.publication;
+  expect(
+    at.tasks.delivery.changePresentation(TASK)?.revisions.map((story) => story.revision),
+  ).toEqual([1, 2]);
+  const earlier = at.tasks.delivery.changePresentation(TASK)?.publication;
   at.change = {
     number: 1,
     branch: BRANCH,
@@ -1467,7 +1468,10 @@ it("keeps the earlier opening identity through a deliberate retry and a newer pr
     body: earlier?.region,
   };
   await at.publish(revision);
-  expect(at.tasks.changePresentation(TASK)?.published).toMatchObject({ revision: 2, head: next });
+  expect(at.tasks.delivery.changePresentation(TASK)?.published).toMatchObject({
+    revision: 2,
+    head: next,
+  });
   expect(at.open).toHaveBeenCalledTimes(1);
   expect(at.update).toHaveBeenCalledTimes(1);
 });
@@ -1616,7 +1620,7 @@ describe("edited story boundaries", () => {
     expect(replaced.body?.split(start)).toHaveLength(2);
     expect(replaced.body?.split(end)).toHaveLength(2);
     expect(readPresentationRegion(replaced.body ?? "", TASK)).toBe(
-      at.tasks.changePresentation(TASK)?.published?.region,
+      at.tasks.delivery.changePresentation(TASK)?.published?.region,
     );
     await expect(at.service.assertPublished(TASK, replaced, at.forge)).resolves.toEqual({
       ...replaced,
@@ -1682,7 +1686,7 @@ it("recovers an uncertain replacement with edited markers through the same delib
   const next = await at.publish(2, { replaceRegion: edited });
   expect(next.body).toContain("A person's introduction");
   expect(next.body).toContain("A person's conclusion");
-  expect(at.tasks.changePresentation(TASK)?.published?.revision).toBe(2);
+  expect(at.tasks.delivery.changePresentation(TASK)?.published?.revision).toBe(2);
   await expect(at.service.assertPublished(TASK, next, at.forge)).resolves.toEqual({
     ...next,
     squashMessage: at.draft.whatChanged.join("\n\n"),
@@ -1721,7 +1725,7 @@ describe("stories without native attachment publication", () => {
       expect(change.body).toContain("this host receives the story's text only");
       expect(change.body).toContain(at.draft.views[0]?.before[0]?.alt);
       expect(change.body).not.toMatch(/app-frame:|user-attachments|\/uploads\/|\.webp/);
-      expect(at.tasks.changePresentation(TASK)?.receipts).toEqual([]);
+      expect(at.tasks.delivery.changePresentation(TASK)?.receipts).toEqual([]);
       const card = await at.service.completion(TASK, revision, HEAD);
       expect(card.body).toContain("app-frame://images/");
       expect(card.pictures).toHaveLength(2);
@@ -1758,8 +1762,11 @@ describe("stories without native attachment publication", () => {
     expect(at.open).not.toHaveBeenCalled();
     expect(at.update).not.toHaveBeenCalled();
     expect(change).toEqual({ branch: BRANCH, headSha: HEAD, url: null });
-    expect(at.tasks.changePresentation(TASK)?.published).toBeUndefined();
-    expect(at.tasks.changePresentation(TASK)?.completion).toMatchObject({ revision, head: HEAD });
+    expect(at.tasks.delivery.changePresentation(TASK)?.published).toBeUndefined();
+    expect(at.tasks.delivery.changePresentation(TASK)?.completion).toMatchObject({
+      revision,
+      head: HEAD,
+    });
     expect((await at.service.completion(TASK, revision, HEAD)).pictures).toHaveLength(2);
     await expect(
       at.service.assertPublished(TASK, { ...change, headSha: "b".repeat(40) }, forge),
@@ -1777,8 +1784,8 @@ describe("stories without native attachment publication", () => {
     const at = await arrange();
     const local = { kind: "local", project: "repo-meterlab" } as const;
     const revision = await at.service.prepare(TASK, at.staged, local);
-    expect(at.tasks.changePresentation(TASK)?.publication).toBeUndefined();
-    expect(at.tasks.changePresentation(TASK)?.receipts).toEqual([]);
+    expect(at.tasks.delivery.changePresentation(TASK)?.publication).toBeUndefined();
+    expect(at.tasks.delivery.changePresentation(TASK)?.receipts).toEqual([]);
     expect(await at.service.assertLocal(TASK, local)).toBe(HEAD);
     const card = await at.service.completion(TASK, revision, HEAD);
     expect(card.pictures).toHaveLength(2);
@@ -1790,7 +1797,7 @@ describe("stories without native attachment publication", () => {
     at.setHead("b".repeat(40));
     await expect(at.service.assertLocal(TASK, local)).rejects.toThrow("current committed version");
     at.setHead(HEAD);
-    const asset = at.tasks.changePresentation(TASK)?.revisions[0]?.assets[0];
+    const asset = at.tasks.delivery.changePresentation(TASK)?.revisions[0]?.assets[0];
     if (!asset) throw new Error("Missing retained fixture");
     rmSync(join(at.media, asset.file));
     await expect(at.service.assertLocal(TASK, local)).rejects.toThrow();
@@ -1809,6 +1816,6 @@ describe("stories without native attachment publication", () => {
       "Native evidence publication is not available",
     );
     expect(at.open).not.toHaveBeenCalled();
-    expect(at.tasks.changePresentation(TASK)?.published).toBeUndefined();
+    expect(at.tasks.delivery.changePresentation(TASK)?.published).toBeUndefined();
   });
 });

@@ -336,7 +336,7 @@ export class MergeReviews {
     const record = this.options.tasks.get(taskId);
     const reviews = record?.delivery?.mergeReviews;
     if (!reviews) return receipt;
-    this.options.tasks.recordPermissionRecords(taskId, {
+    this.options.tasks.delivery.recordPermissionRecords(taskId, {
       mergeReviews: reviews.map((item) =>
         item.id === reviewId
           ? {
@@ -717,7 +717,7 @@ export class MergeReviews {
   ): void {
     const reviews = this.options.tasks.get(taskId)?.delivery?.mergeReviews;
     if (!reviews) return;
-    this.options.tasks.recordPermissionRecords(taskId, {
+    this.options.tasks.delivery.recordPermissionRecords(taskId, {
       mergeReviews: reviews.map((item) =>
         item.id === reviewId
           ? { ...item, sent: { at: item.sent?.at ?? this.context.now(), ...outcome } }

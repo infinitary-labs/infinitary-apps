@@ -88,7 +88,7 @@ The report's receipt tells the crewmate so when no card is up as it reports.
 Only a ready card lists the task under "waiting on you"; without one, its record shows the latest report as the reason it is paused (FI3-702, `docs/task-record.md`).
 An undeclared note still holds nothing.
 The ladder still climbs past it, but what it sends names the newest note up on the task rather than claim no card is up (FI3-438): the nudge (`idleNoteNudgeText`) asks a crewmate whose outcome it is to declare its wait instead of posting it again, and the stall wake (`idle-stall` with `note`) tells the first mate the note is up and to steer it that way.
-The wait lasts until the crewmate's next turn starts (`TaskService.clearDeclaration` in `beginTurn`): a choice, reply or steer starts one, and that turn's report declares it again if it still holds.
+The wait lasts until the crewmate's next turn starts (`TaskService.turns.clearDeclaration` in `beginTurn`): a choice, reply or steer starts one, and that turn's report declares it again if it still holds.
 Putting a decision or pending note aside, or reading a marked saved answer, starts no turn and preserves its wait.
 Reading an ordinary note acknowledges it and starts its author's next turn through the existing durable path, clearing that declaration; the author reports finished if nothing remains.
 The minimize corner itself never declares work finished.
@@ -108,7 +108,7 @@ Two typed waits stand on a task.
 A `baseline-blocked` diagnosis at its change's current head, while the checks are not green, names its `dependencyTask` (`standingDependencyWaits` in `src/core/tasks/dependencyWaits.ts`: derived, never stored, so a new head or a passing reading ends the wait by itself).
 A marked `blocks` edge from a task that has not closed holds its close (`blockersHoldingClose`: a `blocks_me` filing or a required action's prerequisite).
 A link the first mate records holds the start only.
-When the named task is open and the ready sweep will not start it - on request, held, or waiting on blockers of its own (`TaskService.awaitsStart`) - only the first mate or the captain can begin that work, so a report from the waiting task wakes the first mate on any backend, naming that work - which a moving witness would otherwise hold quiet.
+When the named task is open and the ready sweep will not start it - on request, held, or waiting on blockers of its own (`TaskService.graph.awaitsStart`) - only the first mate or the captain can begin that work, so a report from the waiting task wakes the first mate on any backend, naming that work - which a moving witness would otherwise hold quiet.
 An open named task that cannot start until its own blockers close stands for those blockers (the wait chain, INF-1428, the captain's Approve and build on INF-1670's piece 2): its blockers are read the same way, so a chain that ends in work underway is a wait on work underway, and a chain that ends in work nobody has started names that work.
 An open task a dropped blocker holds is named itself, since nothing will free it.
 So INF-785, waiting on an on-request task blocked by a task whose pull request was up for merge, is quiet until that merge; then the on-request task needs a start, and the waiting task's next report wakes the first mate naming it.
@@ -131,7 +131,7 @@ Only the close wakes: a pull request that merges while its task stays open wakes
 The words say what the close means, naming the work's pull request when it has one: a link's done or dropped work no longer holds the task, so it carries on, and a wait that moved to it names the task whose work it took over (the waiter's `unlinked` event with `movedTo`, `docs/task-graph.md` "A wait follows moved work"); a baseline wait's done work means bring the change up to date, and its dropped work means lead the report with it, which the ordinary report sort routes without treating the dropped task as unstarted work.
 A baseline wait also resumes before that close, when the default branch's own run of the check it names passes (`docs/forge.md`, "A main failure's wake"): one `main-check-passed` steer, once per check and commit, and the close still resumes it if that run has not passed.
 A record cancelled from its record or stall card runs the sweep at once, as every close does.
-A crewmate names a wait itself in its report: `report`'s top-level `waits_on` lists the keys of open tasks its work cannot go on without, and each is recorded as a `blocks` link from that task, actor crewmate, holding no merge (`TaskService.linkWaits`, INF-1428).
+A crewmate names a wait itself in its report: `report`'s top-level `waits_on` lists the keys of open tasks its work cannot go on without, and each is recorded as a `blocks` link from that task, actor crewmate, holding no merge (`TaskService.graph.linkWaits`, INF-1428).
 A key whose work moved through `replaced-by` links is recorded on the task carrying it now, and refused, naming that task, when it is already done.
 The report is refused, with nothing linked, when a key is unknown, closed, its own task, or would close a cycle, or beside `finished`.
 The app never reads the report's words for a wait.
@@ -290,7 +290,7 @@ Work declared finished with no card of its own up is raised the same way, from t
 The report's own wake (row 0a, or row 1a for finished) counts as rung 2's first wake, sent when the crewmate asked, and the rung's rules run from there.
 The clock holds while a wake about the task waits on the first mate's lane.
 Each thirty minutes without an act bring a reminder, `idle-asked`, which says the request again in the crewmate's words beside its report (`rule:idle-repeat`), two in all (`ASKED_WAKES`).
-The report's wake and each reminder name the work already built on the task, open or closed, with its status, closing reason and change (`TaskService.builtOn`), so the first mate reconciles them before it files or starts more (INF-976).
+The report's wake and each reminder name the work already built on the task, open or closed, with its status, closing reason and change (`TaskService.graph.builtOn`), so the first mate reconciles them before it files or starts more (INF-976).
 Nothing nudges the crewmate, and no card goes up: the captain chose on 2026-10-10 that the app reminds the first mate itself rather than ask the captain to send what it can send.
 After the last reminder nothing more is sent, and the task's crew line carries its `stalled` fact, as it does from the first reminder on.
 An act of the first mate's ends all of it: the next reconcile restarts the clock, once, read off the record - the ladder's last act fell after the request and before the act (`endAnsweredAsk`).

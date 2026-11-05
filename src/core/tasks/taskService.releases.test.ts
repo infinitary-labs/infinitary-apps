@@ -21,13 +21,13 @@ describe("a start whose contact was lost", () => {
   it("moves a preparing attempt to checking and keeps when it began", () => {
     const { tasks, tick } = setup();
     seedTask(tasks, { id: "build", title: "Build the export", status: "queued" });
-    expect(tasks.beginStartAttempt("build")).toBe(true);
+    expect(tasks.starts.beginStartAttempt("build")).toBe(true);
     tick(500);
 
-    tasks.markStartChecking("build");
+    tasks.starts.markStartChecking("build");
 
-    expect(tasks.startAttemptOf("build")).toEqual({ phase: "checking", since: 1_000 });
-    expect(tasks.startAttemptIds()).toEqual(["build"]);
+    expect(tasks.starts.startAttemptOf("build")).toEqual({ phase: "checking", since: 1_000 });
+    expect(tasks.starts.startAttemptIds()).toEqual(["build"]);
   });
 
   it("starts the checking clock now when no attempt was published", () => {
@@ -35,9 +35,9 @@ describe("a start whose contact was lost", () => {
     seedTask(tasks, { id: "build", title: "Build the export", status: "queued" });
     tick(250);
 
-    tasks.markStartChecking("build");
+    tasks.starts.markStartChecking("build");
 
-    expect(tasks.startAttemptOf("build")).toEqual({ phase: "checking", since: 1_250 });
+    expect(tasks.starts.startAttemptOf("build")).toEqual({ phase: "checking", since: 1_250 });
   });
 
   it("tells the board the task changed", () => {
@@ -46,7 +46,7 @@ describe("a start whose contact was lost", () => {
     const changed: string[][] = [];
     tasks.onChange((change) => changed.push(change.taskIds));
 
-    tasks.markStartChecking("build");
+    tasks.starts.markStartChecking("build");
 
     expect(changed).toEqual([["build"]]);
   });
@@ -56,12 +56,12 @@ describe("a start that came back unconfirmed", () => {
   it("returns claimed work to the queue with no failure notice", () => {
     const { tasks, tick } = setup();
     seedTask(tasks, { id: "build", title: "Build the export", status: "queued" });
-    tasks.beginStartAttempt("build");
-    expect(tasks.claimForDispatch("build")).toBe(true);
-    tasks.markStartChecking("build");
+    tasks.starts.beginStartAttempt("build");
+    expect(tasks.starts.claimForDispatch("build")).toBe(true);
+    tasks.starts.markStartChecking("build");
     tick(40);
 
-    tasks.releaseUnconfirmedStart("build");
+    tasks.starts.releaseUnconfirmedStart("build");
 
     const record = tasks.get("build");
     expect(record).toMatchObject({
@@ -74,7 +74,7 @@ describe("a start that came back unconfirmed", () => {
     });
     // An unknown outcome is not a confirmed failure.
     expect(record?.startNotice ?? null).toBeNull();
-    expect(tasks.startAttemptOf("build")).toBeUndefined();
+    expect(tasks.starts.startAttemptOf("build")).toBeUndefined();
     const last = tasks.timeline("build").at(-1);
     expect(last).toMatchObject({
       actor: "host",
@@ -92,13 +92,13 @@ describe("a start that came back unconfirmed", () => {
       status: "running",
       worktreeDir: "/work/build",
     });
-    tasks.markStartChecking("build");
+    tasks.starts.markStartChecking("build");
     const events = tasks.timeline("build").length;
 
-    tasks.releaseUnconfirmedStart("build");
+    tasks.starts.releaseUnconfirmedStart("build");
 
     expect(tasks.get("build")).toMatchObject({ status: "active", worktreeDir: "/work/build" });
-    expect(tasks.startAttemptOf("build")).toBeUndefined();
+    expect(tasks.starts.startAttemptOf("build")).toBeUndefined();
     expect(tasks.timeline("build")).toHaveLength(events);
   });
 
@@ -111,7 +111,7 @@ describe("a start that came back unconfirmed", () => {
       sessionFile: "/sessions/build.jsonl",
     });
 
-    tasks.releaseUnconfirmedStart("build");
+    tasks.starts.releaseUnconfirmedStart("build");
 
     expect(tasks.get("build")).toMatchObject({
       status: "active",
@@ -126,7 +126,7 @@ describe("a start that came back unconfirmed", () => {
     const closed = tasks.get("build");
     const events = tasks.timeline("build").length;
 
-    tasks.releaseUnconfirmedStart("build");
+    tasks.starts.releaseUnconfirmedStart("build");
 
     expect(tasks.get("build")).toEqual(closed);
     expect(tasks.timeline("build")).toHaveLength(events);
@@ -135,12 +135,12 @@ describe("a start that came back unconfirmed", () => {
   it("forgets the attempt of open work that was never claimed", () => {
     const { tasks } = setup();
     seedTask(tasks, { id: "build", title: "Build the export", status: "queued" });
-    tasks.beginStartAttempt("build");
+    tasks.starts.beginStartAttempt("build");
     const open = tasks.get("build");
 
-    tasks.releaseUnconfirmedStart("build");
+    tasks.starts.releaseUnconfirmedStart("build");
 
-    expect(tasks.startAttemptOf("build")).toBeUndefined();
+    expect(tasks.starts.startAttemptOf("build")).toBeUndefined();
     expect(tasks.get("build")?.status).toBe(open?.status);
   });
 });
@@ -150,13 +150,13 @@ describe("a message the turn never read", () => {
 
   it("waits for the next turn with no facts of this one", () => {
     const { tasks } = setup();
-    tasks.openAsk({ id: "m1", text: "Is the export done?" });
-    tasks.noteDelivery(["m1"], entry);
-    expect(tasks.getAsk("m1")?.deliveryFacts.entries).toHaveLength(1);
+    tasks.capture.openAsk({ id: "m1", text: "Is the export done?" });
+    tasks.capture.noteDelivery(["m1"], entry);
+    expect(tasks.capture.getAsk("m1")?.deliveryFacts.entries).toHaveLength(1);
 
-    tasks.releaseAskDelivery("m1");
+    tasks.capture.releaseAskDelivery("m1");
 
-    expect(tasks.getAsk("m1")).toMatchObject({
+    expect(tasks.capture.getAsk("m1")).toMatchObject({
       delivery: "pending",
       deliveryFacts: { entries: [] },
     });
@@ -164,12 +164,12 @@ describe("a message the turn never read", () => {
 
   it("returns a held message to pending", () => {
     const { tasks } = setup();
-    tasks.openAsk({ id: "m1", text: "Is the export done?" });
-    tasks.setAskDelivery("m1", "held", { entries: [entry] });
+    tasks.capture.openAsk({ id: "m1", text: "Is the export done?" });
+    tasks.capture.setAskDelivery("m1", "held", { entries: [entry] });
 
-    tasks.releaseAskDelivery("m1");
+    tasks.capture.releaseAskDelivery("m1");
 
-    expect(tasks.getAsk("m1")).toMatchObject({
+    expect(tasks.capture.getAsk("m1")).toMatchObject({
       delivery: "pending",
       deliveryFacts: { entries: [] },
     });
@@ -177,13 +177,13 @@ describe("a message the turn never read", () => {
 
   it("keeps a retry a retry, linked to the message it asks again", () => {
     const { tasks } = setup();
-    tasks.openAsk({ id: "m1", text: "Is the export done?" });
-    tasks.openAsk({ id: "m2", text: "Is the export done?", retryOf: "m1" });
-    tasks.setAskDelivery("m2", "retrying", { entries: [entry], retryOf: "m1" });
+    tasks.capture.openAsk({ id: "m1", text: "Is the export done?" });
+    tasks.capture.openAsk({ id: "m2", text: "Is the export done?", retryOf: "m1" });
+    tasks.capture.setAskDelivery("m2", "retrying", { entries: [entry], retryOf: "m1" });
 
-    tasks.releaseAskDelivery("m2");
+    tasks.capture.releaseAskDelivery("m2");
 
-    expect(tasks.getAsk("m2")).toMatchObject({
+    expect(tasks.capture.getAsk("m2")).toMatchObject({
       delivery: "retrying",
       deliveryFacts: { entries: [], retryOf: "m1" },
     });
@@ -193,12 +193,12 @@ describe("a message the turn never read", () => {
     "leaves a %s message as it is",
     (delivery) => {
       const { tasks } = setup();
-      tasks.openAsk({ id: "m1", text: "Is the export done?" });
-      tasks.setAskDelivery("m1", delivery, { entries: [entry] });
+      tasks.capture.openAsk({ id: "m1", text: "Is the export done?" });
+      tasks.capture.setAskDelivery("m1", delivery, { entries: [entry] });
 
-      tasks.releaseAskDelivery("m1");
+      tasks.capture.releaseAskDelivery("m1");
 
-      expect(tasks.getAsk("m1")).toMatchObject({
+      expect(tasks.capture.getAsk("m1")).toMatchObject({
         delivery,
         deliveryFacts: { entries: [entry] },
       });
@@ -207,7 +207,7 @@ describe("a message the turn never read", () => {
 
   it("ignores a message it does not know", () => {
     const { tasks } = setup();
-    expect(() => tasks.releaseAskDelivery("missing")).not.toThrow();
-    expect(tasks.getAsk("missing")).toBeUndefined();
+    expect(() => tasks.capture.releaseAskDelivery("missing")).not.toThrow();
+    expect(tasks.capture.getAsk("missing")).toBeUndefined();
   });
 });

@@ -50,7 +50,7 @@ Readers: Observe (`src/core/observe/transcript.ts`), the dispatch extractor (`ki
 A policy-step decision is a served first mate turn (captain, drain, or mixed).
 The whose-turn rule (`docs/report-sort.md`) is host code rather than a turn, so it serves nothing and opens no decision; it writes its `supervision_outcomes` row and nothing else.
 `DecisionCapture` (`src/core/orchestrator/decisionCapture.ts`) opens one when the input is served and finishes it when the turn's asks, inbox rows and effects are settled.
-Finishing writes one `decided` event, through `TaskService.recordDecision`, on every task the decision touched, all with the same data and the decision id as `ref`.
+Finishing writes one `decided` event, through `TaskService.turns.recordDecision`, on every task the decision touched, all with the same data and the decision id as `ref`.
 Nothing is written on a watchdog tick, an empty poke or a drain that served nothing.
 
 The data is `DecisionRecord` (`src/shared/provenance.ts`, zod schema):
@@ -78,11 +78,11 @@ Timeline compaction never folds `decided`, `steered` or `interrupted`; those row
 Before R2 a steer or interrupt left no durable event.
 Now the crew control plane writes one through the task writer at the moment it decides what happened:
 
-- `steered` (`TaskService.recordSteer`, from `CrewSupervisor.steerCrewmate` / `steerInternal`): actor `firstmate` or `captain` (a card choice); the `supervisor` actor, the `supervision` via and the `recorded-queued` delivery were the retired session's and stay in the vocabulary for the record.
+- `steered` (`TaskService.turns.recordSteer`, from `CrewSupervisor.steerCrewmate` / `steerInternal`): actor `firstmate` or `captain` (a card choice); the `supervisor` actor, the `supervision` via and the `recorded-queued` delivery were the retired session's and stay in the vocabulary for the record.
   `data` is `SteerEventData` - the delivery outcome (`mid-turn`, `queued-next-turn`, `recorded-retrying`, `recorded-queued`), `via` (`tool` / `card` / `supervision`), the issuing decision, the card id, and the inbox row.
   The message is redacted at capture.
   A refused steer (unknown or closed task) throws as before and records nothing.
-- `interrupted` (`TaskService.recordInterrupt`, from `CrewSupervisor.interruptCrewmate`): actor `firstmate` (the tool) or `captain` (the shell's abort); `data` is `InterruptEventData` - mode, `effect`, a redacted error when present, `via` (`tool` / `shell`) and the issuing decision.
+- `interrupted` (`TaskService.turns.recordInterrupt`, from `CrewSupervisor.interruptCrewmate`): actor `firstmate` (the tool) or `captain` (the shell's abort); `data` is `InterruptEventData` - mode, `effect`, a redacted error when present, `via` (`tool` / `shell`) and the issuing decision.
   An abort records `requested` before the transport call, then `aborted-turn` on success or `abort-failed` on rejection.
   Effects that need no transport call (`cancelled-idle`, `cancelled-record`, `no-turn`, `already-done`) record once.
 

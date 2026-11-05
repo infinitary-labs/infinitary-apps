@@ -173,7 +173,7 @@ A round is one message of the captain's and the reply line kept beside it.
   Dissolving never clears a saved message or reply line, and it does not move the input: the older round's room stays reserved and empty, with no link and no dim text.
   Reduced motion cuts the dissolve to an instant and does not shorten the 15 seconds.
   Fading does not move focus, change the draft, or read the reply out again.
-  The saved rounds are the two newest `captain_asks` rows and the reply lines kept beside them (`TaskService.setAskReply`, migration 68), read once as the window opens (`inf:conversation:last-turn`, the older round as its `previous`).
+  The saved rounds are the two newest `captain_asks` rows and the reply lines kept beside them (`TaskService.capture.setAskReply`, migration 68), read once as the window opens (`inf:conversation:last-turn`, the older round as its `previous`).
 - **The reply note.**
   A click on the reply line, or Enter or Space on it, opens the whole reply as a note at the front of the stack, in front of any open card (INF-1102's plan, the captain's Approve and build, reversing "neither line is a control" for the reply line only).
   The window holds it, as it holds a past card (`{ replyNote }` in `OpenRecord`, `stack.ts`): nothing is saved or sent, and the first mate is not told.

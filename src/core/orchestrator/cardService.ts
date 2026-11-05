@@ -531,7 +531,7 @@ export class CardService {
   dismissQuestion(taskId: string): string | undefined {
     const record = this.host.tasks.get(taskId);
     const card = this.snapshot().find(
-      (entry) => this.host.tasks.openCardTaskFor(entry.id)?.id === taskId,
+      (entry) => this.host.tasks.capture.openCardTaskFor(entry.id)?.id === taskId,
     );
     if (record?.kind !== "decision" || !card || card.taskId)
       return "This question is no longer waiting.";
@@ -676,13 +676,14 @@ export class CardService {
   /**
    * Where a card's work came from, for its line under the title (INF-1610,
    * INF-2326): the origin its task's graph leads to
-   * (`TaskService.originAbout`), through the task it names or the task it
+   * (`TaskService.capture.originAbout`), through the task it names or the task it
    * was raised on. `known` holds each task's answer for one snapshot.
    */
   private askedAbout(card: Card, known: Map<string, CardAsked | undefined>): CardAsked | undefined {
-    const taskId = card.taskId ?? this.host.tasks.taskForCard(card.id)?.id;
+    const taskId = card.taskId ?? this.host.tasks.capture.taskForCard(card.id)?.id;
     if (!taskId) return undefined;
-    if (!known.has(taskId)) known.set(taskId, cardAskedOf(this.host.tasks.originAbout(taskId)));
+    if (!known.has(taskId))
+      known.set(taskId, cardAskedOf(this.host.tasks.capture.originAbout(taskId)));
     return known.get(taskId);
   }
 
@@ -956,7 +957,7 @@ export class CardService {
     const returned = this.host.cardStore
       .messages(card.id)
       .some((message) => message.who === "captain");
-    this.host.tasks.recordCardRaised(card.taskId, {
+    this.host.tasks.capture.recordCardRaised(card.taskId, {
       cardId: card.id,
       kind: cardWord(card),
       title: card.title,
@@ -1165,9 +1166,10 @@ export class CardService {
     if ((who === "crewmate" || who === "firstmate") && about) {
       const task = about.taskId
         ? this.host.tasks.get(about.taskId)
-        : (this.host.tasks.openCardTaskFor(cardId) ?? this.host.tasks.taskForCard(cardId));
+        : (this.host.tasks.capture.openCardTaskFor(cardId) ??
+          this.host.tasks.capture.taskForCard(cardId));
       if (task) {
-        this.host.tasks.recordReply(task.id, {
+        this.host.tasks.turns.recordReply(task.id, {
           cardId,
           title: about.title,
           text,
@@ -1292,8 +1294,9 @@ export class CardService {
     const tasks = this.host.tasks;
     let closedAnswer = false;
     if (card.taskId && tasks.get(card.taskId)?.delivery?.captainAction) {
-      if (action === "dismissed" || action === "defer") tasks.deferCaptainAction(card.taskId);
-      tasks.recordCardResolved(card.taskId, {
+      if (action === "dismissed" || action === "defer")
+        tasks.delivery.deferCaptainAction(card.taskId);
+      tasks.capture.recordCardResolved(card.taskId, {
         cardId: card.id,
         title: card.title,
         action,
@@ -1304,7 +1307,7 @@ export class CardService {
       return false;
     }
     if (card.taskId && tasks.get(card.taskId)) {
-      tasks.recordCardResolved(card.taskId, {
+      tasks.capture.recordCardResolved(card.taskId, {
         cardId: card.id,
         title: card.title,
         action,
@@ -1318,7 +1321,7 @@ export class CardService {
       this.host.syncCaptainGate(card.taskId, this.host.now());
       closedAnswer = this.host.closeAnsweredTask(card, action, by);
     }
-    const row = tasks.openCardTaskFor(card.id);
+    const row = tasks.capture.openCardTaskFor(card.id);
     if (!row) return closedAnswer;
     // A host card's row is the host's bookkeeping: its close is not news.
     const quiet = row.kind === "operation" ? { feed: false as const } : {};
@@ -1502,7 +1505,7 @@ export class CardService {
 
   /** Presentation state and the card commit together, so a crash cannot lose its first offer. */
   presentRequiredAction(taskId: string): boolean {
-    if (!this.host.tasks.captainActionReady(taskId)) return false;
+    if (!this.host.tasks.delivery.captainActionReady(taskId)) return false;
     const current = this.host.tasks.get(taskId)?.delivery?.captainAction;
     // Reopening an already shown generation must not erase a pending reply.
     if (
@@ -1513,7 +1516,7 @@ export class CardService {
       return true;
     this.host.tasks.atomic(
       () => {
-        const action = this.host.tasks.presentCaptainAction(taskId);
+        const action = this.host.tasks.delivery.presentCaptainAction(taskId);
         if (!action) throw new Error("The required action is no longer ready.");
         const next = requiredActionCard(
           taskId,
@@ -1698,8 +1701,8 @@ export class CardService {
       return;
     }
     if (card.author !== "host" || cardWord(card) !== "decision") return;
-    if (this.host.tasks.openCardTaskFor(card.id)) return;
-    this.host.tasks.fileHostCardTask({
+    if (this.host.tasks.capture.openCardTaskFor(card.id)) return;
+    this.host.tasks.capture.fileHostCardTask({
       id: randomUUID().slice(0, 8),
       title: card.title.trim().slice(0, 64),
       cardId: card.id,
@@ -1713,7 +1716,7 @@ export class CardService {
       this.refreshSettleFacts([card.taskId]);
       return;
     }
-    const row = this.host.tasks.openCardTaskFor(card.id);
+    const row = this.host.tasks.capture.openCardTaskFor(card.id);
     if (row?.kind !== "operation") return;
     this.host.tasks.close(row.id, {
       status: "dropped",

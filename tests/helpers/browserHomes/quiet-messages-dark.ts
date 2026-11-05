@@ -25,9 +25,9 @@ export default function seed(userDataDir: string, { theme, rounds }: Input): voi
     const tasks = new TaskService({ db, strict: true });
     rounds.forEach(({ ask, reply }, index) => {
       const id = `ask-quiet-${index + 1}`;
-      tasks.openAsk({ id, text: ask, at: start + index * 60_000 });
-      tasks.setAskReply(id, { text: reply, eligibility: "completed" });
-      tasks.closeAsk(id, "closed");
+      tasks.capture.openAsk({ id, text: ask, at: start + index * 60_000 });
+      tasks.capture.setAskReply(id, { text: reply, eligibility: "completed" });
+      tasks.capture.closeAsk(id, "closed");
     });
   } finally {
     db.close();

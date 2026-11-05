@@ -32,16 +32,16 @@ const FOUND = { files: ["tests/e2e/knowledge.spec.ts", "tests/e2e/notes.spec.ts"
 describe("reports and results as entries (INF-1296 piece 1)", () => {
   it("keeps a report's result on its entry alone, and the newest result stands until a later report carries another", () => {
     const { tasks } = setup();
-    tasks.recordReport("finder", {
+    tasks.turns.recordReport("finder", {
       text: "Two journeys fail on the queue clock.",
       declared: { result: FOUND },
     });
     expect(tasks.get("finder")?.delivery?.result).toBeUndefined();
     const first = tasks.latestResult("finder");
     expect(first?.value).toEqual(FOUND);
-    tasks.recordReport("finder", { text: "Still watching the nightly run." });
+    tasks.turns.recordReport("finder", { text: "Still watching the nightly run." });
     expect(tasks.latestResult("finder")).toEqual(first);
-    tasks.recordReport("finder", {
+    tasks.turns.recordReport("finder", {
       text: "Only one fails now.",
       declared: { result: { files: [FOUND.files[0]] } },
     });
@@ -55,7 +55,7 @@ describe("reports and results as entries (INF-1296 piece 1)", () => {
 
   it("reads an older release's saved result copy unchanged, until a report written after it carries a newer one", () => {
     const { tasks, asOlderRelease } = setup();
-    tasks.recordReport("finder", {
+    tasks.turns.recordReport("finder", {
       text: "Two journeys fail on the queue clock.",
       summary: "Two journeys fail.",
       declared: { result: FOUND },
@@ -69,18 +69,18 @@ describe("reports and results as entries (INF-1296 piece 1)", () => {
     ]);
 
     // The copy is evidence: it stays saved as it was, and a report with no result keeps it.
-    tasks.recordReport("finder", { text: "Still watching the nightly run." });
+    tasks.turns.recordReport("finder", { text: "Still watching the nightly run." });
     expect(tasks.get("finder")?.delivery?.result).toEqual({ at: reported?.at, value: FOUND });
     expect(byKey()?.result).toEqual(FOUND);
 
-    tasks.recordReport("finder", { text: "One left.", declared: { result: { files: [] } } });
+    tasks.turns.recordReport("finder", { text: "One left.", declared: { result: { files: [] } } });
     expect(byKey()?.result).toEqual({ files: [] });
     expect(tasks.get("finder")?.delivery?.result).toEqual({ at: reported?.at, value: FOUND });
   });
 
   it("keeps an older copy's precedence where the copies disagree, and reads a copy no entry holds", () => {
     const { tasks, asOlderRelease } = setup();
-    tasks.recordReport("finder", { text: "Found them.", declared: { result: FOUND } });
+    tasks.turns.recordReport("finder", { text: "Found them.", declared: { result: FOUND } });
     const at = tasks.reportEntries("finder")[0]?.at ?? 0;
     asOlderRelease({ files: ["from the delivery copy"] }, at);
     expect(tasks.latestResult("finder")?.value).toEqual({ files: ["from the delivery copy"] });
@@ -90,7 +90,7 @@ describe("reports and results as entries (INF-1296 piece 1)", () => {
       title: "A copy whose report no longer says it",
       status: "idle",
     });
-    tasks.recordReport("copied", { text: "Done." });
+    tasks.turns.recordReport("copied", { text: "Done." });
     expect(tasks.latestResult("copied")).toBeUndefined();
     asOlderRelease(FOUND, T0, "copied");
     expect(tasks.latestResult("copied")).toEqual({ at: T0, value: FOUND });
@@ -99,7 +99,7 @@ describe("reports and results as entries (INF-1296 piece 1)", () => {
 
   it("reads a report whose facts an older writer stored in another shape without guessing them", () => {
     const { tasks } = setup();
-    tasks.recordReport("finder", { text: "Done." });
+    tasks.turns.recordReport("finder", { text: "Done." });
     const event = tasks.timeline("finder").find((entry) => entry.kind === "report");
     if (!event) throw new Error("The report was not recorded.");
     const odd = {

@@ -11,7 +11,7 @@ import { parseSpawnIntent, type SpawnIntent } from "../orchestrator/intentBrief"
 import { type NamedModel, namedModelWords } from "../orchestrator/namedModel";
 import { boundTool, stringEnum } from "../session/tools";
 import type { CardRefusalReason } from "../storage/taskStore";
-import type { SettleRefusal } from "../tasks/taskService";
+import type { SettleRefusal } from "../tasks/taskGraph";
 
 export const PLACEMENT_REQUIREMENTS_PARAM = Type.Object(
   {

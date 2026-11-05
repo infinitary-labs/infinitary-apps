@@ -378,7 +378,7 @@ export class GithubGatewayService {
    * budget only when it is sent.
    */
   async sendAsk(taskId: string, askId: string): Promise<WriteAskSent> {
-    const taken = this.options.tasks.takeWriteAsk(taskId, askId);
+    const taken = this.options.tasks.delivery.takeWriteAsk(taskId, askId);
     if ("refused" in taken) {
       return { ok: false, call: "", place: "", outcome: { kind: "refused", why: taken.refused } };
     }
@@ -386,12 +386,15 @@ export class GithubGatewayService {
       // An integration's ask runs through its binding (`IntegrationsService.sendAsk`).
       const why =
         "an integration's action is not a write where a project lives, so it was not sent";
-      this.options.tasks.recordWriteAskOutcome(taskId, taken.ask.id, { kind: "refused", why });
+      this.options.tasks.delivery.recordWriteAskOutcome(taskId, taken.ask.id, {
+        kind: "refused",
+        why,
+      });
       return { ok: false, call: "", place: "", outcome: { kind: "refused", why } };
     }
     const ask = taken.ask;
     const done = (outcome: WriteAskOutcome, answer?: string): WriteAskSent => {
-      this.options.tasks.recordWriteAskOutcome(taskId, ask.id, outcome);
+      this.options.tasks.delivery.recordWriteAskOutcome(taskId, ask.id, outcome);
       return {
         ok: outcome.kind === "answered" && outcome.status < 300,
         ask,
@@ -581,7 +584,7 @@ export class GithubGatewayService {
       ...(validationEffect ? { validationEffect } : {}),
       at: this.options.now(),
     };
-    this.options.tasks.keepWriteAsk(taskId, ask);
+    this.options.tasks.delivery.keepWriteAsk(taskId, ask);
     const byNumber =
       ask.kind === "gitlab" && target.via === "project" && /^\/projects\/\d+(?:\/|$)/.test(ask.path)
         ? " If it is your own project, name it by its URL-encoded path instead, and the write goes at once."
@@ -916,7 +919,7 @@ export class GithubGatewayService {
     )
       return;
     reserved.startedAt = this.options.now();
-    this.options.tasks.recordChangeEvidence(
+    this.options.tasks.delivery.recordChangeEvidence(
       taskId,
       { ciRepair: ledger },
       { kind: "ci", text: "Failed-job rerun started", actor: "crewmate" },

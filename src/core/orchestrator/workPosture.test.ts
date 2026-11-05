@@ -80,7 +80,7 @@ describe("host-derived work posture", () => {
         })),
       ).toEqual({ state: "active", reason: "turn" });
       // A quota-reset gate holds without a cut-off standing: no hold to name.
-      fixture.tasks.setGate("t", { kind: "quota-reset", ref: "scope" });
+      fixture.tasks.placement.setGate("t", { kind: "quota-reset", ref: "scope" });
       expect(
         deriveWorkPosture(fixture.tasks.get("t") ?? fixture.record, () => ({ ...base, hold })),
       ).toEqual({ state: "paused", reason: "access" });
@@ -92,14 +92,14 @@ describe("host-derived work posture", () => {
   it("counts only finite automatic waits; a closed record never stays active", () => {
     const fixture = record();
     try {
-      fixture.tasks.setGate("t", { kind: "at-time", until: 100 });
+      fixture.tasks.placement.setGate("t", { kind: "at-time", until: 100 });
       expect(
         deriveWorkPosture(fixture.tasks.get("t") ?? fixture.record, () => ({
           ...base,
           timedWait: true,
         })).state,
       ).toBe("active");
-      fixture.tasks.setGate("t", { kind: "at-time" });
+      fixture.tasks.placement.setGate("t", { kind: "at-time" });
       expect(
         deriveWorkPosture(fixture.tasks.get("t") ?? fixture.record, () => ({
           ...base,

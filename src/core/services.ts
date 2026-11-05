@@ -991,7 +991,7 @@ export async function createServices(
     runsOn: (record) => runsOnOf(record),
     place: (record) => placeOf(record),
     computerMove: (record) => computerMoveOf(record),
-    startAttempt: (taskId) => tasks.startAttemptOf(taskId),
+    startAttempt: (taskId) => tasks.starts.startAttemptOf(taskId),
     // The crewmate's solid on the orbit: the slot its newest routing chose.
     tiers: (taskIds) => servedSlots(ledger, taskIds),
     // The summary's line under the model: the same decision, its typed columns.
@@ -2125,7 +2125,7 @@ export async function createServices(
     // The bridge until the secret manager takes the keys over (INF-775, q3).
     secrets: integrationSecrets,
     asks: {
-      keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+      keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
       present: (taskId, ask) => supervisor.askIntegration(taskId, ask),
       keepForFirstmate: (ask) => supervisor.askIntegrationForFirstmate(ask),
       // One ask per panel and action at a time (docs/integrations.md, "Panels").
@@ -2138,8 +2138,9 @@ export async function createServices(
         panelAsks.asking(ask, card);
         return { card };
       },
-      take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
-      record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+      take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
+      record: (taskId, askId, outcome) =>
+        tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
     },
     reads: outsideReads,
     // A panel holds words from outside no longer than their kind does.

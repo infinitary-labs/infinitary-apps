@@ -332,7 +332,7 @@ describe("a kept merge carries a passed review across a pure update", () => {
     expect(carried?.versionReadings?.[later]).toBe("same-change");
     expect(reviewCoversHead(carried, later)).toBe(true);
 
-    tasks.setDevice("oldpass", "other-mac");
+    tasks.placement.setDevice("oldpass", "other-mac");
     seedDelivery(tasks, "oldpass", { reviewCarrySha: undefined, reviewChange: undefined });
     const placed = tasks.get("oldpass");
     expect(
@@ -412,7 +412,7 @@ describe("a local story at the final dispatch boundary", () => {
         head,
         contentHash: presentationContentHash(story),
       };
-      tasks.updateChangePresentation(story.taskId, () => ({
+      tasks.delivery.updateChangePresentation(story.taskId, () => ({
         revisions: [story],
         receipts: [],
         completion: binding,
@@ -423,14 +423,14 @@ describe("a local story at the final dispatch boundary", () => {
           revision: 2,
           whatChanged: ["The meter change has a newly reviewed explanation."],
         };
-        tasks.updateChangePresentation(story.taskId, () => ({
+        tasks.delivery.updateChangePresentation(story.taskId, () => ({
           revisions: [newer],
           receipts: [],
           completion: { revision: 2, head, contentHash: presentationContentHash(newer) },
         }));
       };
       if (when === "restored-wait") {
-        tasks.setPendingSettle(story.taskId, {
+        tasks.delivery.setPendingSettle(story.taskId, {
           mode: "land",
           actor: "captain",
           requestedAt: 1,

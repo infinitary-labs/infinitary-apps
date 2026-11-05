@@ -103,7 +103,7 @@ describe("the presentation pass (INF-1073)", () => {
     const release = f.presentation.hold();
     for (const id of ["crew-1", "crew-2", "crew-3"]) {
       f.postures.set(id, { state: "active", reason: "turn" });
-      f.tasks.setActivity(id, "running");
+      f.tasks.turns.setActivity(id, "running");
       await f.settled();
       expect(f.passes()).toBe(0);
     }
@@ -137,7 +137,7 @@ describe("the presentation pass (INF-1073)", () => {
     // A crewmate's turn starts: its record is written and its posture moves.
     const changedId = "crew-1";
     f.postures.set(changedId, { state: "active", reason: "turn" });
-    f.tasks.setActivity(changedId, "running");
+    f.tasks.turns.setActivity(changedId, "running");
     await f.settled();
     expect(f.passes()).toBe(1);
     // INF-2186: one read for the write, then each live row exactly once.
@@ -159,7 +159,7 @@ describe("the presentation pass (INF-1073)", () => {
     f.reset();
     for (const id of ["crew-1", "crew-2", "crew-3"]) {
       f.postures.set(id, { state: "active", reason: "turn" });
-      f.tasks.setActivity(id, "running");
+      f.tasks.turns.setActivity(id, "running");
     }
     await f.settled();
     expect(f.passes()).toBe(1);
@@ -180,10 +180,10 @@ describe("the presentation pass (INF-1073)", () => {
       reacted = true;
       // Something heard the counts and moved another crewmate.
       f.postures.set("crew-2", { state: "active", reason: "job" });
-      f.tasks.setActivity("crew-2", "running");
+      f.tasks.turns.setActivity("crew-2", "running");
     });
     f.postures.set("crew-1", { state: "active", reason: "turn" });
-    f.tasks.setActivity("crew-1", "running");
+    f.tasks.turns.setActivity("crew-1", "running");
     await f.settled();
     expect(f.passes()).toBe(2);
     expect(f.events.filter((e) => e.type === "crew_counts").at(-1)).toEqual({

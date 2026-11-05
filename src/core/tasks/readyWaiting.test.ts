@@ -213,12 +213,12 @@ describe("ready decisions and saved answers are the waiting facts", () => {
         repoId: null,
         shape: { kind: "research", deliverable: "answer" },
       });
-      h.tasks.dispatch("answer", {
+      h.tasks.starts.dispatch("answer", {
         workspace: { repoDir: "r", worktreeDir: "w", branch: "b" },
         accountId: null,
         assignee: "crew",
       });
-      h.tasks.setActivity("answer", "idle");
+      h.tasks.turns.setActivity("answer", "idle");
       h.subscribe("answer");
       const id = h.cards.emitCrewmateCard(
         "answer",
@@ -258,13 +258,13 @@ describe("ready decisions and saved answers are the waiting facts", () => {
     const h = setup(true);
     try {
       h.tasks.create({ id: "t", title: "Open the pull request", prompt: "p", repoId: null });
-      h.tasks.dispatch("t", {
+      h.tasks.starts.dispatch("t", {
         workspace: { repoDir: "r", worktreeDir: "w", branch: "b" },
         accountId: null,
         assignee: "crew",
       });
-      h.tasks.setActivity("t", "idle");
-      h.tasks.recordReport("t", {
+      h.tasks.turns.setActivity("t", "idle");
+      h.tasks.turns.recordReport("t", {
         text: "The session cannot open a pull request.",
         declared: { wait: { reason: "A required tool is missing." } },
       });
@@ -419,7 +419,7 @@ describe("ready decisions and saved answers are the waiting facts", () => {
         await h.flush();
         h.assertWaiting("t", id);
         expect(h.tasks.get("t")?.gate).toEqual(before?.gate);
-        expect(h.tasks.listReady()).toEqual([]);
+        expect(h.tasks.graph.listReady()).toEqual([]);
         expect(h.tasks.timeline("t").filter((e) => e.kind === "progress")).toEqual(
           timeline.filter((e) => e.kind === "progress"),
         );
@@ -492,12 +492,12 @@ describe("ready decisions and saved answers are the waiting facts", () => {
         repoId: null,
         parentId: "parent",
       });
-      h.tasks.dispatch("s", {
+      h.tasks.starts.dispatch("s", {
         workspace: { repoDir: "r", worktreeDir: "w", branch: "b" },
         accountId: null,
         assignee: "crew",
       });
-      h.tasks.setActivity("s", "running");
+      h.tasks.turns.setActivity("s", "running");
       const id = h.cards.addFirstmateCard({ ...decision, taskId: "t" });
       const hidden = h.cards.emitCrewmateCard("t", { ...decision, id: "hidden" }, "route");
       h.subscribe("t");
@@ -573,7 +573,7 @@ describe("ready decisions and saved answers are the waiting facts", () => {
       await h.flush();
       h.assertWaiting("t", null);
       h.tasks.create({ id: "dead", title: "Dead", prompt: "p", repoId: null });
-      h.tasks.link("dead", "t", "blocks", "host");
+      h.tasks.graph.link("dead", "t", "blocks", "host");
       h.tasks.close("dead", { status: "dropped", reason: "cancelled", actor: "captain" });
       await h.flush();
       h.assertWaiting("t", null);
@@ -598,12 +598,12 @@ describe("ready decisions and saved answers are the waiting facts", () => {
         prompt: "Choose the safer route",
         repoId: null,
       });
-      h.tasks.dispatch("t", {
+      h.tasks.starts.dispatch("t", {
         workspace: { repoDir: "r", worktreeDir: "w", branch: "b" },
         accountId: null,
         assignee: "crew",
       });
-      h.tasks.setActivity("t", "idle");
+      h.tasks.turns.setActivity("t", "idle");
       h.subscribe("t");
       const id = h.cards.emitCrewmateCard("t", decision, "route");
       h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
@@ -616,7 +616,7 @@ describe("ready decisions and saved answers are the waiting facts", () => {
       expect(h.cards.shown(id)).toMatchObject({ minimized: true, awaiting: "answer" });
       // The turn is now running; answering alone cannot make the decision
       // ready before its author's turn ends.
-      h.tasks.setActivity("t", "running");
+      h.tasks.turns.setActivity("t", "running");
       h.cards.replyFromCrewmate("t", {
         cardId: id,
         text: "This route avoids the closed road.",
@@ -624,7 +624,7 @@ describe("ready decisions and saved answers are the waiting facts", () => {
       });
       await h.flush();
       h.assertWaiting("t", null);
-      h.tasks.setActivity("t", "idle");
+      h.tasks.turns.setActivity("t", "idle");
       h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
       await h.flush();
       h.assertWaiting("t", id);

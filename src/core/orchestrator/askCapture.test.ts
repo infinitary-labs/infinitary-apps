@@ -26,14 +26,14 @@ describe("AskCapture", () => {
     const parked = capture.open({ text: "and tell the crew to use cursors" });
     capture.beginTurn();
     capture.endTurn({ asks: [read.id], failed: false, closingText: "ok" });
-    expect(tasks.getAsk(read.id)?.turnState).toBe("closed");
-    expect(tasks.getAsk(parked.id)).toMatchObject({ turnState: "open", taskId: null });
+    expect(tasks.capture.getAsk(read.id)?.turnState).toBe("closed");
+    expect(tasks.capture.getAsk(parked.id)).toMatchObject({ turnState: "open", taskId: null });
 
     // The next turn adopts it, attaches it through a tool and closes it.
     capture.beginTurn();
     expect(capture.attach("t1", "steer_crewmate")).toBe(true);
     capture.endTurn({ asks: [parked.id], failed: false });
-    expect(tasks.getAsk(parked.id)).toMatchObject({
+    expect(tasks.capture.getAsk(parked.id)).toMatchObject({
       turnState: "closed",
       taskId: "t1",
       attachedVia: "tool:steer_crewmate",
@@ -44,12 +44,12 @@ describe("AskCapture", () => {
     const { tasks, capture } = setup();
     seedTask(tasks, { id: "t1", title: "Add pagination", status: "running" });
     const ask = capture.open({ text: "how is pagination going?" });
-    expect(tasks.getAsk(ask.id)?.turnState).toBe("open");
-    expect(tasks.getAsk(ask.id)?.taskId).toBeNull();
+    expect(tasks.capture.getAsk(ask.id)?.turnState).toBe("open");
+    expect(tasks.capture.getAsk(ask.id)?.taskId).toBeNull();
 
     capture.beginTurn();
     expect(capture.attach("t1", "emit_card")).toBe(true);
-    const attached = tasks.getAsk(ask.id);
+    const attached = tasks.capture.getAsk(ask.id);
     expect(attached?.taskId).toBe("t1");
     expect(attached?.attachedVia).toBe("tool:emit_card");
     const askEvents = tasks.timeline("t1").filter((event) => event.kind === "ask");
@@ -62,12 +62,12 @@ describe("AskCapture", () => {
     expect(capture.attach("t1", "steer_crewmate")).toBe(false);
     seedTask(tasks, { id: "t2", title: "Other work", status: "idle" });
     expect(capture.attach("t2", "steer_crewmate")).toBe(true);
-    expect(tasks.getAsk(ask.id)?.taskId).toBe("t1");
+    expect(tasks.capture.getAsk(ask.id)?.taskId).toBe("t1");
     expect(tasks.timeline("t2").some((event) => event.kind === "ask")).toBe(true);
 
     expect(capture.endTurn({ asks: [ask.id], failed: false, closingText: "done" })).toEqual([]);
-    expect(tasks.getAsk(ask.id)?.turnState).toBe("closed");
-    expect(tasks.listOpenAsks()).toEqual([]);
+    expect(tasks.capture.getAsk(ask.id)?.turnState).toBe("closed");
+    expect(tasks.capture.listOpenAsks()).toEqual([]);
     // No question task was filed: the ask was about existing work (D1).
     expect(tasks.list().filter((record) => record.kind === "question")).toHaveLength(0);
   });
@@ -83,7 +83,7 @@ describe("AskCapture", () => {
       closingText: "Carrying on.",
     });
     expect(fallbacks).toEqual([{ askId: ask.id, via: "hint", taskId: "t1" }]);
-    const closed = tasks.getAsk(ask.id);
+    const closed = tasks.capture.getAsk(ask.id);
     expect(closed?.taskId).toBe("t1");
     expect(closed?.attachedVia).toBe("host:fallback");
     expect(closed?.hintTaskId).toBe("t1");
@@ -108,8 +108,8 @@ describe("AskCapture", () => {
     expect(question?.outcome).toBe("All quiet on deck.");
     expect(question?.projectId).toBe("scratch");
     expect(question?.key).toMatch(/^SCR-\d+$/);
-    expect(tasks.getAsk(ask.id)?.taskId).toBe(question?.id);
-    expect(tasks.getAsk(ask.id)?.attachedVia).toBe("host:fallback");
+    expect(tasks.capture.getAsk(ask.id)?.taskId).toBe(question?.id);
+    expect(tasks.capture.getAsk(ask.id)?.attachedVia).toBe("host:fallback");
     const kinds = tasks.timeline(question?.id ?? "").map((event) => event.kind);
     expect(kinds).toEqual(["created", "status", "ask"]);
   });
@@ -117,7 +117,7 @@ describe("AskCapture", () => {
   it("an unknown hint is dropped at open, so the fallback files a question", () => {
     const { tasks, capture } = setup();
     const ask = capture.open({ text: "hello", hintTaskId: "gone" });
-    expect(tasks.getAsk(ask.id)?.hintTaskId).toBeNull();
+    expect(tasks.capture.getAsk(ask.id)?.hintTaskId).toBeNull();
     capture.beginTurn();
     const [fallback] = capture.endTurn({ asks: [ask.id], failed: false });
     expect(fallback?.via).toBe("question");
@@ -129,8 +129,8 @@ describe("AskCapture", () => {
     const ask = capture.open({ text: "ship it" });
     capture.beginTurn();
     const [fallback] = capture.endTurn({ asks: [ask.id], failed: true, error: "provider 500" });
-    expect(tasks.getAsk(ask.id)?.turnState).toBe("failed");
-    expect(tasks.getAsk(ask.id)?.taskId).toBe(fallback?.taskId);
+    expect(tasks.capture.getAsk(ask.id)?.turnState).toBe("failed");
+    expect(tasks.capture.getAsk(ask.id)?.taskId).toBe(fallback?.taskId);
     expect(tasks.get(fallback?.taskId ?? "")?.outcome).toBe("hit a problem: provider 500");
   });
 
@@ -145,9 +145,9 @@ describe("AskCapture", () => {
     expect(capture.current()?.id).toBe(second.id);
     capture.attach("t2", "interrupt_crewmate");
     expect(capture.endTurn({ asks: [first.id, second.id], failed: false })).toEqual([]);
-    expect(tasks.getAsk(first.id)?.taskId).toBe("t1");
-    expect(tasks.getAsk(second.id)?.taskId).toBe("t2");
-    expect(tasks.listOpenAsks()).toEqual([]);
+    expect(tasks.capture.getAsk(first.id)?.taskId).toBe("t1");
+    expect(tasks.capture.getAsk(second.id)?.taskId).toBe("t2");
+    expect(tasks.capture.listOpenAsks()).toEqual([]);
   });
 
   it("attaches nothing on an operational wake, and reconciles asks a dead process left open", () => {
@@ -164,8 +164,8 @@ describe("AskCapture", () => {
     const rebooted = new AskCapture(new TaskService({ db, strict: true, now: () => 2_000 }));
     const [filed] = rebooted.reconcileStranded([]);
     expect(filed?.via).toBe("question");
-    expect(tasks.getAsk(stranded.id)?.turnState).toBe("failed");
-    expect(tasks.getAsk(stranded.id)?.taskId).toBe(filed?.taskId);
+    expect(tasks.capture.getAsk(stranded.id)?.turnState).toBe("failed");
+    expect(tasks.capture.getAsk(stranded.id)?.taskId).toBe(filed?.taskId);
     expect(rebooted.reconcileStranded([])).toEqual([]);
   });
 

@@ -39,8 +39,6 @@ export const OVER_CEILING: readonly string[] = [
   "src/core/orchestrator/firstmateAgent.ts",
   "src/core/orchestrator/wakes.ts",
   "src/core/services.ts",
-  "src/core/tasks/taskProtocol.test.ts",
-  "src/core/tasks/taskService.ts",
   "tests/e2e/mockProvider.ts",
   "tests/e2e/task-browser.spec.ts",
   "tests/helpers/phoneHome.ts",

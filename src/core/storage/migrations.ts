@@ -606,9 +606,9 @@ export const MIGRATIONS: readonly Migration[] = [
   // columns undoes it.
   migrateIdleRecovery,
   // 46: the two graph gaps (primitives review P1). A task's basis verdict
-  // is derived at every read (`TaskService.basisHolds`), and the review a
+  // is derived at every read (`TaskService.graph.basisHolds`), and the review a
   // builder's verdict came from is read off the parent edge
-  // (`TaskService.verdictReviewOf`), so the stamps that cached them leave
+  // (`TaskService.graph.verdictReviewOf`), so the stamps that cached them leave
   // the record: `basis_verified` from the shape and `reviewTaskId` from the
   // delivery facts. Reversible: both are derived from what stays - the
   // basis task's state and the review's parent edge.
@@ -835,7 +835,7 @@ export const MIGRATIONS: readonly Migration[] = [
   // docs/helper.md "Holding a conversation"): the id of the paired computer
   // that runs work holding its conversation, or null for this Mac. Every row
   // that exists runs here, so nothing is backfilled. Written only by
-  // `TaskService.setDevice`. No published view reads the column. Additive
+  // `TaskService.placement.setDevice`. No published view reads the column. Additive
   // and reversible: dropping the column undoes it.
   (db) => addColumn(db, "tasks", "device_id", "TEXT"),
   // 64: where a project's tasks run (multi-machine piece 11, FI3-690;
@@ -883,7 +883,7 @@ export const MIGRATIONS: readonly Migration[] = [
   // plan; docs/composer.md "The last turn"), as JSON `{ text, problem? }`,
   // so the last turn above the input comes back after a relaunch. Null
   // until a turn that read the message ends, and on every row written
-  // before it. Written only by `TaskService.setAskReply`. No published view
+  // before it. Written only by `TaskService.capture.setAskReply`. No published view
   // reads the column. Additive and reversible: dropping the column undoes it.
   (db) => addColumn(db, "captain_asks", "reply", "TEXT"),
   // 69: a merge card's risk assessment (FI3-1128; docs/card-authoring.md

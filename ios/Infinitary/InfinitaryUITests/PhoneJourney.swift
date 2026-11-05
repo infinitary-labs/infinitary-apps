@@ -909,7 +909,8 @@ import XCTest
     }
 
     /// INF-2568, the same report and the captain's added ask: "scrolling a card should dismiss the keyboard if keyboard is
-    /// up". Data: the merge card, whose facts and required actions make the whole card scroll with its reply inside.
+    /// up". Data: the merge card, whose facts and required actions make the whole card scroll with its reply inside on
+    /// the iPhone; on the iPad it fits whole above the keyboard, so there the flicks check a card that fits (INF-2737).
     /// Completion: a reply growing to three lines stays above the card's lower edge, upright and on its side, and on the
     /// iPad's maximized card; a flick of the card with the keyboard up, from the reply or the message box, closes the
     /// keyboard. Platform and resources as testKeyboardOverPinnedCard; the merge fixture runs once per home.

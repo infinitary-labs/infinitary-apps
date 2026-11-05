@@ -286,6 +286,8 @@ private struct PhoneCardPane: View {
     /// Counts the moments the face's scroller follows its focused field's caret: the field taking the focus or growing,
     /// and the keyboard shortening the scroller.
     @State private var replyGrew = 0
+    /// A scroller on the card is moving: dragged, settling from a drag, or following the caret.
+    @State private var scrollMoving = false
 
     enum CardSide { case face, back }
 
@@ -462,9 +464,15 @@ private struct PhoneCardPane: View {
 
     /// A card's scroller closes the keyboard as a person starts to scroll it, never as the scroller follows the caret.
     private func scrolled(_ phase: ScrollPhase) {
+        scrollMoving = phase != .idle
         // INF-2568, the captain: "scrolling a card should dismiss the keyboard if keyboard is up".
         if phase == .interacting && messageContext.keyboardUp { dismissPhoneKeyboard() }
     }
+
+    /// INF-2737: a scroller only starts a drag when its content overflows or it bounces, so while the keyboard is up a
+    /// card or thread that fits whole above it bounces too, and a flick on it starts the scroll that closes the keyboard.
+    /// It bounces on until that scroll settles, after the keyboard has gone; with the keyboard down, one that fits holds still.
+    private var bounce: ScrollBounceBehavior { messageContext.keyboardUp || scrollMoving ? .always : .basedOnSize }
 
     /// The latest line and Card turn the card over, carrying a typing captain's focus to the other side's field; a send
     /// turns it too, but drops the keyboard, as it did before, so the whole card shows above where the keyboard was.
@@ -503,9 +511,10 @@ private struct PhoneCardPane: View {
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
                 }
                 .frame(maxHeight: contentHeight > 0 ? contentHeight : nil)
-                .scrollBounceBehavior(.basedOnSize)
+                .scrollBounceBehavior(bounce)
+                // A body that fits and is pulled down past its top, as it bounces, still has nothing below the choices.
                 .onScrollGeometryChange(for: Bool.self) { geometry in
-                    geometry.contentOffset.y + geometry.containerSize.height < geometry.contentSize.height - 1
+                    max(geometry.contentOffset.y, 0) + geometry.containerSize.height < geometry.contentSize.height - 1
                 } action: { _, below in runsOn = below }
                 .accessibilityIdentifier("card-scroll")
                 .scrollDismissesKeyboard(.interactively)
@@ -574,7 +583,7 @@ private struct PhoneCardPane: View {
             }
             .frame(maxHeight: threadHeight > 0 ? threadHeight : nil)
             .defaultScrollAnchor(.bottom)
-            .scrollBounceBehavior(.basedOnSize)
+            .scrollBounceBehavior(bounce)
             .scrollDismissesKeyboard(.interactively)
             .onScrollPhaseChange { _, phase in scrolled(phase) }
             .accessibilityIdentifier("card-thread")

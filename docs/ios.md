@@ -159,6 +159,7 @@ The keyboard its reply raises never reshapes the frame (INF-1524), so the card s
 A reply inside the scroller of a card that scrolls whole keeps its last line in view as it grows.
 On an iPhone on its side the keyboard leaves about two lines of room, so while it is up the pager steps aside, and while a card's reply types the message box steps aside too, keeping its draft.
 A person starting to scroll a card or its thread closes the keyboard; the scroller following the caret does not.
+While the keyboard is up, a card or thread that fits whole above it bounces under a flick, so that flick closes the keyboard too (INF-2737); with the keyboard down, one that fits does not move.
 When the home is on `CARD_SEEN_UPDATE_SINCE` (major 13) or later, or advertises `card-current-update-seen`, every snapshot supplies the owner's exact released-update seen state, which drives unread counts and the next chevron's dot.
 A sighting acknowledges the exact released update only after the pane draws while visible, active and connected; reading never hides a note or changes another view's selection.
 The session consumes initial state before reporting again on reconnect and never queues offline sightings.

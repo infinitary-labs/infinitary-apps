@@ -2,8 +2,10 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   devicePhotos,
+  PHONE_JOURNEY,
   PHONE_PARTS,
   partSelection,
+  partTestStarted,
   phoneAnimationWaits,
   phoneExecutionArguments,
   phoneJobs,
@@ -38,9 +40,10 @@ describe("the phone check's built test plan", () => {
 
 // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the journey's four parts run
 // side by side, each from its own simulator, and every check the single journey made stays.
-// Every test the Oct 21 build ran, read from the four parts' result bundles on the Mac mini.
+// Every test the build has: Xcode 27.1's -enumerate-tests of the phone check's own build of the
+// scheme (INF-2625, which retired testCards, testJoinAndRecover and testTalkAndTasks from it).
 const everyTest: string[] = JSON.parse(
-  readFileSync("tests/fixtures/phone-test-plan/xcode-26.4-tests.json", "utf8"),
+  readFileSync("tests/fixtures/phone-test-plan/xcode-27.1-tests.json", "utf8"),
 );
 // xcodebuild's -only-testing and -skip-testing name a target, a class or a test, matched whole.
 const chosen = (selection: string[], test: string) => {
@@ -65,6 +68,28 @@ describe("the phone journey's parts", () => {
     expect(
       partsRunning("InfinitaryTests/RecoveryTests/testMissingCertificateReusesTheStoredKey"),
     ).toEqual(["rest"]);
+  });
+  // INF-2625's phone guard: a part names a test the build has, so no part selects nothing.
+  it("name only tests the build has", () => {
+    for (const part of PHONE_PARTS)
+      expect(everyTest, part.name).toContain(`${PHONE_JOURNEY}/${part.test}`);
+  });
+  // INF-2625's phone guard: XCTest passes a selection that matched no test, so the gate reads that the
+  // part's own test started. The log is the iPhone's join-read part in the 0.8.0 phone release check.
+  it("start their own journey test, read from XCTest's own lines", () => {
+    const joinRead = readFileSync(
+      "tests/fixtures/phone-test-plan/join-read-xcodebuild.log",
+      "utf8",
+    );
+    expect(partTestStarted("join-read", joinRead)).toBe(true);
+    expect(partTestStarted("cards-form", joinRead)).toBe(false);
+    expect(partTestStarted("rest", joinRead)).toBe(false);
+    expect(
+      partTestStarted("join-read", joinRead.replaceAll("PhoneJourney", "PhoneJourneyParts")),
+    ).toBe(false);
+    expect(() => partTestStarted("everything", joinRead)).toThrow(
+      /No phone journey part is named everything/,
+    );
   });
   it("still runs a test no part names, such as a new or renamed one", () => {
     expect(partsRunning("InfinitaryUITests/PhoneJourney/testSomethingNew")).toEqual(["rest"]);

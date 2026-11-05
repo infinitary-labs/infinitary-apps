@@ -104,6 +104,14 @@ export function partSelection(name: string, waitsOnly = false): string[] {
   return PHONE_PARTS.slice(0, -1).map((part) => `-skip-testing:${PHONE_JOURNEY}/${part.test}`);
 }
 
+/** INF-2625's phone guard: a part passes on xcodebuild's exit status, and a test XCTest never found fails nothing, so
+ * the gate also asks that the part's own journey test started, read from XCTest's own "Test Case ... started" line. */
+export function partTestStarted(name: string, output: string): boolean {
+  const part = PHONE_PARTS.find((each) => each.name === name);
+  if (!part) throw new Error(`No phone journey part is named ${name}`);
+  return output.includes(`Test Case '-[${PHONE_JOURNEY.replace("/", ".")} ${part.test}]' started.`);
+}
+
 /** Every device's parts in start order: each part on the slower iPad first, then on the iPhone.
  * INF-1438: the gate runs each device's parts in this order on the one simulator it starts for that device. */
 export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHONE_PARTS.map((part) => part.name)) {

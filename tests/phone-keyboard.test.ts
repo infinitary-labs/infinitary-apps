@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { gunzipSync } from "node:zlib";
@@ -1619,5 +1619,22 @@ describe("a tap's outcome on a host too starved to read its witness (INF-2076)",
     expect(kept.kill).toHaveBeenCalled();
     clock.stop();
     await observer.close();
+  });
+});
+
+// INF-2625's phone guard: the journey's display requests wait `displayBudget` seconds, the budget this mirrors
+// (INF-1786); a split of PhoneJourney may move it into any of the journey's files, and it stays the one value.
+describe("the journey's display request budget", () => {
+  it("is the budget PhoneJourney gives its display requests", () => {
+    const journey = "ios/Infinitary/InfinitaryUITests";
+    const budgets = readdirSync(journey)
+      .filter((file) => file.endsWith(".swift"))
+      .flatMap((file) => [
+        ...readFileSync(join(journey, file), "utf8").matchAll(
+          /\blet displayBudget: TimeInterval = ([\d_]+)\b/g,
+        ),
+      ])
+      .map((match) => Number((match[1] as string).replaceAll("_", "")));
+    expect(budgets).toEqual([PHONE_DISPLAY_REQUEST_BUDGET_MS / 1000]);
   });
 });

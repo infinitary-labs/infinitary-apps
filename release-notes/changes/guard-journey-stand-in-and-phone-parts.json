@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "guard-journey-stand-in-and-phone-parts",
+      "reason": "Tests only: new tests pin the journey stand-in's answers and readers, the phone check now fails a part whose own journey test never started, and a stand-in change runs the phone check. The app shows nothing new."
+    }
+  ]
+}

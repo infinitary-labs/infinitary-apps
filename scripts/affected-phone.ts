@@ -23,6 +23,8 @@ const INPUTS = [
   "tests/helpers/phoneLauncherLog.ts", "tests/helpers/phoneLookupWait.ts", "tests/helpers/phoneProxyLaunches.ts",
   // INF-662: each device's own test home in the one build's test plan.
   "scripts/phone-test-plan.ts",
+  // INF-2625: the phone check's test home answers the phone's crewmates and first mate through the journey stand-in.
+  "tests/e2e/mockProvider.ts",
 ] as const;
 // INF-827 (the captain's "skip changes to unused setup"): the device gates never run this
 // chooser or scripts/phone-test-home.ts, so they are not inputs. The chooser runs before the

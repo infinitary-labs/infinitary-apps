@@ -4,6 +4,7 @@ import type { HostNotifications } from "@core/host";
 import { CardNotifier } from "@core/notifications";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { cardsSnapshotSchema } from "@shared/cards";
+import { sideToUpdate } from "@shared/contractFeatures";
 import { HERE, HOME } from "@shared/deviceNames";
 import { splitDialAddress, type ThisMac } from "@shared/devices";
 import {
@@ -15,7 +16,6 @@ import {
   PROTOCOL_VERSION,
   type PushChannel,
   parseInvokeRequest,
-  sideToUpdate,
 } from "@shared/ipc";
 import { readKeepingUnknown } from "@shared/openLists";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";

@@ -1,17 +1,15 @@
 import { existsSync, renameSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { COMPUTER, HERE } from "@shared/deviceNames";
-import { awayWord, type ComputerReach } from "@shared/devices";
-import type { FmEvent } from "@shared/events";
 import {
-  type InvokeRequest,
-  type InvokeResponse,
   speaksChangePresentations,
   speaksKnowledge,
   speaksSeed,
   speaksTempCleanup,
-  type WorkInvokeChannel,
-} from "@shared/ipc";
+} from "@shared/contractFeatures";
+import { COMPUTER, HERE } from "@shared/deviceNames";
+import { awayWord, type ComputerReach } from "@shared/devices";
+import type { FmEvent } from "@shared/events";
+import type { InvokeRequest, InvokeResponse, WorkInvokeChannel } from "@shared/ipc";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import {
   type PlacedEventRecord,

@@ -1,5 +1,5 @@
 import { APP_FRAME_SCHEME } from "../csp";
-import { FRAME_BRIDGE_SHA256 } from "./bridge";
+import { FRAME_BRIDGE_SHA256 } from "./frameScript";
 
 /**
  * The containment constants every plugin-facing frame shares (D6, "the

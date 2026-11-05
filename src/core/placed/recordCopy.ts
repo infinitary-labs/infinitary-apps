@@ -10,7 +10,7 @@ import {
   writeSync,
 } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
-import { speaksRecordRefresh } from "@shared/ipc";
+import { speaksRecordRefresh } from "@shared/contractFeatures";
 import type { WorkOrderResponse } from "@shared/work";
 import { errorText } from "../personal/errorText";
 import type { WorkDevices } from "./workDevices";

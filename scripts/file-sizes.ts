@@ -44,8 +44,6 @@ export const OVER_CEILING: readonly string[] = [
   "src/core/services.ts",
   "src/core/tasks/taskProtocol.test.ts",
   "src/core/tasks/taskService.ts",
-  "src/shared/ipc.ts",
-  "src/shared/plugins/bridge.ts",
   "tests/e2e/mockProvider.ts",
   "tests/e2e/task-browser.spec.ts",
   "tests/helpers/phoneHome.ts",

@@ -762,8 +762,8 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 
 A journey calls the window's interface directly, such as `window.infinitary.retention.scope()`, so a changed answer breaks it with no hook, sentence or symbol of its own changing.
 `knowledge-gate.spec.ts` compares that answer whole, so a new field in it breaks the journey (INF-1136).
-Rule 7 reads a message as a channel of the contract, `invokeContract` or `pushContract` in `src/shared/ipc.ts`.
-The channel changes when the code of its entry changes, or the code of a declaration of `src/shared/ipc.ts` that the entry uses, directly or through another declaration there.
+Rule 7 reads a message as a channel of the contract, `invokeContract` or `pushContract` in `src/shared/ipc.ts`, with the groups of channels they spread in from their own modules (`...talkChannels`, `src/shared/channels/`).
+The channel changes when the code of its entry changes, or the code of a declaration of the entry's own module that the entry uses, directly or through another declaration there.
 A method of the preload's `window.infinitary` object changes with its channel or with its own code in `src/preload/api.ts` or `src/preload/index.ts`, and a read of `readCatalog` in `src/shared/reads.ts` with its channel, its own entry or a declaration of that module it uses.
 The journey names the method by its whole path, as `window.infinitary.retention.scope` or `window.firstmate.retention.scope`, or holds the read's name as its own quoted string.
 A comment or a line break is not code, so an edited comment on a channel chooses nothing.

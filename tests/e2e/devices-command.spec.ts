@@ -5,6 +5,7 @@ import { writeInstalled } from "@core/helper/background";
 import { joinHome } from "@core/helper/join";
 import { catalogRefreshesSettled } from "@core/pi/modelRuntime";
 import { expect, test } from "@playwright/test";
+import { WORK_UPDATE_SINCE } from "@shared/contractFeatures";
 import {
   type DeviceView,
   deviceJoinedLine,
@@ -14,7 +15,6 @@ import {
   parsePairingLink,
 } from "@shared/devices";
 import { deviceUpdateBody, deviceUpdateCardId, deviceUpdateTitle } from "@shared/deviceUpdateNudge";
-import { WORK_UPDATE_SINCE } from "@shared/ipc";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import {
   NO_NEW_WORK,

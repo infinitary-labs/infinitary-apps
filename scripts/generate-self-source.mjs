@@ -14,16 +14,21 @@ const repoRoot = join(here, "..");
 
 // The agents' tool sets come from the tool spec (primitives P7), the same
 // entries the runtimes serve: the Firstmate's set and every crewmate tool,
-// which both crewmate runtimes generate from one list. The spec is app core,
-// so it loads through the Vite module runner the other scripts use.
-export async function loadToolSpec() {
+// which both crewmate runtimes generate from one list. The channels come from
+// the contract itself, wherever its groups of channels are written. Both are
+// app code, so they load through the Vite module runner the other scripts use.
+export async function loadLiveSpecs() {
   const runner = await openModuleRunner();
   try {
     const { FIRSTMATE_TOOLS } = await runner.import(join(repoRoot, "src/core/session/tools.ts"));
     const { crewmateToolManifest } = await runner.import(
       join(repoRoot, "src/core/pi/crewmateTaskTools.ts"),
     );
-    return { firstmate: [...FIRSTMATE_TOOLS], crewmate: crewmateToolManifest() };
+    const { invokeContract, pushContract } = await runner.import(join(repoRoot, "src/shared/ipc.ts"));
+    return {
+      tools: { firstmate: [...FIRSTMATE_TOOLS], crewmate: crewmateToolManifest() },
+      ipc: { invoke: Object.keys(invokeContract), push: Object.keys(pushContract) },
+    };
   } finally {
     await runner.close();
   }
@@ -37,16 +42,6 @@ function quotedStrings(text) {
   return [...text.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
 }
 
-function blockAfter(source, marker) {
-  const start = source.indexOf(marker);
-  if (start < 0) throw new Error(`generate-self-source: missing ${marker}`);
-  // The object's own closing line, whatever follows `as const` on it
-  // (`satisfies` checks the invoke contract's declarations).
-  const end = source.slice(start).search(/^\} as const\b/m);
-  if (end < 0) throw new Error(`generate-self-source: unterminated ${marker}`);
-  return source.slice(start, start + end);
-}
-
 function outputBundleFor(sourcePath) {
   // The core is bundled into the main process today; a second host would
   // bundle the same tree into itself (daemon study D1).
@@ -58,16 +53,9 @@ function outputBundleFor(sourcePath) {
   return undefined;
 }
 
-export function buildSelfMap({ version, commit, trackedFiles, sources, tools }) {
-  const ipcSrc = sources.ipc;
+export function buildSelfMap({ version, commit, trackedFiles, sources, tools, ipc }) {
   const cardsSrc = sources.cards;
   const eventsSrc = sources.events;
-  const invoke = [...blockAfter(ipcSrc, "export const invokeContract").matchAll(/^ {2}"((?:inf|fm):[^"]+)":/gm)].map(
-    (match) => match[1],
-  );
-  const push = [...blockAfter(ipcSrc, "export const pushContract").matchAll(/^ {2}"((?:inf|fm):[^"]+)":/gm)].map(
-    (match) => match[1],
-  );
   // One card shape (cards/tasks/agents P1): the wire has no kind; the map
   // records the presentations a card derives from what it is.
   const kindsMatch = cardsSrc.match(/CARD_PRESENTATIONS = \[([^\]]+)\] as const/);
@@ -84,7 +72,7 @@ export function buildSelfMap({ version, commit, trackedFiles, sources, tools }) 
     version,
     commit,
     modules,
-    ipc: { invoke, push },
+    ipc,
     tools: tools.firstmate,
     crewmateTools: tools.crewmate,
     prompts: {
@@ -123,11 +111,10 @@ export async function generateSelfSource({ outDir, writeRepoMap = false } = {}) 
     commit,
     trackedFiles,
     sources: {
-      ipc: readFileSync(join(repoRoot, "src/shared/ipc.ts"), "utf8"),
       cards: readFileSync(join(repoRoot, "src/shared/cards.ts"), "utf8"),
       events: readFileSync(join(repoRoot, "src/shared/events.ts"), "utf8"),
     },
-    tools: await loadToolSpec(),
+    ...(await loadLiveSpecs()),
   });
   const mapJson = `${JSON.stringify(map, null, 2)}\n`;
 

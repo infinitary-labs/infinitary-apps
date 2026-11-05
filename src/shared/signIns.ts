@@ -332,7 +332,7 @@ export function isSignInOrderChannel(channel: string): channel is SignInOrderCha
 
 /**
  * The work requests a computer asks its home about its sign-ins, declared
- * into `invokeContract` (src/shared/ipc.ts) with `reach: "work"`.
+ * into `invokeContract` (src/shared/channels/work.ts) with `reach: "work"`.
  */
 export const signInWorkRequests = {
   "inf:work:sign-in": {

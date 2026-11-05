@@ -6,13 +6,13 @@ import { join } from "node:path";
 import { connect, createServer as createTlsServer } from "node:tls";
 import { cardMessageSchema, cardSchema, cardThreadSchema, pastCardSchema } from "@shared/cards";
 import { CONNECTION_CLOSE, PAIR_PATH } from "@shared/connection";
+import { PLACED_WORK_SINCE } from "@shared/contractFeatures";
 import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
 import {
   type CoreInvokeChannel,
   HOME_CAPABILITIES,
   isRunViewInvokeChannel,
-  PLACED_WORK_SINCE,
   PROTOCOL_VERSION,
   RUN_HOME_ONLY_CHANNELS,
 } from "@shared/ipc";

@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
+import { speaksCustomApi } from "@shared/contractFeatures";
 import { HERE } from "@shared/deviceNames";
 import { type ComputerReach, type DeviceView, deviceRunsWork } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
-import { speaksCustomApi } from "@shared/ipc";
 import { catalogEntry } from "@shared/providers";
 import {
   type ComputerSignIns,

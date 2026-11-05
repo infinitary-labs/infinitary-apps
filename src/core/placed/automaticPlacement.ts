@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
+import { speaksSince } from "@shared/contractFeatures";
 import { chipWords, HERE, SYSTEM_WORDS } from "@shared/deviceNames";
 import { type ComputerReach, type DeviceView, deviceLabel, deviceRunsWork } from "@shared/devices";
 import { forgeOf, type KnownForgeHost } from "@shared/forge";
-import { speaksSince } from "@shared/ipc";
 import {
   PLACEMENT_FACT_MAX_AGE_MS,
   PLACEMENT_FACTS_ORDER,

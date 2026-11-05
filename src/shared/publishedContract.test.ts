@@ -3,19 +3,21 @@ import { join } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 import {
-  CORE_INVOKE_CHANNELS,
-  CORE_PUSH_CHANNELS,
   CUSTOM_API_SIGN_INS_SINCE,
   FORGE_SIGN_INS_SINCE,
-  HOST_INVOKE_CHANNELS,
   PLACED_WORK_SINCE,
+  SIGN_INS_SINCE,
+  WORK_DOWNLOAD_SINCE,
+  WORK_UPDATE_SINCE,
+} from "./contractFeatures";
+import {
+  CORE_INVOKE_CHANNELS,
+  CORE_PUSH_CHANNELS,
+  HOST_INVOKE_CHANNELS,
   PROTOCOL_MAJORS_BEHIND,
   PROTOCOL_VERSION,
   parseInvokeRequest,
-  SIGN_INS_SINCE,
   VIEW_FLOOR,
-  WORK_DOWNLOAD_SINCE,
-  WORK_UPDATE_SINCE,
 } from "./ipc";
 import {
   CONTRACT_FILE,

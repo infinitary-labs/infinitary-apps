@@ -1,3 +1,4 @@
+import { posix } from "node:path";
 import ts from "typescript";
 
 /**
@@ -9,9 +10,10 @@ import ts from "typescript";
  * that answer whole, so a new field in it breaks the journey (INF-1136).
  *
  * A message is a channel of the contract (`invokeContract` or
- * `pushContract` in `src/shared/ipc.ts`). It changes when its entry's code
- * changes, or a declaration of the contract's own module that the entry
- * uses. A schema the contract imports is not followed: the task and card
+ * `pushContract` in `src/shared/ipc.ts`, with the groups of channels it
+ * spreads in from their own modules, such as `src/shared/channels/`). It
+ * changes when its entry's code changes, or a declaration of the entry's own
+ * module that the entry uses. A schema the contract imports is not followed: the task and card
  * schemas there change with most changes, and most journeys call a method
  * that carries them. The window reaches a message through a method of the
  * preload's `window.infinitary` object, whose own code can change too, or
@@ -30,11 +32,8 @@ export const PRELOAD = "src/preload/api.ts";
 const PRELOAD_FILES = [PRELOAD, "src/preload/index.ts"];
 const READS = "src/shared/reads.ts";
 
-/** The objects whose entries are compared one by one, in their modules. */
-const CONTAINERS = new Map([
-  [CONTRACT, ["invokeContract", "pushContract"]],
-  [READS, ["readCatalog"]],
-]);
+/** The contract's own objects, whose entries are compared one by one with those they spread in. */
+const CONTRACT_OBJECTS = ["invokeContract", "pushContract"];
 
 type Read = (file: string) => string | undefined;
 
@@ -71,7 +70,7 @@ function partOf(node: ts.Node, source: ts.SourceFile): Part {
 }
 
 /** A module's top-level declarations, but for the objects whose entries are compared one by one. */
-function declarationsOf(file: string, text: string): Map<string, Part> {
+function declarationsOf(file: string, text: string, objects: readonly string[]): Map<string, Part> {
   const source = parse(file, text);
   const parts = new Map<string, Part>();
   for (const statement of source.statements) {
@@ -99,14 +98,19 @@ function declarationsOf(file: string, text: string): Map<string, Part> {
       );
     }
   }
-  for (const name of CONTAINERS.get(file) ?? []) parts.delete(name);
+  for (const name of objects) parts.delete(name);
   return parts;
 }
 
 /** The declarations the change edits in one module, and those that use one it edits. */
-function changedDeclarations(file: string, before: string, after: string): Set<string> {
-  const old = declarationsOf(file, before);
-  const next = before === after ? old : declarationsOf(file, after);
+function changedDeclarations(
+  file: string,
+  before: string,
+  after: string,
+  objects: readonly string[],
+): Set<string> {
+  const old = declarationsOf(file, before, objects);
+  const next = before === after ? old : declarationsOf(file, after, objects);
   const all = new Set([...old.keys(), ...next.keys()]);
   const changed = new Set([...all].filter((name) => old.get(name)?.code !== next.get(name)?.code));
   let grew = changed.size > 0;
@@ -124,10 +128,9 @@ function changedDeclarations(file: string, before: string, after: string): Set<s
   return changed;
 }
 
-/** The entries of a top-level object literal, such as the contract's channels or the read catalog. */
-function entriesOf(file: string, text: string, object: string): Map<string, Part> {
-  const source = parse(file, text);
-  const entries = new Map<string, Part>();
+/** The properties of a top-level object literal, such as the contract's channels or the read catalog. */
+function propertiesOf(source: ts.SourceFile, object: string): ts.ObjectLiteralElementLike[] {
+  const properties: ts.ObjectLiteralElementLike[] = [];
   for (const statement of source.statements) {
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
@@ -135,15 +138,51 @@ function entriesOf(file: string, text: string, object: string): Map<string, Part
       let value = declaration.initializer;
       while (value && (ts.isAsExpression(value) || ts.isSatisfiesExpression(value)))
         value = value.expression;
-      if (!value || !ts.isObjectLiteralExpression(value)) continue;
-      for (const property of value.properties) {
-        const name = property.name;
-        if (name && (ts.isStringLiteral(name) || ts.isIdentifier(name)))
-          entries.set(name.text, partOf(property, source));
-      }
+      if (value && ts.isObjectLiteralExpression(value)) properties.push(...value.properties);
     }
   }
+  return properties;
+}
+
+/** The named entries of a top-level object literal, by name. */
+function entriesOf(file: string, text: string, object: string): Map<string, Part> {
+  const source = parse(file, text);
+  const entries = new Map<string, Part>();
+  for (const property of propertiesOf(source, object)) {
+    const name = property.name;
+    if (name && (ts.isStringLiteral(name) || ts.isIdentifier(name)))
+      entries.set(name.text, partOf(property, source));
+  }
   return entries;
+}
+
+/**
+ * The objects the contract spreads into its own (`...talkChannels`), by the
+ * module each is imported from, with the contract's own two objects. An
+ * object built by a call (`...channelsOf(workRequests)`) is not followed:
+ * like a schema the contract imports, its entries are not the window's.
+ */
+function contractObjects(text: string): Map<string, Set<string>> {
+  const source = parse(CONTRACT, text);
+  const modules = new Map<string, string>();
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier))
+      continue;
+    const specifier = statement.moduleSpecifier.text;
+    const bindings = statement.importClause?.namedBindings;
+    if (!specifier.startsWith(".") || !bindings || !ts.isNamedImports(bindings)) continue;
+    const file = `${posix.join(posix.dirname(CONTRACT), specifier)}.ts`;
+    for (const element of bindings.elements) modules.set(element.name.text, file);
+  }
+  const objects = new Map([[CONTRACT, new Set(CONTRACT_OBJECTS)]]);
+  for (const object of CONTRACT_OBJECTS)
+    for (const property of propertiesOf(source, object)) {
+      if (!ts.isSpreadAssignment(property) || !ts.isIdentifier(property.expression)) continue;
+      const name = property.expression.text;
+      const file = modules.get(name);
+      if (file) objects.set(file, new Set([...(objects.get(file) ?? []), name]));
+    }
+  return objects;
 }
 
 /**
@@ -232,11 +271,15 @@ export function changedMessages(
   readBefore: Read,
 ): WindowMessages {
   const messages: WindowMessages = { methods: new Map(), reads: new Map() };
+  const sides = (file: string) => [readBefore(file) ?? "", read(file) ?? ""] as const;
+  const contract = new Map<string, Set<string>>();
+  for (const text of new Set(sides(CONTRACT)))
+    for (const [file, objects] of contractObjects(text))
+      contract.set(file, new Set([...(contract.get(file) ?? []), ...objects]));
   if (
-    !changed.some((file) => file === CONTRACT || file === READS || PRELOAD_FILES.includes(file))
+    !changed.some((file) => contract.has(file) || file === READS || PRELOAD_FILES.includes(file))
   )
     return messages;
-  const sides = (file: string) => [readBefore(file) ?? "", read(file) ?? ""] as const;
   const compare = (
     file: string,
     object: string,
@@ -253,10 +296,12 @@ export function changedMessages(
     }
     return result;
   };
-  const contract = changedDeclarations(CONTRACT, ...sides(CONTRACT));
   const channels = new Set<string>();
-  for (const object of CONTAINERS.get(CONTRACT) ?? [])
-    for (const channel of compare(CONTRACT, object, contract).keys()) channels.add(channel);
+  for (const [file, objects] of contract) {
+    const edited = changedDeclarations(file, ...sides(file), [...objects]);
+    for (const object of objects)
+      for (const channel of compare(file, object, edited).keys()) channels.add(channel);
+  }
   const methodsOf = (side: 0 | 1) =>
     new Map(PRELOAD_FILES.flatMap((file) => [...windowMethods(file, sides(file)[side])]));
   const old = methodsOf(0);
@@ -265,7 +310,7 @@ export function changedMessages(
     const channel = changeOf(old.get(method), next.get(method), new Set(), channels);
     if (channel !== undefined) messages.methods.set(method, channel);
   }
-  const reads = changedDeclarations(READS, ...sides(READS));
+  const reads = changedDeclarations(READS, ...sides(READS), ["readCatalog"]);
   messages.reads = compare(READS, "readCatalog", reads, channels);
   return messages;
 }

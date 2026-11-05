@@ -556,7 +556,7 @@ const recordKnowledgeInputSchema = z.object({
 
 /**
  * The work requests a computer that runs work asks its home, declared into
- * `invokeContract` (src/shared/ipc.ts) with `reach: "work"`.
+ * `invokeContract` (src/shared/channels/work.ts) with `reach: "work"`.
  */
 export const workRequests = {
   "inf:work:card": {
@@ -917,6 +917,20 @@ export const workRequests = {
     response: doneSchema,
   },
   /**
+   * What the conversation did, numbered: one request at a time per task, in
+   * order, from the number after the last answer's `through`.
+   */
+  "inf:work:events": {
+    effect: "change",
+    request: z.tuple([
+      z.object({
+        task: placedTaskIdSchema,
+        events: z.array(placedEventRecordSchema).min(1).max(PLACED_EVENTS_MAX_PER_REQUEST),
+      }),
+    ]),
+    response: placedEventsAnswerSchema,
+  },
+  /**
    * A task's browser there, as the captain reads it, each time it changes
    * (docs/task-browser.md, "On another computer"): asked once, while the
    * home is in reach and never again, since the next one says it whole;
@@ -983,20 +997,6 @@ export const workRequests = {
     }),
     response: doneSchema,
   },
-  /**
-   * What the conversation did, numbered: one request at a time per task, in
-   * order, from the number after the last answer's `through`.
-   */
-  "inf:work:events": {
-    effect: "change",
-    request: z.tuple([
-      z.object({
-        task: placedTaskIdSchema,
-        events: z.array(placedEventRecordSchema).min(1).max(PLACED_EVENTS_MAX_PER_REQUEST),
-      }),
-    ]),
-    response: placedEventsAnswerSchema,
-  },
 } as const satisfies Record<
   `inf:work:${string}`,
   {
@@ -1007,14 +1007,6 @@ export const workRequests = {
     response: z.ZodType;
   }
 >;
-
-/** The declaration as the invoke contract publishes it: the repeat rule stays off the wire. */
-export function workRequestWire<C extends keyof typeof workRequests>(channel: C) {
-  const declared = workRequests[channel];
-  if (!("repeats" in declared)) return declared;
-  const { repeats: _repeats, ...wire } = declared;
-  return wire;
-}
 
 /** Whether a cut-off of this request is safe to ask again, from its own declaration. */
 export function requestRepeatsSafely(channel: string): boolean {
@@ -1100,7 +1092,7 @@ const sourceFileFields = {
 /**
  * The orders a home asks a computer that runs work. The computer answers
  * them; the home sends them only to a computer whose welcome says it takes
- * work (`takesWork`, src/shared/ipc.ts).
+ * work (`takesWork`, src/shared/contractFeatures.ts).
  */
 export const workOrders = {
   [PLACEMENT_FACTS_ORDER]: {

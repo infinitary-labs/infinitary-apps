@@ -1,6 +1,6 @@
 /// <reference types="@vitest/browser-playwright" />
+
 import {
-  type FirstmateApi,
   type InvokeChannel,
   type InvokeRequest,
   type InvokeResponse,
@@ -9,6 +9,7 @@ import {
   type PushPayload,
   pushContract,
 } from "@shared/ipc";
+import type { FirstmateApi } from "@shared/windowApi";
 import { type BridgeIpc, createApi } from "../../src/preload/api";
 
 /**

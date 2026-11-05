@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { FRAME_BRIDGE_SCRIPT, FRAME_BRIDGE_SHA256 } from "@shared/plugins/bridge";
+import { FRAME_BRIDGE_SCRIPT, FRAME_BRIDGE_SHA256 } from "@shared/plugins/frameScript";
 import { describe, expect, it } from "vitest";
 
 const sha256 = (text: string) =>

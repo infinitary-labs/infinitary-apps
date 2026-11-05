@@ -1,4 +1,4 @@
-import { speaksResources } from "@shared/ipc";
+import { speaksResources } from "@shared/contractFeatures";
 import {
   type ComputerResourceReading,
   RESOURCE_MAX_AGE_MS,

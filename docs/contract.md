@@ -8,7 +8,7 @@ How the connection carries it is `docs/connection.md`; how a device pairs is `do
 
 `card-current-update-seen` adds optional `currentUpdateId` and `currentUpdateSeen` snapshot fields and a separate `inf:cards:seen-update(cardId, lifecycleId, updateId)` request.
 The existing two-argument `inf:cards:seen` request and lifecycle-wide `Card.seen` retain their meanings; legacy reports cannot acknowledge an unidentifiable newer answer.
-Updated views use the new request with a home on `CARD_SEEN_UPDATE_SINCE` (major 13) or later, read from the healthcheck's `protocolVersion`, or with an older home that lists the named change through the connection welcome or the healthcheck's optional `changes` list (`readsSeenUpdate`, `src/shared/ipc.ts`).
+Updated views use the new request with a home on `CARD_SEEN_UPDATE_SINCE` (major 13) or later, read from the healthcheck's `protocolVersion`, or with an older home that lists the named change through the connection welcome or the healthcheck's optional `changes` list (`readsSeenUpdate`, `src/shared/contractFeatures.ts`).
 Any other home keeps the legacy path, and an older phone ignores the new fields.
 Older desktop card decoders are strict, so the connection omits the added snapshot fields for a desktop on an earlier major that did not advertise the named change, on list replies, live pushes and replay alike.
 This compatibility projection changes neither permissions nor access.

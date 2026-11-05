@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCsp, PRODUCTION_CSP } from "./csp";
-import { FRAME_BRIDGE_SHA256 } from "./plugins/bridge";
+import { FRAME_BRIDGE_SHA256 } from "./plugins/frameScript";
 
 describe("renderer CSP", () => {
   it("matches the architecture section 4 baseline exactly", () => {

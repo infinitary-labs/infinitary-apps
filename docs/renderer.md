@@ -181,7 +181,7 @@ Shared e2e helpers read the shown entry (`tests/e2e/stack.ts` `SHOWN_ENTRY`): a 
 ### Held preparation
 
 FI3-871's design: the stage prepares the next card ahead without letting any of its own behavior start unseen.
-A card's page, in either vehicle, is born held (`buildFrameDocument`'s `held`, read by the bridge in `src/shared/plugins/bridge.ts`); a panel's page never is.
+A card's page, in either vehicle, is born held (`buildFrameDocument`'s `held`, read by the bridge in `src/shared/plugins/frameScript.ts`); a panel's page never is.
 Held, the page loads its markup, styles, fonts, pictures, theme, width and task links and draws, while each `<script>` it carries, every CSS animation and every SVG timeline waits.
 The bridge holds a script before the parser runs it, through a mutation record the parser delivers first, and keeps the served markup and every hash as they were.
 When the stage shows the card, `FrameController.activate` sends one `activate`; a card nobody prepared is activated as its page is born.

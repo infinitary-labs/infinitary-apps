@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { takesDownload, takesUpdate } from "@shared/contractFeatures";
 import {
   awayWord,
   type ComputerReach,
@@ -12,7 +13,7 @@ import {
   deviceRunsWork,
 } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
-import { PROTOCOL_VERSION, takesDownload, takesUpdate } from "@shared/ipc";
+import { PROTOCOL_VERSION } from "@shared/ipc";
 import {
   type RemoteLoginPasswordQuestion,
   type RemoteLoginRefusal,

@@ -1,5 +1,6 @@
 import type { Card } from "@shared/cards";
-import { type FirstmateApi, readsSeenUpdate } from "@shared/ipc";
+import { readsSeenUpdate } from "@shared/contractFeatures";
+import type { FirstmateApi } from "@shared/windowApi";
 import { useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
 

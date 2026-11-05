@@ -2,10 +2,10 @@ import { createHash } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readSync, statSync, writeSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
+import { speaksInfinitaryNames } from "@shared/contractFeatures";
 import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import { forgeOf } from "@shared/forge";
-import { speaksInfinitaryNames } from "@shared/ipc";
 import {
   type BundledRef,
   PLACED_COPY_CHUNK_BYTES,

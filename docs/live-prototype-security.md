@@ -1,7 +1,7 @@
 # Live-prototype sandbox security review
 
 The checklist for the agent-authored-HTML surface (decision D-9).
-Re-run this review whenever `prototypeSrcdoc.ts`, `PrototypeBody.tsx`, the frame bridge (`src/shared/plugins/bridge.ts`), the frame document builder (`src/shared/plugins/frameDocument.ts`), the frame scheme (`src/main/frames/`), the frame watchdog (`FrameController`), the frame realm's lib or runtime (`scripts/frame-lib.ts`, `src/renderer/src/frameRealm/`), the project-font check (`src/core/fontFormat.ts`, `src/core/pi/fontFaces.ts`, the font probe in `src/main/mediaProbe.ts`), or the frame CSP changes.
+Re-run this review whenever `prototypeSrcdoc.ts`, `PrototypeBody.tsx`, the frame bridge (`src/shared/plugins/frameScript.ts`, its messages in `src/shared/plugins/bridge.ts`), the frame document builder (`src/shared/plugins/frameDocument.ts`), the frame scheme (`src/main/frames/`), the frame watchdog (`FrameController`), the frame realm's lib or runtime (`scripts/frame-lib.ts`, `src/renderer/src/frameRealm/`), the project-font check (`src/core/fontFormat.ts`, `src/core/pi/fontFaces.ts`, the font probe in `src/main/mediaProbe.ts`), or the frame CSP changes.
 The sandbox token list, the focus policy and the frame CSP are one shared definition (`src/shared/plugins/containment.ts`, UI plugin system phases 0 and 1, `docs/ui-plugins.md`); a change there is a change here.
 Template mounts share the sandbox, CSP sources, bridge validation, and served-document vehicle.
 Their script contract differs: a plugin runs only its single `template.script`, while a card mount hash-pins each inline script in its markup.

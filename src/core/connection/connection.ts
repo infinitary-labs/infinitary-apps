@@ -31,6 +31,12 @@ import {
   type PairGrant,
   type PairRefusal,
 } from "@shared/connection";
+import {
+  type ContractAccess,
+  contractAccess,
+  readsSeenUpdate,
+  takesWork,
+} from "@shared/contractFeatures";
 import { COMPUTER, HOME } from "@shared/deviceNames";
 import {
   type DeviceChip,
@@ -42,16 +48,12 @@ import {
 } from "@shared/devices";
 import {
   CORE_INVOKE_CHANNELS,
-  type ContractAccess,
   type CoreInvokeChannel,
-  contractAccess,
   invokeContract,
   isRunViewInvokeChannel,
   isViewInvokeChannel,
   isWorkInvokeChannel,
   PROTOCOL_VERSION,
-  readsSeenUpdate,
-  takesWork,
   VIEW_FLOOR,
 } from "@shared/ipc";
 import { WebSocket, WebSocketServer } from "ws";

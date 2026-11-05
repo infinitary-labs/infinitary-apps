@@ -18,22 +18,24 @@ import {
   pairRequestSchema,
 } from "./connection";
 import {
-  CORE_INVOKE_CHANNELS,
-  CORE_PUSH_CHANNELS,
   CUSTOM_API_SIGN_INS_SINCE,
   FORGE_SIGN_INS_SINCE,
-  HOME_CAPABILITIES,
-  invokeContract,
   PLACED_SEED_SINCE,
   PLACED_WORK_SINCE,
+  SIGN_INS_SINCE,
+  TASK_BROWSERS_THERE_SINCE,
+  WORK_DOWNLOAD_SINCE,
+  WORK_UPDATE_SINCE,
+} from "./contractFeatures";
+import {
+  CORE_INVOKE_CHANNELS,
+  CORE_PUSH_CHANNELS,
+  HOME_CAPABILITIES,
+  invokeContract,
   PROTOCOL_MAJORS_BEHIND,
   PROTOCOL_VERSION,
   pushContract,
-  SIGN_INS_SINCE,
-  TASK_BROWSERS_THERE_SINCE,
   VIEW_FLOOR,
-  WORK_DOWNLOAD_SINCE,
-  WORK_UPDATE_SINCE,
 } from "./ipc";
 import { VIEW_OPEN_LISTS } from "./openLists";
 import { RESOURCE_OBSERVATIONS_SINCE, RESOURCE_ORDER, resourceOrders } from "./resources";

@@ -58,7 +58,7 @@ The home answers `welcome` with its own contract version, its journal's `epoch` 
 - `reload`: the device reads its state again through ordinary requests.
   A first connection is always a reload.
 
-A `work` connection's welcome also carries `takesWork`: whether its version may take new work from this home, which needs the home's own major and `PLACED_WORK_SINCE` or later (`takesWork`, `src/shared/ipc.ts`; `docs/helper.md`, "Versions").
+A `work` connection's welcome also carries `takesWork`: whether its version may take new work from this home, which needs the home's own major and `PLACED_WORK_SINCE` or later (`takesWork`, `src/shared/contractFeatures.ts`; `docs/helper.md`, "Versions").
 It carries `onHomeMac` too, from protocol 9.1: whether that computer joined from this Mac itself, as the home's list found it (`onThisMac`, `docs/devices.md`, "Where a computer joins from"), which the computer keeps on its grant and its work's priority follows (`docs/helper.md`, "In the background"); absent while the list does not say.
 Whatever it says, the home hears what a `work` device said of its versions and its changes (`onWorkVersion`), and may ask it the update order, and from protocol 8.15 the download order and how far that download got (`docs/devices.md`, "Updating over the connection" and "Downloading over the connection").
 A `view` connection's welcome carries `startedByCommand: true` when the home's first mate was started by a command, with no window (`docs/run.md`, "Control from another computer"); a home with its window, and an older one, leaves it out.
@@ -103,7 +103,7 @@ Asked of anything else, or of a device whose connection goes before it answers, 
 `onViewDevice` hears each view come into reach, once welcomed, and go once its last connection goes; `WorkDevices` holds which are connected for Settings -> Devices (`docs/devices.md`).
 A computer that runs work asks its work requests again after a drop under the same call id, which its home answers from what it kept; a view never asks again.
 
-Every core channel in `src/shared/ipc.ts` declares its `reach`, and the type of the contract refuses one that does not.
+Every core channel of the contract (`src/shared/ipc.ts`, with its groups of channels in `src/shared/channels/`) declares its `reach`, and the type of the contract refuses one that does not.
 A view may ask what the captain does on the stage of another Mac: talking, cards and their threads, task records and their bar, and the reads that draw them (cards and their pictures, tasks, projects, the feed, the crew strip, quota, model names, the captain's appearance and layout, the first-launch state).
 It may also read and change the automations that run there (`inf:automation:*`, `docs/automation.md`).
 Everything else stays home's: settings, sign-ins and accounts, paired devices, project setup, voice, added panels and their data, Observe, SQL, diagnostics, retention, and anything that acts on the home Mac's own screen.

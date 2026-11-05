@@ -8,13 +8,13 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { type Spelling, workLabelOf } from "@shared/codeNames";
-import { type DeviceView, deviceLabel } from "@shared/devices";
 import {
   PLACED_WORK_SINCE,
-  PROTOCOL_VERSION,
   WORK_DOWNLOAD_SINCE,
   WORK_UPDATE_SINCE,
-} from "@shared/ipc";
+} from "@shared/contractFeatures";
+import { type DeviceView, deviceLabel } from "@shared/devices";
+import { PROTOCOL_VERSION } from "@shared/ipc";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import type { UpdateDownload } from "@shared/work";
 import { afterEach, describe, expect, it, vi } from "vitest";

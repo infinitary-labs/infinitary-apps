@@ -8,7 +8,8 @@ import {
   testFlightBuilds,
 } from "../scripts/phone-order.ts";
 import type { AppleRead } from "../scripts/phone-release.ts";
-import { contractAccess, PROTOCOL_VERSION, VIEW_FLOOR } from "../src/shared/ipc.ts";
+import { contractAccess } from "../src/shared/contractFeatures.ts";
+import { PROTOCOL_VERSION, VIEW_FLOOR } from "../src/shared/ipc.ts";
 import { runJobNames } from "./helpers/ciJobNames";
 
 /**

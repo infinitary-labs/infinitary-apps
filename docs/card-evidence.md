@@ -107,7 +107,7 @@ Existing historical unrecognized-action observations remain readable.
 ### Question definitions
 
 A footer click already asks the frame for a fresh reading (`collect`, `docs/card-authoring.md` "Questions in the body").
-The same reply now carries what each named question offered, read by the bridge from the DOM (`defineQuestion` in `src/shared/plugins/bridge.ts`), never from the body's HTML text:
+The same reply now carries what each named question offered, read by the bridge from the DOM (`defineQuestion` in `src/shared/plugins/frameScript.ts`), never from the body's HTML text:
 
 - the prompt, taken only from explicit native semantics: a fieldset's `<legend>`, a `role="group"`/`radiogroup` container's `aria-labelledby` or `aria-label`, a lone field's bound `<label>` (without the text of a control it wraps), or one shared first `aria-labelledby` id; otherwise `null` with the gap `no-prompt`;
 - the kind (`single`, `multiple`, `text`, `opaque`) and the control;

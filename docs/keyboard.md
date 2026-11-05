@@ -16,7 +16,7 @@ The captain chose complete keyboard access with conventional controls and custom
 | The shell's window commands' handlers | `src/renderer/src/app/shellCommands.ts` (`followShellCommands`, `runWindowCommand`) |
 | Why a window command cannot run now | `src/renderer/src/app/commandRefusals.ts` (`commandRefusal`) |
 | Command search | `src/renderer/src/app/CommandSearch.tsx`, its list `commandRows.ts`; the design skill's `components/core/CommandSearch.prompt.md` |
-| A main-process command chosen by name | the `inf:keyboard:run` request (`src/shared/ipc.ts`, `src/main/ipc/index.ts`) |
+| A main-process command chosen by name | the `inf:keyboard:run` request (`src/shared/channels/shell.ts`, `src/main/ipc/index.ts`) |
 | A control's key hint | `src/renderer/src/app/keyHints.ts` (`useCommandKeys`), drawn by `IconButton`'s label |
 | The installed map in the page | `src/renderer/src/design/core/installedKeys.ts`, read before the first render (`hydratePreferences`) and followed through the `inf:keyboard:keymap` push |
 | Keyboard settings | `src/renderer/src/settings/KeyboardTab.tsx`, its recorder `keyRecorder.ts`; the design skill's `components/core/KeyboardSettings.prompt.md` |
@@ -30,7 +30,7 @@ The captain chose complete keyboard access with conventional controls and custom
 | A label on rest, the pointer's or the keyboard's: an icon button's words, or a fact shown on rest | `src/renderer/src/design/core/restLabel.ts` (`useRestLabel`), drawn by `iconLabel.ts`; words cut short: `overflowTitle.ts` (`useCutWords`) |
 | The shown card's own places, its body, buttons and reply | `src/renderer/src/app/shellCommands.ts` (`toShownPart`), each entry named by its `StageEntry` (`data-stage-entry-id`) |
 | The card's reading keys | `src/renderer/src/cards/cardKeys.ts` (`readingScrollTop`), run by `StageEntry` (`cards/SurfaceReveal.tsx`) |
-| Focus given back into a frame, and a frame's gesture counted only from focus | `src/renderer/src/plugins/frames/frameFocus.ts` (`giveFocusBack`, `guardFrameFocus`, `giveHandedFocusBack`, `whenFrameHoldsFocus`); the frame's side is the bridge (`src/shared/plugins/bridge.ts`: `keys`, `focus`, `escape`) |
+| Focus given back into a frame, and a frame's gesture counted only from focus | `src/renderer/src/plugins/frames/frameFocus.ts` (`giveFocusBack`, `guardFrameFocus`, `giveHandedFocusBack`, `whenFrameHoldsFocus`); the frame's side is the bridge (`src/shared/plugins/frameScript.ts`: `keys`, `focus`, `escape`) |
 | A frame's click or key spent as focus leaves it, and the window's own gesture | `src/renderer/src/plugins/frames/frameActivation.ts` (`guardFrameActivation`, `windowGesture`) |
 | A card pointed at takes focus once it appears, unless a press began since | `src/renderer/src/app/presses.ts` (`countPresses`, `pressesSoFar`), read by `focusCard` (`stackActions.ts`) and the stage's focus in `stage/CardLayer.tsx`; the frame's side is the bridge's `pressed` |
 | A held key presses a control once | `src/renderer/src/app/heldKeys.ts` (`guardHeldPresses`) and `enterAction`'s repeat (`composerKeys.ts`) |
@@ -416,7 +416,7 @@ The shown card is one of the window's parts, and inside it a person reads its bo
   Go to the main message, and anything else that asks for the main message, restores the card first, and so does going to Settings.
 - A merge card's risk chart puts each of its dots in the Tab order right after the card's put-away control: the keyboard's focus on one opens its note as the pointer's rest does, Esc lets the note go and nothing else, and a dot reached while the body is scrolled brings the chart back (`docs/card-authoring.md`, "The risk chart").
 
-Inside a card's body the bridge completes the keyboard (`src/shared/plugins/bridge.ts`), once the host says which of the body's keys it hears (`keys`, sent to a mount that opens pictures or hears Escape):
+Inside a card's body the bridge completes the keyboard (`src/shared/plugins/frameScript.ts`), once the host says which of the body's keys it hears (`keys`, sent to a mount that opens pictures or hears Escape):
 
 - every picture a click would open is a Tab stop, still an image named by its alt, that Enter or Space opens in the picture viewer; a group's pictures past the fifth thumbnail stay off the Tab order, and the viewer's arrows reach them;
 - a demo's Play button, which the bridge draws under its poster, is a button like any other: Enter or Space opens the viewer playing it, and the viewer's focus starts on its play control;

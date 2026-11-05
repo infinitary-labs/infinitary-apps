@@ -317,7 +317,7 @@ Idle cadence samples accept the character's automatic fidget, including the idle
 The named source and drawing scope, working heat, rotation advancement, requested-reaction presence, callback counts and budgets remain enforced.
 Its accessibility value stays the state the conversation owner supplies; an emote never changes it.
 The join stage uses idle; the empty stage follows the Mac's published busy snapshot and numbered busy events, never typing or a crew count.
-Homes on `SCENE_OBSERVATIONS_SINCE` (`src/shared/ipc.ts`, major 12) or later, and older homes that advertise `native-scene-observations`, answer `inf:conversation:state` and the public `inf:computers:presence` read/push; the latter contains only each work computer's id, name and reach, never addresses or management facts.
+Homes on `SCENE_OBSERVATIONS_SINCE` (`src/shared/contractFeatures.ts`, major 12) or later, and older homes that advertise `native-scene-observations`, answer `inf:conversation:state` and the public `inf:computers:presence` read/push; the latter contains only each work computer's id, name and reach, never addresses or management facts.
 A numbered push supersedes an older pending read; an older home retains event-only busy observation and unknown remote reach without sending unsupported requests.
 Joining shows only the first mate until real board facts arrive, and the accessibility value names unknown conversation activity until the home supplies a reading.
 `PhoneCrewScene` renders home's formation and every other computer's at the desktop's share of it in a continuous native scroller, with touch panning and arrow keys rather than paging or shrinking the entire scene, and no scroll bars.

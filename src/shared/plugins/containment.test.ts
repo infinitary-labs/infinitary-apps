@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cardTypefaceUrl } from "../cardPictures";
 import { PRODUCTION_CSP } from "../csp";
-import { FRAME_BRIDGE_SHA256 } from "./bridge";
 import {
   FORBIDDEN_SANDBOX_TOKENS,
   FRAME_ALLOW,
@@ -20,6 +19,7 @@ import {
   STRUCTURALLY_IMPOSSIBLE,
 } from "./containment";
 import { frameFontUrl } from "./frameDocument";
+import { FRAME_BRIDGE_SHA256 } from "./frameScript";
 import { type PluginManifestInput, parsePluginManifest, retiredGrantWords } from "./manifest";
 
 /**

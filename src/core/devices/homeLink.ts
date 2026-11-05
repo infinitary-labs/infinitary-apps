@@ -14,15 +14,10 @@ import {
   type HomeFrame,
   homeFrameSchema,
 } from "@shared/connection";
+import type { ContractAccess } from "@shared/contractFeatures";
 import { COMPUTER } from "@shared/deviceNames";
 import type { DeviceChip, DeviceGrant, DeviceRole, DeviceSystem } from "@shared/devices";
-import {
-  type ContractAccess,
-  type CoreInvokeChannel,
-  invokeContract,
-  PROTOCOL_VERSION,
-  VIEW_FLOOR,
-} from "@shared/ipc";
+import { type CoreInvokeChannel, invokeContract, PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import type { WebSocket } from "ws";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { thisDeviceSystem } from "../platform";

@@ -299,7 +299,7 @@ export type FoundTools = z.infer<typeof foundToolsSchema>;
  * How this Mac brings a computer that runs work to its own version of
  * Firstmate (docs/devices.md, "Updating"): over Remote Login for one added
  * by its address, over the connection for one that takes the update order
- * (`takesUpdate`, src/shared/ipc.ts), or by a new command run there for one
+ * (`takesUpdate`, src/shared/contractFeatures.ts), or by a new command run there for one
  * too old to take it.
  */
 export const deviceUpdateBySchema = z.enum(["remote-login", "connection", "command"]);

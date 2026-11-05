@@ -1,4 +1,4 @@
-import type { WindowControl, WindowState } from "@shared/ipc";
+import type { WindowControl, WindowState } from "@shared/channels/shell";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IconButton } from "../design";

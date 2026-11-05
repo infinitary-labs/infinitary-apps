@@ -128,7 +128,7 @@ A crewmate on a computer that runs work (`docs/helper.md`, "Holding a conversati
 That computer serves both tools and asks this Mac to run each call (`inf:work:knowledge`, `inf:work:record-knowledge`); this Mac answers with that binding and keeps the answer, so a call asked again after a drop is answered from what it kept.
 Its brief carries the same knowledge lines, written here.
 Its working copy there is no folder of this Mac's, so its actor names none: a kept file source reads against the project's own folder here, as the first mate's reads do, and a new file citation is refused there as it is here.
-A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/ipc.ts`) is given neither the tool pair nor the factual candidate lines; applicable directions still ride each served turn.
+A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/contractFeatures.ts`) is given neither the tool pair nor the factual candidate lines; applicable directions still ride each served turn.
 
 | Bound | Size |
 | --- | --- |
@@ -218,7 +218,7 @@ The command `panel:knowledge/open` (Open Knowledge, no default key) opens your g
 
 ### The reads
 
-The browser reads seven catalog entries, and the app's other surfaces two more (`src/shared/reads.ts`), each over a `home` channel of its own (`inf:knowledge:*`, `src/shared/ipc.ts`; shapes in `src/shared/knowledge.ts`), answered by `KnowledgeService` (`KnowledgeWindow` for entries, `StandingDirections` for directions) with personal entries in the captain's collection and directions in their own scope:
+The browser reads seven catalog entries, and the app's other surfaces two more (`src/shared/reads.ts`), each over a `home` channel of its own (`inf:knowledge:*`, `src/shared/channels/knowledge.ts`; shapes in `src/shared/knowledge.ts`), answered by `KnowledgeService` (`KnowledgeWindow` for entries, `StandingDirections` for directions) with personal entries in the captain's collection and directions in their own scope:
 
 | Read | Answers |
 | --- | --- |

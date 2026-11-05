@@ -10,15 +10,14 @@ import {
 } from "@shared/cardPictures";
 import type { CardPicture } from "@shared/cards";
 import { wireRepairImpact } from "@shared/checkRepair";
-import { crewSpeedSchema } from "@shared/crewSpeed";
-import { HOME } from "@shared/deviceNames";
 import {
   changesStoryAround,
   hearsClientJobEnds,
-  invokeContract,
   keepsCardTypefaces,
-  type WorkInvokeChannel,
-} from "@shared/ipc";
+} from "@shared/contractFeatures";
+import { crewSpeedSchema } from "@shared/crewSpeed";
+import { HOME } from "@shared/deviceNames";
+import { invokeContract, type WorkInvokeChannel } from "@shared/ipc";
 import {
   isWorkOrderChannel,
   PLACED_COPY_CHUNK_BYTES,

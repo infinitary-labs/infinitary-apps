@@ -1,4 +1,4 @@
-import { FRAME_BRIDGE_SHA256 } from "./plugins/bridge";
+import { FRAME_BRIDGE_SHA256 } from "./plugins/frameScript";
 
 /**
  * The renderer Content-Security-Policy, per docs/architecture.md section 4.

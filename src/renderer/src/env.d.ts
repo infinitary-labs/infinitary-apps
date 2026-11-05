@@ -1,4 +1,4 @@
-import type { FirstmateApi } from "@shared/ipc";
+import type { FirstmateApi } from "@shared/windowApi";
 
 declare global {
   interface Window {

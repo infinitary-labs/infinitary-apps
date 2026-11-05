@@ -8,7 +8,7 @@ The first mate has made schedules since R3 (`schedule_prompt`, `cancel_schedule`
 
 `Scheduler` (`src/core/orchestrator/scheduler.ts`) over `ScheduleStore` (`src/core/storage/scheduleStore.ts`) is the only writer.
 The first mate's tools, Settings → Automation (`src/renderer/src/settings/AutomationTab.tsx`) and the host's once-a-minute ticker all go through it.
-The `inf:automation:*` channels (`src/shared/ipc.ts`, reach `views`) are Settings' door, here and on a computer that controls this one; the reads `automation.list`, `automation.history` and `automation.preview` feed it, and `automation.list` feeds the Automation panel too.
+The `inf:automation:*` channels (`src/shared/channels/activity.ts`, reach `views`) are Settings' door, here and on a computer that controls this one; the reads `automation.list`, `automation.history` and `automation.preview` feed it, and `automation.list` feeds the Automation panel too.
 `automation.list` answers `ready` with every rule, or `unavailable` with the app's words when the rules cannot be read, never an empty list in its place.
 
 Settings and the first mate change a rule through one path: each change channel is a line of the app action catalog (`src/shared/actions.ts`, `docs/orchestrator-contract.md` "App action catalog"), run by the dispatcher.

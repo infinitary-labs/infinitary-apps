@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { FRAME_BRIDGE_SCRIPT } from "./bridge";
 import { FRAME_CSP } from "./containment";
 import {
   buildFrameDocument,
@@ -8,6 +7,7 @@ import {
   frameTemplateSchema,
   scriptSafeJson,
 } from "./frameDocument";
+import { FRAME_BRIDGE_SCRIPT } from "./frameScript";
 
 describe("the frame document", () => {
   it("assembles head, bridge, markup, and an optional template script in order", () => {

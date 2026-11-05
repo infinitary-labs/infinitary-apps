@@ -45,7 +45,7 @@ if (listsChange(link.state().homeChanges, PLAN_LABEL_LIMITS)) {
 - On the home, a computer's list is `WorkDeviceVersion.changes` (`WorkDevices.version`); on a computer, its home's is `HomeLinkState.homeChanges`.
 - A side that listed nothing, such as one built before changes had names, has no change, so it gets no such feature.
 
-A feature asked across majors, such as the update and download orders or where a computer gets Infinitary, keeps a typed number (`WORK_DOWNLOAD_SINCE`, `src/shared/ipc.ts`), because a major removes every name.
+A feature asked across majors, such as the update and download orders or where a computer gets Infinitary, keeps a typed number (`WORK_DOWNLOAD_SINCE`, `src/shared/contractFeatures.ts`), because a major removes every name.
 The numbers typed before changes had names (`*_SINCE`) stay as they are.
 
 ## Adding a major change

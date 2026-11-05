@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { CARD_BODY_WORDS } from "../../src/renderer/src/cards/cardBodyWords";
-import { FRAME_BRIDGE_SHA256 } from "../../src/shared/plugins/bridge";
+import { FRAME_BRIDGE_SHA256 } from "../../src/shared/plugins/frameScript";
 import { cardBody, cardBodyElement, cardBodySelector } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { SCRIPT_CARD_TITLES } from "./mockProvider";

@@ -1,4 +1,4 @@
-import type { WindowControl, WindowState } from "@shared/ipc";
+import type { WindowControl, WindowState } from "@shared/channels/shell";
 import { app, type BrowserWindow } from "electron";
 import { hostPlatform } from "../core/platform";
 

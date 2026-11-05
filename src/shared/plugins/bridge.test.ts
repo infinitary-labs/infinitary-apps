@@ -4,7 +4,6 @@ import { CARD_ANSWERS_MAX_BYTES } from "../cards";
 import { APP_FRAME_SCHEME } from "../csp";
 import {
   ACTION_VALUE_MAX_BYTES,
-  FRAME_BRIDGE_SCRIPT,
   FRAME_BRIDGE_VERSION,
   FRAME_DEMO_SOURCE,
   FRAME_DEMO_SRC_MAX,
@@ -12,6 +11,7 @@ import {
   frameMessageSchema,
   frameRequestSchema,
 } from "./bridge";
+import { FRAME_BRIDGE_SCRIPT } from "./frameScript";
 
 describe("bridge v2", () => {
   it("is version 2 and exposes exactly the verbs of the contract", () => {

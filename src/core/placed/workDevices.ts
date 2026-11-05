@@ -1,4 +1,4 @@
-import { takesWork } from "@shared/ipc";
+import { takesWork } from "@shared/contractFeatures";
 import {
   DeviceOutOfReachError,
   type HomeConnection,

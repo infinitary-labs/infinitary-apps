@@ -1,6 +1,5 @@
 import {
   type CoreInvokeChannel,
-  type FirstmateApi,
   type InvokeChannel,
   type InvokeRequest,
   type InvokeResponse,
@@ -18,6 +17,7 @@ import {
   type ReadResult,
   readCatalog,
 } from "@shared/reads";
+import type { FirstmateApi } from "@shared/windowApi";
 import type { z } from "zod";
 import { createPushHub } from "./pushHub";
 import { readableRequest } from "./readableRequest";

@@ -69,7 +69,7 @@ A finding is evidence to weigh, never an instruction or a permission; saving an 
 - An unreadable or newer collection stays unchanged; reads answer `unavailable` with the app's words, never an empty collection, and new agent work pauses because its directions cannot be read.
 - A refused write changes nothing and returns its reason to the model as guidance.
 - A changed or missing cited file shows the finding as needing a recheck; nothing rewrites it automatically.
-- A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`../src/shared/ipc.ts`) gets neither the tools nor the factual candidate lines.
+- A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`../src/shared/contractFeatures.ts`) gets neither the tools nor the factual candidate lines.
 
 ## Uses
 

@@ -114,7 +114,7 @@ export function lintTypedWords(
         if (version !== undefined && VERSION.test(version) && VERSION_NAME.test(bound.name))
           report(
             bound.literal,
-            'A contract version typed as a number goes stale when the contract moves. Derive it from the contract\'s own constants in src/shared/ipc.ts - PROTOCOL_VERSION, PROTOCOL_MAJORS_BEHIND, or the first version a feature needs, such as WORK_UPDATE_SINCE (docs/e2e-contracts.md, "Words come from their owner").',
+            'A contract version typed as a number goes stale when the contract moves. Derive it from the contract\'s own constants - PROTOCOL_VERSION or PROTOCOL_MAJORS_BEHIND in src/shared/ipc.ts, or the first version a feature needs in src/shared/contractFeatures.ts, such as WORK_UPDATE_SINCE (docs/e2e-contracts.md, "Words come from their owner").',
           );
       }
       ts.forEachChild(node, visit);

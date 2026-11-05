@@ -2,8 +2,8 @@ import { z } from "zod";
 import { APP_FRAME_SCHEME } from "../csp";
 import { PANEL_READ_NAMES, personalIdSchema } from "../personal/manifest";
 import { sqlViewNameSchema } from "../sql";
-import { FRAME_BRIDGE_SCRIPT } from "./bridge";
 import { BUILTIN_FRAME_PANELS, FRAME_LIB_BOOT, frameLibUrl } from "./frameLib";
+import { FRAME_BRIDGE_SCRIPT } from "./frameScript";
 import { PANEL_NAME_PATTERN, panelCardIdSchema } from "./panelCards";
 
 /**

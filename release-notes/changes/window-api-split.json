@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "window-api-split",
+      "reason": "Internal: the window's contract and the frame script move out of two long files into files that each do one job, with every channel's shape unchanged; nothing a person sees changes."
+    }
+  ]
+}

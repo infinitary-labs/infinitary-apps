@@ -14,7 +14,7 @@ import {
 
 export type { FoundTools } from "./devices";
 
-import type { ContractAccess } from "./ipc";
+import type { ContractAccess } from "./contractFeatures";
 
 /**
  * The connection's wire (docs/connection.md): what a paired device and the

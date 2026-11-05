@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { FRAME_BRIDGE_SCRIPT, FRAME_BRIDGE_SHA256 } from "@shared/plugins/bridge";
 import { FRAME_CSP, frameCsp } from "@shared/plugins/containment";
 import type { DocumentMountRequest } from "@shared/plugins/frameDocument";
+import { FRAME_BRIDGE_SCRIPT, FRAME_BRIDGE_SHA256 } from "@shared/plugins/frameScript";
 import { describe, expect, it } from "vitest";
 import { expectBytesEqual } from "../../../tests/helpers/expectBytes";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";

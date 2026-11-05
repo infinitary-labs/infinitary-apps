@@ -27,7 +27,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - Read for a turn: `StandingDirections.standing(actor)`, the full active set visible to that actor, never shortened to a search or formatting budget.
 - Render for a turn: `renderDirections` and `renderDirection` in [`../src/core/knowledge/directions.ts`](../src/core/knowledge/directions.ts).
 - Delivery: the first mate's context (`../src/core/orchestrator/firstmateAgent.ts`) and every crewmate turn (`../src/core/orchestrator/crewSupervisor.ts`) call `renderDirections` over `StandingDirections.standing`.
-- The agent's door: the app action catalog's `direction` line (`../src/shared/actions.ts`), whose change channel `inf:knowledge:direction:set` (`../src/shared/ipc.ts`) runs `StandingDirections.change` through the dispatcher.
+- The agent's door: the app action catalog's `direction` line (`../src/shared/actions.ts`), whose change channel `inf:knowledge:direction:set` (`../src/shared/channels/knowledge.ts`) runs `StandingDirections.change` through the dispatcher.
 - Window reads: `knowledge.directions` and `knowledge.direction` (`../src/shared/reads.ts`, shapes in `../src/shared/knowledge.ts`), answered by `StandingDirections.page` and `StandingDirections.read`.
 
 ## Operations and lifecycle

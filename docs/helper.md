@@ -342,7 +342,7 @@ This computer keeps trying."
 When the home removes it, it deletes its grant, keeps one note of which home, says "MacBook Pro removed this computer." and "A new command from MacBook Pro joins it again.", removes what Infinitary set up here (below, "Removed"), and exits 0.
 
 **Versions.**
-The welcome tells a computer that runs work whether it may take new work (`takesWork`): only on the home's own major, and only when it speaks `PLACED_WORK_SINCE` or later, so it can hold the conversations it is sent (`takesWork`, `src/shared/ipc.ts`).
+The welcome tells a computer that runs work whether it may take new work (`takesWork`): only on the home's own major, and only when it speaks `PLACED_WORK_SINCE` or later, so it can hold the conversations it is sent (`takesWork`, `src/shared/contractFeatures.ts`).
 That is stricter than the version rule's window for a client, because the home sends it the work itself (`docs/contract.md`).
 On another major it still connects, says "MacBook Pro has another version of Infinitary, so this computer takes no new work." and "It takes work again once it is updated from MacBook Pro.", and takes none until it is replaced with the home's version.
 Its hello also says the version of Infinitary it runs (`appVersion`), so the home's Settings -> Devices says when it runs another (`docs/devices.md`, "Another version, and updating").

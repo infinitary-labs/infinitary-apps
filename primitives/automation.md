@@ -24,7 +24,7 @@ The first mate's `schedule_prompt` and `cancel_schedule` and Settings → Automa
 - Rule operations: `Scheduler.create`, `pause`, `resume`, `pauseAll`, `cancel`, `preview`, `history` and `list`; the once-a-minute ticker calls `Scheduler.tick` (period from `tickPeriodFor`, `../src/core/orchestrator/ticker.ts`).
 - Agent tools: `schedule_prompt` and `cancel_schedule` in [`../src/core/pi/scheduleTools.ts`](../src/core/pi/scheduleTools.ts).
 - Catalog lines (`../src/shared/actions.ts`): `automation-edit`, `automation-state`, `automation-pause-all` and `automation-delete`, run by the dispatcher for Settings and the first mate's `app_change` alike.
-- Channels and reads: `inf:automation:*` (`../src/shared/ipc.ts`, reach `views`), and `automation.list`, `automation.history` and `automation.preview`.
+- Channels and reads: `inf:automation:*` (`../src/shared/channels/activity.ts`, reach `views`), and `automation.list`, `automation.history` and `automation.preview`.
 - Shared shapes and placeholders: `SCHEDULE_DETAILS` and `fillScheduleDetails` in [`../src/shared/automation.ts`](../src/shared/automation.ts); calendar rules in `../src/core/orchestrator/calendar.ts`.
 - Surfaces: `../src/renderer/src/settings/AutomationTab.tsx` and the panel folder `../src/panels/automation/`.
 

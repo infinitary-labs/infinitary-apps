@@ -39,8 +39,8 @@ import { type BoundTool, FIRSTMATE_TOOLS } from "../session/tools";
 import { resolveClaudeExecutable } from "./claudeCli";
 import type { ClaudeRateLimit } from "./claudeEvents";
 import { MessageQueue, userMessage } from "./claudeQueryCore";
+import { CLAUDE_STEER_PRIORITY, claudeSessionOptions } from "./claudeSessionOptions";
 import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
-import { CLAUDE_STEER_PRIORITY, claudeSessionOptions } from "./session";
 
 /**
  * The Claude seat against the REAL client (W1 S6), hermetically, on the

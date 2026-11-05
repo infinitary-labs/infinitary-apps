@@ -27,12 +27,10 @@ import { STAGED_FOLDER } from "../session/stagingFolders";
 import { openInMemoryDatabase } from "../storage/db";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import { SettingsStore } from "../storage/settingsStore";
+import { CLAUDE_PROJECT_SKILLS_DIR } from "./claudeProjectResources";
+import { CLAUDE_MODEL_PROVIDER } from "./claudeQueryCore";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
-import {
-  CLAUDE_MODEL_PROVIDER,
-  CLAUDE_PROJECT_SKILLS_DIR,
-  createClaudeSessionFactory,
-} from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 // The staging case starts the boxed client twice. FI3-1104 measured its
 // fastest Linux check run at 3.523 s; five times, rounded up to 5 s.

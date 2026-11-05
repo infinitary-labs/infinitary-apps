@@ -15,7 +15,7 @@ import type { FoundTools } from "@shared/connection";
 import { deviceLabel } from "@shared/devices";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import electronPath from "electron";
-import { CLAUDE_CONTROL_PROFILE } from "../../src/core/claude/session";
+import { CLAUDE_CONTROL_PROFILE } from "../../src/core/claude/claudeQueryCore";
 import { type HomeConnection, startConnection } from "../../src/core/connection/connection";
 import { claimLink } from "../../src/core/devices/dial";
 import { FarBuilds } from "../../src/core/devices/farBuilds";

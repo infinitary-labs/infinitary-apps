@@ -40,10 +40,10 @@ import {
   readSession,
 } from "../storage/sessionReader";
 import { resolveClaudeExecutable } from "./claudeCli";
+import { CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS } from "./claudeSessionOptions";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 import { claudeToolOf, claudeToolServer, claudeToolsOf, zodShapeOf } from "./claudeTaskTools";
 import { locateClaudeTranscript } from "./claudeTranscript";
-import { CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS } from "./session";
 
 /**
  * What the Claude transport actually SERVES of the app's own tools.

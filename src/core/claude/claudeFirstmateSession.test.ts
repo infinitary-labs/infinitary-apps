@@ -40,17 +40,14 @@ import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import type { ClaudeClientCheck } from "./claudeCli";
 import type { ClaudeRateLimit } from "./claudeEvents";
+import { CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS, CLAUDE_STEER_PRIORITY } from "./claudeSessionOptions";
 import {
   hasActiveSession,
   resetStoreLeasesForTest,
   runExclusiveStoreTask,
 } from "./claudeStoreLease";
 import { encodeClaudeProjectDir } from "./claudeTranscript";
-import {
-  CLAUDE_FIRSTMATE_MCP_OUTPUT_TOKENS,
-  CLAUDE_STEER_PRIORITY,
-  createClaudeSessionFactory,
-} from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 /**
  * The Claude seat against a scripted client (W1 S6). The message shapes are

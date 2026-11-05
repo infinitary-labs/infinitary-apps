@@ -14,8 +14,8 @@ import { appPathsFor } from "../paths";
 import { LOCAL_MACHINE_ID, type SessionSpec } from "../session/session";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { MessageQueue, userMessage } from "./claudeQueryCore";
+import { claudeSessionOptions } from "./claudeSessionOptions";
 import { locateClaudeTranscript } from "./claudeTranscript";
-import { claudeSessionOptions } from "./session";
 
 /**
  * INF-1627's accepted workaround for Claude Code issue 97074: identify

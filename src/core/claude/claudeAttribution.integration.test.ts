@@ -12,12 +12,9 @@ import { appPathsFor } from "../paths";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import { resolveClaudeExecutable } from "./claudeCli";
+import { CLAUDE_MODEL_PROVIDER, type ClaudeQueryFactory } from "./claudeQueryCore";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
-import {
-  CLAUDE_MODEL_PROVIDER,
-  type ClaudeQueryFactory,
-  createClaudeSessionFactory,
-} from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 // Measured on the hosted Linux check machine with four integration workers:
 // slowest per-case 2.919 s; five times that is 14.6 s, rounded up to a whole

@@ -1,10 +1,18 @@
 import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { stageRunbookSkills } from "../runbooks/runbooks";
+import {
+  PERSONAL_RESOURCE_RULES,
+  type PersonalResourceDigests,
+  personalInstructionsText,
+  personalResources,
+} from "../session/personalResources";
 import {
   type ProjectInstructions,
   projectInstructions,
   projectSkillFolders,
 } from "../session/projectResources";
+import type { SessionSpec } from "../session/session";
 
 /**
  * A Claude crewmate's share of its working copy's own instructions and
@@ -80,15 +88,70 @@ export async function stageClaudeSkills(
   return dir;
 }
 
-/** Read the working copy's instructions and stage its skills, for one attach. */
+/** Where a coding session stages its working copy's skills, inside its staging folder. */
+export const CLAUDE_PROJECT_SKILLS_DIR = "project-skills";
+
+/**
+ * A coding session's working copy as one attach hands it to the client: its
+ * instruction file, read now, and its skills, staged in the session's own
+ * folder `staged` beside its record (INF-2054); with the personal opt-in, the
+ * person's instructions and skills too, whose digests the served stamp keeps;
+ * and the runbook skills no other skill already names. A stage that fails
+ * costs those skills, never the attach.
+ */
 export async function claudeProjectResources(
-  cwd: string,
-  pluginDir: string,
-): Promise<ClaudeProjectResources> {
-  const instructions = projectInstructions(cwd);
-  const skillsPlugin = await stageClaudeProjectSkills(cwd, pluginDir);
-  return {
-    ...(instructions ? { instructions } : {}),
-    ...(skillsPlugin ? { skillsPlugin } : {}),
-  };
+  spec: Pick<SessionSpec, "cwd" | "personalResources" | "runbookSkills">,
+  home: string | undefined,
+  staged: string,
+  note: (line: string) => void,
+): Promise<{ project: ClaudeProjectResources; personalDigests?: PersonalResourceDigests }> {
+  let project: ClaudeProjectResources;
+  try {
+    const instructions = projectInstructions(spec.cwd);
+    const skillsPlugin = await stageClaudeProjectSkills(
+      spec.cwd,
+      join(staged, CLAUDE_PROJECT_SKILLS_DIR),
+    );
+    project = {
+      ...(instructions ? { instructions } : {}),
+      ...(skillsPlugin ? { skillsPlugin } : {}),
+    };
+  } catch (error) {
+    note(`the working copy's skills were not staged: ${String(error)}`);
+    const instructions = projectInstructions(spec.cwd);
+    project = instructions ? { instructions } : {};
+  }
+  const names = new Set(projectSkillFolders(spec.cwd).map((skill) => skill.name));
+  const personal = spec.personalResources ? personalResources(home, names) : undefined;
+  if (personal) {
+    project.personalInstructions = personal.instructions
+      ? personalInstructionsText(personal.instructions)
+      : PERSONAL_RESOURCE_RULES;
+    try {
+      project.personalSkillsPlugin = await stageClaudeSkills(
+        personal.skills,
+        join(staged, "personal-skills"),
+        "personal",
+      );
+    } catch (error) {
+      note(`the personal skills were not staged: ${String(error)}`);
+    }
+  }
+  if (spec.runbookSkills) {
+    const taken = new Set([...names, ...(personal?.skills ?? []).map((skill) => skill.name)]);
+    try {
+      const folders = await stageRunbookSkills(
+        spec.runbookSkills.filter((skill) => !taken.has(skill.name)),
+        join(staged, "runbook-files"),
+      );
+      project.runbookSkillsPlugin = await stageClaudeSkills(
+        folders,
+        join(staged, "runbook-skills"),
+        "runbooks",
+      );
+    } catch (error) {
+      note(`the runbook skills were not staged: ${String(error)}`);
+    }
+  }
+  return { project, ...(personal ? { personalDigests: personal.digests } : {}) };
 }

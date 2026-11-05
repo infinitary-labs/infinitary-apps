@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-session-split",
+      "reason": "Internal: splits the Claude session's file along its owners with no change to how a session behaves; nothing a person sees changes."
+    }
+  ]
+}

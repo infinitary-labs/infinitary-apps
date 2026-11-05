@@ -15,7 +15,7 @@ import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { MessageQueue, userMessage } from "./claudeQueryCore";
-import { claudeSessionOptions } from "./session";
+import { claudeSessionOptions } from "./claudeSessionOptions";
 
 // Measured on the hosted Linux check machine with four integration workers:
 // slowest per-case minimum 1.966 s; five times, rounded up to 5 s.

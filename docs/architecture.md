@@ -214,7 +214,7 @@ Non-negotiable baseline (enforced by a startup assertion in dev builds):
   INF-2321's accepted amendment retains the exact-item permission check; Apple-first alone cannot guarantee a silent background read.
   The core never shells out to `/usr/bin/security`, and no credential reaches the reader process’s stdout, logs or the renderer.
 - **First mate filesystem jail**: the seat does not roam, and it does not read.
-  `seatSessionSpec` (`src/core/orchestrator/seat.ts`) sets `builtins: "none"`; Pi maps that to `noTools: "builtin"` and serves only the spec's typed tools (`openRolling` in `src/core/pi/session.ts`), and the Claude seat passes `tools: []` (`claudeSessionOptions` in `src/core/claude/session.ts`).
+  `seatSessionSpec` (`src/core/orchestrator/seat.ts`) sets `builtins: "none"`; Pi maps that to `noTools: "builtin"` and serves only the spec's typed tools (`openRolling` in `src/core/pi/session.ts`), and the Claude seat passes `tools: []` (`claudeSessionOptions` in `src/core/claude/claudeSessionOptions.ts`).
   There is no `read`, `grep`, `find`, or `ls`.
   Reading is a crewmate's job (`docs/orchestrator-contract.md`). rev-4's Q1 jailed read-only tools are not what production runs.
   Packaged builds still ship the git-tracked tree as `Contents/Resources/self-source/` plus `self-map.json` (`scripts/generate-self-source.mjs`, extraResources); unpackaged/dev uses the checkout.

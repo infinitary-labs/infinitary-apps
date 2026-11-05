@@ -11,14 +11,10 @@ import { appPathsFor } from "../paths";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import { resolveClaudeExecutable } from "./claudeCli";
+import { CLAUDE_MODEL_PROVIDER, type ClaudeQueryFactory } from "./claudeQueryCore";
+import { CLAUDE_CODING_ENV, CLAUDE_COMMAND_TIME_CEILING_MS } from "./claudeSessionOptions";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
-import {
-  CLAUDE_CODING_ENV,
-  CLAUDE_COMMAND_TIME_CEILING_MS,
-  CLAUDE_MODEL_PROVIDER,
-  type ClaudeQueryFactory,
-  createClaudeSessionFactory,
-} from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 // Measured on the Mac with the installed 2.1.317: the one case's slowest of
 // five runs 3.12 s for its two client starts; five times that, rounded up to

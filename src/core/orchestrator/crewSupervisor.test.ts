@@ -117,7 +117,7 @@ import { jpegImage, pngImage } from "../../../tests/helpers/images";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { attachmentPath, keepImages } from "../attachments";
-import { CLAUDE_CONTROL_PROFILE } from "../claude/session";
+import { CLAUDE_CONTROL_PROFILE } from "../claude/claudeQueryCore";
 import {
   type Forge,
   type ForgeChange,

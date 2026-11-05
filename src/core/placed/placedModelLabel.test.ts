@@ -15,7 +15,7 @@ import {
   type ContractWorld,
   CREWMATE_TASK,
 } from "../../../tests/helpers/sessionContract";
-import { CLAUDE_MODEL_PROVIDER } from "../claude/session";
+import { CLAUDE_MODEL_PROVIDER } from "../claude/claudeQueryCore";
 import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { LOCAL_MACHINE_ID, type ModelSession } from "../session/session";

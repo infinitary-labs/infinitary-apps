@@ -66,7 +66,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     FOLD_MIN: physical("a repeat folds to a pointer naming the line of its first copy"),
     CONTEXT_MAX: physical("three lines show above instead; a window from a line reads more"),
   },
-  "src/core/claude/session.ts": {
+  "src/core/claude/claudeSessionOptions.ts": {
     CLAUDE_THINKING_FLOOR_TOKENS: outside("thinking turns off when the output cap is at or under it"),
     // The captain chose 3 days (2026-11-04), a policy value, not a measured need.
     CLAUDE_COMMAND_TIME_CEILING_MS: {

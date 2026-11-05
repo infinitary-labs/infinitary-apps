@@ -1,21 +1,100 @@
-import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { Options, Query, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { FmEvent } from "@shared/events";
-import type { SessionImage } from "../session/session";
+import type { SessionClock } from "../session/bounds";
+import type { ControlProfile, SessionImage } from "../session/session";
+import { bareToolName } from "../storage/sessionReader";
+import type { SessionRecordStore } from "../storage/sessionRecordStore";
+import { type ClaudeClientCheck, checkClaudeClient, claudeClientIssueText } from "./claudeCli";
 import {
   type ClaudeNormalizeResult,
   type ClaudeNormalizerState,
+  type ClaudeRateLimit,
   createNormalizerState,
   fmEventsFromClaudeMessage,
 } from "./claudeEvents";
 
 /**
- * The core both Claude sessions stand on - the rolling and the one-shot
- * session (session.ts): the push-to-pull input queue, the user message the
- * client reads, and the pump that reads the client's messages, normalizes
- * them and settles the awaited turn. They differ only in WHEN a turn is
- * over and what a failed one says, so each supplies those decisions and
- * nothing else is written twice.
+ * The core both Claude sessions stand on - the rolling session
+ * (`claudeRollingSession.ts`) and the one-shot (`claudeOneShotSession.ts`),
+ * which the factory (`session.ts`) opens: what they run on, the push-to-pull
+ * input queue, the user message the client reads, and the pump that reads
+ * the client's messages, normalizes them and settles the awaited turn. They
+ * differ only in WHEN a turn is over and what a failed one says, so each
+ * supplies those decisions and nothing else is written twice.
  */
+
+/**
+ * Claude's streaming-input session delivers the whole contract natively.
+ * One constant, so the factory's declaration and each session's own cannot
+ * drift apart.
+ */
+export const CLAUDE_CONTROL_PROFILE: ControlProfile = {
+  steer: "native",
+  interruptGranularity: "turn",
+  quotaEvents: true,
+  // The client owns its own background work and keeps working after a
+  // prompt settles, so the host sees activity but never a provable stop.
+  // The whose-turn rule answers "cannot tell" here (S7c, R4.8 q2).
+  backgroundWork: "client",
+  // Every failed turn is classified from the SDK's typed fields
+  // (`classifyClaudeSignal`), never from the words it reports.
+  failureSignals: "typed",
+};
+
+export type ClaudeQueryFactory = (params: {
+  prompt: AsyncIterable<SDKUserMessage>;
+  options: Options;
+}) => Query;
+
+/** The provider id a Claude session reports as its model's provider. */
+export const CLAUDE_MODEL_PROVIDER = "anthropic-claude";
+
+export type ClaudeSessionDeps = {
+  /**
+   * The machine's default Claude config root: the store the lease guards,
+   * and where the client keeps a rolling session's own transcript.
+   */
+  configDir: string;
+  /**
+   * The host's one clock: every rolling session reads it, and its record's
+   * copy and its client hygiene ride its ticks.
+   */
+  clock?: SessionClock;
+  /**
+   * The app's durable record of the rolling sessions in a directory;
+   * production keeps one store per directory. Tests hand in their own.
+   */
+  records?: (dir: string) => SessionRecordStore;
+  /** A plan-window reading the client pushed, for the account's quota. */
+  onRateLimit?: (accountId: string, reading: ClaudeRateLimit) => void;
+  /** A turn succeeded on this account: the provider accepted its login. */
+  onServed?: (accountId: string) => void;
+  /** The client's own stderr, and the session's notes about the client. */
+  log?: (line: string) => void;
+  /** The environment the client is found in and run from; production reads the host's. */
+  env?: () => NodeJS.ProcessEnv;
+  /** Is the client there and new enough; production spawns `claude --version` once per binary. */
+  checkClient?: (env: NodeJS.ProcessEnv) => Promise<ClaudeClientCheck>;
+  /** The SDK's query; tests script one. */
+  query?: ClaudeQueryFactory;
+};
+
+/** Where a session's notes go: the deps' log, or the console. */
+export function noteTo(deps: ClaudeSessionDeps): (line: string) => void {
+  return deps.log ?? ((line) => console.warn(`[claude] ${line}`));
+}
+
+/**
+ * The machine's own client (F14), checked at every open and attachment:
+ * refuse with its sentence, before anything is leased, when it is gone or old.
+ */
+export async function refuseMissingClient(
+  deps: ClaudeSessionDeps,
+  env: NodeJS.ProcessEnv,
+): Promise<void> {
+  const issue = claudeClientIssueText(await (deps.checkClient ?? checkClaudeClient)(env));
+  if (issue) throw new Error(issue);
+}
 
 /**
  * A hand-rolled queue, because the input side of a streaming-input session
@@ -198,9 +277,20 @@ export abstract class ClaudeQueryCore<E extends { type: string }> {
     for (const listener of this.listeners) listener(event);
   }
 
-  /** A normalized FmEvent is always one of `E`: both sessions' unions contain FmEvent. */
+  /**
+   * A normalized FmEvent is always one of `E`: both sessions' unions contain
+   * FmEvent. A session speaks the spec's tools by their own names: the client
+   * serves each under the app's server (`mcp__infinitary__<name>`), and the
+   * decision record, the feed and the replay read the bare one.
+   */
   protected emitAll(events: readonly FmEvent[]): void {
-    for (const event of events) this.emit(event as unknown as E);
+    for (const event of events) {
+      const spoken =
+        event.type === "tool_start" || event.type === "tool_end"
+          ? { ...event, toolName: bareToolName(event.toolName) }
+          : event;
+      this.emit(spoken as unknown as E);
+    }
   }
 
   protected settleTurn(): void {

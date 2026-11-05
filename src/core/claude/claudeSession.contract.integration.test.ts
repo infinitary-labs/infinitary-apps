@@ -15,8 +15,9 @@ import {
 import type { ModelRuntime } from "../pi/types";
 import { BoundsWatcher } from "../session/bounds";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
+import { CLAUDE_MODEL_PROVIDER } from "./claudeQueryCore";
 import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
-import { CLAUDE_MODEL_PROVIDER, createClaudeSessionFactory } from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 /**
  * Claude's real-client harness for the session contract

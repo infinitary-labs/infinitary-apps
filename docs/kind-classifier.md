@@ -53,7 +53,7 @@ An older task's saved classification is not rewritten.
 
 ## The call
 
-The session comes from the binding's backend (`docs/decision-models.md`): a Pi-served model gets the Pi factory below, a Claude-served one the Claude factory (W1 S10, `src/core/claude/session.ts`: one query to the machine's own client, no tools, one turn, low effort, no transcript), so a machine with only Claude signed in classifies too.
+The session comes from the binding's backend (`docs/decision-models.md`): a Pi-served model gets the Pi factory below, a Claude-served one the Claude factory (W1 S10, `src/core/claude/claudeOneShotSession.ts`: one query to the machine's own client, no tools, one turn, low effort, no transcript), so a machine with only Claude signed in classifies too.
 Claude classification keeps the client's model-specific output allowance rather than the Pi path's 64-token cap: Claude's output includes hidden thinking, which Sonnet 5.5 can use even when the session requests thinking disabled (INF-1451).
 The question still asks for exactly one kind, and the adapter's 15-second deadline still covers the whole call.
 No classification is re-asked to repair an empty reply; the original request has room to finish its thinking and return the word.

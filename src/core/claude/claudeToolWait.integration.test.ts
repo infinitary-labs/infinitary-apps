@@ -19,9 +19,10 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PLACED_CLAUDE_ENV } from "../helper/conversations";
 import { LOCAL_MACHINE_ID, type SessionSpec } from "../session/session";
 import { boundTool } from "../session/tools";
+import { CLAUDE_MODEL_PROVIDER } from "./claudeQueryCore";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
 import { claudeToolOf } from "./claudeTaskTools";
-import { CLAUDE_MODEL_PROVIDER, createClaudeSessionFactory } from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 /**
  * How long the Claude client lets one of the app's own tools wait, on the

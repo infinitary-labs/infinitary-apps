@@ -14,8 +14,8 @@ import { appPathsFor } from "../paths";
 import { LOCAL_MACHINE_ID, type SessionSpec } from "../session/session";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { MessageQueue, userMessage } from "./claudeQueryCore";
+import { claudeSessionOptions } from "./claudeSessionOptions";
 import { encodeClaudeProjectDir } from "./claudeTranscript";
-import { claudeSessionOptions } from "./session";
 
 // Measured on the hosted Linux check machine with four integration workers:
 // slowest per-case minimum 2.060 s; five times, rounded up to 5 s.

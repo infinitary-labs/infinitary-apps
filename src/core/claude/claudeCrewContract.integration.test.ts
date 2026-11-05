@@ -11,8 +11,9 @@ import { appPathsFor, crewmateSessionsDir } from "../paths";
 import { LOCAL_MACHINE_ID, type SessionResume, type SessionSpec } from "../session/session";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import { resolveClaudeExecutable } from "./claudeCli";
+import { CLAUDE_MODEL_PROVIDER } from "./claudeQueryCore";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
-import { CLAUDE_MODEL_PROVIDER, createClaudeSessionFactory } from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 // Each case starts the boxed client three or four times in turn. Fastest
 // of three Mac runs: 1.285 s on the SDK's own client, 1.192 s installed;

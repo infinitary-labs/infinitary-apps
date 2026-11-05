@@ -7,12 +7,9 @@ import type { ModelSession, SessionEvent } from "../session/session";
 import type { BoundTool } from "../session/tools";
 import type { ClaudeClientCheck } from "./claudeCli";
 import type { ClaudeRateLimit } from "./claudeEvents";
+import { CLAUDE_MODEL_PROVIDER, type ClaudeQueryFactory } from "./claudeQueryCore";
 import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
-import {
-  CLAUDE_MODEL_PROVIDER,
-  type ClaudeQueryFactory,
-  createClaudeSessionFactory,
-} from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 /**
  * The Claude classifier (W1 S10) - the question's one-shot session on

@@ -1,5 +1,5 @@
-import type { ClaudeQueryFactory } from "../../src/core/claude/session";
-import { type ClaudeSessionDeps, createClaudeSessionFactory } from "../../src/core/claude/session";
+import type { ClaudeQueryFactory, ClaudeSessionDeps } from "../../src/core/claude/claudeQueryCore";
+import { createClaudeSessionFactory } from "../../src/core/claude/session";
 import type { SessionFactory } from "../../src/core/session/session";
 import { SessionRecordStore } from "../../src/core/storage/sessionRecordStore";
 

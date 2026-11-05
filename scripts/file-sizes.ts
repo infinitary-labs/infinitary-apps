@@ -35,7 +35,6 @@ export const OVER_CEILING: readonly string[] = [
   "scripts/replay/engine.ts",
   "src/core/browser/taskBrowsers.test.ts",
   "src/core/browser/taskBrowsers.ts",
-  "src/core/claude/session.ts",
   "src/core/core.test.ts",
   "src/core/devices/remoteLogin.test.ts",
   "src/core/helper/sessionHost.test.ts",

@@ -18,8 +18,9 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { LOCAL_MACHINE_ID, type SessionSpec } from "../session/session";
 import { bindTools } from "../session/tools";
+import { CLAUDE_MODEL_PROVIDER } from "./claudeQueryCore";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
-import { CLAUDE_MODEL_PROVIDER, createClaudeSessionFactory } from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 /**
  * A Claude crewmate's completion decision through the real client (FI3-249):

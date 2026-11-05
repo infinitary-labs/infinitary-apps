@@ -10,7 +10,7 @@ import type {
   WorkOrderChannel,
   WorkOrderResponse,
 } from "@shared/work";
-import { CLAUDE_MODELS } from "../claude/claudeModels";
+import { claudeModelName } from "../claude/claudeModels";
 import { DeviceOutOfReachError } from "../connection/connection";
 import { crewmateResume } from "../orchestrator/crewSession";
 import type { ServedInstructions, ServedState } from "../orchestrator/seat";
@@ -340,10 +340,7 @@ export class PlacedSession implements ModelSession {
     const held = this.state.model;
     if (held?.provider === model.provider && held.id === model.id) return;
     const { modelLabel: _stale, ...rest } = this.state;
-    const name =
-      model.provider === CLAUDE_PROVIDER_ID
-        ? CLAUDE_MODELS.find((known) => known.id === model.id)?.name
-        : undefined;
+    const name = model.provider === CLAUDE_PROVIDER_ID ? claudeModelName(model.id) : undefined;
     this.state = { ...rest, model, ...(name ? { modelLabel: name } : {}) };
   }
 

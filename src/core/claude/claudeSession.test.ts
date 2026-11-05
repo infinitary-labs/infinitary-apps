@@ -21,16 +21,15 @@ import { type BoundTool, bindTools, type CrewmateToolDelegate } from "../session
 import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import type { ClaudeRateLimit } from "./claudeEvents";
-import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
-import { encodeClaudeProjectDir } from "./claudeTranscript";
+import { CLAUDE_MODEL_PROVIDER, type ClaudeQueryFactory } from "./claudeQueryCore";
 import {
-  CLAUDE_MODEL_PROVIDER,
   CLAUDE_ROLLING_ENV,
   CLAUDE_SESSION_ENV,
   CLAUDE_STEER_PRIORITY,
-  type ClaudeQueryFactory,
-  createClaudeSessionFactory,
-} from "./session";
+} from "./claudeSessionOptions";
+import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
+import { encodeClaudeProjectDir } from "./claudeTranscript";
+import { createClaudeSessionFactory } from "./session";
 
 /**
  * The crewmate's coding session on Claude runs against a scripted client

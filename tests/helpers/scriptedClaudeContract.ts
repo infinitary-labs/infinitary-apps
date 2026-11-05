@@ -3,9 +3,10 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { CLAUDE_MODEL_PROVIDER } from "../../src/core/claude/claudeQueryCore";
 import { hasActiveSession, resetStoreLeasesForTest } from "../../src/core/claude/claudeStoreLease";
 import { encodeClaudeProjectDir } from "../../src/core/claude/claudeTranscript";
-import { CLAUDE_MODEL_PROVIDER, createClaudeSessionFactory } from "../../src/core/claude/session";
+import { createClaudeSessionFactory } from "../../src/core/claude/session";
 import type { ModelRuntime } from "../../src/core/pi/types";
 import { BoundsWatcher } from "../../src/core/session/bounds";
 import {

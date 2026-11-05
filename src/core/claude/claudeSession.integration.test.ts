@@ -31,9 +31,10 @@ import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
 import { createNormalizerState, fmEventsFromClaudeMessage } from "./claudeEvents";
-import { MessageQueue, userMessage } from "./claudeQueryCore";
+import { CLAUDE_MODEL_PROVIDER, MessageQueue, userMessage } from "./claudeQueryCore";
+import { claudeSessionOptions } from "./claudeSessionOptions";
 import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
-import { CLAUDE_MODEL_PROVIDER, claudeSessionOptions, createClaudeSessionFactory } from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 /**
  * The crewmate's coding session against the REAL client, hermetically: the

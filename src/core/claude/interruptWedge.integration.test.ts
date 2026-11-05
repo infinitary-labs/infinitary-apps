@@ -10,8 +10,9 @@ import { PlacedTasks } from "../helper/placedTasks";
 import { SessionHost } from "../helper/sessionHost";
 import { TICK_PERIOD_MS } from "../orchestrator/ticker";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
+import { CLAUDE_MODEL_PROVIDER } from "./claudeQueryCore";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
-import { CLAUDE_MODEL_PROVIDER, createClaudeSessionFactory } from "./session";
+import { createClaudeSessionFactory } from "./session";
 
 /**
  * A crewmate's Claude client that stops answering - INB-9's, on the computer

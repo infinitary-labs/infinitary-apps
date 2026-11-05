@@ -28,8 +28,9 @@ import {
 } from "../../shared/ipc";
 import { type AccountBackend, statusFromHealth } from "../accounts/accountBackend";
 import { claudeAvailableModels } from "../claude/claudeModels";
+import { CLAUDE_CONTROL_PROFILE } from "../claude/claudeQueryCore";
 import { resetStoreLeasesForTest } from "../claude/claudeStoreLease";
-import { CLAUDE_CONTROL_PROFILE, createClaudeSessionFactory } from "../claude/session";
+import { createClaudeSessionFactory } from "../claude/session";
 import { type HomeConnection, startConnection } from "../connection/connection";
 import { DevicePairing } from "../devices/pairing";
 import type { CoreDispatch } from "../dispatcher";

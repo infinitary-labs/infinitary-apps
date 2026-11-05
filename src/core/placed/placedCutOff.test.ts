@@ -24,8 +24,9 @@ import {
 import { type AccountBackend, statusFromHealth } from "../accounts/accountBackend";
 import { CredentialHealthService } from "../accounts/credentialHealthService";
 import { CLAUDE_MODELS, claudeAvailableModels } from "../claude/claudeModels";
+import { CLAUDE_CONTROL_PROFILE } from "../claude/claudeQueryCore";
 import { resetStoreLeasesForTest } from "../claude/claudeStoreLease";
-import { CLAUDE_CONTROL_PROFILE, createClaudeSessionFactory } from "../claude/session";
+import { createClaudeSessionFactory } from "../claude/session";
 import { type HomeConnection, startConnection } from "../connection/connection";
 import { DeviceSignIns } from "../devices/deviceSignIns";
 import { DevicePairing } from "../devices/pairing";

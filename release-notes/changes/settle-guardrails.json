@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "settle-guardrails",
+      "reason": "Internal: tests pin how a merge's last look, the captain's kept merge approval and a task's close behave before the settle service is split; nothing a person sees changes."
+    }
+  ]
+}

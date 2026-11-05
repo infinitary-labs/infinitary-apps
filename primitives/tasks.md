@@ -104,6 +104,9 @@ Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.
 
 - [`../src/core/tasks/taskService.test.ts`](../src/core/tasks/taskService.test.ts) and [`../src/core/tasks/taskService.graph.test.ts`](../src/core/tasks/taskService.graph.test.ts): the record, graph, refusals and close rules.
 - [`../src/core/orchestrator/settleService.test.ts`](../src/core/orchestrator/settleService.test.ts): settle modes and `SettleRefusal`.
+- [`../src/core/orchestrator/settleService.boundary.test.ts`](../src/core/orchestrator/settleService.boundary.test.ts): the last look before a merge goes out, and a merge's, land's and discard's refusals.
+- [`../src/core/orchestrator/settleService.keptMerge.test.ts`](../src/core/orchestrator/settleService.keptMerge.test.ts): the captain's kept merge approval - its guard, its waits, a host-run merge's first checks and an attempt read back.
+- [`../src/core/orchestrator/settleService.closes.test.ts`](../src/core/orchestrator/settleService.closes.test.ts): the order a close takes and the rechecks of the first mate's declared closes.
 - [`../src/core/pi/taskTools.test.ts`](../src/core/pi/taskTools.test.ts): the first mate's task tools.
 - [`../tests/e2e/sequences.spec.ts`](../tests/e2e/sequences.spec.ts): the binding test that guided work stays parent and child tasks.
 - [`../tests/e2e/task-followup.spec.ts`](../tests/e2e/task-followup.spec.ts) and [`../tests/e2e/answer-task.spec.ts`](../tests/e2e/answer-task.spec.ts).

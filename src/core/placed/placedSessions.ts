@@ -1,84 +1,44 @@
-import {
-  appendFileSync,
-  closeSync,
-  existsSync,
-  fsyncSync,
-  ftruncateSync,
-  mkdirSync,
-  openSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-  writeSync,
-} from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
-import { standingCutOff } from "@shared/accounts";
-import type { CutOffClass } from "@shared/authFailure";
-import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
+import { existsSync, renameSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+import { COMPUTER, HERE } from "@shared/deviceNames";
 import { awayWord, type ComputerReach } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import {
   type InvokeRequest,
   type InvokeResponse,
-  invokeContract,
   speaksChangePresentations,
   speaksKnowledge,
-  speaksRecordRefresh,
   speaksSeed,
   speaksTempCleanup,
-  takesWork,
   type WorkInvokeChannel,
 } from "@shared/ipc";
-import { catalogEntry } from "@shared/providers";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import {
   type PlacedEventRecord,
   type PlacedRosterTask,
   type PlacedSpec,
-  type PlacedState,
   placedSpecSchema,
   placedTaskFolders,
-  requestRepeatsSafely,
   type WorkingCopyBase,
   type WorkOrderChannel,
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
-import { z } from "zod";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
 import { contractChange, listsChange } from "../connection/contractChanges";
 import { SHARED_CARDS } from "../connection/sharedCards";
 import {
   dueIn,
   dueRule,
-  isIntegrationAnswer,
   type OutsideDue,
   type PlacedOutsideVisit,
   rewriteOutsideData,
   textFilesUnder,
 } from "../integrations";
-import type { JobExit } from "../jobs/jobManager";
-import { cardMutationText } from "../orchestrator/cardMutationText";
 import { crewmateResumeToken } from "../orchestrator/crewSession";
-import {
-  type AppPaths,
-  crewmateCardPicturesDir,
-  crewmateHandoverDir,
-  crewmatePlacedDir,
-  crewmateSessionsDir,
-} from "../paths";
-import { keepContentFile } from "../pi/cardImages";
-import type { QuotaCatalogModel } from "../quota/auth";
-import {
-  actualComputerPool,
-  type ComputerPool,
-  catalogWhereUnlisted,
-  computerPool,
-  heldThere,
-} from "../routing/computerPool";
+import { type AppPaths, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
+import { errorText } from "../personal/errorText";
+import type { ComputerPool } from "../routing/computerPool";
 import type {
   ControlProfile,
   ModelSession,
@@ -87,15 +47,18 @@ import type {
   SessionFactory,
   SessionSpec,
 } from "../session/session";
-import { CardRefusedError, type DeclaredCardInput } from "../session/tools";
-import { CHANGE_RECOVERY, changeRecoveryCheck, sameNames } from "../session/workRecovery";
+import { sameNames } from "../session/workRecovery";
 import type { TaskRecord } from "../storage/taskStore";
-import { sha256OfFile } from "../tasks/handoverFiles";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
+import type { AnsweredWait, CrewMachines, PlacedBrowserSink, PlacedHost } from "./crewMachines";
+import { accountKey, PlacedAccounts, type PlacedAccountsOptions } from "./placedAccounts";
+import { answerCall, type CallbackReach, NotHeldHere, replayReport } from "./placedCallbacks";
 import { PlacedCopies, type PlacedCopy } from "./placedCopies";
+import { type CallLine, PlacedLedger, reportOf } from "./placedLedger";
 import { PlacedSession } from "./placedSession";
 import { NO_PLACED_TASK, type PlacedWork } from "./placedWork";
+import { RecordCopy } from "./recordCopy";
 import { sendSourceFile } from "./sourceFiles";
 import type { WorkDevices } from "./workDevices";
 
@@ -125,255 +88,14 @@ import type { WorkDevices } from "./workDevices";
  *   of reach for a minute and when its work caught up.
  *
  * Nothing here reaches a computer before the shell attaches the connection
- * (`WorkDevices`).
+ * (`WorkDevices`). What the crew reads of it is `CrewMachines`
+ * (`crewMachines.ts`); the callbacks are answered in `placedCallbacks.ts`,
+ * kept in `placedLedger.ts`, the record copied home in `recordCopy.ts`, and
+ * the computer's own accounts read in `placedAccounts.ts`.
  */
 
 /** How long a computer with work is out of reach before the feed says so. */
-export const OUT_OF_REACH_LINE_MS = 60_000;
-/** Live copies share at most one start per second; a turn's end always flushes. */
-const LIVE_COPY_MS = 1_000;
-
-function scheduleCopy(ms: number, run: () => void): () => void {
-  const timer = setTimeout(run, ms);
-  timer.unref();
-  return () => clearTimeout(timer);
-}
-
-/** What the supervisor does for the placed tasks (`CrewSupervisor`). */
-export type PlacedHost = {
-  /**
-   * Opens the task's conversation on this Mac when no crewmate here holds it
-   * - a restart left it, or its computer asks first - and resolves once it
-   * is open.
-   */
-  adopt(taskId: string): Promise<void>;
-  /** These tasks' computer is in reach and caught up: their lanes go on, and a waiting start may start. */
-  caughtUp(taskIds: readonly string[]): void;
-  /** A background job the crewmate's shell started there ended. */
-  jobExit(taskId: string, exit: JobExit): void;
-  /**
-   * The task's conversation opened there again after that computer
-   * restarted, in the session the crewmate here holds: one that started
-   * over there is carried into its new conversation as at its open.
-   */
-  reopened(taskId: string): void;
-  /**
-   * The tool names this task's crewmate binds now, for the contract its
-   * computer speaks. A reopen sends these when they differ from the names
-   * it opened with, so a computer that restarted on a newer contract gets
-   * a version-gated tool without this Mac restarting.
-   */
-  toolsNow?(taskId: string): readonly string[] | undefined;
-};
-
-/** What the crew reads of the computers that run work (`CrewSupervisorOptions.machines`). */
-export type CrewMachines = {
-  /** The factories that open a conversation there; undefined when no computer can. */
-  factories(machine: string): SessionFactories | undefined;
-  /** The task's folders there, by the layout its roster named; undefined until it is read. */
-  folders(machine: string, taskId: string): ReturnType<typeof placedTaskFolders> | undefined;
-  /**
-   * That computer keeps its tasks' own browsers, as its roster says
-   * (docs/task-browser.md, "On another computer"); false until it is read.
-   */
-  keepsBrowsers?(machine: string): boolean;
-  /** The task's computer is in reach and caught up, so its lane may go on. */
-  ready(machine: string, taskId: string): boolean;
-  /**
-   * Asks the task's computer, while in reach, whether its conversation is
-   * working, and ends a turn the home still holds as running there once that
-   * computer says it is not and every event it counted is in (INF-2332).
-   * Answers whether that answer ended the turn here; false when it says the
-   * turn works, ends nothing here, or never comes.
-   */
-  confirm?(taskId: string): Promise<boolean>;
-  /**
-   * Asks the task's computer, while in reach, to answer "ask again" each of
-   * the app's own reads its conversation began by the newest event the home
-   * has taken (INF-2603, `answer-stuck-reads.md`): asked after a quiet
-   * stretch, each such read has waited at least that long. Answers the
-   * reads it answered, each with how long it waited; none from a computer
-   * without the change, or out of reach.
-   */
-  answerReads?(taskId: string): Promise<AnsweredWait[]>;
-  /**
-   * Whether the computer's crewmates can report a typed result
-   * (`report-result.md`); false while the home cannot tell.
-   */
-  takesResults?(machine: string): boolean;
-  /** Individually correlated responses, saved immediately at home. */
-  takesResponses?(machine: string): boolean;
-  /**
-   * Whether the computer's crewmates read a shared-card write's typed result
-   * (`SHARED_CARDS`, docs/card-threads.md "Shared cards"); false while the
-   * home cannot tell.
-   */
-  takesSharedCards?(machine: string): boolean;
-  /** The computer understands current check declarations and offer-based readiness. */
-  takesCheckDeclarations?(machine: string): boolean;
-  /**
-   * The task's working copy there, made now or found as it was: its
-   * project cloned there once, then a working copy on the task's branch
-   * (docs/helper.md, "Its working copies").
-   */
-  prepare(
-    machine: string,
-    taskId: string,
-    repoId: string | null,
-    base?: WorkingCopyBase,
-  ): Promise<PlacedCopy>;
-  /**
-   * Copy a source file to the task folder, returning its verified path
-   * there; `handover` keeps it in the task's hand-over folder instead.
-   */
-  sourceFile?(
-    machine: string,
-    taskId: string,
-    name: string,
-    file: string,
-    into?: "handover",
-  ): Promise<string>;
-  /**
-   * Whether the computer takes files one task hands another
-   * (`handover-files.md`); false while the home cannot tell.
-   */
-  takesHandover?(machine: string): boolean;
-  /**
-   * Whether the computer removes files from outside from a task's
-   * hand-over folder when they are due; false while the home cannot tell.
-   */
-  takesOutsideFiles?(machine: string): boolean;
-  /** Carry a home ref into the destination repository before naming it in the brief. */
-  sourceRef?(
-    machine: string,
-    taskId: string,
-    repoId: string | null,
-    sourceId: string,
-    ref: string,
-  ): Promise<string>;
-  /** A committed revision and its changed-file list, read on that computer. */
-  revision(
-    machine: string,
-    taskId: string,
-    headSha?: string,
-  ): Promise<WorkOrderResponse<"inf:working-copy:revision">>;
-  /**
-   * Whether the computer takes a task with no project (`speaksSeed`); absent
-   * where the home cannot tell.
-   */
-  takesRepoless?(machine: string): boolean;
-  /**
-   * Whether the computer gives its crewmates the home's knowledge
-   * (`speaksKnowledge`, docs/knowledge.md "Who has it"); false while the
-   * home cannot tell.
-   */
-  takesKnowledge?(machine: string): boolean;
-  /**
-   * Whether the computer gives its crewmates the home's integrations
-   * through `infinitary-integrations-axi` (docs/integrations.md, "On a
-   * computer that runs work"); false while the home cannot tell.
-   */
-  takesIntegrations?(machine: string): boolean;
-  takesChangePresentations?(machine: string): boolean;
-  /** The working copy's dependencies, installed there; a failure is an outcome. */
-  install(machine: string, taskId: string): Promise<DependencyInstall>;
-  /**
-   * Whether the computer takes a started task's move to or from it
-   * (docs/helper.md, "Moving a started task"); false while the
-   * home cannot tell.
-   */
-  takesMoves?(machine: string): boolean;
-  /** Packs a task's work there to move it, into `pack` here (`PlacedCopies.moveOut`). */
-  moveOut?(
-    machine: string,
-    taskId: string,
-    attempt: string,
-    pack: string,
-    keep?: readonly string[],
-  ): Promise<{ head: string; branch: string; repoDir: string }>;
-  /** Makes a moving task's working copy there from the work packed here (`PlacedCopies.moveIn`). */
-  moveIn?(
-    machine: string,
-    taskId: string,
-    attempt: string,
-    input: { repoId: string | null; head: string; branch: string; pack: string },
-  ): Promise<PlacedCopy>;
-  /** Removes a working copy a move left there (`PlacedCopies.retireMoved`). */
-  retireMoved?(machine: string, taskId: string): Promise<void>;
-  /**
-   * A moved task's conversation starts over where it runs now: what this Mac
-   * kept of its conversation on the computer it left - the newest event, the
-   * callbacks answered - is set aside, so the new one's numbers start fresh.
-   */
-  forgetExecution?(taskId: string): void;
-  /** What the task's working copy there holds unmerged; null while nobody can tell. */
-  workStatus(taskId: string): Promise<{ dirty: boolean; unlandedCommits: number } | null>;
-  /**
-   * The task's branch, brought here from there before this Mac's own git
-   * reads it; answers the repository here it reads it in. `branch` names
-   * another branch the crewmate checked out there (INF-2490).
-   */
-  bringBranchHome(taskId: string, strict?: boolean, branch?: string): Promise<string | undefined>;
-  /** The branch the task's working copy there has checked out, and its commit (INF-2490). */
-  checkedOut(taskId: string): Promise<{ branch: string | null; head: string } | null>;
-  /** The computers that run work on the list, by device id. */
-  computers(): readonly string[];
-  /** The computer's name, as Devices lists it. */
-  nameOf(machine: string): string;
-  /** How the home's words place the computer (`signInPlace`): "Mac mini", "Running as Builder". */
-  placeOf(machine: string): ReturnType<typeof signInPlace>;
-  /**
-   * What the computer's own sign-ins serve, as it last said of them: the
-   * models a task that runs there is routed among, and the account there
-   * for each model and each provider (docs/helper.md, "Its own sign-ins").
-   * Never this Mac's sign-ins.
-   */
-  served(machine: string): Promise<ComputerPool>;
-  /**
-   * What the computer last said of its own sign-ins, asked now when it has
-   * said nothing yet and is in reach; null when it cannot say. A task about
-   * to start there reads whether it has any sign-in at all, and one for the
-   * host its project lives on, before anything is tried there.
-   */
-  signInsOf(machine: string): Promise<ComputerSignIns | null>;
-  /**
-   * The computer's own account a conversation held there is bound to, as
-   * that computer last said (`PlacedState.accountId`): the one its usage is
-   * booked on. Never one of this Mac's accounts; undefined when it named none.
-   */
-  servingAccount(session: ModelSession): string | undefined;
-  /**
-   * The same account for a task, keyed as the cut-off contract names an
-   * account (`<account>@<computer>`, never one of this Mac's ids): from its
-   * open conversation, else the computer's roster. Undefined when it names
-   * none, or nothing has said yet.
-   */
-  accountOf(machine: string, taskId: string): string | undefined;
-  /**
-   * The cut-off that computer last said stands on an account `accountOf`
-   * keyed (docs/helper.md, "Its own sign-ins"); undefined for none, and for
-   * a key of this Mac's own.
-   */
-  cutOffOf(account: string): { class: CutOffClass; since: number; resetsAt?: number } | undefined;
-  /**
-   * Whether that computer has said anything of its sign-ins since this Mac
-   * started, so a cut-off on the account is known to stand or to be over;
-   * true for a key of this Mac's own.
-   */
-  knows(account: string): boolean;
-  /** The account's provider and where it is ("on Mac mini"), for a key `accountOf` made. */
-  accountPlace(account: string): { provider: string; where: string } | undefined;
-  /**
-   * The computer's own sign-in a cut-off alone keeps from serving a task
-   * there, as it last said, when nothing else there serves: a task for it
-   * waits until it serves again. Undefined when something there serves,
-   * nothing would, or it has said nothing yet.
-   */
-  signInWait(
-    machine: string,
-  ): { account: string; provider: string; class: CutOffClass; resetsAt?: number } | undefined;
-};
-
+const OUT_OF_REACH_LINE_MS = 60_000;
 export type PlacedSessionsOptions = {
   tasks: TaskService;
   paths: AppPaths;
@@ -401,24 +123,11 @@ export type PlacedSessionsOptions = {
   /** Every project's id, to find the one a leftover working copy there was cloned from. */
   projects?: () => readonly string[];
   /**
-   * What a computer last said of its own sign-ins (`DeviceSignIns`), asked
-   * when it has said nothing yet; absent, it is known to serve nothing.
-   */
-  signIns?: (deviceId: string) => Promise<ComputerSignIns | null>;
-  /**
-   * The same, read now without asking (`DeviceSignIns.lastSaid`): a cut-off
-   * it names on the account a task there is bound to holds that task.
-   * Absent, nothing there ever holds one.
-   */
-  saidSignIns?: (deviceId: string) => ComputerSignIns | null;
-  /**
    * Asks a computer its sign-ins again and resolves once it answered or
    * could not (`DeviceSignIns.refresh`): before a turn there that met a
    * cut-off ends here, so the turn ends held.
    */
   refreshSignIns?: (deviceId: string) => Promise<void>;
-  /** Every model this Mac's catalog lists, provider-wide, which needs no sign-in here. */
-  catalogModels?: () => readonly QuotaCatalogModel[];
   /**
    * Whether Firstmate on a computer runs work for another Firstmate now, as
    * this Mac's own SSH connection to it found (`runsForAnotherFirstmate`):
@@ -449,29 +158,7 @@ export type PlacedSessionsOptions = {
   /** One-shot copy delay; answers its own cancel. Tests drive it with the same clock as now. */
   schedule?: (ms: number, run: () => void) => () => void;
   log?: (line: string) => void;
-};
-
-/** What a task's browser on a computer tells this Mac, by the computer that asked. */
-export type PlacedBrowserSink = {
-  automaticSignIn?: (
-    task: string,
-    site: string,
-  ) => InvokeResponse<"inf:work:browser-sign-in">["signIn"];
-  heardFact: (
-    deviceId: string,
-    task: string,
-    fact: InvokeRequest<"inf:work:browser">[0]["fact"],
-  ) => void;
-  heardFrame: (task: string, frame: InvokeRequest<"inf:work:browser-frame">[0]["frame"]) => void;
-  heardEvent: (
-    deviceId: string,
-    task: string,
-    event: InvokeRequest<"inf:work:browser-event">[0]["event"],
-  ) => void;
-};
-
-/** A conversation not open on this Mac, or a computer not caught up: asked again, never kept. */
-class NotHeldHere extends Error {}
+} & Pick<PlacedAccountsOptions, "signIns" | "saidSignIns" | "catalogModels">;
 
 type Roster = {
   tasksDir: string;
@@ -497,17 +184,6 @@ type Device = {
   rosterRead: () => void;
 };
 
-type CallLine = {
-  callId: string;
-  channel: string;
-  /** The newest event the home had taken in when it answered. */
-  after: number;
-  answer?: unknown;
-  error?: string;
-  /** A report's words, which a restart here gives its turn again. */
-  report?: { text: string; summary?: string; declared?: unknown };
-};
-
 type Placed = {
   readonly task: string;
   readonly deviceId: string;
@@ -520,8 +196,8 @@ type Placed = {
   session: PlacedSession | undefined;
   /** The conversation is being opened on this Mac for an ask that came first. */
   adopting: Promise<void> | undefined;
-  ledger: Map<string, CallLine> | undefined;
-  begun: Set<string> | undefined;
+  /** What the home keeps of it: each callback's answer, each change begun, its place. */
+  readonly ledger: PlacedLedger;
   calling: Map<string, Promise<unknown>>;
   /** One events request at a time, in order. */
   chain: Promise<unknown>;
@@ -533,17 +209,10 @@ type Placed = {
   released: boolean;
   /** Close was asked of the computer, and answered. */
   closed: boolean;
-  /** The record's copy, one at a time. */
-  copying: Promise<void>;
-  /** A trailing live copy, coalesced while a copy is scheduled or in flight. */
-  copyTimer: (() => void) | undefined;
   /** Calls announced by the computer whose results have not arrived yet. */
   openCalls: Set<string>;
-  liveCopy: Promise<void> | undefined;
-  copyPending: boolean;
-  copiedAt: number;
-  /** Where this Mac keeps the copy: its open session's record folder. */
-  recordDir: string;
+  /** This Mac's copy of its conversation's record. */
+  readonly record: RecordCopy;
   /** What its session was opened with, to open it there again after that computer restarts. */
   spec: PlacedSpec | undefined;
   /**
@@ -560,28 +229,10 @@ type Placed = {
   reopenOwed: boolean;
 };
 
-const keptStateSchema = z.object({
-  kept: z.number().int().nonnegative(),
-  ended: z.number().int().nonnegative(),
-});
-
-const callLineSchema = z.object({
-  callId: z.string(),
-  channel: z.string(),
-  after: z.number().int().nonnegative(),
-  answer: z.unknown().optional(),
-  error: z.string().optional(),
-  report: z
-    .object({ text: z.string(), summary: z.string().optional(), declared: z.unknown().optional() })
-    .optional(),
-});
-
 const rosterSchema = workOrders["inf:session:roster"].response;
 /** The quiet watchdog's answer to a stuck read there (`answer-stuck-reads.md`). */
 const ANSWER_STUCK_READS = contractChange("answer-stuck-reads");
 
-/** A read a computer that runs work answered "ask again", and how long it had waited. */
-export type AnsweredWait = { tool: string; waitedMs: number };
 const openAnswerSchema = workOrders["inf:session:open"].response;
 
 export class PlacedSessions implements PlacedWork, CrewMachines {
@@ -592,6 +243,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   private host: PlacedHost | undefined;
   private readonly startedAt: number;
   private readonly log: (line: string) => void;
+  /** The computers' own sign-ins and accounts, as each last said. */
+  private readonly accounts: PlacedAccounts;
+  /** What answering a callback reads of this side. */
+  private readonly callbackReach: CallbackReach;
 
   constructor(private readonly options: PlacedSessionsOptions) {
     this.startedAt = options.now();
@@ -610,6 +265,17 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       now: options.now,
       log: this.log,
     });
+    this.accounts = new PlacedAccounts({
+      ...options,
+      placeOf: (deviceId) => this.placeOf(deviceId),
+    });
+    this.callbackReach = {
+      paths: options.paths,
+      host: () => this.host,
+      browsers: () => options.browsers?.(),
+      takesSharedCards: (deviceId) => this.takesSharedCards(deviceId),
+      takesCheckDeclarations: (deviceId) => this.takesCheckDeclarations(deviceId),
+    };
     options.devices.onWorkDevice((contact) => this.contact(contact));
     // A record that closes closes its conversation there; one that goes -
     // a start that failed, a purge - leaves what it had there to the
@@ -651,26 +317,21 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return version ? speaksChangePresentations(version.contract) : false;
   }
 
-  private takesCurrentWork(machine: string): boolean {
-    const version = this.options.devices.version(machine);
-    return !!version && takesWork(version.contract);
-  }
-
   takesCheckDeclarations(machine: string): boolean {
-    return this.takesCurrentWork(machine);
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   takesResults(machine: string): boolean {
-    return this.takesCurrentWork(machine);
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   takesResponses(machine: string): boolean {
-    return this.takesCurrentWork(machine);
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   takesSharedCards(machine: string): boolean {
     return (
-      this.takesCurrentWork(machine) &&
+      this.options.devices.takesCurrentWork(machine) &&
       listsChange(this.options.devices.version(machine)?.changes, SHARED_CARDS)
     );
   }
@@ -686,7 +347,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * work requests included on this contract major.
    */
   takesIntegrations(machine: string): boolean {
-    return this.keepsBrowsers(machine) && this.takesCurrentWork(machine);
+    return this.keepsBrowsers(machine) && this.options.devices.takesCurrentWork(machine);
   }
 
   prepare(
@@ -705,7 +366,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     file: string,
     into?: "handover",
   ): Promise<string> {
-    if (statSync(file).size === 0 && !this.takesCurrentWork(machine))
+    if (statSync(file).size === 0 && !this.options.devices.takesCurrentWork(machine))
       throw new Error(
         "Update Infinitary on the work computer before it can receive an empty attached file.",
       );
@@ -713,12 +374,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   }
 
   takesHandover(machine: string): boolean {
-    return this.takesCurrentWork(machine);
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   /** Whether the computer removes files from outside when they are due: every one on the home's major. */
   takesOutsideFiles(machine: string): boolean {
-    return this.takesCurrentWork(machine);
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   sourceRef(
@@ -743,7 +404,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.copies.install(machine, taskId);
   }
   takesMoves(machine: string): boolean {
-    return this.takesCurrentWork(machine);
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   moveOut(
@@ -771,7 +432,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   forgetExecution(taskId: string): void {
     const placed = this.placed.get(taskId);
-    if (placed?.session && !placed.session.letGo)
+    if (placed && heldSession(placed))
       throw new Error("The task's conversation there is still held here.");
     this.placed.delete(taskId);
     const dir = crewmatePlacedDir(this.options.paths, taskId);
@@ -790,77 +451,40 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.copies.checkoutThere(taskId);
   }
 
-  async signInsOf(machine: string): Promise<ComputerSignIns | null> {
-    return (await this.options.signIns?.(machine)) ?? null;
+  signInsOf(machine: string): Promise<ComputerSignIns | null> {
+    return this.accounts.signInsOf(machine);
   }
 
-  async served(machine: string): Promise<ComputerPool> {
-    const signIns = (await this.options.signIns?.(machine)) ?? null;
-    const who = this.placeOf(machine).who;
-    const models = this.options.catalogModels?.() ?? [];
-    const now = this.options.now();
-    // Only the models its sign-ins say they serve, as an Automatic start
-    // routes among; an account that lists none, and every account of a
-    // computer too old to say, takes this Mac's catalog for its provider.
-    return (
-      actualComputerPool(who, catalogWhereUnlisted(signIns, models), models, now) ??
-      computerPool(who, signIns, models, now)
-    );
+  served(machine: string): Promise<ComputerPool> {
+    return this.accounts.served(machine);
+  }
+
+  servingAccount(session: ModelSession): string | undefined {
+    return this.accounts.servingAccount(session);
   }
 
   accountOf(machine: string, taskId: string): string | undefined {
     const placed = this.placed.get(taskId);
-    const session = placed?.session && !placed.session.letGo ? placed.session : undefined;
     const accountId =
-      session?.servingAccount() ??
+      (placed && heldSession(placed)?.servingAccount()) ??
       this.devices.get(machine)?.roster?.tasks.get(taskId)?.state?.accountId;
     return accountId ? accountKey(machine, accountId) : undefined;
   }
 
-  cutOffOf(account: string): { class: CutOffClass; since: number; resetsAt?: number } | undefined {
-    const row = this.accountRow(account);
-    return row ? standingCutOff(row, this.options.now()) : undefined;
+  cutOffOf(account: string): ReturnType<CrewMachines["cutOffOf"]> {
+    return this.accounts.cutOffOf(account);
   }
 
   knows(account: string): boolean {
-    const key = parseAccountKey(account);
-    if (!key || !this.options.saidSignIns) return true;
-    return this.options.saidSignIns(key.deviceId) !== null;
+    return this.accounts.knows(account);
   }
 
-  accountPlace(account: string): { provider: string; where: string } | undefined {
-    const key = parseAccountKey(account);
-    if (!key) return undefined;
-    const providerId = this.accountRow(account)?.providerId;
-    return {
-      provider: providerWord(providerId),
-      where: this.placeOf(key.deviceId).where,
-    };
+  accountPlace(account: string): ReturnType<CrewMachines["accountPlace"]> {
+    return this.accounts.accountPlace(account);
   }
 
-  signInWait(
-    machine: string,
-  ): { account: string; provider: string; class: CutOffClass; resetsAt?: number } | undefined {
-    const now = this.options.now();
-    const held = heldThere(this.options.saidSignIns?.(machine), now);
-    const cutOff = held ? standingCutOff(held, now) : undefined;
-    return held && cutOff
-      ? {
-          account: accountKey(machine, held.id),
-          provider: providerWord(held.providerId),
-          class: cutOff.class,
-          ...(cutOff.resetsAt !== undefined ? { resetsAt: cutOff.resetsAt } : {}),
-        }
-      : undefined;
-  }
-
-  /** The row that computer last said of an account `accountOf` keyed. */
-  private accountRow(account: string) {
-    const key = parseAccountKey(account);
-    if (!key) return undefined;
-    return this.options
-      .saidSignIns?.(key.deviceId)
-      ?.accounts.find((row) => row.id === key.accountId);
+  signInWait(machine: string): ReturnType<CrewMachines["signInWait"]> {
+    return this.accounts.signInWait(machine);
   }
 
   ready(machine: string, taskId: string): boolean {
@@ -916,8 +540,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       return run as Promise<InvokeResponse<C>>;
     }
     const callId = asked.callId as string;
-    const ledger = this.ledger(placed);
-    const kept = ledger.get(callId);
+    const kept = placed.ledger.answered(callId);
     if (kept) {
       if (kept.error !== undefined) throw new Error(kept.error);
       return kept.answer as InvokeResponse<C>;
@@ -925,22 +548,32 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     // Asked again while the first is still being done: one effect, one answer.
     const running = placed.calling.get(callId);
     if (running) return running as Promise<InvokeResponse<C>>;
-    const work = this.call(placed, channel, request as Record<string, unknown>);
+    const work = answerCall(
+      this.callbackReach,
+      {
+        task: placed.task,
+        deviceId: placed.deviceId,
+        ledger: placed.ledger,
+        live: () => this.live(placed),
+      },
+      channel,
+      request as Record<string, unknown>,
+    );
     placed.calling.set(callId, work);
     try {
       const answer = await work;
-      this.keep(placed, {
+      placed.ledger.keep({
         callId,
         channel,
         after: placed.through,
         answer,
-        ...this.reportOf(channel, request),
+        ...reportOf(channel, request),
       });
       return answer as InvokeResponse<C>;
     } catch (caught) {
       // Not held here yet is asked again; every other refusal is the callback's answer.
       if (!(caught instanceof NotHeldHere))
-        this.keep(placed, {
+        placed.ledger.keep({
           callId,
           channel,
           after: placed.through,
@@ -1015,7 +648,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       throw new Error(
         `${this.nameOf(deviceId)} is ${awayWord(this.options.reachOf?.(deviceId) === "connecting")}, so the conversation waits`,
       );
-    if (spec.runbookSkills?.length && !this.takesCurrentWork(deviceId))
+    if (spec.runbookSkills?.length && !this.options.devices.takesCurrentWork(deviceId))
       throw new Error(
         `Update Infinitary on ${this.nameOf(deviceId)} before it can receive this task's runbook skills.`,
       );
@@ -1076,7 +709,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ]),
     );
     const recordDir = spec.shape.record.dir;
-    placed.recordDir = recordDir;
+    placed.record.dir = recordDir;
     placed.spec = placedSpec;
     placed.reopenOwed = state.streaming;
     const session: PlacedSession = new PlacedSession(
@@ -1088,7 +721,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         order: <C extends WorkOrderChannel>(channel: C, args: unknown) =>
           this.options.devices.ask(deviceId, channel, args) as Promise<WorkOrderResponse<C>>,
         inReach: () => this.options.devices.inReach(deviceId),
-        copy: () => this.copy(placed),
+        copy: () => placed.record.copy(),
         interrupted: (retry = true) =>
           `${this.nameOf(deviceId)} quit before this turn finished${retry ? ", so its messages go again." : "."}`,
         unheard: () =>
@@ -1097,7 +730,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
           if (placed.session === released) {
             placed.session = undefined;
             placed.openCalls.clear();
-            this.cancelLiveCopy(placed);
+            placed.record.cancelLive();
           }
         },
       },
@@ -1114,7 +747,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (replays.length > 0)
       session.onceHeard(() => {
         placed.replaying = (async () => {
-          for (const line of replays) await this.replay(session, line);
+          for (const line of replays) await replayReport(session, line);
         })();
       });
     return session;
@@ -1132,13 +765,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       for (const placed of this.placed.values())
         if (placed.deviceId === contact.deviceId) {
           placed.released = false;
-          this.cancelLiveCopy(placed);
+          placed.record.cancelLive();
         }
       this.options.reachMoved?.();
       return;
     }
     void this.reach(device, device.contact).catch((caught: unknown) =>
-      this.log(`could not read what ${contact.deviceId} holds: ${messageOf(caught)}`),
+      this.log(`could not read what ${contact.deviceId} holds: ${errorText(caught)}`),
     );
   }
 
@@ -1149,9 +782,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * now.
    */
   private async reach(device: Device, contact: number): Promise<void> {
-    const raw = await this.options.devices.ask(device.id, "inf:session:roster", []);
+    const roster = await this.readRoster(device.id);
     if (device.contact !== contact) return;
-    const roster = rosterSchema.parse(raw);
     device.roster = {
       tasksDir: roster.tasksDir,
       ...(roster.worktreesDir ? { worktreesDir: roster.worktreesDir } : {}),
@@ -1176,7 +808,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         continue;
       }
       const placed = this.load(entry.task, device.id);
-      const session = placed.session && !placed.session.letGo ? placed.session : undefined;
+      const session = heldSession(placed);
       // That computer restarted: the conversation this Mac holds opens there again.
       if (session && !entry.open) adopting.push(this.reopen(placed, session, device.id));
       else if (session) session.adopt(entry, entry.seq >= placed.through);
@@ -1185,12 +817,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       this.heard(placed, entry);
     }
     for (const placed of this.placed.values()) {
-      if (placed.deviceId !== device.id || !placed.session || placed.session.letGo) continue;
+      const session = heldSession(placed);
+      if (placed.deviceId !== device.id || !session) continue;
       // What waited for it goes now; the record's copy may have missed a turn's end the drop cut off.
-      placed.session.reached();
-      void this.copy(placed)
+      session.reached();
+      void placed.record
+        .copy()
         .finally(() => {
-          if (this.hasGrowingCall(placed)) this.copyDuringTurn(placed);
+          if (placed.record.growing()) placed.record.duringTurn();
         })
         .catch(() => undefined);
     }
@@ -1238,7 +872,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       .catch((caught: unknown) => {
         // An owed open that failed stays owed, asked again at the next end.
         if (owed) placed.reopenOwed = true;
-        this.log(`could not open ${placed.task} there again: ${messageOf(caught)}`);
+        this.log(`could not open ${placed.task} there again: ${errorText(caught)}`);
       });
     placed.adopting = reopening.finally(() => {
       placed.adopting = undefined;
@@ -1300,7 +934,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   /** The task's conversation, open on this Mac: opened by the supervisor when nothing holds it. */
   private async live(placed: Placed): Promise<PlacedSession> {
-    if (placed.session && !placed.session.letGo) return placed.session;
+    const held = heldSession(placed);
+    if (held) return held;
     const host = this.host;
     if (!host) throw new NotHeldHere(`${HERE.This} is still starting.`);
     // Asked before its roster was read: where its folders are comes first.
@@ -1316,14 +951,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     try {
       await placed.adopting;
     } catch (caught) {
-      this.log(`could not open ${placed.task}'s conversation here: ${messageOf(caught)}`);
+      this.log(`could not open ${placed.task}'s conversation here: ${errorText(caught)}`);
       throw new NotHeldHere(
-        `Could not open the conversation on ${HERE.this}: ${messageOf(caught)}`,
+        `Could not open the conversation on ${HERE.this}: ${errorText(caught)}`,
       );
     }
-    if (!placed.session || placed.session.letGo)
-      throw new NotHeldHere(`That task's conversation is not open on ${HERE.this}.`);
-    return placed.session;
+    const session = heldSession(placed);
+    if (!session) throw new NotHeldHere(`That task's conversation is not open on ${HERE.this}.`);
+    return session;
   }
 
   // ---- events ---------------------------------------------------------------------
@@ -1356,7 +991,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ) {
         placed.openCalls.clear();
         // A continuation still needs its final tail, even when its client exited.
-        if (type !== "continuation_ended") this.cancelLiveCopy(placed);
+        if (type !== "continuation_ended") placed.record.cancelLive();
       }
       await session.take(event);
       placed.through = record.seq;
@@ -1369,7 +1004,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         type === "turn_end" ||
         type === "continuation_ended"
       )
-        this.copyDuringTurn(placed);
+        placed.record.duringTurn();
       if (type === "turn_end" || type === "turn_ended") {
         placed.kept = placed.through;
         if (type === "turn_ended") {
@@ -1379,7 +1014,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         this.writeKept(placed);
       }
       for (const line of placed.replays.filter((replay) => replay.after === placed.through))
-        await this.replay(session, line);
+        await replayReport(session, line);
     }
     if (!placed.released) this.release(placed.deviceId);
     return { through: placed.through, kept: placed.kept };
@@ -1407,9 +1042,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (!deviceId || !this.options.devices.inReach(deviceId)) return false;
     const device = this.device(deviceId);
     const contact = device.contact;
-    const roster = rosterSchema.parse(
-      await this.options.devices.ask(deviceId, "inf:session:roster", []),
-    );
+    const roster = await this.readRoster(deviceId);
     if (device.contact !== contact) return false;
     const entry = roster.tasks.find((each) => each.task === taskId);
     if (!entry) return false;
@@ -1425,7 +1058,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   private heard(placed: Placed, entry: PlacedRosterTask): void {
     placed.said = { seq: entry.seq, working: working(entry) };
     void this.settleSaid(placed).catch((caught: unknown) =>
-      this.log(`could not end ${placed.task}'s turn here: ${messageOf(caught)}`),
+      this.log(`could not end ${placed.task}'s turn here: ${errorText(caught)}`),
     );
   }
 
@@ -1442,8 +1075,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (!said || placed.through < said.seq) return false;
     placed.said = undefined;
     if (said.working || placed.through > said.seq) return false;
-    const session = placed.session;
-    if (!session || session.letGo) return false;
+    const session = heldSession(placed);
+    if (!session) return false;
     const following = session.isStreaming();
     if (following) await session.endedThere();
     // Nothing runs there with every event in: an open owed goes now.
@@ -1459,393 +1092,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * Called only at such an end, never on an event mid-turn.
    */
   private reopenIfOwed(placed: Placed): void {
-    const session = placed.session;
-    if (!placed.reopenOwed || !session || session.letGo || session.isStreaming()) return;
+    const session = heldSession(placed);
+    if (!placed.reopenOwed || !session || session.isStreaming()) return;
     placed.reopenOwed = false;
     void this.reopen(placed, session, placed.deviceId, true);
-  }
-
-  // ---- callbacks ----------------------------------------------------------------
-
-  private async call(
-    placed: Placed,
-    channel: WorkInvokeChannel,
-    request: Record<string, unknown>,
-  ): Promise<unknown> {
-    switch (channel) {
-      case "inf:work:picture":
-        return this.picture(placed, request as InvokeRequest<"inf:work:picture">[0]);
-      case "inf:work:media":
-        return this.recordingPiece(placed, request as InvokeRequest<"inf:work:media">[0]);
-      case "inf:work:handover-file":
-        return this.handoverPiece(placed, request as InvokeRequest<"inf:work:handover-file">[0]);
-      case "inf:work:typeface":
-        return this.typeface(placed, request as InvokeRequest<"inf:work:typeface">[0]);
-      case "inf:work:job-exit": {
-        const { exit } = request as InvokeRequest<"inf:work:job-exit">[0];
-        if (!this.host) throw new NotHeldHere(`${HERE.This} is still starting.`);
-        this.begin(placed, channel, request);
-        this.host.jobExit(placed.task, { ...exit, ownerId: placed.task });
-        return { ok: true };
-      }
-      case "inf:work:browser-event": {
-        const { event } = request as InvokeRequest<"inf:work:browser-event">[0];
-        const browsers = this.options.browsers?.();
-        if (!browsers) throw new NotHeldHere(`${HERE.This} is still starting.`);
-        this.begin(placed, channel, request);
-        browsers.heardEvent(placed.deviceId, placed.task, event);
-        return { ok: true };
-      }
-      default:
-        break;
-    }
-    const session = await this.live(placed);
-    this.begin(placed, channel, request);
-    const callbacks = session.callbacks;
-    const missing = (): never => {
-      throw new Error("That tool is not this task's.");
-    };
-    switch (channel) {
-      case "inf:work:card": {
-        const { card } = request as InvokeRequest<"inf:work:card">[0];
-        const onCard = callbacks?.onCard ?? missing();
-        try {
-          const shown = await onCard(card as DeclaredCardInput);
-          if (shown && typeof shown === "object") {
-            // The supervisor refuses a computer from before shared cards a
-            // write on someone else's card before writing anything
-            // (`takesSharedCards`); should one still come back, that
-            // computer hears what the host saved in words, never "shown".
-            if (!this.takesSharedCards(placed.deviceId)) {
-              const why = cardMutationText(shown);
-              return { refused: { message: why, reason: "other", why } };
-            }
-            return { shown: true, cardId: shown.cardId, mutation: shown };
-          }
-          return { shown: true, ...(shown ? { cardId: shown } : {}) };
-        } catch (caught) {
-          if (!(caught instanceof CardRefusedError)) throw caught;
-          return { refused: { message: caught.message, reason: caught.reason, why: caught.why } };
-        }
-      }
-      case "inf:work:card-refused": {
-        const { refusal } = request as InvokeRequest<"inf:work:card-refused">[0];
-        callbacks?.onCardRefused?.(refusal);
-        return { ok: true };
-      }
-      case "inf:work:close-card": {
-        const { cardId, reason } = request as InvokeRequest<"inf:work:close-card">[0];
-        const onCloseCard = callbacks?.onCloseCard ?? missing();
-        return { text: await onCloseCard({ cardId, ...(reason ? { reason } : {}) }) };
-      }
-      case "inf:work:followup": {
-        const { input } = request as InvokeRequest<"inf:work:followup">[0];
-        return { text: await (callbacks?.onFollowup ?? missing())(input) };
-      }
-      case "inf:work:progress": {
-        const { text, plan } = request as InvokeRequest<"inf:work:progress">[0];
-        return { text: await (callbacks?.onProgress ?? missing())(text, plan) };
-      }
-      case "inf:work:report": {
-        const { text, summary, declared } = request as InvokeRequest<"inf:work:report">[0];
-        return { text: await (callbacks?.onReport ?? missing())(text, summary, declared) };
-      }
-      case "inf:work:reply": {
-        const { cardId, text, interim, answersMessage, operationId, response } =
-          request as InvokeRequest<"inf:work:reply">[0];
-        return {
-          text: await (callbacks?.onReply ?? missing())({
-            cardId,
-            text,
-            ...(interim !== undefined ? { interim } : {}),
-            ...(answersMessage !== undefined ? { answersMessage } : {}),
-            ...(operationId ? { operationId } : {}),
-            ...(response ? { response } : {}),
-          }),
-        };
-      }
-      case "inf:work:revise-required-action": {
-        const { input } = request as InvokeRequest<"inf:work:revise-required-action">[0];
-        return { text: await (callbacks?.onReviseRequiredAction ?? missing())(input) };
-      }
-      case "inf:work:read-card": {
-        const { cardId } = request as InvokeRequest<"inf:work:read-card">[0];
-        return { text: await (callbacks?.onReadCard ?? missing())(cardId) };
-      }
-      case "inf:work:speed-note": {
-        const { model, selection } = request as InvokeRequest<"inf:work:speed-note">[0];
-        callbacks?.onSpeed?.(model, selection);
-        return { ok: true };
-      }
-      case "inf:work:speed": {
-        const { model } = request as InvokeRequest<"inf:work:speed">[0];
-        return (await callbacks?.requestedSpeed?.(model)) ?? "standard";
-      }
-      case "inf:work:tasks": {
-        const { input } = request as InvokeRequest<"inf:work:tasks">[0];
-        return await (callbacks?.onQueryTasks ?? missing())(input);
-      }
-      case "inf:work:read-workflow": {
-        const { input } = request as InvokeRequest<"inf:work:read-workflow">[0];
-        return { text: await (callbacks?.onReadWorkflow ?? missing())(input) };
-      }
-      case "inf:work:github-read": {
-        const { input } = request as InvokeRequest<"inf:work:github-read">[0];
-        return { text: await (callbacks?.onGithubRead ?? missing())(input) };
-      }
-      case "inf:work:github-write": {
-        const { input } = request as InvokeRequest<"inf:work:github-write">[0];
-        return { text: await (callbacks?.onGithubWrite ?? missing())(input) };
-      }
-      case "inf:work:prepare-change": {
-        const { input } = request as InvokeRequest<"inf:work:prepare-change">[0];
-        return { text: await (callbacks?.onPrepareChange ?? missing())(input) };
-      }
-      case "inf:work:open-change": {
-        const { input } = request as InvokeRequest<"inf:work:open-change">[0];
-        return { text: await (callbacks?.onOpenChange ?? missing())(input) };
-      }
-      case "inf:work:check-change": {
-        if (!this.takesCheckDeclarations(placed.deviceId))
-          return {
-            text: "Update Infinitary on the work computer before it reads check facts and records check or repair declarations. No declaration was recorded.",
-          };
-        const { input } = request as InvokeRequest<"inf:work:check-change">[0];
-        return { text: await (callbacks?.onCheckChange ?? missing())(input) };
-      }
-      case "inf:work:download-artifact": {
-        const { input } = request as InvokeRequest<"inf:work:download-artifact">[0];
-        return { text: await (callbacks?.onDownloadArtifact ?? missing())(input) };
-      }
-      case "inf:work:knowledge": {
-        const { input } = request as InvokeRequest<"inf:work:knowledge">[0];
-        return { text: await (callbacks?.knowledge ?? missing()).read(input) };
-      }
-      case "inf:work:record-knowledge": {
-        const { input } = request as InvokeRequest<"inf:work:record-knowledge">[0];
-        return { text: await (callbacks?.knowledge ?? missing()).record(input) };
-      }
-      // The integrations command there, answered by this Mac's own integrations under the task's rules.
-      case "inf:work:integrations": {
-        const { input } = request as InvokeRequest<"inf:work:integrations">[0];
-        const integrations = callbacks?.integrations ?? missing();
-        if (input.name === undefined) return { data: { integrations: await integrations.list() } };
-        const shown = await integrations.show(input.name);
-        return isIntegrationAnswer(shown) ? shown : { data: shown };
-      }
-      case "inf:work:use-integration": {
-        const { input } = request as InvokeRequest<"inf:work:use-integration">[0];
-        const integrations = callbacks?.integrations ?? missing();
-        return await integrations.call(
-          input.name,
-          input.action,
-          input.input,
-          undefined,
-          input.reason,
-        );
-      }
-      default:
-        throw new Error(`${channel} is not a request ${HERE.this} answers.`);
-    }
-  }
-
-  /** A card picture's bytes, kept where this Mac's cards show their pictures from. */
-  private picture(placed: Placed, request: InvokeRequest<"inf:work:picture">[0]): { ok: true } {
-    if (!request.id.startsWith(`${placed.task}-`))
-      throw new Error("That picture is not this task's.");
-    const dir = crewmateCardPicturesDir(this.options.paths, placed.task);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(
-      join(dir, `${request.id}.${request.extension}`),
-      Buffer.from(request.data, "base64"),
-    );
-    return { ok: true };
-  }
-
-  /**
-   * A project font's bytes, kept beside the pictures where this Mac's frames
-   * load it from - left alone when that name already holds them, and
-   * otherwise replaced whole (`keepContentFile`), since a frame may be
-   * reading the name while the same font arrives again.
-   */
-  private typeface(placed: Placed, request: InvokeRequest<"inf:work:typeface">[0]): { ok: true } {
-    if (!request.id.startsWith(`${placed.task}-`)) throw new Error("That font is not this task's.");
-    const dir = crewmateCardPicturesDir(this.options.paths, placed.task);
-    mkdirSync(dir, { recursive: true });
-    keepContentFile(
-      join(dir, `${request.id}.${request.extension}`),
-      Buffer.from(request.data, "base64"),
-    );
-    return { ok: true };
-  }
-
-  /**
-   * A piece of a card's demo recording, written at its place in a partial
-   * file; the last piece makes it the recording its poster names, so a card
-   * never names one this Mac holds only part of.
-   */
-  private recordingPiece(
-    placed: Placed,
-    request: InvokeRequest<"inf:work:media">[0],
-  ): { ok: true } {
-    if (!request.id.startsWith(`${placed.task}-`))
-      throw new Error("That recording is not this task's.");
-    const piece = Buffer.from(request.data, "base64");
-    if (request.offset + piece.length > request.size)
-      throw new Error("That piece runs past the recording's end.");
-    const dir = crewmateCardPicturesDir(this.options.paths, placed.task);
-    mkdirSync(dir, { recursive: true });
-    const file = join(dir, `${request.id}.${request.extension}`);
-    const partial = `${file}.partial`;
-    const handle = openSync(partial, request.offset === 0 ? "w" : "r+");
-    try {
-      writeSync(handle, piece, 0, piece.length, request.offset);
-    } finally {
-      closeSync(handle);
-    }
-    if (request.offset + piece.length === request.size) renameSync(partial, file);
-    return { ok: true };
-  }
-
-  /**
-   * A piece of a file the task's report hands on (`handover-files.md`),
-   * written at its place in a 0600 partial file; the last piece, checked
-   * against its sha256, makes it the kept file the report names. Its
-   * content is never logged or put in an answer.
-   */
-  private async handoverPiece(
-    placed: Placed,
-    request: InvokeRequest<"inf:work:handover-file">[0],
-  ): Promise<{ ok: true }> {
-    const piece = Buffer.from(request.data, "base64");
-    if (request.offset + piece.length > request.size)
-      throw new Error("That piece runs past the handed file's end.");
-    const dir = crewmateHandoverDir(this.options.paths, placed.task);
-    mkdirSync(dir, { recursive: true, mode: 0o700 });
-    const file = join(dir, request.file);
-    const partial = `${file}.partial`;
-    const handle = openSync(partial, request.offset === 0 ? "w" : "r+", 0o600);
-    try {
-      writeSync(handle, piece, 0, piece.length, request.offset);
-    } finally {
-      closeSync(handle);
-    }
-    if (request.offset + piece.length < request.size) return { ok: true };
-    if (
-      statSync(partial).size !== request.size ||
-      (await sha256OfFile(partial)) !== request.sha256
-    ) {
-      rmSync(partial, { force: true });
-      throw new Error("The handed file did not arrive unchanged.");
-    }
-    renameSync(partial, file);
-    return { ok: true };
-  }
-
-  /** A report a turn gave before this Mac restarted, given to the turn this Mac follows now. */
-  private async replay(session: PlacedSession, line: CallLine): Promise<void> {
-    if (!line.report) return;
-    const { text, summary, declared } = line.report;
-    try {
-      await session.callbacks?.onReport?.(
-        text,
-        summary,
-        declared as Parameters<NonNullable<typeof session.callbacks.onReport>>[2],
-      );
-    } catch {
-      // Refused again now: it was refused or answered then, and the crewmate read that.
-    }
-  }
-
-  private reportOf(
-    channel: WorkInvokeChannel,
-    request: unknown,
-  ): Pick<CallLine, "report"> | Record<string, never> {
-    if (channel !== "inf:work:report") return {};
-    const { text, summary, declared } = request as InvokeRequest<"inf:work:report">[0];
-    return {
-      report: {
-        text,
-        ...(summary !== undefined ? { summary } : {}),
-        ...(declared !== undefined ? { declared } : {}),
-      },
-    };
-  }
-
-  // ---- the record's copy -------------------------------------------------------
-
-  /** Claude may announce a call before its refreshable transcript has reached disk. */
-  private hasGrowingCall(placed: Placed): boolean {
-    return (
-      placed.openCalls.size > 0 &&
-      placed.spec?.binding.backend === "claude" &&
-      speaksRecordRefresh(this.options.devices.version(placed.deviceId)?.contract ?? "")
-    );
-  }
-
-  /** Coalesced copies outside the event lane, repeated while a call's transcript can still grow. */
-  private copyDuringTurn(placed: Placed): void {
-    if (
-      placed.closed ||
-      !placed.session ||
-      placed.session.letGo ||
-      !this.options.devices.inReach(placed.deviceId)
-    )
-      return;
-    placed.copyPending = true;
-    if (placed.copyTimer !== undefined || placed.liveCopy) return;
-    const delay = Math.min(
-      LIVE_COPY_MS,
-      Math.max(0, placed.copiedAt + LIVE_COPY_MS - this.options.now()),
-    );
-    placed.copyTimer = (this.options.schedule ?? scheduleCopy)(delay, () => {
-      placed.copyTimer = undefined;
-      placed.liveCopy = this.copy(placed)
-        .catch(() => undefined) // copy() records the failure; reconnect and turn end still retry.
-        .finally(() => {
-          placed.liveCopy = undefined;
-          if (placed.copyPending || this.hasGrowingCall(placed)) this.copyDuringTurn(placed);
-        });
-    });
-  }
-
-  private cancelLiveCopy(placed: Placed): void {
-    placed.copyTimer?.();
-    placed.copyTimer = undefined;
-    placed.copyPending = false;
-  }
-
-  /**
-   * Brings this Mac's copy of the conversation's record up to the
-   * computer's, from where each file's copy ends; a file the computer
-   * rewrote shorter is rewritten from where it differs.
-   */
-  private copy(placed: Placed): Promise<void> {
-    this.cancelLiveCopy(placed);
-    const recordDir = placed.recordDir;
-    const run = placed.copying.then(async () => {
-      placed.copiedAt = this.options.now();
-      let refresh = speaksRecordRefresh(
-        this.options.devices.version(placed.deviceId)?.contract ?? "",
-      );
-      let more = true;
-      while (more) {
-        const answer = (await this.options.devices.ask(placed.deviceId, "inf:session:copy", [
-          {
-            task: placed.task,
-            from: copiedFiles(recordDir),
-            ...(refresh ? { refresh: true } : {}),
-          },
-        ])) as WorkOrderResponse<"inf:session:copy">;
-        for (const file of answer.files) writeAt(recordDir, file);
-        refresh = false;
-        more = answer.more && answer.files.length > 0;
-      }
-    });
-    placed.copying = run.catch((caught: unknown) =>
-      this.log(`could not copy ${placed.task}'s record home: ${messageOf(caught)}`),
-    );
-    return run;
   }
 
   /**
@@ -1857,15 +1107,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   private sweepLeftovers(): void {
     for (const device of this.devices.values()) {
       if (!device.roster || !this.options.devices.inReach(device.id)) continue;
-      void this.options.devices
-        .ask(device.id, "inf:session:roster", [])
-        .then((raw) => {
-          for (const entry of rosterSchema.parse(raw).tasks)
+      void this.readRoster(device.id)
+        .then((roster) => {
+          for (const entry of roster.tasks)
             if (this.options.tasks.get(entry.task)?.deviceId !== device.id)
               void this.copies.retireLeftover(device.id, entry.task);
         })
         .catch((caught: unknown) =>
-          this.log(`could not read what ${device.id} holds: ${messageOf(caught)}`),
+          this.log(`could not read what ${device.id} holds: ${errorText(caught)}`),
         );
     }
   }
@@ -1882,25 +1131,19 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    */
   async bringHome(deviceId: string): Promise<void> {
     const name = this.nameOf(deviceId);
-    const roster = rosterSchema.parse(
-      await this.options.devices.ask(deviceId, "inf:session:roster", []),
-    );
+    const roster = await this.readRoster(deviceId);
     for (const entry of roster.tasks) {
       const record = this.options.tasks.get(entry.task);
       const ours = record?.deviceId === deviceId;
       if (ours && record && !TaskService.isClosed(record))
         throw new Error(`"${record.title}" is still running on ${name}.`);
       if (!entry.closed) {
-        await this.options.devices.ask(deviceId, "inf:session:close", [
-          { orderId: `close:${entry.task}`, task: entry.task },
-        ]);
+        await this.closeThere(deviceId, entry.task);
         if (ours) this.load(entry.task, deviceId).closed = true;
       }
       if (entry.workingCopy && ours) await this.copies.retire(entry.task);
     }
-    const after = rosterSchema.parse(
-      await this.options.devices.ask(deviceId, "inf:session:roster", []),
-    );
+    const after = await this.readRoster(deviceId);
     const left = after.tasks.filter(
       (entry) => entry.workingCopy && this.options.tasks.get(entry.task)?.deviceId === deviceId,
     ).length;
@@ -1921,9 +1164,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const deviceId = record.deviceId;
     if (!this.options.devices.inReach(deviceId))
       throw new Error("This task's computer is out of reach.");
-    await this.options.devices.ask(deviceId, "inf:session:close", [
-      { orderId: `close:${record.id}`, task: record.id },
-    ]);
+    await this.closeThere(deviceId, record.id);
     const result = await this.options.devices.ask(deviceId, "inf:session:clean-files", [
       { orderId: `clean-files:${record.id}:${record.closedAt}`, task: record.id },
     ]);
@@ -1946,9 +1187,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const version = this.options.devices.version(deviceId)?.contract ?? "";
     if (!speaksTempCleanup(version))
       throw new Error("This computer needs an update before temporary files can be removed.");
-    await this.options.devices.ask(deviceId, "inf:session:close", [
-      { orderId: `close:${record.id}`, task: record.id },
-    ]);
+    await this.closeThere(deviceId, record.id);
     const result = await this.options.devices.ask(deviceId, "inf:session:clean-temp", [
       { orderId: `clean-temp:${record.id}:${record.closedAt}`, task: record.id },
     ]);
@@ -1976,12 +1215,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (!deviceId || !this.computers().includes(deviceId)) return "gone";
     const rule = dueRule(due.kinds);
     const placed = this.load(record.id, deviceId);
-    const calls = join(crewmatePlacedDir(this.options.paths, record.id), "calls.jsonl");
-    const answers = rewriteOutsideData(calls, rule, due.legacy);
-    if (answers > 0) placed.ledger = undefined;
+    const answers = rewriteOutsideData(placed.ledger.callsFile, rule, due.legacy);
+    if (answers > 0) placed.ledger.reread();
     const computer = this.nameOf(deviceId);
     if (!this.options.devices.inReach(deviceId)) return { computer, until: "reach" };
-    if (!this.takesCurrentWork(deviceId)) return { computer, until: "update" };
+    if (!this.options.devices.takesCurrentWork(deviceId)) return { computer, until: "update" };
     if (files.length > 0 && !this.takesOutsideFiles(deviceId)) return { computer, until: "update" };
     let answer: WorkOrderResponse<"inf:session:delete-outside">;
     try {
@@ -2001,7 +1239,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       throw caught;
     }
     if (answer.status === "waiting") return "waiting";
-    const session = placed.session && !placed.session.letGo ? placed.session : undefined;
+    const session = heldSession(placed);
     if (answer.state && session) {
       // Opened there again from its files: a conversation that started over is carried on as at a restart.
       session.reopened(answer.state);
@@ -2012,81 +1250,18 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     }
     // What it changed, and anything this Mac's copy still holds, from a pass a drop cut short.
     const names = new Set(answer.files);
-    for (const file of textFilesUnder(placed.recordDir))
+    const recordDir = placed.record.dir;
+    for (const file of textFilesUnder(recordDir))
       if (await dueIn(file, rule, due.legacy, undefined))
-        names.add(relative(placed.recordDir, file).split(sep).join("/"));
+        names.add(relative(recordDir, file).split(sep).join("/"));
     if (names.size > 0) {
-      const copied = await this.copyWhole(placed, [...names]);
+      const copied = await placed.record.copyWhole([...names]);
       // A file it no longer holds is copied no more, so this Mac's copy is replaced here.
       for (const name of copied.absent)
-        rewriteOutsideData(join(placed.recordDir, ...name.split("/")), rule, due.legacy);
+        rewriteOutsideData(join(recordDir, ...name.split("/")), rule, due.legacy);
       if (copied.short.length > 0) return "waiting";
     }
     return answer.status === "changed" || answers > 0 || names.size > 0 ? "changed" : "unchanged";
-  }
-
-  /**
-   * These files of the record, copied whole after that computer wrote them
-   * again shorter: each is written beside this Mac's copy and put in its
-   * place once whole, so the copy never mixes old and new words, while the
-   * rest of the record is copied on as usual. Answers the files that
-   * computer does not hold, and those a drop cut short.
-   */
-  private copyWhole(
-    placed: Placed,
-    names: readonly string[],
-  ): Promise<{ absent: string[]; short: string[] }> {
-    const recordDir = placed.recordDir;
-    const staging = `${recordDir}.whole`;
-    const wanted = new Map(names.map((name) => [name, 0]));
-    const whole = new Set<string>();
-    const seen = new Set<string>();
-    const run = placed.copying.then(async () => {
-      rmSync(staging, { recursive: true, force: true });
-      try {
-        let more = true;
-        while (more) {
-          const from = [
-            ...copiedFiles(recordDir).filter((file) => !wanted.has(file.name)),
-            ...[...wanted]
-              .filter(([name]) => !whole.has(name))
-              .map(([name, offset]) => ({ name, offset })),
-          ];
-          const answer = (await this.options.devices.ask(placed.deviceId, "inf:session:copy", [
-            { task: placed.task, from },
-          ])) as WorkOrderResponse<"inf:session:copy">;
-          for (const file of answer.files) {
-            if (!wanted.has(file.name)) {
-              writeAt(recordDir, file);
-              continue;
-            }
-            if (whole.has(file.name)) continue;
-            seen.add(file.name);
-            writeAt(staging, file);
-            const end = file.offset + Buffer.byteLength(file.data, "base64");
-            wanted.set(file.name, end);
-            if (end < file.size) continue;
-            const target = join(recordDir, ...file.name.split("/"));
-            mkdirSync(dirname(target), { recursive: true });
-            renameSync(join(staging, ...file.name.split("/")), target);
-            whole.add(file.name);
-          }
-          more = answer.more && answer.files.length > 0;
-        }
-      } finally {
-        rmSync(staging, { recursive: true, force: true });
-      }
-      return {
-        absent: names.filter((name) => !seen.has(name)),
-        short: names.filter((name) => seen.has(name) && !whole.has(name)),
-      };
-    });
-    placed.copying = run.then(
-      () => undefined,
-      (caught: unknown) =>
-        this.log(`could not copy ${placed.task}'s record home whole: ${messageOf(caught)}`),
-    );
-    return run;
   }
 
   private closeIfClosed(taskId: string): void {
@@ -2106,16 +1281,26 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const placed = this.load(taskId, deviceId);
     placed.closed = true;
     placed.openCalls.clear();
-    this.cancelLiveCopy(placed);
-    this.options.devices
-      .ask(deviceId, "inf:session:close", [{ orderId: `close:${taskId}`, task: taskId }])
-      .then(
-        () => this.copies.retire(taskId),
-        (caught: unknown) => {
-          placed.closed = false;
-          this.log(`could not close ${taskId} there yet: ${messageOf(caught)}`);
-        },
-      );
+    placed.record.cancelLive();
+    this.closeThere(deviceId, taskId).then(
+      () => this.copies.retire(taskId),
+      (caught: unknown) => {
+        placed.closed = false;
+        this.log(`could not close ${taskId} there yet: ${errorText(caught)}`);
+      },
+    );
+  }
+
+  /** Closes the task's conversation there for good, under the one order id every close of it uses. */
+  private closeThere(deviceId: string, task: string): Promise<unknown> {
+    return this.options.devices.ask(deviceId, "inf:session:close", [
+      { orderId: `close:${task}`, task },
+    ]);
+  }
+
+  /** What the computer holds now, read whole. */
+  private async readRoster(deviceId: string): Promise<WorkOrderResponse<"inf:session:roster">> {
+    return rosterSchema.parse(await this.options.devices.ask(deviceId, "inf:session:roster", []));
   }
 
   // ---- what the home keeps ----------------------------------------------------------
@@ -2141,7 +1326,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   private load(task: string, deviceId: string): Placed {
     const known = this.placed.get(task);
     if (known) return known;
-    const kept = readKept(join(crewmatePlacedDir(this.options.paths, task), "state.json"));
+    const ledger = new PlacedLedger(crewmatePlacedDir(this.options.paths, task));
+    const kept = ledger.place();
     const placed: Placed = {
       task,
       deviceId,
@@ -2152,121 +1338,41 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       adopting: undefined,
       said: undefined,
       reopenOwed: false,
-      ledger: undefined,
-      begun: undefined,
+      ledger,
       calling: new Map(),
       chain: Promise.resolve(),
       replays: [],
       released: false,
       closed: false,
-      copying: Promise.resolve(),
-      copyTimer: undefined,
       openCalls: new Set(),
-      liveCopy: undefined,
-      copyPending: false,
-      copiedAt: Number.NEGATIVE_INFINITY,
-      recordDir: crewmateSessionsDir(this.options.paths, task),
+      record: new RecordCopy(
+        {
+          task,
+          deviceId,
+          devices: this.options.devices,
+          now: this.options.now,
+          ...(this.options.schedule ? { schedule: this.options.schedule } : {}),
+          log: this.log,
+          following: () => !placed.closed && heldSession(placed) !== undefined,
+          callOpen: () => placed.openCalls.size > 0 && placed.spec?.binding.backend === "claude",
+        },
+        crewmateSessionsDir(this.options.paths, task),
+      ),
       spec: undefined,
     };
     this.placed.set(task, placed);
     // The reports a turn this Mac had not finished gave: a restart here replays them.
-    placed.replays = [...this.ledger(placed).values()].filter(
-      (line) => line.report !== undefined && line.after >= placed.ended,
-    );
+    placed.replays = ledger
+      .lines()
+      .filter((line) => line.report !== undefined && line.after >= placed.ended);
     return placed;
   }
 
-  private ledger(placed: Placed): Map<string, CallLine> {
-    if (placed.ledger) return placed.ledger;
-    const ledger = new Map<string, CallLine>();
-    let text = "";
-    try {
-      text = readFileSync(
-        join(crewmatePlacedDir(this.options.paths, placed.task), "calls.jsonl"),
-        "utf8",
-      );
-    } catch {
-      // Nothing asked yet.
-    }
-    for (const line of text.split("\n")) {
-      if (!line) continue;
-      try {
-        const call = callLineSchema.parse(JSON.parse(line)) as CallLine;
-        ledger.set(call.callId, call);
-      } catch {
-        // A line a quit cut short was never answered: it is asked again.
-      }
-    }
-    placed.ledger = ledger;
-    return ledger;
-  }
-
-  /** Synced before a non-repeatable change; a cut answer must never repeat its effect. */
-  private begin(
-    placed: Placed,
-    channel: WorkInvokeChannel,
-    request: Record<string, unknown>,
-  ): void {
-    if (invokeContract[channel].effect !== "change" || requestRepeatsSafely(channel)) return;
-    const dir = crewmatePlacedDir(this.options.paths, placed.task);
-    const path = join(dir, "begun.jsonl");
-    if (!placed.begun) {
-      const begun = new Set<string>();
-      let text = "";
-      try {
-        text = readFileSync(path, "utf8");
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-      }
-      for (const line of text.split("\n")) {
-        if (!line) continue;
-        try {
-          begun.add(z.string().parse(JSON.parse(line)));
-        } catch {
-          // A final partial mark cannot have preceded an effect: sync had not returned.
-        }
-      }
-      placed.begun = begun;
-    }
-    const callId = request.callId as string;
-    if (placed.begun.has(callId)) {
-      const [action, result] = CHANGE_RECOVERY[channel] ?? [
-        "updating this task",
-        "the change may already be recorded",
-      ];
-      throw new Error(
-        `${HOME.The} stopped while ${action}, so ${result}. ${changeRecoveryCheck(channel)}`,
-      );
-    }
-    mkdirSync(dir, { recursive: true });
-    const fd = openSync(path, "a");
-    try {
-      // Start on a fresh line even if a crash left a partial final mark.
-      writeFileSync(fd, `\n${JSON.stringify(callId)}\n`);
-      fsyncSync(fd);
-      placed.begun.add(callId);
-    } finally {
-      closeSync(fd);
-    }
-  }
-
-  /** Kept before it is returned, so a callback asked again is answered from here. */
-  private keep(placed: Placed, line: CallLine): void {
-    const dir = crewmatePlacedDir(this.options.paths, placed.task);
-    mkdirSync(dir, { recursive: true });
-    appendFileSync(join(dir, "calls.jsonl"), `${JSON.stringify(line)}\n`);
-    this.ledger(placed).set(line.callId, line);
-  }
-
   private writeKept(placed: Placed): void {
-    const dir = crewmatePlacedDir(this.options.paths, placed.task);
     try {
-      mkdirSync(dir, { recursive: true });
-      const next = join(dir, "state.json.next");
-      writeFileSync(next, `${JSON.stringify({ kept: placed.kept, ended: placed.ended })}\n`);
-      renameSync(next, join(dir, "state.json"));
+      placed.ledger.keepPlace(placed.kept, placed.ended);
     } catch (caught) {
-      this.log(`could not keep ${placed.task}'s place: ${messageOf(caught)}`);
+      this.log(`could not keep ${placed.task}'s place: ${errorText(caught)}`);
     }
   }
 
@@ -2293,10 +1399,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return { label: name, where: `on ${name}`, who: name };
   }
 
-  servingAccount(session: ModelSession): string | undefined {
-    return session instanceof PlacedSession ? session.servingAccount() : undefined;
-  }
-
   /** The projects a computer's active work belongs to, as one phrase. */
   private projectsOf(deviceId: string): string {
     const names = [
@@ -2316,86 +1418,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   }
 }
 
-/** What a placed state is, for the session's own reading. */
-export type { PlacedState };
-
-function readKept(path: string): z.infer<typeof keptStateSchema> {
-  try {
-    return keptStateSchema.parse(JSON.parse(readFileSync(path, "utf8")));
-  } catch {
-    return { kept: 0, ended: 0 };
-  }
-}
-
-/** Every file of this Mac's copy, by its path under the record's folder, with where it ends. */
-function copiedFiles(dir: string): { name: string; offset: number }[] {
-  let names: string[];
-  try {
-    names = readdirSync(dir, { recursive: true, encoding: "utf8" }) as string[];
-  } catch {
-    return [];
-  }
-  return names.flatMap((name) => {
-    try {
-      const stat = statSync(join(dir, name));
-      if (!stat.isFile()) return [];
-      return [{ name: relative(dir, join(dir, name)).split(sep).join("/"), offset: stat.size }];
-    } catch {
-      return [];
-    }
-  });
-}
-
-/** One copied stretch of a file, written at its offset; the file ends where the stretch does. */
-function writeAt(
-  dir: string,
-  file: { name: string; size: number; offset: number; data: string },
-): void {
-  const path = join(dir, ...file.name.split("/"));
-  if (relative(dir, path).startsWith("..")) return;
-  mkdirSync(dirname(path), { recursive: true });
-  const bytes = Buffer.from(file.data, "base64");
-  const fd = openSync(path, "a+");
-  closeSync(fd);
-  const handle = openSync(path, "r+");
-  try {
-    let written = 0;
-    while (written < bytes.length)
-      written += writeSync(handle, bytes, written, bytes.length - written, file.offset + written);
-    const end = file.offset + bytes.length;
-    if (end >= file.size) ftruncateSync(handle, end);
-  } finally {
-    closeSync(handle);
-  }
+/** The conversation, while this Mac holds it and has not let it go. */
+function heldSession(placed: Placed): PlacedSession | undefined {
+  return placed.session && !placed.session.letGo ? placed.session : undefined;
 }
 
 /** Whether a roster row says its conversation works there: a prompt's turn, or a session that streams. */
 function working(entry: PlacedRosterTask): boolean {
   return entry.running !== undefined || entry.state?.streaming === true;
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-/**
- * A computer's own account, keyed apart from this Mac's own account ids (a
- * device id is a UUID and an account id holds no `@`), so the cut-off
- * contract's wakes and once-names can name it beside them.
- */
-function accountKey(deviceId: string, accountId: string): string {
-  return `${accountId}@${deviceId}`;
-}
-
-function parseAccountKey(account: string): { deviceId: string; accountId: string } | undefined {
-  const at = account.lastIndexOf("@");
-  if (at <= 0 || at === account.length - 1) return undefined;
-  return { accountId: account.slice(0, at), deviceId: account.slice(at + 1) };
-}
-
-/** A provider as the captain names it. */
-function providerWord(providerId: string | undefined): string {
-  return (providerId && catalogEntry(providerId)?.name) || providerId || "its subscription";
 }
 
 /** An event that carries a typed cut-off its turn met there. */

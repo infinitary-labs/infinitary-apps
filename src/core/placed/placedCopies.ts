@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import { forgeOf } from "@shared/forge";
-import { speaksInfinitaryNames, takesWork } from "@shared/ipc";
+import { speaksInfinitaryNames } from "@shared/ipc";
 import {
   type BundledRef,
   PLACED_COPY_CHUNK_BYTES,
@@ -633,7 +633,7 @@ export class PlacedCopies {
   }
 
   writesEvidenceFiles(deviceId: string): boolean {
-    return this.takesCurrentWork(deviceId);
+    return this.options.devices.takesCurrentWork(deviceId);
   }
 
   async writeEvidenceFile(
@@ -649,13 +649,7 @@ export class PlacedCopies {
 
   /** Whether that computer writes a selection of an artifact's files beside the whole one. */
   writesArtifactParts(deviceId: string): boolean {
-    return this.takesCurrentWork(deviceId);
-  }
-
-  /** Every computer on this home's major writes evidence files and artifact selections. */
-  private takesCurrentWork(deviceId: string): boolean {
-    const version = this.options.devices.version(deviceId);
-    return !!version && takesWork(version.contract);
+    return this.options.devices.takesCurrentWork(deviceId);
   }
 
   /**

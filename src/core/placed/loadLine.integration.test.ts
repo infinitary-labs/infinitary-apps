@@ -504,7 +504,7 @@ describe("the declared heavy-run line through its native command", () => {
           throw new Error("No work computer");
         },
         inReach: () => false,
-        version: () => undefined,
+        takesCurrentWork: () => false,
         onWorkDevice: () => () => {},
       },
     });

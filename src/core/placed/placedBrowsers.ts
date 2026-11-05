@@ -38,7 +38,7 @@ import {
   type WebSignIns,
 } from "../browser/webSignIns";
 import { DeviceOutOfReachError } from "../connection/connection";
-import type { PlacedBrowserSink } from "./placedSessions";
+import type { PlacedBrowserSink } from "./crewMachines";
 import type { WorkDevices } from "./workDevices";
 
 /**

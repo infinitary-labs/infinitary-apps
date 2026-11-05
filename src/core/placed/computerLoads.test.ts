@@ -1,4 +1,4 @@
-import { PROTOCOL_VERSION } from "@shared/ipc";
+import { PROTOCOL_VERSION, takesWork } from "@shared/ipc";
 import { LOAD_ORDER, type LoadSnapshot } from "@shared/load";
 import { RESOURCE_MAX_AGE_MS, RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -43,7 +43,7 @@ function fixture() {
     work: {
       ask,
       inReach: () => reachable,
-      version: () => version,
+      takesCurrentWork: () => takesWork(version.contract),
       onWorkDevice: (listener) => {
         contact = listener;
         return () => {};

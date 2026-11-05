@@ -1,3 +1,4 @@
+import { takesWork } from "@shared/ipc";
 import {
   DeviceOutOfReachError,
   type HomeConnection,
@@ -149,6 +150,16 @@ export class WorkDevices {
    */
   version(deviceId: string): WorkDeviceVersion | undefined {
     return this.versions.get(deviceId);
+  }
+
+  /**
+   * The connected computer takes work on the home's contract major
+   * (`takesWork`), so it speaks every change that needs nothing newer; false
+   * while none of its connections is up.
+   */
+  takesCurrentWork(deviceId: string): boolean {
+    const version = this.versions.get(deviceId);
+    return !!version && takesWork(version.contract);
   }
 
   /**

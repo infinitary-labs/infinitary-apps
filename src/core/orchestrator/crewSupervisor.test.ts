@@ -154,7 +154,7 @@ import { CREWMATE_BROWSER_LINE, crewmateComputersNote } from "../pi/piResources"
 import { Runbooks } from "../runbooks/runbooks";
 import { createPiSessionFactory, holdingRecoverableAttempt } from "../pi/session";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
-import type { CrewMachines } from "../placed/placedSessions";
+import type { CrewMachines } from "../placed/crewMachines";
 import {
   ABANDON,
   APPROVE_AND_BUILD,

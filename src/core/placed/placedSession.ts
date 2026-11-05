@@ -55,7 +55,7 @@ export type PlacedSessionLink = {
   /** The computer is in reach now. */
   inReach(): boolean;
   /** Brings the record's copy home up to the computer's. */
-  copy(state: PlacedState): Promise<void>;
+  copy(): Promise<void>;
   /** What a turn the computer quit in the middle of failed with, in the person's words. */
   interrupted(retry?: boolean): string;
   /** What a prompt's turn whose end never arrived failed with, in the person's words. */
@@ -286,7 +286,7 @@ export class PlacedSession implements ModelSession {
     // last words. The computer reads its live session for that: a turn in
     // progress or carried on by itself is never stopped.
     void this.detachThere()
-      .then(() => (this.link.inReach() ? this.link.copy(this.state) : undefined))
+      .then(() => (this.link.inReach() ? this.link.copy() : undefined))
       .catch(() => undefined)
       .finally(() => this.retire());
   }
@@ -441,7 +441,7 @@ export class PlacedSession implements ModelSession {
     // What the turn there never took in, then the steers that came after it ended.
     this.undelivered = [...event.undelivered, ...this.undelivered];
     this.lastEnded = Math.max(this.lastEnded, event.turn);
-    await this.link.copy(this.state).catch(() => undefined);
+    await this.link.copy().catch(() => undefined);
     // A steer still on its way is answered first, so its words are not lost to this end.
     while (this.steering.size > 0) await Promise.allSettled([...this.steering]);
     const running = this.running?.turn === event.turn ? this.running : undefined;

@@ -1,4 +1,3 @@
-import { takesWork } from "@shared/ipc";
 import {
   type ComputerLoadReading,
   LOAD_ORDER,
@@ -39,7 +38,7 @@ export class ComputerLoads {
   constructor(
     private readonly options: {
       local: Pick<LoadLine, "snapshot" | "reconsider" | "taskIds">;
-      work: Pick<WorkDevices, "ask" | "inReach" | "version" | "onWorkDevice">;
+      work: Pick<WorkDevices, "ask" | "inReach" | "takesCurrentWork" | "onWorkDevice">;
       overrides: (computerId: string) => string[];
       changed?: () => void;
       now?: () => number;
@@ -103,8 +102,7 @@ export class ComputerLoads {
   }
 
   supports(computerId: string): boolean {
-    const version = this.options.work.version(computerId);
-    return !!version && takesWork(version.contract);
+    return this.options.work.takesCurrentWork(computerId);
   }
 
   /** Called by the existing two-second resource feed, not a second sampling loop. */

@@ -519,7 +519,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
   An order that acts carries an `orderId` from what the home saved; one already applied is answered as it was, from `tasks/<task>/orders.jsonl`, without acting again, but for a keep, which reads the working copy again (below, "Its working copies").
   A prompt's answer is kept before its turn starts.
   A callback asks under one `callId` and asks again under it after every drop until the home answers or the callback's deadline expires (`HomeLink.ask`); the home keeps each answer and answers a repeat from it.
-  Before a change, once its conversation or receiving service is ready, the home appends that id to `crewmates/<task>/placed/begun.jsonl` and syncs the file to disk.
+  Before a change, once its conversation or receiving service is ready, the home appends that id to `crewmates/<task>/placed/begun.jsonl` and syncs the file to disk (`PlacedLedger.begin`).
   A repeat with a begun mark but no kept answer does nothing: it keeps and returns a warning that the change may already be done, naming the operation and what to check before trying again, never a raw channel id.
   Reads, and a change whose request declares that it repeats safely, leave no begun mark; a picture, a demo piece, a font and a knowledge write are those changes, and knowledge keeps its own request id.
   A begun-only report is never replayed into an adopting turn.
@@ -578,6 +578,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
 ## The home's side
 
 `PlacedSessions` (`src/core/placed/placedSessions.ts`) is the home's half, composed in `createServices` as `services.placed`; it reaches the computers only through `WorkDevices`, which the shell attaches to the connection (`docs/devices.md`).
+Its parts sit beside it in `src/core/placed/`: what the crew reads of the computers (`CrewMachines`, `crewMachines.ts`), the callbacks it answers (`placedCallbacks.ts`), what it keeps of them (`PlacedLedger`, `placedLedger.ts`), this Mac's copy of a record there (`RecordCopy`, `recordCopy.ts`), and each computer's own accounts (`PlacedAccounts`, `placedAccounts.ts`).
 
 - **Where a task runs.**
   `task_execution.device_id` (migration 63, moved by migration 97, written by `TaskService.setDevice`) names the paired computer that runs work holding a task's conversation; null is this Mac.
@@ -599,7 +600,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
   Disposing lets go here only: a running turn goes on there, and an idle conversation lets its client go (`detach`).
 - **Work requests.**
   The home refuses one about a task its record does not place on the computer that asks, or one closed here.
-  Each callback is done once, by the task's open session's callbacks, and its answer - or its refusal - is kept in `crewmates/<task>/placed/calls.jsonl` before it is returned, so one asked again is answered from there.
+  Each callback is done once, by the task's open session's callbacks, and its answer - or its refusal - is kept in `crewmates/<task>/placed/calls.jsonl` before it is returned, so one asked again is answered from there (`PlacedLedger`).
   A computer that runs work sends a project font only to a home on protocol 8.9 or later (`CARD_TYPEFACES_SINCE`); to an older home it refuses the card itself, in words saying to draw the preview in the app's own typefaces until the home is updated.
   A card picture's bytes are kept where this Mac's cards show their pictures from, and so is a project font's, only under the task's own id; a demo recording's pieces are written into a partial file there that becomes the recording only with its last piece, and a job's end reaches the task's lane as a local job's does.
   The events are taken once each and in order; the newest kept for good is saved at every model turn's end in `crewmates/<task>/placed/state.json`, so a restart here never counts a turn's usage twice.
@@ -660,7 +661,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
   A turn's end, reconnect and session release flush the copy without the live throttle, from where each file's copy ends; Observe and the Crewmate tab read that copy for a task on another computer.
   On protocol 8.15 or later, the first piece's copy order requests a fresh app-owned record from the live session before the computer reads it, so a Claude client's mid-turn tail does not wait for its minute tick.
   The home omits that request on older computers, which retain the cached-source behavior until updated.
-  A file the computer wrote again shorter, after `delete-outside` replaced the words from outside in it, is copied whole instead: into a folder beside the copy, `crewmates/<task>/sessions.whole/`, and renamed over this Mac's file once whole, so the copy never mixes the old words with the new, while the rest of the record is copied on as usual (`copyWhole`).
+  A file the computer wrote again shorter, after `delete-outside` replaced the words from outside in it, is copied whole instead: into a folder beside the copy, `crewmates/<task>/sessions.whole/`, and renamed over this Mac's file once whole, so the copy never mixes the old words with the new, while the rest of the record is copied on as usual (`RecordCopy.copyWhole`).
 - **Closing.**
   When the record closes the conversation is closed there for good, at once or at that computer's next roster.
 
@@ -1114,7 +1115,7 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   Settings -> Intelligence draws it (`docs/subscriptions-tab.md`, "A computer's own sign-ins"), Settings -> Projects draws its GitHub row (`docs/forge.md`, "A computer's own sign-in"), and the feed says "Mac mini is signed in to Codex."
   (`device_signed_in`).
 - **A task's model.**
-  A task that runs here takes its model at the home among the subscriptions this computer is signed in to, never the home's, whether Automatic chose this computer or the task was set to run here (`PlacedSessions.served`, `actualComputerPool` in `src/core/routing/computerPool.ts`, the pool an Automatic start routes among).
+  A task that runs here takes its model at the home among the subscriptions this computer is signed in to, never the home's, whether Automatic chose this computer or the task was set to run here (`PlacedAccounts.served`, `actualComputerPool` in `src/core/routing/computerPool.ts`, the pool an Automatic start routes among).
   The pool is every model this computer said an account that can serve lists - enabled, signed in, needing no new sign-in, withheld by nothing here and with no cut-off standing on it - as the home narrowed it (above), with the home's catalog row for each and the allowance as read here, so a subscription spent here is skipped.
   A model the home's catalog lists that no account here serves is never offered.
   A provider that catalog does not list, OpenRouter, joins with the models this computer said that account serves, and a custom connection with its checked models.
@@ -1126,7 +1127,7 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   The home's routing decision records it ("routed among Mac mini's own sign-ins (anthropic-claude): 4 models"), the home selects no account of its own for the task, and its binding names this computer's own account that lists the chosen model - its pin, else the first - or, on a computer too old to list its models, its account for that provider - its pin, else the first that serves - which `bindHere` binds here.
   A task whose computer lists no account at all waits as queued work until it reports one (above, "Runs on"); one whose computer lists accounts but none that can take it does not start, and nothing is made here for it: "Mac mini has no subscription of its own that can take this task now.
   Sign it in to one in Settings → Intelligence."
-  When a cut-off alone withholds the sign-in that would serve it (`heldThere`, `PlacedSessions.signInWait`), the task waits as queued work instead, and starts once that sign-in serves again (above, "Runs on").
+  When a cut-off alone withholds the sign-in that would serve it (`heldThere`, `PlacedAccounts.signInWait`), the task waits as queued work instead, and starts once that sign-in serves again (above, "Runs on").
   A task waiting for its computer chooses its model once that computer is back, and a task reopened after a restart binds the same way, by the model its record names, so it binds the account it started on while that account still lists the model.
 - **The first mate's card.**
   Asked to sign a computer in, the first mate calls `app_change` `device-sign-in { deviceId, provider }`, and the host files one card from the computer's own entry: "Sign in to Codex on Mac mini", with Sign in beside Not now.

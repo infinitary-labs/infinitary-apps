@@ -293,9 +293,9 @@ import {
   verifyKeptValidationEvidenceSync,
 } from "../pi/validationEvidence";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
+import type { CrewMachines } from "../placed/crewMachines";
 import type { PlacedCopy } from "../placed/placedCopies";
 import { PreparationUnknown } from "../placed/placedCopies";
-import type { CrewMachines } from "../placed/placedSessions";
 import { askJson } from "../program/programAsk";
 import { type ProgramEnd, type ProgramPartAsk, ProgramRunner } from "../program/programRunner";
 import { programRefusal } from "../program/programScript";

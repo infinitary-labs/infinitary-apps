@@ -36,7 +36,8 @@ import { GithubGatewayService } from "../../src/core/orchestrator/githubGateway"
 import type { TypedWake } from "../../src/core/orchestrator/wakes";
 import { WorkflowEvidenceService } from "../../src/core/orchestrator/workflowEvidence";
 import { type AppPaths, appPathsFor, crewmateCardPicturesDir } from "../../src/core/paths";
-import { type PlacedBrowserSink, PlacedSessions } from "../../src/core/placed/placedSessions";
+import type { PlacedBrowserSink } from "../../src/core/placed/crewMachines";
+import { PlacedSessions } from "../../src/core/placed/placedSessions";
 import { WorkDevices } from "../../src/core/placed/workDevices";
 import type { QuotaCatalogModel } from "../../src/core/quota/auth";
 import type { QuotaService } from "../../src/core/quota/quotaService";

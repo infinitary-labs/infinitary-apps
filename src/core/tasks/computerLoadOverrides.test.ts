@@ -1,5 +1,4 @@
 import { overridePasses } from "@shared/holds";
-import { PROTOCOL_VERSION } from "@shared/ipc";
 import { LOAD_ORDER } from "@shared/load";
 import { expect, it, vi } from "vitest";
 import { freshDatabase, rowsRead } from "../../../tests/helpers/database";
@@ -81,10 +80,7 @@ it("sends the persisted overrides in a load round without reading more rows when
     work: {
       ask,
       inReach: () => true,
-      version: () => ({
-        contract: PROTOCOL_VERSION,
-        takesWork: true,
-      }),
+      takesCurrentWork: () => true,
       onWorkDevice: () => () => {},
     },
     overrides: (computer) => tasks.passingOverridesForComputer(computer, "load-line"),

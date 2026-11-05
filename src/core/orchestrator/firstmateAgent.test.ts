@@ -78,7 +78,7 @@ import {
 import { LIST_PAGING_RESTART, parseTasksQueryText } from "../pi/taskTools";
 import { piToolsOf } from "../pi/toolSpec";
 import type { ModelRuntime } from "../pi/types";
-import type { CrewMachines } from "../placed/placedSessions";
+import type { CrewMachines } from "../placed/crewMachines";
 import { ShellPreferencesService } from "../preferences/shellPreferences";
 import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
 import { readSelfSource, readSelfSourceAsync } from "../selfSource/resolve";

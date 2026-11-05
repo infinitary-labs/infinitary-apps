@@ -121,7 +121,7 @@ Tab reaches See more under the recent tasks, past their keys; Enter or Space add
 - `src/core/claude/claudeEvents.test.ts` ("a turn's usage, model by model"): each model's share, running totals, a result reported twice, a client that starts over, a turn that names no model.
 - `src/core/pi/piEvents.test.ts`: the listed-prices estimate and its split, and no cost for a model with no listed prices.
 - `src/core/storage/usageStore.test.ts`: one row per served model; the summary reconciles days, models and where it went to one total, names models and places, groups by project and saved kind, counts finished work, filters, and answers an empty ledger; recent tasks in order, ties, limits, the period and each category's reporting.
-- `src/core/storage/db.test.ts` ("migration 66").
+- `src/core/storage/settingsMigrations.test.ts` ("migration 66").
 - `src/renderer/src/settings/usageWords.test.ts`: every printed word and number.
 - `src/renderer/src/settings/UsageTab.test.tsx`: the recent tasks while a read is out, after one fails, with nothing to list, and with more to show.
 - `tests/e2e/usage.spec.ts`: a real first mate turn lands in the ledger, and the captain opens Usage, switches units, filters, opens and closes a model's details and finds the unit kept after a reload, all by keys; over a seeded ledger, Where it went lists the first mate, each project and other work, and See more adds ten tasks at a time by keys, kept across a unit switch and started over by a new period.

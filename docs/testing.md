@@ -170,7 +170,7 @@ A search through an index, a temporary b-tree over the rows an index sought, and
 The ledger only shrinks.
 A statement whose plan no longer makes its ledgered walks fails the check, and `tests/statement-check.test.ts` plans every entry, so a fixed walk leaves the ledger in the same pull request.
 A new entry is a move its pull request explains, as a moved replay number is; the usual answer to a new walk is an index or a query that seeks.
-An optional query index goes in `migrate`'s index block in `src/core/storage/db.ts`, with no migration version.
+An optional query index goes in `createQueryIndexes` in `src/core/storage/queryIndexes.ts`, with no migration version.
 A read that needs a partial index names it with `INDEXED BY`: with no statistics, SQLite prefers an index that matches more equality terms, and the roster's restart read did so and tested every note of a running task before INF-2341.
 This check plans that read as a search, and the scale check below counts only the one row it returns, so the read's own test asserts its plan (`src/core/tasks/taskRead.test.ts`).
 The check sees only the statements the tests prepare, and it reads no time: a walk of a small table and a slow file read are outside it.

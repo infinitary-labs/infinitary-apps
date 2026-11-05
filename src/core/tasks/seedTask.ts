@@ -1,7 +1,7 @@
 import type { Reasoning } from "@shared/reasoning";
 import type { WorkShape } from "@shared/routingPolicy";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
-import { mapLegacyStatus } from "../storage/db";
+import { mapLegacyStatus } from "../storage/taskRecordMigrations";
 import type { TaskGate, TaskKind, TaskRecord } from "../storage/taskStore";
 import type { TaskService } from "./taskService";
 

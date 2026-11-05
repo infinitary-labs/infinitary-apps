@@ -175,7 +175,7 @@ Never drop the table or rewrite its rows to recover from a capture problem.
 ## Tests
 
 - `src/core/orchestrator/cardService.test.ts` "CardService evidence" - stale offer, fidelity, retransmit, reopen and restart past 500 task events, exits, offer minting, host reopen, thread refs, a failed write rolled back, legacy seed, purge.
-- `src/core/storage/cardStore.test.ts`, `src/core/storage/db.test.ts` - the purge and the schema refusal; migration 57 and its reversal.
+- `src/core/storage/cardStore.test.ts`, `src/core/storage/cardColumnMigrations.test.ts` - the purge and the schema refusal; migration 57's reversal under each older card column.
 - `src/core/orchestrator/crewSupervisor.test.ts` - the frozen task slice and a frame action.
 - `src/renderer/src/app/store.test.ts`, `src/renderer/src/plugins/frames/frameController.test.ts`, `src/shared/ipc.test.ts` - the gesture, the mounted offer and the definitions on the wire.
 - `tests/export-human-supervision.test.ts` - episodes, legacy strata, pictures and checksums, determinism, redaction, refusal, exclusions, and the CLI gate; `tests/export-corpus.test.ts` holds the default export's five files.

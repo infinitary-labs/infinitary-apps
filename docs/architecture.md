@@ -319,7 +319,7 @@ Idle slots are bounded per repository, in total and by age, and boot finishes an
 
 Persistence:
 
-- `userData/firstmate.db` - better-sqlite3, WAL, forward-only embedded migrations (`src/core/storage/db.ts`, sixty-two; 53 records a filing's test path, the captain's first open, and the first mate's verdict, 54 the answers a card's own questions got, 55 how wide a card is, 56 the model a card's author ran on).
+- `userData/firstmate.db` - better-sqlite3, WAL, forward-only embedded migrations (the ledger in `src/core/storage/migrations.ts`, opened by `src/core/storage/db.ts`, sixty-two; 53 records a filing's test path, the captain's first open, and the first mate's verdict, 54 the answers a card's own questions got, 55 how wide a card is, 56 the model a card's author ran on).
   The task record (task-system design, section 19): `projects`, `tasks`, `task_events`, `task_links`, `captain_asks`, `task_board` (the board sequence).
   Around it: `cards`, `activity_events`, `inbox`, `decisions` (the one decision ledger, `docs/decision-models.md`; `routing_decisions`, `account_decisions` and `supervision_outcomes` are read-only views over it), `jobs`, `schedules`, `memories`/`memory_revisions`, `quota_snapshots`, `pushed_quota`, `usage_events`, `repos`, `settings`, `schema_migrations`.
   There is no `crewmates` table: a crewmate is a task row plus a runtime handle.

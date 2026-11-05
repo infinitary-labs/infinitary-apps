@@ -52,8 +52,6 @@ export const OVER_CEILING: readonly string[] = [
   "src/core/placed/placedSessions.test.ts",
   "src/core/placed/placedSessions.ts",
   "src/core/services.ts",
-  "src/core/storage/db.test.ts",
-  "src/core/storage/db.ts",
   "src/core/tasks/taskProtocol.test.ts",
   "src/core/tasks/taskService.ts",
   "src/renderer/src/app/HomeScreen.tsx",

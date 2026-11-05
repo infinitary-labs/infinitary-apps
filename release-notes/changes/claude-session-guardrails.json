@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-session-guardrails",
+      "reason": "Internal: tests that pin the Claude session's behavior before its file is split; nothing a person sees changes."
+    }
+  ]
+}

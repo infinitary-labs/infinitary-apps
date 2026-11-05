@@ -29,6 +29,7 @@ import {
   CLAUDE_SESSION_ENV,
   CLAUDE_STEER_PRIORITY,
   type ClaudeQueryFactory,
+  createClaudeSessionFactory,
 } from "./session";
 
 /**
@@ -521,6 +522,35 @@ describe("the Claude crewmate's coding session", () => {
         session.dispose();
       }
     });
+  });
+
+  it("labels its model by the catalog's name: the one answering, else the one it asks for (INF-2625's guardrail)", async () => {
+    let turn = 0;
+    const { factory } = scriptedQuery({
+      onInput: answering(() => {
+        turn += 1;
+        return [
+          {
+            type: "system",
+            subtype: "init",
+            model: turn === 1 ? "claude-sonnet-5-5" : "claude-opus-4-8",
+            session_id: "session-under-test",
+          },
+          result({ cost: 0.01 * turn, input: 10 * turn, output: 2 * turn }),
+        ];
+      }),
+    });
+    const session = await createClaudeSession({ ...baseSpec, model: "claude-opus-5-5" }, factory);
+    // Before the client says anything, the model it is asked for names it.
+    expect(session.modelLabel()).toBe("Claude Opus 5.5");
+    await session.prompt("go");
+    expect(session.modelLabel()).toBe("Claude Sonnet 5.5");
+    // A model the shipped catalog does not name has no label of its own.
+    await session.prompt("carry on");
+    expect(session.modelRef()?.id).toBe("claude-opus-4-8");
+    expect(session.modelLabel()).toBeUndefined();
+    session.dispose();
+    await session.closed();
   });
 
   it("normalizes deltas and tool calls, losing none emitted before anyone subscribed", async () => {
@@ -1217,6 +1247,13 @@ describe("the client's own continuations", () => {
     );
   });
 
+  it("ends a continuation its client crashed under with the client's error (INF-2625's guardrail)", async () => {
+    const { harness, ends } = await continuing();
+    harness().emit(says.running);
+    harness().fail(new Error("the client crashed"));
+    await vi.waitFor(() => expect(ends).toEqual([["the client crashed", undefined]]));
+  });
+
   it("interrupts a continuation on abort, as it does a prompt", async () => {
     const { session, harness, ends } = await continuing();
     harness().emit(says.running);
@@ -1489,6 +1526,63 @@ describe("the crewmate's record (the session contract's step 6)", () => {
     session.dispose();
     await session.closed();
   });
+
+  it("keeps its copy when the client's transcript no longer extends it, and says so once (INF-2625's guardrail)", async () => {
+    const configDir = scratchDir("infinitary-claude-diverged-client-");
+    const recordDir = scratchDir("infinitary-claude-diverged-copy-");
+    const notes: string[] = [];
+    let client = "";
+    const line = (n: number) =>
+      `${JSON.stringify({ type: "user", uuid: `line-${n}`, sessionId: "s" })}\n`;
+    const { factory } = scriptedQuery({
+      onInput: (message, emit) => {
+        opens(emit, message);
+        appendFileSync(client, line(1));
+        closes(emit, result({ cost: 0.01, input: 10, output: 2 }));
+      },
+    });
+    let tick: ((now: number) => void) | undefined;
+    const session = await scriptedClaudeFactory({
+      configDir,
+      query: factory,
+      log: (note) => notes.push(note),
+      clock: {
+        now: () => Date.now(),
+        register: (_name, _cadenceMs, run) => {
+          tick = run;
+          return () => {
+            tick = undefined;
+          };
+        },
+      },
+    }).open(
+      codingSpec({
+        binding: { backend: "claude", accountId: "acct_claude" },
+        cwd: baseSpec.cwd,
+        recordDir,
+      }),
+    );
+    client = join(
+      configDir,
+      "projects",
+      encodeClaudeProjectDir(baseSpec.cwd),
+      `${session.sessionId}.jsonl`,
+    );
+    mkdirSync(dirname(client), { recursive: true });
+    await session.prompt("go");
+    const copy = session.recordPath() ?? "";
+    expect(readFileSync(copy, "utf8")).toBe(line(1));
+    // The client's file is rewritten: it no longer starts with what the app copied.
+    writeFileSync(client, line(7) + line(8));
+    tick?.(Date.now());
+    tick?.(Date.now());
+    expect(readFileSync(copy, "utf8")).toBe(line(1));
+    expect(notes.filter((note) => note.includes("no longer extends"))).toEqual([
+      "the client's transcript no longer extends the app's copy; the copy is kept",
+    ]);
+    session.dispose();
+    await session.closed();
+  });
 });
 
 describe("the crewmate's contract across an upgrade", () => {
@@ -1610,6 +1704,155 @@ describe("the crewmate's contract across an upgrade", () => {
 });
 
 describe("the session's own guardrails", () => {
+  it("refuses a session on another computer, and a rolling one without the host's clock (INF-2625's guardrail)", async () => {
+    const { factory } = scriptedQuery({ onInput: () => {} });
+    const spec = codingSpec({
+      binding: { backend: "claude", accountId: "acct_claude" },
+      cwd: baseSpec.cwd,
+    });
+    await expect(
+      scriptedClaudeFactory({ configDir: baseSpec.configDir, query: factory }).open({
+        ...spec,
+        machine: "another-computer",
+      }),
+    ).rejects.toThrow("A Claude session cannot run on machine another-computer.");
+    await expect(
+      createClaudeSessionFactory({
+        configDir: baseSpec.configDir,
+        query: factory,
+        checkClient: async () => ({ state: "ready", executable: "/usr/local/bin/claude" }),
+      }).open(spec),
+    ).rejects.toThrow("A rolling Claude session needs the host's clock.");
+  });
+
+  it("fails a prompt its client crashed under with the client's error, and attaches a new client for the next (INF-2625's guardrail)", async () => {
+    const notes: string[] = [];
+    let crashes = true;
+    const { factory, harness, attachments } = scriptedQuery({
+      onInput: (message, emit) => {
+        opens(emit, message);
+        if (!crashes) closes(emit, result({ cost: 0.01, input: 10, output: 2 }));
+      },
+    });
+    const session = await createClaudeSession(
+      { ...baseSpec, log: (note) => notes.push(note) },
+      factory,
+    );
+    const first = session.prompt("one");
+    await vi.waitFor(() => expect(harness().inputs).toHaveLength(1));
+    harness().fail(new Error("the client crashed"));
+    await expect(first).rejects.toThrow("the client crashed");
+    expect(notes).toContain("the client stopped: the client crashed");
+    expect(session.isStreaming()).toBe(false);
+    crashes = false;
+    await expect(session.prompt("two")).resolves.toBeUndefined();
+    expect(attachments).toHaveLength(2);
+    session.dispose();
+    await session.closed();
+  });
+
+  it("settles a turn the provider already failed quietly when its client then crashes (INF-2625's guardrail)", async () => {
+    const { factory, harness } = scriptedQuery({
+      onInput: (message, emit) => {
+        opens(emit, message);
+        emit({
+          type: "result",
+          subtype: "success",
+          is_error: true,
+          result: "Claude usage limit reached. Your limit resets at 3pm.",
+          total_cost_usd: 0,
+          modelUsage: {},
+        });
+      },
+    });
+    const session = await createClaudeSession(baseSpec, factory);
+    const events: SessionEvent[] = [];
+    session.subscribe((event) => events.push(event));
+    const turn = session.prompt("go");
+    await vi.waitFor(() => expect(events.some((event) => event.type === "turn_failed")).toBe(true));
+    harness().fail(new Error("the client crashed"));
+    await expect(turn).resolves.toBeUndefined();
+    expect(events.filter((event) => event.type === "turn_failed")).toHaveLength(1);
+    session.dispose();
+    await session.closed();
+  });
+
+  it("stops safely once the calls its client began end, never waiting on a subagent's, and refuses calls meanwhile (INF-2625's guardrail)", async () => {
+    const { factory, harness } = scriptedQuery({
+      onInput: (message, emit) => {
+        opens(emit, message);
+        // The call as it streams, then as its message records it again.
+        emit({
+          type: "stream_event",
+          parent_tool_use_id: null,
+          event: {
+            type: "content_block_start",
+            index: 0,
+            content_block: {
+              type: "tool_use",
+              id: "call-1",
+              name: "mcp__infinitary__note_progress",
+              input: {},
+            },
+          },
+        });
+        emit(says.toolCall("call-1", "mcp__infinitary__note_progress"));
+        // A subagent's own call runs inside the call that started it.
+        emit({
+          type: "assistant",
+          parent_tool_use_id: "call-1",
+          message: { content: [{ type: "tool_use", id: "sub-1", name: "Read", input: {} }] },
+        });
+      },
+      onInterrupt: interruptedBy(interruptedResult),
+    });
+    const session = await createClaudeSession(baseSpec, factory);
+    const events: SessionEvent[] = [];
+    session.subscribe((event) => events.push(event));
+    const turn = session.prompt("go");
+    await vi.waitFor(() => expect(events.some((event) => event.type === "tool_start")).toBe(true));
+    const gate = harness().options.hooks?.PreToolUse?.[0]?.hooks[0];
+    const ask = () =>
+      gate?.({ hook_event_name: "PreToolUse" } as never, undefined, {
+        signal: new AbortController().signal,
+      });
+    expect(await ask()).toEqual({});
+    const waited: string[][] = [];
+    const stopping = session.stopSafely?.({
+      waiting: (calls) => waited.push(calls.map((call) => call.callId)),
+    });
+    // A second ask joins the first.
+    expect(session.stopSafely?.()).toBe(stopping);
+    expect(await ask()).toMatchObject({
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny" },
+    });
+    expect(harness().interrupts()).toBe(0);
+    harness().emit(says.toolResult("call-1"));
+    await expect(stopping).resolves.toBe("stopped");
+    await expect(turn).resolves.toBeUndefined();
+    expect(waited).toEqual([["call-1"], []]);
+    expect(harness().interrupts()).toBe(1);
+    expect(await ask()).toEqual({});
+    session.dispose();
+    await session.closed();
+  });
+
+  it("withdraws a safe stop whose signal was already aborted, and cuts nothing (INF-2625's guardrail)", async () => {
+    const { factory, harness } = scriptedQuery({
+      onInput: (message, emit) => opens(emit, message),
+      onInterrupt: interruptedBy(interruptedResult),
+    });
+    const session = await createClaudeSession(baseSpec, factory);
+    const turn = session.prompt("go");
+    await vi.waitFor(() => expect(session.isStreaming()).toBe(true));
+    await vi.waitFor(() => expect(harness().inputs).toHaveLength(1));
+    await expect(session.stopSafely?.({ signal: AbortSignal.abort() })).resolves.toBe("withdrawn");
+    expect(harness().interrupts()).toBe(0);
+    session.dispose();
+    await expect(turn).resolves.toBeUndefined();
+    await session.closed();
+  });
+
   it("refuses a second turn rather than orphaning the first", async () => {
     const { factory } = scriptedQuery({
       onInput: (message, emit) => opens(emit, message),

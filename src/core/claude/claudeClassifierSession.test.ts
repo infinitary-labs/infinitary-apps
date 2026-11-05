@@ -1,8 +1,10 @@
+import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
 import { scriptedClaudeQuery as scriptedQuery } from "../../../tests/helpers/scriptedClaudeQuery";
 import { questionSessionSpec } from "../decisions/questionSession";
 import { CLASSIFIER_MAX_OUTPUT_TOKENS } from "../orchestrator/seat";
 import type { ModelSession, SessionEvent } from "../session/session";
+import type { BoundTool } from "../session/tools";
 import type { ClaudeClientCheck } from "./claudeCli";
 import type { ClaudeRateLimit } from "./claudeEvents";
 import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
@@ -187,6 +189,58 @@ describe("the Claude classifier session", () => {
     expect(readings).toEqual([
       { status: "allowed", utilization: 0.4, resetsAt: 1_800_000_000_000, windowId: "five_hour" },
     ]);
+    session.dispose();
+  });
+
+  it("labels its model by the catalog's name, and has none for a model the catalog does not name (INF-2625's guardrail)", async () => {
+    const { factory } = scriptedQuery({ onInput: () => {} });
+    const named = await factoryWith(factory).open({
+      ...spec,
+      model: { provider: CLAUDE_MODEL_PROVIDER, id: "claude-haiku-5-5" },
+    });
+    expect(named.modelLabel()).toBe("Claude Haiku 5.5");
+    named.dispose();
+    const unnamed = await factoryWith(factory).open(spec);
+    expect(unnamed.modelRef()).toEqual({ provider: CLAUDE_MODEL_PROVIDER, id: MODEL });
+    expect(unnamed.modelLabel()).toBeUndefined();
+    unnamed.dispose();
+  });
+
+  it("speaks the spec's tools by their bare names (INF-2625's guardrail)", async () => {
+    const { factory } = scriptedQuery({
+      onInput: (_message, emit) => {
+        emit({
+          type: "assistant",
+          parent_tool_use_id: null,
+          message: {
+            content: [
+              { type: "tool_use", id: "call-1", name: "mcp__infinitary__lookup", input: {} },
+            ],
+          },
+        });
+        emit({
+          type: "user",
+          parent_tool_use_id: null,
+          message: { content: [{ type: "tool_result", tool_use_id: "call-1", is_error: false }] },
+        });
+        emit(result("left"));
+      },
+    });
+    const lookup: BoundTool = {
+      name: "lookup",
+      label: "lookup",
+      description: "Look a word up.",
+      parameters: Type.Object({ word: Type.String() }),
+      run: async () => ({ text: "found" }),
+    };
+    const session = await factoryWith(factory).open({ ...spec, tools: [lookup] });
+    const events = recorder(session);
+    await session.prompt("Which way?");
+    expect(
+      events.flatMap((event) =>
+        event.type === "tool_start" || event.type === "tool_end" ? [event.toolName] : [],
+      ),
+    ).toEqual(["lookup", "lookup"]);
     session.dispose();
   });
 

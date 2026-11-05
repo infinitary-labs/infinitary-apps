@@ -21,6 +21,7 @@ import {
   main,
   parseArgs,
   parseContextBlock,
+  resolutionOf,
 } from "../scripts/extract-dispatch-corpus.ts";
 import { RELEASE_USER_DATA_FOLDER, USER_DATA_FOLDERS } from "../src/shared/userDataFolders";
 import { scratchDir } from "./helpers/scratchDirs";
@@ -709,6 +710,31 @@ describe("dispatch extractor - flat and grouped spawns (P7)", () => {
     }
     expect(grouped.record.outcome).toEqual(flat.record.outcome);
     expect(grouped.record.label).toEqual(flat.record.label);
+  });
+});
+
+describe("dispatch extractor - who closed a card", () => {
+  // The extractor's own rule (resolutionOf): the card_resolved row's actor
+  // says who closed the card, and only the card's declared actions are
+  // answers. INF-2625's plan pins it before the extractor is split.
+  const card = {
+    resolved_at: 21,
+    chosen_action: "nimbus",
+    actions_json: JSON.stringify([
+      { id: "nimbus", label: "nimbus-api" },
+      { id: "ledger", label: "ledgerline-core" },
+    ]),
+  };
+
+  it("reads a card the host closed as retired, even when it stored a declared action", () => {
+    expect(resolutionOf(card, { actor: "captain", action: "nimbus" })).toBe("acted");
+    expect(resolutionOf(card, { actor: "host", action: "nimbus" })).toBe("retired");
+  });
+
+  it("reads a stored id the card never declared as a withdrawal, never an answer", () => {
+    expect(resolutionOf({ ...card, chosen_action: "duplicate" })).toBe("retired");
+    expect(resolutionOf({ ...card, chosen_action: "close" })).toBe("dismissed");
+    expect(resolutionOf({ ...card, resolved_at: null })).toBe("open");
   });
 });
 

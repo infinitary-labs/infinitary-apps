@@ -436,6 +436,7 @@
         "!tests/ensure-electron-installed.test.ts",
         "!tests/typecheck.test.ts",
         "!tests/export-tasks.test.ts",
+        "!tests/corpus-tools-plain-node.test.ts",
         "!tests/generate-self-source.test.ts",
         "!tests/install-clones.test.ts",
         "!tests/local-codesign.test.ts",

@@ -188,6 +188,23 @@ It counts work, never time (captain's B1), and a walk that returns no rows is th
 It sees only the reads it drives; a new read the app repeats on its main thread joins it.
 The fixture seeds through `outsideCensus` (`tests/helpers/statementCheck.ts`), so the statement check does not read a stack for each of the seeding's prepares; the reads it measures are still recorded and planned.
 
+## The size check
+
+A code file the project tracks is at most 2,000 lines, the captain's bar for a file that is too long (INF-2625).
+`pnpm check` runs `node scripts/file-sizes.ts`, which refuses a code file over `SIZE_CEILING` lines unless it is on `OVER_CEILING`, the list of files that were already longer when the check began.
+The list only shrinks: the check refuses an entry whose file is back at or under the ceiling, or gone, so the pull request that brings a file under removes its entry.
+A file that grows past the ceiling is split along its owners in the change that grows it; a new entry is a move its pull request explains.
+A code file is one with a code extension (TypeScript, JavaScript, Swift, C, shell or CSS), less generated files (`.generated.` in the name), vendored code, fixtures and the design skill's built bundle; data, lockfiles and pictures are not code.
+`node scripts/file-sizes.ts --list` prints every code file over the ceiling with its lines.
+
+## Measuring coverage
+
+`pnpm coverage <file>...` measures which lines, branches and functions of the named files the tests reach, with Vitest's V8 coverage provider (`scripts/coverage.ts`), and prints one table.
+By default it runs the named files' own tests: the test files whose paths start with a named file's path less its extension.
+Arguments after `--` go to Vitest in place of those, such as `pnpm coverage src/core/orchestrator/wakes.ts -- --project unit src/core/orchestrator`.
+It sets no threshold and fails nothing for low coverage: the number is information, never a gate.
+A piece of a restructure measures the files it moves on untouched main, so its guardrail tests cover what the tests do not reach before it moves them.
+
 ## E2E scheduling and launch diagnostics
 
 The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share two workers locally unless the caller passes `--workers`.

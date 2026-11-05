@@ -59,6 +59,8 @@ const CLOSERS = new Set([")", "]", '"', "'", "”", "’", "*", "_"]);
 const SENTENCE_START = /[\p{Lu}0-9`"“*_[(]/u;
 /** Words whose stop does not end a sentence. */
 const ABBREVIATION = /^(e\.g|i\.e|etc|vs|cf|al|approx|incl|Inc|Ltd|Mr|Mrs|Ms|Dr|St|Jr|Sr|Fig|[A-Za-z]|([A-Za-z]\.)+[A-Za-z])$/;
+/** A one-letter unit after a number, as in `within 15 s.`: unlike an initial, its stop can end a sentence. */
+const UNIT_AFTER_NUMBER = /(^|\s)\d[\d.,]* [A-Za-z]$/;
 
 /** A paragraph or a list item's text, as it was written. */
 type Run = { lines: string[]; prefix: string; indent: string };
@@ -96,7 +98,11 @@ export function sentencesOf(text: string): string[] {
         next > end &&
         next < text.length &&
         SENTENCE_START.test(text[next] ?? "") &&
-        !(char === "." && ABBREVIATION.test(word)) &&
+        !(
+          char === "." &&
+          ABBREVIATION.test(word) &&
+          !UNIT_AFTER_NUMBER.test(text.slice(start, index))
+        ) &&
         !BLOCK_START.test(text.slice(next))
       ) {
         sentences.push(text.slice(start, end));

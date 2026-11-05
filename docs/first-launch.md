@@ -157,7 +157,8 @@ No tour, legend, setting or dismiss control; colors, motion, the hover summary, 
 `src/renderer/src/character/crew/stateWords.ts` is the pure, time-injected rule (like the character machine); `CrewOrbit` reads the painted frames on a 200 ms clock of its own (so it works while reduced motion holds one still frame, and its seconds are real seconds whatever the stage rate) and draws the one word on the anchors the model names use, 4 px under the solid: `--text-xs`, `--fg-2`, never the state's color.
 
 - **When a word appears.**
-  Only on a crewmate settled on its orbit (frame phase `orbiting`, never spawning or leaving) whose working blend has settled, after it has held that state for 1 s. The earliest crewmate in the state carries it.
+  Only on a crewmate settled on its orbit (frame phase `orbiting`, never spawning or leaving) whose working blend has settled, after it has held that state for 1 s.
+  The earliest crewmate in the state carries it.
   It hides while that crewmate's summary is open.
 - **When it counts.**
   Only when shown in full: 6 s at full strength (fade in `--dur-med`, out `--dur-slow`) with the stage visible - the home view, no card over it, the window not hidden.

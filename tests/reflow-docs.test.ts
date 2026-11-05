@@ -45,6 +45,15 @@ describe("one sentence per line", () => {
     for (const text of kept) expect(reflowMarkdown(text)).toBe(text);
   });
 
+  it("ends a sentence at a one-letter unit after a number, as at an ordinary word", () => {
+    // Main's check failed on docs/ios.md: "within 15 s." read as an initial, so the
+    // reflow wanted these two sentences joined on one line.
+    const text =
+      "Failed rounds wait 2, 4 and 8 s and so on, so a computer that comes back is found within 15 s.\n" +
+      "A welcome that replays brings every push the phone missed.\n";
+    expect(reflowMarkdown(text)).toBe(text);
+  });
+
   it("leaves code, tables, headings, HTML, quotes and hard breaks as written", () => {
     const kept = [
       "# A heading. With two sentences.",

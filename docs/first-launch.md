@@ -22,7 +22,7 @@ The same provider chip row the Intelligence tab has sits below, in catalog order
 Sign-in happens right there: a chip runs the provider's own flow (Pi's select, a browser bounce or a device code, a pasted key) through the same aside the tab renders, anchored under the row.
 While a sign-in step is up (`data-sign-in-step`), the band takes the held input's room, the input is hidden, and a window under 720 pixels tall hides the heading, so a code step fits the smallest window without scrolling (INF-842).
 The input is disabled meanwhile, dimmed, with its own line ("connect a subscription first"), and hold-to-talk is ignored in the same state.
-Before the window's first read of the gate settles, nobody knows yet whether it is up, so the input is held the same way: no typing, files, focus or hold-to-talk (`mainInputHeld`, `src/renderer/src/app/store.ts`).
+Before the window's first read of the gate settles, nobody knows yet whether it is up, so the input is held the same way: no typing, files, focus or hold-to-talk (`mainInputHeld`, `src/renderer/src/app/composer.ts`).
 Words sent in that moment would reach a first mate that cannot answer and skip the welcome.
 The held input keeps full strength and its usual hint, so a launch that is ready never fades in; a fresh one dims when the gate's caption arrives.
 A first read that fails still settles it, and the input opens as it did before any read rather than waiting for a read that may not come.

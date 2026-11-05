@@ -779,7 +779,7 @@ The fallback table beside the existing selector unions these files into its resu
 
 | Changed path | Additional files under `tests/e2e/` |
 | --- | --- |
-| `src/renderer/src/cards/` or `src/renderer/src/app/HomeScreen.tsx` | `keyboard-routing.spec.ts`, `stage-reveals.spec.ts` |
+| `src/renderer/src/cards/`, `src/renderer/src/app/HomeScreen.tsx`, `HomeMate.tsx`, `HomePrompt.tsx` or `src/renderer/src/app/stage/` | `keyboard-routing.spec.ts`, `stage-reveals.spec.ts` |
 | `src/renderer/src/app/focusRecovery.ts` or `src/renderer/src/plugins/frames/frameFocus.ts` | `frame-focus.spec.ts`, `focus-recovery.spec.ts`, `card-task-keys.spec.ts` |
 | `src/core/devices/` | `devices.spec.ts` |
 | `src/core/routing/placementEngine.ts`, `src/main/host/resourceMemory.ts`, or `automaticPlacement.ts`, `placementFacts.ts`, `resourceSampler.ts`, `computerResources.ts` or `computerResourceFeed.ts` in `src/core/placed/` | `automatic-placement.spec.ts` |
@@ -813,7 +813,7 @@ They read the text, not the product's meaning.
 They match the whole hook and the whole quoted sentence, so a fragment in the shared stand-in does not select every journey.
 A change no journey or helper it imports reaches runs nothing and the chooser reports so in its summary.
 A change to an export every journey imports still runs them all, because that is the break this check exists to catch.
-A changed screen file that draws a hook most journeys read, such as `HomeScreen.tsx` with `data-stage-entry`, likewise runs most journeys.
+A changed screen file that draws a hook most journeys read, such as `stage/CardLayer.tsx` with `data-stage-entry`, likewise runs most journeys.
 A model behavior only a few journeys need lives in its own scenario file instead ("A journey's own scenarios"), so an edit to it runs only those journeys.
 The Mac job refuses an empty file list, builds once, then runs the chosen files' tagged tests with `--no-deps`, as a local run does (`docs/testing.md`, "Full e2e runs are CI-only").
 After the rounds pass it runs the edited files' tagged tests alone, as Linux does for the rest ("Each test owns its prerequisites"), and keeps that result as the `e2e-alone-mac` artifact.

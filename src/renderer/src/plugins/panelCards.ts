@@ -10,13 +10,8 @@ import {
   panelCardIdSchema,
   panelCardKeptSchema,
 } from "@shared/plugins/panelCards";
-import {
-  offStack,
-  type PanelCardEntry,
-  panelCardEntryId,
-  shownCard,
-  useShellStore,
-} from "../app/store";
+import { type PanelCardEntry, panelCardEntryId, shownEntry } from "../app/stack";
+import { useShellStore } from "../app/store";
 import { windowGesture } from "./frames/frameActivation";
 import { frameHoldsFocus } from "./frames/frameFocus";
 import { pluginHost } from "./host";
@@ -27,7 +22,7 @@ import { pluginHost } from "./host";
  * whoever made the panel: `cards.emit`, which a panel's code calls in
  * either realm, and which the app calls itself for a header button or a
  * command that names a card. The card is a shell-held stack entry
- * (`{ panelCard }` in ../app/store.ts) that its panel's card view draws.
+ * (`{ panelCard }` in ../app/stack.ts) that its panel's card view draws.
  *
  * A card the captain asked for - his click on the app's own chrome, his
  * key, or his own click or key inside the panel or the card that called -
@@ -94,7 +89,7 @@ export function keepPanelCard(panel: string, id: string, value: unknown): void {
 /** `panel`'s open cards, newest first. */
 export function openPanelCards(panel: string): PanelOpenCard[] {
   const s = useShellStore.getState();
-  const shownId = shownCard(s.cards, s.cardIndex, offStack(s), s.records)?.id;
+  const shownId = shownEntry(s)?.id;
   return s.records.flatMap((held) =>
     "panelCard" in held && held.panelCard.panel === panel
       ? [

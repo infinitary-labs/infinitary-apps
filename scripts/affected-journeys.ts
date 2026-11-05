@@ -101,7 +101,13 @@ export type Reasons = Map<string, string[]>;
 const FALLBACKS = [
   { paths: ["src/shared/cardLeave.ts", "src/shared/cards.ts", "src/core/orchestrator/cardService.ts", "src/core/orchestrator/crewSupervisor.ts", "src/renderer/src/design/cards/"], specs: ["card-leave.spec.ts"] },
   {
-    paths: ["src/renderer/src/cards/", "src/renderer/src/app/HomeScreen.tsx"],
+    paths: [
+      "src/renderer/src/cards/",
+      "src/renderer/src/app/HomeScreen.tsx",
+      "src/renderer/src/app/HomeMate.tsx",
+      "src/renderer/src/app/HomePrompt.tsx",
+      "src/renderer/src/app/stage/",
+    ],
     specs: ["keyboard-routing.spec.ts", "stage-reveals.spec.ts", "card-leave.spec.ts"],
   },
   {

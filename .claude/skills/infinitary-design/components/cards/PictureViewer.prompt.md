@@ -67,6 +67,6 @@ A `--dur-med` (360 ms) `--ease-drift` fade in and out; none at all under reduced
 **Theme.**
 Dark and light through the tokens alone.
 
-In the app this is `src/renderer/src/design/cards/PictureViewer.tsx`, opened by the card layer (`src/renderer/src/app/HomeScreen.tsx`) from the frame bridge's `image` message (`src/shared/plugins/bridge.ts`).
+In the app this is `src/renderer/src/design/cards/PictureViewer.tsx`, opened by the card layer (`src/renderer/src/app/stage/CardLayer.tsx`) from the frame bridge's `image` message (`src/shared/plugins/bridge.ts`).
 The viewer shows only what the host accepts (`viewablePictures` in `src/shared/cardPictures.ts`): the host's own `app-frame://images/` copies and `data:` PNG, JPEG, GIF or WebP pictures, nothing else.
 It plays only the host's own `app-frame://media/` copy of a recording the card's body names (`isPlayableDemoSource`), opened from the bridge's `demo` message; the copy's kind (`playableDemoKind`) picks the MP4 player or the GIF one.

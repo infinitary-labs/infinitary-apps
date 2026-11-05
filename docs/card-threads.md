@@ -292,7 +292,7 @@ In place is the last rung - a segmented control in the card's head swaps the bod
 ### Collapsing the thread
 
 The captain folds an open thread back into its card (FI3-1130): the thread head's Collapse thread, ⌘\ or command search's "Show or hide the card's thread" (`cards.thread`, `docs/keyboard.md`).
-The shell's `closedThreadIds` holds the cards collapsed in this window, and `entryView` (`src/renderer/src/app/HomeScreen.tsx`) draws such a card lone, its field above its buttons with the thread's latest line above it (`ThreadCue` in `CardThread.tsx`); a click or Enter on that line, or ⌘\ again, opens the thread (`openThread`).
+The shell's `closedThreadIds` holds the cards collapsed in this window, and `entryView` (`src/renderer/src/app/stage/entryView.ts`) draws such a card lone, its field above its buttons with the thread's latest line above it (`ThreadCue` in `CardThread.tsx`); a click or Enter on that line, or ⌘\ again, opens the thread (`openThread`).
 The draft, pictures and chips belong to the card's id in the shell, so they survive both moves, and so does the body's state.
 A focused field keeps the focus in its new place (`ReplyRow` carries it across the move); otherwise the card layer focuses what undoes the move, the latest line or the collapse, ringed when a key moved it.
 Collapsing gives up what folded the docks, so in a narrow window they come back, and the folded docks' edge tabs collapse the thread the same way.
@@ -301,7 +301,7 @@ A read that brings nothing new, such as a window catching up, keeps the collapse
 The collapse is shell state for the card while it is up, like a dragged width: `applyCards` drops it with the card, and nothing is saved or sent to the author.
 
 `threadGeometry.test.ts` is the binding evidence: the R3.1 table at 960 / 1200 / 1440 / 1728 with both docks, one dock and none, and `card-threads.spec.ts` measures the real shell against it - folded at the default 1200 (expanded docks reserve a 600px centered stage) and beside the docks at 1728, clear of the rail.
-The collapse's rules are `store.test.ts`'s, its controls `CardThread.test.tsx`'s, and `card-threads.spec.ts` drives it by keys, its own controls and a new line.
+The collapse's rules are `stackActions.test.ts`'s, its controls `CardThread.test.tsx`'s, and `card-threads.spec.ts` drives it by keys, its own controls and a new line.
 
 One sharp edge paid for there: `--rail-docked-left|right` are REGISTERED (`@property`, `syntax: "<length>"`) because the ladder reads them.
 An unregistered custom property computes to its own token stream, so `--rail-docked-left: var(--rail-width)` reads back through `getComputedStyle` as the literal `max(300px, 20vw)` and parses as `NaN`; the ladder then placed the pair as if nothing were docked and it sat under the rail.
@@ -337,7 +337,7 @@ Cancellation and terminal session failure retire the task's open cards through `
   The stage rule's case A: with two cards, a reply keeps the card shown with its thread, an acknowledgement and a reload leave it in its place, and the crewmate's turn end after its report redraws it with the answer in place.
   A lone replied-under card is put aside without a warning and remains open for its author's answer; `cardService.test.ts` covers its release at that author's close-out.
 - `tests/e2e/stage-reveals.spec.ts` - a close brings up the first unread card, a reply keeps its card shown while the unread card waits, and with nothing unread the first card comes up; a reply under a lone card keeps its body as the captain left it.
-  `store.test.ts` owns `departureIndex`, `dismissalSuccessor` and the reply that moves nothing.
+  `stackActions.test.ts` owns `departureIndex`, `dismissalSuccessor` and the reply that moves nothing.
 - `crewSupervisor.test.ts` ("a card reaches the stage at its author's close-out") - the design's recorded exchanges A, B and C replayed at their offsets through the real card, thread and report paths, each answered only at its turn's end, and a card put aside that its crewmate answers mid-turn; `firstmateAgent .test.ts` - case D on the first mate's own card and the mid-turn capture; `cardService.test.ts` - the kept card across a restart.
 - `tests/e2e/thread-waiting.spec.ts` - a reply under a Claude crewmate's card that meets a refusal shows the held waiting line, keeps it across a restart, and loses it to the crewmate's answer once another login serves.
   `threadWait.test.ts`, `CardThread.test.tsx` and `workPosture.test.ts` own the wait per posture, its words and the row; `crewSupervisor.test.ts` the typed hold on the posture and the checks refusal's thread answer.

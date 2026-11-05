@@ -28,7 +28,7 @@ Its controls show a choice at once, each write sends the whole saved look with o
 Opening Appearance or Usage reads the saved look again, so the advice to reopen Settings after a failed recovery holds there too.
 An account's refused edit is told under its row while the list shows what is saved; when that row is gone, as after a disconnect that went through before failing, it is told under the list.
 
-`settings/settingSave.test.ts` covers receipt, partial-write recovery, failed recovery, ordering, stale polls and pushes; `app/store.test.ts` covers the look's writer.
+`settings/settingSave.test.ts` covers receipt, partial-write recovery, failed recovery, ordering, stale polls and pushes; `app/appearance.test.ts` covers the look's writer.
 `tests/e2e/settings-save-recovery.spec.ts` drives the notification, presence, routing, slot, decision and appearance controls through rejected Electron requests, retries real writes and checks their saved state after reopening Settings.
 `tests/browser/settings-save-recovery.test.tsx` does the same for the panels, sharing, Firstmate model and account controls, against the core's answers written in the test.
 The login-item interface is boxed because login items are shared OS state; all other data is disposable.

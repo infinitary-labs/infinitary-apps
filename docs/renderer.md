@@ -49,13 +49,13 @@ The original before/after measurements and pictures were local evidence and are 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - Live mic RMS is a module ref (`src/renderer/src/voice/liveVoiceLevel.ts`), not Zustand.
-  Streaming card bodies are subscribed only by `CardLayer` in `src/renderer/src/app/HomeScreen.tsx`, so they do not re-render `Firstmate` or `VoiceInput`.
+  Streaming card bodies are subscribed only by `CardLayer` in `src/renderer/src/app/stage/CardLayer.tsx`, so they do not re-render `Firstmate` or `VoiceInput`.
   The composer's growth reaches the stage as the CSS variable `--prompt-rise`, never through the store, and the stage subscribes only to whether there is a draft, so typing never re-renders it (`docs/composer.md`).
   Each key's spin kick is read from the store by the character's own drawing frame (`Firstmate`'s `kick` as a reader), not passed down as a prop (INF-1073).
   `tests/browser/typing-stage.test.tsx` holds this by count, never by time: the browser's call counters say how often `HomeMate` and `Firstmate` ran while a sentence was typed, so a busy machine cannot fail it.
-  Stack visibility is `reconcileStack` in `src/renderer/src/app/store.ts`: arrivals keep local selection, project focus holds other projects back, and every snapshot applies the card owner's exact released-update seen marks.
+  Stack visibility is `reconcileStack` in `src/renderer/src/app/stack.ts`: arrivals keep local selection, project focus holds other projects back, and every snapshot applies the card owner's exact released-update seen marks.
   Reading, elapsed time and paging never hide notes; only ordinary lifecycle actions remove them.
-  `HomeScreen` reports a sighting after its shown document draws in a foreground window, and reconnect waits for fresh state before reporting again.
+  The card layer (`CardLayer`) reports a sighting after its shown document draws in a foreground window, and reconnect waits for fresh state before reporting again.
   The pager's new count includes the shown update until the owner acknowledges it; arrow dots still locate only unread updates before and after it.
   An older home without `card-current-update-seen` keeps the legacy offer request and local unread fallback; `tests/e2e/stack-visibility.spec.ts` and `card-current-seen.spec.ts` cover retention, news and multiple views.
 - The character (captain-approved spec, `firstmate/data/fm3000-character-animation-prototypes-s1/report.md`): `src/renderer/src/character/machine.ts` is an explicit input-reconciled state machine - base states idle|listening|working, one-shot emotes (greet/celebrate/ponder/confused/fidget pool: roll, yawn, orbit, the five sky fidgets, the three 6s warps and a 5.6s pretend black hole), and a `busy` parameter that carries the ember INDEPENDENTLY of state (heat is deliberately not in the state targets - listening mid-turn runs hot and cools in place).
@@ -175,7 +175,7 @@ Natural measurement temporarily releases the shell constraint before paint, then
 Same-entry growth, drafts and controls remain instant.
 Resize/drag/focus, reduced motion and error/Retry also remain usable.
 
-How a replacement draws is judged by eye and by recordings; the journeys through it (paging, a reply draft kept across paging and a card-body disclosure in `tests/browser/phase4-cards.test.tsx`; the shared minus, the next-card rule and a lone card's reply keeping its body in `stage-reveals.spec.ts`) are end-to-end and browser tests, and `stageSlots.test.ts` and `store.test.ts` own the lifecycle and selection ordering.
+How a replacement draws is judged by eye and by recordings; the journeys through it (paging, a reply draft kept across paging and a card-body disclosure in `tests/browser/phase4-cards.test.tsx`; the shared minus, the next-card rule and a lone card's reply keeping its body in `stage-reveals.spec.ts`) are end-to-end and browser tests, and `stageSlots.test.ts` and `stackActions.test.ts` own the lifecycle and selection ordering.
 Shared e2e helpers read the shown entry (`tests/e2e/stack.ts` `SHOWN_ENTRY`): a prepared or leaving entry is never "the card".
 
 ### Held preparation
@@ -259,7 +259,7 @@ The state name on the character stays current, because it is the signal, not the
 ## Maximized cards (FI3-1133)
 
 The shown card's size control (the design skill's `components/cards/ResponseCard.prompt.md`, "Maximize") makes it nearly fill the app's window, and the window itself does not change.
-Which entry is maximized is the card layer's own state in `HomeScreen.tsx` (`MaximizedAt`, `src/renderer/src/cards/cardMaximize.ts`): the entry and the main message's focus request it was maximized under.
+Which entry is maximized is the card layer's own state in `stage/CardLayer.tsx` (`MaximizedAt`, `src/renderer/src/cards/cardMaximize.ts`): the entry and the main message's focus request it was maximized under.
 Each newly shown entry starts from `appearance.defaultCardSize`; Usual retains the host's width, Wide and Full widen it through `openingCardWidth`, and Maximized seeds that entry's maximized state before it paints.
 A manual maximize or restore lasts for that visit only, including revisions, and a request to focus the main message restores it.
 Paging, the layer remounting after Settings, and restarting start from the saved default again; the default is persisted, never the per-visit override.
@@ -332,7 +332,7 @@ A foot the headers lift takes the composer's growth down with it (`promptShellMa
 
 ### Docked rails and the input's room
 
-The input is `min(560px, 100vw - occupied rails - 32px)` wide (`PROMPT_WIDTH`, `HomeScreen.tsx`), centred on the window under the first mate.
+The input is `min(560px, 100vw - occupied rails - 32px)` wide (`PROMPT_WIDTH`, `HomePrompt.tsx`), centred on the window under the first mate.
 With Activity and Tasks both expanded, the smallest window at 100% leaves it 328px, which is what the design is drawn for: every hint has a form that fits its one line beside Add files (`docs/composer.md`).
 A larger Size makes the page narrower than that window, and between the rails the input would shrink with it: to 241px at 110% in the smallest window, 136px at 125%, and 21px at 150%, where Add files no longer fits.
 With no card up no card folds the rails, so the input would keep only the room between them.

@@ -87,7 +87,7 @@ A revision on a shown crewmate card records the shown offer as still `available`
 
 ## What a click carries
 
-The shell stamps each gesture (`src/renderer/src/app/store.ts`): a random 32-hex interaction id, the lifecycle and offer ids of the card it mounted, and for a footer click with a form, whether the reading was `fresh`, a `fallback` to the last draft, or `none`, whether the card was remounted with another offer while it waited, and the question definitions.
+The shell stamps each gesture (`src/renderer/src/app/cardActions.ts`): a random 32-hex interaction id, the lifecycle and offer ids of the card it mounted, and for a footer click with a form, whether the reading was `fresh`, a `fallback` to the last draft, or `none`, whether the card was remounted with another offer while it waited, and the question definitions.
 It rides `inf:cards:act`, `inf:cards:close` and `inf:cards:reply` as one optional trailing argument (protocol 1.37.0).
 
 The core normally reads that metadata leniently: a missing or malformed submission does not refuse a choice.
@@ -177,7 +177,7 @@ Never drop the table or rewrite its rows to recover from a capture problem.
 - `src/core/orchestrator/cardService.test.ts` "CardService evidence" - stale offer, fidelity, retransmit, reopen and restart past 500 task events, exits, offer minting, host reopen, thread refs, a failed write rolled back, legacy seed, purge.
 - `src/core/storage/cardStore.test.ts`, `src/core/storage/cardColumnMigrations.test.ts` - the purge and the schema refusal; migration 57's reversal under each older card column.
 - `src/core/orchestrator/crewSupervisor.test.ts` - the frozen task slice and a frame action.
-- `src/renderer/src/app/store.test.ts`, `src/renderer/src/plugins/frames/frameController.test.ts`, `src/shared/ipc.test.ts` - the gesture, the mounted offer and the definitions on the wire.
+- `src/renderer/src/app/cardActions.test.ts`, `src/renderer/src/plugins/frames/frameController.test.ts`, `src/shared/ipc.test.ts` - the gesture, the mounted offer and the definitions on the wire.
 - `tests/export-human-supervision.test.ts` - episodes, legacy strata, pictures and checksums, determinism, redaction, refusal, exclusions, and the CLI gate; `tests/export-corpus.test.ts` holds the default export's five files.
 - `cardService.test.ts` "what changed since the captain looked" and `tests/e2e/card-changes.spec.ts` - the `seen` kind: once per offer, stale looks ignored, and the revised line and bars it drives.
 - `tests/e2e/card-evidence.spec.ts` - the stale-offer journey through the app and the real export command, every question shape the bridge defines, and no draft kept on a close or a quit.

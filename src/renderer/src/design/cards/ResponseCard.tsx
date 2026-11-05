@@ -150,7 +150,7 @@ const cardKinds: Record<ResponseCardKind, { label: string; tone: BadgeTone }> = 
  * one gives back the stage's air above the stack and beside the pager
  * (`--stage-yield-*`, design/styles.css). A taller body scrolls inside the
  * card. A maximized card's stage sets `--card-max-height`, the room the
- * window gives it, for everything inside it (`HomeScreen.tsx`).
+ * window gives it, for everything inside it (`app/stage/CardLayer.tsx`).
  */
 // Reserve separate stable lanes for paging and the activity whisper.
 export const CARD_MAX_HEIGHT =
@@ -159,7 +159,7 @@ export const CARD_MAX_HEIGHT =
 /**
  * A card surface's floor, `px` under the cap. A maximized card's stage sets
  * `--card-floor` on the card it shows, so its surface fills the room the
- * window gives it however short its body (`HomeScreen.tsx`).
+ * window gives it however short its body (`app/stage/CardLayer.tsx`).
  */
 export const cardFloor = (px: number) => `var(--card-floor, min(${px}px, ${CARD_MAX_HEIGHT}))`;
 

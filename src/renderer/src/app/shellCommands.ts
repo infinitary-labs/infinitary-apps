@@ -21,11 +21,12 @@ import { giveFocusBack } from "../plugins/frames/frameFocus";
 import { pluginHost } from "../plugins/host";
 import { panelCommandRefusal, runPanelCommand } from "../plugins/panelCommands";
 import { cardStage } from "./cardStage";
-import { commandRefusal, shownEntry, type WindowFacts } from "./commandRefusals";
+import { commandRefusal, type WindowFacts } from "./commandRefusals";
 import { available, modalOpen } from "./focusRecovery";
 import { projectFocus } from "./projectFocus";
 import { enterCard, moveToRegion } from "./regions";
-import { isHeldEntry, type ShellState, useShellStore } from "./store";
+import { isHeldEntry, shownEntry } from "./stack";
+import { type ShellState, useShellStore } from "./store";
 import {
   checkForUpdates,
   checksUpdates,

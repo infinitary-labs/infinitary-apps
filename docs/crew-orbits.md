@@ -98,7 +98,7 @@ The whole scene, the first mate included, shrinks only when the window is shorte
 At 1280 by 800 two computers of eight shrink nothing; five computers of twenty-four each fit at about 60 percent.
 
 **One path for a remote clip.**
-A remote spark flies one curved screen-space path from the first mate's core to its slot (`arcBetween` in `orbit.ts`), re-aimed at the live slot each frame, eased out once and unfolding over its last two thirds like a home spawn; a finished remote crewmate falls home along the same kind of path, accelerating, and its packets ride the live line as at home.
+A remote spark flies one curved screen-space path from the first mate's core to its slot (`arcBetween` in `orbitPaths.ts`), re-aimed at the live slot each frame, eased out once and unfolding over its last two thirds like a home spawn; a finished remote crewmate falls home along the same kind of path, accelerating, and its packets ride the live line as at home.
 Each takes longer the farther it flies (`REMOTE_TRIP`, `remoteTripMs`): the home clip's time over the distance a home spark covers, 147 px, and 280 ms more at 320 px, so a spark takes about a second across the stage; the fall home and a packet add the same extra over their own base.
 The home spawn's numbers do not change.
 A remote send-off or steer cue carries a unit direction, so the first mate glances toward the cluster.
@@ -159,7 +159,7 @@ The circle ends as soon as the review closes or the builder departs.
 Closing the review closes the reviewer's task, so the reviewer takes its existing departure.
 Its offset eases out on the springs over the fall, so it leaves from the seat it was drawn at and glides to its normal path; reduced motion settles at once.
 Restart seeds the same relationship from the live board, and two reviews of one builder do not cancel each other when one ends: the other keeps circling.
-`CrewOrbit.withReviewCues` turns each live review into a satellite cue beside the recorded waits.
+`withReviewCues` in `companions.ts` turns each live review into a satellite cue beside the recorded waits.
 The host records no edge from a review onto its builder (INF-1876), so the builder never orbits its own reviewer or points an arrow at it; the orbit layer drops such an edge all the same, the way an earlier release recorded one.
 A real dependency keeps its place, and reviewers and waiting crewmates of one builder share up to three seats.
 More than three, a builder that is itself a satellite, a reviewer not yet on its orbit, or a builder past the scene reach keeps the reviewer on its slot; near the scene's edge the circle shrinks instead ("Waiting on another crewmate" below).

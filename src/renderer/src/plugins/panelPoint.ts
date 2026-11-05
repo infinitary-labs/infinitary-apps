@@ -3,15 +3,11 @@ import { PANEL_DRAFT_MAX, type PanelPoint, type PanelView } from "@shared/person
 import { pointNeedsBoardMessage } from "@shared/personal/manifest";
 import { useMemo } from "react";
 import { z } from "zod";
+import { mainMessageRefusal } from "../app/composer";
 import { pressesSoFar } from "../app/presses";
 import { projectFocus, useProjectFocus } from "../app/projectFocus";
-import {
-  mainMessageRefusal,
-  offStack,
-  type ShellState,
-  shownCard,
-  useShellStore,
-} from "../app/store";
+import { shownEntry } from "../app/stack";
+import { type ShellState, useShellStore } from "../app/store";
 import { showsSection } from "../devices/viewWords";
 import { hearFrameOut } from "./frames/frameFocus";
 import { pluginHost } from "./host";
@@ -359,7 +355,7 @@ export function panelViewKey(
   litTaskId: string | null = null,
   focusedProjectId: string | null = null,
 ): string {
-  const shown = shownCard(s.cards, s.cardIndex, offStack(s), s.records);
+  const shown = shownEntry(s);
   const openTaskIds = s.records.flatMap((held) => ("taskId" in held ? [held.taskId] : []));
   const shownTaskId =
     shown?.recordTaskId ??

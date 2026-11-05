@@ -1,6 +1,6 @@
 import type { FrameTheme } from "@shared/plugins/frameDocument";
 import { useContext, useEffect, useSyncExternalStore } from "react";
-import type { PanelCardEntry } from "../app/store";
+import type { PanelCardEntry } from "../app/stack";
 import { CardCorner, CardSizeContext } from "../design/cards/CardSize";
 import { CARD_MAX_HEIGHT, ResponseCard } from "../design/cards/ResponseCard";
 import { pluginHost } from "../plugins/host";

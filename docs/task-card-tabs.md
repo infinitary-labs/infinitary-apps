@@ -22,8 +22,8 @@ A task with nothing but Info - no card, no Activity line, no crewmate and no bro
 ## One entry per task
 
 The record, the Crewmate tab and the browser view are three shell-held stack entries that replace each other, so a task has one entry on the stack.
-Info, Cards and Activity are three views of the one record entry (`OpenRecord.view`, `src/renderer/src/app/store.ts`): switching among them keeps the record's one sandboxed body and only tells it which view to show.
-`openRecord`, `openCrewmateView` and `openBrowserView` each take the task's other tabs out of the stack (`src/renderer/src/app/store.ts`).
+Info, Cards and Activity are three views of the one record entry (`OpenRecord.view`, `src/renderer/src/app/stack.ts`): switching among them keeps the record's one sandboxed body and only tells it which view to show.
+`openRecord`, `openCrewmateView` and `openBrowserView` each take the task's other tabs out of the stack (`src/renderer/src/app/stackActions.ts`).
 The tabs, the record's `Open`, the view's `Task record` link, a card's door to the browser and a task row on the Tasks panel all go through them.
 Info keeps its populated document while another tab of that same task is selected, so returning does not recreate its sandbox or repeat its initial reads and readiness frames.
 The stage parks it invisibly and inert, preserves its subscriptions and reading position, and releases it when another task or card is selected or the task card is hidden.
@@ -41,7 +41,7 @@ While the captain only watches, those tabs are disabled and the current page's t
 
 A card about a task is another way in (INF-358): the task's key in its head opens the record in front of the card (`docs/card-authoring.md`, "Task keys"), Show Info does the same by name, and Show Cards, Show Activity, Show Crewmate and Show Browser open the task's other tabs from the card where it has them; a card about no task refuses them with "This card is not about a task".
 A card's live attachment opens the browser view the same way (`docs/task-browser.md`, "From a card").
-The entry carries the card it came from (`EntryFrom` on the record, the Crewmate tab and the browser view, `src/renderer/src/app/store.ts`), and the task's next tab keeps it (`goToTab`), so Hide or Esc on any of its tabs returns to that card while it is still shown; once the card is gone, Hide reveals as any record does.
+The entry carries the card it came from (`EntryFrom` on the record, the Crewmate tab and the browser view, `src/renderer/src/app/stack.ts`), and the task's next tab keeps it (`goToTab`), so Hide or Esc on any of its tabs returns to that card while it is still shown; once the card is gone, Hide reveals as any record does.
 A tab opened from a Tasks row, a board tile or a key in a body names no card.
 
 ## The Crewmate tab
@@ -113,5 +113,5 @@ Inside the Crewmate tab the transcript is one Tab stop that scrolls by keys, eac
 
 ## Tests
 
-`src/core/tasks/crewTranscript.test.ts` holds the transcript to both dialects, the senders, the queued line, redaction, pictures and diffs; `crewmateState.test.ts`, `taskTabs.test.ts` and `store.test.ts` the window's side, `taskTabs.test.ts` the tab order and the Cards count; `crewSupervisor.test.ts` the steer and the interrupt.
+`src/core/tasks/crewTranscript.test.ts` holds the transcript to both dialects, the senders, the queued line, redaction, pictures and diffs; `crewmateState.test.ts`, `taskTabs.test.ts` and `stackActions.test.ts` the window's side, `taskTabs.test.ts` the tab order and the Cards count; `crewSupervisor.test.ts` the steer and the interrupt.
 `tests/e2e/task-crewmate.spec.ts` replays a closed task's session by keys (folds, a diff, a picture, the blocks, Show Info and Show Crewmate), types a line a mock Claude crewmate takes mid-turn and reports on, and stops a turn with ⌃C; `tests/e2e/task-browser.spec.ts` walks the three kinds of tab.

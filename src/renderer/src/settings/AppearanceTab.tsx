@@ -1,7 +1,8 @@
 import { HERE } from "@shared/deviceNames";
 import { UI_SIZES, type UiSize } from "@shared/preferences";
 import { useEffect } from "react";
-import { type AppearanceChoice, useShellStore } from "../app/store";
+import type { AppearanceChoice } from "../app/appearance";
+import { useShellStore } from "../app/store";
 import { GroupedPills, Switch } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { isView } from "../devices/viewWords";

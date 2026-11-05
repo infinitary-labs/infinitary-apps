@@ -1,7 +1,7 @@
 import { EMPTY_FIRST_RUN, type FirstRunView } from "@shared/firstRun";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { voiceController } from "../voice/voiceController";
-import { inputPlaceholder } from "./HomeScreen";
+import { inputPlaceholder } from "./HomePrompt";
 import { useShellStore } from "./store";
 
 const defaultState = useShellStore.getState();
@@ -23,7 +23,6 @@ describe("dictation off", () => {
       voiceSupported: true,
       voiceModelReady: true,
       recording: true,
-      phase: "recording",
       voiceNotice: { kind: "consent" },
     });
     useShellStore.getState().applyDictation({ enabled: false, key: "MetaRight" });

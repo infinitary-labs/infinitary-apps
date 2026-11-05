@@ -27,10 +27,10 @@ it("accepts the current shared corner and rejects a caller-owned close button", 
 });
 
 it("rejects a second close caller and out-of-order documentation through the lint interface", () => {
-  const store = readFileSync("src/renderer/src/app/store.ts", "utf8");
+  const store = readFileSync("src/renderer/src/app/cardActions.ts", "utf8");
   expect(
     cornerProblems({
-      "src/renderer/src/app/store.ts": store,
+      "src/renderer/src/app/cardActions.ts": store,
       "src/renderer/src/cards/NewCard.tsx": 'window.infinitary.cards.close("plan");',
       "docs/card-authoring.md": docs,
     }),

@@ -18,7 +18,7 @@ export function cornerProblems(files: Record<string, string>): string[] {
         const name = node.expression.getText(tree);
         if (name === "window.infinitary.cards.close") {
           closeCalls++;
-          if (path !== "src/renderer/src/app/store.ts") problems.push(`${path}: use the shell's card-leave dispatcher`);
+          if (path !== "src/renderer/src/app/cardActions.ts") problems.push(`${path}: use the shell's card-leave dispatcher`);
         }
         if (name === "this.cards.dismiss") {
           dismissCalls++;

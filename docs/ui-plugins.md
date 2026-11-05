@@ -333,7 +333,7 @@ Measured on the captain's MacBook against the mock provider: a row paints 36-56 
 ### The task-record card
 
 `task-record` is a fourth row in the built-in manifest's card-kind slot (`chrome: record`, the design system's "Task" chip) and NOT something the wire can carry: since cards/tasks/agents P1 the wire card has no kind field at all (`cardSchema` is strict), so the card store cannot persist one and `emit_card` cannot produce one (`builtin/index.test.ts`).
-It is a VIEW the shell holds - `records` in the store (`src/renderer/src/app/store.ts`), the stack's front entry while open, so the pager, close, and the working layout treat it like any card - rendered by `src/renderer/src/cards/RecordCard.tsx`: host chrome (chip, title, a meta line of key and state in the panel's own words via `taskStatusWord`, close) around a template body, `plugins/builtin/record/`, instantiated per opened task with the task id stamped on the template's root (`recordTemplate(taskId)`) so the frame subscribes to `tasks.detail` for exactly that task.
+It is a VIEW the shell holds - `records` in the store (`src/renderer/src/app/stackActions.ts`), the stack's front entry while open, so the pager, close, and the working layout treat it like any card - rendered by `src/renderer/src/cards/RecordCard.tsx`: host chrome (chip, title, a meta line of key and state in the panel's own words via `taskStatusWord`, close) around a template body, `plugins/builtin/record/`, instantiated per opened task with the task id stamped on the template's root (`recordTemplate(taskId)`) so the frame subscribes to `tasks.detail` for exactly that task.
 Goal, the captain's words verbatim, graph, timeline tail with "earlier · N more" (each report's line opens to its whole text), delivery, crew - and no button anywhere: the card's only control is close (captain's second note; superseded 2026-09-28, see "The record's action bar").
 The chrome subscribes to the same read for the title and meta, so a state change re-titles the card the moment the record changes.
 
@@ -384,7 +384,7 @@ The same ship made the model a chip app-wide (1C): wherever a container's top ro
 ### The stage on a narrow window
 
 Both rails docked on the minimum window (960px) leave a 360px stage.
-The input is `min(560px, 100vw - occupied rails - 32px)` wide (`HomeScreen.tsx`), so it fits between them.
+The input is `min(560px, 100vw - occupied rails - 32px)` wide (`HomePrompt.tsx`), so it fits between them.
 That holds at 100%; a larger Size makes the page narrower, and where the rails would leave the input under 328px they fold for it as well, with no card up (`docs/renderer.md`, "Docked rails and the input's room").
 Every card asks for more room than that stage has, so while one is up the rails fold and the card takes the window, and they come back when it leaves (`cardPlacement` in `src/renderer/src/cards/cardGeometry.ts`; `docs/card-authoring.md`).
 A lone card at that window offers no Show panels edge tabs: returning it to regular would still fold the rails.
@@ -514,7 +514,7 @@ A name that points at nothing the folder has is the panel's error: the captain's
 `api` names the panel API a folder is written for; this app serves 1, and a folder naming another mounts nothing.
 
 **On the stack.**
-A card is a shell-held entry, `OpenRecord`'s `{ panelCard: { panel, id, view, title, width, data } }` (`src/renderer/src/app/store.ts`), any number per panel, never saved.
+A card is a shell-held entry, `OpenRecord`'s `{ panelCard: { panel, id, view, title, width, data } }` (`src/renderer/src/app/stack.ts`), any number per panel, never saved.
 From the captain's own click or key - the app's header button or command, or inside the panel or a card - it comes to the front; otherwise it waits behind the entry the captain is reading, marked new (`emitPanelCard`).
 That is the panel's frame holding the window's focus (`framePanelCardAction`, `frameHoldsFocus`); a header button or command is the window's own gesture (`windowPanelCards`, `windowGesture`).
 The stage draws `PanelCardView`: the app's one row of chrome - the title, `yours` or the maker's name, Hide - and the panel binding's `CardBody` under it.

@@ -13,7 +13,7 @@ How the pill looks and moves is the design skill's `components/core/ProjectFocus
 | A panel's view and pointing | `PanelProps.view.focusedProjectId` and `point.focusProject` (`src/renderer/src/plugins/panelPoint.ts`, `docs/ui-plugins.md`) |
 | The stage's light | `src/renderer/src/character/crew/focusLight.ts` (`lightFrame`), `docs/crew-orbits.md` "The project focus" |
 | Activity's lines | `src/panels/activity/feedRows.ts` (`linesInFocus`), read by the Activity panel from `view.focusedProjectId` |
-| The cards held back | `src/shared/projectFocus.ts` (`holdsBack`), read through `focusHoldsBack` by the window's stack in `src/renderer/src/app/store.ts` (`reconcileStack`, `offStack`, `applyHold`) |
+| The cards held back | `src/shared/projectFocus.ts` (`holdsBack`), read through `focusHoldsBack` by the window's stack in `src/renderer/src/app/stack.ts` (`reconcileStack`, `stackOf`, `shownEntry`) and `src/renderer/src/app/stackActions.ts` (`applyHold`) |
 | The first mate's hint | the turn's `focusedProjectId` (`inf:converse`), read by `buildContextBlock` as `focused_project` |
 | The keys | `project-focus.open` and `project-focus.clear` (`docs/keyboard.md`) |
 
@@ -59,7 +59,7 @@ How the stack draws it is the design skill's `components/cards/CardStack.prompt.
 - Picking its project or All projects brings a held card back in its place: one that arrived while held comes back marked new, and one the captain had seen comes back seen.
 - A card the captain points at (the first mate shows it, a task key, a record's Show the card) comes to the front without moving the focus, and stays until the focus changes (`focusCard`).
 
-Every reading of the window's stack passes its project-held cards through `offStack`; no automatic note-collapse list exists.
+Every reading of the window's stack passes its project-held cards through `stackOf` and `shownEntry`; no automatic note-collapse list exists.
 The hold moves with the focus and the board: the stack reads them as each cards snapshot lands and again whenever the focus store speaks (`applyHold`), and writes nothing when the held cards stay the same.
 
 ## Opening and closing the row
@@ -84,5 +84,5 @@ Before the board is read at launch the saved focus holds, so a restart never sho
 
 ## Tests
 
-- Unit: `src/shared/projectFocus.test.ts` (pills, Scratch, archived, the held focus, the tail and which cards are held back), `src/renderer/src/app/store.test.ts` (the stack holding, bringing back and letting a pointed-at card through), `src/renderer/src/character/crew/focusLight.test.ts` (the light on the orbit's own frames), `src/panels/now/rows.test.ts` (the narrowed summary), `src/panels/activity/feedRows.test.ts` (Activity's lines under focus), `src/renderer/src/plugins/panelPoint.test.ts` (`focusProject` only from the captain's click or key) and `src/core/orchestrator/firstmateAgent.test.ts` (the hint).
+- Unit: `src/shared/projectFocus.test.ts` (pills, Scratch, archived, the held focus, the tail and which cards are held back), `src/renderer/src/app/stackActions.test.ts` (the stack holding, bringing back and letting a pointed-at card through), `src/renderer/src/character/crew/focusLight.test.ts` (the light on the orbit's own frames), `src/panels/now/rows.test.ts` (the narrowed summary), `src/panels/activity/feedRows.test.ts` (Activity's lines under focus), `src/renderer/src/plugins/panelPoint.test.ts` (`focusProject` only from the captain's click or key) and `src/core/orchestrator/firstmateAgent.test.ts` (the hint).
 - Journey: `tests/e2e/project-focus.spec.ts` drives the pill by keys, the Tasks list, the stage's light, a restart and Show all projects, and the held cards and hidden Activity lines coming back; `tests/browser/project-focus-still-click.test.tsx` holds a still click on the pill to the row opening with no crew dimmed, and moving onto a pill lighting its project (INF-1292); `tasks-search.spec.ts` and `task-board.spec.ts` cover the chips as the one focus.

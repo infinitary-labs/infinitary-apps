@@ -29,7 +29,7 @@ export type StageRole = "shown" | "warm" | "outgoing" | "parked";
  * successor and a leaving drawing are inert and hidden from assistive
  * technology. The shown entry is the selected card even before it is ready
  * to appear; the stage keeps it transparent and out of the pointer's way
- * until then (`HomeScreen.tsx`). The shown entry is also one of the
+ * until then (`app/stage/CardLayer.tsx`). The shown entry is also one of the
  * window's parts F6 moves between (app/regions.ts): it takes focus whole,
  * so Tab goes on into the card from there, and while it holds focus the
  * reading keys scroll its body (`cardKeys.ts`). It names the entry it

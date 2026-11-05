@@ -7,7 +7,8 @@ import {
   type TaskBrowserFact,
 } from "@shared/taskBrowser";
 import type { TaskDetail, TaskView } from "@shared/tasks";
-import { type RecordView, taskEntryFrom, useShellStore } from "../app/store";
+import { type RecordView, taskEntryFrom } from "../app/stack";
+import { useShellStore } from "../app/store";
 
 export { ACTIVITY_TAB_LABEL, CARDS_TAB_LABEL };
 

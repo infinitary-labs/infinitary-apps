@@ -6,7 +6,8 @@ import {
   panelCommandParts,
 } from "@shared/keyboard";
 import { parseSuggestedKey } from "@shared/plugins/panelCards";
-import { panelCardEntryId, useShellStore } from "../app/store";
+import { panelCardEntryId } from "../app/stack";
+import { useShellStore } from "../app/store";
 import { setInstalledKeymap } from "../design/core/installedKeys";
 import type { SidePanelContribution } from "./contributions";
 import type { PluginHost } from "./host";

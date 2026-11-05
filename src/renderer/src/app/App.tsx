@@ -14,11 +14,14 @@ import { CommandSearch } from "./CommandSearch";
 import { cardStage } from "./cardStage";
 import { followDictationKey } from "./dictationKey";
 import { guardLostFocus } from "./focusRecovery";
-import { HomeMate, HomePrompt, HomeScreen } from "./HomeScreen";
+import { HomeMate } from "./HomeMate";
+import { HomePrompt } from "./HomePrompt";
+import { HomeScreen } from "./HomeScreen";
 import { guardHeldPresses } from "./heldKeys";
 import { applyTheme } from "./preferences";
 import { followShellCommands } from "./shellCommands";
-import { isHeldEntry, offStack, shownCard, useShellStore } from "./store";
+import { isHeldEntry, shownEntry } from "./stack";
+import { useShellStore } from "./store";
 import { TopBar } from "./TopBar";
 
 export function App() {
@@ -64,18 +67,18 @@ export function App() {
           store.view === "home" &&
           stage?.maximized &&
           !event.defaultPrevented &&
-          store.phase !== "recording"
+          !store.recording
         ) {
           stage.toggleSize();
           return;
         }
-        const shown = shownCard(store.cards, store.cardIndex, offStack(store), store.records);
+        const shown = shownEntry(store);
         if (store.view === "home" && isHeldEntry(shown)) {
           // A panel's card hides on an Escape nothing in it used
           // (docs/ui-plugins.md, "A panel's cards"); one its own field took stays.
           if (shown?.panelCard && event.defaultPrevented) return;
           store.closeRecord();
-        } else if (store.phase === "recording") {
+        } else if (store.recording) {
           store.abandonRecording();
         } else if (store.view === "settings") {
           store.setView("home");

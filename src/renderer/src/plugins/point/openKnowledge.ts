@@ -1,6 +1,7 @@
 import { KNOWLEDGE_ID_EXACT } from "@shared/knowledge";
 import { z } from "zod";
-import { panelCardEntryId, useShellStore } from "../../app/store";
+import { panelCardEntryId } from "../../app/stack";
+import { useShellStore } from "../../app/store";
 import type { SidePanelContribution } from "../contributions";
 import { pluginHost, useContributions } from "../host";
 import { emitNamedCard } from "../panelCards";

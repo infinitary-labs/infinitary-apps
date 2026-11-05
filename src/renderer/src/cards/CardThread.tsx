@@ -490,7 +490,7 @@ export function ReplyRow({
  * The thread column beside the card, inside the pair's single container:
  * its own micro-label head and the message list. The reply row at its foot
  * is the card's one reply field, which the stage keeps mounted whether the
- * thread is open or not (`HomeScreen.tsx`), so opening the thread never
+ * thread is open or not (`app/stage/EntrySurface.tsx`), so opening the thread never
  * rebuilds the field or the body beside it. The divider is the column's
  * left border - one hairline, no gap and no second surface, so the pair
  * reads as one object. The head names only the thread: the card beside it

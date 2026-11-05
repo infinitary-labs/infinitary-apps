@@ -8,7 +8,7 @@
 //
 // The reviewed prototype was event-sourced (voiceStart/typeStart/...). The
 // app version reconciles against the shell's derived inputs instead -
-// listening from voice/typing (HomeScreen), busy from the firstmate_state
+// listening from voice/typing (HomeMate), busy from the firstmate_state
 // event - so the machine can never wedge out of sync with the store: inputs
 // are authoritative, and the one anticipation (submit plays intake into
 // working before busy confirms) expires on a bounded grace window.

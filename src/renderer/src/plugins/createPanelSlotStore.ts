@@ -6,7 +6,8 @@ import {
 import type { PersonalSnapshot } from "@shared/personal/manifest";
 import { isPanelHidden } from "@shared/preferences";
 import { useSyncExternalStore } from "react";
-import { mainMessageRefusal, useShellStore } from "../app/store";
+import { mainMessageRefusal } from "../app/composer";
+import { useShellStore } from "../app/store";
 import { railStore, useRailLayout } from "./railStore";
 
 /**

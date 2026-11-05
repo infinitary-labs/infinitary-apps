@@ -3,7 +3,7 @@ import { QuestionBubble } from "../cards/QuestionBubble";
 import { ResponseCard } from "../design/cards/ResponseCard";
 import { MateMark } from "./LastTurn";
 import { CONVERSATION_HEADING } from "./lastTurnWords";
-import type { ReplyNote } from "./store";
+import type { ReplyNote } from "./stack";
 import "./replyNote.css";
 
 /** A read-only conversation round, held by the existing Note shell and stack. */

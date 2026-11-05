@@ -72,7 +72,7 @@ function allowlist(selector: string): string[] {
 }
 
 const callSites = [
-  "src/renderer/src/app/HomeScreen.tsx",
+  "src/renderer/src/app/stage/StackedCard.tsx",
   "src/renderer/src/cards/PastCard.tsx",
   "src/renderer/src/cards/RecordCard.tsx",
 ];

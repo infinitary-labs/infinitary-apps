@@ -1,6 +1,7 @@
 import type { TaskBoard } from "@shared/tasks";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
-import { shownCard, useShellStore } from "../app/store";
+import { shownCard } from "../app/stack";
+import { useShellStore } from "../app/store";
 
 /**
  * Pointing at the app's own tasks and cards from a panel (docs/ui-plugins.md,

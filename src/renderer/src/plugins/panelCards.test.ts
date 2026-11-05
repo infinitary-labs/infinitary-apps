@@ -1,7 +1,8 @@
 import { panelCommandId } from "@shared/keyboard";
 import { parsePluginManifest } from "@shared/plugins/manifest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { shownCard, useShellStore } from "../app/store";
+import { shownCard } from "../app/stack";
+import { useShellStore } from "../app/store";
 import { sidePanelBinding } from "./contributions";
 import { pluginHost } from "./host";
 import {

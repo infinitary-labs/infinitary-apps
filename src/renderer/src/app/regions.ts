@@ -129,7 +129,7 @@ export function windowRegions(): HTMLElement[] {
       kindOf(root) !== null &&
       available(root) &&
       // A card selected but not ready to appear is held transparent
-      // (HomeScreen.tsx); a part fading in is already there.
+      // (stage/CardLayer.tsx); a part fading in is already there.
       root.style.opacity !== "0" &&
       (kindOf(root) !== "main-message" || mainMessageField(root) !== null),
   );

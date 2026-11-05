@@ -63,7 +63,7 @@ export type TopBarProps = {
   backButtonRef?: React.Ref<HTMLButtonElement>;
 };
 
-/** The bar's height, px: a maximized card keeps clear of it (`HomeScreen.tsx`). */
+/** The bar's height, px: a maximized card keeps clear of it (`stage/CardLayer.tsx`). */
 export const TOP_BAR_HEIGHT = 52;
 
 /**

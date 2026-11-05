@@ -1,7 +1,7 @@
 import type { FrameTemplate, FrameTheme } from "@shared/plugins/frameDocument";
 import type { CardKindEntry, SettingsSectionEntry, SidePanelEntry } from "@shared/plugins/manifest";
 import type { ComponentType } from "react";
-import type { PanelCardEntry } from "../app/store";
+import type { PanelCardEntry } from "../app/stack";
 import type { Contribution } from "./registry";
 
 /**

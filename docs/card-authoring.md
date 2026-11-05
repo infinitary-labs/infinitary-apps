@@ -603,7 +603,7 @@ Optional questions, text fields, notes and previews pass.
 A body may also stage a JSON snapshot under a name with `inf.stage(name, value)` (`undefined` unstages it): a preview's tuned look, say.
 It joins the answers as one more question, always `changed`, and is worded as JSON.
 
-The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `HomeScreen.tsx`'s `StackedCard`):
+The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `StackedCard` in `src/renderer/src/app/stage/StackedCard.tsx`):
 
 - The bridge watches the named controls only after the host's `form` message, which only a card body's mount sends.
   On every `input`, `change` and document change it posts the one-way `answers` message: `answered`, `of`, `changed`, `picked`, and the answers themselves, which are the shell's draft.

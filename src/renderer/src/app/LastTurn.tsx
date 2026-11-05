@@ -11,7 +11,8 @@ import {
   subscribeFade,
   syncFade,
 } from "./lastTurnFade";
-import { offStack, useShellStore, visibleStack } from "./store";
+import { stackOf } from "./stack";
+import { useShellStore } from "./store";
 import "./lastTurn.css";
 
 /**
@@ -274,7 +275,7 @@ function messageCovered(): boolean {
 
 /** Whether a card or another stack entry is up: then only the newest round shows. */
 export function useCardUp(): boolean {
-  return useShellStore((s) => visibleStack(s.cards, offStack(s), s.records).length > 0);
+  return useShellStore((s) => stackOf(s).length > 0);
 }
 
 type Shown = { round: LastRound; key: number; older: boolean };

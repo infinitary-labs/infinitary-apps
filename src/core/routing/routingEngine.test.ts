@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildModelsCatalog } from "../quota/catalog";
 import { parseClaudeUsage } from "../quota/providers/claude";
 import { parseCodexUsage } from "../quota/providers/codex";
-import { route } from "./routingEngine";
+import { route, type SlottedRef } from "./routingEngine";
 
 const catalog: CatalogModelView[] = [
   // quota catalog order: spend priority first, runway as the fallback.
@@ -779,6 +779,122 @@ describe("an offered provider whose allowance nobody reads (INF-2523)", () => {
         bucket: "medium",
       }).choice,
     ).toBeUndefined();
+  });
+});
+
+// INF-2654: a Claude-only install before its first allowance reading (or
+// when none lands) has an empty catalog. Its slotted models are unknown,
+// never spent, so they route by slot; routing used to place the task on no
+// model, and the start was refused with no model to open on.
+describe("no allowance read yet (INF-2654)", () => {
+  const haiku = { provider: "anthropic-claude", id: "claude-haiku-5-5" };
+  const sonnet = { provider: "anthropic-claude", id: "claude-sonnet-5-5" };
+  const opus = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+  const slotted: SlottedRef[] = [
+    { ...haiku, slot: "low" },
+    { ...sonnet, slot: "medium" },
+    { ...opus, slot: "high" },
+  ];
+
+  it("routes each slot's own Claude model with an empty catalog", () => {
+    const available = [opus, sonnet, haiku];
+    for (const [bucket, model] of [
+      ["low", haiku],
+      ["medium", sonnet],
+      ["high", opus],
+    ] as const) {
+      const decision = route({ catalog: [], available, slotted, pins: [], bucket });
+      expect(decision.choice).toEqual(model);
+      expect(decision.servedBucket).toBeUndefined();
+      // Nothing was read, so nothing is spent: unknown, not unserveable.
+      expect(decision.unserveable).toBeUndefined();
+      expect(decision.reasons.at(-1)).toBe(`picked anthropic-claude/${model.id} by runway order`);
+    }
+  });
+
+  it("keeps the ladder and the premium boundary", () => {
+    // A low ask with no low model falls to medium, as with a catalog.
+    const fellBack = route({
+      catalog: [],
+      available: [sonnet, opus],
+      slotted,
+      pins: [],
+      bucket: "low",
+    });
+    expect(fellBack.choice).toEqual(sonnet);
+    expect(fellBack.servedBucket).toBe("medium");
+    // A model placed only in premium is never chosen for a high ask.
+    const fable = { provider: "anthropic-claude", id: "claude-fable-5-1" };
+    expect(
+      route({
+        catalog: [],
+        available: [fable],
+        slotted: [{ ...fable, slot: "premium" }],
+        pins: [],
+        bucket: "high",
+      }).choice,
+    ).toBeUndefined();
+  });
+
+  it("never routes a model its slot leaves out, or a provider the app does not offer", () => {
+    expect(
+      route({ catalog: [], available: [haiku, sonnet], slotted: [], pins: [], bucket: "low" })
+        .choice,
+    ).toBeUndefined();
+    expect(
+      route({
+        catalog: [],
+        available: [haiku],
+        slotted: [{ ...sonnet, slot: "medium" }],
+        pins: [],
+        bucket: "medium",
+      }).choice,
+    ).toBeUndefined();
+    const own = { provider: "my-models-json", id: "local-model" };
+    expect(
+      route({
+        catalog: [],
+        available: [own],
+        slotted: [{ ...own, slot: "medium" }],
+        pins: [],
+        bucket: "medium",
+      }).choice,
+    ).toBeUndefined();
+  });
+
+  it("ranks the subscription ahead of an OpenRouter model in the same slot", () => {
+    // Where its catalog row would sit: ahead of a model nobody reads.
+    const router = { provider: "openrouter", id: "~anthropic/claude-sonnet-latest" };
+    expect(
+      route({
+        catalog: [],
+        available: [router, sonnet],
+        slotted: [
+          { ...router, slot: "medium" },
+          { ...sonnet, slot: "medium" },
+        ],
+        pins: [],
+        bucket: "medium",
+      }).choice,
+    ).toEqual(sonnet);
+  });
+
+  it("admits a model by slot alone only while the catalog is empty", () => {
+    // Once a reading lands, a model the catalog has no row for keeps out and
+    // a spent one stays spent: the catalog is read again.
+    const codex = { provider: "openai-codex", id: "gpt-6.1-terra" };
+    const decision = route({
+      catalog: [{ provider: "codex", id: codex.id, label: codex.id, effectivePercentRemaining: 0 }],
+      available: [codex, sonnet],
+      slotted: [
+        { ...codex, slot: "medium" },
+        { ...sonnet, slot: "medium" },
+      ],
+      pins: [],
+      bucket: "medium",
+    });
+    expect(decision.choice).toBeUndefined();
+    expect(decision.unserveable).toBe(true);
   });
 });
 

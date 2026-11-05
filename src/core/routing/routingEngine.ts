@@ -24,7 +24,10 @@ import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./ca
  * 2. Candidates = slot ∩ Pi-available models, minus exhausted scopes. A
  *    model with no allowance row - a checked custom connection's, an
  *    offered provider's whose allowance nobody reads (OpenRouter), or a
- *    computer's own - is admitted by slot membership alone.
+ *    computer's own - is admitted by slot membership alone. So is every
+ *    offered model while the catalog is empty: no allowance has been read
+ *    yet (before the first reading, or when none lands), which is unknown,
+ *    never zero.
  * 3. Within a slot, serveable candidates rank band first (INF-1714): an
  *    unadjusted reading projected to last through every reset, then one
  *    projected to run out, then one at or below the near-floor, then an
@@ -313,6 +316,17 @@ export function route(input: RoutingInput): RoutingDecision {
   };
   const candidates = () => [...facts.values()];
   const catalogKeys = new Set<string>(input.catalog.map((model) => servedModelKey(model)));
+  // No allowance read yet - an empty catalog, before the first reading lands
+  // or when none does - leaves every sensed model's allowance unknown, never
+  // zero: its slot alone admits it, in the unknown band, as its catalog row
+  // would once a reading came back unknown. They come first among the
+  // extras, where their rows would sit.
+  const unread =
+    input.catalog.length === 0
+      ? input.available.filter(
+          (ref) => isOfferedProvider(ref.provider) && isSensedProvider(ref.provider),
+        )
+      : [];
   const empty = [...input.available, ...(input.unowned ?? [])].some((ref) =>
     slotsOf(ref)?.includes(bucket),
   )
@@ -354,10 +368,11 @@ export function route(input: RoutingInput): RoutingDecision {
       mark(ref, `eligible at ${candidateSlot}`);
       return [{ model, ref, slot: candidateSlot }];
     });
-    // Checked connection-owned models, an offered provider's models whose
-    // allowance nobody reads, and a computer's models the quota catalog does
-    // not list. Only slot membership admits them.
-    const extras = [...input.available.filter(allowanceless), ...(input.unowned ?? [])];
+    // Sensed models no allowance was read for yet, checked connection-owned
+    // models, an offered provider's models whose allowance nobody reads, and
+    // a computer's models the quota catalog does not list. Only slot
+    // membership admits them.
+    const extras = [...unread, ...input.available.filter(allowanceless), ...(input.unowned ?? [])];
     const seenExtra = new Set<string>();
     for (const ref of extras) {
       const key = `${ref.provider}/${ref.id}`;

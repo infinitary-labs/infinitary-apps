@@ -19,6 +19,9 @@ Routing admits such a model by its slot alone (`allowanceless` and `unowned` in 
 An install signed in only to OpenRouter has nothing placed, so the slot record's fallback places OpenRouter's listed aliases at medium and a crewmate starts on one under that key (INF-2523).
 Beside a subscription whose starter models are placed, OpenRouter's models arrive off and route only once placed or named; if that subscription's account is withheld, the same fallback reaches them.
 A provider the app does not offer, such as one in the base engine's own `models.json`, is still never a choice.
+Before any allowance is read, the quota catalog is empty: at launch until the first reading lands, or while none lands.
+Then every offered model's allowance is unknown, never zero, so routing admits a subscription's placed models by their slot alone too, ahead of a model nobody reads in the same slot, as their catalog rows would once a reading came back unknown (INF-2654).
+Once the catalog has rows, a model it lacks keeps out and a spent one stays spent.
 With Dynamic routing on, a local start that routing placed on no model opens on the account-less engine's default only while that engine serves a model of its own (`PiAuthService.servesAnyModel`); otherwise startup is refused with the same words as with routing off, rather than opening a session that fails as if a sign-in had lapsed.
 
 ## Bounded fact retrieval

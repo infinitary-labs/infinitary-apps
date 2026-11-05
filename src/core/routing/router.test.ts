@@ -1,3 +1,4 @@
+import { STARTER_SLOTS } from "@shared/modelSlots";
 import { CREW_NEAR_FLOOR_PERCENT } from "@shared/quotaSignals";
 import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it } from "vitest";
@@ -500,6 +501,46 @@ describe("Router", () => {
     expect(JSON.parse(row.reasons_json) as string[]).toContain(
       "skipped openai-codex/gpt-5.3-codex-spark: the turn needs ~183k tokens and its context window is 128k",
     );
+  });
+
+  it("places a Claude-only install's chore on Claude's low model before any allowance is read (INF-2654)", () => {
+    // No reading has landed: the quota service has no catalog yet, and the
+    // starter map is the only slot record.
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    const claude = Object.keys(STARTER_SLOTS["anthropic-claude"] ?? {}).map((id) => ({
+      provider: "anthropic-claude",
+      id,
+    }));
+    const low = Object.entries(STARTER_SLOTS["anthropic-claude"] ?? {}).find(([, slots]) =>
+      slots.includes("low"),
+    )?.[0];
+    expect(low).toBeDefined();
+    const router = new Router({
+      decisions: new DecisionStore(db),
+      settings,
+      quota: fakeQuota(undefined),
+      availableModels: () => claude,
+      slots: new ModelSlots({
+        settings,
+        accounts: () => [
+          {
+            accountId: "acct-claude",
+            accountLabel: "personal",
+            providerId: "anthropic-claude",
+            models: claude,
+          },
+        ],
+        quotaModels: () => undefined,
+      }),
+    });
+    const result = router.decide("task-chore", "tidy the rivet gauge", {
+      kind: "chore",
+      kind_source: "classifier:test",
+    });
+    expect(result?.choice).toEqual({ provider: "anthropic-claude", id: low });
+    expect(result?.servedBucket).toBeUndefined();
+    expect(result?.unserveable).toBeUndefined();
   });
 });
 

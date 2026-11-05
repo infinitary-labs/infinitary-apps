@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-web-stacks-shared-clock",
+      "reason": "Internal: a unit test now advances its faked clock by exactly the phone capture's observation window, so a timer from another test file in the same worker no longer moves its expected time; nothing a person sees changes."
+    }
+  ]
+}

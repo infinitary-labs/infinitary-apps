@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PhoneWebProcess } from "./helpers/phoneStacks";
-import { capturePhoneWebStacks } from "./helpers/phoneWebStacks";
+import { capturePhoneWebStacks, phoneWebLaunchObservationMs } from "./helpers/phoneWebStacks";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-1936: original PR #735 attempt 1 readings, including the delayed launch's
@@ -46,7 +46,10 @@ describe("capture the missing live simulator stacks without retrying the journey
     f.reader.receive(request);
     f.reader.receive(request);
     expect(f.capture).not.toHaveBeenCalled();
-    await vi.runAllTimersAsync();
+    // Advance exactly the observation window: a unit worker is shared, so another
+    // file's timer can sit on the faked clock and running every timer would move
+    // "now" past the moment the capture was triggered.
+    await vi.advanceTimersByTimeAsync(phoneWebLaunchObservationMs);
     const triggeredAt = new Date().toISOString();
     f.reader.receive(request);
     await vi.runAllTimersAsync();

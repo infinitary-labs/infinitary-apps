@@ -87,7 +87,7 @@ The host records no `blocks` edge from a review onto its builder (INF-1876): whe
 A task also does not close while something it waits on is still live work - open or active (`TaskService.blockerRefusal`, over `blockersHoldingClose`): that is what `blocks_me` promises, and blocks edges otherwise gate dispatch alone, which says nothing about work already under way.
 That wait is a soft hold (`waits`): the captain's recorded override passes it, and a close refused on it says so (`docs/delivery-rigor.md`, "The holds").
 A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
-A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does (`SettleService.closeGateRefusal`).
+A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does (`closeGateRefusal`, `settleRefusals.ts`).
 A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewSupervisor.addCrewmateCard`; open children stay a click-time choice because the captain can override them).
 The `link_tasks` description says a blocks link holds the start, and says nothing about a merge.
 It says `related` is for work neither task is waiting on.
@@ -107,7 +107,7 @@ The row lists under the now panel's `landed` group like any other closed work an
 
 Whether an answer task is an internal step (captain's call C, 2026-09-24: "intelligent judgments ... handled mostly through instructions") of a sequence the first mate runs, or something the captain asked for personally, is the first mate's judgment: it declares a step when it creates it (`internal_step` on `spawn_crewmate` or `create_task`, stored on the shape), and the host infers nothing - no rule reads the parent, the kind or the words.
 Absent is the captain's own ask, which is also every row from before the field.
-`settle_task` mode `answered` lets the first mate close an IDLE answer task it declared a step `done/answered` once a planned or started task names it as its `basis` - its answer carries on in that task's brief (`SettleService.closeAnswerUsedAsBasis`).
+`settle_task` mode `answered` lets the first mate close an IDLE answer task it declared a step `done/answered` once a planned or started task names it as its `basis` - its answer carries on in that task's brief (`DeclaredCloses.closeAnswerUsedAsBasis`).
 It closes a step the same way when a live task waits on it through a `blocks` link (FI3-422): the step was run for that task, and its close as done is what clears the wait, so a finished check never holds that task's merge or has to be discarded; a task naming it as its basis comes first.
 The feed says where it went ("KEY answered: its answer carries on in KEY \"title\""), never "discarded".
 A step whose crewmate reported its answer closes the same way when nothing builds on it or waits on it (INF-1137): the first mate passed the answer on itself, as by a steer to a task already under way, and the feed reads "Answered: its crewmate reported the answer", so a finished investigation is never announced as dropped.
@@ -131,7 +131,7 @@ An externally delivered work task may close `done/released` only through an expl
 A pull request of its own closed without merging, or commits only history calls unmerged, such as a squash merge's originals, do not refuse it: the close keeps those commits on the task's kept ref (INF-2628).
 The release evidence is recorded in its close event.
 Ordinary work declared `in_folder` closes `done/finished` through `settle_task finished` after the first mate verifies its reported result and supplies `completion_evidence` (INF-1279).
-`SettleService.closeFinishedFolderWork` records the declaration through the existing close owner without inspecting or changing the project folder, preserving edits, staged work, stashes and unpushed commits.
+`DeclaredCloses.closeFinishedFolderWork` records the declaration through the existing close owner without inspecting or changing the project folder, preserving edits, staged work, stashes and unpushed commits.
 Only an idle, reported change task with no task-owned working copy, branch or proposed change qualifies; outstanding jobs, guidance, check-backs, captain waits, questions, pending settles and the child or dependency holds refuse the close.
 The host checks these typed facts, never the meaning of the evidence; verification remains the first mate's judgment, not a publication-specific state or a substitute for merging.
 A missing proposed change, a note dismissal or an unverified assertion never closes work; the host does not infer delivery from either.

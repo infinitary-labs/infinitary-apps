@@ -16,7 +16,8 @@ import type { CardService } from "./cardService";
 import { createChangeDelivery } from "./changeDelivery";
 import { armWatch, CHECK_REFRESH_MS, CheckWatcher } from "./checkWatch";
 import { CrewSupervisor } from "./crewSupervisor";
-import { SettleService, type SettleServiceHost } from "./settleService";
+import type { SettleServiceHost } from "./settleHost";
+import { createSettleOwners } from "./settleOwners";
 
 /** INF-458 and the captain’s safety correction: only an explicitly finished task closes on merge. */
 function fixture() {
@@ -93,7 +94,7 @@ function fixture() {
     broadcastCrewCounts: () => {},
     broadcastEvent: () => {},
   };
-  const settle = new SettleService(host);
+  const { settle } = createSettleOwners(host);
   let blocked = false;
   const readChecks = vi.fn(async () => ({ kind: "gone" as const }));
   const steer = vi.fn();

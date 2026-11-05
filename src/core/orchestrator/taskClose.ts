@@ -1,0 +1,622 @@
+import {
+  bodyHeadings,
+  COMPLETION_CARD_HEADINGS,
+  TIERED_STORY_HEADINGS,
+} from "@shared/cardHeadings";
+import type { Card } from "@shared/cards";
+import { plainProblem, type TypedFailure } from "@shared/plainProblem";
+import { opensPullRequest } from "@shared/repos";
+import type { TaskDeliveryMode } from "@shared/tasks";
+import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
+import type { TaskRecord } from "../storage/taskStore";
+import { TaskService } from "../tasks/taskService";
+import { keptWorkWords, type TaskWorkspace } from "../workspace/workspaceService";
+import { answersByShape, type ClosingPlace } from "./askEnding";
+import { escapeCardText } from "./cardText";
+import type { PrOutcome } from "./changeMerge";
+import type { KeptApproval } from "./keptApproval";
+import { endedAuthorization, standingAuthorization } from "./mergeAuthorization";
+import type { SettleServiceHost } from "./settleHost";
+import type { SettleLocks } from "./settleLocks";
+import {
+  type ClosedWithoutClick,
+  changeName,
+  closedLine,
+  closedWithoutClick,
+  closingNoteTitle,
+  mergedLine,
+  pullLeftOpenText,
+  withCloseLine,
+  withMergeLine,
+} from "./settleWords";
+import type { AnswerTaskClosedPayload } from "./wakes";
+
+/** A record's worktree facts in the shape the workspace service takes. */
+export function workspaceOf(record: TaskRecord): TaskWorkspace {
+  return {
+    taskId: record.id,
+    cwd: record.worktreeDir,
+    branch: record.branch,
+    repoDir: record.repoDir,
+  };
+}
+
+/** How a task closes: its status and reason, who closed it, and what the close records. */
+export type TaskClose = {
+  status: "done" | "dropped";
+  reason:
+    | "landed"
+    | "merged"
+    | "released"
+    | "answered"
+    | "discarded"
+    | "cancelled"
+    | "finished"
+    | "superseded";
+  actor: "captain" | "firstmate" | "host";
+  text?: string;
+  /** Delivery facts learned by the close; a live close carries its posture. */
+  delivery?: {
+    mode?: TaskDeliveryMode;
+    landedMode?: "fast-forward" | "merge" | "pr";
+  };
+  /** False when another row already carries this close's feed line. */
+  feed?: boolean;
+  /** A selected answer choice to queue after the close transaction commits. */
+  answerHandoff?: AnswerTaskClosedPayload;
+  /** Extra facts the close records on its timeline event. */
+  data?: Record<string, unknown>;
+};
+
+/**
+ * A card that told the captain how the work came out: shaped as its outcome
+ * (`answersByShape`), or a crewmate's card opening with a completion
+ * story's headings, read from the markup as the card lint reads them.
+ */
+function toldOutcome(card: Card): boolean {
+  if (answersByShape(card)) return true;
+  if (card.author !== "crewmate") return false;
+  const headings = bodyHeadings(card.body);
+  return [COMPLETION_CARD_HEADINGS, TIERED_STORY_HEADINGS].some((outline) =>
+    outline.every((heading, index) => headings[index] === heading),
+  );
+}
+
+/**
+ * How a task closes (the primitives review's P6, docs/task-record.md): its
+ * record, its lane and queued wakes in one transaction (`closeAndPurge`),
+ * its cards off the stack, the first mate's closing sentence and where the
+ * outcome goes, its worktree retired with unlanded work saved first, and its
+ * delivery children after it.
+ */
+export class TaskClosing {
+  constructor(
+    private readonly host: SettleServiceHost,
+    private readonly locks: SettleLocks,
+    private readonly approvals: KeptApproval,
+  ) {}
+
+  private readonly retirements = new Map<string, Promise<"removed" | "kept" | "none">>();
+
+  /**
+   * The first mate's closing sentence for a task it is closing now
+   * (INF-547): the one sentence the captain reads about started work that
+   * closed without their click. Only the first mate's own close tools set
+   * one, so a captain's click never carries it; the close that follows
+   * takes it (`takeClosingSentence`).
+   */
+  private readonly closingSentences = new Map<string, string>();
+
+  /**
+   * Runs one of the first mate's settles with its closing sentence, which
+   * lasts only as long as that settle: the close it makes carries it.
+   */
+  async withClosingSentence<T>(
+    taskId: string,
+    sentence: string,
+    run: () => Promise<T>,
+  ): Promise<T> {
+    this.closingSentences.set(taskId, sentence);
+    try {
+      return await run();
+    } finally {
+      this.closingSentences.delete(taskId);
+    }
+  }
+
+  /**
+   * The first mate cancelled this task: its close comes when the turn it
+   * stopped ends (`closeRecord`), and carries the sentence then.
+   */
+  expectClosingSentence(taskId: string, sentence: string): void {
+    this.closingSentences.set(taskId, sentence);
+  }
+
+  /** A cancel that will not close the task after all leaves no sentence behind. */
+  forgetClosingSentence(taskId: string): void {
+    this.closingSentences.delete(taskId);
+  }
+
+  /** The sentence a close takes; never a captain's, whose click carries none. */
+  private takeClosingSentence(taskId: string, actor: TaskClose["actor"]): string | undefined {
+    const sentence = this.closingSentences.get(taskId);
+    if (sentence === undefined || actor === "captain") return undefined;
+    this.closingSentences.delete(taskId);
+    return sentence;
+  }
+
+  /**
+   * Where a close of started work puts what became of it (INF-1610's at
+   * most one closing note, docs/task-capture.md "How a message ends"). The
+   * captain's message the work covers decides, never the close's words:
+   * - the card that answers it, recorded or accepted, or up for them, is
+   *   revised with the outcome - the merge line on a merge - and a card
+   *   they already closed comes back only when the work was dropped after
+   *   all, by someone other than them;
+   * - other work of the message still running, or the task that took this
+   *   work over, keeps it quiet;
+   * - otherwise the first mate's sentence goes up as the app's one closing
+   *   note, marked as the answer.
+   * Work no message of the captain's covers - work the fleet started on
+   * its own - puts a note up only when code merged or was released, only
+   * when nothing of the task is still on their stack, and only when they
+   * never closed its story or completion card.
+   */
+  placeOutcome(
+    record: TaskRecord,
+    reason: string,
+    actor: TaskClose["actor"],
+    sentence: string | undefined,
+  ): void {
+    const outcome = closedWithoutClick(reason);
+    if (!outcome || record.startedAt === null) return;
+    // Work the first mate declared the captain did not ask for raises
+    // nothing new on their stack (INF-1467): a card of its that is up still
+    // takes the outcome, and a message it served gets its answer from the
+    // first mate step.
+    const asked = this.host.askEnding.closingPlace(record.id);
+    const place: ClosingPlace =
+      !record.shape?.internal_step || asked.kind === "unasked"
+        ? asked
+        : asked.kind === "revise" && asked.open
+          ? asked
+          : { kind: "unasked" };
+    const answer =
+      place.kind === "revise"
+        ? place
+        : place.kind === "unasked" && place.card
+          ? { card: place.card, open: true }
+          : undefined;
+    if (answer) {
+      if (!answer.open && (outcome !== "dropped" || actor === "captain")) return;
+      if (answer.open && outcome !== "merged" && !sentence) return;
+      this.reviseAnswer(answer.card, answer.open, record, outcome, actor, sentence);
+      return;
+    }
+    if (!sentence || place.kind === "quiet") return;
+    const unasked = place.kind === "unasked";
+    if (unasked && outcome !== "merged" && outcome !== "released") return;
+    if (unasked && [...this.host.cards.values()].some((card) => card.taskId === record.id)) return;
+    // The captain already closed or chose on the task's story or completion
+    // card: that card was its one note, so no second note goes up beside it
+    // (INF-2461, the captain's pick on INF-2442).
+    if (unasked && this.host.cards.closedByCaptain(record.id).some(toldOutcome)) return;
+    const closed = this.host.tasks.get(record.id) ?? record;
+    const prUrl = closed.delivery?.prUrl;
+    const prNumber = closed.delivery?.prNumber;
+    const pullRequest =
+      outcome === "merged" && prUrl && prNumber !== undefined
+        ? `<p>Merged <a class="inf-mono" href="${escapeCardText(prUrl)}">PR #${prNumber}</a>.</p>`
+        : "";
+    this.host.cards.addFirstmateCard({
+      title: closingNoteTitle(record.key || record.id, outcome),
+      body: `<p>${escapeCardText(sentence)}</p>${pullRequest}`,
+      actions: [],
+      taskId: record.id,
+      ...(unasked ? {} : { answering: true }),
+    });
+  }
+
+  /**
+   * The card that answers the message, revised with what became of its
+   * work: on a merge the merge line - when, its pull request and the first
+   * mate's sentence (INF-1219) - else the close line. A card the captain
+   * closed comes back as a note, since what it offered is gone.
+   */
+  private reviseAnswer(
+    card: Card,
+    open: boolean,
+    record: TaskRecord,
+    outcome: ClosedWithoutClick,
+    actor: TaskClose["actor"],
+    sentence: string | undefined,
+  ): void {
+    const current = this.host.tasks.get(record.id) ?? record;
+    const delivery = current.delivery;
+    const label =
+      delivery?.prNumber !== undefined
+        ? `PR ${changeName(current, delivery.prNumber)}`
+        : delivery?.changeLabel;
+    const body =
+      outcome === "merged"
+        ? withMergeLine(
+            card.body,
+            mergedLine({
+              at: this.host.now(),
+              onItsOwn: actor !== "captain",
+              ...(label
+                ? { change: { label, ...(delivery?.prUrl ? { url: delivery.prUrl } : {}) } }
+                : {}),
+              ...(sentence ? { sentence } : {}),
+            }),
+          )
+        : withCloseLine(card.body, closedLine(record.key || record.id, outcome, sentence));
+    if (open) this.host.cards.reviseBody(card.id, body);
+    else {
+      // Raised again as it now stands: no wait of its last showing comes with it.
+      const { awaiting: _awaiting, ...shown } = card;
+      this.host.cards.put({ ...shown, body, actions: [] });
+    }
+  }
+
+  /**
+   * Best effort for every abandoned attempt; never prevent local cleanup.
+   * A pull request it could not close is not left with nobody on it
+   * (INF-549's sibling): the host files the task that closes it, and the
+   * note says so - on the feed too, unless the captain's own click already
+   * puts the outcome there (`line`).
+   */
+  async closeOpenPullRequest(
+    taskId: string,
+    options: { line?: boolean } = {},
+  ): Promise<PrOutcome & { repair?: string }> {
+    if (!opensPullRequest(this.host.taskDelivery(taskId)) || !this.host.closePullRequest) {
+      return { ok: true, text: "" };
+    }
+    const result = await this.host.closePullRequest(taskId).catch((caught): PrOutcome => {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      return { ok: false, text: `Could not close its PR: ${message}`, problem: message };
+    });
+    const record = this.host.tasks.get(taskId);
+    let repair: { record: TaskRecord; filed: boolean } | undefined;
+    if (!result.ok && record?.delivery?.prNumber !== undefined) {
+      try {
+        repair = this.host.filePullRepair?.(record, result.problem);
+      } catch (caught) {
+        console.warn("[settle] the pull request repair could not be filed:", caught);
+      }
+    }
+    const said = repair
+      ? pullLeftOpenText({ key: repair.record.key || repair.record.id, filed: repair.filed })
+      : undefined;
+    const text = said ? `${result.text} ${said}` : result.text;
+    // The record's line says what it means; the raw words ride its data
+    // and the tool's answer, as every settle failure's do.
+    const line = said
+      ? `Its pull request is still open where the project lives: ${plainProblem(result.problem ?? result.text)}. ${said}`
+      : text;
+    if (line && record) {
+      this.host.tasks.note(taskId, line, {
+        news: true,
+        ...(repair && options.line !== false ? { feed: true } : {}),
+        ...(result.problem || repair
+          ? {
+              data: {
+                ...(result.problem ? { problem: result.problem } : {}),
+                ...(repair ? { feedLine: true, pullRepair: repair.record.id } : {}),
+              },
+            }
+          : {}),
+        ...(repair ? { about: [repair.record.id] } : {}),
+      });
+    }
+    return { ...result, text, ...(said ? { repair: said } : {}) };
+  }
+
+  /**
+   * Settle a task: the crewmate stops, the worktree and branch go, the
+   * lane and open cards retire, and the RECORD CLOSES - its row, timeline
+   * and session JSONL under crewmates/<taskId> stay (captain decision D2:
+   * "the sessions are very valuable ... we shouldn't remove the entire
+   * session JSONL altogether"). The worktree vanishing is the externally
+   * observable "settled" signal (the phase3 e2e polls for it), so the
+   * record closes before it goes.
+   */
+  async closeTask(
+    taskId: string,
+    close: TaskClose,
+    options: { recordBeforeStop?: boolean } = {},
+  ): Promise<void> {
+    // This task settlement announces its reach before stopping the runtime;
+    // the crewmate leaves after that spark. A superseded one instead hands
+    // over to its successor, whose start is its spark.
+    // Work carried on closes done and goes home like any done task.
+    if (close.reason !== "superseded" || close.status === "done") this.host.announceReach?.(taskId);
+    this.host.killJobs?.(taskId);
+    this.host.endLiveTask(taskId);
+    const stopping = this.host.stopRuntime(taskId);
+    if (stopping && !options.recordBeforeStop) {
+      await stopping;
+      this.locks.releaseSettleBoundary(taskId);
+    }
+    const record = this.host.tasks.get(taskId);
+    // The lane and every queued wake retire with the task, in the close's
+    // own transaction: a settled task makes still-recorded guidance moot.
+    // A row already done or dropped keeps its close; a discard there only
+    // clears the worktree it kept (WI-7).
+    let answerHandoffQueued = false;
+    let sentence: string | undefined;
+    if (record && record.status !== "done" && record.status !== "dropped") {
+      sentence = this.takeClosingSentence(taskId, close.actor);
+      const data =
+        close.data || close.answerHandoff || sentence
+          ? {
+              ...close.data,
+              ...(close.answerHandoff ? { choice: close.answerHandoff.choice.label } : {}),
+              ...(sentence ? { closingSentence: sentence } : {}),
+            }
+          : undefined;
+      this.closeAndPurge([taskId], () => {
+        // A standing approval ends with its task: spent by a merge, revoked
+        // by any other close (FI3-304), in the close's own transaction.
+        const standing = standingAuthorization(record.delivery);
+        if (standing) {
+          this.host.tasks.recordPermissionRecords(taskId, {
+            mergeAuthorization: endedAuthorization(standing, {
+              status: close.reason === "merged" ? "consumed" : "revoked",
+              reason: `the task closed ${close.reason}`,
+              endedAt: this.host.now(),
+              generation: standing.generation + 1,
+            }),
+          });
+        }
+        this.host.tasks.close(taskId, {
+          status: close.status,
+          reason: close.reason,
+          actor: close.actor,
+          ...(close.text ? { text: close.text } : {}),
+          ...(close.delivery ? { delivery: close.delivery } : {}),
+          ...(close.feed === false ? { feed: false } : {}),
+          // The captain's choice on an answer's card is a fact of the
+          // close, so work built on the answer can be told what was chosen;
+          // so is the first mate's sentence on a close of its own.
+          ...(data ? { data } : {}),
+        });
+        if (close.answerHandoff) {
+          answerHandoffQueued =
+            this.host.inbox.enqueueWake(
+              FIRSTMATE_RECIPIENT,
+              { facts: { kind: "answer-closed", handoff: close.answerHandoff } },
+              "agent",
+              taskId,
+            ) !== null;
+        }
+      });
+    } else {
+      this.host.inbox.purgeTask(taskId);
+    }
+    // External observation closes at the synchronous idle boundary, before
+    // stopping can yield: new guidance must see a closed record, not be purged
+    // later after it was accepted on a task that still appeared open.
+    if (stopping && options.recordBeforeStop) {
+      await stopping;
+      this.locks.releaseSettleBoundary(taskId);
+    }
+    // The durable handoff becomes visible only after its close transaction;
+    // poking here cannot race the lane purge that precedes its insertion.
+    if (answerHandoffQueued) this.host.pokeInbox();
+    this.host.cards.retireTaskCards(taskId, close.reason, { keepNotes: close.status === "done" });
+    if (record && record.status !== "done" && record.status !== "dropped") {
+      this.placeOutcome(record, close.reason, close.actor, sentence);
+    }
+    // A kept note still waiting on the crewmate shows now, after the close
+    // wrote its outcome on it, so its first showing carries it (INF-2533).
+    this.host.cards.releaseNotes(taskId);
+    this.host.asksMoved?.();
+    this.host.cards.scheduleBroadcast();
+    this.host.broadcastCrewCounts();
+    if (record?.worktreeDir && record.workspaceState !== "removed") {
+      // A confirmed discard is the captain choosing to throw the work away:
+      // it is still saved when it can be, but a failed save never keeps it.
+      await this.retireWorktreeOf(record, { force: close.reason === "discarded" });
+    }
+    // Delivery machinery follows its parent out, whatever the direction
+    // the parent closed in - a review must never outlive its builder.
+    await this.retireDeliveryChildren(taskId, record?.title);
+    // Any close may release a row waiting on this task, or leave one
+    // waiting forever (the ready query and the dead-blocker card, P2).
+    void this.host.sweepGates(this.host.now());
+  }
+
+  /**
+   * The containment refinement (captain-approved 2026-09-19): a live child
+   * the host commissioned as part of delivering this task - today exactly
+   * the independent review - is retired with it, silently, the way a
+   * superseded escalation attempt is: runtime aborted, worktree gone, lane
+   * purged. The parent's own close line is the news; an orphaned reviewer
+   * idling against a closed builder was the bug this exists to end.
+   */
+  async retireDeliveryChildren(parentId: string, parentTitle?: string): Promise<void> {
+    const live = this.host.tasks
+      .children(parentId)
+      .filter((child) => !TaskService.isClosed(child) && TaskService.isDeliveryChild(child));
+    for (const child of live) {
+      await this.closeTask(child.id, {
+        status: "dropped",
+        reason: "superseded",
+        actor: "host",
+        text: `superseded - ${parentTitle ? `"${parentTitle}"` : "its builder"} closed`,
+        feed: false,
+      }).catch(() => {});
+    }
+  }
+
+  /**
+   * The record side of finish(): a crewmate turn that cancelled or failed
+   * closes the record, retires its open cards, and saves/removes its worktree.
+   * There is no `completed` here any more (WI-11): a crewmate that finished
+   * its work and went idle is not a close - it stays `active` and resumable
+   * until the captain merges, lands, or discards. A failure a typed backend
+   * reported keeps that fact, so the feed line never reads its words for a
+   * class (docs/quota.md "Typed cut-offs").
+   */
+  closeRecord(
+    taskId: string,
+    status: "cancelled" | "failed",
+    error: string | undefined,
+    actor: "captain" | "firstmate" | "host",
+    typed?: TypedFailure,
+  ): void {
+    const record = this.host.tasks.get(taskId);
+    const sentence = status === "cancelled" ? this.takeClosingSentence(taskId, actor) : undefined;
+    this.closeAndPurge([taskId], () => {
+      if (status === "cancelled") {
+        this.host.tasks.close(taskId, {
+          status: "dropped",
+          reason: "cancelled",
+          actor,
+          ...(sentence ? { data: { closingSentence: sentence } } : {}),
+        });
+      } else {
+        this.host.tasks.close(taskId, {
+          status: "dropped",
+          reason: "failed",
+          actor,
+          ...(error ? { error } : {}),
+          ...(typed
+            ? {
+                data: {
+                  failureSignals: "typed",
+                  ...(typed.cutOff ? { cutOff: typed.cutOff } : {}),
+                },
+              }
+            : {}),
+        });
+      }
+    });
+    void this.closeOpenPullRequest(taskId);
+    this.host.cards.retireTaskCards(taskId, status);
+    if (record && status === "cancelled") this.placeOutcome(record, "cancelled", actor, sentence);
+    this.host.asksMoved?.();
+    void this.retireDeliveryChildren(taskId, this.host.tasks.get(taskId)?.title);
+    void this.retireWorkspace(taskId);
+  }
+
+  /**
+   * A closed task's worktree ALWAYS goes (captain, 2026-09-22: "when a
+   * task closes, its worktree gets cleaned up period. no exceptions"): a
+   * done or dropped row never keeps `present`. What it holds that never
+   * landed is saved on the task's hidden kept ref first
+   * (`WorkspaceService.retireTaskWorktree`), so nothing is destroyed; the
+   * one exception is a save that fails, which keeps the tree and says so.
+   */
+  retireWorkspace(
+    taskId: string,
+    options: { keepAlways?: boolean; noteKept?: boolean } = {},
+  ): Promise<"removed" | "kept" | "none"> {
+    const retirement = this.retireClosedWorkspace(taskId, options).finally(() => {
+      if (this.retirements.get(taskId) === retirement) this.retirements.delete(taskId);
+    });
+    this.retirements.set(taskId, retirement);
+    return retirement;
+  }
+
+  /** A replacement waits for the close's save before reading its predecessor's work. */
+  finishWorkspaceRetirement(taskId: string): Promise<"removed" | "kept" | "none"> {
+    return this.retirements.get(taskId) ?? this.retireWorkspace(taskId);
+  }
+
+  private async retireClosedWorkspace(
+    taskId: string,
+    options: { keepAlways?: boolean; noteKept?: boolean },
+  ): Promise<"removed" | "kept" | "none"> {
+    const record = this.host.tasks.get(taskId);
+    if (!record?.worktreeDir || record.workspaceState !== "present") return "none";
+    if (record.status !== "done" && record.status !== "dropped") return "none";
+    if (this.host.runtimeState(taskId) !== undefined) return "none";
+    try {
+      return await this.retireWorktreeOf(record, options);
+    } catch (caught) {
+      // The save succeeded or was not needed, but removing the tree failed:
+      // the next boot's hygiene pass tries again.
+      console.warn(`[workspace] could not remove the working copy of task ${taskId}:`, caught);
+      return "kept";
+    }
+  }
+
+  /**
+   * The one retirement of a record's worktree. An ANSWER task's worktree
+   * (Task B) was a laboratory the brief said would be discarded, so it
+   * goes with nothing saved; every other goes through the save first. The
+   * timeline says what happened: a save as a quiet line (the ref itself
+   * stays in the event's data, never in words a surface shows), a failed
+   * save as a feed line - a kept tree is never silent again.
+   */
+  private async retireWorktreeOf(
+    record: TaskRecord,
+    options: { keepAlways?: boolean; force?: boolean; noteKept?: boolean } = {},
+  ): Promise<"removed" | "kept" | "none"> {
+    // PlacedSessions observes the closed record and PlacedCopies saves and
+    // retires its copy there, at reconnect if necessary. A remote path must
+    // never be inspected here or marked removed before that owner confirms it.
+    if (record.deviceId) return record.workspaceState === "present" ? "kept" : "none";
+    const taskId = record.id;
+    const workspace = workspaceOf(record);
+    const stillPresent = () => this.host.tasks.get(taskId)?.workspaceState === "present";
+    if (this.host.deliverableOf(record) === "answer") {
+      await this.host.workspace.removeTaskWorktree(workspace);
+      this.host.tasks.markWorkspaceRemoved(taskId);
+      return "removed";
+    }
+    const retired = await this.host.workspace.retireTaskWorktree(
+      workspace,
+      options.keepAlways ? { keepAlways: true } : {},
+    );
+    if (retired.outcome === "kept") {
+      if (options.force) {
+        await this.host.workspace.removeTaskWorktree(workspace);
+        this.host.tasks.markWorkspaceRemoved(taskId);
+        return "removed";
+      }
+      // Git was awaited: a concurrent close may have removed it meanwhile.
+      if (!stillPresent()) return "none";
+      if (options.noteKept !== false) {
+        this.host.tasks.note(
+          taskId,
+          "working copy kept - its work could not be saved first; discard to remove it",
+          { news: true, feed: true, data: { kept: true, reason: retired.reason } },
+        );
+      }
+      return "kept";
+    }
+    if (stillPresent()) this.host.tasks.markWorkspaceRemoved(taskId);
+    if (retired.kept) {
+      this.host.tasks.note(
+        taskId,
+        `working copy removed - ${keptWorkWords(retired.kept)} saved first`,
+        { news: false, data: { saved: retired.kept } },
+      );
+    }
+    return "removed";
+  }
+
+  /**
+   * Close and purge as one commit (interaction P0, WI-2): the record closes
+   * in the same transaction that deletes the task's lane rows and every
+   * queued wake about it, so no reader ever sees a closed task with a live
+   * wake. Background jobs are killed right before, synchronously - a
+   * process is not a row - and a job that still exits later becomes a feed
+   * line, never a wake (deliverJobResult).
+   */
+  closeAndPurge<T>(taskIds: string[], close: () => T): T {
+    for (const id of taskIds) this.host.killJobs?.(id);
+    // A clicked merge's pending note carries no task, so the card retire
+    // leaves it: it ends with its task here, the one seam every close takes,
+    // so no reader sees the task closed with it still up (INF-1275).
+    for (const id of taskIds) this.approvals.clearPendingMerge(id, "task-closed");
+    return this.host.inbox.transaction(() => {
+      for (const id of taskIds) this.host.inbox.purgeTask(id);
+      return close();
+    });
+  }
+}

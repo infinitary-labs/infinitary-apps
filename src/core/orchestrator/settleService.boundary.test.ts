@@ -20,7 +20,7 @@ async function firstmateMergeAfter(world: World, change: () => void) {
   world.merge = async (_guard, boundary) => {
     change();
     looked = boundary?.beforeDispatch(HEAD);
-    sentWhileOut = world.settle.mergeWasSent(TASK);
+    sentWhileOut = world.locks.mergeWasSent(TASK);
     return looked
       ? { ok: false, text: `Cannot merge: ${looked}` }
       : { ok: true, text: `Merged #${PR} on GitHub.`, receipt: { head: HEAD } };
@@ -35,7 +35,7 @@ describe("the last look before a merge goes out", () => {
     const { answer, looked, sentWhileOut } = await firstmateMergeAfter(world, () => {});
     expect(looked).toBeUndefined();
     expect(sentWhileOut).toBe(true);
-    expect(world.settle.mergeWasSent(TASK)).toBe(false);
+    expect(world.locks.mergeWasSent(TASK)).toBe(false);
     expect(answer.text).toBe(`Merged #${PR} on GitHub.`);
     expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "merged" });
   });
@@ -110,7 +110,7 @@ describe("the last look before a merge goes out", () => {
     expect(looked).toContain(words);
     expect(answer.text).toContain(words);
     expect(sentWhileOut).toBe(false);
-    expect(world.settle.mergeWasSent(TASK)).toBe(false);
+    expect(world.locks.mergeWasSent(TASK)).toBe(false);
     expect(world.tasks.get(TASK)?.closedReason ?? null).not.toBe("merged");
   });
 });

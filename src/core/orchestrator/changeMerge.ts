@@ -759,11 +759,16 @@ function alreadyMerged(forge: Forge, pull: ForgePull): PrOutcome {
   return {
     ok: true,
     text: `${numberLabel(forge, pull.number)} is already merged ${placeWords(forge)}.`,
-    receipt: {
-      head: pull.headSha,
-      ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
-      already: true,
-    },
+    receipt: mergedReceipt(pull),
+  };
+}
+
+/** The receipt of a pull request found already merged: the head it merged at, and its commit. */
+export function mergedReceipt(pull: ForgePull): NonNullable<PrOutcome["receipt"]> {
+  return {
+    head: pull.headSha,
+    ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
+    already: true,
   };
 }
 

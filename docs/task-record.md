@@ -107,7 +107,7 @@ A clean folder behind on its default branch is fast-forwarded, as after a merge,
 One behind with edits or commits of its own gets the repair, with `noticed: "app-start"`, unless the captain dropped the project's latest repair while origin's default branch stood where it stands now; once that moves on, the next start files it again.
 
 A pull request an abandoned task could not close gets the same kind of task (INF-549's sibling).
-When a discarded, cancelled, failed or superseded task's pull request is refused its close (`SettleService.closeOpenPullRequest`), the host files one task under the project, "Close the pull request", with `in_place.pull` naming the pull request, its link and branch, the abandoned task, and what the host answered (`CrewSupervisor.filePullRepair`); one stands per pull request.
+When a discarded, cancelled, failed or superseded task's pull request is refused its close (`TaskClosing.closeOpenPullRequest`), the host files one task under the project, "Close the pull request", with `in_place.pull` naming the pull request, its link and branch, the abandoned task, and what the host answered (`CrewSupervisor.filePullRepair`); one stands per pull request.
 The note on the abandoned task names it, and is an Activity line unless the captain's own click already put the outcome there.
 Its brief says close the pull request or report why not (`renderPullRepairBrief`): the crewmate works in the folder without changing it, holds only the read and write tools where the project lives, and never merges, pushes or deletes a branch.
 The same minute's read closes it as finished once the host reads that pull request closed or merged.
@@ -320,7 +320,7 @@ Drop task, Discard, stronger-model retries, provider retries and closed-work ret
 ## Ready waiting is a presentation projection
 
 Approved specification: FI3-275, direction A, reachable cards, split waiting children.
-Cancellation and terminal session failure retire task cards at closure through `SettleService.closeRecord` (FI3-270); the waiting projection also independently excludes closed tasks.
+Cancellation and terminal session failure retire task cards at closure through `TaskClosing.closeRecord` (FI3-270); the waiting projection also independently excludes closed tasks.
 `waitingCardId` is the operational ready-decision fact: the first unresolved shown ready decision associated with a live task, with no `awaiting` and nonempty actions, in `CardService.taskSnapshot()` order.
 Direct associations and captain-gate references use that same test.
 A ready card behind the foreground card still counts; navigation can focus it.
@@ -479,7 +479,7 @@ The first mate declares the replacement with `update_task`'s `replaced_by` besid
 ## Work carried on by another task
 
 Work another task carries on closes done, never dropped (INF-1825): "dropped" is kept for work that was really abandoned.
-The first mate closes started work with `settle_task` mode `carried_on` and `carried_by`, the task carrying it (`SettleService.closeCarriedOn`), and unstarted work with `update_task` `drop` and `replaced_by` (`TaskService.dropWithChildren`).
+The first mate closes started work with `settle_task` mode `carried_on` and `carried_by`, the task carrying it (`DeclaredCloses.closeCarriedOn`), and unstarted work with `update_task` `drop` and `replaced_by` (`TaskService.dropWithChildren`).
 It is also the close for work another task delivered in its merged pull request while the old task's own pull request closed unmerged (INF-2626), since the merge close reads that closed pull request and cannot close the task.
 The close writes the `replaced-by` link first, so the old task's live waits move to that task before the close clears them (`docs/task-graph.md`, "A wait follows moved work").
 Its unmerged commits are saved as every close saves them, and its own pull request is closed unless the task carrying the work carries that same pull request.

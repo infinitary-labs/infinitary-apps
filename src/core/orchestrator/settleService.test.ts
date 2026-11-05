@@ -15,7 +15,8 @@ import type { CardService } from "./cardService";
 import type { MergeBoundary, MergeGuard } from "./changeMerge";
 import { declareMergeRepair } from "./mergeAuthorization";
 import { carryPassedReview, reviewCoversHead } from "./reviewCarry";
-import { SettleService, type SettleServiceHost } from "./settleService";
+import type { SettleServiceHost } from "./settleHost";
+import { createSettleOwners } from "./settleOwners";
 
 // Integration budget (docs/test-cohorts.md): real git for one pure update
 // and one edited line, at the run's own priority.
@@ -168,7 +169,7 @@ describe("a kept merge carries a passed review across a pure update", () => {
         };
       },
     } as unknown as SettleServiceHost;
-    return { tasks, host: new SettleService(host), updated, run, dir, merged: () => merged };
+    return { tasks, host: createSettleOwners(host).kept, updated, run, dir, merged: () => merged };
   }
 
   it("does not read the branch when the stored readings match", async () => {
@@ -452,7 +453,7 @@ describe("a local story at the final dispatch boundary", () => {
         },
       );
       // A fresh owner reads the durable pending intent, not an earlier in-memory closure.
-      const service = new SettleService({
+      const service = createSettleOwners({
         now: () => 10,
         tasks,
         repos,
@@ -463,7 +464,7 @@ describe("a local story at the final dispatch boundary", () => {
         taskAutonomy: () => false,
         validateLocalStory,
         workspace: { landTaskWork },
-      } as unknown as SettleServiceHost);
+      } as unknown as SettleServiceHost).settle;
       const outcome = await service.settleTask(story.taskId, "land", undefined, "captain");
       expect(validateLocalStory).toHaveBeenCalledOnce();
       expect(landTaskWork).toHaveBeenCalledOnce();

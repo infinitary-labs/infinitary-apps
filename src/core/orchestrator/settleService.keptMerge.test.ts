@@ -112,7 +112,7 @@ describe("the guard a kept merge runs with", () => {
     ],
     [
       "the approval ended",
-      (world) => world.settle.revokeMergeAuthorization(TASK, "the captain interrupted it"),
+      (world) => world.approvals.revokeMergeAuthorization(TASK, "the captain interrupted it"),
       undefined,
       "the captain's merge approval ended",
     ],
@@ -166,7 +166,7 @@ describe("the guard a kept merge runs with", () => {
     async (_case, change, words) => {
       const host = approved();
       const unattended = lookAfter(host, () => change(host));
-      await host.settle.runMergeAuthorization(TASK);
+      await host.kept.runMergeAuthorization(TASK);
       expect(unattended.guard?.unattended).toBe(true);
       expect(unattended.looked).toBe(words);
       expect(host.tasks.get(TASK)?.status).toBe("active");
@@ -180,7 +180,7 @@ describe("the guard a kept merge runs with", () => {
 
   it("holds the merge on the captain's newer guidance until its crewmate declares its impact", async () => {
     const world = approved();
-    expect(world.settle.holdForGuidance(TASK)).toBe(1);
+    expect(world.approvals.holdForGuidance(TASK)).toBe(1);
     let held: string | undefined;
     world.merge = async (guard) => {
       held = guard?.held?.();
@@ -272,7 +272,7 @@ describe("the checks a host-run merge makes before it asks anything", () => {
   it("ends the approval without merging when the task's change is another pull request", async () => {
     const world = approved();
     seedDelivery(world.tasks, TASK, { prNumber: PR + 1 });
-    await world.settle.runMergeAuthorization(TASK);
+    await world.kept.runMergeAuthorization(TASK);
     expect(world.log.filter((line) => line.startsWith("merge"))).toEqual([]);
     expect(approvalOf(world)).toMatchObject({
       status: "invalidated",
@@ -292,7 +292,7 @@ describe("the checks a host-run merge makes before it asks anything", () => {
   it("gives way to a new completion card without a word to the first mate", async () => {
     const world = approved();
     world.cards.put(completionCard());
-    await world.settle.runMergeAuthorization(TASK);
+    await world.kept.runMergeAuthorization(TASK);
     expect(world.log.filter((line) => line.startsWith("merge"))).toEqual([]);
     expect(approvalOf(world)).toMatchObject({
       status: "superseded",
@@ -303,8 +303,8 @@ describe("the checks a host-run merge makes before it asks anything", () => {
 
   it("waits on the captain's guidance without merging", async () => {
     const world = approved();
-    world.settle.holdForGuidance(TASK);
-    await world.settle.runMergeAuthorization(TASK);
+    world.approvals.holdForGuidance(TASK);
+    await world.kept.runMergeAuthorization(TASK);
     expect(world.log.filter((line) => line.startsWith("merge"))).toEqual([]);
     expect(approvalOf(world)?.waiting).toMatchObject({ on: "guidance", head: HEAD });
   });
@@ -316,7 +316,7 @@ describe("an attempt that outlived its answer", () => {
   it("waits on the outcome while its pull request cannot be read", async () => {
     const world = approved({ attempt });
     world.live.pull = undefined;
-    await world.settle.runMergeAuthorization(TASK);
+    await world.kept.runMergeAuthorization(TASK);
     expect(approvalOf(world)).toMatchObject({
       status: "standing",
       attempt,
@@ -334,7 +334,7 @@ describe("an attempt that outlived its answer", () => {
       merged: true,
       mergedSha: "c".repeat(40),
     };
-    await world.settle.runMergeAuthorization(TASK);
+    await world.kept.runMergeAuthorization(TASK);
     expect(world.log.filter((line) => line.startsWith("merge"))).toEqual([]);
     expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "merged" });
     expect(approvalOf(world)).toMatchObject({
@@ -349,7 +349,7 @@ describe("an attempt that outlived its answer", () => {
       ...(world.live.pull as NonNullable<SettleWorld["live"]["pull"]>),
       state: "closed",
     };
-    await world.settle.runMergeAuthorization(TASK);
+    await world.kept.runMergeAuthorization(TASK);
     expect(approvalOf(world)).toMatchObject({
       status: "invalidated",
       reason: "its pull request was closed without merging",
@@ -362,7 +362,7 @@ describe("an attempt that outlived its answer", () => {
 
   it("clears the token and runs every gate again while its pull request is still open", async () => {
     const world = approved({ attempt });
-    await world.settle.runMergeAuthorization(TASK);
+    await world.kept.runMergeAuthorization(TASK);
     expect(world.log.filter((line) => line.startsWith("merge"))).toHaveLength(1);
     expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "merged" });
   });
@@ -371,14 +371,14 @@ describe("an attempt that outlived its answer", () => {
 describe("a merge request's refusals", () => {
   it("answers a host-run request whose approval no longer stands as withdrawn", async () => {
     const world = settleWorld({ reviews: true });
-    const answer = await world.settle.requestMerge(TASK, "review-1", true);
+    const answer = await world.kept.requestMerge(TASK, "review-1", true);
     expect(answer).toMatchObject({ ok: false, stop: "withdrawn" });
     expect(world.log).toEqual([]);
   });
 
   it("refuses a request where the project lives cannot be reached", async () => {
     const world = settleWorld();
-    const answer = await world.settle.requestMerge(TASK, "review-1");
+    const answer = await world.kept.requestMerge(TASK, "review-1");
     expect(answer).toMatchObject({
       ok: false,
       text: "Cannot merge: where the project lives is not reachable from here.",
@@ -388,7 +388,7 @@ describe("a merge request's refusals", () => {
   it("refuses a request on a closed task", async () => {
     const world = settleWorld();
     world.tasks.close(TASK, { status: "dropped", reason: "cancelled", actor: "captain" });
-    const answer = await world.settle.requestMerge(TASK, "review-1");
+    const answer = await world.kept.requestMerge(TASK, "review-1");
     expect(answer).toMatchObject({
       ok: false,
       text: `Cannot merge: task ${TASK} is already cancelled.`,
@@ -408,7 +408,7 @@ describe("the pending note of a kept merge", () => {
       text: `Merged #${PR} on GitHub.`,
       receipt: { head: HEAD },
     });
-    await world.settle.runMergeAuthorization(TASK);
+    await world.kept.runMergeAuthorization(TASK);
     expect(world.cards.get(mergePendingCardId(TASK))).toBeUndefined();
     expect(world.tasks.get(TASK)?.closedReason).toBe("merged");
   });

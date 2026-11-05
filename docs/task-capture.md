@@ -151,7 +151,7 @@ Who writes a missing answer, in the captain's order:
 2. The first mate, through the retry above, once all of the message's work has ended with no answer: the wake names the work that ended (`workEnded`), and the first mate shows the answer or links the task that took the work over with `link_tasks`.
 3. The app's one notice.
 
-At most one closing note: when work closes without the captain's click, `SettleService` asks `AskEnding.closingPlace` where its outcome goes.
+At most one closing note: when work closes without the captain's click, `TaskClosing` asks `AskEnding.closingPlace` where its outcome goes.
 
 - The accepted or recorded answer is revised with the outcome line and comes back to the stack only when the work was dropped after the captain accepted it.
 - Other running work of the message, or a handover, puts up nothing.

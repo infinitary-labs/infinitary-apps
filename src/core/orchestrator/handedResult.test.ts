@@ -12,7 +12,8 @@ import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { CrewSupervisor } from "./crewSupervisor";
-import { SettleService, type SettleServiceHost } from "./settleService";
+import type { SettleServiceHost } from "./settleHost";
+import { createSettleOwners } from "./settleOwners";
 
 // Integration: real screenshot copies and a real close transaction; measured below one second.
 vi.setConfig({ testTimeout: 15_000 });
@@ -55,7 +56,7 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
     broadcastCrewCounts: () => {},
     workspace: { taskWorkStatus: workStatus },
   } as unknown as SettleServiceHost;
-  const service = new SettleService(host);
+  const service = createSettleOwners(host).declared;
   return { tasks, service, cards, cardCloses, workStatus };
 }
 

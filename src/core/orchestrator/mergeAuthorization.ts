@@ -24,7 +24,8 @@ import type { WakeBody } from "./wakes";
 /**
  * The captain's kept merge approval (FI3-304, docs/delivery-rigor.md "A
  * kept merge approval"): the closed facts the host checks about it, kept
- * apart from the settle path that runs it (`./settleService.ts`).
+ * apart from the settle path that runs it (`./keptApproval.ts`,
+ * `./keptMerge.ts`).
  *
  * - The candidate head is the approved head, or the newest repair the host
  *   accepted after it. No other head is ever merged on the approval.
@@ -94,6 +95,19 @@ export function standingAuthorization(
 ): MergeAuthorization | undefined {
   const authorization = delivery?.mergeAuthorization;
   return authorization?.status === "standing" ? authorization : undefined;
+}
+
+/**
+ * A standing approval as it ends - spent by its merge, or revoked,
+ * invalidated or superseded - with no attempt, retry or wait left on it:
+ * the one shape every end of an approval records.
+ */
+export function endedAuthorization(
+  standing: MergeAuthorization,
+  end: Pick<MergeAuthorization, "status" | "endedAt"> &
+    Partial<Pick<MergeAuthorization, "reason" | "generation" | "holds" | "receipt">>,
+): MergeAuthorization {
+  return { ...standing, ...end, attempt: undefined, retryAt: undefined, waiting: undefined };
 }
 
 /**

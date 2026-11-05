@@ -4,7 +4,10 @@ import {
   type FolderRefreshCause,
   folderRefreshWords,
 } from "@shared/folderRefresh";
+import { forgePlace } from "@shared/forge";
 import { POLICY_MERGING_WORDS } from "@shared/taskPolicies";
+import type { TaskRecord } from "../storage/taskStore";
+import type { RepoRegistry } from "../workspace/repoRegistry";
 import { escapeCardText } from "./cardText";
 import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";
 
@@ -238,4 +241,30 @@ export const MERGE_PENDING_TITLE = "Merge pending";
 export const MERGE_STOPPED_TITLE = "Merge did not go through";
 export function mergePendingBody(words: string, taskTitle: string): string {
   return `<p>${escapeCardText(words)}</p><p class="inf-muted">${escapeCardText(taskTitle)}</p>`;
+}
+
+/**
+ * Where the task's project lives, in the person's words ("GitHub", "GitLab",
+ * a host's address); `unnamed` when its repository names no host.
+ */
+export function placeOf(
+  repos: RepoRegistry,
+  record: TaskRecord | undefined,
+  unnamed = "the project's host",
+): string {
+  const repo = record?.repoId ? repos.get(record.repoId) : undefined;
+  return (
+    (repo?.host ? forgePlace({ kind: repo.host.kind, host: repo.host.name }) : null) ?? unnamed
+  );
+}
+
+/**
+ * The task's pull request by its number, in the host's own words: the
+ * label the forge recorded for it (`#N`, `!N`), else `#N`.
+ */
+export function changeName(record: TaskRecord | undefined, number: number): string {
+  const delivery = record?.delivery;
+  return delivery?.prNumber === number && delivery.changeLabel
+    ? delivery.changeLabel
+    : `#${number}`;
 }

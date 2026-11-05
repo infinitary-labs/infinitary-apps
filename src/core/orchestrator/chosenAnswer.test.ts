@@ -12,7 +12,7 @@ import { WorkspaceService } from "../workspace/workspaceService";
 import { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { askEndingOf } from "./askEnding";
 import { CardService } from "./cardService";
-import { SettleService } from "./settleService";
+import { createSettleOwners } from "./settleOwners";
 
 /**
  * INF-2242's approved plan, replaying INF-2235's answering+asking choice.
@@ -45,7 +45,7 @@ function fixture() {
       cardStore,
       syncCaptainGate: () => {},
       noteCapAnswered: () => {},
-      closeAnsweredTask: (card, action, by) => settle.closeAnsweredTask(card, action, by),
+      closeAnsweredTask: (card, action, by) => settle.declared.closeAnsweredTask(card, action, by),
       captainResponded: (card, response, action) => ending.captainResponded(card, response, action),
       settleFacts: () => undefined,
       followupNotice: () => undefined,
@@ -55,7 +55,7 @@ function fixture() {
     });
   const cards = makeCards();
   const ending = askEndingOf(tasks, cards);
-  const settle = new SettleService({
+  const settle = createSettleOwners({
     now,
     tasks,
     inbox,
@@ -127,8 +127,8 @@ describe("choosing a delivered answer", () => {
         return close(...args);
       });
       let closing: Promise<void> | undefined;
-      const closeTask = settle.closeTask.bind(settle);
-      vi.spyOn(settle, "closeTask").mockImplementation((...args) => {
+      const closeTask = settle.closing.closeTask.bind(settle.closing);
+      vi.spyOn(settle.closing, "closeTask").mockImplementation((...args) => {
         closing = closeTask(...args);
         return closing;
       });
@@ -181,7 +181,7 @@ describe("choosing a delivered answer", () => {
       const acceptedAt = restartedTasks.getAsk("reading-style")?.acceptedAt;
       const handoff = handoffs();
       expect(restored.get(card.id)).toBeUndefined();
-      expect(settle.closeAnsweredTask(card, action, "captain")).toBe(false);
+      expect(settle.declared.closeAnsweredTask(card, action, "captain")).toBe(false);
       expect(restartedTasks.getAsk("reading-style")?.acceptedAt).toBe(acceptedAt);
       expect(handoffs()).toHaveLength(1);
       inbox.ack(inbox.pending(FIRSTMATE_RECIPIENT).map((row) => row.id));

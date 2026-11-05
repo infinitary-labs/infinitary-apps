@@ -1,5 +1,5 @@
 /**
- * The settle service over a real task record, inbox and card service, for
+ * The settle owners over a real task record, inbox and card service, for
  * its guardrail tests (INF-2625's plan, the settle piece). One idle task,
  * "meter", delivers pull request #71 at `HEAD` in a GitHub project that asks
  * before merging. Every live fact the supervisor would supply is a field of
@@ -9,7 +9,8 @@ import type { ForgePull } from "../../src/core/forge";
 import { askEndingOf } from "../../src/core/orchestrator/askEnding";
 import type { CardService } from "../../src/core/orchestrator/cardService";
 import type { MergeGuard, PrOutcome } from "../../src/core/orchestrator/changeMerge";
-import { SettleService, type SettleServiceHost } from "../../src/core/orchestrator/settleService";
+import type { SettleServiceHost } from "../../src/core/orchestrator/settleHost";
+import { createSettleOwners, type SettleOwners } from "../../src/core/orchestrator/settleOwners";
 import type { AppDatabase } from "../../src/core/storage/db";
 import { InboxStore } from "../../src/core/storage/inboxStore";
 import type { MergeAuthorization } from "../../src/core/storage/taskStore";
@@ -51,13 +52,12 @@ export function standingApproval(patch: Partial<MergeAuthorization> = {}): Merge
   };
 }
 
-export type SettleWorld = {
+export type SettleWorld = SettleOwners & {
   db: AppDatabase;
   tasks: TaskService;
   inbox: InboxStore;
   repos: RepoRegistry;
   cards: CardService;
-  settle: SettleService;
   /** The facts the supervisor reads live; a test changes them mid-settle. */
   live: {
     runtime: "starting" | "streaming" | "idle" | undefined;
@@ -107,13 +107,12 @@ export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
     const record = tasks.get(TASK);
     return `${record?.status}/${record?.delivery?.mergeAuthorization?.status ?? "none"}`;
   };
-  const world: SettleWorld = {
+  const world: Omit<SettleWorld, keyof SettleOwners> = {
     db,
     tasks,
     inbox,
     repos,
     cards,
-    settle: undefined as unknown as SettleService,
     live: {
       runtime: "idle",
       delivery: "direct-pr",
@@ -149,7 +148,7 @@ export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
       log.push(`remove worktree: ${state()}`);
     },
   } as unknown as SettleServiceHost["workspace"];
-  world.settle = new SettleService({
+  const owners = createSettleOwners({
     now: () => now,
     tasks,
     inbox,
@@ -200,5 +199,5 @@ export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
     broadcastCrewCounts: () => {},
     broadcastEvent: () => {},
   });
-  return world;
+  return Object.assign(world, owners);
 }

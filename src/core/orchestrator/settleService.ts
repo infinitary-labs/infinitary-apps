@@ -1,200 +1,43 @@
-import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import {
-  bodyHeadings,
-  COMPLETION_CARD_HEADINGS,
-  TIERED_STORY_HEADINGS,
-} from "@shared/cardHeadings";
-import { type Card, isRoutineMergeCard, keepsTaskOpen, settleEffectOf } from "@shared/cards";
+import { isRoutineMergeCard, keepsTaskOpen } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus } from "@shared/checkSnapshot";
-import { HERE } from "@shared/deviceNames";
-import type { FmEvent } from "@shared/events";
-import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh";
-import { forgePlace, hasChangeRequests } from "@shared/forge";
+import type { FolderRefreshRefusal } from "@shared/folderRefresh";
 import { fixedHoldWords, overridePasses, softHoldWords, withoutHoldWords } from "@shared/holds";
 import type { MergeReview } from "@shared/mergeReview";
-import { plainProblem, type TypedFailure } from "@shared/plainProblem";
+import { plainProblem } from "@shared/plainProblem";
 import { hostedPresentation } from "@shared/presentationDestination";
-import { opensPullRequest, type RepoDelivery } from "@shared/repos";
-import { type Deliverable, isFolderWork } from "@shared/routingPolicy";
-import type { ServedWakeOrigin } from "@shared/servedFrame";
+import { opensPullRequest } from "@shared/repos";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
-import type { TaskDeliveryMode } from "@shared/tasks";
-import { MERGE_WORDS } from "@shared/vocabulary";
-import { type ForgePull, forgeLocationOf, QUEUE_WAITING_WORDS, signInRefusal } from "../forge";
+import type { ForgePull } from "../forge";
 import { currentChange } from "../storage/changeProjection";
-import { FIRSTMATE_RECIPIENT, type InboxStore } from "../storage/inboxStore";
-import type {
-  MergeAuthorization,
-  MergeWait,
-  PendingSettleIntent,
-  TaskRecord,
-} from "../storage/taskStore";
+import type { MergeWait, TaskRecord } from "../storage/taskStore";
 import { SETTLE_FOLD } from "../tasks/taskFeed";
+import { type SettleRefusal, TaskService } from "../tasks/taskService";
+import { type MergeGuard, mergedReceipt, type PrOutcome } from "./changeMerge";
+import type { KeptApproval } from "./keptApproval";
+import { candidateHead, keptFeedLine, keptNote, standingAuthorization } from "./mergeAuthorization";
+import type { SettleOutcome, SettleServiceHost } from "./settleHost";
+import type { SettleLocks } from "./settleLocks";
 import {
-  carriedOnClose,
-  type SettleRefusal,
-  type SettleWay,
-  TaskService,
-} from "../tasks/taskService";
-import type { RepoRegistry } from "../workspace/repoRegistry";
+  autonomyRefusal,
+  closeGateRefusal,
+  notSignedInRefusal,
+  unlandedWorkRefusal,
+  unreadableWorkRefusal,
+} from "./settleRefusals";
 import {
-  keptWorkWords,
-  type TaskWorkspace,
-  type WorkspaceService,
-} from "../workspace/workspaceService";
-import { taskResultResponse } from "./answerTaskResponse";
-import { type AskEnding, answersByShape, type ClosingPlace } from "./askEnding";
-import { type CardService, cardEmitter } from "./cardService";
-import { escapeCardText } from "./cardText";
-import type { MergeGuard, MergeStop, PrOutcome } from "./changeMerge";
-import {
-  approvableOffer,
-  candidateHead,
-  keptFeedLine,
-  keptNote,
-  mergeHold,
-  outstandingGuidance,
-  retryAfter,
-  standingAuthorization,
-  wakesFirstmate,
-} from "./mergeAuthorization";
-import {
-  type ClosedWithoutClick,
   cannotMergeText,
-  closedLine,
-  closedWithoutClick,
-  closingNoteTitle,
+  changeName,
   discardedText,
   folderNotUpdatedText,
-  MERGE_PENDING_TITLE,
   MERGE_STOPPED_TITLE,
   mergedLine,
-  mergePendingBody,
-  mergePendingCardId,
-  pullLeftOpenText,
+  placeOf,
   settlingText,
-  unlandedWorkText,
-  withCloseLine,
   withMergeLine,
 } from "./settleWords";
-import type { AnswerTaskClosedPayload, TypedWake } from "./wakes";
-
-/**
- * Settling and closing a task (the primitives review's P4 and P6,
- * docs/task-record.md, docs/delivery-rigor.md): the one place a
- * crewmate's work goes in (land, merge-pr), is thrown away (discard), or a
- * task otherwise closes - its record, its lane and queued wakes in one
- * transaction (`closeAndPurge`), its cards off the stack, its worktree
- * retired with unlanded work saved first, and its delivery children after
- * it.
- *
- * - One settle owns a task at a time, across cards, the shell and the
- *   Firstmate's tools; a merge or land the captain asked for mid-turn is a
- *   durable intent that waits for the turn's boundary.
- * - Every refusal is structured (WI-12): the close gate, unlanded work, the
- *   autonomy hold and a missing sign-in carry their ways out.
- * - A settle the captain triggered always wakes the Firstmate with its
- *   outcome; a Firstmate settle hears it as its tool result.
- *
- * The supervisor composes it and supplies the live runtimes and the task
- * facts it reads through `SettleServiceHost`.
- */
-
-/**
- * A settle attempt's result: whether it happened, and the text to show.
- * `contention` marks a refusal that is not a verdict on the operation at
- * all - another settle (or triage) already owns the task - so the caller
- * that actually ran reports its own outcome separately; a contention
- * refusal never raises its own failure card.
- */
-export type SettleOutcome = {
-  ok: boolean;
-  text: string;
-  contention?: boolean;
-  /** A structured close refusal (WI-12): its ways ride the wake and the tool result. */
-  refusal?: SettleRefusal;
-  /**
-   * The raw failure `text` quotes (a git, gh or network error). The feed
-   * says what it means through `plainProblem`; the raw words stay on the
-   * task's timeline and in the Firstmate's wake.
-   */
-  problem?: string;
-  /** The reason in the app's words, where `text` carries raw detail that is not a failure. */
-  plain?: string;
-  /** The merge was refused only because current readiness was not established. */
-  notGreen?: boolean;
-  /** Why a merge under the captain's kept approval stopped (`MergeStop`). */
-  stop?: MergeStop;
-  /** The merge GitHub confirmed. */
-  receipt?: PrOutcome["receipt"];
-  /** A merge's Activity line (`PrOutcome.line`). */
-  line?: string;
-  /**
-   * A sentence in the app's words that follows the outcome on the feed even
-   * when a raw failure is said plainly: the task the host started for what
-   * the settle left behind.
-   */
-  followup?: string;
-  /** The merge went through and the task stays open (INF-2490, INF-2525). */
-  continued?: boolean;
-  /**
-   * What on the task is still open after a merge that kept it open, as a
-   * clause - a question, by its title, or another pull request (INF-2525) -
-   * which its crewmate judges what to do about.
-   */
-  stillOpen?: string;
-};
-
-/**
- * The captain's click on a completion offer, as the click handler read it
- * off the shown card: the card, its occurrence and version, the action and
- * the gesture's own id (FI3-304).
- */
-export type MergeApproval = {
-  cardId: string;
-  lifecycleId?: string;
-  offerId?: string;
-  actionId: string;
-  interactionId?: string;
-};
-
-/** What a stopped merge means for a kept approval: the wait it now stands on. */
-function waitOf(result: SettleOutcome, undecided: boolean): MergeWait {
-  switch (result.stop) {
-    case "conflict":
-    case "behind":
-      return "conflict";
-    case "moved":
-      return undecided ? "evidence" : "repair";
-    case "checks":
-      return "checks";
-    case "protected":
-    case "computing":
-    case "draft":
-    case "sign-in":
-    case "transient":
-    case "outcome":
-    case "guidance":
-    case "queue":
-      return result.stop;
-    default:
-      if (result.refusal?.refused === "not-signed-in") return "sign-in";
-      if (result.notGreen) return "checks";
-      return "refused";
-  }
-}
-
-/** A record's worktree facts in the shape the workspace service takes. */
-function workspaceOf(record: TaskRecord): TaskWorkspace {
-  return {
-    taskId: record.id,
-    cwd: record.worktreeDir,
-    branch: record.branch,
-    repoDir: record.repoDir,
-  };
-}
+import { type TaskClose, type TaskClosing, workspaceOf } from "./taskClose";
 
 /**
  * The feed line for a settle the captain clicked. An outcome with no raw
@@ -203,7 +46,7 @@ function workspaceOf(record: TaskRecord): TaskWorkspace {
  * vocabulary's error row, `plainProblem`), and the raw text stays on the
  * task's timeline.
  */
-function settleFeedLine(
+export function settleFeedLine(
   mode: "merge-pr" | "land" | "discard",
   result: { ok: boolean; text: string; problem?: string; plain?: string; followup?: string },
 ): string {
@@ -225,365 +68,33 @@ export function describeStatus(record: TaskRecord): string {
   return record.closedReason ?? record.status;
 }
 
-/** How a task closes: its status and reason, who closed it, and what the close records. */
-export type TaskClose = {
-  status: "done" | "dropped";
-  reason:
-    | "landed"
-    | "merged"
-    | "released"
-    | "answered"
-    | "discarded"
-    | "cancelled"
-    | "finished"
-    | "superseded";
-  actor: "captain" | "firstmate" | "host";
-  text?: string;
-  /** Delivery facts learned by the close; a live close carries its posture. */
-  delivery?: {
-    mode?: TaskDeliveryMode;
-    landedMode?: "fast-forward" | "merge" | "pr";
-  };
-  /** False when another row already carries this close's feed line. */
-  feed?: boolean;
-  /** A selected answer choice to queue after the close transaction commits. */
-  answerHandoff?: AnswerTaskClosedPayload;
-  /** Extra facts the close records on its timeline event. */
-  data?: Record<string, unknown>;
-};
-
-export { isRoutineMergeCard };
-
-/** What settling needs from the supervisor that composes it. */
-export type SettleServiceHost = {
-  /** The host's one clock (the ticker's). */
-  now: () => number;
-  tasks: TaskService;
-  inbox: InboxStore;
-  workspace: WorkspaceService;
-  repos: RepoRegistry;
-  cards: CardService;
-  /** How each captain's message ends: where a close's outcome goes (INF-1610). */
-  askEnding: AskEnding;
-  /** A close moved a message's work: the first mate's check reads it when it can. */
-  asksMoved?: () => void;
-  /** Check selected proof synchronously, preserving the final no-yield send boundary. */
-  verifyValidationEvidence?: (taskId: string) => void;
-  /** The task's live crewmate turn state, when a runtime holds it. */
-  runtimeState(taskId: string): "starting" | "streaming" | "idle" | undefined;
-  /**
-   * Stop the task's live crewmate - its turn aborted, its runtime gone - or
-   * undefined when there is none.
-   */
-  stopRuntime(taskId: string): Promise<void> | undefined;
-  /** Something reached the task's crewmate: the center's spark flies to it (INF-759). */
-  announceReach?: (taskId: string) => void;
-  killJobs?: (taskId: string) => void;
-  hasRunningJobs?: (taskId: string) => boolean;
-  /**
-   * A task whose working copy is on a computer that runs work
-   * (docs/helper.md, "Its working copies"): what it holds unmerged there,
-   * null while nobody can tell, and its branch brought here before this
-   * Mac's own git reads it, in the repository it answers.
-   */
-  placed?: {
-    workStatus(taskId: string): Promise<{ dirty: boolean; unlandedCommits: number } | null>;
-    bringBranchHome(taskId: string): Promise<string | undefined>;
-  };
-  /** The personal workspace's running dot ends with the task. */
-  endLiveTask(taskId: string): void;
-  validateLocalStory?: (taskId: string) => Promise<string>;
-  mergePullRequest?: (
-    taskId: string,
-    guard?: MergeGuard,
-    boundary?: import("./changeMerge").MergeBoundary,
-  ) => Promise<PrOutcome>;
-  /**
-   * Merge one stored review (FI3-1543): a continuing merge, so the task
-   * stays open (INF-2490).
-   */
-  mergeReview?: (taskId: string, reviewId: string, guard?: MergeGuard) => Promise<PrOutcome>;
-  /** The requested merge's outcome reaches its still-open crewmate, including a kept merge. */
-  mergeContinued?: (taskId: string, review: MergeReview | undefined, result: SettleOutcome) => void;
-  closePullRequest?: (taskId: string) => Promise<PrOutcome>;
-  /** The pinned pull request by its number, for a kept approval's reconcile (FI3-304). */
-  readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
-  /**
-   * A kept approval read its undecided repair: the supervisor sees that one
-   * independent assessment decides it (FI3-663) - commissioned once, ended
-   * when it stopped or ran past its bound without answering.
-   */
-  assessRepair?: (taskId: string) => void;
-  /**
-   * A merge's project folder could not be brought up to date: the supervisor
-   * files the task that does it, or updates the one standing (INF-549).
-   */
-  fileFolderRepair?: (
-    merged: TaskRecord,
-    refusal: FolderRefreshRefusal & { reach?: string },
-  ) => { record: TaskRecord; filed: boolean } | undefined;
-  /**
-   * Work found the project's folder missing: the supervisor files the task
-   * that brings it back, or names the one standing, and answers the words
-   * refusing that work (INF-572).
-   */
-  folderMissing?: (repoId: string, noticed: FolderNoticed, by?: TaskRecord) => string;
-  /**
-   * An abandoned task's pull request could not be closed: the supervisor
-   * files the task that closes it, or names the one standing (INF-549's
-   * sibling).
-   */
-  filePullRepair?: (
-    abandoned: TaskRecord,
-    problem: string | undefined,
-  ) => { record: TaskRecord; filed: boolean } | undefined;
-  isPersonalTask(taskId: string): boolean;
-  deliverableOf(record: TaskRecord): Deliverable;
-  taskDelivery(taskId: string): RepoDelivery | undefined;
-  taskAutonomy(taskId: string): boolean;
-  resolveTaskRef(ref: string, param: string): TaskRecord;
-  notifyOp(wake: TypedWake, origin: ServedWakeOrigin, ref?: string): void;
-  pokeInbox(): void;
-  /** Any close may release a queued row waiting on the task (R1). */
-  sweepGates(now: number): Promise<unknown>;
-  broadcastCrewCounts(): void;
-  broadcastEvent: (event: FmEvent) => void;
-};
-
-/** Whether two tasks deliver through the same pull request or pushed branch. */
-function sameChange(left: TaskRecord, right: TaskRecord): boolean {
-  const a = left.delivery;
-  const b = right.delivery;
-  if (a?.prUrl && b?.prUrl) return a.prUrl === b.prUrl;
-  return (
-    left.repoId !== null &&
-    left.repoId === right.repoId &&
-    a?.prNumber !== undefined &&
-    a.prNumber === b?.prNumber
-  );
-}
-
 /**
- * A card that told the captain how the work came out: shaped as its outcome
- * (`answersByShape`), or a crewmate's card opening with a completion
- * story's headings, read from the markup as the card lint reads them.
+ * Settling and closing a task (the primitives review's P4 and P6,
+ * docs/task-record.md, docs/delivery-rigor.md): the one place a
+ * crewmate's work goes in (land, merge-pr), is thrown away (discard), or a
+ * task otherwise closes - its record, its lane and queued wakes in one
+ * transaction (`closeAndPurge`), its cards off the stack, its worktree
+ * retired with unlanded work saved first, and its delivery children after
+ * it.
+ *
+ * - One settle owns a task at a time, across cards, the shell and the
+ *   Firstmate's tools; a merge or land the captain asked for mid-turn is a
+ *   durable intent that waits for the turn's boundary.
+ * - Every refusal is structured (WI-12): the close gate, unlanded work, the
+ *   autonomy hold and a missing sign-in carry their ways out.
+ * - A settle the captain triggered always wakes the Firstmate with its
+ *   outcome; a Firstmate settle hears it as its tool result.
+ *
+ * The supervisor composes it and supplies the live runtimes and the task
+ * facts it reads through `SettleServiceHost`.
  */
-function toldOutcome(card: Card): boolean {
-  if (answersByShape(card)) return true;
-  if (card.author !== "crewmate") return false;
-  const headings = bodyHeadings(card.body);
-  return [COMPLETION_CARD_HEADINGS, TIERED_STORY_HEADINGS].some((outline) =>
-    outline.every((heading, index) => headings[index] === heading),
-  );
-}
-
-/**
- * A card that holds `settle_task answered`. A crewmate card still up is the
- * captain's to close. A Firstmate note stays through a done close, so it
- * does not hold it. A Firstmate card that still asks something would be
- * taken down by the close, so it holds it until he answers (FI3-1581).
- */
-function holdsAnswerClose(entry: Card, taskId: string): boolean {
-  if (entry.taskId !== taskId) return false;
-  const emitter = cardEmitter(entry.id, taskId);
-  if (emitter === "crewmate") return true;
-  return emitter === "firstmate" && entry.actions.length > 0;
-}
-
 export class SettleService {
-  /** Per-task exclusion, shared by card actions and conversational settles. */
-  private readonly settlingTasks = new Map<string, string>();
-  /** Durable settle intents waiting for the current crewmate turn to go idle. */
-  private readonly settleBoundaryWaiters = new Map<string, Set<() => void>>();
-
-  private readonly sentMerges = new Set<string>();
-  private readonly retirements = new Map<string, Promise<"removed" | "kept" | "none">>();
-  /**
-   * The first mate's closing sentence for a task it is closing now
-   * (INF-547): the one sentence the captain reads about started work that
-   * closed without their click. Only the first mate's own close tools set
-   * one, so a captain's click never carries it; the close that follows
-   * takes it (`takeClosingSentence`).
-   */
-  private readonly closingSentences = new Map<string, string>();
-
-  mergeWasSent(taskId: string): boolean {
-    return this.sentMerges.has(taskId);
-  }
-
-  constructor(private readonly host: SettleServiceHost) {}
-
-  /**
-   * Runs one of the first mate's settles with its closing sentence, which
-   * lasts only as long as that settle: the close it makes carries it.
-   */
-  async withClosingSentence<T>(
-    taskId: string,
-    sentence: string,
-    run: () => Promise<T>,
-  ): Promise<T> {
-    this.closingSentences.set(taskId, sentence);
-    try {
-      return await run();
-    } finally {
-      this.closingSentences.delete(taskId);
-    }
-  }
-
-  /**
-   * The first mate cancelled this task: its close comes when the turn it
-   * stopped ends (`closeRecord`), and carries the sentence then.
-   */
-  expectClosingSentence(taskId: string, sentence: string): void {
-    this.closingSentences.set(taskId, sentence);
-  }
-
-  /** A cancel that will not close the task after all leaves no sentence behind. */
-  forgetClosingSentence(taskId: string): void {
-    this.closingSentences.delete(taskId);
-  }
-
-  /** The sentence a close takes; never a captain's, whose click carries none. */
-  private takeClosingSentence(taskId: string, actor: TaskClose["actor"]): string | undefined {
-    const sentence = this.closingSentences.get(taskId);
-    if (sentence === undefined || actor === "captain") return undefined;
-    this.closingSentences.delete(taskId);
-    return sentence;
-  }
-
-  /**
-   * Where a close of started work puts what became of it (INF-1610's at
-   * most one closing note, docs/task-capture.md "How a message ends"). The
-   * captain's message the work covers decides, never the close's words:
-   * - the card that answers it, recorded or accepted, or up for them, is
-   *   revised with the outcome - the merge line on a merge - and a card
-   *   they already closed comes back only when the work was dropped after
-   *   all, by someone other than them;
-   * - other work of the message still running, or the task that took this
-   *   work over, keeps it quiet;
-   * - otherwise the first mate's sentence goes up as the app's one closing
-   *   note, marked as the answer.
-   * Work no message of the captain's covers - work the fleet started on
-   * its own - puts a note up only when code merged or was released, only
-   * when nothing of the task is still on their stack, and only when they
-   * never closed its story or completion card.
-   */
-  private placeOutcome(
-    record: TaskRecord,
-    reason: string,
-    actor: TaskClose["actor"],
-    sentence: string | undefined,
-  ): void {
-    const outcome = closedWithoutClick(reason);
-    if (!outcome || record.startedAt === null) return;
-    // Work the first mate declared the captain did not ask for raises
-    // nothing new on their stack (INF-1467): a card of its that is up still
-    // takes the outcome, and a message it served gets its answer from the
-    // first mate step.
-    const asked = this.host.askEnding.closingPlace(record.id);
-    const place: ClosingPlace =
-      !record.shape?.internal_step || asked.kind === "unasked"
-        ? asked
-        : asked.kind === "revise" && asked.open
-          ? asked
-          : { kind: "unasked" };
-    const answer =
-      place.kind === "revise"
-        ? place
-        : place.kind === "unasked" && place.card
-          ? { card: place.card, open: true }
-          : undefined;
-    if (answer) {
-      if (!answer.open && (outcome !== "dropped" || actor === "captain")) return;
-      if (answer.open && outcome !== "merged" && !sentence) return;
-      this.reviseAnswer(answer.card, answer.open, record, outcome, actor, sentence);
-      return;
-    }
-    if (!sentence || place.kind === "quiet") return;
-    const unasked = place.kind === "unasked";
-    if (unasked && outcome !== "merged" && outcome !== "released") return;
-    if (unasked && [...this.host.cards.values()].some((card) => card.taskId === record.id)) return;
-    // The captain already closed or chose on the task's story or completion
-    // card: that card was its one note, so no second note goes up beside it
-    // (INF-2461, the captain's pick on INF-2442).
-    if (unasked && this.host.cards.closedByCaptain(record.id).some(toldOutcome)) return;
-    const closed = this.host.tasks.get(record.id) ?? record;
-    const prUrl = closed.delivery?.prUrl;
-    const prNumber = closed.delivery?.prNumber;
-    const pullRequest =
-      outcome === "merged" && prUrl && prNumber !== undefined
-        ? `<p>Merged <a class="inf-mono" href="${escapeCardText(prUrl)}">PR #${prNumber}</a>.</p>`
-        : "";
-    this.host.cards.addFirstmateCard({
-      title: closingNoteTitle(record.key || record.id, outcome),
-      body: `<p>${escapeCardText(sentence)}</p>${pullRequest}`,
-      actions: [],
-      taskId: record.id,
-      ...(unasked ? {} : { answering: true }),
-    });
-  }
-
-  /**
-   * The card that answers the message, revised with what became of its
-   * work: on a merge the merge line - when, its pull request and the first
-   * mate's sentence (INF-1219) - else the close line. A card the captain
-   * closed comes back as a note, since what it offered is gone.
-   */
-  private reviseAnswer(
-    card: Card,
-    open: boolean,
-    record: TaskRecord,
-    outcome: ClosedWithoutClick,
-    actor: TaskClose["actor"],
-    sentence: string | undefined,
-  ): void {
-    const current = this.host.tasks.get(record.id) ?? record;
-    const delivery = current.delivery;
-    const label =
-      delivery?.prNumber !== undefined
-        ? `PR ${this.changeName(current, delivery.prNumber)}`
-        : delivery?.changeLabel;
-    const body =
-      outcome === "merged"
-        ? withMergeLine(
-            card.body,
-            mergedLine({
-              at: this.host.now(),
-              onItsOwn: actor !== "captain",
-              ...(label
-                ? { change: { label, ...(delivery?.prUrl ? { url: delivery.prUrl } : {}) } }
-                : {}),
-              ...(sentence ? { sentence } : {}),
-            }),
-          )
-        : withCloseLine(card.body, closedLine(record.key || record.id, outcome, sentence));
-    if (open) this.host.cards.reviseBody(card.id, body);
-    else {
-      // Raised again as it now stands: no wait of its last showing comes with it.
-      const { awaiting: _awaiting, ...shown } = card;
-      this.host.cards.put({ ...shown, body, actions: [] });
-    }
-  }
-
-  /** Where the task's project lives, in the person's words ("GitHub", "GitLab", a host's address). */
-  private placeOf(record: TaskRecord | undefined): string {
-    const repo = record?.repoId ? this.host.repos.get(record.repoId) : undefined;
-    return (
-      (repo?.host ? forgePlace({ kind: repo.host.kind, host: repo.host.name }) : null) ??
-      "the project's host"
-    );
-  }
-
-  /**
-   * The task's pull request by its number, in the host's own words: the
-   * label the forge recorded for it (`#N`, `!N`), else `#N`.
-   */
-  private changeName(record: TaskRecord | undefined, number: number): string {
-    const delivery = record?.delivery;
-    return delivery?.prNumber === number && delivery.changeLabel
-      ? delivery.changeLabel
-      : `#${number}`;
-  }
+  constructor(
+    private readonly host: SettleServiceHost,
+    private readonly locks: SettleLocks,
+    private readonly approvals: KeptApproval,
+    private readonly closing: TaskClosing,
+  ) {}
 
   private policiesOf(record: TaskRecord) {
     return effectiveTaskPolicies(
@@ -610,15 +121,15 @@ export class SettleService {
       if (!record || TaskService.isClosed(record)) return "the task closed";
       if (signature !== JSON.stringify(this.policiesOf(record)))
         return "its policies changed; recheck the current requirements before trying again";
-      if (this.working(taskId)) return "its crewmate is still working";
+      if (this.locks.working(taskId)) return "its crewmate is still working";
       if (this.host.deliverableOf(record) !== "change" || record.shape?.kind === "review")
         return `this work has no merge. ${fixedHoldWords("nothing-to-merge")}`;
       const destination = this.host.taskDelivery(taskId);
       if ((mode === "merge-pr") !== opensPullRequest(destination))
         return "the requested destination does not match its current delivery policy";
-      const gate = this.closeGateRefusal(taskId, mode, proceedWithOpen);
+      const gate = closeGateRefusal(this.host, taskId, mode, proceedWithOpen);
       if (gate) return gate.text;
-      const autonomy = this.autonomyRefusal(record, mode, actor);
+      const autonomy = autonomyRefusal(this.host, record, mode, actor);
       if (autonomy) return autonomy.text;
       // The version a version-long override is read at: the one being sent.
       const at = head ?? record.delivery?.headSha;
@@ -662,7 +173,7 @@ export class SettleService {
         )
           return `another decision or hold still needs attention. ${softHoldWords("decisions", "firstmate")}`;
       }
-      this.sentMerges.add(taskId);
+      this.locks.sentMerges.add(taskId);
       return undefined;
     };
   }
@@ -683,86 +194,12 @@ export class SettleService {
     }
   }
 
-  /** Whether the task's crewmate is mid-turn. */
-  private working(taskId: string): boolean {
-    const state = this.host.runtimeState(taskId);
-    return state !== undefined && state !== "idle";
-  }
-
-  /** Capture a merge/land intent and wait until the current turn is safely idle. */
-  private waitForSettleBoundary(taskId: string, intent: PendingSettleIntent): Promise<void> {
-    if (!this.working(taskId)) return Promise.resolve();
-    this.host.tasks.setPendingSettle(taskId, intent);
-    return new Promise((resolve) => {
-      const waiters = this.settleBoundaryWaiters.get(taskId) ?? new Set<() => void>();
-      waiters.add(resolve);
-      this.settleBoundaryWaiters.set(taskId, waiters);
-    });
-  }
-
-  releaseSettleBoundary(taskId: string): void {
-    const waiters = this.settleBoundaryWaiters.get(taskId);
-    if (!waiters) return;
-    this.settleBoundaryWaiters.delete(taskId);
-    for (const wake of waiters) wake();
-  }
-
-  /**
-   * The answer task's own close (Task B, captain F2 A). The captain's choice
-   * on the card its own crewmate emitted closes it `done/answered`: the
-   * deliverable was produced and he answered it, which is not the same as
-   * declining a decision the Firstmate raised. The close control never
-   * chooses or ends work. Only an ordinary note read or duplicate closure
-   * notifies its live author; only the ordinary read acknowledges a note.
-   * After that acknowledgement, the crewmate can report `finished` and the
-   * Firstmate can settle the answer task `answered`. A marked saved answer
-   * instead waits for explicit Done (`answer-done`), which receipts it and
-   * closes the answer task `done/answered` without a `card-closed` steer.
-   * Interrupt, cancel and `update_task drop` keep their own closes.
-   */
-  closeAnsweredTask(card: Card, action: string, by: "captain" | "firstmate" | "crewmate"): boolean {
-    const record = card.taskId ? this.host.tasks.get(card.taskId) : undefined;
-    if (!taskResultResponse(card, record, action, by) || !record || !card.taskId) return false;
-    const choice = card.actions.find((entry) => entry.id === action);
-    // A plain result choice is a receipt, never consent or a merge effect.
-    // Change tasks still wait for an explicit answered settle and a clean-work check.
-    if (choice && !choice.effect)
-      this.host.tasks.recordResultHandoff(record.id, { cardId: card.id, action });
-    if (this.host.deliverableOf(record) !== "answer") return false;
-    const text = !choice ? "marked answer Done" : `chose "${choice.label}"`;
-    // An invalid action never produces a closure-choice wake.
-    const handoff = choice ? this.answerTaskClosedPayload(record, card, choice) : undefined;
-    void this.closeTask(card.taskId, {
-      status: "done",
-      reason: "answered",
-      actor: "captain",
-      text,
-      ...(handoff ? { answerHandoff: handoff } : {}),
-    }).catch(() => {});
-    return true;
-  }
-
-  private answerTaskClosedPayload(
-    task: TaskRecord,
-    card: Card,
-    choice: Card["actions"][number],
-  ): AnswerTaskClosedPayload {
-    return {
-      version: 1,
-      event: "answer_task_closed",
-      task: { id: task.id, key: task.key, title: task.title },
-      card: { id: card.id, title: card.title },
-      choice: { id: choice.id, label: choice.label, effect: choice.effect ?? null },
-      close: { status: "done", reason: "answered", actor: "captain" },
-    };
-  }
-
   private async landTaskOnce(
     taskId: string,
     actor: "captain" | "firstmate",
     beforeDispatch?: (head?: string) => string | undefined,
   ): Promise<SettleOutcome> {
-    if (this.working(taskId)) {
+    if (this.locks.working(taskId)) {
       return {
         ok: false,
         text: "Cannot merge: the crewmate is still working; wait for its report or interrupt it first.",
@@ -817,7 +254,7 @@ export class SettleService {
         this.finishContinued(taskId, undefined, continued, actor);
         return continued;
       }
-      await this.closeTask(taskId, {
+      await this.closing.closeTask(taskId, {
         status: "done",
         reason: "landed",
         actor,
@@ -838,7 +275,7 @@ export class SettleService {
     guard?: MergeGuard,
     beforeDispatch?: (head: string) => string | undefined,
   ): Promise<SettleOutcome> {
-    if (this.working(taskId)) {
+    if (this.locks.working(taskId)) {
       return {
         ok: false,
         text: "Cannot merge yet: the crewmate is still working; wait for its report or interrupt it first.",
@@ -862,11 +299,9 @@ export class SettleService {
     if (!this.host.mergePullRequest) {
       // Named by where the project lives (git integration PR 1.3), never
       // assumed to be GitHub.
-      const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-      const place = repo?.host ? forgePlace({ kind: repo.host.kind, host: repo.host.name }) : null;
       return {
         ok: false,
-        text: `Cannot merge: ${place ?? "where the project lives"} is not reachable from here.`,
+        text: `Cannot merge: ${placeOf(this.host.repos, record, "where the project lives")} is not reachable from here.`,
       };
     }
     const result = await this.host.mergePullRequest(
@@ -877,12 +312,13 @@ export class SettleService {
         : undefined,
     );
     // The answer came: an attempt token has done its job, whatever it said.
-    if (guard && result.stop !== "outcome") this.patchStanding(taskId, { attempt: undefined });
+    if (guard && result.stop !== "outcome")
+      this.approvals.patchStanding(taskId, { attempt: undefined });
     if (!result.ok) {
       // The project's host needs the app's sign-in (git integration PR
       // 1.2): a typed refusal whose ways are the sign-in and keeping the
       // project on this Mac - the Firstmate carries them on one card.
-      const refusal = result.signIn ? this.notSignedInRefusal(record, result.signIn) : undefined;
+      const refusal = result.signIn ? notSignedInRefusal(record, result.signIn) : undefined;
       return {
         ok: false,
         text: refusal ? `Cannot merge: ${refusal.text}` : result.text,
@@ -893,7 +329,7 @@ export class SettleService {
         ...(refusal ? { refusal } : {}),
       };
     }
-    if (guard) this.consumeStanding(taskId, result.receipt);
+    if (guard) this.approvals.consumeStanding(taskId, result.receipt);
     // Something else on the task is still open (INF-2525): the merge went
     // through and the task stays, for its crewmate to judge what is next.
     const merged = record.delivery?.prNumber;
@@ -920,10 +356,7 @@ export class SettleService {
    * is open or could not be read. Undefined when nothing is, and the merge
    * may close the task.
    */
-  private async stillOpen(
-    record: TaskRecord,
-    merged: number | undefined,
-  ): Promise<string | undefined> {
+  async stillOpen(record: TaskRecord, merged: number | undefined): Promise<string | undefined> {
     const question = [...this.host.cards.values()].find(
       (card) => card.taskId === record.id && keepsTaskOpen(card),
     );
@@ -931,7 +364,7 @@ export class SettleService {
     if (merged === undefined) return undefined;
     const open = await this.otherOpenChange(record, merged);
     if (!open) return undefined;
-    return `${this.changeName(record, open.number)} on this task ${open.unread ? "could not be read, so it may still be open" : "is still open"}`;
+    return `${changeName(record, open.number)} on this task ${open.unread ? "could not be read, so it may still be open" : "is still open"}`;
   }
 
   /**
@@ -947,10 +380,10 @@ export class SettleService {
       !record ||
       TaskService.isClosed(record) ||
       !opensPullRequest(this.host.taskDelivery(taskId)) ||
-      this.settlingTasks.has(taskId)
+      this.locks.settlingTasks.has(taskId)
     )
       return false;
-    this.settlingTasks.set(taskId, "merge-pr");
+    this.locks.settlingTasks.set(taskId, "merge-pr");
     try {
       const pull = await this.mergedOutside(record);
       const current = this.host.tasks.get(taskId);
@@ -976,7 +409,7 @@ export class SettleService {
         other !== undefined ||
         completion?.prNumber !== pull.number ||
         completion.headSha !== pull.headSha ||
-        this.working(taskId) ||
+        this.locks.working(taskId) ||
         current.activity === "starting" ||
         current.activity === "running" ||
         current.activity === "interrupted" ||
@@ -987,18 +420,18 @@ export class SettleService {
         ) ||
         this.host.inbox.allFor(taskId).length > 0 ||
         this.host.inbox.inFlight(taskId).length > 0 ||
-        this.closeGateRefusal(taskId, "merge-pr", false)
+        closeGateRefusal(this.host, taskId, "merge-pr", false)
       ) {
         const once = `external-merge:${pull.number}:${pull.headSha}`;
         if (!this.host.inbox.woken(taskId, once)) {
           this.host.inbox.enqueueSteerOnce(taskId, {
             facts: {
               kind: "external-merge",
-              change: this.changeName(current, pull.number),
+              change: changeName(current, pull.number),
               head: pull.headSha,
               ...(other
                 ? {
-                    open: `${this.changeName(current, other.number)} on this task ${other.unread ? "could not be read, so it may still be open" : "is still open"}`,
+                    open: `${changeName(current, other.number)} on this task ${other.unread ? "could not be read, so it may still be open" : "is still open"}`,
                   }
                 : {}),
             },
@@ -1010,7 +443,7 @@ export class SettleService {
       await this.closeMergedOutside(taskId, "host", pull);
       return true;
     } finally {
-      this.settlingTasks.delete(taskId);
+      this.locks.settlingTasks.delete(taskId);
     }
   }
 
@@ -1046,7 +479,7 @@ export class SettleService {
    * Every pull request number the task's record keeps: its changes not yet
    * merged, its slot, its merge reviews and its completion offers.
    */
-  private pullNumbersOf(record: TaskRecord): Set<number> {
+  pullNumbersOf(record: TaskRecord): Set<number> {
     const numbers = new Set<number>();
     for (const change of this.host.tasks.changesFor(record.id))
       if (change.handle?.number !== undefined && change.receipt?.outcome !== "merged")
@@ -1064,7 +497,7 @@ export class SettleService {
    * or cannot be read where the project lives; undefined when every one
    * reads closed or merged. Without a way to read them, each one is unread.
    */
-  private async openChangeAmong(
+  async openChangeAmong(
     record: TaskRecord,
     except?: number,
   ): Promise<{ number: number; unread: boolean } | undefined> {
@@ -1089,7 +522,7 @@ export class SettleService {
     actor: TaskClose["actor"],
     pull: ForgePull,
   ): Promise<SettleOutcome> {
-    if (this.working(taskId)) {
+    if (this.locks.working(taskId)) {
       return {
         ok: false,
         text: "Cannot merge yet: the crewmate is still working; wait for its report or interrupt it first.",
@@ -1099,13 +532,9 @@ export class SettleService {
     if (!record) throw new Error(`Unknown task "${taskId}".`);
     return this.closeMerged(record, actor, {
       ok: true,
-      text: `${this.changeName(record, pull.number)} is already merged on ${this.placeOf(record)}.`,
-      line: `Merged ${this.changeName(record, pull.number)} on ${this.placeOf(record)}`,
-      receipt: {
-        head: pull.headSha,
-        ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
-        already: true,
-      },
+      text: `${changeName(record, pull.number)} is already merged on ${placeOf(this.host.repos, record)}.`,
+      line: `Merged ${changeName(record, pull.number)} on ${placeOf(this.host.repos, record)}`,
+      receipt: mergedReceipt(pull),
     });
   }
 
@@ -1116,7 +545,7 @@ export class SettleService {
     result: PrOutcome,
   ): Promise<SettleOutcome> {
     const taskId = record.id;
-    await this.closeTask(
+    await this.closing.closeTask(
       taskId,
       {
         status: "done",
@@ -1198,115 +627,18 @@ export class SettleService {
     return text;
   }
 
-  /**
-   * The captain's click on `request_merge`. Declaring the action merged
-   * nothing; this runs only from that click. It is a continuing merge
-   * (INF-2490): whichever change it names, the task keeps its working copy
-   * and its crewmate hears the outcome once. Only the completion card's
-   * settle merge, the finishing change, closes the task.
-   */
-  async requestMerge(
-    taskId: string,
-    reviewId: string,
-    unattended = false,
-  ): Promise<SettleOutcome & { continued?: boolean }> {
-    const refuse = (result: SettleOutcome): SettleOutcome => {
-      const review = this.host.tasks
-        .get(taskId)
-        ?.delivery?.mergeReviews?.find((item) => item.id === reviewId);
-      if (!unattended) this.host.mergeContinued?.(taskId, review, result);
-      return result;
-    };
-    if (this.settlingTasks.has(taskId)) {
-      return refuse({
-        ok: false,
-        text: "Cannot merge: another settle is already in progress.",
-        contention: true,
-      });
-    }
-    const record = this.host.tasks.get(taskId);
-    if (!record) return refuse({ ok: false, text: `Cannot merge: unknown task ${taskId}.` });
-    if (record.status === "done" || record.status === "dropped") {
-      return refuse({
-        ok: false,
-        text: `Cannot merge: task ${taskId} is already ${describeStatus(record)}.`,
-      });
-    }
-    if (!this.host.mergeReview) {
-      return refuse({
-        ok: false,
-        text: "Cannot merge: where the project lives is not reachable from here.",
-      });
-    }
-    const authorization = standingAuthorization(record.delivery);
-    const approved = authorization?.review?.id === reviewId ? authorization : undefined;
-    const review =
-      approved?.review ?? record.delivery?.mergeReviews?.find((item) => item.id === reviewId);
-    if (unattended && !approved)
-      return { ok: false, stop: "withdrawn", text: "The kept merge approval no longer stands." };
-    // The captain's click stays in view like a completion card's (INF-1275).
-    if (!unattended && review)
-      this.pendingMerge(
-        taskId,
-        `${settlingText("merge-pr", this.changeName(record, review.number), false)}.`,
-      );
-    this.settlingTasks.set(taskId, "merge-pr");
-    try {
-      const result = await this.host.mergeReview(
-        taskId,
-        reviewId,
-        approved ? this.guardOf(taskId, approved, unattended) : undefined,
-      );
-      if (!result.ok) {
-        const kept = approved ? this.afterAttempt(taskId, approved, result) : undefined;
-        const outcome = kept
-          ? {
-              ...result,
-              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, this.placeOf(record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery))}`,
-            }
-          : result;
-        if (!unattended) {
-          if (kept) this.pendingWait(taskId, kept.wait);
-          else
-            this.pendingMerge(taskId, settleFeedLine("merge-pr", result), {
-              title: MERGE_STOPPED_TITLE,
-              raise: false,
-            });
-        }
-        if (kept?.changed && unattended)
-          this.noteWait(taskId, record.title, kept.head, result, kept.wait);
-        else if (kept?.changed) {
-          this.settleLine(
-            taskId,
-            keptFeedLine(
-              kept.wait,
-              this.placeOf(record),
-              currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
-            ),
-          );
-        }
-        if (!unattended && review) this.host.mergeContinued?.(taskId, review, outcome);
-        return outcome;
-      }
-      this.finishContinued(taskId, review, result, "captain");
-      return { ...result, continued: true };
-    } finally {
-      this.settlingTasks.delete(taskId);
-    }
-  }
-
-  private finishContinued(
+  finishContinued(
     taskId: string,
     review: MergeReview | undefined,
     result: SettleOutcome,
     actor: TaskClose["actor"],
   ): void {
-    this.clearPendingMerge(taskId, "merged");
+    this.approvals.clearPendingMerge(taskId, "merged");
     // The merge has a result: a story note held for it shows now, once,
     // with the merged line and that the task continues (INF-2533).
     const record = this.host.tasks.get(taskId);
     const number = review?.number ?? record?.delivery?.prNumber;
-    const label = number !== undefined ? `PR ${this.changeName(record, number)}` : undefined;
+    const label = number !== undefined ? `PR ${changeName(record, number)}` : undefined;
     const url = review ? undefined : record?.delivery?.prUrl;
     this.host.cards.showHeld(taskId, (body) =>
       withMergeLine(
@@ -1327,9 +659,9 @@ export class SettleService {
           authorization?.review?.id === review.id &&
           candidateHead(authorization) === result.receipt?.head
         )
-          this.consumeStanding(taskId, result.receipt);
+          this.approvals.consumeStanding(taskId, result.receipt);
         else if (review && authorization?.review?.id === review.id)
-          this.endAuthorization(
+          this.approvals.endAuthorization(
             taskId,
             "invalidated",
             "the pull request merged at a different version",
@@ -1342,622 +674,6 @@ export class SettleService {
     );
     // The committed task note already reaches Activity through the task-event seam.
     this.host.mergeContinued?.(taskId, review, result);
-  }
-
-  /**
-   * What forbids this task's record from closing (WI-12): an open child (the
-   * parent close rule) or live work it waits on (the blocks rule), as a
-   * structured refusal whose ways the Firstmate turns into effect buttons. A
-   * discard abandons the work rather than completing it, so a wait on other
-   * work cannot forbid it - only containment can. `proceed_with_open` is the
-   * captain's leave to settle the task and keep its open children planned,
-   * and so is his recorded override on the open parts; his override on the
-   * waits passes a `blocks_me` promise.
-   */
-  private closeGateRefusal(
-    taskId: string,
-    mode: "merge-pr" | "land" | "discard",
-    proceedWithOpen: boolean,
-  ): SettleRefusal | undefined {
-    const delivery = this.host.tasks.get(taskId)?.delivery;
-    // The captain's override on the open parts is his leave to settle
-    // keeping them planned, the same as `proceed_with_open`.
-    if (!proceedWithOpen && !overridePasses(delivery, "parts", delivery?.headSha)) {
-      const children = this.host.tasks.closeRefusal(taskId);
-      if (children) {
-        const refusal = this.withProceedWay(children, taskId, mode);
-        return { ...refusal, text: `${refusal.text} ${softHoldWords("parts", "firstmate")}` };
-      }
-    }
-    if (mode === "discard") return undefined;
-    const waits = this.host.tasks.blockerRefusal(taskId);
-    return waits
-      ? { ...waits, text: `${waits.text} ${softHoldWords("waits", "firstmate")}` }
-      : waits;
-  }
-
-  /**
-   * The mode's `proceed_with_open` way, first (its default), on a children-open
-   * refusal. The refusal's own text already names "settle keeping them
-   * planned", so only the runnable way is added here.
-   */
-  private withProceedWay(
-    refusal: SettleRefusal,
-    taskId: string,
-    mode: "merge-pr" | "land" | "discard",
-  ): SettleRefusal {
-    const verb = mode === "discard" ? "Discard" : MERGE_WORDS[mode];
-    const them = refusal.tasks.length === 1 ? "it" : "them";
-    const way: SettleWay = {
-      label: `${verb}, keeping ${them} planned`,
-      tool: "settle_task",
-      args: { task_id: taskId, mode, proceed_with_open: true },
-    };
-    return { ...refusal, ways: [way, ...refusal.ways] };
-  }
-
-  /** A discard that would destroy unlanded work, as a structured refusal (WI-12). */
-  private unlandedWorkRefusal(
-    record: TaskRecord,
-    work: { dirty: boolean; unlandedCommits: number },
-  ): SettleRefusal {
-    const task = { id: record.id, key: record.key || record.id, title: record.title };
-    const keepMode = opensPullRequest(this.host.taskDelivery(record.id)) ? "merge-pr" : "land";
-    const ways: SettleWay[] = [
-      {
-        label: "Discard anyway",
-        tool: "settle_task",
-        args: { task_id: record.id, mode: "discard", confirm: true },
-      },
-      {
-        label: `${MERGE_WORDS[keepMode]} instead`,
-        tool: "settle_task",
-        args: { task_id: record.id, mode: keepMode },
-      },
-    ];
-    const text = unlandedWorkText(task, work, keepMode);
-    return { refused: "unlanded-work", task, tasks: [], ways, text };
-  }
-
-  /**
-   * A discard of a task whose working copy is on a computer that is out of
-   * reach: nobody can read what it holds. Its work still comes here before
-   * that computer deletes it, so confirming loses nothing.
-   */
-  private unreadableWorkRefusal(record: TaskRecord): SettleRefusal {
-    const task = { id: record.id, key: record.key || record.id, title: record.title };
-    const ways: SettleWay[] = [
-      {
-        label: "Discard anyway",
-        tool: "settle_task",
-        args: { task_id: record.id, mode: "discard", confirm: true },
-      },
-    ];
-    const text = `Cannot discard ${task.key} "${record.title}" without confirm: its working copy is on a computer that is out of reach, so nobody can tell whether it holds unmerged work. Its work comes to ${HERE.this} before that computer deletes its copy; discard with confirm to go ahead.`;
-    return { refused: "unlanded-work", task, tasks: [], ways, text };
-  }
-
-  /** The not-signed-in refusal on a task's settle, with the sign-in's two ways. */
-  private notSignedInRefusal(
-    record: TaskRecord,
-    fact: { host: string; name: string; repoId?: string },
-  ): SettleRefusal {
-    const refusal = signInRefusal({
-      ...fact,
-      context: `merging "${record.title}" needs the captain's ${fact.name} sign-in, or the project kept on ${HERE.this}.`,
-    });
-    return {
-      refused: "not-signed-in",
-      task: { id: record.id, key: record.key || record.id, title: record.title },
-      tasks: [],
-      ways: refusal.ways,
-      text: `${refusal.text} ${fixedHoldWords("sign-in")}`,
-    };
-  }
-
-  /**
-   * The autonomy hold, as a structured refusal (captain ruling 2026-09-20:
-   * "this should actually be the same - repo default, per-task ask
-   * allowed"). Autonomy off means a green result is the captain's call, and
-   * until now only the Firstmate's own prompt said so - a rule an
-   * instruction can lose, on the one move that cannot be taken back. So the
-   * HOST refuses it: a Firstmate merge or land on a task whose effective
-   * autonomy is off settles nothing.
-   *
-   * The captain is never refused: his click arrives as `actor: "captain"`,
-   * from the card's settle effect or the shell, and this rule does not read
-   * it. Autonomy off means the merge is his to make, so his click IS the
-   * way out - not a relay of it through the Firstmate, which is the move
-   * the hold exists to stop.
-   *
-   * The one way out is that click, so the refusal names the button it is
-   * already sitting on rather than a tool: the completion card's merge
-   * action, by card id and action id. With no such card open there is
-   * nothing to point at, and the text says whose card is owed instead.
-   */
-  private autonomyRefusal(
-    record: TaskRecord,
-    mode: "merge-pr" | "land",
-    actor: "captain" | "firstmate",
-  ): SettleRefusal | undefined {
-    if (actor === "captain") return undefined;
-    // His own words to the first mate are his consent too: an override on
-    // asking first lets the first mate's merge through.
-    if (overridePasses(record.delivery, "asks-first", record.delivery?.headSha)) return undefined;
-    // A withdrawn or outgrown merge approval holds the task for the captain
-    // whatever the project's autonomy says (FI3-304): only his new click
-    // merges it.
-    const hold = mergeHold(record.delivery);
-    if (!hold && this.host.taskAutonomy(record.id)) return undefined;
-    const task = { id: record.id, key: record.key || record.id, title: record.title };
-    const verb = mode === "merge-pr" ? "Merging the pull request for" : "Merging";
-    const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-    const standing = repo ? `${repo.name} asks before merging` : "this task has no repository";
-    const open = this.host.cards.openMergeAction(record.id);
-    const ways: SettleWay[] = open
-      ? [{ label: open.label, card: { id: open.cardId, action: open.actionId } }]
-      : [];
-    const pointer = open
-      ? `The completion card "${open.cardTitle}" is on the stack with its "${open.label}" button: that click is the merge, and it is the captain's to make. Nothing further is needed from you.`
-      : "The captain merges it from the crewmate's completion card; steer the crewmate to emit one if it has not.";
-    const why = hold
-      ? `the captain's merge approval ended because ${hold}, so the merge is theirs again`
-      : `autonomy is off for this task (${standing})`;
-    return {
-      refused: "autonomy-off",
-      task,
-      tasks: [],
-      ways,
-      text: `${verb} ${task.key} "${record.title}" is not yours to do: ${why}. ${pointer} ${softHoldWords("asks-first", "firstmate")}`,
-    };
-  }
-
-  /**
-   * settle_task carried_on (INF-1825): started work another task carries on
-   * closes done through it. The replaced-by link is written first, so the
-   * waits on this task move to that one (`TaskService.moveWaits`) before
-   * the close clears them; its unmerged commits are saved as every close
-   * saves them, and its own pull request is closed unless the other task
-   * carries that same pull request. No closing note goes up: the close's
-   * reason gives none (`closedWithoutClick`).
-   */
-  async closeCarriedOn(
-    taskRef: string,
-    carrierRef: string,
-  ): Promise<{ ok: boolean; text: string }> {
-    const record = this.host.resolveTaskRef(taskRef, "task_id");
-    const carrier = this.host.resolveTaskRef(carrierRef, "carried_by");
-    const handle = `${record.key || record.id} "${record.title}"`;
-    const other = carrier.key || carrier.id;
-    const refuse = (why: string) => ({
-      ok: false,
-      text: `Cannot close ${handle} as carried on by ${other}: ${why}`,
-    });
-    if (TaskService.isClosed(record)) return refuse(`it is already ${describeStatus(record)}.`);
-    const refusal = this.host.tasks.carrierRefusal(record.id, carrier.id);
-    if (refusal) return { ok: false, text: refusal };
-    const card = this.host.cards
-      .snapshot()
-      .find((entry) => entry.taskId === record.id && entry.actions.length > 0);
-    if (card)
-      return refuse(
-        `its card "${card.title}" still waits on the captain, and their choice there comes first.`,
-      );
-    const gate = this.host.tasks.closeRefusal(record.id);
-    if (gate) return refuse(gate.text);
-    const pending = this.settlingTasks.get(record.id);
-    if (pending) return refuse(`${pending} is already in progress. Wait for its outcome.`);
-    this.settlingTasks.set(record.id, "carried_on");
-    let pullRequest = "";
-    try {
-      this.host.tasks.link(record.id, carrier.id, "replaced-by", "firstmate");
-      const end = this.host.tasks.carrierOf(record.id);
-      const shared = [carrier, end].some((next) => next && sameChange(record, next));
-      if (!shared) pullRequest = (await this.closeOpenPullRequest(record.id)).text;
-      await this.closeTask(record.id, carriedOnClose(carrier, "firstmate"));
-    } finally {
-      this.settlingTasks.delete(record.id);
-    }
-    this.placeHeldOutcome(record.id);
-    return {
-      ok: true,
-      text: `Closed ${handle} as done: ${other} carries on its work.${pullRequest ? ` ${pullRequest}` : ""}`,
-    };
-  }
-
-  /**
-   * The outcome of a carrier that closed before the work it carries on
-   * (INF-1825): the old task's message held it back while that task was
-   * open, and the old task's close puts up nothing of its own, so the
-   * carrier's outcome is placed once, where it would have gone.
-   */
-  private placeHeldOutcome(oldId: string): void {
-    const carrier = this.host.tasks.carrierOf(oldId);
-    if (!carrier || carrier.id === oldId || !TaskService.isClosed(carrier)) return;
-    if (!carrier.closedReason) return;
-    const chain = this.host.askEnding.chainsOf(carrier.id)[0];
-    if (!chain?.work.some((task) => task.id === oldId)) return;
-    const close = this.host.tasks
-      .timeline(carrier.id)
-      .findLast(
-        (event) =>
-          event.data?.status === carrier.status && event.data?.reason === carrier.closedReason,
-      );
-    if (!close) return;
-    const sentence =
-      typeof close.data?.closingSentence === "string" ? close.data.closingSentence : undefined;
-    const actor = close.actor === "captain" || close.actor === "firstmate" ? close.actor : "host";
-    this.placeOutcome(carrier, carrier.closedReason, actor, sentence);
-  }
-
-  /**
-   * settle_task mode `answered`: the one path besides the captain's own that
-   * closes an ANSWER task (the Task B rule, revised by the captain's call C
-   * of 2026-09-24). Whether a task is the Firstmate's own internal step or
-   * something the captain asked for is the Firstmate's judgment, taught by
-   * its instructions and declared when it creates the task
-   * (`internal_step`); the host infers nothing and only honours that
-   * declaration. An idle answer task declared as a step, whose answer a live
-   * task has taken as its basis - planned or started - has done its job: its
-   * report and card carry on in that task's brief. So has a step a live task
-   * waits on through a blocks link (FI3-422): it was run for that task, and
-   * its close as done is what clears the wait. It closes `done/answered`
-   * with one feed line naming where the answer went, never as a discard.
-   * An answer the captain asked for closes here too once its crewmate's
-   * report declared it finished - he closed its card and nothing is left
-   * (FI3-435) - with nothing built on it required. So does a step whose
-   * crewmate reported its answer when no task builds on it (INF-1137): the
-   * first mate passed the answer on by a steer, and a finished answer is
-   * never closed as a discard.
-   * A verified result receipt also lets the first mate finish reported idle
-   * work not declared internal, including file-producing change tasks, after
-   * checking that no unmerged work or proposed change would be bypassed.
-   * Refused, as text, on a change without that receipt, one neither declared
-   * a step nor declared finished nor holding a receipt, one still working or never started, a
-   * step that reported nothing and no live task builds on or waits on, one
-   * whose own answer card is still waiting on the captain - his choice is
-   * that card's close -
-   * and one whose Firstmate card still asks him something, because the
-   * close would take that question down. A Firstmate note stays up.
-   */
-  async closeAnswerUsedAsBasis(taskRef: string): Promise<{ ok: boolean; text: string }> {
-    const record = this.host.resolveTaskRef(taskRef, "task_id");
-    const handle = `${record.key || record.id} "${record.title}"`;
-    const refuse = (why: string) => ({
-      ok: false,
-      text: `Cannot close ${handle} as answered: ${why}`,
-    });
-    if (record.kind !== "work") return refuse("it is not crew work.");
-    if (TaskService.isClosed(record)) {
-      return refuse(`it is already ${describeStatus(record)}.`);
-    }
-    if (this.host.deliverableOf(record) === "operation")
-      return refuse(
-        "it delivers an effect, not an answer - verify it and close it finished with completion_evidence.",
-      );
-    const handedOn = this.host.tasks.resultHandoffOf(record.id);
-    const change = this.host.deliverableOf(record) !== "answer";
-    if (change && !handedOn) {
-      return refuse(
-        "it delivers a change, not an answer - merge it, land it, or discard it instead.",
-      );
-    }
-    const finished = record.delivery?.finishedAt !== undefined;
-    if (!record.shape?.internal_step && !finished && !handedOn) {
-      return refuse(
-        "it was not opened as an internal step of yours - the captain asked for this answer, so it closes on their choice or Done on its marked note, or once its crewmate reports it finished after their explicit acknowledgement. Putting the card away is not that acknowledgement.",
-      );
-    }
-    if (record.status !== "active" || this.working(record.id)) {
-      return refuse(
-        record.status === "open"
-          ? "it has not run yet, so there is no answer to close on."
-          : "its crewmate is still working; wait for its report.",
-      );
-    }
-    if (record.activity && record.activity !== "idle") {
-      return refuse("its crewmate is still working; wait for its report.");
-    }
-    if (handedOn) {
-      if (!record.outcome?.trim()) return refuse("its crewmate has not reported the result yet.");
-      if (record.delivery?.prUrl || record.delivery?.prNumber || record.delivery?.changeLabel)
-        return refuse("it has its own pull request; use its delivery path instead.");
-      const gate =
-        this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
-      if (gate) return refuse(gate.text);
-      if (record.worktreeDir || record.branch || record.deviceId) {
-        const work = await (record.deviceId
-          ? (this.host.placed?.workStatus(record.id) ?? Promise.resolve(null))
-          : this.host.workspace.taskWorkStatus(workspaceOf(record), { strict: true })
-        ).catch(() => null);
-        if (!work) return refuse("its working copy could not be checked; keep the task open.");
-        if (work.dirty || work.unlandedCommits > 0)
-          return refuse(
-            "its working copy has uncommitted edits or unmerged commits; use its delivery path instead.",
-          );
-        const current = this.host.tasks.get(record.id);
-        if (
-          current?.status !== "active" ||
-          current.activity !== "idle" ||
-          this.working(record.id) ||
-          current.updatedAt !== record.updatedAt
-        )
-          return refuse(
-            "its work changed during the check; read its latest report before closing it.",
-          );
-      }
-    }
-    const builtOn = this.host.tasks
-      .listLive()
-      .filter((task) => task.id !== record.id && task.shape?.basis)
-      .find((task) => this.host.tasks.resolve(task.shape?.basis ?? "")?.id === record.id);
-    // A live task that waits on it through a blocks link is the other place
-    // its answer goes on (FI3-422): the step was run for that task, and
-    // closing it done is what clears the wait.
-    const waitedOnBy = builtOn
-      ? undefined
-      : this.host.tasks.blocking(record.id).find((task) => !TaskService.isClosed(task));
-    const carriedBy = builtOn ?? waitedOnBy;
-    // A step whose crewmate reported its answer has done its job even when
-    // no task builds on it: the first mate passed the answer on itself, by a
-    // steer (INF-1137). Without a report there is nothing to close on.
-    const reported = record.outcome !== null;
-    if (!carriedBy && !finished && !reported) {
-      return refuse(
-        `its crewmate has reported no answer yet, and no planned or started task names it as its basis or waits on it. Wait for its report, or start or plan the step that builds on it with basis ${record.key || record.id}.`,
-      );
-    }
-    const card = this.host.cards.snapshot().find((entry) => holdsAnswerClose(entry, record.id));
-    if (card) {
-      return refuse(
-        cardEmitter(card.id, record.id) === "crewmate"
-          ? `its answer card "${card.title}" is waiting on the captain, and their choice there is its close.`
-          : `its card "${card.title}" still asks the captain something, and closing now would take it down before they have answered it.`,
-      );
-    }
-    if (handedOn) {
-      const gate =
-        this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
-      if (gate) return refuse(gate.text);
-      if (
-        this.host.hasRunningJobs?.(record.id) ||
-        this.host.inbox.allFor(record.id).length ||
-        this.host.inbox.inFlight(record.id).length ||
-        record.delivery?.checkBack ||
-        record.pendingSettle
-      )
-        return refuse("work or guidance is still outstanding; let its crewmate finish first.");
-      await this.closeTask(record.id, {
-        status: "done",
-        reason: "answered",
-        actor: "firstmate",
-        text: "answered - its reported result was handed on",
-        data: { handedOn: true },
-      });
-      return { ok: true, text: `Closed ${handle} as answered: its reported result was handed on.` };
-    }
-    if (!carriedBy && finished) {
-      await this.closeTask(record.id, {
-        status: "done",
-        reason: "answered",
-        actor: "firstmate",
-        text: "answered - the captain read it and its crewmate finished",
-      });
-      return { ok: true, text: `Closed ${handle} as answered: the captain has read it.` };
-    }
-    if (!carriedBy) {
-      await this.closeTask(record.id, {
-        status: "done",
-        reason: "answered",
-        actor: "firstmate",
-        text: "answered - its crewmate reported the answer",
-        data: { reported: true },
-      });
-      return { ok: true, text: `Closed ${handle} as answered: its crewmate reported the answer.` };
-    }
-    const successor = `${carriedBy.key || carriedBy.id} "${carriedBy.title}"`;
-    await this.closeTask(record.id, {
-      status: "done",
-      reason: "answered",
-      actor: "firstmate",
-      text: `answered - its answer carries on in ${successor}`,
-      data: builtOn ? { basisOf: builtOn.id } : { waitedOnBy: carriedBy.id },
-    });
-    return {
-      ok: true,
-      text: `Closed ${handle} as answered: its answer carries on in ${successor}.`,
-    };
-  }
-
-  /**
-   * INF-1279 and INF-1430: the first mate declares verified operational
-   * success, including legacy folder work and a personal workspace build
-   * (INF-1677). Evidence is its judgment, not
-   * a host interpretation of prose. Never inspect, commit or merge as proof;
-   * the ordinary close owner retires a scratch copy and leaves a folder alone.
-   */
-  async closeFinishedFolderWork(
-    taskRef: string,
-    completionEvidence: string,
-  ): Promise<{ text: string; refusal?: SettleRefusal }> {
-    const record = this.host.resolveTaskRef(taskRef, "task_id");
-    const handle = `${record.key || record.id} "${record.title}"`;
-    const refuse = (why: string) => ({ text: `Cannot close ${handle} as finished: ${why}` });
-    if (this.settlingTasks.has(record.id) || record.pendingSettle)
-      return refuse("another settle is already in progress.");
-    // The personal workspace builds in place too (INF-1677): the host
-    // commits each turn, so its finished work closes here like folder work.
-    const personal = this.host.isPersonalTask(record.id);
-    if (
-      record.kind !== "work" ||
-      !(
-        this.host.deliverableOf(record) === "operation" ||
-        (this.host.deliverableOf(record) === "change" &&
-          (personal || isFolderWork(record.shape?.in_place)))
-      )
-    )
-      return refuse(
-        "this mode is for an operation or work built in place, not an answer or a change to merge.",
-      );
-    if (
-      this.host.deliverableOf(record) !== "operation" &&
-      (record.worktreeDir || record.branch || record.deviceId)
-    )
-      return refuse(
-        "this task has a working copy or branch of its own; use its delivery path instead.",
-      );
-    if (record.status !== "active" || record.activity !== "idle" || this.working(record.id))
-      return refuse("wait for its crewmate to finish and report first.");
-    if (!record.outcome?.trim()) return refuse("its crewmate has not reported the result yet.");
-    const evidence = completionEvidence.trim();
-    if (!evidence) return refuse("name the completed result and the evidence that verifies it.");
-    if (record.delivery?.prUrl || record.delivery?.prNumber || record.delivery?.changeLabel)
-      return refuse("this task has its own pull request; use its delivery path instead.");
-    if (
-      this.host.hasRunningJobs?.(record.id) ||
-      record.delivery?.checkBack ||
-      this.host.inbox.allFor(record.id).length ||
-      this.host.inbox.inFlight(record.id).length
-    )
-      return refuse("work or guidance is still outstanding; let its crewmate finish it first.");
-    if (
-      !overridePasses(record.delivery, "decisions", record.delivery?.headSha) &&
-      (record.gate ||
-        record.delivery?.captainWait ||
-        this.host.cards.snapshot().some((card) => card.taskId === record.id && card.actions.length))
-    )
-      return refuse(
-        `another decision or hold still needs attention. ${softHoldWords("decisions", "firstmate")}`,
-      );
-    const gate =
-      this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
-    if (gate) return { text: gate.text, refusal: gate };
-    this.settlingTasks.set(record.id, "finished");
-    try {
-      // All reads above are synchronous. Commit before stopping can yield,
-      // so newly arriving guidance sees a closed task rather than being lost.
-      await this.closeTask(
-        record.id,
-        {
-          status: "done",
-          reason: "finished",
-          actor: "firstmate",
-          text: `finished: ${evidence}`,
-          data: { completionEvidence: evidence },
-          ...(personal ? { delivery: { mode: "in-place" as const } } : {}),
-        },
-        { recordBeforeStop: true },
-      );
-      return { text: `Closed ${handle} as finished: ${evidence}` };
-    } finally {
-      this.settlingTasks.delete(record.id);
-    }
-  }
-
-  /**
-   * Close work already delivered by an independent release process. This is
-   * an explicit Firstmate declaration backed by a specific verified release,
-   * not an inference from a missing proposed change or a dismissed card.
-   * Refuse local work that could be lost; the ordinary put-in/discard paths
-   * remain available for it. No forge merge or PR close is attempted here.
-   */
-  async closeExternallyReleased(
-    taskRef: string,
-    releaseEvidence: string,
-  ): Promise<{ text: string; refusal?: SettleRefusal }> {
-    const record = this.host.resolveTaskRef(taskRef, "task_id");
-    const handle = `${record.key || record.id} "${record.title}"`;
-    const refuse = (why: string) => ({ text: `Cannot close ${handle} as released: ${why}` });
-    if (this.settlingTasks.has(record.id) || record.pendingSettle)
-      return refuse("another settle is already in progress.");
-    if (record.kind !== "work" || this.host.deliverableOf(record) !== "change")
-      return refuse("this is not a work task delivering a change.");
-    if (this.host.isPersonalTask(record.id))
-      return refuse("the personal workspace builds in place and closes from its report.");
-    if (record.status !== "active" || record.activity !== "idle" || this.working(record.id))
-      return refuse("wait for its crewmate to finish and report first.");
-    if (!record.outcome) return refuse("its crewmate has not reported the result yet.");
-    const evidence = releaseEvidence.trim();
-    if (!evidence)
-      return refuse("name the release and the evidence that its delivery was verified.");
-    // A pull request of its own does not stop a release close: one closed
-    // without merging, its work delivered by another merged pull request or
-    // a release, is the case this close is for. Only one that may still be
-    // open does - it reads open, or cannot be read (INF-2628).
-    if (
-      this.pullNumbersOf(record).size === 0 &&
-      (record.delivery?.prUrl || record.delivery?.changeLabel)
-    )
-      return refuse(
-        "its pull request could not be read, so it may still be open; check it where the project lives before closing the task.",
-      );
-    if ((!record.deviceId && !record.worktreeDir) || record.workspaceState !== "present")
-      return refuse("its working copy is unavailable; check the work before closing it.");
-    const gate =
-      this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
-    if (gate) return { text: gate.text, refusal: gate };
-    this.settlingTasks.set(record.id, "external release");
-    try {
-      const pulls = [...this.pullNumbersOf(record)].sort((a, b) => a - b);
-      const open = await this.openChangeAmong(record);
-      if (open)
-        return refuse(
-          open.unread
-            ? `${this.changeName(record, open.number)} could not be read, so it may still be open; close or merge it first, or try again once it reads.`
-            : `${this.changeName(record, open.number)} is still open; close or merge it first.`,
-        );
-      // Read the working copy where the task ran, just as discard does.
-      // A missing computer or working copy is not proof of released work.
-      const work = await (record.deviceId
-        ? (this.host.placed?.workStatus(record.id) ?? Promise.resolve(null))
-        : this.host.workspace.taskWorkStatus(workspaceOf(record), { strict: true })
-      ).catch((caught) => {
-        const message = caught instanceof Error ? caught.message : String(caught);
-        return { inspectionFailure: message };
-      });
-      if (!work)
-        return refuse("its working copy is unavailable; check the work before closing it.");
-      if ("inspectionFailure" in work)
-        return refuse(`the working copy could not be checked: ${work.inspectionFailure}`);
-      // Commits that history alone calls unmerged - a squash merge's
-      // originals, or a closed pull request's - do not refuse: the close
-      // saves them on the task's kept ref before the working copy goes.
-      // Uncommitted edits are no delivered work, so they still refuse.
-      if (work.dirty)
-        return refuse(
-          "its working copy has uncommitted edits. Commit them or resolve them before closing it.",
-        );
-      // Recheck after the asynchronous work read: a concurrent turn may have
-      // started or a card may have placed a new gate in the meantime.
-      const current = this.host.tasks.get(record.id);
-      if (
-        this.working(record.id) ||
-        current?.status !== "active" ||
-        current.activity !== "idle" ||
-        current.pendingSettle ||
-        current.deviceId !== record.deviceId ||
-        current.worktreeDir !== record.worktreeDir ||
-        current.workspaceState !== "present" ||
-        [...this.pullNumbersOf(current)].sort((a, b) => a - b).join() !== pulls.join() ||
-        (pulls.length === 0 && (current.delivery?.prUrl || current.delivery?.changeLabel))
-      )
-        return refuse("its state changed while the working copy was checked; try again.");
-      const newGate =
-        this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
-      if (newGate) return { text: newGate.text, refusal: newGate };
-      await this.closeTask(record.id, {
-        status: "done",
-        reason: "released",
-        actor: "firstmate",
-        text: `released outside this task: ${evidence}`,
-        data: { releaseEvidence: evidence },
-        // No new fact, but the close still records the posture it ends under.
-        delivery: {},
-      });
-      return { text: `Closed ${handle} as released outside this task: ${evidence}.` };
-    } finally {
-      this.settlingTasks.delete(record.id);
-    }
   }
 
   /**
@@ -2033,7 +749,7 @@ export class SettleService {
   }
 
   /** Same as settleTask, with the ok/refused distinction a card retry needs. */
-  private async settleTaskGuarded(
+  async settleTaskGuarded(
     taskId: string,
     mode: "merge-pr" | "land" | "discard",
     confirm: boolean | undefined,
@@ -2041,7 +757,7 @@ export class SettleService {
     proceedWithOpen = false,
     guard?: MergeGuard,
   ): Promise<SettleOutcome> {
-    const pending = this.settlingTasks.get(taskId);
+    const pending = this.locks.settlingTasks.get(taskId);
     if (pending) {
       return {
         ok: false,
@@ -2085,7 +801,7 @@ export class SettleService {
     }
     // One owner across cards, the shell, and conversational tools. Claim
     // before the first await, and retain it through worktree cleanup.
-    this.settlingTasks.set(taskId, mode);
+    this.locks.settlingTasks.set(taskId, mode);
     const boundary =
       mode === "discard" ? undefined : this.mergeBoundary(taskId, mode, actor, proceedWithOpen);
     try {
@@ -2097,7 +813,7 @@ export class SettleService {
           destination && !hostedPresentation(destination)
             ? readyPresentation(presentation)
             : undefined;
-        await this.waitForSettleBoundary(
+        await this.locks.waitForSettleBoundary(
           taskId,
           existing ?? {
             mode,
@@ -2122,8 +838,8 @@ export class SettleService {
         const record = this.host.tasks.get(taskId);
         if (record?.pendingSettle) this.host.tasks.setPendingSettle(taskId, null);
       }
-      this.settlingTasks.delete(taskId);
-      this.sentMerges.delete(taskId);
+      this.locks.settlingTasks.delete(taskId);
+      this.locks.sentMerges.delete(taskId);
     }
   }
 
@@ -2143,7 +859,7 @@ export class SettleService {
     }
     // The close rules (P2): every settle mode closes the record. A structured
     // refusal carries its ways out (WI-12); the prose still leads the result.
-    const gateRefusal = this.closeGateRefusal(taskId, mode, proceedWithOpen);
+    const gateRefusal = closeGateRefusal(this.host, taskId, mode, proceedWithOpen);
     if (gateRefusal) {
       const prefix = mode === "discard" ? "" : "Cannot merge: ";
       // A held merge reads in plain words on the feed, with no tool names.
@@ -2169,7 +885,7 @@ export class SettleService {
       if (pull && stillOpen !== undefined) {
         return {
           ok: false,
-          text: `Cannot close as merged: ${this.changeName(record, pull.number)} is merged, and ${stillOpen}. The task closes as merged once nothing else on it is open; its crewmate judges what comes next.`,
+          text: `Cannot close as merged: ${changeName(record, pull.number)} is merged, and ${stillOpen}. The task closes as merged once nothing else on it is open; its crewmate judges what comes next.`,
           plain: "something else on the task is still open",
         };
       }
@@ -2177,7 +893,7 @@ export class SettleService {
     }
     if (mode === "merge-pr" || mode === "land") {
       // The autonomy hold, before anything merges or lands.
-      const held = this.autonomyRefusal(record, mode, actor);
+      const held = autonomyRefusal(this.host, record, mode, actor);
       if (held) return { ok: false, text: held.text, refusal: held };
     }
     if (mode === "merge-pr") {
@@ -2196,7 +912,7 @@ export class SettleService {
         text: `Task ${taskId} "${record.title}" is already ${describeStatus(record)}; there is nothing to discard.`,
       };
     }
-    if (this.working(taskId) && !confirm) {
+    if (this.locks.working(taskId) && !confirm) {
       return {
         ok: false,
         text: `Cannot discard task ${taskId} "${record.title}" while it is still working. Interrupt it first, or pass confirm true after the captain chooses.`,
@@ -2206,85 +922,26 @@ export class SettleService {
     // copy; while it is out of reach nobody can say it holds nothing.
     const work = record.deviceId
       ? await (this.host.placed?.workStatus(taskId) ?? Promise.resolve(null))
-      : await this.host.workspace
-          .taskWorkStatus({
-            taskId,
-            cwd: record.worktreeDir,
-            branch: record.branch,
-            repoDir: record.repoDir,
-          })
-          .catch(() => ({ dirty: false, unlandedCommits: 0 }));
+      : await this.host.workspace.taskWorkStatus(workspaceOf(record));
     if (!work && !confirm && record.workspaceState === "present") {
-      const refusal = this.unreadableWorkRefusal(record);
+      const refusal = unreadableWorkRefusal(record);
       return { ok: false, text: refusal.text, refusal };
     }
     if (work && (work.dirty || work.unlandedCommits > 0) && !confirm) {
-      const refusal = this.unlandedWorkRefusal(record, work);
+      const refusal = unlandedWorkRefusal(this.host, record, work);
       return { ok: false, text: refusal.text, refusal };
     }
-    const prResult = await this.closeOpenPullRequest(taskId, { line: actor === "firstmate" });
+    const prResult = await this.closing.closeOpenPullRequest(taskId, {
+      line: actor === "firstmate",
+    });
     const problem = prResult.problem;
-    await this.closeTask(taskId, { status: "dropped", reason: "discarded", actor });
+    await this.closing.closeTask(taskId, { status: "dropped", reason: "discarded", actor });
     return {
       ok: true,
       text: discardedText(prResult.text),
       ...(problem ? { problem } : {}),
       ...(prResult.repair ? { followup: prResult.repair } : {}),
     };
-  }
-
-  /**
-   * Best effort for every abandoned attempt; never prevent local cleanup.
-   * A pull request it could not close is not left with nobody on it
-   * (INF-549's sibling): the host files the task that closes it, and the
-   * note says so - on the feed too, unless the captain's own click already
-   * puts the outcome there (`line`).
-   */
-  async closeOpenPullRequest(
-    taskId: string,
-    options: { line?: boolean } = {},
-  ): Promise<PrOutcome & { repair?: string }> {
-    if (!opensPullRequest(this.host.taskDelivery(taskId)) || !this.host.closePullRequest) {
-      return { ok: true, text: "" };
-    }
-    const result = await this.host.closePullRequest(taskId).catch((caught): PrOutcome => {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      return { ok: false, text: `Could not close its PR: ${message}`, problem: message };
-    });
-    const record = this.host.tasks.get(taskId);
-    let repair: { record: TaskRecord; filed: boolean } | undefined;
-    if (!result.ok && record?.delivery?.prNumber !== undefined) {
-      try {
-        repair = this.host.filePullRepair?.(record, result.problem);
-      } catch (caught) {
-        console.warn("[settle] the pull request repair could not be filed:", caught);
-      }
-    }
-    const said = repair
-      ? pullLeftOpenText({ key: repair.record.key || repair.record.id, filed: repair.filed })
-      : undefined;
-    const text = said ? `${result.text} ${said}` : result.text;
-    // The record's line says what it means; the raw words ride its data
-    // and the tool's answer, as every settle failure's do.
-    const line = said
-      ? `Its pull request is still open where the project lives: ${plainProblem(result.problem ?? result.text)}. ${said}`
-      : text;
-    if (line && record) {
-      this.host.tasks.note(taskId, line, {
-        news: true,
-        ...(repair && options.line !== false ? { feed: true } : {}),
-        ...(result.problem || repair
-          ? {
-              data: {
-                ...(result.problem ? { problem: result.problem } : {}),
-                ...(repair ? { feedLine: true, pullRepair: repair.record.id } : {}),
-              },
-            }
-          : {}),
-        ...(repair ? { about: [repair.record.id] } : {}),
-      });
-    }
-    return { ...result, text, ...(said ? { repair: said } : {}) };
   }
 
   /**
@@ -2306,14 +963,14 @@ export class SettleService {
   ): Promise<void> {
     const record = this.host.tasks.get(taskId);
     const title = record?.title ?? taskId;
-    if (!this.settlingTasks.has(taskId) && record) {
-      const waitsForTurn = (mode === "merge-pr" || mode === "land") && this.working(taskId);
+    if (!this.locks.settlingTasks.has(taskId) && record) {
+      const waitsForTurn = (mode === "merge-pr" || mode === "land") && this.locks.working(taskId);
       const number = record.delivery?.prNumber;
       const change =
-        mode === "merge-pr" && number !== undefined ? this.changeName(record, number) : undefined;
+        mode === "merge-pr" && number !== undefined ? changeName(record, number) : undefined;
       this.settleLine(taskId, settlingText(mode, change, waitsForTurn));
       if (mode !== "discard")
-        this.pendingMerge(taskId, `${settlingText(mode, change, waitsForTurn)}.`);
+        this.approvals.pendingMerge(taskId, `${settlingText(mode, change, waitsForTurn)}.`);
     }
     // The click's own approval, minted with its card resolution (FI3-304):
     // this attempt merges only the head that approval covers.
@@ -2321,7 +978,7 @@ export class SettleService {
       mode === "merge-pr"
         ? standingAuthorization(this.host.tasks.get(taskId)?.delivery)
         : undefined;
-    if (authorization) await this.storeApprovalReading(taskId, authorization);
+    if (authorization) await this.approvals.storeApprovalReading(taskId, authorization);
     let result: SettleOutcome;
     try {
       result = await this.settleTaskGuarded(
@@ -2330,7 +987,7 @@ export class SettleService {
         confirm,
         "captain",
         proceedWithOpen ?? authorization?.proceedWithOpen ?? false,
-        authorization ? this.guardOf(taskId, authorization, false) : undefined,
+        authorization ? this.approvals.guardOf(taskId, authorization, false) : undefined,
       );
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -2343,9 +1000,11 @@ export class SettleService {
     // A refusal that is not a verdict on the approved work does not spend
     // the captain's click: his approval stands on the task and the host
     // runs it once the gates pass (FI3-304).
-    const kept = authorization ? this.afterAttempt(taskId, authorization, result) : undefined;
+    const kept = authorization
+      ? this.approvals.afterAttempt(taskId, authorization, result)
+      : undefined;
     if (kept) {
-      const place = this.placeOf(this.host.tasks.get(taskId));
+      const place = placeOf(this.host.repos, this.host.tasks.get(taskId));
       result = {
         ...result,
         text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery))}`,
@@ -2355,803 +1014,11 @@ export class SettleService {
   }
 
   /**
-   * Mint the captain's merge approval for the offer he clicked (FI3-304),
-   * inside the card resolution's transaction and before any work starts.
-   * It is minted only on a pull request task (direct-pr or queue-pr) on
-   * GitHub or GitLab, for an offer the host published after its checks
-   * passed at a known head, on the pull request the task still names;
-   * anything else - a seeded or Firstmate card, an offer with no baseline,
-   * a plain Git host - approves no head and the click is one attempt, as
-   * before. A standing approval the click
-   * replaces is superseded either way.
-   */
-  authorizeMerge(
-    taskId: string,
-    approval: MergeApproval,
-    proceedWithOpen: boolean,
-    reviewId?: string,
-  ): void {
-    const record = this.host.tasks.get(taskId);
-    if (!record || TaskService.isClosed(record)) return;
-    const now = this.host.now();
-    const previous = record.delivery?.mergeAuthorization;
-    const generation = (previous?.generation ?? 0) + 1;
-    const minted = this.mint(record, approval, proceedWithOpen, generation, now, reviewId);
-    if (minted) {
-      // The approved review is the task's current change from the click on (INF-2490).
-      const own = minted.review?.branch === record.branch;
-      this.host.tasks.recordPermissionRecords(taskId, {
-        mergeAuthorization: minted,
-        ...(minted.review && !own ? { checkTarget: minted.review } : {}),
-      });
-      if (minted.review && own) this.host.tasks.selectOwnChange(taskId, minted.review);
-      this.host.tasks.note(
-        taskId,
-        `The captain approved merging ${this.changeName(record, minted.target.prNumber)} at ${minted.approvedHead}.`,
-        { news: true, data: { mergeAuthorization: minted.id, generation } },
-      );
-      return;
-    }
-    if (previous?.status === "standing") {
-      this.endAuthorization(taskId, "superseded", "the captain clicked merge on another card");
-    }
-  }
-
-  private mint(
-    record: TaskRecord,
-    approval: MergeApproval,
-    proceedWithOpen: boolean,
-    generation: number,
-    now: number,
-    reviewId?: string,
-  ): MergeAuthorization | undefined {
-    const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-    const review = reviewId
-      ? record.delivery?.mergeReviews?.find((item) => item.id === reviewId)
-      : undefined;
-    // The review's own project: another managed one when the task opened it there (INF-2510).
-    const reviewRepo = review?.repoId ? this.host.repos.get(review.repoId) : repo;
-    const location = reviewRepo ? forgeLocationOf(reviewRepo) : undefined;
-    // A request review is a typed, head-bound offer. Rule-skipping clicks remain one-shot.
-    if (
-      reviewId &&
-      (!opensPullRequest(this.host.taskDelivery(record.id)) ||
-        !review ||
-        review.skips ||
-        review.receipt ||
-        location?.host !== review.host ||
-        location.owner !== review.owner ||
-        location.name !== review.name)
-    )
-      return undefined;
-    const offer = review
-      ? { baseline: { headSha: review.headSha, prNumber: review.number }, ...review }
-      : approvableOffer(
-          record,
-          this.changeRepoOf(record, repo),
-          this.host.taskDelivery(record.id),
-          approval,
-        );
-    const offerId = approval.offerId;
-    if (!offer || !offerId || !record.repoId || !record.branch) return undefined;
-    const { baseline } = offer;
-    return {
-      version: 1,
-      id: randomUUID(),
-      generation,
-      issuer: "captain",
-      at: now,
-      card: {
-        id: approval.cardId,
-        ...(approval.lifecycleId ? { lifecycleId: approval.lifecycleId } : {}),
-        offerId,
-        actionId: approval.actionId,
-        ...(approval.interactionId ? { interactionId: approval.interactionId } : {}),
-      },
-      target: {
-        repoId: record.repoId,
-        host: offer.host,
-        owner: offer.owner,
-        name: offer.name,
-        prNumber: baseline.prNumber,
-        branch: review?.branch ?? currentChange(record.delivery, record.branch).branch,
-        delivery: "direct-pr",
-        method: "squash",
-      },
-      ...(review ? { review } : {}),
-      approvedHead: baseline.headSha,
-      ...(record.delivery?.versionReadings?.[baseline.headSha]
-        ? { changeReading: record.delivery.versionReadings[baseline.headSha] }
-        : {}),
-      lineage: [],
-      proceedWithOpen,
-      status: "standing",
-    };
-  }
-
-  /** Patch the standing approval, if one stands. */
-  private patchStanding(taskId: string, patch: Partial<MergeAuthorization>): void {
-    const record = this.host.tasks.get(taskId);
-    const authorization = standingAuthorization(record?.delivery);
-    if (!record || !authorization) return;
-    this.host.tasks.recordPermissionRecords(taskId, {
-      mergeAuthorization: { ...authorization, ...patch },
-    });
-  }
-
-  /** The merge happened under the standing approval: it is spent. */
-  private consumeStanding(taskId: string, receipt: PrOutcome["receipt"]): void {
-    const now = this.host.now();
-    this.patchStanding(taskId, {
-      status: "consumed",
-      endedAt: now,
-      attempt: undefined,
-      retryAt: undefined,
-      waiting: undefined,
-      ...(receipt
-        ? {
-            receipt: { head: receipt.head, ...(receipt.sha ? { sha: receipt.sha } : {}), at: now },
-          }
-        : {}),
-    });
-  }
-
-  /**
-   * End the standing approval (FI3-304 section 6): `revoked` by an
-   * interruption or the captain's withdrawal, `invalidated` when the
-   * approved work or pull request is no longer the one he approved,
-   * `superseded` by a new completion card or click. The generation
-   * advances, so a run already under way stops before it sends anything.
-   * A revoked or work-changed end holds the task's merge for the captain.
-   */
-  endAuthorization(
-    taskId: string,
-    status: "revoked" | "invalidated" | "superseded",
-    why: string,
-    options: { holds?: boolean; feed?: boolean } = {},
-  ): boolean {
-    const record = this.host.tasks.get(taskId);
-    const authorization = standingAuthorization(record?.delivery);
-    if (!record || !authorization) return false;
-    this.host.tasks.recordPermissionRecords(taskId, {
-      mergeAuthorization: {
-        ...authorization,
-        status,
-        reason: why,
-        endedAt: this.host.now(),
-        generation: authorization.generation + 1,
-        ...(options.holds ? { holds: true } : {}),
-        attempt: undefined,
-        retryAt: undefined,
-        waiting: undefined,
-      },
-    });
-    if (status === "superseded") this.clearPendingMerge(taskId, "superseded");
-    else
-      this.pendingMerge(taskId, `Your merge will not run: ${why}.`, {
-        title: MERGE_STOPPED_TITLE,
-        raise: false,
-      });
-    if (!TaskService.isClosed(record)) {
-      this.host.tasks.note(taskId, `The captain's kept merge approval ended: ${why}.`, {
-        news: true,
-        feed: options.feed ?? false,
-      });
-    }
-    return true;
-  }
-
-  /** The captain's or the Firstmate's interruption withdraws the approval (interrupt = revoke). */
-  revokeMergeAuthorization(taskId: string, why: string): boolean {
-    return this.endAuthorization(taskId, "revoked", why, { holds: true, feed: true });
-  }
-
-  /**
-   * The captain's guidance reached the task while his approval stands
-   * (FI3-662): it takes the next mark, which rides the message to the
-   * crewmate, and the merge holds until the crewmate declares that mark's
-   * impact. Called as the steer's row is recorded, so guidance nothing
-   * could deliver holds nothing. Undefined when no approval stands.
-   */
-  holdForGuidance(taskId: string): number | undefined {
-    const record = this.host.tasks.get(taskId);
-    const authorization = standingAuthorization(record?.delivery);
-    if (!record || !authorization || TaskService.isClosed(record)) return undefined;
-    const now = this.host.now();
-    const before = authorization.guidance ?? { latest: 0, declared: 0, at: now };
-    const mark = before.latest + 1;
-    const began = outstandingGuidance(authorization) === undefined;
-    this.host.tasks.recordPermissionRecords(taskId, {
-      mergeAuthorization: { ...authorization, guidance: { ...before, latest: mark, at: now } },
-    });
-    this.host.tasks.note(
-      taskId,
-      `The captain's guidance (mark ${mark}) holds the kept merge until its crewmate declares its impact.`,
-      { news: true, data: { mergeGuidance: { mark } } },
-    );
-    if (began) {
-      this.host.broadcastEvent({
-        type: "firstmate_note",
-        text: `Your merge of "${record.title}" is kept and waits until its crewmate says whether your newer words change the work you approved.`,
-        taskId,
-      });
-    }
-    return mark;
-  }
-
-  /**
-   * The guard a merge under the approval runs with: its candidate head and
-   * pinned pull request, and the last look right before the request goes
-   * out - the same approval, the same generation and head, the crewmate
-   * idle, no new completion card - which persists the attempt token the
-   * restart reconcile reads (FI3-304 section 5). The same look before a
-   * queue mark (`mark`) records nothing: no merge request goes out.
-   */
-  private guardOf(taskId: string, authorization: MergeAuthorization, unattended: boolean) {
-    const head = candidateHead(authorization);
-    const guard: MergeGuard = {
-      head,
-      prNumber: authorization.target.prNumber,
-      unattended,
-      // The captain's guidance since his click holds the merge without
-      // spending the approval, read right before the last look (FI3-662).
-      held: () => {
-        const now = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
-        const mark = now?.id === authorization.id ? outstandingGuidance(now) : undefined;
-        return mark === undefined
-          ? undefined
-          : `the captain's guidance (mark ${mark}) waits for its crewmate to declare its impact`;
-      },
-      beforeDispatch: (dispatchHead, mark) => {
-        const record = this.host.tasks.get(taskId);
-        const now = standingAuthorization(record?.delivery);
-        if (!record || TaskService.isClosed(record)) return "the task closed";
-        if (now?.id !== authorization.id || now.generation !== authorization.generation) {
-          return "the captain's merge approval ended";
-        }
-        const identity = this.authorizationIdentity(record, now);
-        if (identity) {
-          this.endAuthorization(taskId, "invalidated", identity, { feed: true });
-          return identity;
-        }
-        if (candidateHead(now) !== dispatchHead || dispatchHead !== head) {
-          return "the pull request is not at the version the approval covers";
-        }
-        if (unattended && this.working(taskId)) return "its crewmate started working again";
-        if (unattended && this.host.cards.openMergeAction(taskId)) {
-          return "a new completion card is up";
-        }
-        if (mark) return undefined;
-        this.host.tasks.recordPermissionRecords(taskId, {
-          mergeAuthorization: {
-            ...now,
-            attempt: { token: randomUUID(), head: dispatchHead, at: this.host.now() },
-          },
-        });
-        return undefined;
-      },
-    };
-    return guard;
-  }
-
-  /**
-   * What an attempt's outcome does to the approval it ran under: a merge
-   * already spent it; a pull request closed or swapped ends it; every
-   * other stop leaves it standing, waiting on that stop - with a time to
-   * look again where nothing else will wake it. Returns the wait and
-   * whether it is new, or undefined when the approval no longer stands.
-   */
-  private afterAttempt(
-    taskId: string,
-    authorization: MergeAuthorization,
-    result: SettleOutcome,
-  ): { wait: MergeWait; head: string; changed: boolean } | undefined {
-    const record = this.host.tasks.get(taskId);
-    const current = standingAuthorization(record?.delivery);
-    if (!record || !current || current.id !== authorization.id || result.ok) return undefined;
-    if (result.stop === "withdrawn") return undefined;
-    const now = this.host.now();
-    if (result.contention) {
-      this.patchStanding(taskId, { retryAt: now });
-      return undefined;
-    }
-    if (result.stop === "closed" || result.stop === "identity") {
-      this.endAuthorization(
-        taskId,
-        "invalidated",
-        result.stop === "closed"
-          ? "its pull request was closed without merging"
-          : "the branch's pull request is not the one approved",
-        { feed: true },
-      );
-      return undefined;
-    }
-    const wait = waitOf(result, current.undecided !== undefined);
-    const head = candidateHead(current);
-    const changed = current.waiting?.on !== wait || current.waiting.head !== head;
-    const retries = changed ? 0 : (current.retries ?? 0) + 1;
-    const retryAt = retryAfter(wait, retries, now);
-    this.host.tasks.recordPermissionRecords(taskId, {
-      mergeAuthorization: {
-        ...current,
-        waiting: { on: wait, head, at: now },
-        retries,
-        retryAt,
-        ...(result.stop === "outcome" ? {} : { attempt: undefined }),
-      },
-    });
-    return { wait, head, changed };
-  }
-
-  /**
-   * The checks a host-run merge makes before it asks anything of GitHub
-   * (FI3-304 section 4): the task and pull request are still the approved
-   * ones, no new completion card replaced the approval, no round cap holds
-   * the task, a declared repair is not still undecided, and a reviewed
-   * task's review passed for this change. A failed identity
-   * check ends the approval; the others are waits.
-   */
-  private authorizationIdentity(
-    record: TaskRecord,
-    authorization: MergeAuthorization,
-  ): string | undefined {
-    const target = authorization.target;
-    const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-    const changeRepo = this.changeRepoOf(record, repo);
-    const location = changeRepo ? forgeLocationOf(changeRepo) : undefined;
-    return !opensPullRequest(this.host.taskDelivery(record.id))
-      ? "the project no longer delivers as a pull request"
-      : record.repoId !== target.repoId || !repo
-        ? "the task's project is no longer the one approved"
-        : !hasChangeRequests(changeRepo?.host?.kind) ||
-            location?.host !== target.host ||
-            location.owner !== target.owner ||
-            location.name !== target.name
-          ? "where the project lives changed"
-          : // The approved change must still be the task's current one (INF-2490).
-            currentChange(record.delivery, record.branch).branch !== target.branch ||
-              currentChange(record.delivery, record.branch).number !== target.prNumber
-            ? "the task's current change is not the one approved"
-            : undefined;
-  }
-
-  /**
-   * The project the task's current change is in: another managed one when
-   * open_change opened it there (INF-2510), else the task's own.
-   */
-  private changeRepoOf(
-    record: TaskRecord,
-    own: ReturnType<RepoRegistry["get"]>,
-  ): ReturnType<RepoRegistry["get"]> {
-    const target = record.delivery?.checkTarget;
-    return target?.repoId && target.repoId !== record.repoId
-      ? this.host.repos.get(target.repoId)
-      : own;
-  }
-
-  private preflight(
-    record: TaskRecord,
-    authorization: MergeAuthorization,
-  ): { ended: true } | { wait: MergeWait } | undefined {
-    const identity = this.authorizationIdentity(record, authorization);
-    if (identity) {
-      this.endAuthorization(record.id, "invalidated", identity, { feed: true });
-      return { ended: true };
-    }
-    if (this.host.cards.openMergeAction(record.id)) {
-      this.endAuthorization(record.id, "superseded", "its crewmate put up a new completion card");
-      return { ended: true };
-    }
-    if (outstandingGuidance(authorization) !== undefined) return { wait: "guidance" };
-    if (authorization.undecided) {
-      // Its crewmate could not judge the repair: one independent assessment
-      // decides it. An end it brings tells the crewmate itself, so the wait
-      // below then records nothing.
-      this.host.assessRepair?.(record.id);
-      return { wait: "evidence" };
-    }
-    return undefined;
-  }
-
-  /**
-   * Store the approved head's change reading on the approval (INF-416 G)
-   * when a review was recorded on the task. The click is the moment that
-   * version enters the record. A later kept merge compares this stored
-   * fact and does not read the branch again. An unreadable commit stores
-   * nothing.
-   */
-  private async storeApprovalReading(
-    taskId: string,
-    authorization: MergeAuthorization,
-  ): Promise<void> {
-    if (authorization.changeReading) return;
-    const record = this.host.tasks.get(taskId);
-    if (!record?.delivery?.reviewVerdict) return;
-    const read = this.host.workspace.reviewChangeReading;
-    if (typeof read !== "function") return;
-    try {
-      const home = record.deviceId ? await this.host.placed?.bringBranchHome(taskId) : undefined;
-      const fresh = this.host.tasks.get(taskId) ?? record;
-      const repo = fresh.repoId ? this.host.repos.get(fresh.repoId) : undefined;
-      const dir = home ?? repo?.path ?? fresh.repoDir;
-      if (!dir) return;
-      const reading = await read.call(this.host.workspace, dir, authorization.approvedHead);
-      if (!reading) return;
-      const current = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
-      if (
-        !current ||
-        current.id !== authorization.id ||
-        current.approvedHead !== authorization.approvedHead ||
-        current.changeReading
-      ) {
-        return;
-      }
-      const delivery = this.host.tasks.get(taskId)?.delivery;
-      this.host.tasks.recordApprovedChangeReading(taskId, {
-        mergeAuthorization: { ...current, changeReading: reading },
-        versionReadings: { ...delivery?.versionReadings, [authorization.approvedHead]: reading },
-      });
-    } catch {
-      // An unreadable version stores nothing: the pass does not carry to it.
-    }
-  }
-
-  /**
-   * Run the standing approval once, as the host on the captain's behalf: at
-   * every crewmate idle boundary, on the tick when a timed wait comes due,
-   * and at boot. It merges only the candidate head, only after the
-   * preflight, GitHub's own readiness, every page of the checks and the
-   * last look before the request; what stops it is a wait on the approval
-   * (a quiet timeline line, and one wake where someone else must move) or
-   * an end that the feed and the Firstmate hear.
-   * A reviewed task's coverage is the reading stored with the candidate
-   * version. This run does not read the branch to carry a passed review.
-   */
-  async runMergeAuthorization(taskId: string): Promise<void> {
-    const record = this.host.tasks.get(taskId);
-    const authorization = standingAuthorization(record?.delivery);
-    if (!record || !authorization || TaskService.isClosed(record)) return;
-    if (this.settlingTasks.has(taskId) || record.pendingSettle || this.working(taskId)) return;
-    if (authorization.attempt) {
-      await this.reconcileAttempt(taskId, authorization);
-      return;
-    }
-    const title = record.title;
-    const checked = this.preflight(this.host.tasks.get(taskId) ?? record, authorization);
-    if (checked && "ended" in checked) {
-      this.reportEnded(taskId, title);
-      return;
-    }
-    if (checked) {
-      const wait = this.markWaiting(taskId, checked.wait);
-      if (wait?.changed) {
-        this.noteWait(
-          taskId,
-          title,
-          wait.head,
-          {
-            ok: false,
-            text: keptFeedLine(
-              checked.wait,
-              this.placeOf(record),
-              currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
-            ),
-          },
-          checked.wait,
-        );
-      }
-      return;
-    }
-    if (authorization.review) {
-      const result = await this.requestMerge(taskId, authorization.review.id, true);
-      if (!result.ok && !standingAuthorization(this.host.tasks.get(taskId)?.delivery))
-        this.reportEnded(taskId, title, result);
-      return;
-    }
-    let result: SettleOutcome;
-    try {
-      result = await this.settleTaskGuarded(
-        taskId,
-        "merge-pr",
-        undefined,
-        "captain",
-        authorization.proceedWithOpen,
-        this.guardOf(taskId, authorization, true),
-      );
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      result = {
-        ok: false,
-        text: `Could not complete merge-pr for task ${taskId}: ${message}`,
-        problem: message,
-      };
-    }
-    if (result.contention) return;
-    if (result.ok) {
-      this.reportOutcome(taskId, title, "merge-pr", undefined, result, undefined);
-      return;
-    }
-    const kept = this.afterAttempt(taskId, authorization, result);
-    if (!kept) {
-      if (result.stop !== "withdrawn") this.reportEnded(taskId, title, result);
-      return;
-    }
-    if (kept.changed) this.noteWait(taskId, title, kept.head, result, kept.wait);
-  }
-
-  /** Record a preflight wait on the standing approval; whether it is new for this head. */
-  private markWaiting(
-    taskId: string,
-    wait: MergeWait,
-  ): { head: string; changed: boolean } | undefined {
-    const current = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
-    if (!current) return undefined;
-    const head = candidateHead(current);
-    const now = this.host.now();
-    const changed = current.waiting?.on !== wait || current.waiting.head !== head;
-    const retries = changed ? 0 : (current.retries ?? 0) + 1;
-    this.host.tasks.recordPermissionRecords(taskId, {
-      mergeAuthorization: {
-        ...current,
-        waiting: { on: wait, head, at: now },
-        retries,
-        retryAt: retryAfter(wait, retries, now),
-      },
-    });
-    return { head, changed };
-  }
-
-  /**
-   * A wait that is new for this head: a quiet line on the task's timeline
-   * with the raw words, and one wake to the Firstmate when someone other
-   * than the crewmate the check watch already wakes has to move.
-   */
-  private noteWait(
-    taskId: string,
-    title: string,
-    head: string,
-    result: SettleOutcome,
-    wait: MergeWait,
-  ): void {
-    this.host.tasks.note(taskId, `The kept merge did not run yet: ${result.text}`, {
-      news: true,
-      ...(result.problem || result.plain
-        ? { data: { problem: result.problem ?? result.plain } }
-        : {}),
-    });
-    this.pendingWait(taskId, wait, false);
-    if (!wakesFirstmate(wait)) return;
-    const record = this.host.tasks.get(taskId);
-    const place = this.placeOf(record);
-    this.settleLine(taskId, keptFeedLine(wait, place, currentCheckStatus(record?.delivery)));
-    this.wakeOnSettle(taskId, title, "merge-pr (kept)", {
-      ...result,
-      text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery))}`,
-    });
-  }
-
-  /**
-   * The approval ended on a host-run attempt: the Firstmate hears why. A
-   * new completion card superseding it needs no word - the card is up.
-   */
-  private reportEnded(taskId: string, title: string, result?: SettleOutcome): void {
-    const ended = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
-    if (ended?.status === "superseded") return;
-    const reason = ended?.reason;
-    this.pendingMerge(
-      taskId,
-      result && (result.problem || result.plain)
-        ? settleFeedLine("merge-pr", result)
-        : `Your merge will not run: ${reason ?? "your approval no longer stands"}.`,
-      { title: MERGE_STOPPED_TITLE, raise: false },
-    );
-    const text = `The captain's kept merge approval for "${title}" ended: ${reason ?? "it no longer stands"}. A new completion card is the way to merge it.`;
-    this.wakeOnSettle(taskId, title, "merge-pr (kept)", {
-      ok: false,
-      text: result ? `${result.text}\n\n${text}` : text,
-    });
-  }
-
-  /**
-   * An attempt token outlived its answer - the app quit or the answer
-   * never came (FI3-304 section 5). The pinned pull request decides: merged
-   * means the approval is spent and the task closes once; closed ends it;
-   * open at the same head clears the token and runs every gate again; an
-   * unreadable one waits.
-   */
-  private async reconcileAttempt(taskId: string, authorization: MergeAuthorization): Promise<void> {
-    const readPull = this.host.readPull;
-    let pull: ForgePull | undefined;
-    try {
-      pull = readPull ? await readPull(taskId, authorization.target.prNumber) : undefined;
-    } catch {
-      pull = undefined;
-    }
-    const record = this.host.tasks.get(taskId);
-    const current = standingAuthorization(record?.delivery);
-    if (
-      !record ||
-      current?.id !== authorization.id ||
-      current.generation !== authorization.generation
-    ) {
-      return;
-    }
-    const now = this.host.now();
-    if (!pull) {
-      const retries = (current.retries ?? 0) + 1;
-      this.patchStanding(taskId, {
-        waiting: { on: "outcome", head: candidateHead(current), at: now },
-        retries,
-        retryAt: retryAfter("outcome", retries, now),
-      });
-      return;
-    }
-    if (pull.merged) {
-      await this.finishMerged(taskId, record.title, pull);
-      return;
-    }
-    if (pull.state !== "open") {
-      this.endAuthorization(taskId, "invalidated", "its pull request was closed without merging", {
-        feed: true,
-      });
-      this.reportEnded(taskId, record.title);
-      return;
-    }
-    this.patchStanding(taskId, { attempt: undefined, retryAt: now });
-    await this.runMergeAuthorization(taskId);
-  }
-
-  /** A merge the reconcile found already done: spend the approval and close the task once. */
-  private async finishMerged(taskId: string, title: string, pull: ForgePull): Promise<void> {
-    if (this.settlingTasks.has(taskId)) return;
-    this.settlingTasks.set(taskId, "merge-pr");
-    try {
-      const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
-      // A kept request_merge approval merged a continuing change (INF-2490).
-      if (authorization?.review) {
-        this.finishContinued(
-          taskId,
-          authorization.review,
-          {
-            ok: true,
-            text: `Merged ${this.changeName(this.host.tasks.get(taskId), pull.number)} on ${this.placeOf(this.host.tasks.get(taskId))}. The task stays open.`,
-            receipt: {
-              head: pull.headSha,
-              ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
-              already: true,
-            },
-          },
-          "captain",
-        );
-        return;
-      }
-      this.consumeStanding(taskId, {
-        head: pull.headSha,
-        ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
-        already: true,
-      });
-      const record = this.host.tasks.get(taskId);
-      const text = `Merged ${this.changeName(record, pull.number)} on ${this.placeOf(record)}.`;
-      // Something else on the task still open keeps it open (INF-2525).
-      const stillOpen = record ? await this.stillOpen(record, pull.number) : undefined;
-      if (stillOpen) {
-        this.host.tasks.recordChangeEvidence(taskId, {
-          ci: "merged",
-          headSha: pull.headSha,
-          ciAt: this.host.now(),
-          ciWatch: undefined,
-        });
-        const continued = { ok: true, text, continued: true, stillOpen };
-        this.finishContinued(taskId, undefined, continued, "captain");
-        this.reportOutcome(taskId, title, "merge-pr", undefined, continued, undefined);
-        return;
-      }
-      await this.closeTask(taskId, {
-        status: "done",
-        reason: "merged",
-        actor: "captain",
-        text,
-        delivery: { landedMode: "pr", ...(pull.mergedSha ? { mergedSha: pull.mergedSha } : {}) },
-      });
-      this.reportOutcome(taskId, title, "merge-pr", undefined, { ok: true, text }, undefined);
-    } finally {
-      this.settlingTasks.delete(taskId);
-      this.sentMerges.delete(taskId);
-    }
-  }
-
-  /**
-   * The tick's rider: every standing approval whose timed wait came due
-   * runs again (FI3-304: persisted delayed reconciliation, never a hot loop
-   * that a restart resets).
-   */
-  reconcileMergeAuthorizations(now: number): void {
-    for (const record of this.host.tasks.listLive()) {
-      const authorization = standingAuthorization(record.delivery);
-      if (!authorization || authorization.retryAt === undefined || authorization.retryAt > now) {
-        continue;
-      }
-      void this.runMergeAuthorization(record.id).catch((caught: unknown) => {
-        console.warn("[settle] a kept merge approval could not run:", caught);
-      });
-    }
-  }
-
-  /**
-   * At boot: contract 4.66's unversioned kept click names no approved head,
-   * so it is retired and said, never carried forward; every standing
-   * approval runs once - an attempt token first reads its pull request back.
-   */
-  resumeMergeAuthorizations(): void {
-    for (const record of this.host.tasks.listLive()) {
-      if (record.delivery?.mergeOrder) {
-        this.host.tasks.recordPermissionRecords(record.id, { mergeOrder: undefined });
-        const text = `The kept merge click for "${record.title}" was made before this version and names no approved version, so it could not be carried forward. Its crewmate puts up its completion card again once the checks pass.`;
-        this.host.tasks.note(record.id, text, { news: true, feed: true });
-        this.wakeOnSettle(record.id, record.title, "merge-pr (kept before this version)", {
-          ok: false,
-          text,
-        });
-      }
-      if (!standingAuthorization(record.delivery)) continue;
-      void this.runMergeAuthorization(record.id).catch((caught: unknown) => {
-        console.warn("[settle] a kept merge approval could not resume:", caught);
-      });
-    }
-  }
-
-  /**
-   * The captain's merge click stays in view (INF-1275): a note under the
-   * task's key, raised at the click and revised in place on each new wait,
-   * until the merge goes through (`clearPendingMerge`) or says why not.
-   * `raise` false revises only a note already up.
-   */
-  private pendingMerge(
-    taskId: string,
-    words: string,
-    options: { title?: string; raise?: boolean } = {},
-  ): void {
-    const record = this.host.tasks.get(taskId);
-    const id = mergePendingCardId(taskId);
-    // A closed task's merge already went through or ended: a report that
-    // arrives after the close never puts its note back up.
-    if (!record || TaskService.isClosed(record)) return;
-    if (options.raise === false && !this.host.cards.get(id)) return;
-    this.host.cards.raiseHostCard(
-      {
-        id,
-        title: options.title ?? MERGE_PENDING_TITLE,
-        meta: record.key,
-        body: mergePendingBody(words, record.title),
-        actions: [],
-      },
-      { note: true },
-    );
-  }
-
-  /** The merge went through or a new card took its place: the pending note goes. */
-  private clearPendingMerge(taskId: string, reason: string): void {
-    this.host.cards.withdrawHostCard(mergePendingCardId(taskId), reason);
-  }
-
-  /** A kept approval's wait, in the pending note's words. */
-  private pendingWait(taskId: string, wait: MergeWait, raise = true): void {
-    const record = this.host.tasks.get(taskId);
-    // Only a standing approval waits: one already spent or ended has no wait to show.
-    if (!standingAuthorization(record?.delivery)) return;
-    this.pendingMerge(
-      taskId,
-      keptFeedLine(wait, this.placeOf(record), currentCheckStatus(record?.delivery)),
-      { ...(wait === "queue" ? { title: QUEUE_WAITING_WORDS } : {}), raise },
-    );
-  }
-
-  /**
    * A settle's line in Activity, on its task's record so it carries the
    * task's key: the click, then whatever became of it, each taking the
    * last one's place (`SETTLE_FOLD`, INF-1845).
    */
-  private settleLine(taskId: string, text: string): void {
+  settleLine(taskId: string, text: string): void {
     if (!this.host.tasks.get(taskId)) return;
     this.host.tasks.note(taskId, text, {
       news: true,
@@ -3161,7 +1028,7 @@ export class SettleService {
   }
 
   /** The feed's receipt of a settle and the wake that makes a refusal actionable. */
-  private reportOutcome(
+  reportOutcome(
     taskId: string,
     title: string,
     mode: "merge-pr" | "land" | "discard",
@@ -3190,14 +1057,14 @@ export class SettleService {
         TaskService.isClosed(record) &&
         (mode !== "discard" || (!result.problem && !result.plain)));
     if (mode !== "discard" && !result.contention) {
-      if (result.ok) this.clearPendingMerge(taskId, "merged");
+      if (result.ok) this.approvals.clearPendingMerge(taskId, "merged");
       // A refused sign-in raises the host's own sign-in card, the one thing
       // to do: the pending note leaves rather than compete with it.
       else if (result.refusal?.refused === "not-signed-in")
-        this.clearPendingMerge(taskId, "sign-in");
-      else if (kept) this.pendingWait(taskId, kept);
+        this.approvals.clearPendingMerge(taskId, "sign-in");
+      else if (kept) this.approvals.pendingWait(taskId, kept);
       else
-        this.pendingMerge(taskId, settleFeedLine(mode, result), {
+        this.approvals.pendingMerge(taskId, settleFeedLine(mode, result), {
           title: MERGE_STOPPED_TITLE,
           raise: false,
         });
@@ -3205,7 +1072,7 @@ export class SettleService {
     if (kept)
       this.settleLine(
         taskId,
-        keptFeedLine(kept, this.placeOf(record), currentCheckStatus(record?.delivery)),
+        keptFeedLine(kept, placeOf(this.host.repos, record), currentCheckStatus(record?.delivery)),
       );
     // Contention settled nothing: the attempt that owns the task says what became of it.
     else if (!merged && !result.contention) this.settleLine(taskId, settleFeedLine(mode, result));
@@ -3269,7 +1136,7 @@ export class SettleService {
    * JSON block, so the Firstmate can answer with one card whose actions
    * carry the `ways` as effects. The feed line stays the prose alone.
    */
-  private wakeOnSettle(taskId: string, title: string, chose: string, result: SettleOutcome): void {
+  wakeOnSettle(taskId: string, title: string, chose: string, result: SettleOutcome): void {
     if (result.contention) return;
     this.host.notifyOp(
       {
@@ -3284,316 +1151,5 @@ export class SettleService {
       "agent",
       taskId,
     );
-  }
-
-  /**
-   * Settle a task: the crewmate stops, the worktree and branch go, the
-   * lane and open cards retire, and the RECORD CLOSES - its row, timeline
-   * and session JSONL under crewmates/<taskId> stay (captain decision D2:
-   * "the sessions are very valuable ... we shouldn't remove the entire
-   * session JSONL altogether"). The worktree vanishing is the externally
-   * observable "settled" signal (the phase3 e2e polls for it), so the
-   * record closes before it goes.
-   */
-  async closeTask(
-    taskId: string,
-    close: TaskClose,
-    options: { recordBeforeStop?: boolean } = {},
-  ): Promise<void> {
-    // This task settlement announces its reach before stopping the runtime;
-    // the crewmate leaves after that spark. A superseded one instead hands
-    // over to its successor, whose start is its spark.
-    // Work carried on closes done and goes home like any done task.
-    if (close.reason !== "superseded" || close.status === "done") this.host.announceReach?.(taskId);
-    this.host.killJobs?.(taskId);
-    this.host.endLiveTask(taskId);
-    const stopping = this.host.stopRuntime(taskId);
-    if (stopping && !options.recordBeforeStop) {
-      await stopping;
-      this.releaseSettleBoundary(taskId);
-    }
-    const record = this.host.tasks.get(taskId);
-    // The lane and every queued wake retire with the task, in the close's
-    // own transaction: a settled task makes still-recorded guidance moot.
-    // A row already done or dropped keeps its close; a discard there only
-    // clears the worktree it kept (WI-7).
-    let answerHandoffQueued = false;
-    let sentence: string | undefined;
-    if (record && record.status !== "done" && record.status !== "dropped") {
-      sentence = this.takeClosingSentence(taskId, close.actor);
-      const data =
-        close.data || close.answerHandoff || sentence
-          ? {
-              ...close.data,
-              ...(close.answerHandoff ? { choice: close.answerHandoff.choice.label } : {}),
-              ...(sentence ? { closingSentence: sentence } : {}),
-            }
-          : undefined;
-      this.closeAndPurge([taskId], () => {
-        // A standing approval ends with its task: spent by a merge, revoked
-        // by any other close (FI3-304), in the close's own transaction.
-        const standing = standingAuthorization(record.delivery);
-        if (standing) {
-          this.host.tasks.recordPermissionRecords(taskId, {
-            mergeAuthorization: {
-              ...standing,
-              status: close.reason === "merged" ? "consumed" : "revoked",
-              reason: `the task closed ${close.reason}`,
-              endedAt: this.host.now(),
-              generation: standing.generation + 1,
-              attempt: undefined,
-              retryAt: undefined,
-              waiting: undefined,
-            },
-          });
-        }
-        this.host.tasks.close(taskId, {
-          status: close.status,
-          reason: close.reason,
-          actor: close.actor,
-          ...(close.text ? { text: close.text } : {}),
-          ...(close.delivery ? { delivery: close.delivery } : {}),
-          ...(close.feed === false ? { feed: false } : {}),
-          // The captain's choice on an answer's card is a fact of the
-          // close, so work built on the answer can be told what was chosen;
-          // so is the first mate's sentence on a close of its own.
-          ...(data ? { data } : {}),
-        });
-        if (close.answerHandoff) {
-          answerHandoffQueued =
-            this.host.inbox.enqueueWake(
-              FIRSTMATE_RECIPIENT,
-              { facts: { kind: "answer-closed", handoff: close.answerHandoff } },
-              "agent",
-              taskId,
-            ) !== null;
-        }
-      });
-    } else {
-      this.host.inbox.purgeTask(taskId);
-    }
-    // External observation closes at the synchronous idle boundary, before
-    // stopping can yield: new guidance must see a closed record, not be purged
-    // later after it was accepted on a task that still appeared open.
-    if (stopping && options.recordBeforeStop) {
-      await stopping;
-      this.releaseSettleBoundary(taskId);
-    }
-    // The durable handoff becomes visible only after its close transaction;
-    // poking here cannot race the lane purge that precedes its insertion.
-    if (answerHandoffQueued) this.host.pokeInbox();
-    this.host.cards.retireTaskCards(taskId, close.reason, { keepNotes: close.status === "done" });
-    if (record && record.status !== "done" && record.status !== "dropped") {
-      this.placeOutcome(record, close.reason, close.actor, sentence);
-    }
-    // A kept note still waiting on the crewmate shows now, after the close
-    // wrote its outcome on it, so its first showing carries it (INF-2533).
-    this.host.cards.releaseNotes(taskId);
-    this.host.asksMoved?.();
-    this.host.cards.scheduleBroadcast();
-    this.host.broadcastCrewCounts();
-    if (record?.worktreeDir && record.workspaceState !== "removed") {
-      // A confirmed discard is the captain choosing to throw the work away:
-      // it is still saved when it can be, but a failed save never keeps it.
-      await this.retireWorktreeOf(record, { force: close.reason === "discarded" });
-    }
-    // Delivery machinery follows its parent out, whatever the direction
-    // the parent closed in - a review must never outlive its builder.
-    await this.retireDeliveryChildren(taskId, record?.title);
-    // Any close may release a row waiting on this task, or leave one
-    // waiting forever (the ready query and the dead-blocker card, P2).
-    void this.host.sweepGates(this.host.now());
-  }
-
-  /**
-   * The containment refinement (captain-approved 2026-09-19): a live child
-   * the host commissioned as part of delivering this task - today exactly
-   * the independent review - is retired with it, silently, the way a
-   * superseded escalation attempt is: runtime aborted, worktree gone, lane
-   * purged. The parent's own close line is the news; an orphaned reviewer
-   * idling against a closed builder was the bug this exists to end.
-   */
-  async retireDeliveryChildren(parentId: string, parentTitle?: string): Promise<void> {
-    const live = this.host.tasks
-      .children(parentId)
-      .filter((child) => !TaskService.isClosed(child) && TaskService.isDeliveryChild(child));
-    for (const child of live) {
-      await this.closeTask(child.id, {
-        status: "dropped",
-        reason: "superseded",
-        actor: "host",
-        text: `superseded - ${parentTitle ? `"${parentTitle}"` : "its builder"} closed`,
-        feed: false,
-      }).catch(() => {});
-    }
-  }
-
-  /**
-   * The record side of finish(): a crewmate turn that cancelled or failed
-   * closes the record, retires its open cards, and saves/removes its worktree.
-   * There is no `completed` here any more (WI-11): a crewmate that finished
-   * its work and went idle is not a close - it stays `active` and resumable
-   * until the captain merges, lands, or discards. A failure a typed backend
-   * reported keeps that fact, so the feed line never reads its words for a
-   * class (docs/quota.md "Typed cut-offs").
-   */
-  closeRecord(
-    taskId: string,
-    status: "cancelled" | "failed",
-    error: string | undefined,
-    actor: "captain" | "firstmate" | "host",
-    typed?: TypedFailure,
-  ): void {
-    const record = this.host.tasks.get(taskId);
-    const sentence = status === "cancelled" ? this.takeClosingSentence(taskId, actor) : undefined;
-    this.closeAndPurge([taskId], () => {
-      if (status === "cancelled") {
-        this.host.tasks.close(taskId, {
-          status: "dropped",
-          reason: "cancelled",
-          actor,
-          ...(sentence ? { data: { closingSentence: sentence } } : {}),
-        });
-      } else {
-        this.host.tasks.close(taskId, {
-          status: "dropped",
-          reason: "failed",
-          actor,
-          ...(error ? { error } : {}),
-          ...(typed
-            ? {
-                data: {
-                  failureSignals: "typed",
-                  ...(typed.cutOff ? { cutOff: typed.cutOff } : {}),
-                },
-              }
-            : {}),
-        });
-      }
-    });
-    void this.closeOpenPullRequest(taskId);
-    this.host.cards.retireTaskCards(taskId, status);
-    if (record && status === "cancelled") this.placeOutcome(record, "cancelled", actor, sentence);
-    this.host.asksMoved?.();
-    void this.retireDeliveryChildren(taskId, this.host.tasks.get(taskId)?.title);
-    void this.retireWorkspace(taskId);
-  }
-
-  /**
-   * A closed task's worktree ALWAYS goes (captain, 2026-09-22: "when a
-   * task closes, its worktree gets cleaned up period. no exceptions"): a
-   * done or dropped row never keeps `present`. What it holds that never
-   * landed is saved on the task's hidden kept ref first
-   * (`WorkspaceService.retireTaskWorktree`), so nothing is destroyed; the
-   * one exception is a save that fails, which keeps the tree and says so.
-   */
-  retireWorkspace(
-    taskId: string,
-    options: { keepAlways?: boolean; noteKept?: boolean } = {},
-  ): Promise<"removed" | "kept" | "none"> {
-    const retirement = this.retireClosedWorkspace(taskId, options).finally(() => {
-      if (this.retirements.get(taskId) === retirement) this.retirements.delete(taskId);
-    });
-    this.retirements.set(taskId, retirement);
-    return retirement;
-  }
-
-  /** A replacement waits for the close's save before reading its predecessor's work. */
-  finishWorkspaceRetirement(taskId: string): Promise<"removed" | "kept" | "none"> {
-    return this.retirements.get(taskId) ?? this.retireWorkspace(taskId);
-  }
-
-  private async retireClosedWorkspace(
-    taskId: string,
-    options: { keepAlways?: boolean; noteKept?: boolean },
-  ): Promise<"removed" | "kept" | "none"> {
-    const record = this.host.tasks.get(taskId);
-    if (!record?.worktreeDir || record.workspaceState !== "present") return "none";
-    if (record.status !== "done" && record.status !== "dropped") return "none";
-    if (this.host.runtimeState(taskId) !== undefined) return "none";
-    try {
-      return await this.retireWorktreeOf(record, options);
-    } catch (caught) {
-      // The save succeeded or was not needed, but removing the tree failed:
-      // the next boot's hygiene pass tries again.
-      console.warn(`[workspace] could not remove the working copy of task ${taskId}:`, caught);
-      return "kept";
-    }
-  }
-
-  /**
-   * The one retirement of a record's worktree. An ANSWER task's worktree
-   * (Task B) was a laboratory the brief said would be discarded, so it
-   * goes with nothing saved; every other goes through the save first. The
-   * timeline says what happened: a save as a quiet line (the ref itself
-   * stays in the event's data, never in words a surface shows), a failed
-   * save as a feed line - a kept tree is never silent again.
-   */
-  private async retireWorktreeOf(
-    record: TaskRecord,
-    options: { keepAlways?: boolean; force?: boolean; noteKept?: boolean } = {},
-  ): Promise<"removed" | "kept" | "none"> {
-    // PlacedSessions observes the closed record and PlacedCopies saves and
-    // retires its copy there, at reconnect if necessary. A remote path must
-    // never be inspected here or marked removed before that owner confirms it.
-    if (record.deviceId) return record.workspaceState === "present" ? "kept" : "none";
-    const taskId = record.id;
-    const workspace = workspaceOf(record);
-    const stillPresent = () => this.host.tasks.get(taskId)?.workspaceState === "present";
-    if (this.host.deliverableOf(record) === "answer") {
-      await this.host.workspace.removeTaskWorktree(workspace);
-      this.host.tasks.markWorkspaceRemoved(taskId);
-      return "removed";
-    }
-    const retired = await this.host.workspace.retireTaskWorktree(
-      workspace,
-      options.keepAlways ? { keepAlways: true } : {},
-    );
-    if (retired.outcome === "kept") {
-      if (options.force) {
-        await this.host.workspace.removeTaskWorktree(workspace);
-        this.host.tasks.markWorkspaceRemoved(taskId);
-        return "removed";
-      }
-      // Git was awaited: a concurrent close may have removed it meanwhile.
-      if (!stillPresent()) return "none";
-      if (options.noteKept !== false) {
-        this.host.tasks.note(
-          taskId,
-          "working copy kept - its work could not be saved first; discard to remove it",
-          { news: true, feed: true, data: { kept: true, reason: retired.reason } },
-        );
-      }
-      return "kept";
-    }
-    if (stillPresent()) this.host.tasks.markWorkspaceRemoved(taskId);
-    if (retired.kept) {
-      this.host.tasks.note(
-        taskId,
-        `working copy removed - ${keptWorkWords(retired.kept)} saved first`,
-        { news: false, data: { saved: retired.kept } },
-      );
-    }
-    return "removed";
-  }
-
-  /**
-   * Close and purge as one commit (interaction P0, WI-2): the record closes
-   * in the same transaction that deletes the task's lane rows and every
-   * queued wake about it, so no reader ever sees a closed task with a live
-   * wake. Background jobs are killed right before, synchronously - a
-   * process is not a row - and a job that still exits later becomes a feed
-   * line, never a wake (deliverJobResult).
-   */
-  closeAndPurge<T>(taskIds: string[], close: () => T): T {
-    for (const id of taskIds) this.host.killJobs?.(id);
-    // A clicked merge's pending note carries no task, so the card retire
-    // leaves it: it ends with its task here, the one seam every close takes,
-    // so no reader sees the task closed with it still up (INF-1275).
-    for (const id of taskIds) this.clearPendingMerge(id, "task-closed");
-    return this.host.inbox.transaction(() => {
-      for (const id of taskIds) this.host.inbox.purgeTask(id);
-      return close();
-    });
   }
 }

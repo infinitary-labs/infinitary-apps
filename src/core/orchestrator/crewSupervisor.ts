@@ -35,6 +35,7 @@ import {
   cardTakesReplies,
   type DropTaskReview,
   type HostEffect,
+  isRoutineMergeCard,
   isStoryNote,
   LIVE_ATTACHMENT_LABEL_MAX,
   type LiveAttachment,
@@ -498,8 +499,10 @@ import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
 import { earlierHistory, reviewHistory } from "./reviewHistory";
 import { type RunReading, RunWatcher } from "./runWatch";
-import { describeStatus, isRoutineMergeCard, SettleService, type TaskClose } from "./settleService";
+import { createSettleOwners, type SettleOwners } from "./settleOwners";
+import { describeStatus } from "./settleService";
 import { folderMissingText, pendingMergeLine } from "./settleWords";
+import type { TaskClose } from "./taskClose";
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
 import type { Ticker } from "./ticker";
 import {
@@ -1685,7 +1688,7 @@ export class CrewSupervisor {
   /** How each captain's message ends (INF-1610, docs/task-capture.md "How a message ends"). */
   readonly askEnding: AskEnding;
   /** Settling and closing: land, merge-pr, discard, and every close's teardown. */
-  private readonly settle: SettleService;
+  private readonly settling: SettleOwners;
   private crewmateSeq = 0;
   /** The watchdog's registrations on the shared ticker, undone at dispose. */
   private watchdog: (() => void)[] | undefined;
@@ -1744,7 +1747,8 @@ export class CrewSupervisor {
       cardStore: options.cardStore,
       syncCaptainGate: (taskId, at) => this.ladder.syncCaptainGate(taskId, at),
       noteCapAnswered: () => {},
-      closeAnsweredTask: (card, action, by) => this.settle.closeAnsweredTask(card, action, by),
+      closeAnsweredTask: (card, action, by) =>
+        this.settling.declared.closeAnsweredTask(card, action, by),
       settleFacts: (taskId) => this.settleFacts(taskId),
       mergeLabel: (card) => this.mergeLabel(card),
       mergeAnyway: (card) => this.mergeAnyway(card),
@@ -1778,7 +1782,7 @@ export class CrewSupervisor {
       },
     });
     this.askEnding = askEndingOf(options.tasks, this.cards);
-    this.settle = new SettleService({
+    this.settling = createSettleOwners({
       now: this.now,
       tasks: options.tasks,
       inbox: options.inbox,
@@ -1787,7 +1791,6 @@ export class CrewSupervisor {
       cards: this.cards,
       askEnding: this.askEnding,
       asksMoved: () => this.hooks.asksMoved?.(),
-      verifyValidationEvidence: (taskId) => this.verifyValidationEvidence(taskId),
       runtimeState: (taskId) => this.tasks.get(taskId)?.state,
       stopRuntime: (taskId) => this.stopRuntime(taskId),
       hasRunningJobs: (taskId) =>
@@ -1926,7 +1929,10 @@ export class CrewSupervisor {
           inbox: options.inbox,
           read: readCheckWatch,
           ...(options.readPull
-            ? { reconcileMerged: (taskId: string) => this.settle.reconcileExternalMerge(taskId) }
+            ? {
+                reconcileMerged: (taskId: string) =>
+                  this.settling.settle.reconcileExternalMerge(taskId),
+              }
             : {}),
           // The posture the Tasks dot shows as "Blocked by another task".
           idleBehindOtherWork: (record) => {
@@ -2004,8 +2010,8 @@ export class CrewSupervisor {
         const edits = taskPolicyEditsSchema.safeParse(changes?.policies);
         if (edits.success) this.policiesChanged(record.id, edits.data);
       }
-      this.settle.resumePendingSettles();
-      this.settle.resumeMergeAuthorizations();
+      this.settling.settle.resumePendingSettles();
+      this.settling.kept.resumeMergeAuthorizations();
     });
   }
 
@@ -4476,7 +4482,7 @@ export class CrewSupervisor {
           feed: true,
           data: { feedLine: true },
         });
-        await this.settle.closeTask(record.id, {
+        await this.settling.closing.closeTask(record.id, {
           status: "done",
           reason: "finished",
           actor: "host",
@@ -4543,7 +4549,7 @@ export class CrewSupervisor {
       this.now(),
     );
     if (decided.decided === "accepted") {
-      void this.settle.runMergeAuthorization(builderId).catch((caught: unknown) => {
+      void this.settling.kept.runMergeAuthorization(builderId).catch((caught: unknown) => {
         console.warn("[crew] kept merge could not run:", caught);
       });
       return;
@@ -4575,7 +4581,7 @@ export class CrewSupervisor {
       .children(builderId)
       .filter((child) => !TaskService.isClosed(child) && isRepairAssessment(child.shape));
     for (const child of live) {
-      await this.settle
+      await this.settling.closing
         .closeTask(child.id, {
           status: "dropped",
           reason: "superseded",
@@ -4598,7 +4604,7 @@ export class CrewSupervisor {
     if (builderId) {
       this.repairDecided(builderId, task.id, verdict, capWithOverflow(report, "task-report"));
     }
-    await this.settle
+    await this.settling.closing
       .closeTask(task.id, {
         status: "done",
         reason: "finished",
@@ -4967,7 +4973,7 @@ export class CrewSupervisor {
       await runtime.session?.abort().catch(() => {});
       this.releaseSession(runtime);
       this.tasks.delete(taskId);
-      this.settle.releaseSettleBoundary(taskId);
+      this.settling.locks.releaseSettleBoundary(taskId);
     }
     this.recordInterrupt(
       taskId,
@@ -4976,7 +4982,7 @@ export class CrewSupervisor {
       runtime ? "aborted-turn" : "no-turn",
     );
     if (record.status !== "done" && record.status !== "dropped") {
-      this.settle.closeAndPurge([taskId], () =>
+      this.settling.closing.closeAndPurge([taskId], () =>
         this.options.tasks.close(taskId, {
           status: "dropped",
           reason: "superseded",
@@ -4985,15 +4991,15 @@ export class CrewSupervisor {
           data: { escalated_to: continuesAs },
         }),
       );
-      await this.settle.closeOpenPullRequest(taskId);
+      await this.settling.closing.closeOpenPullRequest(taskId);
     } else {
       this.options.inbox.purgeTask(taskId);
     }
     this.cards.retireTaskCards(taskId, "superseded");
     this.cards.scheduleBroadcast();
     this.broadcastCrewCounts();
-    await this.settle.retireDeliveryChildren(taskId, record.title);
-    await this.settle.retireWorkspace(taskId, { keepAlways: true });
+    await this.settling.closing.retireDeliveryChildren(taskId, record.title);
+    await this.settling.closing.retireWorkspace(taskId, { keepAlways: true });
     void this.sweepGates(this.now());
   }
 
@@ -5610,7 +5616,7 @@ export class CrewSupervisor {
       setTimeout(() => {
         const part = this.options.tasks.get(partId);
         if (!part || TaskService.isClosed(part)) return resolve();
-        void this.settle
+        void this.settling.closing
           .closeTask(partId, {
             status: "done",
             reason: "answered",
@@ -5690,7 +5696,7 @@ export class CrewSupervisor {
     const tasks = this.options.tasks;
     for (const part of tasks.children(program.id)) {
       if (TaskService.isClosed(part) || !part.shape?.program_part) continue;
-      await this.settle.closeTask(part.id, {
+      await this.settling.closing.closeTask(part.id, {
         status: "dropped",
         reason: "superseded",
         actor: "host",
@@ -7437,7 +7443,7 @@ export class CrewSupervisor {
       edits,
       now: policies,
       before,
-      mergeSent: this.settle.mergeWasSent(taskId),
+      mergeSent: this.settling.locks.mergeWasSent(taskId),
     });
   }
 
@@ -8080,7 +8086,7 @@ export class CrewSupervisor {
     const move = task.pendingMove;
     task.pendingMove = undefined;
     if (this.options.tasks.get(task.id)?.pendingSettle) {
-      this.settle.releaseSettleBoundary(task.id);
+      this.settling.locks.releaseSettleBoundary(task.id);
     } else if (move) {
       // A move asked for mid-turn runs at this boundary, and delivers what
       // waits once the task reopens on its new provider (INF-849).
@@ -8095,7 +8101,7 @@ export class CrewSupervisor {
     this.ladder.reconcileIdleTask(task.id, this.now());
     // The captain's kept merge approval runs once the crewmate's turn is
     // over; a no-op when none stands (FI3-304).
-    void this.settle.runMergeAuthorization(task.id).catch((caught: unknown) => {
+    void this.settling.kept.runMergeAuthorization(task.id).catch((caught: unknown) => {
       console.warn("[crew] kept merge could not run:", caught);
     });
   }
@@ -8394,7 +8400,7 @@ export class CrewSupervisor {
         data: { reviewTaskId: task.id },
       });
       try {
-        await this.settle.closeTask(task.id, {
+        await this.settling.closing.closeTask(task.id, {
           status: "done",
           reason: "finished",
           actor: "host",
@@ -8837,7 +8843,7 @@ export class CrewSupervisor {
         );
         this.restartObservations.delete(taskId);
       }
-      const mark = guidance ? this.settle.holdForGuidance(taskId) : undefined;
+      const mark = guidance ? this.settling.approvals.holdForGuidance(taskId) : undefined;
       if (mark !== undefined) {
         const marked = withGuidanceMark(body, mark);
         message = renderWake(marked);
@@ -10084,15 +10090,15 @@ export class CrewSupervisor {
     // about, now or when the stopped turn ends (INF-547), keyed by the
     // record the close names.
     const id = this.options.tasks.resolve(taskId)?.id ?? taskId;
-    this.settle.expectClosingSentence(id, closingSentence);
+    this.settling.closing.expectClosingSentence(id, closingSentence);
     try {
       await this.interruptOnce(taskId, mode, source);
     } catch (caught) {
-      this.settle.forgetClosingSentence(id);
+      this.settling.closing.forgetClosingSentence(id);
       throw caught;
     }
     // With no turn left to end, no later close will take it.
-    if (!this.tasks.has(id)) this.settle.forgetClosingSentence(id);
+    if (!this.tasks.has(id)) this.settling.closing.forgetClosingSentence(id);
   }
 
   private async interruptOnce(
@@ -10115,7 +10121,7 @@ export class CrewSupervisor {
       if (TaskService.isResumable(record)) {
         if (mode === "cancel") {
           this.recordInterrupt(taskId, mode, source, "cancelled-record");
-          this.settle.closeRecord(record.id, "cancelled", undefined, source.actor);
+          this.settling.closing.closeRecord(record.id, "cancelled", undefined, source.actor);
           this.options.broadcastEvent({
             type: "task_finished",
             taskId,
@@ -10195,10 +10201,15 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
     const handle = `${record.key || record.id} "${record.title}"`;
-    const ended = this.settle.endAuthorization(taskId, "revoked", "the captain withdrew it", {
-      holds: true,
-      feed: true,
-    });
+    const ended = this.settling.approvals.endAuthorization(
+      taskId,
+      "revoked",
+      "the captain withdrew it",
+      {
+        holds: true,
+        feed: true,
+      },
+    );
     if (ended) this.announceReach(taskId);
     return ended
       ? {
@@ -10273,7 +10284,7 @@ export class CrewSupervisor {
     this.overrideNoticed(taskId, override);
     // His kept merge click reads the same record: one waiting on a hold his
     // words pass runs now (a no-op when none stands).
-    void this.settle.runMergeAuthorization(taskId).catch((caught: unknown) => {
+    void this.settling.kept.runMergeAuthorization(taskId).catch((caught: unknown) => {
       console.warn("[crew] kept merge could not run:", caught);
     });
     return {
@@ -10461,7 +10472,7 @@ export class CrewSupervisor {
   ): void {
     // An interruption withdraws the captain's kept merge approval (FI3-304:
     // interrupt = revoke); resuming work needs a new click.
-    this.settle.revokeMergeAuthorization(
+    this.settling.approvals.revokeMergeAuthorization(
       taskId,
       source.actor === "captain"
         ? "the captain interrupted the crewmate"
@@ -11283,7 +11294,7 @@ export class CrewSupervisor {
         if (card.actions.some((action) => settleEffectOf(action)?.mode === "merge"))
           this.recordCompletionOffer(task.id, id, checked, presentationChecked);
         else
-          this.settle.endAuthorization(
+          this.settling.approvals.endAuthorization(
             task.id,
             "superseded",
             "its crewmate put up a new merge card",
@@ -11566,7 +11577,11 @@ export class CrewSupervisor {
     checked: boolean,
     presentation?: { revision: number; head: string },
   ): void {
-    this.settle.endAuthorization(taskId, "superseded", "its crewmate put up a new completion card");
+    this.settling.approvals.endAuthorization(
+      taskId,
+      "superseded",
+      "its crewmate put up a new completion card",
+    );
     const record = this.options.tasks.get(taskId);
     const offerId = this.cards.get(cardId)?.offerId;
     const head = presentation?.head ?? record?.delivery?.headSha;
@@ -12041,7 +12056,7 @@ export class CrewSupervisor {
     }
     this.releaseSession(task);
     this.tasks.delete(task.id);
-    this.settle.releaseSettleBoundary(task.id);
+    this.settling.locks.releaseSettleBoundary(task.id);
     this.options.personal?.endLiveTask(task.id);
     // A record another close already ended keeps its own reason; the turn's
     // end must not relabel it. Either way nothing queued about the task
@@ -12052,7 +12067,7 @@ export class CrewSupervisor {
       // a sign-in or an allowance from its words (a client exit is a session
       // failure, docs/quota.md "Typed cut-offs").
       const typed = task.session?.controlProfile.failureSignals === "typed" ? {} : undefined;
-      this.settle.closeRecord(task.id, status, error, "host", typed);
+      this.settling.closing.closeRecord(task.id, status, error, "host", typed);
     } else {
       this.options.inbox.purgeTask(task.id);
     }
@@ -12112,7 +12127,7 @@ export class CrewSupervisor {
     actor: "captain" | "firstmate" = "firstmate",
     proceedWithOpen = false,
   ): Promise<string> {
-    return this.settle.settleTask(taskId, mode, confirm, actor, proceedWithOpen);
+    return this.settling.settle.settleTask(taskId, mode, confirm, actor, proceedWithOpen);
   }
 
   /**
@@ -12120,7 +12135,7 @@ export class CrewSupervisor {
    * the close it makes carries the sentence.
    */
   withClosingSentence<T>(taskId: string, sentence: string, run: () => Promise<T>): Promise<T> {
-    return this.settle.withClosingSentence(taskId, sentence, run);
+    return this.settling.closing.withClosingSentence(taskId, sentence, run);
   }
 
   /** The settle a tool runs (WI-12): its prose, and the structured refusal when there is one. */
@@ -12131,32 +12146,32 @@ export class CrewSupervisor {
     proceedWithOpen?: boolean,
     actor: "captain" | "firstmate" = "firstmate",
   ): Promise<{ text: string; refusal?: SettleRefusal }> {
-    return this.settle.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen, actor);
+    return this.settling.settle.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen, actor);
   }
 
   /** Verified folder work closes without touching the project's files or git state. */
   closeFinishedFolderWork(taskRef: string, completionEvidence: string) {
-    return this.settle.closeFinishedFolderWork(taskRef, completionEvidence);
+    return this.settling.declared.closeFinishedFolderWork(taskRef, completionEvidence);
   }
 
   /** A verified external release closes work without a task-owned change. */
   closeExternallyReleased(taskRef: string, releaseEvidence: string) {
-    return this.settle.closeExternallyReleased(taskRef, releaseEvidence);
+    return this.settling.declared.closeExternallyReleased(taskRef, releaseEvidence);
   }
 
   /** settle_task mode `answered`: a completed answer or a verified result handoff. */
   closeAnswerUsedAsBasis(taskRef: string): Promise<{ ok: boolean; text: string }> {
-    return this.settle.closeAnswerUsedAsBasis(taskRef);
+    return this.settling.declared.closeAnswerUsedAsBasis(taskRef);
   }
 
   /** A user-initiated discard from a leftover task card, or the shell's delete. */
   requestDiscard(taskId: string): Promise<void> {
-    return this.settle.requestDiscard(taskId);
+    return this.settling.settle.requestDiscard(taskId);
   }
 
   /** Settle a task: the crewmate stops, and the record, lane, cards and worktree close. */
   closeTask(taskId: string, close: TaskClose): Promise<void> {
-    return this.settle.closeTask(taskId, close);
+    return this.settling.closing.closeTask(taskId, close);
   }
 
   /** Stop a task's live crewmate: its turn aborted, its runtime gone. */
@@ -12613,7 +12628,7 @@ export class CrewSupervisor {
         continue;
       }
       if (record.status !== "done" && record.status !== "dropped") continue;
-      if ((await this.settle.retireWorkspace(record.id, { noteKept: false })) === "kept")
+      if ((await this.settling.closing.retireWorkspace(record.id, { noteKept: false })) === "kept")
         kept.push(record);
     }
     const orphansKept = await this.retireOrphanWorktrees();
@@ -12783,7 +12798,7 @@ export class CrewSupervisor {
       ticker.register("in-place-folders", WATCHDOG_TICK_MS, () => void this.closeCurrentFolders()),
       ticker.register("check-watch", WATCHDOG_TICK_MS, (now) => void this.pollCheckWatches(now)),
       ticker.register("kept-merges", WATCHDOG_TICK_MS, (now) =>
-        this.settle.reconcileMergeAuthorizations(now),
+        this.settling.kept.reconcileMergeAuthorizations(now),
       ),
       ticker.register("inbox-sweep", WATCHDOG_TICK_MS, (now) => void this.sweepInbox(now)),
       ticker.register("firstmate-inbox", WATCHDOG_TICK_MS, () => this.hooks.pokeInbox?.()),
@@ -13669,7 +13684,7 @@ export class CrewSupervisor {
       }
       if (this.cards.snapshot().some((card) => card.taskId === record.id)) continue;
       const done = children.some((child) => child.status === "done");
-      this.settle.closeAndPurge([record.id], () =>
+      this.settling.closing.closeAndPurge([record.id], () =>
         this.options.tasks.close(record.id, {
           status: done ? "done" : "dropped",
           reason: done ? "finished" : "cancelled",
@@ -13768,7 +13783,7 @@ export class CrewSupervisor {
       if (started.length > 0) {
         void (async () => {
           for (const part of started)
-            await this.settle.closeTask(part.id, {
+            await this.settling.closing.closeTask(part.id, {
               status: "dropped",
               reason: "superseded",
               actor: "firstmate",
@@ -13787,7 +13802,7 @@ export class CrewSupervisor {
     const refusal = this.options.tasks.closeRefusal(record.id);
     if (refusal && !input.confirm) return refusal.text;
     const affected = [record.id, ...this.options.tasks.descendants(record.id).map((c) => c.id)];
-    const dropped = this.settle.closeAndPurge(affected, () =>
+    const dropped = this.settling.closing.closeAndPurge(affected, () =>
       this.options.tasks.dropWithChildren(record.id, {
         reason: input.reason,
         actor: "firstmate",
@@ -13831,7 +13846,7 @@ export class CrewSupervisor {
         reason: `carried on by ${carrierRef}`,
         replacedBy: carrierRef,
       });
-    return (await this.settle.closeCarriedOn(record.id, carrierRef)).text;
+    return (await this.settling.declared.closeCarriedOn(record.id, carrierRef)).text;
   }
 
   /**
@@ -15139,7 +15154,7 @@ export class CrewSupervisor {
       ...(panel ? { panel } : {}),
     });
     this.starting.add(fresh.id);
-    const started = this.settle
+    const started = this.settling.closing
       .finishWorkspaceRetirement(old.id)
       .then(() => this.startQueuedNow(fresh.id, audience))
       .finally(() => this.starting.delete(fresh.id));
@@ -15637,7 +15652,7 @@ export class CrewSupervisor {
           effect.mode === "merge" &&
           this.mergeModeFor(card.taskId) === "merge-pr"))
         ? () =>
-            this.settle.authorizeMerge(
+            this.settling.approvals.authorizeMerge(
               card.taskId as string,
               {
                 cardId: card.id,
@@ -15832,7 +15847,7 @@ export class CrewSupervisor {
         // braces here rather than a settle of nothing.
         if (!card.taskId) return {};
         const mode = effect.mode === "merge" ? this.mergeModeFor(card.taskId) : "discard";
-        void this.settle.reportCardSettle(
+        void this.settling.settle.reportCardSettle(
           card.taskId,
           mode,
           effect.confirm,
@@ -15843,9 +15858,11 @@ export class CrewSupervisor {
       case "request_merge": {
         // The declaration granted nothing. Only this chrome click runs it.
         if (!card.taskId || source !== "chrome") return {};
-        void this.settle.requestMerge(card.taskId, effect.review).catch((caught: unknown) => {
-          console.warn("[crew] requested merge failed:", caught);
-        });
+        void this.settling.kept
+          .requestMerge(card.taskId, effect.review)
+          .catch((caught: unknown) => {
+            console.warn("[crew] requested merge failed:", caught);
+          });
         return {};
       }
       case "request_write": {
@@ -16604,7 +16621,7 @@ export class CrewSupervisor {
     if (this.starting.has(taskId) || this.pendingStarts.has(taskId) || this.tasks.has(taskId))
       return dropStartedRefusal(key);
     try {
-      this.settle.closeAndPurge([taskId], () => {
+      this.settling.closing.closeAndPurge([taskId], () => {
         const result = this.options.tasks.dropUnstarted(taskId, {
           actor: "captain",
           review,
@@ -17013,7 +17030,7 @@ export class CrewSupervisor {
       if (!task) {
         const record = this.options.tasks.get(taskId);
         if (record?.placement && !TaskService.isClosed(record))
-          this.settle.closeRecord(taskId, "cancelled", undefined, "captain");
+          this.settling.closing.closeRecord(taskId, "cancelled", undefined, "captain");
         return;
       }
       this.recordInterrupt(taskId, "cancel", source, "requested");

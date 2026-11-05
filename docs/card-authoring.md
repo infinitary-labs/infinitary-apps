@@ -698,7 +698,7 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
 On a task whose deliverable is an ANSWER (`WorkShape.deliverable`, Task B of the crew-posture rationalization; `docs/delivery-rigor.md`), the card is the whole shipment: the brief says so, the task commits nothing, and a card carrying a `settle` effect is refused at the boundary the way the personal workspace's is.
 The captain's choice on it CLOSES the task `done/answered`, because the deliverable was produced and the captain answered it.
 A card whose choice the crewmate goes on from rather than its answer, such as a consent before it uses something sensitive, is not the deliverable, and the crewmate declares it `continues` (INF-1226: INF-1220's "Allow signing on the Mac mini" closed its task before anything was signed).
-The captain's choice on a `continues` card reaches the crewmate like a choice on any crewmate card, and the task goes on; the host reads only that declaration, never the card's words (`SettleService.closeAnsweredTask`).
+The captain's choice on a `continues` card reaches the crewmate like a choice on any crewmate card, and the task goes on; the host reads only that declaration, never the card's words (`DeclaredCloses.closeAnsweredTask`).
 `asking` is not that declaration: a planner declares its question card `asking`, and the captain's choice on it still closes the plan.
 The declaration is optional and stored as `Card.continues` in `cards.continues`; a revision without it removes it.
 A card that asks to send a kept write is never the deliverable either, whatever it declares.
@@ -755,7 +755,7 @@ The note stays up and answers the captain's message, so no closing note goes up 
 A crewmate on the personal workspace shows what it built on a note marked answering, and the first mate's `finished` close keeps it (`docs/personal-panels.md`, "Report, commit, close").
 Every close the first mate makes of started work carries its one sentence: `settle_task` takes a top-level `closing_sentence` for every mode but `answered`, `interrupt_crewmate` takes it for `cancel`, and both refuse such a close without one.
 The sentence is a fact of the close (`closingSentence` in its timeline data).
-Where it goes is one rule, at most one closing note for each of the captain's messages (`SettleService.placeOutcome`, `AskEnding.closingPlace`; `docs/task-capture.md`, "How a message ends"):
+Where it goes is one rule, at most one closing note for each of the captain's messages (`TaskClosing.placeOutcome`, `AskEnding.closingPlace`; `docs/task-capture.md`, "How a message ends"):
 
 - The card that answers the message, once the captain accepted it, takes the sentence as its close line (`closedLine`, or `mergedLine` after a merge), and comes back to the stack only when the work was dropped after they accepted it (INF-1533).
 - While other work of the message runs, or took the work over, nothing goes up (INF-1437).
@@ -765,7 +765,7 @@ Where it goes is one rule, at most one closing note for each of the captain's me
 A captain's click carries no sentence, an answer task's close takes none, and a task no crewmate started gets no note.
 Work no message of the captain's covers gets a note only when it merges or releases and nothing of the task is on the stack.
 It gets none once the captain closed or chose on the task's story or completion card, which was its one note (INF-2461, the captain's pick on INF-2442: "The card you clicked carries the merge or drop outcome, with no second note").
-That card is one shaped as the work's outcome (`answersByShape`) or a crewmate card opening with a completion story's headings (`toldOutcome` in `src/core/orchestrator/settleService.ts`); a note along the way the captain closed does not count.
+That card is one shaped as the work's outcome (`answersByShape`) or a crewmate card opening with a completion story's headings (`toldOutcome` in `src/core/orchestrator/taskClose.ts`); a note along the way the captain closed does not count.
 The captain's words on INF-1467: "tasks the fleet decided to start that the captain didn't ask for should not report to the captain."
 The first mate sets that mark when it starts work the captain did not ask for - a step of a sequence it runs, a helper another task needs, a crewmate's request, or work it starts unasked, including a crewmate's filing it starts (`update_task internal_step`, on open work before it starts); work started by the captain's message, card choice or schedule is theirs.
 A drop, cancel or finish of such work stays on the task's record and in Activity, and a merge or release still leaves its one note, because code reached the project without the captain's click, unless the captain already closed its story or completion card.

@@ -70,7 +70,7 @@ describe("the order a close takes", () => {
     const world = settleWorld();
     seedDelivery(world.tasks, TASK, { prNumber: undefined, headSha: undefined });
     world.live.deliverable = "operation";
-    const answer = await world.settle.closeFinishedFolderWork(TASK, "The meter reads on time.");
+    const answer = await world.declared.closeFinishedFolderWork(TASK, "The meter reads on time.");
     expect(answer.text).toContain("as finished: The meter reads on time.");
     expect(world.log.slice(0, 2)).toEqual([
       "stop runtime: active/none",
@@ -92,11 +92,11 @@ describe("the order a close takes", () => {
       status: "ready",
       createdAt: 1_000,
     });
-    world.settle.expectClosingSentence(TASK, "The captain stopped the meter work.");
+    world.closing.expectClosingSentence(TASK, "The captain stopped the meter work.");
     // The cancelled turn already ended: no runtime holds the task.
     world.live.runtime = undefined;
-    world.settle.closeRecord(TASK, "cancelled", undefined, "firstmate");
-    await world.settle.finishWorkspaceRetirement(TASK);
+    world.closing.closeRecord(TASK, "cancelled", undefined, "firstmate");
+    await world.closing.finishWorkspaceRetirement(TASK);
     expect(world.tasks.get(TASK)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
     expect(
       world.tasks.timeline(TASK).find((event) => event.data?.reason === "cancelled")?.data,
@@ -109,7 +109,7 @@ describe("the order a close takes", () => {
   it("keeps a typed failure's facts on a failed turn's close", () => {
     const world = settleWorld();
     const cutOff = { class: "no_headroom" as const, resetsAt: 5_000 };
-    world.settle.closeRecord(TASK, "failed", "The plan's allowance ran out.", "host", { cutOff });
+    world.closing.closeRecord(TASK, "failed", "The plan's allowance ran out.", "host", { cutOff });
     const close = world.tasks.timeline(TASK).find((event) => event.data?.reason === "failed");
     expect(world.tasks.get(TASK)).toMatchObject({ status: "dropped", closedReason: "failed" });
     expect(close?.data).toMatchObject({ failureSignals: "typed", cutOff });
@@ -124,7 +124,7 @@ describe("the order a close takes", () => {
       status: "idle",
       shape: { kind: "review", kind_source: "host:review" },
     });
-    await world.settle.closeTask(TASK, {
+    await world.closing.closeTask(TASK, {
       status: "dropped",
       reason: "discarded",
       actor: "captain",
@@ -148,7 +148,7 @@ describe("a release close rechecks after reading the working copy", () => {
 
   it("closes released work once nothing changed during the read", async () => {
     const world = released();
-    const answer = await world.settle.closeExternallyReleased(TASK, "Shipped in 1.4.");
+    const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
     expect(answer.text).toContain("as released outside this task: Shipped in 1.4.");
     expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "released" });
   });
@@ -159,7 +159,7 @@ describe("a release close rechecks after reading the working copy", () => {
       world.tasks.setActivity(TASK, "running");
       return { dirty: false, unlandedCommits: 0 };
     };
-    const answer = await world.settle.closeExternallyReleased(TASK, "Shipped in 1.4.");
+    const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
     expect(answer.text).toContain(
       "its state changed while the working copy was checked; try again.",
     );
@@ -173,28 +173,28 @@ describe("a release close rechecks after reading the working copy", () => {
       world.tasks.link("gauge", TASK, "blocks", "crewmate", true);
       return { dirty: false, unlandedCommits: 0 };
     };
-    const answer = await world.settle.closeExternallyReleased(TASK, "Shipped in 1.4.");
+    const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
     expect(answer.refusal).toMatchObject({ tasks: [expect.objectContaining({ id: "gauge" })] });
     expect(world.tasks.get(TASK)?.status).toBe("active");
   });
 
   it("refuses while its pull request may still be open", async () => {
     const world = settleWorld();
-    const answer = await world.settle.closeExternallyReleased(TASK, "Shipped in 1.4.");
+    const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
     expect(answer.text).toContain(`#${PR} is still open; close or merge it first.`);
     world.live.pull = undefined;
-    const unread = await world.settle.closeExternallyReleased(TASK, "Shipped in 1.4.");
+    const unread = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
     expect(unread.text).toContain(`#${PR} could not be read, so it may still be open`);
   });
 
   it("refuses uncommitted edits and a working copy it cannot read", async () => {
     const world = released();
     world.live.work = { dirty: true, unlandedCommits: 0 };
-    expect((await world.settle.closeExternallyReleased(TASK, "Shipped in 1.4.")).text).toContain(
+    expect((await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.")).text).toContain(
       "its working copy has uncommitted edits",
     );
     world.live.work = null;
-    expect((await world.settle.closeExternallyReleased(TASK, "Shipped in 1.4.")).text).toContain(
+    expect((await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.")).text).toContain(
       "the working copy could not be checked: the working copy is gone",
     );
     expect(world.tasks.get(TASK)?.status).toBe("active");
@@ -212,7 +212,7 @@ describe("a handed-on answer's close rechecks after reading the working copy", (
 
   it("closes it as answered when its working copy holds nothing unmerged", async () => {
     const world = handedOn();
-    const answer = await world.settle.closeAnswerUsedAsBasis(TASK);
+    const answer = await world.declared.closeAnswerUsedAsBasis(TASK);
     expect(answer).toMatchObject({ ok: true });
     expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "answered" });
   });
@@ -223,7 +223,7 @@ describe("a handed-on answer's close rechecks after reading the working copy", (
       world.tasks.setActivity(TASK, "running");
       return { dirty: false, unlandedCommits: 0 };
     };
-    const answer = await world.settle.closeAnswerUsedAsBasis(TASK);
+    const answer = await world.declared.closeAnswerUsedAsBasis(TASK);
     expect(answer.text).toContain(
       "its work changed during the check; read its latest report before closing it.",
     );
@@ -233,11 +233,11 @@ describe("a handed-on answer's close rechecks after reading the working copy", (
   it("refuses unmerged work and a working copy it cannot read", async () => {
     const world = handedOn();
     world.live.work = { dirty: false, unlandedCommits: 1 };
-    expect((await world.settle.closeAnswerUsedAsBasis(TASK)).text).toContain(
+    expect((await world.declared.closeAnswerUsedAsBasis(TASK)).text).toContain(
       "its working copy has uncommitted edits or unmerged commits",
     );
     world.live.work = null;
-    expect((await world.settle.closeAnswerUsedAsBasis(TASK)).text).toContain(
+    expect((await world.declared.closeAnswerUsedAsBasis(TASK)).text).toContain(
       "its working copy could not be checked; keep the task open.",
     );
     expect(world.tasks.get(TASK)?.status).toBe("active");
@@ -268,7 +268,7 @@ describe("a carried-on close's refusals", () => {
     const world = settleWorld();
     seedTask(world.tasks, { id: "carrier", title: "Carry the meter on", status: "idle" });
     await change(world);
-    const answer = await world.settle.closeCarriedOn(TASK, "carrier");
+    const answer = await world.declared.closeCarriedOn(TASK, "carrier");
     expect(answer.ok).toBe(false);
     expect(answer.text).toContain(words);
   });
@@ -279,7 +279,7 @@ describe("a carried-on close's refusals", () => {
     world.live.autonomy = true;
     let answer: { ok: boolean; text: string } | undefined;
     world.merge = async () => {
-      answer = await world.settle.closeCarriedOn(TASK, "carrier");
+      answer = await world.declared.closeCarriedOn(TASK, "carrier");
       return { ok: false, text: "Checks are running.", stop: "checks" };
     };
     await world.settle.settleTaskDetailed(TASK, "merge-pr");

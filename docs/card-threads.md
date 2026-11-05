@@ -327,7 +327,7 @@ Refusal is typed internally and transported as `refusal` text, not the empty acc
 Valid choices still use the shown offer, including when a newer stored revision changes its actions.
 Gate-backed decisions/operations use their existing typed card-raised task association after closure (closure clears the live gate).
 Submission metadata, required-answer rules and routing are unchanged.
-Cancellation and terminal session failure retire the task's open cards through `SettleService.closeRecord`, as ordinary settle closure does through `closeTask`.
+Cancellation and terminal session failure retire the task's open cards through `TaskClosing.closeRecord`, as ordinary settle closure does through `closeTask`.
 
 ## Tests
 

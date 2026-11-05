@@ -7,6 +7,7 @@ import { seedTask } from "@core/tasks/seedTask";
 import { TaskService } from "@core/tasks/taskService";
 import type { WorkShape } from "@shared/routingPolicy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFleetTables } from "../scripts/dispatch-corpus/fleetTables.ts";
 import {
   type CorpusExportResult,
   detectPackaged,
@@ -17,7 +18,6 @@ import {
   routingDispatches,
   type SupervisionRecord,
 } from "../scripts/export-corpus.ts";
-import { readFleetTables } from "../scripts/extract-dispatch-corpus.ts";
 import { scratchDir } from "./helpers/scratchDirs";
 
 /**

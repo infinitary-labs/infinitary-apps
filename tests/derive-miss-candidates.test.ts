@@ -8,7 +8,6 @@ import {
   type CandidateMiss,
   cardEvidenceKind,
   DEFAULT_WINDOW_MS,
-  defaultUserDataDir,
   deriveMissCandidates,
   inForwardWindow,
   isTurnFailedWake,
@@ -16,6 +15,7 @@ import {
   parseArgs,
   summarize,
 } from "../scripts/derive-miss-candidates.ts";
+import { defaultUserDataDir } from "../scripts/dispatch-corpus/userData.ts";
 import { RELEASE_USER_DATA_FOLDER, USER_DATA_FOLDERS } from "../src/shared/userDataFolders";
 import { scratchDir } from "./helpers/scratchDirs";
 import { withScratchHome } from "./helpers/scratchHome";

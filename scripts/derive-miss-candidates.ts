@@ -32,23 +32,18 @@
 
 import Database from "better-sqlite3";
 import { existsSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { settingFrom } from "../src/shared/envSettings.ts";
 import { redactDeep, redactObserveText } from "../src/core/observe/redact.ts";
 import {
-  RELEASE_USER_DATA_FOLDER,
-  userDataFoldersNewestFirst,
-} from "../src/shared/userDataFolders.ts";
-import {
-  actionOf,
   type CardRevisionRow,
   cardVersionAt,
   chosenEffectOf,
   declaredActionsOf,
   resolutionOf,
-} from "./extract-dispatch-corpus.ts";
+} from "./dispatch-corpus/cards.ts";
+import { actionOf } from "./dispatch-corpus/fleetTables.ts";
+import { defaultUserDataDir } from "./dispatch-corpus/userData.ts";
 
 /** The report's proposed window; overridable so a fixture can be tiny. */
 export const DEFAULT_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -929,21 +924,6 @@ export function deriveMissCandidates(options: DeriveOptions): DeriveResult {
 // --------------------------------------------------------------------------
 // CLI
 // --------------------------------------------------------------------------
-
-export function defaultUserDataDir(): string {
-  const override = settingFrom(process.env, "USER_DATA_DIR");
-  if (override) return override;
-  const appData =
-    process.platform === "darwin"
-      ? join(homedir(), "Library", "Application Support")
-      : process.platform === "win32"
-        ? (process.env.APPDATA ?? join(homedir(), "AppData", "Roaming"))
-        : (process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"));
-  // The installed app's folder under its newest name that is there: Firstmate
-  // 3000's until the one-time move brings it to Infinitary's.
-  const folders = userDataFoldersNewestFirst("release").map((folder) => join(appData, folder));
-  return folders.find((folder) => existsSync(folder)) ?? join(appData, RELEASE_USER_DATA_FOLDER);
-}
 
 export type CliArgs = {
   userData: string;

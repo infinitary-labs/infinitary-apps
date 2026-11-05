@@ -53,7 +53,8 @@ import {
   type ServedOrigin,
 } from "../src/shared/servedFrame.ts";
 import { detectPackaged } from "./export-corpus.ts";
-import { defaultUserDataDir, settingString, splitBackupCopies } from "./extract-dispatch-corpus.ts";
+import { splitBackupCopies } from "./dispatch-corpus/sessionFiles.ts";
+import { defaultUserDataDir, settingString } from "./dispatch-corpus/userData.ts";
 
 type JsonRecord = Record<string, unknown>;
 

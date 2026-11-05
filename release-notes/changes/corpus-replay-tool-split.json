@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "corpus-replay-tool-split",
+      "reason": "Splits the developer replay engine, the dispatch corpus extractor and the corpus corrections test into smaller files under the size ceiling, with no change to what the app does."
+    }
+  ]
+}

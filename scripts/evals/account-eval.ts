@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { join, relative, resolve, sep } from "node:path";
 import { parseArgs } from "node:util";
-import { defaultUserDataDir } from "../extract-dispatch-corpus.ts";
+import { defaultUserDataDir } from "../dispatch-corpus/userData.ts";
 import { openModuleRunner, REPO_ROOT } from "../moduleRunner.ts";
 import type * as Eval from "./runner.ts";
 

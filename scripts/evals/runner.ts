@@ -25,7 +25,7 @@ import type {
 } from "../../src/core/session/session.ts";
 import type { BoundTool } from "../../src/core/session/tools.ts";
 import { readSession } from "../../src/core/storage/sessionReader.ts";
-import { defaultUserDataDir } from "../extract-dispatch-corpus.ts";
+import { defaultUserDataDir } from "../dispatch-corpus/userData.ts";
 import {
   approvalCases,
   type ApprovalCase,

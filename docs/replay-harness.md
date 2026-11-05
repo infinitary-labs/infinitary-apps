@@ -8,6 +8,7 @@ A pull request that touches the prompt, card lint, the whose-turn sort, routing,
 ## What it replays
 
 `scripts/replay-captain-session.ts` is the CLI; `scripts/replay/engine.ts` does the work.
+Its parts sit beside it under `scripts/replay/`: the recordings it reads, the recorded timeline, the translation of recorded cards, the id map, the crewmates' playback and the observations its report counts.
 For each session it builds an in-memory app from the app's own migrations and runs the real host:
 
 - **FirstmateAgent** - context block, `emit_card` lint and ownership rules, ask capture, the inbox drain.
@@ -24,7 +25,7 @@ A recorded `create_task program` files and starts its program through the real h
 The captain's labels run against the replayed host: `flag_missed_escalation` against its supervision record, and `flag_duplicate` against its own cards, so a duplicate the captain flagged counts in `duplicate_card_pairs` as it did that night.
 A recorded call to any tool the first mate holds today is answered one of these ways, never listed under `missing_tools`.
 So a new first mate tool is either bound live, through the `FirstmateAgent` option it needs in the seat options `Replay.wire` passes, or listed in `RECORDED_ANSWER_TOOLS` (`scripts/replay/engine.ts`); `tests/replay-captain-session.test.ts` replays a call to each of `FIRSTMATE_TOOLS` and fails on one in neither.
-A new tool that changes something the captain asked for also gets a `RECORDED_ACTION` entry, or the answer-delivery row ("Metrics") reads a turn that used it as no action.
+A new tool that changes something the captain asked for also gets a `RECORDED_ACTION` entry (`scripts/replay/timeline.ts`), or the answer-delivery row ("Metrics") reads a turn that used it as no action.
 The dispatch extractor keeps its own class sets for the same tools (`docs/dispatch-extractor.md`, "Tests").
 A crewmate turn plays back its recorded session through the crewmate's card, report, progress, and follow-up hooks; a Claude crewmate's copy under `crewmates/<task>/sessions/` is read through the same one reader, so it plays as a Pi crewmate holding the same turns (the session contract's step 6).
 Each input the host serves a crewmate plays the recorded turn that answered it ("Crewmate turns" below).
@@ -168,7 +169,7 @@ It carries:
 - **The section-4 table.**
   Answered-in-turn, default actions, re-asks, quick dismissals, duplicate pairs, operational wakes per captain turn, escalation precision, lock refusals, closed rows with worktrees, closed without evidence (structurally zero since WI-11 retired the `delivered` status that a bad close could reach without proof), visual share, mean body length.
   Since the wake diet (P3, WI-13) `op_wakes_per_captain_turn` counts operational drain TURNS, not payloads - the report's "turns on operations" - so a drain that hears several wakes together is one wake; a captain turn that carries pending wakes is not an op wake, but an escalation it carried is still counted (`countCarriedWakes`), scored `handled` from that captain turn's play.
-- **The answer-delivery row** (`asks_without_action`, observational): the captain messages no action took effect after, read off each recorded turn's own tool answers (`RECORDED_ACTION` in the engine; a lookup and closing words are no action, a refused card voids a later reaction).
+- **The answer-delivery row** (`asks_without_action`, observational): the captain messages no action took effect after, read off each recorded turn's own tool answers (`RECORDED_ACTION` in `scripts/replay/timeline.ts`; a lookup and closing words are no action, a refused card voids a later reaction).
   It reads the recording and not the replay's re-run tools, so a host change cannot hide a message that went unanswered that night.
   The replayed agent is wired with `answerDelivery: "observe"`, which judges nothing, so no retry or notice changes a recorded turn.
   The committed fixtures read 3 on `sep14` (a start refused because its branch existed, and two steers refused under the old triage claim), 1 on `sep26-claude` ("How is the crew doing?", answered with a lookup and closing words) and 0 elsewhere; the baseline carries it and the gate never grades it.

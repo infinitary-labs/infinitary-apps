@@ -19,7 +19,7 @@
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type * as AccountModels from "./account-models.ts";
-import { defaultUserDataDir } from "./extract-dispatch-corpus.ts";
+import { defaultUserDataDir } from "./dispatch-corpus/userData.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 
 export type AccountModelsModule = typeof AccountModels;

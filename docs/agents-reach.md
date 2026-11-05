@@ -36,7 +36,7 @@ The weekly audit reads the week's changes for those.
 
 The captain's words pass a soft hold through one recorded override (`docs/delivery-rigor.md`, "The holds").
 Each declaration is a `note` row on the task's timeline that carries the override; a take-back is a row that carries none.
-`scripts/interaction-metrics.ts` reads them as each dispatch's `overrides`, off the same rows in the replay (`scripts/replay/engine.ts`) and in the corpus export (`scripts/extract-dispatch-corpus.ts`).
+`scripts/interaction-metrics.ts` reads them as each dispatch's `overrides`, off the same rows in the replay (`scripts/replay/observations.ts`) and in the corpus export (`scripts/dispatch-corpus/fleetTables.ts`).
 `hold_overrides` counts the overrides declared, an observational row nobody grades.
 The corpus export's manifest counts them per hold kind in `rigor.overrides_by_hold` (`docs/corpus-export.md`), where an override that names two holds counts once under each.
 A hold the captain's words pass often is the signal that it rests on a verdict: it should drop a level, or its judgment should go to the agent.

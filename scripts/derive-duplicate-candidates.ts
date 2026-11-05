@@ -29,7 +29,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { redactDeep, redactObserveText } from "../src/core/observe/redact.ts";
-import { defaultUserDataDir } from "./extract-dispatch-corpus.ts";
+import { defaultUserDataDir } from "./dispatch-corpus/userData.ts";
 import {
   DUPLICATE_SIMILARITY,
   DUPLICATE_WINDOW_MS,

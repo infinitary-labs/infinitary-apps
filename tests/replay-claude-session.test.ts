@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { extractTurnsFromJsonl } from "../scripts/extract-dispatch-corpus";
+import { extractTurnsFromJsonl } from "../scripts/dispatch-corpus/dispatchTurns.ts";
 import { replaySession } from "../scripts/replay/engine";
 import { discoverSources, exportFixture } from "../scripts/replay-captain-session";
 import { resetStoreLeasesForTest } from "../src/core/claude/claudeStoreLease";

@@ -9,19 +9,21 @@ import { TaskService } from "@core/tasks/taskService";
 import type { WorkShape } from "@shared/routingPolicy";
 import { frameServedInput } from "@shared/servedFrame";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { resolutionOf } from "../scripts/dispatch-corpus/cards.ts";
 import {
-  buildRecord,
   classifyTurn,
-  type DispatchRecord,
-  defaultUserDataDir,
-  EMPTY_TABLES,
-  extractDispatchCorpus,
   extractTurnsFromJsonl,
   inferClassFromNames,
+  parseContextBlock,
+} from "../scripts/dispatch-corpus/dispatchTurns.ts";
+import { EMPTY_TABLES } from "../scripts/dispatch-corpus/fleetTables.ts";
+import { defaultUserDataDir } from "../scripts/dispatch-corpus/userData.ts";
+import {
+  buildRecord,
+  type DispatchRecord,
+  extractDispatchCorpus,
   main,
   parseArgs,
-  parseContextBlock,
-  resolutionOf,
 } from "../scripts/extract-dispatch-corpus.ts";
 import { RELEASE_USER_DATA_FOLDER, USER_DATA_FOLDERS } from "../src/shared/userDataFolders";
 import { scratchDir } from "./helpers/scratchDirs";

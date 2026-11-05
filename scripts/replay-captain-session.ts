@@ -41,7 +41,7 @@ import {
   sidecarPathOf,
 } from "../src/core/storage/sessionReader.ts";
 import { detectPackaged } from "./export-corpus.ts";
-import { defaultUserDataDir } from "./extract-dispatch-corpus.ts";
+import { defaultUserDataDir } from "./dispatch-corpus/userData.ts";
 import {
   type BaselineScores,
   baselineFrom,

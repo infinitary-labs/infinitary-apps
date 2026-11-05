@@ -31,8 +31,6 @@ export const CODE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".
  */
 export const OVER_CEILING: readonly string[] = [
   "ios/Infinitary/InfinitaryUITests/PhoneJourney.swift",
-  "scripts/extract-dispatch-corpus.ts",
-  "scripts/replay/engine.ts",
   "src/core/browser/taskBrowsers.test.ts",
   "src/core/browser/taskBrowsers.ts",
   "src/core/core.test.ts",
@@ -62,9 +60,7 @@ export const OVER_CEILING: readonly string[] = [
   "tests/e2e/devices.spec.ts",
   "tests/e2e/mockProvider.ts",
   "tests/e2e/task-browser.spec.ts",
-  "tests/export-corpus-corrections.test.ts",
   "tests/helpers/phoneHome.ts",
-  "tests/replay-captain-session.test.ts",
 ];
 
 /** Whether the check reads this tracked file. */

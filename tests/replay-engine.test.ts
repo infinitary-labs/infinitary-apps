@@ -6,10 +6,9 @@ import {
   firstmatePromptParts,
   readCrewRecording,
   readFirstmateRecording,
-  recordedQuestions,
-  recordedShape,
   wakeRef,
-} from "../scripts/replay/engine.ts";
+} from "../scripts/replay/recording.ts";
+import { recordedQuestions, recordedShape } from "../scripts/replay/translation.ts";
 import { renderWake, type WakeFacts } from "../src/core/orchestrator/wakes.ts";
 import { lintCrewmateCard } from "../src/core/pi/cardLint.ts";
 import { SessionRecordStore } from "../src/core/storage/sessionRecordStore.ts";

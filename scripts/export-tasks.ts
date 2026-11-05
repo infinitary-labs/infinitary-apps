@@ -24,7 +24,7 @@
 
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defaultUserDataDir } from "./extract-dispatch-corpus.ts";
+import { defaultUserDataDir } from "./dispatch-corpus/userData.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import type * as TaskRecords from "./task-records.ts";
 

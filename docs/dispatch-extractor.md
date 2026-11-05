@@ -14,7 +14,8 @@ pnpm extract:dispatch --user-data /path/to/exported/userData --out corpus.jsonl
 pnpm extract:dispatch --session-file one.jsonl --db firstmate.db
 ```
 
-`scripts/extract-dispatch-corpus.ts` runs straight through Node 24's type stripping - no build step - which is why its relative import carries an explicit `.ts` and `tsconfig.node.json` sets `allowImportingTsExtensions`.
+`scripts/extract-dispatch-corpus.ts` runs straight through Node 24's type stripping - no build step - which is why its relative imports carry an explicit `.ts` and `tsconfig.node.json` sets `allowImportingTsExtensions`.
+It reads through its parts under `scripts/dispatch-corpus/`: the user-data folder, the session files, the turns and their classes, the cards, and the fleet tables.
 
 Every input is a parameter with a sensible default (`--user-data`, `--sessions`, `--claude-sessions`, `--db`, `--session-file`), so an **exported copy** of another machine's userData runs identically.
 Nothing hardcodes one machine's path; the default is the platform userData dir, or `INFINITARY_USER_DATA_DIR`.
@@ -165,7 +166,7 @@ The schema under test is the real one; only the rows are fixtures.
 Its classification cases hold the action catalog: `app_change` is operate, `app_state` alone a read, and a `configure_repo` recorded before the catalog replaced it is still operate.
 They hold the captain's labels and a panel from elsewhere too: `flag_missed_escalation`, `flag_duplicate` and `install_plugin` are each operate.
 `record_knowledge` is operate as well, `knowledge` alone a read, and every tool the first mate holds today has a class, so none of its turns exports as `other`.
-A new first mate tool joins one of the class sets in `scripts/extract-dispatch-corpus.ts` in the change that adds it, or its turns export as `other`; that test reads `FIRSTMATE_TOOLS` and fails on a tool with no class.
+A new first mate tool joins one of the class sets in `scripts/dispatch-corpus/dispatchTurns.ts` in the change that adds it, or its turns export as `other`; that test reads `FIRSTMATE_TOOLS` and fails on a tool with no class.
 The replay engine keeps its own tool sets, which the same change updates (`docs/replay-harness.md`, "What it replays").
 
 ## Notes moved from AGENTS.md

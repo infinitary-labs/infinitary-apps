@@ -56,14 +56,11 @@ import {
   cardVersionAt,
   chosenEffectOf,
   declaredActionsOf,
-  type DispatchRecord,
-  defaultUserDataDir,
-  EMPTY_TABLES,
-  extractDispatchCorpus,
-  type FleetTables,
-  readFleetTables,
   resolutionOf,
-} from "./extract-dispatch-corpus.ts";
+} from "./dispatch-corpus/cards.ts";
+import { EMPTY_TABLES, type FleetTables, readFleetTables } from "./dispatch-corpus/fleetTables.ts";
+import { defaultUserDataDir } from "./dispatch-corpus/userData.ts";
+import { type DispatchRecord, extractDispatchCorpus } from "./extract-dispatch-corpus.ts";
 import {
   escalationLineages,
   isCompletionCard,

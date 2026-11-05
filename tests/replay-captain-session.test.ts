@@ -2,19 +2,15 @@ import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { parseTurnText } from "../scripts/extract-dispatch-corpus.ts";
+import { parseTurnText } from "../scripts/dispatch-corpus/dispatchTurns.ts";
 import {
   compareToBaseline,
   type MetricScores,
   scoreSession,
 } from "../scripts/interaction-metrics.ts";
 import { emptyTables, readRecordedTables } from "../scripts/recorded-tables.ts";
-import {
-  readCrewRecording,
-  readFirstmateRecording,
-  replaySession,
-  type SessionReport,
-} from "../scripts/replay/engine.ts";
+import { replaySession, type SessionReport } from "../scripts/replay/engine.ts";
+import { readCrewRecording, readFirstmateRecording } from "../scripts/replay/recording.ts";
 import { windowTables } from "../scripts/replay/window.ts";
 import {
   discoverFixtures,

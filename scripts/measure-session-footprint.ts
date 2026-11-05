@@ -34,7 +34,7 @@ import Database from "better-sqlite3";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defaultUserDataDir } from "./extract-dispatch-corpus.ts";
+import { defaultUserDataDir } from "./dispatch-corpus/userData.ts";
 
 // --------------------------------------------------------------------------
 // Byte classes

@@ -17,6 +17,7 @@ import {
   tick,
   workComputer,
 } from "../../../tests/helpers/crewHarness";
+import { deferred } from "../../../tests/helpers/deferred";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 
@@ -162,6 +163,143 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     await tick();
     expect(h.tasks.get(taskId)?.status).toBe("active");
     expect(h.supervisor.sessions.conversationHeld(taskId)).toBe(true);
+  });
+
+  // INF-2556: after an update restart, one task's crewmate opened twice, a
+  // second wake's resume beside the first, and the two conversations worked
+  // on one working copy until one failed and closed the task.
+  it("opens a task the last run left idle once, whether two resumes ask together or one asks after it opened", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    // What an update restart leaves: an idle task with its saved conversation and no crewmate.
+    seedTask(h.tasks, {
+      id: "t-left",
+      title: "Measure the build load",
+      branch: "fm/task-t-left",
+      worktreeDir: "/work/t-left",
+      sessionFile: "/sessions/t-left.jsonl",
+      status: "idle",
+    });
+
+    // The quit's cut background job and a steer both reach it at once.
+    h.supervisor.deliverJobResult("t-left", "[job] the background wait ended");
+    expect(await h.supervisor.steer.steerCrewmate("t-left", "carry on")).toBe("mid-turn");
+    await vi.waitFor(() => expect(crewmate.promptCalls.length).toBeGreaterThan(0));
+    // A second open of the task, now that it has its crewmate, is that crewmate.
+    const again = await h.supervisor.sessions.resumeTask("t-left");
+    expect(again.session).toBe(crewmate);
+    expect(await h.supervisor.sessions.resumeTask("t-left")).toBe(again);
+
+    expect(h.sessionSpecs).toHaveLength(1);
+    expect(h.specs[0]).toMatchObject({ resumeToken: "/sessions/t-left.jsonl" });
+    expect(crewmate.dispose).not.toHaveBeenCalled();
+    // Both wakes reach the one crewmate, and so does the next steer.
+    crewmate.finishPrompt();
+    await vi.waitFor(() =>
+      expect(crewmate.promptCalls.join("\n")).toContain("the background wait ended"),
+    );
+    expect(crewmate.promptCalls.join("\n")).toContain("carry on");
+    crewmate.finishPrompt();
+    await tick();
+    expect(await h.supervisor.steer.steerCrewmate("t-left", "check the header too")).toBe(
+      "mid-turn",
+    );
+    await vi.waitFor(() => expect(crewmate.promptCalls.at(-1)).toContain("check the header too"));
+    expect(h.sessionSpecs).toHaveLength(1);
+  });
+
+  it("opens no second crewmate for a task whose crewmate is stopping", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await tick();
+    // A cancel whose abort is still on its way.
+    const aborting = deferred<void>();
+    crewmate.abort = vi.fn(() => aborting.promise);
+    const cancelling = h.supervisor.sessions.interruptCrewmate(taskId, "cancel");
+
+    await expect(h.supervisor.sessions.resumeTask(taskId)).rejects.toThrow(
+      "already has a crewmate that is stopping",
+    );
+    await tick();
+    expect(h.sessionSpecs).toHaveLength(1);
+
+    aborting.resolve();
+    await cancelling;
+    expect(h.tasks.get(taskId)?.status).toBe("dropped");
+    expect(interrupts(h.tasks, taskId)).toEqual(["requested", "aborted-turn"]);
+    expect(h.supervisor.sessions.conversationHeld(taskId)).toBe(false);
+    expect(h.sessionSpecs).toHaveLength(1);
+  });
+
+  it("lets go of a conversation a move overtook while it opened, and the task keeps one crewmate", async () => {
+    const copilot = { provider: "github-copilot", id: "gpt-5.1" };
+    const first = fakeCrewmate({ model: copilot });
+    const reopened = fakeCrewmate({
+      model: copilot,
+      sessionId: "s-reopened",
+      resume: { backend: "pi", sessionFile: "/tmp/s-reopened.jsonl" },
+    });
+    const moved = fakeCrewmate({
+      model: CODEX,
+      sessionId: "s-moved",
+      resume: { backend: "pi", sessionFile: "/tmp/s-moved.jsonl" },
+    });
+    const h = setup(first, {
+      routedModel: copilot,
+      crewmates: [reopened, moved],
+      movePick: (shape) =>
+        shape.override_model_id === "openai-codex/gpt-6.1-sol" ? CODEX : undefined,
+    });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await vi.waitFor(() => expect(first.promptCalls).toHaveLength(1));
+    first.finishPrompt();
+    await tick();
+    // Let go between turns, as a quit leaves it.
+    expect(await h.supervisor.sessions.releaseConversation(taskId)).toBe(true);
+
+    // A steer reopens it, and that open has not answered yet.
+    const answering = deferred<void>();
+    const open = h.sessions.open.getMockImplementation();
+    if (!open) throw new Error("the harness opens no session");
+    h.sessions.open.mockImplementationOnce(async (spec) => {
+      const session = await open(spec);
+      await answering.promise;
+      return session;
+    });
+    const steering = h.supervisor.steer.steerCrewmate(taskId, "carry on");
+    await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(2));
+    // The captain moves it meanwhile: the move waits for that open to end.
+    expect(
+      h.supervisor.moves.requestMove(taskId, {
+        by: "captain",
+        model: "openai-codex/gpt-6.1-sol",
+      }).ok,
+    ).toBe(true);
+    await tick();
+    expect(h.sessionSpecs).toHaveLength(2);
+
+    answering.resolve();
+    expect(await steering).toBe("recorded-retrying");
+    await vi.waitFor(() => expect(moved.promptCalls.join("\n")).toContain("carry on"));
+    // The overtaken conversation is let go, never left running beside the moved one.
+    expect(reopened.dispose).toHaveBeenCalled();
+    expect(reopened.promptCalls).toEqual([]);
+    expect(h.sessionSpecs).toHaveLength(3);
+    expect(h.specs.at(-1)).toMatchObject({ model: CODEX });
+    expect(
+      h.tasks.archive
+        .sessions(taskId)
+        .filter((session) => session.current)
+        .map((session) => session.conversation),
+    ).toEqual(["s-moved"]);
+    expect(h.tasks.get(taskId)?.status).toBe("active");
   });
 
   it("asks the computer a running turn is on whether it still runs after a stop", async () => {

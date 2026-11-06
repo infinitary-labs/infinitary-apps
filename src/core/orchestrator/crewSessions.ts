@@ -459,15 +459,28 @@ export class CrewSessions {
    * conversation when the new backend can reopen it. With `restart`, a new
    * conversation opens instead, told why and where the earlier one is: a
    * task that moved to another computer (docs/helper.md, "Moving a started
-   * task"). A plain resume while the task's conversation is opening joins
-   * that open rather than opening a second conversation over it: a computer
-   * that runs work can ask for the conversation (`adoptPlaced`) before it
-   * has answered the open a move or a wake asked of it.
+   * task"). A task has one crewmate at a time (INF-2556). A plain resume
+   * while the task's conversation is opening joins that open, and a plain
+   * resume of a task whose crewmate already holds the conversation returns
+   * that crewmate: a computer that runs work can ask for the conversation
+   * (`adoptPlaced`) before it has answered the open a move or a wake asked
+   * of it, and two wakes after a restart each ask for it. A move or a
+   * restart waits for an open under way to end first; the move let go of
+   * that crewmate, so its open ends without one (`openResumed`).
    */
   resumeTask(taskId: string, move?: MoveTarget, restart?: CrewmateRestart): Promise<TaskRuntime> {
+    const replaces = move !== undefined || restart !== undefined;
     const opening = this.resuming.get(taskId);
-    if (opening && !move && !restart) return opening;
-    const resuming = this.openResumed(taskId, move, restart);
+    if (opening && !replaces) return opening;
+    const live = this.core.tasks.get(taskId);
+    if (!opening && !replaces && live?.session && !live.cancelled && !live.settling)
+      return Promise.resolve(live);
+    const resuming = opening
+      ? opening.then(
+          () => this.openResumed(taskId, move, restart),
+          () => this.openResumed(taskId, move, restart),
+        )
+      : this.openResumed(taskId, move, restart);
     this.resuming.set(taskId, resuming);
     const opened = () => {
       if (this.resuming.get(taskId) === resuming) this.resuming.delete(taskId);
@@ -483,6 +496,16 @@ export class CrewSessions {
   ): Promise<TaskRuntime> {
     const record = this.core.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
+    // One crewmate per task: one still here is never opened over (INF-2556).
+    const held = this.core.tasks.get(record.id);
+    if (held) {
+      const state = !held.session
+        ? " that is starting"
+        : held.cancelled || held.settling
+          ? " that is stopping"
+          : "";
+      throw new Error(`This task already has a crewmate${state}, so a second one is not opened.`);
+    }
     // A committed move to another computer opens a new conversation there,
     // whichever path resumes it first (docs/helper.md, "Moving a started task").
     const movedFrom = record.shape?.computer_move?.restartFrom;
@@ -610,7 +633,9 @@ export class CrewSessions {
       throw caught;
     }
     task.session = session;
+    this.endIfLetGo(task);
     task.unsubscribe = await this.core.follow(task, session);
+    this.endIfLetGo(task);
     // A moved task's record names the conversation it opened now, so a quit
     // before its first turn ends reopens this one.
     this.recordCrewSession(
@@ -636,6 +661,17 @@ export class CrewSessions {
     }
     this.core.broadcastCrewCounts();
     return task;
+  }
+
+  /**
+   * A reopen whose crewmate was let go while its conversation opened - a
+   * move, a stop or a close took the task meanwhile - ends here: the session
+   * it opened goes too, never left running with no task (INF-2556).
+   */
+  private endIfLetGo(task: TaskRuntime): void {
+    if (this.core.tasks.get(task.id) === task) return;
+    this.disposeSession(task);
+    throw new Error("This task's crewmate was let go while its conversation opened.");
   }
 
   /**
@@ -921,8 +957,13 @@ export class CrewSessions {
    * counted twice.
    */
   releaseSession(runtime: TaskRuntime): void {
-    const session = runtime.session;
     this.core.turns.turnOver(runtime.id);
+    this.disposeSession(runtime);
+  }
+
+  /** The session goes; a turn it is still settling is owed to the usage ledger (`releaseSession`). */
+  private disposeSession(runtime: TaskRuntime): void {
+    const session = runtime.session;
     // A copy replaced by an update waits for every client to be gone, so
     // each conversation is written down before the new copy reads it.
     if (session?.isStreaming() || (session && this.core.updates.savedHere())) {

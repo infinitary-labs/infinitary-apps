@@ -570,6 +570,8 @@ Phases 0-8 were implemented: Pi, then Claude Max, then Cursor; Cursor was remove
   A `burnGapMultiple` tiebreak seam waits for the sensor to expose it.
 - **Injection**: the crewmate's account; the supervisor's `bind` (a `SessionBinder`, `src/core/session/binding.ts`) resolves it to the account's `ModelRuntime` on Pi, or the account itself on Claude.
   Spawn and resume are the only attachment points; resume re-checks the account and moves to a sibling with a feed line.
+  A task has one crewmate at a time (`CrewSessions.resumeTask`): a resume joins the open already under way, or the crewmate already holding the conversation, and is refused while that crewmate is starting or stopping.
+  A move waits for an open under way to end, and an open whose crewmate a move, stop or close let go meanwhile disposes the session it opened.
 - **The flagship**: the first mate agent pins one account - a Pi account, or since rev-9 the Claude login (`firstmate-account` setting, derived once like the fixed model).
   Rebind happens only at attachment points - app start, explicit pin change, or the exhaustion ladder at an idle boundary - never mid-turn.
   The ladder: sibling rebind (feed line) → cross-provider decision card (a model change always asks) → paused with its class's card while the durable inbox holds turns, for every cut-off class, not only a spent allowance (§16.8).

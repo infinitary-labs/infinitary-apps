@@ -25,6 +25,7 @@ import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import {
   askedOn,
   completionBody,
+  endTurn,
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
@@ -44,6 +45,7 @@ import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { bindTool } from "../session/tools";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
+import type { MergeBoundary, MergeGuard } from "./changeMerge";
 import { CrewFacts } from "./crewFacts";
 import type { CrewmateSpec } from "./crewSession";
 import { MERGES_NEXT_WORDS, mergedWords, pendingMergeLine } from "./settleWords";
@@ -913,7 +915,16 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       requiredActions: story.requiredActions,
       pictures: story.pictures,
     }));
-    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Merged #1 on GitHub." }));
+    // The merge takes the settle's last look right before it sends, as the
+    // forge's merge does (`ChangeMerges.merge`).
+    const mergePullRequest = vi.fn(
+      async (_taskId: string, _guard?: MergeGuard, boundary?: MergeBoundary) => {
+        const withdrawn = boundary?.beforeDispatch(head);
+        return withdrawn
+          ? { ok: false, text: `Cannot merge: ${withdrawn}` }
+          : { ok: true, text: "Merged #1 on GitHub." };
+      },
+    );
     const harness = setup(crewmate, {
       checkCi: async () => "green",
       completionPresentation,
@@ -1038,6 +1049,37 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         .timeline(taskId)
         .filter((event) => event.kind === "card_raised" && event.ref === shown.id),
     ).toHaveLength(1);
+  });
+
+  // INF-2761, from INF-2695's crewmate: its reports waited on the captain to
+  // read its story note, and every first mate merge was refused as "another
+  // decision or hold still needs attention". The note stays off the stack
+  // until the merge has a result, so a wait on it can only end after the
+  // merge: it holds the merge no more than a wait on a merge offer does.
+  it("merges a self-merging task whose crewmate waits on the captain to read its held story note (INF-2761)", async () => {
+    const { supervisor, tasks, taskId, note, mergePullRequest, specs, crewmate } =
+      await heldStoryNote();
+    const held = note() as Card;
+    // Its next turn reports the green change, waiting on the captain to read the note.
+    await supervisor.steer.steerCrewmate(taskId, "the checks passed; report");
+    await tick();
+    await specs[0]?.onReport?.(
+      "PR #1 is green and its story note is up; it merges on its own.",
+      undefined,
+      {
+        wait: { reason: "read the completion note", cardId: held.id },
+        needsFirstmate: "merge pull request #1",
+      },
+    );
+    await endTurn(crewmate, taskId);
+    const waiting = tasks.get(taskId);
+    expect(waiting?.delivery?.captainWait).toMatchObject({ cardId: held.id });
+    expect(waiting?.gate).toMatchObject({ kind: "captain", ref: held.id });
+    const answer = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
+    expect(answer.text).not.toContain(softHoldWords("decisions", "firstmate"));
+    expect(mergePullRequest).toHaveBeenCalledOnce();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+    expect(onStage(note() as Card)).toBe(true);
   });
 
   // INF-2678, the captain's screenshot of INF-2677's note: "these cards now

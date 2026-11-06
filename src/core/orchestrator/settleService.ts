@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { isRoutineMergeCard, keepsTaskOpen } from "@shared/cards";
+import { isRoutineMergeCard, isStoryNote, keepsTaskOpen } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus } from "@shared/checkSnapshot";
 import type { FolderRefreshRefusal } from "@shared/folderRefresh";
@@ -145,12 +145,20 @@ export class SettleService {
         // The first mate's own cards never hold its own merge (INF-242's
         // question 9): a crewmate's question, a write request or a
         // validation question still does.
-        const decisions = [...this.host.cards.values()].filter(
-          (card) => card.taskId === taskId && card.actions.length,
-        );
+        const cards = [...this.host.cards.values()].filter((card) => card.taskId === taskId);
+        const decisions = cards.filter((card) => card.actions.length);
+        // Nor does the task's story note: the completion of work that merges
+        // on its own, held off the stack until this merge has a result
+        // (INF-2533). A wait or gate on the captain reading it waits on the
+        // merge itself, like one on a merge offer (INF-2761).
         const passed = new Set(
-          decisions
-            .filter((card) => isRoutineMergeCard(card) || card.author === "firstmate")
+          cards
+            .filter(
+              (card) =>
+                isStoryNote(card) ||
+                (card.actions.length > 0 &&
+                  (isRoutineMergeCard(card) || card.author === "firstmate")),
+            )
             .map((card) => card.id),
         );
         const gateIsPassed =

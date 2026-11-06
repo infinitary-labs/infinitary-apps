@@ -552,8 +552,9 @@ The crewmate reads them as its consent for what they reach among its own consent
 The reviewer's brief carries them on every review turn (`reviewerOverrideWords`), so access or a step they cover is not a finding.
 When they pass the checks, its merge reads Merge the pull request on failed or running checks, since the click merges at once ("Its words" above).
 
-**The first mate's own cards.**
+**The first mate's own cards and a story note.**
 The `decisions` hold on a first mate merge counts a crewmate's question, a write request and a validation question, never a card of the first mate's own (INF-242's question 9).
+Nor does it count a captain wait or gate on the task's own story note: the completion of work that merges on its own stays off the stack until the merge has a result ("Work that closed without the captain's click" in `docs/card-authoring.md`), so the captain reads it after the merge, the same as a wait on a merge offer (INF-2761).
 
 A refusal written with no kind at all is beyond the check; the weekly audit reads each week's changes for one, beside the limits ledger and the override counts (`docs/agents-reach.md`).
 

@@ -356,6 +356,8 @@ Record the requesting task, exact source and reason explaining why narrower proo
 Before dispatching, inspect existing same-source checks and artifacts, including running checks, to avoid duplicate work.
 A request for all Linux proof authorizes Linux only, never Mac tests, signing or packaging.
 Use `source-journeys.yml` with `suite: full` for that sweep; Linux-only success is not full-system main or release proof.
+A Mac-specific exception, such as a Mac runner's trial or a repair only the Mac jobs can prove, requests `verify.yml` with `mac_only: true` in place of `full_system`: its three Mac jobs run and no Linux job does (INF-2850).
+Mac-only success is not full-system main or release proof either.
 `mac_all` and `all_journeys` belong only to a named Mac-specific proof or full-run exception, never reassurance.
 Signing consent remains separate.
 
@@ -368,7 +370,9 @@ For `renderer` or `application` specs, add `--no-deps` to avoid pulling in the w
 
 Only for a named exception under "When to request full verification", start `verify.yml` in GitHub Actions for the required branch or tag.
 Crewmates use `github_write` to POST `/repos/{owner}/{repo}/actions/workflows/verify.yml/dispatches` with `{"ref":"<workflow-branch>","inputs":{"full_system":true,"ref":"<exact-source-commit>","task":"<task-key>","reason":"<named exception; why narrower proof cannot suffice>"}}` and any other required inputs through the app's own GitHub sign-in (`docs/forge.md`, "Verification workflow requests").
+For the Mac jobs alone, pass `"mac_only":true` in place of `"full_system":true`, with the same source, task and reason; the two cannot be combined.
 For an isolated Mac proof, pass the optional `mac_runner` input with a temporary runner label; it changes only that invocation's Mac lanes, never `MAC_RUNNER` or the Linux jobs.
+A Mac runner's trial pairs it with `mac_only`, so no Linux job runs beside it.
 The reusable workflow accepts the same input, and leaving it unset keeps the normal project runner and hosted fallback.
 An accepted request is not a passing check: find the run with `github_read`, confirm its version, then read `check_change`.
 CI sets `CI`; do not set it locally to bypass the guard.
@@ -672,7 +676,7 @@ So a journey the change only reaches is checked there, and a break found there s
 | The Linux sweep | never, outside a named exception ("When to request full verification") | `source-journeys.yml` with `suite: full`, task and reason |
 | The phone check | its change selects the phone gate ("Native phone checks") | `phone.yml` with `affected: "true"`, or named `parts`; every part only with `task` and `reason` |
 | The replay gate | its change touches a replay trigger (`docs/replay-harness.md`, "The gate") | `replay.yml` |
-| Full verification | never, outside a named exception ("When to request full verification") | `verify.yml` with `full_system`, task and reason |
+| Full verification | never, outside a named exception ("When to request full verification") | `verify.yml` with `full_system`, or `mac_only` for its Mac jobs alone, task and reason |
 
 Each request goes once per task, at the final version, after the pull request's own checks passed.
 A request made while the change is still being written is a diagnostic, never its proof.
@@ -1357,9 +1361,9 @@ Request `source-journeys.yml` on a branch with `suite: alone` to check just thos
 Its manual `suite: full` route runs the same eight full-suite jobs, including styles, with no Mac tests, signing, packaging or broad unit sweep.
 Pass `ref` as the exact source commit, `task` as the requesting task and `reason` as why the Linux sweep is needed; each job checks its checkout and records these fields before installing or building.
 The dispatch's top-level `ref` selects the workflow definition; `inputs.ref` selects the tested source, and the artifact names, timing identity, test order and failure reporting remain the reusable full route's.
-A manual `verify.yml` request instead requires `full_system: true` plus task, source and reason before expensive jobs can start.
+A manual `verify.yml` request instead requires `full_system: true`, or `mac_only: true` for its three Mac jobs alone, plus task, source and reason before expensive jobs can start.
 Both `stable` and `alpha` profiles run full-system checks, not Linux-only checks.
-Installer-only and installer-reuse requests retain their separate route and cannot also select `full_system`; main and release reusable calls need no manual opt-in.
+Installer-only and installer-reuse requests retain their separate route and cannot also select `full_system` or `mac_only`; main and release reusable calls need no manual opt-in.
 With `suite: affected`, each job ends with the run-alone pass over its directly edited files and keeps it as `e2e-alone-<suffix>-<lane>`.
 A stable promotion inherits them with the other lanes ("Full alpha checks, inherited stable checks" in `docs/alpha.md`).
 The replay gate and packaging stay on the full check's native Mac job.

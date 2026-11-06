@@ -17,7 +17,8 @@ name: verify
 # only, from the first piece on"): main.yml's call runs the checks part, every
 # lane but the journeys, with only the tagged tests on the Mac; an alpha that
 # reuses main's checks runs the journeys part, every journey on Linux and the
-# Mac and nothing else; every other run is the whole check.
+# Mac and nothing else; a request with mac_only runs the three Mac lanes and
+# no Linux job (INF-2850); every other run is the whole check.
 #
 # The e2e paint and latency budgets are graded only on request, on a quiet
 # host (captain's B1, 2026-09-24; tests/e2e/perf.ts): every e2e run prints
@@ -93,14 +94,21 @@ on:
         description: Explicitly request full Linux and Mac verification, including signing and packaging (not Linux-only)
         type: boolean
         default: false
+      # The three Mac jobs alone, for a Mac-specific proof such as a Mac
+      # runner's trial (INF-2850, the captain's pick from INF-2834: "Give a
+      # manual check request a choice that runs only the Mac jobs").
+      mac_only:
+        description: Explicitly request only the Mac jobs (native tests, replay and package; parallel and desktop journeys), no Linux job
+        type: boolean
+        default: false
       task:
-        description: Requesting task (required for manual full-system verification)
+        description: Requesting task (required for manual full-system or Mac-only verification)
         type: string
       reason:
         description: Named full-run exception and why narrower proof cannot suffice
         type: string
       ref:
-        description: Exact source commit for full-system; optional branch, tag or SHA for installer checks
+        description: Exact source commit for full-system or Mac-only; optional branch, tag or SHA for installer checks
         required: false
         type: string
       mac_runner:
@@ -171,6 +179,7 @@ jobs:
         env:
           MANUAL: ${{ github.event_name == 'workflow_dispatch' && github.workflow == 'verify' }}
           FULL_SYSTEM: ${{ inputs.full_system }}
+          MAC_ONLY: ${{ inputs.mac_only }}
           INSTALLER_ONLY: ${{ inputs.installer_only }}
           INSTALLER_REUSE: ${{ inputs.installer_reuse }}
           SOURCE: ${{ inputs.ref }}
@@ -180,22 +189,23 @@ jobs:
         run: |
           if [ "$MANUAL" != true ]; then exit 0; fi
           if [ "$INSTALLER_ONLY" = true ] || [ -n "$INSTALLER_REUSE" ]; then
-            [ "$FULL_SYSTEM" != true ] || { echo 'Choose installer verification or full-system, not both'; exit 1; }
+            [ "$FULL_SYSTEM" != true ] && [ "$MAC_ONLY" != true ] || { echo 'Choose installer verification, full-system or Mac-only, only one'; exit 1; }
           else
-            [ "$FULL_SYSTEM" = true ] || { echo 'Select full_system explicitly; use source-journeys.yml for Linux-only proof'; exit 1; }
+            [ "$FULL_SYSTEM" = true ] || [ "$MAC_ONLY" = true ] || { echo 'Select full_system or mac_only explicitly; use source-journeys.yml for Linux-only proof'; exit 1; }
+            [ "$FULL_SYSTEM" != true ] || [ "$MAC_ONLY" != true ] || { echo 'Choose full-system or Mac-only, not both'; exit 1; }
             [[ "$SOURCE" =~ ^[0-9a-f]{40}$ ]] && [ -n "$TASK" ] && [ -n "$REASON" ] || {
-              echo 'Full-system requests require an exact source commit, task and reason'; exit 1;
+              echo 'Full-system and Mac-only requests require an exact source commit, task and reason'; exit 1;
             }
           fi
-          printf 'Verification request: full_system=%s installer_only=%s installer_reuse=%s source=%s task=%s reason=%s\n' "$FULL_SYSTEM" "$INSTALLER_ONLY" "$INSTALLER_REUSE" "${SOURCE:-$WORKFLOW_SOURCE}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Verification request: full_system=%s mac_only=%s installer_only=%s installer_reuse=%s source=%s task=%s reason=%s\n' "$FULL_SYSTEM" "$MAC_ONLY" "$INSTALLER_ONLY" "$INSTALLER_REUSE" "${SOURCE:-$WORKFLOW_SOURCE}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
   # linux-e2e: every Playwright journey on the app built from source on
   # Ubuntu (LINUX_RUNNER, hosted when unset), in shards (docs/testing.md, "The Linux source desktop").
   # A call from main.yml or release.yml runs them on GitHub's hosted Ubuntu instead.
   # Journeys that are the Mac's alone skip there and say why. The checks part
-  # (main.yml's call) leaves it out of the run.
+  # (main.yml's call) and a Mac-only request leave it out of the run.
   linux-e2e:
     needs: request
-    if: ${{ !inputs.installer_only && !inputs.installer_reuse && inputs.part != 'checks' }}
+    if: ${{ !inputs.installer_only && !inputs.installer_reuse && !inputs.mac_only && inputs.part != 'checks' }}
     name: ${{ format('{0} · Linux journeys', inputs.trigger || 'Manual request') }}
     uses: ./.github/workflows/source-journeys.yml
     with:
@@ -230,7 +240,7 @@ jobs:
   # signing checks; parallel runs the journeys of the parallel lanes; desktop
   # runs the one-worker desktop lane, alone, with the recorded demos. Each
   # step names the lanes it belongs to. The journeys part runs the two
-  # journey lanes alone.
+  # journey lanes alone, and a Mac-only request the three Mac lanes.
   lane:
     needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
@@ -238,7 +248,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lane: ${{ fromJSON(inputs.part == 'journeys' && '["parallel","desktop"]' || '["linux-checks","mac","parallel","desktop"]') }}
+        lane: ${{ fromJSON(inputs.part == 'journeys' && '["parallel","desktop"]' || inputs.mac_only && '["mac","parallel","desktop"]' || '["linux-checks","mac","parallel","desktop"]') }}
     # Every Mac lane asks for the split kind, a size each Mac place can
     # take, so the three run side by side; until MAC_QUEUES names it, the
     # journeys kind's size, then the full check's old kind (docs/testing.md,
@@ -608,10 +618,11 @@ jobs:
   # probe, the projects ci.yml's requested sweeps run (docs/test-cohorts.md);
   # the alpha's proof requires every group's complete set
   # (scripts/main-alpha-proof.mjs). Each group reports even when another
-  # fails, and the journeys part leaves them out, as linux-checks.
+  # fails, and the journeys part and a Mac-only request leave them out, as
+  # linux-checks.
   linux-tests:
     needs: request
-    if: ${{ !inputs.installer_only && !inputs.installer_reuse && inputs.part != 'journeys' }}
+    if: ${{ !inputs.installer_only && !inputs.installer_reuse && !inputs.mac_only && inputs.part != 'journeys' }}
     name: ${{ format(matrix.shards > 1 && '{0} · {1} (Linux; group {2}/{3})' || '{0} · {1} (Linux)', inputs.trigger || 'Manual request', matrix.tests, matrix.shard, matrix.shards) }}
     strategy:
       fail-fast: false

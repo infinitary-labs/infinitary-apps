@@ -421,10 +421,11 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   This Linux-only route retains all eight full-suite groups without Mac tests, signing or packaging; `suite: alone` remains the separate fresh-state pass.
   Before requesting work, read existing same-source checks, including running checks, and reuse applicable evidence rather than duplicate it.
   A manual `verify.yml` full-system request uses `{"ref":"<workflow-branch>","inputs":{"full_system":true,"ref":"<exact-source-commit>","task":"<task-key>","reason":"<named exception; why narrower proof cannot suffice>"}}`.
+  A Mac-only request, such as a Mac runner's trial, passes `"mac_only":true` in place of `"full_system":true` with the same source, task and reason: the three Mac jobs run and no Linux job does, and the two selections cannot be combined.
   Both verification profiles include Linux and Mac; `all_journeys: false` narrows Mac journeys, not the broad Mac job, signing or packaging.
-  Without the explicit selection, verification stops before expensive jobs; installer-only/reuse routes remain separate and reject a simultaneous full-system selection.
+  Without the explicit selection, verification stops before expensive jobs; installer-only/reuse routes remain separate and reject a simultaneous full-system or Mac-only selection.
   Main and release reusable callers need no manual selection, and together keep full-system coverage: main runs every check but the old journey set, and every alpha runs every journey or reuses the swept batch's.
-  A Linux-only result cannot satisfy their full-system proof, and a request for all Linux tests does not authorize Mac work.
+  A Linux-only or Mac-only result cannot satisfy their full-system proof, and a request for all Linux tests does not authorize Mac work.
   The caller chooses the workflow, ref and optional inputs its task needs; the host adds no task-branch or input restrictions.
   In this repository, `verify.yml` on request runs only the tests tagged `MAC_ONLY_TAG` on the Mac; a request may pass `"all_journeys":true` to run every journey there, as every alpha does (`docs/testing.md`, "Tests that need a Mac").
   Starting, cancelling, enabling, disabling and rerunning workflows are project operations, not account administration.

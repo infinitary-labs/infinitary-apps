@@ -352,10 +352,22 @@ it("refuses an unknown phone device before the gate starts", () => {
 // INF-2374 approved plan: Linux-only full proof must not silently buy full Mac
 // verification. Exercise the actual request shells and Actions expressions.
 describe("explicit manual verification scope (INF-2374)", () => {
-  type Step = { name?: string; run?: string; if?: string; env?: Record<string, string> };
-  type Job = { needs?: string; steps?: Step[]; strategy?: { matrix: Record<string, string> } };
+  type Step = {
+    id?: string;
+    name?: string;
+    run?: string;
+    if?: string;
+    env?: Record<string, string>;
+  };
+  type Job = {
+    needs?: string;
+    if?: string;
+    "runs-on"?: string;
+    steps?: Step[];
+    strategy?: { matrix: Record<string, string> };
+  };
   type Workflow = {
-    on: Record<string, { inputs: Record<string, { options?: string[] }> }>;
+    on: Record<string, { inputs: Record<string, { options?: string[]; default?: unknown }> }>;
     jobs: Record<string, Job>;
   };
   const verify = loadYamlFile(".github/workflows/verify.yml") as Workflow;
@@ -491,6 +503,88 @@ describe("explicit manual verification scope (INF-2374)", () => {
       expect(
         runRequest(linuxRequest!, { ...context, inputs: { ...inputs, suite: "full" } }).status,
       ).not.toBe(0);
+    }
+  });
+
+  // INF-2850, the captain's pick: "Give a manual check request a choice that
+  // runs only the Mac jobs." A Mac runner's trial requested the full check and
+  // ran every Linux job beside the three Mac ones. A Mac-only request is held
+  // to the same exact source, task and reason, and past the request check it
+  // runs the three Mac jobs alone, each with the steps a full request gives it.
+  it("runs only the three Mac jobs for an explained Mac-only request", () => {
+    const macOnly = {
+      mac_only: true,
+      ref: head,
+      task: "INF-2850",
+      reason: "Trial a Mac runner's split jobs before its queue takes them",
+    };
+    // A request's inputs, with verify.yml's own defaults for those it leaves out.
+    const dispatched = (given: Record<string, unknown>) => ({
+      ...Object.fromEntries(
+        Object.entries(verify.on.workflow_dispatch?.inputs ?? {}).flatMap(([name, input]) =>
+          "default" in input ? [[name, input.default]] : [],
+        ),
+      ),
+      ...given,
+    });
+    const full = dispatched(valid);
+    const mac = dispatched(macOnly);
+    const accepted = runRequest(request!, { github, inputs: mac });
+    expect(accepted.status, accepted.stderr).toBe(0);
+    expect(accepted.summary).toContain("full_system=false mac_only=true");
+    expect(accepted.summary).toContain(`source=${head} task=${macOnly.task}`);
+    for (const inputs of [
+      { ...macOnly, ref: "main" },
+      { ...macOnly, task: "" },
+      { ...macOnly, reason: "" },
+      { ...macOnly, full_system: true },
+      { ...macOnly, installer_only: true },
+      { mac_only: true, installer_reuse: "reviewed declaration" },
+    ]) {
+      const refused = runRequest(request!, { github, inputs: dispatched(inputs) });
+      expect(refused.status, JSON.stringify(inputs)).not.toBe(0);
+      expect(refused.summary).toBe("");
+    }
+
+    const runs = (id: string, inputs: Record<string, unknown>) =>
+      verify.jobs[id]?.if === undefined ||
+      workflowValue(verify.jobs[id]?.if ?? "", { inputs }) === true;
+    const lanes = (inputs: Record<string, unknown>) =>
+      workflowValue(verify.jobs.lane?.strategy?.matrix.lane ?? "", { inputs });
+    expect(Object.keys(verify.jobs).filter((id) => runs(id, full))).toEqual([
+      "request",
+      "linux-e2e",
+      "lane",
+      "linux-tests",
+    ]);
+    expect(lanes(full)).toEqual(["linux-checks", "mac", "parallel", "desktop"]);
+    expect(Object.keys(verify.jobs).filter((id) => runs(id, mac))).toEqual(["request", "lane"]);
+    expect(lanes(mac)).toEqual(["mac", "parallel", "desktop"]);
+
+    // Each lane on a Mac, and with the steps a full request runs there.
+    const ran = (lane: string, inputs: Record<string, unknown>) => {
+      const outcomes: Record<string, { outcome: string }> = {};
+      const commands: string[] = [];
+      for (const step of verify.jobs.lane?.steps ?? []) {
+        const runsStep =
+          step.if === undefined ||
+          workflowValue(step.if, { matrix: { lane }, inputs, steps: outcomes }) === true;
+        if (step.id) outcomes[step.id] = { outcome: runsStep ? "success" : "skipped" };
+        if (runsStep && step.run) commands.push(step.id ?? step.name ?? step.run);
+      }
+      return commands;
+    };
+    for (const lane of lanes(mac) as string[]) {
+      expect(
+        workflowValue(verify.jobs.lane?.["runs-on"] ?? "", {
+          matrix: { lane },
+          inputs: mac,
+          vars: { MAC_RUNNER: "mini-mac" },
+        }),
+        lane,
+      ).toBe("mini-mac");
+      expect(ran(lane, mac), lane).toEqual(ran(lane, full));
+      expect(ran(lane, mac), lane).toContain(lane === "mac" ? "dev-signing" : "e2e");
     }
   });
 });

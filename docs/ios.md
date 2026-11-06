@@ -343,6 +343,7 @@ While browsing, a scene-owned responder holds first-responder status and offers 
 Each crewmate and program answers touch across its 44-point square, not only the drawn circle.
 One UIKit view under the scene (`PhoneSceneTouches`) answers touch and accessibility from the frame the render thread last drew, read only when a touch or an accessibility query arrives, rather than a SwiftUI button laid out for each crewmate on every frame.
 A tap opens the crewmate the frame on screen at touch-down drew under the finger, from the last half second of drawn frames, because the crew keep moving on the render thread before the tap is recognized as the finger lifts.
+The touch-down is the one the tap recognizer receives as the finger lands, never the view's own: the scroller holds a touch back from the view, so a quick tap would be recognized before the view heard it land, and a drag the scroller takes over would leave its own landing for the next tap.
 Where two squares overlap, each point belongs to the nearer center (`PhoneTouchCell`), so a tap on a crewmate's own center always reaches it.
 Selection has an accent outline and an accessibility value; Tab brings it into view without relying on SwiftUI's platform-focus reporting.
 Escape, editing, a preview, a task record, leaving Home or backgrounding stops browsing and releases that responder, so the unmodified commands do not take over other controls.

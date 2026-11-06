@@ -207,7 +207,7 @@ jobs:
             core.setOutput('heads', batch.headList(composed.merged));
 
   # The alpha's full check on the composed batch, without the phone check:
-  # hosted Linux, and the Mac lane on the release check line.
+  # hosted Linux, and the Mac lanes on the release split line.
   sweep:
     needs: compose
     if: needs.compose.outputs.sweep == 'true'
@@ -221,7 +221,7 @@ jobs:
       profile: stable
       all_journeys: true
       hosted: true
-      mac_runner: ${{ fromJSON(vars.MAC_QUEUES || '{}').release_check || '' }}
+      mac_runner: ${{ fromJSON(vars.MAC_QUEUES || '{}').release_split || '' }}
 
   # The critical path (INF-2507; docs/testing.md, "The critical path") on the
   # composed batch, in a job of its own, so the swept batch's check runs it

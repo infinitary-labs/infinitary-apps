@@ -10,6 +10,7 @@ const pool = "mini-mac-phone";
 const nativeJobs = ["native-phone"];
 const allowed = nativeJobs.map((id) => `phone.yml:${id}`);
 const kinds = [
+  "split",
   "check",
   "journeys",
   "phone",
@@ -17,7 +18,7 @@ const kinds = [
   "build",
   "sign",
   "light",
-  "release_check",
+  "release_split",
   "release_sign",
   "release_light",
 ];

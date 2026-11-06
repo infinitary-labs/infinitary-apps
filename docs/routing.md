@@ -171,7 +171,7 @@ A Mac reading without pressure, or without inactive and speculative bytes, count
 Anything else has no figure.
 A Mac in ordinary use keeps almost no page free, so free bytes alone would read a Mac with room as full.
 The observation still carries every raw count, and the figure is the only number a reader uses.
-`tests/e2e/automatic-placement.spec.ts` starts an Automatic project task on the computer that runs the suite, once on a model routing names and once on that computer's own default when routing names none: the Mac mini on a pull request and in the full suite's Mac lane, and the hosted Linux virtual machines in the full suite.
+`tests/e2e/automatic-placement.spec.ts` starts an Automatic project task on the computer that runs the suite, once on a model routing names and once on that computer's own default when routing names none: the Mac mini on a pull request, the Mac that runs the full suite's desktop journeys job, and the hosted Linux virtual machines in the full suite.
 Memory, macOS page and pressure reads, computer identity, program and project access remain that computer's own.
 The journey replays captured CPU counters only inside its isolated Electron process (`tests/e2e/placementCpu.ts`); production sampling and admission are unchanged.
 It first observes a fresh busy sample, asks for a task, checks that the task waits unstarted for CPU room, then releases available counters and checks that the next placement sweep starts it on its own branch.

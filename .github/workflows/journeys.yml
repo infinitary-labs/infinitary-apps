@@ -92,23 +92,31 @@ jobs:
       # GitHub's time limit and answered 502; leaving them out drops no run,
       # and the chooser never reads them.
       # INF-1578: an installer-only verify can pass without journey times;
-      # keep looking until a passing run has an unexpired e2e-results artifact.
+      # keep looking until a passing run has every journey's time unexpired.
+      # INF-2779: since the Mac journeys run in two jobs, a run keeps each
+      # lane's result as e2e-results-<lane>, and needs both; a run from
+      # before it kept one e2e-results.
       - id: timing-run
         name: Find the newest passing full verification
         uses: actions/github-script@v7
         with:
           script: |
+            const TIMES = [['e2e-results-parallel', 'e2e-results-desktop'], ['e2e-results']];
             const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
               ...context.repo, workflow_id: 'verify.yml', exclude_pull_requests: true, per_page: 100
             });
             let run;
+            let kept;
             for await (const { data } of pages) {
               for (const candidate of data) {
                 if (candidate.conclusion !== 'success') continue;
                 const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
-                  ...context.repo, run_id: candidate.id, name: 'e2e-results', per_page: 100
+                  ...context.repo, run_id: candidate.id, per_page: 100
                 });
-                if (artifacts.some(artifact => artifact.name === 'e2e-results' && !artifact.expired)) {
+                const live = artifacts.filter(artifact => !artifact.expired);
+                kept = TIMES.map(names => names.map(name => live.find(artifact => artifact.name === name)))
+                  .find(found => found.every(Boolean));
+                if (kept) {
                   run = candidate;
                   break;
                 }
@@ -120,11 +128,13 @@ jobs:
               return;
             }
             core.setOutput('id', run.id);
+            core.setOutput('artifacts', kept.map(artifact => artifact.id).join(','));
             await core.summary.addRaw(`Journey times: [passing verify run ${run.id}](${run.html_url})\n`).write();
+      # Each artifact in a folder of its own, which journey-budget.ts reads whole.
       - uses: actions/download-artifact@v4
         if: steps.timing-run.outputs.id != ''
         with:
-          name: e2e-results
+          artifact-ids: ${{ steps.timing-run.outputs.artifacts }}
           run-id: ${{ steps.timing-run.outputs.id }}
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/journey-times
@@ -185,7 +195,7 @@ jobs:
         name: Choose and place the journeys
         run: |
           node scripts/affected-journeys.ts --named "$NAMED" --json > "$RUNNER_TEMP/affected.json"
-          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" --linux-timings "$RUNNER_TEMP/linux-journey-times" --linux-jobs "$RUNNER_TEMP/linux-journey-jobs.json" --platforms "$PLATFORMS" $EVERY > "$RUNNER_TEMP/placement.json"
+          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times" --linux-timings "$RUNNER_TEMP/linux-journey-times" --linux-jobs "$RUNNER_TEMP/linux-journey-jobs.json" --platforms "$PLATFORMS" $EVERY > "$RUNNER_TEMP/placement.json"
         env:
           NAMED: ${{ inputs.files }}
           PLATFORMS: ${{ inputs.platforms || 'linux' }}

@@ -120,9 +120,9 @@ export function recordedWorkflowCall(
   return readFileSync(log, "utf8").trim().split("\n");
 }
 
-/** verify.yml's full Mac e2e command: half the job's cores (scripts/job-cores.ts). */
+/** verify.yml's full Mac e2e command: its journey lane's projects alone, on half the job's cores (scripts/job-cores.ts). */
 export const VERIFY_E2E_RUN =
-  'cores="$(node scripts/job-cores.ts)"\npnpm exec playwright test --workers=$(( cores > 1 ? cores / 2 : 1 ))\n';
+  'cores="$(node scripts/job-cores.ts)"\npnpm exec playwright test --no-deps $PROJECTS --workers=$(( cores > 1 ? cores / 2 : 1 ))\n';
 
 /** A ci.yml job that calls another workflow and starts no machine of its own. */
 export type CiCall = { if?: string; needs?: unknown; uses: string; with?: Record<string, unknown> };

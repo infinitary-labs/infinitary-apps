@@ -367,7 +367,7 @@ describe("batch.yml", () => {
     ).toBe(false);
   });
 
-  it("sweeps with the alpha's full check: hosted Linux, every journey, the Mac on the release check line", () => {
+  it("sweeps with the alpha's full check: hosted Linux, every journey, the Mac lanes on the release split line", () => {
     const sweep = batch.jobs.sweep!;
     expect(sweep.uses).toBe("./.github/workflows/verify.yml");
     expect(sweep.with).toMatchObject({ hosted: true, all_journeys: true, profile: "stable" });
@@ -375,10 +375,14 @@ describe("batch.yml", () => {
     // alpha reuse them". The sweep calls the whole check, never a part, so
     // its journeys are there for the alpha to reuse.
     expect(sweep.with!.part).toBeUndefined();
+    // INF-2779: the full check's three Mac jobs share one kind.
     const vars = {
-      MAC_QUEUES: JSON.stringify({ check: "mini-mac-check", release_check: "mini-mac-release" }),
+      MAC_QUEUES: JSON.stringify({
+        split: "mini-mac-split",
+        release_split: "mini-mac-release-split",
+      }),
     };
-    expect(workflowString(String(sweep.with!.mac_runner), { vars })).toBe("mini-mac-release");
+    expect(workflowString(String(sweep.with!.mac_runner), { vars })).toBe("mini-mac-release-split");
     expect(Object.values(batch.jobs).some((job) => job.uses?.endsWith("/phone.yml"))).toBe(false);
   });
 

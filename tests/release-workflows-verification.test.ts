@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import vitestConfig from "../vitest.config";
+import { E2E_PROJECTS } from "./e2e/lanes.ts";
 import { MAC_ONLY_TAG } from "./e2e/tags.ts";
 import { runJobNames } from "./helpers/ciJobNames";
 import {
@@ -99,9 +100,12 @@ describe("the signed channel workflow", () => {
       uses: "./.github/workflows/source-journeys.yml",
       with: { ref: "${{ inputs.ref || github.ref }}", suite: "full" },
     });
-    expect(lanes("stable")).toEqual(["linux-checks", "mac"]);
-    expect(lanes()).toEqual(["linux-checks", "mac"]);
-    expect(lanes("alpha")).toEqual(["linux-checks", "mac"]);
+    // INF-2779 (the captain's three Mac jobs): native tests and the package,
+    // the parallel journeys, and the one-worker desktop journeys.
+    const all = ["linux-checks", "mac", "parallel", "desktop"];
+    expect(lanes("stable")).toEqual(all);
+    expect(lanes()).toEqual(all);
+    expect(lanes("alpha")).toEqual(all);
     // INF-2259 adds an automatic-event success guard, not a manual profile skip.
     // Both manual profiles still resolve; lane jobs never turn a skip into a pass.
     for (const channel of ["stable", "alpha"])
@@ -131,11 +135,11 @@ describe("the signed channel workflow", () => {
     const runner = (name: string) =>
       workflowValue(lane["runs-on"] ?? "", { matrix: { lane: name }, inputs: {}, vars: {} });
     expect(runner("linux-checks")).toBe("ubuntu-24.04");
-    expect(runner("mac")).toBe("macos-15");
+    for (const mac of ["mac", "parallel", "desktop"]) expect(runner(mac), mac).toBe("macos-15");
     // What each lane runs, by its own step conditions on a passing run: the
     // linux-checks lane retains the full main gate, replacing the separate
     // cohort sweeps and changed-test repetitions with the full suite; the
-    // Mac lane retains its Mac-only selection.
+    // Mac lanes retain the Mac-only selection, the journeys on their own jobs.
     const runsIn = (name: string) =>
       (lane.steps ?? [])
         .filter(
@@ -164,15 +168,20 @@ describe("the signed channel workflow", () => {
       [...new Set(mainGate)].toSorted(),
     );
     expect(runsIn("linux-checks").filter((run) => run?.startsWith("pnpm test"))).toEqual([]);
+    const macUnit = 'mac_tests="$(node scripts/mac-unit-tests.ts)"\npnpm test $mac_tests\n';
     expect(runsIn("mac")).toEqual(
-      expect.arrayContaining([
-        'mac_tests="$(node scripts/mac-unit-tests.ts)"\npnpm test $mac_tests\n',
-        "pnpm build",
-        VERIFY_E2E_RUN,
-        "pnpm replay:gate",
-      ]),
+      expect.arrayContaining([macUnit, "pnpm build", "pnpm replay:gate"]),
     );
-    expect(runsIn("mac")).not.toContain("pnpm typecheck");
+    expect(runsIn("mac")).not.toContain(VERIFY_E2E_RUN);
+    for (const journeys of ["parallel", "desktop"]) {
+      expect(runsIn(journeys), journeys).toEqual(
+        expect.arrayContaining(["pnpm build", VERIFY_E2E_RUN]),
+      );
+      expect(runsIn(journeys), journeys).not.toContain(macUnit);
+      expect(runsIn(journeys), journeys).not.toContain("pnpm replay:gate");
+    }
+    for (const mac of ["mac", "parallel", "desktop"])
+      expect(runsIn(mac), mac).not.toContain("pnpm typecheck");
     // The publication's summary names each profile's lanes and what it
     // omits, from the same profiles.
     const summary = step("Summarize the publication").env ?? {};
@@ -181,7 +190,7 @@ describe("the signed channel workflow", () => {
         needs: { resolve: { outputs: { verify_required: required, main_run: "" } } },
       };
       expect(workflowValue(summary.LANES ?? "", context)).toBe(
-        required === "true" ? "linux-checks, linux-e2e, mac" : "none",
+        required === "true" ? "linux-checks, linux-e2e, mac, parallel and desktop" : "none",
       );
       expect(workflowValue(summary.OMITTED ?? "", context)).toMatch(
         required === "true" ? /^none$/ : /inherited from the published alpha, not passed/,
@@ -199,9 +208,11 @@ describe("the signed channel workflow", () => {
         },
       },
     };
-    expect(workflowValue(summary.LANES ?? "", reused)).toBe("linux-e2e, mac (every journey)");
+    expect(workflowValue(summary.LANES ?? "", reused)).toBe(
+      "linux-e2e, parallel and desktop (every journey)",
+    );
     expect(workflowValue(summary.OMITTED ?? "", reused)).toBe(
-      "linux-checks and the mac lane's other stages; inherited from rolling main https://github.com/infinitary-labs/infinitary/actions/runs/41657804530, not repeated here",
+      "linux-checks and mac; inherited from rolling main https://github.com/infinitary-labs/infinitary/actions/runs/41657804530, not repeated here",
     );
     // The captain on INF-2508: "Keep every journey in the batch, and let an
     // alpha reuse them". An alpha from a swept batch that ran every journey
@@ -216,7 +227,7 @@ describe("the signed channel workflow", () => {
     };
     expect(workflowValue(summary.LANES ?? "", swept)).toBe("none");
     expect(workflowValue(summary.OMITTED ?? "", swept)).toBe(
-      `linux-checks, linux-e2e and mac; inherited from ${batchRun}, not repeated here`,
+      `linux-checks, linux-e2e, mac, parallel and desktop; inherited from ${batchRun}, not repeated here`,
     );
   });
 
@@ -273,9 +284,11 @@ describe("the signed channel workflow", () => {
     expect(workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: checks })).toEqual([
       "linux-checks",
       "mac",
+      "parallel",
+      "desktop",
     ]);
-    expect(ran("mac", checks)).toEqual(whole);
-    expect(ran("linux-checks", checks)).toEqual(ran("linux-checks", called({})));
+    for (const name of ["linux-checks", "mac", "parallel", "desktop"])
+      expect(ran(name, checks), name).toEqual(ran(name, called({})));
     // Every Linux test group, as in the whole check (INF-2646).
     const groupSteps = (inputs: Record<string, unknown>) =>
       verifyLinuxTests(inputs).map(({ steps }) => steps);
@@ -283,20 +296,26 @@ describe("the signed channel workflow", () => {
     expect(verifyLinuxTests(checks)).not.toEqual([]);
     expect(only(checks)).toBe(MAC_ONLY_TAG);
 
-    // The journeys part: every Linux journey, and on the Mac every journey and what it needs.
+    // The journeys part: every Linux journey, and on the Mac every journey and
+    // what it needs, in the two journey jobs alone (INF-2779).
     const journeys = called({ part: "journeys" });
     expect(linuxJourneys(journeys)).toBe(true);
-    expect(workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: journeys })).toEqual(["mac"]);
+    expect(workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: journeys })).toEqual([
+      "parallel",
+      "desktop",
+    ]);
     expect(verifyLinuxTests(journeys)).toEqual([]);
     expect(only(journeys)).toBe("");
-    expect(ran("mac", journeys)).toEqual([
-      "install",
-      "build",
-      "recorder",
-      "Read the dev Electron's signature",
-      "e2e",
-      "Summarize",
-    ]);
+    for (const name of ["parallel", "desktop"])
+      expect(ran(name, journeys), name).toEqual([
+        "install",
+        "build",
+        "recorder",
+        "Read the dev Electron's signature",
+        "e2e",
+        "Summarize",
+      ]);
+    expect(whole).not.toContain("e2e");
     expect(whole).toEqual(
       expect.arrayContaining([
         "unit",
@@ -307,6 +326,34 @@ describe("the signed channel workflow", () => {
         "helper",
       ]),
     );
+  });
+
+  /**
+   * INF-2779 (the captain approved "Three jobs: unit tests and package check,
+   * parallel journeys, desktop journeys"): the two journey jobs together run
+   * every journey project once, and the desktop job holds the one-worker
+   * project, the one that keeps voice, paint budgets and demo recordings on
+   * a quiet machine (tests/e2e/lanes.ts).
+   */
+  it("splits the Mac journeys between the parallel and desktop jobs, every project once", () => {
+    const e2e = (lane.steps ?? []).find((candidate) => candidate.id === "e2e");
+    const projects = (name: string) =>
+      [
+        ...String(
+          workflowValue(e2e?.env?.PROJECTS ?? "", { matrix: { lane: name }, inputs: {} }),
+        ).matchAll(/--project=(\S+)/g),
+      ].map(([, project]) => project);
+    const parallel = projects("parallel");
+    const desktop = projects("desktop");
+    expect([...parallel, ...desktop].toSorted()).toEqual(
+      E2E_PROJECTS.map(({ name }) => name).toSorted(),
+    );
+    expect(desktop).toEqual(
+      E2E_PROJECTS.filter((project) => project.workers === 1).map(({ name }) => name),
+    );
+    // Each job runs its own projects alone: the desktop project is the parallel
+    // ones' teardown, so without --no-deps the parallel job would run it too.
+    expect(e2e?.run).toContain("--no-deps $PROJECTS");
   });
 
   // Captain's accepted INF-1258 mac-unit-only option: all files still run

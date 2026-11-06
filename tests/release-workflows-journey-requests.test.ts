@@ -142,12 +142,18 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       workflowString(e2e?.env?.INFINITARY_E2E_TAG ?? "", { inputs: { all_journeys } });
     expect(verifyOnly(false)).toBe(MAC_ONLY_TAG);
     expect(verifyOnly(true)).toBe("");
-    // Only a run of every journey supplies the chooser's journey times.
+    // Only a run of every journey supplies the chooser's journey times, one
+    // result for each Mac journey job (INF-2779).
     const kept = steps.find((step) => step.name === "Keep the e2e result");
-    const keptAs = (all_journeys: boolean) =>
-      workflowString(String(kept?.with?.name ?? ""), { inputs: { all_journeys } });
-    expect(keptAs(true)).toBe("e2e-results");
-    expect(keptAs(false)).not.toBe("e2e-results");
+    const keptAs = (all_journeys: boolean, lane: string) =>
+      workflowString(String(kept?.with?.name ?? ""), {
+        inputs: { all_journeys },
+        matrix: { lane },
+      });
+    for (const lane of ["parallel", "desktop"]) {
+      expect(keptAs(true, lane)).toBe(`e2e-results-${lane}`);
+      expect(keptAs(false, lane)).not.toBe(keptAs(true, lane));
+    }
   });
 
   /**
@@ -235,6 +241,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * without them. INF-1578: on 2026-10-27 a passing installer-only run
    * supplied no e2e-results. The step's own script runs against each day's
    * answers and the artifact metadata, including across run-list pages.
+   * INF-2779: a run since the Mac journeys split in two keeps one result per
+   * journey job, and supplies times only with both.
    */
   it.each(["2026-10-22", "2026-10-26", "2026-10-27"])(
     "finds the newest passing verify run with journey times in the plain list read on %s",
@@ -352,11 +360,38 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
           artifacts.runs[String(run.id)]?.some((artifact) => artifact.name === "e2e-results"),
       );
       expect(readings.runs.indexOf(passing as Run)).toBeGreaterThan(0);
+      const recorded = artifacts.runs[String(passing?.id)] ?? [];
+      const results = recorded.find((artifact) => artifact.name === "e2e-results");
       for (const pageSize of [undefined, 1]) {
         const found = await choose(readings.runs, { pageSize });
         expect(found.outputs.id).toBe(passing?.id);
+        expect(found.outputs.artifacts).toBe(String(results?.id));
         expect(found.summaries.join("")).toContain(passing?.html_url);
       }
+
+      // The same run as a split check keeps it: each journey job's result, by
+      // the name verify.yml gives it, with both downloaded.
+      const verify = loadYamlFile(".github/workflows/verify.yml") as {
+        jobs: { lane: { steps: Step[] } };
+      };
+      const keep = verify.jobs.lane.steps.find((step) => step.name === "Keep the e2e result");
+      const split = ["parallel", "desktop"].map((lane, index) => ({
+        id: Number(results?.id) + index,
+        name: workflowString(String(keep?.with?.name ?? ""), {
+          inputs: { all_journeys: true },
+          matrix: { lane },
+        }),
+        expired: false,
+      }));
+      artifacts.runs[String(passing?.id)] = split;
+      const both = await choose(readings.runs);
+      expect(both.outputs.id).toBe(passing?.id);
+      expect(both.outputs.artifacts).toBe(split.map((artifact) => artifact.id).join(","));
+      // One job's result alone holds half the journeys' times: the chooser passes it by.
+      artifacts.runs[String(passing?.id)] = split.slice(0, 1);
+      const upToPassing = readings.runs.slice(0, readings.runs.indexOf(passing as Run) + 1);
+      expect((await choose(upToPassing)).outputs).toEqual({});
+      artifacts.runs[String(passing?.id)] = recorded;
 
       // INF-2259: missing optional history no longer blocks explicit selections.
       // It still supplies no invented run identifier or downloadable timings.

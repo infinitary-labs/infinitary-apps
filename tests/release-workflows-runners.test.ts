@@ -63,7 +63,8 @@ describe("the jobs that ask for the real Mac", () => {
  * DOP-178's approved plan ("Have the placement service start a release's Mac
  * jobs before other waiting jobs"): a publishing run's Mac jobs ask for the
  * placement service's release-only queues, which MAC_QUEUES names as the
- * release_check, release_sign and release_light kinds (INF-2112). Each keeps
+ * release_split, release_sign and release_light kinds (INF-2112; INF-2779's
+ * three Mac lanes replaced release_check with release_split). Each keeps
  * its place - signing real, update and publication virtual, verification
  * any - and a dry run or an unset kind keeps today's label.
  */
@@ -79,7 +80,7 @@ describe("a release's own queues", () => {
   const update = (loadYamlFile(".github/workflows/mac-update.yml") as { jobs: Record<string, Job> })
     .jobs.update;
   const releaseKinds = {
-    release_check: "mini-mac-release-any",
+    release_split: "mini-mac-release-any",
     release_sign: "mini-mac-release-real",
     release_light: "mini-mac-release-virtual",
   };
@@ -96,12 +97,16 @@ describe("a release's own queues", () => {
       workflowValue(release[id]?.with?.[input] ?? "", { needs, vars });
     const updateIn = (id: string) =>
       workflowValue(update?.["runs-on"] ?? "", { inputs: { runner: passed(id, "runner") }, vars });
-    return {
-      verify: workflowValue(verifyLane?.["runs-on"] ?? "", {
-        matrix: { lane: "mac" },
+    // Every Mac lane of verify's, each a job of its own (INF-2779), starts in one place.
+    const verify = ["mac", "parallel", "desktop"].map((lane) =>
+      workflowValue(verifyLane?.["runs-on"] ?? "", {
+        matrix: { lane },
         inputs: { mac_runner: passed("verify", "mac_runner") },
         vars,
       }),
+    );
+    return {
+      verify: new Set(verify).size === 1 ? verify[0] : verify,
       sign: workflowValue(release.release?.["runs-on"] ?? "", { needs, vars }),
       update: updateIn("update"),
       publish: workflowValue(release.publish?.["runs-on"] ?? "", { needs, vars }),
@@ -147,13 +152,13 @@ describe("a release's own queues", () => {
     // With only the ordinary kinds named, a publishing run goes where a dry run goes.
     const plain = {
       MAC_QUEUES: JSON.stringify({
-        check: "mini-mac-check",
+        split: "mini-mac-split",
         sign: "mini-mac-sign",
         light: "mini-mac-light",
       }),
     };
     const ordinaryKinds = {
-      verify: "mini-mac-check",
+      verify: "mini-mac-split",
       sign: "mini-mac-sign",
       update: "mini-mac-light",
       publish: "mini-mac-light",
@@ -176,19 +181,20 @@ describe("each Mac job's kind", () => {
     "runs-on"?: string;
     with?: Record<string, string>;
     strategy?: { matrix?: Record<string, unknown> };
-    steps?: { id?: string; run?: string }[];
+    steps?: { id?: string; run?: string; env?: Record<string, string> }[];
   };
   const jobs = (file: string) =>
     (loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, Job> }).jobs;
   const queues = {
     check: "q-check",
+    split: "q-split",
     journeys: "q-journeys",
     phone: "q-phone",
     testflight: "q-testflight",
     build: "q-build",
     sign: "q-sign",
     light: "q-light",
-    release_check: "q-release-check",
+    release_split: "q-release-split",
     release_sign: "q-release-sign",
     release_light: "q-release-light",
   };
@@ -200,7 +206,9 @@ describe("each Mac job's kind", () => {
   const publishing = (dryRun: boolean) => ({ resolve: { outputs: { dry_run: String(dryRun) } } });
 
   it.each([
-    ["verify.yml", "lane", { matrix: { lane: "mac" }, inputs: {} }, "check", "mini-mac-any"],
+    ["verify.yml", "lane", { matrix: { lane: "mac" }, inputs: {} }, "split", "mini-mac-any"],
+    ["verify.yml", "lane", { matrix: { lane: "parallel" }, inputs: {} }, "split", "mini-mac-any"],
+    ["verify.yml", "lane", { matrix: { lane: "desktop" }, inputs: {} }, "split", "mini-mac-any"],
     ["journeys.yml", "affected-journeys", { inputs: {} }, "journeys", "mini-mac-any"],
     ["phone.yml", "scene-evidence", {}, "light", "mini-mac-any"],
     ["ios-release.yml", "testflight", {}, "testflight", "mini-mac-real"],
@@ -218,6 +226,24 @@ describe("each Mac job's kind", () => {
       expect(runner({ ...today, MAC_QUEUES: JSON.stringify(queues) })).toBe(queues[kind]);
       expect(runner({ ...today, MAC_QUEUES: JSON.stringify({ [kind]: "" }) })).toBe(before);
       expect(runner(today)).toBe(before);
+    },
+  );
+
+  // INF-2779 (the captain's approved three-job split, sized so every Mac
+  // place can take one): until MAC_QUEUES names the split kind, each of the
+  // full check's Mac lanes asks for the journeys kind's queue, a job of the
+  // same size, then the full check's old check kind's, then MAC_RUNNER.
+  it.each(["mac", "parallel", "desktop"])(
+    "falls back from the split kind through the journeys and check kinds for the %s lane",
+    (lane) => {
+      const runner = (named: Record<string, string>) =>
+        workflowValue(jobs("verify.yml").lane?.["runs-on"] ?? "", {
+          matrix: { lane },
+          inputs: {},
+          vars: { ...today, MAC_QUEUES: JSON.stringify(named) },
+        });
+      expect(runner({ journeys: "q-journeys", check: "q-check" })).toBe("q-journeys");
+      expect(runner({ check: "q-check" })).toBe("q-check");
     },
   );
 
@@ -267,7 +293,11 @@ describe("each Mac job's kind", () => {
   });
 
   it("gives the full Mac check's journeys half the job's cores, its size when the placement service names one", () => {
-    const run = jobs("verify.yml").lane?.steps?.find((step) => step.id === "e2e")?.run ?? "";
+    const e2e = jobs("verify.yml").lane?.steps?.find((step) => step.id === "e2e");
+    const run = e2e?.run ?? "";
+    // The parallel journeys' job, where the worker count tells (INF-2779).
+    const projects = workflowString(e2e?.env?.PROJECTS ?? "", { matrix: { lane: "parallel" } });
+    const command = `exec playwright test --no-deps ${projects}`;
     const dir = scratchDir("infinitary-job-cores-");
     const bin = join(dir, "bin");
     mkdirSync(bin);
@@ -284,6 +314,7 @@ describe("each Mac job's kind", () => {
           PATH: `${bin}:${process.env.PATH}`,
           COMMAND_LOG: log,
           INFINITARY_E2E_TAG: "",
+          PROJECTS: projects,
           ...(cores === undefined ? {} : { RUNNER_UP_CORES: cores }),
         },
         encoding: "utf8",
@@ -291,14 +322,14 @@ describe("each Mac job's kind", () => {
       expect(result.status, result.stderr).toBe(0);
       return readFileSync(log, "utf8").trim();
     };
-    expect(workers("12")).toBe("exec playwright test --workers=6");
-    expect(workers("1")).toBe("exec playwright test --workers=1");
+    expect(workers("12")).toBe(`${command} --workers=6`);
+    expect(workers("1")).toBe(`${command} --workers=1`);
     // No size named: half this machine, as `--workers=50%` gave.
     expect(workers()).toBe(
-      `exec playwright test --workers=${Math.max(1, Math.floor(availableParallelism() / 2))}`,
+      `${command} --workers=${Math.max(1, Math.floor(availableParallelism() / 2))}`,
     );
     expect(workers("not a number")).toBe(
-      `exec playwright test --workers=${Math.max(1, Math.floor(availableParallelism() / 2))}`,
+      `${command} --workers=${Math.max(1, Math.floor(availableParallelism() / 2))}`,
     );
   });
 });

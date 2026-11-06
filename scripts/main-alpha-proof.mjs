@@ -11,7 +11,7 @@ import { legacyJobName } from "./ci-job-names.mjs";
 //
 // Main runs no old journey set either (INF-2480, the captain: "old set at the
 // release check only, from the first piece on"): its full check is the Linux
-// checks and the Mac lane with only the tests that need a Mac, so what an
+// checks and the Mac lanes with only the tests that need a Mac, so what an
 // alpha reuses from it is those owners, and the alpha runs every journey
 // itself (release.yml's verify call with part journeys). A swept batch runs
 // every journey on the alpha source's files, so an alpha it proves reuses
@@ -86,13 +86,26 @@ export function linuxChecksPassed(jobs, prefix = "verify / ") {
   });
 }
 
-/** The checks an alpha reuses from verify.yml, called as job `prefix`: its
- * Linux checks and its Mac lane passed, and every job of the run completed. */
-function checksPassed(jobs, prefix) {
+// verify.yml's Mac lanes since INF-2779 (the captain's approved three-job
+// split): its native tests, replay and package, its parallel journeys and its
+// desktop journeys, each a job of its own. A run from before then ran them all
+// in its one `mac` job, whose name the trigger-first rename reads back.
+const MAC_NATIVE = "Native tests, replay and package (Mac)";
+const MAC_JOURNEYS = ["Parallel journeys (Mac)", "Desktop journeys (Mac)"];
+
+/** Whether `jobs` hold verify.yml's Mac lanes, called as job `prefix`, each
+ * passed: `names`, or the one `mac` job of a run from before INF-2779. */
+function macPassed(jobs, prefix, names = [MAC_NATIVE, ...MAC_JOURNEYS]) {
   const passed = (name) => jobs.some((job) => job.name === name && green(job));
+  return passed(`${prefix}mac`) || names.every((name) => passed(`${prefix}${name}`));
+}
+
+/** The checks an alpha reuses from verify.yml, called as job `prefix`: its
+ * Linux checks and its Mac lanes passed, and every job of the run completed. */
+function checksPassed(jobs, prefix) {
   // All jobs of the successful run must be completed; an optional lane may
   // skip, but no full-check owner may be skipped or merely absent.
-  return linuxChecksPassed(jobs, prefix) && passed(`${prefix}mac`) &&
+  return linuxChecksPassed(jobs, prefix) && macPassed(jobs, prefix) &&
     jobs.every((job) => job.status === "completed" && ["success", "skipped"].includes(job.conclusion));
 }
 
@@ -180,10 +193,10 @@ export async function proveMain(github, repo, run, source) {
 /** What a published alpha's release run proved itself, from its latest job
  * executions, for a stable that promotes it:
  * - "all": the Linux checks (linuxChecksPassed), every Linux journey shard
- *   and mac passed in it;
+ *   and every Mac lane passed in it;
  * - "journeys": it ran only the journey part, with no Linux checks job, and
- *   every Linux journey shard and mac passed (an alpha that reused main's
- *   checks, INF-2480);
+ *   every Linux journey shard and both Mac journey jobs passed (an alpha that
+ *   reused main's checks, INF-2480);
  * - "none": its verify call skipped, so it ran no lane (an automatic alpha
  *   that reused every lane, from its swept batch or a main run from before
  *   INF-2480); GitHub lists a skipped call as one job named `verify`, or,
@@ -195,12 +208,11 @@ export function alphaVerification(named) {
   const jobs = legacy(named);
   const lanes = jobs.filter((job) => job.name === "verify" || job.name.startsWith("verify / "));
   if (lanes.every(skipped)) return "none";
-  const passed = (name) => jobs.some((job) => job.name === name && green(job));
   const shards = lanes.filter((job) => job.name.startsWith("verify / linux-e2e / "));
   const linux = shards.length > 0 && shards.every(green);
-  if (linuxChecksPassed(lanes) && linux && passed("verify / mac")) return "all";
+  if (linuxChecksPassed(lanes) && linux && macPassed(lanes, "verify / ")) return "all";
   if (!lanes.some((job) => linuxCheck(job.name, "verify / ")) && everyLinuxJourney(lanes) &&
-      passed("verify / mac") && lanes.every((job) => green(job) || skipped(job)))
+      macPassed(lanes, "verify / ", MAC_JOURNEYS) && lanes.every((job) => green(job) || skipped(job)))
     return "journeys";
   return null;
 }

@@ -424,6 +424,59 @@ describe("an alpha's own verification (INF-2480)", () => {
       ),
     ).toThrow("every full-check owner");
   });
+
+  // INF-2779 (the captain approved three Mac jobs): the Mac lanes are the
+  // native tests, replay and package and the two journey jobs, each passed,
+  // and the journeys part is the two journey jobs; one missing, red or
+  // skipped job leaves them unproven. A run from before reads by its one job.
+  it("reads the split Mac lanes only when each of their jobs passed", () => {
+    const native = "verify / Native tests, replay and package (Mac)";
+    const macJourneys = ["verify / Parallel journeys (Mac)", "verify / Desktop journeys (Mac)"];
+    const whole = [
+      "verify / Validate verification selection",
+      "verify / linux-checks",
+      native,
+      ...macJourneys,
+      ...linuxJourneys,
+    ];
+    const run = (names: string[], change?: [string, Record<string, string>]) =>
+      alphaVerification([
+        ...releaseJobs.map((name) => named(name)),
+        ...names.map((name) => ({ ...named(name), ...(change?.[0] === name ? change[1] : {}) })),
+        named(installer, "skipped"),
+      ]);
+    expect(run(whole)).toBe("all");
+    const journeys = whole.filter((name) => name !== "verify / linux-checks" && name !== native);
+    expect(run(journeys)).toBe("journeys");
+    for (const name of [native, ...macJourneys]) {
+      expect(run(whole.filter((each) => each !== name)), name).toBeNull();
+      for (const conclusion of ["failure", "skipped", "cancelled"])
+        expect(run(whole, [name, { conclusion }]), `${name} ${conclusion}`).toBeNull();
+      expect(run(whole, [name, { status: "in_progress", conclusion: "" }]), name).toBeNull();
+    }
+    for (const name of macJourneys) {
+      expect(run(journeys.filter((each) => each !== name)), name).toBeNull();
+      expect(run(journeys, [name, { conclusion: "failure" }]), name).toBeNull();
+    }
+    // Main's checks read the same way.
+    const main = completedMain();
+    const splitMain = [
+      ...main.jobs.filter(({ name }) => name !== "verify / mac"),
+      ...[native, ...macJourneys].map((name) => ({ ...main.jobs[0]!, name })),
+    ];
+    expect(verifyMainEvidence(main.run, splitMain, repository, source).runId).toBe(main.run.id);
+    for (const name of [native, ...macJourneys])
+      expect(
+        () =>
+          verifyMainEvidence(
+            main.run,
+            splitMain.filter((job) => job.name !== name),
+            repository,
+            source,
+          ),
+        name,
+      ).toThrow("every full-check owner");
+  });
 });
 
 type WorkflowStep = {

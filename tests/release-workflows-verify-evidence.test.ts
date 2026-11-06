@@ -28,9 +28,12 @@ import { scratchDir } from "./helpers/scratchDirs";
 // Preserve the original release-contract budget; discovery keeps its explicit budget.
 vi.setConfig({ testTimeout: 10_000 });
 
-/** The full check's Mac lane: its stages, its evidence and its signing proof (verify.yml). */
+/** The full check's Mac lanes: their stages, their evidence and the signing proof (verify.yml). */
 
 describe("local packaging identity (electron-builder.dev.yml)", () => {
+  /** verify.yml's lanes: the Linux checks and, since INF-2779, three Mac jobs. */
+  type Lane = "linux-checks" | "mac" | "parallel" | "desktop";
+  const JOURNEY_LANES = ["parallel", "desktop"] as const;
   /**
    * Whether Actions runs a step in a lane (the mac lane unless named) once
    * the earlier steps ended with these outcomes: its condition through
@@ -41,7 +44,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   const stepRuns = (
     step: Step | undefined,
     outcomes: Record<string, string>,
-    lane: "mac" | "linux-checks" = "mac",
+    lane: Lane = "mac",
     part: "all" | "checks" | "journeys" = "all",
   ) => {
     const failed = Object.values(outcomes).includes("failure");
@@ -85,11 +88,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 
   /**
    * Runs verify's Summarize step as Actions would (bash -e, the stages'
-   * outcomes filled in) in a checked-out workspace holding the files `write`
-   * names, by their path in the working copy.
+   * outcomes filled in) in a lane's checked-out workspace holding the files
+   * `write` names, by their path in the working copy.
    */
   const summarizeRun = (
     summarize: Step | undefined,
+    lane: Lane,
     outcomes: Record<string, string>,
     write?: (dir: string) => Record<string, unknown>,
   ) => {
@@ -115,6 +119,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       env: {
         ...git,
         REQUESTED: "refs/heads/main",
+        LANE: lane,
         STAGES: stages.replace(
           /\$\{\{ steps\.([\w-]+)\.outcome \}\}/g,
           (_, id: string) => outcomes[id] ?? "skipped",
@@ -172,13 +177,42 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const kept = upload(result);
     const failures = upload("test-results/");
     const demos = upload("test-results/runs/*/*/demo/");
-    const runsAfter = (step: Step | undefined, e2eOutcome: string) =>
-      stepRuns(step, { e2e: e2eOutcome });
+    const runsAfter = (step: Step | undefined, e2eOutcome: string, lane: Lane) =>
+      stepRuns(step, { e2e: e2eOutcome }, lane);
     const outcomes = ["success", "failure", "skipped"];
-    expect(outcomes.map((outcome) => runsAfter(kept, outcome))).toEqual([true, true, false]);
-    expect(outcomes.map((outcome) => runsAfter(failures, outcome))).toEqual([false, true, false]);
-    // A requested demo is kept whether the suite passed or failed.
-    expect(outcomes.map((outcome) => runsAfter(demos, outcome))).toEqual([true, true, false]);
+    // Each journey job keeps its own result and evidence, under a name of its
+    // own so the two jobs' uploads never meet (INF-2779).
+    for (const lane of JOURNEY_LANES) {
+      expect(outcomes.map((outcome) => runsAfter(kept, outcome, lane))).toEqual([
+        true,
+        true,
+        false,
+      ]);
+      expect(outcomes.map((outcome) => runsAfter(failures, outcome, lane))).toEqual([
+        false,
+        true,
+        false,
+      ]);
+    }
+    const named = (step: Step | undefined, lane: Lane) =>
+      workflowString(String(step?.with?.name ?? ""), {
+        matrix: { lane },
+        inputs: { all_journeys: true },
+      });
+    for (const step of [kept, failures])
+      expect(new Set(JOURNEY_LANES.map((lane) => named(step, lane))).size).toBe(2);
+    // A requested demo is kept whether the suite passed or failed, by the
+    // desktop job, where the journeys that record one run (tests/e2e/lanes.ts).
+    expect(outcomes.map((outcome) => runsAfter(demos, outcome, "desktop"))).toEqual([
+      true,
+      true,
+      false,
+    ]);
+    expect(outcomes.map((outcome) => runsAfter(demos, outcome, "parallel"))).toEqual([
+      false,
+      false,
+      false,
+    ]);
     for (const step of [kept, failures, demos]) {
       expect(step?.with?.["if-no-files-found"]).toBe("ignore");
       expect(Number(step?.with?.["retention-days"])).toBeGreaterThan(0);
@@ -200,7 +234,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 
     const summarize = steps.find((step) => step.name === "Summarize");
     expect(summarize).toMatchObject({
-      if: "always() && matrix.lane == 'mac'",
+      if: "always() && matrix.lane != 'linux-checks'",
       "continue-on-error": true,
     });
     expect(summarize?.run).toContain(result);
@@ -305,7 +339,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     });
     const failed = summarizeRun(
       summarize,
-      { install: "success", unit: "success", e2e: "failure" },
+      "desktop",
+      { install: "success", build: "success", recorder: "success", e2e: "failure" },
       (dir) => ({ [result]: red(dir) }),
     );
     expect(failed.summary).toContain(`\`refs/heads/main\` at \`${failed.sha}\``);
@@ -322,9 +357,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     );
 
     // A failed stage is named, and an e2e suite that left no result claims none.
-    const early = summarizeRun(summarize, { install: "success", unit: "failure" });
-    expect(early.summary).toContain("First failed stage: **unit**.");
+    const early = summarizeRun(summarize, "parallel", { install: "success", build: "failure" });
+    expect(early.summary).toContain("First failed stage: **build**.");
     expect(early.summary).toContain("No e2e result: the suite did not run to its end.");
+    // The native job runs no journeys, so its summary claims no e2e result either way.
+    const native = summarizeRun(summarize, "mac", { install: "success", unit: "failure" });
+    expect(native.summary).toContain("First failed stage: **unit**.");
+    expect(native.summary).not.toContain("e2e result");
   });
 
   /**
@@ -333,7 +372,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * needs, so a red unit test no longer skips the e2e suite, the client
    * check, the replay gate or the package smoke. The job still ends red on
    * any failure, so release.yml still refuses to sign ("signs only after
-   * full verification", below).
+   * full verification", below). INF-2779 (the captain's three Mac jobs):
+   * each stage runs in exactly one of them, so none is lost or run twice.
    */
   it("runs each stage when its own inputs passed, whatever else failed, and still ends red", () => {
     const verify = loadYamlFile(".github/workflows/verify.yml") as {
@@ -342,45 +382,64 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const steps = verify.jobs.lane.steps;
     const stage = (id: string) => steps.find((step) => step.id === id);
     const ids = steps.flatMap((step) => (step.id ? [step.id] : []));
-    const needs: Record<string, string[]> = {
-      unit: ["install"],
-      build: ["install"],
-      recorder: ["install"],
-      e2e: ["build", "recorder"],
-      "claude-client": ["install"],
-      replay: ["install"],
-      "dev-signing": ["install"],
-      package: ["build", "dev-signing"],
-      codesign: ["package"],
-      "data-folder": ["package"],
-      "bundled-git": ["package"],
-      helper: ["package"],
+    const macLanes: Lane[] = ["mac", ...JOURNEY_LANES];
+    const native: Lane[] = ["mac"];
+    const journeysOnly: Lane[] = [...JOURNEY_LANES];
+    const needs: Record<string, { lanes: Lane[]; inputs: string[] }> = {
+      unit: { lanes: native, inputs: ["install"] },
+      // Every Mac job builds its own app: the build takes seconds (INF-724).
+      build: { lanes: macLanes, inputs: ["install"] },
+      recorder: { lanes: journeysOnly, inputs: ["install"] },
+      e2e: { lanes: journeysOnly, inputs: ["build", "recorder"] },
+      "claude-client": { lanes: native, inputs: ["install"] },
+      replay: { lanes: native, inputs: ["install"] },
+      "dev-signing": { lanes: native, inputs: ["install"] },
+      package: { lanes: native, inputs: ["build", "dev-signing"] },
+      codesign: { lanes: native, inputs: ["package"] },
+      "data-folder": { lanes: native, inputs: ["package"] },
+      "bundled-git": { lanes: native, inputs: ["package"] },
+      helper: { lanes: native, inputs: ["package"] },
     };
     const upstream = (id: string): string[] =>
-      (needs[id] ?? []).flatMap((input) => [input, ...upstream(input)]);
-    for (const [id, inputs] of Object.entries(needs)) {
-      // Every earlier stage it does not stand on failed: it still runs.
-      const earlier = ids.slice(0, ids.indexOf(id));
-      const unrelatedRed = Object.fromEntries(
-        earlier.map((other) => [other, upstream(id).includes(other) ? "success" : "failure"]),
-      );
-      expect(stepRuns(stage(id), unrelatedRed), `${id} after unrelated failures`).toBe(true);
-      // Any input red or skipped: it does not.
-      for (const input of inputs)
-        for (const outcome of ["failure", "skipped"])
-          expect(
-            stepRuns(stage(id), { ...unrelatedRed, [input]: outcome }),
-            `${id} after ${input} ${outcome}`,
-          ).toBe(false);
+      (needs[id]?.inputs ?? []).flatMap((input) => [input, ...upstream(input)]);
+    const green = Object.fromEntries(ids.map((id) => [id, "success"]));
+    for (const [id, { lanes, inputs }] of Object.entries(needs)) {
+      // It runs in its own job and in no other Mac job.
+      expect(
+        macLanes.filter((lane) => stepRuns(stage(id), green, lane)),
+        `${id}'s Mac jobs`,
+      ).toEqual(lanes);
+      for (const lane of lanes) {
+        // Every earlier stage it does not stand on failed: it still runs.
+        const earlier = ids.slice(0, ids.indexOf(id));
+        const unrelatedRed = Object.fromEntries(
+          earlier.map((other) => [other, upstream(id).includes(other) ? "success" : "failure"]),
+        );
+        expect(
+          stepRuns(stage(id), unrelatedRed, lane),
+          `${id} after unrelated failures in ${lane}`,
+        ).toBe(true);
+        // Any input red or skipped: it does not.
+        for (const input of inputs)
+          for (const outcome of ["failure", "skipped"])
+            expect(
+              stepRuns(stage(id), { ...unrelatedRed, [input]: outcome }, lane),
+              `${id} after ${input} ${outcome} in ${lane}`,
+            ).toBe(false);
+      }
     }
 
     // The failure INF-663 read on main (release run 39337627117): a red unit
-    // stage skipped every later stage. Now each one runs.
+    // stage skipped every later stage. Now each one runs in its own job.
     const unitRed = Object.fromEntries(
       ids.map((id) => [id, id === "unit" ? "failure" : "success"]),
     );
     const later = ids.slice(ids.indexOf("unit") + 1).filter((id) => id !== "perf");
-    expect(later.filter((id) => !stepRuns(stage(id), unitRed))).toEqual([]);
+    expect(
+      later.filter(
+        (id) => !(needs[id]?.lanes ?? native).every((lane) => stepRuns(stage(id), unitRed, lane)),
+      ),
+    ).toEqual([]);
 
     // The linux-checks lane the same way: a red check skips none of the others.
     const linux = steps.filter(
@@ -408,9 +467,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * INF-2255 (the captain chose "Build separately" on "Keep main's full
    * coverage and separate signing proof"): where a check runs and whether it
    * proves real signing are separate. No journey route signs, whatever it
-   * selects; the full check's signing proof runs after every stage that
-   * launches the dev Electron, stops none of them when it fails, and still
-   * ends the lane red.
+   * selects; the full check's signing proof runs in a job where no stage
+   * launches the dev Electron (INF-2779), stops none of them when it fails,
+   * and still ends its job red.
    */
   it("keeps the journeys off development signing and the full check's signing proof apart from them", () => {
     const signs = (step: Step) => /\bpnpm codesign:local\b/.test(step.run ?? "");
@@ -426,17 +485,18 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const steps = verify.jobs.lane.steps;
     const ids = steps.flatMap((step) => (step.id ? [step.id] : []));
     expect(steps.filter(signs).map((step) => step.id)).toEqual(["dev-signing"]);
-    // Every stage that launches the dev Electron runs before anything signs it.
-    for (const launches of ["e2e", "perf"])
-      expect(ids.indexOf(launches), launches).toBeLessThan(ids.indexOf("dev-signing"));
-    // A red signing stage stops no journey stage, and skips the signed package's checks.
+    // No job both signs and launches the dev Electron.
     const stage = (id: string) => steps.find((step) => step.id === id);
-    const signingRed = Object.fromEntries(
-      ids.map((id) => [id, id === "dev-signing" ? "failure" : "success"]),
-    );
-    expect(stepRuns(stage("e2e"), signingRed)).toBe(true);
+    const green = Object.fromEntries(ids.map((id) => [id, "success"]));
+    const lanes: Lane[] = ["linux-checks", "mac", ...JOURNEY_LANES];
+    const runsIn = (id: string) => lanes.filter((lane) => stepRuns(stage(id), green, lane));
+    expect(runsIn("dev-signing")).toEqual(["mac"]);
+    for (const launches of ["e2e", "perf"]) expect(runsIn(launches), launches).not.toContain("mac");
+    // A red signing stage stops no journey stage, and skips the signed package's checks.
+    const signingRed = { ...green, "dev-signing": "failure" };
+    for (const lane of JOURNEY_LANES) expect(stepRuns(stage("e2e"), signingRed, lane)).toBe(true);
     expect(stepRuns(stage("package"), signingRed)).toBe(false);
-    // And it still ends the lane red: no signing stage may pass a failure.
+    // And it still ends its job red: no signing stage may pass a failure.
     for (const id of ["dev-signing", "package", "codesign"])
       expect(stage(id)?.["continue-on-error"], id).toBeUndefined();
   });
@@ -447,8 +507,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * by itself on the Mac (INF-873: the rest run alone on Linux). INF-2340
    * (captain's route "alone-at-author") moved it from main's full check to
    * journeys.yml's proof of edited journeys: the Mac job hands the run-alone
-   * pass the same tag as its rounds and keeps its result, and the full
-   * check's mac lane no longer runs it.
+   * pass the same tag as its rounds and keeps its result, and none of the
+   * full check's Mac lanes runs it.
    */
   it("runs each later Mac-only test of an edited file alone with the journeys' proof, not in the full check", () => {
     const verify = loadYamlFile(".github/workflows/verify.yml") as {
@@ -518,9 +578,9 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(mac.defaults.run["working-directory"]).toBe("Application Support/firstmate");
     // The default working directory does not exist yet, so the action is
     // fetched on its own and the assertion starts before the real checkout -
-    // on the mac lane, the only one on a Mac.
-    expect(mac.steps[0]).toMatchObject({ if: "matrix.lane == 'mac'" });
-    expect(mac.steps[1]).toMatchObject({ if: "matrix.lane == 'mac'" });
+    // in every lane on a Mac, all but the Linux checks (INF-2779).
+    expect(mac.steps[0]).toMatchObject({ if: "matrix.lane != 'linux-checks'" });
+    expect(mac.steps[1]).toMatchObject({ if: "matrix.lane != 'linux-checks'" });
     expect(mac.steps[0]?.uses).toBe("actions/checkout@v4");
     expect(mac.steps[0]?.with?.["sparse-checkout"]).toBe(".github/actions/keep-mac-awake");
     expect(mac.steps[1]?.uses).toBe(actionRef);

@@ -272,7 +272,7 @@ jobs:
             await core.summary.addHeading('Inherited rolling-main verification')
               .addRaw(proof.journeys
                 ? `The full check passed on the exact alpha source's files in ${proof.url}, with every journey: every lane is reused, not repeated. This release runs its release-specific gates.`
-                : `Main's full check passed at the exact alpha source in ${proof.url}: its Linux checks and its Mac lane are reused, not repeated. This release runs every journey on Linux and the Mac itself, and its release-specific gates.`).write();
+                : `Main's full check passed at the exact alpha source in ${proof.url}: its Linux checks and its Mac native tests, replay and package are reused, not repeated. This release runs every journey on Linux and the Mac itself, and its release-specific gates.`).write();
 
       - name: Resolve the release
         id: resolve
@@ -514,10 +514,10 @@ jobs:
       # (docs/testing.md, "A release's hosted machines").
       hosted: true
       profile: ${{ needs.resolve.outputs.channel }}
-      # A publishing run's Mac lane takes the release_check queue once
+      # A publishing run's Mac lanes take the release_split queue once
       # MAC_QUEUES names it (docs/testing.md, "Each Mac job's kind and size");
-      # a dry run takes the check kind's, as any other full Mac check.
-      mac_runner: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_check || '' }}
+      # a dry run takes the split kind's, as any other full Mac check.
+      mac_runner: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_split || '' }}
 
   # The Linux packages of this release (docs/linux-packages.md), for both
   # channels, a stable promotion included: built at the release's version
@@ -1921,8 +1921,8 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          LANES: ${{ (needs.resolve.outputs.verify_required != 'true' || needs.resolve.outputs.main_journeys == 'true') && 'none' || needs.resolve.outputs.main_run != '' && 'linux-e2e, mac (every journey)' || 'linux-checks, linux-e2e, mac' }}
-          OMITTED: ${{ needs.resolve.outputs.main_journeys == 'true' && format('linux-checks, linux-e2e and mac; inherited from {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.main_run != '' && format('linux-checks and the mac lane''s other stages; inherited from rolling main {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
+          LANES: ${{ (needs.resolve.outputs.verify_required != 'true' || needs.resolve.outputs.main_journeys == 'true') && 'none' || needs.resolve.outputs.main_run != '' && 'linux-e2e, parallel and desktop (every journey)' || 'linux-checks, linux-e2e, mac, parallel and desktop' }}
+          OMITTED: ${{ needs.resolve.outputs.main_journeys == 'true' && format('linux-checks, linux-e2e, mac, parallel and desktop; inherited from {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.main_run != '' && format('linux-checks and mac; inherited from rolling main {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e, mac, parallel and desktop; inherited from the published alpha, not passed in this run' }}
           SHA256: ${{ needs.release.outputs.sha256 }}
           HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ needs.upload.outputs.attempt || 'unread' }}
           GATES: >-

@@ -194,8 +194,9 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
 - **Full alpha checks, inherited stable checks (FI3-482).**
   Every alpha needs every Playwright journey passed on its exact files, on Linux in shards (`docs/testing.md`, "The Linux source desktop") and on the Mac, since main runs none of the old journey set (INF-2480, the captain: "old set at the release check only, from the first piece on").
   An automatic alpha whose files a green swept batch checked with every journey reuses that batch's run and runs no lane itself (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them"; `docs/testing.md`, "The swept batch").
-  Any other automatic alpha calls `verify.yml` with `part: journeys` for them, and reuses the rest of the completed rolling-main run's full check without running it again: its Linux checks, the `linux-checks` lane's typecheck, lint, adherence lint and build and every Linux test group's unit, integration, probe and browser tests, and its `mac` lane's macOS unit tests, tests tagged `MAC_ONLY_TAG`, installed Claude client check, replay gate, and development package with its signature, data-folder and bundled-git checks.
-  The journeys part's Mac lane runs only the install, the build, the recorder and the suite.
+  Any other automatic alpha calls `verify.yml` with `part: journeys` for them, and reuses the rest of the completed rolling-main run's full check without running it again: its Linux checks, the `linux-checks` lane's typecheck, lint, adherence lint and build and every Linux test group's unit, integration, probe and browser tests, and its Mac lanes' macOS unit tests, tests tagged `MAC_ONLY_TAG`, installed Claude client check, replay gate, and development package with its signature, data-folder and bundled-git checks.
+  Since INF-2779 the full check's Mac work is three jobs: native tests, replay and package; parallel journeys; and desktop journeys (`docs/testing.md`, "E2E scheduling and launch diagnostics").
+  The journeys part runs only the two journey jobs, each with only the install, the build, the recorder and the suite.
   The release also runs the update check (`mac-update.yml`, "The update check" below) on Apple silicon: the real update from the signing job's handoff, once every check passed, before publication.
   There is no Linux-only bypass.
   Performance grading stays on request (`verify.yml` with explicit `full_system=true`, task/source/reason and `perf=true`; `docs/forge.md`, "Verification workflow requests").
@@ -204,7 +205,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The run must have succeeded with every lane's latest execution completed successfully, each Linux journey shard included.
   An alpha that ran only the journeys part, with no Linux checks job, needs complete Linux shard sets and also validated exact-source main proof for the rest.
   An automatic alpha that ran no lane reused every one, so it is promoted only when the run it reused also holds complete Linux shard sets: its swept batch's, or a main run from before INF-2480, which carried every journey (`scripts/main-alpha-proof.mjs`).
-  Reuse reads GitHub's run and latest per-job executions, requires the trusted main-push identity and the full-check owners, the Linux checks and `mac`, and refuses skipped required owners, partial, cancelled, failed or other-source results.
+  Reuse reads GitHub's run and latest per-job executions, requires the trusted main-push identity and the full-check owners, the Linux checks and the three Mac jobs (or, in a run from before INF-2779, the one `mac` job), and refuses skipped required owners, partial, cancelled, failed or other-source results.
   The Linux checks are the `linux-checks` lane and every Linux test group's complete set, or, in a run from before INF-2646 split them, the one `linux-checks` job that ran them all (`scripts/main-alpha-proof.mjs`).
   A manual alpha without reusable main proof, including a rehearsal, still runs full verification.
   A stable is refused without its alpha's proof, never verified again on its own.
@@ -220,7 +221,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   Its token only reads: it records, uploads and publishes nothing, so a failed check leaves no tag, release or public file behind.
   The update check and the upload job wait for every check, the verify lanes and the Linux packages included; recording the zip is the upload job's first effect.
   A stable has no lanes to wait for, so its signing starts at once as before.
-  The signing job holds the real Mac while the release's Mac lane runs, so that lane takes a virtual place or waits for the real Mac (`docs/testing.md`, "The real Mac's place").
+  The signing job holds the real Mac while the release's Mac lanes run, so those lanes take a virtual place or wait for the real Mac (`docs/testing.md`, "The real Mac's place").
 - **Signing on the real Mac, uploads on a hosted machine, checks in a virtual Mac (INF-1716, INF-2498).**
   The signing job runs on the real Mac through the checked disk image, then hands off and frees it.
   Its handoff is one uncompressed Actions artifact per attempt: the zip to record and, when one was built, the checked disk image, with a manifest of the run, attempt, workflow revision, source, channel, version, download mode, and each file's size and checksum.

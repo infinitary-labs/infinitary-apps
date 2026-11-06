@@ -339,7 +339,10 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
         "Main push · Desktop checks / Main push · Environment checks (Linux; group 1/2)",
         "Main push · Desktop checks / Main push · Environment checks (Linux; group 2/2)",
         "Main push · Desktop checks / Main push · Browser tests (Linux)",
-        "Main push · Desktop checks / Main push · Native tests, journeys, replay and package (Mac)",
+        // INF-2779: the Mac lane is three jobs.
+        "Main push · Desktop checks / Main push · Native tests, replay and package (Mac)",
+        "Main push · Desktop checks / Main push · Parallel journeys (Mac)",
+        "Main push · Desktop checks / Main push · Desktop journeys (Mac)",
       ]),
     );
     const run = {
@@ -367,11 +370,24 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
       runId: 1,
       journeys: false,
     });
-    // A missing Mac lane is still an incomplete check.
+    // A missing Mac lane is still an incomplete check, and so is any one of its three jobs.
     const short = jobs.filter((job) => !job.name.endsWith("(Mac)"));
     expect(() => verifyMainEvidence(run, short, "infinitary-labs/infinitary", source)).toThrow(
       "every full-check owner",
     );
+    const macJobs = jobs.filter((job) => job.name.endsWith("(Mac)"));
+    expect(macJobs).toHaveLength(3);
+    for (const missing of macJobs)
+      expect(
+        () =>
+          verifyMainEvidence(
+            run,
+            jobs.filter((job) => job !== missing),
+            "infinitary-labs/infinitary",
+            source,
+          ),
+        missing.name,
+      ).toThrow("every full-check owner");
     // So is any Linux test group missing a part, or one part that did not
     // pass: a skipped part counts for nothing (INF-2646).
     const linux = names.filter((name) =>

@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, readFileSync, readdirSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
@@ -48,6 +48,28 @@ export function journeyTimes(report: { suites: ReportSuite[] }): Map<string, num
   if (![...times.values()].some((time) => time > 0))
     throw new Error("The passing verify result contains no measured journeys");
   return times;
+}
+
+/**
+ * The journey times at `path`: one verify result, or a folder of the results
+ * the chooser downloaded from one passing verify run, each artifact in a
+ * folder of its own - every Mac journey lane's `e2e-results.json` since
+ * INF-2779, or the one result of a run from before it. Nothing at `path`
+ * reads as no timings.
+ */
+export function readJourneyTimes(path: string): Map<string, number> {
+  if (!existsSync(path)) return new Map();
+  const files = statSync(path).isDirectory()
+    ? readdirSync(path, { recursive: true, encoding: "utf8" })
+        .filter((file) => basename(file) === "e2e-results.json")
+        .toSorted()
+        .map((file) => join(path, file))
+    : [path];
+  return journeyTimes({
+    suites: files.flatMap(
+      (file) => (JSON.parse(readFileSync(file, "utf8")) as { suites: ReportSuite[] }).suites,
+    ),
+  });
 }
 
 const linuxReport = z.object({
@@ -428,9 +450,7 @@ function main() {
     Object.entries(JSON.parse(readFileSync(value("--selection"), "utf8"))),
   );
   // Historical timings optimize placement; their absence never removes an explicitly selected file.
-  const times = existsSync(value("--timings"))
-    ? journeyTimes(JSON.parse(readFileSync(value("--timings"), "utf8")))
-    : new Map<string, number>();
+  const times = readJourneyTimes(value("--timings"));
   const platforms = process.argv.includes("--platforms") ? value("--platforms") : "both";
   if (platforms !== "linux" && platforms !== "mac" && platforms !== "both")
     throw new Error("Journey platforms must be linux, mac or both.");

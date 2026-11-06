@@ -1,4 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   budget,
@@ -10,6 +12,7 @@ import {
   laneOf,
   linuxParts,
   type ReportSuite,
+  readJourneyTimes,
   readLinuxObservations,
   SMALL_BIN_MS,
 } from "../scripts/journey-budget.ts";
@@ -204,6 +207,27 @@ describe("INF-1763 journey placement", () => {
     for (const [file, duration] of parsed) expect(duration).toBe(times.get(file));
     expect(parsed.size).toBeGreaterThan(0);
     expect(() => journeyTimes({ suites: [] })).toThrow("no measured journeys");
+  });
+
+  // INF-2779: since the Mac journeys run in two jobs, a passing full check
+  // keeps one result per job, and the chooser downloads each into a folder of
+  // its own; a run from before kept one result, and a pull request with no
+  // passing run downloads nothing.
+  it("reads a split check's two results as one run's times, as one result's, and none as none", () => {
+    const fixture = new URL("./fixtures/affected-journeys/verify-report.json", import.meta.url);
+    const report = JSON.parse(readFileSync(fixture, "utf8")) as { suites: ReportSuite[] };
+    const whole = journeyTimes(report);
+    const dir = scratchDir("journey-times-");
+    // The recorded readings, one file's suite in each job's result.
+    expect(report.suites).toHaveLength(2);
+    report.suites.forEach((suite, index) => {
+      const job = join(dir, ["e2e-results-parallel", "e2e-results-desktop"][index] ?? "");
+      mkdirSync(job);
+      writeFileSync(join(job, "e2e-results.json"), JSON.stringify({ suites: [suite] }));
+    });
+    expect(readJourneyTimes(dir)).toEqual(whole);
+    expect(readJourneyTimes(fileURLToPath(fixture))).toEqual(whole);
+    expect(readJourneyTimes(join(dir, "nothing-downloaded")).size).toBe(0);
   });
 });
 

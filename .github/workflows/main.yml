@@ -9,7 +9,7 @@ name: main
 # alpha's proof reader and stable promotion read them through
 # scripts/ci-job-names.mjs. It replaces the nightly full check. Main runs no old
 # journey set (INF-2480, the captain: "old set at the release check only, from
-# the first piece on"): its full check is the Linux checks and the Mac lane
+# the first piece on"): its full check is the Linux checks and the Mac lanes
 # with only the tests that need a Mac, and every alpha runs every journey on
 # Linux and the Mac itself, unless the swept batch already ran them on its
 # files (release.yml, docs/alpha.md "Cutting an alpha").
@@ -119,8 +119,8 @@ jobs:
       - env:
           BATCH: ${{ needs.sort.outputs.batch }}
         run: echo "Batch run $BATCH swept exactly these files."
-  # The full check's checks part: the Linux checks, and the Mac lane with only
-  # the journeys tagged MAC_ONLY_TAG. The rest of the journeys run at the
+  # The full check's checks part: the Linux checks, and the Mac lanes with
+  # only the journeys tagged MAC_ONLY_TAG. The rest of the journeys run at the
   # release (INF-2480).
   verify:
     needs: [alpha-wait, sort]

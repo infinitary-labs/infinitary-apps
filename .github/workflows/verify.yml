@@ -28,9 +28,9 @@ name: verify
 #
 # Deliberately no pull_request, push or schedule trigger of its own (captain's call;
 # main.yml is the one caller that runs it on a push):
-# the per-PR mac job was 98% of a ~$200/month bill. The mac lane's runner
-# label comes from the check kind in the MAC_QUEUES repository variable,
-# else MAC_RUNNER, so a self-hosted runner can take it over without a
+# the per-PR mac job was 98% of a ~$200/month bill. The Mac lanes' runner
+# label comes from the split kind in the MAC_QUEUES repository variable,
+# else MAC_RUNNER, so a self-hosted runner can take them over without a
 # workflow change (docs/testing.md, "Each Mac job's kind and size"). A pull
 # request runs no journeys (INF-2139); journeys.yml runs the ones a branch
 # names on request: the whole suite stays here.
@@ -223,19 +223,27 @@ jobs:
   # The profile's lanes, as one matrix: an omitted lane is absent from the
   # run, never a skipped job that reads as green. linux-checks is the main
   # checks' typecheck, lints and build in one job, beside linux-tests below,
-  # which runs every vitest project; mac is the full macOS verification. Each step names
-  # the lane it belongs to. The journeys part runs the mac lane alone, and
-  # there only the stages the journeys need: the install, the build, the
-  # recorder and the suite.
+  # which runs every vitest project. The macOS verification is three jobs of
+  # one size (INF-2779, the captain's approved three-job split, so each Mac
+  # place can take one and they run side by side): mac runs the Mac unit
+  # files, the Claude client check, the replay gate and the package and
+  # signing checks; parallel runs the journeys of the parallel lanes; desktop
+  # runs the one-worker desktop lane, alone, with the recorded demos. Each
+  # step names the lanes it belongs to. The journeys part runs the two
+  # journey lanes alone.
   lane:
     needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
-    name: ${{ format(matrix.lane == 'mac' && (inputs.part == 'journeys' && '{0} · Every app journey (Mac)' || '{0} · Native tests, journeys, replay and package (Mac)') || '{0} · Code checks and build (Linux)', inputs.trigger || 'Manual request') }}
+    name: ${{ format('{0} · {1}', inputs.trigger || 'Manual request', matrix.lane == 'linux-checks' && 'Code checks and build (Linux)' || matrix.lane == 'mac' && 'Native tests, replay and package (Mac)' || matrix.lane == 'parallel' && 'Parallel journeys (Mac)' || 'Desktop journeys (Mac)') }}
     strategy:
       fail-fast: false
       matrix:
-        lane: ${{ fromJSON(inputs.part == 'journeys' && '["mac"]' || '["linux-checks","mac"]') }}
-    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15') || inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').checks || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+        lane: ${{ fromJSON(inputs.part == 'journeys' && '["parallel","desktop"]' || '["linux-checks","mac","parallel","desktop"]') }}
+    # Every Mac lane asks for the split kind, a size each Mac place can
+    # take, so the three run side by side; until MAC_QUEUES names it, the
+    # journeys kind's size, then the full check's old kind (docs/testing.md,
+    # "Each Mac job's kind and size").
+    runs-on: ${{ matrix.lane == 'linux-checks' && (inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').checks || vars.LINUX_RUNNER || 'ubuntu-24.04') || inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').split || fromJSON(vars.MAC_QUEUES || '{}').journeys || fromJSON(vars.MAC_QUEUES || '{}').check || vars.MAC_RUNNER || 'macos-15' }}
     # Every crewmate works under "Application Support". The gate here does
     # too, so a check that only fails from a path with a space fails here
     # instead of only in a working copy (FI3-152).
@@ -249,14 +257,14 @@ jobs:
       # the rest of the job runs in. The assertion is .github/actions/keep-mac-awake
       # (also used by the signing job); it is not copied here.
       - name: Checkout the keep-awake action
-        if: matrix.lane == 'mac'
+        if: matrix.lane != 'linux-checks'
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
           sparse-checkout: .github/actions/keep-mac-awake
           fetch-depth: 1
       - name: Keep the Mac awake
-        if: matrix.lane == 'mac'
+        if: matrix.lane != 'linux-checks'
         uses: ./.github/actions/keep-mac-awake
       - uses: actions/checkout@v4
         with:
@@ -276,11 +284,11 @@ jobs:
         with:
           dest: ${{ runner.temp }}/setup-pnpm
           package_json_file: Application Support/firstmate/package.json
-      # No package cache on the mac lane (journeys.yml says why, INF-724).
+      # No package cache on a Mac lane (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: ${{ matrix.lane != 'mac' && runner.environment == 'github-hosted' && 'pnpm' || '' }}
+          cache: ${{ matrix.lane == 'linux-checks' && runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
       - id: install
@@ -311,16 +319,17 @@ jobs:
       # only files with Mac-specific cases/readings; keep mixed files whole so
       # none of their Mac-only cases is lost (scripts/mac-unit-tests.ts).
       - name: Read the temporary volume's filesystem type
-        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: node -e 'console.log(require("fs").statfsSync(require("os").tmpdir()).type)'
       - id: unit
-        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         timeout-minutes: 60
         run: |
           mac_tests="$(node scripts/mac-unit-tests.ts)"
           pnpm test $mac_tests
-      # The app built once, in both lanes: the mac lane's e2e suite and
-      # package smoke both run on it.
+      # The app built in every lane: each lane is a machine of its own, and
+      # its install and build take seconds beside a hand-over between jobs
+      # (INF-724). The journeys and the package smoke run on it.
       - id: build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm build
@@ -328,24 +337,26 @@ jobs:
       # records would otherwise fetch it in the middle of its test, and where
       # the fetch fails the window never reports itself loaded.
       - id: recorder
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && (matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
         run: pnpm exec playwright install ffmpeg
       # The signature the journeys below run on, read from the binary itself:
       # Electron's own, never this runner's local development identity. A
       # report, never a gate.
       - name: Read the dev Electron's signature
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && (matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
         run: codesign -dvv "$(node -p 'require("electron")')" 2>&1 | grep -E '^(Identifier|Authority|Signature|TeamIdentifier|CDHash)=' || true
-      # The complete desktop suite, on the build above and Electron's supplied
-      # signature (`pnpm test:e2e` is the same two commands in one), when
+      # The desktop suite, on the build above and Electron's supplied
+      # signature, one journey lane per job, as the Linux journeys run
+      # (source-journeys.yml): parallel takes the styles, renderer and
+      # application lanes, and desktop the one-worker lane, alone on its
+      # machine; --no-deps keeps desktop, the other lanes' teardown, out of
+      # the parallel job (tests/e2e/lanes.ts). Every journey runs when
       # all_journeys is set: every alpha. A requested check runs only the
       # tests tagged MAC_ONLY_TAG (tests/e2e/tags.ts), since linux-e2e runs
       # every other one (docs/principles.md, 2026-10-28), and so does the run
       # on main, which leaves every other journey to the release (INF-2480).
       # The tag goes to every lane through INFINITARY_E2E_TAG
-      # (playwright.config.ts), never --grep: desktop is the other lanes'
-      # teardown, which ignores the command line's filter, and it still runs
-      # last, alone, as in a run of every journey.
+      # (playwright.config.ts), never --grep.
       # A local run keeps its JSON result in its own run directory
       # (tests/e2e/runEvidence.ts); this one names the fixed path kept below.
       # The parallel lanes take half the job's cores: its size when the
@@ -353,14 +364,16 @@ jobs:
       # its share. With every processor, launches starved while the other
       # slot ran journeys too (docs/testing.md, "E2E scheduling").
       - id: e2e
-        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.build.outcome == 'success' && steps.recorder.outcome == 'success' }}
+        if: ${{ !cancelled() && (matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.build.outcome == 'success' && steps.recorder.outcome == 'success' }}
         # The run ends at 150 minutes and the command at 180 (INF-1083, the
         # captain's check limits); a stuck wait ends sooner, at its own cap.
         timeout-minutes: 180
+        # shellcheck disable=SC2086 # one word per project flag
         run: |
           cores="$(node scripts/job-cores.ts)"
-          pnpm exec playwright test --workers=$(( cores > 1 ? cores / 2 : 1 ))
+          pnpm exec playwright test --no-deps $PROJECTS --workers=$(( cores > 1 ? cores / 2 : 1 ))
         env:
+          PROJECTS: ${{ matrix.lane == 'desktop' && '--project=desktop' || '--project=styles --project=renderer --project=application' }}
           INFINITARY_E2E_TAG: ${{ !inputs.all_journeys && '@mac-only' || '' }}
           INFINITARY_E2E_RUN_MINUTES: 150
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/e2e-results.json
@@ -371,14 +384,15 @@ jobs:
       # screenshot. Each app ran on a throwaway userData and HOME and no step
       # of this job holds a secret; a trace records the launch environment's
       # shape, never its values. Neither upload can fail the job, and neither
-      # runs when an earlier stage kept e2e from starting.
-      # Only a run of every journey keeps its result as e2e-results, the
-      # journey times journeys.yml's chooser reads.
+      # runs when an earlier stage kept e2e from starting. Each journey lane
+      # keeps its own, named for its lane.
+      # Only a run of every journey keeps its results as e2e-results-<lane>,
+      # the journey times journeys.yml's chooser reads.
       - name: Keep the e2e result
         if: ${{ always() && steps.e2e.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.all_journeys && 'e2e-results' || 'e2e-results-mac-only' }}
+          name: ${{ format('{0}-{1}', inputs.all_journeys && 'e2e-results' || 'e2e-results-mac-only', matrix.lane) }}
           path: Application Support/firstmate/playwright-report/e2e-results.json
           if-no-files-found: ignore
           retention-days: 14
@@ -386,27 +400,29 @@ jobs:
         if: ${{ always() && steps.e2e.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-failures
+          name: ${{ format('e2e-failures-{0}', matrix.lane) }}
           path: Application Support/firstmate/test-results/
           if-no-files-found: ignore
           retention-days: 7
       # The demos a journey recorded (tests/e2e/demo.ts, docs/testing.md
       # "Recording a demo"), passed or failed, so a requested demo can be
-      # watched from the run's page. Only a journey that asks records.
+      # watched from the run's page. Only a journey that asks records, and
+      # each such journey is in the desktop lane (tests/e2e-lanes.test.ts).
       - name: Keep the recorded demos
-        if: ${{ always() && steps.e2e.outcome != 'skipped' }}
+        if: ${{ always() && matrix.lane == 'desktop' && steps.e2e.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
           name: e2e-demos
           path: Application Support/firstmate/test-results/runs/*/*/demo/
           if-no-files-found: ignore
           retention-days: 14
-      # The budgets the suite above only reported, graded (tests/e2e/perf.ts).
-      # Whole files, because a serial spec's later tests stand on its earlier
-      # ones; --no-deps, because the desktop lane is the other lanes' teardown
-      # and a teardown project ignores the file filter.
+      # The budgets the suite above only reported, graded (tests/e2e/perf.ts),
+      # in the desktop job, the quiet one. Whole files, because a serial
+      # spec's later tests stand on its earlier ones; --no-deps, because the
+      # desktop lane is the other lanes' teardown and a teardown project
+      # ignores the file filter.
       - id: perf
-        if: ${{ !cancelled() && inputs.perf && matrix.lane == 'mac' && steps.e2e.outcome != 'skipped' }}
+        if: ${{ !cancelled() && inputs.perf && matrix.lane == 'desktop' && steps.e2e.outcome != 'skipped' }}
         run: |
           grep -lE "tag: .*PERF_TAG" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps
         env:
@@ -423,7 +439,7 @@ jobs:
       # updated or replaced from here; only a runner with none gets one the
       # way a person does, from the vendor's native installer.
       - id: claude-client
-        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: |
           claude_bin="$(command -v claude || true)"
           if [ -z "$claude_bin" ] && [ -x "$HOME/.local/bin/claude" ]; then claude_bin="$HOME/.local/bin/claude"; fi
@@ -438,7 +454,7 @@ jobs:
       # committed captain sessions and fails on any metric that regressed
       # from tests/fixtures/replay/baseline.json.
       - id: replay
-        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: pnpm replay:gate
       - uses: actions/upload-artifact@v4
         if: always() && matrix.lane == 'mac'
@@ -446,16 +462,17 @@ jobs:
           name: replay-report
           path: Application Support/firstmate/replay-report.json
           if-no-files-found: ignore
-      # The signing proof, after every stage that launches the dev Electron
-      # (e2e, perf): those are isolated source tests on Electron's
-      # supplied signature, so nothing signs before them and a signing failure
-      # stops none of them (docs/testing.md, "Platform and signing are separate").
+      # The signing proof, on a machine where no stage launches the dev
+      # Electron: the journeys are isolated source tests on Electron's
+      # supplied signature, in jobs of their own that never sign, so a signing
+      # failure stops none of them (docs/testing.md, "Platform and signing are
+      # separate").
       # An install never signs (docs/local-code-signing.md), so the lane signs
       # the dev Electron here, the way `pnpm dev` does on a person's Mac; the
       # package below is its own copy, signed through the same identity, and
       # the codesign stage checks both. A red signing stage still ends the job red.
       - id: dev-signing
-        if: ${{ !cancelled() && matrix.lane == 'mac' && inputs.part != 'journeys' && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: pnpm codesign:local
       # electron-builder refuses to sign pull-request builds by default, which
       # would skip the one step this smoke exists for: the fuse-flipped
@@ -493,17 +510,18 @@ jobs:
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.package.outcome == 'success' }}
         run: scripts/check-helper.sh "dist/mac-universal/Infinitary Dev.app"
       # The run's page says what a red verify needs first (docs/testing.md):
-      # the exact commit it checked, the first stage that failed, and the e2e
-      # counts, skipped included, with every failure in the order it started
-      # and the first one's assertion. It reads the stages' typed outcomes and
-      # Playwright's JSON result, never the log's prose, and it decides
-      # nothing about which failure caused which - that stays with whoever
-      # reviews the evidence. A report, never a gate.
+      # the exact commit it checked, the first stage that failed, and, in a
+      # journey lane, the e2e counts, skipped included, with every failure in
+      # the order it started and the first one's assertion. It reads the
+      # stages' typed outcomes and Playwright's JSON result, never the log's
+      # prose, and it decides nothing about which failure caused which - that
+      # stays with whoever reviews the evidence. A report, never a gate.
       - name: Summarize
-        if: always() && matrix.lane == 'mac'
+        if: always() && matrix.lane != 'linux-checks'
         continue-on-error: true
         env:
           REQUESTED: ${{ inputs.ref || github.ref }}
+          LANE: ${{ matrix.lane }}
           STAGES: >-
             install=${{ steps.install.outcome }}
             unit=${{ steps.unit.outcome }}
@@ -529,7 +547,8 @@ jobs:
             echo
             echo "First failed stage: **$first_failed**. Stages: \`$STAGES\`."
             echo
-            node - <<'SUMMARY'
+            if [ "$LANE" != mac ]; then
+              node - <<'SUMMARY'
           const fs = require("node:fs");
           const file = "playwright-report/e2e-results.json";
           if (!fs.existsSync(file)) {
@@ -578,6 +597,7 @@ jobs:
           for (const error of report.errors ?? [])
             console.log(`\nOutside any test: ${plain(error.message).split("\n")[0]}`);
           SUMMARY
+            fi
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
   # linux-tests: every vitest project on Linux, in test groups on machines of

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ipc-test-phone-sharing-channel",
+      "reason": "Test-only: the contract test's list of requests a paired view may ask now names the phone's Diagnostics request, which was added as a view request without updating the list. Nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-moves-overrides-updates",
+      "reason": "Internal: the crew supervisor's task moves, the captain's overrides, the crew's pause and save for an update, and its watch on the crew a restart cut move into owners of their own, with callers reaching them directly and guardrail tests renamed beside them; nothing a person sees changes."
+    }
+  ]
+}

@@ -168,8 +168,8 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     moveTask: async (taskId, computer, keep) => {
       const done =
         computer === null
-          ? supervisor.cancelComputerMove(taskId, "firstmate")
-          : await supervisor.requestComputerMove(taskId, computer, "firstmate", keep);
+          ? supervisor.moves.cancelComputerMove(taskId, "firstmate")
+          : await supervisor.moves.requestComputerMove(taskId, computer, "firstmate", keep);
       if (done.ok) {
         host.turn.delivered = true;
         host.noteDelivery({ outcome: "action", kind: "work", tool: "move_task", ref: taskId });

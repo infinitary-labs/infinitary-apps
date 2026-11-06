@@ -1010,7 +1010,7 @@ export async function createServices(
   });
   runsOnOf = (record) => supervisor.placement.runsOnFact(record);
   placeOf = (record) => supervisor.placement.taskPlace(record);
-  computerMoveOf = (record) => supervisor.computerMoveFacts(record);
+  computerMoveOf = (record) => supervisor.moves.computerMoveFacts(record);
   closingResolutionOf = (taskId) => supervisor.cards.newestResolutionForTask(taskId);
   cardStack = supervisor;
   readWorkPosture = (record) => supervisor.postures.workPosture(record);
@@ -1645,9 +1645,9 @@ export async function createServices(
     // This computer's crew saves its running work before an update
     // replaces the copy (docs/alpha.md, "Saving work before an update").
     work: {
-      save: (options) => supervisor.saveForUpdate(options),
-      release: () => supervisor.releaseUpdate(),
-      resuming: () => supervisor.resumingAfterUpdate(),
+      save: (options) => supervisor.updates.saveForUpdate(options),
+      release: () => supervisor.updates.releaseUpdate(),
+      resuming: () => supervisor.updates.resumingAfterUpdate(),
     },
   });
   return {

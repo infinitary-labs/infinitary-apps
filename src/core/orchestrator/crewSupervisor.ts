@@ -1,16 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import {
-  basename,
-  dirname,
-  isAbsolute,
-  join,
-  normalize,
-  resolve as resolvePath,
-  sep,
-} from "node:path";
+import { isAbsolute, join, resolve as resolvePath } from "node:path";
 import { type AttachmentRef, attachmentWords, fileSizeWords } from "@shared/attachments";
 import { type CutOff, isAuthFailureMessage } from "@shared/authFailure";
 import {
@@ -61,12 +53,9 @@ import {
   choiceWords,
   type HoldOverride,
   holdNames,
-  mergeClickRefusal,
-  type OverridableHold,
   overridePasses,
   overrideSpan,
   overrideWords,
-  STANDING_WORDS_FROM,
   softHoldWords,
   standingOverride,
 } from "@shared/holds";
@@ -77,13 +66,12 @@ import {
   validationRevision,
   validationStateRevision,
 } from "@shared/liveValidation";
-import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
-import { AUTOMATIC_COMPUTER, type ComputerMove, UNCOMPARED_WAIT } from "@shared/placement";
+import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
+import { UNCOMPARED_WAIT } from "@shared/placement";
 import type { TypedFailure } from "@shared/plainProblem";
 import { CREWMATE_TAB_VIA, type InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { catalogEntry, isRetiredProvider, PROVIDER_CATALOG } from "@shared/providers";
 import { formatDurationShort } from "@shared/quotaSignals";
-import { moveOutOfReach } from "@shared/recordBar";
 import {
   DROP_REVIEW_STALE,
   dropMissingRefusal,
@@ -96,7 +84,6 @@ import {
   deliveryForRecord,
   opensPullRequest,
   type RepoDelivery,
-  RUNS_ON_THIS_MAC,
 } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import {
@@ -123,7 +110,6 @@ import {
   queueStartedBacklogRefusal,
   queueStartedRefusal,
 } from "@shared/taskQueue";
-import type { MoveDestination, MoveOptions, TaskView } from "@shared/tasks";
 import {
   CARE_WORDS,
   MERGE_AFTER_FIXING_WORDS,
@@ -153,7 +139,6 @@ import {
   crewmateEvidenceDir,
   crewmateHandoverDir,
   crewmateSessionsDir,
-  crewmateSourceCardsDir,
   crewmateTempDir,
 } from "../paths";
 import { errorText } from "../personal/errorText";
@@ -167,7 +152,7 @@ import { PreparationUnknown } from "../placed/placedCopies";
 import { CrewPrograms, ProgramRunner } from "../program/programRunner";
 import { KIND_SOURCE, kindEstablished } from "../routing/kindClassifier";
 import { legacyShapeFromDifficulty, tierFor } from "../routing/policy";
-import { type RoutePreview, type RouteResult, requiresReasoningWait } from "../routing/router";
+import { type RouteResult, requiresReasoningWait } from "../routing/router";
 import { isDowngrade } from "../routing/routingEngine";
 import { crewRunbookText } from "../runbooks/runbooks";
 import { followCompletions } from "../session/followCompletions";
@@ -200,7 +185,7 @@ import {
 } from "../tasks/handoverFiles";
 import { StaleValidationDecisionError } from "../tasks/liveValidation";
 import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
-import { carryOnWords, modelMoveWords, RESTART_RESUMED_WORDS } from "../tasks/recordActivity";
+import { carryOnWords, modelMoveWords } from "../tasks/recordActivity";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import {
   builtOnRows,
@@ -216,13 +201,13 @@ import { crewTally } from "../tasks/workPresentation";
 import { compareSemver } from "../update/semver";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { gitFailure } from "../workspace/git";
-import { type MovedFolders, packWork, unpackWork } from "../workspace/workMove";
 import type {
   DependencyInstall,
   DispatchBase,
   WorktreeAcquisition,
 } from "../workspace/workspaceService";
 import { type AskEnding, askEndingOf } from "./askEnding";
+import { CaptainOverrides } from "./captainOverrides";
 import type { WakeChoice } from "./captainWakes";
 import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import type { CardInteractionEvidence } from "./cardEvidence";
@@ -235,9 +220,9 @@ import { CrewBrief } from "./crewBrief";
 import { CrewmateCards } from "./crewmateCards";
 import {
   type InterruptSource,
-  type MoveAsk,
   type MoveTarget,
   type PlacementRecord,
+  QUIT_SETTLE_MS,
   type SteerDelivery,
   type SteerSource,
   SUPERVISOR_STEER,
@@ -259,6 +244,7 @@ import type {
   PluginConsentHandler,
   ProjectSetupHandler,
 } from "./crewSupervisorOptions";
+import { CrewUpdates } from "./crewUpdates";
 import { premiumRetryPossible } from "./holds";
 import {
   type AccountServeability,
@@ -293,12 +279,14 @@ import {
   type WakeOpenReview,
   wakeBuiltOn,
 } from "./reportWakes";
+import { RestartWatch } from "./restartWatch";
 import { Reviews } from "./reviews";
 import { RunWatcher } from "./runWatch";
 import { SettleFacts } from "./settleCardFacts";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
 import { computerLeftOutWake, systemWaitWake } from "./startWakes";
+import { installText, TaskMoves } from "./taskMoves";
 import { placedCutOffStartRefusal, TaskPlacement } from "./taskPlacement";
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
 import type { Ticker } from "./ticker";
@@ -338,36 +326,6 @@ import {
  * Firstmate agent through the hooks as [fm-op] inbox messages.
  */
 
-/** How a save for this computer's own update ended (`saveForUpdate`). */
-export type UpdateSaveOutcome = "saved" | "withdrawn";
-
-/** One turn this computer's own update stops (`stopForUpdate`). */
-type UpdateTurn = {
-  task: TaskRuntime;
-  /** The lane row that carries it on. */
-  row: number;
-  /** Withdraws the stop while it still waits. */
-  withdraw: AbortController;
-  /** How many calls it runs that the stop waits for. */
-  running: number;
-  /** Resolves once the turn has ended here, or the stop was withdrawn. */
-  ended: Promise<void>;
-};
-
-/** This computer's own update while it saves the crew's work (`saveForUpdate`). */
-type LocalUpdate = {
-  turns: Map<string, UpdateTurn>;
-  /** Tells the update which tasks' running work it waits for now. */
-  report: () => void;
-  /** Every turn here has stopped: the copy may be replaced. */
-  saved: boolean;
-  /** The save under way, which a second ask joins. */
-  saving: Promise<UpdateSaveOutcome>;
-};
-
-/** A paused task's timeline line while this computer is updated. */
-const UPDATE_PAUSE_NOTE = "paused while Infinitary is updated";
-
 /**
  * The quiet-crewmate watchdog (P4): conservative thresholds, no settings
  * surface. Ten silent minutes on a streaming turn earns one feed line,
@@ -390,14 +348,6 @@ const WATCHDOG_TICK_MS = 60 * 1000;
  */
 export const UNHEARD_END_NOTE =
   "its turn had already ended where it ran, but that end never arrived; ended here as interrupted";
-/**
- * How long a quit waits for the crewmates it cut mid-turn to settle, so each
- * interrupted turn's usage reaches the ledger. An answered interrupt takes
- * well under a second; a client that does not answer loses its turn's usage
- * rather than holding the quit.
- */
-export const QUIT_SETTLE_MS = 2_000;
-
 /**
  * Why a start on request refuses a row that waits on blockers. Only a done
  * blocker clears its wait (`TaskService.blockerCleared`) and a dropped edge
@@ -457,19 +407,6 @@ function gateClearedText(gate: TaskGate): string {
 function listSome(items: string[], limit = 5): string {
   const shown = items.slice(0, limit).join(", ");
   return items.length > limit ? `${shown}, and ${items.length - limit} more` : shown;
-}
-
-/** The timeline line for a commission's dependency install (WI-7). */
-function installText(install: Exclude<DependencyInstall, { outcome: "skipped" }>): string {
-  const seconds = `${Math.max(1, Math.round(install.ms / 1000))}s`;
-  switch (install.outcome) {
-    case "offline":
-      return `the project's dependencies are installed (${seconds})`;
-    case "online":
-      return `dependencies installed; the shared pnpm store was missing packages, so they were fetched (${seconds})`;
-    case "failed":
-      return `could not install the project's dependencies - ${install.error}; the crewmate can do it itself`;
-  }
 }
 
 /**
@@ -615,16 +552,8 @@ export class CrewSupervisor {
 
   /** Charted starts requested and not yet claimed. A drop in that window refuses. */
   private readonly starting = new Set<string>();
-  /** Tasks moving to another provider now (INF-849). */
-  private readonly moving = new Set<string>();
   /** Each task's conversation opening here now (`resumeTask`), which a plain resume joins. */
   private readonly resuming = new Map<string, Promise<TaskRuntime>>();
-  /** Tasks whose move to another computer is being carried out now (`runComputerMove`). */
-  private readonly computerMoving = new Set<string>();
-  /** Tasks whose moved-off or unfinished copy is being removed now (`retireMovedSource`, `undoMovedDestination`). */
-  private readonly clearingMoves = new Set<string>();
-  /** In-flight moves, including reopening and source/destination cleanup, until their writes end. */
-  private readonly computerMoveOperations = new Set<Promise<void>>();
   /** The facts a settle card's task writes on the card: its fact strip and its follow-ups. */
   private readonly settleFacts: SettleFacts;
   /** The card stack: the open cards and every write to them. */
@@ -639,6 +568,14 @@ export class CrewSupervisor {
   private readonly reviews: Reviews;
   /** Where each task runs: its computer, the waits for it, and the words said of it. */
   readonly placement: TaskPlacement;
+  /** A started task's moves: to another provider between turns, and to another computer at a safe pause. */
+  readonly moves: TaskMoves;
+  /** The captain's overrides of a soft hold: declared, withdrawn, and the words they cite. */
+  readonly overrides: CaptainOverrides;
+  /** The crew's pause and save while a computer is updated. */
+  readonly updates: CrewUpdates;
+  /** The crew a restart or an update cut, watched until each carries on or stops. */
+  private readonly restarts: RestartWatch;
   /** A crewmate's own cards: its emit_card, the completion card the host finishes, and its refusals. */
   readonly crewmateCards: CrewmateCards;
   /** Integration calls held for the captain: their approval cards and what came of them. */
@@ -658,18 +595,6 @@ export class CrewSupervisor {
   private readonly sweeping = new Set<Promise<void>>();
   /** The app is quitting: a turn that settles now is not the crew's to act on. */
   private disposed = false;
-  /**
-   * The computers being updated now, each by its device id with its name:
-   * their crewmates wait as for a computer out of reach (`outOfReach`)
-   * until the update is over and the computer is back and caught up.
-   */
-  private readonly updating = new Map<string, string>();
-  /**
-   * This computer's own update while it saves its crew's work and until
-   * the copy is replaced or the update is let go (`saveForUpdate`): no
-   * turn here starts, and each one running stops where nothing is lost.
-   */
-  private localUpdate: LocalUpdate | undefined;
   /** Who waits for a task's running turn to end here, by task (`untilTurnOver`). */
   private readonly turnWaiters = new Map<string, Set<() => void>>();
   private readonly now: () => number;
@@ -680,7 +605,6 @@ export class CrewSupervisor {
   private readonly ladder: IdleLadder;
   /** Each task's posture, and the wait facts read from the same snapshot. */
   readonly postures: WorkPostures;
-  private readonly moveFact = Symbol("computer move facts");
   private readonly ciFact = Symbol("crew check summary");
   /** The host's watch on crewmates' checks; absent when no read is wired. */
   private readonly checkWatch: CheckWatcher | undefined;
@@ -688,8 +612,6 @@ export class CrewSupervisor {
   private readonly mainCheckWake: MainCheckWatcher | undefined;
   private readonly runWatch: RunWatcher | undefined;
   private recoveredPendingSettles = false;
-  /** Observing boot recovery never sends guidance or wakes an agent. */
-  private readonly restartObservations = new Map<string, { at: number; last?: string }>();
   /** Every running program (INF-799 piece 2, docs/programs.md). */
   private readonly programs: ProgramRunner;
   /** The crew's side of a running program: its parts, its asks, its bound and its end. */
@@ -698,6 +620,18 @@ export class CrewSupervisor {
   constructor(private readonly options: CrewSupervisorOptions) {
     const now = options.now;
     this.now = now ? () => now() : () => Date.now();
+    this.restarts = new RestartWatch(options, { now: this.now });
+    this.updates = new CrewUpdates(options, {
+      now: this.now,
+      restarts: this.restarts,
+      disposed: () => this.disposed,
+      runtimes: () => this.tasks.values(),
+      machineOf: (taskId) => this.machineOf(taskId),
+      untilTurnOver: (task) => this.untilTurnOver(task),
+      sweepTaskLane: (taskId, at) => this.sweepTaskLane(taskId, at),
+      sweepGates: (at) => this.sweepGates(at),
+      broadcastCrewCounts: () => this.broadcastCrewCounts(),
+    });
     // A project moved: its tasks that have not started follow it (docs/helper.md, "Runs on").
     options.repos.onRunsOn?.((repo) => this.placement.projectMoved(repo));
     this.settleFacts = new SettleFacts(options, {
@@ -753,6 +687,25 @@ export class CrewSupervisor {
       outOfReach: (taskId) => this.outOfReach(taskId),
       reviewBuilderOf: (record) => this.reviewBuilderOf(record),
       dispatchQueuedTask: (taskId) => this.dispatchQueuedTask(taskId),
+    });
+    this.moves = new TaskMoves(options, {
+      now: this.now,
+      placement: this.placement,
+      runtime: (taskId) => this.tasks.get(taskId),
+      releaseSession: (runtime) => this.releaseSession(runtime),
+      forgetRuntime: (taskId) => this.tasks.delete(taskId),
+      resumeTask: (taskId, move) => this.resumeTask(taskId, move),
+      deliverPendingToTask: (task) => this.deliverPendingToTask(task),
+      deliverLane: (taskId) => this.deliverLane(taskId),
+      machineOf: (taskId) => this.machineOf(taskId),
+      isPersonalTask: (taskId) => this.isPersonalTask(taskId),
+      queuedShape: (record) => this.queuedShape(record),
+      clientJobStart: (taskId) => this.clientJobStart(taskId),
+      modelName: (model) => this.modelName(model),
+      beingUpdated: (deviceId) => this.updates.isUpdating(deviceId),
+      clearSignInCard: (taskId) => this.cards.clearAuthDecisionCard(crewSignInCardId(taskId)),
+      disposed: () => this.disposed,
+      broadcastCrewCounts: () => this.broadcastCrewCounts(),
     });
     this.settling = createSettleOwners({
       now: this.now,
@@ -820,6 +773,14 @@ export class CrewSupervisor {
       sweepGates: (at) => this.sweepGates(at),
       broadcastCrewCounts: () => this.broadcastCrewCounts(),
       broadcastEvent: options.broadcastEvent,
+    });
+    this.overrides = new CaptainOverrides(options, {
+      now: this.now,
+      cards: this.cards,
+      settling: this.settling,
+      syncCaptainGate: (taskId, at) => this.ladder.syncCaptainGate(taskId, at),
+      runtime: (taskId) => this.tasks.get(taskId),
+      sweepTaskLane: (taskId, at) => this.sweepTaskLane(taskId, at),
     });
     this.briefs = new CrewBrief(options, {
       cards: this.cards,
@@ -1152,7 +1113,7 @@ export class CrewSupervisor {
       move?.phase === "moving" ||
       move?.restartFrom !== undefined ||
       move?.preparing === true ||
-      this.computerMoving.has(taskId)
+      this.moves.isCrossing(taskId)
     )
       return true;
     const accountId = this.tasks.get(taskId)?.accountId ?? record?.accountId;
@@ -1163,17 +1124,8 @@ export class CrewSupervisor {
         deviceId: record?.deviceId ?? null,
       }) ||
       this.outOfReach(taskId) ||
-      this.heldForUpdate(taskId)
+      this.updates.heldForUpdate(taskId)
     );
-  }
-
-  /**
-   * This computer is being updated and the task's turns run here
-   * (`saveForUpdate`): nothing starts a turn for it until the update is
-   * over, and what it is sent waits on its lane in order.
-   */
-  private heldForUpdate(taskId: string): boolean {
-    return this.localUpdate !== undefined && this.machineOf(taskId) === LOCAL_MACHINE_ID;
   }
 
   /**
@@ -1214,7 +1166,7 @@ export class CrewSupervisor {
     const machine = this.machineOf(taskId);
     if (machine === LOCAL_MACHINE_ID) return false;
     // Being updated, it stops for a moment: nothing is handed to it meanwhile.
-    if (this.updating.has(machine)) return true;
+    if (this.updates.isUpdating(machine)) return true;
     return this.options.machines?.ready(machine, taskId) !== true;
   }
 
@@ -2427,9 +2379,9 @@ export class CrewSupervisor {
             event.type === "request_started" ||
             event.type === "continuation_started")
         )
-          this.recordRestartOutcome(task.id, "resumed");
+          this.restarts.recordRestartOutcome(task.id, "resumed");
         if (event.type === "turn_failed" && !task.paused)
-          this.recordRestartOutcome(task.id, "stopped", event.error);
+          this.restarts.recordRestartOutcome(task.id, "stopped", event.error);
         // A steer is read once its session says so, or once a model request
         // begins after it was handed over (INF-2603).
         if (event.type === "input_read") {
@@ -2916,7 +2868,7 @@ export class CrewSupervisor {
         served += `\n\nCurrent review assignment (supersedes earlier heads):\n${assignment}`;
       // This computer is being updated: the turn never reaches its model,
       // and its rows go again once the update is over (`saveForUpdate`).
-      if (this.heldForUpdate(task.id)) {
+      if (this.updates.heldForUpdate(task.id)) {
         task.paused ??= {};
         throw new StoppedBeforeStartError();
       }
@@ -2936,7 +2888,7 @@ export class CrewSupervisor {
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       if (this.disposed) return;
-      if (!task.paused) this.recordRestartOutcome(task.id, "stopped", message);
+      if (!task.paused) this.restarts.recordRestartOutcome(task.id, "stopped", message);
       if (task.cancelled) {
         this.finish(task, "cancelled");
       } else if (task.interruptRequested) {
@@ -3114,9 +3066,7 @@ export class CrewSupervisor {
     task.autonomousTurn = true;
     this.beginTurn(task, inboxIds);
     // Its computer is being updated: the turn it began there stops too.
-    const computer = this.updating.get(this.machineOf(task.id));
-    if (computer !== undefined) void this.pauseTurn(task, computer);
-    if (this.localUpdate && this.heldForUpdate(task.id)) this.stopForUpdate(task, this.localUpdate);
+    this.updates.turnBegan(task);
   }
 
   /**
@@ -3429,7 +3379,7 @@ export class CrewSupervisor {
         // restart renumbers.
         // Its default moves the task to the app's pick when another
         // provider serves (INF-849); Open settings stays beside it.
-        const plan = this.planMove(task.id);
+        const plan = this.moves.planMove(task.id);
         const move =
           "refused" in plan || !plan.from
             ? undefined
@@ -3489,10 +3439,10 @@ export class CrewSupervisor {
     } else if (move) {
       // A move asked for mid-turn runs at this boundary, and delivers what
       // waits once the task reopens on its new provider (INF-849).
-      void this.runMove(task.id, move);
+      void this.moves.runMove(task.id, move);
     } else if (this.options.tasks.get(task.id)?.shape?.computer_move?.phase === "waiting") {
       // The safe pause a move to another computer waited for.
-      void this.runComputerMove(task.id);
+      void this.moves.runComputerMove(task.id);
     } else {
       this.deliverPendingToTask(task, { announce: true });
     }
@@ -4061,13 +4011,13 @@ export class CrewSupervisor {
     // check's result - waits on a started task's lane in the backlog.
     const sentByHost = given.actor === "supervisor";
     const enqueue = (): number => {
-      if (this.restartObservations.has(taskId)) {
-        this.recordRestartOutcome(
+      if (this.restarts.observing(taskId)) {
+        this.restarts.recordRestartOutcome(
           taskId,
           "stopped",
           "new guidance arrived before automatic recovery was confirmed",
         );
-        this.restartObservations.delete(taskId);
+        this.restarts.forget(taskId);
       }
       const mark = guidance ? this.settling.approvals.holdForGuidance(taskId) : undefined;
       if (mark !== undefined) {
@@ -4113,7 +4063,7 @@ export class CrewSupervisor {
         // Its computer is out of reach, or this one is being updated: kept
         // on the lane, and steered into the turn once it is back and caught
         // up, or served by the turn that carries it on.
-        if (this.outOfReach(taskId) || this.heldForUpdate(taskId)) {
+        if (this.outOfReach(taskId) || this.updates.heldForUpdate(taskId)) {
           const held = enqueue();
           this.recordSteer(taskId, message, source, "recorded-held", held);
           return "recorded-held";
@@ -4301,7 +4251,11 @@ export class CrewSupervisor {
     const fresh: CrewmateRestart | undefined =
       restart ??
       (!move && movedFrom !== undefined
-        ? { from: movedFrom, changed: "computer", to: this.computerName(this.computerOf(record)) }
+        ? {
+            from: movedFrom,
+            changed: "computer",
+            to: this.moves.computerName(this.moves.computerOf(record)),
+          }
         : undefined);
     if (!record.sessionFile) {
       throw new Error(`Task ${taskId} has no session to resume. Spawn a follow-up instead.`);
@@ -4445,23 +4399,6 @@ export class CrewSupervisor {
   }
 
   /**
-   * The effort a move or a reopen asks for on `model` at `level`: the
-   * captain's word on the task, else the model's Settings choice, else the
-   * level's default.
-   */
-  private effortFor(
-    record: TaskRecord,
-    model: { provider: string; id: string },
-    level: Slot,
-  ): NonNullable<CrewmateSpec["thinkingLevel"]> {
-    return (
-      record.shape?.override_reasoning ??
-      this.options.router?.reasoningChoice(model, level) ??
-      levelDefaultReasoning(level)
-    );
-  }
-
-  /**
    * What a reopen asks for (INF-1272): the model of the task's newest
    * routing choice, its start's or its newest move's, at the effort a move
    * works out - here or on a computer that runs work. A Claude conversation
@@ -4484,824 +4421,9 @@ export class CrewSupervisor {
     };
   }
 
-  /** The name a person knows a provider by: its catalog name, else its id. */
-  private providerName(provider: string): string {
-    return PROVIDER_CATALOG.find((entry) => entry.id === provider)?.name ?? provider;
-  }
-
-  /** Why a move refuses the model its card offered, when the app would now pick another. */
-  private offerGone(
-    plan: { record: TaskRecord; choice: { provider: string; id: string } },
-    ask: MoveAsk,
-  ): string | undefined {
-    if (!ask.offered || offeringKey(plan.choice) === ask.offered) return undefined;
-    const handle = `${plan.record.key || plan.record.id} "${plan.record.title}"`;
-    return `${handle} did not move: the app would now pick ${this.modelName(plan.choice)}, not the model its card offered.`;
-  }
-
   /** A model by its Settings name, as the sign-in card's Move names it. */
   private modelName(model: { provider: string; id: string }): string {
     return this.options.modelName?.(model) ?? model.id;
-  }
-
-  /**
-   * Where a move would take a started task now (INF-849): the router's
-   * evaluation for its own shape, with its current provider left out - or
-   * the model named, as R0 pins one - never recorded. A refusal is text:
-   * a task not started or closed, one on another computer, none that serves.
-   */
-  private planMove(
-    taskId: string,
-    model?: string,
-  ):
-    | { refused: string }
-    | {
-        record: TaskRecord;
-        from: string | undefined;
-        preview: RoutePreview;
-        choice: { provider: string; id: string };
-      } {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return { refused: `Unknown task "${taskId}".` };
-    const handle = `${record.key || record.id} "${record.title}"`;
-    if (record.kind !== "work" || record.status !== "active")
-      return { refused: `${handle} is ${describeStatus(record)}; only started work moves.` };
-    if (this.machineOf(taskId) !== LOCAL_MACHINE_ID)
-      return {
-        refused: `${handle} runs on another computer, so it stays on that computer's own subscriptions.`,
-      };
-    const router = this.options.router;
-    const from =
-      router?.servedProvider(taskId) ??
-      (record.model ? parseOfferingKey(record.model).provider || undefined : undefined);
-    if (!model && !from) return { refused: `${handle} has no provider on its record to move off.` };
-    const { override_model_id: _named, ...shape } = this.queuedShape(record);
-    const preview = router?.preview(
-      record.prompt,
-      model ? { ...shape, override_model_id: model } : shape,
-      model || !from ? {} : { withoutProvider: from },
-    );
-    if (!preview)
-      return { refused: "Automatic model choice is off, so the app cannot pick another model." };
-    const choice = preview.result.choice;
-    const named =
-      choice && model
-        ? model.includes("/")
-          ? offeringKey(choice) === model
-          : choice.id === model
-        : true;
-    if (!choice || !named)
-      return {
-        refused: model
-          ? `${model} cannot take ${handle} now, so it stays where it runs.`
-          : `No other signed-in provider can take ${handle} now, so it stays on ${this.providerName(from ?? "")}.`,
-      };
-    if (record.model === offeringKey(choice))
-      return { refused: `${handle} already runs on ${offeringKey(choice)}.` };
-    return { record, from, preview, choice: { provider: choice.provider, id: choice.id } };
-  }
-
-  /**
-   * Move a started task to another provider (INF-849): the sign-in card's
-   * Move, or update_task's model on started work. It keeps its key, branch,
-   * working copy and record. A crewmate mid-turn moves once that turn ends,
-   * and is never cut short. A refusal is text and changes nothing.
-   */
-  requestMove(taskId: string, ask: MoveAsk): { ok: boolean; text: string } {
-    const plan = this.planMove(taskId, ask.model);
-    if ("refused" in plan) return { ok: false, text: plan.refused };
-    const { record, from, choice } = plan;
-    const handle = `${record.key || record.id} "${record.title}"`;
-    if (ask.from && from !== ask.from)
-      return { ok: false, text: `${handle} already moved off ${this.providerName(ask.from)}.` };
-    const gone = this.offerGone(plan, ask);
-    if (gone) return { ok: false, text: gone };
-    if (this.moving.has(taskId)) return { ok: false, text: `${handle} is already moving.` };
-    const to = `${this.modelName(choice)} on ${this.providerName(choice.provider)}`;
-    const runtime = this.tasks.get(taskId);
-    if (runtime && runtime.state !== "idle") {
-      runtime.pendingMove = ask;
-      return { ok: true, text: `${handle} moves to ${to} once its crewmate's turn ends.` };
-    }
-    void this.runMove(taskId, ask);
-    return {
-      ok: true,
-      text: `Moving ${handle} to ${to}; it keeps its key, branch and working copy.`,
-    };
-  }
-
-  /**
-   * The move itself, between turns: route again and record why, pick the
-   * account, let go of the old session, write the record, take the sign-in
-   * card down, end the lane's outage, and reopen in the same working copy -
-   * the same conversation between two Pi providers, a new one told it moved
-   * otherwise - then deliver what waited. A failure is a feed line and a
-   * timeline row; the record then reopens on its new provider when next asked.
-   */
-  private async runMove(taskId: string, ask: MoveAsk): Promise<void> {
-    if (this.moving.has(taskId)) return;
-    this.moving.add(taskId);
-    try {
-      const runtime = this.tasks.get(taskId);
-      if (runtime && runtime.state !== "idle") {
-        runtime.pendingMove = ask;
-        return;
-      }
-      const plan = this.planMove(taskId, ask.model);
-      const refused = "refused" in plan ? plan.refused : this.offerGone(plan, ask);
-      if (refused || "refused" in plan) {
-        this.options.broadcastEvent({ type: "firstmate_note", text: refused ?? "", taskId });
-        return;
-      }
-      const { record, from, preview, choice } = plan;
-      const who = ask.by === "captain" ? "the captain" : "the first mate";
-      preview.reasons.push(
-        ask.model
-          ? `moved by ${who} to the model named`
-          : `moved by ${who} off ${from ?? "its provider"}`,
-      );
-      this.options.router?.commit(taskId, preview);
-      const accountId = this.options.accounts?.selectForSpawn(taskId, choice.provider, {
-        model: choice.id,
-      });
-      if (runtime) {
-        this.releaseSession(runtime);
-        this.tasks.delete(taskId);
-      }
-      const fromName = from ? this.providerName(from) : "its provider";
-      const toName = this.providerName(choice.provider);
-      this.options.tasks.placement.recordMove(taskId, {
-        model: choice,
-        accountId: accountId ?? null,
-        actor: ask.by,
-        text: `${who} moved it from ${fromName} to ${this.modelName(choice)} on ${toName}`,
-        data: {
-          moved: {
-            from: record.model,
-            to: offeringKey(choice),
-            ...(accountId ? { accountId } : {}),
-          },
-        },
-      });
-      this.cards.clearAuthDecisionCard(crewSignInCardId(taskId));
-      this.options.inbox.movedProvider(taskId);
-      const level = preview.result.servedBucket ?? preview.result.bucket;
-      const resumed = await this.resumeTask(taskId, {
-        model: choice,
-        ...(accountId ? { accountId } : {}),
-        thinkingLevel: this.effortFor(record, choice, level),
-        providerName: toName,
-      });
-      this.deliverPendingToTask(resumed);
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      this.options.tasks.note(taskId, `its move could not reopen it: ${message}`, { news: true });
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Task ${this.options.tasks.get(taskId)?.title ?? taskId} could not move: ${message}`,
-        taskId,
-      });
-    } finally {
-      this.moving.delete(taskId);
-      this.broadcastCrewCounts();
-    }
-  }
-
-  /**
-   * Where a started task could move now (docs/helper.md, "Moving a started
-   * task"): the computer it runs on, and each other computer with why it
-   * cannot take the task, when it cannot. A refusal is text.
-   */
-  async moveOptions(taskId: string): Promise<MoveOptions> {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return { ok: false, text: `Unknown task "${taskId}".` };
-    const refused = this.moveRefusal(record);
-    if (refused) return { ok: false, text: refused };
-    const from = this.computerOf(record);
-    const ids = [RUNS_ON_THIS_MAC, ...(this.options.machines?.computers() ?? [])].filter(
-      (id) => id !== from,
-    );
-    const destinations: MoveDestination[] = [];
-    for (const id of ids) {
-      const unavailable = await this.destinationRefusal(record, id);
-      destinations.push({
-        id,
-        name: this.computerName(id),
-        ...(unavailable ? { unavailable } : {}),
-      });
-    }
-    return { ok: true, from: this.computerName(from), destinations };
-  }
-
-  /**
-   * Move a started task to another computer (docs/helper.md, "Moving a
-   * started task"): the record's Move to a computer, or move_task. It keeps
-   * its key, branch, working copy, files and record. It moves at a safe
-   * pause - its crewmate's turn over and nothing it started still running -
-   * and no new turn starts meanwhile. A refusal is text and changes nothing.
-   */
-  async requestComputerMove(
-    taskId: string,
-    ask: string,
-    by: "captain" | "firstmate",
-    keep: readonly string[] = [],
-  ): Promise<{ ok: boolean; text: string }> {
-    const record = this.options.tasks.get(taskId) ?? this.options.tasks.resolve(taskId);
-    if (!record) return { ok: false, text: `Unknown task "${taskId}".` };
-    const handle = `${record.key || record.id} "${record.title}"`;
-    const refused = this.moveRefusal(record);
-    if (refused) return { ok: false, text: refused };
-    let to: string;
-    try {
-      to = this.placement.resolveRunsOn(ask);
-    } catch (caught) {
-      return { ok: false, text: caught instanceof Error ? caught.message : String(caught) };
-    }
-    if (to === AUTOMATIC_COMPUTER)
-      return { ok: false, text: `Name the computer ${handle} moves to.` };
-    const from = this.computerOf(record);
-    if (to === from)
-      return { ok: false, text: `${handle} already runs on ${this.computerName(to)}.` };
-    const kept = [...new Set(keep.map((path) => path.trim()).filter(Boolean))];
-    const outside = kept.find(
-      (path) => isAbsolute(path) || path === ".." || normalize(path).startsWith(`..${sep}`),
-    );
-    if (outside)
-      return {
-        ok: false,
-        text: `${handle} cannot move: ${outside} is outside its working copy; keep names files in it.`,
-      };
-    const unavailable = await this.destinationRefusal(record, to);
-    if (unavailable) return { ok: false, text: `${handle} cannot move: ${unavailable}` };
-    // The record may have moved on while the destination was read.
-    const now = this.options.tasks.get(record.id);
-    const again = now ? this.moveRefusal(now) : `Unknown task "${taskId}".`;
-    if (again) return { ok: false, text: again };
-    const who = by === "captain" ? "the captain" : "the first mate";
-    const toName = this.computerName(to);
-    this.options.tasks.placement.setComputerMove(
-      record.id,
-      { from, to, by, at: this.now(), phase: "waiting", ...(kept.length ? { keep: kept } : {}) },
-      {
-        text: `${who} asked to move it from ${this.computerName(from)} to ${toName}`,
-        actor: by,
-      },
-    );
-    this.broadcastCrewCounts();
-    const waiting = this.pauseBlockers(record.id);
-    void this.runComputerMove(record.id);
-    return {
-      ok: true,
-      text: waiting.length
-        ? `${handle} moves to ${toName} once ${waiting.join(" and ")}. No new turn starts meanwhile.`
-        : `Moving ${handle} to ${toName}; it keeps its key, branch, working copy and files.`,
-    };
-  }
-
-  /** Cancel a move that has not started crossing; a refusal is text. */
-  cancelComputerMove(taskId: string, by: "captain" | "firstmate"): { ok: boolean; text: string } {
-    const record = this.options.tasks.get(taskId) ?? this.options.tasks.resolve(taskId);
-    if (!record) return { ok: false, text: `Unknown task "${taskId}".` };
-    const handle = `${record.key || record.id} "${record.title}"`;
-    const move = record.shape?.computer_move;
-    if (!move || move.phase === "undoing")
-      return { ok: false, text: `${handle} is not moving to another computer.` };
-    if (move.phase !== "waiting" || this.computerMoving.has(record.id))
-      return {
-        ok: false,
-        text: `${handle} is already moving to ${this.computerName(move.to)}, so the move can no longer be cancelled.`,
-      };
-    const who = by === "captain" ? "the captain" : "the first mate";
-    this.options.tasks.placement.setComputerMove(record.id, null, {
-      text: `${who} cancelled its move to ${this.computerName(move.to)}; it stays on ${this.computerName(move.from)}`,
-      actor: by,
-    });
-    this.broadcastCrewCounts();
-    this.deliverLane(record.id);
-    return { ok: true, text: `${handle} stays on ${this.computerName(move.from)}.` };
-  }
-
-  /**
-   * A task's move as its record shows it: whether it may move now, and the
-   * move that stands with what still stops a safe pause (`TaskView`).
-   */
-  computerMoveFacts(record: TaskRecord): Pick<TaskView, "movable" | "computerMove"> {
-    return this.options.tasks.projectedFact(record, this.moveFact, () =>
-      this.readComputerMoveFacts(record),
-    );
-  }
-
-  private readComputerMoveFacts(record: TaskRecord): Pick<TaskView, "movable" | "computerMove"> {
-    const move = record.shape?.computer_move;
-    if (move) {
-      if (move.phase === "undoing") return {};
-      return {
-        computerMove: {
-          from: this.computerName(move.from),
-          to: this.computerName(move.to),
-          state: move.phase,
-          waitingFor: move.phase === "waiting" ? this.pauseBlockers(record.id) : [],
-          ...(move.problem ? { problem: move.problem } : {}),
-        },
-      };
-    }
-    if (this.moveBlocker(record)) return {};
-    const from = this.computerOf(record);
-    const others = [RUNS_ON_THIS_MAC, ...(this.options.machines?.computers() ?? [])].filter(
-      (id) => id !== from,
-    );
-    return others.length ? { movable: true } : {};
-  }
-
-  /** A computer that runs work by its device id, or `this-mac`, as the record holds it. */
-  private computerOf(record: TaskRecord): string {
-    return record.deviceId ?? RUNS_ON_THIS_MAC;
-  }
-
-  private computerName(id: string): string {
-    return id === RUNS_ON_THIS_MAC
-      ? HERE.this
-      : (this.options.machines?.nameOf(id) ?? `the other ${COMPUTER.one}`);
-  }
-
-  /** Why a task cannot move to another computer at all, or undefined when it can. */
-  private moveRefusal(record: TaskRecord): string | undefined {
-    return this.moveBlocker(record)?.();
-  }
-
-  /** The bulk view needs eligibility, not a refusal sentence for each row. */
-  private moveBlocker(record: TaskRecord): (() => string) | undefined {
-    const handle = () => `${record.key || record.id} "${record.title}"`;
-    if (record.kind !== "work" || record.status !== "active" || TaskService.isClosed(record))
-      return () =>
-        `${handle()} is ${describeStatus(record)}; only started work moves to another computer.`;
-    if (!record.sessionFile || !record.branch)
-      return () => `${handle()} has no working copy of its own to move.`;
-    if (this.isPersonalTask(record.id))
-      return () => `${handle()} builds in your personal workspace, which stays on ${HERE.this}.`;
-    if (record.shape?.in_place)
-      return () => `${handle()} works in its project's own folder, which stays where it is.`;
-    if (record.shape?.kind === "review")
-      return () => `${handle()} is a review and follows its builder's computer.`;
-    const move = record.shape?.computer_move;
-    if (move?.phase === "waiting" || move?.phase === "moving")
-      return () => `${handle()} is already moving to ${this.computerName(move.to)}.`;
-    if (move) return () => `${handle()} is still finishing its last move; try again once it has.`;
-    const from = this.computerOf(record);
-    const machines = this.options.machines;
-    if (from !== RUNS_ON_THIS_MAC && machines?.takesMoves?.(from) !== true)
-      // A computer out of reach has no version to read until it is back.
-      return () =>
-        machines?.ready(from, record.id) !== true
-          ? moveOutOfReach(this.computerName(from))
-          : `Infinitary on ${this.computerName(from)} cannot move a started task yet. Update it first.`;
-    return undefined;
-  }
-
-  /** Why `to` cannot take this task now, or undefined when it can. */
-  private async destinationRefusal(record: TaskRecord, to: string): Promise<string | undefined> {
-    const name = this.computerName(to);
-    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-    // What a start reads of a computer: its system, chip and programs, and
-    // its own sign-in where the project lives; a project kept here only
-    // crosses in a bundle (docs/helper.md, "Moving a started task").
-    const eligible = () =>
-      this.options.automaticPlacement?.moveRefusal(
-        record,
-        repo,
-        to === RUNS_ON_THIS_MAC ? null : to,
-        name,
-      );
-    if (to === RUNS_ON_THIS_MAC) return eligible();
-    const machines = this.options.machines;
-    if (!machines?.computers().includes(to))
-      return "No computer that runs work has that deviceId. Look with app_state.";
-    // Reach first: a computer out of reach has no version to read until it is back.
-    if (machines.ready(to, record.id) !== true) return moveOutOfReach(name);
-    if (machines.takesMoves?.(to) !== true || !machines.moveIn)
-      return `Infinitary on ${name} cannot take a started task yet. Update it first.`;
-    const model = this.modelOfTask(record);
-    if (model) {
-      const pool = await machines.served(to).catch(() => undefined);
-      const serves = pool
-        ? (pool.modelAccounts?.has(offeringKey(model)) ?? pool.accounts.has(model.provider))
-        : false;
-      if (!serves) return `${name} has no signed-in account that serves ${this.modelName(model)}.`;
-    }
-    return eligible();
-  }
-
-  /** The model a task runs on: its newest routing choice, else its record's. */
-  private modelOfTask(record: TaskRecord): { provider: string; id: string } | undefined {
-    const routed = this.options.router?.servedChoice(record.id)?.model;
-    if (routed) return { provider: routed.provider, id: routed.id };
-    if (!record.model) return undefined;
-    const parsed = parseOfferingKey(record.model);
-    return parsed.provider ? { provider: parsed.provider, id: parsed.id } : undefined;
-  }
-
-  /** What still stops a safe pause for a task's move, in words; empty when nothing does. */
-  private pauseBlockers(taskId: string): string[] {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return [];
-    const runtime = this.tasks.get(taskId);
-    const blockers: string[] = [];
-    if (
-      runtime &&
-      (runtime.state !== "idle" ||
-        runtime.settling === true ||
-        runtime.session?.isStreaming() === true)
-    )
-      blockers.push("its crewmate's current turn ends");
-    if (
-      this.options.hasRunningJobs?.(taskId) === true ||
-      this.clientJobStart(taskId) !== undefined ||
-      (runtime?.clientTasks.size ?? 0) > 0
-    )
-      blockers.push("the commands it started finish");
-    if (record.pendingSettle) blockers.push("its merge is settled");
-    // A live page, or one in the captain's hands, never moves or closes under the captain.
-    if (
-      this.options.browsers?.fact(taskId)?.state === "open" ||
-      this.options.browsers?.withCaptain(taskId) === true
-    )
-      blockers.push("its browser is closed");
-    if (
-      this.options.tasks.graph
-        .children(taskId)
-        .some((child) => child.shape?.kind === "review" && !TaskService.isClosed(child))
-    )
-      blockers.push("its independent review finishes");
-    const move = record.shape?.computer_move;
-    for (const id of move ? [move.from, move.to] : []) {
-      if (id === RUNS_ON_THIS_MAC) continue;
-      if (this.updating.has(id) || this.options.machines?.ready(id, taskId) !== true)
-        blockers.push(`${this.computerName(id)} is in reach`);
-    }
-    return blockers;
-  }
-
-  /** The task's own folders a move carries, here (`MOVED_FOLDERS`). */
-  private localMoveFolders(taskId: string): MovedFolders {
-    const paths = this.options.paths;
-    return {
-      evidence: crewmateEvidenceDir(paths, taskId),
-      "card-bodies": crewmateCardBodiesDir(paths, taskId),
-      "source-cards": crewmateSourceCardsDir(paths, taskId),
-      sessions: crewmateSessionsDir(paths, taskId),
-      handover: join(crewmateTempDir(paths, taskId), HANDOVER_IN_DIR_NAME),
-    };
-  }
-
-  /**
-   * Every standing move to another computer goes one step further: one
-   * waiting for a safe pause moves once nothing stops it, a commit's old
-   * working copy is removed, and a copy a move that did not finish made is
-   * removed. A move a quit cut off while its work crossed did not finish.
-   * Runs on the shared tick and once at boot. The work crossing and the
-   * new conversation's install run on their own, so a large pack or a long
-   * install never holds the rest of the tick; `computerMoving` keeps a
-   * later tick from starting either twice.
-   */
-  private async driveComputerMoves(): Promise<void> {
-    for (const record of this.options.tasks.listActive()) {
-      const move = record.shape?.computer_move;
-      if (!move || this.computerMoving.has(record.id)) continue;
-      if (move.phase === "waiting") void this.runComputerMove(record.id).catch(warnMove);
-      else if (move.phase === "moving")
-        await this.endUnfinishedMove(record.id, "Infinitary stopped while its work moved");
-      else if (move.phase === "retiring" && (move.restartFrom !== undefined || move.preparing))
-        void this.reopenMovedTask(record.id).catch(warnMove);
-      else if (move.phase === "retiring") await this.retireMovedSource(record.id);
-      else await this.undoMovedDestination(record.id);
-    }
-    // A task closed meanwhile moves no further; what its move left goes with its close.
-    for (const record of this.options.tasks.listWithComputerMove()) {
-      if (!TaskService.isClosed(record)) continue;
-      if (this.computerMoving.has(record.id)) continue;
-      this.options.tasks.placement.setComputerMove(record.id, null);
-    }
-  }
-
-  /** Keep the whole lifetime, not just the task-id exclusion, for the quit to await. */
-  private trackComputerMove(operation: Promise<void>): Promise<void> {
-    const tracked = operation.finally(() => this.computerMoveOperations.delete(tracked));
-    this.computerMoveOperations.add(tracked);
-    return tracked;
-  }
-
-  /**
-   * The move itself, at a safe pause: the crewmate's conversation is let
-   * go, the work is packed where it runs - the branch's commits, what is
-   * staged and what is not, the files git does not track and the task's own
-   * folders - and unpacked on the destination, checked against what left.
-   * Then the record names the destination once, the old conversation's
-   * execution state is set aside, a new conversation opens there with the
-   * brief and where the earlier conversation is, and the old working copy
-   * goes. A failure before that commit leaves the task where it was.
-   */
-  private runComputerMove(taskId: string): Promise<void> {
-    return this.trackComputerMove(this.runComputerMoveOperation(taskId));
-  }
-
-  private async runComputerMoveOperation(taskId: string): Promise<void> {
-    if (this.computerMoving.has(taskId) || this.disposed) return;
-    const record = this.options.tasks.get(taskId);
-    const move = record?.shape?.computer_move;
-    if (!record || move?.phase !== "waiting") return;
-    if (this.pauseBlockers(taskId).length) {
-      this.broadcastCrewCounts();
-      return;
-    }
-    this.computerMoving.add(taskId);
-    const machines = this.options.machines;
-    const attempt = String(this.now());
-    const pack = join(this.options.paths.crewmatesDir, taskId, "move", `move-${attempt}.pack`);
-    let committed = false;
-    try {
-      const runtime = this.tasks.get(taskId);
-      if (runtime) {
-        this.releaseSession(runtime);
-        this.tasks.delete(taskId);
-        await runtime.session?.closed().catch(() => {});
-      }
-      this.options.tasks.placement.setComputerMove(taskId, {
-        ...move,
-        phase: "moving",
-        problem: undefined,
-      });
-      this.broadcastCrewCounts();
-      mkdirSync(dirname(pack), { recursive: true, mode: 0o700 });
-      let out: { head: string; branch: string; repoDir: string };
-      try {
-        if (move.from === RUNS_ON_THIS_MAC) {
-          const { manifest } = await packWork(
-            record.worktreeDir || "",
-            record.branch || "",
-            this.localMoveFolders(taskId),
-            pack,
-            move.keep,
-          );
-          out = { head: manifest.head, branch: manifest.branch, repoDir: record.repoDir };
-        } else {
-          if (!machines?.moveOut) throw new Error("this Mac cannot reach that computer's work");
-          out = await machines.moveOut(move.from, taskId, attempt, pack, move.keep);
-        }
-      } catch (caught) {
-        // Nothing has changed anywhere yet: the move waits, and says why.
-        this.options.tasks.placement.setComputerMove(taskId, {
-          ...move,
-          problem: `its work could not be packed: ${errorText(caught)}`,
-        });
-        this.broadcastCrewCounts();
-        return;
-      }
-      const toName = this.computerName(move.to);
-      let cwd: string;
-      let branch = out.branch;
-      let accountId: string | undefined;
-      if (move.to === RUNS_ON_THIS_MAC) {
-        const model = this.modelOfTask(record);
-        accountId = model
-          ? this.options.accounts?.selectForSpawn(taskId, model.provider)
-          : undefined;
-        if (model && this.options.accounts && !accountId)
-          throw new Error(
-            `${HERE.this} has no signed-in account that serves ${this.modelName(model)}`,
-          );
-        const workspace = await this.options.workspace.createTaskWorktree(taskId, out.repoDir, {
-          headSha: out.head,
-        });
-        await unpackWork(workspace.cwd, pack, this.localMoveFolders(taskId));
-        cwd = workspace.cwd;
-        branch = workspace.branch;
-      } else {
-        if (!machines?.moveIn) throw new Error(`${toName} cannot take a started task`);
-        const copy = await machines.moveIn(move.to, taskId, attempt, {
-          repoId: record.repoId,
-          head: out.head,
-          branch: out.branch,
-          pack,
-        });
-        cwd = copy.cwd;
-      }
-      if (move.from !== RUNS_ON_THIS_MAC) machines?.forgetExecution?.(taskId);
-      const who = move.by === "captain" ? "the captain" : "the first mate";
-      this.options.tasks.placement.commitComputerMove(taskId, {
-        deviceId: move.to === RUNS_ON_THIS_MAC ? null : move.to,
-        repoDir: out.repoDir,
-        worktreeDir: move.to === RUNS_ON_THIS_MAC ? cwd : "",
-        branch,
-        move: {
-          ...move,
-          phase: "retiring",
-          problem: undefined,
-          ...(move.from === RUNS_ON_THIS_MAC && record.worktreeDir
-            ? { fromDir: record.worktreeDir }
-            : {}),
-          restartFrom: basename(record.sessionFile ?? "").replace(/\.jsonl$/, ""),
-          preparing: true,
-        },
-        actor: move.by,
-        text: `${who} moved it from ${this.computerName(move.from)} to ${toName}; it keeps its key, branch, working copy and files`,
-      });
-      committed = true;
-      // A computer that runs work binds its own account there again.
-      this.options.tasks.placement.setAccountId(taskId, accountId ?? null);
-      this.broadcastCrewCounts();
-      await rm(pack, { force: true });
-      // Still held: nothing on its lane starts a turn before it reopened there.
-      await this.reopenMovedTask(taskId, true);
-    } catch (caught) {
-      if (!committed) {
-        this.computerMoving.delete(taskId);
-        await this.endUnfinishedMove(taskId, errorText(caught));
-      } else {
-        // Its record names the destination: the next tick reopens it there.
-        this.options.tasks.note(
-          taskId,
-          `it moved, but could not reopen yet: ${errorText(caught)}`,
-          {
-            news: true,
-          },
-        );
-      }
-    } finally {
-      await rm(pack, { force: true }).catch(() => {});
-      this.computerMoving.delete(taskId);
-      this.broadcastCrewCounts();
-    }
-    if (committed) {
-      this.deliverLane(taskId);
-      await this.retireMovedSource(taskId);
-    }
-  }
-
-  /**
-   * A committed move's new conversation where the task runs now: it opens
-   * told it moved (`restartFrom`, read by `resumeTask`), and its
-   * dependencies install there before anything on its lane starts a turn,
-   * as a first turn's do (`prepareFirstTurn`). The lane stays held
-   * meanwhile, by the record's `preparing` until the install is over, so a
-   * quit mid-install installs again at the next launch before any turn;
-   * `held` says the caller already holds it, and retires the copy it left
-   * itself. A failure is kept for the next tick.
-   */
-  private reopenMovedTask(taskId: string, held = false): Promise<void> {
-    return this.trackComputerMove(this.reopenMovedTaskOperation(taskId, held));
-  }
-
-  private async reopenMovedTaskOperation(taskId: string, held = false): Promise<void> {
-    if (!held) {
-      if (this.computerMoving.has(taskId) || this.disposed) return;
-      this.computerMoving.add(taskId);
-    }
-    try {
-      const resumed = this.tasks.get(taskId) ?? (await this.resumeTask(taskId));
-      const machine = this.machineOf(taskId);
-      const installing =
-        machine !== LOCAL_MACHINE_ID
-          ? this.options.machines?.install(machine, taskId)
-          : resumed.workspace?.cwd
-            ? this.options.workspace.installDependencies(resumed.workspace.cwd)
-            : undefined;
-      const install = await installing?.catch(
-        (caught): DependencyInstall => ({ outcome: "failed", ms: 0, error: errorText(caught) }),
-      );
-      if (install && install.outcome !== "skipped" && this.options.tasks.get(taskId))
-        this.options.tasks.note(taskId, installText(install), {
-          news: install.outcome === "failed",
-          data: {
-            install: install.outcome,
-            ms: install.ms,
-            ...(install.outcome === "failed" ? { error: install.error } : {}),
-          },
-        });
-      const prepared = this.options.tasks.get(taskId)?.shape?.computer_move;
-      if (prepared?.preparing) {
-        const { preparing: _done, ...rest } = prepared;
-        this.options.tasks.placement.setComputerMove(taskId, rest);
-      }
-    } catch (caught) {
-      // Its record names the destination: the next tick reopens it there.
-      const problem = `it moved, but could not reopen yet: ${errorText(caught)}`;
-      const move = this.options.tasks.get(taskId)?.shape?.computer_move;
-      if (move && move.problem !== problem) {
-        this.options.tasks.placement.setComputerMove(taskId, { ...move, problem });
-        this.options.tasks.note(taskId, problem, { news: true });
-      }
-    } finally {
-      if (!held) this.computerMoving.delete(taskId);
-    }
-    if (held || !this.tasks.has(taskId)) return;
-    this.deliverLane(taskId);
-    await this.retireMovedSource(taskId);
-  }
-
-  /**
-   * A move that did not finish before its commit: the task stays where it
-   * was, with its work and conversation there untouched, and its timeline
-   * and the feed say why. What the move made on the destination is
-   * removed next (`undoing`).
-   */
-  private async endUnfinishedMove(taskId: string, reason: string): Promise<void> {
-    const record = this.options.tasks.get(taskId);
-    const move = record?.shape?.computer_move;
-    if (!record || !move) return;
-    const from = this.computerName(move.from);
-    this.options.tasks.placement.setComputerMove(
-      taskId,
-      { ...move, phase: "undoing", problem: reason },
-      {
-        text: `its move to ${this.computerName(move.to)} did not finish: ${reason}. It stays on ${from}`,
-        actor: "host",
-        feed: true,
-      },
-    );
-    this.broadcastCrewCounts();
-    await this.undoMovedDestination(taskId);
-    this.deliverLane(taskId);
-  }
-
-  /** Removes the copy an unfinished move made on its destination; retried while out of reach. */
-  private undoMovedDestination(taskId: string): Promise<void> {
-    return this.trackComputerMove(this.undoMovedDestinationOperation(taskId));
-  }
-
-  private async undoMovedDestinationOperation(taskId: string): Promise<void> {
-    const record = this.options.tasks.get(taskId);
-    const move = record?.shape?.computer_move;
-    if (!record || move?.phase !== "undoing" || this.clearingMoves.has(taskId)) return;
-    this.clearingMoves.add(taskId);
-    try {
-      if (move.to === RUNS_ON_THIS_MAC) {
-        const cwd = join(this.options.paths.worktreesDir, taskId);
-        if (existsSync(cwd) && cwd !== record.worktreeDir)
-          await this.options.workspace.removeTaskWorktree({
-            taskId,
-            cwd,
-            branch: record.branch || `fm/task-${taskId}`,
-            repoDir: record.repoDir,
-          });
-      } else {
-        await this.options.machines?.retireMoved?.(move.to, taskId);
-      }
-      if (this.sameMove(taskId, move)) this.options.tasks.placement.setComputerMove(taskId, null);
-    } catch (caught) {
-      // Kept, and tried again on the next tick.
-      console.warn("[crew] a moved copy could not be removed yet:", caught);
-    } finally {
-      this.clearingMoves.delete(taskId);
-    }
-  }
-
-  /** The task's move is still `move` in the same phase: a newer ask is never cleared by an older one's end. */
-  private sameMove(taskId: string, move: Pick<ComputerMove, "at" | "to" | "phase">): boolean {
-    const now = this.options.tasks.get(taskId)?.shape?.computer_move;
-    return (
-      now !== undefined && now.at === move.at && now.to === move.to && now.phase === move.phase
-    );
-  }
-
-  /** Removes the working copy a committed move left on the computer it left; retried while out of reach. */
-  private retireMovedSource(taskId: string): Promise<void> {
-    return this.trackComputerMove(this.retireMovedSourceOperation(taskId));
-  }
-
-  private async retireMovedSourceOperation(taskId: string): Promise<void> {
-    const record = this.options.tasks.get(taskId);
-    const move = record?.shape?.computer_move;
-    if (!record || move?.phase !== "retiring" || this.clearingMoves.has(taskId)) return;
-    // Its old conversation stays until a new one opened where it runs now.
-    if (move.restartFrom !== undefined || move.preparing) return;
-    this.clearingMoves.add(taskId);
-    try {
-      if (move.from === RUNS_ON_THIS_MAC) {
-        if (move.fromDir && existsSync(move.fromDir))
-          await this.options.workspace.removeTaskWorktree({
-            taskId,
-            cwd: move.fromDir,
-            branch: `fm/task-${taskId}`,
-            repoDir: record.repoDir,
-          });
-      } else {
-        if (!this.options.machines?.retireMoved)
-          throw new Error(`${this.computerName(move.from)} cannot remove it`);
-        await this.options.machines.retireMoved(move.from, taskId);
-      }
-      if (this.sameMove(taskId, move))
-        this.options.tasks.placement.setComputerMove(taskId, null, {
-          text: `the working copy it left on ${this.computerName(move.from)} was removed`,
-          actor: "host",
-        });
-    } catch (caught) {
-      const problem = `the working copy it left on ${this.computerName(move.from)} is not removed yet: ${errorText(caught)}`;
-      if (move.problem !== problem && this.sameMove(taskId, move))
-        this.options.tasks.placement.setComputerMove(taskId, { ...move, problem });
-    } finally {
-      this.clearingMoves.delete(taskId);
-      this.broadcastCrewCounts();
-    }
   }
 
   /**
@@ -5449,249 +4571,6 @@ export class CrewSupervisor {
       : { ok: false, text: `${handle} has no kept merge approval to withdraw.` };
   }
 
-  /**
-   * update_task override (docs/delivery-rigor.md, "The holds"): the
-   * captain's words, which the first mate heard in this turn, pass the soft
-   * holds it declares, for this version or the task's life. The host keeps
-   * his words as the row's reason and never reads them; it checks only that
-   * the task is live, since update_task has already refused a hold the
-   * override cannot pass, in that hold's own words (`overrideRefusal`). One
-   * override stands at a time: a new one replaces it. Naming a counted limit
-   * reopens it now. Words that are his click on a merge (`mergeClick`, from
-   * `citedCaptainWords`) are his approval of it, kept until the checks pass,
-   * so they never pass the checks (INF-1966), and the record keeps that
-   * fact for `standing` to carry.
-   */
-  declareOverride(
-    taskId: string,
-    input: {
-      words: string;
-      holds: OverridableHold[];
-      until: "version" | "task";
-      mergeClick?: true;
-    },
-  ): { ok: boolean; text: string } {
-    const record = this.options.tasks.get(taskId);
-    if (!record) throw new Error(`Unknown task "${taskId}".`);
-    const handle = `${record.key || record.id} "${record.title}"`;
-    if (TaskService.isClosed(record))
-      return { ok: false, text: `${handle} is closed, so no hold is left to pass.` };
-    const holds = [...new Set(input.holds)];
-    if (holds.length === 0)
-      return { ok: false, text: "Name at least one soft hold the captain's words pass." };
-    if (input.mergeClick && holds.includes("checks"))
-      return { ok: false, text: mergeClickRefusal(input.words) };
-    const head = record.delivery?.headSha;
-    if (input.until === "version" && !head)
-      return {
-        ok: false,
-        text: `${handle} has no version yet, so an override for this version has nothing to cover. Declare until task if their words mean the whole task.`,
-      };
-    // The version is a head of the pull request the task names now - its own
-    // or a selected one - so the override records which (INF-1884 R2).
-    const prNumber = record.delivery?.prNumber;
-    const override: HoldOverride = {
-      words: input.words,
-      holds,
-      until: input.until,
-      ...(input.until === "version" && head
-        ? { head, ...(prNumber !== undefined ? { prNumber } : {}) }
-        : {}),
-      ...(input.mergeClick ? { mergeClick: true as const } : {}),
-      at: this.now(),
-    };
-    this.options.tasks.delivery.recordPermissionRecords(
-      taskId,
-      { override },
-      {
-        kind: "note",
-        actor: "firstmate",
-        feed: true,
-        text: overrideWords(override),
-        data: { news: true },
-      },
-    );
-    this.overrideNoticed(taskId, override);
-    // His kept merge click reads the same record: one waiting on a hold his
-    // words pass runs now (a no-op when none stands).
-    void this.settling.kept.runMergeAuthorization(taskId).catch((caught: unknown) => {
-      console.warn("[crew] kept merge could not run:", caught);
-    });
-    return {
-      ok: true,
-      text: `Recorded the captain's override on ${handle}: their words pass ${holdNames(holds)} ${overrideSpan(override)}. Every soft hold named reads it, their merge click included; go on as their words asked. override with empty holds takes it back.`,
-    };
-  }
-
-  /** update_task override with empty holds: the captain takes his override back; a second row says so. */
-  withdrawOverride(taskId: string): { ok: boolean; text: string } {
-    const record = this.options.tasks.get(taskId);
-    if (!record) throw new Error(`Unknown task "${taskId}".`);
-    const handle = `${record.key || record.id} "${record.title}"`;
-    const override = record.delivery?.override;
-    if (!override) return { ok: false, text: `${handle} has no override to take back.` };
-    this.options.tasks.delivery.recordPermissionRecords(
-      taskId,
-      { override: undefined },
-      {
-        kind: "note",
-        actor: "firstmate",
-        feed: true,
-        text: `You took back your words on ${holdNames(override.holds)}: they hold again.`,
-        data: { news: true, overrideWithdrawn: override },
-      },
-    );
-    this.overrideNoticed(taskId, override, true);
-    this.ladder.syncCaptainGate(taskId, this.now());
-    return {
-      ok: true,
-      text: `Took back the captain's override on ${handle}: ${holdNames(override.holds)} hold again.`,
-    };
-  }
-
-  /**
-   * The captain's override changed on a task (INF-1216): its crewmate is
-   * served his standing words, or that he took them back, on its durable
-   * lane, so its next turn reads them on this computer or another. A
-   * notice alone starts no turn (`deliverableRows`); a running turn hears
-   * it now. Its reviewer reads the override in every review turn's brief.
-   */
-  private overrideNoticed(taskId: string, override: HoldOverride, withdrawn = false): void {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return;
-    this.options.inbox.enqueueSteerOnce(taskId, {
-      facts: {
-        kind: "task-override-changed",
-        task: { id: taskId, key: record.key, title: record.title },
-        override: { words: override.words, holds: override.holds, until: override.until },
-        ...(withdrawn ? { withdrawn: true as const } : {}),
-      },
-      once: `task-override:${withdrawn ? "withdrawn" : "standing"}:${override.at}`,
-    });
-    if (this.tasks.get(taskId)?.state === "streaming") void this.sweepTaskLane(taskId, this.now());
-  }
-
-  /**
-   * The captain's own words the first mate cites for an override (INF-1216,
-   * INF-1582 finding 2): on a card of this task (`from` is the card's id),
-   * the newest of his reply in its thread and his click on its button, on
-   * the first mate's cards and a crewmate's alike; his newest line in its
-   * Crewmate tab (`crewmate-tab`), read from the steer that carried it; or
-   * the words of the override standing on it (`standing`), so one sentence
-   * names more holds. The host checks only that the words are his and on
-   * this task, and reads none of them. `mergeClick` says the words are his
-   * click on a merge, a typed fact of the card's action or the standing
-   * record, never read from the words (INF-1966).
-   */
-  citedCaptainWords(
-    taskId: string,
-    from: string,
-  ): { ok: true; words: string; mergeClick?: true } | { ok: false; text: string } {
-    const record = this.options.tasks.get(taskId);
-    if (!record) throw new Error(`Unknown task "${taskId}".`);
-    const handle = record.key || record.id;
-    const cited = from.trim();
-    if (cited === STANDING_WORDS_FROM) {
-      const standing = standingOverride(record.delivery, record.delivery?.headSha);
-      return standing
-        ? {
-            ok: true,
-            words: standing.words,
-            ...(standing.mergeClick ? { mergeClick: true as const } : {}),
-          }
-        : {
-            ok: false,
-            text: `Override refused: nothing was recorded. No override stands on ${handle} at this version, so there are no recorded words of the captain's to name more holds with.`,
-          };
-    }
-    if (cited === CREWMATE_TAB_VIA) {
-      const message = this.options.tasks
-        .timeline(taskId)
-        .findLast(
-          (event) =>
-            event.kind === "steered" &&
-            event.actor === "captain" &&
-            event.data?.via === CREWMATE_TAB_VIA,
-        );
-      const span = message?.data?.words as { from: number; to: number } | undefined;
-      const words = message && span ? message.text.slice(span.from, span.to).trim() : "";
-      return words
-        ? { ok: true, words }
-        : {
-            ok: false,
-            text: `Override refused: nothing was recorded. The record holds no words the captain typed in ${handle}'s Crewmate tab.`,
-          };
-    }
-    const card = this.cards.get(cited) ?? this.cards.stored(cited);
-    if (!card)
-      return {
-        ok: false,
-        text: `Override refused: nothing was recorded. There is no card "${cited}"; pass from as the id of the card the captain replied under or clicked, ${CREWMATE_TAB_VIA}, or ${STANDING_WORDS_FROM}.`,
-      };
-    if (card.taskId !== taskId)
-      return {
-        ok: false,
-        text: `Override refused: nothing was recorded. Card "${card.title}" is not on ${handle}, so the captain's words there pass nothing on it.`,
-      };
-    const words = this.captainWordsOnCard(card);
-    if (!words)
-      return {
-        ok: false,
-        text: `Override refused: nothing was recorded. The record holds no words of the captain's on card "${card.title}": no reply in its thread and no click on its buttons.`,
-      };
-    return { ok: true, ...words };
-  }
-
-  /**
-   * The captain's newest words on a card: his reply in its thread, or his
-   * click on one of its buttons (`choiceWords`), whichever came last. A
-   * body's own script choosing is never his click. A click on a merge says
-   * so (`clickApprovesMerge`).
-   */
-  private captainWordsOnCard(card: Card): { words: string; mergeClick?: true } | undefined {
-    const reply = this.cards.messages(card.id).findLast((message) => message.who === "captain");
-    const typed = reply?.text.trim();
-    const past = this.cards.past(card.id);
-    const ending = past?.ending;
-    const clicked =
-      past && ending?.how === "chose" && ending.by === "captain" && ending.label
-        ? {
-            at: ending.at,
-            words: choiceWords(ending.label, past.title, anythingElseOf(past.answers)),
-            ...(this.clickApprovesMerge(card, ending.actionId)
-              ? { mergeClick: true as const }
-              : {}),
-          }
-        : undefined;
-    if (clicked && (!typed || !reply || clicked.at >= reply.at)) {
-      const { at: _at, ...words } = clicked;
-      return words;
-    }
-    return typed ? { words: typed } : undefined;
-  }
-
-  /**
-   * Whether the captain's click on this action approved a merge (INF-1966):
-   * the completion card's merge, whose words the app draws from the checks
-   * (`mergeLabel`), or an ordinary request_merge card's - never Merge
-   * anyway, which passes the checks itself, nor a merge past the branch
-   * rules, whose card names each failed check it skips. Read from the
-   * action's declared effect, never from its words.
-   */
-  private clickApprovesMerge(card: Card, actionId: string | undefined): boolean {
-    const action = actionId ? card.actions.find((entry) => entry.id === actionId) : undefined;
-    const effect = action?.effect;
-    if (!action || !effect || action.passes) return false;
-    if (effect.kind === "settle") return effect.mode === "merge";
-    if (effect.kind !== "request_merge") return false;
-    const review = card.taskId
-      ? this.options.tasks
-          .get(card.taskId)
-          ?.delivery?.mergeReviews?.find((item) => item.id === effect.review)
-      : undefined;
-    return !review?.skips;
-  }
-
   /** The interrupt request or outcome's timeline event (R2 forward capture). */
   private recordInterrupt(
     taskId: string,
@@ -5822,7 +4701,7 @@ export class CrewSupervisor {
       const rigor = this.options.tasks.policiesOf(record)?.rigor.value;
       const review = this.reviewState(record);
       const thread = threads.get(record.id);
-      const restart = this.restartFact(record.id);
+      const restart = this.restarts.restartFact(record.id);
       const now = this.now();
       const stalledSince = this.ladder.stalledSince(record, now);
       const stalled = stalledSince ? this.ladder.stalledFact(record, now, stalledSince) : undefined;
@@ -6292,7 +5171,7 @@ export class CrewSupervisor {
     this.turnOver(runtime.id);
     // A copy replaced by an update waits for every client to be gone, so
     // each conversation is written down before the new copy reads it.
-    if (session?.isStreaming() || (session && this.localUpdate?.saved)) {
+    if (session?.isStreaming() || (session && this.updates.savedHere())) {
       const unsubscribe = session.subscribe((event) => {
         if ((event.type === "turn_end" || event.type === "tool_end") && event.usage) {
           this.recordUsage(runtime, event.usage);
@@ -6664,9 +5543,9 @@ export class CrewSupervisor {
         .some((row) => row.cuts > 0 || row.facts?.kind === "turn-resumed");
       if (cut || record.activity === "running") {
         carrying.push(record);
-        if (!this.restartObservations.has(record.id)) {
-          this.restartObservations.set(record.id, { at: this.now() });
-          this.recordRestartOutcome(
+        if (!this.restarts.observing(record.id)) {
+          this.restarts.observe(record.id);
+          this.restarts.recordRestartOutcome(
             record.id,
             "pending",
             "automatic recovery has not started a request yet",
@@ -6683,46 +5562,13 @@ export class CrewSupervisor {
     });
   }
 
-  /** The latest durable observation, not an inference from the running flag. */
-  private restartFact(taskId: string): CrewStatusEntry["restart"] {
-    const event = this.options.tasks.restartObservation(taskId);
-    if (!event) return undefined;
-    return { at: new Date(event.at).toISOString(), text: event.text };
-  }
-
-  private recordRestartOutcome(
-    taskId: string,
-    outcome: "pending" | "waiting" | "resumed" | "stopped",
-    reason?: string,
-  ): void {
-    const observation = this.restartObservations.get(taskId);
-    if (!observation) return;
-    const text =
-      outcome === "resumed"
-        ? RESTART_RESUMED_WORDS
-        : outcome === "waiting" || outcome === "pending"
-          ? `Has not carried on after the app reopened: ${reason}.`
-          : `Stopped after the app reopened: ${reason}.`;
-    if (observation.last === text) return;
-    observation.last = text;
-    this.options.tasks.note(taskId, text, {
-      news: outcome !== "pending",
-      feed: outcome !== "pending",
-      data: {
-        journal: true,
-        restartOutcome: { reopenedAt: observation.at, outcome, ...(reason ? { reason } : {}) },
-      },
-    });
-    if (outcome === "resumed") this.restartObservations.delete(taskId);
-  }
-
   async sweepInbox(now: number): Promise<void> {
     if (this.sweepingInbox) return;
     this.sweepingInbox = true;
     try {
       for (const recipient of new Set([
         ...this.options.inbox.recipientsWithRows(),
-        ...this.restartObservations.keys(),
+        ...this.restarts.observed(),
       ])) {
         // The firstmate lane is the agent's own to drain; the tick pokes it
         // separately (startWatchdog). The retired supervision lane is
@@ -6741,8 +5587,8 @@ export class CrewSupervisor {
     if (spent.length > 0) this.escalateTaskGuidance(taskId, spent);
     // A started task in the backlog keeps its lane until a Start (INF-2062).
     if (this.inBacklog(taskId)) return;
-    if (this.restartObservations.has(taskId) && this.laneHeld(taskId))
-      this.recordRestartOutcome(
+    if (this.restarts.observing(taskId) && this.laneHeld(taskId))
+      this.restarts.recordRestartOutcome(
         taskId,
         "waiting",
         this.outOfReach(taskId)
@@ -6782,7 +5628,7 @@ export class CrewSupervisor {
     // this lane due beside older, escalated guidance; keep both until the
     // unfinished task can resume, rather than orphaning its entire lane.
     if (record.kind !== "work" || !TaskService.isResumable(record) || !record.sessionFile) {
-      this.recordRestartOutcome(
+      this.restarts.recordRestartOutcome(
         taskId,
         "stopped",
         !record.sessionFile ? "its saved conversation is unavailable" : "its task is not resumable",
@@ -6792,7 +5638,11 @@ export class CrewSupervisor {
     if (this.retiredProviderOf(taskId)) {
       // Its session belongs to a subscription this build no longer offers:
       // no backend can reopen it, so the guidance is kept, not retried.
-      this.recordRestartOutcome(taskId, "stopped", "it ran on a subscription no longer offered");
+      this.restarts.recordRestartOutcome(
+        taskId,
+        "stopped",
+        "it ran on a subscription no longer offered",
+      );
       this.orphanTaskGuidance(taskId, record, "it ran on a subscription no longer offered");
       return;
     }
@@ -6808,7 +5658,7 @@ export class CrewSupervisor {
       const resumed = await this.resumeTask(taskId);
       void this.runTurn(resumed, laneTurnText(due), ids, pictures.images);
     } catch (caught) {
-      this.recordRestartOutcome(
+      this.restarts.recordRestartOutcome(
         taskId,
         "stopped",
         caught instanceof Error ? caught.message : String(caught),
@@ -7149,9 +5999,9 @@ export class CrewSupervisor {
   placedReopened(taskId: string): void {
     const task = this.tasks.get(taskId);
     if (task?.session) {
-      if (task.state !== "idle" && !this.restartObservations.has(taskId)) {
-        this.restartObservations.set(taskId, { at: this.now() });
-        this.recordRestartOutcome(
+      if (task.state !== "idle" && !this.restarts.observing(taskId)) {
+        this.restarts.observe(taskId);
+        this.restarts.recordRestartOutcome(
           taskId,
           "waiting",
           "its computer reopened and has not confirmed a new request yet",
@@ -7196,215 +6046,6 @@ export class CrewSupervisor {
     }
     void this.sweepGates(this.now());
     this.broadcastCrewCounts();
-  }
-
-  /**
-   * The computer is about to be updated (docs/helper.md, "Updated by its
-   * home"): each crewmate turn running there stops, as a pause and never a
-   * failure, and nothing is handed to its crew until the update is over
-   * and the computer is back and caught up (`outOfReach`). The update
-   * waits, at most `QUIT_SETTLE_MS`, for the stopped turns to end there,
-   * so each conversation is written down before its computer stops.
-   */
-  async pauseForUpdate(deviceId: string): Promise<void> {
-    if (this.disposed || this.updating.has(deviceId)) return;
-    const computer = this.options.machines?.nameOf(deviceId) ?? deviceId;
-    this.updating.set(deviceId, computer);
-    const stopping = [...this.tasks.values()]
-      .filter((task) => task.state === "streaming" && this.machineOf(task.id) === deviceId)
-      .map((task) => this.pauseTurn(task, computer));
-    if (stopping.length === 0) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const bound = new Promise<void>((resolve) => {
-      timer = setTimeout(resolve, QUIT_SETTLE_MS);
-    });
-    await Promise.race([Promise.all(stopping), bound]).finally(() => clearTimeout(timer));
-  }
-
-  /**
-   * The update is over, whatever came of it: the computer's crew carries
-   * on, each paused crewmate with the lane row its pause left - once the
-   * computer is back and caught up (`placedCaughtUp`), or now when it
-   * never stopped.
-   */
-  resumeAfterUpdate(deviceId: string): void {
-    if (!this.updating.delete(deviceId) || this.disposed) return;
-    const now = this.now();
-    for (const taskId of this.options.inbox.recipientsWithRows())
-      if (this.machineOf(taskId) === deviceId) void this.sweepTaskLane(taskId, now);
-    void this.sweepGates(now);
-    this.broadcastCrewCounts();
-  }
-
-  /**
-   * One crewmate's turn stops for its computer's update: a lane row says
-   * why, for the turn that carries it on, and the turn's end there is a
-   * pause (`turnComplete`). No interrupt is recorded, so a kept merge
-   * approval stands.
-   */
-  private async pauseTurn(task: TaskRuntime, computer: string): Promise<void> {
-    if (task.paused || task.cancelled || !task.session) return;
-    const row = this.options.inbox.enqueue(task.id, {
-      facts: { kind: "turn-resumed", stopped: "update", computer },
-    });
-    task.paused = { computer, row };
-    this.restartObservations.set(task.id, { at: this.now() });
-    this.recordRestartOutcome(task.id, "waiting", `Infinitary on ${computer} is being updated`);
-    this.options.tasks.note(task.id, `paused while Infinitary on ${computer} is updated`, {
-      news: true,
-    });
-    try {
-      await task.session.abort();
-    } catch (caught) {
-      // Its end comes with the update instead, and is read as the pause.
-      console.warn("[crew] a paused turn could not be stopped:", caught);
-    }
-  }
-
-  /**
-   * This computer's own copy is about to be replaced (docs/alpha.md,
-   * "Saving work before an update"). No new turn starts here and what the
-   * crew is sent waits on its lanes in order (`heldForUpdate`); each turn
-   * running here stops where nothing is lost - the calls it runs finish and
-   * keep their results, the ones it would start are refused and say so,
-   * and then the turn is cut, with a lane row that carries it on after the
-   * restart. Resolves `saved` once every turn here has stopped, with no
-   * bound, telling `waiting` meanwhile which tasks' running work it waits
-   * for. Aborting `signal` lets the update go (`releaseUpdate`) and
-   * resolves `withdrawn`. A second ask joins the first. Turns on other
-   * computers go on there, and an idle or paused task is left as it is.
-   */
-  saveForUpdate(
-    options: { signal?: AbortSignal; waiting?: (tasks: string[]) => void } = {},
-  ): Promise<UpdateSaveOutcome> {
-    if (this.localUpdate) return this.localUpdate.saving;
-    if (this.disposed) return Promise.resolve("saved");
-    const turns = new Map<string, UpdateTurn>();
-    const report = () =>
-      options.waiting?.(
-        [...turns.values()].filter((turn) => turn.running > 0).map((turn) => turn.task.title),
-      );
-    const update: LocalUpdate = { turns, report, saved: false, saving: Promise.resolve("saved") };
-    this.localUpdate = update;
-    for (const task of [...this.tasks.values()])
-      if (task.state === "streaming" && this.heldForUpdate(task.id))
-        this.stopForUpdate(task, update);
-    update.saving = this.saveTurns(update, options.signal);
-    return update.saving;
-  }
-
-  /** Waits for every turn the update stops, including one that began meanwhile. */
-  private async saveTurns(update: LocalUpdate, signal?: AbortSignal): Promise<UpdateSaveOutcome> {
-    let letGo = () => {};
-    const withdrawn = new Promise<"withdrawn">((resolve) => {
-      letGo = () => resolve("withdrawn");
-    });
-    if (signal?.aborted) letGo();
-    else signal?.addEventListener("abort", letGo, { once: true });
-    try {
-      for (let asked = -1; asked !== update.turns.size; ) {
-        asked = update.turns.size;
-        const ended = Promise.all([...update.turns.values()].map((turn) => turn.ended));
-        const outcome = await Promise.race([ended.then(() => "saved" as const), withdrawn]);
-        if (this.localUpdate !== update) return "withdrawn";
-        if (outcome === "withdrawn") {
-          this.releaseUpdate();
-          return "withdrawn";
-        }
-      }
-      update.saved = true;
-      update.report();
-      return "saved";
-    } finally {
-      signal?.removeEventListener("abort", letGo);
-    }
-  }
-
-  /**
-   * One crewmate's turn here stops for this computer's update: a lane row
-   * says why for the turn that carries it on, and its end is a pause
-   * (`turnComplete`). A session that cannot hold its calls is cut.
-   */
-  private stopForUpdate(task: TaskRuntime, update: LocalUpdate): void {
-    const session = task.session;
-    if (update.turns.has(task.id) || task.cancelled || !session) return;
-    const row = this.options.inbox.enqueue(task.id, {
-      facts: { kind: "turn-resumed", stopped: "update" },
-    });
-    task.paused = { row };
-    this.restartObservations.set(task.id, { at: this.now() });
-    this.recordRestartOutcome(task.id, "waiting", "Infinitary is being updated");
-    this.options.tasks.note(task.id, UPDATE_PAUSE_NOTE, { news: true });
-    const withdraw = new AbortController();
-    const turn: UpdateTurn = { task, row, withdraw, running: 0, ended: Promise.resolve() };
-    const stopped = session.stopSafely
-      ? session.stopSafely({
-          signal: withdraw.signal,
-          waiting: (calls) => {
-            turn.running = calls.length;
-            update.report();
-          },
-        })
-      : session.abort().then(() => "stopped" as const);
-    turn.ended = stopped
-      .catch((caught: unknown) => {
-        // Its end comes with the update instead, and is read as the pause.
-        console.warn("[crew] a paused turn could not be stopped:", caught);
-        return "stopped" as const;
-      })
-      .then((outcome) => {
-        turn.running = 0;
-        if (outcome === "stopped") return this.untilTurnOver(task);
-        // Let go before it was cut: the turn goes on as if never asked.
-        if (task.paused?.row === row) {
-          task.paused = undefined;
-          this.options.inbox.withdraw([row]);
-          this.restartObservations.delete(task.id);
-        }
-      });
-    update.turns.set(task.id, turn);
-    update.report();
-  }
-
-  /**
-   * This computer's update was let go, or did not replace the copy
-   * (docs/alpha.md, "Saving work before an update"): a turn still stopping
-   * goes on as if never asked, one that stopped carries on from its lane
-   * row, and what waited on the lanes goes now, in order.
-   */
-  releaseUpdate(): void {
-    const update = this.localUpdate;
-    if (!update) return;
-    this.localUpdate = undefined;
-    for (const turn of update.turns.values()) turn.withdraw.abort();
-    if (this.disposed) return;
-    const now = this.now();
-    for (const taskId of this.options.inbox.recipientsWithRows())
-      if (this.machineOf(taskId) === LOCAL_MACHINE_ID) void this.sweepTaskLane(taskId, now);
-    void this.sweepGates(now);
-    this.broadcastCrewCounts();
-  }
-
-  /**
-   * The tasks whose turn this computer's own update stopped and which have
-   * not started again, by title: the update's Resuming work.
-   */
-  resumingAfterUpdate(): string[] {
-    const titles: string[] = [];
-    for (const taskId of this.options.inbox.recipientsWithRows()) {
-      const waits = this.options.inbox
-        .allFor(taskId)
-        .some(
-          (row) =>
-            row.deliveredAt === null &&
-            row.facts?.kind === "turn-resumed" &&
-            row.facts.stopped === "update" &&
-            row.facts.computer === undefined,
-        );
-      const title = waits ? this.options.tasks.get(taskId)?.title : undefined;
-      if (title) titles.push(title);
-    }
-    return titles;
   }
 
   /** Resolves once the task's running turn here has ended, at once when none runs. */
@@ -7456,7 +6097,7 @@ export class CrewSupervisor {
   private async sweepReady(now: number): Promise<void> {
     this.cards.fileMissingHostCardTasks();
     // Only a sweep with a move to drive yields here, so one with none keeps its order.
-    if (this.options.tasks.listWithComputerMove().length > 0) await this.driveComputerMoves();
+    if (this.options.tasks.listWithComputerMove().length > 0) await this.moves.driveComputerMoves();
     for (const record of this.options.tasks.listOpen()) {
       const action = record.delivery?.captainAction;
       if (
@@ -7805,7 +6446,7 @@ export class CrewSupervisor {
       if (this.tasks.has(taskId)) return;
       // This computer is being updated: it starts once the update is over
       // or let go (`releaseUpdate`).
-      if (this.localUpdate) return;
+      if (this.updates.updatingHere()) return;
       // It runs on a computer that is out of reach: it waits, and never starts here instead.
       if (this.placement.placeForStart(taskId)) return;
       if (
@@ -8262,7 +6903,7 @@ export class CrewSupervisor {
    */
   conversationBusy(taskId: string): boolean {
     const runtime = this.tasks.get(taskId);
-    if (this.moving.has(taskId) || this.computerMoving.has(taskId)) return true;
+    if (this.moves.isMoving(taskId)) return true;
     if (!runtime) return false;
     return (
       runtime.state !== "idle" ||
@@ -8275,7 +6916,7 @@ export class CrewSupervisor {
 
   /** A live crewmate holds its conversation's files. */
   conversationHeld(taskId: string): boolean {
-    return this.tasks.has(taskId) || this.moving.has(taskId) || this.computerMoving.has(taskId);
+    return this.tasks.has(taskId) || this.moves.isMoving(taskId);
   }
 
   /**
@@ -8952,7 +7593,7 @@ export class CrewSupervisor {
         data: { news: true },
       },
     );
-    this.overrideNoticed(taskId, override);
+    this.overrides.overrideNoticed(taskId, override);
   }
 
   /** A choice on a crewmate's card, steered to its session through the task's durable lane. */
@@ -9302,7 +7943,7 @@ export class CrewSupervisor {
         // provider it moves off and the model the card offered.
         const [taskId, from, ...offered] = effect.arg?.split(":") ?? [];
         if (!taskId || !from) return {};
-        const moved = this.requestMove(taskId, {
+        const moved = this.moves.requestMove(taskId, {
           by: "captain",
           from,
           ...(offered.length > 0 ? { offered: offered.join(":") } : {}),
@@ -9961,7 +8602,7 @@ export class CrewSupervisor {
     // An update that saved the crew's work replaces this copy only once
     // every conversation is closed: no bound (docs/alpha.md, "Saving work
     // before an update").
-    return this.localUpdate?.saved ? this.settled() : this.settled(QUIT_SETTLE_MS);
+    return this.updates.savedHere() ? this.settled() : this.settled(QUIT_SETTLE_MS);
   }
 
   /**
@@ -9970,7 +8611,7 @@ export class CrewSupervisor {
    * operation is its caller's to hear, never the quit's.
    */
   private settled(boundMs?: number): Promise<void> {
-    const pending = [...this.releasing, ...this.sweeping, ...this.computerMoveOperations];
+    const pending = [...this.releasing, ...this.sweeping, ...this.moves.operations()];
     if (pending.length === 0) return Promise.resolve();
     if (boundMs === undefined) return Promise.allSettled(pending).then(() => {});
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -10096,9 +8737,4 @@ function chromeAnswers(value: unknown): CardAnswer[] | undefined {
 function interactionOf(submission: unknown): { interactionId?: string } {
   const id = (submission as { id?: unknown } | null | undefined)?.id;
   return typeof id === "string" && id.length >= 8 && id.length <= 64 ? { interactionId: id } : {};
-}
-
-/** A move step that threw past its own handling; the next tick tries it again. */
-function warnMove(caught: unknown): void {
-  console.warn("[crew] a move to another computer could not go on yet:", caught);
 }

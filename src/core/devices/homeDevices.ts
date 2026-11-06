@@ -130,12 +130,7 @@ export type HomeDevices = {
 export type DevicesCrew = {
   supervisor: Pick<
     CrewSupervisor,
-    | "stopTasksOn"
-    | "pauseForUpdate"
-    | "resumeAfterUpdate"
-    | "cards"
-    | "placement"
-    | "observeRequiredActionDevice"
+    "stopTasksOn" | "updates" | "cards" | "placement" | "observeRequiredActionDevice"
   >;
   placed: Pick<PlacedSessions, "bringHome">;
   repos: RepoRegistry;
@@ -552,8 +547,8 @@ export async function startHomeDevices(options: {
         stopTasks: (deviceId) => supervisor.stopTasksOn(deviceId),
         bringHome: (deviceId) => placed.bringHome(deviceId),
         // Its crew pauses for its update and carries on after (docs/helper.md, "Updated by its home").
-        pauseTasks: (deviceId) => supervisor.pauseForUpdate(deviceId),
-        resumeTasks: (deviceId) => supervisor.resumeAfterUpdate(deviceId),
+        pauseTasks: (deviceId) => supervisor.updates.pauseForUpdate(deviceId),
+        resumeTasks: (deviceId) => supervisor.updates.resumeAfterUpdate(deviceId),
         removeThere: (device) => remoteLogin.removeThere(device),
         // Update: a computer's version against this Mac's, over Remote Login or
         // the connection (docs/devices.md, "Updating").

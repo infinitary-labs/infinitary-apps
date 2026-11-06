@@ -3,7 +3,7 @@ import type { UpdateStatus, UpdateWork } from "@shared/update";
 /**
  * What an update of this computer's own copy asks of the crew's work here
  * (docs/alpha.md, "Saving work before an update"); the core's crew answers
- * it (`CrewSupervisor.saveForUpdate`). An app with no crew of its own, such
+ * it (`CrewUpdates.saveForUpdate`). An app with no crew of its own, such
  * as one controlling another computer, has none and saves nothing.
  */
 export type CrewWorkForUpdate = {

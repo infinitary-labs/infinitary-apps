@@ -1,15 +1,13 @@
 /**
- * How the crew supervisor moves a started task (docs/helper.md, "Moving a
- * started task"; INF-849 for a move to another provider): where a task
+ * How a started task moves (docs/helper.md, "Moving a started task";
+ * INF-849 for a move to another provider; `TaskMoves`): where a task
  * could move now and why each other computer cannot take it, the refusals
  * a move to a computer or a provider meets before anything is written, a
  * move cancelled before it crosses, and the move facts a task's record
- * shows. INF-2625's plan, the crew supervisor's eighth step, moves this
- * code out of the supervisor into an owner of its own; these cases pin,
- * before it moves, the behaviour no other test reaches. The move itself,
- * carrying real work between computers, stays pinned by the real-git
- * journey in crewSupervisor.test.ts. Each case drives a public door of the
- * supervisor and reads its answer and the record.
+ * shows. These cases pin the behaviour no other test reaches. The move
+ * itself, carrying real work between computers, stays pinned by the
+ * real-git journey in crewSupervisor.test.ts. Each case drives a public
+ * door of the supervisor's moves and reads its answer and the record.
  */
 
 import { HERE } from "@shared/deviceNames";
@@ -104,12 +102,12 @@ function move(fields: Partial<ComputerMove>): ComputerMove {
   return { from: RUNS_ON_THIS_MAC, to: MINI, by: "captain", at: 1, phase: "waiting", ...fields };
 }
 
-describe("a started task's move, before it moves out of the crew supervisor", () => {
+describe("a started task's move", () => {
   it("lists every other computer a task could move to, each with why it cannot take it", async () => {
     const h = await withComputers();
     started(h, "t1");
 
-    expect(await h.supervisor.moveOptions("t1")).toEqual({
+    expect(await h.supervisor.moves.moveOptions("t1")).toEqual({
       ok: true,
       from: HERE.this,
       destinations: [
@@ -127,7 +125,7 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
         { id: AWAY, name: "Spare MacBook Pro", unavailable: moveOutOfReach("Spare MacBook Pro") },
       ],
     });
-    expect(await h.supervisor.moveOptions("nope")).toEqual({
+    expect(await h.supervisor.moves.moveOptions("nope")).toEqual({
       ok: false,
       text: 'Unknown task "nope".',
     });
@@ -161,8 +159,8 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
     };
 
     for (const [id, text] of Object.entries(refusals)) {
-      expect(await h.supervisor.moveOptions(id)).toEqual({ ok: false, text });
-      expect(await h.supervisor.requestComputerMove(id, MINI, "captain")).toEqual({
+      expect(await h.supervisor.moves.moveOptions(id)).toEqual({ ok: false, text });
+      expect(await h.supervisor.moves.requestComputerMove(id, MINI, "captain")).toEqual({
         ok: false,
         text,
       });
@@ -187,35 +185,35 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
     const onOld = started(h, "on-old", { deviceId: OLD });
     const onAway = started(h, "on-away", { deviceId: AWAY });
 
-    expect(await h.supervisor.moveOptions("waiting")).toEqual({
+    expect(await h.supervisor.moves.moveOptions("waiting")).toEqual({
       ok: false,
       text: `${handle(waiting)} is already moving to Studio Mac mini.`,
     });
-    expect(await h.supervisor.moveOptions("finishing")).toEqual({
+    expect(await h.supervisor.moves.moveOptions("finishing")).toEqual({
       ok: false,
       text: `${handle(finishing)} is still finishing its last move; try again once it has.`,
     });
-    expect(await h.supervisor.moveOptions("on-old")).toEqual({
+    expect(await h.supervisor.moves.moveOptions("on-old")).toEqual({
       ok: false,
       text: "Infinitary on Office iMac cannot move a started task yet. Update it first.",
     });
-    expect(await h.supervisor.moveOptions("on-away")).toEqual({
+    expect(await h.supervisor.moves.moveOptions("on-away")).toEqual({
       ok: false,
       text: moveOutOfReach("Spare MacBook Pro"),
     });
     // The record shows the standing move and its pause, and nothing for a task that cannot move.
-    expect(h.supervisor.computerMoveFacts(h.tasks.get("waiting") as TaskRecord)).toEqual({
+    expect(h.supervisor.moves.computerMoveFacts(h.tasks.get("waiting") as TaskRecord)).toEqual({
       computerMove: { from: HERE.this, to: "Studio Mac mini", state: "waiting", waitingFor: [] },
     });
-    expect(h.supervisor.computerMoveFacts(onOld)).toEqual({});
-    expect(h.supervisor.computerMoveFacts(onAway)).toEqual({});
+    expect(h.supervisor.moves.computerMoveFacts(onOld)).toEqual({});
+    expect(h.supervisor.moves.computerMoveFacts(onAway)).toEqual({});
   });
 
   it("refuses a move to a computer it cannot name, to Automatic, to where it runs, or that keeps files outside its copy", async () => {
     const h = await withComputers();
     const record = started(h, "t1");
     const ask = (to: string, keep: string[] = []) =>
-      h.supervisor.requestComputerMove("t1", to, "firstmate", keep);
+      h.supervisor.moves.requestComputerMove("t1", to, "firstmate", keep);
 
     expect(await ask("Basement Mac")).toMatchObject({ ok: false });
     expect(await ask("automatic")).toEqual({
@@ -239,13 +237,13 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
       ok: false,
       text: `${handle(record)} cannot move: ${moveOutOfReach("Spare MacBook Pro")}`,
     });
-    expect(await h.supervisor.requestComputerMove("nope", MINI, "captain")).toEqual({
+    expect(await h.supervisor.moves.requestComputerMove("nope", MINI, "captain")).toEqual({
       ok: false,
       text: 'Unknown task "nope".',
     });
     // Nothing was written: the task may still move, and stands on no move.
     expect(h.tasks.get("t1")?.shape?.computer_move).toBeUndefined();
-    expect(h.supervisor.computerMoveFacts(h.tasks.get("t1") as TaskRecord)).toEqual({
+    expect(h.supervisor.moves.computerMoveFacts(h.tasks.get("t1") as TaskRecord)).toEqual({
       movable: true,
     });
     expect(h.moveIn).not.toHaveBeenCalled();
@@ -254,7 +252,7 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
   it("cancels only a move still waiting for its pause, and says why it cannot cancel any other", async () => {
     const h = await withComputers();
     const record = started(h, "t1");
-    expect(h.supervisor.cancelComputerMove("t1", "captain")).toEqual({
+    expect(h.supervisor.moves.cancelComputerMove("t1", "captain")).toEqual({
       ok: false,
       text: `${handle(record)} is not moving to another computer.`,
     });
@@ -262,12 +260,12 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
       text: "its move did not finish",
       actor: "host",
     });
-    expect(h.supervisor.cancelComputerMove("t1", "captain")).toEqual({
+    expect(h.supervisor.moves.cancelComputerMove("t1", "captain")).toEqual({
       ok: false,
       text: `${handle(record)} is not moving to another computer.`,
     });
     // A move that did not finish shows nothing on the record while its copy goes.
-    expect(h.supervisor.computerMoveFacts(h.tasks.get("t1") as TaskRecord)).toEqual({});
+    expect(h.supervisor.moves.computerMoveFacts(h.tasks.get("t1") as TaskRecord)).toEqual({});
     h.tasks.placement.setComputerMove(
       "t1",
       move({ phase: "moving", problem: "the disk is full" }),
@@ -276,11 +274,11 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
         actor: "host",
       },
     );
-    expect(h.supervisor.cancelComputerMove("t1", "firstmate")).toEqual({
+    expect(h.supervisor.moves.cancelComputerMove("t1", "firstmate")).toEqual({
       ok: false,
       text: `${handle(record)} is already moving to Studio Mac mini, so the move can no longer be cancelled.`,
     });
-    expect(h.supervisor.computerMoveFacts(h.tasks.get("t1") as TaskRecord)).toEqual({
+    expect(h.supervisor.moves.computerMoveFacts(h.tasks.get("t1") as TaskRecord)).toEqual({
       computerMove: {
         from: HERE.this,
         to: "Studio Mac mini",
@@ -293,7 +291,7 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
       text: "the first mate asked to move it",
       actor: "firstmate",
     });
-    expect(h.supervisor.cancelComputerMove("t1", "firstmate")).toEqual({
+    expect(h.supervisor.moves.cancelComputerMove("t1", "firstmate")).toEqual({
       ok: true,
       text: `${handle(record)} stays on ${HERE.this}.`,
     });
@@ -302,7 +300,7 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
       actor: "firstmate",
       text: `the first mate cancelled its move to Studio Mac mini; it stays on ${HERE.this}`,
     });
-    expect(h.supervisor.cancelComputerMove("nope", "captain")).toEqual({
+    expect(h.supervisor.moves.cancelComputerMove("nope", "captain")).toEqual({
       ok: false,
       text: 'Unknown task "nope".',
     });
@@ -317,8 +315,8 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
       sessionFile: "/sessions/t1.jsonl",
       status: "completed",
     });
-    expect(h.supervisor.computerMoveFacts(record)).toEqual({});
-    expect(await h.supervisor.moveOptions("t1")).toEqual({
+    expect(h.supervisor.moves.computerMoveFacts(record)).toEqual({});
+    expect(await h.supervisor.moves.moveOptions("t1")).toEqual({
       ok: true,
       from: HERE.this,
       destinations: [],
@@ -353,31 +351,33 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     const record = h.tasks.get(taskId);
 
-    expect(h.supervisor.requestMove("nope", { by: "captain" })).toEqual({
+    expect(h.supervisor.moves.requestMove("nope", { by: "captain" })).toEqual({
       ok: false,
       text: 'Unknown task "nope".',
     });
-    const notStarted = h.supervisor.requestMove("queued", { by: "captain" });
+    const notStarted = h.supervisor.moves.requestMove("queued", { by: "captain" });
     expect(notStarted).toEqual({
       ok: false,
       text: `${handle(queued)} is ${describeStatus(queued)}; only started work moves.`,
     });
-    expect(h.supervisor.requestMove("elsewhere", { by: "captain" })).toEqual({
+    expect(h.supervisor.moves.requestMove("elsewhere", { by: "captain" })).toEqual({
       ok: false,
       text: `${handle(elsewhere)} runs on another computer, so it stays on that computer's own subscriptions.`,
     });
-    expect(h.supervisor.requestMove(taskId, { by: "firstmate", model: "xai/grok-5" })).toEqual({
+    expect(
+      h.supervisor.moves.requestMove(taskId, { by: "firstmate", model: "xai/grok-5" }),
+    ).toEqual({
       ok: false,
       text: `xai/grok-5 cannot take ${handle(record)} now, so it stays where it runs.`,
     });
     expect(
-      h.supervisor.requestMove(taskId, { by: "firstmate", model: "github-copilot/gpt-5.1" }),
+      h.supervisor.moves.requestMove(taskId, { by: "firstmate", model: "github-copilot/gpt-5.1" }),
     ).toEqual({
       ok: false,
       text: `${handle(record)} already runs on github-copilot/gpt-5.1.`,
     });
     // A move asked mid-turn waits for the turn to end.
-    const asked = h.supervisor.requestMove(taskId, { by: "captain" });
+    const asked = h.supervisor.moves.requestMove(taskId, { by: "captain" });
     expect(asked.ok).toBe(true);
     expect(asked.text).toContain("once its crewmate's turn ends");
     // Nothing moved: the record keeps its model and the turn was never cut.
@@ -401,7 +401,7 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
     crewmate.finishPrompt();
     await tick();
     h.sessions.open.mockRejectedValueOnce(new Error("Codex did not answer"));
-    expect(h.supervisor.requestMove(taskId, { by: "captain" }).ok).toBe(true);
+    expect(h.supervisor.moves.requestMove(taskId, { by: "captain" }).ok).toBe(true);
     await vi.waitFor(() =>
       expect(h.events).toContainEqual({
         type: "firstmate_note",
@@ -419,7 +419,7 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
   it("refuses a move to another provider for a task that names none to move off", async () => {
     const h = setup(fakeCrewmate());
     const record = seedTask(h.tasks, { id: "bare", title: "Check the meter", status: "completed" });
-    expect(h.supervisor.requestMove("bare", { by: "firstmate" })).toEqual({
+    expect(h.supervisor.moves.requestMove("bare", { by: "firstmate" })).toEqual({
       ok: false,
       text: `${handle(record)} has no provider on its record to move off.`,
     });

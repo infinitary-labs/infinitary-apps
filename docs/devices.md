@@ -675,7 +675,7 @@ One that takes no work is still connected, so it reads "seen just now" and "no n
 - **Any other computer that takes the update order** (`takesUpdate`, a contract from `WORK_UPDATE_SINCE` on, whatever its major): over the connection, below.
 - **One too old to take it**: refused as `not-updatable`; Devices' Update makes the command for it instead, which run there once finds this Mac again and keeps this Mac's version (above, "Finding the home again").
 
-Its crew pauses for the update and carries on after, with no message from the captain and no failed turn (INF-721 friction 9; `pauseTasks` and `resumeTasks`, `CrewSupervisor.pauseForUpdate` and `resumeAfterUpdate`):
+Its crew pauses for the update and carries on after, with no message from the captain and no failed turn (INF-721 friction 9; `pauseTasks` and `resumeTasks`, `CrewUpdates.pauseForUpdate` and `resumeAfterUpdate`):
 
 - **When it pauses.**
   Once the update goes ahead there, past every refusal and the password question, and before anything there stops: over the connection after the checks that refuse it, over Remote Login once nothing refused it here (`RemoteLogin.update`'s `pause`).

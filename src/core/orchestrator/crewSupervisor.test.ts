@@ -199,6 +199,7 @@ import type { PrOutcome } from "./changeMerge";
 import { BASELINE_OBSERVATIONS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { ciFactOf } from "./ciFact";
 import { COMPLETION_REVISED_WHILE_RUNNING } from "./crewmateCards";
+import { QUIT_SETTLE_MS } from "./crewRuntime";
 import { type CrewmateSpec, crewmateRenewedNote, crewmateRestartText } from "./crewSession";
 import {
   BACKLOG_STEER_LINE,
@@ -207,7 +208,6 @@ import {
   CrewSupervisor,
   QUIET_CARD_MS,
   QUEUED_GUIDANCE_LINE,
-  QUIT_SETTLE_MS,
   UNHEARD_END_NOTE,
 } from "./crewSupervisor";
 import type { AccountAttachment, CrewSupervisorOptions } from "./crewSupervisorOptions";
@@ -692,7 +692,7 @@ describe("CrewSupervisor", () => {
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     crewmate.finishPrompt();
     await tick();
-    expect(supervisor.requestMove(taskId, { by: "captain", from: "xai" })).toEqual({
+    expect(supervisor.moves.requestMove(taskId, { by: "captain", from: "xai" })).toEqual({
       ok: false,
       text: `${tasks.get(taskId)?.key} "t" already moved off Grok.`,
     });
@@ -713,7 +713,7 @@ describe("CrewSupervisor", () => {
     crewmate.finishPrompt();
     await tick();
     expect(
-      supervisor.requestMove(taskId, {
+      supervisor.moves.requestMove(taskId, {
         by: "captain",
         from: "github-copilot",
         offered: "xai/grok-5",
@@ -744,7 +744,7 @@ describe("CrewSupervisor", () => {
     });
     const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
-    const asked = supervisor.requestMove(taskId, {
+    const asked = supervisor.moves.requestMove(taskId, {
       by: "firstmate",
       model: "openai-codex/gpt-6.1-sol",
     });
@@ -4931,7 +4931,7 @@ describe("CrewSupervisor", () => {
           softHoldWords("checks", "firstmate"),
         );
         expect(
-          h.supervisor.declareOverride(h.taskId, {
+          h.supervisor.overrides.declareOverride(h.taskId, {
             words,
             holds: ["checks"],
             until: "version",
@@ -4970,7 +4970,7 @@ describe("CrewSupervisor", () => {
             .allFor(h.taskId)
             .filter((row) => row.facts?.kind === "task-override-changed")
             .map(renderWake);
-        h.supervisor.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
+        h.supervisor.overrides.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
         expect(notices()).toEqual([
           standingOverrideWords({ words, holds: ["checks"], until: "task" }),
         ]);
@@ -4978,20 +4978,20 @@ describe("CrewSupervisor", () => {
           passes: "the checks for the rest of this task",
           words,
         });
-        h.supervisor.withdrawOverride(h.taskId);
+        h.supervisor.overrides.withdrawOverride(h.taskId);
         expect(notices().at(-1)).toBe(overrideTakenBackWords({ holds: ["checks"] }));
         expect(h.supervisor.crewStatus(h.taskId)[0]?.override).toBeUndefined();
       });
 
       it("passes them at every later version when his words cover the task's life, until he takes them back", async () => {
         const h = await failedChecks();
-        h.supervisor.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
-        h.supervisor.withdrawOverride(h.taskId);
+        h.supervisor.overrides.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
+        h.supervisor.overrides.withdrawOverride(h.taskId);
         expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
         expect((await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
           softHoldWords("checks", "firstmate"),
         );
-        h.supervisor.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
+        h.supervisor.overrides.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
         h.forge.headSha = "fixed0004";
         await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
         expect(h.forge.merges).toEqual(["fixed0004"]);
@@ -5010,7 +5010,7 @@ describe("CrewSupervisor", () => {
         h.supervisor.act(h.card.id, "merge");
         await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
         expect(h.forge.merges).toEqual([]);
-        h.supervisor.declareOverride(h.taskId, {
+        h.supervisor.overrides.declareOverride(h.taskId, {
           words: "The failing check is the flaky one; merge it anyway.",
           holds: ["checks"],
           until: "version",
@@ -5053,7 +5053,7 @@ describe("CrewSupervisor", () => {
         h.forge.states = ["failure"];
         await h.declare({});
         await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
-        h.supervisor.declareOverride(h.taskId, {
+        h.supervisor.overrides.declareOverride(h.taskId, {
           words: "The failing check is the flaky one; merge it anyway.",
           holds: ["checks"],
           until: "version",
@@ -5075,7 +5075,7 @@ describe("CrewSupervisor", () => {
 
       it("keeps the wait's words on a card whose version the pull request has moved past, though his words pass the checks for the task", async () => {
         const h = await approved();
-        h.supervisor.declareOverride(h.taskId, {
+        h.supervisor.overrides.declareOverride(h.taskId, {
           words: "The failing check is the flaky one; merge it anyway.",
           holds: ["checks"],
           until: "task",
@@ -5367,13 +5367,13 @@ describe("CrewSupervisor", () => {
         await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
         // What the first mate cites from the card is his click on its merge.
         const clicked = choiceWords(MERGE_WHEN_CHECKS_PASS_WORDS, "Ready to merge");
-        expect(h.supervisor.citedCaptainWords(h.taskId, h.card.id)).toEqual({
+        expect(h.supervisor.overrides.citedCaptainWords(h.taskId, h.card.id)).toEqual({
           ok: true,
           words: clicked,
           mergeClick: true,
         });
         expect(
-          h.supervisor.declareOverride(h.taskId, {
+          h.supervisor.overrides.declareOverride(h.taskId, {
             words: clicked,
             mergeClick: true,
             holds: ["checks"],
@@ -5385,7 +5385,7 @@ describe("CrewSupervisor", () => {
         expect(h.forge.sends).toBe(0);
         expect(h.authorization()?.waiting).toMatchObject({ on: "checks" });
         // His own words that the checks need not pass do, and his kept click merges.
-        h.supervisor.declareOverride(h.taskId, {
+        h.supervisor.overrides.declareOverride(h.taskId, {
           words: "This project has no CI; merge it without the checks.",
           holds: ["checks"],
           until: "version",
@@ -5432,7 +5432,7 @@ describe("CrewSupervisor", () => {
               /<span class="inf-fact" data-fact="override"[\s\S]*?<\/span><\/span>/,
             )?.[0];
         expect(strip()).toBeUndefined();
-        h.supervisor.declareOverride(h.taskId, {
+        h.supervisor.overrides.declareOverride(h.taskId, {
           words: "Merge it past the waits; I tried it myself.",
           holds: ["waits", "checks"],
           until: "version",
@@ -5449,7 +5449,7 @@ describe("CrewSupervisor", () => {
       it("refuses a version-long override before the task has a version", async () => {
         const { supervisor, tasks } = setup(fakeCrewmate());
         seedTask(tasks, { id: "no-head", title: "Ship the fix", status: "idle" });
-        const declared = supervisor.declareOverride("no-head", {
+        const declared = supervisor.overrides.declareOverride("no-head", {
           words,
           holds: ["checks"],
           until: "version",
@@ -7770,7 +7770,7 @@ describe("CrewSupervisor", () => {
 
       // The first mate moves it; the next launch reopens it where it moved.
       expect(
-        reopened.fresh.requestMove(taskId, { by: "firstmate", model: "openai-codex/gpt-6.1-sol" })
+        reopened.fresh.moves.requestMove(taskId, { by: "firstmate", model: "openai-codex/gpt-6.1-sol" })
           .ok,
       ).toBe(true);
       await tick();
@@ -7890,7 +7890,7 @@ describe("CrewSupervisor", () => {
       await tick();
       h.tasks.placement.setDevice(taskId, "mac-mini");
       const wakesBefore = h.ops.length;
-      await h.supervisor.pauseForUpdate("mac-mini");
+      await h.supervisor.updates.pauseForUpdate("mac-mini");
       const paused = h.supervisor.crewStatus(taskId)[0]?.restart;
       expect(paused?.text).toContain("is being updated");
       crewmate.emit({ type: "turn_failed", taskId, error: "The turn was aborted for the update." });
@@ -7949,7 +7949,7 @@ describe("CrewSupervisor", () => {
         await tick();
         expect(crewmate.promptCalls).toHaveLength(1);
         const waiting: string[][] = [];
-        const saving = h.supervisor.saveForUpdate({ waiting: (tasks) => waiting.push(tasks) });
+        const saving = h.supervisor.updates.saveForUpdate({ waiting: (tasks) => waiting.push(tasks) });
         expect(waiting.at(-1)).toEqual(["Release notes"]);
         // The captain's words while it saves wait on the lane, never steered in.
         expect(await h.supervisor.steerCrewmate(taskId, "Mention the new keys too", "captain")).toBe(
@@ -7967,9 +7967,9 @@ describe("CrewSupervisor", () => {
         expect(await saving).toBe("saved");
         expect(waiting.at(-1)).toEqual([]);
         expect(updateRows(h, taskId)).toEqual([{ kind: "turn-resumed", stopped: "update" }]);
-        expect(h.supervisor.resumingAfterUpdate()).toEqual(["Release notes"]);
+        expect(h.supervisor.updates.resumingAfterUpdate()).toEqual(["Release notes"]);
         // A second ask for the same update joins the first.
-        expect(await h.supervisor.saveForUpdate()).toBe("saved");
+        expect(await h.supervisor.updates.saveForUpdate()).toBe("saved");
         expect(crewmate.stops).toHaveLength(1);
 
         await h.supervisor.disposeAll();
@@ -8010,7 +8010,7 @@ describe("CrewSupervisor", () => {
         });
         await tick();
         const later = new AbortController();
-        const saving = h.supervisor.saveForUpdate({ signal: later.signal });
+        const saving = h.supervisor.updates.saveForUpdate({ signal: later.signal });
         await h.supervisor.steerCrewmate(taskId, "Mention the new keys too", "captain");
         later.abort();
         expect(await saving).toBe("withdrawn");
@@ -8018,7 +8018,7 @@ describe("CrewSupervisor", () => {
         // Nothing was cut: the turn runs on, and nothing carries it on later.
         expect(crewmate.isStreaming()).toBe(true);
         expect(updateRows(h, taskId)).toEqual([]);
-        expect(h.supervisor.resumingAfterUpdate()).toEqual([]);
+        expect(h.supervisor.updates.resumingAfterUpdate()).toEqual([]);
         expect(crewmate.steer).toHaveBeenCalledTimes(1);
         expect(crewmate.steer.mock.calls[0]?.[0]).toContain("Mention the new keys too");
         await h.supervisor.disposeAll();
@@ -8034,7 +8034,7 @@ describe("CrewSupervisor", () => {
         await tick();
         crewmate.finishPrompt();
         await tick();
-        expect(await h.supervisor.saveForUpdate()).toBe("saved");
+        expect(await h.supervisor.updates.saveForUpdate()).toBe("saved");
         // Already idle: no stop, no row that would wake it after the restart.
         expect(crewmate.stops).toEqual([]);
         expect(updateRows(h, taskId)).toEqual([]);
@@ -8042,7 +8042,7 @@ describe("CrewSupervisor", () => {
         await tick();
         expect(crewmate.promptCalls).toHaveLength(1);
         // The update did not replace the copy: what waited goes now.
-        h.supervisor.releaseUpdate();
+        h.supervisor.updates.releaseUpdate();
         await tick();
         expect(crewmate.promptCalls).toHaveLength(2);
         expect(crewmate.promptCalls[1]).toContain("One more paragraph");
@@ -8065,7 +8065,7 @@ describe("CrewSupervisor", () => {
         vi.spyOn(h.tasks.turns, "setActivity").mockImplementation((...args) => {
           const result = setActivity(...args);
           if (args[0] === taskId && args[1] === "running" && !saving)
-            saving = h.supervisor.saveForUpdate();
+            saving = h.supervisor.updates.saveForUpdate();
           return result;
         });
         await h.supervisor.steerCrewmate(taskId, "One more paragraph", "captain");
@@ -8078,7 +8078,7 @@ describe("CrewSupervisor", () => {
         expect(h.inbox.allFor(taskId).map((row) => [row.text, row.deliveredAt])).toEqual([
           [expect.stringContaining("One more paragraph"), null],
         ]);
-        h.supervisor.releaseUpdate();
+        h.supervisor.updates.releaseUpdate();
         await tick();
         expect(crewmate.promptCalls).toHaveLength(2);
         expect(crewmate.promptCalls[1]).toContain("One more paragraph");
@@ -28739,10 +28739,10 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
   it("waits for the turn to end, starts no new turn meanwhile, and carries the work to the Mac mini", async () => {
     const h = await startedHere();
-    const asked = await h.supervisor.requestComputerMove(h.taskId, "Kun's Mac mini", "captain");
+    const asked = await h.supervisor.moves.requestComputerMove(h.taskId, "Kun's Mac mini", "captain");
     expect(asked.ok).toBe(true);
     expect(asked.text).toContain("once its crewmate's current turn ends");
-    expect(h.supervisor.computerMoveFacts(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
+    expect(h.supervisor.moves.computerMoveFacts(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
       computerMove: {
         from: HERE.this,
         to: "Kun's Mac mini",
@@ -28759,7 +28759,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       "recorded-held",
     );
     await h.supervisor.sweepGates(Date.now());
-    expect(h.supervisor.computerMoveFacts(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
+    expect(h.supervisor.moves.computerMoveFacts(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
       computerMove: {
         from: HERE.this,
         to: "Kun's Mac mini",
@@ -28804,8 +28804,8 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
   it("cancels a move that has not started crossing, and the task carries on where it is", async () => {
     const h = await startedHere();
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
-    expect(h.supervisor.cancelComputerMove(h.taskId, "captain")).toEqual({
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect(h.supervisor.moves.cancelComputerMove(h.taskId, "captain")).toEqual({
       ok: true,
       text: `${h.tasks.get(h.taskId)?.key} "Fix the meter" stays on ${HERE.this}.`,
     });
@@ -28820,7 +28820,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
   it("leaves the task and its work where they were when the destination cannot take it", async () => {
     const h = await startedHere({ moveIn: "fail" });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "firstmate")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "firstmate")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(
       () => expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined(),
@@ -28865,13 +28865,13 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
   it("moves from one computer that runs work to another, and removes the copy it left", async () => {
     const h = await startedHere();
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => {
       expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
       expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
     }, REAL_GIT_WAIT);
-    expect((await h.supervisor.requestComputerMove(h.taskId, AIR, "firstmate")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, AIR, "firstmate")).ok).toBe(true);
     await h.supervisor.sweepGates(Date.now());
     await vi.waitFor(() => {
       expect(h.tasks.get(h.taskId)?.deviceId).toBe(AIR);
@@ -28906,7 +28906,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
         adopting ??= h.supervisor.adoptPlaced(h.taskId);
       },
     });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => {
       expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
@@ -28926,7 +28926,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     // R3: the conversation it left is written with the commit; R9: dependencies before the lane's turn.
     const installing = deferred<DependencyInstall>();
     const h = await startedHere({ bootFails: true, install: () => installing.promise });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(
       () =>
@@ -28973,7 +28973,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
         return next.promise;
       },
     });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.install).toHaveBeenCalledTimes(1), REAL_GIT_WAIT);
     expect(h.tasks.get(h.taskId)?.shape?.computer_move).toMatchObject({ preparing: true });
@@ -29000,7 +29000,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
   it("keeps a move that waits for a safe pause across a quit, and moves at the next launch", async () => {
     const h = await startedHere();
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     // Quit mid-turn: the move waits on the record.
     await h.supervisor.disposeAll();
     expect(h.tasks.get(h.taskId)?.shape?.computer_move).toMatchObject({ to: MINI, phase: "waiting" });
@@ -29022,7 +29022,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
   it("leaves the task here when the work crossed but the Mac mini's answer was lost", async () => {
     const h = await startedHere({ moveIn: "fail-after-copy" });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(
       () => expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined(),
@@ -29043,7 +29043,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
   it("ends a move a quit cut off while its work crossed, and the task stays here", async () => {
     const h = await startedHere({ moveIn: "wait" });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     // Review INF-1772 round 3 R11: the Mac mini already made its copy when
     // the quit comes, and nothing more of it is still being written there.
@@ -29072,7 +29072,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
   it("holds a steer sent while the work crosses for the new conversation, never the old one", async () => {
     const h = await startedHere({ moveIn: "wait" });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.moveIn).toHaveBeenCalled(), REAL_GIT_WAIT);
     expect(await h.supervisor.steerCrewmate(h.taskId, "Use watt-hours.")).toBe("recorded-held");
@@ -29107,7 +29107,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     h.supervisor.cards.addMessage(card.id, "captain", "Which one do the other meters show?");
     h.supervisor.cards.addMessage(card.id, "crewmate", "The other meters show kilowatt-hours.");
     const thread = h.supervisor.cards.thread(card.id).messages.map(({ who, text }) => ({ who, text }));
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     // It moved; its new conversation there waits on its dependencies.
     await vi.waitFor(() => expect(h.install).toHaveBeenCalledWith(MINI, h.taskId), REAL_GIT_WAIT);
@@ -29142,7 +29142,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     // R4: one removal at a time, and its end clears only the move it removed.
     const removing = deferred<void>();
     const h = await startedHere({ moveIn: "fail", retire: () => removing.promise });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.retireMoved).toHaveBeenCalledTimes(1), REAL_GIT_WAIT);
     await h.supervisor.sweepGates(Date.now());
@@ -29165,11 +29165,11 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       withCaptain: false,
     };
     const h = await startedHere({ browser });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.supervisor.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
     await h.supervisor.sweepGates(Date.now());
-    expect(h.supervisor.computerMoveFacts(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
+    expect(h.supervisor.moves.computerMoveFacts(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
       computerMove: {
         from: HERE.this,
         to: "Kun's Mac mini",
@@ -29216,7 +29216,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
         }
         await remove(work);
       });
-      expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+      expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
       h.crewmate.finishPrompt();
       await entered.promise;
       // The quit's bound is wall-clock time, and the real git the released
@@ -29277,7 +29277,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       }
       await remove(work);
     });
-    expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+    expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await entered.promise;
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -29322,7 +29322,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       disposal = h.supervisor.disposeAll();
     });
     try {
-      expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
+      expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
       h.crewmate.finishPrompt();
       await vi.waitFor(() => expect(disposal).toBeDefined(), REAL_GIT_WAIT);
       await disposal;
@@ -29366,11 +29366,11 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     mkdirSync(join(h.cwd, "build"));
     writeFileSync(join(h.cwd, "build", "meter.js"), "built\n");
     expect(
-      (await h.supervisor.requestComputerMove(h.taskId, MINI, "firstmate", [".env.local"])).ok,
+      (await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "firstmate", [".env.local"])).ok,
     ).toBe(true);
     expect(h.tasks.get(h.taskId)?.shape?.computer_move?.keep).toEqual([".env.local"]);
     expect(
-      (await h.supervisor.requestComputerMove(h.taskId, AIR, "firstmate", ["../elsewhere"])).text,
+      (await h.supervisor.moves.requestComputerMove(h.taskId, AIR, "firstmate", ["../elsewhere"])).text,
     ).toContain("is already moving");
     h.crewmate.finishPrompt();
     await vi.waitFor(() => {

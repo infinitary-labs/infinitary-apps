@@ -95,7 +95,7 @@ export type ComputersOptions = {
   bringHome: (deviceId: string) => Promise<void>;
   /**
    * The computer's crew pauses for its update, resolving once each running
-   * turn there stopped (`CrewSupervisor.pauseForUpdate`); `resumeTasks`
+   * turn there stopped (`CrewUpdates.pauseForUpdate`); `resumeTasks`
    * carries it on once the update is over, whatever came of it.
    */
   pauseTasks?: (deviceId: string) => Promise<void>;

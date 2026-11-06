@@ -157,7 +157,10 @@ describe("the host's own operations, before they move out of the crew supervisor
     expect(h.events.filter((event) => event.type === "firstmate_note")).toEqual([]);
 
     // A sign-in card's Move on a task the record does not hold says why in the feed.
-    const refusal = h.supervisor.requestMove("t-gone", { by: "captain", from: "openai-codex" });
+    const refusal = h.supervisor.moves.requestMove("t-gone", {
+      by: "captain",
+      from: "openai-codex",
+    });
     expect(refusal.ok).toBe(false);
     h.supervisor.act(
       hostCard(h, "c-move", { kind: "host", op: "move-task", arg: "t-gone:openai-codex" }),

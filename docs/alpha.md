@@ -107,7 +107,7 @@ A Linux installation updates through the one update reader (`src/core/update/upd
 ## Saving work before an update
 
 An update of this computer's own copy saves the crew's work here before anything replaces the copy (INF-2245, the stop-and-resume update the captain approved on INF-2223).
-The update asks the crew's work (`CrewWorkForUpdate`, `src/core/update/updateWork.ts`), which `CrewSupervisor.saveForUpdate` answers.
+The update asks the crew's work (`CrewWorkForUpdate`, `src/core/update/updateWork.ts`), which `CrewUpdates.saveForUpdate` answers.
 The Mac updater asks once the download is done and before native installation; the Linux updater asks once the download's checksum is checked and before the password prompt or the AppImage's rename (`beforeReplace`, `src/core/update/linuxInstall.ts`).
 
 - **Nothing new starts.**

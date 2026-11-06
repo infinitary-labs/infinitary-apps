@@ -53,6 +53,14 @@ export const SUPERVISOR_STEER: SteerSource = {
   cardId: null,
 };
 
+/**
+ * How long a quit waits for the crewmates it cut mid-turn to settle, so each
+ * interrupted turn's usage reaches the ledger. An answered interrupt takes
+ * well under a second; a client that does not answer loses its turn's usage
+ * rather than holding the quit.
+ */
+export const QUIT_SETTLE_MS = 2_000;
+
 /** What placement reads of a task, or of one about to exist (docs/helper.md, "Runs on"). */
 export type PlacementRecord = {
   branch?: string;

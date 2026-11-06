@@ -648,7 +648,7 @@ Once the start claims the row it is no longer open work, so a basis is refused i
 ## Moving a started task to another provider
 
 A started task moves to another provider in place (INF-849): it keeps its key, branch, working copy, record, pull request and waiting messages, and only its model, account and sometimes its conversation change.
-Two things ask for it, and both run `CrewSupervisor.requestMove`.
+Two things ask for it, and both run `TaskMoves.requestMove`.
 The crewmate sign-in card's default, "Move to" the app's pick, is the captain's: the router evaluates the task's own shape with the failed provider left out (`withoutProvider`, `docs/routing.md`), and the card offers it only when a model serves; otherwise the card keeps only Open settings.
 The button names that model by its Settings name (`ModelSlots.nameOf`), the model the task would run on.
 Its `move-task` effect names the task, the provider it moves off and the model offered, so a card left up after another move, or after the app's pick changed, refuses in a feed line rather than move somewhere the card did not name.

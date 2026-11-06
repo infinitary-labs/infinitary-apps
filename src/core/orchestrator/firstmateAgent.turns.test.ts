@@ -369,8 +369,8 @@ describe("FirstmateAgent", () => {
     try {
       f.tasks.readProjection(() => {
         for (const record of f.tasks.listLive()) {
-          expect(f.supervisor.computerMoveFacts(record)).toEqual({});
-          expect(f.supervisor.computerMoveFacts(record)).toEqual({});
+          expect(f.supervisor.moves.computerMoveFacts(record)).toEqual({});
+          expect(f.supervisor.moves.computerMoveFacts(record)).toEqual({});
         }
       });
       console.info(
@@ -380,7 +380,11 @@ describe("FirstmateAgent", () => {
         }),
       );
       expect(words).not.toHaveBeenCalled();
-      const refused = await f.supervisor.requestComputerMove("queued-0", "Studio Mac", "captain");
+      const refused = await f.supervisor.moves.requestComputerMove(
+        "queued-0",
+        "Studio Mac",
+        "captain",
+      );
       expect(refused.ok).toBe(false);
       expect(refused.text.length).toBeGreaterThan(0);
       expect(words).toHaveBeenCalledTimes(1);

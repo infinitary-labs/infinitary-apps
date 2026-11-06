@@ -874,14 +874,14 @@ describe("a task that runs on a computer that runs work", () => {
     expect(computer).toBeDefined();
 
     // The update pauses its crew first: the turn there stops before it restarts.
-    await home.supervisor.pauseForUpdate(at.deviceId);
+    await home.supervisor.updates.pauseForUpdate(at.deviceId);
     await expect.poll(() => home.tasks.get("t-update")?.activity).toBe("idle");
     expect(api.openRequests()).toBe(0);
     await at.restartComputer();
     await at.inReach("t-update");
     // Back and caught up, it waits for the update to be over.
     expect(api.requests.length - requests).toBe(1);
-    home.supervisor.resumeAfterUpdate(at.deviceId);
+    home.supervisor.updates.resumeAfterUpdate(at.deviceId);
 
     await expect
       .poll(() => home.tasks.get("t-update")?.outcome)
@@ -915,7 +915,7 @@ describe("a task that runs on a computer that runs work", () => {
     const wakes = home.wakes.length;
 
     await at.stopComputer();
-    await home.supervisor.pauseForUpdate(at.deviceId);
+    await home.supervisor.updates.pauseForUpdate(at.deviceId);
     await at.restartComputer();
     await at.inReach("t-update-away");
     await expect.poll(() => home.tasks.get("t-update-away")?.activity).toBe("idle");
@@ -924,7 +924,7 @@ describe("a task that runs on a computer that runs work", () => {
       "turn-resumed",
     );
     expect(api.requests.length - requests).toBe(1);
-    home.supervisor.resumeAfterUpdate(at.deviceId);
+    home.supervisor.updates.resumeAfterUpdate(at.deviceId);
 
     await expect
       .poll(() => home.tasks.get("t-update-away")?.outcome)
@@ -972,13 +972,13 @@ describe("a task that runs on a computer that runs work", () => {
         )
         .toBe(true);
 
-      await home.supervisor.pauseForUpdate(at.deviceId);
+      await home.supervisor.updates.pauseForUpdate(at.deviceId);
       await at.restartComputer();
       await at.inReach(taskId);
       await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
       heldCall.open();
       claude.answer({ text: "Carried on after the update." });
-      home.supervisor.resumeAfterUpdate(at.deviceId);
+      home.supervisor.updates.resumeAfterUpdate(at.deviceId);
 
       await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carried on after the update.");
       expect(claude.served().at(-1)?.said).toContain(

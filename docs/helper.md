@@ -365,7 +365,7 @@ On any version from `WORK_UPDATE_SINCE` on, the run answers its home's update or
 3. Its run then ends as `updated`: every conversation lets go, as when it quits, and the command exits 0.
    The background keeps the run alive while the grant is in the folder, so launchd starts it again at once, now from this version; a run started by hand is not started again.
 
-The home pauses this computer's crew before it asks (`CrewSupervisor.pauseForUpdate`, `docs/devices.md`, "Updating"): each turn running here is stopped first, its end there is a pause and never a failed turn, and nothing is handed to the crew until the update is over and this computer is back and caught up.
+The home pauses this computer's crew before it asks (`CrewUpdates.pauseForUpdate`, `docs/devices.md`, "Updating"): each turn running here is stopped first, its end there is a pause and never a failed turn, and nothing is handed to the crew until the update is over and this computer is back and caught up.
 A turn the update still cuts off here, one the home could not ask to stop or that had not ended once the home stopped waiting, ends as `interrupted` as when this computer restarts (below, "That computer restarts"), and the home reads that end as the pause too.
 The order's name and shape never change across majors, so a home on any later major can still ask it.
 
@@ -995,7 +995,7 @@ It moves only when the captain asks: the record's Move to a computer, the `task.
 Nothing moves work on its own, to balance load or to fail over.
 
 - **What may move.**
-  Started work with a working copy of its own moves; the personal workspace, work in a project's own folder and an independent review do not (`CrewSupervisor.moveRefusal`).
+  Started work with a working copy of its own moves; the personal workspace, work in a project's own folder and an independent review do not (`TaskMoves.moveRefusal`).
   A computer that runs work takes a move only when it takes work on the home's contract major (`PlacedSessions.takesMoves`); an older one is named with "Update it first."
   A destination must be in reach and must serve the task's own model through a signed-in account of its own (`destinationRefusal`); the task never changes model on the way.
   It must also be able to run the task, read as a start reads it: the system and chip the project or task names, the programs it needs, and, for a project that lives on a forge, its own sign-in there, read from the sign-ins it lists rather than from whether it can reach the project, which a public project answers without one (`AutomaticPlacement.moveRefusal`); a move back to this computer reads this computer's own list the same way, so a sign-in that needs renewing counts as none, and a list that cannot be read, or a sign-in in unknown health because its file is unreadable or its health is not read yet, is named as unread.
@@ -1007,7 +1007,7 @@ Nothing moves work on its own, to balance load or to fail over.
   The task moves once its crewmate's turn ends, the commands it started finish, its merge is settled, its independent review finishes, its browser is closed and both computers are in reach (`pauseBlockers`); no turn is cut short, and no live page, or one in the captain's hands, moves or closes.
   No new turn starts meanwhile: the lane is held (`laneHeld`), and steers and job results wait on it.
   The record's footer says what the move still waits for (`TaskView.computerMove`, `computerMoveLine`), and Cancel move, or `move_task` with `cancel`, ends the ask until the work starts crossing.
-- **The work crossing** (`CrewSupervisor.runComputerMove`, phase `moving`).
+- **The work crossing** (`TaskMoves.runComputerMove`, phase `moving`).
   The crewmate's conversation is let go, never closed, so a move that does not finish reopens it where it was.
   The work is packed where the task runs (`src/core/workspace/workMove.ts`): the branch's commits cross as a git bundle, and one pack carries what is staged and what is not, as two binary patches against the commit the checkout is at, the files git does not track and does not ignore, the ignored files the move names to keep, and the task's evidence, card bodies, source cards, sessions and handed files.
   A file git ignores stays behind and goes with the old copy unless the ask names it in `keep` (`move_task`), as paths inside the working copy; a kept path that is not there, or that leaves the working copy or passes through a link, refuses the pack.

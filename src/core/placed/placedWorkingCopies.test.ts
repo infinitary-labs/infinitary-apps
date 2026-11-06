@@ -417,7 +417,7 @@ describe("a task that runs on a computer that runs work", () => {
 
     // Home: the work arrives in a working copy here, and the copy there goes.
     expect(
-      await home.supervisor.requestComputerMove("t-move", RUNS_ON_THIS_MAC, "captain"),
+      await home.supervisor.moves.requestComputerMove("t-move", RUNS_ON_THIS_MAC, "captain"),
     ).toMatchObject({ ok: true });
     await settled();
     const here = home.tasks.get("t-move")?.worktreeDir ?? "";
@@ -439,7 +439,7 @@ describe("a task that runs on a computer that runs work", () => {
     // project's origin is a folder of this Mac; the copy here goes.
     writeFileSync(join(here, "notes.txt"), "thought it through\n");
     expect(
-      await home.supervisor.requestComputerMove("t-move", at.deviceId, "captain"),
+      await home.supervisor.moves.requestComputerMove("t-move", at.deviceId, "captain"),
     ).toMatchObject({ ok: true });
     await settled();
     expect(home.tasks.get("t-move")?.deviceId).toBe(at.deviceId);
@@ -452,7 +452,7 @@ describe("a task that runs on a computer that runs work", () => {
 
     // Home once more: the copy there, in a repository that began empty, goes too.
     expect(
-      await home.supervisor.requestComputerMove("t-move", RUNS_ON_THIS_MAC, "captain"),
+      await home.supervisor.moves.requestComputerMove("t-move", RUNS_ON_THIS_MAC, "captain"),
     ).toMatchObject({ ok: true });
     await settled();
     expect(home.tasks.get("t-move")?.deviceId ?? null).toBeNull();

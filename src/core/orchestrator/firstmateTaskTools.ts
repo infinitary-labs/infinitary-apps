@@ -210,7 +210,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             () => {},
           );
           const move = moveTo
-            ? supervisor.requestMove(record.id, { by: "firstmate", model: moveTo })
+            ? supervisor.moves.requestMove(record.id, { by: "firstmate", model: moveTo })
             : undefined;
           const backlog = toBacklog
             ? supervisor.moveToBacklog(
@@ -316,7 +316,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         if (input.from) {
           if (!host.turn.canCreate && host.turn.asked.length === 0)
             return "Override refused: nothing was recorded. A scheduled check records no override, since no words of the captain's arrived with it; the one standing still applies.";
-          const cited = supervisor.citedCaptainWords(record.id, input.from);
+          const cited = supervisor.overrides.citedCaptainWords(record.id, input.from);
           if (!cited.ok) return cited.text;
           said = { words: cited.words, ...(cited.mergeClick ? { mergeClick: true } : {}) };
         } else {
@@ -325,7 +325,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             return "Override refused: only the captain's own words declare one: this turn's, or their reply or click on a card of the task or line in its Crewmate tab, cited with from.";
         }
         host.asks.attach(record.id, "update_task");
-        const declared = supervisor.declareOverride(record.id, {
+        const declared = supervisor.overrides.declareOverride(record.id, {
           ...said,
           holds: input.holds,
           until: input.until,
@@ -339,7 +339,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       asText(() => {
         const record = resolve(input.task);
         host.asks.attach(record.id, "update_task");
-        const withdrawn = supervisor.withdrawOverride(record.id);
+        const withdrawn = supervisor.overrides.withdrawOverride(record.id);
         if (withdrawn.ok) {
           tookEffect(record.id, `Took back your override on ${record.key}: ${record.title}`);
         }

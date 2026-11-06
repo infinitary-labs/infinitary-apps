@@ -297,12 +297,12 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     // A started task's move to another computer (docs/helper.md, "Moving a started task").
-    "inf:task:move-options": (taskId) => services.supervisor.moveOptions(taskId),
+    "inf:task:move-options": (taskId) => services.supervisor.moves.moveOptions(taskId),
     "inf:task:move": async (taskId, to) => {
       const done =
         to === null
-          ? services.supervisor.cancelComputerMove(taskId, "captain")
-          : await services.supervisor.requestComputerMove(taskId, to, "captain");
+          ? services.supervisor.moves.cancelComputerMove(taskId, "captain")
+          : await services.supervisor.moves.requestComputerMove(taskId, to, "captain");
       return done.ok
         ? { ok: true as const, text: done.text }
         : { ok: false as const, text: done.text };

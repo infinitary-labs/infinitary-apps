@@ -354,7 +354,7 @@ async function buildRecord() {
     },
     workPosture: (record) => supervisor.postures.workPosture(record),
     place: (record) => supervisor.placement.taskPlace(record),
-    computerMove: (record) => supervisor.computerMoveFacts(record),
+    computerMove: (record) => supervisor.moves.computerMoveFacts(record),
     runsOn: (record) => supervisor.placement.runsOnFact(record),
     broadcastEvent: (event) => events.push(event),
     emit: () => {},

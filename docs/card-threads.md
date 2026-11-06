@@ -338,11 +338,11 @@ Cancellation and terminal session failure retire the task's open cards through `
   A lone replied-under card is put aside without a warning and remains open for its author's answer; `cardService.test.ts` covers its release at that author's close-out.
 - `tests/e2e/stage-reveals.spec.ts` - a close brings up the first unread card, a reply keeps its card shown while the unread card waits, and with nothing unread the first card comes up; a reply under a lone card keeps its body as the captain left it.
   `stackActions.test.ts` owns `departureIndex`, `dismissalSuccessor` and the reply that moves nothing.
-- `crewSupervisor.test.ts` ("a card reaches the stage at its author's close-out") - the design's recorded exchanges A, B and C replayed at their offsets through the real card, thread and report paths, each answered only at its turn's end, and a card put aside that its crewmate answers mid-turn; `firstmateAgent .test.ts` - case D on the first mate's own card and the mid-turn capture; `cardService.test.ts` - the kept card across a restart.
+- `crewSupervisor.test.ts` ("a card reaches the stage at its author's close-out") - the design's recorded exchanges A, B and C replayed at their offsets through the real card, thread and report paths, each answered only at its turn's end, and a card put aside that its crewmate answers mid-turn; `firstmateAgent.turns.test.ts` - case D on the first mate's own card and the mid-turn capture; `cardService.test.ts` - the kept card across a restart.
 - `tests/e2e/thread-waiting.spec.ts` - a reply under a Claude crewmate's card that meets a refusal shows the held waiting line, keeps it across a restart, and loses it to the crewmate's answer once another login serves.
   `threadWait.test.ts`, `CardThread.test.tsx` and `workPosture.test.ts` own the wait per posture, its words and the row; `crewSupervisor.test.ts` the typed hold on the posture and the checks refusal's thread answer.
 - `crewSupervisor.test.ts` ("the card thread") - the steer's shape and its `via: "thread"` record, the refusals, the host "revised" line, the crewmate's own reply, the whose-turn fact, the context facts, a first mate card routing to a captain turn, and an image on a crewmate steer.
-- `firstmateAgent.test.ts` - the about-card line and the prose capture at turn end.
+- `firstmateAgent.capture.test.ts` - the about-card line and the prose capture at turn end.
 - `cardStore.test.ts`, `reportSort.test.ts`, `threadGeometry.test.ts`, `observeService.test.ts` / `observe.frame.test.ts` (threads on the detail header).
 
 ## Notes moved from AGENTS.md

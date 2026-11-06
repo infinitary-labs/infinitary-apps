@@ -282,7 +282,7 @@ const PREVIEW_TAGS =
  * outside every `<figure>`. Such a body is markup first and copy second, so
  * the rules written for prose do not read it - the shape lint lets it be
  * (core/pi/cardLint.ts), the Firstmate's context line quotes no excerpt from
- * it (core/orchestrator/firstmateAgent.ts) and no change bar marks it
+ * it (core/orchestrator/firstmateContext.ts) and no change bar marks it
  * (core/orchestrator/cardChanges.ts). A script inside a figure only makes
  * that figure move (FI3-796, the captain's yes): the body stays prose. It is
  * a shape test, never a kind test.

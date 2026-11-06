@@ -120,7 +120,7 @@ The offline readers do exactly that (W1 S11): the one session reader (`src/core/
 
 ## Tests
 
-`firstmateAgent.test.ts` ("provenance (R2)") drive the real agents, supervisor, TaskService and SQLite and assert on the durable events; `firstmateSession.served.contract.test.ts` checks the served location and prefix against real Pi and a mock provider; `servedFrame.test.ts` pins the convention's round trip and forgery resistance; the extractor and Observe tests read framed turns.
+`firstmateAgent.provenance.test.ts` ("provenance (R2)") drive the real agents, supervisor, TaskService and SQLite and assert on the durable events; `firstmateSession.served.contract.test.ts` checks the served location and prefix against real Pi and a mock provider; `servedFrame.test.ts` pins the convention's round trip and forgery resistance; the extractor and Observe tests read framed turns.
 
 ## Notes moved from AGENTS.md
 

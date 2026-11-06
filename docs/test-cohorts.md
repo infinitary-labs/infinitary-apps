@@ -216,7 +216,19 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/personal/liveWorkspace.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/workspace/git.test.ts` | the app's own git and a stand-in, its launcher built with the C compiler, a shell | 5 s default |
 | `src/core/utilityQos.test.ts` | taskpolicy children | 5 s default |
-| `src/core/orchestrator/firstmateAgent.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.actions.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.capture.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.context.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.delivery.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.flagship.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.inbox.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.knowledge.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.lane.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.provenance.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.reply.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.seat.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.tools.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/orchestrator/firstmateAgent.turns.test.ts` | real git, at the run's own priority | 5 s default |
 | `tests/ensure-electron-installed.test.ts` | node | 5 s default |
 | `tests/typecheck.test.ts` | the pinned checker through its real command, a scratch copy of the settings words and incremental imports, missing/failed native executables | 20 s for the eleven-check incremental journey; 5 s default elsewhere |
 | `tests/install-clones.test.ts` | `cp -c`, tar, the installed ONNX runtime files, APFS's private size through koffi | 5 s default |

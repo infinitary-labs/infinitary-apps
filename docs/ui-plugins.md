@@ -337,7 +337,7 @@ It is a VIEW the shell holds - `records` in the store (`src/renderer/src/app/sta
 Goal, the captain's words verbatim, graph, timeline tail with "earlier · N more" (each report's line opens to its whole text), delivery, crew - and no button anywhere: the card's only control is close (captain's second note; superseded 2026-09-28, see "The record's action bar").
 The chrome subscribes to the same read for the title and meta, so a state change re-titles the card the moment the record changes.
 
-While the record is the shown entry, a turn carries its task as `taskId` on `inf:converse` - the hint P1 reserved for it - the way a persisted card's id rides `visibleCardId`; the core's about line and the host fallback attach the ask to that task (`now-panel.spec.ts`; the about line's words are `firstmateAgent.test.ts`'s).
+While the record is the shown entry, a turn carries its task as `taskId` on `inf:converse` - the hint P1 reserved for it - the way a persisted card's id rides `visibleCardId`; the core's about line and the host fallback attach the ask to that task (`now-panel.spec.ts`; the about line's words are `firstmateAgent.capture.test.ts`'s).
 Closing the last stack entry is a shell-only act that reveals the character.
 
 ### The record's action bar (2026-09-28; one bar since FI3-565 piece 4)
@@ -687,7 +687,7 @@ Before the arrangement, a panel's slot came from `placements` and a full rail's 
 A hidden panel is skipped, not unregistered, so "show tasks again" is a record deletion and nothing re-mounts.
 
 **Surfaces have ids.**
-`src/shared/surfaces.ts` declares the app's own panels once (`activity` "Activity", `now` "Tasks", with their default placements); the built-in manifest declares its side panels FROM it, and the first mate's context block gains a bounded "your surfaces" section (`FirstmateAgent.renderSurfaces`, with `renderSurfacesSection` in `src/core/pi/personalizeTool.ts` its plain-text form): the theme, each app panel, each personal extension from Step 2's snapshot (marked `(yours)`, capped at twelve with a count for the rest), listed in the arrangement's order, with its rail, its end of that rail, its place in that slot (`2 of 3`) and its state.
+`src/shared/surfaces.ts` declares the app's own panels once (`activity` "Activity", `now` "Tasks", with their default placements); the built-in manifest declares its side panels FROM it, and the first mate's context block gains a bounded "your surfaces" section (`FirstmateContext.renderSurfaces`, with `renderSurfacesSection` in `src/core/pi/personalizeTool.ts` its plain-text form): the theme, each app panel, each personal extension from Step 2's snapshot (marked `(yours)`, capped at twelve with a count for the rest), listed in the arrangement's order, with its rail, its end of that rail, its place in that slot (`2 of 3`) and its state.
 The state is the window's own word on the panel (`surfaceState`: drawn, collapsed, folded for room, in its rail's More row, loading, stopped, off, hidden or refused, with the reason), never read from the layout alone, and "no word from the window" until a window has answered (`docs/personal-panels.md`, "Placed on the rail").
 `personalize` resolves a surface by that id (a title is accepted too) and refuses an unknown one WITH the list, never guessing.
 

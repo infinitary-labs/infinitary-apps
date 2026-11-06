@@ -215,7 +215,7 @@ When the first mate was chosen on a connection whose saved checks no longer coun
 That check, `CustomApiAccountOwner.recheck` over `inf:accounts:custom:recheck`, sends Check model's text and optional picture requests for each unchecked model to the saved address, key and settings, which the person already approved, and changes only the proofs.
 It saves each passing model at once, stops at the first failure with that model's reason, and gives the connection its runtime once every model passes, as a checked replacement does.
 Disconnect or an applied replacement meanwhile ends it.
-A crewmate or the first mate that cannot reach its custom connection raises the usual sign-in card, which names the connection and says to press Edit and then Save in Settings → Intelligence to check it again (`CrewSupervisor.signInCardBody`, `FirstmateAgent.signInCardBody`).
+A crewmate or the first mate that cannot reach its custom connection raises the usual sign-in card, which names the connection and says to press Edit and then Save in Settings → Intelligence to check it again (`CrewSupervisor.signInCardBody`, `FirstmateSeat.signInCardBody`).
 Like every sign-in card, it never quotes the failure: Pi's own text names its terminal sign-in and paths into the app's files, so the raw text stays on the task's timeline or the first mate turn's records.
 Every consumer (turns, compaction and decision/background sessions) uses this same guarded stream; custom sessions disable automatic provider retries.
 Infinitary does not estimate a request's tokens or refuse it for the documented window before it is sent.

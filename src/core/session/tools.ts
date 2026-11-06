@@ -627,7 +627,7 @@ export function toolContent(output: ToolOutput) {
 
 /**
  * The Firstmate's tool set as the self-source map records it, in
- * registration order (`FirstmateAgent.buildTools`, which binds each entry
+ * registration order (`buildFirstmateTools`, which binds each entry
  * to the host; the host's own `emote` is not a tool the map indexes). The
  * self-source generator reads it here, beside the crewmate tool spec, and
  * its test pins it against the live agent's tools on both runtimes, so a

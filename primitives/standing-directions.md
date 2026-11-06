@@ -26,7 +26,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - Write: `StandingDirections.change` (`add`, `revise`, `retire`, with an optional `expectedRevision` and a required reason).
 - Read for a turn: `StandingDirections.standing(actor)`, the full active set visible to that actor, never shortened to a search or formatting budget.
 - Render for a turn: `renderDirections` and `renderDirection` in [`../src/core/knowledge/directions.ts`](../src/core/knowledge/directions.ts).
-- Delivery: the first mate's context (`../src/core/orchestrator/firstmateAgent.ts`) and every crewmate turn (`../src/core/orchestrator/crewSupervisor.ts`) call `renderDirections` over `StandingDirections.standing`.
+- Delivery: the first mate's context (`../src/core/orchestrator/firstmateContext.ts`) and every crewmate turn (`../src/core/orchestrator/crewSupervisor.ts`) call `renderDirections` over `StandingDirections.standing`.
 - The agent's door: the app action catalog's `direction` line (`../src/shared/actions.ts`), whose change channel `inf:knowledge:direction:set` (`../src/shared/channels/knowledge.ts`) runs `StandingDirections.change` through the dispatcher.
 - Window reads: `knowledge.directions` and `knowledge.direction` (`../src/shared/reads.ts`, shapes in `../src/shared/knowledge.ts`), answered by `StandingDirections.page` and `StandingDirections.read`.
 
@@ -88,7 +88,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - [`../src/core/knowledge/knowledgeService.test.ts`](../src/core/knowledge/knowledgeService.test.ts): add, revise and retire through `StandingDirections.change`, kept reasons, a stale revision refused, and `record_knowledge` refusing a direction.
 - [`../src/core/knowledge/directions.test.ts`](../src/core/knowledge/directions.test.ts): the active directions carried once, a retried and a conflicting carry, and the browser's pages and one-direction reads.
 - [`../src/core/core.settings.test.ts`](../src/core/core.settings.test.ts) ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line and its reason in the history.
-- [`../src/core/orchestrator/firstmateAgent.test.ts`](../src/core/orchestrator/firstmateAgent.test.ts) ("renders authoritative directions and keeps them from a scheduled turn too"): whole delivery to the first mate, background wakes included.
+- [`../src/core/orchestrator/firstmateAgent.actions.test.ts`](../src/core/orchestrator/firstmateAgent.actions.test.ts) ("renders authoritative directions and keeps them from a scheduled turn too"): whole delivery to the first mate, background wakes included.
 - [`../src/core/orchestrator/crewSupervisor.test.ts`](../src/core/orchestrator/crewSupervisor.test.ts) ("serves active project directions with their authority once on the first turn", "serves the personal workspace's directions on every turn and drops a retired one"): project directions on a crewmate turn.
 - [`../src/core/personal/panelInstructions.test.ts`](../src/core/personal/panelInstructions.test.ts): the panel instructions carry, its repeat and its unreadable-Knowledge case.
 - [`../tests/e2e/personalize.spec.ts`](../tests/e2e/personalize.spec.ts) ("a panel instruction is a standing direction for the personal workspace"): the captain's words become a direction listed in the Knowledge browser.

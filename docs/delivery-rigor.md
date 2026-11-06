@@ -363,7 +363,7 @@ Stopping decisions belong to the agents' guidance, while consent and version ide
 **The repository's rigor is a posture.**
 `app_change project-settings` writes `rigor` beside `delivery` and `autonomy` (`configure_repo` is retired); Settings → Projects writes the same row.
 The project-settings feed line (`repo_configured` in `src/shared/feed.ts`) names the care (`CARE_WORDS`: Quick, Default, Careful) only when the column is set, and says nothing when the host derives it.
-The context block does the same: `rigor` is on a repo only when the column is set (`firstmateAgent`'s context `repos`).
+The context block does the same: `rigor` is on a repo only when the column is set (`firstmateContext`'s `repos`).
 `rigorFor` reads the column as `repoRigor` (rule 3 above).
 `setup_repo` is retired; `project-setup` puts up the setup card, where the captain may set a new project's care before it is added (`docs/fleet.md` "Asking the first mate to add a project").
 The personal workspace takes no policy at all - its registry refuses the whole patch with one message - because it is a workspace KIND (`repos.kind: personal`, migration 37) rather than a posture.

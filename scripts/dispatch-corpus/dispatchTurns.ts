@@ -533,7 +533,7 @@ function openTurn(input: {
 
 /**
  * The `[fm-op] context` block back into structure, mirroring the lines
- * `FirstmateAgent.buildContextBlock` writes. Anything it cannot parse stays
+ * `FirstmateContext.buildContextBlock` writes. Anything it cannot parse stays
  * absent rather than being guessed at - the raw block rides the record too.
  */
 export function parseContextBlock(block: string): FleetSnapshot {

@@ -69,7 +69,7 @@ export function startFirstLaunch(options: {
   // The first launch (docs/first-launch.md): the gate is the Firstmate's
   // own pre-flight - no model that can answer it: its provider's role and
   // an account the seat can stand on (`Flagship.servesFirstmate`), exactly
-  // what `FirstmateAgent.resolveModel` derives from - unless an account the
+  // what `resolveModel` (firstmateModelPick.ts) derives from - unless an account the
   // seat could stand on is only paused by a typed cut-off, when the pause
   // card speaks instead (`Flagship.standsOnCutOff`). Welcome eligibility is
   // separate: the selected serving model must not be paused, and the host

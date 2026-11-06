@@ -198,7 +198,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/orchestrator/changePresentations.ts": {
     GITHUB_STORY_BODY_LIMIT: outside("refused in words naming the limit; shorten the story or its text"),
   },
-  "src/core/orchestrator/firstmateAgent.ts": {
+  "src/core/orchestrator/firstmateContext.ts": {
     RESOLVED_CONTEXT_LIMIT: record("the rest are counted; each task's record holds them (tasks by key)"),
     THREAD_CONTEXT_LIMIT: physical("older threads drop out uncounted; each card's thread stays on record"),
     CARD_EXCERPT_LIMIT: physical("clipped with an ellipsis; the card itself keeps the whole body"),

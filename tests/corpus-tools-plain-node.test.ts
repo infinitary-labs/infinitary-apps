@@ -88,6 +88,35 @@ describe("the corpus and replay commands under plain Node", () => {
     );
   });
 
+  it("writes every record to a pipe, the same bytes as its --out file", () => {
+    const userData = scratchDir("infinitary-corpus-pipe-");
+    const out = join(userData, "corpus.jsonl");
+    const extract = (extra: string[]) =>
+      spawnSync(
+        process.execPath,
+        [
+          scriptFile("extract:dispatch"),
+          "--user-data",
+          userData,
+          "--sessions",
+          join(REPLAY_FIXTURES, "sep04-real/firstmate/sessions"),
+          "--claude-sessions",
+          join(REPLAY_FIXTURES, "sep26-claude/firstmate/claude"),
+          ...extra,
+        ],
+        { cwd: ROOT },
+      );
+    expect(extract(["--out", out]).status).toBe(0);
+    const piped = extract([]);
+    expect(piped.status).toBe(0);
+    const file = readFileSync(out);
+    // More than a pipe takes at once, so a command that exits before its
+    // reader has taken the rest loses the tail.
+    expect(file.length).toBeGreaterThan(128 * 1024);
+    expect(piped.stdout.length).toBe(file.length);
+    expect(piped.stdout.equals(file)).toBe(true);
+  });
+
   it("refuses an argument it does not know, naming it", () => {
     const run = node(scriptFile("extract:dispatch"), ["--nope"]);
     expect(run.status).toBe(2);

@@ -151,7 +151,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/installer-reuse.test.ts` | scratch git histories and ZIP extraction, recorded forge metadata and streamed artifact-integrity checks; no network or signing | 5 s default |
 | `src/core/hostEnv.test.ts` | stub login shells | 10 s on the hang test |
 | `tests/export-tasks.test.ts` | node, pnpm | 60 s |
-| `tests/corpus-tools-plain-node.test.ts` | plain Node runs of the corpus and replay commands, one over recorded sessions | 5 s default (Mac slowest 0.18 s) |
+| `tests/corpus-tools-plain-node.test.ts` | plain Node runs of the corpus and replay commands, two over recorded sessions, one of them read through a pipe | 5 s default (Mac slowest 0.31 s) |
 | `tests/account-eval.test.ts` | twenty independently owned one-case production sessions (all ten cases on each backend), two 503/no-retry proofs, one ten-case Pi run proving every case opens with its sheet allowance, one Pi case refused on a scripted local endpoint, one Claude case cut mid-answer on one, the complete ten-case no-call sheet, plus the Claude crewmate's client read from the real process table and a mock Claude run stopped when that client ends; local mock provider and boxed Claude client | 30 s kept per case |
 | `tests/stall-recovery-eval.test.ts` | real git: the disposable project's committed branch and the working copies started from it, at the run's own priority | 25 s |
 | `tests/eval-auth-turn-taking.test.ts` | two processes on a scratch auth file and local fake OAuth server, for two provider ids | 5 s default |

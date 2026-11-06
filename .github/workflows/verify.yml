@@ -710,3 +710,15 @@ jobs:
           SHARDS: ${{ matrix.shards }}
           # Test time limits run on the load clock, and on the wall clock only on a graded run (docs/test-cohorts.md, "Budgets").
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '' }}
+          # Also writes each file's time, which the next step keeps (vitest.config.ts).
+          INFINITARY_TEST_TIMING_FILE: vitest-timing.json
+      # The measured time of each file, which scripts/shard-timings.ts turns into
+      # the record the unit groups are balanced by (docs/test-cohorts.md, "Balanced groups").
+      - name: Keep the test times
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ format('vitest-timing-{0}-{1}-of-{2}', matrix.tests, matrix.shard, matrix.shards) }}
+          path: Application Support/firstmate/vitest-timing.json
+          if-no-files-found: ignore
+          retention-days: 14

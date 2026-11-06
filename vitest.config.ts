@@ -7,6 +7,7 @@ import { PROBE_FILES } from "./scripts/affected-probes.ts";
 import { jobCores } from "./scripts/job-cores.ts";
 import { FRAME_FOCUS_BLINK_FEATURE } from "./src/shared/plugins/containment.ts";
 import { browserCommands } from "./tests/helpers/browserCommands.ts";
+import TimeBalancedSequencer from "./tests/helpers/timeBalancedSequencer.ts";
 
 /**
  * The integration cohort (captain's A1, docs/test-cohorts.md) is the list of
@@ -276,5 +277,14 @@ export default defineConfig({
     // The frame stylesheet imports the design tokens as text (`?raw`);
     // vitest otherwise blanks every .css module, query or not.
     css: true,
+    // A run that names a file also writes each test file's time there, as the
+    // record scripts/shard-timings.ts balances the unit groups by.
+    ...(process.env.INFINITARY_TEST_TIMING_FILE
+      ? {
+          reporters: ["default", ["json", { outputFile: process.env.INFINITARY_TEST_TIMING_FILE }]],
+        }
+      : {}),
+    // --shard gives each group about the same measured time, not the same count of files.
+    sequence: { sequencer: TimeBalancedSequencer },
   },
 });

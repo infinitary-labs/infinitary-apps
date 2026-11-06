@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inf-2674-unit-groups",
+      "reason": "Balance the full check's unit test groups by measured time instead of file name; only how the project is checked changes."
+    }
+  ]
+}

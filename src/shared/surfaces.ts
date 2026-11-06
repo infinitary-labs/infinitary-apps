@@ -40,11 +40,10 @@ export type AppPanelFolder = {
 };
 
 /**
- * A gate an app panel can wait on: `knowledge` is open in an alpha or
- * development build only (`knowledgeEnabled`, src/core/knowledge/
- * availability.ts; docs/knowledge.md, "Who has it") while there is some to
- * show; `automation` while a saved automation rule exists
- * (docs/automation.md, "The Automation panel").
+ * A gate an app panel can wait on: `knowledge` is open while there is some
+ * to show, in every build (docs/knowledge.md, "Who has it"); `automation`
+ * while a saved automation rule exists (docs/automation.md, "The Automation
+ * panel").
  */
 export type AppPanelGate = "knowledge" | "automation";
 
@@ -55,8 +54,8 @@ export type AppPanelGates = Readonly<Partial<Record<AppPanelGate, boolean>>>;
  * The folders, by id: Activity on the left rail, whose dock shows from the
  * start, and Tasks on the right, which shows only while the board has a row
  * to list. Both are bottom-docked, on opposite rails. Knowledge sits under
- * Tasks in an alpha or development build alone, and Automation under them
- * while a rule is saved. A manifest the panel schema
+ * Tasks while there is some to show, and Automation under them while a rule
+ * is saved. A manifest the panel schema
  * refuses fails at load, so a broken folder never reaches a session.
  */
 export const APP_PANEL_FOLDERS: readonly AppPanelFolder[] = [

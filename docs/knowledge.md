@@ -313,7 +313,7 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
 
 - `src/core/knowledge/knowledgeService.test.ts`: reuse in other words through a link, scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data, purge and the shortlist; a direction's add, revise and retire through `StandingDirections.change`, its kept reasons and a stale revision refused, and `record_knowledge` refusing one.
 - `src/core/core.settings.test.ts` ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line, its reason in the history, and `app_state` listing it.
-- `src/core/knowledge/knowledgeTools.test.ts`, `knowledgeContext.test.ts` and `availability.test.ts`: what the tools and the context say, and the gate.
+- `src/core/knowledge/knowledgeTools.test.ts` and `knowledgeContext.test.ts`: what the tools and the context say.
 - `src/core/knowledge/knowledgeSources.integration.test.ts`: evidence from a real git working copy.
 - `src/core/knowledge/knowledgeRefusals.test.ts`: each write the owner refuses answers in its own words, commits nothing and leaves the collection byte for byte as it was, including a write another write moved past while it was prepared and a read of a scope the reader does not read.
 - `src/core/knowledge/knowledgeReads.test.ts`: a claim's concepts named as its subject and object, the finding that contradicts it, its relations in the captain's window, a revision or source the reader cannot read refused as absent, and a file an older build kept checked against the reader's working copy.

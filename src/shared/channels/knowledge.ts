@@ -28,9 +28,8 @@ export const knowledgeChannels = {
   // it and whether there is any to show (`held`: an entry, or a collection
   // that cannot be read), which the window asks before it registers the
   // Knowledge panel, and the browser's reads, scoped as Firstmate's are.
-  // Every build answers them (`knowledgeEnabled`,
-  // src/core/knowledge/availability.ts). This Mac's own window only: a view
-  // of another Mac reads none.
+  // Every build answers them. This Mac's own window only: a view of another
+  // Mac reads none.
   "inf:knowledge:enabled": {
     effect: "read",
     surface: "core",

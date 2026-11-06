@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "knowledge-switch-removal",
+      "reason": "Internal: removes the unused knowledge switch that answered yes in every build, and its test; nothing a person sees changes."
+    }
+  ]
+}

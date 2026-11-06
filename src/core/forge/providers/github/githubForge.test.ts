@@ -162,6 +162,23 @@ describe("GitHubForge", () => {
     );
   });
 
+  // INF-2675 finding 7: on 2026-11-05 GitHub answered 500, with no message,
+  // to a commit's statuses while two pull requests' checks ran; typed as a
+  // refusal, it ended both check watches instead of reading again.
+  it("types GitHub's 500 on a check reading as transient, so the watch reads again", async () => {
+    const head = "5dfc572dc7ea84dfc3a07cf252c8eaedda9541d6";
+    const { forge } = await stub({
+      [`GET /repos/octo/meter/commits/${head}/check-runs`]: () => ({ json: { check_runs: [] } }),
+      [`GET /repos/octo/meter/commits/${head}/status`]: () => ({ status: 500 }),
+    });
+    await expect(
+      forge.checks({ number: 23, url: null, branch: "b", headSha: head }),
+    ).rejects.toMatchObject({
+      failure: "transient",
+      message: `GitHub answered 500 to GET /repos/octo/meter/commits/${head}/status`,
+    });
+  });
+
   // INF-988: INF-643's repair was declared at 93355db9 while PR #203
   // conflicted, so GitHub never ran anything there; the pull request then
   // moved on, clean. These are GitHub's answers on 2026-10-23.
@@ -1090,7 +1107,7 @@ describe("GitHubForge", () => {
       failure: "permission",
       message: expect.stringContaining("the hourly allowance is spent"),
     });
-    for (const code of [502, 503, 504]) {
+    for (const code of [500, 502, 503, 504]) {
       status.code = code;
       expect(await failure()).toMatchObject({ failure: "transient" });
     }

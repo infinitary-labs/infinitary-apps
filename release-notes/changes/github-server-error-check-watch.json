@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "github-server-error-check-watch",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A GitHub server error no longer stops a crewmate watching its checks",
+      "body": "When GitHub briefly answers with a server error while a pull request's checks run, the crewmate keeps waiting and reads the checks again, instead of stopping and reporting that they could not be read.",
+      "noPicture": "This changes how check readings recover from a GitHub server error, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

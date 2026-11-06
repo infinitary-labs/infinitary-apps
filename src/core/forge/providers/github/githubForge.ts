@@ -1306,7 +1306,10 @@ function failureOf(response: Response, method: string, path: string, text: strin
       return new ForgeError("permission", spent ? `${what} (the hourly allowance is spent)` : what);
   }
   if (response.status === 404) return new ForgeError("not-found", what);
-  if ([502, 503, 504].includes(response.status)) return new ForgeError("transient", what);
+  // Any 5xx is the host's own failure, not a verdict on what was asked: a
+  // read retries it quietly, and a write's outcome stays unknown (INF-2675
+  // finding 7: a 500 on a commit's statuses ended two check watches).
+  if (response.status >= 500) return new ForgeError("transient", what);
   return new ForgeError("refused", what);
 }
 

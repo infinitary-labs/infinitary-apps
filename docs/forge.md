@@ -791,7 +791,7 @@ The app builds a new client for each call, so the store lives in the home's forg
 
 ## Failures are typed
 
-A forge throws `ForgeError` with a `failure`: `transient` (a 502/503/504 or the host unreachable - `ChangeMerge.merge` retries these quietly, and nothing else), `sign-in` (a 401), `permission` (a 403, never retried; a spent hourly allowance, a 403 or 429 with no calls left, is a `ForgeAllowanceSpent` carrying the reset time, which the timed reads wait for), `not-found`, `refused` (a stale head, a default branch that moved on, branch protection), `unsupported`.
+A forge throws `ForgeError` with a `failure`: `transient` (any 5xx or the host unreachable - `ChangeMerge.merge` retries these quietly, and nothing else), `sign-in` (a 401), `permission` (a 403, never retried; a spent hourly allowance, a 403 or 429 with no calls left, is a `ForgeAllowanceSpent` carrying the reset time, which the timed reads wait for), `not-found`, `refused` (a stale head, a default branch that moved on, branch protection), `unsupported`.
 The raw words stay on the error for the record and `plainProblem`; the kind is what code decides on.
 
 ## Who reads it

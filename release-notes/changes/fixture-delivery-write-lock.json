@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fixture-delivery-write-lock",
+      "reason": "Test-only repair: the journeys' delivery fixture takes the database's write lock before it reads, so a journey that ages a saved fact while the app runs waits out the app's write instead of failing with database is locked; no app behavior changes."
+    }
+  ]
+}

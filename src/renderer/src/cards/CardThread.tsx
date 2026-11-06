@@ -51,6 +51,7 @@ import {
   THREAD_WHO_LABELS,
   THREAD_WORKING,
   threadCountWords,
+  threadCueLabel,
 } from "./threadWords";
 import { useReplyDoing } from "./useReplyDoing";
 import { type ThreadWaitLine, useThreadWait } from "./useThreadWait";
@@ -628,7 +629,7 @@ export function LatestLine({
     <button
       type="button"
       data-thread-cue={cardId}
-      aria-label={`Show thread, ${working ? "author working" : count}`}
+      aria-label={threadCueLabel(count, working)}
       aria-keyshortcuts={keyShortcuts}
       onClick={(event) => onOpen(byKey(event))}
     >

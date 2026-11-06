@@ -26,6 +26,7 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { KnowledgeService } from "../knowledge/knowledgeService";
+import { BUILD_IN_PLACE_OPENING } from "./intentBrief";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -172,7 +173,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     // sentence the posture used to carry.
     expect(brief).not.toContain("Delivery:");
     expect(brief).not.toContain("Care:");
-    expect(brief).toContain("You build in place: this task carries no delivery posture");
+    expect(brief).toContain(`${BUILD_IN_PLACE_OPENING}: this task carries no delivery posture`);
     expect(brief).toContain(`Workspace: ${h.workspaceDir}`);
     expect(brief).toContain('Surfaces now: open-prs "Open PRs" (right rail)');
     // Nothing stamped a tier on the record either.

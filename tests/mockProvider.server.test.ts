@@ -587,28 +587,24 @@ describe("each wire carries a text turn and a tool turn the way its client reads
     expect(calls).toEqual(CALLS.map((call) => ({ name: call.name, args: call.args })));
   });
 
-  it("Anthropic messages: a call goes out under the name the request serves its tool by", async () => {
+  // mockProvider.test.ts owns the app-tool prefix; this case owns the shell, which Claude serves as Bash.
+  it("Anthropic messages: a scripted shell call goes out as Bash to Claude's client and bash to Pi", async () => {
     await start([
       () => (request) =>
         request.body.includes("shell")
-          ? {
-              calls: [
-                { name: "bash", args: { command: "true" } },
-                { name: "report", args: { text: "Done." } },
-              ],
-            }
+          ? { calls: [{ name: "bash", args: { command: "true" } }] }
           : undefined,
     ]);
     const claude = await ask("anthropic", {
       messages: [user("anthropic", "shell")],
-      tools: ["Bash", `${CLAUDE_SEAT_TOOL_PREFIX}report`],
+      tools: ["Bash"],
     });
-    expect(names(claude)).toEqual(["Bash", `${CLAUDE_SEAT_TOOL_PREFIX}report`]);
+    expect(names(claude)).toEqual(["Bash"]);
     const pi = await ask("anthropic", {
       messages: [user("anthropic", "shell")],
-      tools: ["bash", "report"],
+      tools: ["bash"],
     });
-    expect(names(pi)).toEqual(["bash", "report"]);
+    expect(names(pi)).toEqual(["bash"]);
   });
 });
 

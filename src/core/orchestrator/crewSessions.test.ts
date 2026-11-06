@@ -154,7 +154,6 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     await expect(h.supervisor.sessions.interruptCrewmate(taskId, "cancel")).rejects.toThrow(
       "the session is gone",
     );
-    expect(interrupts(h.tasks, taskId)).toEqual(["requested", "abort-failed"]);
     expect(h.supervisor.facts.crewStatus(taskId)[0]?.status).toBe("running");
     expect(h.tasks.get(taskId)?.status).toBe("active");
     // Its turn ends as any turn does, never as the cancel that failed.

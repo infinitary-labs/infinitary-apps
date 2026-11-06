@@ -10,6 +10,7 @@
 import { randomBytes } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { describe, expect, it, vi } from "vitest";
 import {
   type FakeCrewmate,
@@ -507,7 +508,7 @@ describe("CrewSupervisor", () => {
         choice: { provider: "openai-codex", id: "gpt-5.5-mini" },
         bucket: "high",
         servedBucket: "medium",
-        withheld: { provider: "anthropic-claude", reason: "signed_out" },
+        withheld: { provider: CLAUDE_PROVIDER_ID, reason: "signed_out" },
         rule: "R8",
       },
     });

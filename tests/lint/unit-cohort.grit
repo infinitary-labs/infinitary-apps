@@ -3,7 +3,9 @@
 // child process, drive real git, or sleep on a real clock - so it imports
 // neither node:child_process, node:timers/promises, nor a product module
 // whose one job is to spawn (workspace/git, sql/forkChildProcess, devices/ssh,
-// devices/sshConnections, devices/relay, devices/dnsSd). A test that needs one of those is an integration test:
+// devices/sshConnections, devices/relay, devices/dnsSd), nor a test helper
+// that drives real git (crewHarnessGit, placedWorld, phoneScene, and the
+// journeys' projectSeed, knowledgeSeed, usage and savePoints). A test that needs one of those is an integration test:
 // biome.json's unit-cohort override lists it as an exclusion,
 // vitest.config.ts reads that same list into the integration project, and
 // the file states a budget sized to its measured work. A type-only import
@@ -22,7 +24,8 @@ or {
   not $source <: within JsExport() as $export where { $export <: r"(?s)export\s+type\s.*" } ,
   $source <: or {
     r"[\"'](?:node:)?(?:child_process|timers/promises)[\"']",
-    r"[\"'](?:\.{1,2}/|@core/)(?:[^\"']*/)?(?:git|forkChildProcess|ssh|sshConnections|relay|dnsSd)(?:\.ts)?[\"']"
+    r"[\"'](?:\.{1,2}/|@core/)(?:[^\"']*/)?(?:git|forkChildProcess|ssh|sshConnections|relay|dnsSd)(?:\.ts)?[\"']",
+    r"[\"'][^\"']*/(?:helpers|e2e)/(?:crewHarnessGit|placedWorld|phoneScene|projectSeed|knowledgeSeed|usage|savePoints)(?:\.ts)?[\"']"
   },
   register_diagnostic(span=$source, message="A unit test runs in memory: it may not start a child process, drive real git or sleep on a real clock. Fake the dependency or inject a clock, or make the file an integration test - add it to the exclusions of biome.json's unit-cohort override and give it a budget sized to its measured work (docs/test-cohorts.md).")
 }

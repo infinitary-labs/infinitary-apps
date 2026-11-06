@@ -14,6 +14,9 @@ import { heldProjectFocus } from "./projectFocus";
 import { isHeldEntry, shownEntry } from "./stack";
 import type { ShellGet, ShellSet, ShellState } from "./store";
 
+/** The voice notice when a recording cannot be turned into words. */
+export const TRANSCRIBE_FAILED = "Could not transcribe that. You can still type.";
+
 /** The main message: what the captain is writing to the Firstmate, and its send (docs/composer.md). */
 export type ComposerSlice = {
   inputText: string;
@@ -145,7 +148,7 @@ export function transcribeRecording(
     .catch(() => {
       if (!get().dictation?.enabled || !current()) return;
       set({
-        voiceNotice: { kind: "error", message: "Could not transcribe that. You can still type." },
+        voiceNotice: { kind: "error", message: TRANSCRIBE_FAILED },
       });
     })
     .finally(() => {

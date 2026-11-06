@@ -7,11 +7,12 @@
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
 
-import { type Card, MERGE_CLOSES_WORDS } from "@shared/cards";
+import { type Card, MERGE_CLOSES_MARK, MERGE_CLOSES_WORDS, SETTLE_FACTS_OPEN } from "@shared/cards";
 import { softHoldWords } from "@shared/holds";
+import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import type { WorkShape } from "@shared/routingPolicy";
-import { changeLinesWords } from "@shared/vocabulary";
+import { changeLinesWords, DEFAULT_WORKSPACE_WORD } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
   completionBody,
@@ -35,6 +36,8 @@ import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { queryTasks } from "../tasks/taskQuery";
 import type { CrewmateSpec } from "./crewSession";
+import { FOLLOWUP_PROVENANCE_OPENING } from "./intentBrief";
+import { discardedText } from "./settleWords";
 
 fakeCrewTimersEachTest();
 
@@ -430,7 +433,7 @@ describe("the task graph (task-system P2)", () => {
     });
     crewmate.finishPrompt();
     await tick();
-    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe("Discarded.");
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe(discardedText());
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
   });
 
@@ -518,12 +521,12 @@ describe("the task graph (task-system P2)", () => {
       completionBody(
         "<p>The prompt no longer fires on every rebuild.</p><ul><li>Verified on a packaged build.</li></ul>",
       ) +
-        '<div class="inf-facts" data-facts>' +
-        '<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">Default workspace</span></span>' +
+        SETTLE_FACTS_OPEN +
+        `<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">${DEFAULT_WORKSPACE_WORD}</span></span>` +
         '<span class="inf-fact" data-fact="crewmate"><span class="inf-fact-k">Model</span><span class="inf-fact-v">mock-1</span></span>' +
         '<span class="inf-fact" data-fact="care"><span class="inf-fact-k">Care</span><span class="inf-fact-v">Quick</span></span>' +
         // The app's line says the merge closes the task (INF-2490).
-        `<p class="inf-merge-closes" data-merge-closes>${MERGE_CLOSES_WORDS.closes}</p>` +
+        `<p class="inf-merge-closes" ${MERGE_CLOSES_MARK}>${MERGE_CLOSES_WORDS.closes}</p>` +
         "</div>",
     );
     // A card with no settle effect carries no facts line.
@@ -713,8 +716,9 @@ describe("the task graph (task-system P2)", () => {
   });
 
   it("keeps the task record on the model that answers, says what moved it, and names it on the strip (FI3-967)", async () => {
-    const opus55 = { provider: "anthropic-claude", id: "claude-opus-5-5" };
-    const opus48 = { provider: "anthropic-claude", id: "claude-opus-4-8" };
+    const opus55 = { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-5-5" };
+    const opus48 = { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-4-8" };
+    const served = (model: { provider: string; id: string }) => `${model.provider}/${model.id}`;
     const crewmate = fakeCrewmate({ model: opus55, modelLabel: "Claude Opus 5.5" });
     const { supervisor, specs, cards, tasks, events } = setup(crewmate, { routedModel: opus55 });
     const { taskId } = await supervisor.intake.commission({
@@ -725,7 +729,7 @@ describe("the task graph (task-system P2)", () => {
     await tick();
     const moves = () =>
       tasks.timeline(taskId).filter((event) => event.kind === "note" && event.data?.servedModel);
-    expect(tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-5-5");
+    expect(tasks.get(taskId)?.model).toBe(served(opus55));
 
     // The client's first word on its model is the routed one: nothing moved.
     crewmate.emit({ type: "model_served", model: opus55 });
@@ -737,12 +741,12 @@ describe("the task graph (task-system P2)", () => {
       model: opus48,
       fallback: { from: opus55, category: "cyber" },
     });
-    expect(tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-4-8");
+    expect(tasks.get(taskId)?.model).toBe(served(opus48));
     const [moved] = moves();
     expect(moved?.data).toEqual({
-      servedModel: "anthropic-claude/claude-opus-4-8",
-      from: "anthropic-claude/claude-opus-5-5",
-      fallback: { from: "anthropic-claude/claude-opus-5-5", category: "cyber" },
+      servedModel: served(opus48),
+      from: served(opus55),
+      fallback: { from: served(opus55), category: "cyber" },
       news: true,
     });
     const record = tasks.get(taskId);
@@ -775,11 +779,11 @@ describe("the task graph (task-system P2)", () => {
 
     // A reattach asked for the routed model again, and the client honored it.
     crewmate.emit({ type: "model_served", model: opus55 });
-    expect(tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-5-5");
+    expect(tasks.get(taskId)?.model).toBe(served(opus55));
     const back = moves().at(-1);
     expect(back?.data).toEqual({
-      servedModel: "anthropic-claude/claude-opus-5-5",
-      from: "anthropic-claude/claude-opus-4-8",
+      servedModel: served(opus55),
+      from: served(opus48),
       news: true,
     });
     const now = tasks.get(taskId);
@@ -848,7 +852,7 @@ describe("the task graph (task-system P2)", () => {
       goal: "The meter test passes ten runs in a row",
     });
     expect(followup?.prompt).toContain(
-      'Filed as a follow-up by crewmate 1 while working on "Fix the meter" (SCR-1)',
+      `${FOLLOWUP_PROVENANCE_OPENING} crewmate 1 while working on "Fix the meter" (SCR-1)`,
     );
     expect(tasks.graph.discoveredFrom(taskId).map((r) => r.id)).toEqual([followup?.id]);
     expect(tasks.graph.blockers(taskId)).toEqual([]);

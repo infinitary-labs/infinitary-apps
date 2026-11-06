@@ -5,6 +5,9 @@ import { insertVoiceTranscript } from "../voice/voiceInput";
 import { mainInputHeld, transcribeRecording } from "./composer";
 import type { ShellGet, ShellSet, ShellState } from "./store";
 
+/** The voice notice when the voice model's download fails. */
+export const VOICE_MODEL_DOWNLOAD_FAILED = "The voice model download failed. Try again.";
+
 /** Hold-to-talk: the saved dictation choice, the recording and its transcript (docs/composer.md, "Voice"). */
 export type VoiceSlice = {
   recording: boolean;
@@ -68,7 +71,7 @@ export function voiceSlice(set: ShellSet, get: ShellGet): VoiceSlice {
         .catch(() => {
           if (!get().dictation?.enabled) return;
           set({
-            voiceNotice: { kind: "error", message: "The voice model download failed. Try again." },
+            voiceNotice: { kind: "error", message: VOICE_MODEL_DOWNLOAD_FAILED },
           });
         });
     },

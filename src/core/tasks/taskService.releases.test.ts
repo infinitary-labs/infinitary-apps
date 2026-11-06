@@ -76,6 +76,7 @@ describe("a start that came back unconfirmed", () => {
     expect(record?.startNotice ?? null).toBeNull();
     expect(tasks.starts.startAttemptOf("build")).toBeUndefined();
     const last = tasks.timeline("build").at(-1);
+    // This case owns the line's words (taskStarts.ts, UNCONFIRMED_START_RETURNED); other tests import it.
     expect(last).toMatchObject({
       actor: "host",
       kind: "status",

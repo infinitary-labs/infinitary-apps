@@ -28,6 +28,7 @@ import { deferred } from "../../../tests/helpers/deferred";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
+import { FIRSTMATE_FAILURE_CARD_ID } from "./hostCards";
 import { mergePendingCardId } from "./settleWords";
 
 fakeCrewTimersEachTest();
@@ -583,9 +584,9 @@ describe("a card places the captain gate (cards as tasks)", () => {
     });
 
     supervisor.cards.addFirstmateFailureCard("<p>The turn failed.</p>");
-    const [failure] = hostRows(tasks, "card-fm-turn-failure");
+    const [failure] = hostRows(tasks, FIRSTMATE_FAILURE_CARD_ID);
     expect(failure?.status).toBe("open");
-    supervisor.close("card-fm-turn-failure");
+    supervisor.close(FIRSTMATE_FAILURE_CARD_ID);
     expect(tasks.get(failure?.id ?? "")).toMatchObject({ status: "open", closedReason: null });
     // A note asks nothing, so it files nothing.
     supervisor.cards.addSystemNoteCard("card-note", "A note", "<p>FYI.</p>");

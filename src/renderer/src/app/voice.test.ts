@@ -2,16 +2,12 @@ import type { MicAccess } from "@shared/voice";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { voiceController } from "../voice/voiceController";
 import { useShellStore } from "./store";
-import { resetShell } from "./storeTestKit";
+import { resetShell, settle } from "./storeTestKit";
 
 /** Hold-to-talk (./voice.ts): the microphone access lines under the input. */
 
 describe('microphone access lines under the input (docs/composer.md, "Voice")', () => {
   const state = () => useShellStore.getState();
-  /** Lets the access read and the microphone's answer run through. */
-  const settle = async () => {
-    for (let i = 0; i < 20; i++) await Promise.resolve();
-  };
   let access: MicAccess;
   let micAccess: ReturnType<typeof vi.fn>;
   /** The microphone's open, answered by the test the way macOS answers its prompt. */

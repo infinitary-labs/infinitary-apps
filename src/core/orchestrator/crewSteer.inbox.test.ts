@@ -5,43 +5,27 @@
  * Each case drives a real CrewSupervisor through the crew harness
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
-  type FakeCrewmate,
   fakeCrewmate,
   fakeCrewTimersEachTest,
   fakeQueuedSteerCrewmate,
   intentOf,
   reboot,
-  type SetupExtras,
   served,
-  setup,
 } from "../../../tests/helpers/crewHarness";
+import { idleLadderHarness, settle } from "../../../tests/helpers/idleLadderHarness";
 import { INBOX_ATTEMPT_MAX, InboxStore } from "../storage/inboxStore";
 import { RESTART_REPLAY_NOTE, renderWake, type WakeFacts } from "./wakes";
 
 fakeCrewTimersEachTest();
 
 describe("the durable inbox (design A)", () => {
-  // These run on the host's one clock (P5, `ticker.ts`): the test moves
-  // `hostNow` itself, so nothing here fakes a timer or `Date`.
-  let hostNow = 0;
-  const hostClock = () => hostNow;
-  beforeEach(() => {
-    vi.useRealTimers();
-    hostNow = Date.now();
-  });
-  /** One turn of the event loop: the supervisor's promise chains settle; no clock moves. */
-  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
-  /** The harness on the host's clock, its card stack read as the broadcast carries it. */
-  const clockedSetup = (crewmate: FakeCrewmate, extras: SetupExtras = {}) => {
-    const harness = setup(crewmate, { now: hostClock, ...extras });
-    return { ...harness, cards: () => harness.supervisor.cards.snapshot() };
-  };
+  const { clock, hostClock, clockedSetup } = idleLadderHarness();
 
   /** Two minutes pass: every attempted row is past the retry grace. */
   const passGrace = () => {
-    hostNow += 120_000;
+    clock.now += 120_000;
   };
 
   it("re-delivers guidance a quit stranded once the next boot sweeps", async () => {
@@ -51,7 +35,7 @@ describe("the durable inbox (design A)", () => {
       title: "Job",
       intent: intentOf("Start"),
     });
-    await tick();
+    await settle();
 
     // Mid-turn guidance on a followup-queue backend: durably recorded.
     expect(await supervisor.steer.steerCrewmate(taskId, "use the other library")).toBe(
@@ -69,8 +53,8 @@ describe("the durable inbox (design A)", () => {
       { now: hostClock, cardStore },
     );
     new InboxStore(db, { now: hostClock }).resetInFlight();
-    await fresh.watch.sweepInbox(hostNow);
-    await tick();
+    await fresh.watch.sweepInbox(clock.now);
+    await settle();
 
     // The stranded guidance became the resumed crewmate's next turn.
     expect(bootCrewmate.promptCalls).toEqual(["use the other library"]);
@@ -85,15 +69,15 @@ describe("the durable inbox (design A)", () => {
       title: "Suite",
       intent: intentOf("Start"),
     });
-    await tick();
+    await settle();
     crewmate.finishPrompt();
-    await tick();
+    await settle();
     crewmate.emit({
       type: "background_work_changed",
       count: 1,
       tasks: [{ id: "bybac1mss", description: "Run the long suite" }],
     });
-    hostNow += 12 * 60_000;
+    clock.now += 12 * 60_000;
 
     await supervisor.disposeAll();
     const bootCrewmate = fakeCrewmate();
@@ -104,8 +88,8 @@ describe("the durable inbox (design A)", () => {
       { now: hostClock, cardStore, inbox },
     );
     inbox.resetInFlight();
-    await fresh.watch.sweepInbox(hostNow);
-    await tick();
+    await fresh.watch.sweepInbox(clock.now);
+    await settle();
 
     expect(bootCrewmate.promptCalls).toEqual([
       expect.stringContaining(
@@ -113,7 +97,7 @@ describe("the durable inbox (design A)", () => {
       ),
     ]);
     bootCrewmate.finishPrompt();
-    await tick();
+    await settle();
     expect(inbox.allFor(taskId)).toEqual([]);
     await fresh.disposeAll();
   });
@@ -128,12 +112,12 @@ describe("the durable inbox (design A)", () => {
       title: "Suite",
       intent: intentOf("Start"),
     });
-    await tick();
+    await settle();
     crewmate.finishPrompt();
-    await tick();
+    await settle();
     // The client went on by itself once its background work ended.
     crewmate.emit({ type: "continuation_started" });
-    await tick();
+    await settle();
 
     await supervisor.disposeAll();
     const bootCrewmate = fakeCrewmate();
@@ -144,14 +128,14 @@ describe("the durable inbox (design A)", () => {
       { now: hostClock, cardStore, inbox },
     );
     inbox.resetInFlight();
-    await fresh.watch.sweepInbox(hostNow);
-    await tick();
+    await fresh.watch.sweepInbox(clock.now);
+    await settle();
 
     expect(bootCrewmate.promptCalls).toEqual([
       renderWake({ facts: { kind: "turn-resumed", stopped: "quit" } }),
     ]);
     bootCrewmate.finishPrompt();
-    await tick();
+    await settle();
     expect(inbox.allFor(taskId)).toEqual([]);
     await fresh.disposeAll();
   });
@@ -163,7 +147,7 @@ describe("the durable inbox (design A)", () => {
       title: "Publish",
       intent: intentOf("Dispatch the release workflow"),
     });
-    await tick();
+    await settle();
     // The brief's turn runs and never ends: the app closes under it.
     const brief = crewmate.promptCalls[0] ?? "";
     expect(brief).toContain("Dispatch the release workflow");
@@ -197,8 +181,8 @@ describe("the durable inbox (design A)", () => {
       // The boot: the quit left the brief in flight.
       expect(new InboxStore(db, { now: hostClock }).resetInFlight()).toBe(1);
       passGrace();
-      await fresh.watch.sweepInbox(hostNow);
-      await tick();
+      await fresh.watch.sweepInbox(clock.now);
+      await settle();
 
       // The same message again, opened by the note that it is a replay.
       expect(bootCrewmate.promptCalls).toEqual([`${RESTART_REPLAY_NOTE}\n\n${brief}`]);
@@ -214,7 +198,7 @@ describe("the durable inbox (design A)", () => {
     // The last replay's turn ends clean: the message is handled and leaves the lane.
     turnCrewmate.emit({ type: "turn_end", taskId });
     turnCrewmate.finishPrompt();
-    await tick();
+    await settle();
     expect(new InboxStore(db).allFor(taskId)).toEqual([]);
     expect(new InboxStore(db).inFlight(taskId)).toEqual([]);
     running.disposeAll();
@@ -227,15 +211,15 @@ describe("the durable inbox (design A)", () => {
       title: "Job",
       intent: intentOf("Start"),
     });
-    await tick();
+    await settle();
 
     (crewmate.steer as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("busy"));
     expect(await supervisor.steer.steerCrewmate(taskId, "make it blue")).toBe("recorded-retrying");
-    expect(inbox.pending(taskId, hostNow + 120000)).toHaveLength(1);
+    expect(inbox.pending(taskId, clock.now + 120000)).toHaveLength(1);
 
     // The tick sweep retries once the grace passes; the steer now lands.
     passGrace();
-    await supervisor.watch.sweepInbox(hostNow);
+    await supervisor.watch.sweepInbox(clock.now);
     expect(crewmate.steer).toHaveBeenCalledTimes(2);
     expect(crewmate.steer).toHaveBeenLastCalledWith(
       "make it blue",
@@ -246,7 +230,7 @@ describe("the durable inbox (design A)", () => {
     // Ack after handling: the row clears when the turn it landed in ends.
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
-    await tick();
+    await settle();
     expect(inbox.allFor(taskId)).toHaveLength(0);
   });
 
@@ -265,13 +249,13 @@ describe("the durable inbox (design A)", () => {
       title: "Job",
       intent: intentOf("Start"),
     });
-    await tick();
+    await settle();
 
     (crewmate.steer as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("always busy"));
     expect(await supervisor.steer.steerCrewmate(taskId, "urgent fix")).toBe("recorded-retrying");
     for (let round = 0; round < 3; round += 1) {
       passGrace();
-      await supervisor.watch.sweepInbox(hostNow);
+      await supervisor.watch.sweepInbox(clock.now);
     }
 
     const escalated = inbox.allFor(taskId);
@@ -284,14 +268,14 @@ describe("the durable inbox (design A)", () => {
         (event) => event.type === "firstmate_note" && event.text.includes("could not be delivered"),
       ),
     ).toBe(true);
-    await tick();
+    await settle();
     // The wake and the feed line are the escalation; no host card (P0, WI-3).
     expect(cards()).toEqual([]);
 
     // The budget is spent: no further delivery attempts.
     const attempts = (crewmate.steer as ReturnType<typeof vi.fn>).mock.calls.length;
     passGrace();
-    await supervisor.watch.sweepInbox(hostNow);
+    await supervisor.watch.sweepInbox(clock.now);
     expect((crewmate.steer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(attempts);
   });
 
@@ -302,18 +286,18 @@ describe("the durable inbox (design A)", () => {
       title: "Job",
       intent: intentOf("Start the work"),
     });
-    await tick();
+    await settle();
 
     // Pi resolves a provider-failed turn; the task stays steerable and the
     // brief - the task's first inbox row - is released for retry.
     crewmate.emit({ type: "turn_failed", taskId, error: "upstream 529" });
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
-    await tick();
+    await settle();
 
     passGrace();
-    await supervisor.watch.sweepInbox(hostNow);
-    await tick();
+    await supervisor.watch.sweepInbox(clock.now);
+    await settle();
     expect(crewmate.promptCalls).toHaveLength(2);
     expect(crewmate.promptCalls[0]).toContain("Start the work");
     expect(crewmate.promptCalls[1]).toBe(crewmate.promptCalls[0]);
@@ -323,7 +307,7 @@ describe("the durable inbox (design A)", () => {
     const crewmate = fakeCrewmate();
     const { supervisor, inbox, ops, events } = clockedSetup(crewmate);
     inbox.enqueue("ghost-task", "hello out there");
-    await supervisor.watch.sweepInbox(hostNow);
+    await supervisor.watch.sweepInbox(clock.now);
     expect(events).toContainEqual({
       type: "firstmate_note",
       text: "Guidance for a task that no longer exists was never delivered - the task is gone: hello out there",

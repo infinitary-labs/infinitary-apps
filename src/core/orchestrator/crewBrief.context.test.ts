@@ -18,6 +18,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
+import { gitRepo } from "../../../tests/helpers/crewHarnessGit";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { renderReferenceImport } from "../knowledge/context";
 import { KnowledgeService } from "../knowledge/knowledgeService";
@@ -36,20 +37,7 @@ fakeCrewTimersEachTest();
 
 describe("CrewSupervisor direction context", () => {
   it("serves active project directions with their authority once on the first turn", async () => {
-    const dir = scratchDir("infinitary-brief-notes-");
-    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-    execFileSync("git", [
-      "-C",
-      dir,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@localhost",
-      "commit",
-      "--allow-empty",
-      "-m",
-      "init",
-    ]);
+    const { dir } = gitRepo();
     try {
       const crewmate = fakeCrewmate();
       let knowledge: KnowledgeService | undefined;
@@ -88,20 +76,7 @@ describe("CrewSupervisor direction context", () => {
   });
 
   it("leads a local crewmate's brief with its project's knowledge and hands it the knowledge pair", async () => {
-    const dir = scratchDir("infinitary-brief-knowledge-");
-    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-    execFileSync("git", [
-      "-C",
-      dir,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@localhost",
-      "commit",
-      "--allow-empty",
-      "-m",
-      "init",
-    ]);
+    const { dir } = gitRepo();
     let knowledge: KnowledgeService | undefined;
     const crewmate = fakeCrewmate();
     const { supervisor, repos, specs } = setup(crewmate, {
@@ -158,20 +133,7 @@ describe("CrewSupervisor direction context", () => {
   });
 
   it("serves common saving guidance as its own paragraph after knowledge candidates", async () => {
-    const dir = scratchDir("infinitary-brief-references-");
-    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-    execFileSync("git", [
-      "-C",
-      dir,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@localhost",
-      "commit",
-      "--allow-empty",
-      "-m",
-      "init",
-    ]);
+    const { dir } = gitRepo();
     const crewmate = fakeCrewmate();
     const { supervisor, repos } = setup(crewmate, {
       knowledge: (registry) =>

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "restructure-test-audit",
+      "reason": "Internal: brings the file restructure's tests to the project's test rules (one owner per fact, pins derived from their source, shared setup, a project-row seed helper, measured budgets) and makes a crewmate's knowledge retire answer say 'Retired 1 entry' for one, which only a crewmate reads."
+    }
+  ]
+}

@@ -267,7 +267,7 @@ describe("the host's own operations, as HostOps runs them", () => {
         via: "task-card",
         decision: null,
       }),
-    ).toEqual({ ok: true, text: `${key} "Count presses" already waits in the backlog.` });
+    ).toEqual({ ok: true, text: expect.stringContaining("already waits in the backlog") });
     // The board's unqueue on it again is no refusal and moves nothing.
     expect(h.supervisor.hostOps.runTaskOp(taskId, "unqueue-task")).toBeUndefined();
     expect(h.tasks.get(taskId)?.backlogSince).toBe(since);

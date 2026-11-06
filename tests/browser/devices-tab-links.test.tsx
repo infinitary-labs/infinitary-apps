@@ -48,7 +48,7 @@ test("the link panel makes, copies, stops, joins and expires one link at a time"
   bridge.answer("inf:devices:sign-ins", []);
   bridge.answer("inf:devices:stop", { ok: true });
   let made = 0;
-  /** How long the next link lives; the home's own is thirty minutes. */
+  /** How long the next link lives from when the home makes it; the home's own is thirty minutes. */
   let lives = THIRTY_MINUTES;
   let refuseNext: string | null = null;
   bridge.answer("inf:devices:invite", (request: DeviceInviteRequest): DeviceInvite => {
@@ -214,10 +214,11 @@ test("the link panel makes, copies, stops, joins and expires one link at a time"
   // Section: a link that runs out reads as expired, and Make a new one makes
   // the same kind again.
   {
-    lives = 1500;
+    // A link whose thirty minutes ran out before the panel reads it: the
+    // panel compares its end with the clock as it opens, so no time passes.
+    lives = -THIRTY_MINUTES;
     await userEvent.click(devices.querySelector('[data-device-add="phone"]') as HTMLElement);
-    // The countdown ticks each second while a link is open.
-    const expired = await shown('[data-panel-state="expired"]', 5000);
+    const expired = await shown('[data-panel-state="expired"]');
     expect(expired.textContent).toContain("The link expired before any phone used it.");
     expect(expired.textContent).toContain("Make a new one when the phone is ready.");
     const before = bridge.requests("inf:devices:invite").length;

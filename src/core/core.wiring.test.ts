@@ -10,11 +10,12 @@ import { type MockProviderServer, startMockProvider } from "../../tests/e2e/mock
 import { latestContext } from "../../tests/e2e/providerRequest";
 import { fakeHost, quotaFixture, waitFor } from "../../tests/helpers/bootedCore";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
+import { interruptedJobNote } from "./bootRecovery";
 import { ForgeSignInStore } from "./forge/signIns";
 import { type Core, startCore } from "./index";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import { openDatabase } from "./storage/db";
-import { JobStore } from "./storage/jobStore";
+import { type InterruptedJob, JobStore } from "./storage/jobStore";
 import { FIRSTMATE_USAGE_TASK_ID, UsageStore } from "./storage/usageStore";
 import { seedTask } from "./tasks/seedTask";
 import { TaskService } from "./tasks/taskService";
@@ -210,13 +211,17 @@ describe("the app wiring's own answers, through the booted core", () => {
     const said = notes
       .map((line) => ({ text: line.text, taskKey: line.taskKey ?? null }))
       .sort((a, b) => a.text.localeCompare(b.text));
+    // The words are bootRecovery.test.ts's; this holds that the wiring says each
+    // stranded job once, under its task's title and on its task's record.
+    const titleOf = (id: string) => (id === "build-task" ? "Speed up the build" : undefined);
+    const note = (job: InterruptedJob) => interruptedJobNote(job, titleOf).text;
     expect(said).toEqual([
       {
-        text: `"Speed up the build"'s background job "${LONG_COMMAND.slice(0, 80)}" was running when the app quit unexpectedly. It may have kept running, even to the end.`,
+        text: note({ ownerId: "build-task", command: LONG_COMMAND, stoppedByQuit: false }),
         taskKey: key,
       },
       {
-        text: 'Your first mate\'s background job "pnpm dev" was stopped when the app quit.',
+        text: note({ ownerId: "firstmate", command: "pnpm dev", stoppedByQuit: true }),
         taskKey: null,
       },
     ]);

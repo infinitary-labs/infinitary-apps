@@ -75,23 +75,8 @@ describe("saved rows of wakes the host no longer queues", () => {
     );
   });
 
-  it("serves a review cap an older build saved with its findings as prose", () => {
-    expect(
-      drained({
-        v: 1,
-        facts: {
-          kind: "review-cap",
-          task: TASK,
-          rounds: 3,
-          cap: 2,
-          report: "[fm-op] crewmate 62 reported on review task b9299a73: verdict: findings F1",
-        },
-      }),
-    ).toBe(
-      `${RETIRED_COUNT_HOLD} [fm-op] crewmate 62 reported on review task b9299a73: verdict: findings F1`,
-    );
-  });
-
+  // A saved review cap with its findings as prose: wakes.test.ts's
+  // "drains queued review findings without reviving their retired cap".
   it("serves a saved review cap that carried neither", () => {
     expect(
       drained({

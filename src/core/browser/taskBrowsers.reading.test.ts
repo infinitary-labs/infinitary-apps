@@ -8,8 +8,9 @@ import {
   openPopup,
   PNG,
 } from "../../../tests/helpers/taskBrowserStandIn";
+import { NOTHING_CHANGED_LINE } from "./changes";
 import { TASK_BROWSER_COMMAND_MS } from "./crewmateCommands";
-import { type BrowserNode, REF_FROM_EARLIER_PAGE, REF_PATTERN } from "./outline";
+import { type BrowserNode, REF_FROM_EARLIER_PAGE, REF_PATTERN, refusedRefWords } from "./outline";
 import { TASK_BROWSER_IDLE_MS } from "./taskBrowsers";
 
 /**
@@ -255,7 +256,7 @@ describe("a task's own browser", () => {
     expect(changed.text).toContain('+ line 2: textbox "Name" [g1:e1]: "Sam"');
     expect(changed.text).not.toContain('heading "Sign up"');
     const unchanged = await browser.act({ action: "click", ref: "g1:e3" });
-    expect(unchanged.text).toContain("changed: nothing changed in the outline.");
+    expect(unchanged.text).toContain(NOTHING_CHANGED_LINE);
     expect(unchanged.text).not.toContain('combobox "Seat"');
     const read = await browser.inspect({});
     expect(read.text).toContain('heading "Sign up"');
@@ -642,8 +643,8 @@ describe("a task's own browser", () => {
     expect((await browser.navigate({ url: "http://localhost:5173/" })).text).toContain(
       'button "Send" [g2:e3]',
     );
-    expect((await browser.act({ action: "click", ref: "g1:e3" })).text).toContain(
-      "g1:e3 is from a browser this task had before, which has stopped.",
+    expect((await browser.act({ action: "click", ref: "g1:e3" })).text).toBe(
+      refusedRefWords("g1:e3", { kind: "earlier-browser" }),
     );
     // Another task's browser counts its own pages.
     const other = browsers.forTask("t2");

@@ -29,6 +29,7 @@ import { conversationRestartOnce, conversationRestartWake } from "./turnWakes";
 import {
   laneText,
   laneTurnText,
+  RESTART_REPLAY_NOTE,
   renderWake,
   replyWordsSpan,
   rowAttachments,
@@ -37,10 +38,6 @@ import {
   withAttachmentsKept,
   withGuidanceMark,
 } from "./wakes";
-
-/** How a row a quit or crash cut a turn on opens when it is served again. */
-const REPLAY_NOTE =
-  "Delivered again after a restart: the app closed - a quit or a crash - while your turn on the message below was running, so that turn may already have done part of it. Before you repeat a step, check what already took effect - your working copy and branch, a push, a pull request, a job or workflow you started, a card you showed - and carry on from there rather than doing it twice.";
 
 const TASK = { id: "479823ee", key: "INF-2696", title: "Restructure the wakes file" };
 const AT = 1_793_903_528_000;
@@ -449,7 +446,7 @@ describe("a crewmate lane's rows as one turn", () => {
         renderWake(restart),
         renderWake(resumed),
         renderWake(steer),
-        `${REPLAY_NOTE}\n\n${renderWake(cut)}`,
+        `${RESTART_REPLAY_NOTE}\n\n${renderWake(cut)}`,
       ].join("\n\n"),
     );
   });

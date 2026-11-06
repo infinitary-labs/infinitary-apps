@@ -28,6 +28,7 @@ import { bindTool } from "../../../session/tools";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { RepoRegistry } from "../../../workspace/repoRegistry";
+import { seedProject } from "../../../workspace/seedProject";
 import { API_CALLS_PER_TASK, API_RESPONSE_MAX_BYTES } from "../../api";
 import { GitHubForge } from "./githubForge";
 
@@ -489,13 +490,14 @@ async function fixture(
   cleanup.push(() => {
     db.close();
   });
-  db.prepare("INSERT INTO repos (id, path, name, added_at, origin) VALUES (?, ?, ?, ?, ?)").run(
-    "repo-1",
-    dir,
-    "meter",
-    1,
-    `https://${options.host ?? "github.com"}/octo/meter.git`,
-  );
+  seedProject(db, {
+    id: "repo-1",
+    name: "meter",
+    path: dir,
+    setupKind: "adopt",
+    origin: `https://${options.host ?? "github.com"}/octo/meter.git`,
+    addedAt: 1,
+  });
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, {
     id: "task-1",

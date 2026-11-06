@@ -9,11 +9,13 @@
  * record.
  */
 
+import { join } from "node:path";
 import type { HostChildSpawner } from "@core/host";
 import { describe, expect, it } from "vitest";
 import { fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedTask } from "../tasks/seedTask";
+import { seedProject } from "../workspace/seedProject";
 
 /** A program process for a plan that is refused before anything spawns. */
 const NEVER_SPAWNED: HostChildSpawner = {
@@ -32,7 +34,12 @@ function notes(events: { type: string; text?: string }[]): string[] {
 /** A supervisor with "meter", a project of the captain's that merges nothing. */
 async function withProject(extras: Parameters<typeof setup>[1] = {}) {
   const h = setup(fakeCrewmate(), extras);
-  const { repo } = await h.repos.setup({ kind: "init", name: "meter" });
+  const repo = seedProject(h.db, {
+    id: "meter",
+    name: "meter",
+    path: join(h.paths.fleetDir, "meter"),
+    setupKind: "init",
+  });
   return { ...h, repo };
 }
 
@@ -83,9 +90,8 @@ describe("new work", () => {
     await expect(queue({ afterTask: "NOPE-9" })).rejects.toThrow(
       'Unknown task "NOPE-9" in start_after. Use a task id from crew_status.',
     );
-    await expect(queue({ whenQuotaResets: "openai" })).rejects.toThrow(
-      'Unknown quota scope "openai" in start_after.',
-    );
+    // The refusal's wording is starts.classify.test.ts's; this case owns that it names the scope.
+    await expect(queue({ whenQuotaResets: "openai" })).rejects.toThrow('"openai"');
     await expect(queue({})).rejects.toThrow(
       "start_after needs after_task, when_quota_resets, or at_time.",
     );
@@ -178,11 +184,10 @@ describe("new work", () => {
       status: "running",
       parentId: parent.id,
     });
+    // The refusal's wording is intake.taskGraph.test.ts's; this case owns that it names the started child.
     expect(
       h.supervisor.intake.dropTask(parent.key, { reason: "changed course", confirm: true }),
-    ).toBe(
-      `Cannot drop ${parent.key} "Rework the meter": its child has started (${child.key} "Rewire the gauge"). Settle them first.`,
-    );
+    ).toContain(`${child.key} "Rewire the gauge"`);
     expect(h.tasks.get(parent.id)?.status).toBe("open");
 
     const planned = h.supervisor.intake.plan({
@@ -266,7 +271,7 @@ describe("new work", () => {
         repoId: personal.id,
         shape: { program: { script: "return 1;", bound: 1 } },
       }),
-    ).toThrow("A program runs its parts in a project");
+    ).toThrow("not the personal workspace");
     expect(
       plan(h, { program: { script: "return 1;", bound: 1 }, branch_from: "source01" }),
     ).toThrow(

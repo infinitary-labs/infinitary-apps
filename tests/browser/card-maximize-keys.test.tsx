@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { EDGE_KEY_STEP } from "../../src/renderer/src/app/stage/CardEdges";
 import { CARD_DRAG_MIN } from "../../src/renderer/src/cards/cardGeometry";
 import {
   MAXIMIZE_LABEL,
@@ -78,8 +79,11 @@ test("a card maximizes from the keyboard, keeps Tab round it and its pager, and 
   await expect.poll(() => rightEdge()).not.toBeNull();
   const chosen = Number(rightEdge()?.getAttribute("aria-valuenow"));
   (rightEdge() as HTMLElement).focus();
+  // The card is centred, so a step on one edge moves both and the width changes by two steps.
   await userEvent.keyboard("{ArrowLeft}");
-  await expect.poll(() => rightEdge()?.getAttribute("aria-valuenow")).toBe(String(chosen - 32));
+  await expect
+    .poll(() => rightEdge()?.getAttribute("aria-valuenow"))
+    .toBe(String(chosen - 2 * EDGE_KEY_STEP));
   await userEvent.keyboard("{Home}");
   await expect.poll(() => rightEdge()?.getAttribute("aria-valuenow")).toBe(String(CARD_DRAG_MIN));
   await userEvent.keyboard("{Enter}");

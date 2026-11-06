@@ -11,6 +11,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { HOME } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
+import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { levelDefaultReasoning, type WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -43,7 +44,7 @@ fakeCrewTimersEachTest();
 describe("CrewSupervisor", () => {
   // INF-1381: Dynamic routing off must still bind a signed-in model/account,
   // or explain why none serves, before a coding session can ask Pi for a key.
-  it.each(["openai-codex", "anthropic-claude"])(
+  it.each(["openai-codex", CLAUDE_PROVIDER_ID])(
     "starts routing-off work on an explicit %s model and isolated account",
     async (provider) => {
       const model = { provider, id: provider === "openai-codex" ? "gpt-5.5" : "claude-sonnet-5-5" };
@@ -205,7 +206,7 @@ describe("CrewSupervisor", () => {
         reselectForResume: () => ({ changed: false }),
         labelOf: () => "Claude",
       },
-      routedModel: { provider: "anthropic-claude", id: "claude-opus" },
+      routedModel: { provider: CLAUDE_PROVIDER_ID, id: "claude-opus" },
       noteCutOff,
     });
     const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
@@ -245,7 +246,7 @@ describe("CrewSupervisor", () => {
   });
 
   it("hands spawn_crewmate the model that took new work the captain named one for (FI3-444)", async () => {
-    const fable = { provider: "anthropic-claude", id: "claude-fable-5-1" };
+    const fable = { provider: CLAUDE_PROVIDER_ID, id: "claude-fable-5-1" };
     const spawn = async (crewmate: FakeCrewmate, named?: string) => {
       const { supervisor, tasks } = setup(crewmate, { routedModel: fable });
       const handle = await supervisor.intake.commission({
@@ -261,9 +262,9 @@ describe("CrewSupervisor", () => {
     const served = await spawn(fakeCrewmate({ model: fable }), "claude-fable-5-1");
     expect(served.handle.model).toEqual({
       named: "claude-fable-5-1",
-      took: "anthropic-claude/claude-fable-5-1",
+      took: `${CLAUDE_PROVIDER_ID}/claude-fable-5-1`,
     });
-    expect(served.model).toBe("anthropic-claude/claude-fable-5-1");
+    expect(served.model).toBe(`${CLAUDE_PROVIDER_ID}/claude-fable-5-1`);
     // The session runs on another model than the one named: that one is what took it.
     const fellBack = await spawn(fakeCrewmate(), "claude-fable-5-1");
     expect(fellBack.handle.model).toEqual({ named: "claude-fable-5-1", took: "fm-mock/mock-1" });
@@ -331,7 +332,7 @@ describe("CrewSupervisor", () => {
   // with no transcript to restore a model from; the reopen asks for the
   // model and effort its routing chose, here or on a computer that runs work.
   describe("a reopen asks for the task's own model and effort (INF-1272)", () => {
-    const fable = { provider: "anthropic-claude", id: "claude-fable-5-1" };
+    const fable = { provider: CLAUDE_PROVIDER_ID, id: "claude-fable-5-1" };
 
     /** The next launch: a new supervisor over the same record and routing ledger. */
     function relaunch(h: ReturnType<typeof setup>, boot: FakeCrewmate, machines?: CrewMachines) {
@@ -382,14 +383,14 @@ describe("CrewSupervisor", () => {
         thinkingLevel: "xhigh",
       });
       boot.emit({ type: "model_served", model: fable });
-      expect(h.tasks.get(taskId)?.model).toBe("anthropic-claude/claude-fable-5-1");
+      expect(h.tasks.get(taskId)?.model).toBe(`${CLAUDE_PROVIDER_ID}/claude-fable-5-1`);
       expect(moves(h, taskId)).toEqual([]);
       await fresh.disposeAll();
     });
 
     it("reopens a moved task on the model it moved to, and a fallback on the model it asked for", async () => {
-      const opus55 = { provider: "anthropic-claude", id: "claude-opus-5-5" };
-      const opus48 = { provider: "anthropic-claude", id: "claude-opus-4-8" };
+      const opus55 = { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-5-5" };
+      const opus48 = { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-4-8" };
       const codex = { provider: "openai-codex", id: "gpt-6.1-sol" };
       const crewmate = fakeCrewmate({ model: opus55 });
       const h = setup(crewmate, {
@@ -409,7 +410,7 @@ describe("CrewSupervisor", () => {
       // Claude Code moved the session after a safeguard stopped a reply: a
       // fallback, never a routing choice.
       crewmate.emit({ type: "model_served", model: opus48, fallback: { from: opus55 } });
-      expect(h.tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-4-8");
+      expect(h.tasks.get(taskId)?.model).toBe(`${CLAUDE_PROVIDER_ID}/claude-opus-4-8`);
       await h.supervisor.disposeAll();
 
       const boot = fakeCrewmate({ model: opus55 });
@@ -442,7 +443,7 @@ describe("CrewSupervisor", () => {
     });
 
     it("tells the first mate once when a task answers on a model it did not ask for", async () => {
-      const opus = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+      const opus = { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-5-5" };
       const crewmate = fakeCrewmate({ model: fable });
       const h = setup(crewmate, {
         routeResult: { choice: fable, bucket: "premium", rule: "R0" },
@@ -481,8 +482,8 @@ describe("CrewSupervisor", () => {
     });
 
     it("names the cause of a fallback, and says when the routing chose the model", async () => {
-      const opus48 = { provider: "anthropic-claude", id: "claude-opus-4-8" };
-      const opus55 = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+      const opus48 = { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-4-8" };
+      const opus55 = { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-5-5" };
       const crewmate = fakeCrewmate({ model: opus55 });
       const h = setup(crewmate, { routedModel: opus55 });
       const { taskId } = await h.supervisor.intake.commission({
@@ -948,7 +949,7 @@ describe("CrewSupervisor", () => {
       file: `/tmp/records/${earlierToken}.jsonl`,
       computer: HOME.the,
       device_id: "local",
-      provider: "anthropic-claude",
+      provider: CLAUDE_PROVIDER_ID,
       model: "claude-fable-5",
       account_id: null,
       began: "start",
@@ -1132,7 +1133,7 @@ describe("CrewSupervisor", () => {
         reselectForResume: () => ({ changed: false }),
         labelOf: () => "Claude",
       },
-      routedModel: { provider: "anthropic-claude", id: "claude-opus-5-5" },
+      routedModel: { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-5-5" },
       // The account binds to Claude, and this supervisor has only Pi's factory.
       bind: async (accountId) => ({ backend: "claude", accountId: accountId ?? "" }),
     });

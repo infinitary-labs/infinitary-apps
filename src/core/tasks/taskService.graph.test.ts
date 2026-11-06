@@ -13,6 +13,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
 import { RepoRegistry } from "../workspace/repoRegistry";
+import { seedProject } from "../workspace/seedProject";
 import { seedTask } from "./seedTask";
 import { TaskGraphRefusal } from "./taskGraph";
 import { queryTasks } from "./taskQuery";
@@ -27,9 +28,13 @@ import { TaskService } from "./taskService";
 
 function setup() {
   const db = openInMemoryDatabase();
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', NULL, 'direct-pr', 0)",
-  ).run("r1", "/fleet/nimbus-api", "nimbus-api", 1);
+  seedProject(db, {
+    id: "r1",
+    name: "nimbus-api",
+    path: "/fleet/nimbus-api",
+    delivery: "direct-pr",
+    addedAt: 1,
+  });
   let now = 1_000;
   const tasks = new TaskService({
     db,
@@ -37,7 +42,6 @@ function setup() {
     now: () => now,
     strict: true,
   });
-  tasks.projects.ensureForRepo({ id: "r1", name: "nimbus-api" });
   const work = (id: string, extra: Partial<Parameters<TaskService["create"]>[0]> = {}) =>
     tasks.create({ id, title: id.toUpperCase(), prompt: "p", repoId: null, ...extra });
   return { db, tasks, work, tick: (ms = 1) => (now += ms) };
@@ -202,18 +206,23 @@ describe("the task graph (task-system P2)", () => {
     // to INF-61's F1).
     it("a moved task and the parts that followed its project take the new repository; a part bound to its own keeps it", () => {
       const { db, tasks, work } = setup();
-      const repo = db.prepare(
-        "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-      );
-      repo.run(
-        "r2",
-        "/fleet/infinitary",
-        "infinitary",
-        2,
-        "https://github.com/infinitary-labs/infinitary",
-      );
-      repo.run("r3", "/fleet/website", "website", 3, "https://github.com/infinitary-labs/website");
-      tasks.projects.ensureForRepo({ id: "r2", name: "infinitary" }, "INF");
+      seedProject(db, {
+        id: "r2",
+        name: "infinitary",
+        path: "/fleet/infinitary",
+        origin: "https://github.com/infinitary-labs/infinitary",
+        delivery: "direct-pr",
+        addedAt: 2,
+        key: "INF",
+      });
+      seedProject(db, {
+        id: "r3",
+        name: "website",
+        path: "/fleet/website",
+        origin: "https://github.com/infinitary-labs/website",
+        delivery: "direct-pr",
+        addedAt: 3,
+      });
       work("step", { repoId: "r1" });
       work("part", { parentId: "step" });
       work("own", { parentId: "step", repoId: "r3" });
@@ -271,12 +280,23 @@ describe("the task graph (task-system P2)", () => {
     // its pull request in infinitary.
     it("a task moved through Scratch into another project takes that project's repository, and the parts that followed it", () => {
       const { db, tasks, work } = setup();
-      const repo = db.prepare(
-        "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
-      );
-      repo.run("r2", "/fleet/notes", "notes", 2, "https://github.com/infinitary-labs/notes");
-      repo.run("r3", "/fleet/website", "website", 3, "https://github.com/infinitary-labs/website");
-      tasks.projects.ensureForRepo({ id: "r2", name: "notes" }, "NOTE");
+      seedProject(db, {
+        id: "r2",
+        name: "notes",
+        path: "/fleet/notes",
+        origin: "https://github.com/infinitary-labs/notes",
+        delivery: "direct-pr",
+        addedAt: 2,
+        key: "NOTE",
+      });
+      seedProject(db, {
+        id: "r3",
+        name: "website",
+        path: "/fleet/website",
+        origin: "https://github.com/infinitary-labs/website",
+        delivery: "direct-pr",
+        addedAt: 3,
+      });
       work("step", { repoId: "r1" });
       work("part", { parentId: "step" });
       work("own", { parentId: "step", repoId: "r3" });
@@ -302,22 +322,24 @@ describe("the task graph (task-system P2)", () => {
     // INF-61's F3: the captain's answer was to refuse, as a plan is refused.
     it("refuses to move a task asked to ship as a pull request into a project whose repository has no remote", () => {
       const db = openInMemoryDatabase();
-      const repo = db.prepare(
-        "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, ?, ?, 0)",
-      );
-      repo.run(
-        "r1",
-        "/fleet/infinitary",
-        "infinitary",
-        1,
-        "clone",
-        "https://github.com/infinitary-labs/infinitary.git",
-        "direct-pr",
-      );
-      repo.run("r2", "/fleet/notes", "notes", 2, "init", null, "local-only");
+      seedProject(db, {
+        id: "r1",
+        name: "infinitary",
+        path: "/fleet/infinitary",
+        origin: "https://github.com/infinitary-labs/infinitary.git",
+        delivery: "direct-pr",
+        addedAt: 1,
+        key: "INF",
+      });
+      seedProject(db, {
+        id: "r2",
+        name: "notes",
+        path: "/fleet/notes",
+        setupKind: "init",
+        addedAt: 2,
+        key: "NOTE",
+      });
       const tasks = new TaskService({ db, repos: new RepoRegistry(db, "/fleet"), strict: true });
-      tasks.projects.ensureForRepo({ id: "r1", name: "infinitary" }, "INF");
-      tasks.projects.ensureForRepo({ id: "r2", name: "notes" }, "NOTE");
       tasks.create({ id: "site", title: "Site", prompt: "p", repoId: "r1" });
       tasks.create({
         id: "ship",

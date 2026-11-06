@@ -7,116 +7,35 @@
  */
 import { writeFileSync } from "node:fs";
 import { type Card, cardPresentation, cardTakesReplies } from "@shared/cards";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   askedOn,
   endTurn,
-  type FakeCrewmate,
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
   type SetupExtras,
   served,
-  setup,
 } from "../../../tests/helpers/crewHarness";
+import {
+  failTurn,
+  idleLadderHarness,
+  idleWakes,
+  minutes,
+  settle,
+  wakesThroughInbox,
+} from "../../../tests/helpers/idleLadderHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { initOverflowDir } from "../overflow";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import { TaskProtocol } from "../tasks/taskProtocol";
 import { TIMELINE_CAP } from "../tasks/timelineCompaction";
 import { IDLE_ANSWER_NUDGE_TEXT, IDLE_NUDGE_TEXT, idleNoteNudgeText } from "./idleWakes";
-import type { SpawnIntent } from "./intentBrief";
 
 fakeCrewTimersEachTest();
 
 describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
-  // These run on the host's one clock (P5, `ticker.ts`): the test moves
-  // `hostNow` itself, so nothing here fakes a timer or `Date`.
-  let hostNow = 0;
-  const hostClock = () => hostNow;
-  beforeEach(() => {
-    vi.useRealTimers();
-    hostNow = Date.now();
-  });
-  /** One turn of the event loop: the supervisor's promise chains settle; no clock moves. */
-  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
-  /** The harness on the host's clock, its card stack read as the broadcast carries it. */
-  const clockedSetup = (crewmate: FakeCrewmate, extras: SetupExtras = {}) => {
-    const harness = setup(crewmate, { now: hostClock, ...extras });
-    return { ...harness, cards: () => harness.supervisor.cards.snapshot() };
-  };
-
-  const minutes = (n: number) => n * 60_000;
-  const idleWakes = (ops: string[]) => ops.filter((line) => line.includes("has been idle for"));
-
-  async function failTurn(crewmate: FakeCrewmate, taskId: string, error = "upstream 529") {
-    crewmate.emit({ type: "turn_failed", taskId, error });
-    crewmate.emit({ type: "turn_end", taskId });
-    crewmate.finishPrompt();
-    await tick();
-  }
-
-  /**
-   * The real agent's notifyOp: the inbox's wake path, which holds a wake
-   * that names a `once` to once. `ops` keeps every call, served, whether
-   * or not the inbox queued it - so a doubled wake is still seen. A live
-   * Firstmate takes each wake it is sent in its next turn (the drain hands
-   * it over and the clean turn acks it); a paused seat takes none, so its
-   * wakes wait on the lane.
-   */
-  function wakesThroughInbox<
-    H extends Pick<ReturnType<typeof setup>, "supervisor" | "inbox" | "ops">,
-  >(harness: H, firstmate: "live" | "paused" = "live"): H {
-    harness.supervisor.setFirstmateHooks({
-      notifyOp: (wake, origin, ref) => {
-        const id = harness.inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref);
-        harness.ops.push(served(wake));
-        if (id !== null && firstmate === "live") {
-          harness.inbox.markDelivered([id]);
-          harness.inbox.ack([id]);
-        }
-      },
-      retryConverse: vi.fn(),
-    });
-    return harness;
-  }
-
-  /** A Pi crewmate that reported and stopped: nobody's turn, clock running. */
-  async function stopped(
-    extras: SetupExtras = {},
-    crewmate = fakeCrewmate(),
-    intent: SpawnIntent = intentOf("Start"),
-  ) {
-    const harness = wakesThroughInbox(clockedSetup(crewmate, extras));
-    const { taskId } = await harness.supervisor.intake.commission({ title: "Job", intent });
-    await tick();
-    await endTurn(crewmate, taskId, "Done with step one.");
-    // A job running at that end earns its one check-back ask (INF-1244),
-    // which the crewmate answers without naming one.
-    if (harness.tasks.get(taskId)?.activity === "running") {
-      await endTurn(crewmate, taskId, "Not waiting on it.");
-    }
-    const idleSince = harness.tasks.get(taskId)?.idleSince ?? 0;
-    /** The tick at `ms` idle minutes past the clock's start. */
-    const at = async (ms: number) => {
-      hostNow = idleSince + ms;
-      harness.supervisor.watch.reconcileIdle(hostNow);
-      await tick();
-    };
-    return { ...harness, crewmate, taskId, idleSince, at };
-  }
-
-  /** Move the clock to when the lane's first row is due, and sweep it. */
-  async function sweepWhenDue(harness: ReturnType<typeof setup>, taskId: string) {
-    const due = Math.max(
-      hostNow,
-      ...harness.inbox.allFor(taskId).map((row) => row.nextAttemptAt ?? 0),
-    );
-    hostNow = due;
-    harness.supervisor.watch.reconcileIdle(hostNow);
-    await harness.supervisor.watch.sweepInbox(hostNow);
-    await tick();
-  }
+  const { clock, hostClock, clockedSetup, stopped, sweepWhenDue } = idleLadderHarness();
 
   it("still says the last plan stands after compaction folds the note that carried it (INF-866 K2)", async () => {
     const h = clockedSetup(fakeCrewmate());
@@ -124,7 +43,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       title: "Long check",
       intent: intentOf("Check every fixture library"),
     });
-    await tick();
+    await settle();
     const progress = h.specs[0]?.onProgress;
     if (!progress) throw new Error("Missing production progress callback");
     progress("Starting the check.", [
@@ -147,7 +66,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       title: "Progress recovery",
       intent: intentOf("Check fixture libraries, prepare image, test"),
     });
-    await tick();
+    await settle();
     const protocol = new TaskProtocol({
       tasks: h.tasks,
       repos: h.repos,
@@ -166,7 +85,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(progress("Briefing before a list exists.")).toBe("Noted on your task's timeline.");
     expect(protocol.detail(taskId).plan).toBeNull();
     progress("Starting the library check.", plan);
-    hostNow += 11_000;
+    clock.now += 11_000;
     const before = h.tasks.timeline(taskId).length;
     // INF-484 move 5: a note that omits the list is written, and the last list stands.
     const kept = progress("The library check completed; preparing the test image.");
@@ -233,10 +152,10 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
               { id: "hold", label: "Keep waiting" },
             ],
           });
-          await tick();
+          await settle();
         }
         await h.supervisor.steer.steerCrewmate(h.taskId, "Report only the current state.");
-        await tick();
+        await settle();
         const before = h.ops.length;
         h.specs[0]?.onReport?.("The current owner still has the next move.", undefined, {
           recoveryWays: [],
@@ -262,7 +181,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       initOverflowDir(scratchDir("infinitary-recovery-wake-"));
       const h = await stopped();
       await h.supervisor.steer.steerCrewmate(h.taskId, "Report the observations and alternatives.");
-      await tick();
+      await settle();
       const observation =
         "The host fix is merged, but the running app still lacks it; the branch can move without an alpha. ".repeat(
           8,
@@ -302,7 +221,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         h.taskId,
         "Report the release wait and cheapest alternative.",
       );
-      await tick();
+      await settle();
       h.specs[0]?.onReport?.("The running app still lacks the host fix.", undefined, {
         checkBack: { minutes: 15, waitingFor: "the installed alpha" },
         workWait: {
@@ -328,7 +247,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         h.taskId,
         "Read-only: find ways around this host record; report, no card, then stop.",
       );
-      await tick();
+      await settle();
       h.specs[0]?.onReport?.(
         "The existing branch_from capability can move this work today.",
         undefined,
@@ -365,7 +284,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         h.taskId,
         "Read-only: report ways around the failing checks.",
       );
-      await tick();
+      await settle();
       // INF-1688 retired the repair limit; a same-major work computer on an older build still names it.
       const way = {
         action: "Push one more repair",
@@ -399,21 +318,21 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
           { verdict: "Let the crewmate finish step one." },
           "firstmate",
         );
-        hostNow += 1;
+        clock.now += 1;
         await h.supervisor.steer.steerCrewmate(h.taskId, "Name the wait.");
-        await tick();
+        await settle();
         h.specs[0]?.onReport?.("No release owner exists.", undefined, {
           workWait: { observation: "No alpha is being cut", cheapestWay: "Take over the branch" },
         });
         await endTurn(h.crewmate, h.taskId);
-        return { ...h, base: hostNow - h.idleSince };
+        return { ...h, base: clock.now - h.idleSince };
       }
       const backstop = (h: Awaited<ReturnType<typeof waited>>) =>
         h.cards().find((card) => card.id === `card-stall-${h.taskId}`);
 
       it("names the same wait, the attempts recorded since it and the captain's ways out", async () => {
         const h = await waited();
-        hostNow += 1;
+        clock.now += 1;
         h.tasks.updateFields(
           h.taskId,
           { verdict: "Started the takeover check; the wait did not move." },
@@ -452,9 +371,9 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         await h.at(h.base + minutes(10));
         await endTurn(h.crewmate, h.taskId);
         await h.at(h.base + minutes(20));
-        hostNow += 1;
+        clock.now += 1;
         await h.supervisor.steer.steerCrewmate(h.taskId, "Read the owner again.");
-        await tick();
+        await settle();
         h.specs[0]?.onReport?.("The takeover started on the branch.");
         await endTurn(h.crewmate, h.taskId);
         // Where the old episode would have raised its card, the new one has
@@ -478,7 +397,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       };
       const report = async () => {
         await h.supervisor.steer.steerCrewmate(h.taskId, "Check the named owner once.");
-        await tick();
+        await settle();
         h.specs[0]?.onReport?.("Checked the takeover owner.", undefined, {
           workWait: wait,
           checkBack: { minutes: 15, waitingFor: "the takeover to start" },
@@ -508,11 +427,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         });
         await endTurn(h.crewmate, h.taskId);
       };
-      hostNow += 1;
+      clock.now += 1;
       await h.supervisor.steer.steerCrewmate(h.taskId, "Check the release owner.");
-      await tick();
+      await settle();
       await lookLater();
-      const base = hostNow - h.idleSince;
+      const base = clock.now - h.idleSince;
       const timerEnds: number[] = [];
       // Every turn the crewmate is given, it answers with one more timer and
       // no job, for two hours of the host's clock.
@@ -520,8 +439,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         const prompts = h.crewmate.promptCalls.length;
         const timer = h.tasks.get(h.taskId)?.gate;
         await h.at(base + minutes(step));
-        await h.supervisor.watch.sweepGates(hostNow);
-        await tick();
+        await h.supervisor.watch.sweepGates(clock.now);
+        await settle();
         if (timer?.kind === "at-time" && h.tasks.get(h.taskId)?.gate === null) timerEnds.push(step);
         if (h.crewmate.promptCalls.length > prompts) await lookLater();
       }
@@ -547,7 +466,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         h.taskId,
         "Look at the release again in half an hour.",
       );
-      await tick();
+      await settle();
       const receipt = h.specs[0]?.onReport?.("The release is not out yet.", undefined, {
         checkBack: { minutes: 30, waitingFor: "the release to publish" },
       });
@@ -556,7 +475,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // The crewmate starts the sleep after its report, before its turn ends.
       sleeping = true;
       await endTurn(h.crewmate, h.taskId);
-      const reportedAt = hostNow;
+      const reportedAt = clock.now;
       expect(h.ops.some((op) => op.includes('"kind":"wait-without-owner"'))).toBe(false);
       expect(h.sorts.at(-1)?.rule).not.toBe("stopped");
       expect(h.tasks.get(h.taskId)?.gate).toEqual({
@@ -566,7 +485,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
       // A second check-back while the sleep runs keeps today's reply.
       await h.supervisor.steer.steerCrewmate(h.taskId, "Any change?");
-      await tick();
+      await settle();
       expect(
         h.specs[0]?.onReport?.("Still waiting.", undefined, {
           checkBack: { minutes: 20, waitingFor: "the release to publish" },
@@ -584,7 +503,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       };
       const report = async (observation: string) => {
         await h.supervisor.steer.steerCrewmate(h.taskId, "Check the named owner once.");
-        await tick();
+        await settle();
         h.specs[0]?.onReport?.("Checked the takeover owner.", undefined, {
           workWait: { ...wait, observation },
         });
@@ -717,7 +636,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(idleWakes(ops)).toHaveLength(1);
     // The Firstmate asks for an interrupt at 40 minutes: an action on the
     // task, read from its timeline, so the first wake was not ignored.
-    hostNow = hostNow + minutes(20);
+    clock.now = clock.now + minutes(20);
     await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     await at(minutes(50));
     expect(idleWakes(ops)).toHaveLength(1);
@@ -733,11 +652,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(cards().some((card) => card.id === `card-stall-${taskId}`)).toBe(true);
 
     await supervisor.steer.steerCrewmate(taskId, "carry on with step two");
-    await tick();
+    await settle();
     expect(cards().some((card) => card.id === `card-stall-${taskId}`)).toBe(false);
     expect(tasks.get(taskId)).toMatchObject({ idleSince: null, recoveryRung: 0, recoveryCount: 0 });
     // Step two takes five minutes.
-    hostNow = idleSince + minutes(85);
+    clock.now = idleSince + minutes(85);
     await endTurn(crewmate, taskId, "Step two done.");
     // A fresh clock, from this idle boundary.
     expect(tasks.get(taskId)?.idleSince).toBe(idleSince + minutes(85));
@@ -750,7 +669,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await endTurn(first.crewmate, first.taskId);
     for (const step of [20, 50, 80]) await first.at(minutes(step));
     first.supervisor.cardActions.act(`card-stall-${first.taskId}`, "nudge");
-    await tick();
+    await settle();
     expect(first.crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
     const steered = first.tasks
       .timeline(first.taskId)
@@ -769,7 +688,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // alert like the captain's close, steering nobody and ending nothing.
     const prompts = second.crewmate.promptCalls.length;
     second.supervisor.cardActions.act(`card-stall-${second.taskId}`, "keep-waiting");
-    await tick();
+    await settle();
     expect(second.cards()).toEqual([]);
     expect(second.crewmate.promptCalls).toHaveLength(prompts);
     expect(second.tasks.get(second.taskId)).toMatchObject({ status: "active", recoveryRung: 3 });
@@ -804,7 +723,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     // The task moves before the first mate answers: the card stays up.
     await supervisor.steer.steerCrewmate(taskId, "carry on with step two");
-    await tick();
+    await settle();
     expect(cards().some((card) => card.id === stall)).toBe(true);
     await endTurn(crewmate, taskId, "Step two done.");
     // The first mate's closing words are its line, naming no message: their
@@ -814,7 +733,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       supervisor.cards.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,
     ).toBe("firstmate");
     await supervisor.steer.steerCrewmate(taskId, "and step three");
-    await tick();
+    await settle();
     expect(cards().some((card) => card.id === stall)).toBe(true);
     await endTurn(crewmate, taskId, "Step three done.");
     // Its answer names their message, in a reply on the app's own card.
@@ -837,7 +756,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     // Answered, the next move takes it down as before.
     await supervisor.steer.steerCrewmate(taskId, "and step four");
-    await tick();
+    await settle();
     expect(cards().some((card) => card.id === stall)).toBe(false);
   });
 
@@ -847,7 +766,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await endTurn(first.crewmate, first.taskId);
     for (const step of [20, 50, 80]) await first.at(minutes(step));
     first.supervisor.cardActions.act(`card-stall-${first.taskId}`, "discard");
-    await tick();
+    await settle();
     expect(first.tasks.get(first.taskId)).toMatchObject({ closedReason: "discarded" });
 
     const second = await stopped();
@@ -855,7 +774,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await endTurn(second.crewmate, second.taskId);
     for (const step of [20, 50, 80]) await second.at(minutes(step));
     second.supervisor.close(`card-stall-${second.taskId}`);
-    await tick();
+    await settle();
     const opsBefore = second.ops.length;
     await second.at(minutes(400));
     // The keep: no more wakes or cards this episode, the context line stays.
@@ -911,14 +830,14 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         name: "a young background job",
         extras: {
           hasRunningJobs: () => true,
-          oldestRunningJob: () => ({ jobId: "j1", command: "pnpm test", startedAt: hostNow }),
+          oldestRunningJob: () => ({ jobId: "j1", command: "pnpm test", startedAt: clock.now }),
         },
       },
       {
         name: "guidance waiting out its backoff",
         arrange: async ({ supervisor, crewmate, taskId }) => {
           await supervisor.steer.steerCrewmate(taskId, "try the other route");
-          await tick();
+          await settle();
           await failTurn(crewmate, taskId);
         },
       },
@@ -928,7 +847,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
           tasks.delivery.setPendingSettle(taskId, {
             mode: "land",
             actor: "captain",
-            requestedAt: hostNow,
+            requestedAt: clock.now,
             proceedWithOpen: false,
           }),
       },
@@ -936,7 +855,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     for (const witness of witnesses) {
       const harness = await stopped(witness.extras);
       await witness.arrange?.(harness);
-      await tick();
+      await settle();
       const prompts = harness.crewmate.promptCalls.length;
       await harness.at(minutes(200));
       expect(harness.crewmate.promptCalls, witness.name).toHaveLength(prompts);
@@ -970,7 +889,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   it("names the note up on the task at every rung, never claiming no card is up (FI3-438)", async () => {
     const { supervisor, crewmate, specs, ops, ledgerFacts, taskId, at, cards } = await stopped();
     specs[0]?.onCard?.({ title: "Released 0.1.30", body: "<p>0.1.30 is out.</p>", actions: [] });
-    await tick();
+    await settle();
     const outcome = cards().find((card) => card.title === "Released 0.1.30") as Card;
     const note = { id: outcome.id, title: outcome.title };
 
@@ -988,7 +907,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // The stall card's Nudge is the same nudge, naming the same note.
     for (const step of [50, 80]) await at(minutes(step));
     supervisor.cardActions.act(`card-stall-${taskId}`, "nudge");
-    await tick();
+    await settle();
     expect(crewmate.promptCalls.at(-1)).toBe(idleNoteNudgeText(note));
   });
 

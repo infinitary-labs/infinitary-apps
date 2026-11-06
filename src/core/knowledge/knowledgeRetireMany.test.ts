@@ -131,7 +131,7 @@ describe("retiring an approved list", () => {
     expect(f.service.get(CAPTAIN, review).summary.retired).toBe(false);
   });
 
-  it("narrows to the ids asked, keeps the exceptions and lists what it left alone", async () => {
+  it("narrows to the ids asked, keeps the exceptions, lists what it left alone and names a single entry in the singular", async () => {
     const f = await fixture();
     const { article, servers, review, claim } = f.ids;
     f.approvals.set("INF-9", f.card("INF-9", "remove", [article, servers, review, claim]));
@@ -149,7 +149,7 @@ describe("retiring an approved list", () => {
       reason: "Approved.",
     });
     expect(outcome).toEqual({
-      text: `Retired 1 entries approved on INF-9: ${article}. Their history and evidence stay readable. Left alone: ${claim} (already retired).`,
+      text: `Retired 1 entry approved on INF-9: ${article}. Its history and evidence stay readable. Left alone: ${claim} (already retired).`,
       committed: true,
       ids: [article],
     });
@@ -170,7 +170,7 @@ describe("retiring an approved list", () => {
       reason: "Approved.",
     });
     expect(outcome.text).toBe(
-      `Retired 1 entries approved on INF-9: ${article}. Their history and evidence stay readable. Left alone: f-gone00 (not readable).`,
+      `Retired 1 entry approved on INF-9: ${article}. Its history and evidence stay readable. Left alone: f-gone00 (not readable).`,
     );
   });
 

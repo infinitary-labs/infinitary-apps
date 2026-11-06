@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { openInMemoryDatabase } from "../storage/db";
+import { seedProject } from "../workspace/seedProject";
 import { exportTaskRecords, parseTaskExport, TASK_EXPORT_FORMAT } from "./taskExport";
 import { TaskService } from "./taskService";
 
@@ -14,9 +15,14 @@ import { TaskService } from "./taskService";
 
 function populated() {
   const db = openInMemoryDatabase();
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', NULL, 'direct-pr', 1)",
-  ).run("r1", "/fleet/nimbus-api", "nimbus-api", 1);
+  seedProject(db, {
+    id: "r1",
+    name: "nimbus-api",
+    path: "/fleet/nimbus-api",
+    delivery: "direct-pr",
+    autonomy: true,
+    addedAt: 1,
+  });
   let now = 1_000;
   const tasks = new TaskService({
     db,
@@ -27,7 +33,6 @@ function populated() {
   const tick = () => {
     now += 7;
   };
-  tasks.projects.ensureForRepo({ id: "r1", name: "nimbus-api" });
   tasks.create({
     id: "a",
     title: "Ship the meter",
@@ -234,15 +239,6 @@ describe("the task export (task-system P5)", () => {
       /project key NIA belongs to "proj-other"/,
     );
     expect(target.list()).toEqual([]);
-
-    // A dangling reference is a refusal too.
-    const orphan = {
-      ...bundle,
-      events: [{ ...bundle.events[0], taskId: "ghost" }],
-    } as typeof bundle;
-    const clean = new TaskService({ db: openInMemoryDatabase(), strict: true });
-    expect(() => clean.archive.importRecords(orphan)).toThrow(/unknown task "ghost"/);
-    expect(clean.list()).toEqual([]);
   });
 
   // Pinned before the task service splits into its owners (INF-2625's plan,
@@ -265,6 +261,11 @@ describe("the task export (task-system P5)", () => {
         "a task under an unknown parent",
         { ...bundle, tasks: [{ ...first, parentId: "ghost" }, ...bundle.tasks.slice(1)] },
         new RegExp(`task ${first.key} names an unknown parent "ghost"`),
+      ],
+      [
+        "an event on an unknown task",
+        { ...bundle, events: [{ ...event, taskId: "ghost" }] },
+        /an event names an unknown task "ghost"/,
       ],
       [
         "an event about an unknown task",
@@ -365,15 +366,12 @@ describe("the task export (task-system P5)", () => {
 
     // A database whose own history moves every reloaded event to a new id.
     const db = openInMemoryDatabase();
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES ('r9', '/fleet/other', 'other', 1, 'clone', NULL, 'local-only', 1)",
-    ).run();
+    seedProject(db, { id: "r9", name: "other", path: "/fleet/other", autonomy: true, addedAt: 1 });
     const target = new TaskService({
       db,
       repos: { get: () => ({ delivery: "local-only" as const }) },
       strict: true,
     });
-    target.projects.ensureForRepo({ id: "r9", name: "other" });
     target.create({ id: "earlier", title: "Earlier work", prompt: "p", repoId: "r9" });
     for (let i = 0; i < 5; i++) target.noteProgress("earlier", `checkpoint ${i}`);
     target.archive.importRecords(parseTaskExport(exportTaskRecords(source, 5_000)));

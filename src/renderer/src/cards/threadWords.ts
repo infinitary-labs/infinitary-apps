@@ -21,6 +21,11 @@ export function messageCountWords(count: number): string {
   return `${count} ${count === 1 ? "message" : "messages"}`;
 }
 
+/** The name the collapsed thread's latest line reads to assistive technology: its count words, or that the author is working. */
+export function threadCueLabel(count: string, working: boolean): string {
+  return `Show thread, ${working ? "author working" : count}`;
+}
+
 /** The replies that came while the card showed its face: the phone's latest line (INF-1919). */
 export function newCountWords(count: number): string {
   return `${count} new`;

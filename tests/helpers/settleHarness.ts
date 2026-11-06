@@ -17,6 +17,7 @@ import type { MergeAuthorization } from "../../src/core/storage/taskStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import type { TaskService } from "../../src/core/tasks/taskService";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
+import { seedProject } from "../../src/core/workspace/seedProject";
 import { setup as cardWorld } from "./cardServiceHarness";
 import { freshDatabase } from "./database";
 import { seedDelivery } from "./taskDelivery";
@@ -83,9 +84,13 @@ export type SettleWorld = SettleOwners & {
 export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
   const now = 1_000;
   const db = freshDatabase();
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, 'direct-pr', 0)",
-  ).run("project", "/not-mounted/project", "Meter", 1, "https://github.com/o/meter.git");
+  seedProject(db, {
+    id: "project",
+    name: "Meter",
+    path: "/not-mounted/project",
+    origin: "https://github.com/o/meter.git",
+    delivery: "direct-pr",
+  });
   const repos = new RepoRegistry(db, "/not-mounted/fleet");
   // The task service reads each task's policies through the same projects
   // the settle does, as the app wires them: a project change is a policy change.

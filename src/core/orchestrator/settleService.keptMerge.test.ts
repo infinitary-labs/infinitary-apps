@@ -92,15 +92,23 @@ describe("the guard a kept merge runs with", () => {
 
   it("names the approved version and pull request, and marks a queue entry without an attempt", async () => {
     const world = approved();
-    let guard: MergeGuard | undefined;
+    // Read inside the merge, asserted after it: a throw in the stub would
+    // read as a failed merge, not a failed test.
+    const calls: Array<{
+      guard: MergeGuard | undefined;
+      looked: string | undefined;
+      attempt: MergeAuthorization["attempt"];
+    }> = [];
     world.merge = async (seen) => {
-      guard = seen;
-      expect(seen?.beforeDispatch(HEAD, true)).toBeUndefined();
-      expect(approvalOf(world)?.attempt).toBeUndefined();
+      const looked = seen?.beforeDispatch(HEAD, true);
+      calls.push({ guard: seen, looked, attempt: approvalOf(world)?.attempt });
       return { ok: false, text: "Queued.", stop: "queue" };
     };
     await world.settle.reportCardSettle(TASK, "merge-pr");
-    expect(guard).toMatchObject({ head: HEAD, prNumber: PR, unattended: false });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.guard).toMatchObject({ head: HEAD, prNumber: PR, unattended: false });
+    expect(calls[0]?.looked).toBeUndefined();
+    expect(calls[0]?.attempt).toBeUndefined();
   });
 
   it.each<[string, (world: SettleWorld) => void, string | undefined, string]>([
@@ -402,7 +410,12 @@ describe("the pending note of a kept merge", () => {
     const world = approved();
     world.merge = async () => ({ ok: false, text: "Checks are running.", stop: "checks" });
     await world.settle.reportCardSettle(TASK, "merge-pr");
-    expect(world.cards.get(mergePendingCardId(TASK))).toBeDefined();
+    expect(world.cards.get(mergePendingCardId(TASK))).toMatchObject({
+      id: mergePendingCardId(TASK),
+      author: "host",
+      title: MERGE_PENDING_TITLE,
+      actions: [],
+    });
     world.merge = async () => ({
       ok: true,
       text: `Merged #${PR} on GitHub.`,

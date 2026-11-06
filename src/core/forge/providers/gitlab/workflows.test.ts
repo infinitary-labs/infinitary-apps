@@ -17,6 +17,7 @@ import { openInMemoryDatabase } from "../../../storage/db";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { RepoRegistry } from "../../../workspace/repoRegistry";
+import { seedProject } from "../../../workspace/seedProject";
 import { isArtifactStorage } from "./client";
 import { GitLabForge } from "./gitlabForge";
 
@@ -161,13 +162,14 @@ async function fixture(
   cleanup.push(() => {
     db.close();
   });
-  db.prepare("INSERT INTO repos (id, path, name, added_at, origin) VALUES (?, ?, ?, ?, ?)").run(
-    "repo-1",
-    cwd,
-    "field-notes",
-    1,
-    `https://${host}/${PROJECT}.git`,
-  );
+  seedProject(db, {
+    id: "repo-1",
+    name: "field-notes",
+    path: cwd,
+    setupKind: "adopt",
+    origin: `https://${host}/${PROJECT}.git`,
+    addedAt: 1,
+  });
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, {
     id: "task-1",

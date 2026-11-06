@@ -3,22 +3,30 @@ import { describe, expect, it } from "vitest";
 import { createEventSeam } from "./eventSeam";
 import { ActivityStore } from "./storage/activityStore";
 import { openInMemoryDatabase } from "./storage/db";
+import { seedTask } from "./tasks/seedTask";
+import { TaskService } from "./tasks/taskService";
 
-/** The seam over a real Activity store, with every listener recorded. */
+/**
+ * The one event seam (docs/architecture.md, "feed lines only via the
+ * `broadcastEvent` seam"), held at the unit layer when the app wiring was
+ * split into its owners (INF-2625's plan): where a note about a task is
+ * written, which listeners hear an event, and when a settled run's line is
+ * rewritten or withdrawn (docs/orchestrator-contract.md, "Settled runs").
+ * The feed reading a task's note back is core.projects.test.ts's, through the
+ * booted core.
+ */
+
+/** The seam over a real Activity store and task record, with every listener recorded. */
 function seam() {
-  const activity = new ActivityStore(openInMemoryDatabase(), () => 1_000);
-  const noted: { taskId: string; text: string }[] = [];
+  const db = openInMemoryDatabase();
+  const activity = new ActivityStore(db, () => 1_000);
+  const tasks = new TaskService({ db, now: () => 1_000 });
+  seedTask(tasks, { id: "task-1", title: "Fix the login page", status: "queued" });
   const emitted: FmEvent[] = [];
   const live: FmEvent[] = [];
   const recorded: string[] = [];
   const built = createEventSeam({
-    tasks: {
-      get: (id) => (id === "task-1" ? ({ id } as never) : undefined),
-      note: (taskId, text) => {
-        noted.push({ taskId, text });
-        return undefined as never;
-      },
-    },
+    tasks,
     activity,
     sharing: { record: (event) => void recorded.push(event.name) },
     crewLive: { apply: (event) => void live.push(event) },
@@ -27,6 +35,12 @@ function seam() {
     },
   });
   const lines = () => activity.recent().map((line) => line.text);
+  /** The notes on a task's record, in the order written. */
+  const noted = (taskId: string) =>
+    tasks
+      .timeline(taskId)
+      .filter((event) => event.kind === "note")
+      .map((event) => event.text);
   return { ...built, activity, noted, emitted, live, recorded, lines };
 }
 
@@ -41,7 +55,7 @@ describe("createEventSeam", () => {
   it("writes a note about a known task on that task's record, not the feed", () => {
     const { broadcastEvent, noted, emitted, lines } = seam();
     broadcastEvent({ type: "firstmate_note", text: "Its job stopped.", taskId: "task-1" });
-    expect(noted).toEqual([{ taskId: "task-1", text: "Its job stopped." }]);
+    expect(noted("task-1")).toEqual(["Its job stopped."]);
     expect(emitted).toEqual([]);
     expect(lines()).toEqual([]);
   });
@@ -55,7 +69,7 @@ describe("createEventSeam", () => {
     attachPresentation((event) => heard.push(event));
     const note: FmEvent = { type: "firstmate_note", text: "A job stopped.", taskId: "gone" };
     broadcastEvent(note);
-    expect(noted).toEqual([]);
+    expect(noted("task-1")).toEqual([]);
     expect(lines()).toEqual(["A job stopped."]);
     expect(emitted).toEqual([note]);
     expect(live).toEqual([note]);

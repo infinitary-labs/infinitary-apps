@@ -15,12 +15,13 @@ import {
   type ForgeReadiness,
   type ForgeRuleset,
   type ForgeSkipMerge,
+  QUEUE_STATUS,
 } from "../forge";
 import type { MergeGuard } from "./changeMerge";
 
-// Integration budget (docs/test-cohorts.md): real git plus the product's
-// own put-in backoff, the slowest test 1.3 s at its fastest measured run.
-vi.setConfig({ testTimeout: 10_000 });
+// Integration cohort (docs/test-cohorts.md): a real `git init` per project at
+// the run's own priority, the slowest test (the refusals by number) 0.6 s at
+// its fastest of five Mac runs, so five times fits vitest's 5 s default and the file sets no budget.
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -66,12 +67,14 @@ const SKIPPABLE: ForgeRuleset = {
 /**
  * A task on a GitHub project x/y whose pull request #23 the host reads by its
  * number, with its branch rules and the merge past them. The test moves
- * `host` between calls.
+ * `host` between calls. A shape puts the project's delivery ask on the task.
  */
-async function onGitHub() {
+async function onGitHub(shape?: { delivery_ask: "queue-pr" }) {
   const forge = new FakeForge();
   const harness = setup({ forge });
-  await insertDirectPrTask(harness.tasks, harness.repos);
+  await insertDirectPrTask(harness.tasks, harness.repos, {
+    ...(shape ? { shape: { kind: "fix", kind_source: "none", ...shape } } : {}),
+  });
   const task = harness.tasks.get("ab12cd34");
   if (!task?.repoId) throw new Error("the task has no project");
   harness.repos.configure(task.repoId, { origin: "https://github.com/x/y.git" });
@@ -898,5 +901,59 @@ describe("the captain's click on a pull request the task did not open, while Git
     expect(outcome).toMatchObject({ ok: false, stop: "moved" });
     expect(forge.reads).toBe(2);
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+  });
+});
+
+describe("a review's click on a queue-pr project (docs/forge.md, \"A project's queue\")", () => {
+  async function queuedReview() {
+    const harness = await onGitHub({ delivery_ask: "queue-pr" });
+    const review: MergeReview = {
+      id: "mrqueued00001",
+      kind: "github",
+      host: "github.com",
+      owner: "x",
+      name: "y",
+      number: 23,
+      headSha: HEAD,
+      base: "main",
+      branch: "fm/task-ab12cd34",
+      method: "squash",
+      title: openPull().title ?? "",
+      at: 1,
+    };
+    seedDelivery(harness.tasks, "ab12cd34", { mergeReviews: [review] });
+    const putIns = () => harness.forge.calls.filter((call) => call.startsWith("putIn"));
+    return { ...harness, review, putIns };
+  }
+
+  it("stops on the checks when the queue's batch failed at the version, marking nothing", async () => {
+    const { service, forge, review, putIns } = await queuedReview();
+    const marked: string[] = [];
+    forge.markQueued = async (sha) => {
+      marked.push(sha);
+    };
+    forge.atHead[HEAD] = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "failure" },
+    ];
+    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toEqual({
+      ok: false,
+      text: `Cannot merge yet - the project's queue did not pass ${HEAD} (${QUEUE_STATUS} is failure).`,
+      plain: "the batch check failed",
+      notGreen: true,
+      stop: "checks",
+    });
+    expect(marked).toEqual([]);
+    expect(putIns()).toEqual([]);
+  });
+
+  it("refuses in words when the host cannot mark a version for the queue", async () => {
+    const { service, review, putIns } = await queuedReview();
+    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toEqual({
+      ok: false,
+      text: "Cannot merge: This project's host cannot mark a version for its queue.",
+      problem: "This project's host cannot mark a version for its queue.",
+    });
+    expect(putIns()).toEqual([]);
   });
 });

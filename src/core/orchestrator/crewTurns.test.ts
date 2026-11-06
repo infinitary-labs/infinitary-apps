@@ -45,13 +45,15 @@ describe("a crewmate's turn, as CrewTurns runs it", () => {
     const [kept] = await keepHandoverFiles([picture], crewmateHandoverDir(h.paths, taskId));
     if (!kept) throw new Error("the picture was not kept");
 
+    // The refusal's words are owned by src/core/tasks/handoverFiles.test.ts;
+    // here the report is refused, naming the file that did not arrive whole.
     await expect(
       Promise.resolve(
         report("The screenshot is ready.", undefined, {
           files: [{ ...kept, size: kept.size + 1 }],
         }),
       ),
-    ).rejects.toThrow(`${kept.file} did not arrive whole; report it again.`);
+    ).rejects.toThrow(kept.file);
 
     expect(await report("The screenshot is ready.", undefined, { files: [kept] })).toContain(
       "Reported.",

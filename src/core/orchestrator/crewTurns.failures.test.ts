@@ -8,6 +8,8 @@
  */
 import { readFileSync } from "node:fs";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
+import { PLAIN_PROBLEM_FALLBACK } from "@shared/plainProblem";
+import { CLAUDE_PROVIDER_ID, COPILOT_PROVIDER_ID } from "@shared/providers";
 import { describe, expect, it, vi } from "vitest";
 import {
   type FakeCrewmate,
@@ -32,6 +34,7 @@ import { legacyStateOf } from "../tasks/seedTask";
 import { recentFeed, taskFeedLine } from "../tasks/taskFeed";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { QUEUED_GUIDANCE_LINE } from "./crewTurns";
+import { PROVIDER_SIGN_IN_TITLE } from "./hostCards";
 import { renderWake } from "./wakes";
 
 fakeCrewTimersEachTest();
@@ -133,9 +136,7 @@ describe("CrewSupervisor", () => {
     crewmate.failPrompt("Authentication failed for \"openai-codex\". Run '/login' again.");
     // The card rides a debounced broadcast, so wait for the card itself.
     await vi.waitFor(() =>
-      expect(cards().find((card) => card.actions.length > 0)?.title).toBe(
-        "A provider needs sign in",
-      ),
+      expect(cards().find((card) => card.actions.length > 0)?.title).toBe(PROVIDER_SIGN_IN_TITLE),
     );
     const decision = cards().find((card) => card.actions.length > 0);
     // The agent-down set keeps its host card, with exactly its one way out.
@@ -160,7 +161,7 @@ describe("CrewSupervisor", () => {
   // app's pick, with the failed provider left out, keeping its key, branch
   // and working copy; between two Pi providers the conversation goes on.
   it("offers Move to the app's pick on a crewmate's sign-in card, and the click moves the task in place", async () => {
-    const copilot = { provider: "github-copilot", id: "gpt-5.1" };
+    const copilot = { provider: COPILOT_PROVIDER_ID, id: "gpt-5.1" };
     const codex = { provider: "openai-codex", id: "gpt-6.1-sol" };
     const crewmate = fakeCrewmate({ model: copilot });
     const moved = fakeCrewmate({ model: codex });
@@ -176,7 +177,7 @@ describe("CrewSupervisor", () => {
       },
       movePick: (_shape, options) => {
         left.push(options.withoutProvider);
-        return options.withoutProvider === "github-copilot" ? codex : undefined;
+        return options.withoutProvider === COPILOT_PROVIDER_ID ? codex : undefined;
       },
       modelName: (model) => (model.id === codex.id ? "GPT-6.1 Sol" : model.id),
     });
@@ -187,12 +188,12 @@ describe("CrewSupervisor", () => {
     const before = tasks.get(taskId);
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     // INF-839's own words, thrown as its turn started.
-    crewmate.failPrompt("No API key found for github-copilot");
+    crewmate.failPrompt(`No API key found for ${COPILOT_PROVIDER_ID}`);
     await vi.waitFor(() =>
       expect(cards().find((card) => card.id === `card-auth-${taskId}`)).toBeDefined(),
     );
     const card = cards().find((card) => card.id === `card-auth-${taskId}`);
-    expect(left).toContain("github-copilot");
+    expect(left).toContain(COPILOT_PROVIDER_ID);
     expect(card?.actions.map((action) => [action.label, action.default === true])).toEqual([
       // The captain's words: show "Move to <model>", the model it would run on.
       ["Move to GPT-6.1 Sol", true],
@@ -205,7 +206,7 @@ describe("CrewSupervisor", () => {
     supervisor.cardActions.act(card?.id ?? "", "move-task");
     await tick();
     expect(specs).toHaveLength(1);
-    crewmate.failPrompt("No API key found for github-copilot");
+    crewmate.failPrompt(`No API key found for ${COPILOT_PROVIDER_ID}`);
     await vi.waitFor(() => expect(moved.promptCalls.length).toBeGreaterThan(0));
     const after = tasks.get(taskId);
     expect(after).toMatchObject({
@@ -245,7 +246,7 @@ describe("CrewSupervisor", () => {
     await vi.waitFor(() => expect(ops.at(-1)).toContain("failed"));
     // Any card the failure raised was broadcast on a shorter timer than this.
     await tick();
-    expect(cards().find((card) => card.title === "A provider needs sign in")).toBeUndefined();
+    expect(cards().find((card) => card.title === PROVIDER_SIGN_IN_TITLE)).toBeUndefined();
   });
 
   it("reports a provider-failed turn instead of '(no report)' and keeps the crewmate steerable", async () => {
@@ -284,7 +285,7 @@ describe("CrewSupervisor", () => {
     expect(ops.at(-1)).toContain("retries it on its own");
     expect(ops.at(-1)).toContain("You can still steer or interrupt it.");
     // Transient fault, not auth: no sign-in card.
-    expect(cards().find((card) => card.title === "A provider needs sign in")).toBeUndefined();
+    expect(cards().find((card) => card.title === PROVIDER_SIGN_IN_TITLE)).toBeUndefined();
 
     // The session survives: still steerable, and the next clean turn
     // reports normally again.
@@ -542,7 +543,7 @@ describe("CrewSupervisor", () => {
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
     await tick();
-    const decision = cards().find((card) => card.title === "A provider needs sign in");
+    const decision = cards().find((card) => card.title === PROVIDER_SIGN_IN_TITLE);
     expect(decision).toBeDefined();
     // Product words, never the provider's own reply.
     expect(decision?.body).toBe(
@@ -579,9 +580,9 @@ describe("CrewSupervisor", () => {
       ].join("\n"),
     );
     await vi.waitFor(() =>
-      expect(cards().find((card) => card.title === "A provider needs sign in")).toBeDefined(),
+      expect(cards().find((card) => card.title === PROVIDER_SIGN_IN_TITLE)).toBeDefined(),
     );
-    expect(cards().find((card) => card.title === "A provider needs sign in")?.body).toBe(
+    expect(cards().find((card) => card.title === PROVIDER_SIGN_IN_TITLE)?.body).toBe(
       "The crewmate could not reach Operator gateway, your custom connection. In Settings → Intelligence, press Edit on it, then Save to check it again.",
     );
   });
@@ -590,7 +591,7 @@ describe("CrewSupervisor", () => {
     const crewmate = {
       ...fakeCrewmate(),
       controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client", failureSignals: "typed" },
-      modelRef: () => ({ provider: "anthropic-claude", id: "claude-opus" }),
+      modelRef: () => ({ provider: CLAUDE_PROVIDER_ID, id: "claude-opus" }),
     } satisfies FakeCrewmate;
     const { supervisor, cards, tasks } = setup(crewmate);
     const wakes: Array<{ origin: string; ref?: string }> = [];
@@ -619,7 +620,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const signIn = cards().filter((card) => card.id === `card-auth-${taskId}`);
     expect(signIn).toHaveLength(1);
-    expect(signIn[0]?.title).toBe("A provider needs sign in");
+    expect(signIn[0]?.title).toBe(PROVIDER_SIGN_IN_TITLE);
     // Product words, never the client's own (they name a terminal command).
     expect(signIn[0]?.body).toBe(
       "The crewmate could not reach Claude, which needs you to sign in again.",
@@ -664,7 +665,7 @@ describe("CrewSupervisor", () => {
     // The honest retry keeps its guidance, as for any provider failure.
     expect(ops.at(-1)).toContain("failed at the provider: 401: invalid_api_key");
     // Nor does the feed line read a sign-in out of those words.
-    expect(lastFeedLine()).toBe("Problem: something went wrong - try again");
+    expect(lastFeedLine()).toBe(`Problem: ${PLAIN_PROBLEM_FALLBACK}`);
     // A spent allowance or a refusal keeps today's provider-failure path,
     // and its feed line is its class's.
     for (const [cutOff, line] of [
@@ -672,7 +673,7 @@ describe("CrewSupervisor", () => {
         { class: "no_headroom", resetsAt: 1_800_000_000_000 },
         "Problem: your plan's allowance ran out - it comes back when it resets",
       ],
-      [{ class: "refused" }, "Problem: something went wrong - try again"],
+      [{ class: "refused" }, `Problem: ${PLAIN_PROBLEM_FALLBACK}`],
     ] as const) {
       await supervisor.steer.steerCrewmate(taskId, "again");
       await tick();
@@ -705,7 +706,7 @@ describe("CrewSupervisor", () => {
       failureSignals: "typed",
     });
     expect(taskFeedLine(tasks.get(taskId) as TaskRecord, closed as TaskEvent)?.text).toBe(
-      "Failed: something went wrong - try again",
+      `Failed: ${PLAIN_PROBLEM_FALLBACK}`,
     );
   });
 });

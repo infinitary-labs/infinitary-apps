@@ -235,20 +235,7 @@ export async function approved(
     validateRange: async () => {},
     lineageFacts: async () => facts,
   });
-  const dir = scratchDir("infinitary-kept-merge-");
-  execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-  execFileSync("git", [
-    "-C",
-    dir,
-    "-c",
-    "user.name=Test",
-    "-c",
-    "user.email=test@localhost",
-    "commit",
-    "--allow-empty",
-    "-m",
-    "init",
-  ]);
+  const { dir } = gitRepo("meter");
   execFileSync("git", [
     "-C",
     dir,

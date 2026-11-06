@@ -20,6 +20,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
 import type { CrewMachines } from "../placed/crewMachines";
 import { seedTask } from "../tasks/seedTask";
+import { UNCONFIRMED_START_RETURNED } from "../tasks/taskStarts";
 import { PLACED_WAIT_DAY_MS } from "./taskPlacement";
 
 const MINI = "mini";
@@ -137,7 +138,7 @@ describe("where a task runs", () => {
     expect(tasks.get("t-here")).toMatchObject({ status: "open", startNotice: null });
     expect(tasks.starts.startAttemptOf("t-here")).toBeUndefined();
     expect(tasks.timeline("t-here").map((event) => event.text)).toContain(
-      "returned to the queue - the start was not confirmed",
+      UNCONFIRMED_START_RETURNED,
     );
     // A recorded session means it started: it stays where it is.
     expect(tasks.starts.startAttemptOf("t-recorded")).toBeUndefined();

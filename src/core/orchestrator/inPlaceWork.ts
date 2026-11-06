@@ -409,6 +409,11 @@ export class InPlaceWork {
     if (facts.cause === "missing") {
       return `The project's folder is back: clean, on ${branch} and level with origin's ${branch}.`;
     }
-    return `The project's folder is up to date: clean, on ${branch} and at or past ${facts.reach ? facts.reach.slice(0, 7) : `origin's ${branch}`}.`;
+    return folderUpToDateLine(branch, facts.reach);
   }
+}
+
+/** The line a folder repair closes on when the folder is clean, on its default branch and at or past the merge. */
+export function folderUpToDateLine(branch: string, reach: string | undefined | null): string {
+  return `The project's folder is up to date: clean, on ${branch} and at or past ${reach ? reach.slice(0, 7) : `origin's ${branch}`}.`;
 }

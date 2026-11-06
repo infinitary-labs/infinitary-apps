@@ -9,7 +9,9 @@ import type { Card } from "@shared/cards";
 import {
   SAVED_SIGN_IN_FAILED_LABEL,
   SIGN_IN_MYSELF_LABEL,
+  savedSignInLabel,
   type TaskBrowserFact,
+  USE_SAVED_SIGN_IN_ACTION,
 } from "@shared/taskBrowser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -19,7 +21,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
-import { EMIT_CARD_TOOL } from "../pi/cardTool";
+import { BROWSER_SIGN_IN_STEP, EMIT_CARD_TOOL } from "../pi/cardTool";
 import { CREWMATE_BROWSER_LINE } from "../pi/piResources";
 import { bindTool } from "../session/tools";
 import type { TaskRecord } from "../storage/taskStore";
@@ -60,7 +62,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       { id: "leave", label: "Leave waiting" },
       {
         id: "sign-in",
-        label: "Open browser and sign in",
+        label: BROWSER_SIGN_IN_STEP,
         default: true,
         effect: { kind: "open" as const, target: "browser" as const },
       },
@@ -291,7 +293,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
           to: "crewmate",
           source: "chrome",
           card: { title: REQUEST.title },
-          choice: { id: "sign-in", label: "Open browser and sign in" },
+          choice: { id: "sign-in", label: BROWSER_SIGN_IN_STEP },
           browserGone: "quit",
         },
       }),
@@ -331,7 +333,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
           to: "crewmate",
           source: "chrome",
           card: { title: REQUEST.title },
-          choice: { id: "sign-in", label: "Open browser and sign in" },
+          choice: { id: "sign-in", label: BROWSER_SIGN_IN_STEP },
           browserGone: "stopped",
         },
       }),
@@ -366,7 +368,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       generation: 2,
     };
     h.held.current = false;
-    h.supervisor.cardActions.act(card?.id ?? "", "use-saved-sign-in");
+    h.supervisor.cardActions.act(card?.id ?? "", USE_SAVED_SIGN_IN_ACTION);
     await tick();
     await tick();
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
@@ -378,7 +380,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
           to: "crewmate",
           source: "chrome",
           card: { title: REQUEST.title },
-          choice: { id: "use-saved-sign-in", label: "Use my saved aurora.example sign-in" },
+          choice: { id: USE_SAVED_SIGN_IN_ACTION, label: savedSignInLabel("aurora.example") },
           browserGone: "stopped",
         },
       }),
@@ -443,12 +445,12 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       { id: "leave", label: "Leave waiting" },
       {
         id: "sign-in",
-        label: "Sign in myself",
+        label: SIGN_IN_MYSELF_LABEL,
         effect: { kind: "open", target: "browser" },
       },
       {
-        id: "use-saved-sign-in",
-        label: "Use my saved aurora.example sign-in",
+        id: USE_SAVED_SIGN_IN_ACTION,
+        label: savedSignInLabel("aurora.example"),
         default: true,
         effect: { kind: "open", target: "browser", savedSignIn: true },
       },
@@ -456,11 +458,11 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await h.endTurn();
     // A script in the body can never press it.
     expect(() =>
-      h.supervisor.cardActions.act(card?.id ?? "", "use-saved-sign-in", "frame"),
-    ).toThrow("This action is available only from the card controls.");
+      h.supervisor.cardActions.act(card?.id ?? "", USE_SAVED_SIGN_IN_ACTION, "frame"),
+    ).toThrow("available only from the card controls");
     // The captain's click gives the card's own browser the saved sign-in and opens its view;
     // the captain never takes control.
-    expect(h.supervisor.cardActions.act(card?.id ?? "", "use-saved-sign-in")).toEqual({
+    expect(h.supervisor.cardActions.act(card?.id ?? "", USE_SAVED_SIGN_IN_ACTION)).toEqual({
       effect: {
         kind: "open",
         target: "browser",
@@ -495,7 +497,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       })),
     ).toEqual([
       { id: "leave", label: "Leave waiting" },
-      { id: "use-saved-sign-in", label: SAVED_SIGN_IN_FAILED_LABEL },
+      { id: USE_SAVED_SIGN_IN_ACTION, label: SAVED_SIGN_IN_FAILED_LABEL },
       // The default stands last in the row.
       { id: "sign-in", label: SIGN_IN_MYSELF_LABEL, default: true },
     ]);
@@ -542,7 +544,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       "skip",
       "leave",
       "sign-in",
-      "use-saved-sign-in",
+      USE_SAVED_SIGN_IN_ACTION,
     ]);
   });
 
@@ -553,7 +555,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await h.emitCard.run(REQUEST);
     expect(h.saved()?.actions.map((action) => [action.id, action.label, action.default])).toEqual([
       ["leave", "Leave waiting", undefined],
-      ["sign-in", "Open browser and sign in", true],
+      ["sign-in", BROWSER_SIGN_IN_STEP, true],
     ]);
   });
 
@@ -587,7 +589,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await h.emitCard.run(REQUEST);
     const card = h.saved();
     await h.endTurn();
-    h.supervisor.cardActions.act(card?.id ?? "", "use-saved-sign-in");
+    h.supervisor.cardActions.act(card?.id ?? "", USE_SAVED_SIGN_IN_ACTION);
     await tick();
     expect(h.events).toContainEqual({
       type: "firstmate_note",

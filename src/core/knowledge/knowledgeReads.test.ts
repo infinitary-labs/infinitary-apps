@@ -153,7 +153,9 @@ describe("reading around an entry", () => {
     expect(read.entry.standing).toBe("differing");
   });
 
-  it("refuses a revision or a source the reader cannot read, in the same words as one that is absent", async () => {
+  // Every reader reads the captain's whole collection (access.ts, scopesFor), so no
+  // entry or source is held from a reader: these refusals are for what was never kept.
+  it("refuses a revision the entry never had, and a source or entry no collection holds, naming the id", async () => {
     const f = fixture();
     const { pins } = await seed(f);
     expect(() => f.service.get(f.crew(), pins, 4)).toThrow(
@@ -162,9 +164,9 @@ describe("reading around an entry", () => {
     expect(() => f.service.source(f.crew(), "s-none00")).toThrow(
       new KnowledgeRefusal("No source s-none00 in a collection you can read."),
     );
-    expect(() => f.service.get(CAPTAIN, "f-none00")).toThrow(
-      new KnowledgeRefusal("No entry f-none00 in a collection you can read."),
-    );
+    // The entry refusal's words are knowledgeService.test.ts's; this checks the captain gets it too.
+    expect(() => f.service.get(CAPTAIN, "f-none00")).toThrow(KnowledgeRefusal);
+    expect(() => f.service.get(CAPTAIN, "f-none00")).toThrow("f-none00");
   });
 
   it("checks a file an older build kept against the reader's own working copy", () => {

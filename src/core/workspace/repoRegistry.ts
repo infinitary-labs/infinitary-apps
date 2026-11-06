@@ -31,7 +31,7 @@ import {
 import type { Rigor } from "@shared/rigor";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
 import type { AppDatabase } from "../storage/db";
-import { ProjectStore } from "../storage/projectStore";
+import { ensureRepoProject, ProjectStore } from "../storage/projectStore";
 import type { SettingsStore } from "../storage/settingsStore";
 import { prepared } from "../storage/statements";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "./git";
@@ -119,6 +119,84 @@ function fromRow(row: Row): RepoView {
         }
       : {}),
   };
+}
+
+/** A new project's row as `saveNewRepo` saves it; each absent policy takes the registry's default. */
+export type NewRepoRow = {
+  id: string;
+  name: string;
+  path: string;
+  setupKind: RepoSetupKind;
+  kind?: RepoKind | undefined;
+  origin: string | null;
+  delivery: RepoDelivery;
+  /** Off when absent. */
+  autonomy?: boolean | undefined;
+  /** Standard when absent. */
+  rigor?: Rigor | null | undefined;
+  /** Automatic for a hosted project, else this computer, when absent. */
+  runsOn?: string | null | undefined;
+  /** When it was added; the list orders by it. Now when absent. */
+  addedAt?: number | undefined;
+  /** The task key chosen for it, checked free; derived from the name when absent. */
+  projectKey?: string | undefined;
+};
+
+/**
+ * The one writer of a new project's row: where it lives stamped from its
+ * address, Runs on stamped for a hosted project, and its task project born
+ * in the same transaction (design section 8). `RepoRegistry` saves every
+ * project a person adds through it, and fixtures that need a fixed id seed
+ * through it (`seedProject`), so a column the registry starts stamping
+ * reaches both.
+ */
+export function saveNewRepo(
+  db: AppDatabase,
+  spec: NewRepoRow,
+  knownHosts: readonly KnownForgeHost[] = [],
+): RepoView {
+  const kind = spec.kind ?? "project";
+  const repo: RepoView = {
+    id: spec.id,
+    name: spec.name,
+    scope: null,
+    path: spec.path,
+    setupKind: spec.setupKind,
+    kind,
+    origin: spec.origin,
+    host: repoHostFrom(forgeOf(spec.origin, knownHosts)),
+    delivery: spec.delivery,
+    autonomy: spec.autonomy ?? false,
+    rigor: spec.rigor === undefined ? "standard" : spec.rigor,
+    runsOn:
+      spec.runsOn === undefined
+        ? spec.origin && kind !== "personal"
+          ? AUTOMATIC_COMPUTER
+          : null
+        : spec.runsOn,
+  };
+  db.transaction(() => {
+    db.prepare(
+      `INSERT INTO repos (id, path, name, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, added_at, runs_on)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      repo.id,
+      repo.path,
+      repo.name,
+      repo.setupKind,
+      repo.kind,
+      repo.origin,
+      repo.host?.kind ?? "none",
+      repo.host?.name ?? null,
+      repo.delivery,
+      repo.autonomy ? 1 : 0,
+      repo.rigor,
+      spec.addedAt ?? Date.now(),
+      repo.runsOn,
+    );
+    ensureRepoProject(db, repo, Date.now(), spec.projectKey);
+  })();
+  return repo;
 }
 
 export class RepoRegistry {
@@ -714,44 +792,11 @@ export class RepoRegistry {
     /** The task key chosen for it, checked free; derived from the name when absent. */
     projectKey?: string | undefined;
   }): RepoView {
-    const repo: RepoView = {
-      id: randomUUID().slice(0, 8),
-      name: spec.name,
-      scope: null,
-      path: spec.path,
-      setupKind: spec.setupKind,
-      kind: spec.kind ?? "project",
-      origin: spec.origin,
-      host: repoHostFrom(forgeOf(spec.origin, this.options.knownHosts?.() ?? [])),
-      delivery: spec.delivery,
-      autonomy: false,
-      rigor: "standard",
-      runsOn: spec.origin && spec.kind !== "personal" ? AUTOMATIC_COMPUTER : null,
-    };
-    const insert = this.db.transaction(() => {
-      this.db
-        .prepare(
-          `INSERT INTO repos (id, path, name, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, added_at, runs_on)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-        )
-        .run(
-          repo.id,
-          repo.path,
-          repo.name,
-          repo.setupKind,
-          repo.kind,
-          repo.origin,
-          repo.host?.kind ?? "none",
-          repo.host?.name ?? null,
-          repo.delivery,
-          repo.rigor,
-          Date.now(),
-          repo.runsOn,
-        );
-      // The repo's project is born in the same transaction (design section 8).
-      this.projects.ensureForRepo(repo, spec.projectKey);
-    });
-    insert();
+    const repo = saveNewRepo(
+      this.db,
+      { ...spec, id: randomUUID().slice(0, 8) },
+      this.options.knownHosts?.() ?? [],
+    );
     this.projection?.delete(repo.id);
     return repo;
   }

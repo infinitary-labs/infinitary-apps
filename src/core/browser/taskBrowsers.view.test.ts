@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  deferred,
-  FakePage,
-  flush,
-  harness,
-  openPopup,
-} from "../../../tests/helpers/taskBrowserStandIn";
+import { deferred } from "../../../tests/helpers/deferred";
+import { FakePage, flush, harness, openPopup } from "../../../tests/helpers/taskBrowserStandIn";
 import type { HostBrowserFrame, HostLoadOutcome } from "../host";
-import { REF_PATTERN } from "./outline";
+import { REF_PATTERN, refusedRefWords } from "./outline";
 import { TASK_BROWSER_IDLE_MS } from "./taskBrowsers";
 
 /**
@@ -364,7 +359,7 @@ describe('a page opens a second page (docs/task-browser.md, "A second page")', (
     // The first page's ref is refused here, never used on the second page's element.
     check.effects = [];
     expect((await browser.act({ action: "click", ref: "g1:e3" })).text).toBe(
-      "g1:e3 is a ref on page 1, and your commands act on page 2 now. Use this page's refs, or switch with `infinitary-browser-axi selectpage 1`.",
+      refusedRefWords("g1:e3", { kind: "other-page", page: 1, current: 2 }),
     );
     expect(check.effects).toEqual([]);
     // It switches back by place, and its first page's refs still stand.

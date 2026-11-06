@@ -11,6 +11,7 @@ import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { TaskProtocol } from "../../src/core/tasks/taskProtocol";
 import { TaskService } from "../../src/core/tasks/taskService";
 import type { TaskChange } from "../../src/core/tasks/taskWriter";
+import { seedProject } from "../../src/core/workspace/seedProject";
 import { freshDatabase as openInMemoryDatabase } from "./database";
 
 /**
@@ -56,9 +57,14 @@ export function taskProtocolFixture(
   } = {},
 ): TaskProtocolFixture {
   const db = openInMemoryDatabase();
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', NULL, 'direct-pr', 1)",
-  ).run("r1", "/fleet/nimbus-api", "nimbus-api", 1);
+  seedProject(db, {
+    id: "r1",
+    name: "nimbus-api",
+    path: "/fleet/nimbus-api",
+    delivery: "direct-pr",
+    autonomy: true,
+    addedAt: 1,
+  });
   let now = 10 * DAY;
   const tasks = new TaskService({
     db,
@@ -66,7 +72,6 @@ export function taskProtocolFixture(
     now: () => now,
     strict: true,
   });
-  tasks.projects.ensureForRepo({ id: "r1", name: "nimbus-api" });
   const activity = new ActivityStore(db, () => now);
   const cards: Card[] = [];
   const snapshot = vi.fn(() => cards);

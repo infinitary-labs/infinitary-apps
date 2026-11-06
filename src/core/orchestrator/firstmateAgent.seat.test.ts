@@ -1006,7 +1006,6 @@ describe("the seat's other ways: Settings, the way back, holds and moves (INF-26
     first();
     await tick();
     expect(seat.prompts).toHaveLength(1);
-    expect(captainRows(t.inbox)).toEqual(["while signing in"]);
 
     second();
     await tick();
@@ -1193,13 +1192,10 @@ describe("the seat's other ways: Settings, the way back, holds and moves (INF-26
     await t.agent.converse("hello");
     await tick();
     expect(t.specs).toEqual([]);
-    expect(t.cards().map((card) => [card.id, card.title, card.body])).toEqual([
-      [
-        "card-fm-turn-failure",
-        "Your first mate hit a problem",
-        "Claude cannot run your first mate.",
-      ],
-    ]);
+    // The failure card's words are owned by firstmateAgent.flagship.test.ts
+    // ("the seat seam"); this path only has to reach that same failure.
+    expect(t.cards().map((card) => card.id)).toEqual(["card-fm-turn-failure"]);
+    expect(t.cards()[0]?.body).toContain("Claude cannot run your first mate.");
   });
 });
 

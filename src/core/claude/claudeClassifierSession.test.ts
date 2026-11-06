@@ -7,6 +7,7 @@ import type { ModelSession, SessionEvent } from "../session/session";
 import type { BoundTool } from "../session/tools";
 import type { ClaudeClientCheck } from "./claudeCli";
 import type { ClaudeRateLimit } from "./claudeEvents";
+import { CLAUDE_MODELS } from "./claudeModels";
 import { CLAUDE_MODEL_PROVIDER, type ClaudeQueryFactory } from "./claudeQueryCore";
 import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
 import { createClaudeSessionFactory } from "./session";
@@ -191,11 +192,14 @@ describe("the Claude classifier session", () => {
 
   it("labels its model by the catalog's name, and has none for a model the catalog does not name (INF-2625's guardrail)", async () => {
     const { factory } = scriptedQuery({ onInput: () => {} });
+    // The pair is the shipped catalog's (claudeModelCatalog.test.ts owns its names).
+    const haiku = CLAUDE_MODELS.find((model) => model.id.includes("haiku"));
+    if (!haiku) throw new Error("the shipped catalog names no Haiku model");
     const named = await factoryWith(factory).open({
       ...spec,
-      model: { provider: CLAUDE_MODEL_PROVIDER, id: "claude-haiku-5-5" },
+      model: { provider: CLAUDE_MODEL_PROVIDER, id: haiku.id },
     });
-    expect(named.modelLabel()).toBe("Claude Haiku 5.5");
+    expect(named.modelLabel()).toBe(haiku.name);
     named.dispose();
     const unnamed = await factoryWith(factory).open(spec);
     expect(unnamed.modelRef()).toEqual({ provider: CLAUDE_MODEL_PROVIDER, id: MODEL });

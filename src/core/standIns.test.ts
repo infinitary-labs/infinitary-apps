@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { readStandIns } from "./standIns";
 
+/**
+ * The stand-ins the app wiring reads, held in one module when the wiring was
+ * split into its owners (INF-2625's plan), and the rule that module states
+ * (src/core/standIns.ts): a packaged app reads none of them, whatever the
+ * environment says, so a build anyone runs cannot be pointed anywhere else.
+ * An unpackaged run reads each by its environment name, and drops what is
+ * blank or out of range.
+ */
+
 /** Every stand-in this run can name, each set to a value the read keeps. */
 const NAMED = {
   INFINITARY_EARLY_LAUNCH_MS: "2500",

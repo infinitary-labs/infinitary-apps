@@ -8,7 +8,8 @@
  */
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { AttachmentRef } from "@shared/attachments";
-import { CARD_ANSWERS_TOO_LONG, type Card } from "@shared/cards";
+import { CARD_ANSWERS_TOO_LONG, type Card, REPLY_SETTINGS_HEAD } from "@shared/cards";
+import { PLAIN_PROBLEM_FALLBACK } from "@shared/plainProblem";
 import { describe, expect, it, vi } from "vitest";
 import {
   answersPastBound,
@@ -38,6 +39,7 @@ import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { THREAD_STEER_PREAMBLE } from "./captainWakes";
+import { cannotMergeText, discardedText } from "./settleWords";
 import { renderWake, type WakeFacts } from "./wakes";
 
 fakeCrewTimersEachTest();
@@ -295,7 +297,7 @@ describe("CrewSupervisor", () => {
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
     expect(tasks.get("dirty")?.status).toBe("active");
     expect(await supervisor.settling.settle.settleTask("dirty", "discard", true)).toBe(
-      "Discarded.",
+      discardedText(),
     );
   });
 
@@ -349,7 +351,7 @@ describe("CrewSupervisor", () => {
     // One wake for the settle that ran, none for the one that was turned
     // away - announcing a settle that never happened is not an outcome.
     await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(1));
-    expect(settleWakes(ops)[0]).toContain("the outcome was: Discarded.");
+    expect(settleWakes(ops)[0]).toContain(`the outcome was: ${discardedText()}`);
     expect(settleWakes(ops).join("\n")).not.toContain("already in progress");
   });
 
@@ -391,7 +393,7 @@ describe("CrewSupervisor", () => {
       settleWakes(ops).find((line) => line.includes(`for task ${taskId} `)) ?? "";
     // A discard is an outcome too: the agent is told what its crew's work
     // became, and decides for itself whether that is worth a word.
-    expect(wake("clean")).toContain("the outcome was: Discarded.");
+    expect(wake("clean")).toContain(`the outcome was: ${discardedText()}`);
     expect(wake("land")).toContain("Cannot merge: The main worktree is dirty.");
     expect(wake("merge")).toContain("PR merge blocked: CI is red.");
   });
@@ -713,13 +715,11 @@ describe("CrewSupervisor", () => {
     expect(
       await supervisor.settling.settle.settleTask("merge", "merge-pr", undefined, "captain"),
     ).toContain("already in progress");
-    expect(await supervisor.settling.settle.settleTask("other", "discard")).toBe("Discarded.");
+    expect(await supervisor.settling.settle.settleTask("other", "discard")).toBe(discardedText());
     operation.reject(new Error("GitHub is unreachable"));
     // The feed says what it means; the raw failure is kept on the record.
     await vi.waitFor(() =>
-      expect(settleLines(tasks, "merge")).toContain(
-        "Cannot merge: something went wrong - try again",
-      ),
+      expect(settleLines(tasks, "merge")).toContain(cannotMergeText(PLAIN_PROBLEM_FALLBACK)),
     );
     expect(tasks.timeline("merge").find((event) => event.data?.problem)).toMatchObject({
       kind: "note",
@@ -746,9 +746,7 @@ describe("CrewSupervisor", () => {
     });
     supervisor.cardActions.act(id, "land");
     await vi.waitFor(() =>
-      expect(settleLines(tasks, "land")).toContain(
-        "Cannot merge: something went wrong - try again",
-      ),
+      expect(settleLines(tasks, "land")).toContain(cannotMergeText(PLAIN_PROBLEM_FALLBACK)),
     );
     expect(tasks.timeline("land").find((event) => event.data?.problem)).toMatchObject({
       kind: "note",
@@ -757,14 +755,12 @@ describe("CrewSupervisor", () => {
     });
     vi.mocked(workspace.removeTaskWorktree).mockRejectedValue(new Error("Cleanup failed."));
     await supervisor.settling.settle.requestDiscard("land");
-    expect(settleLines(tasks, "land")).toContain(
-      "Could not discard: something went wrong - try again",
-    );
+    expect(settleLines(tasks, "land")).toContain(`Could not discard: ${PLAIN_PROBLEM_FALLBACK}`);
     // The row closed but its worktree is still there, so a second discard
     // retries the cleanup instead of claiming there is nothing left (WI-7).
     expect(tasks.get("land")).toMatchObject({ status: "dropped", workspaceState: "present" });
     vi.mocked(workspace.removeTaskWorktree).mockResolvedValue(undefined);
-    expect(await supervisor.settling.settle.settleTask("land", "discard")).toBe("Discarded.");
+    expect(await supervisor.settling.settle.settleTask("land", "discard")).toBe(discardedText());
     expect(tasks.get("land")).toMatchObject({
       status: "dropped",
       closedReason: "discarded",
@@ -1048,7 +1044,7 @@ describe("CrewSupervisor: the card thread", () => {
     // author still reads them together, permission wording included.
     expect(thread.messages.at(-1)).toMatchObject({ who: "captain", text: "revise this", answers });
     expect(vi.mocked(crew.steer).mock.calls.at(-1)?.[0]).toContain(
-      'revise this\nCurrent settings (context, not permission):\n- look: {"tiltDeg":57} (JSON), changed',
+      `revise this\n${REPLY_SETTINGS_HEAD}\n- look: {"tiltDeg":57} (JSON), changed`,
     );
     expect(
       harness.tasks.timeline(taskId).find((event) => event.kind === "steered")?.data,
@@ -1099,7 +1095,7 @@ describe("CrewSupervisor: the card thread", () => {
     // The thread shows his words alone; the builder reads the reply as its
     // author did, settings included (FI3-617).
     expect(crew.promptCalls.at(-1)).toContain(
-      'What was said under its card, newest last:\n- captain: tilt it more\nCurrent settings (context, not permission):\n- look: {"tiltDeg":57} (JSON), changed',
+      `What was said under its card, newest last:\n- captain: tilt it more\n${REPLY_SETTINGS_HEAD}\n- look: {"tiltDeg":57} (JSON), changed`,
     );
   });
 

@@ -25,6 +25,7 @@ import {
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { crewmateCardPicturesDir } from "../paths";
+import { seedProject } from "../workspace/seedProject";
 
 const HEAD = "a".repeat(40);
 
@@ -32,18 +33,13 @@ const HEAD = "a".repeat(40);
 async function builder(delivery: "direct-pr" | "local-only" = "direct-pr") {
   const crewmate = fakeCrewmate();
   const h = setup(crewmate);
-  h.db
-    .prepare(
-      "INSERT INTO repos (id, path, name, added_at, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, ?, 0)",
-    )
-    .run(
-      "meter",
-      scratchDir("infinitary-meter-"),
-      "meter",
-      1,
-      "https://github.com/octo/meter.git",
-      delivery,
-    );
+  seedProject(h.db, {
+    id: "meter",
+    name: "meter",
+    path: scratchDir("infinitary-meter-"),
+    origin: "https://github.com/octo/meter.git",
+    delivery,
+  });
   const { taskId } = await h.supervisor.intake.commission({
     title: "Correct the meter",
     intent: intentOf("make the meter count every press"),

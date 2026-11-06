@@ -25,6 +25,7 @@ import type { EmittedAction } from "../session/tools";
 import { FIRSTMATE_RECIPIENT, type InboxStore } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "../tasks/seedTask";
+import { seedProject } from "../workspace/seedProject";
 import { isCardClosedSteer } from "./captainWakes";
 import type { CrewmateSpec } from "./crewSession";
 import { renderWake } from "./wakes";
@@ -656,8 +657,16 @@ describe("the deliverable axis (Task B)", () => {
           }) as const,
       },
     });
-    const { repo } = await harness.repos.setup({ kind: "init", name: "checks" });
-    harness.repos.configure(repo.id, { delivery: "direct-pr" });
+    // The project's folder is there; starting a task needs nothing in it (the workspace is mocked).
+    const folder = join(harness.paths.fleetDir, "checks");
+    mkdirSync(folder, { recursive: true });
+    const repo = seedProject(harness.db, {
+      id: "checks",
+      name: "checks",
+      path: folder,
+      setupKind: "init",
+      delivery: "direct-pr",
+    });
     const { taskId } = await harness.supervisor.intake.commission({
       title: "Fix the merge check",
       intent: intentOf("fix the merge check"),

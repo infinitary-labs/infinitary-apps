@@ -3,6 +3,7 @@ import type { ThisMac } from "@shared/devices";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { changesOffWords } from "../devices/viewWords";
 import { useShellStore } from "./store";
+import { card, DECIDE, resetShell, settle } from "./storeTestKit";
 
 /**
  * Putting a card away and bringing it back (docs/composer.md and the design
@@ -13,11 +14,6 @@ import { useShellStore } from "./store";
  */
 
 const state = () => useShellStore.getState();
-
-/** Lets every answer the store waits on run through. */
-const settle = async () => {
-  for (let i = 0; i < 20; i++) await Promise.resolve();
-};
 
 /** A window controlling the computer named Studio, out of reach. */
 const AWAY: ThisMac = {
@@ -31,20 +27,9 @@ const AWAY: ThisMac = {
   caughtUp: 0,
 };
 
-function card(id: string, title: string, minimized?: true): Card {
-  return {
-    id,
-    author: "firstmate",
-    priority: 10,
-    title,
-    meta: "firstmate",
-    body: `<p>${title}</p>`,
-    actions: [{ id: "go", label: "Go", default: true }],
-    status: "ready",
-    createdAt: 1_000,
-    ...(minimized ? { minimized } : {}),
-  };
-}
+/** The shown decision, and the one put away beside it. */
+const WELCOME = card({ id: "card-a", title: "Pick a welcome", status: "ready", actions: DECIDE });
+const FIX = card({ id: "card-b", title: "Merge the fix", status: "ready", actions: DECIDE });
 
 let minimize: ReturnType<typeof vi.fn>;
 let list: ReturnType<typeof vi.fn>;
@@ -61,12 +46,12 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  useShellStore.setState(useShellStore.getInitialState(), true);
+  resetShell();
 });
 
 describe("putting a card away", () => {
   it("asks the card's owner to put it away", async () => {
-    useShellStore.setState({ cards: [card("card-a", "Pick a welcome")] });
+    useShellStore.setState({ cards: [WELCOME] });
     await state().minimizeCard("card-a");
     expect(minimize).toHaveBeenCalledWith("card-a", true);
     expect(state().cardActionErrors).toEqual({});
@@ -74,13 +59,13 @@ describe("putting a card away", () => {
 
   it("says why on the card when its owner refuses", async () => {
     minimize.mockRejectedValue(new Error("The card is already closed."));
-    useShellStore.setState({ cards: [card("card-a", "Pick a welcome")] });
+    useShellStore.setState({ cards: [WELCOME] });
     await state().minimizeCard("card-a");
     expect(state().cardActionErrors).toEqual({ "card-a": "The card is already closed." });
   });
 
   it("refuses at once while changes to the other computer are off", async () => {
-    useShellStore.setState({ thisMac: AWAY, cards: [card("card-a", "Pick a welcome")] });
+    useShellStore.setState({ thisMac: AWAY, cards: [WELCOME] });
     await state().minimizeCard("card-a");
     expect(minimize).not.toHaveBeenCalled();
     expect(state().cardActionErrors).toEqual({ "card-a": changesOffWords(AWAY) });
@@ -90,13 +75,13 @@ describe("putting a card away", () => {
 describe("bringing back a card that was put away", () => {
   beforeEach(() => {
     useShellStore.setState({
-      cards: [card("card-a", "Pick a welcome"), card("card-b", "Merge the fix", true)],
+      cards: [WELCOME, { ...FIX, minimized: true }],
       cardIndex: 0,
     });
   });
 
   it("restores it with its owner, reads the stack again and shows it", async () => {
-    stackThere = [card("card-a", "Pick a welcome"), card("card-b", "Merge the fix")];
+    stackThere = [WELCOME, FIX];
 
     expect(state().focusCard("card-b")).toBe(true);
     expect(minimize).toHaveBeenCalledWith("card-b", false);
@@ -129,7 +114,7 @@ describe("a reply while changes to the other computer are off (docs/view.md)", (
   it("keeps the reply, says so under the field, and sends nothing then or later", async () => {
     useShellStore.setState({
       thisMac: AWAY,
-      cards: [card("card-a", "Pick a welcome")],
+      cards: [WELCOME],
       replyDrafts: { "card-a": "Lead with the caption" },
     });
 

@@ -20,6 +20,7 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { seedTask } from "../tasks/seedTask";
+import { CARD_CLOSED_STEER_PREFIX } from "./captainWakes";
 
 fakeCrewTimersEachTest();
 
@@ -424,7 +425,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
     ).toMatchObject({ status: "flagged" });
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe(
-      `The captain closed your card "Second note" (${second.id}) as a duplicate of "First note" (${first.id}), without choosing.`,
+      `${CARD_CLOSED_STEER_PREFIX}"Second note" (${second.id}) as a duplicate of "First note" (${first.id}), without choosing.`,
     );
     expect(sparks(events, taskId)).toBe(before + 1);
   });

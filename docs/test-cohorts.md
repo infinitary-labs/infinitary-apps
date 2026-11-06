@@ -63,11 +63,13 @@ A failed or interrupted run is never a timing sample (`compareWorkloads`).
 
 `tests/lint/unit-cohort.grit` refuses, in every `pure` and `unit` test file, an import of `node:child_process`, `node:timers/promises` or a product module whose one job is to spawn (`workspace/git` and any relative `git` module, `sql/forkChildProcess`, `devices/ssh`, `devices/relay`, `devices/dnsSd`), whether static, dynamic, `require` or `vi.importActual`.
 A new module of that kind joins the plugin's pattern.
+It also refuses an import of a test helper that drives real git (`tests/helpers/crewHarnessGit.ts`, `placedWorld.ts` and `phoneScene.ts`, and the journeys' `projectSeed.ts`, `knowledgeSeed.ts`, `usage.ts` and `savePoints.ts` under `tests/e2e/`), and a new helper of that kind joins that list.
+A unit test seeds a project row with `seedProject` (`src/core/workspace/seedProject.ts`), which saves the row the registry saves and runs no git, never with `RepoRegistry.setup`, which does.
 A type-only import is not a dependency and passes, and so does `vi.mock` of any of them (faking a spawn is how a unit test avoids one).
 It runs inside `pnpm check` through biome.json's unit-cohort override.
 It is a Grit plugin rather than a `noRestrictedImports` override because Biome replaces a rule's options per override instead of merging them: a test-file override of that rule would silently drop the Electron, Pi and Claude fences for every test under `src/core/`.
 
-The fence sees a test file's own imports.
+The fence sees a test file's own imports and the helpers it names.
 A unit test that reached a spawn through product code (`WorkspaceService` on a real repository, say) would pass it, and so would a `setTimeout` written inside a test (a few unit tests still yield a macrotask or hold a lock open for a few milliseconds that way, and none of them asserts on elapsed time); the 5 s default is what bounds those, and the answer for a new one is the same: fake the dependency or inject a clock, or list the file as integration.
 
 ## The list
@@ -117,11 +119,11 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/scale-check.test.ts` | a record of the captain's size seeded through the app's writers (3,400 closed tasks, then 13,600), and the first mate, the crew's minute pass and the board read over it | 300 s (Mac fastest 33 s, on a loaded host) |
 | `src/core/placed/loadLine.integration.test.ts` | real native wrappers, command processes, process groups and two-second admission/lifetime cadence | 35 s |
 | `src/core/workspace/worktreePool.test.ts` | real git, real pnpm, at the run's own priority | 15 s for the file; the real-pnpm measurement test is 600 s |
-| `src/core/orchestrator/changeChecks.test.ts` | real git at the run's own priority | 10 s |
-| `src/core/orchestrator/changeMerge.test.ts` | real git at the run's own priority, the put-in's 300 + 900 ms backoff | 10 s |
-| `src/core/orchestrator/changePublication.test.ts` | real git at the run's own priority | 10 s |
-| `src/core/orchestrator/changePublication.stories.test.ts` | real git at the run's own priority | 10 s |
-| `src/core/orchestrator/mergeReviews.test.ts` | a real `git init` per project, at the run's own priority | 10 s |
+| `src/core/orchestrator/changeChecks.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.59 s) |
+| `src/core/orchestrator/changeMerge.test.ts` | real git at the run's own priority, the put-in's 300 + 900 ms backoff | 10 s (Mac slowest case 1.3 s, the retried put-in) |
+| `src/core/orchestrator/changePublication.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.66 s) |
+| `src/core/orchestrator/changePublication.stories.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.63 s) |
+| `src/core/orchestrator/mergeReviews.test.ts` | a real `git init` per project, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/settleService.test.ts` | real git for a pure update and an edited line, at the run's own priority | 15 s |
 | `src/core/workspace/conventional.test.ts` | real git for incoming commit range, at the run's own priority | 5 s default |
 | `src/core/workspace/workspaceService.test.ts` | real git, at the run's own priority | 15 s |

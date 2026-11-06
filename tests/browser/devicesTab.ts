@@ -128,11 +128,9 @@ export async function openDevices(): Promise<HTMLElement> {
   return document.querySelector<HTMLElement>("[data-devices]") as HTMLElement;
 }
 
-/** The element `selector` names, once it is on screen; `timeout` for a step the clock takes. */
-export async function shown(selector: string, timeout?: number): Promise<HTMLElement> {
-  await expect
-    .poll(() => document.querySelector(selector), timeout ? { timeout } : {})
-    .not.toBeNull();
+/** The element `selector` names, once it is on screen. */
+export async function shown(selector: string): Promise<HTMLElement> {
+  await expect.poll(() => document.querySelector(selector)).not.toBeNull();
   return document.querySelector<HTMLElement>(selector) as HTMLElement;
 }
 

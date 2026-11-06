@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
+import { seedProject } from "../workspace/seedProject";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
 
@@ -221,10 +222,7 @@ describe("TaskService capture", () => {
 
   it("files an operation task done/settled with the tool result as its outcome", () => {
     const { db, tasks } = setup();
-    db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES ('r1', '/fleet/api', 'api', 1, 'adopt', NULL, 'local-only', 0)",
-    ).run();
-    tasks.projects.ensureForRepo({ id: "r1", name: "api" });
+    seedProject(db, { id: "r1", name: "api", path: "/fleet/api", setupKind: "adopt", addedAt: 1 });
     const operation = tasks.capture.fileOperation({
       id: "o1",
       title: "Configured repository api",

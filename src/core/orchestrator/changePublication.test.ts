@@ -22,9 +22,10 @@ import { git } from "../workspace/git";
 import { readChangeReading } from "../workspace/workspaceService";
 import { reviewCoversHead } from "./reviewCarry";
 
-// Integration budget (docs/test-cohorts.md): real git plus the product's
-// own put-in backoff, the slowest test 1.3 s at its fastest measured run.
-vi.setConfig({ testTimeout: 10_000 });
+// Integration cohort (docs/test-cohorts.md): real git at the run's own
+// priority, the slowest test (a prerequisite publication past a newer head)
+// 0.66 s at its fastest of five Mac runs, so five times fits vitest's 5 s
+// default and the file sets no budget.
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -911,23 +912,6 @@ describe("the change delivery and the sign-in where the project lives", () => {
         "Not signed in to GitHub (github.com). Report this as a blocker: the captain signs in to GitHub in the app's Settings. Do not sign in yourself, and do not look for another way in.",
       );
     }
-  });
-
-  it("carries the sign-in fact on a refused put-in, for the settle's refusal", async () => {
-    const forge = new FakeForge();
-    forge.fail.putIn = new ForgeError(
-      "sign-in",
-      "GitHub answered 401 to PUT /repos/x/y/pulls/23/merge",
-    );
-    const { tasks, repos, service } = setup({ forge });
-    await insertDirectPrTask(tasks, repos);
-    const outcome = await service.merges.merge("ab12cd34");
-    expect(outcome.ok).toBe(false);
-    expect(outcome.signIn).toEqual({
-      host: "github.com",
-      name: "GitHub",
-      repoId: tasks.get("ab12cd34")?.repoId,
-    });
   });
 
   it("says in the feed that the host refused the change, and asks for write access", async () => {

@@ -6,6 +6,7 @@ import { openDatabase } from "@core/storage/db";
 import { SettingsStore } from "@core/storage/settingsStore";
 import { seedTask } from "@core/tasks/seedTask";
 import { TaskService } from "@core/tasks/taskService";
+import { seedProject } from "@core/workspace/seedProject";
 import type { WorkShape } from "@shared/routingPolicy";
 import { frameServedInput } from "@shared/servedFrame";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -252,21 +253,21 @@ function fixtureJsonl(): string {
 
 function buildFixtureUserData(dir: string): void {
   const db = openDatabase(dir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, setup_kind, origin, delivery, autonomy, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-  ).run("repo-nimbus", "/fleet/nimbus-api", "nimbus-api", "clone", null, "direct-pr", 0, 1);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, setup_kind, origin, delivery, autonomy, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-  ).run(
-    "repo-ledger",
-    "/fleet/ledgerline-core",
-    "ledgerline-core",
-    "clone",
-    null,
-    "direct-pr",
-    1,
-    2,
-  );
+  seedProject(db, {
+    id: "repo-nimbus",
+    name: "nimbus-api",
+    path: "/fleet/nimbus-api",
+    delivery: "direct-pr",
+    addedAt: 1,
+  });
+  seedProject(db, {
+    id: "repo-ledger",
+    name: "ledgerline-core",
+    path: "/fleet/ledgerline-core",
+    delivery: "direct-pr",
+    autonomy: true,
+    addedAt: 2,
+  });
 
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, {

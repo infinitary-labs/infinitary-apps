@@ -29,6 +29,7 @@ import { isProfileRetired } from "../storage/retiredProfile";
 import { recordStartAtLogin } from "../storage/startAtLoginRecord";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
+import { seedProject } from "../workspace/seedProject";
 import { copyTree } from "./copy";
 import { dueMove, type FolderMove, stagedFolderFor, stagedFolders } from "./due";
 import { type MoveDeps, type MoveItem, runMove, stageMove } from "./move";
@@ -138,12 +139,7 @@ function olderFolder(): World {
   const build = join(base, "build");
   const db = openDatabase(build);
   db.pragma("wal_autocheckpoint = 0");
-  db.prepare("INSERT INTO repos (id, path, name, added_at) VALUES (?, ?, ?, ?)").run(
-    "r-inside",
-    inFleet,
-    "inside",
-    1,
-  );
+  seedProject(db, { id: "r-inside", name: "inside", path: inFleet, setupKind: "init", addedAt: 1 });
   const tasks = new TaskService({ db });
   seedTask(tasks, {
     id: "one",

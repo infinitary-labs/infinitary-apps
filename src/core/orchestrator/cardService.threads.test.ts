@@ -9,8 +9,8 @@ import type { CardService } from "./cardService";
  * Guardrails for card threads (INF-2625's plan, cardService's row: "Card
  * emission tests"), before the threads move to an owner of their own: the
  * receipt a crewmate's reply reads, every refusal of a line word for word
- * (the crewmate and the first mate act on these words), who owes a thread
- * its answer, and what Observe and the crew line read of a thread.
+ * (the crewmate and the first mate act on these words), and what Observe
+ * and the crew line read of a thread.
  */
 
 const crewmate = { actor: "crewmate", taskId: "t1" } as const;
@@ -295,7 +295,10 @@ describe("card threads", () => {
     cards.dispose();
   });
 
-  it("says who owes each thread its answer, and what the crew line and Observe read of it", () => {
+  // Who owes a thread its answer is cardEvidence.test.ts's fact, and the crew
+  // line's exact words are cardThreads.test.ts's; this case owns what Observe
+  // lists for each session and that retiring a task's cards closes them.
+  it("says what the crew line and Observe read of a task's threads, and that retiring its cards closes them", () => {
     const { tasks, make } = fixture();
     const cards = make();
     const id = crewCard(cards);
@@ -304,24 +307,12 @@ describe("card threads", () => {
       body: "<p>It is ready.</p>",
       actions: [{ id: "ship", label: "Ship", default: true }],
     });
-    expect(cards.owed(id)).toBe("none");
-    expect(cards.answerOwed(id)).toBe(false);
-    expect(cards.threadFact("t1")).toBeUndefined();
     expect(cards.observeThreads("t1")).toEqual([]);
 
     const asked = cards.addMessage(id, "captain", "Why watts?");
     cards.addMessage(fm, "captain", "Is it tested?");
-    expect(cards.owed(id)).toBe("author");
-    expect(cards.answerOwed(id)).toBe(true);
-    expect(cards.owed(fm)).toBe("firstmate");
-    expect(cards.threadsAwaitingAuthor("t1")).toEqual([{ id, title: "The meter reads in watts" }]);
-    expect(cards.threadFact("t1")).toBe("thread: 1 message, last from captain");
-
     cards.replyFromCrewmate("t1", { cardId: id, text: "Watts fit.", answersMessage: asked.id });
-    expect(cards.threadFact("t1")).toBe("thread: 2 messages, last from crewmate");
-    expect(cards.threadFacts(["t1", "t2"])).toEqual(
-      new Map([["t1", "thread: 2 messages, last from crewmate"]]),
-    );
+    expect(cards.threadFact("t1")).toContain("last from crewmate");
     expect(
       cards.observeThreads("t1").map(({ cardId, title, messages }) => ({
         cardId,
@@ -339,17 +330,19 @@ describe("card threads", () => {
       },
     ]);
     expect(cards.observeThreads(FIRSTMATE_SESSION_ID).map((thread) => thread.cardId)).toEqual([fm]);
-    // A crewmate card whose task closed is the first mate's to answer.
+    // A question still waits on the card when its task's cards retire.
     cards.addMessage(id, "captain", "And for the panel?");
     tasks.close("t1", { status: "done", reason: "finished", actor: "host" });
-    expect(cards.owed(id)).toBe("firstmate");
+    expect(cards.answerOwed(id)).toBe(true);
     cards.retireTaskCards("t1", "finished");
     expect(cards.owed(id)).toBe("closed");
     expect(cards.answerOwed(id)).toBe(false);
     cards.dispose();
   });
 
-  it("writes the first mate's closing words once under a card it owes an answer, and nowhere else", () => {
+  // When the first mate owes an answer and that its closing words leave the
+  // wait are cardThreads.test.ts's facts; this case owns the words it keeps.
+  it("writes the first mate's closing words trimmed, and never blank words", () => {
     const { make } = fixture();
     const cards = make();
     const fm = cards.addFirstmateCard({
@@ -357,20 +350,14 @@ describe("card threads", () => {
       body: "<p>It is ready.</p>",
       actions: [{ id: "ship", label: "Ship", default: true }],
     });
-    const id = crewCard(cards);
-    cards.addMessage(id, "captain", "Why watts?");
-    expect(cards.recordFirstmateThreadAnswer(fm, "Nothing asked yet.")).toBe(false);
-    expect(cards.recordFirstmateThreadAnswer(id, "Not the first mate's card.")).toBe(false);
     cards.addMessage(fm, "captain", "Is it tested?");
     expect(cards.recordFirstmateThreadAnswer(fm, "   ")).toBe(false);
+    expect(cards.messages(fm).map((line) => line.who)).toEqual(["captain"]);
     expect(cards.recordFirstmateThreadAnswer(fm, "  I asked the crewmate.  ")).toBe(true);
-    expect(cards.recordFirstmateThreadAnswer(fm, "Again.")).toBe(false);
     expect(cards.messages(fm).map((line) => [line.who, line.text])).toEqual([
       ["captain", "Is it tested?"],
       ["firstmate", "I asked the crewmate."],
     ]);
-    // The line names no message, so the question still waits.
-    expect(cards.owed(fm)).toBe("firstmate");
     cards.dispose();
   });
 });

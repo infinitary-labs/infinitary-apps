@@ -6,6 +6,7 @@
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
 import type { Card } from "@shared/cards";
+import { forgeRefusedText, forgeSignInTitle, LOCAL_PROJECTS_UNAFFECTED } from "@shared/forges";
 import { fixedHoldWords } from "@shared/holds";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -38,9 +39,11 @@ describe("the sign-in where a project lives", () => {
     expect(raised).toHaveLength(1);
     const card = raised[0] as Card;
     expect(card.author).toBe("host");
-    expect(card.title).toBe("Sign in to GitHub again");
-    expect(card.body).toContain("2 pull requests are waiting on it.");
-    expect(card.body).toContain("Projects kept on this computer are not affected.");
+    // cardService.hostCards.test.ts owns the card's words; this case owns that it goes up once.
+    expect(card.title).toBe(forgeSignInTitle("GitHub", true));
+    expect(card.body).toContain(forgeRefusedText("GitHub"));
+    expect(card.body).toContain("2 pull requests");
+    expect(card.body).toContain(LOCAL_PROJECTS_UNAFFECTED);
     expect(supervisor.cardActions.act(card.id, "sign-in").effect).toEqual({
       kind: "open",
       target: "projects",

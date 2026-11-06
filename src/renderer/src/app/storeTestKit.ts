@@ -5,7 +5,8 @@ import { useShellStore } from "./store";
 /**
  * What the window store's test files share (store.test.ts and one file per
  * slice beside its module): a card and its gesture, a picture, and the one
- * reset back to the store's first state. Tests only; no app code imports it.
+ * reset back to the store's first state, and the wait for its answers to
+ * run through. Tests only; no app code imports it.
  */
 
 /** The metadata every card gesture carries beside it: a fresh id of its own. */
@@ -39,4 +40,9 @@ export const picture = (id: string) => ({
 /** Puts the whole store back as it was created: every slice's state and actions. */
 export function resetShell(): void {
   useShellStore.setState(useShellStore.getInitialState(), true);
+}
+
+/** Lets every answer the store waits on, and what it does with each, run through. */
+export async function settle(): Promise<void> {
+  for (let i = 0; i < 20; i++) await Promise.resolve();
 }

@@ -31,6 +31,9 @@ import { TaskGraphRefusal } from "./taskGraph";
 import { TaskService } from "./taskService";
 import { keyOrId, type TaskWriter } from "./taskWriter";
 
+/** The record's status line when a start whose outcome is unknown goes back to the queue. */
+export const UNCONFIRMED_START_RETURNED = "returned to the queue - the start was not confirmed";
+
 export type DispatchInput = {
   workspace: {
     repoDir: string;
@@ -389,7 +392,7 @@ export class TaskStarts {
         at,
         actor: "host",
         kind: "status",
-        text: "returned to the queue - the start was not confirmed",
+        text: UNCONFIRMED_START_RETURNED,
         feed: false,
       });
     });

@@ -76,7 +76,7 @@ export function FocusEdge({ onFocus }: { onFocus: () => void }) {
 }
 
 /** How far one arrow key moves a card's edge. */
-const EDGE_KEY_STEP = 16;
+export const EDGE_KEY_STEP = 16;
 
 /**
  * The captain's drag on a lone card's edges (his Q5 A: facts, then the

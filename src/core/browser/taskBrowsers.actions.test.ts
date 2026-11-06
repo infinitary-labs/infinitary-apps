@@ -10,7 +10,12 @@ import {
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { type FakePage, formNodes, harness } from "../../../tests/helpers/taskBrowserStandIn";
+import {
+  type FakePage,
+  formNodes,
+  harness,
+  PICTURE,
+} from "../../../tests/helpers/taskBrowserStandIn";
 import type { HostLoadOutcome } from "../host";
 
 /**
@@ -103,7 +108,7 @@ describe("piece 4 browser actions", () => {
     const browser = browsers.forTask("t1");
     await browser.navigate({ url: "http://localhost:5173" });
     const page = pages[0] as FakePage;
-    expect((await browser.capture({ ref: "g1:e3" })).image).toBeDefined();
+    expect((await browser.capture({ ref: "g1:e3" })).image).toEqual(PICTURE);
     expect(page.effects).toContain("capture target 30");
     expect((await browser.capture({ ref: "g1:e3", fullPage: true })).image).toBeUndefined();
     const handle = { session: browsers.session, generation: 1 };

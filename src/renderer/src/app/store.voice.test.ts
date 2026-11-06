@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { voiceController } from "../voice/voiceController";
+import { TRANSCRIBE_FAILED } from "./composer";
 import { useShellStore } from "./store";
+import { resetShell, settle } from "./storeTestKit";
+import { VOICE_MODEL_DOWNLOAD_FAILED } from "./voice";
 
 /**
  * Talking to the first mate (docs/composer.md, "Voice"): the voice model's
@@ -11,11 +14,6 @@ import { useShellStore } from "./store";
  */
 
 const state = () => useShellStore.getState();
-
-/** Lets every answer the store waits on run through. */
-const settle = async () => {
-  for (let i = 0; i < 20; i++) await Promise.resolve();
-};
 
 /** A home window with dictation on and the voice model on this computer. */
 const READY = {
@@ -30,7 +28,7 @@ const READY = {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
-  useShellStore.setState(useShellStore.getInitialState(), true);
+  resetShell();
 });
 
 describe('the voice model\'s download (docs/composer.md, "Voice")', () => {
@@ -75,7 +73,7 @@ describe('the voice model\'s download (docs/composer.md, "Voice")', () => {
     await settle();
     expect(state()).toMatchObject({
       voiceModelReady: false,
-      voiceNotice: { kind: "error", message: "The voice model download failed. Try again." },
+      voiceNotice: { kind: "error", message: VOICE_MODEL_DOWNLOAD_FAILED },
     });
 
     state().startVoiceDownload();
@@ -155,7 +153,7 @@ describe('a recording that ends (docs/composer.md, "Voice")', () => {
     expect(state()).toMatchObject({
       transcribing: false,
       inputText: "keep this",
-      voiceNotice: { kind: "error", message: "Could not transcribe that. You can still type." },
+      voiceNotice: { kind: "error", message: TRANSCRIBE_FAILED },
     });
   });
 
@@ -207,7 +205,7 @@ describe('a recording that ends (docs/composer.md, "Voice")', () => {
     expect(state()).toMatchObject({
       transcribing: false,
       inputText: "Look at",
-      voiceNotice: { kind: "error", message: "Could not transcribe that. You can still type." },
+      voiceNotice: { kind: "error", message: TRANSCRIBE_FAILED },
     });
   });
 });

@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { Card } from "@shared/cards";
 import {
   FileIntegrationSecrets,
   IntegrationSettingsStore,
@@ -13,6 +14,7 @@ import type { ModelRuntime } from "../../src/core/pi/types";
 import { ShellPreferencesService } from "../../src/core/preferences/shellPreferences";
 import type { BoundTool } from "../../src/core/session/tools";
 import { CardStore } from "../../src/core/storage/cardStore";
+import type { AppDatabase } from "../../src/core/storage/db";
 import { InboxStore } from "../../src/core/storage/inboxStore";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
 import { TaskService } from "../../src/core/tasks/taskService";
@@ -35,23 +37,24 @@ export async function firstmateTools(): Promise<BoundTool[]> {
 }
 
 /**
- * The same live agent with the crew supervisor and stores it was built
- * over, for a case that runs a tool and reads what it did to the record
- * and the card stack. Nothing is bound to the workspace; a tool that
- * reaches it fails.
+ * A crew supervisor over an in-memory record with no first mate attached,
+ * holding the cards an earlier run saved. Nothing is bound to the
+ * workspace; a tool that reaches it fails.
  */
-export async function firstmateSeat(): Promise<{
-  tools: BoundTool[];
-  supervisor: CrewSupervisor;
+export function toolsCrew(saved: Card[] = []): {
+  paths: ReturnType<typeof appPathsFor>;
+  db: AppDatabase;
+  repos: RepoRegistry;
   tasks: TaskService;
   cardStore: CardStore;
-}> {
+  supervisor: CrewSupervisor;
+} {
   const paths = appPathsFor(scratchDir("infinitary-firstmate-tools-"));
   const db = freshDatabase();
-  const settings = new SettingsStore(db);
   const repos = new RepoRegistry(db, paths.fleetDir);
   const tasks = new TaskService({ db, strict: true });
   const cardStore = new CardStore(db);
+  for (const card of saved) cardStore.upsert(card);
   const supervisor = new CrewSupervisor({
     sessions: { pi: fakeSessionFactory() },
     bind: async (accountId) => fakeBinding(accountId),
@@ -64,6 +67,23 @@ export async function firstmateSeat(): Promise<{
     broadcastEvent: () => {},
     broadcastCards: () => {},
   });
+  return { paths, db, repos, tasks, cardStore, supervisor };
+}
+
+/**
+ * The same live agent with the crew supervisor and stores it was built
+ * over, for a case that runs a tool and reads what it did to the record
+ * and the card stack. Nothing is bound to the workspace; a tool that
+ * reaches it fails.
+ */
+export async function firstmateSeat(): Promise<{
+  tools: BoundTool[];
+  supervisor: CrewSupervisor;
+  tasks: TaskService;
+  cardStore: CardStore;
+}> {
+  const { paths, db, repos, tasks, cardStore, supervisor } = toolsCrew();
+  const settings = new SettingsStore(db);
   // The factory the agent opens its seat through: it keeps the spec it was handed.
   const seat = fakeSessionFactory("pi");
   const agent = new FirstmateAgent({

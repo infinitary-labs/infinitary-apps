@@ -12,6 +12,7 @@ import { rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { Card } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
+import { CLAUDE_PROVIDER_ID, COPILOT_PROVIDER_ID } from "@shared/providers";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -52,7 +53,7 @@ fakeCrewTimersEachTest();
 describe("CrewSupervisor", () => {
   // INF-849: a card left up after the task moved does nothing again.
   it("refuses a second Move from a card whose task already left that provider", async () => {
-    const copilot = { provider: "github-copilot", id: "gpt-5.1" };
+    const copilot = { provider: COPILOT_PROVIDER_ID, id: "gpt-5.1" };
     const crewmate = fakeCrewmate({ model: copilot });
     const { supervisor, tasks } = setup(crewmate, {
       routedModel: copilot,
@@ -71,7 +72,7 @@ describe("CrewSupervisor", () => {
   // INF-849, the captain: "it's better if we can show "Move to <model>"" - a
   // click moves to the model its card named, or does not move.
   it("refuses a Move whose card named a model the app would no longer pick", async () => {
-    const copilot = { provider: "github-copilot", id: "gpt-5.1" };
+    const copilot = { provider: COPILOT_PROVIDER_ID, id: "gpt-5.1" };
     const crewmate = fakeCrewmate({ model: copilot });
     const { supervisor, tasks } = setup(crewmate, {
       routedModel: copilot,
@@ -85,21 +86,21 @@ describe("CrewSupervisor", () => {
     expect(
       supervisor.moves.requestMove(taskId, {
         by: "captain",
-        from: "github-copilot",
+        from: COPILOT_PROVIDER_ID,
         offered: "xai/grok-5",
       }),
     ).toEqual({
       ok: false,
       text: `${tasks.get(taskId)?.key} "t" did not move: the app would now pick GPT-6.1 Sol, not the model its card offered.`,
     });
-    expect(tasks.get(taskId)?.model).toBe("github-copilot/gpt-5.1");
+    expect(tasks.get(taskId)?.model).toBe(`${COPILOT_PROVIDER_ID}/gpt-5.1`);
   });
 
   // INF-849: "A turn is never cut short" - a move asked for mid-turn waits
   // for the turn to end; from a Claude conversation, which Pi cannot reopen,
   // the crewmate starts a new conversation told it moved.
   it("moves a crewmate mid-turn once its turn ends, and tells a new conversation it moved", async () => {
-    const claude = { provider: "anthropic-claude", id: "claude-fable-5" };
+    const claude = { provider: CLAUDE_PROVIDER_ID, id: "claude-fable-5" };
     const codex = { provider: "openai-codex", id: "gpt-6.1-sol" };
     const crewmate = fakeCrewmate({
       model: claude,

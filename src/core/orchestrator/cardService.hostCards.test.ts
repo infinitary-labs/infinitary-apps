@@ -337,8 +337,10 @@ describe("host cards", () => {
       "Build it",
       "model",
     );
+    const crewFace = face(cards.get(crewCard));
     cards.withdrawHostCard(crewCard, "gone");
-    expect(cards.get(crewCard)).toBeDefined();
+    expect(face(cards.get(crewCard))).toEqual(crewFace);
+    expect(crewFace).toMatchObject({ id: crewCard, taskId: "t1", title: "Done" });
     cards.withdrawHostCard("card-consent", "gone");
     expect(cards.has("card-consent")).toBe(false);
     cards.dispose();

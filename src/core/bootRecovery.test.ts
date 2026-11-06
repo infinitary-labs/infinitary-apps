@@ -5,6 +5,15 @@ import { PANELS_SAFE_MODE_NOTE } from "./personal/panelLines";
 import { openInMemoryDatabase } from "./storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore, SUPERVISION_RECIPIENT } from "./storage/inboxStore";
 import type { InterruptedJob } from "./storage/jobStore";
+import { seedTask } from "./tasks/seedTask";
+import { TaskService } from "./tasks/taskService";
+
+/**
+ * Boot recovery (src/core/bootRecovery.ts), held at the unit layer when the
+ * app wiring was split into its owners (INF-2625's plan): the one line each
+ * job the last quit stranded gets (WI-13), owned here word for word, and the
+ * order boot says and sweeps what the last launch left.
+ */
 
 const titles: Record<string, string> = { "task-1": "Fix the login page" };
 const titleOf = (taskId: string) => titles[taskId];
@@ -47,7 +56,10 @@ describe("interruptedJobNote", () => {
 
 /** A boot with the crew's sweeps recorded in the order they ran. */
 function boot(options: { enteredSafeMode: boolean; interrupted: InterruptedJob[] }) {
-  const inbox = new InboxStore(openInMemoryDatabase(), { now: () => 5_000 });
+  const db = openInMemoryDatabase();
+  const inbox = new InboxStore(db, { now: () => 5_000 });
+  const tasks = new TaskService({ db, now: () => 5_000 });
+  for (const [id, title] of Object.entries(titles)) seedTask(tasks, { id, title, status: "idle" });
   const happened: string[] = [];
   const events: FmEvent[] = [];
   return {
@@ -58,7 +70,7 @@ function boot(options: { enteredSafeMode: boolean; interrupted: InterruptedJob[]
       recoverAtBoot({
         enteredSafeMode: options.enteredSafeMode,
         jobs: { reportInterrupted: () => options.interrupted },
-        tasks: { get: (id) => (titles[id] ? ({ title: titles[id] } as never) : undefined) },
+        tasks,
         supervisor: {
           reconcileCutOffs: () => void happened.push("cut-offs"),
           watch: {
@@ -79,18 +91,16 @@ function boot(options: { enteredSafeMode: boolean; interrupted: InterruptedJob[]
 
 describe("recoverAtBoot", () => {
   it("says safe mode and each stranded job first, then hears cut-offs before the sweeps", () => {
-    const { happened, run } = boot({
-      enteredSafeMode: true,
-      interrupted: [
-        { ownerId: "firstmate", command: "pnpm test", stoppedByQuit: true },
-        { ownerId: "task-1", command: "pnpm build", stoppedByQuit: false },
-      ],
-    });
+    const interrupted: InterruptedJob[] = [
+      { ownerId: "firstmate", command: "pnpm test", stoppedByQuit: true },
+      { ownerId: "task-1", command: "pnpm build", stoppedByQuit: false },
+    ];
+    const { happened, run } = boot({ enteredSafeMode: true, interrupted });
     run();
+    // The job lines' words are the interruptedJobNote cases'; this case owns the order.
     expect(happened).toEqual([
       `line: ${PANELS_SAFE_MODE_NOTE}`,
-      'line: Your first mate\'s background job "pnpm test" was stopped when the app quit.',
-      'line: "Fix the login page"\'s background job "pnpm build" was running when the app quit unexpectedly. It may have kept running, even to the end.',
+      ...interrupted.map((job) => `line: ${interruptedJobNote(job, titleOf).text}`),
       "cut-offs",
       "carry-on",
       "inbox sweep at 5000",

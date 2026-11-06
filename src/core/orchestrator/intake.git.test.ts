@@ -27,10 +27,12 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { hostEnv } from "../hostEnv";
 import { crewmateHandoverDir, crewmateTempDir } from "../paths";
+import { NOTHING_SPAWNED } from "../pi/crewTools";
 import type { ModelRuntime } from "../pi/types";
 import { SettingsStore } from "../storage/settingsStore";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
+import { RESULT_WORDS } from "../tasks/taskResult";
 import type { CrewmateSpec } from "./crewSession";
 import { FirstmateAgent } from "./firstmateAgent";
 
@@ -44,20 +46,7 @@ fakeCrewTimersEachTest();
 
 describe("the task graph (task-system P2)", () => {
   it("names the project, PR number and CI state on a direct-pr task's settle card", async () => {
-    const dir = scratchDir("infinitary-settle-facts-");
-    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-    execFileSync("git", [
-      "-C",
-      dir,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@localhost",
-      "commit",
-      "--allow-empty",
-      "-m",
-      "init",
-    ]);
+    const { dir } = gitRepo();
     // It lives on GitHub: the proposed change gets a link in the strip.
     execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/r.git"]);
     try {
@@ -215,20 +204,7 @@ describe("the task graph (task-system P2)", () => {
   });
 
   it("names a plain Git host's change by the label the forge gave it, with no link to parse (git integration PR 1.1)", async () => {
-    const dir = scratchDir("infinitary-settle-facts-plain-");
-    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-    execFileSync("git", [
-      "-C",
-      dir,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@localhost",
-      "commit",
-      "--allow-empty",
-      "-m",
-      "init",
-    ]);
+    const { dir } = gitRepo();
     execFileSync("git", [
       "-C",
       dir,
@@ -583,7 +559,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
     const read = await specs[0]?.onQueryTasks?.({ key: tasks.get(taskId)?.key });
     expect(read?.rows[0]).toMatchObject({ result: FOUND, result_schema: FINDINGS });
     const wake = ops.find((line) => line.includes("reported on task")) ?? "";
-    expect(wake).toContain(`Its result, as declared: ${JSON.stringify(FOUND)}`);
+    expect(wake).toContain(`${RESULT_WORDS} ${JSON.stringify(FOUND)}`);
   });
 
   it("prints a basis's result in the next brief, after its report", async () => {
@@ -600,7 +576,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
     });
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain(
-      `Found the two renderers.\n\nIts result, as declared:\n${JSON.stringify(FOUND)}`,
+      `Found the two renderers.\n\n${RESULT_WORDS}\n${JSON.stringify(FOUND)}`,
     );
   });
 
@@ -626,10 +602,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
       ).trim();
     }
     function projectRepo() {
-      const dir = scratchDir("infinitary-branch-from-");
-      execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-      git(dir, "commit", "--allow-empty", "-m", "init");
-      return dir;
+      return gitRepo().dir;
     }
 
     /** A first stage that committed its migration on its branch. */
@@ -899,7 +872,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
           repoId,
           shape: { branch_from: "INF-404" },
         }),
-      ).rejects.toThrow('Nothing was spawned. Unknown branch_from "INF-404"');
+      ).rejects.toThrow(`${NOTHING_SPAWNED} Unknown branch_from "INF-404"`);
       // A started task's shape is the one its crewmate was briefed with.
       expect(() => tasks.updateFields(first.id, { resultSchema: FINDINGS }, "firstmate")).toThrow(
         "A result shape or branch_from can only change on open work that has not started.",

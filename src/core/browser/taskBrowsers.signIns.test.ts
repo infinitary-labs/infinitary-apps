@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   type FakePage,
+  flush,
   formNodes,
   harness,
   openPopup,
+  PICTURE,
   PNG,
 } from "../../../tests/helpers/taskBrowserStandIn";
 import type { HostCookie } from "../host";
@@ -44,7 +46,7 @@ describe('a browser handed back keeps only what the task needs (docs/task-browse
       name: "booking",
       reason: "the captain asked for the booking confirmation",
     });
-    expect(taken.image).toBeDefined();
+    expect(taken.image).toEqual(PICTURE);
     expect(readFileSync(join(evidence, "t1", "booking.png"))).toEqual(Buffer.from(PNG));
     expect(notes).toContain(
       "t1: photographed its browser's page at aurora.example after you returned control: the captain asked for the booking confirmation",
@@ -105,7 +107,7 @@ describe('a browser handed back keeps only what the task needs (docs/task-browse
     // Cleared, the page holds nothing of his, and its picture is taken.
     page.nodeList = typed("", "");
     const taken = await browser.capture({ name: "pay", reason: "the task needs the total" });
-    expect(taken.image).toBeDefined();
+    expect(taken.image).toEqual(PICTURE);
   });
 
   it("passes on no address details and no error words, and Open again starts from the bare address", async () => {
@@ -162,7 +164,6 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
       sameSite: "no_restriction",
     },
   ];
-  const tick = () => new Promise((resolve) => setImmediate(resolve));
 
   /** The browsers on one Mac whose saved sign-ins live in a scratch folder. */
   function onThisMac() {
@@ -472,7 +473,7 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
     // The site refreshed its session while the task used it.
     page.cookies.cookies = page.cookies.cookies.map((cookie) => ({ ...cookie, value: "sam-2" }));
     await browser.close();
-    await tick();
+    await flush();
     expect(page.closed).toBe(true);
     expect(h.signIns.get("localhost:5173")).toMatchObject({
       id: first,
@@ -483,7 +484,7 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
     const t1 = h.pages[0] as FakePage;
     t1.cookies.cookies = [];
     h.browsers.stopByCaptain("t1");
-    await tick();
+    await flush();
     expect(h.signIns.get("localhost:5173")?.cookies).toHaveLength(1);
   });
 
@@ -507,7 +508,7 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
     );
     page.cookies.cookies.push({ ...(SIGNED_IN[0] as HostCookie) });
     await browser.close();
-    await tick();
+    await flush();
     expect(h.signIns.get("localhost:5173")).toBeUndefined();
     expect(await h.browsers.removeSavedSignIn("localhost:5173")).toEqual({
       ok: false,
@@ -612,7 +613,7 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
     const bank = openPopup(page, "https://bank.example/check") as FakePage;
     page.store.put("https://bank.example", { token: "the bank's" });
     await browser.close();
-    await tick();
+    await flush();
     expect(h.signIns.get("localhost:5173")?.storage).toEqual([
       {
         origin: ORIGIN,
@@ -687,7 +688,7 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
     page.sessionStore.origins.delete(ORIGIN);
     page.sessionStore.put(ORIGIN, { idle: "signed out" });
     await browser.close();
-    await tick();
+    await flush();
     expect(page.effects.filter((effect) => effect.startsWith("read session"))).toEqual([]);
     expect(h.signIns.get("localhost:5173")?.session).toEqual([
       { origin: ORIGIN, items: [["repository", "token-1"]] },
@@ -743,7 +744,7 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
     page.cookies.cookies = page.cookies.cookies.map((cookie) => ({ ...cookie, value: "late" }));
     h.browsers.closeAll();
     expect(page.closed).toBe(true);
-    await tick();
+    await flush();
     expect(h.signIns.get("localhost:5173")?.cookies[0]?.value).toBe("sam-1");
   });
 });

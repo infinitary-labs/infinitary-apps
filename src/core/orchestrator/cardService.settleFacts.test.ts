@@ -1,4 +1,4 @@
-import { MERGE_ANYWAY_ACTION, SETTLE_FACTS_OPEN, withMergeClosesLine } from "@shared/cards";
+import { MERGE_ANYWAY_ACTION, SETTLE_FACTS_OPEN } from "@shared/cards";
 import { MERGE_ANYWAY_WORDS } from "@shared/vocabulary";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "../../../tests/helpers/cardServiceHarness";
@@ -50,10 +50,8 @@ describe("a merge card's facts", () => {
     const id = cards.emitCrewmateCard("t1", completion, "Fix the meter", "model");
     cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
     const labels = () => cards.get(id)?.actions.map((action) => [action.id, action.label]);
+    // The body's refresh is cardService.test.ts's fact; this case owns the actions.
     expect(labels()).toEqual([["merge", "Merge and close the task"]]);
-    expect(cards.get(id)?.body).toBe(
-      `<p>The meter now reads in watts.</p>${withMergeClosesLine(facts(), completion.actions)}`,
-    );
 
     anyway = true;
     seedDelivery(tasks, "t1", { ci: "red", ciAt: 1000 });
@@ -67,7 +65,6 @@ describe("a merge card's facts", () => {
       },
       { ...merge, label: "Merge and close the task", variant: "primary" },
     ]);
-    expect(cards.get(id)?.body).toContain("<span>red</span>");
     // The saved row and the stage carry the same facts.
     expect(cardStore.get(id)?.actions).toEqual(cards.get(id)?.actions);
     expect(cards.snapshot().find((card) => card.id === id)?.actions).toEqual(

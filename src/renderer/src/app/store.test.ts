@@ -8,7 +8,7 @@ import { card, DECIDE, resetShell } from "./storeTestKit";
 
 /** The window's own state (./store.ts): the core's events, the last turn, and how the slices meet. */
 
-describe("derivePhase", () => {
+describe("the first mate's turn, the card stack and a recording move apart", () => {
   beforeEach(resetShell);
 
   it("heats only for Firstmate's own turn; cards are layout, not heat", () => {

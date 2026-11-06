@@ -28,7 +28,7 @@ import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import type { TaskService } from "../tasks/taskService";
 import { FLEET_STARTED_CHANGE_WORDS, type SpawnIntent } from "./intentBrief";
-import { closingNoteTitle, droppedLine } from "./settleWords";
+import { closingNoteTitle, discardedText, droppedLine } from "./settleWords";
 
 fakeCrewTimersEachTest();
 
@@ -644,7 +644,7 @@ describe("CrewSupervisor", () => {
 
     const result = await supervisor.settling.settle.settleTask(taskId, "discard");
     expect(closePullRequest).not.toHaveBeenCalled();
-    expect(result).toBe("Discarded.");
+    expect(result).toBe(discardedText());
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
   });
 

@@ -29,6 +29,7 @@ import { THREAD_STEER_PREAMBLE } from "./captainWakes";
 import type { CrewmateSpec } from "./crewSession";
 import { UNHEARD_END_NOTE } from "./crewTurns";
 import { QUIET_CARD_MS } from "./crewWatch";
+import { discardedText } from "./settleWords";
 
 fakeCrewTimersEachTest();
 
@@ -422,7 +423,9 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
     });
 
     expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toContain("2 commits");
-    expect(await supervisor.settling.settle.settleTask(taskId, "discard", true)).toBe("Discarded.");
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard", true)).toBe(
+      discardedText(),
+    );
     // The close stands as cancelled; only the worktree it kept is gone.
     expect(tasks.get(taskId)).toMatchObject({
       status: "dropped",
@@ -665,7 +668,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     }
     expect(settleWakes(ops)).toEqual([
       `[fm-op] the captain chose discard for task dirty "Unlanded"; the host settled it and the outcome was: Cannot discard SCR-1 "Unlanded" without confirm: 2 commits and uncommitted edits that were never merged. Discard with confirm to abandon them, or merge the branch instead.\n\`\`\`json\n{\n  "refused": "unlanded-work",\n  "task": {\n    "id": "dirty",\n    "key": "SCR-1",\n    "title": "Unlanded"\n  },\n  "tasks": [],\n  "ways": [\n    {\n      "label": "Discard anyway",\n      "tool": "settle_task",\n      "args": {\n        "task_id": "dirty",\n        "mode": "discard",\n        "confirm": true\n      }\n    },\n    {\n      "label": "Merge the branch instead",\n      "tool": "settle_task",\n      "args": {\n        "task_id": "dirty",\n        "mode": "land"\n      }\n    }\n  ],\n  "text": "Cannot discard SCR-1 \\"Unlanded\\" without confirm: 2 commits and uncommitted edits that were never merged. Discard with confirm to abandon them, or merge the branch instead."\n}\n\`\`\``,
-      `[fm-op] the captain chose discard for task clean "Clean"; the host settled it and the outcome was: Discarded.`,
+      `[fm-op] the captain chose discard for task clean "Clean"; the host settled it and the outcome was: ${discardedText()}`,
     ]);
   });
 
@@ -913,10 +916,11 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     tasks.placement.setGate(taskId, { kind: "at-time", until: Date.now() - 1 });
     await supervisor.watch.sweepGates(Date.now());
     await tick();
-    expect(crewmate.promptCalls.slice(before)).toEqual([
-      "The time this task was waiting for has come (checks settle). Carry on from where you stopped.",
-      "The time this task was waiting for has come. Carry on from where you stopped.",
-    ]);
+    // The wake's whole words are the crewmate words table's; this case owns its reason riding along.
+    const ended = crewmate.promptCalls.slice(before);
+    expect(ended).toHaveLength(2);
+    expect(ended[0]).toContain("was waiting for has come (checks settle).");
+    expect(ended[1]).toContain("was waiting for has come. Carry on");
   });
 
   it("the Firstmate's lane holds these wakes as typed facts, never their wording", async () => {

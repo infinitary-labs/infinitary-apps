@@ -37,6 +37,8 @@ import { isCardClosedSteer } from "./captainWakes";
 import type { CardService } from "./cardService";
 import type { PrOutcome } from "./changeMerge";
 import type { CrewSupervisor } from "./crewSupervisor";
+import { PROVIDER_SIGN_IN_TITLE } from "./hostCards";
+import { MERGE_CHECKS_HOLD_REASON } from "./mergeAuthorization";
 import { MERGE_STOPPED_TITLE, mergePendingCardId } from "./settleWords";
 
 fakeCrewTimersEachTest();
@@ -95,7 +97,7 @@ describe("CrewSupervisor", () => {
     // A refusal on the checks themselves names no check in the feed.
     mergePullRequest.mockResolvedValueOnce({
       ok: false,
-      text: "Cannot merge yet - the checks have not all passed. overall: red\n- linux-checks: completed / failure",
+      text: `Cannot merge yet - ${MERGE_CHECKS_HOLD_REASON}. overall: red\n- linux-checks: completed / failure`,
       plain: "the checks failed",
     });
     const again = supervisor.addFirstmateCard({
@@ -710,7 +712,7 @@ describe("the task graph (R1)", () => {
         restoreAccountId: "acct_codex",
       },
     );
-    supervisor.cards.addAuthDecisionCard("auth-any", "Codex", "A provider needs sign in.");
+    supervisor.cards.addAuthDecisionCard("auth-any", "Codex", `${PROVIDER_SIGN_IN_TITLE}.`);
     supervisor.cards.addFirstmateMoveBackCard({
       providerId: "openai-codex",
       providerName: "Codex",

@@ -16,6 +16,7 @@ import { standingDependencyWaits } from "../../../tasks/dependencyWaits";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { RepoRegistry } from "../../../workspace/repoRegistry";
+import { seedProject } from "../../../workspace/seedProject";
 import { GitHubForge } from "./githubForge";
 
 /**
@@ -148,14 +149,19 @@ async function setup(delivery: "direct-pr" | "local-only" = "direct-pr", operati
   cleanup.push(() => {
     db.close();
   });
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, origin, delivery) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run("r1", dir, "infinitary", 1, "https://github.com/infinitary-labs/infinitary.git", delivery);
+  seedProject(db, {
+    id: "r1",
+    name: "infinitary",
+    path: dir,
+    setupKind: "adopt",
+    origin: "https://github.com/infinitary-labs/infinitary.git",
+    delivery,
+    addedAt: 1,
+  });
   // The rerun went out at 4:44 PM Pacific, just before GitHub started its second attempt.
   let now = Date.parse("2026-10-20T23:44:00Z");
   const clock = () => now;
   const tasks = new TaskService({ db, strict: true, now: clock });
-  tasks.projects.ensureForRepo({ id: "r1", name: "infinitary" });
   seedTask(tasks, {
     id: "proof",
     title: "Prove every project's Mac jobs in a virtual Mac",

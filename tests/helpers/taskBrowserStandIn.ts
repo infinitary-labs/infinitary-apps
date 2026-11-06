@@ -32,6 +32,9 @@ import { scratchDir } from "./scratchDirs";
 
 export const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+/** The picture a crewmate's capture answers with: the stand-in page's PNG, as it travels. */
+export const PICTURE = { data: Buffer.from(PNG).toString("base64"), mimeType: "image/png" };
+
 export function formNodes(): BrowserNode[] {
   return [
     {
@@ -312,13 +315,6 @@ export class FakePage implements HostBrowserPage {
 export const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
 /** A promise the test settles by hand. */
-export function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
-  let resolve: (value: T) => void = () => undefined;
-  const promise = new Promise<T>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
-}
 
 /**
  * The browsers' clock: a short wait (the settle after an action, a wait's

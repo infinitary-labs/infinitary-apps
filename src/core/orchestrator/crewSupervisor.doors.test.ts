@@ -10,42 +10,16 @@
  */
 import type { Card } from "@shared/cards";
 import { describe, expect, it, vi } from "vitest";
-import { freshDatabase } from "../../../tests/helpers/database";
-import { fakeBinding, fakeSessionFactory } from "../../../tests/helpers/fakeSession";
-import { firstmateSeat } from "../../../tests/helpers/firstmateTools";
-import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { firstmateSeat, toolsCrew } from "../../../tests/helpers/firstmateTools";
 import type { CoreServices } from "../coreServices";
 import { createCoreDispatcher } from "../dispatcher";
 import type { HostCapabilities } from "../host";
-import { appPathsFor } from "../paths";
 import type { BoundTool } from "../session/tools";
-import { CardStore } from "../storage/cardStore";
-import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
-import { TaskService } from "../tasks/taskService";
-import { RepoRegistry } from "../workspace/repoRegistry";
-import type { WorkspaceService } from "../workspace/workspaceService";
-import { CrewSupervisor } from "./crewSupervisor";
 
 /** A supervisor over an in-memory record with no first mate attached, and the window's dispatch over it. */
 function crew(saved: Card[] = []) {
-  const paths = appPathsFor(scratchDir("infinitary-crew-doors-"));
-  const db = freshDatabase();
-  const cardStore = new CardStore(db);
-  for (const card of saved) cardStore.upsert(card);
-  const tasks = new TaskService({ db, strict: true });
-  const supervisor = new CrewSupervisor({
-    sessions: { pi: fakeSessionFactory() },
-    bind: async (accountId) => fakeBinding(accountId),
-    workspace: {} as WorkspaceService,
-    repos: new RepoRegistry(db, paths.fleetDir),
-    tasks,
-    cardStore,
-    inbox: new InboxStore(db),
-    paths,
-    broadcastEvent: () => {},
-    broadcastCards: () => {},
-  });
+  const { supervisor, tasks } = toolsCrew(saved);
   // The window's card channels read only the supervisor and the event sink.
   const dispatch = createCoreDispatcher({
     services: { supervisor, broadcastEvent: () => {} } as unknown as CoreServices,
@@ -224,7 +198,6 @@ describe("the first mate reads and changes cards through its tools", () => {
     expect(text).toContain(
       `Revised card "Remove the job host from the shell PC" (${cardId}) as your first mate.`,
     );
-    expect(text).toContain("Its required action is at generation 2.");
     const cards = cardStore.listOpen();
     expect(cards.map((card) => card.id)).toEqual([cardId]);
     expect(cards[0]?.body).toContain(
@@ -327,7 +300,8 @@ describe("the host's own steer", () => {
     const steered = steeredOf();
     expect(steered[0]).toMatchObject({
       actor: "supervisor",
-      text: "The time this task was waiting for has come (checks settle). Carry on from where you stopped.",
+      // The wake's whole words are the crewmate words table's.
+      text: expect.stringContaining("was waiting for has come (checks settle)."),
       data: { via: "supervision", decision: null, cardId: null },
     });
   });

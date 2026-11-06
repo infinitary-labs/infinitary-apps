@@ -15,7 +15,6 @@ import { seedTask } from "@core/tasks/seedTask";
 import { TaskService } from "@core/tasks/taskService";
 import type { Card, CardAction } from "@shared/cards";
 import type { HoldOverride, OverridableHold } from "@shared/holds";
-import { expect, vi } from "vitest";
 import { main } from "../../scripts/export-corpus.ts";
 import { seedDelivery } from "./taskDelivery";
 
@@ -1131,9 +1130,19 @@ export type DispatchRow = {
   };
 };
 
+/** The rows the real export CLI wrote under `caseOut`, none when it failed. */
+function exportedRows(exitCode: number, caseOut: string): DispatchRow[] {
+  if (exitCode !== 0) return [];
+  return readFileSync(join(caseOut, "dispatch.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as DispatchRow);
+}
+
 /**
  * One emit_card turn in a session of its own, exported through the real
- * CLI over the fixture copy in `dir`: the record of the captain's words.
+ * CLI over the fixture copy in `dir`: the CLI's exit code and the record of
+ * the captain's words, which the calling test checks.
  */
 export function exportCardCaseIn(
   dir: string,
@@ -1143,7 +1152,7 @@ export function exportCardCaseIn(
   args: Record<string, unknown>,
   includeResultId = true,
   resultText?: string,
-): DispatchRow {
+): { exitCode: number; row: DispatchRow | undefined } {
   const session = `${[
     JSON.stringify({ type: "session", version: 3, id: `case-${cardId}`, timestamp: nextStamp() }),
     userEntry(`${CONTEXT}\n\n[user]\n${user}`),
@@ -1156,38 +1165,36 @@ export function exportCardCaseIn(
   ].join("\n")}\n`;
   writeFileSync(join(dir, "firstmate", "sessions", `case-${cardId}.jsonl`), session);
   const caseOut = join(dir, `corpus-${cardId}`);
-  const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
-  try {
-    expect(
-      main(
-        [
-          "--out",
-          caseOut,
-          "--user-data",
-          dir,
-          "--session-file",
-          join(dir, "firstmate", "sessions", `case-${cardId}.jsonl`),
-        ],
-        { isPackaged: false },
-      ),
-    ).toBe(0);
-  } finally {
-    stderr.mockRestore();
-  }
-  const rows = readFileSync(join(caseOut, "dispatch.jsonl"), "utf8")
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line) as DispatchRow);
-  const row = rows.find((record) => record.user === user);
-  if (!row) throw new Error(`no exported case turn saying ${user}`);
-  return row;
+  const exitCode = main(
+    [
+      "--out",
+      caseOut,
+      "--user-data",
+      dir,
+      "--session-file",
+      join(dir, "firstmate", "sessions", `case-${cardId}.jsonl`),
+    ],
+    { isPackaged: false },
+  );
+  const row = exportedRows(exitCode, caseOut).find((record) => record.user === user);
+  return { exitCode, row };
 }
+
+/** A revised card's case as exported: the CLI's exit code, each turn's record, and when each step happened. */
+export type RevisionCase = {
+  exitCode: number;
+  early: DispatchRow | undefined;
+  current: DispatchRow | undefined;
+  /** The early card shown, the early turn's result seen, the current turn, and the early version replaced. */
+  at: { early: number; earlyObserved: number; currentTurn: number; replaced: number };
+};
 
 /**
  * A card revised between two turns, exported through the real CLI over the
- * fixture copy in `dir`: the record of the turn that showed each version.
+ * fixture copy in `dir`: the record of the turn that showed each version,
+ * which the calling test checks.
  */
-export function exportRevisionCaseIn(dir: string): { early: DispatchRow; current: DispatchRow } {
+export function exportRevisionCaseIn(dir: string): RevisionCase {
   const cardId = "card-t-work-revised";
   const earlyArgs = {
     task_id: "t-work",
@@ -1285,33 +1292,27 @@ export function exportRevisionCaseIn(dir: string): { early: DispatchRow; current
 
   writeFileSync(join(dir, "firstmate", "sessions", "case-revisions.jsonl"), session);
   const caseOut = join(dir, "corpus-revisions");
-  const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
-  try {
-    expect(
-      main(
-        [
-          "--out",
-          caseOut,
-          "--user-data",
-          dir,
-          "--session-file",
-          join(dir, "firstmate", "sessions", "case-revisions.jsonl"),
-        ],
-        { isPackaged: false },
-      ),
-    ).toBe(0);
-  } finally {
-    stderr.mockRestore();
-  }
-  const rows = readFileSync(join(caseOut, "dispatch.jsonl"), "utf8")
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line) as DispatchRow);
-  const early = rows.find((row) => row.user === "Show the original revision.");
-  const current = rows.find((row) => row.user === "Show the current revision.");
-  if (!early || !current) throw new Error("missing revised card turns");
-  expect(earlyAt).toBeLessThan(earlyObservedAt);
-  expect(earlyObservedAt).toBeLessThan(currentTurnAt);
-  expect(currentTurnAt).toBeLessThan(replacedAt);
-  return { early, current };
+  const exitCode = main(
+    [
+      "--out",
+      caseOut,
+      "--user-data",
+      dir,
+      "--session-file",
+      join(dir, "firstmate", "sessions", "case-revisions.jsonl"),
+    ],
+    { isPackaged: false },
+  );
+  const rows = exportedRows(exitCode, caseOut);
+  return {
+    exitCode,
+    early: rows.find((row) => row.user === "Show the original revision."),
+    current: rows.find((row) => row.user === "Show the current revision."),
+    at: {
+      early: earlyAt,
+      earlyObserved: earlyObservedAt,
+      currentTurn: currentTurnAt,
+      replaced: replacedAt,
+    },
+  };
 }

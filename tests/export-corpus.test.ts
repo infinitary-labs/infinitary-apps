@@ -5,6 +5,7 @@ import { openDatabase } from "@core/storage/db";
 import { DecisionStore } from "@core/storage/decisionStore";
 import { seedTask } from "@core/tasks/seedTask";
 import { TaskService } from "@core/tasks/taskService";
+import { seedProject } from "@core/workspace/seedProject";
 import type { WorkShape } from "@shared/routingPolicy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFleetTables } from "../scripts/dispatch-corpus/fleetTables.ts";
@@ -131,9 +132,14 @@ function fixtureJsonl(): string {
 
 function buildFixtureUserData(dir: string): void {
   const db = openDatabase(dir);
-  db.prepare(
-    "INSERT INTO repos (id, path, name, setup_kind, origin, delivery, autonomy, added_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-  ).run("repo-nimbus", "/fleet/nimbus-api", "nimbus-api", "clone", null, "direct-pr", 1, 1);
+  seedProject(db, {
+    id: "repo-nimbus",
+    name: "nimbus-api",
+    path: "/fleet/nimbus-api",
+    delivery: "direct-pr",
+    autonomy: true,
+    addedAt: 1,
+  });
 
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, {

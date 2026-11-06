@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { deferred, type FakePage, harness } from "../../../tests/helpers/taskBrowserStandIn";
+import { type FakePage, harness } from "../../../tests/helpers/taskBrowserStandIn";
 import { HERE } from "../../shared/deviceNames";
 import { FORM_RESEND, type HostLoadOutcome } from "../host";
+import { NOTHING_CHANGED_LINE } from "./changes";
 import { type BrowserNode, REF_FROM_BEFORE_HANDBACK } from "./outline";
 import type { ProjectServer } from "./projectServer";
 import { FORM_RESEND_CAPTAIN_WORDS, TASK_BROWSER_IDLE_MS } from "./taskBrowsers";
@@ -42,7 +44,7 @@ describe('taking control and handing it back (docs/task-browser.md, "Taking cont
     expect(fresh.text).not.toContain("old-public-value");
     expect(fresh.text).not.toContain("captain-secret");
     const unchanged = await browser.act({ action: "press", key: "Tab" });
-    expect(unchanged.text).toContain("changed: nothing changed in the outline.");
+    expect(unchanged.text).toContain(NOTHING_CHANGED_LINE);
     expect(unchanged.text).not.toContain("captain-secret");
   });
 

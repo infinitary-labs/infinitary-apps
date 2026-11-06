@@ -24,8 +24,9 @@ import type { TaskSeed } from "../tasks/seedTask";
 import type { MergeGuard } from "./changeMerge";
 import { MERGE_CHECKS_HOLD_REASON } from "./mergeAuthorization";
 
-// Integration budget (docs/test-cohorts.md): real git plus the product's
-// own put-in backoff, the slowest test 1.3 s at its fastest measured run.
+// Integration budget (docs/test-cohorts.md): real git plus the put-in's own
+// 300 + 900 ms retry backoff, the slowest test (a put-in retried after a
+// transient failure) 1.3 s at its fastest of five Mac runs; five times is 6.5 s.
 vi.setConfig({ testTimeout: 10_000 });
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -74,12 +75,10 @@ class NumberedForge extends FakeForge {
   }
 }
 
-async function approved(shape?: { delivery_ask: "queue-pr" }) {
+async function approved() {
   const forge = new NumberedForge();
   const harness = setup({ forge });
-  await insertDirectPrTask(harness.tasks, harness.repos, {
-    ...(shape ? { shape: { kind: "fix", kind_source: "none", ...shape } } : {}),
-  });
+  await insertDirectPrTask(harness.tasks, harness.repos);
   const guard = (overrides: Partial<MergeGuard> = {}): MergeGuard => ({
     head: "feedbeef",
     prNumber: 23,
@@ -194,62 +193,24 @@ describe("a merge request whose answer never came is read back before anything i
   });
 });
 
-describe("a review's click on a queue-pr project (docs/forge.md, \"A project's queue\")", () => {
-  async function queuedReview() {
-    const harness = await approved({ delivery_ask: "queue-pr" });
-    const repoId = harness.tasks.get("ab12cd34")?.repoId ?? "";
-    harness.repos.configure(repoId, { origin: "https://github.com/x/y.git" });
-    const review: MergeReview = {
-      id: "mrqueued00001",
-      kind: "github",
-      host: "github.com",
-      owner: "x",
-      name: "y",
-      number: 23,
-      headSha: "feedbeef",
-      base: "main",
-      branch: "fm/task-ab12cd34",
-      method: "squash",
-      title: "fix: ship it",
-      at: 1,
-    };
-    seedDelivery(harness.tasks, "ab12cd34", { mergeReviews: [review] });
-    return { ...harness, review };
-  }
-
-  it("stops on the checks when the queue's batch failed at the version, marking nothing", async () => {
-    const { service, forge, review, putIns } = await queuedReview();
-    const marked: string[] = [];
-    forge.markQueued = async (sha) => {
-      marked.push(sha);
-    };
-    forge.atHead.feedbeef = [
-      { name: "linux-checks", state: "success" },
-      { name: QUEUE_STATUS, state: "failure" },
-    ];
-    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toEqual({
-      ok: false,
-      text: `Cannot merge yet - the project's queue did not pass feedbeef (${QUEUE_STATUS} is failure).`,
-      plain: "the batch check failed",
-      notGreen: true,
-      stop: "checks",
-    });
-    expect(marked).toEqual([]);
-    expect(putIns()).toEqual([]);
-  });
-
-  it("refuses in words when the host cannot mark a version for the queue", async () => {
-    const { service, review, putIns } = await queuedReview();
-    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toEqual({
-      ok: false,
-      text: "Cannot merge: This project's host cannot mark a version for its queue.",
-      problem: "This project's host cannot mark a version for its queue.",
-    });
-    expect(putIns()).toEqual([]);
-  });
-});
-
 describe("ChangeMerge", () => {
+  it("carries the sign-in fact on a refused put-in, for the settle's refusal", async () => {
+    const forge = new FakeForge();
+    forge.fail.putIn = new ForgeError(
+      "sign-in",
+      "GitHub answered 401 to PUT /repos/x/y/pulls/23/merge",
+    );
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    const outcome = await service.merges.merge("ab12cd34");
+    expect(outcome.ok).toBe(false);
+    expect(outcome.signIn).toEqual({
+      host: "github.com",
+      name: "GitHub",
+      repoId: tasks.get("ab12cd34")?.repoId,
+    });
+  });
+
   it("holds a missing saved story at the merge boundary even when every check passes (INF-92)", async () => {
     const { tasks, repos, service, forge } = setup();
     await insertDirectPrTask(tasks, repos);

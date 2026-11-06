@@ -11,8 +11,8 @@ import { describe, expect, it, vi } from "vitest";
 import { createNormalizerState, fmEventsFromClaudeMessage } from "../claude/claudeEvents";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
+import { seedProject } from "../workspace/seedProject";
 import { openInMemoryDatabase } from "./db";
-import { ensureRepoProject } from "./projectStore";
 import { localDate, type UsageNames, UsageStore } from "./usageStore";
 
 describe("UsageStore", () => {
@@ -527,16 +527,12 @@ describe("UsageStore, where it went by project and kind of work, and recent task
    */
   function ledger() {
     const db = openInMemoryDatabase();
-    const repo = db.prepare(
-      "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', NULL, 'direct-pr', 0)",
-    );
     for (const [id, name, key] of [
       ["repo-fm", "firstmate-3000", "FM3K"],
       ["repo-web", "Website", "WEB"],
       ["repo-old", "Old project", "OLD"],
     ] as const) {
-      repo.run(id, `/repos/${id}`, name, NOW);
-      ensureRepoProject(db, { id, name }, NOW, key);
+      seedProject(db, { id, name, path: `/repos/${id}`, delivery: "direct-pr", addedAt: NOW, key });
     }
     let clock = NOW - 10 * DAY;
     const tasks = new TaskService({ db, strict: true, now: () => clock });

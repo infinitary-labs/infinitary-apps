@@ -1,12 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import {
-  isCodeFile,
-  lineCount,
-  OVER_CEILING,
-  SIZE_CEILING,
-  sizeProblems,
-} from "../scripts/file-sizes";
+import { isCodeFile, lineCount, SIZE_CEILING, sizeProblems } from "../scripts/file-sizes";
 
 /**
  * The size check (INF-2625's approved plan: "it refuses a file over 2,000
@@ -15,7 +9,10 @@ import {
  * files.
  */
 describe("the size check", () => {
+  // The list is sizeProblems' argument, so these cases pass their own and never
+  // read the live list, which shrinks to nothing as files are split.
   const LISTED = "tests/helpers/phoneHome.ts";
+  const OVER = SIZE_CEILING + 1;
   const WAKES = "src/core/orchestrator/wakes.ts";
   const WAITS = "scripts/main-thread-waits.ts";
 
@@ -43,20 +40,18 @@ describe("the size check", () => {
   });
 
   it("passes a listed file over the ceiling and an unlisted one under it", () => {
-    expect(OVER_CEILING).toContain(LISTED);
-    expect(OVER_CEILING).not.toContain(WAITS);
-    const sizes = { [LISTED]: 17380, [WAITS]: lineCount(readFileSync(WAITS, "utf8")) };
+    const sizes = { [LISTED]: OVER, [WAITS]: lineCount(readFileSync(WAITS, "utf8")) };
     expect(sizeProblems(sizes, [LISTED])).toEqual([]);
   });
 
   it("refuses an unlisted file that grows over the ceiling", () => {
-    const problems = sizeProblems({ [LISTED]: 17380, [WAITS]: SIZE_CEILING + 1 }, [LISTED]);
+    const problems = sizeProblems({ [LISTED]: OVER, [WAITS]: SIZE_CEILING + 1 }, [LISTED]);
     expect(problems).toHaveLength(1);
     expect(problems[0]).toMatch(new RegExp(`^${WAITS}: ${SIZE_CEILING + 1} lines`));
   });
 
   it("refuses an entry whose file came under the ceiling or left, so the list shrinks", () => {
-    const problems = sizeProblems({ [LISTED]: 17380, [WAKES]: SIZE_CEILING }, [
+    const problems = sizeProblems({ [LISTED]: OVER, [WAKES]: SIZE_CEILING }, [
       LISTED,
       WAKES,
       "src/core/orchestrator/gone.ts",

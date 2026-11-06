@@ -11,6 +11,7 @@ import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
+import { seedProject } from "../workspace/seedProject";
 import { askEndingOf } from "./askEnding";
 import type { CardService } from "./cardService";
 import { createChangeDelivery } from "./changeDelivery";
@@ -25,9 +26,13 @@ function fixture() {
   const db = openInMemoryDatabase();
   const tasks = new TaskService({ db, strict: true, now: () => now });
   const inbox = new InboxStore(db, { now: () => now });
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, 'direct-pr', 0)",
-  ).run("project", "/not-mounted/project", "Meter", 1, "https://github.com/o/meter.git");
+  seedProject(db, {
+    id: "project",
+    name: "Meter",
+    path: "/not-mounted/project",
+    origin: "https://github.com/o/meter.git",
+    delivery: "direct-pr",
+  });
   const repos = new RepoRegistry(db, "/not-mounted/fleet");
   seedTask(tasks, {
     id: "meter",

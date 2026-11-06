@@ -9,7 +9,7 @@
 
 import type { Card } from "@shared/cards";
 import { formatDurationShort } from "@shared/quotaSignals";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   askedOn,
   endTurn,
@@ -18,15 +18,20 @@ import {
   fakeCrewTimersEachTest,
   intentOf,
   reboot,
-  type SetupExtras,
-  served,
-  setup,
 } from "../../../tests/helpers/crewHarness";
+import {
+  failTurn,
+  idleLadderHarness,
+  idleWakes,
+  minutes,
+  settle,
+  wakesThroughInbox,
+} from "../../../tests/helpers/idleLadderHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { ForgeCheckState } from "../forge";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
-import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
+import { InboxStore } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
@@ -34,7 +39,7 @@ import { BASELINE_OBSERVATIONS_NEXT, declareCheckAction, observeCheckRepair } fr
 import type { CrewSupervisor } from "./crewSupervisor";
 import { JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } from "./idleLadder";
 import { IDLE_NUDGE_TEXT } from "./idleWakes";
-import type { SpawnIntent } from "./intentBrief";
+import { FINISHED_REPORT_WORDS } from "./reportWakes";
 import { Ticker } from "./ticker";
 import { renderWake } from "./wakes";
 
@@ -47,95 +52,9 @@ vi.mock("../utilityQos", async (importOriginal) =>
 fakeCrewTimersEachTest();
 
 describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
-  // These run on the host's one clock (P5, `ticker.ts`): the test moves
-  // `hostNow` itself, so nothing here fakes a timer or `Date`.
-  let hostNow = 0;
-  const hostClock = () => hostNow;
-  beforeEach(() => {
-    vi.useRealTimers();
-    hostNow = Date.now();
-  });
-  /** One turn of the event loop: the supervisor's promise chains settle; no clock moves. */
-  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
-  /** The harness on the host's clock, its card stack read as the broadcast carries it. */
-  const clockedSetup = (crewmate: FakeCrewmate, extras: SetupExtras = {}) => {
-    const harness = setup(crewmate, { now: hostClock, ...extras });
-    return { ...harness, cards: () => harness.supervisor.cards.snapshot() };
-  };
-
-  const minutes = (n: number) => n * 60_000;
-  const idleWakes = (ops: string[]) => ops.filter((line) => line.includes("has been idle for"));
+  const { clock, hostClock, clockedSetup, stopped, sweepWhenDue } = idleLadderHarness();
   const failureWakes = (ops: string[]) =>
     ops.filter((line) => line.includes("failed at the provider"));
-
-  async function failTurn(crewmate: FakeCrewmate, taskId: string, error = "upstream 529") {
-    crewmate.emit({ type: "turn_failed", taskId, error });
-    crewmate.emit({ type: "turn_end", taskId });
-    crewmate.finishPrompt();
-    await tick();
-  }
-
-  /**
-   * The real agent's notifyOp: the inbox's wake path, which holds a wake
-   * that names a `once` to once. `ops` keeps every call, served, whether
-   * or not the inbox queued it - so a doubled wake is still seen. A live
-   * Firstmate takes each wake it is sent in its next turn (the drain hands
-   * it over and the clean turn acks it); a paused seat takes none, so its
-   * wakes wait on the lane.
-   */
-  function wakesThroughInbox<
-    H extends Pick<ReturnType<typeof setup>, "supervisor" | "inbox" | "ops">,
-  >(harness: H, firstmate: "live" | "paused" = "live"): H {
-    harness.supervisor.setFirstmateHooks({
-      notifyOp: (wake, origin, ref) => {
-        const id = harness.inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref);
-        harness.ops.push(served(wake));
-        if (id !== null && firstmate === "live") {
-          harness.inbox.markDelivered([id]);
-          harness.inbox.ack([id]);
-        }
-      },
-      retryConverse: vi.fn(),
-    });
-    return harness;
-  }
-
-  /** A Pi crewmate that reported and stopped: nobody's turn, clock running. */
-  async function stopped(
-    extras: SetupExtras = {},
-    crewmate = fakeCrewmate(),
-    intent: SpawnIntent = intentOf("Start"),
-  ) {
-    const harness = wakesThroughInbox(clockedSetup(crewmate, extras));
-    const { taskId } = await harness.supervisor.intake.commission({ title: "Job", intent });
-    await tick();
-    await endTurn(crewmate, taskId, "Done with step one.");
-    // A job running at that end earns its one check-back ask (INF-1244),
-    // which the crewmate answers without naming one.
-    if (harness.tasks.get(taskId)?.activity === "running") {
-      await endTurn(crewmate, taskId, "Not waiting on it.");
-    }
-    const idleSince = harness.tasks.get(taskId)?.idleSince ?? 0;
-    /** The tick at `ms` idle minutes past the clock's start. */
-    const at = async (ms: number) => {
-      hostNow = idleSince + ms;
-      harness.supervisor.watch.reconcileIdle(hostNow);
-      await tick();
-    };
-    return { ...harness, crewmate, taskId, idleSince, at };
-  }
-
-  /** Move the clock to when the lane's first row is due, and sweep it. */
-  async function sweepWhenDue(harness: ReturnType<typeof setup>, taskId: string) {
-    const due = Math.max(
-      hostNow,
-      ...harness.inbox.allFor(taskId).map((row) => row.nextAttemptAt ?? 0),
-    );
-    hostNow = due;
-    harness.supervisor.watch.reconcileIdle(hostNow);
-    await harness.supervisor.watch.sweepInbox(hostNow);
-    await tick();
-  }
 
   // FI3-250: a wait on work another crewmate is doing is not idleness. The
   // ladder reads it as moving, and the sweep resumes the waiting crewmate
@@ -164,7 +83,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         seedDelivery(tasks, taskId, {
           headSha: "head-1",
           ci: "red",
-          ...observeCheckRepair(undefined, "head-1", failed, hostNow),
+          ...observeCheckRepair(undefined, "head-1", failed, clock.now),
         });
         const declared = declareCheckAction(
           tasks,
@@ -178,7 +97,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
               dependencyTask: owner.id,
             },
           },
-          hostNow,
+          clock.now,
         );
         expect(declared.text).toContain(`${owner.key} "Fix the shared fixture" is underway`);
         expect(declared.text).toContain(BASELINE_OBSERVATIONS_NEXT);
@@ -225,7 +144,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         intent: intentOf("Ship the fix"),
         repoId: repo.id,
       });
-      await tick();
+      await settle();
       await endTurn(crewmate, taskId, "Waiting on the phone failure.");
       const owner = seedTask(harness.tasks, {
         id: "main-owner",
@@ -241,7 +160,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
           undefined,
           "head-1",
           [{ name: "linux-checks", state: "failure" }],
-          hostNow,
+          clock.now,
         ),
       });
       expect(
@@ -257,32 +176,32 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
               dependencyTask: owner.id,
             },
           },
-          hostNow,
+          clock.now,
         ).text,
       ).toContain("Diagnosis recorded");
       const prompts = crewmate.promptCalls.length;
-      await harness.supervisor.watch.pollCheckWatches(hostNow);
-      await tick();
+      await harness.supervisor.watch.pollCheckWatches(clock.now);
+      await settle();
       expect(crewmate.promptCalls).toHaveLength(prompts + 1);
       await endTurn(crewmate, taskId, "Still waiting for the named baseline work.");
       // Captain F5: a final reading wakes once per commit; the baseline fix is a new commit.
       main = "b".repeat(40);
       items = [{ name: "linux-checks", state: "success" }];
-      await harness.supervisor.watch.pollCheckWatches(hostNow);
-      await tick();
+      await harness.supervisor.watch.pollCheckWatches(clock.now);
+      await settle();
       expect(crewmate.promptCalls.at(-1)).toContain("The default branch reports finished checks");
       expect(crewmate.promptCalls.at(-1)).toContain("Judge whether this clears your declared wait");
       expect(crewmate.promptCalls.at(-1)).toContain(JSON.stringify(items));
       expect(harness.tasks.get(taskId)?.idleSince).toBeNull();
-      await harness.supervisor.watch.pollCheckWatches(hostNow);
-      await tick();
+      await harness.supervisor.watch.pollCheckWatches(clock.now);
+      await settle();
       expect(crewmate.promptCalls).toHaveLength(prompts + 2);
     });
 
     it("a report on a Pi crewmate waiting on work underway wakes nobody", async () => {
       const { crewmate, ops, sorts, supervisor, taskId } = await waitingOn("baseline");
       await supervisor.steer.steerCrewmate(taskId, "how is it going?");
-      await tick();
+      await settle();
       await endTurn(crewmate, taskId, "Still waiting on the shared fixture fix.");
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
       expect(ops.filter((line) => line.includes("Still waiting on the shared fixture"))).toEqual(
@@ -322,16 +241,16 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
             ? { status: "done", reason: "merged", actor: "captain" }
             : { status: "dropped", reason: "cancelled", actor: "captain" },
         );
-        await supervisor.watch.sweepGates(hostNow);
-        await tick();
+        await supervisor.watch.sweepGates(clock.now);
+        await settle();
         expect(crewmate.promptCalls.at(-1)).toBe(words);
         expect(resumes(tasks, taskId)).toHaveLength(1);
         // The wait's end opened a new episode: the turn it starts is the
         // task's own, and its report is sorted like any other.
         await endTurn(crewmate, taskId, "Carried on from the wait.");
         expect(sorts.at(-1)?.rule).toBe("stopped");
-        await supervisor.watch.sweepGates(hostNow);
-        await tick();
+        await supervisor.watch.sweepGates(clock.now);
+        await settle();
         expect(resumes(tasks, taskId)).toHaveLength(1);
       },
     );
@@ -355,7 +274,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
             { name: "linux-checks", state: "failure" },
             { name: "integration", state: "failure" },
           ],
-          hostNow,
+          clock.now,
         ),
       });
       expect(
@@ -371,12 +290,12 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
               dependencyTask: live.id,
             },
           },
-          hostNow,
+          clock.now,
         ).text,
       ).toContain("Diagnosis recorded");
       tasks.close(owner.id, { status: "dropped", reason: "cancelled", actor: "captain" });
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       await endTurn(crewmate, taskId, "Still waiting on the remaining fix.");
       expect(sorts.at(-1)?.rule).toBe("still-moving");
       const prompts = crewmate.promptCalls.length;
@@ -451,31 +370,31 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
       tasks.graph.link(loader.id, carrier.id, "related", "firstmate");
       tasks.graph.link(old.id, waiting.id, "blocks", "crewmate");
-      supervisor.watch.reconcileIdle(hostNow);
-      hostNow += minutes(30);
+      supervisor.watch.reconcileIdle(clock.now);
+      clock.now += minutes(30);
       const before = crewmate.promptCalls.length;
       tasks.dropWithChildren(old.id, {
         reason: "its branch moved to a fresh task",
         actor: "firstmate",
         replacedBy: carrier.id,
       });
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       // No premature "dropped, carry on": the wait is on the carrier now.
       expect(crewmate.promptCalls).toHaveLength(before);
       expect(tasks.graph.blockers(waiting.id).map((row) => row.id)).toEqual([carrier.id]);
 
-      hostNow += minutes(60);
+      clock.now += minutes(60);
       seedDelivery(tasks, carrier.id, { prNumber: 412 });
       tasks.close(carrier.id, { status: "done", reason: "merged", actor: "captain" });
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       expect(crewmate.promptCalls.slice(before)).toHaveLength(1);
       expect(crewmate.promptCalls.at(-1)).toContain(
         `${carrier.key} "Publish Runbooks piece 0" (PR #412), which took over the work of ${old.key} that your task could not merge before, is done.`,
       );
-      await supervisor.watch.sweepGates(hostNow + minutes(5));
-      await tick();
+      await supervisor.watch.sweepGates(clock.now + minutes(5));
+      await settle();
       expect(crewmate.promptCalls.slice(before)).toHaveLength(1);
     });
 
@@ -498,33 +417,33 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         status: "running",
       });
       tasks.graph.link(old.id, waiting.id, "blocks", "crewmate");
-      supervisor.watch.reconcileIdle(hostNow);
-      hostNow += minutes(30);
+      supervisor.watch.reconcileIdle(clock.now);
+      clock.now += minutes(30);
       tasks.close(old.id, { status: "dropped", reason: "cancelled", actor: "firstmate" });
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       expect(crewmate.promptCalls.at(-1)).toContain("was dropped and no longer holds it");
       await endTurn(crewmate, waiting.id, "Carrying on.");
       const told = crewmate.promptCalls.length;
 
-      hostNow += minutes(10);
+      clock.now += minutes(10);
       tasks.graph.link(old.id, carrier.id, "replaced-by", "firstmate");
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       expect(crewmate.promptCalls.slice(told)).toEqual([
         expect.stringContaining(
           `${old.key} "Runbooks piece 0", which you heard was dropped, goes on in ${carrier.key} "Publish Runbooks piece 0", so your task waits on ${carrier.key} now`,
         ),
       ]);
       await endTurn(crewmate, waiting.id, "Waiting on the carrier.");
-      await supervisor.watch.sweepGates(hostNow + minutes(5));
-      await tick();
+      await supervisor.watch.sweepGates(clock.now + minutes(5));
+      await settle();
       expect(crewmate.promptCalls.slice(told)).toHaveLength(1);
 
-      hostNow += minutes(60);
+      clock.now += minutes(60);
       tasks.close(carrier.id, { status: "done", reason: "merged", actor: "captain" });
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       expect(crewmate.promptCalls.slice(told)).toHaveLength(2);
       expect(crewmate.promptCalls.at(-1)).toContain(
         `which took over the work of ${old.key} that your task could not merge before, is done.`,
@@ -548,11 +467,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         status: "running",
       });
       tasks.graph.link(owner.id, waiting.id, "blocks", "firstmate");
-      supervisor.watch.reconcileIdle(hostNow);
-      hostNow += minutes(30);
+      supervisor.watch.reconcileIdle(clock.now);
+      clock.now += minutes(30);
       tasks.close(owner.id, { status: "done", reason: "merged", actor: "captain" });
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       expect(crewmate.promptCalls.at(-1)).toContain('"Fix the shared fixture", which your task');
       // Queued or in flight: every row the lane holds for the task.
       const resumeRows = (inbox: InboxStore) =>
@@ -569,26 +488,26 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       );
       restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
       expect(resumeRows(inbox)).toHaveLength(1);
-      await restarted.watch.sweepGates(hostNow);
-      await tick();
+      await restarted.watch.sweepGates(clock.now);
+      await settle();
       expect(resumeRows(inbox)).toHaveLength(1);
     });
 
     it("after the resume the ladder reads the task on its own clock again", async () => {
       const { supervisor, crewmate, tasks, taskId, owner, at } = await waitingOn("blocks");
       tasks.close(owner.id, { status: "done", reason: "merged", actor: "captain" });
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       await endTurn(crewmate, taskId, "Nothing left but the merge.");
       const resumedIdle = tasks.get(taskId)?.idleSince ?? 0;
-      hostNow = resumedIdle + minutes(10);
-      supervisor.watch.reconcileIdle(hostNow);
-      await tick();
+      clock.now = resumedIdle + minutes(10);
+      supervisor.watch.reconcileIdle(clock.now);
+      await settle();
       expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
       // The sweep never resumes it twice, however long it then sits.
       await at(minutes(600));
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       expect(
         resumes(tasks, taskId).filter((event) => event.text.includes("Fix the shared fixture")),
       ).toHaveLength(1);
@@ -606,16 +525,16 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         blockedBy: [origin.id],
       });
       expect(tasks.get(taskId)?.status).toBe("open");
-      hostNow += minutes(5);
+      clock.now += minutes(5);
       tasks.close(origin.id, { status: "done", reason: "merged", actor: "captain" });
-      hostNow += 1;
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      clock.now += 1;
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       expect(tasks.get(taskId)?.status).toBe("active");
       await endTurn(crewmate, taskId, "Shown in Settings.");
       const prompts = crewmate.promptCalls.length;
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(resumes(tasks, taskId)).toEqual([]);
 
@@ -625,9 +544,9 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       seedDelivery(tasks, taskId, {
         headSha: "head-1",
         ci: "red",
-        ...observeCheckRepair(undefined, "head-1", failed, hostNow),
+        ...observeCheckRepair(undefined, "head-1", failed, clock.now),
       });
-      hostNow += 1;
+      clock.now += 1;
       const declared = declareCheckAction(
         tasks,
         taskId,
@@ -640,11 +559,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
             dependencyTask: origin.id,
           },
         },
-        hostNow,
+        clock.now,
       );
       expect(declared.text).toContain("is already done: bring your change up to date");
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(resumes(tasks, taskId)).toEqual([]);
     });
@@ -683,7 +602,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(heldWakes(ops)[0]).toContain('"held": "captain-gate"');
       // No card and no cap holds it, so the tick's sweep clears it, and the
       // clear restarts the clock: the nudge is ten minutes out, not now.
-      const healedAt = hostNow;
+      const healedAt = clock.now;
       await supervisor.watch.sweepGates(healedAt);
       expect(tasks.get(taskId)?.gate).toBeNull();
       expect(tasks.get(taskId)?.idleSince).toBe(healedAt);
@@ -698,18 +617,17 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const prompts = crewmate.promptCalls.length;
       await at(minutes(29));
       expect(crewmate.promptCalls).toHaveLength(prompts);
-      await supervisor.watch.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(clock.now);
       expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "at-time", until });
 
-      hostNow = until + minutes(1);
-      await supervisor.watch.sweepGates(hostNow);
-      await tick();
-      const steeredAt = hostNow;
+      clock.now = until + minutes(1);
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
+      const steeredAt = clock.now;
       // One steer on the task's own lane, the supervisor's, never a dispatch.
       expect(crewmate.promptCalls).toHaveLength(prompts + 1);
-      expect(crewmate.promptCalls.at(-1)).toBe(
-        "The time this task was waiting for has come (checks settle). Carry on from where you stopped.",
-      );
+      // The wake's whole words are the crewmate words table's.
+      expect(crewmate.promptCalls.at(-1)).toContain("was waiting for has come (checks settle).");
       expect(tasks.get(taskId)).toMatchObject({ status: "active", gate: null });
       const steered = tasks
         .timeline(taskId)
@@ -731,7 +649,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         prompts.filter((prompt) => prompt.includes("Report again with check_back"));
 
       async function withJob() {
-        let started = hostNow;
+        let started = clock.now;
         const harness = await stopped({
           hasRunningJobs: () => true,
           oldestRunningJob: () => ({ jobId: "tests-1", command: TEST_RUN, startedAt: started }),
@@ -746,7 +664,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         expect(checkBackAsks(crewmate.promptCalls)).toHaveLength(1);
         expect(checkBackAsks(crewmate.promptCalls)[0]).toContain(`"${TEST_RUN}"`);
         await supervisor.steer.steerCrewmate(taskId, "rebase onto main");
-        await tick();
+        await settle();
         await endTurn(crewmate, taskId, "Rebased; the tests still run.");
         expect(checkBackAsks(crewmate.promptCalls)).toHaveLength(1);
       });
@@ -754,7 +672,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       it("holds the task until its time, then wakes the crewmate naming the job and its age", async () => {
         const { supervisor, crewmate, specs, tasks, taskId, idleSince, at } = await withJob();
         await supervisor.steer.steerCrewmate(taskId, "rebase onto main");
-        await tick();
+        await settle();
         expect(() =>
           specs[0]?.onReport?.("Waiting on the tests.", undefined, {
             wait: { reason: "the merge" },
@@ -770,32 +688,32 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         );
         expect(receipt).toContain("wakes you in 20m");
         await endTurn(crewmate, taskId);
-        const reportedAt = hostNow;
+        const reportedAt = clock.now;
         expect(tasks.get(taskId)?.gate).toEqual({
           kind: "at-time",
           until: reportedAt + minutes(20),
           reason: "the unit tests, then the native gate",
         });
         // The crew line reads the durations it would otherwise guess.
-        hostNow = reportedAt + minutes(5);
+        clock.now = reportedAt + minutes(5);
         expect(supervisor.facts.crewStatus(taskId)[0]).toMatchObject({
-          job: `running ${formatDurationShort(hostNow - idleSince)}: ${TEST_RUN}`,
+          job: `running ${formatDurationShort(clock.now - idleSince)}: ${TEST_RUN}`,
           reported: "5m ago",
           checkBack: "in 15m: the unit tests, then the native gate",
         });
         const prompts = crewmate.promptCalls.length;
         await at(reportedAt - idleSince + minutes(19));
-        await supervisor.watch.sweepGates(hostNow);
+        await supervisor.watch.sweepGates(clock.now);
         expect(crewmate.promptCalls).toHaveLength(prompts);
 
-        hostNow = reportedAt + minutes(20);
-        await supervisor.watch.sweepGates(hostNow);
-        await tick();
+        clock.now = reportedAt + minutes(20);
+        await supervisor.watch.sweepGates(clock.now);
+        await settle();
         expect(crewmate.promptCalls).toHaveLength(prompts + 1);
         const wake = crewmate.promptCalls.at(-1);
         expect(wake).toContain("(the unit tests, then the native gate)");
         expect(wake).toContain(
-          `still running after ${formatDurationShort(hostNow - idleSince)}: "${TEST_RUN}"`,
+          `still running after ${formatDurationShort(clock.now - idleSince)}: "${TEST_RUN}"`,
         );
         expect(tasks.get(taskId)?.gate).toBeNull();
       });
@@ -803,12 +721,12 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       it("a check-back past the job's bound leaves the bound as the backstop", async () => {
         const { supervisor, crewmate, specs, ops, taskId, idleSince, at } = await withJob();
         await supervisor.steer.steerCrewmate(taskId, "rebase onto main");
-        await tick();
+        await settle();
         specs[0]?.onReport?.("The tests run in the background.", undefined, {
           checkBack: { minutes: 300, waitingFor: "the tests" },
         });
         await endTurn(crewmate, taskId);
-        const sinceIdle = hostNow - idleSince;
+        const sinceIdle = clock.now - idleSince;
         await at(JOB_BOUND_MS - minutes(1));
         expect(ops.filter((line) => line.includes("background job running"))).toHaveLength(0);
         await at(Math.max(JOB_BOUND_MS, sinceIdle));
@@ -827,7 +745,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
           { id: "change", label: "Plot new course", default: true },
         ],
       });
-      await tick();
+      await settle();
       const card = cards().find((entry) => entry.title === "Pick a course") as Card;
       expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: card.id });
       const prompts = crewmate.promptCalls.length;
@@ -835,9 +753,9 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(crewmate.promptCalls).toHaveLength(prompts);
 
       const opsBefore = ops.length;
-      hostNow = idleSince + minutes(30);
+      clock.now = idleSince + minutes(30);
       supervisor.close(card.id);
-      await tick();
+      await settle();
       expect(tasks.timeline(taskId).some((event) => event.kind === "card_resolved")).toBe(false);
       expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: card.id });
       expect(crewmate.promptCalls).toHaveLength(prompts);
@@ -858,14 +776,14 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         title: "Release",
         intent: intentOf("cut the release"),
       });
-      await tick();
+      await settle();
       harness.specs[0]?.onCard?.({
         ...(id ? { id } : {}),
         title: "Version 1.2 is out",
         body: "<p>Version 1.2 is published.</p><p>The release page lists it.</p>",
         actions: [],
       });
-      await tick();
+      await settle();
       const note = harness.cards().find((entry) => entry.taskId === taskId) as Card;
       return { ...harness, crewmate, taskId, note };
     }
@@ -876,11 +794,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       taskId: string,
       at: number[],
     ) {
-      const since = harness.tasks.get(taskId)?.idleSince ?? hostNow;
+      const since = harness.tasks.get(taskId)?.idleSince ?? clock.now;
       for (const ms of at) {
-        hostNow = since + ms;
-        harness.supervisor.watch.reconcileIdle(hostNow);
-        await tick();
+        clock.now = since + ms;
+        harness.supervisor.watch.reconcileIdle(clock.now);
+        await settle();
       }
     }
 
@@ -910,7 +828,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // Reading the note itself reaches its author and releases
       // the declared wait; no injected steer repairs the production path.
       supervisor.pressNote(note.id);
-      await tick();
+      await settle();
       expect(crewmate.promptCalls).toHaveLength(prompts + 1);
       expect(crewmate.promptCalls.at(-1)).toContain(
         renderWake({
@@ -925,10 +843,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
       await endTurn(crewmate, taskId);
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "finished" });
-      expect(ops.at(-1)).toContain(
-        "It declared its work finished: the captain has read its outcome and nothing is left for it.",
-      );
-      expect(tasks.get(taskId)?.delivery?.finishedAt).toBe(hostNow);
+      expect(ops.at(-1)).toContain(FINISHED_REPORT_WORDS);
+      expect(tasks.get(taskId)?.delivery?.finishedAt).toBe(clock.now);
       expect(tasks.timeline(taskId).at(-1)).toMatchObject({
         kind: "report",
         data: expect.objectContaining({ finished: true }),
@@ -943,8 +859,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("a finished report with its own card still up wakes nobody, however often the captain replies; his close wakes the first mate once and restarts no turn (INF-731, INF-2718)", async () => {
       const { supervisor, crewmate, ops, sorts, specs, tasks, taskId, note } =
         await withOutcomeNote();
-      const finishedWakes = () =>
-        ops.filter((line) => line.includes("It declared its work finished"));
+      const finishedWakes = () => ops.filter((line) => line.includes(FINISHED_REPORT_WORDS));
       const receipt = specs[0]?.onReport?.(
         "Version 1.2 is released and the note says so.",
         undefined,
@@ -961,7 +876,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ["make the version bold", "The version is bold now."],
       ]) {
         supervisor.cardActions.replyToCard(note.id, question as string);
-        await tick();
+        await settle();
         specs[0]?.onReply?.({
           cardId: note.id,
           text: answer as string,
@@ -989,7 +904,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // a fresh conversation that raised the closed note again (INF-2662).
       // The first mate is woken once, now, for the close only it makes.
       supervisor.pressNote(note.id);
-      await tick();
+      await settle();
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(tasks.get(taskId)?.status).not.toBe("done");
       const closeAsks = ops
@@ -1011,7 +926,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await endTurn(crewmate, taskId);
       const promptsBeforeRead = crewmate.promptCalls.length;
       supervisor.pressNote(note.id);
-      await tick();
+      await settle();
       expect(crewmate.promptCalls).toHaveLength(promptsBeforeRead + 1);
       const words = "The release is out; the captain may still want the old build.";
       const receipt = specs[0]?.onReport?.(words, undefined, {
@@ -1044,7 +959,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       );
 
       await supervisor.steer.steerCrewmate(taskId, "The captain keeps the old build.");
-      await tick();
+      await settle();
       expect(tasks.get(taskId)?.gate).toBeNull();
       expect(tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
     });
@@ -1103,12 +1018,12 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     async function asks(harness: Awaited<ReturnType<typeof stopped>>) {
       const { supervisor, crewmate, specs, tasks, taskId } = harness;
       await supervisor.steer.steerCrewmate(taskId, "the captain approved it");
-      await tick();
+      await settle();
       specs.at(-1)?.onReport?.("The captain approved the plan.", undefined, {
         needsFirstmate: ASK,
       });
       await endTurn(crewmate, taskId);
-      return tasks.get(taskId)?.idleSince ?? hostNow;
+      return tasks.get(taskId)?.idleSince ?? clock.now;
     }
 
     /** A builder the first mate starts on the task, merged and closed. */
@@ -1140,16 +1055,16 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const { supervisor, ops, tasks, taskId } = harness;
       const key = tasks.get(taskId)?.key ?? taskId;
       const builder = mergedBuilder(harness, "builder", key);
-      hostNow += 1000;
+      clock.now += 1000;
       const askedAt = await asks(harness);
       const built = ` Work built on this task, open or closed: ${builder} "Build the plan" (done: merged, #364).`;
       expect(ops.find((line) => line.includes(`It asks the first mate to act: ${ASK}`))).toContain(
         built,
       );
 
-      hostNow = askedAt + minutes(31);
-      supervisor.watch.reconcileIdle(hostNow);
-      await tick();
+      clock.now = askedAt + minutes(31);
+      supervisor.watch.reconcileIdle(clock.now);
+      await settle();
       const [reminder] = askedWakes(ops);
       expect(reminder).toContain(`no task built on it or under it was created or started.${built}`);
     });
@@ -1159,16 +1074,16 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         const harness = await stopped();
         const { supervisor, ops, tasks, taskId } = harness;
         const askedAt = await asks(harness);
-        hostNow += 1000;
+        clock.now += 1000;
         mergedBuilder(
           harness,
           `builder-${by}`,
           by === "id" ? taskId : (tasks.get(taskId)?.key ?? ""),
         );
         for (const idle of [31, 62]) {
-          hostNow = askedAt + minutes(idle);
-          supervisor.watch.reconcileIdle(hostNow);
-          await tick();
+          clock.now = askedAt + minutes(idle);
+          supervisor.watch.reconcileIdle(clock.now);
+          await settle();
         }
         expect(askedWakes(ops), by).toEqual([]);
       }
@@ -1182,7 +1097,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const harness = await stopped();
     const { supervisor, crewmate, specs, ops, sorts, ledgerFacts, tasks, taskId } = harness;
     await supervisor.steer.steerCrewmate(taskId, "the captain closed your card");
-    await tick();
+    await settle();
     expect(
       specs.at(-1)?.onReport?.("PR #612 merged and the captain closed the card.", undefined, {
         finished: true,
@@ -1190,21 +1105,21 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     ).toContain("The first mate hears it when this turn ends and closes your task.");
     await endTurn(crewmate, taskId);
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "finished" });
-    const finishedAt = tasks.get(taskId)?.delivery?.finishedAt ?? hostNow;
+    const finishedAt = tasks.get(taskId)?.delivery?.finishedAt ?? clock.now;
     const promptsBefore = crewmate.promptCalls.length;
     const reminders = () => ops.filter((line) => line.includes("ago with no card of its own up"));
 
     for (const idle of [10, 20, 29]) {
-      hostNow = finishedAt + minutes(idle);
-      supervisor.watch.reconcileIdle(hostNow);
-      await tick();
+      clock.now = finishedAt + minutes(idle);
+      supervisor.watch.reconcileIdle(clock.now);
+      await settle();
     }
     expect(crewmate.promptCalls).toHaveLength(promptsBefore);
     expect(reminders()).toEqual([]);
 
-    hostNow = finishedAt + minutes(30);
-    supervisor.watch.reconcileIdle(hostNow);
-    await tick();
+    clock.now = finishedAt + minutes(30);
+    supervisor.watch.reconcileIdle(clock.now);
+    await settle();
     expect(crewmate.promptCalls).toHaveLength(promptsBefore);
     expect(ledgerFacts.at(-1)).toMatchObject({ kind: "idle-asked", finished: true, wakes: 2 });
     expect(reminders()).toEqual([
@@ -1222,9 +1137,9 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     });
     supervisor.intake.linkTasks(next.id, taskId, "related");
     for (const idle of [61, 120, 240]) {
-      hostNow = finishedAt + minutes(idle);
-      supervisor.watch.reconcileIdle(hostNow);
-      await tick();
+      clock.now = finishedAt + minutes(idle);
+      supervisor.watch.reconcileIdle(clock.now);
+      await settle();
     }
     expect(crewmate.promptCalls).toHaveLength(promptsBefore);
     expect(reminders()).toHaveLength(1);
@@ -1244,16 +1159,16 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         { id: "change", label: "Plot new course", default: true },
       ],
     });
-    await tick();
+    await settle();
     const card = cards().find((entry) => entry.title === "Pick a course") as Card;
     supervisor.cardActions.replyToCard(card.id, "take the northern route");
-    await tick();
+    await settle();
     const reply = crewmate.promptCalls.at(-1) ?? "";
     expect(reply).toContain("take the northern route");
 
     // The provider fails the reply's turn nine times, far past the three
     // attempts that used to set it aside for good.
-    const start = hostNow;
+    const start = clock.now;
     await failTurn(crewmate, taskId);
     for (let failure = 2; failure <= 9; failure += 1) {
       await sweepWhenDue(harness, taskId);
@@ -1267,7 +1182,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(failureWakes(ops)).toHaveLength(1);
     const stillDown = ops.filter((line) => line.includes("is still failing at the provider"));
     expect(stillDown).toHaveLength(1);
-    expect(hostNow - start).toBeGreaterThan(STILL_DOWN_MS);
+    expect(clock.now - start).toBeGreaterThan(STILL_DOWN_MS);
     // Meanwhile the reply is deliverable, so nothing climbs the ladder.
     expect(idleWakes(ops)).toEqual([]);
 
@@ -1287,7 +1202,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       title: "Job",
       intent: intentOf("Start"),
     });
-    await tick();
+    await settle();
     const brief = crewmate.promptCalls[0];
     await failTurn(crewmate, taskId);
     for (let failure = 2; failure <= 6; failure += 1) {
@@ -1310,7 +1225,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const harness = await stopped({}, claude);
     const { supervisor, taskId, inbox } = harness;
     await supervisor.steer.steerCrewmate(taskId, "use the other library");
-    await tick();
+    await settle();
     for (let failure = 1; failure <= 4; failure += 1) {
       await failTurn(claude, taskId, "API Error: 529 Overloaded");
       await sweepWhenDue(harness, taskId);
@@ -1326,7 +1241,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // A turn the provider began on its own, and failed: no guidance rode it.
     crewmate.emit({ type: "continuation_started" });
     crewmate.emit({ type: "continuation_ended", error: "upstream 500" });
-    await tick();
+    await settle();
     expect(failureWakes(ops)).toHaveLength(0);
     expect(ops.at(-1)).toContain("failed: upstream 500");
     // That turn started a fresh clock, one that opens past the nudge.
@@ -1348,7 +1263,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   });
 
   it("a job past its bound earns one wake naming it, and stops counting as moving", async () => {
-    let started = hostNow;
+    let started = clock.now;
     const { crewmate, ops, sorts, taskId, at, idleSince } = await stopped({
       hasRunningJobs: () => true,
       oldestRunningJob: () => ({ jobId: "poll-1", command: "gh run watch", startedAt: started }),
@@ -1379,7 +1294,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const crewmate = fakeCrewmate();
     const { crewmate: client, ops, sorts, at, idleSince } = await stopped({}, crewmate);
     // The client began the command as the turn went idle.
-    hostNow = idleSince;
+    clock.now = idleSince;
     client.emit({ type: "background_work_changed", count: 1 });
     await at(STALL_WAKE_MS + minutes(5));
     expect(client.promptCalls).not.toContain(IDLE_NUDGE_TEXT);
@@ -1415,16 +1330,16 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     supervisor.watch.startWatchdog(ticker);
     supervisor.watch.startWatchdog(ticker);
 
-    hostNow = idleSince + minutes(10);
+    clock.now = idleSince + minutes(10);
     ticker.tick();
-    await tick();
+    await settle();
     expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
     // One reading of the clock, and the order phase 1 relies on: the
     // reconcile runs before the gate sweep, which runs before the lanes.
-    expect(reconcile.mock.calls).toEqual([[hostNow]]);
-    expect(gates.mock.calls).toEqual([[hostNow]]);
-    expect(lanes.mock.calls).toEqual([[hostNow]]);
-    expect(riders).toEqual([hostNow]);
+    expect(reconcile.mock.calls).toEqual([[clock.now]]);
+    expect(gates.mock.calls).toEqual([[clock.now]]);
+    expect(lanes.mock.calls).toEqual([[clock.now]]);
+    expect(riders).toEqual([clock.now]);
     const [reconciled] = reconcile.mock.invocationCallOrder;
     const [swept] = gates.mock.invocationCallOrder;
     const [drained] = lanes.mock.invocationCallOrder;
@@ -1462,13 +1377,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       outcome: "Waiting for the deploy to finish.",
     });
     expect(quiet.outcome).toBeNull();
-    const boot = hostNow;
+    const boot = clock.now;
     // The first reconcile after boot starts the clock of records older than it.
     supervisor.watch.reconcileIdle(boot);
     expect(tasks.get(quiet.id)?.idleSince).toBe(boot);
-    hostNow = boot + STALL_WAKE_MS;
-    supervisor.watch.reconcileIdle(hostNow);
-    await tick();
+    clock.now = boot + STALL_WAKE_MS;
+    supervisor.watch.reconcileIdle(clock.now);
+    await settle();
     // Both are nudged by resuming their conversations - outcome or none.
     expect(crewmate.promptCalls).toEqual([IDLE_NUDGE_TEXT, IDLE_NUDGE_TEXT]);
     expect(sorts.map((sort) => [sort.taskId, sort.rule])).toEqual([

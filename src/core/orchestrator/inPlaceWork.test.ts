@@ -18,6 +18,7 @@ import { fakeCrewmate, type SetupExtras, setup, tick } from "../../../tests/help
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
+import { seedProject } from "../workspace/seedProject";
 import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";
 
 const ORIGIN = "https://github.com/octo/shop.git";
@@ -33,11 +34,13 @@ function shop(
   const crewmate = fakeCrewmate();
   const h = setup(crewmate, options.readPull ? { readPull: options.readPull } : {});
   const folder = options.folder ?? `${scratchDir("infinitary-shop-")}/shop`;
-  h.db
-    .prepare(
-      "INSERT INTO repos (id, path, name, added_at, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, 'direct-pr', 0)",
-    )
-    .run("shop", folder, "shop", 1, options.origin === undefined ? ORIGIN : options.origin);
+  seedProject(h.db, {
+    id: "shop",
+    name: "shop",
+    path: folder,
+    origin: options.origin === undefined ? ORIGIN : options.origin,
+    delivery: "direct-pr",
+  });
   const reads = {
     refreshAtStart: vi.fn(async (_path: string): Promise<unknown> => ({ outcome: "level" })),
     folderDefaultBranch: vi.fn(async (_path: string) => "main"),

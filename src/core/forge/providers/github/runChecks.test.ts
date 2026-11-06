@@ -8,6 +8,7 @@ import { openInMemoryDatabase } from "../../../storage/db";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskProtocol } from "../../../tasks/taskProtocol";
 import { TaskService } from "../../../tasks/taskService";
+import { seedProject } from "../../../workspace/seedProject";
 import { GitHubWorkflows } from "./workflows";
 
 /**
@@ -68,9 +69,13 @@ const JOBS = {
 
 function setup(run: () => typeof RUN) {
   const db = openInMemoryDatabase();
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', NULL, 'direct-pr', 0)",
-  ).run("r1", "/fleet/infinitary", "infinitary", 1);
+  seedProject(db, {
+    id: "r1",
+    name: "infinitary",
+    path: "/fleet/infinitary",
+    delivery: "direct-pr",
+    addedAt: 1,
+  });
   let now = Date.parse("2026-10-20T06:00:00Z");
   const clock = () => now;
   const tasks = new TaskService({
@@ -79,7 +84,6 @@ function setup(run: () => typeof RUN) {
     now: clock,
     strict: true,
   });
-  tasks.projects.ensureForRepo({ id: "r1", name: "infinitary" });
   const protocol = new TaskProtocol({
     tasks,
     repos: {

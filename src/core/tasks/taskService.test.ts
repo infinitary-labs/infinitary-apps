@@ -11,6 +11,7 @@ import type { WorkShape } from "../../shared/routingPolicy";
 import { initOverflowDir, MESSAGE_EXCERPT_LIMIT } from "../overflow";
 import { savedDeliveryReader } from "../storage/taskDeliveryFields";
 import type { TaskRecord } from "../storage/taskStore";
+import { seedProject } from "../workspace/seedProject";
 import { reportEntryOf } from "./reportEntry";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
@@ -18,9 +19,13 @@ import { TIMELINE_CAP, TIMELINE_KEEP } from "./timelineCompaction";
 
 function setup() {
   const db = freshDatabase();
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', NULL, 'direct-pr', 0)",
-  ).run("r1", "/fleet/nimbus-api", "nimbus-api", 1);
+  seedProject(db, {
+    id: "r1",
+    name: "nimbus-api",
+    path: "/fleet/nimbus-api",
+    delivery: "direct-pr",
+    addedAt: 1,
+  });
   let now = 1_000;
   const tasks = new TaskService({
     db,
@@ -28,8 +33,6 @@ function setup() {
     now: () => now,
     strict: true,
   });
-  // A repo registered before this service existed still gets its project.
-  tasks.projects.ensureForRepo({ id: "r1", name: "nimbus-api" });
   return { db, tasks, tick: (ms = 1) => (now += ms) };
 }
 

@@ -22,6 +22,7 @@ import { openInMemoryDatabase } from "../../../storage/db";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { RepoRegistry } from "../../../workspace/repoRegistry";
+import { seedProject } from "../../../workspace/seedProject";
 import { ZIP_FILE_CHUNK_BYTES } from "../../zipFile";
 import { GitHubForge } from "./githubForge";
 
@@ -170,13 +171,14 @@ async function fixture(
   cleanup.push(() => {
     db.close();
   });
-  db.prepare("INSERT INTO repos (id, path, name, added_at, origin) VALUES (?, ?, ?, ?, ?)").run(
-    "repo-1",
-    cwd,
-    "meter",
-    1,
-    "https://github.com/octo/meter.git",
-  );
+  seedProject(db, {
+    id: "repo-1",
+    name: "meter",
+    path: cwd,
+    setupKind: "adopt",
+    origin: "https://github.com/octo/meter.git",
+    addedAt: 1,
+  });
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, {
     id: "task-1",

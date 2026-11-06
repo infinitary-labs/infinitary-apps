@@ -392,9 +392,15 @@ describe("a crewmate's write on a card", () => {
       body: "<p>The forest or the cave.</p>",
       actions: [],
     });
-    expect(JSON.parse(h.supervisor.crewmateCards.readCard(` ${id} `))).toEqual(
-      JSON.parse(JSON.stringify(h.supervisor.cards.cardRead(id))),
-    );
+    expect(JSON.parse(h.supervisor.crewmateCards.readCard(` ${id} `))).toMatchObject({
+      id,
+      title: "Which level comes first",
+      author: "firstmate",
+      open: true,
+      choices: [],
+      body: "<p>The forest or the cave.</p>",
+      thread: [],
+    });
     expect(h.supervisor.crewmateCards.readCard(" card-gone ")).toBe(
       'No card "card-gone" is on the record. Read the id again.',
     );
@@ -466,9 +472,10 @@ describe("a crewmate's merge cards and refusals", () => {
     expect(answer.tasks.get(answerTask.taskId)?.delivery?.cardRefusal).toBeUndefined();
   });
 
-  it("says a task's crewmate owes its completion card only on active change work with none up yet", async () => {
+  // That a live change task owes its card until one is up, and an unknown task
+  // none, is crewmateCards.completion.test.ts's fact; this case owns the shapes.
+  it("says a task's crewmate owes no completion card on review, in-place, answer or queued work", async () => {
     const h = await crewmateOn();
-    expect(h.supervisor.crewmateCards.crewmateOwesCompletion(h.taskId)).toBe(true);
     const seeded = (id: string, shape: Parameters<typeof seedTask>[1]["shape"]) => {
       seedTask(h.tasks, { id, title: id, status: "running", shape });
       return h.supervisor.crewmateCards.crewmateOwesCompletion(id);

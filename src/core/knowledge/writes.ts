@@ -486,7 +486,9 @@ export class KnowledgeWrites {
         done.push(entry.id);
       }
       return {
-        text: `Retired ${done.length} entries approved on ${approval.key}: ${done.join(", ")}. Their history and evidence stay readable.${
+        text: `Retired ${done.length} ${done.length === 1 ? "entry" : "entries"} approved on ${approval.key}: ${done.join(", ")}. ${
+          done.length === 1 ? "Its" : "Their"
+        } history and evidence stay readable.${
           skipped.length > 0 ? ` Left alone: ${skipped.join(", ")}.` : ""
         }`,
         ids: done,

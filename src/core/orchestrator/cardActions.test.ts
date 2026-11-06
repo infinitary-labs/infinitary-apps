@@ -164,8 +164,9 @@ describe("a click on a card, as CardActions takes it", () => {
     expect(() =>
       h.supervisor.cardActions.act(h.cardId, "not-now", "frame", { note: "x".repeat(5000) }),
     ).toThrow("Card settings must be JSON no larger than 4,096 bytes.");
+    // cardActions.browser.test.ts owns the refusal's words.
     expect(() => h.supervisor.cardActions.act(h.cardId, "send", "frame")).toThrow(
-      "This action is available only from the card controls.",
+      "available only from the card controls",
     );
     // Nothing was sent and the card is still up for the captain's own click.
     expect(sendWriteAsk).not.toHaveBeenCalled();

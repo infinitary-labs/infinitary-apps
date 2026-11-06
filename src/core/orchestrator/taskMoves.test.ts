@@ -10,6 +10,7 @@
  * door of the supervisor's moves and reads its answer and the record.
  */
 
+import { join } from "node:path";
 import { HERE } from "@shared/deviceNames";
 import type { ComputerMove } from "@shared/placement";
 import { moveOutOfReach } from "@shared/recordBar";
@@ -21,6 +22,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { CrewMachines } from "../placed/crewMachines";
 import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "../tasks/seedTask";
+import { seedProject } from "../workspace/seedProject";
 import { describeStatus } from "./settleService";
 
 const MINI = "mini-device";
@@ -64,7 +66,12 @@ function computers() {
 async function withComputers() {
   const { machines, moveIn } = computers();
   const h = setup(fakeCrewmate(), { machines });
-  const { repo } = await h.repos.setup({ kind: "init", name: "meter" });
+  const repo = seedProject(h.db, {
+    id: "meter",
+    name: "meter",
+    path: join(h.paths.fleetDir, "meter"),
+    setupKind: "init",
+  });
   return { ...h, repo, moveIn };
 }
 
@@ -376,10 +383,10 @@ describe("a started task's move", () => {
       ok: false,
       text: `${handle(record)} already runs on github-copilot/gpt-5.1.`,
     });
-    // A move asked mid-turn waits for the turn to end.
+    // A move asked mid-turn is taken and waits for the turn to end; what it
+    // says then is taskMoves.computer.test.ts's.
     const asked = h.supervisor.moves.requestMove(taskId, { by: "captain" });
     expect(asked.ok).toBe(true);
-    expect(asked.text).toContain("once its crewmate's turn ends");
     // Nothing moved: the record keeps its model and the turn was never cut.
     expect(h.tasks.get(taskId)?.model).toBe("github-copilot/gpt-5.1");
     expect(crewmate.aborts).toEqual([]);

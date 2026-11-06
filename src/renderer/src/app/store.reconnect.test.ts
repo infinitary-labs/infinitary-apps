@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { changesOffWords } from "../devices/viewWords";
 import { onResync } from "../plugins/reads/resync";
 import { useShellStore } from "./store";
+import { card, DECIDE, resetShell, settle } from "./storeTestKit";
 
 /**
  * A window that controls the first mate on another computer (docs/view.md):
@@ -15,11 +16,6 @@ import { useShellStore } from "./store";
  */
 
 const state = () => useShellStore.getState();
-
-/** Lets every read the store started answer, and what it did with each answer run. */
-const settle = async () => {
-  for (let i = 0; i < 20; i++) await Promise.resolve();
-};
 
 /** This window, controlling the computer named Studio, in `contact` and caught up `caughtUp` times. */
 function view(contact: "in-reach" | "lost", caughtUp = 0): Extract<ThisMac, { role: "view" }> {
@@ -32,20 +28,6 @@ function view(contact: "in-reach" | "lost", caughtUp = 0): Extract<ThisMac, { ro
     readOnly: null,
     heardAt: contact === "in-reach" ? 2_000 : 1_500,
     caughtUp,
-  };
-}
-
-function card(id: string, title: string): Card {
-  return {
-    id,
-    author: "firstmate",
-    priority: 10,
-    title,
-    meta: "firstmate",
-    body: `<p>${title}</p>`,
-    actions: [{ id: "go", label: "Go", default: true }],
-    status: "ready",
-    createdAt: 1_000,
   };
 }
 
@@ -97,7 +79,7 @@ const board = (tasks: TaskView[]): TaskBoard => ({
 describe("changes coming back on for a window controlling another computer (docs/view.md)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-    useShellStore.setState(useShellStore.getInitialState(), true);
+    resetShell();
   });
 
   it("takes down every line that said changes were off and keeps the words typed", () => {
@@ -159,7 +141,9 @@ describe("reading everything again after a gap (docs/view.md)", () => {
   let stopListening: () => void;
 
   beforeEach(() => {
-    stackThere = [card("card-b", "Merge the reply fix")];
+    stackThere = [
+      card({ id: "card-b", title: "Merge the reply fix", status: "ready", actions: DECIDE }),
+    ];
     infinitary = {
       cards: {
         list: vi.fn(async () => stackThere),
@@ -182,7 +166,7 @@ describe("reading everything again after a gap (docs/view.md)", () => {
     });
     useShellStore.setState({
       thisMac: view("in-reach", 2),
-      cards: [card("card-a", "Pick a welcome")],
+      cards: [card({ id: "card-a", title: "Pick a welcome", status: "ready", actions: DECIDE })],
       cardsSnapshotLoaded: true,
       threads: { "card-a": [] },
       firstmateBusy: true,
@@ -192,7 +176,7 @@ describe("reading everything again after a gap (docs/view.md)", () => {
   afterEach(() => {
     stopListening();
     vi.unstubAllGlobals();
-    useShellStore.setState(useShellStore.getInitialState(), true);
+    resetShell();
   });
 
   it("reads the stack, every thread it read, the board and every panel's reads again, and the turn that ended away stops showing", async () => {
@@ -224,7 +208,9 @@ describe("reading everything again after a gap (docs/view.md)", () => {
     );
 
     state().applyThisMac(view("in-reach", 3));
-    state().applyCards([card("card-c", "A newer card")]);
+    state().applyCards([
+      card({ id: "card-c", title: "A newer card", status: "ready", actions: DECIDE }),
+    ]);
     answer(stackThere);
     await settle();
 

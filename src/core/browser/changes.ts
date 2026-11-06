@@ -2,6 +2,9 @@ import { browserCommand } from "./commandWords";
 import type { OutlineLine } from "./outline";
 import { mapOf, type PageWindow, WINDOW_CHARS, WINDOW_LINES } from "./window";
 
+/** The changed list when the outline is the same as before. */
+export const NOTHING_CHANGED_LINE = "changed: nothing changed in the outline.";
+
 /** Compare only outline text already filtered by the page's privacy rules.
  * Line numbers refer to the old outline for removals and the current one for additions.
  * Bound both comparison work and the answer, even when a page replaces everything.
@@ -20,7 +23,7 @@ export function changesOf(
     newEnd--;
   }
   if (start === oldEnd && start === newEnd) {
-    return { lines: ["changed: nothing changed in the outline."], next: [] };
+    return { lines: [NOTHING_CHANGED_LINE], next: [] };
   }
 
   const oldCount = oldEnd - start;

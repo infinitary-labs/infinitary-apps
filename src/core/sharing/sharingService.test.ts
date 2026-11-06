@@ -6,6 +6,7 @@ import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
 import { TaskService } from "../tasks/taskService";
 import type { TelemetryClient } from "../telemetry";
+import { seedProject } from "../workspace/seedProject";
 import {
   CONTRIBUTION_PREVIEW_LIMIT,
   crewMilestoneFor,
@@ -90,9 +91,13 @@ function decision(id: string, endedAt: number, taskIds: string[]): DecisionRecor
 
 function setup(overrides: Partial<SharingServiceOptions> = {}) {
   const db = openInMemoryDatabase();
-  db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', NULL, 'direct-pr', 0)",
-  ).run("r1", "/fleet/nimbus-api", "nimbus-api", 1);
+  seedProject(db, {
+    id: "r1",
+    name: "nimbus-api",
+    path: "/fleet/nimbus-api",
+    delivery: "direct-pr",
+    addedAt: 1,
+  });
   let now = 10_000;
   const tasks = new TaskService({
     db,
@@ -100,7 +105,6 @@ function setup(overrides: Partial<SharingServiceOptions> = {}) {
     now: () => now,
     strict: true,
   });
-  tasks.projects.ensureForRepo({ id: "r1", name: "nimbus-api" });
   const settings = new SettingsStore(db);
   const raw = new RecordingClient();
   const pushes: PushPayload<"inf:sharing">[] = [];

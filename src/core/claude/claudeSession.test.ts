@@ -21,6 +21,7 @@ import { type BoundTool, bindTools, type CrewmateToolDelegate } from "../session
 import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import type { ClaudeRateLimit } from "./claudeEvents";
+import { CLAUDE_MODELS } from "./claudeModels";
 import { CLAUDE_MODEL_PROVIDER, type ClaudeQueryFactory } from "./claudeQueryCore";
 import {
   CLAUDE_ROLLING_ENV,
@@ -524,6 +525,14 @@ describe("the Claude crewmate's coding session", () => {
   });
 
   it("labels its model by the catalog's name: the one answering, else the one it asks for (INF-2625's guardrail)", async () => {
+    // Two of the shipped catalog's pairs (claudeModelCatalog.test.ts owns its names).
+    const catalogModel = (family: string) => {
+      const model = CLAUDE_MODELS.find((entry) => entry.id.includes(family));
+      if (!model) throw new Error(`the shipped catalog names no ${family} model`);
+      return model;
+    };
+    const asked = catalogModel("opus");
+    const answered = catalogModel("sonnet");
     let turn = 0;
     const { factory } = scriptedQuery({
       onInput: answering(() => {
@@ -532,18 +541,18 @@ describe("the Claude crewmate's coding session", () => {
           {
             type: "system",
             subtype: "init",
-            model: turn === 1 ? "claude-sonnet-5-5" : "claude-opus-4-8",
+            model: turn === 1 ? answered.id : "claude-opus-4-8",
             session_id: "session-under-test",
           },
           result({ cost: 0.01 * turn, input: 10 * turn, output: 2 * turn }),
         ];
       }),
     });
-    const session = await createClaudeSession({ ...baseSpec, model: "claude-opus-5-5" }, factory);
+    const session = await createClaudeSession({ ...baseSpec, model: asked.id }, factory);
     // Before the client says anything, the model it is asked for names it.
-    expect(session.modelLabel()).toBe("Claude Opus 5.5");
+    expect(session.modelLabel()).toBe(asked.name);
     await session.prompt("go");
-    expect(session.modelLabel()).toBe("Claude Sonnet 5.5");
+    expect(session.modelLabel()).toBe(answered.name);
     // A model the shipped catalog does not name has no label of its own.
     await session.prompt("carry on");
     expect(session.modelRef()?.id).toBe("claude-opus-4-8");

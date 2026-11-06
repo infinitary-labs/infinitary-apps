@@ -42,6 +42,10 @@ function appliedVersions(database: AppDatabase): number[] {
 it("names each saved-version boundary by a distinct migration of the ledger", () => {
   // DATABASE_VERSION is the ledger's length, so it shares the newest migration's number.
   const named = namedVersions().filter(([name]) => name !== "DATABASE_VERSION");
+  // The read sees the boundaries db.ts names, so the checks below cannot pass on none.
+  expect(named.map(([name]) => name)).toEqual(
+    expect.arrayContaining(["CREW_RESPONSE_VERSION", "CHANGES_VERSION", "INTERIM_ANSWERS_VERSION"]),
+  );
   for (const [name, version] of named) {
     expect({ name, inLedger: Number.isInteger(version) && version >= 1 }).toEqual({
       name,

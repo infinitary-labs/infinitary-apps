@@ -136,6 +136,16 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     return row;
   };
 
+  /** Runs the export CLI with its progress lines kept off the test's output. */
+  const quietly = <T>(run: () => T): T => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    try {
+      return run();
+    } finally {
+      stderr.mockRestore();
+    }
+  };
+
   const exportCardCase = (
     user: string,
     cardId: string,
@@ -143,9 +153,14 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     args: Record<string, unknown>,
     includeResultId = true,
     resultText?: string,
-  ): DispatchRow => exportCardCaseIn(dir, user, cardId, title, args, includeResultId, resultText);
-
-  const exportRevisionCase = () => exportRevisionCaseIn(dir);
+  ): DispatchRow => {
+    const { exitCode, row } = quietly(() =>
+      exportCardCaseIn(dir, user, cardId, title, args, includeResultId, resultText),
+    );
+    expect(exitCode).toBe(0);
+    if (!row) throw new Error(`no exported case turn saying ${user}`);
+    return row;
+  };
 
   it("keeps an operational drain operational, and preserves the wake it carried", () => {
     const ops = dispatch.filter((record) => record.kind === "op");
@@ -512,7 +527,13 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
   });
 
   it("uses the card version each emit turn actually showed", () => {
-    const { early, current } = exportRevisionCase();
+    const { exitCode, early, current, at } = quietly(() => exportRevisionCaseIn(dir));
+    expect(exitCode).toBe(0);
+    // The early version was shown and seen before the current turn, and replaced after it.
+    expect(at.early).toBeLessThan(at.earlyObserved);
+    expect(at.earlyObserved).toBeLessThan(at.currentTurn);
+    expect(at.currentTurn).toBeLessThan(at.replaced);
+    if (!early || !current) throw new Error("missing revised card turns");
     expect(early.outcome.cards[0]).toMatchObject({
       card_id: "card-t-work-revised",
       joined_via: "title",

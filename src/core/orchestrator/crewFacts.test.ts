@@ -19,6 +19,7 @@ import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { queryTasks } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
+import { discardedText } from "./settleWords";
 
 fakeCrewTimersEachTest();
 
@@ -180,7 +181,7 @@ describe("the task record (task-system P0)", () => {
     });
     await tick();
     const result = await supervisor.settling.settle.settleTask(taskId, "discard", true);
-    expect(result).toBe("Discarded.");
+    expect(result).toBe(discardedText());
     // The abort resolves the turn; its finish path sees a closed record and
     // leaves the discard reason alone.
     crewmate.failPrompt("aborted");

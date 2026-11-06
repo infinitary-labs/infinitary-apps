@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { messageCountWords, threadCueLabel } from "../../src/renderer/src/cards/threadWords";
 import { fakeBridge } from "./bridge";
 import { seededHome, subscribed } from "./freshHome";
 import { answerStack, SHOWN_ENTRY } from "./stack";
@@ -38,7 +39,9 @@ test("a card's thread folds and opens again by keys, focus following what undoes
   await userEvent.keyboard("{Enter}");
   await expect.poll(() => shown("[data-thread-cue]")).not.toBeNull();
   expect(shown("[data-thread-collapse]")).toBeNull();
-  expect(shown("[data-thread-cue]")?.getAttribute("aria-label")).toBe("Show thread, 2 messages");
+  expect(shown("[data-thread-cue]")?.getAttribute("aria-label")).toBe(
+    threadCueLabel(messageCountWords(2), false),
+  );
   await expect.poll(() => document.activeElement === shown("[data-thread-cue]")).toBe(true);
 
   // Section: opening it by key puts it beside the card again, focus on its fold.

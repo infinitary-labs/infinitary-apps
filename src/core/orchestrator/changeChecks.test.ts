@@ -25,9 +25,9 @@ import { git } from "../workspace/git";
 import type { MergeGuard } from "./changeMerge";
 import { CheckWatcher } from "./checkWatch";
 
-// Integration budget (docs/test-cohorts.md): real git plus the product's
-// own put-in backoff, the slowest test 1.3 s at its fastest measured run.
-vi.setConfig({ testTimeout: 10_000 });
+// Integration cohort (docs/test-cohorts.md): real git at the run's own
+// priority, the slowest test (the no-CI project's merge) 0.59 s at its fastest
+// of five Mac runs, so five times fits vitest's 5 s default and the file sets no budget.
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).

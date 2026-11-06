@@ -82,8 +82,10 @@ describe("a program the crew runs", () => {
       }
     `);
     await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+    // The refusal's words are owned by intake.git.test.ts; the script's await
+    // only has to catch that schema refusal.
     expect(h.tasks.latestResult(h.program.id)?.value).toEqual({
-      refused: 'result_schema must have an object at its root: give it "type": "object".',
+      refused: expect.stringContaining("result_schema must have an object at its root"),
     });
     expect(h.tasks.graph.children(h.program.id)).toEqual([]);
   });

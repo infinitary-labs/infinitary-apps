@@ -31,6 +31,8 @@ import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 import { git } from "../workspace/git";
 import { type ChangeDelivery, createChangeDelivery } from "./changeDelivery";
+import { folderUpToDateLine } from "./inPlaceWork";
+import { FOLDER_REPAIR_TITLE, IN_PLACE_OPENING, PULL_REPAIR_TITLE } from "./intentBrief";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -111,7 +113,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
 
     const [repair] = repairOf(h.tasks, h.repo.id);
     if (!repair) throw new Error("no repair task was filed");
-    const sentence = `Merged, but your project's folder was not brought up to date: it has edits that are not committed. Infinitary started ${repair.key} "Bring the folder up to date" to do it.`;
+    const sentence = `Merged, but your project's folder was not brought up to date: it has edits that are not committed. Infinitary started ${repair.key} "${FOLDER_REPAIR_TITLE}" to do it.`;
     expect(reply).toContain(sentence);
     expect(h.tasks.get("shipped1")).toMatchObject({ status: "done", closedReason: "merged" });
     // The fact is kept on the merged task's record, and it is the Activity
@@ -124,7 +126,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
       reach: h.merged,
     });
     expect(repair).toMatchObject({
-      title: "Bring the folder up to date",
+      title: FOLDER_REPAIR_TITLE,
       startPolicy: "when-ready",
     });
 
@@ -139,7 +141,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     expect(brief).toContain(
       "Why it was not brought up to date: it has edits that are not committed",
     );
-    expect(brief).toContain("You work in place");
+    expect(brief).toContain(IN_PLACE_OPENING);
     expect(brief).not.toContain("Delivery:");
     expect(brief).not.toContain("open_change");
     expect(h.specs.at(-1)?.procedure).toEqual({ delivery: "none", rigor: "none" });
@@ -150,7 +152,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
     h.ship("shipped2", "Ship the shop again");
     expect(await h.supervisor.settling.settle.settleTask("shipped2", "merge-pr")).toContain(
-      `${repair.key} "Bring the folder up to date" is already doing it.`,
+      `${repair.key} "${FOLDER_REPAIR_TITLE}" is already doing it.`,
     );
     expect(repairOf(h.tasks, h.repo.id)).toHaveLength(1);
     // The standing crewmate is told of the newer version, on a turn of its own.
@@ -171,7 +173,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
     expect(h.tasks.timeline(repair.id)).toContainEqual(
       expect.objectContaining({
-        text: `The project's folder is up to date: clean, on main and at or past ${h.merged.slice(0, 7)}.`,
+        text: folderUpToDateLine("main", h.merged),
         feed: true,
       }),
     );
@@ -195,7 +197,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     expect(h.tasks.get("clicked1")).toMatchObject({ status: "done", closedReason: "merged" });
     const [repair] = repairOf(h.tasks, h.repo.id);
     if (!repair) throw new Error("no repair task was filed");
-    const sentence = `Merged, but your project's folder was not brought up to date: it has edits that are not committed. Infinitary started ${repair.key} "Bring the folder up to date" to do it.`;
+    const sentence = `Merged, but your project's folder was not brought up to date: it has edits that are not committed. Infinitary started ${repair.key} "${FOLDER_REPAIR_TITLE}" to do it.`;
     // INF-1845: the note is the task's keyed warning line beside the merge's own line.
     await vi.waitFor(
       () =>
@@ -252,7 +254,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
       expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
       expect(h.tasks.timeline(repair.id)).toContainEqual(
         expect.objectContaining({
-          text: `The project's folder is up to date: clean, on main and at or past ${h.merged.slice(0, 7)}.`,
+          text: folderUpToDateLine("main", h.merged),
           feed: true,
         }),
       );
@@ -331,7 +333,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     expect(reply).toContain(
-      `Merged, but your project's folder was not brought up to date: it is missing. Infinitary started ${repair.key} "Bring the folder up to date" to do it.`,
+      `Merged, but your project's folder was not brought up to date: it is missing. Infinitary started ${repair.key} "${FOLDER_REPAIR_TITLE}" to do it.`,
     );
     expect(repair.shape?.in_place).toMatchObject({ cause: "missing" });
 
@@ -389,7 +391,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     expect(header?.status).toBe("open");
     expect(header?.gate).toMatchObject({ kind: "captain", ref: "dispatch-failed" });
     expect(header?.gate?.reason).toContain(
-      `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. Infinitary started ${repair.key} "Bring the folder up to date" to bring it back.`,
+      `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. Infinitary started ${repair.key} "${FOLDER_REPAIR_TITLE}" to bring it back.`,
     );
     expect(repair.shape?.in_place).toMatchObject({
       cause: "missing",
@@ -404,7 +406,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     // A second task finds the same repair standing, and nothing new is filed.
     await h.supervisor.starts.dispatchQueuedTask("footer01");
     expect(h.tasks.get("footer01")?.gate?.reason).toContain(
-      `${repair.key} "Bring the folder up to date" is already bringing it back.`,
+      `${repair.key} "${FOLDER_REPAIR_TITLE}" is already bringing it back.`,
     );
     expect(h.repairs()).toHaveLength(1);
     await h.supervisor.disposeAll();
@@ -443,7 +445,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     );
     const [repair] = folderRepairs();
     if (!repair) throw new Error("no repair task was filed");
-    expect(repair).toMatchObject({ title: "Bring the folder up to date" });
+    expect(repair).toMatchObject({ title: FOLDER_REPAIR_TITLE });
     expect(repair.shape?.in_place).toMatchObject({ cause: "missing", noticed: "start" });
 
     // The repair itself still starts, in the folder above the missing one.
@@ -459,7 +461,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     expect(waiting?.status).toBe("open");
     expect(waiting?.gate).toMatchObject({ kind: "captain", ref: "dispatch-failed" });
     expect(waiting?.gate?.reason).toContain(
-      `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. ${repair.key} "Bring the folder up to date" is already bringing it back.`,
+      `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. ${repair.key} "${FOLDER_REPAIR_TITLE}" is already bringing it back.`,
     );
     expect(folderRepairs()).toHaveLength(1);
     expect(h.sessionSpecs.map((spec) => spec.cwd)).not.toContain(h.folder);
@@ -736,7 +738,7 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
 
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
-    const sentence = `Infinitary started ${repair.key} "Close the pull request" to close it.`;
+    const sentence = `Infinitary started ${repair.key} "${PULL_REPAIR_TITLE}" to close it.`;
     expect(reply).toContain(sentence);
     expect(h.tasks.get(h.taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
     // The discarded task's record keeps the fact, as an Activity line of its own.
@@ -748,7 +750,7 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
     });
     // The first mate still reads what GitHub said.
     expect(reply).toContain(`Could not close PR: ${refused}`);
-    expect(repair).toMatchObject({ title: "Close the pull request", startPolicy: "when-ready" });
+    expect(repair).toMatchObject({ title: PULL_REPAIR_TITLE, startPolicy: "when-ready" });
 
     // It starts on its own, in the project's folder, with the GitHub pair and nothing that ships.
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2));
@@ -758,7 +760,7 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
     expect(brief).toContain("close the pull request #9 (https://github.com/acme/shop/pull/9)");
     expect(brief).toContain("or report why it cannot be closed");
     expect(brief).toContain(`What the project's host answered: ${refused}`);
-    expect(brief).toContain("You work in place");
+    expect(brief).toContain(IN_PLACE_OPENING);
     expect(brief).not.toContain("Delivery:");
     expect(brief).not.toContain("open_change");
     const spec = h.specs.at(-1);
@@ -797,7 +799,7 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
     expect(settleLines(h.tasks, h.taskId)).toContainEqual(
       expect.stringMatching(
         new RegExp(
-          `^Discarded\\. Its pull request is still open where the project lives: .+\\. Infinitary started ${repair.key} "Close the pull request" to close it\\.$`,
+          `^Discarded\\. Its pull request is still open where the project lives: .+\\. Infinitary started ${repair.key} "${PULL_REPAIR_TITLE}" to close it\\.$`,
         ),
       ),
     );
@@ -928,7 +930,7 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
       shape: { in_folder: true },
     });
     expect(planned.shape?.in_place).toEqual({ folder: true });
-    expect(planned.prompt).toContain("You work in place");
+    expect(planned.prompt).toContain(IN_PLACE_OPENING);
     expect(planned.prompt).not.toContain("Delivery:");
     await expect(
       h.supervisor.intake.commission({

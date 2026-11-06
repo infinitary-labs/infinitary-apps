@@ -9,6 +9,7 @@
  */
 import { join } from "node:path";
 import { HOME } from "@shared/deviceNames";
+import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -707,10 +708,10 @@ describe("the task graph (R1)", () => {
       routedModel: { provider: "fm-mock", id: "mock-1" },
     });
     const filed = supervisor.intake.plan({ title: "Trim the log", intent: intentOf("trim it") });
-    tasks.updateFields(filed.id, { model: "anthropic-claude/claude-fable-5-1" }, "firstmate");
+    tasks.updateFields(filed.id, { model: `${CLAUDE_PROVIDER_ID}/claude-fable-5-1` }, "firstmate");
 
     expect(await supervisor.starts.startQueuedNow(filed.key)).toBe(
-      `Started ${filed.key} "Trim the log" on fm-mock/mock-1: anthropic-claude/claude-fable-5-1 was not available.`,
+      `Started ${filed.key} "Trim the log" on fm-mock/mock-1: ${CLAUDE_PROVIDER_ID}/claude-fable-5-1 was not available.`,
     );
     // The captain's own Start in the record keeps its plain words.
     const other = supervisor.intake.plan({ title: "Trim the cache", intent: intentOf("trim it") });

@@ -182,8 +182,8 @@ Tasks may deliver `operation`, constraints may declare it, model reasons carry R
 A computer on another major takes no work, so the new deliverable is never sent to a computer that cannot read it.
 The preceding named waits for integrations, report results, handed files, empty source files and outside-data deletion retire; every computer taking work on this major has them.
 
-Task delivery facts carry an optional `reviewCapOwner`: `firstmate` delegates a qualifying review cap, while `captain` or absence keeps the captain hold (`docs/delivery-rigor.md`).
-The home alone sets it and enforces the gate it chooses.
+Task delivery facts may carry an optional `reviewCapOwner`, which an older build recorded beside a review cap.
+No build sets or reads it now, and no hold rests on it (`docs/delivery-rigor.md`, "The record and its holds").
 
 A plan item's `label` and `short` in `inf:tasks:detail` carry no length limit: a plan keeps its crewmate's words, and each surface cuts what it cannot show (`docs/task-record.md`).
 

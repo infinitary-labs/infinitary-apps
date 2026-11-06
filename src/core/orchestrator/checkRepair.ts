@@ -4,9 +4,6 @@ import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import { liveWaitCycle, waitCycleWords } from "../tasks/waitCycles";
 
-export const CHECK_DIAGNOSIS_NEXT =
-  "Read the failed step and logs first. Record diagnosis with check_change: own-regression with attribution evidence, baseline-blocked with untouched-main evidence and a separately owned dependencyTask, suspected-flake with comparison evidence and changedTest false, never for a test your change adds or edits, or unknown with the investigation gap. Fix your regression yourself; reserve one evidenced failed-job rerun, or report the separate owner and wait for its fix. Diagnosis and waiting spend no repair attempt and need no captain card.";
-
 export const BASELINE_OBSERVATIONS_NEXT =
   "changed default-branch check observations and the named task closing wake you to judge whether the wait is cleared.";
 
@@ -153,8 +150,8 @@ export function declareCheckAction(
 /**
  * check_change on a task that makes an effect and ships no change (an
  * operation): it has no pull request to read or merge, so it records only
- * a diagnosis of a workflow run it read, its one reserved failed-job rerun,
- * or a flake declaration, on the same repair ledger a change's are
+ * a diagnosis of a workflow run it read, a reserved failed-job rerun, or
+ * a flake declaration, on the same repair ledger a change's are
  * (docs/delivery-rigor.md, "A run with no pull request").
  */
 export function declareRunCheck(

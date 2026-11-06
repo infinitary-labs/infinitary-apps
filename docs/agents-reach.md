@@ -74,8 +74,8 @@ It runs five steps.
 ## The story end to end
 
 `tests/e2e/agents-reach.spec.ts` runs the three nets together through the hermetic launcher, on the GitHub stand-in and the mock models.
-A reviewed task at its review cap with failed checks hears the captain's words, records one override, and merges at the reviewed version with no re-review.
+A Careful task whose review still has findings after two re-reviews, with failed checks at the version the reviewer last read, hears the captain's words, records one override of the checks hold, and merges at the reviewed version with no re-review.
 Words that name GitHub's required review pass asking first, and GitHub's rule refuses the merge in the fixed limit's words.
-A crewmate refused its second rerun reports, and the captain's choice reopens the rerun limit for one more.
+A crewmate reserves and reruns a failed job a second time, and the host records both reservations with no allowance to refuse the second: no card goes up and no override is asked.
 The weekly audit rule, set to run once, starts one audit task, and the corpus export counts each override per hold.
 Every refusal an agent was served names its hold: a soft hold with its way out, a fixed limit as fixed.

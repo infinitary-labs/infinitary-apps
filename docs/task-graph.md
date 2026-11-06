@@ -253,9 +253,9 @@ A missed triage leaves an ordinary visible on-request filing.
 ## Combining repairs after a circular-wait refusal
 
 The crewmate reports the full task-key loop to the first mate rather than declaring another wait or retrying the refusal.
-The first mate chooses one existing repair owner and combines necessary patches with attribution, keeping existing permissions and repair allowances.
+The first mate chooses one existing repair owner and combines necessary patches with attribution, keeping existing permissions and repair records.
 It removes only waits made obsolete by that consolidation, has the owner verify the combined version including every failed check, and reconciles other tasks only after merge.
-The host refuses loops but never chooses an owner, resets a budget, or stores another wait type.
+The host refuses loops but never chooses an owner or stores another wait type.
 
 ## Captain-owned required actions
 

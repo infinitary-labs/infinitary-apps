@@ -30,11 +30,11 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 ## Diagnosed check failures
 
-FI3-237 pairs persona clarification with the host repair allowance.
+FI3-237 pairs persona clarification with the crew's repair judgment; the host counts no repairs or reruns.
 An initial failed reading requests the failed-step/log diagnosis, not a captain card.
 The first mate coordinates an own repair, one evidenced failed-job rerun, or a confirmed separately owned baseline wait/resumption.
 Unknown needs one bounded investigation.
-Only three unsuccessful declared own repairs (or a real captain-only decision/access gap) earn the cap question; waits and raw failed versions spend nothing.
+A crewmate's blocker report, or a real captain-only decision or access gap, earns a question on its task; waits and raw failed versions hold nothing.
 The typed declarations, persistent ledger and strict all-current-checks-success completion gate are specified in `docs/delivery-rigor.md` and `docs/forge.md`.
 Existing recorded captain holds are not silently lifted.
 Model changes still require the captain.

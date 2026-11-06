@@ -28,23 +28,22 @@ import {
  * `agents-reach.spec.ts` beside `reviewedTier`: the moves only that journey
  * needs, in the order the story meets them.
  *
- * 1. The captain's words stop a capped review: the reviewed builder, steered
- *    with them, emits its completion card at the reviewed version. Before
- *    that, after each fix the journey pushes, the builder reads its checks
- *    and revalidates the new version through the app's own tools.
+ * 1. The captain's words stop a review that still has findings: the
+ *    reviewed builder, steered with them, emits its completion card at the
+ *    reviewed version. Before that, after each fix the journey pushes, the
+ *    builder reads its checks and revalidates the new version through the
+ *    app's own tools.
  * 2. Words naming a fixed limit: the first mate passes the soft hold the
  *    words name (asking first), tries the merge, and relays GitHub's rule,
  *    which no one's word passes, in its reply.
- * 3. The rerun limit: a crewmate reruns a failed job once, is refused a
- *    second, and asks the captain on its own card. His reply under it is
- *    relayed to the first mate, which records it as his override in that
- *    relay turn, citing the card (INF-1216), and steers the crewmate to
- *    rerun it once more.
+ * 3. A second rerun: a crewmate diagnoses a failed job as a suspected
+ *    flake, then reserves and reruns it twice with no host allowance to
+ *    refuse the second, and reports with no card.
  * 4. The weekly audit rule's wake: the first mate starts the audit task in
  *    the project the rule names, and its crewmate answers on a card.
  */
 
-/** The captain's words on the capped review (ring 4's own quote). */
+/** The captain's words on the review that still has findings (ring 4's own quote). */
 export const REACH_STOP_WORDS = "stop the review and merge it";
 /**
  * The soft holds the first mate reads those words to pass, for this version:

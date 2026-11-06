@@ -86,19 +86,20 @@ import { pressKey } from "./windowKeys";
  * the captain's words pass the holds that rest on a verdict, once and on the
  * record, and nothing passes the limits that rest on a fact.
  *
- * - Promised result, in five sections: (1) a reviewed task at its review
- *   cap and with failed checks hears "stop the review and merge it": one
- *   override row on its timeline and one feed line, the override cell on its
- *   completion card's strip, the merge at the version the reviewer last read
- *   with no re-review, and the review task retired; (2) words naming
- *   GitHub's required review pass asking first but are refused in words at
- *   GitHub's rule, a fixed limit, and the captain merges on GitHub himself;
- *   (3) a crewmate refused its second rerun reports, the first mate asks,
- *   and the captain's choice relayed as an override lets it rerun once more;
- *   (4) the weekly audit rule, set to run once now, starts exactly one audit
- *   task; (5) the corpus export counts each override per hold, and every
- *   refusal any agent was served names its hold: a soft hold's way out, or
- *   a fixed limit as fixed.
+ * - Promised result, in five sections: (1) a reviewed task whose review
+ *   still has findings after two re-reviews, with failed checks at the
+ *   version the reviewer last read, hears "stop the review and merge it":
+ *   one override row on its timeline, passing the checks hold, and one feed
+ *   line, the override cell on its completion card's strip, the merge at
+ *   that version with no re-review, and the review task retired; (2) words
+ *   naming GitHub's required review pass asking first but are refused in
+ *   words at GitHub's rule, a fixed limit, and the captain merges on GitHub
+ *   himself; (3) a crewmate reserves and reruns a failed job a second time
+ *   with no host allowance to refuse it: both reruns reach GitHub, and it
+ *   reports with no card and no override; (4) the weekly audit rule, set to
+ *   run once now, starts exactly one audit task; (5) the corpus export
+ *   counts each override per hold, and every refusal any agent was served
+ *   names its hold: a soft hold's way out, or a fixed limit as fixed.
  * - Data: a disposable development home with two projects (meterlab, and
  *   infinitary for the audit), the GitHub stand-in serving each task's
  *   change and its checks, and the mock models, scripted by `reviewedTier`
@@ -284,7 +285,7 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
   await expandDock(page, "activity");
   const merged: { number: number; sha: string }[] = [];
 
-  await test.step("1. the review cap and red checks, then stop the review and merge it", async () => {
+  await test.step("1. findings after two re-reviews and red checks, then stop the review and merge it", async () => {
     await send(`${SPAWN_PROMPT_MARKER} ${BUILDER_TITLE}`);
     const builder = await boardRow((task) => task.title === BUILDER_TITLE);
     await expect(startedLine(page, builder.key)).toBeVisible({ timeout: 30_000 });
@@ -295,7 +296,7 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
       .poll(() => detail(builder.id), { timeout: 30_000 })
       .toMatchObject({ delivery: expect.objectContaining({ reviewVerdict: "findings" }) });
 
-    // Two re-reviews at two new versions; the third findings is past the cap.
+    // Two re-reviews at two new versions, each answered with findings again.
     const branch = `fm/task-${builder.id}`;
     let reviewed = "";
     for (const [round, subject] of [

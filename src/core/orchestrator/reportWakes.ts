@@ -176,11 +176,10 @@ export type ReviewVerdictFacts = {
 };
 
 /**
- * A review's later steps, served where each arises (FI3-566 cut C), the
- * way `CHECK_DIAGNOSIS_NEXT` rides a failed check: the core keeps when to
- * commission a review and that every steer carries the captain's latest
- * decision; the findings wake keeps how to fix a finding, since a review
- * happens at any care and no brief carries the rules.
+ * A review's later steps, served where each arises (FI3-566 cut C): the
+ * core keeps when to commission a review and that every steer carries the
+ * captain's latest decision; the findings wake keeps how to fix a finding,
+ * since a review happens at any care and no brief carries the rules.
  */
 export const REVIEWER_IDLE_NEXT =
   "Steer a reviewer only to re-review at a new head, evidence revision or validation state its builder reports (including a captain-granted gap exception or a new effect request) - an idle reviewer needs no stand-by and no status.";

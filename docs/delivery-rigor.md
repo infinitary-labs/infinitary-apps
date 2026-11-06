@@ -8,7 +8,7 @@ What each care asks of a crewmate is the Care levels runbook's (`resources/runbo
 
 Rigor derives from the user's words and the repository's configured rigor alone (captain rulings, 2026-09-19): standard is every project's standing value, never the intelligence tier or an escalation.
 Careful's guidance orders the review before the pull request, on the builder's branch; the host holds neither the push nor the merge on it.
-A verdict-less reviewer report records nothing and spends no round.
+A verdict-less reviewer report records nothing.
 Info-only findings derive a pass.
 Declined findings converge through the review history the app writes into every reviewer turn ("The review history").
 Validation is agent-driven and evidence-first; no configured command is mandated in the pipeline.
@@ -96,29 +96,30 @@ Each changed view pairs its Before and After pictures; recordings stack, new vie
 Version-1 stories keep their existing drawing; the report, legacy descriptions and free-form completion outline stay unchanged.
 The crewmate is told that once, on `emit_card`'s `presentation` field (`tests/crewmate-fixed-context.test.ts`).
 Failed checks first require reading the failed step and logs and declaring an explicit diagnosis at the head/check via `check_change`.
-Initial diagnosis spends nothing.
-Own regressions are repaired on this task: declare a stable repair id, source head, new target head/check and fix evidence; only the unsuccessful result spends one of three attempts.
-The third unsuccessful repair is a blocker report (no completion card), which the first mate turns into one decision: retry, one captain-only model way, or discard.
+Own regressions are repaired on this task: the crewmate declares a stable repair id, source head, new target head/check and fix evidence, and later settles that repair with a `declaration` naming it, its version and its outcome.
+The host records each diagnosis, repair and settlement and counts none of them.
+When a crewmate stops repairing and reports a blocker (no completion card) is the delivery judgment's guidance (`resources/runbooks/delivery`), never a host count.
+The first mate takes a blocker report through stall recovery, then coordinates the next owner or asks the captain for one decision on its task, carrying the other ways its wake names.
 
-An evidenced suspected flake may reserve **one failed-job rerun per task allowance**, before running it without code changes.
-A suspected flake is only ever a test whose own code the change does not add or edit: `check_change` takes `changedTest`, the crewmate's typed answer, and refuses a suspected-flake diagnosis unless it is false (INF-840).
+An evidenced suspected flake may reserve a failed-job rerun with `check_change`'s `rerun`, before running it without code changes.
+The host records the reservation with the failed run it found and refuses no later one: a second reservation, before or after a restart, replaces the standing one while the declaration history keeps both, and no count or allowance stands behind either.
+How many reruns a failure is worth is the agents' judgment from their guidance, never a host refusal.
+A suspected flake is only ever a test whose own code the change does not add or edit: `check_change` takes `changedTest`, the crewmate's typed answer, which its description says is false for a suspected flake (INF-840); the host records the answer and refuses nothing on it.
 A failure in the change's own test is its own regression, or baseline-blocked with untouched-main evidence for a test it edits.
-A repeated reservation is refused, including after restart.
-An operation, which ships no change and has no pull request, holds the same `check_change` for a workflow run it read: it records the diagnosis, reserves the one rerun and declares a flake there, and refuses a pull request reading, review or repair (`declareRunCheck`, INF-2146).
-If it fails again, investigate or reclassify with evidence, never rerun in a loop.
-A confirmed baseline failure needs untouched-main reproduction evidence and a separately owned task id.
+An operation, which ships no change and has no pull request, holds the same `check_change` for a workflow run it read: it records the diagnosis, reserves a rerun and declares a flake there, and refuses a pull request reading or a repair (`declareRunCheck`, INF-2146).
+The diagnosis's description asks a baseline failure for untouched-main reproduction evidence and a separately owned task, which the diagnosis names as its `dependencyTask`; the host refuses only a task outside the project or one that would close a wait loop.
 The first mate coordinates its dependency.
-The host resumes the waiting crewmate when the default branch's own run of that check passes, and still when that task closes (FI3-250, INF-833 Fix 4).
-The declaration's answer says where that task stands (FI3-671): nobody has started it, so the crewmate leads its report with its key and that report wakes the first mate on any backend (`docs/report-sort.md`, row 2a), which starts it, steers the crewmate to fold the fix into its own branch when that is smaller, or asks the captain in one card; it is underway or queued, so the crewmate reports the wait once and ends its turn, and nothing nudges it until the sweep's one steer says that task closed; it is done, so the crewmate brings its change up to date.
+The host relays each finished run of the default branch's checks to the waiting crewmate, once per commit, and that task's close, and the crewmate judges whether the wait is cleared (FI3-250, INF-833 Fix 4).
+The declaration's answer says where that task stands (FI3-671): nobody has started it, so the crewmate leads its report with its key and that report wakes the first mate on any backend (`docs/report-sort.md`, row 2a), which starts it, steers the crewmate to fold the fix into its own branch when that is smaller, or asks the captain in one card; it is underway or queued, so the crewmate reports the wait once and ends its turn, and nothing nudges it until a default-branch run or that task's close wakes it to judge the wait; it is done, so the crewmate brings its change up to date.
 A blocking follow-up nobody started wakes the first mate the same way.
-Before accepting a current non-green-head baseline diagnosis, the host checks the same live-wait graph used by ordinary blocker insertion (`docs/task-graph.md`, "Combining repairs after a circular-wait refusal").
-A loop refusal names the complete task-key path and changes no diagnosis, link, or repair budget.
+Before accepting a diagnosis that names a dependency task, the host checks the same live-wait graph used by ordinary blocker insertion (`docs/task-graph.md`, "Combining repairs after a circular-wait refusal").
+A loop refusal names the complete task-key path and changes no diagnosis, link or repair record.
 The crewmate reports it to the first mate, which chooses one existing owner, combines attributed patches, removes only obsolete waits, verifies every failed check, and reconciles after merge.
 Historical diagnoses and closed dependencies do not create mixed-wait edges; valid waits still derive from durable delivery records across restart and resume when the dependency closes.
 A wait instruction alone proves no external ownership.
-Diagnosis, waiting, and the one flake rerun spend no own repair attempts and earn no captain card.
-Unknown allows one outstanding evidenced investigation gap; resolve it through a bounded investigation, then report it for the first mate to coordinate if still unknown, rather than repeated readings or reruns.
-Only an exhausted repair allowance or a real decision/access/information only the captain can supply warrants a question.
+Diagnosis, waiting and reruns earn no captain card.
+The delivery judgment gives an unknown cause one bounded investigation, then a report for the first mate to coordinate if it is still unknown, rather than repeated readings or reruns; the host refuses no second unknown diagnosis.
+Only a blocker the first mate cannot resolve, or a real decision, access or information only the captain can supply, warrants a question.
 Every current check must still pass before completion.
 
 Validation at every care may use whatever it truly needs, preferring disposable data/accounts, isolated app homes, local instances or workspace-local tools when they prove the same boundary.
@@ -205,7 +206,7 @@ The first mate never judges a rigor, the same way it never judges a reasoning cl
 ## Changing policy on open work
 
 `update_task` is the conversation-first editing surface described in `docs/task-record.md`, “Live task policies”.
-An explicit self-merging request (including a reset to an autonomous project) releases only a routine completion offer and its matching captain wait; unrelated decisions, dependencies, explicit withdrawals, repair caps and safety holds remain.
+An explicit self-merging request (including a reset to an autonomous project) releases only a routine completion offer and its matching captain wait; unrelated decisions, dependencies, explicit withdrawals and safety holds remain.
 The first mate then uses the existing settle operation, which rereads current checks, destination, review, consent and close requirements; permission is not evidence that they passed.
 A task that merges on its own puts no merge card in front of the captain: at green its crewmate shows its completion story on a note with no actions and reports `needs_firstmate` to merge (the report sort's row 0a wakes the first mate), and the first mate runs `settle_task merge-pr` with its closing sentence; Activity and the record say so.
 That note carries the risk chart and the merge card's fact strip, and the host keeps it off the stack until the merge has a result, then shows it once, already saying it merged, with the first mate's sentence (`docs/card-authoring.md`, "Work that closed without the captain's click").
@@ -274,7 +275,7 @@ PR-8 stands (board decision): a project that runs no checks (a PR that reports z
 A review is an independent read of a change at a version, commissioned on request at any care (INF-1875).
 Careful's guidance (`resources/runbooks/care/careful.json` and its careful-change skill) orders it BEFORE the pull request (the no-mistakes ordering, captain-approved 2026-09-19), so fix rounds are local commits rather than push + CI cycles; the host holds neither the push nor the merge on it (INF-1876): a review task is its builder's child and carries no `blocks` edge onto it.
 The host owns the derivation, the reviewer's brief and the typed record; the first mate owns the routing of findings, by instruction (contract v3.5).
-Since FI3-566 (cut C) those instructions sit where each step arises, the way `CHECK_DIAGNOSIS_NEXT` rides a failed check: the first mate's core says when to commission a review and to carry the captain's latest decision into every fix and review steer, each review wake names the step it asks for, and the findings wake carries how to fix a finding (`REVIEW_FIX_RULES` in `reviewFindingsNext`, `reportWakes.ts`).
+Since FI3-566 (cut C) those instructions sit where each step arises: the first mate's core says when to commission a review and to carry the captain's latest decision into every fix and review steer, each review wake names the step it asks for, and the findings wake carries how to fix a finding (`REVIEW_FIX_RULES` in `reviewFindingsNext`, `reportWakes.ts`).
 
 1. **A Careful builder finishes locally and emits no card.**
    The Careful section has it commit its work on its branch, report under the five headings with `needs_firstmate` asking for the review, and neither push, open a PR nor emit a completion card until the first mate says so; the host refuses none of those by the care's name, so an early card is the first mate's to question, not the host's to refuse (`resources/runbooks/care/guide.md`).
@@ -305,7 +306,7 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
 4. **The verdict is the typed review record** (INF-1875).
    The reviewer reports it on `report.validation` with kind `review` at the head and evidence revision its turn was assigned (`validationReviewSchema`): `code` clear, findings or blocked; `findings`, one typed entry each - id, severity (error / warning / info), file and line, one sentence of text, and an action: auto-fix, ask-user or no-op (`reviewFindingSchema`); and `risk` low, medium or high with one sentence why.
    The host reads nothing off the report's words: the code judgment is the verdict (`REVIEW_VERDICT_OF_CODE` - clear is a pass), the record refuses one that contradicts itself (clear code beside a finding that blocks, or code findings none of which block; `recordValidation`), and info findings ride a clear review because info never blocks (`findingsBlock` - blocking is an error or warning severity, or an ask-user action at any severity).
-   A report with no typed review record, or one naming another head than the assigned commit, records nothing and spends no round - a reviewer's acknowledgment ("standing by") is not a verdict, and the review stays open, so it still fails toward the human.
+   A report with no typed review record, or one naming another head than the assigned commit, records nothing - a reviewer's acknowledgment ("standing by") is not a verdict, and the review stays open, so it still fails toward the human.
    The code judgment is the verdict as typed at every care; the reviewer's live-proof judgment is its own typed record beside it ("Careful live validation" below), which Careful's guidance has the reviewer give and the first mate read, and which the host reads only to attest the pull request.
    The verdict, the head read, the change reading taken at assignment and the risk land on the builder's delivery facts (`reviewVerdict`, `reviewSha`, `reviewChange`, `reviewRisk`, `reviewRiskNote`, `reviewedAt`) as a `review` timeline event whose data also names the review task; which review a builder's verdict came from is otherwise read off the parent edge (`TaskService.graph.verdictReviewOf`).
    The typed findings stay on the live-validation record, the findings wake carries them one line each, and the change record's version carries them with the verdict (`ChangeReview.findings`, `docs/task-record.md`).
@@ -618,7 +619,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Careful's guidance orders the review BEFORE the pull request (the no-mistakes ordering, captain-approved 2026-09-19): the reviewer reads the builder's branch at its head (worktrees share refs; `WorkspaceService.branchHead`), fix rounds land as local commits, and the push, PR and CI come after the pass on the first mate's word - a builder with a pull request already on record is still reviewed at its committed branch head, not that pull request's recorded head.
   A review task's events bypass the whose-turn sort and go straight to the first mate; a Careful builder's are sorted like any other's, with two typed witnesses a review adds (`docs/report-sort.md`): its findings or blocked verdict wakes the first mate above a card on the captain's screen (row 0c), and the open review keeps the idle ladder from nudging the builder while the reviewer reads.
   The verdict is the typed review record on the reviewer's `report.validation` (INF-1875; `validationReviewSchema`: `code` clear/findings/blocked, typed `findings` with severity and action, `risk` with its why), mapped by `REVIEW_VERDICT_OF_CODE`; nothing is parsed off the report's words.
-  A report with no typed record records nothing and spends no round - a reviewer's acknowledgment is not a verdict (the phantom rounds of 2026-09-19), and no pass is recorded regardless; the record refuses a review that contradicts its findings, so info findings ride a clear review and never block (the no-mistakes rule; blocking = error/warning severity or an ask-user action, `findingsBlock`).
+  A report with no typed record records nothing - a reviewer's acknowledgment is not a verdict (the phantom rounds of 2026-09-19), and no pass is recorded regardless; the record refuses a review that contradicts its findings, so info findings ride a clear review and never block (the no-mistakes rule; blocking = error/warning severity or an ask-user action, `findingsBlock`).
   Findings/blocked leave the reviewer idle and steerable, a pass records verdict, head and risk on the BUILDER's delivery facts as a feed-worthy `review` event, closes the review task silently (done/finished) and wakes the first mate with the builder as ref.
   Risk never holds (Q4); no host hold reads the care's name (INF-1876); `SettleFacts.strip`, `crewStatus` and the context crew lines carry `rigor` and the review state.
   The first mate routes findings by instruction only (contract v3.5): auto-fix findings are relayed verbatim and fixed by the ported fixer preamble (double-check legitimacy, smallest root-cause fix, never revert intent), ask-user findings are ONE decision card per round, declined findings ride the review history the app writes and are never re-reported, and a reviewer is steered only to re-review at a named new head, evidence revision or validation state - never to stand by; since FI3-566 the steps ride the review wakes, and since INF-1876 the preamble rides every findings wake ("The review").
@@ -627,8 +628,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The evidence contract was linted at the crewmate card boundary (`lintCrewmateCard` with the task's rigor) until contract v3.6 removed that rule and the rigor option with it (captain lock 3: the card was the third copy of a record the report and the PR body already carried); the five headings stay REQUIRED in the report and the PR body, and the task's holds (the personal workspace, the checks) still speak before the shape rules.
   Reviewer placement (Q5): `Router.decide` takes `avoidProvider` on a review task - the builder's provider off its newest `routing_decisions` row (`Router.servedProvider`) - prefers another signed-in provider at the same tier, falls back with the reason recorded, never descends a tier, and records rule `R9`; the replay scorer keys on `kind_source`, so the new rule id needs no tolerance there.
   Observe's crewmate header renders rigor, review verdict/risk and the reviewed builder; the C5 join carries `review_of`/`review_verdict`/`review_risk`, null on a pre-phase-2 database.
-  Contract v3.4 names the cap wake as the same decision card as a crewmate's own three-round blocker and the steer after the answer as what reopens the rounds; v3.5 is the no-mistakes alignment above; `PROTOCOL_VERSION` 1.15.0 since contract v3.8 (the `read-only` constraint in the intent vocabulary and `deliverable` on the task detail, over v3.7's `RepoView.kind`, narrowed delivery enum and `TaskDelivery.mode: in-place`).
-  `tests/e2e/rigor-reviewed.spec.ts` (the review cap) and `tests/e2e/rigor-standard.spec.ts` (the card boundary: since v3.6 a drawn body publishing under the host's own buttons) are the binding tests.
+  Contract v3.5 is the no-mistakes alignment above; `PROTOCOL_VERSION` 1.15.0 since contract v3.8 (the `read-only` constraint in the intent vocabulary and `deliverable` on the task detail, over v3.7's `RepoView.kind`, narrowed delivery enum and `TaskDelivery.mode: in-place`).
+  `tests/e2e/rigor-reviewed.spec.ts` (repeated re-reviews with no round allowance) and `tests/e2e/rigor-standard.spec.ts` (the card boundary: since v3.6 a drawn body publishing under the host's own buttons) are the binding tests.
 - The rigor numbers (delivery rigor phase 4, the last; `docs/delivery-rigor.md` "Numbers"): `scoreRigor` in `scripts/interaction-metrics.ts` is their ONE home, beside `scoreRouting`, so the replay gate and `manifest.rigor` in the corpus export cannot disagree - fourteen rows over `ObservedDispatch` (which gains the rigor, the posture, the PR, `ciRounds`, the cap holds and whether the change's REPORT carried the five headings - the card's body since contract v3.6 no longer carries them, so `reportEvidenceHeadings` is what the share reads) and `ObservedReview`, one row per verdict read off the builder's `review` timeline events (a review task carries no rigor at all: it read a change rather than shipping one).
   Since Task B the row also carries the `deliverable`, and an ANSWER task is out of every rigor denominator - it ships nothing, so it can carry no evidence contract, spend no CI round and hit no cap - reported instead by its own observational share `deliverable_share_answer`.
   Nothing new is written for it.
@@ -701,11 +702,11 @@ An old assignment cannot reuse its earlier typed judgment to accept changed fact
 A new commit, including a check repair or an update from the default branch, keeps the proof already run when a review at that commit judges the earlier run and confirms its difference reaches none of the scenarios (`acceptedValidation`); a difference that reaches a scenario reruns only the scenarios it reaches, carrying the others' earlier observations and kept evidence into the new run.
 The existing code-review carry still covers an unchanged change; an unavoidable update reviews only its code difference, not the whole change again.
 New evidence at the same commit also needs review, without a dummy commit.
-The findings allowance counts distinct version-and-evidence pairs; repeating a report spends no round, and a captain-authorized reset clears those counted pairs with the existing counter.
+The host counts no findings rounds and keeps no allowance or reset for them: each typed review of a version-and-evidence pair is one more entry in the review history.
 The current accepted pair is what Careful's guidance asks for before the push, the pull request and the completion card; the host reads it only to attest the pull request (`docs/forge.md`, "No-mistakes' attestation").
 Raising care on open work serves the Careful section in the policy notice; lowering care removes nothing from the record.
 A reviewer's live-proof judgment stands beside its code verdict in the typed record, and the first mate relays what it says.
-Required checks, their repair allowance, autonomy and separate merge consent are unchanged.
+Required checks, autonomy and separate merge consent are unchanged.
 
 ### Visible validation effects
 
@@ -762,4 +763,4 @@ Commands, supporting transcripts and detailed observations sit under How it was 
 The existing task record retains Live validation as supporting history under Details, with scenario disclosures and kept evidence reachable by pointer or keyboard.
 Its accepted labels are Demonstrated for this version, No running surface and Proceeding without live proof.
 Awaiting live validation appears only for an approved early publication that is still waiting for proof.
-Selected evidence and captain answers survive restarts with the review and repair allowances.
+Selected evidence and captain answers survive restarts with the review and repair records.

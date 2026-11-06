@@ -8,7 +8,6 @@ import {
   BROWSER_GONE_OPENING,
   isCardClosedSteer,
 } from "./captainWakes";
-import { CHECK_DIAGNOSIS_NEXT } from "./checkRepair";
 import { crewHoldWays, idleStallWays } from "./holds";
 import {
   IDLE_ANSWER_NUDGE_TEXT,

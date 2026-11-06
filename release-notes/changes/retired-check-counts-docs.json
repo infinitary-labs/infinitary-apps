@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "retired-check-counts-docs",
+      "reason": "Internal: the docs and a journey's header describe check repairs, reruns and reviews with no retired count, and an unused sentence that offered one rerun is removed; nothing a person sees changes."
+    }
+  ]
+}

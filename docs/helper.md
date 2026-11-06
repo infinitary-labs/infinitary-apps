@@ -396,6 +396,7 @@ The shared feed samples every two seconds while a task is active or a local decl
 - `ResourceSampler` measures CPU time deltas across a window of at least 250 milliseconds, no longer than five seconds, and reports the idle fraction and logical processor count.
   A read within five seconds of the previous endpoint reuses that endpoint and measures the whole interval, finishing the minimum window if needed.
   The first read or one after a longer quiet spell takes a fresh quarter-second window.
+  A timer can wake before its millisecond, so the sampler waits again until the window is finished, never reading an early wake as an interrupted window.
   Process-time deltas use the corresponding process endpoints, so local declared-run accounting and task Use cover the same refresh interval.
   A missing CPU list, changed processor count, reset counter, empty delta or interrupted window is unknown, never idle.
 - The desktop host supplies memory facts in bytes through `HostCapabilities.resourceMemory`; work mode supplies the same adapter (`src/main/host/resourceMemory.ts`).

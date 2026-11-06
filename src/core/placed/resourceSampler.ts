@@ -108,11 +108,11 @@ export class ResourceSampler {
       const first = reuse ? previous.cpus : readCpus();
       const start = reuse ? previous.at : now();
       const pause = this.options.wait ?? wait;
-      if (!reuse) await pause(RESOURCE_SAMPLE_MS);
-      // Timers can wake just before their requested millisecond. Finish the
-      // window rather than presenting that as missing CPU information.
-      const remaining = RESOURCE_SAMPLE_MS - (now() - start);
-      if (remaining > 0) await pause(Math.ceil(remaining));
+      // Timers can wake just before their requested millisecond, more than once.
+      // Wait until the window is finished rather than presenting an early wake
+      // as missing CPU information. A reused window may be finished already.
+      const remaining = () => RESOURCE_SAMPLE_MS - (now() - start);
+      while (remaining() > 0) await pause(Math.ceil(remaining()));
       const last = readCpus();
       const at = now();
       const sampleMs = at - start;

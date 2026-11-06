@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "process-observation-mac-waits",
+      "reason": "Mostly test repair: the live process observation test waits on marks watched as files, not a folder's watch, which macOS can hold or drop. The resource sampler waits again when a timer wakes just before its quarter-second window ends. The regular two-second refreshes never wait on that timer, so a person would not notice."
+    }
+  ]
+}

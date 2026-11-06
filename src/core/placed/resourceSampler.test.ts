@@ -125,4 +125,40 @@ describe("accepted CPU refresh windows", () => {
     clock += 1750;
     expect(await sampler.read()).toMatchObject({ status: "unknown", reason: "interrupted" });
   });
+
+  /**
+   * A Mac run of processResources.integration.test.ts read an interrupted refresh: the
+   * 69 ms wait that should finish its 250 ms window woke after 68.56 ms, leaving 249.62 ms.
+   * Each wait here wakes half a millisecond early, as that one did. Fails when an early
+   * wake of the finishing wait reads as an interrupted window.
+   */
+  it("finishes a window whose waits wake before their millisecond", async () => {
+    let clock = 0;
+    const pauses: number[] = [];
+    const sampler = new ResourceSampler({
+      memory: () => ({ totalBytes: 8 * 1024 ** 3, freeBytes: 3 * 1024 ** 3 }),
+      cpus: () => [
+        {
+          model: "Recorded CPU",
+          speed: 0,
+          times: { user: clock * 70, nice: 0, sys: 0, idle: clock * 60, irq: 0 },
+        },
+      ],
+      now: () => clock,
+      wait: async (ms) => {
+        pauses.push(ms);
+        clock += ms - 0.5;
+      },
+    });
+    const first = await sampler.read();
+    expect(first).toMatchObject({ status: "sampled" });
+    if (first.status === "sampled") expect(first.sampleMs).toBeGreaterThanOrEqual(250);
+    expect(pauses).toEqual([250, 1]);
+    pauses.length = 0;
+    clock += 181.06;
+    const refreshed = await sampler.read();
+    expect(refreshed).toMatchObject({ status: "sampled" });
+    if (refreshed.status === "sampled") expect(refreshed.sampleMs).toBeGreaterThanOrEqual(250);
+    expect(pauses).toEqual([69, 1]);
+  });
 });

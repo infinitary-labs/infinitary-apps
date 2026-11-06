@@ -1,9 +1,10 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { watch, writeFileSync } from "node:fs";
+import { appendFileSync, writeFileSync } from "node:fs";
 import { freemem, totalmem } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { reachMark } from "../../../tests/helpers/reachMark";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { attributedClaudeProcess } from "../claude/processResources";
 import { hostEnv } from "../hostEnv";
@@ -26,19 +27,19 @@ describe("live task process observation", () => {
     const dir = scratchDir("infinitary-process-shares-");
     const ready = join(dir, "ready");
     const finish = join(dir, "finish");
-    const changed = watch(dir);
-    const started = new Promise<void>((resolve) =>
-      changed.on("change", (_event, file) => {
-        if (file === "ready") resolve();
-      }),
-    );
+    // Both waits are marks a process appends to, each watched as a file, never through
+    // the folder: on macOS a folder's watch is FSEvents, which held or dropped a new
+    // file's event past the whole budget while other runs churned the disk (INF-2578).
+    const started = reachMark(ready);
+    writeFileSync(finish, "", { flag: "wx" });
     let ended!: () => void;
     const exit = new Promise<void>((resolve) => {
       ended = resolve;
     });
     const jobs = new JobManager({ onExit: () => ended() });
-    // The child stays alive until the parent writes finish, rather than timing a read against a sleep.
-    const program = `const fs=require('node:fs');const memory=Buffer.alloc(4*1024*1024,1);const watcher=fs.watch(${JSON.stringify(dir)},(_,file)=>{if(file==='finish'){console.log(memory.length);watcher.close()}});fs.writeFileSync(${JSON.stringify(ready)},'ready')`;
+    // The child stays alive until the parent appends to finish, rather than timing a read
+    // against a sleep. It watches finish as reachMark does, reading it once the watch is in place.
+    const program = `const fs=require('node:fs');const memory=Buffer.alloc(4*1024*1024,1);const finish=${JSON.stringify(finish)};const watcher=fs.watch(finish);const look=()=>{if(fs.readFileSync(finish,'utf8')==='')return;console.log(memory.length);watcher.close()};watcher.on('change',look);setImmediate(()=>setImmediate(look));fs.appendFileSync(${JSON.stringify(ready)},'ready')`;
     const expectedLog = "压力";
     let logged = "";
     let finishLog = () => {};
@@ -121,8 +122,7 @@ describe("live task process observation", () => {
       ).toBeGreaterThan(0);
       console.info("Full-interval refresh proof", JSON.stringify(refreshed));
     } finally {
-      changed.close();
-      writeFileSync(finish, "done");
+      appendFileSync(finish, "done");
       client.stdin.end();
       await Promise.all([exit, clientExit]);
     }

@@ -569,7 +569,9 @@ export class FirstmateContext {
       ),
       crew: rows(this.rosterRows()),
       // Served only while another computer runs work, so one computer pays nothing (INF-992).
-      computers: whole(this.options.supervisor.computersListed() ? COMPUTERS_RULE : undefined),
+      computers: whole(
+        this.options.supervisor.placement.computersListed() ? COMPUTERS_RULE : undefined,
+      ),
       computer_versions: whole(this.options.computerVersions?.()),
       backlog: whole(this.renderBacklog()),
       open_cards: rows(this.openCardRows()),
@@ -659,7 +661,7 @@ export class FirstmateContext {
    */
   /** A project's folder computer and where its tasks run, while another computer runs work. */
   private placesFact(repo: RepoView): { folder_on?: string; tasks_run_on?: string } {
-    const places = this.options.supervisor.projectPlaces(repo);
+    const places = this.options.supervisor.placement.projectPlaces(repo);
     return places ? { folder_on: places.folder, tasks_run_on: places.tasks } : {};
   }
 

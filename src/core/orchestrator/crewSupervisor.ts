@@ -12,7 +12,7 @@ import {
   sep,
 } from "node:path";
 import { type AttachmentRef, attachmentWords, fileSizeWords } from "@shared/attachments";
-import { type CutOff, type CutOffClass, isAuthFailureMessage } from "@shared/authFailure";
+import { type CutOff, isAuthFailureMessage } from "@shared/authFailure";
 import { cardPictureFiles } from "@shared/cardPictures";
 import {
   anythingElseOf,
@@ -59,23 +59,8 @@ import { type CrewSpeed, type SpeedSelection, speedNote } from "@shared/crewSpee
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
-import {
-  deviceForgeGateReason,
-  deviceForgeGateRef,
-  deviceForgeSignInCardId,
-  deviceForgeWaitLine,
-  deviceSetupCardId,
-  GITHUB_HOST,
-  noSignInsStartRefusal,
-  noSignInsWaitLine,
-  updateStartRefusal,
-  updateWaitLine,
-} from "@shared/deviceSetup";
-import {
-  noNewWorkDayLine,
-  noNewWorkStartRefusal,
-  noNewWorkWaitLine,
-} from "@shared/deviceUpdateNudge";
+import { noSignInsStartRefusal, updateStartRefusal } from "@shared/deviceSetup";
+import { noNewWorkStartRefusal } from "@shared/deviceUpdateNudge";
 import type { CrewCounts, FmEvent } from "@shared/events";
 import { reportSummary } from "@shared/feed";
 import {
@@ -83,7 +68,7 @@ import {
   type FolderRefreshRefusal,
   folderRefreshWords,
 } from "@shared/folderRefresh";
-import { forgeOf, forgePlace } from "@shared/forge";
+import { forgePlace } from "@shared/forge";
 import { forgeSignInCardId } from "@shared/forges";
 import {
   choiceWords,
@@ -110,25 +95,12 @@ import {
 } from "@shared/liveValidation";
 import type { MergeReview } from "@shared/mergeReview";
 import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
-import {
-  AUTOMATIC_COMPUTER,
-  AUTOMATIC_WORD,
-  type ComputerMove,
-  placementCandidateLines,
-  placementReason,
-  UNCOMPARED_WAIT,
-} from "@shared/placement";
+import { AUTOMATIC_COMPUTER, type ComputerMove, UNCOMPARED_WAIT } from "@shared/placement";
 import type { TypedFailure } from "@shared/plainProblem";
 import { hostedPresentation } from "@shared/presentationDestination";
 import { projectPagePathRefusal } from "@shared/projectPage";
 import { CREWMATE_TAB_VIA, type InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
-import {
-  backendForProvider,
-  catalogEntry,
-  isRetiredProvider,
-  PROVIDER_CATALOG,
-} from "@shared/providers";
-import { formatResetText } from "@shared/quota";
+import { catalogEntry, isRetiredProvider, PROVIDER_CATALOG } from "@shared/providers";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { moveOutOfReach } from "@shared/recordBar";
 import {
@@ -146,7 +118,6 @@ import {
   type RepoDelivery,
   type RepoView,
   RUNS_ON_THIS_MAC,
-  runsHereOnly,
 } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { RiskAssessment } from "@shared/risk";
@@ -178,9 +149,7 @@ import { type PlanItem, readPlanItems } from "@shared/taskPlan";
 import {
   type EffectiveTaskPolicies,
   policyEditConsequences,
-  RUNS_ON_SOURCE_WORDS,
   type TaskPolicyEdits,
-  type TaskRunsOn,
   taskPolicyEditsSchema,
 } from "@shared/taskPolicies";
 import {
@@ -188,7 +157,7 @@ import {
   queueStartedBacklogRefusal,
   queueStartedRefusal,
 } from "@shared/taskQueue";
-import type { MoveDestination, MoveOptions, TaskPlace, TaskView } from "@shared/tasks";
+import type { MoveDestination, MoveOptions, TaskView } from "@shared/tasks";
 import {
   CARE_WORDS,
   CHECK_WORDS,
@@ -200,7 +169,6 @@ import {
   sendWriteWords,
 } from "@shared/vocabulary";
 import type { HandoverFile } from "@shared/work";
-import { resolveWorkComputer } from "@shared/workComputer";
 import { type IntegrationAsk, NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
@@ -256,7 +224,6 @@ import {
   type ControlProfile,
   LOCAL_MACHINE_ID,
   type ModelSession,
-  type SessionBinding,
   type SessionEvent,
   type SessionSpec,
   StoppedBeforeStartError,
@@ -350,7 +317,6 @@ import {
   type UnreadSteer,
 } from "./crewRuntime";
 import {
-  type CrewmateComputers,
   type CrewmateRestart,
   type CrewmateSpec,
   crewmateProcedureFor,
@@ -414,6 +380,7 @@ import { createSettleOwners, type SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
 import { folderMissingText, pendingMergeLine } from "./settleWords";
 import { computerLeftOutWake, systemWaitWake } from "./startWakes";
+import { type PlacedWaitFor, placedCutOffStartRefusal, TaskPlacement } from "./taskPlacement";
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
 import type { Ticker } from "./ticker";
 import { conversationRestartWake, type OpenCallFact } from "./turnWakes";
@@ -719,39 +686,6 @@ export class CardChoiceUnavailableError extends Error {
  * anything longer spills to a file and the excerpt carries a pointer.
  */
 
-/** How long a project's next task waits for its computer before the feed says so again. */
-export const PLACED_WAIT_DAY_MS = 24 * 60 * 60 * 1000;
-
-/**
- * The feed's one line when a computer's only sign-in is cut off
- * (docs/helper.md, "Runs on"). A spent allowance is named as that
- * allowance, never as a sign-in.
- */
-/**
- * What a project's next task waits for on its computer, beyond the computer
- * itself being in reach: its own sign-in a cut-off withholds, any sign-in
- * at all, or its own sign-in for the host its project lives on.
- */
-export type PlacedWaitFor =
-  | { kind: "cut-off"; provider: string; class: CutOffClass; resetsAt?: number }
-  | { kind: "no-sign-ins" }
-  | { kind: "update" }
-  | { kind: "forge"; host: string };
-
-export function placedCutOffWaitLine(
-  subject: string,
-  who: string,
-  signIn: { provider: string; class: CutOffClass; resetsAt?: number },
-  now: number,
-): string {
-  if (signIn.class !== "no_headroom")
-    return `${subject} waits for ${who}'s own ${signIn.provider} sign-in.`;
-  const reset = signIn.resetsAt !== undefined ? formatResetText(signIn.resetsAt, now) : undefined;
-  return reset
-    ? `${subject} waits for ${who}'s ${signIn.provider} plan's allowance, which ${reset}.`
-    : `${subject} waits for ${who}'s ${signIn.provider} plan's allowance to reset.`;
-}
-
 /**
  * The feed's line when a task is served from a weaker slot than it asked for
  * (P7: never a silent downgrade). When a withheld account would have served
@@ -772,21 +706,6 @@ export function downgradeLine(
   if (withheld.reason === CUT_OFF_REFUSED) return `${held} while ${name} refuses your sign-in.`;
   if (isClientIssueReason(withheld.reason)) return `${held}: ${name} cannot run on ${HERE.this}.`;
   return `${held} right now.`;
-}
-
-/** Start now's refusal for the same wait. */
-function placedCutOffStartRefusal(
-  handle: string,
-  who: string,
-  signIn: { provider: string; class: CutOffClass; resetsAt?: number },
-  now: number,
-): string {
-  if (signIn.class === "no_headroom") {
-    const reset = signIn.resetsAt !== undefined ? formatResetText(signIn.resetsAt, now) : undefined;
-    const when = reset ? `, which ${reset}` : "";
-    return `${handle} waits for ${who}'s ${signIn.provider} plan's allowance${when}. It starts by itself once it resets, and never runs on ${HERE.this} instead.`;
-  }
-  return `${handle} waits for ${who}'s own ${signIn.provider} sign-in, which no longer serves there. It starts by itself once it serves again, and never runs on ${HERE.this} instead.`;
 }
 
 /**
@@ -812,27 +731,6 @@ export function crewSignInCardId(taskId: string): string {
 
 export class CrewSupervisor {
   private readonly tasks = new Map<string, TaskRuntime>();
-  /**
-   * A project's next task waiting for the computer it runs on, by project and
-   * computer (docs/helper.md, "Runs on"): what it waits for - that computer
-   * in reach, or its own sign-in a cut-off withholds - when the wait began
-   * and whether the day's line was said, so each line is said once per
-   * wait. Kept in memory: after a restart here a wait still standing is
-   * said once more.
-   */
-  private readonly placedWaits = new Map<
-    string,
-    {
-      since: number;
-      dayTold: boolean;
-      on: "reach" | "no-new-work" | "sign-in" | "allowance" | "no-sign-ins" | "update" | "forge";
-    }
-  >();
-  /**
-   * A project's next task waiting for its computer's own GitHub sign-in,
-   * said once per project and computer until that computer signs in.
-   */
-  private readonly deviceForgeSaid = new Set<string>();
   /** Folder repairs whose folder is being read now, so one tick reads each once. */
   private readonly closingFolders = new Set<string>();
   /**
@@ -871,6 +769,8 @@ export class CrewSupervisor {
   private readonly briefs: CrewBrief;
   /** Independent reviews and repair assessments: their reads, verdicts and tasks. */
   private readonly reviews: Reviews;
+  /** Where each task runs: its computer, the waits for it, and the words said of it. */
+  readonly placement: TaskPlacement;
   private crewmateSeq = 0;
   /** The watchdog's registrations on the shared ticker, undone at dispose. */
   private watchdog: (() => void)[] | undefined;
@@ -902,7 +802,6 @@ export class CrewSupervisor {
   private readonly ladder: IdleLadder;
   /** Each task's posture, and the wait facts read from the same snapshot. */
   readonly postures: WorkPostures;
-  private readonly placeFact = Symbol("task place");
   private readonly moveFact = Symbol("computer move facts");
   private readonly ciFact = Symbol("crew check summary");
   /** The host's watch on crewmates' checks; absent when no read is wired. */
@@ -922,7 +821,7 @@ export class CrewSupervisor {
     const now = options.now;
     this.now = now ? () => now() : () => Date.now();
     // A project moved: its tasks that have not started follow it (docs/helper.md, "Runs on").
-    options.repos.onRunsOn?.((repo) => this.projectMoved(repo));
+    options.repos.onRunsOn?.((repo) => this.placement.projectMoved(repo));
     this.settleFacts = new SettleFacts(options, {
       now: this.now,
       taskDelivery: (taskId) => this.taskDelivery(taskId),
@@ -968,6 +867,14 @@ export class CrewSupervisor {
       },
     });
     this.askEnding = askEndingOf(options.tasks, this.cards);
+    this.placement = new TaskPlacement(options, {
+      now: this.now,
+      cards: this.cards,
+      runtime: (taskId) => this.tasks.get(taskId),
+      outOfReach: (taskId) => this.outOfReach(taskId),
+      reviewBuilderOf: (record) => this.reviewBuilderOf(record),
+      dispatchQueuedTask: (taskId) => this.dispatchQueuedTask(taskId),
+    });
     this.settling = createSettleOwners({
       now: this.now,
       tasks: options.tasks,
@@ -1342,654 +1249,9 @@ export class CrewSupervisor {
     };
   }
 
-  /**
-   * The routing decision for a task where it runs: among this Mac's
-   * subscriptions, or for a task on a computer that runs work, among the
-   * ones that computer is signed in to, with its own reading of the
-   * allowance (docs/helper.md, "Its own sign-ins"). Never this Mac's for a
-   * task there.
-   */
-  private async routeTask(
-    taskId: string,
-    prompt: string,
-    shape: WorkShape,
-    machine: string | null,
-    avoidProvider?: string,
-  ): Promise<RouteResult | undefined> {
-    const router = this.options.router;
-    if (!router) return undefined;
-    const preference = avoidProvider ? { avoidProvider } : {};
-    const pool = machine ? await this.options.machines?.served(machine) : undefined;
-    if (machine && !pool) return undefined;
-    const options = { ...preference, ...(pool ? { pool } : {}) };
-    // Routing off must not delegate the initial model/account to Pi's
-    // account-less base runtime. The router still owns eligibility.
-    return (
-      router.decide(taskId, prompt, shape, options) ??
-      router.initialChoice(taskId, prompt, shape, options)
-    );
-  }
-
-  /**
-   * A placed task's binding (docs/helper.md, "Its own sign-ins"): its
-   * model's own backend, naming that computer's own account that serves the
-   * model, else one for the provider, which it binds there. This Mac's
-   * accounts never serve it, so the runtime is this Mac's account-less one,
-   * which only presents the session's control plane. With no model routed,
-   * it binds as a task with none does.
-   */
-  private async placedBinding(
-    machine: string,
-    provider: string | undefined,
-    selectedAccount?: string,
-    model?: { provider: string; id: string },
-  ): Promise<SessionBinding> {
-    if (!provider) return this.options.bind(undefined, undefined);
-    const pool = selectedAccount ? undefined : await this.options.machines?.served(machine);
-    const there =
-      selectedAccount ??
-      (model?.provider === provider ? pool?.modelAccounts?.get(offeringKey(model)) : undefined) ??
-      pool?.accounts.get(provider);
-    if (isCustomApiProvider(provider) && !there)
-      throw new Error(
-        "This task’s custom connection is not available on the computer it runs on. It cannot use another server automatically.",
-      );
-    if (backendForProvider(provider) === "claude")
-      return { backend: "claude", accountId: there ?? "claude" };
-    // Only the control-plane runtime is needed here. The provider's checked
-    // connection belongs to that computer, and is resolved by bindHere there.
-    const binding = await this.options.bind(undefined, undefined);
-    return binding.backend === "pi" && there ? { ...binding, accountId: there } : binding;
-  }
-
   /** Where a task's crewmate runs: the computer that runs work its record names, or this Mac. */
   private machineOf(taskId: string): string {
     return this.options.tasks.get(taskId)?.deviceId ?? LOCAL_MACHINE_ID;
-  }
-
-  /**
-   * Where a task runs (docs/helper.md, "Runs on"): the computer its record
-   * names - where it started, or where it waits to start, which follows its
-   * Runs on while it has not started (`repoint`) - else where it would
-   * start now (`runsOnFor`). Null is this Mac.
-   */
-  private placementOf(record: PlacementRecord): string | null {
-    if (record.placement) return record.placement.snapshot.computerId;
-    if (record.deviceId) return record.deviceId;
-    const target = this.runsOnFor(record);
-    return target === AUTOMATIC_COMPUTER ? null : target;
-  }
-
-  /**
-   * Where a start that has not claimed its task goes (INF-409): Automatic,
-   * which compares the computers - a computer it chose, or the home it
-   * settled on, is still Automatic's - else the computer `placementOf`
-   * names, null for this Mac.
-   */
-  private startPlace(record: PlacementRecord): string | null {
-    return this.automaticFor(record) ? AUTOMATIC_COMPUTER : this.placementOf(record);
-  }
-
-  automaticFor(record: PlacementRecord): boolean {
-    return Boolean(
-      this.options.automaticPlacement &&
-        !record.branch &&
-        !record.sessionFile &&
-        (record.placement ||
-          (this.options.router?.dynamicEnabled() &&
-            !this.runsOnlyHere(record) &&
-            this.runsOnFor(record) === AUTOMATIC_COMPUTER)),
-    );
-  }
-
-  /**
-   * Keeps the latest words for Details and Start now, and says why a task
-   * waits once, then again only when the kind of wait changes: each new
-   * reading can change the words, and every line is a row in Activity.
-   */
-  private sayAutomaticWait(record: TaskRecord, wait = UNCOMPARED_WAIT): void {
-    // The record, not this process: a restart still knows what was said.
-    const said = this.options.tasks.get(record.id)?.shape?.placement_wait;
-    this.options.tasks.placement.setPlacementWait(record.id, wait);
-    if (said?.kind === wait.kind) return;
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      taskId: record.id,
-      text: record.placement
-        ? `"${record.title}" waits for its chosen computer to confirm preparation. It will not start elsewhere.`
-        : `"${record.title}": ${wait.words}`,
-    });
-  }
-
-  /** A current runtime/remote continuation, never a saved activity flag alone. */
-  placementRunning(record: TaskRecord): boolean {
-    return this.tasks.get(record.id)?.state === "streaming" && !this.outOfReach(record.id);
-  }
-
-  /** Where a task would start now: its own Runs on, else its parent's, else its project's. */
-  private runsOnFor(record: PlacementRecord): string | null {
-    const own = this.ownRunsOn(record);
-    return own ? own.deviceId : this.runsOnOf(record);
-  }
-
-  /**
-   * Whether a task only ever runs on this Mac: a repair assessment, and
-   * one whose project can run only here (`runsHereOnly`), or any task where
-   * no computer can run work. A task with no project runs where the captain
-   * asks, and here without a word.
-   */
-  private runsOnlyHere(record: PlacementRecord): boolean {
-    // A folder repair runs where the folder is (INF-549).
-    if (!this.options.machines || isRepairAssessment(record.shape) || record.shape?.in_place)
-      return true;
-    if (!record.repoId) return false;
-    const repo = this.options.repos.get(record.repoId);
-    return !repo || runsHereOnly(repo) !== null;
-  }
-
-  /** The project's Runs on for a task of its, or null where it runs on this Mac. */
-  private runsOnOf(record: PlacementRecord): string | null {
-    if (this.runsOnlyHere(record)) return null;
-    return this.options.repos.get(record.repoId ?? "")?.runsOn ?? null;
-  }
-
-  /**
-   * A task's own Runs on (docs/helper.md, "A task's own Runs on"): the
-   * captain's word on the task, else on its nearest parent that has one,
-   * with where it came from. Undefined where none does, so it follows its
-   * project, and for a task that only ever runs on this Mac. Null is this Mac.
-   */
-  private ownRunsOn(
-    record: PlacementRecord,
-  ): { deviceId: string | null; from: "task" | "parent" } | undefined {
-    const builder = this.reviewBuilderOf(record);
-    if (builder) return { deviceId: builder.deviceId ?? null, from: "parent" };
-    if (this.runsOnlyHere(record)) return undefined;
-    const { tasks } = this.options;
-    const parents = record.parentId
-      ? [tasks.get(record.parentId), ...tasks.graph.ancestors(record.parentId)]
-      : [];
-    for (const [index, at] of [record, ...parents].entries()) {
-      const ask = at?.shape?.runs_on_ask;
-      if (!ask) continue;
-      return {
-        deviceId: ask === RUNS_ON_THIS_MAC ? null : ask,
-        from: index === 0 ? "task" : "parent",
-      };
-    }
-    return undefined;
-  }
-
-  /** A task has started: it has a branch, a conversation, or a crewmate now. */
-  private started(record: TaskRecord): boolean {
-    return Boolean(
-      record.placement || record.branch || record.sessionFile || this.tasks.has(record.id),
-    );
-  }
-
-  /** A task that has not started goes where it would start now; one started stays where it started. */
-  private repoint(record: TaskRecord): void {
-    if (record.status !== "open" || record.kind !== "work" || this.started(record)) return;
-    const requested = this.runsOnFor(record);
-    const target = requested === AUTOMATIC_COMPUTER ? null : requested;
-    if (target !== (record.deviceId ?? null))
-      this.options.tasks.placement.setDevice(record.id, target);
-  }
-
-  /**
-   * A project's Runs on changed: each of its tasks that has not started
-   * goes where its next task starts now, unless the captain chose where it
-   * runs, and one already started stays where it started (docs/helper.md,
-   * "Runs on").
-   */
-  private projectMoved(repo: RepoView): void {
-    for (const record of this.options.tasks.listOpen())
-      if (record.repoId === repo.id) this.repoint(record);
-  }
-
-  /**
-   * The captain's word on where a task runs changed, or the task moved
-   * under another parent (docs/helper.md, "A task's own Runs on"): it and
-   * each of its parts that has not started go where they would start now.
-   */
-  runsOnChanged(taskId: string): void {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return;
-    for (const task of [record, ...this.options.tasks.graph.descendants(taskId)])
-      this.repoint(task);
-  }
-
-  /**
-   * Why the captain's word on where a task runs cannot be kept, in plain
-   * words, or undefined when it can (docs/helper.md, "A task's own Runs
-   * on"). `ask` is a device id, `this-mac`, or null to follow its parent's
-   * or project's Runs on again.
-   */
-  runsOnRefusal(taskId: string, ask: string | null): string | undefined {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return undefined;
-    const handle = `${record.key || record.id} "${record.title}"`;
-    if (record.kind !== "work" || TaskService.isClosed(record))
-      return `${handle} is not open work, so where it runs cannot change.`;
-    if (record.status !== "open" || this.started(record)) {
-      const where = record.deviceId
-        ? (this.options.machines?.placeOf(record.deviceId).where ?? `on the other ${COMPUTER.one}`)
-        : `on ${HERE.this}`;
-      return `${handle} has started, so it finishes where it started, ${where}.`;
-    }
-    return ask === null ? undefined : this.placeRefusal(handle, record, ask);
-  }
-
-  /** Resolve the first mate's placement name before any task record is written. */
-  resolveRunsOn(ask: string): string {
-    const machines = this.options.machines;
-    return resolveWorkComputer(
-      ask,
-      (machines?.computers() ?? []).map((id) => ({ id, name: machines?.nameOf(id) ?? id })),
-    );
-  }
-
-  /** Why a task cannot be asked to run at `ask`, or undefined when it can. */
-  private placeRefusal(handle: string, record: PlacementRecord, ask: string): string | undefined {
-    if (record.shape?.kind === "review")
-      return `${handle} is a review and follows its builder's computer; its location cannot be chosen separately.`;
-    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-    if (record.repoId && !repo) return `${handle} has no project, so it runs on ${HERE.this}.`;
-    if (repo?.kind === "personal")
-      return `${handle} builds in your personal workspace, which stays on ${HERE.this}.`;
-    const here = repo ? runsHereOnly(repo) : null;
-    if (repo && here) return `${handle} is in ${repo.name}. ${here}`;
-    if (ask === AUTOMATIC_COMPUTER && !record.repoId)
-      return "Automatic needs a project that can run on another computer.";
-    if (
-      ask !== AUTOMATIC_COMPUTER &&
-      ask !== RUNS_ON_THIS_MAC &&
-      !this.options.machines?.computers().includes(ask)
-    )
-      return "No computer that runs work has that deviceId. Look with app_state.";
-    return undefined;
-  }
-
-  /**
-   * Where a task runs, as its record's Details reads it (docs/helper.md,
-   * "A task's own Runs on"): where it started, or where it would start
-   * now, and where that came from. Absent until a computer that runs work
-   * is on the list, for a task that only ever runs on this Mac, and for a
-   * task with no project that nobody asked to run elsewhere.
-   */
-  runsOnFact(record: TaskRecord): TaskRunsOn | undefined {
-    const machines = this.options.machines;
-    if (!machines || record.kind !== "work") return undefined;
-    if (
-      !record.deviceId &&
-      !record.placement &&
-      this.runsOnFor(record) !== AUTOMATIC_COMPUTER &&
-      (machines.computers().length === 0 || this.runsOnlyHere(record))
-    )
-      return undefined;
-    // A task with no project has no project setting to follow: it says where
-    // it runs only once the captain, or its parent, chose.
-    if (!record.deviceId && !record.repoId && !this.ownRunsOn(record)) return undefined;
-    const settled = TaskService.isClosed(record) || this.started(record);
-    const device = settled ? (record.deviceId ?? null) : this.placementOf(record);
-    return {
-      label:
-        !record.placement && !settled && this.runsOnFor(record) === AUTOMATIC_COMPUTER
-          ? AUTOMATIC_WORD
-          : device
-            ? machines.placeOf(device).label
-            : HERE.This,
-      source: this.ownRunsOn(record)?.from ?? "project",
-      ...(record.placement
-        ? {
-            reason: placementReason(record.placement.snapshot),
-            candidates: placementCandidateLines(record.placement.snapshot),
-          }
-        : !settled &&
-            this.runsOnFor(record) === AUTOMATIC_COMPUTER &&
-            this.options.router?.dynamicEnabled()
-          ? {
-              reason:
-                record.startPolicy === "when-ready"
-                  ? (record.shape?.placement_wait ?? UNCOMPARED_WAIT).words
-                  : "Your first mate chooses a computer when this task starts. It stays there.",
-            }
-          : {}),
-    };
-  }
-
-  /**
-   * Where a task runs in words, as its Tasks row, its summary and its status
-   * read it (docs/helper.md, "Runs on"): the computer it started on, or the
-   * one it would start on now, and whether open or underway work's computer
-   * is out of reach or not yet caught up. Absent for a task this Mac runs.
-   */
-  taskPlace(record: TaskRecord): TaskPlace | undefined {
-    return this.options.tasks.projectedFact(record, this.placeFact, () =>
-      this.readTaskPlace(record),
-    );
-  }
-
-  private readTaskPlace(record: TaskRecord): TaskPlace | undefined {
-    const machines = this.options.machines;
-    if (!machines || record.kind !== "work") return undefined;
-    const settled = TaskService.isClosed(record) || this.started(record);
-    const device = settled ? record.deviceId : this.placementOf(record);
-    if (!device) return undefined;
-    const { label, where } = machines.placeOf(device);
-    const live = record.status === "open" || record.status === "active";
-    const away = live && machines.ready(device, record.id) !== true;
-    const older = away && this.options.takesNoWorkUntilUpdated?.(device) === true;
-    return {
-      name: label,
-      where,
-      reach: away
-        ? this.options.reachOf?.(device) === "connecting" && !older
-          ? "connecting"
-          : "out-of-reach"
-        : "in-reach",
-      ...(older ? { noNewWork: true as const } : {}),
-    };
-  }
-
-  /** Whether a computer that runs work is listed, so the captain has more than one (INF-992). */
-  computersListed(): boolean {
-    return (this.options.machines?.computers().length ?? 0) > 0;
-  }
-
-  /**
-   * The captain's computers as a crewmate's prompt names them (INF-992):
-   * every computer that runs work, and the one this crewmate runs on.
-   * Nothing while none is listed, when there is no other computer to know.
-   */
-  private computersFor(machineId: string): { computers?: CrewmateComputers } {
-    const machines = this.options.machines;
-    if (!machines || machines.computers().length === 0) return {};
-    const workers = machines.computers().map((device) => {
-      const place = machines.placeOf(device);
-      return place.where.startsWith("as ")
-        ? { name: place.who, sameComputer: true }
-        : { name: machines.nameOf(device) };
-    });
-    const here =
-      machineId === LOCAL_MACHINE_ID
-        ? undefined
-        : machines.placeOf(machineId).where.startsWith("as ")
-          ? machines.placeOf(machineId).who
-          : machines.nameOf(machineId);
-    return { computers: { workers, ...(here ? { here } : {}) } };
-  }
-
-  /**
-   * Where a project's folder is and where its new tasks start, for the
-   * first mate's context (INF-567): the folder is always on this computer,
-   * which keeps the record, while its tasks follow the project's Runs on.
-   * Absent while no other computer runs work, when the two cannot differ.
-   */
-  projectPlaces(repo: RepoView): { folder: string; tasks: string } | undefined {
-    const machines = this.options.machines;
-    if (!machines || machines.computers().length === 0) return undefined;
-    const runsOn = runsHereOnly(repo) === null ? repo.runsOn : null;
-    return {
-      folder: HERE.this,
-      tasks:
-        runsOn === AUTOMATIC_COMPUTER
-          ? AUTOMATIC_WORD
-          : runsOn
-            ? machines.nameOf(runsOn)
-            : HERE.this,
-    };
-  }
-
-  /** The Details row's words once a task's own Runs on is `ask` ("Mac mini (This task)"). */
-  runsOnWords(taskId: string, ask: string | null): string {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return "";
-    const { runs_on_ask: _now, ...shape } = record.shape ?? { kind: "unclear" as const };
-    const next = {
-      ...record,
-      deviceId: null,
-      shape: { ...shape, ...(ask ? { runs_on_ask: ask } : {}) },
-    };
-    const fact = this.runsOnFact(next);
-    return fact ? `${fact.label} (${RUNS_ON_SOURCE_WORDS[fact.source]})` : HERE.This;
-  }
-
-  /**
-   * A task that has not started takes where it would start now, and says
-   * whether it must wait for that computer: out of reach, or back and not
-   * yet caught up. It never runs on this Mac instead.
-   */
-  private placeForStart(taskId: string): boolean {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return false;
-    const target = this.placementOf(record);
-    if (target && !record.deviceId) this.options.tasks.placement.setDevice(taskId, target);
-    if (!this.outOfReach(taskId)) return false;
-    if (target) this.sayPlacedWait(this.waitSubject(record), target);
-    return true;
-  }
-
-  /**
-   * A task for a computer that serves nothing now but a sign-in a cut-off
-   * withholds there, as that computer last said, waits for that sign-in, as
-   * a lane on a cut-off account here waits (docs/helper.md, "Its own
-   * sign-ins"): it takes its place, tries nothing there, and starts once
-   * that sign-in serves again. Says whether it waits.
-   */
-  private waitsForSignIn(taskId: string, target: string): boolean {
-    const held = this.options.machines?.signInWait(target);
-    const record = this.options.tasks.get(taskId);
-    if (!held || !record) return false;
-    if (!record.deviceId) this.options.tasks.placement.setDevice(taskId, target);
-    this.sayPlacedWait(this.waitSubject(record), target, { ...held, kind: "cut-off" });
-    return true;
-  }
-
-  /**
-   * What a task for a computer waits for before anything is tried there,
-   * from what that computer said of its own sign-ins (docs/helper.md, "Its
-   * own sign-ins"; the captain's pick on FI3-1350): no sign-in at all, so
-   * it waits as queued work and starts by itself once the computer reports
-   * one; or, for a project that lives on GitHub, no GitHub sign-in of its
-   * own there, so it waits behind a gate that computer's sign-in lifts.
-   * Undefined when nothing known keeps it from starting - a computer that
-   * has said nothing is tried, and fails the way it always has.
-   */
-  private async placedWaitFor(
-    target: string,
-    repoId: string | null,
-  ): Promise<Extract<PlacedWaitFor, { kind: "no-sign-ins" | "update" | "forge" }> | undefined> {
-    // A task with no project starts from this Mac's default workspace sent
-    // first, which a computer on an older Firstmate cannot take.
-    if (!repoId && this.options.machines?.takesRepoless?.(target) === false)
-      return { kind: "update" };
-    const signIns = await this.options.machines?.signInsOf(target);
-    if (!signIns) return undefined;
-    // A task there is routed among that computer's own sign-ins; a home
-    // that routes nothing binds what it was given, whatever the computer has.
-    if (signIns.accounts.length === 0 && this.options.router) return { kind: "no-sign-ins" };
-    const origin = repoId ? this.options.repos.get(repoId)?.origin : undefined;
-    const where = forgeOf(origin);
-    if (where.kind !== "github" || where.host !== GITHUB_HOST || !signIns.forges) return undefined;
-    // Only a sign-in that computer offers from here is worth waiting for; a
-    // computer too old to offer one is tried, and a refusal there is typed.
-    const host = where.host;
-    if (!signIns.forges.hosts.some((entry) => entry.host === host)) return undefined;
-    return signIns.forges.signIns.some((entry) => entry.host === host)
-      ? undefined
-      : { kind: "forge", host };
-  }
-
-  /**
-   * A queued task for a computer with no sign-in it needs waits, as that
-   * computer said (`placedWaitFor`): as unheld queued work for any sign-in
-   * at all, which the ready sweep tries again once the computer reports
-   * one; behind the sign-in's gate for its own GitHub sign-in.
-   */
-  private waitForSetup(
-    taskId: string,
-    target: string,
-    waitFor: Extract<PlacedWaitFor, { kind: "no-sign-ins" | "update" | "forge" }>,
-  ): void {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return;
-    if (!record.deviceId) this.options.tasks.placement.setDevice(taskId, target);
-    if (waitFor.kind === "forge") this.holdForDeviceForge(taskId, target, waitFor.host);
-    this.sayPlacedWait(this.waitSubject(record), target, waitFor);
-  }
-
-  /** The gate a task waits behind for its computer's own GitHub sign-in. */
-  private holdForDeviceForge(taskId: string, deviceId: string, host: string): void {
-    const who = this.options.machines?.placeOf(deviceId).who ?? "the computer it runs on";
-    const name = forgePlace({ kind: "github", host }) ?? host;
-    const gate = {
-      kind: "captain" as const,
-      ref: deviceForgeGateRef(host, deviceId),
-      reason: deviceForgeGateReason(who, name),
-    };
-    const record = this.options.tasks.get(taskId);
-    if (record?.gate?.ref === gate.ref) return;
-    if (record?.status === "open") this.options.tasks.placement.setGate(taskId, gate, gate.reason);
-    else this.options.tasks.starts.requeue(taskId, gate, gate.reason);
-  }
-
-  /**
-   * Where a crewmate card's task runs, for a task on a computer that runs
-   * work ("on Mac mini", "as Builder"; docs/helper.md, "A card from
-   * there"). It rides beside the meta line, never inside it, so a long
-   * task title gives way and the place never does.
-   */
-  private cardPlace(taskId: string): string | undefined {
-    const device = this.options.tasks.get(taskId)?.deviceId;
-    return device ? this.options.machines?.placeOf(device).where : undefined;
-  }
-
-  /** The project's name, or the task's title for a task with none. */
-  private projectWord(repoId: string | null, title: string): string {
-    return (repoId ? this.options.repos.get(repoId)?.name : undefined) ?? title;
-  }
-
-  /**
-   * Who the feed says waits for a computer (design skill
-   * `components/devices/RunsOn`): the task, by its title, where the
-   * captain chose where it runs; else its project's next task. A wait is
-   * said once per subject and computer.
-   */
-  private waitSubject(record: PlacementRecord & { id: string; title: string }): {
-    key: string;
-    name: string;
-    runHere: string;
-    /** The project's name, for the GitHub card a wait for its computer's sign-in raises. */
-    project: string;
-  } {
-    const project = this.projectWord(record.repoId, record.title);
-    if (this.ownRunsOn(record)) {
-      const name = `"${record.title}"`;
-      return {
-        key: `task:${record.id}`,
-        name,
-        runHere: `To run it here instead, ask your first mate to run ${name} on ${HERE.this}.`,
-        project,
-      };
-    }
-    return {
-      key: record.repoId ?? record.title,
-      name: `${project}'s next task`,
-      runHere: `To run it here instead, set ${project} to run on ${HERE.this}.`,
-      project,
-    };
-  }
-
-  /** A project's next task as the subject of a wait, where no task record names one yet. */
-  private projectSubject(repo: { id: string; name: string }): {
-    key: string;
-    name: string;
-    project: string;
-  } {
-    return { key: repo.id, name: `${repo.name}'s next task`, project: repo.name };
-  }
-
-  /**
-   * The feed's words for a task waiting for its computer (design skill
-   * `components/devices/RunsOn`): once when the wait begins, and once more
-   * after a day. Feed lines, never cards.
-   */
-  private sayPlacedWait(
-    subject: ReturnType<CrewSupervisor["waitSubject"]>,
-    device: string,
-    waitFor?: PlacedWaitFor,
-  ): void {
-    const key = `${subject.key}\n${device}`;
-    const place = this.options.machines?.placeOf(device);
-    if (!place) return;
-    const now = this.now();
-    const older = !waitFor && this.options.takesNoWorkUntilUpdated?.(device) === true;
-    const on = !waitFor
-      ? older
-        ? "no-new-work"
-        : "reach"
-      : waitFor.kind === "cut-off"
-        ? waitFor.class === "no_headroom"
-          ? "allowance"
-          : "sign-in"
-        : waitFor.kind;
-    const wait = this.placedWaits.get(key);
-    if (wait?.on !== on) {
-      this.placedWaits.set(key, { since: now, dayTold: false, on });
-      // A project's task waiting for that computer's own GitHub sign-in
-      // raises the GitHub card too, unless its setup card already asks.
-      if (waitFor?.kind === "forge") {
-        this.deviceForgeSignInNeeded(device, waitFor.host, subject);
-        return;
-      }
-      // The wait begins: the Update card returns, even after Not now.
-      if (older) this.options.recallUpdateCard?.(device);
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: !waitFor
-          ? older
-            ? noNewWorkWaitLine(subject.name, place.who)
-            : `${subject.name} waits for ${place.who}. It never runs on ${HERE.this} instead.`
-          : waitFor.kind === "cut-off"
-            ? placedCutOffWaitLine(subject.name, place.who, waitFor, now)
-            : waitFor.kind === "update"
-              ? updateWaitLine(place.label, subject.name)
-              : noSignInsWaitLine(place.label, subject.name),
-      });
-      return;
-    }
-    // A sign-in or a spent allowance there comes back on its own: no day's line.
-    if (
-      (on !== "reach" && on !== "no-new-work") ||
-      wait.dayTold ||
-      now - wait.since < PLACED_WAIT_DAY_MS
-    )
-      return;
-    wait.dayTold = true;
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text:
-        on === "no-new-work"
-          ? noNewWorkDayLine(place.label, subject.name)
-          : `${place.label} has been out of reach for a day. ${subject.name} still waits.`,
-    });
-    this.options.broadcastEvent({ type: "firstmate_note", text: subject.runHere });
-  }
-
-  /** A task started on the computer it waited for: the wait's last line. */
-  private sayPlacedStarted(taskId: string): void {
-    const record = this.options.tasks.get(taskId);
-    const device = record?.deviceId;
-    if (!record || !device) return;
-    const subject = this.waitSubject(record);
-    if (!this.placedWaits.delete(`${subject.key}\n${device}`)) return;
-    const place = this.options.machines?.placeOf(device);
-    if (!place) return;
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text: `${subject.name} started ${place.where}.`,
-    });
   }
 
   /**
@@ -2024,32 +1286,8 @@ export class CrewSupervisor {
    */
   reconcileCutOffs(): void {
     this.resumePendingStarts();
-    this.reconcileStartChecks();
+    this.placement.reconcileStartChecks();
     this.ladder.checkCutOffs();
-  }
-
-  /**
-   * A start whose contact was lost: once the computer is back, a recorded
-   * session means it started, and none means it did not. Neither is a
-   * confirmed failure, and Start stays unavailable until that is known.
-   */
-  private reconcileStartChecks(): void {
-    for (const id of this.options.tasks.starts.startAttemptIds()) {
-      const attempt = this.options.tasks.starts.startAttemptOf(id);
-      if (attempt?.phase !== "checking") continue;
-      const record = this.options.tasks.get(id);
-      if (!record) {
-        this.options.tasks.starts.clearStartAttempt(id);
-        continue;
-      }
-      if (record.sessionFile || this.tasks.has(id)) {
-        this.options.tasks.starts.clearStartAttempt(id);
-        continue;
-      }
-      if (record.placement) continue; // its durable order, not roster absence, owns reconciliation
-      if (record.deviceId && this.outOfReach(id)) continue;
-      this.options.tasks.starts.releaseUnconfirmedStart(id);
-    }
   }
 
   // ---- the card stack (CardService) -----------------------------------------
@@ -2222,89 +1460,6 @@ export class CrewSupervisor {
   }
 
   /**
-   * A project that lives on a host runs on a computer with no sign-in of
-   * its own there (docs/forge.md, "A computer's own sign-in"): the feed
-   * says its next task waits for that sign-in, and the host's GitHub card
-   * for that computer goes up - unless that computer's setup card is on the
-   * stack, which already asks for the sign-in in its own row.
-   */
-  deviceForgeSignInNeeded(
-    deviceId: string,
-    host: string,
-    subject: { key: string; name: string; project: string },
-  ): void {
-    const place = this.options.machines?.placeOf(deviceId);
-    if (!place) return;
-    const name = forgePlace({ kind: "github", host }) ?? host;
-    // Said once per subject and computer, until that computer signs in.
-    const said = `${deviceForgeGateRef(host, deviceId)}\n${subject.key}`;
-    if (!this.deviceForgeSaid.has(said)) {
-      this.deviceForgeSaid.add(said);
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: deviceForgeWaitLine(subject.name, place.who, name),
-      });
-    }
-    if (this.cards.has(deviceSetupCardId(deviceId))) return;
-    this.cards.addDeviceForgeSignInCard({
-      deviceId,
-      host,
-      name,
-      project: subject.project,
-      place,
-    });
-    this.cards.scheduleBroadcast();
-  }
-
-  /** The same, for a project set to run on such a computer before any task of its own waits. */
-  projectForgeSignInNeeded(
-    deviceId: string,
-    host: string,
-    repo: { id: string; name: string },
-  ): void {
-    this.deviceForgeSignInNeeded(deviceId, host, this.projectSubject(repo));
-  }
-
-  /**
-   * A computer said something new of its own sign-ins: a project's next
-   * task that waits for it to have any sign-in at all is tried now, not at
-   * the next tick. Only such a wait is retried here; everything else keeps
-   * to the ready sweep, so nothing here races a start already under way.
-   */
-  deviceSignInsChanged(deviceId: string): void {
-    const waiting = [...this.placedWaits].some(
-      ([key, wait]) => wait.on === "no-sign-ins" && key.endsWith(`\n${deviceId}`),
-    );
-    if (!waiting) return;
-    for (const record of this.options.tasks.graph.listReady()) {
-      if (record.kind !== "work" || record.deviceId !== deviceId) continue;
-      void this.dispatchQueuedTask(record.id).catch((caught: unknown) => {
-        console.warn("[crew] a placed task's start after a sign-in failed:", caught);
-      });
-    }
-  }
-
-  /**
-   * A computer reported its own sign-in for a host where projects live: its
-   * GitHub card comes down, and every task held for that sign-in starts.
-   */
-  async resumeDeviceForgeSignInTasks(deviceId: string, host: string): Promise<void> {
-    this.cards.clearAuthDecisionCard(deviceForgeSignInCardId(host, deviceId));
-    const ref = deviceForgeGateRef(host, deviceId);
-    for (const said of [...this.deviceForgeSaid])
-      if (said.startsWith(`${ref}\n`)) this.deviceForgeSaid.delete(said);
-    for (const record of this.options.tasks.listOpen()) {
-      if (record.kind !== "work" || record.gate?.ref !== ref) continue;
-      this.options.tasks.placement.setGate(
-        record.id,
-        null,
-        "its computer's own GitHub sign-in is ready",
-      );
-      await this.dispatchQueuedTask(record.id);
-    }
-  }
-
-  /**
    * The one router for crew lifecycle events: the event type is a property
    * of the call site, so sorting has always been code here. Since S7c
    * (captain call C7 A) there is no second reader behind it - a failed
@@ -2456,7 +1611,7 @@ export class CrewSupervisor {
     let runsOnAsk: string | undefined;
     try {
       runsOnAsk = input.shape?.runs_on_ask?.trim()
-        ? this.resolveRunsOn(input.shape.runs_on_ask)
+        ? this.placement.resolveRunsOn(input.shape.runs_on_ask)
         : undefined;
     } catch (caught) {
       throw new Error(
@@ -2464,7 +1619,7 @@ export class CrewSupervisor {
       );
     }
     const runsOnRefused =
-      runsOnAsk && this.placeRefusal(`"${title}"`, { repoId: boundRepoId }, runsOnAsk);
+      runsOnAsk && this.placement.placeRefusal(`"${title}"`, { repoId: boundRepoId }, runsOnAsk);
     if (runsOnRefused) throw new Error(`${NOTHING_SPAWNED} ${runsOnRefused}`);
     const handOff = handOffShape(this.options.tasks, input.shape, boundRepoId);
     if ("refused" in handOff) throw new Error(`${NOTHING_SPAWNED} ${handOff.refused}`);
@@ -2522,7 +1677,7 @@ export class CrewSupervisor {
       parentId: placement.parentId,
       shape: classified,
     };
-    if (this.automaticFor(placed)) {
+    if (this.placement.automaticFor(placed)) {
       this.insertQueuedWork(taskId, title, brief, input.intent, boundRepoId, classified, graph);
       if (escalation) await this.applyEscalation(escalation, taskId);
       this.announcePlanSkip(classified);
@@ -2535,7 +1690,7 @@ export class CrewSupervisor {
       const started = this.options.tasks.get(taskId);
       return this.withNamedModel({ taskId, crewmate: started?.assignee ?? "queued" }, input.shape);
     }
-    const target = this.placementOf(placed);
+    const target = this.placement.placementOf(placed);
     const waitsThere = target !== null && !this.options.machines?.ready(target, taskId);
     // A computer whose only sign-in a cut-off withholds takes it once that
     // sign-in serves: known before routing once that computer said so, and
@@ -2550,11 +1705,11 @@ export class CrewSupervisor {
     // lives, is not tried: the task waits for the sign-in and starts by
     // itself once that computer reports it.
     if (target !== null && !waitsThere && !signInThere)
-      signInThere = await this.placedWaitFor(target, boundRepoId);
+      signInThere = await this.placement.placedWaitFor(target, boundRepoId);
     const routed =
       waitsThere || signInThere
         ? undefined
-        : await this.routeTask(taskId, brief, classified, target);
+        : await this.placement.routeTask(taskId, brief, classified, target);
     if (!signInThere && !routed?.choice) {
       const held = heldThere();
       if (held) signInThere = { ...held, kind: "cut-off" };
@@ -2586,10 +1741,15 @@ export class CrewSupervisor {
     if (target && (waitsThere || signInThere)) {
       this.insertQueuedWork(taskId, title, brief, input.intent, boundRepoId, classified, graph);
       this.options.tasks.placement.setDevice(taskId, target);
-      if (signInThere?.kind === "forge") this.holdForDeviceForge(taskId, target, signInThere.host);
+      if (signInThere?.kind === "forge")
+        this.placement.holdForDeviceForge(taskId, target, signInThere.host);
       if (escalation) await this.applyEscalation(escalation, taskId);
       this.announcePlanSkip(classified);
-      this.sayPlacedWait(this.waitSubject(placed), target, waitsThere ? undefined : signInThere);
+      this.placement.sayPlacedWait(
+        this.placement.waitSubject(placed),
+        target,
+        waitsThere ? undefined : signInThere,
+      );
       this.broadcastCrewCounts();
       return { taskId, crewmate: "queued" };
     }
@@ -2742,7 +1902,7 @@ export class CrewSupervisor {
     // Prefer another provider on the builder's computer, never move the
     // review to another computer just to get a different provider.
     const avoidProvider = this.options.router?.servedProvider(builder.id);
-    const routed = await this.routeTask(
+    const routed = await this.placement.routeTask(
       taskId,
       brief,
       shape,
@@ -4274,7 +3434,7 @@ export class CrewSupervisor {
         this.tasks.delete(taskId);
         this.options.tasks.starts.releaseUnconfirmedStart(taskId);
         this.options.tasks.starts.markStartChecking(taskId);
-        this.sayAutomaticWait(this.options.tasks.get(taskId) ?? record);
+        this.placement.sayAutomaticWait(this.options.tasks.get(taskId) ?? record);
         return { taskId, crewmate: "queued" };
       }
       if (
@@ -4298,10 +3458,10 @@ export class CrewSupervisor {
         if (placed) {
           // The computer's own clone was refused for want of its own sign-in
           // there: the task waits for that sign-in, never this Mac's.
-          this.holdForDeviceForge(taskId, machine, caught.host);
+          this.placement.holdForDeviceForge(taskId, machine, caught.host);
           const waiting = this.options.tasks.get(taskId);
           if (waiting)
-            this.sayPlacedWait(this.waitSubject(waiting), machine, {
+            this.placement.sayPlacedWait(this.placement.waitSubject(waiting), machine, {
               kind: "forge",
               host: caught.host,
             });
@@ -4402,7 +3562,7 @@ export class CrewSupervisor {
     const binding =
       crewmate.machineId === LOCAL_MACHINE_ID
         ? await this.options.bind(accountId, crewmate.model?.provider)
-        : await this.placedBinding(
+        : await this.placement.placedBinding(
             crewmate.machineId,
             crewmate.model?.provider ?? this.options.router?.servedProvider(task.id),
             accountId,
@@ -4429,7 +3589,7 @@ export class CrewSupervisor {
         this.options.tasks.policiesOf(this.options.tasks.get(task.id)),
       ),
       // Every crewmate is told the captain's computers and which one it runs on (INF-992).
-      ...this.computersFor(crewmate.machineId),
+      ...this.placement.computersFor(crewmate.machineId),
       // Its app reads here are answerable by the quiet check; there, that computer keeps its own.
       ...(crewmate.machineId === LOCAL_MACHINE_ID ? { openReads: task.openReads } : {}),
     };
@@ -7072,7 +6232,7 @@ export class CrewSupervisor {
     if (refused) return { ok: false, text: refused };
     let to: string;
     try {
-      to = this.resolveRunsOn(ask);
+      to = this.placement.resolveRunsOn(ask);
     } catch (caught) {
       return { ok: false, text: caught instanceof Error ? caught.message : String(caught) };
     }
@@ -8330,7 +7490,7 @@ export class CrewSupervisor {
    */
   private taskComputer(record: TaskRecord): string | undefined {
     if (!this.options.machines || this.options.machines.computers().length === 0) return undefined;
-    const place = this.taskPlace(record);
+    const place = this.placement.taskPlace(record);
     if (place) return place.name;
     return record.status === "open" ? undefined : HERE.this;
   }
@@ -8849,7 +8009,7 @@ export class CrewSupervisor {
         risk ? { ...card, risk } : card,
         task.title,
         task.session?.modelLabel() ?? task.session?.modelRef()?.id ?? "Unknown model",
-        this.cardPlace(task.id),
+        this.placement.cardPlace(task.id),
       );
       if (input.validationDecision) {
         const offered = this.cards.get(id);
@@ -11997,14 +11157,18 @@ export class CrewSupervisor {
       // (INF-409), decides this start: it starts over from the record as it
       // now stands.
       const routedFrom = record.shape;
-      const startsAt = this.startPlace(record);
+      const startsAt = this.placement.startPlace(record);
       const moved = () => {
         const now = this.options.tasks.get(taskId);
-        return !now || routingAskMoved(routedFrom, now.shape) || this.startPlace(now) !== startsAt;
+        return (
+          !now ||
+          routingAskMoved(routedFrom, now.shape) ||
+          this.placement.startPlace(now) !== startsAt
+        );
       };
       // A task that waits for its computer chooses its model once that
       // computer is back, among its own subscriptions.
-      const automatic = this.automaticFor(record);
+      const automatic = this.placement.automaticFor(record);
       if (!automatic) this.options.tasks.placement.setPlacementWait(taskId, null);
       const ignoreAsk = options.ignoreAsk || record.shape?.placement_fallback_accepted === true;
       const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
@@ -12041,7 +11205,7 @@ export class CrewSupervisor {
         const wait =
           waiting?.wait ?? this.options.tasks.get(taskId)?.shape?.placement_wait ?? UNCOMPARED_WAIT;
         this.options.tasks.placement.waitForPlacement(taskId, ignoreAsk, wait.words);
-        this.sayAutomaticWait(record, wait);
+        this.placement.sayAutomaticWait(record, wait);
         // No computer runs a system it requires, which no room or reading
         // changes: the first mate hears it at once, once (INF-720).
         if (waiting?.unserved)
@@ -12062,7 +11226,7 @@ export class CrewSupervisor {
         return;
       }
       if (selected) this.options.tasks.placement.setPlacementWait(taskId, null);
-      const target = selected ? selected.computerId : this.placementOf(record);
+      const target = selected ? selected.computerId : this.placement.placementOf(record);
       const ready = !target || this.options.machines?.ready(target, taskId) === true;
       // One that waits for its own sign-in there tries nothing until it
       // serves: known before routing once that computer said so, and after
@@ -12072,22 +11236,22 @@ export class CrewSupervisor {
         target !== null &&
         ready &&
         !this.tasks.has(taskId) &&
-        this.waitsForSignIn(taskId, target);
+        this.placement.waitsForSignIn(taskId, target);
       if (signInWait()) return;
       // One with no sign-in at all, or none for where its project lives,
       // tries nothing until that computer reports one.
       if (!selected && target !== null && ready && !this.tasks.has(taskId)) {
-        const waitFor = await this.placedWaitFor(target, record.repoId);
+        const waitFor = await this.placement.placedWaitFor(target, record.repoId);
         if (moved()) return this.dispatchQueuedTask(taskId, options);
         if (waitFor) {
-          this.waitForSetup(taskId, target, waitFor);
+          this.placement.waitForSetup(taskId, target, waitFor);
           this.broadcastCrewCounts();
           return;
         }
       }
       const routed =
         selected?.routed ??
-        (ready ? await this.routeTask(taskId, record.prompt, shape, target) : undefined);
+        (ready ? await this.placement.routeTask(taskId, record.prompt, shape, target) : undefined);
       // From here to the claim nothing waits; a quit that came meanwhile starts nothing.
       if (this.disposed) return;
       if (moved()) return this.dispatchQueuedTask(taskId, options);
@@ -12107,7 +11271,7 @@ export class CrewSupervisor {
       // or let go (`releaseUpdate`).
       if (this.localUpdate) return;
       // It runs on a computer that is out of reach: it waits, and never starts here instead.
-      if (this.placeForStart(taskId)) return;
+      if (this.placement.placeForStart(taskId)) return;
       if (
         !this.options.tasks.starts.claimForDispatch(
           taskId,
@@ -12130,7 +11294,7 @@ export class CrewSupervisor {
         ...(options.message?.files.length ? { messageFiles: options.message.files } : {}),
       });
       if (start.crewmate === "queued") return;
-      this.sayPlacedStarted(taskId);
+      this.placement.sayPlacedStarted(taskId);
       const because = gate
         ? gateClearedText(gate)
         : blockers.length > 0
@@ -12181,8 +11345,8 @@ export class CrewSupervisor {
         current.deviceId !== LOCAL_MACHINE_ID
       ) {
         // Refused on that computer for want of its own sign-in: held for it.
-        this.holdForDeviceForge(taskId, current.deviceId, caught.host);
-        this.sayPlacedWait(this.waitSubject(current), current.deviceId, {
+        this.placement.holdForDeviceForge(taskId, current.deviceId, caught.host);
+        this.placement.sayPlacedWait(this.placement.waitSubject(current), current.deviceId, {
           kind: "forge",
           host: caught.host,
         });
@@ -12253,7 +11417,9 @@ export class CrewSupervisor {
       return;
     }
     const signIn = now.deviceId ? this.options.machines?.signInWait(now.deviceId) : undefined;
-    const setup = now.deviceId ? await this.placedWaitFor(now.deviceId, now.repoId) : undefined;
+    const setup = now.deviceId
+      ? await this.placement.placedWaitFor(now.deviceId, now.repoId)
+      : undefined;
     if (now.gate || signIn || setup || (now.deviceId && this.outOfReach(now.id))) {
       this.options.tasks.starts.clearStartAttempt(now.id);
       return;
@@ -12353,7 +11519,7 @@ export class CrewSupervisor {
       );
     }
     if (now?.status !== "active" && now?.deviceId && !now.gate) {
-      const waitFor = await this.placedWaitFor(now.deviceId, now.repoId);
+      const waitFor = await this.placement.placedWaitFor(now.deviceId, now.repoId);
       if (waitFor?.kind === "no-sign-ins") {
         const place = this.options.machines?.placeOf(now.deviceId);
         return noSignInsStartRefusal(handle, place?.who ?? "the computer it runs on");
@@ -12470,7 +11636,7 @@ export class CrewSupervisor {
       bucket !== undefined &&
       record.gate?.kind === "quota-reset" &&
       record.gate.ref === reasoningWaitGate(bucket).ref &&
-      this.automaticFor(record)
+      this.placement.automaticFor(record)
     );
   }
 
@@ -14207,12 +13373,12 @@ export class CrewSupervisor {
    * this resolves once each one's record is closed. One whose computer is
    * out of reach cannot end its turn there, so it stops here at once, and
    * so does one still open after `boundMs`. A task that has not started
-   * follows its project instead (`projectMoved`), and one the captain said
-   * runs there follows its parent's or its project's again.
+   * follows its project instead (`TaskPlacement.projectMoved`), and one the
+   * captain said runs there follows its parent's or its project's again.
    */
   async stopTasksOn(deviceId: string, boundMs = 60_000): Promise<void> {
     for (const taskId of this.options.tasks.placement.forgetRunsOn(deviceId))
-      this.runsOnChanged(taskId);
+      this.placement.runsOnChanged(taskId);
     const source: InterruptSource = { actor: "captain", via: "shell", decision: null };
     const started = this.options.tasks
       .listLive()

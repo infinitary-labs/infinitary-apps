@@ -10109,13 +10109,13 @@ describe("the task graph (R1)", () => {
     const starting = supervisor.startQueuedNow(task.id);
     await comparing;
     // As update_task does with runs_on this-mac, which a task not yet claimed accepts.
-    expect(supervisor.runsOnRefusal(task.id, RUNS_ON_THIS_MAC)).toBeUndefined();
+    expect(supervisor.placement.runsOnRefusal(task.id, RUNS_ON_THIS_MAC)).toBeUndefined();
     tasks.updateFields(
       task.id,
       { runsOn: { ask: RUNS_ON_THIS_MAC, words: "This computer (This task)" } },
       "firstmate",
     );
-    supervisor.runsOnChanged(task.id);
+    supervisor.placement.runsOnChanged(task.id);
     release();
     expect(await starting).toBe(`Started ${tasks.get(task.id)?.key} "Fix the ledger footer".`);
     // It no longer runs on Automatic: never compared again, never told to
@@ -26284,7 +26284,7 @@ describe("an Automatic wait in Activity", () => {
       events.flatMap((event) =>
         event.type === "firstmate_note" && event.taskId === task.id ? [event.text] : [],
       );
-    const details = () => supervisor.runsOnFact(tasks.get(task.id) as TaskRecord)?.reason;
+    const details = () => supervisor.placement.runsOnFact(tasks.get(task.id) as TaskRecord)?.reason;
     const [stale, unknown, busy, held] = waits as [
       PlacementWait,
       PlacementWait,
@@ -26361,7 +26361,7 @@ describe("an Automatic wait in Activity", () => {
       events.flatMap((event) =>
         event.type === "firstmate_note" && event.taskId === task.id ? [event.text] : [],
       );
-    const details = () => supervisor.runsOnFact(tasks.get(task.id) as TaskRecord)?.reason;
+    const details = () => supervisor.placement.runsOnFact(tasks.get(task.id) as TaskRecord)?.reason;
     // Three sets of words across four sweeps, each naming its own check.
     expect(new Set(waits.map((wait) => wait.words)).size).toBe(3);
     for (const wait of waits) {
@@ -26426,13 +26426,13 @@ describe("an Automatic wait in Activity", () => {
     if (!restartedRecord) throw new Error("the waiting task did not survive the restart");
     expect(restartedRecord.shape?.placement_wait).toEqual(savedWait);
     expect(restartedRecord.startNotice ?? null).toBeNull();
-    expect(restarted.runsOnFact(restartedRecord)?.reason).toBe(wait.words);
+    expect(restarted.placement.runsOnFact(restartedRecord)?.reason).toBe(wait.words);
     await restarted.dispatchQueuedTask(task.id);
     expect(
       restartedEvents.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : [])),
     ).toEqual([]);
     expect(restartedTasks.get(task.id)?.shape?.placement_wait).toEqual(savedWait);
-    expect(restarted.runsOnFact(restartedTasks.get(task.id) as TaskRecord)?.reason).toBe(
+    expect(restarted.placement.runsOnFact(restartedTasks.get(task.id) as TaskRecord)?.reason).toBe(
       wait.words,
     );
     expect(lines()).toEqual([`"Fix the ledger header": ${wait.words}`]);

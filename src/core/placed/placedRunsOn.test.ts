@@ -212,11 +212,11 @@ describe("a project that runs on a computer that runs work", () => {
  * there. Answers the refusal, or the change the record keeps.
  */
 function askRunsOn(home: PlacedHome, taskId: string, ask: string | null): string {
-  const refused = home.supervisor.runsOnRefusal(taskId, ask);
+  const refused = home.supervisor.placement.runsOnRefusal(taskId, ask);
   if (refused) return refused;
-  const words = home.supervisor.runsOnWords(taskId, ask);
+  const words = home.supervisor.placement.runsOnWords(taskId, ask);
   const changes = home.tasks.updateFields(taskId, { runsOn: { ask, words } }, "firstmate");
-  home.supervisor.runsOnChanged(taskId);
+  home.supervisor.placement.runsOnChanged(taskId);
   return changes.join(", ");
 }
 
@@ -304,7 +304,7 @@ describe("a task's own Runs on", () => {
     await expect
       .poll(() => home.cards().find((card) => card.title === "Footer started"))
       .toMatchObject({ meta: "footer", place: "as Builder" });
-    expect(home.supervisor.runsOnFact(recordOf(home, taskId))).toEqual({
+    expect(home.supervisor.placement.runsOnFact(recordOf(home, taskId))).toEqual({
       label: "Running as Builder",
       source: "task",
     });
@@ -315,7 +315,7 @@ describe("a task's own Runs on", () => {
 
     // The project's next task, with nothing said, starts here as before.
     seedTask(home.tasks, { id: "t-here", title: "header", status: "queued", repoId: repo.id });
-    expect(home.supervisor.runsOnFact(recordOf(home, "t-here"))).toEqual({
+    expect(home.supervisor.placement.runsOnFact(recordOf(home, "t-here"))).toEqual({
       label: "This computer",
       source: "project",
     });
@@ -384,7 +384,7 @@ describe("a task's own Runs on", () => {
     const { repo } = await adoptHere(home.repos, project.home);
     home.repos.setRunsOn(repo.id, at.deviceId);
     seedTask(home.tasks, { id: "t-stays", title: "footer", status: "queued", repoId: repo.id });
-    expect(home.supervisor.runsOnFact(recordOf(home, "t-stays"))).toEqual({
+    expect(home.supervisor.placement.runsOnFact(recordOf(home, "t-stays"))).toEqual({
       label: "Running as Builder",
       source: "project",
     });
@@ -485,11 +485,11 @@ describe("a task's own Runs on", () => {
     );
     expect(home.tasks.get("t-part")?.deviceId).toBe(at.deviceId);
     expect(home.tasks.get("t-own-part")?.deviceId ?? null).toBeNull();
-    expect(home.supervisor.runsOnFact(recordOf(home, "t-part"))).toEqual({
+    expect(home.supervisor.placement.runsOnFact(recordOf(home, "t-part"))).toEqual({
       label: "Running as Builder",
       source: "parent",
     });
-    expect(home.supervisor.runsOnFact(recordOf(home, "t-own-part"))).toEqual({
+    expect(home.supervisor.placement.runsOnFact(recordOf(home, "t-own-part"))).toEqual({
       label: "This computer",
       source: "task",
     });
@@ -578,7 +578,7 @@ describe("a task's own Runs on", () => {
     const { repo: notes } = await home.repos.setup({ kind: "init", name: "notes" });
     const personal = home.repos.ensurePersonal(scratchDir("infinitary-placed-personal-"));
     const refusal = (id: string, ask: string | null = at.deviceId) =>
-      home.supervisor.runsOnRefusal(id, ask)?.replace(recordOf(home, id).key, "KEY");
+      home.supervisor.placement.runsOnRefusal(id, ask)?.replace(recordOf(home, id).key, "KEY");
 
     seedTask(home.tasks, { id: "t-going", title: "footer", status: "running", repoId: repo.id });
     expect(refusal("t-going")).toBe(

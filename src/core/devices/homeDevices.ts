@@ -134,8 +134,7 @@ export type DevicesCrew = {
     | "pauseForUpdate"
     | "resumeAfterUpdate"
     | "cards"
-    | "projectForgeSignInNeeded"
-    | "resumeDeviceForgeSignInTasks"
+    | "placement"
     | "observeRequiredActionDevice"
   >;
   placed: Pick<PlacedSessions, "bringHome">;
@@ -637,9 +636,9 @@ export async function startHomeDevices(options: {
         },
         broadcastEvent,
         forgeNeeded: (deviceId, forgeHost, repo) =>
-          supervisor.projectForgeSignInNeeded(deviceId, forgeHost, repo),
+          supervisor.placement.projectForgeSignInNeeded(deviceId, forgeHost, repo),
         forgeReady: (deviceId, forgeHost) =>
-          void supervisor.resumeDeviceForgeSignInTasks(deviceId, forgeHost),
+          void supervisor.placement.resumeDeviceForgeSignInTasks(deviceId, forgeHost),
       });
       deviceSetup = setup;
       repos.onRunsOn((repo) => setup.runsOnChanged(repo));

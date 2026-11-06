@@ -531,8 +531,9 @@ export function startPlacedHome(options: {
     },
     broadcastEvent: (event) => events.push(event),
     forgeNeeded: (deviceId, host, repo) =>
-      supervisor.projectForgeSignInNeeded(deviceId, host, repo),
-    forgeReady: (deviceId, host) => void supervisor.resumeDeviceForgeSignInTasks(deviceId, host),
+      supervisor.placement.projectForgeSignInNeeded(deviceId, host, repo),
+    forgeReady: (deviceId, host) =>
+      void supervisor.placement.resumeDeviceForgeSignInTasks(deviceId, host),
   });
   repos.onRunsOn((repo) => setup.runsOnChanged(repo));
   devices.onWorkDevice((contact) => setup.contact(contact));
@@ -540,7 +541,7 @@ export function startPlacedHome(options: {
     supervisor.reconcileCutOffs();
     setup.signInsChanged(deviceId);
     // A task waiting for a sign-in there starts now, not at the next tick.
-    supervisor.deviceSignInsChanged(deviceId);
+    supervisor.placement.deviceSignInsChanged(deviceId);
   };
   placed.serve({
     adopt: (taskId) => supervisor.adoptPlaced(taskId),

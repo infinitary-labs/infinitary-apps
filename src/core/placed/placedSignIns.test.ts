@@ -585,7 +585,7 @@ describe("a task that runs on a computer that runs work", () => {
     // Lifted once that computer reports the sign-in: the clone goes through.
     model([{ text: "Done." }]);
     refuse = false;
-    await home.supervisor.resumeDeviceForgeSignInTasks(at.deviceId, "github.com");
+    await home.supervisor.placement.resumeDeviceForgeSignInTasks(at.deviceId, "github.com");
     await expect.poll(() => home.tasks.get("t-refused")?.status).toBe("active");
     expect(at.holds().workingCopies).toEqual(["t-refused"]);
   });

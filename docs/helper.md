@@ -795,7 +795,7 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   Each is said once per wait, held in memory, so a wait still standing after this Mac restarts is said once more.
   Start now answers that the task waits for that computer.
   A task whose computer serves nothing now but a sign-in a cut-off withholds there waits the same way for that sign-in (below, "Its own sign-ins"): "api's next task waits for Mac mini's own Claude sign-in." once when the sign-in is lost or refused, and "api's next task waits for Mac mini's Claude plan's allowance, which resets 1:10pm." once when the allowance is spent, with no day's line either way, and "api's next task started on Mac mini." once that sign-in serves again; Start now answers with the same distinction.
-  A task whose computer has no sign-in at all waits the same way, as queued work with no gate: "Mac mini has no sign-ins yet. api's next task waits until it has one." once, nothing tried there, Start now refusing with the same words, and the task started by itself the moment that computer reports a sign-in (`CrewSupervisor.deviceSignInsChanged`), with "api's next task started on Mac mini."
+  A task whose computer has no sign-in at all waits the same way, as queued work with no gate: "Mac mini has no sign-ins yet. api's next task waits until it has one." once, nothing tried there, Start now refusing with the same words, and the task started by itself the moment that computer reports a sign-in (`TaskPlacement.deviceSignInsChanged`), with "api's next task started on Mac mini."
   (`docs/devices.md`, "Finishing its setup").
   A task for a project that lives on GitHub, whose computer offers a GitHub sign-in from here and holds none, waits behind that sign-in's gate (`forge-sign-in:github.com@<device>`), with "api's next task waits for Mac mini's own GitHub sign-in." once and the host's GitHub card for that computer unless its setup card already asks; the gate lifts, and the task starts, the moment that computer reports the sign-in (`docs/forge.md`, "A computer's own sign-in").
   A project whose computer was removed from the list keeps waiting, as "The other computer", until it is set to run elsewhere.
@@ -804,7 +804,7 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   The place rides as its own field, never inside the meta text, so a long title gives way and the place reads whole.
   A completion card's fact strip has a Runs cell after the project ("on Mac mini", `device`).
 - **The Tasks row, the summary and the status.**
-  A task another computer runs carries where on the board, in words (`TaskView.place`, `CrewSupervisor.taskPlace`): where it started, or where it would start now, and `reach` (`in-reach`, `connecting`, `reconnecting` or `out-of-reach`) while open or underway work's computer is not in reach, or back and not yet caught up.
+  A task another computer runs carries where on the board, in words (`TaskView.place`, `TaskPlacement.taskPlace`): where it started, or where it would start now, and `reach` (`in-reach`, `connecting`, `reconnecting` or `out-of-reach`) while open or underway work's computer is not in reach, or back and not yet caught up.
   Its Tasks row ends with its project and the place, "website · on Mac mini", then "out of reach" in `--warn`, "connecting" in `--fg-3` with no warn mark while its connection is being made (`place.reach`: `connecting`, or anything but `in-reach` for out of reach), or "takes no new work" while the computer is connected on an older Infinitary (`place.noNewWork`).
   A part that does not fit leaves whole, the project's name first and then the place, so the narrow panel says "out of reach" alone, as it leaves out the project's name.
   The shared status (`taskStatusOf`) draws the mark of open, working and idle work in `--warn` with the reason "Mac mini is out of reach" ("Mac mini takes no new work" for a computer on an older Infinitary; "Mac mini is connecting", with the mark as it was, while its connection is being made), unless a blocker, a hold or its parts give the reason, so the crew summary, the record's pill and a task board tile say it too; an interruption, a start and a ready decision keep their own.
@@ -952,28 +952,28 @@ The first mate sets it only from the captain's words, never by judging, and only
   Project placement through `app_change project-runs-on` and a `project-setup` proposal resolve names the same way, including computers out of reach; no partial-name guessing or fallback changes where work runs.
   `TaskService.updateFields` writes it, one timeline line and feed line ("updated: Runs on: Mac mini (This task)"), and `recordShape` writes only the host's stamp onto the record as it stands, so an edit made while a queued task is classified is never lost.
 - **Which wins.**
-  A task's own Runs on wins; without one, a part takes its nearest parent's; without either, its project's (`CrewSupervisor.ownRunsOn`, `runsOnFor`).
+  A task's own Runs on wins; without one, a part takes its nearest parent's; without either, its project's (`TaskPlacement.ownRunsOn`, `runsOnFor`).
   It works in both directions: a task can run on Mac mini while its project runs here, or stay here while its project runs on Mac mini.
   The personal workspace and a project kept on this Mac only always run here, and have none.
   A review has no independent choice: it follows the computer its builder actually uses.
   A task with no project runs here unless the captain asks, and has no project to follow: it runs on a computer only by its own Runs on, or its parent's.
   Work the first mate declares on a project's folder itself runs here, where the folder is, and has none (`docs/task-record.md`, "A folder a merge left behind").
 - **What each side is told** (INF-567).
-  Once a computer that runs work is on the list, the first mate's context names, for each project, the computer keeping its folder (`folder_on`, always this computer) and where its tasks start (`tasks_run_on`: a computer's name, Automatic, or this computer) (`CrewSupervisor.projectPlaces`).
+  Once a computer that runs work is on the list, the first mate's context names, for each project, the computer keeping its folder (`folder_on`, always this computer) and where its tasks start (`tasks_run_on`: a computer's name, Automatic, or this computer) (`TaskPlacement.projectPlaces`).
   Every crewmate, here or on a computer that runs work, reads one paragraph naming this computer, which keeps the record and every project's folder, each computer that runs work, and the one its task runs on (`crewmateComputersNote`, INF-992); a computer that is another user on this Mac is named by that user.
   The paragraph says a file, folder, program or action on another computer goes to the first mate through a report that needs it, naming the computer, what is needed and where the result is needed, and that a handed file's content is never printed, quoted or pasted.
   Until such a file reaches it, the crewmate says plainly it could not open it and never answers as if it had; a picture the captain's words name by its path on another computer is the example it is given (INF-2422).
   The first mate's crew lines carry each task's computer (`runs_on`), and its context carries the `computers` rule (`COMPUTERS_RULE`): it coordinates such a report itself rather than relaying it to the captain, starting a task on that computer or one that finds the files and hands them on.
 - **Kept until it starts.**
   An edit, or a move under another parent or into another project, re-points the task and each part of it that has not started (`runsOnChanged`), and a project that moves re-points only its tasks that have none of their own (`projectMoved`).
-  A move made while a queued task's start waits on a computer - reading its sign-ins or the models it serves, or Automatic comparing computers - starts that start over from the record (`CrewSupervisor.startPlace`, INF-409).
+  A move made while a queued task's start waits on a computer - reading its sign-ins or the models it serves, or Automatic comparing computers - starts that start over from the record (`TaskPlacement.startPlace`, INF-409).
   The task then starts where it now runs, routed among that place's own subscriptions, and is never routed or held for the computer it left.
   Whatever Automatic chose, a computer or this Mac, still counts as Automatic, so its own choice never starts it over.
   From that check to the claim nothing waits, and once claimed the task has started, so a move is refused.
   A started task stays where it started unless the captain moves it (below, "Moving a started task").
   Start again and a stronger-model retry carry the ask to the new task, as they carry `autonomy_ask` (`workShape`).
 - **Refusals, in plain words.**
-  `CrewSupervisor.runsOnRefusal` refuses a started task ("has started, so it finishes where it started, on Mac mini."), the personal workspace, a project kept on this Mac only, a review, and a device id that is not a computer that runs work on the list; `update_task` then changes nothing, and `spawn_crewmate` starts nothing ("Nothing was spawned.").
+  `TaskPlacement.runsOnRefusal` refuses a started task ("has started, so it finishes where it started, on Mac mini."), the personal workspace, a project kept on this Mac only, a review, and a device id that is not a computer that runs work on the list; `update_task` then changes nothing, and `spawn_crewmate` starts nothing ("Nothing was spawned.").
   A move to another project or under another parent in the same `update_task` lands first, in the same transaction, so the ask is judged, and its words written, where the task lands.
 - **A task with no project** (FI3-1496's plan, direction A) starts on the computer the captain named, in a working copy of this Mac's default workspace sent there first (above, "Its working copies").
   Merging its change brings the branch home and merges it into this Mac's default workspace, as a task here merges, so the next task with no project, on either computer, starts from that merge.
@@ -985,7 +985,7 @@ The first mate sets it only from the captain's words, never by judging, and only
   It says `"Fix the footer" waits for Mac mini. It never runs on this computer instead.` once, a day later `Mac mini has been out of reach for a day. "Fix the footer" still waits.` and `To run it here instead, ask Firstmate to run "Fix the footer" on this computer.`, and `"Fix the footer" started on Mac mini.` when it starts.
   Removing that computer forgets each task's own Runs on that names it, as each project's moves home, so the task follows its parent's or its project's (`TaskService.placement.forgetRunsOn`, called from `stopTasksOn`).
 - **Where the captain sees it.**
-  The task record's Details has a read-only Runs on row once a computer that runs work is on the list (for a task with no project, only once it or its parent has its own) (`TaskDetail.runsOn`, `CrewSupervisor.runsOnFact`): where it started, or where it would start now, then its source, "This task", "Parent task" or "Project setting" (design skill `components/cards/TaskRecord`).
+  The task record's Details has a read-only Runs on row once a computer that runs work is on the list (for a task with no project, only once it or its parent has its own) (`TaskDetail.runsOn`, `TaskPlacement.runsOnFact`): where it started, or where it would start now, then its source, "This task", "Parent task" or "Project setting" (design skill `components/cards/TaskRecord`).
   A card from the task names where it runs as before ("Fix the footer · on Mac mini").
 
 ## Moving a started task

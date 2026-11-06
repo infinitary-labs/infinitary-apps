@@ -865,8 +865,8 @@ export async function createServices(
     repo: (id) => repos.get(id),
     catalog: quotaCatalogModels,
     protectedIds: (providerId) => slots.protectedIds(providerId),
-    running: (record): boolean => supervisor.placementRunning(record),
-    eligible: (record): boolean => supervisor.automaticFor(record),
+    running: (record): boolean => supervisor.placement.placementRunning(record),
+    eligible: (record): boolean => supervisor.placement.automaticFor(record),
     forgeSignIns: () => forgeSignIns.view().signIns,
     knownForgeHosts: () => forgeSignIns.knownHosts(),
   });
@@ -1007,8 +1007,8 @@ export async function createServices(
       emit("inf:cards:thread", thread);
     },
   });
-  runsOnOf = (record) => supervisor.runsOnFact(record);
-  placeOf = (record) => supervisor.taskPlace(record);
+  runsOnOf = (record) => supervisor.placement.runsOnFact(record);
+  placeOf = (record) => supervisor.placement.taskPlace(record);
   computerMoveOf = (record) => supervisor.computerMoveFacts(record);
   closingResolutionOf = (taskId) => supervisor.cards.newestResolutionForTask(taskId);
   cardStack = supervisor;
@@ -1510,7 +1510,7 @@ export async function createServices(
     scheduleWorkPresentation();
     supervisor.reconcileCutOffs();
     deviceSetup.signInsChanged(deviceId);
-    supervisor.deviceSignInsChanged(deviceId);
+    supervisor.placement.deviceSignInsChanged(deviceId);
   });
   firstmate.pokeInbox();
   /**

@@ -6,7 +6,7 @@ Model lists are `docs/model-lists.md`; decision models are `docs/decision-models
 ## Starting with Dynamic routing off
 
 Every fresh crewmate still needs an eligible model and the account that serves it.
-When Dynamic routing is off, `CrewSupervisor.routeTask` uses `Router.initialChoice` to evaluate the same pool, work shape, capability checks, allowance and premium boundaries before selecting an account through the existing account selector.
+When Dynamic routing is off, `TaskPlacement.routeTask` uses `Router.initialChoice` to evaluate the same pool, work shape, capability checks, allowance and premium boundaries before selecting an account through the existing account selector.
 A model named for that task remains a one-off pin; saved Always use pins apply only with Dynamic routing on.
 The initial choice is recorded through the same decision ledger and bound through the same session binder; credentials never move into the base store.
 If no model or account can serve a local start, startup explains that before opening a session, rather than asking the account-less engine for a default model.

@@ -1,13 +1,12 @@
 /**
- * Where a task runs, as the crew supervisor reads and says it (docs/helper.md,
- * "Runs on" and "A task's own Runs on"). INF-2625's plan, the crew
- * supervisor's fourth step, moves this placement code out of the supervisor
- * into its own owner; these cases pin, before it moves, the behaviour no
- * other test reaches: the wait for a computer on an older version, the wait
- * of a task with no project for a computer too old to take one, a lost
- * start's reconciliation, whether a placed task's turn is running, and the
- * refusals and Details words of a task's own Runs on. Each drives a public
- * door of the supervisor and reads the record, the feed and the words.
+ * Where a task runs, as the crew's placement reads and says it (docs/helper.md,
+ * "Runs on" and "A task's own Runs on"; `TaskPlacement`). These cases pin the
+ * behaviour no other test reaches: the wait for a computer on an older
+ * version, the wait of a task with no project for a computer too old to take
+ * one, a lost start's reconciliation, whether a placed task's turn is
+ * running, and the refusals and Details words of a task's own Runs on. Each
+ * drives a public door of the supervisor or its placement and reads the
+ * record, the feed and the words.
  */
 
 import { HERE } from "@shared/deviceNames";
@@ -21,7 +20,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
 import type { CrewMachines } from "../placed/crewMachines";
 import { seedTask } from "../tasks/seedTask";
-import { PLACED_WAIT_DAY_MS } from "./crewSupervisor";
+import { PLACED_WAIT_DAY_MS } from "./taskPlacement";
 
 const MINI = "mini";
 const MINI_NAME = "Mac mini";
@@ -49,7 +48,7 @@ function feed(events: FmEvent[]): string[] {
   return events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
 }
 
-describe("where a task runs, before its placement moves out of the crew supervisor", () => {
+describe("where a task runs", () => {
   it("says once that a task waits for a computer on an older version, brings back its Update card, and says so again after a day", async () => {
     let at = 1_000_000;
     const recallUpdateCard = vi.fn();
@@ -74,7 +73,7 @@ describe("where a task runs, before its placement moves out of the crew supervis
     expect(feed(events)).toEqual([noNewWorkWaitLine('"Footer"', MINI_NAME)]);
     expect(recallUpdateCard.mock.calls).toEqual([[MINI]]);
     const record = tasks.get("t-older");
-    expect(record && supervisor.taskPlace(record)).toEqual({
+    expect(record && supervisor.placement.taskPlace(record)).toEqual({
       name: MINI_NAME,
       where: `on ${MINI_NAME}`,
       reach: "out-of-reach",
@@ -166,7 +165,7 @@ describe("where a task runs, before its placement moves out of the crew supervis
     await tick();
     const running = () => {
       const record = tasks.get(taskId);
-      return record ? supervisor.placementRunning(record) : undefined;
+      return record ? supervisor.placement.placementRunning(record) : undefined;
     };
     expect(running()).toBe(true);
     tasks.placement.setDevice(taskId, MINI);
@@ -187,17 +186,17 @@ describe("where a task runs, before its placement moves out of the crew supervis
     seedTask(tasks, { id: "t-free", title: "Free", status: "queued", repoId: null });
     const handle = (id: string) => `${tasks.get(id)?.key} "${tasks.get(id)?.title}"`;
 
-    expect(supervisor.runsOnRefusal("t-closed", MINI)).toBe(
+    expect(supervisor.placement.runsOnRefusal("t-closed", MINI)).toBe(
       `${handle("t-closed")} is not open work, so where it runs cannot change.`,
     );
-    expect(supervisor.runsOnRefusal("t-lost", MINI)).toBe(
+    expect(supervisor.placement.runsOnRefusal("t-lost", MINI)).toBe(
       `${handle("t-lost")} has no project, so it runs on ${HERE.this}.`,
     );
-    expect(supervisor.runsOnRefusal("t-free", AUTOMATIC_COMPUTER)).toBe(
+    expect(supervisor.placement.runsOnRefusal("t-free", AUTOMATIC_COMPUTER)).toBe(
       "Automatic needs a project that can run on another computer.",
     );
-    expect(supervisor.runsOnRefusal("t-free", MINI)).toBeUndefined();
-    expect(supervisor.runsOnRefusal("t-free", RUNS_ON_THIS_MAC)).toBeUndefined();
+    expect(supervisor.placement.runsOnRefusal("t-free", MINI)).toBeUndefined();
+    expect(supervisor.placement.runsOnRefusal("t-free", RUNS_ON_THIS_MAC)).toBeUndefined();
   });
 
   it("names where a task runs in Details only once a computer is listed and the task can follow one", () => {
@@ -225,7 +224,7 @@ describe("where a task runs, before its placement moves out of the crew supervis
     seedTask(tasks, { id: "t-lost", title: "Lost", status: "queued", repoId: "gone" });
     const fact = (id: string) => {
       const record = tasks.get(id);
-      return record && supervisor.runsOnFact(record);
+      return record && supervisor.placement.runsOnFact(record);
     };
 
     // No computer that runs work is listed: nothing to say.
@@ -236,10 +235,10 @@ describe("where a task runs, before its placement moves out of the crew supervis
     // A task with no project nobody asked about, and one whose project runs only here.
     expect(fact("t-free")).toBeUndefined();
     expect(fact("t-lost")).toBeUndefined();
-    expect(supervisor.runsOnWords("t-free", MINI)).toBe(
+    expect(supervisor.placement.runsOnWords("t-free", MINI)).toBe(
       `${MINI_NAME} (${RUNS_ON_SOURCE_WORDS.task})`,
     );
-    expect(supervisor.runsOnWords("t-free", null)).toBe(HERE.This);
+    expect(supervisor.placement.runsOnWords("t-free", null)).toBe(HERE.This);
   });
 
   it("says why a task on Automatic has no computer yet, by how it starts", () => {
@@ -260,7 +259,7 @@ describe("where a task runs, before its placement moves out of the crew supervis
     });
     const fact = (id: string) => {
       const record = tasks.get(id);
-      return record && supervisor.runsOnFact(record);
+      return record && supervisor.placement.runsOnFact(record);
     };
 
     expect(fact("t-ready")).toEqual({

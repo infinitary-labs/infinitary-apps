@@ -136,9 +136,9 @@ describe("a task that runs on a computer that runs work", () => {
     // made it says connecting instead, with no warn mark (INF-49).
     const dropped = home.tasks.get("t-drop");
     if (!dropped) throw new Error("no task");
-    expect(home.supervisor.taskPlace(dropped)).toMatchObject({ reach: "out-of-reach" });
+    expect(home.supervisor.placement.taskPlace(dropped)).toMatchObject({ reach: "out-of-reach" });
     connectingNow.add(at.deviceId);
-    const connectingPlace = home.supervisor.taskPlace(dropped);
+    const connectingPlace = home.supervisor.placement.taskPlace(dropped);
     connectingNow.clear();
     // Protocol 9 carries only the core reach reading.
     expect(connectingPlace).toMatchObject({ reach: "connecting" });

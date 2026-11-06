@@ -154,8 +154,8 @@ export type UpdateTaskPatch = {
    * Where the task runs, on the captain's words before it starts
    * (docs/helper.md, "A task's own Runs on"): stored as the shape's
    * `runs_on_ask` - a device id or `this-mac` - or cleared by null, so it
-   * follows its parent's or project's again. The supervisor checks the ask
-   * first (`CrewSupervisor.runsOnRefusal`) and writes `words`, the
+   * follows its parent's or project's again. The crew's placement checks
+   * the ask first (`TaskPlacement.runsOnRefusal`) and writes `words`, the
    * Details row as it now reads, into the timeline.
    */
   runsOn?: { ask: string | null; words: string };

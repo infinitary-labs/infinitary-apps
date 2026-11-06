@@ -100,7 +100,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             : null;
           const runsOn =
             typeof input.runsOn === "string"
-              ? supervisor.resolveRunsOn(input.runsOn)
+              ? supervisor.placement.resolveRunsOn(input.runsOn)
               : input.runsOn;
           // A model named for started work moves it there between turns,
           // keeping its key, branch and working copy (INF-849).
@@ -176,7 +176,9 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
                   ? tasks.updateFields(record.id, moves, "firstmate")
                   : [];
               const refused =
-                runsOn !== undefined ? supervisor.runsOnRefusal(record.id, runsOn) : undefined;
+                runsOn !== undefined
+                  ? supervisor.placement.runsOnRefusal(record.id, runsOn)
+                  : undefined;
               if (refused) throw new TaskGraphRefusal(refused);
               const added: string[] = [];
               if (declared) {
@@ -192,7 +194,12 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
               }
               const where =
                 runsOn !== undefined
-                  ? { runsOn: { ask: runsOn, words: supervisor.runsOnWords(record.id, runsOn) } }
+                  ? {
+                      runsOn: {
+                        ask: runsOn,
+                        words: supervisor.placement.runsOnWords(record.id, runsOn),
+                      },
+                    }
                   : {};
               return [
                 ...moved,
@@ -235,7 +242,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           // A task under another parent or in another project, or told
           // where it runs, goes there.
           if (runsOn !== undefined || input.parent !== undefined || input.project !== undefined)
-            supervisor.runsOnChanged(record.id);
+            supervisor.placement.runsOnChanged(record.id);
           // Policy edits alone never dispatch a queued row.
           if (
             Object.keys(input).some(

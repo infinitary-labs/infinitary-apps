@@ -418,7 +418,7 @@ describe("FirstmateAgent", () => {
         })),
       ],
     });
-    const place = vi.spyOn(f.supervisor, "taskPlace");
+    const place = vi.spyOn(f.supervisor.placement, "taskPlace");
     try {
       const context = decodeContext(f.agent.buildContextBlock());
       expect(context.crew).toMatchObject([{ task_id: "started", runs_on: name }]);

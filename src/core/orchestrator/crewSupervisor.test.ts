@@ -22,14 +22,10 @@ import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
 import { ANSWER_DONE_LABEL } from "@shared/cardLeave";
 import {
-  CARD_ANSWER_TEXT_MAX,
   CARD_ANSWERS_BOUND_REFUSAL,
-  CARD_ANSWERS_MAX_BYTES,
   CARD_ANSWERS_TOO_LONG,
   type Card,
   type CardEffect,
-  type CardThread,
-  cardAnswersBytes,
   cardPresentation,
   cardTakesReplies,
   MERGE_ANYWAY_ACTION,
@@ -72,7 +68,6 @@ import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
-import type { RiskDeclaration } from "@shared/risk";
 import {
   isFolderRepair,
   levelDefaultReasoning,
@@ -104,15 +99,36 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vite
 import { overrideHoldsFrom } from "../../../scripts/interaction-metrics";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import { codingSpec } from "../../../tests/helpers/codingSession";
-import { completionCardBody } from "../../../tests/helpers/completionCard";
-import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
 import {
-  type FakeSession,
-  type FakeSessionOptions,
-  fakeBinding,
-  fakeSession,
-  fakeSessionFactory,
-} from "../../../tests/helpers/fakeSession";
+  answersPastBound,
+  askedOn,
+  bundledRunbooks,
+  catalogLessRouter,
+  completionBody,
+  crewSessions,
+  endTurn,
+  type FakeCrewmate,
+  fakeCrewmate,
+  fakeQueuedSteerCrewmate,
+  handedCard,
+  intentOf,
+  METER_RISK,
+  reportTurn,
+  routingOffRouter,
+  type SetupExtras,
+  SETTLE_DISCARD,
+  SETTLE_MERGE,
+  served,
+  settleLines,
+  settleWakes,
+  setup,
+  syncCardId,
+  tick,
+  useFakeCrewTimers,
+} from "../../../tests/helpers/crewHarness";
+import { gitRepo } from "../../../tests/helpers/crewHarnessGit";
+import { deferred } from "../../../tests/helpers/deferred";
+import { type FakeSessionOptions, fakeSessionFactory } from "../../../tests/helpers/fakeSession";
 import { jpegImage, pngImage } from "../../../tests/helpers/images";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -132,13 +148,7 @@ import { hostEnv } from "../hostEnv";
 import { renderReferenceImport } from "../knowledge/context";
 import { KnowledgeService } from "../knowledge/knowledgeService";
 import { initOverflowDir, withPastedFiles, type MessageFile } from "../overflow";
-import {
-  type AppPaths,
-  appPathsFor,
-  crewmateEvidenceDir,
-  crewmateHandoverDir,
-  crewmateTempDir,
-} from "../paths";
+import { crewmateEvidenceDir, crewmateHandoverDir, crewmateTempDir } from "../paths";
 import { standingBaselineChecks } from "../tasks/dependencyWaits";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { CHECK_FAILS_ON_MAIN_WORDS } from "./checkVerdicts";
@@ -161,13 +171,10 @@ import {
   SAVE_AND_DEFER,
   START_THE_NEXT_STEP,
 } from "../prompts/cardContract";
-import { Router } from "../routing/router";
-import type { QuotaService } from "../quota/quotaService";
-import { DecisionStore } from "../storage/decisionStore";
 import { SettingsStore } from "../storage/settingsStore";
 import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
-import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
+import type { SessionEvent, SessionSpec } from "../session/session";
 import { bindTool, type EmittedAction } from "../session/tools";
 import { ActivityStore } from "../storage/activityStore";
 import { CardStore } from "../storage/cardStore";
@@ -181,7 +188,7 @@ import type { TaskEvent } from "../storage/taskEventStore";
 import { type TaskRecord } from "../storage/taskStore";
 import { UsageStore } from "../storage/usageStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
-import { recentFeed, SETTLE_FOLD, taskFeedLine } from "../tasks/taskFeed";
+import { recentFeed, taskFeedLine } from "../tasks/taskFeed";
 import { TaskProtocol } from "../tasks/taskProtocol";
 import { queryTasks } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
@@ -201,14 +208,9 @@ import {
 import type { CardService } from "./cardService";
 import { type ChangeDelivery, createChangeDelivery } from "./changeDelivery";
 import type { PrOutcome } from "./changeMerge";
-import { BASELINE_OBSERVATIONS_NEXT, CHECK_DIAGNOSIS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
+import { BASELINE_OBSERVATIONS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { ciFactOf } from "./ciFact";
-import {
-  type CrewmateSpec,
-  crewmateRenewedNote,
-  crewmateRestartText,
-  crewmateSessionSpec,
-} from "./crewSession";
+import { type CrewmateSpec, crewmateRenewedNote, crewmateRestartText } from "./crewSession";
 import {
   type AccountAttachment,
   BACKLOG_STEER_LINE,
@@ -217,13 +219,11 @@ import {
   COMPLETION_REVISED_WHILE_RUNNING,
   CrewSupervisor,
   type CrewSupervisorOptions,
-  type FirstmateHooks,
   QUIET_CARD_MS,
   QUEUED_GUIDANCE_LINE,
   QUIT_SETTLE_MS,
   UNHEARD_END_NOTE,
 } from "./crewSupervisor";
-import { crewHoldWays } from "./holds";
 import { type AccountServeability, JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } from "./idleLadder";
 import {
   FLEET_STARTED_CHANGE_WORDS,
@@ -231,11 +231,7 @@ import {
   renderRigorSection,
   type SpawnIntent,
 } from "./intentBrief";
-import {
-  keptFeedLine,
-  type LineageFacts,
-  MERGE_CHECKS_HOLD_REASON,
-} from "./mergeAuthorization";
+import { keptFeedLine, type LineageFacts } from "./mergeAuthorization";
 import {
   closingNoteTitle,
   droppedLine,
@@ -250,7 +246,6 @@ import {
 import { Ticker } from "./ticker";
 import { renderReviewHistory } from "./reviewHistory";
 import {
-  ciCapWake,
   GUIDANCE_MARK_WORDS,
   IDLE_ANSWER_NUDGE_TEXT,
   IDLE_NUDGE_TEXT,
@@ -268,7 +263,6 @@ import {
   THREAD_STEER_PREAMBLE,
   WRITE_ANSWERED_LEAD,
   CHECK_OBSERVATIONS_LEAD,
-  type WakeBody,
   type WakeFacts,
 } from "./wakes";
 
@@ -278,623 +272,8 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 
-/** Schema-valid answers whose JSON exceeds the footer bound. One value cannot, so this is several. */
-function answersPastBound(): { name: string; values: string[]; changed: boolean }[] {
-  const answers = Array.from({ length: 5 }, (_, index) => ({
-    name: `notes-${index}`,
-    values: ["x".repeat(CARD_ANSWER_TEXT_MAX)],
-    changed: true,
-  }));
-  if (cardAnswersBytes(answers) <= CARD_ANSWERS_MAX_BYTES) {
-    throw new Error("the bound fixture no longer exceeds the answers bound");
-  }
-  return answers;
-}
+useFakeCrewTimers();
 
-/**
- * The shared fake session (`tests/helpers/fakeSession.ts`) as this file
- * drives a crewmate: the texts it was prompted with, its steer and dispose
- * spied, and each prompt ended by the case - an abort only asks, as a
- * backend's does, and the case ends the turn the way that backend would.
- */
-type FakeCrewmate = FakeSession & {
-  promptCalls: string[];
-  promptImageCalls: (Parameters<ModelSession["prompt"]>[1] | undefined)[];
-  finishPrompt: () => void;
-  failPrompt: (message: string) => void;
-  steer: Mock<ModelSession["steer"]>;
-  dispose: Mock<ModelSession["dispose"]>;
-};
-
-/**
- * A crewmate on a backend that cannot take guidance mid-turn: its
- * profile says `followup-queue`, and its steer() rejects, so a supervisor
- * that called it would fail this test rather than quietly lose the message.
- */
-function fakeQueuedSteerCrewmate(): FakeCrewmate {
-  const crewmate = fakeCrewmate();
-  return {
-    ...crewmate,
-    controlProfile: {
-      steer: "followup-queue",
-      interruptGranularity: "process",
-      quotaEvents: false,
-      backgroundWork: "host",
-      failureSignals: "text",
-    },
-    steer: vi.fn(async () => {
-      throw new Error("this crewmate cannot be steered mid-turn");
-    }),
-  };
-}
-
-function fakeCrewmate(options: FakeSessionOptions = {}): FakeCrewmate {
-  const session = fakeSession({
-    sessionId: "s1",
-    controlProfile: PI_CONTROL_PROFILE,
-    resume: { backend: "pi", sessionFile: "/tmp/s1.jsonl" },
-    model: { provider: "fm-mock", id: "mock-1" },
-    modelLabel: "Claude Fable 5",
-    ...options,
-  });
-  const promptCalls: string[] = [];
-  const promptImageCalls: (Parameters<ModelSession["prompt"]>[1] | undefined)[] = [];
-  const { prompt, steer, dispose } = session;
-  return Object.assign(session, {
-    promptCalls,
-    promptImageCalls,
-    prompt: (text: string, images?: Parameters<ModelSession["prompt"]>[1]) => {
-      promptCalls.push(text);
-      promptImageCalls.push(images);
-      return prompt(text, images);
-    },
-    abort: async (failure?: string) => {
-      session.aborts.push(failure);
-    },
-    finishPrompt: () => session.settle(),
-    failPrompt: (message: string) => session.rejectPrompt(message),
-    steer: vi.fn(steer),
-    dispose: vi.fn(dispose),
-  });
-}
-
-/**
- * A supervisor's session options over fakes: one Pi factory whose `open`
- * the case supplies, bindings that carry the account, and the crewmate
- * preset, keeping every crewmate the host started (its callbacks are what a
- * case plays the crewmate's tool calls into).
- */
-function crewSessions(
-  paths: AppPaths,
-  open: (spec: SessionSpec) => Promise<ModelSession>,
-  specs: CrewmateSpec[] = [],
-): Pick<CrewSupervisorOptions, "sessions" | "bind" | "sessionSpec"> {
-  return {
-    sessions: { pi: { backend: "pi", controlProfile: PI_CONTROL_PROFILE, open } },
-    bind: async (accountId) => fakeBinding(accountId),
-    sessionSpec: (crewmate, binding) => {
-      specs.push(crewmate);
-      return crewmateSessionSpec(paths, crewmate, binding);
-    },
-  };
-}
-
-type RecordUsageInput = {
-  taskId: string;
-  accountId?: string;
-  model?: { provider: string; id: string };
-  usage: {
-    input?: number;
-    output?: number;
-    cacheRead?: number;
-    cacheWrite?: number;
-    cost?: number;
-  };
-};
-
-type SetupExtras = {
-  realRouter?: (db: ReturnType<typeof openInMemoryDatabase>) => import("../routing/router").Router;
-  /** Whether the account-less runtime serves a model of its own. */
-  accountlessServes?: () => boolean;
-  /**
-   * Automatic placement's answers for a project set to Automatic, with the
-   * routing switch on and computers that run work on the list (docs/helper.md,
-   * "Automatic starts"); nothing asks those computers anything here.
-   */
-  automatic?: Pick<AutomaticPlacement, "choose">;
-  reasoningChoice?: import("../routing/router").Router["reasoningChoice"];
-  accounts?: AccountAttachment;
-  routedModel?: { provider: string; id: string };
-  routeResult?: import("../routing/router").RouteResult;
-  /** Spies on every router.decide() call, to check what commission() passed it. */
-  onRouteDecide?: (args: {
-    taskId: string;
-    prompt: string;
-    shape: WorkShape;
-    avoidProvider?: string;
-  }) => void;
-  recordUsage?: (input: RecordUsageInput) => void;
-  /**
-   * What the router evaluates for a move (INF-849): the model it would pick
-   * for the shape with `withoutProvider` left out. Absent, nothing serves.
-   */
-  movePick?: (
-    shape: WorkShape,
-    options: { withoutProvider?: string },
-  ) => { provider: string; id: string } | undefined;
-  noteCutOff?: (accountId: string, cutOff: import("@shared/authFailure").CutOff) => void;
-  /** A model's Settings name (`ModelSlots.nameOf`). */
-  modelName?: (model: { provider: string; id: string }) => string;
-  serveability?: AccountServeability;
-  quotaGateCleared?: (ref: string) => boolean;
-  quotaGateRefValid?: (ref: string) => boolean;
-  hasRunningJobs?: (taskId: string) => boolean;
-  oldestRunningJob?: (
-    taskId: string,
-  ) => { jobId: string; command: string; startedAt: number } | undefined;
-  killJobs?: (taskId: string) => void;
-  mergePullRequest?: CrewSupervisorOptions["mergePullRequest"];
-  mergeReview?: CrewSupervisorOptions["mergeReview"];
-  reviewGate?: CrewSupervisorOptions["reviewGate"];
-  readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
-  openChange?: (
-    taskId: string,
-    input: import("@shared/changePresentation").OpenChangeInput,
-  ) => Promise<string>;
-  completionPresentation?: CrewSupervisorOptions["completionPresentation"];
-  checkChange?: (taskId: string, input?: CheckChangeInput) => Promise<string>;
-  readWorkflow?: CrewSupervisorOptions["readWorkflow"];
-  downloadArtifact?: CrewSupervisorOptions["downloadArtifact"];
-  closePullRequest?: (taskId: string) => Promise<{ ok: boolean; text: string }>;
-  githubRead?: CrewSupervisorOptions["githubRead"];
-  githubWrite?: CrewSupervisorOptions["githubWrite"];
-  sendTakenIntegrationAsk?: CrewSupervisorOptions["sendTakenIntegrationAsk"];
-  checkCi?: CrewSupervisorOptions["checkCi"];
-  /** The bundled runbooks, when a test reads the guidance the task's facts select. */
-  runbooks?: CrewSupervisorOptions["runbooks"];
-  readCheckWatch?: CrewSupervisorOptions["readCheckWatch"];
-  readMainChecks?: CrewSupervisorOptions["readMainChecks"];
-  /** The home's knowledge, over this setup's projects. */
-  knowledge?: (repos: RepoRegistry) => KnowledgeService;
-  /** The kind classifier (S3); absent keeps S2's every-shape-unclear behaviour. */
-  classifier?: import("../routing/kindClassifier").KindClassifier;
-  /**
-   * Further crewmates, one per later spawn in order (delivery rigor phase
-   * 2: a builder and its reviewer are two sessions). The first spawn still
-   * gets `crewmate`; once these run out every spawn gets `crewmate` again.
-   */
-  crewmates?: FakeCrewmate[];
-  /** A real workspace service over real git, in place of the mocked one. */
-  realWorkspace?: boolean;
-  /** Each task's own browser (docs/task-browser.md). */
-  browsers?: CrewSupervisorOptions["browsers"];
-  /** The task channel; a stand-in that grants a key path when the app has browsers. */
-  taskCommands?: CrewSupervisorOptions["taskCommands"];
-  /** The host's one clock (the ticker's), for the task record, the inbox and the supervisor. */
-  now?: () => number;
-  /** An account's binding; absent, every account binds to a Pi runtime. */
-  bind?: CrewSupervisorOptions["bind"];
-  /** Open cards a previous build saved, there before the supervisor starts. */
-  savedCards?: Card[];
-  /** The computers that run work for this one, as the crew reads them. */
-  machines?: CrewMachines;
-  /** The process a program's script runs in (docs/programs.md). */
-  programProcess?: CrewSupervisorOptions["programProcess"];
-};
-
-function routingOffRouter(
-  db: ReturnType<typeof openInMemoryDatabase>,
-  models: { provider: string; id: string }[],
-) {
-  const settings = new SettingsStore(db);
-  settings.setRoutingSettings({ dynamicRouting: false, pins: [] });
-  return new Router({
-    settings,
-    decisions: new DecisionStore(db),
-    quota: {
-      latestModels: () => ({
-        generatedAt: "now",
-        models: models.map((model) => ({
-          provider: model.provider,
-          id: model.id,
-          label: model.id,
-          effectivePercentRemaining: 80,
-        })),
-      }),
-      latest: () => undefined,
-    } as unknown as QuotaService,
-    availableModels: () => models,
-  });
-}
-
-/**
- * Routing on, over a pool no allowance is read for: an install signed in
- * only to OpenRouter (INF-2523). The quota catalog holds no row for it, and
- * the slot record places every listed model at medium, as its fallback does
- * when nothing is placed.
- */
-function catalogLessRouter(
-  db: ReturnType<typeof openInMemoryDatabase>,
-  models: { provider: string; id: string }[],
-) {
-  return new Router({
-    settings: new SettingsStore(db),
-    decisions: new DecisionStore(db),
-    quota: {
-      latestModels: () => ({ generatedAt: "now", models: [] }),
-      latest: () => undefined,
-    } as unknown as QuotaService,
-    availableModels: () => models,
-    slots: {
-      routable: (available: { provider: string; id: string }[]) => ({
-        models: available.map((model) => ({ ...model, slot: "medium" as const })),
-        note: "no slotted or starter-map model is available; using every listed model",
-      }),
-      slotsOf: () => [],
-      reasoningChoice: () => undefined,
-      nameOf: () => undefined,
-    } as unknown as import("../routing/modelSlots").ModelSlots,
-  });
-}
-
-function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
-  const paths = appPathsFor(scratchDir("infinitary-crew-"));
-  const events: FmEvent[] = [];
-  const ops: string[] = [];
-  const sorts: { taskId: string; verdict: "routine" | "captain"; rule: string }[] = [];
-  /** The text each ledger row records, in order (what the replay scorer matches). */
-  const ledger: string[] = [];
-  /** The typed facts each ledger row carries beside that text (P6); undefined for a line. */
-  const ledgerFacts: (WakeFacts | undefined)[] = [];
-  let cards: Card[] = [];
-  const threads: CardThread[] = [];
-  const workspace = {
-    createTaskWorktree: vi.fn(async (taskId: string) => ({
-      taskId,
-      cwd: join(paths.worktreesDir, taskId),
-      branch: `fm/task-${taskId}`,
-      repoDir: paths.defaultWorkspaceDir,
-    })),
-    removeTaskWorktree: vi.fn(async () => {}),
-    // The real save-then-remove: nothing to save by default, then the
-    // removal the assertions below watch.
-    retireTaskWorktree: vi.fn(async (ws: import("../workspace/workspaceService").TaskWorkspace) => {
-      await workspace.removeTaskWorktree(ws);
-      return { outcome: "removed" as const, kept: null };
-    }),
-    listWorktreeDirs: vi.fn(() => [] as string[]),
-    workspaceAt: vi.fn(async () => null),
-    removeEmptyWorktreeDir: vi.fn(async () => false),
-    landTaskWork: vi.fn(async () => ({ mode: "fast-forward" as const })),
-    taskWorkStatus: vi.fn(async () => ({ dirty: false, unlandedCommits: 0 })),
-    ensureDefaultRepo: vi.fn(async () => paths.defaultWorkspaceDir),
-    installDependencies: vi.fn(async () => ({ outcome: "skipped" as const })),
-    listTaskBranches: vi.fn(async () => [] as { branch: string; taskId: string }[]),
-    branchHead: vi.fn(async () => null as string | null),
-    reviewChangedFiles: vi.fn(async () => ["src/meter.ts", "tests/meter.test.ts"]),
-    reviewChangeReading: vi.fn(async () => "a".repeat(64)),
-    changeLines: vi.fn(
-      async () => null as import("../workspace/workspaceService").ChangeLineCount | null,
-    ),
-  } as unknown as WorkspaceService;
-  const realWorkspace = extras.realWorkspace ? new RealWorkspaceService(paths) : undefined;
-  const specs: CrewmateSpec[] = [];
-  /** Every session spec the supervisor opened, in order. */
-  const sessionSpecs: SessionSpec[] = [];
-  const open = vi.fn(async (spec: SessionSpec): Promise<ModelSession> => {
-    sessionSpecs.push(spec);
-    if (sessionSpecs.length > 1 && extras.crewmates) {
-      return extras.crewmates[sessionSpecs.length - 2] ?? crewmate;
-    }
-    return crewmate;
-  });
-  const db = openInMemoryDatabase();
-  const clock = extras.now ? { now: extras.now } : {};
-  const repos = new RepoRegistry(db, paths.fleetDir);
-  const tasks = new TaskService({ db, repos, strict: true, ...clock });
-  const cardStore = new CardStore(db);
-  for (const card of extras.savedCards ?? []) cardStore.upsert(card);
-  const inbox = new InboxStore(db, clock);
-  /** Each task's newest routing choice, as the real router reads it off routing_decisions. */
-  const routedChoices = new Map<
-    string,
-    { model: { provider: string; id: string }; slot: import("@shared/modelSlots").Slot }
-  >();
-  const routed = (taskId: string, result: import("../routing/router").RouteResult) => {
-    if (result.choice)
-      routedChoices.set(taskId, {
-        model: result.choice,
-        slot: result.servedBucket ?? result.bucket,
-      });
-    return result;
-  };
-  const router =
-    extras.realRouter?.(db) ??
-    (extras.routedModel || extras.routeResult
-      ? {
-          reasoningChoice: extras.reasoningChoice ?? (() => undefined),
-          decide: (
-            taskId: string,
-            prompt: string,
-            shape: WorkShape,
-            options?: { avoidProvider?: string },
-          ) => {
-            extras.onRouteDecide?.({ taskId, prompt, shape, ...options });
-            return routed(
-              taskId,
-              extras.routeResult ?? {
-                choice: extras.routedModel,
-                bucket: "high" as const,
-                rule: "R8" as const,
-              },
-            );
-          },
-          servedChoice: (taskId: string) => routedChoices.get(taskId),
-          // A move's evaluation, never recorded until it is committed.
-          preview: (_prompt: string, shape: WorkShape, options: { withoutProvider?: string }) => {
-            const choice = extras.movePick?.(shape, options);
-            return {
-              result: {
-                bucket: "high" as const,
-                rule: "R8" as const,
-                ...(choice ? { choice } : {}),
-              },
-              reasons: [],
-              preferenceRank: 0,
-              requiresReasoningWait: false,
-            };
-          },
-          commit: vi.fn(
-            (taskId: string, preview: { result: import("../routing/router").RouteResult }) =>
-              routed(taskId, preview.result),
-          ),
-          // The builder's served provider (R9): the routed model's, as the
-          // real router reads it off routing_decisions.
-          servedProvider: () => extras.routedModel?.provider,
-          // The settle card's crewmate fact: the real router falls back
-          // to the raw id when the catalog holds no label.
-          modelLabel: (ref: { provider: string; id: string }) => ref.id,
-        }
-      : undefined);
-  const supervisor = new CrewSupervisor({
-    ...clock,
-    ...crewSessions(paths, open, specs),
-    ...(extras.bind ? { bind: extras.bind } : {}),
-    workspace: realWorkspace ?? workspace,
-    repos,
-    tasks,
-    cardStore,
-    inbox,
-    paths,
-    ...(extras.knowledge ? { knowledge: extras.knowledge(repos) } : {}),
-    ...(router ? { router: router as unknown as import("../routing/router").Router } : {}),
-    ...(extras.automatic
-      ? {
-          automaticPlacement: extras.automatic as AutomaticPlacement,
-          // Automatic compares no computers of its own here; a crewmate's brief reads the list.
-          machines: { computers: () => [] } as unknown as CrewMachines,
-          // This Mac's routing, for a task that starts here once it no longer runs on Automatic.
-          router: {
-            ...router,
-            dynamicEnabled: () => true,
-          } as unknown as import("../routing/router").Router,
-        }
-      : {}),
-    ...(extras.accounts ? { accounts: extras.accounts } : {}),
-    ...(extras.accountlessServes ? { accountlessServes: extras.accountlessServes } : {}),
-    ...(extras.machines ? { machines: extras.machines } : {}),
-    ...(extras.programProcess ? { programProcess: extras.programProcess } : {}),
-    ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
-    ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),
-    ...(extras.modelName ? { modelName: extras.modelName } : {}),
-    ...(extras.serveability ? { serveability: extras.serveability } : {}),
-    ...(extras.quotaGateCleared ? { quotaGateCleared: extras.quotaGateCleared } : {}),
-    ...(extras.quotaGateRefValid ? { quotaGateRefValid: extras.quotaGateRefValid } : {}),
-    ...(extras.hasRunningJobs ? { hasRunningJobs: extras.hasRunningJobs } : {}),
-    ...(extras.oldestRunningJob ? { oldestRunningJob: extras.oldestRunningJob } : {}),
-    ...(extras.killJobs ? { killJobs: extras.killJobs } : {}),
-    ...(extras.mergePullRequest ? { mergePullRequest: extras.mergePullRequest } : {}),
-    ...(extras.mergeReview ? { mergeReview: extras.mergeReview } : {}),
-    ...(extras.reviewGate ? { reviewGate: extras.reviewGate } : {}),
-    ...(extras.closePullRequest ? { closePullRequest: extras.closePullRequest } : {}),
-    ...(extras.readPull ? { readPull: extras.readPull } : {}),
-    ...(extras.githubRead ? { githubRead: extras.githubRead } : {}),
-    ...(extras.githubWrite ? { githubWrite: extras.githubWrite } : {}),
-    ...(extras.sendTakenIntegrationAsk
-      ? { sendTakenIntegrationAsk: extras.sendTakenIntegrationAsk }
-      : {}),
-    ...(extras.checkCi ? { checkCi: extras.checkCi } : {}),
-    ...(extras.runbooks ? { runbooks: extras.runbooks } : {}),
-    ...(extras.openChange ? { openChange: extras.openChange } : {}),
-    ...(extras.completionPresentation
-      ? { completionPresentation: extras.completionPresentation }
-      : {}),
-    ...(extras.checkChange ? { checkChange: extras.checkChange } : {}),
-    ...(extras.readWorkflow ? { readWorkflow: extras.readWorkflow } : {}),
-    ...(extras.downloadArtifact ? { downloadArtifact: extras.downloadArtifact } : {}),
-    ...(extras.readCheckWatch ? { readCheckWatch: extras.readCheckWatch } : {}),
-    ...(extras.readMainChecks ? { readMainChecks: extras.readMainChecks } : {}),
-    ...(extras.classifier ? { classifier: extras.classifier } : {}),
-    ...(extras.browsers ? { browsers: extras.browsers } : {}),
-    ...(extras.browsers
-      ? {
-          taskCommands: extras.taskCommands ?? {
-            grant: (taskId: string) => ({
-              env: { INFINITARY_AXI_KEY: `/channel/${taskId}.key` },
-              path: ["/app/axi-bin"],
-            }),
-          },
-        }
-      : {}),
-    // The whose-turn sort's record (S7c), wired exactly as services.ts
-    // does: the row, then the wake inside the same call.
-    recordSort: (input) => {
-      sorts.push({ taskId: input.taskId, verdict: input.verdict, rule: input.rule });
-      ledger.push(input.wake);
-      ledgerFacts.push(input.facts);
-      input.effect?.();
-    },
-    broadcastEvent: (event: FmEvent) => events.push(event),
-    broadcastCards: (snapshot: Card[]) => {
-      cards = snapshot;
-    },
-    broadcastThread: (thread) => threads.push(thread),
-  });
-  const hooks: FirstmateHooks = {
-    notifyOp: (wake) => ops.push(served(wake)),
-    notifyCaptainChoice: (wake) => ops.push(served(wake)),
-    retryConverse: vi.fn(),
-  };
-  supervisor.setFirstmateHooks(hooks);
-  return {
-    supervisor,
-    events,
-    ops,
-    sorts,
-    ledger,
-    ledgerFacts,
-    cards: () => cards,
-    threads,
-    sessions: { open },
-    workspace,
-    realWorkspace,
-    tasks,
-    cardStore,
-    inbox,
-    db,
-    specs,
-    sessionSpecs,
-    paths,
-    repos,
-    router,
-  };
-}
-
-let servedLane: InboxStore | undefined;
-
-/**
- * What the Firstmate's drain serves for a wake: the envelope the inbox
- * stores, read back and rendered where it is served (docs/inbox.md, "The
- * wake envelope"). The hooks below collect this, so every assertion on a
- * wake's text is an assertion on the served text.
- */
-function served(wake: WakeBody): string {
-  servedLane ??= new InboxStore(openInMemoryDatabase());
-  const id = servedLane.enqueue(FIRSTMATE_RECIPIENT, wake, undefined, "agent");
-  const row = servedLane.allFor(FIRSTMATE_RECIPIENT).find((entry) => entry.id === id);
-  servedLane.ack([id]);
-  if (!row) throw new Error("the wake was not recorded");
-  return renderWake(row);
-}
-
-// Run the same deadline assertions without wall-clock sleeps. Date and
-// timeouts are controlled; real I/O, microtasks and intervals are untouched.
-// The first journey below retains an actual scheduling integration.
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
-});
-afterEach(() => {
-  if (vi.isFakeTimers()) vi.clearAllTimers();
-  vi.useRealTimers();
-});
-const tick = () =>
-  vi.isFakeTimers()
-    ? vi.advanceTimersByTimeAsync(80)
-    : new Promise((resolve) => setTimeout(resolve, 80));
-
-/**
- * The id of the captain's newest line under a card: what an answer names in
- * answers_message, since only a line naming it ends their question (the
- * captain's "Only a line that says it answers it; a handoff stays open").
- */
-function askedOn(supervisor: Pick<CrewSupervisor, "cards">, cardId: string) {
-  return supervisor.cards.thread(cardId).messages.findLast((line) => line.who === "captain")?.id;
-}
-
-/** A crewmate's whole risk declaration: every dimension rated. */
-const METER_RISK: RiskDeclaration = {
-  blast: { level: "low", why: "Two files in the meter" },
-  behavior: { level: "low", why: "Corrects the unit" },
-  undo: { level: "low", why: "A revert restores the old meter" },
-  evidence: { level: "medium", why: "The meter test" },
-  sensitivity: { level: "low", why: "No sign-in, data or release code" },
-  novelty: { level: "low", why: "Edits the existing reading" },
-  deps: { level: "low", why: "Nothing added" },
-};
-
-/** The settle effects a card action carries (cards/tasks/agents P1): the host resolves merge by posture. */
-const SETTLE_MERGE = { kind: "settle", mode: "merge" } as const;
-const SETTLE_DISCARD = { kind: "settle", mode: "discard" } as const;
-
-/** The lifecycle fixtures need a valid completion outline, not a content recipe. */
-const completionBody = (after: string) =>
-  completionCardBody(
-    "<p>The captain asked for this code change.</p>",
-    "<p>The requested change is complete.</p>",
-    "<p>The requested behavior was missing.</p>",
-    after,
-  );
-
-/** The [fm-op] lines a host-run settle sends back to the Firstmate. */
-const settleWakes = (ops: string[]) => ops.filter((line) => line.includes("the host settled it"));
-
-/** A task's settle lines, oldest first: the click and its outcome on the task's record (INF-1845). */
-function settleLines(tasks: TaskService, taskId: string): string[] {
-  return tasks
-    .timeline(taskId)
-    .filter((event) => event.kind === "note" && event.data?.feedOnce === SETTLE_FOLD)
-    .map((event) => event.text);
-}
-
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (error: Error) => void;
-  const promise = new Promise<T>((yes, no) => {
-    resolve = yes;
-    reject = no;
-  });
-  return { promise, resolve, reject };
-}
-
-/**
- * spawn v2 carries a structured intent instead of an authored brief; tests
- * that only need "some work text" put it in both goal and user words - the
- * host-rendered template then contains it, so content assertions hold.
- */
-function intentOf(text: string): SpawnIntent {
-  return { goal: text, userWords: text };
-}
-
-/** The card file a brief names for a source task (FI3-700), read back the way the crewmate opens it. */
-function handedCard(brief: string): { file: string; body: string } {
-  const file = /open it to read the card:\n- (.+)/.exec(brief)?.[1];
-  if (!file) throw new Error(`the brief names no card file:\n${brief}`);
-  return { file, body: readFileSync(file, "utf8") };
-}
-
-/**
- * onCard's return can be a promise now that a merge decision on a
- * direct-pr task may clear a live CI gate first (`pendingCiGate`), but
- * none of these fixtures wire `checkCi`, so every call here stays the
- * synchronous string it always was. Fails loudly instead of silently
- * comparing a Promise if that assumption ever stops holding.
- */
-function syncCardId(
-  id: string | { cardId: string } | Promise<unknown> | undefined,
-): string | undefined {
-  if (id instanceof Promise) {
-    throw new Error("expected a synchronous card id in this fixture; got a pending CI gate");
-  }
-  // A write on someone else's card answers its typed result, which names the card.
-  return typeof id === "object" ? id.cardId : id;
-}
-
-/** The bundled runbooks, read as the app serves them, with every switch on. */
-const bundledRunbooks = () =>
-  new Runbooks(join(dirname(fileURLToPath(import.meta.url)), "../../../resources/runbooks"), {
-    getRunbookStates: () => ({}),
-    setRunbookStates: () => {},
-  });
 
 describe("CrewSupervisor", () => {
   it("streams a commissioned turn without a task card and leaves the task idle and steerable", async () => {
@@ -9950,13 +9329,6 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
   const merge = [{ id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE }];
 
   /** One crewmate turn that ends with `text` as its report. */
-  async function reportTurn(crewmate: FakeCrewmate, taskId: string, text: string) {
-    crewmate.emit({ type: "assistant_delta", taskId, text });
-    crewmate.emit({ type: "turn_end", taskId });
-    crewmate.finishPrompt();
-    await tick();
-  }
-
   async function shipping(checks: { overall: import("./changeChecks").PrCiOverall }) {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate, { checkCi: async () => checks.overall });
@@ -14345,12 +13717,6 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     }
 
     /** The turn the captain's reply started ends; the explicit report wins over its text. */
-    async function endTurn(crewmate: FakeCrewmate, taskId: string) {
-      crewmate.emit({ type: "turn_end", taskId });
-      crewmate.finishPrompt();
-      await tick();
-    }
-
     for (const backgroundWork of ["host", "client"] as const) {
       it(`wakes the Firstmate for an approval relayed by reply with the plan card up and unchanged (${backgroundWork} background work)`, async () => {
         const { supervisor, crewmate, card, cards, ops, sorts, specs, tasks, taskId } =
@@ -15209,13 +14575,6 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   const idleWakes = (ops: string[]) => ops.filter((line) => line.includes("has been idle for"));
   const failureWakes = (ops: string[]) =>
     ops.filter((line) => line.includes("failed at the provider"));
-
-  async function endTurn(crewmate: FakeCrewmate, taskId: string, text?: string) {
-    if (text) crewmate.emit({ type: "assistant_delta", taskId, text });
-    crewmate.emit({ type: "turn_end", taskId });
-    crewmate.finishPrompt();
-    await tick();
-  }
 
   async function failTurn(crewmate: FakeCrewmate, taskId: string, error = "upstream 529") {
     crewmate.emit({ type: "turn_failed", taskId, error });
@@ -19917,13 +19276,6 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
     };
   }
 
-  async function endTurn(crewmate: FakeCrewmate, taskId: string, text?: string): Promise<void> {
-    if (text) crewmate.emit({ type: "assistant_delta", taskId, text });
-    crewmate.emit({ type: "turn_end", taskId });
-    crewmate.finishPrompt();
-    await tick();
-  }
-
   it("an empty-text turn end emits no wake and never re-sends the previous report", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, tasks, wakes } = withSupervision(crewmate);
@@ -21613,32 +20965,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
 
 describe("the reviewed tier (delivery rigor phase 2)", () => {
   /** A direct-pr repository the host can derive a rigor for. */
-  function directPrRepo(name = "meterlab") {
-    const dir = scratchDir("infinitary-reviewed-");
-    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-    execFileSync("git", [
-      "-C",
-      dir,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@localhost",
-      "commit",
-      "--allow-empty",
-      "-m",
-      "init",
-    ]);
-    return { dir, name, dispose: () => rmSync(dir, { recursive: true, force: true }) };
-  }
-
   /** One crewmate turn that ends with `text` as its report. */
-  async function reportTurn(crewmate: FakeCrewmate, taskId: string, text: string) {
-    crewmate.emit({ type: "assistant_delta", taskId, text });
-    crewmate.emit({ type: "turn_end", taskId });
-    crewmate.finishPrompt();
-    await tick();
-  }
-
   const BUILDER_REPORT =
     "Intent: the meter test passes ten runs in a row. What changed: the test awaits the queue flush. Verified: pnpm test on the final commit; PR is green. Risk: low. Not done: nothing.";
   const HEAD = "0123456789abcdef0123456789abcdef01234567";
@@ -21719,7 +21046,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   // level"; since INF-1876 what a care asks of them is the care guidance's,
   // served on the raise, never a hold the host reads from the name.
   it("INF-994: a Default-care plan is kept across a raise to Careful, whose notice carries the Careful guidance", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const { supervisor, tasks, repos, workspace, specs, inbox } = setup(builder, {
@@ -21789,7 +21116,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("INF-125: only the shown captain choice approves an exact shared effect, and execution never replays an unknown result", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -22010,7 +21337,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("INF-125: asks about the current required gap before accepting any exception, without treating the answer as proof", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -22235,7 +21562,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("INF-1824: a version's gaps share one checklist card and the click accepts exactly the ticked rows", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const { supervisor, tasks, repos, workspace, specs, cards } = setup(builder);
@@ -22368,7 +21695,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("INF-203 F6: a stale approval shows its card, expires its button and tells the builder to ask again", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const { supervisor, tasks, repos, workspace, specs, events } = setup(builder);
@@ -22486,7 +21813,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   // INF-1876: the host holds no merge on live validation; what Careful asks
   // of an older builder reaches it through the care guidance, not a hold.
   it("INF-203 F3: an older Careful builder with a passed review and green checks merges; no host hold asks it for live validation", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const reviewer = fakeCrewmate();
       const { supervisor, tasks, repos, workspace } = setup(reviewer, {
@@ -22537,7 +21864,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("INF-125: accepts only the assigned proof pair and rejects evidence-only reuse of a review", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -22629,7 +21956,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("derives the rigor at dispatch, stamps the shape, and names the tier in the brief - never in the classifier's input", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const crewmate = fakeCrewmate();
       const asked: KindInput[] = [];
@@ -22682,7 +22009,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("reads the captain's ask, the repository's standing rigor, then standard, in the captain's order", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const noted = fakeCrewmate();
@@ -22734,7 +22061,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("starts a crewmate's follow-up at the repository's rigor, never a legacy quick", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const followupCrewmate = fakeCrewmate();
@@ -22828,7 +22155,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   // Careful builder asks for its review with needs_firstmate (the care
   // guidance), which the sort reads as it reads any report.
   it("sorts a Careful builder's report like any other; only a review's own report skips the whose-turn sort", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const crewmate = fakeCrewmate();
       const { supervisor, sorts, ops, repos } = setup(crewmate, {
@@ -22852,7 +22179,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("refuses review_of as text only for no commits, an unknown task or a review already open: a report and Careful care are not prerequisites (INF-1875)", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const scratch = fakeCrewmate();
@@ -22924,7 +22251,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("binds a pre-push review of repaired work to the committed branch head when an older pull request exists (INF-288)", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -23005,7 +22332,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   it("scopes a review commissioned after an earlier pass to the difference since it, through its re-review (INF-401)", async () => {
     // The captain's direction: after an unavoidable update, the re-review
     // checks only the update's difference, not the whole change again.
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const firstReviewer = fakeCrewmate();
@@ -23092,7 +22419,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("answers a review given a named model with the model that took it, since a review never routes on one (FI3-444)", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate({ model: { provider: "openai-codex", id: "gpt-5.5" } });
@@ -23124,7 +22451,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("runs the review: host brief, no hold, findings idle, pass closes the review", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -23420,7 +22747,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("INF-125 and INF-148: a completion keeps unchanged code clearance, and the proof's version is a recorded fact (INF-1876)", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const { supervisor, tasks, repos, specs, cards } = setup(builder, { realWorkspace: true });
@@ -23498,7 +22825,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("retires the review with the builder: a discard cascades, the parent is fixed, no orphaned reviewer", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -23570,7 +22897,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   
 
   it("the served text of every review verdict wake (the typed envelope, P3)", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -23676,7 +23003,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("places the reviewer away from the builder's provider (R9): the router is asked to avoid it", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -23724,7 +23051,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("records nothing on a report with no typed review record: an acknowledgment is not a verdict and spends no round", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -23823,7 +23150,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   });
 
   it("names the fix rules on every findings wake: no brief carries them (INF-1876)", async () => {
-    const repo = directPrRepo();
+    const repo = gitRepo();
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
@@ -23867,24 +23194,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
 });
 
 describe("task-level delivery override", () => {
-  function gitRepo(name: string) {
-    const dir = scratchDir("infinitary-delivery-ask-");
-    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-    execFileSync("git", [
-      "-C",
-      dir,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@localhost",
-      "commit",
-      "--allow-empty",
-      "-m",
-      "init",
-    ]);
-    return { dir, name, dispose: () => rmSync(dir, { recursive: true, force: true }) };
-  }
-
   it("inherits the repository when the captain said nothing about delivery", async () => {
     const repo = gitRepo("meterlab");
     try {
@@ -25133,24 +24442,6 @@ describe("the deliverable axis (Task B)", () => {
 });
 
 describe("task-level autonomy and the host's merge hold (contract v3.9)", () => {
-  function gitRepo(name: string) {
-    const dir = scratchDir("infinitary-autonomy-");
-    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
-    execFileSync("git", [
-      "-C",
-      dir,
-      "-c",
-      "user.name=Test",
-      "-c",
-      "user.email=test@localhost",
-      "commit",
-      "--allow-empty",
-      "-m",
-      "init",
-    ]);
-    return { dir, name, dispose: () => rmSync(dir, { recursive: true, force: true }) };
-  }
-
   /** A direct-pr repository, its autonomy as given, with one task on it. */
   async function onRepo(
     autonomy: boolean,
@@ -27636,13 +26927,6 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   }
 
   /** One crewmate turn that ends with `text` as its report. */
-  async function reportTurn(crewmate: FakeCrewmate, taskId: string, text: string) {
-    crewmate.emit({ type: "assistant_delta", taskId, text });
-    crewmate.emit({ type: "turn_end", taskId });
-    crewmate.finishPrompt();
-    await tick();
-  }
-
   it("a failed turn with nothing to retry, and a sign-in failure", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, ops } = setup(crewmate);

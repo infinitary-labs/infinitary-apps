@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-test-harness",
+      "reason": "Internal: the crew supervisor's test harness moves into shared test helpers, with its copied turn and git helpers kept once; only tests change and nothing a person sees changes."
+    }
+  ]
+}

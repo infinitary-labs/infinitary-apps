@@ -399,6 +399,16 @@ describe("the Linux packages", () => {
     expect([days(false), days(true)]).toEqual([1, 3]);
   });
 
+  // INF-2834's chosen fix: every push to a pull request re-ran every package
+  // check, so no pull request starts it; a task requests it once, at its
+  // final version, as it requests its edited journeys.
+  it("runs only on request or inside a release, never on a pull request", () => {
+    const workflow = loadYamlFile(".github/workflows/linux-packages.yml") as {
+      on: Record<string, unknown>;
+    };
+    expect(Object.keys(workflow.on).toSorted()).toEqual(["workflow_call", "workflow_dispatch"]);
+  });
+
   it("checks each package on a clean copy of its system and keeps the files on the run alone", () => {
     const workflow = loadYamlFile(".github/workflows/linux-packages.yml") as {
       permissions: Record<string, string>;
@@ -418,10 +428,13 @@ describe("the Linux packages", () => {
     );
     // INF-1838: keep the same-run package handoff, not weeks of large binaries.
     // INF-2163's retention change: a pull request's packages 1 day, a release's 3.
+    // Since INF-2834 a pull request's packages come from its task's request.
     expect(upload?.with?.name).toBe("linux-packages");
-    const kept = (event_name: string) =>
-      workflowValue(String(upload?.with?.["retention-days"]), { github: { event_name } });
-    expect(["pull_request", "workflow_dispatch", "push"].map(kept)).toEqual([1, 3, 3]);
+    const kept = (inputs: Record<string, string>) =>
+      workflowValue(String(upload?.with?.["retention-days"]), { inputs });
+    const { version } = JSON.parse(read("package.json")) as { version: string };
+    // A request names no version; a release names the version it publishes.
+    expect([kept({}), kept({ version })]).toEqual([1, 3]);
     const systems = (workflow.jobs.check?.strategy?.matrix.include ?? []).map(
       (entry) => `${entry.system} ${entry.image ?? entry.runner}`,
     );

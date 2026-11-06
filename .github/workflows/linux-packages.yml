@@ -7,11 +7,15 @@ name: linux-packages
 # crew turn with the system's git (scripts/check-linux-package.sh). The
 # packages stay on the run; nothing here uploads them anywhere else.
 #
-# It runs on demand and on a pull request that changes how the packages are
-# made (not this file alone: a change to only this workflow is requested once,
-# at its final version), for the captain to try, and inside every release (release.yml), at
+# It runs on request, for the captain to try or for a task whose change
+# edits how the packages are made, and inside every release (release.yml), at
 # the release's version from its one source commit: there the publication
 # job records and publishes exactly the files this run checked.
+# INF-2834's chosen fix: no pull request starts it, since every push re-ran
+# every package check. A task requests it once, at its final version, as it
+# requests its edited journeys (docs/testing.md, "What a task branch
+# requests"); docs/linux-packages.md, "The checks", lists the files that call
+# for it.
 
 on:
   workflow_dispatch:
@@ -39,16 +43,6 @@ on:
         required: false
         type: boolean
         default: false
-  pull_request:
-    paths:
-      - electron-builder.yml
-      - electron-builder.linux.yml
-      - packaging/linux/**
-      - scripts/check-linux-package.sh
-      - scripts/linux-recipes.ts
-      - src/main/linuxStartup.ts
-      - tests/installed/**
-      - playwright.installed.config.ts
 
 # Inside a release the packages belong to that run and are never cancelled
 # from outside it; otherwise a newer run of the same ref replaces an older.
@@ -63,7 +57,7 @@ jobs:
   # Each job's name leads with what started the run, or the caller's trigger
   # (scripts/ci-job-names.mjs).
   build:
-    name: ${{ format('{0} · Build Linux packages', (inputs.trigger || github.event_name == 'pull_request' && 'Pull request' || 'Manual request')) }}
+    name: ${{ format('{0} · Build Linux packages', (inputs.trigger || 'Manual request')) }}
     # Every job runs where LINUX_RUNNER sends it (ci.yml says how), and on
     # GitHub's hosted Ubuntu when it is unset or a release calls it.
     runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
@@ -150,12 +144,12 @@ jobs:
           name: linux-packages
           path: linux-packages/
           if-no-files-found: error
-          # A pull request's packages serve only its own run; a release's
-          # stay 3 days for a release that resumes.
-          retention-days: ${{ github.event_name == 'pull_request' && 1 || 3 }}
+          # A request's packages serve only its own run; a release's stay 3
+          # days for a release that resumes.
+          retention-days: ${{ inputs.version && 3 || 1 }}
 
   check:
-    name: ${{ format('{0} · Install and run {1}', (inputs.trigger || github.event_name == 'pull_request' && 'Pull request' || 'Manual request'), matrix.label) }}
+    name: ${{ format('{0} · Install and run {1}', (inputs.trigger || 'Manual request'), matrix.label) }}
     needs: build
     strategy:
       fail-fast: false

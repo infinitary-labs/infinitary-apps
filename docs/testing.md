@@ -66,7 +66,9 @@ Full local journey suites remain prohibited.
 ## Actions artifact retention
 
 Large, short-lived uploads use explicit three-day retention: `phone-results`, `phone-pictures`, `phone-logs`, `phone-simulator-logs`, `linux-packages` and the `source-desktop-*` family, including overflow-parallel journeys.
-Two of them are shorter: a pull request's `linux-packages` are kept 1 day, and `phone-results` from a failed phone check 1 day, while a recording run's stay 3 days for its export.
+Two of them are shorter.
+A requested run's `linux-packages` are kept 1 day, while a release's stay 3 days for a release that resumes.
+`phone-results` from a failed phone check are kept 1 day, while a recording run's stay 3 days for its export.
 This keeps recent diagnostic evidence and same-run package handoffs without accumulating weeks of bundles and binaries.
 Phone result bundles upload only on failure or a recording request.
 A `source-desktop-*` upload from a run whose journeys passed holds only `source-results.json` and any recorded demo; a run that did not pass keeps the window and everything under `test-results/`.
@@ -682,12 +684,13 @@ So a journey the change only reaches is checked there, and a break found there s
 | The Linux sweep | never, outside a named exception ("When to request full verification") | `source-journeys.yml` with `suite: full`, task and reason |
 | The phone check | its change selects the phone gate ("Native phone checks") | `phone.yml` with `affected: "true"`, or named `parts`; every part only with `task` and `reason` |
 | The replay gate | its change touches a replay trigger (`docs/replay-harness.md`, "The gate") | `replay.yml` |
+| The Linux package check | its change edits how the Linux packages are made (`docs/linux-packages.md`, "The checks", lists the files) | `linux-packages.yml`, which no pull request starts (INF-2834) |
 | Full verification | never, outside a named exception ("When to request full verification") | `verify.yml` with `full_system`, or `mac_only` for its Mac jobs alone, task and reason |
 
 Each request goes once per task, at the final version, after the pull request's own checks passed.
 A request made while the change is still being written is a diagnostic, never its proof.
 Before a request, read the runs already on that version, running ones included, and reuse one that passed or is still running.
-A later version keeps a run's proof when the files that differ from the proved version reach none of that run's selection: the journey chooser selects none of the proved journeys, or the phone chooser keeps no part.
+A later version keeps a run's proof when the files that differ from the proved version reach none of that run's selection: the journey chooser selects none of the proved journeys, the phone chooser keeps no part, or none of those files makes the Linux packages.
 That holds across a repair and across bringing the branch up to date; otherwise request the check again, once, at the new final version.
 The phone pictures a release note or a card needs come from that one run's `phone-pictures` artifact, never from a run of their own.
 Cancel a run no longer needed by its id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).

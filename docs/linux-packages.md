@@ -103,9 +103,12 @@ A Mac and a run from source never ask, and the app started by a command says the
 
 ## The checks
 
-`linux-packages.yml` runs on a pull request that changes how the packages are made (not its own workflow file alone, which a crewmate requests once at the final version), on demand, and inside every release, where `release.yml`'s `linux` job calls it with the release's source commit and version.
+`linux-packages.yml` runs on request and inside every release, where `release.yml`'s `linux` job calls it with the release's source commit and version.
 There it builds with the notes job's verified catalog and the release's diagnostics settings, and verifies the packaged catalog, as the Mac build does.
-It keeps the packages, the two rendered recipes and `SHA256SUMS` as the run's `linux-packages` artifact for three days; the workflow itself uploads them nowhere else, and only a release's upload job, once every check passed, uploads the files it checked, which its publication job fetches back and checks before switching anything.
+No pull request starts it, so the package checks run once for a change rather than on each push (INF-2834).
+A task whose change edits how the packages are made requests it once, at its final version, as it requests its edited journeys (`docs/testing.md`, "What a task branch requests").
+These files make the packages: `electron-builder.yml`, `electron-builder.linux.yml`, `packaging/linux/`, `scripts/check-linux-package.sh`, `scripts/linux-recipes.ts`, `src/main/linuxStartup.ts`, `tests/installed/`, `playwright.installed.config.ts` and the workflow itself.
+It keeps the packages, the two rendered recipes and `SHA256SUMS` as the run's `linux-packages` artifact, for one day on request and three days in a release; the workflow itself uploads them nowhere else, and only a release's upload job, once every check passed, uploads the files it checked, which its publication job fetches back and checks before switching anything.
 `scripts/check-linux-package.sh` then installs each one the way a person would, one job a system:
 
 - the Ubuntu package with apt on Ubuntu 24.04 and 26.04 machines themselves, AppArmor's restriction on user namespaces left on;

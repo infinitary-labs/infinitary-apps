@@ -174,11 +174,6 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
   })),
   {
     file: "linux-packages.yml",
-    trigger: "Pull request",
-    scenario: { github: { event_name: "pull_request" } },
-  },
-  {
-    file: "linux-packages.yml",
     trigger: "Manual request",
     scenario: { github: { event_name: "workflow_dispatch" } },
   },

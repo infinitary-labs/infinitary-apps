@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-report-and-in-place-guardrails",
+      "reason": "Internal: tests pin how the crew supervisor takes in a crewmate's reports, follow-ups, card-line responses and validation records, and how it files and closes its own work in a project's folder, before that code moves out of the supervisor; only tests change and nothing a person sees changes."
+    }
+  ]
+}

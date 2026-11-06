@@ -51,6 +51,7 @@ import type { FmEvent } from "@shared/events";
 import type { KeptValidationInput } from "@shared/liveValidation";
 import type { RiskDeclaration } from "@shared/risk";
 import type { WorkShape } from "@shared/routingPolicy";
+import { signInPlace } from "@shared/signIns";
 import { afterEach, beforeEach, type Mock, vi } from "vitest";
 import { completionCardBody } from "./completionCard";
 import { freshDatabase as openInMemoryDatabase } from "./database";
@@ -755,3 +756,23 @@ export const bundledRunbooks = () =>
     getRunbookStates: () => ({}),
     setRunbookStates: () => {},
   });
+
+/**
+ * One computer that runs work, as the crew reads it: named, in reach unless
+ * `ready` says otherwise, serving no account of its own, and answering
+ * whatever else a case names in `fields`.
+ */
+export function workComputer(
+  id: string,
+  name: string,
+  fields: Partial<Record<keyof CrewMachines, unknown>> = {},
+): CrewMachines {
+  return {
+    computers: () => [id],
+    ready: () => true,
+    nameOf: () => name,
+    placeOf: () => signInPlace({ name, onThisMac: false }),
+    accountOf: () => undefined,
+    ...fields,
+  } as unknown as CrewMachines;
+}

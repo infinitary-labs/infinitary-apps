@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-sessions-turns-steer-guardrails",
+      "reason": "Internal: tests pin how the crew supervisor holds and lets go of a crewmate's session, stops an account's or a removed computer's work, refuses or keeps a steer, hands files on and names a report's handed files, before that code moves out of the supervisor; only tests change and nothing a person sees changes."
+    }
+  ]
+}

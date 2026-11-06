@@ -231,6 +231,8 @@ export type SetupExtras = {
   githubRead?: CrewSupervisorOptions["githubRead"];
   githubWrite?: CrewSupervisorOptions["githubWrite"];
   sendTakenIntegrationAsk?: CrewSupervisorOptions["sendTakenIntegrationAsk"];
+  /** The captain's click on a crewmate's kept write sends it once (`GithubGatewayService.sendAsk`). */
+  sendWriteAsk?: CrewSupervisorOptions["sendWriteAsk"];
   /** A panel's held call was answered: the panel hears the choice (`HomeIntegrations`). */
   panelAskAnswered?: CrewSupervisorOptions["panelAskAnswered"];
   checkCi?: CrewSupervisorOptions["checkCi"];
@@ -500,6 +502,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.sendTakenIntegrationAsk
       ? { sendTakenIntegrationAsk: extras.sendTakenIntegrationAsk }
       : {}),
+    ...(extras.sendWriteAsk ? { sendWriteAsk: extras.sendWriteAsk } : {}),
     ...(extras.panelAskAnswered ? { panelAskAnswered: extras.panelAskAnswered } : {}),
     ...(extras.checkCi ? { checkCi: extras.checkCi } : {}),
     ...(extras.runbooks ? { runbooks: extras.runbooks } : {}),

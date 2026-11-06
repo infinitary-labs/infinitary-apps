@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-host-ops-card-actions-watch-guardrails",
+      "reason": "Internal: tests pin how the crew supervisor runs the app's own card operations and the task record's buttons, takes a click on a card and sends a crewmate's kept write, hands a job's result to a released crewmate and sweeps working copies no task owns, before that code moves out of the supervisor; only tests change and nothing a person sees changes."
+    }
+  ]
+}

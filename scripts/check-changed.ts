@@ -3,9 +3,11 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * The lint a crewmate runs before it pushes (INF-2588's report, fix 1): only the
- * files this branch changed, plus the generated-file checks. It is not gated by
- * CI mode, so the Mac mini can run it; the full lint stays in the pull request's
+ * The quick check a crewmate runs before every push (INF-2588's report, fix 1;
+ * INF-2674's typecheck fix): the lint of only the files this branch changed, the
+ * generated-file checks, and the whole-project typecheck, which the checker
+ * runs in about two seconds. It is not gated by CI mode, so the Mac mini can
+ * run it; the full lint and the typecheck also stay in the pull request's
  * `typecheck-lint-build` check (INF-2074, docs/testing.md "Where the heavy
  * checks run").
  */
@@ -67,5 +69,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     );
   for (const generator of GENERATORS)
     results.push(run(generator, "node", [`scripts/${generator}`, "--check"]));
+  // Called directly, not through `pnpm typecheck`, which CI mode refuses.
+  results.push(run("typecheck", "node", ["scripts/typecheck.ts", "--pretty"]));
   process.exitCode = results.every(Boolean) ? 0 : 1;
 }

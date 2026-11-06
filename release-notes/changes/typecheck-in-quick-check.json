@@ -1,0 +1,9 @@
+{
+  "exclusions": [
+    {
+      "id": "typecheck-in-quick-check",
+      "reason": "This change adds the typecheck to a developer quick-check script and project instructions; it does not change Infinitary for a person using it.",
+      "covers": ["7c7d592af92cf67bd40e88c02f5386245ba9b5e7"]
+    }
+  ]
+}

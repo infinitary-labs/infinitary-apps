@@ -39,10 +39,13 @@ const ROUTES: Record<HeavyCheck, { name: string; route: string }> = {
     name: "The replay gate",
     route: `start replay.yml on your branch: ${DISPATCHES}/replay.yml/dispatches with {"ref":"<branch>"}.`,
   },
-  typecheck: { name: "The typecheck", route: PULL_REQUEST_CHECKS },
+  typecheck: {
+    name: "The typecheck",
+    route: `run \`pnpm check:changed\` to typecheck here along with the quick lint; the full check is ${PULL_REQUEST_CHECKS}`,
+  },
   lint: {
     name: "The lint",
-    route: `run \`pnpm check:changed\` to lint only your changed files and check the generated files here; the full lint is ${PULL_REQUEST_CHECKS}`,
+    route: `run \`pnpm check:changed\` to lint your changed files, check the generated files and typecheck here; the full lint is ${PULL_REQUEST_CHECKS}`,
   },
 };
 

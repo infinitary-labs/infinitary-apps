@@ -6,8 +6,8 @@ import { DELIVERY_CHANGES, DELIVERY_COMPLETE } from "../src/core/orchestrator/co
 import {
   PENDING_RESPONSES_END,
   PENDING_RESPONSES_OPENING,
-  renderWake,
-} from "../src/core/orchestrator/wakes";
+} from "../src/core/orchestrator/reportWakes";
+import { renderWake } from "../src/core/orchestrator/wakes";
 import { createEventBashTool } from "../src/core/pi/bashTool";
 import { FIRSTMATE_PERSONA } from "../src/core/pi/piResources";
 import {

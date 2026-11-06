@@ -6,7 +6,7 @@ import {
   renderBasisSection,
   renderRigorSection,
 } from "../orchestrator/intentBrief";
-import { reviewFindingsNext } from "../orchestrator/wakes";
+import { reviewFindingsNext } from "../orchestrator/reportWakes";
 import { SEQUENCES_SEED } from "../personal/sequencesSkill";
 import {
   CARD_AUTHORING,

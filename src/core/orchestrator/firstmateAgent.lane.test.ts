@@ -26,10 +26,11 @@ import { SettingsStore } from "../storage/settingsStore";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
+import { SETUP_CARD_FAILED_WORDS } from "./captainWakes";
 import { CrewSupervisor } from "./crewSupervisor";
 import { idleStallWays } from "./holds";
 import { Scheduler } from "./scheduler";
-import { renderWake, SETUP_CARD_FAILED_WORDS, type TypedWake } from "./wakes";
+import { renderWake, type TypedWake } from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).

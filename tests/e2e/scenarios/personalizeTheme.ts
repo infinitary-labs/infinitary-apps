@@ -1,4 +1,4 @@
-import { WELCOME_WAKE_WORDS } from "../../../src/core/orchestrator/wakes";
+import { WELCOME_WAKE_WORDS } from "../../../src/core/orchestrator/noticeWakes";
 import type { Scenario } from "../mockProvider";
 
 /**

@@ -23,13 +23,9 @@ import {
   tableNames,
   tmpUserData,
 } from "../../../tests/helpers/migrations";
-import {
-  IDLE_NUDGE_TEXT,
-  idleNudge,
-  renderWake,
-  stillDownOnce,
-  stillDownWake,
-} from "../orchestrator/wakes";
+import { IDLE_NUDGE_TEXT, idleNudge } from "../orchestrator/idleWakes";
+import { stillDownOnce, stillDownWake } from "../orchestrator/outageWakes";
+import { renderWake } from "../orchestrator/wakes";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { openDatabase } from "./db";

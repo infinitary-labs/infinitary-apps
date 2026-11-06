@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { PANEL_UPDATE_ASKED_OPENING } from "../../src/core/orchestrator/wakes";
+import { PANEL_UPDATE_ASKED_OPENING } from "../../src/core/orchestrator/noticeWakes";
 import { PANEL_SILENCE_MS } from "../../src/core/panels/panelRuntimes";
 import { appPathsFor } from "../../src/core/paths";
 import { PANELS_SAFE_MODE_NOTE } from "../../src/core/personal/panelLines";

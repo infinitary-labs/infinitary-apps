@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
-import { POLICY_GUIDANCE_HEADING } from "../../src/core/orchestrator/wakes";
+import { POLICY_GUIDANCE_HEADING } from "../../src/core/orchestrator/noticeWakes";
 import { openDatabase } from "../../src/core/storage/db";
 import { reportSummary } from "../../src/shared/feed";
 import type { TaskView } from "../../src/shared/tasks";

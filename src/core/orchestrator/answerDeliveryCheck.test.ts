@@ -7,7 +7,8 @@ import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { ANSWER_MISSING_REF, AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { askEndingOf } from "./askEnding";
-import { answerMissingWake, captainTurn } from "./wakes";
+import { answerMissingWake } from "./captainWakes";
+import { captainTurn } from "./wakes";
 
 /**
  * The check over its saved state: a restart (a second check over the same

@@ -9,32 +9,30 @@
 import { describe, expect, it } from "vitest";
 import type { InboxRow } from "../storage/inboxStore";
 import {
-  CUT_OFF_ONCE_PREFIX,
-  checkBackAsk,
-  checkBackAskOnce,
-  computerLeftOutOnce,
-  computerLeftOutWake,
-  conversationRestartOnce,
-  conversationRestartWake,
-  cutOffOnce,
   dependencyClosedOnce,
   dependencyClosedWake,
-  jobBoundOnce,
-  laneText,
-  laneTurnText,
+  waitMovedOnce,
+  waitMovedWake,
+} from "./deliveryWakes";
+import { checkBackAsk, checkBackAskOnce, jobBoundOnce, unnamedBackgroundWork } from "./jobWakes";
+import {
+  CUT_OFF_ONCE_PREFIX,
+  cutOffOnce,
   outageFailedWake,
   providerBackOnce,
   recoveredWake,
+  stillDownOnce,
+} from "./outageWakes";
+import { wakeBuiltOn } from "./reportWakes";
+import { computerLeftOutOnce, computerLeftOutWake, systemWaitWake } from "./startWakes";
+import { conversationRestartOnce, conversationRestartWake } from "./turnWakes";
+import {
+  laneText,
+  laneTurnText,
   renderWake,
   replyWordsSpan,
   rowAttachments,
-  stillDownOnce,
-  systemWaitWake,
-  unnamedBackgroundWork,
   type WakeEnvelope,
-  waitMovedOnce,
-  waitMovedWake,
-  wakeBuiltOn,
   withAttachmentsDropped,
   withAttachmentsKept,
   withGuidanceMark,

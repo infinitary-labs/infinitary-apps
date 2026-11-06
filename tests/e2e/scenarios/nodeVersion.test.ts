@@ -1,7 +1,8 @@
 import { expect, test } from "vitest";
 import { type BashOutcome, jobExitWake, SYNC_CAP_MS } from "../../../src/core/jobs/jobManager";
 import { JOB_BOUND_MS } from "../../../src/core/orchestrator/idleLadder";
-import { checkBackAsk, renderWake } from "../../../src/core/orchestrator/wakes";
+import { checkBackAsk } from "../../../src/core/orchestrator/jobWakes";
+import { renderWake } from "../../../src/core/orchestrator/wakes";
 import { createEventBashTool } from "../../../src/core/pi/bashTool";
 import { OPEN_CHANGE_TOOL } from "../../../src/core/pi/forgeTools";
 import type { ScenarioAnswer } from "../mockProvider";

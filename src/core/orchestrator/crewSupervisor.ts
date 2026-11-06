@@ -400,6 +400,7 @@ import {
 } from "../workspace/workspaceService";
 import { CREWMATE_ANSWER_ASK } from "./answerDelivery";
 import { type AskEnding, askEndingOf } from "./askEnding";
+import type { WakeChoice } from "./captainWakes";
 import { revisionNotice } from "./cardChanges";
 import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import type { CardInteractionEvidence } from "./cardEvidence";
@@ -469,6 +470,7 @@ import {
   withDeliveryLine,
   withoutOriginReadLine,
 } from "./intentBrief";
+import { checkBackAsk, checkBackAskOnce, unnamedBackgroundWork } from "./jobWakes";
 import { type MainBranchReading, MainCheckWatcher } from "./mainCheckWake";
 import {
   ASSESSMENT_BOUND_MS,
@@ -480,39 +482,35 @@ import {
   standingAuthorization,
 } from "./mergeAuthorization";
 import { type NamedModel, namedModelOf, namedModelWords } from "./namedModel";
+import { outageFailedWake } from "./outageWakes";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
+import {
+  PENDING_RESPONSES_END,
+  PENDING_RESPONSES_OPENING,
+  type ReviewVerdictFacts,
+  type WakeOpenReview,
+  wakeBuiltOn,
+} from "./reportWakes";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
 import { earlierHistory, reviewHistory } from "./reviewHistory";
 import { type RunReading, RunWatcher } from "./runWatch";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
 import { folderMissingText, pendingMergeLine } from "./settleWords";
+import { computerLeftOutWake, systemWaitWake } from "./startWakes";
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
 import type { Ticker } from "./ticker";
+import { conversationRestartWake, type OpenCallFact } from "./turnWakes";
 import {
-  checkBackAsk,
-  checkBackAskOnce,
-  computerLeftOutWake,
-  conversationRestartWake,
   laneText,
   laneTurnText,
-  type OpenCallFact,
-  outageFailedWake,
-  PENDING_RESPONSES_END,
-  PENDING_RESPONSES_OPENING,
-  type ReviewVerdictFacts,
   renderWake,
   replyWordsSpan,
   rowAttachments,
-  systemWaitWake,
   type TypedWake,
-  unnamedBackgroundWork,
   type WakeBody,
-  type WakeChoice,
   type WakeFacts,
-  type WakeOpenReview,
-  wakeBuiltOn,
   withAttachmentsDropped,
   withAttachmentsKept,
   withGuidanceMark,

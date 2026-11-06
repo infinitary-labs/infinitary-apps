@@ -12,6 +12,7 @@ import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import { keptWorkWords, type TaskWorkspace } from "../workspace/workspaceService";
 import { answersByShape, type ClosingPlace } from "./askEnding";
+import type { AnswerTaskClosedPayload } from "./captainWakes";
 import { escapeCardText } from "./cardText";
 import type { PrOutcome } from "./changeMerge";
 import type { KeptApproval } from "./keptApproval";
@@ -29,7 +30,6 @@ import {
   withCloseLine,
   withMergeLine,
 } from "./settleWords";
-import type { AnswerTaskClosedPayload } from "./wakes";
 
 /** A record's worktree facts in the shape the workspace service takes. */
 export function workspaceOf(record: TaskRecord): TaskWorkspace {

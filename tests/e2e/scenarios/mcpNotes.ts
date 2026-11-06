@@ -1,5 +1,5 @@
 import { INTEGRATIONS_COMMAND } from "../../../src/core/integrations";
-import { WRITE_ANSWERED_LEAD } from "../../../src/core/orchestrator/wakes";
+import { WRITE_ANSWERED_LEAD } from "../../../src/core/orchestrator/deliveryWakes";
 import { browserShellMessages } from "../browserScript";
 import type { Scenario } from "../mockProvider";
 import { calledTool, providerMessages, sinceLastUser } from "../providerRequest";

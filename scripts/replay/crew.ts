@@ -6,7 +6,7 @@
  */
 
 import type { CrewmateSpec } from "../../src/core/orchestrator/crewSession.ts";
-import { isCardClosedSteer } from "../../src/core/orchestrator/wakes.ts";
+import { isCardClosedSteer } from "../../src/core/orchestrator/captainWakes.ts";
 import { PI_CONTROL_PROFILE } from "../../src/core/pi/session.ts";
 import type { ModelSession, SessionEvent, SessionSpec } from "../../src/core/session/session.ts";
 import type { FmEvent } from "../../src/shared/events.ts";

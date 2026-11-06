@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { POSSIBLE_REPETITION_OPENING } from "../../../src/core/orchestrator/wakes";
+import { POSSIBLE_REPETITION_OPENING } from "../../../src/core/orchestrator/turnWakes";
 import { writeFilesCalls } from "../crewCards";
 import type { Scenario } from "../mockProvider";
 

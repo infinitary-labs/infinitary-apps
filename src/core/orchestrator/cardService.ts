@@ -66,9 +66,9 @@ import {
   hostCard,
   systemNoteCard,
 } from "./hostCards";
+import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { settleCardFacts } from "./settleCardFacts";
-import type { WakeCard } from "./wakes";
 
 /**
  * The card stack (the primitives review's P4 and P6, docs/card-threads.md):

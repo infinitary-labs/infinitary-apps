@@ -4,6 +4,7 @@ import {
   firstmatePauseTitle,
   RECHECK_ALLOWANCE_LABEL,
 } from "../../src/core/orchestrator/hostCards";
+import { SEAT_MOVED_OPENING } from "../../src/core/orchestrator/noticeWakes";
 import {
   ALLOWANCE_CHECKING_WORDS,
   allowanceSpentWords,
@@ -12,7 +13,6 @@ import {
   seatPausedLine,
   signedOutSentence,
 } from "../../src/core/orchestrator/seat";
-import { SEAT_MOVED_OPENING } from "../../src/core/orchestrator/wakes";
 import { catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import {

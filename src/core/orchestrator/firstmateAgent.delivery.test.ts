@@ -28,7 +28,7 @@ import { parseTasksQueryText } from "../pi/taskTools";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { taskResolutionBody } from "../tasks/taskQuery";
 import { ANSWER_ONLY_REFUSAL } from "./answerDelivery";
-import { ANSWER_MISSING_OPENING } from "./wakes";
+import { ANSWER_MISSING_OPENING } from "./captainWakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).

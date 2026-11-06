@@ -16,8 +16,8 @@ import { TaskService } from "../tasks/taskService";
 import { revisionLinks } from "./cardNavigation";
 import type { CardServiceHost, CardStack } from "./cardService";
 import type { CardThreads } from "./cardThreads";
+import { waitingCardWords } from "./idleWakes";
 import { emittedSettleFacts } from "./settleCardFacts";
-import { waitingCardWords } from "./wakes";
 
 /**
  * A card an agent emits (docs/card-threads.md): the first mate's through its

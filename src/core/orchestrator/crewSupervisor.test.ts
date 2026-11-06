@@ -250,26 +250,12 @@ import {
 } from "./settleWords";
 import { Ticker } from "./ticker";
 import { renderReviewHistory } from "./reviewHistory";
-import {
-  GUIDANCE_MARK_WORDS,
-  IDLE_ANSWER_NUDGE_TEXT,
-  IDLE_NUDGE_TEXT,
-  isCardClosedSteer,
-  idleNoteNudgeText,
-  RESTART_REPLAY_NOTE,
-  PENDING_RESPONSES_END,
-  PENDING_RESPONSES_OPENING,
-  POLICY_GUIDANCE_HEADING,
-  REVIEW_NEW_HEAD_NEXT,
-  REVIEW_PASSED_NEXT,
-  REVIEWER_IDLE_NEXT,
-  renderWake,
-  reviewFindingsNext,
-  THREAD_STEER_PREAMBLE,
-  WRITE_ANSWERED_LEAD,
-  CHECK_OBSERVATIONS_LEAD,
-  type WakeFacts,
-} from "./wakes";
+import { isCardClosedSteer, THREAD_STEER_PREAMBLE } from "./captainWakes";
+import { WRITE_ANSWERED_LEAD, CHECK_OBSERVATIONS_LEAD } from "./deliveryWakes";
+import { IDLE_ANSWER_NUDGE_TEXT, IDLE_NUDGE_TEXT, idleNoteNudgeText } from "./idleWakes";
+import { POLICY_GUIDANCE_HEADING } from "./noticeWakes";
+import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, REVIEW_NEW_HEAD_NEXT, REVIEW_PASSED_NEXT, REVIEWER_IDLE_NEXT, reviewFindingsNext } from "./reportWakes";
+import { GUIDANCE_MARK_WORDS, RESTART_REPLAY_NOTE, renderWake, type WakeFacts } from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).

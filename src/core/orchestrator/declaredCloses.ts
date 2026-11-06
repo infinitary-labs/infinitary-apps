@@ -5,13 +5,13 @@ import type { TaskRecord } from "../storage/taskStore";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import { carriedOnClose, TaskService } from "../tasks/taskService";
 import { taskResultResponse } from "./answerTaskResponse";
+import type { AnswerTaskClosedPayload } from "./captainWakes";
 import { cardEmitter } from "./cardEmit";
 import type { SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { describeStatus, type SettleService } from "./settleService";
 import { changeName } from "./settleWords";
 import { type TaskClosing, workspaceOf } from "./taskClose";
-import type { AnswerTaskClosedPayload } from "./wakes";
 
 /** Whether two tasks deliver through the same pull request or pushed branch. */
 function sameChange(left: TaskRecord, right: TaskRecord): boolean {

@@ -5,14 +5,14 @@ import {
   type ServedSegmentInput,
 } from "@shared/servedFrame";
 import { decode } from "@toon-format/toon";
+import type { WakeChoice } from "../../src/core/orchestrator/captainWakes";
 import {
   PENDING_RESPONSES_END,
   PENDING_RESPONSES_OPENING,
   REQUESTED_RESPONSE_OPENING,
   RESPONSE_MISSING_OPENING,
-  renderWake,
-  type WakeChoice,
-} from "../../src/core/orchestrator/wakes";
+} from "../../src/core/orchestrator/reportWakes";
+import { renderWake } from "../../src/core/orchestrator/wakes";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../../src/core/storage/sessionReader";
 import { type CheckSnapshot, checkSnapshotSchema } from "../../src/shared/checkSnapshot";
 import type { ScriptedCall } from "../helpers/scriptedCalls";

@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
 import { FORM_RESEND_CAPTAIN_WORDS } from "../../src/core/browser/taskBrowsers";
-import { BROWSER_GONE_OPENING, BROWSER_RETURNED_OPENING } from "../../src/core/orchestrator/wakes";
+import {
+  BROWSER_GONE_OPENING,
+  BROWSER_RETURNED_OPENING,
+} from "../../src/core/orchestrator/captainWakes";
 import { CREWMATE_BROWSER_LINE } from "../../src/core/pi/piResources";
 import {
   DRIVER_WORDS,

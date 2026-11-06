@@ -1,4 +1,4 @@
-import { MERGE_CONTINUED_LEAD } from "../../../src/core/orchestrator/wakes";
+import { MERGE_CONTINUED_LEAD } from "../../../src/core/orchestrator/deliveryWakes";
 import { completionCardBody } from "../../helpers/completionCard";
 import type { ScriptedArgs } from "../../helpers/scriptedCalls";
 import type { Scenario } from "../mockProvider";

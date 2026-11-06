@@ -1,4 +1,4 @@
-import { FINISHED_REPORT_WORDS } from "../../../src/core/orchestrator/wakes";
+import { FINISHED_REPORT_WORDS } from "../../../src/core/orchestrator/reportWakes";
 import type { Scenario } from "../mockProvider";
 import { calledTool } from "../providerRequest";
 

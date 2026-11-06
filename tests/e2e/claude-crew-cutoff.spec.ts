@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { reportSummary } from "@shared/feed";
-import { cutOffOpening, providerBackOpening } from "../../src/core/orchestrator/wakes";
+import { cutOffOpening, providerBackOpening } from "../../src/core/orchestrator/outageWakes";
 import { heldSteerText } from "../../src/core/pi/crewTools";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { scratchDir } from "../helpers/scratchDirs";

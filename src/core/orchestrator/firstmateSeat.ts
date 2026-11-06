@@ -22,6 +22,7 @@ import { deriveModelForProvider, preflightModel, resolveModel } from "./firstmat
 import type { buildFirstmateTools } from "./firstmateTools";
 import { FIRSTMATE_MOVE_BACK_CARD_ID, type FirstmatePauseCard } from "./hostCards";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
+import type { SeatMoveReason, WakeSeat } from "./noticeWakes";
 import {
   ALLOWANCE_CHECKING_WORDS,
   allowanceCheckedWords,
@@ -33,7 +34,6 @@ import {
   seatSessionSpec,
 } from "./seat";
 import { digestFor, seatIdentity } from "./seatDigest";
-import type { SeatMoveReason, WakeSeat } from "./wakes";
 
 const AUTH_CARD_ID = "card-fm-auth";
 

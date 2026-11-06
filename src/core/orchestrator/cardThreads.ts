@@ -22,8 +22,8 @@ import { buildEmittedCard, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { cardMutationText } from "./cardMutationText";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
 import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardService";
+import { waitingCardWords } from "./idleWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
-import { waitingCardWords } from "./wakes";
 
 /**
  * A card's thread and every write on someone else's card

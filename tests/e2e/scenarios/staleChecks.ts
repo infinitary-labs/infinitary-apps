@@ -1,4 +1,4 @@
-import { CHECK_OBSERVATIONS_LEAD } from "../../../src/core/orchestrator/wakes";
+import { CHECK_OBSERVATIONS_LEAD } from "../../../src/core/orchestrator/deliveryWakes";
 import { completionCardBody } from "../../helpers/completionCard";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import { type Scenario, SPAWN_PROMPT_MARKER } from "../mockProvider";

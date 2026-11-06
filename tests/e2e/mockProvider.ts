@@ -10,9 +10,9 @@ import type { ServedSegment } from "@shared/servedFrame";
 import {
   ANSWER_MISSING_ENDED_OPENING,
   ANSWER_MISSING_OPENING,
-  FINISHED_REPORT_WORDS,
-  WELCOME_WAKE_WORDS,
-} from "../../src/core/orchestrator/wakes";
+} from "../../src/core/orchestrator/captainWakes";
+import { WELCOME_WAKE_WORDS } from "../../src/core/orchestrator/noticeWakes";
+import { FINISHED_REPORT_WORDS } from "../../src/core/orchestrator/reportWakes";
 import { FIRSTMATE_PERSONA, KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../../src/core/storage/sessionReader";
 import {

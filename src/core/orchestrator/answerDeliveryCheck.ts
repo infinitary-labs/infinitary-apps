@@ -12,7 +12,7 @@ import {
   refusalOf,
 } from "./answerDelivery";
 import type { AskChain, AskEnding } from "./askEnding";
-import { answerMissingWake } from "./wakes";
+import { answerMissingWake } from "./captainWakes";
 
 /**
  * The inbox ref the answer-missing wake rides. The wake's once-name

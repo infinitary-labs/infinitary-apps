@@ -2,34 +2,38 @@ import { describe, expect, it } from "vitest";
 import { ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
 import { openInMemoryDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
-import { CHECK_DIAGNOSIS_NEXT } from "./checkRepair";
-import { idleStallWays } from "./holds";
-import { REVIEW_FIX_RULES, renderRigorSection } from "./intentBrief";
 import {
   answerMissingWake,
   answerRepairOnce,
   BROWSER_GONE_OPENING,
-  captainTurn,
-  ciCapWake,
-  drainWakes,
+  isCardClosedSteer,
+} from "./captainWakes";
+import { CHECK_DIAGNOSIS_NEXT } from "./checkRepair";
+import { crewHoldWays, idleStallWays } from "./holds";
+import {
   IDLE_ANSWER_NUDGE_TEXT,
   IDLE_NUDGE_TEXT,
   IDLE_STEP_NUDGE_TEXT,
   IDLE_THREAD_NUDGE_TEXT,
   idleNudge,
-  isCardClosedSteer,
-  jobBoundWake,
-  providerBackWake,
-  providerCutOffWake,
+} from "./idleWakes";
+import { REVIEW_FIX_RULES, renderRigorSection } from "./intentBrief";
+import { jobBoundWake } from "./jobWakes";
+import { providerBackWake, providerCutOffWake, stillDownWake } from "./outageWakes";
+import {
   REVIEW_NEW_HEAD_NEXT,
   REVIEW_PASSED_NEXT,
   REVIEWER_IDLE_NEXT,
-  renderWake,
-  reviewCapWake,
   reviewFindingsNext,
   STALL_RECOVERY_GUIDANCE,
-  stillDownWake,
+} from "./reportWakes";
+import {
+  captainTurn,
+  drainWakes,
+  renderWake,
+  type TypedWake,
   type WakeFacts,
+  type WakeTask,
 } from "./wakes";
 
 describe("renderWake", () => {
@@ -384,10 +388,14 @@ describe("renderWake", () => {
     "idle-ci-cap",
     "idle-review-cap",
   ] as const)("serves a queued %s as history without an active count hold", (kind) => {
-    const task = { id: "t1", title: "Fix the pin" };
-    const wake =
+    const task: WakeTask = { id: "t1", title: "Fix the pin" };
+    // The wakes an older build queued, as its round-cap builders made them.
+    const wake: TypedWake =
       kind === "ci-cap"
-        ? ciCapWake(task, { rounds: 3, cap: 3, headSha: "89abcdef0123" })
+        ? {
+            facts: { kind: "ci-cap", task, rounds: 3, cap: 3, head: "89abcdef0123" },
+            ways: crewHoldWays(task.id, task, undefined, true),
+          }
         : kind.startsWith("idle-")
           ? {
               facts: {
@@ -398,20 +406,27 @@ describe("renderWake", () => {
                 wakes: 1,
               },
             }
-          : reviewCapWake(task, {
-              rounds: 3,
-              cap: 2,
-              ...(kind === "delegated-review-cap" ? { owner: "firstmate" as const } : {}),
-              findings: {
-                kind: "review-verdict",
-                task: { id: "r1", title: "Review" },
-                builder: task,
-                crewmate: "crewmate 2",
-                verdict: "findings",
-                excerpt: "F1 racy",
-                cards: [],
+          : {
+              facts: {
+                kind: "review-cap",
+                task,
+                rounds: 3,
+                cap: 2,
+                findings: {
+                  kind: "review-verdict",
+                  task: { id: "r1", title: "Review" },
+                  builder: task,
+                  crewmate: "crewmate 2",
+                  verdict: "findings",
+                  excerpt: "F1 racy",
+                  cards: [],
+                },
+                owner: kind === "delegated-review-cap" ? "firstmate" : "captain",
               },
-            });
+              ...(kind === "delegated-review-cap"
+                ? {}
+                : { ways: crewHoldWays(task.id, task, undefined, true) }),
+            };
     const body = renderWake(wake);
     expect(body).toContain(task.id);
     expect(body).toContain("count holds are retired");

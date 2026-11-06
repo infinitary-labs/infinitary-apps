@@ -16,7 +16,7 @@ import {
 } from "../../../tests/helpers/scriptedClaudeContract";
 import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
 import { JOB_BOUND_MS } from "../orchestrator/idleLadder";
-import { unnamedBackgroundWork } from "../orchestrator/wakes";
+import { unnamedBackgroundWork } from "../orchestrator/jobWakes";
 import { crewmateSessionsDir } from "../paths";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import type { CrewmateTool } from "../session/tools";

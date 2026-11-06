@@ -11,14 +11,14 @@ import { zstdCompressSync } from "node:zlib";
 import { frameServedInput } from "@shared/servedFrame";
 import { encode } from "@toon-format/toon";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DELIVERY_COMPLETE } from "../src/core/orchestrator/contextDelivery";
-import { BUILD_IN_PLACE_OPENING } from "../src/core/orchestrator/intentBrief";
 import {
   ANSWER_MISSING_ENDED_OPENING,
   ANSWER_MISSING_OPENING,
-  FINISHED_REPORT_WORDS,
-  WELCOME_WAKE_WORDS,
-} from "../src/core/orchestrator/wakes";
+} from "../src/core/orchestrator/captainWakes";
+import { DELIVERY_COMPLETE } from "../src/core/orchestrator/contextDelivery";
+import { BUILD_IN_PLACE_OPENING } from "../src/core/orchestrator/intentBrief";
+import { WELCOME_WAKE_WORDS } from "../src/core/orchestrator/noticeWakes";
+import { FINISHED_REPORT_WORDS } from "../src/core/orchestrator/reportWakes";
 import { FIRSTMATE_PERSONA, KIND_CLASSIFIER_OPENING } from "../src/core/pi/piResources";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../src/core/storage/sessionReader";
 import { WRITE_ASK_ANSWER_MARKER } from "./e2e/apiWriteCases";

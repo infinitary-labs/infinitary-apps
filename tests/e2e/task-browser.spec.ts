@@ -7,7 +7,7 @@ import { type ElectronApplication, expect, type Locator, type Page, test } from 
 import type { TaskDetail } from "@shared/tasks";
 import { BROWSER_COMMAND } from "../../src/core/browser/commandWords";
 import { REF_FROM_BEFORE_HANDBACK, REF_FROM_EARLIER_PAGE } from "../../src/core/browser/outline";
-import { BROWSER_RETURNED_OPENING } from "../../src/core/orchestrator/wakes";
+import { BROWSER_RETURNED_OPENING } from "../../src/core/orchestrator/captainWakes";
 import { MAXIMIZE_LABEL, RESTORE_LABEL } from "../../src/renderer/src/design/cards/cardSizeWords";
 import { CREWMATE_TAB_LABEL } from "../../src/shared/crewTranscript";
 import { HERE } from "../../src/shared/deviceNames";

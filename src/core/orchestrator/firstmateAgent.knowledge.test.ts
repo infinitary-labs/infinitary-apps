@@ -15,8 +15,8 @@ import {
   toolsOf,
 } from "../../../tests/helpers/firstmateHarness";
 import { ANSWER_ONLY_REFUSAL } from "./answerDelivery";
+import { ANSWER_MISSING_OPENING } from "./captainWakes";
 import { idleStallWays } from "./holds";
-import { ANSWER_MISSING_OPENING } from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).

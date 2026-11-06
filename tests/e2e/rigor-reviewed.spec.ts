@@ -5,7 +5,7 @@ import {
   openReviewText,
   REVIEW_PASSED_NEXT,
   reviewFindingsNext,
-} from "../../src/core/orchestrator/wakes";
+} from "../../src/core/orchestrator/reportWakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";

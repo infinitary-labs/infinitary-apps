@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { ANSWER_NOTICE_TITLE } from "../../src/core/orchestrator/answerDelivery";
-import { ANSWER_MISSING_OPENING } from "../../src/core/orchestrator/wakes";
+import { ANSWER_MISSING_OPENING } from "../../src/core/orchestrator/captainWakes";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";

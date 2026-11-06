@@ -1,4 +1,4 @@
-import { SETUP_CARD_FAILED_WORDS } from "../../../src/core/orchestrator/wakes";
+import { SETUP_CARD_FAILED_WORDS } from "../../../src/core/orchestrator/captainWakes";
 import type { Scenario } from "../mockProvider";
 import { sinceLastUser } from "../providerRequest";
 

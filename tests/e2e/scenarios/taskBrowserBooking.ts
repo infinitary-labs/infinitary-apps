@@ -3,7 +3,7 @@ import {
   BROWSER_GONE_OPENING,
   BROWSER_RETURNED_OPENING,
   CARD_CLOSED_STEER_PREFIX,
-} from "../../../src/core/orchestrator/wakes";
+} from "../../../src/core/orchestrator/captainWakes";
 import { BROWSER_PAY_STEP, BROWSER_SIGN_IN_STEP } from "../../../src/core/pi/cardTool";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import { browser, firstSentence, lookingAgain, refOf, toolAnswers } from "../browserScript";

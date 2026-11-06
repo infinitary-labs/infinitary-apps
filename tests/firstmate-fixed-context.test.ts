@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { REVIEW_NEW_HEAD_NEXT, renderWake, type WakeFacts } from "../src/core/orchestrator/wakes";
+import { REVIEW_NEW_HEAD_NEXT } from "../src/core/orchestrator/reportWakes";
+import { renderWake, type WakeFacts } from "../src/core/orchestrator/wakes";
 import { SEQUENCES_SEED } from "../src/core/personal/sequencesSkill";
 import {
   crewmateOwesCompletionRefusal,

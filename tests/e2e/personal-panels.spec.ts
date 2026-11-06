@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 import {
   ANSWER_MISSING_ENDED_OPENING,
   ANSWER_MISSING_OPENING,
-} from "../../src/core/orchestrator/wakes";
+} from "../../src/core/orchestrator/captainWakes";
 import { personalPanelRemovedLine } from "../../src/core/personal/panelLines";
 import { mountLine } from "../../src/core/personal/panelMounts";
 import { MANAGED_FILES } from "../../src/core/personal/workspace";

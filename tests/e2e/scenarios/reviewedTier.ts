@@ -1,5 +1,5 @@
 import { REVIEW_BRIEF_OPENING } from "../../../src/core/orchestrator/intentBrief";
-import { REVIEW_PASSED_NEXT } from "../../../src/core/orchestrator/wakes";
+import { REVIEW_PASSED_NEXT } from "../../../src/core/orchestrator/reportWakes";
 import { PERSONAL_WORKSPACE_NAME } from "../../../src/core/paths";
 import { checkSnapshotSummary } from "../../../src/shared/checkSnapshot";
 import type { KeptValidationInput } from "../../../src/shared/liveValidation";

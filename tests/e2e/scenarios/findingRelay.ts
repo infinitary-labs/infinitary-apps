@@ -1,4 +1,4 @@
-import { HELD_WORK_WORDS } from "../../../src/core/orchestrator/wakes";
+import { HELD_WORK_WORDS } from "../../../src/core/orchestrator/reportWakes";
 import type { Scenario, ScenarioAnswer } from "../mockProvider";
 import { calledTool, sinceLastUser } from "../providerRequest";
 

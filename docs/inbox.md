@@ -184,7 +184,7 @@ Automation is the one sender that uses them (`docs/automation.md`, "Deliveries")
 ## The wake envelope
 
 The primitives review's P3 (captain-approved 2026-09-26): a wake carries typed facts and the ways out, and is rendered to prose once, where it is served.
-The inbox row is the envelope `{v, origin, ref, facts, ways?, text?}`: `origin` and `ref` are the existing columns (the origin is the wake's kind for the reader), and the `payload` column holds `{v, facts, ways}` for a wake whose family has moved onto typed facts, or `{v, text}` for prose (`src/core/orchestrator/wakes.ts`; the store's side is `InboxStore`).
+The inbox row is the envelope `{v, origin, ref, facts, ways?, text?}`: `origin` and `ref` are the existing columns (the origin is the wake's kind for the reader), and the `payload` column holds `{v, facts, ways}` for a wake whose family has moved onto typed facts, or `{v, text}` for prose (`src/core/orchestrator/wakes.ts`, whose `WAKE_WORDS` gathers each family file's words, such as `idleWakes.ts`; the store's side is `InboxStore`).
 
 - **One renderer.**
   `renderWake` turns an envelope into its prose, and nothing else composes a wake's sentence: the one drain (`drainWakes`, which the first mate's `servedTurn` frames row by row and a crewmate's lane joins with `laneText`), the steer path's live steer, and the whose-turn ledger row, whose text the replay scorer matches against the served turn.

@@ -196,7 +196,7 @@ One bound sits under the order, mechanical rather than judged: Careful's guidanc
 
 The dispatch answer is stamped on `WorkShape.rigor` as provenance, while `effectiveTaskPolicies` supplies current care to `crew_status`, crew context, completion facts, briefs and guards.
 The task detail keeps dispatch `rigor` and publishes current `policies` separately; Details displays the latter.
-The brief names current care through `renderRigorSection` - the name and a pointer to the care guidance served with the instructions, nothing of what it asks - and a later policy notice carries the sections the new facts select that the brief did not (`POLICY_GUIDANCE_HEADING`, `wakes.ts`), superseding the brief without changing its scope.
+The brief names current care through `renderRigorSection` - the name and a pointer to the care guidance served with the instructions, nothing of what it asks - and a later policy notice carries the sections the new facts select that the brief did not (`POLICY_GUIDANCE_HEADING`, `noticeWakes.ts`), superseding the brief without changing its scope.
 A queued row is told the rigor of the moment it starts.
 The kind classifier never sees the section - it runs on the intent before the mint - and a row dispatched before phase 2 reads as `quick`, which is what the replay gate and the corpus export treat a recorded spawn as.
 
@@ -274,7 +274,7 @@ PR-8 stands (board decision): a project that runs no checks (a PR that reports z
 A review is an independent read of a change at a version, commissioned on request at any care (INF-1875).
 Careful's guidance (`resources/runbooks/care/careful.json` and its careful-change skill) orders it BEFORE the pull request (the no-mistakes ordering, captain-approved 2026-09-19), so fix rounds are local commits rather than push + CI cycles; the host holds neither the push nor the merge on it (INF-1876): a review task is its builder's child and carries no `blocks` edge onto it.
 The host owns the derivation, the reviewer's brief and the typed record; the first mate owns the routing of findings, by instruction (contract v3.5).
-Since FI3-566 (cut C) those instructions sit where each step arises, the way `CHECK_DIAGNOSIS_NEXT` rides a failed check: the first mate's core says when to commission a review and to carry the captain's latest decision into every fix and review steer, each review wake names the step it asks for, and the findings wake carries how to fix a finding (`REVIEW_FIX_RULES`, `wakes.ts`).
+Since FI3-566 (cut C) those instructions sit where each step arises, the way `CHECK_DIAGNOSIS_NEXT` rides a failed check: the first mate's core says when to commission a review and to carry the captain's latest decision into every fix and review steer, each review wake names the step it asks for, and the findings wake carries how to fix a finding (`REVIEW_FIX_RULES` in `reviewFindingsNext`, `reportWakes.ts`).
 
 1. **A Careful builder finishes locally and emits no card.**
    The Careful section has it commit its work on its branch, report under the five headings with `needs_firstmate` asking for the review, and neither push, open a PR nor emit a completion card until the first mate says so; the host refuses none of those by the care's name, so an early card is the first mate's to question, not the host's to refuse (`resources/runbooks/care/guide.md`).

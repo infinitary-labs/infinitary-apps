@@ -695,13 +695,13 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
 
 ## A main failure's wake
 
-A pull request held because a check also fails on the default branch is woken when that branch's own run of the check passes, without waiting for the named task to close (INF-833 Fix 4).
+A pull request held because a check also fails on the default branch hears that branch's own finished checks, without waiting for the named task to close (INF-833 Fix 4), and its crewmate judges whether they clear the wait.
 The standing baseline diagnoses name the checks, and so does the recorded default-branch run of each check that fails at the change's current version while a completion offer stands at that version (`TaskDelivery.mainChecks` and `completionOffers`; `standingBaselineChecks` in `src/core/tasks/dependencyWaits.ts`), so a merge card that says a check fails on main too is watched without a diagnosis, and a crewmate still driving its checks hears no wake about main.
 On the check watch's tick, one read per project asks the forge for the default branch's checks (`Forge.branchChecks`, `ChangeChecks.readDefaultBranchChecks`).
-A check has passed only when every item of that exact name on that commit is success: a skip, a pending rerun, a failure or an absent name does not wake.
-Each waiting task hears one `main-check-passed` steer per check and commit, through the ordinary steer path, telling it to bring the change up to date and read the checks again.
-The inbox records `main-check-passed:<check>:<sha>`, so a restart does not send that commit's wake twice, and a later commit that passes does.
-The named task's close still resumes the crewmate if the run has not passed.
+A reading wakes nobody until it is final: an incomplete reading, a read problem, no checks or any pending check sends nothing (`MainCheckWatcher`, `src/core/orchestrator/mainCheckWake.ts`).
+Each waiting task then hears one `main-check-observed` steer per commit, through the ordinary steer path, naming the commit and each check's state; the host declares no readiness, and the crewmate judges whether the reading clears its wait.
+The inbox records `main-check-finished:<sha>`, so a restart does not send that commit's wake twice, and a later commit's finished reading does.
+The named task's close still resumes the crewmate.
 A host without `branchChecks` — a plain Git host, and GitLab until it can read a branch's checks apart from a merge request — keeps that close as the only resume.
 A failed read waits out the check watch's slow pause and wakes nobody; on a spent hourly allowance it waits until the reset GitHub named, when that is later.
 The same branch reading answers a crewmate's own failed check at once: a reading of the task's pull request that finds a check red records the default branch's newest run of it as evidence ("Check facts and crew judgment", INF-1915 fix 1), so the diagnosis a `baseline-blocked` classification needs starts from a typed fact rather than a second read.

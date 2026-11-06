@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { POSSIBLE_REPETITION_OPENING } from "../../src/core/orchestrator/wakes";
+import { POSSIBLE_REPETITION_OPENING } from "../../src/core/orchestrator/turnWakes";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { providerMessages } from "./providerRequest";

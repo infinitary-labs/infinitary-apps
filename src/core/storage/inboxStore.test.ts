@@ -3,21 +3,21 @@ import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { freezeWake } from "../freeze/freezeRecorder";
 import { idleStallWays } from "../orchestrator/holds";
+import { IDLE_NUDGE_TEXT, idleNudge } from "../orchestrator/idleWakes";
+import { jobBoundOnce, jobBoundWake } from "../orchestrator/jobWakes";
 import {
   CUT_OFF_ONCE_PREFIX,
   cutOffOnce,
-  IDLE_NUDGE_TEXT,
-  idleNudge,
-  jobBoundOnce,
-  jobBoundWake,
-  laneText,
-  laneTurnText,
   providerBackWake,
   providerCutOffWake,
-  RESTART_REPLAY_NOTE,
-  renderWake,
   stillDownOnce,
   stillDownWake,
+} from "../orchestrator/outageWakes";
+import {
+  laneText,
+  laneTurnText,
+  RESTART_REPLAY_NOTE,
+  renderWake,
   type TypedWake,
 } from "../orchestrator/wakes";
 import {

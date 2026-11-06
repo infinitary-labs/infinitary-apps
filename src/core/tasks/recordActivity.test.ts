@@ -4,12 +4,8 @@ import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_BEFORE_START, DROPPED_BEFORE_START_ACTIVITY } from "@shared/recordDrop";
 import { type TaskEventView, taskEventKindSchema } from "@shared/tasks";
 import { describe, expect, it } from "vitest";
-import {
-  CREWMATE_TAB_STEER_LEAD,
-  renderWake,
-  replyWordsSpan,
-  type TypedWake,
-} from "../orchestrator/wakes";
+import { CREWMATE_TAB_STEER_LEAD } from "../orchestrator/captainWakes";
+import { renderWake, replyWordsSpan, type TypedWake } from "../orchestrator/wakes";
 import { ACTIVITY_PLACES, condenseActivity, reportHeadline } from "./recordActivity";
 
 let id = 0;

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "wakes-split",
+      "reason": "Internal: the wake words split into a core with one map of every kind's words, which the compiler checks, and nine files by family, with four builders nothing called removed and an unreachable branch dropped; every wake's words stay the same and nothing a person sees changes."
+    }
+  ]
+}

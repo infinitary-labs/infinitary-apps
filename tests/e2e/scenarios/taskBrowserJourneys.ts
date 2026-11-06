@@ -1,4 +1,4 @@
-import { BROWSER_RETURNED_OPENING } from "../../../src/core/orchestrator/wakes";
+import { BROWSER_RETURNED_OPENING } from "../../../src/core/orchestrator/captainWakes";
 import { BROWSER_SIGN_IN_STEP } from "../../../src/core/pi/cardTool";
 import { HERE } from "../../../src/shared/deviceNames";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";

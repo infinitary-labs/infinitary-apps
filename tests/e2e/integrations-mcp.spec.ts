@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { WRITE_ANSWERED_LEAD } from "../../src/core/orchestrator/wakes";
+import { WRITE_ANSWERED_LEAD } from "../../src/core/orchestrator/deliveryWakes";
 import { ACTIONS } from "../../src/shared/actions";
 import {
   INTEGRATION_APPROVAL_WORDS,

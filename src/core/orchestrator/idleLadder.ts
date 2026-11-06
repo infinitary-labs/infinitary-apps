@@ -15,33 +15,28 @@ import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import { cardEmitter } from "./cardEmit";
 import { escapeCardText } from "./cardText";
-import { crewHoldWays, idleStallWays } from "./holds";
-import { type IdleRule, type IdleTurn, idleTurn, type Witnesses } from "./reportSort";
 import {
-  CUT_OFF_ONCE_PREFIX,
-  ciCapWake,
-  cutOffOnce,
   dependencyClosedOnce,
   dependencyClosedWake,
-  idleNudge,
-  jobBoundOnce,
-  jobBoundWake,
+  waitMovedOnce,
+  waitMovedWake,
+} from "./deliveryWakes";
+import { crewHoldWays, idleStallWays } from "./holds";
+import { idleNudge, type WakeNote } from "./idleWakes";
+import { jobBoundOnce, jobBoundWake } from "./jobWakes";
+import {
+  CUT_OFF_ONCE_PREFIX,
+  cutOffOnce,
   providerBackOnce,
   providerBackWake,
   providerCutOffWake,
-  type ReviewVerdictFacts,
   recoveredWake,
-  reviewCapWake,
   stillDownOnce,
   stillDownWake,
-  type TypedWake,
-  type WakeFacts,
-  type WakeNote,
-  type WakeTask,
-  waitMovedOnce,
-  waitMovedWake,
-  wakeBuiltOn,
-} from "./wakes";
+} from "./outageWakes";
+import { type IdleRule, type IdleTurn, idleTurn, type Witnesses } from "./reportSort";
+import { wakeBuiltOn } from "./reportWakes";
+import type { TypedWake, WakeFacts, WakeTask } from "./wakes";
 
 /**
  * The idle ladder and the holds (captain-approved 2026-09-26 and the

@@ -63,7 +63,8 @@ function fixture() {
   const cards = {
     retireTaskCards: vi.fn(),
     releaseNotes: vi.fn(),
-    showHeld: vi.fn(),
+    releaseMerged: vi.fn(),
+    drawsMergedLine: () => false,
     withdrawHostCard: vi.fn(),
     values: () => [],
     stored: () => undefined,

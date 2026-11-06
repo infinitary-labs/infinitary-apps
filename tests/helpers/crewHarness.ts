@@ -270,6 +270,7 @@ export type SetupExtras = {
     input: import("@shared/changePresentation").OpenChangeInput,
   ) => Promise<string>;
   completionPresentation?: CrewSupervisorOptions["completionPresentation"];
+  validateLocalStory?: CrewSupervisorOptions["validateLocalStory"];
   checkChange?: (taskId: string, input?: CheckChangeInput) => Promise<string>;
   readWorkflow?: CrewSupervisorOptions["readWorkflow"];
   downloadArtifact?: CrewSupervisorOptions["downloadArtifact"];
@@ -556,6 +557,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.completionPresentation
       ? { completionPresentation: extras.completionPresentation }
       : {}),
+    ...(extras.validateLocalStory ? { validateLocalStory: extras.validateLocalStory } : {}),
     ...(extras.checkChange ? { checkChange: extras.checkChange } : {}),
     ...(extras.readWorkflow ? { readWorkflow: extras.readWorkflow } : {}),
     ...(extras.downloadArtifact ? { downloadArtifact: extras.downloadArtifact } : {}),

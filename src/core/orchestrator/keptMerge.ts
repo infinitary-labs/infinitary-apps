@@ -124,7 +124,7 @@ export class KeptMerge {
         if (!unattended && review) this.host.mergeContinued?.(taskId, review, outcome);
         return outcome;
       }
-      this.settle.finishContinued(taskId, review, result, "captain");
+      this.settle.finishContinued(taskId, review, result);
       return { ...result, continued: true };
     } finally {
       this.locks.settlingTasks.delete(taskId);
@@ -328,16 +328,11 @@ export class KeptMerge {
       const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
       // A kept request_merge approval merged a continuing change (INF-2490).
       if (authorization?.review) {
-        this.settle.finishContinued(
-          taskId,
-          authorization.review,
-          {
-            ok: true,
-            text: `Merged ${changeName(this.host.tasks.get(taskId), pull.number)} on ${placeOf(this.host.repos, this.host.tasks.get(taskId))}. The task stays open.`,
-            receipt: mergedReceipt(pull),
-          },
-          "captain",
-        );
+        this.settle.finishContinued(taskId, authorization.review, {
+          ok: true,
+          text: `Merged ${changeName(this.host.tasks.get(taskId), pull.number)} on ${placeOf(this.host.repos, this.host.tasks.get(taskId))}. The task stays open.`,
+          receipt: mergedReceipt(pull),
+        });
         return;
       }
       this.approvals.consumeStanding(taskId, mergedReceipt(pull));
@@ -353,7 +348,7 @@ export class KeptMerge {
           ciWatch: undefined,
         });
         const continued = { ok: true, text, continued: true, stillOpen };
-        this.settle.finishContinued(taskId, undefined, continued, "captain");
+        this.settle.finishContinued(taskId, undefined, continued);
         this.settle.reportOutcome(taskId, title, "merge-pr", undefined, continued, undefined);
         return;
       }

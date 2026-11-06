@@ -58,6 +58,11 @@ export function carriesChange(record: TaskRecord, repo: ChangeRepo | undefined):
 
 const MERGED_CLOSES = new Set<string>(["merged", "landed", "released"]);
 
+/** Whether a task's close is the one that merged its change. */
+export function mergingClose(reason: string | null | undefined): boolean {
+  return MERGED_CLOSES.has(reason ?? "");
+}
+
 /**
  * The task's current change (INF-2490, `primitives/changes.md`): the pull
  * request a review selected on another branch, else the task's own. The
@@ -475,15 +480,25 @@ function receiptOf(
     Boolean(finished?.landedMode) ||
     MERGED_CLOSES.has(closing?.closedReason ?? "");
   if (merged) {
-    const head = authorization?.receipt?.head ?? reviewed?.head ?? delivery?.headSha;
+    const head =
+      authorization?.receipt?.head ?? reviewed?.head ?? finished?.landedHead ?? delivery?.headSha;
     const sha = finished?.mergedSha ?? authorization?.receipt?.sha ?? reviewed?.sha;
     return {
       outcome: "merged",
       ...(closing?.closedReason ? { reason: closing.closedReason } : {}),
       ...(head ? { head } : {}),
       ...(sha ? { sha } : {}),
-      ...(authorization?.receipt ? { by: "captain" as const } : {}),
-      at: authorization?.receipt?.at ?? reviewed?.at ?? closing?.closedAt ?? null,
+      ...(authorization?.receipt || reviewed?.by === "captain" ? { by: "captain" as const } : {}),
+      // A merge that kept its task open has no merging close: the reading
+      // that saw it merged keeps its time, even after a later close
+      // (INF-2678).
+      at:
+        authorization?.receipt?.at ??
+        reviewed?.at ??
+        (mergingClose(closing?.closedReason) ? closing?.closedAt : undefined) ??
+        (delivery?.ci === "merged" || finished?.landedMode ? delivery?.ciAt : undefined) ??
+        closing?.closedAt ??
+        null,
     };
   }
   if (record.status !== "done" && record.status !== "dropped") return null;
@@ -493,6 +508,19 @@ function receiptOf(
     ...(closing?.closedReason ? { reason: closing.closedReason } : {}),
     at: record.closedAt ?? null,
   };
+}
+
+/**
+ * The receipt of the change the task's record names now, read from the
+ * record itself (INF-2678): the same fact its change row keeps, for a task
+ * with a project or without one.
+ */
+export function currentReceipt(record: TaskRecord): ChangeReceipt | null {
+  const delivery = record.delivery ? ownFacts(record.delivery, record.branch) : null;
+  return receiptOf(record, delivery, record.branch, {
+    own: true,
+    current: currentChange(record.delivery, record.branch).branch === record.branch,
+  });
 }
 
 /**

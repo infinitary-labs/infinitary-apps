@@ -141,6 +141,8 @@ describe("a kept merge carries a passed review across a pure update", () => {
         get: () => undefined,
         raiseHostCard: () => undefined,
         withdrawHostCard: () => undefined,
+        releaseMerged: () => undefined,
+        drawsMergedLine: () => false,
       } as unknown as CardService,
       runtimeState: () => undefined,
       stopRuntime: () => undefined,
@@ -464,6 +466,7 @@ describe("a local story at the final dispatch boundary", () => {
         taskAutonomy: () => false,
         validateLocalStory,
         workspace: { landTaskWork },
+        cards: { releaseMerged: () => undefined },
       } as unknown as SettleServiceHost).settle;
       const outcome = await service.settleTask(story.taskId, "land", undefined, "captain");
       expect(validateLocalStory).toHaveBeenCalledOnce();

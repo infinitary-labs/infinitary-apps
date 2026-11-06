@@ -8,10 +8,14 @@ import type { SettleServiceHost } from "./settleHost";
  * for mid-turn waiting as a durable intent for the turn's boundary.
  */
 export class SettleLocks {
-  constructor(private readonly host: Pick<SettleServiceHost, "runtimeState" | "tasks">) {}
+  constructor(private readonly host: Pick<SettleServiceHost, "runtimeState" | "tasks" | "cards">) {}
 
-  /** Per-task exclusion, shared by card actions and conversational settles. */
-  readonly settlingTasks = new Map<string, string>();
+  /**
+   * Per-task exclusion, shared by card actions and conversational settles.
+   * A settle's end redraws its task's cards: a story note held for its
+   * merge shows after the settle's last write (INF-2678).
+   */
+  readonly settlingTasks = new SettlingTasks((taskId) => this.host.cards.releaseMerged([taskId]));
 
   /** Durable settle intents waiting for the current crewmate turn to go idle. */
   private readonly settleBoundaryWaiters = new Map<string, Set<() => void>>();
@@ -45,5 +49,18 @@ export class SettleLocks {
     if (!waiters) return;
     this.settleBoundaryWaiters.delete(taskId);
     for (const wake of waiters) wake();
+  }
+}
+
+/** The tasks being settled, by what settles them; each end calls `ended`. */
+class SettlingTasks extends Map<string, string> {
+  constructor(private readonly ended: (taskId: string) => void) {
+    super();
+  }
+
+  override delete(taskId: string): boolean {
+    const had = super.delete(taskId);
+    if (had) this.ended(taskId);
+    return had;
   }
 }

@@ -331,6 +331,7 @@ export class MergeReviews {
     reviewId: string,
     head: string,
     sha?: string,
+    by?: "captain",
   ): { head: string; sha?: string } {
     const receipt = { head, ...(sha ? { sha } : {}) };
     const record = this.options.tasks.get(taskId);
@@ -345,6 +346,7 @@ export class MergeReviews {
                 head: receipt.head,
                 ...(receipt.sha ? { sha: receipt.sha } : {}),
                 at: this.context.now(),
+                ...(by ? { by } : {}),
               },
             }
           : item,
@@ -669,7 +671,7 @@ export class MergeReviews {
     const confirmed = (sha?: string): PrOutcome => ({
       ok: true,
       text: `Merged ${label} on ${place}, skipping the branch rules.`,
-      receipt: this.storeReviewReceipt(taskId, review.id, review.headSha, sha),
+      receipt: this.storeReviewReceipt(taskId, review.id, review.headSha, sha, "captain"),
     });
     const unknown = async (why: string): Promise<PrOutcome> => {
       const after = await forge.pull?.(review.number).catch(() => undefined);
@@ -888,7 +890,13 @@ export class MergeReviews {
     const merged = (sha?: string): PrOutcome => ({
       ok: true,
       text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.`,
-      receipt: this.storeReviewReceipt(taskId, review.id, candidate.headSha, sha),
+      receipt: this.storeReviewReceipt(
+        taskId,
+        review.id,
+        candidate.headSha,
+        sha,
+        guard?.unattended ? undefined : "captain",
+      ),
     });
     let dispatched = false;
     try {

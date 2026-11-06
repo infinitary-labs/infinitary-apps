@@ -8,6 +8,7 @@ import {
   requestMergeEffectOf,
   settleEffectOf,
 } from "@shared/cards";
+import type { ChangeReceipt } from "@shared/change";
 import { readyPresentation } from "@shared/changePresentation";
 import { isRepairAssessment } from "@shared/checkRepair";
 import type { CrewSpeed } from "@shared/crewSpeed";
@@ -30,7 +31,7 @@ import { CrewPrograms, ProgramRunner } from "../program/programRunner";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { bindTools, type EmittedCardInput } from "../session/tools";
 import type { DuplicateResult } from "../storage/cardStore";
-import { currentChange } from "../storage/changeProjection";
+import { currentChange, currentReceipt, mergingClose } from "../storage/changeProjection";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { CompletionOffer, TaskRecord } from "../storage/taskStore";
 import { carryOnWords } from "../tasks/recordActivity";
@@ -72,6 +73,7 @@ import { RestartWatch } from "./restartWatch";
 import { Reviews } from "./reviews";
 import { SettleFacts } from "./settleCardFacts";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
+import { hasMergeLine, receiptMergedLine } from "./settleWords";
 import { CrewStarts } from "./starts";
 import { TaskMoves } from "./taskMoves";
 import { TaskPlacement } from "./taskPlacement";
@@ -320,7 +322,8 @@ export class CrewSupervisor {
       settleFacts: (taskId) => this.settleFacts.strip(taskId),
       mergeLabel: (card) => this.cardActions.mergeLabel(card),
       mergeAnyway: (card) => this.cardActions.mergeAnyway(card),
-      holdsUntilMerge: (card, merging) => this.holdsUntilMerge(card, merging === true),
+      holdsUntilMerge: (card) => this.holdsUntilMerge(card),
+      mergedLine: (card) => this.mergedLineOf(card),
       otherChangeOpen: (taskId) => this.otherChangeOpen(taskId),
       followupNotice: (taskId) => this.settleFacts.followupNotice(taskId),
       choiceUnheard: (card) => {
@@ -950,18 +953,52 @@ export class CrewSupervisor {
   /**
    * Whether a story note stays off the stack until its task's merge has a
    * result (INF-2533): a task that merges on its own, open, with a saved
-   * story, whose change has not merged (`merging`: is merging now).
+   * story, whose change has not merged.
    */
-  private holdsUntilMerge(card: Card, merging: boolean): boolean {
+  private holdsUntilMerge(card: Card): boolean {
     if (!card.taskId || !isStoryNote(card)) return false;
     const record = this.options.tasks.get(card.taskId);
     if (!record || TaskService.isClosed(record) || !record.delivery?.presentation) return false;
     if (!this.facts.taskAutonomy(record.id)) return false;
-    if (merging) return true;
-    return (
-      record.delivery.ci !== "merged" &&
-      this.options.tasks.changeFor(record.id)?.receipt?.outcome !== "merged"
-    );
+    return mergeOf(record, card) === undefined;
+  }
+
+  /** The close each closed task recorded, by task and close time (`mergedLineOf`). */
+  private readonly closes = new Map<string, { actor?: string; sentence?: string }>();
+
+  /**
+   * A story note's merge line once its change's receipt says merged
+   * (INF-2678): the card stack draws it whenever the task's record changes.
+   * The close that merged adds who closed it and the first mate's closing
+   * sentence; a merge that kept the task open says the task continued.
+   */
+  private mergedLineOf(card: Card): string | undefined {
+    if (!card.taskId || !isStoryNote(card) || !hasMergeLine(card.body)) return undefined;
+    const record = this.options.tasks.get(card.taskId);
+    const merge = record ? mergeOf(record, card) : undefined;
+    if (!record || merge?.at == null) return undefined;
+    // Only the close that merged adds to the line: a merge that kept its
+    // task open still says so after a later close that merged nothing.
+    let close: { actor?: string; sentence?: string } | undefined;
+    if (TaskService.isClosed(record) && mergingClose(record.closedReason)) {
+      const key = `${record.id}:${record.closedAt}`;
+      close = this.closes.get(key);
+      if (!close) {
+        const event = this.options.tasks
+          .timeline(record.id)
+          .findLast(
+            (item) =>
+              item.data?.status === record.status && item.data?.reason === record.closedReason,
+          );
+        const sentence = event?.data?.closingSentence;
+        close = {
+          ...(event?.actor ? { actor: event.actor } : {}),
+          ...(typeof sentence === "string" ? { sentence } : {}),
+        };
+        this.closes.set(key, close);
+      }
+    }
+    return receiptMergedLine(record, { ...merge, at: merge.at }, close);
   }
 
   /**
@@ -1298,4 +1335,30 @@ export class CrewSupervisor {
       clearTimeout(timer),
     );
   }
+}
+
+/**
+ * The merge a story note's line tells (INF-2678): its change's receipt once
+ * it says merged. A close that merged tells every note. A merge that kept
+ * the task open tells only notes made before it, and a local one only the
+ * story version it landed (`landedHead`): a note made, or revised under
+ * its id, for a later version waits for its own merge, and a later close
+ * that merged nothing does not lend it the earlier merge's line. A local
+ * merge let past its story's check names a version its story does not, so
+ * its note shows at the close (INF-2678).
+ */
+function mergeOf(record: TaskRecord, card: Card): ChangeReceipt | undefined {
+  const receipt = currentReceipt(record);
+  if (receipt?.outcome !== "merged") return undefined;
+  // The close that merged is the change's last merge: every note tells it.
+  if (TaskService.isClosed(record) && mergingClose(record.closedReason)) return receipt;
+  // A note made after this merge tells a later one; a note revised under
+  // its first id keeps its first time, so its story's version decides. A
+  // local merge names the version it landed; a pull request's later story
+  // needs a change of its own, so one merged past its story still tells it.
+  if (receipt.at !== null && receipt.at < card.createdAt) return undefined;
+  const story = record.delivery?.presentation?.revisions.at(-1)?.head;
+  const landed = record.delivery?.landedHead;
+  if (story && landed && story !== landed) return undefined;
+  return receipt;
 }

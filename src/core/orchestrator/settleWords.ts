@@ -219,6 +219,30 @@ export function mergedLine(input: {
   return `${MERGE_LINE_OPEN}<strong>${mergedWords(time, input.onItsOwn)}</strong>${change}${continues}${sentence}</p>`;
 }
 
+/**
+ * A story note's merge line once its change's receipt says merged
+ * (INF-2678): when, who, its pull request, that the task continues while it
+ * is open, and the first mate's closing sentence the close recorded.
+ */
+export function receiptMergedLine(
+  record: TaskRecord,
+  receipt: { at: number; by?: "captain" },
+  close: { actor?: string; sentence?: string } | undefined,
+): string {
+  const delivery = record.delivery;
+  const label =
+    delivery?.prNumber !== undefined
+      ? `PR ${changeName(record, delivery.prNumber)}`
+      : delivery?.changeLabel;
+  return mergedLine({
+    at: receipt.at,
+    onItsOwn: receipt.by !== "captain" && close?.actor !== "captain",
+    ...(label ? { change: { label, ...(delivery?.prUrl ? { url: delivery.prUrl } : {}) } } : {}),
+    ...(close?.sentence ? { sentence: close.sentence } : {}),
+    ...(close ? {} : { continues: true }),
+  });
+}
+
 /** Whether a body carries the merge line. */
 export function hasMergeLine(body: string): boolean {
   return MERGE_LINE.test(body);

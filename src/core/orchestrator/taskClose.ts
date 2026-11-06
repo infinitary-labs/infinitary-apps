@@ -7,6 +7,7 @@ import type { Card } from "@shared/cards";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
 import { opensPullRequest } from "@shared/repos";
 import type { TaskDeliveryMode } from "@shared/tasks";
+import { mergingClose } from "../storage/changeProjection";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
@@ -170,6 +171,17 @@ export class TaskClosing {
   ): void {
     const outcome = closedWithoutClick(reason);
     if (!outcome || record.startedAt === null) return;
+    // Work that merged on its own with a story note says so there: the card
+    // stack draws its merged line, with the first mate's sentence, from the
+    // change's receipt, so no other card takes it and no second note goes up
+    // (INF-2678, the captain's pick: the note's merged line only).
+    if (
+      mergingClose(reason) &&
+      [...this.host.cards.values()].some(
+        (card) => card.taskId === record.id && this.host.cards.drawsMergedLine(card),
+      )
+    )
+      return;
     // Work the first mate declared the captain did not ask for raises
     // nothing new on their stack (INF-1467): a card of its that is up still
     // takes the outcome, and a message it served gets its answer from the
@@ -409,8 +421,9 @@ export class TaskClosing {
     if (record && record.status !== "done" && record.status !== "dropped") {
       this.placeOutcome(record, close.reason, close.actor, sentence);
     }
-    // A kept note still waiting on the crewmate shows now, after the close
-    // wrote its outcome on it, so its first showing carries it (INF-2533).
+    // A kept note still waiting on the crewmate shows now, once the close
+    // is recorded: a story note's merged line is already drawn from the
+    // change's receipt (INF-2533, INF-2678).
     this.host.cards.releaseNotes(taskId);
     this.host.asksMoved?.();
     this.host.cards.scheduleBroadcast();

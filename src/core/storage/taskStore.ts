@@ -365,6 +365,12 @@ export type TaskDelivery = {
   /** The newest watched run's state and host times, kept after its watch ends (INF-594). */
   runChecks?: RunChecks;
   landedMode?: "fast-forward" | "merge" | "pr";
+  /**
+   * The branch head a local merge landed (INF-2678): the version its
+   * receipt names, so after a merge that kept the task open a later story
+   * of the same change waits for its own merge.
+   */
+  landedHead?: string;
   /** The resulting merge, not the proposed branch head. */
   mergedSha?: string;
   /** Earliest published release verified to contain the change; absent is unknown. */

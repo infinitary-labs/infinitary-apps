@@ -70,8 +70,11 @@ export type MergeReview = {
    */
   sent?: { at: number; outcome?: "failed" | "unknown"; text?: string };
   at: number;
-  /** Set once a merge of this review is confirmed, so a repeat sends nothing. */
-  receipt?: { head: string; sha?: string; at: number };
+  /**
+   * Set once a merge of this review is confirmed, so a repeat sends nothing;
+   * `by` names the captain when their own click sent it.
+   */
+  receipt?: { head: string; sha?: string; at: number; by?: "captain" };
 };
 
 /** How many reviews a task keeps. Older ones drop; a receipt stays findable until then. */

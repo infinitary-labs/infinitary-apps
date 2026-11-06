@@ -67,7 +67,8 @@ export type SettleCards = {
   ): { cardId: string; cardTitle: string; actionId: string; label: string } | undefined;
   releaseNotes(taskId: string): void;
   retireTaskCards(taskId: string, reason: string, options?: { keepNotes?: boolean }): void;
-  showHeld(taskId: string, revise: (body: string) => string): void;
+  releaseMerged(taskIds: readonly string[]): void;
+  drawsMergedLine(card: Card): boolean;
   scheduleBroadcast(): void;
 };
 

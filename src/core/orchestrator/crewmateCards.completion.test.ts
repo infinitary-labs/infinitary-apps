@@ -10,7 +10,13 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Card, MERGE_CLOSES_WORDS, onStage, splitSettleFacts } from "@shared/cards";
+import {
+  type Card,
+  isStoryNote,
+  MERGE_CLOSES_WORDS,
+  onStage,
+  splitSettleFacts,
+} from "@shared/cards";
 import type { ChangePresentation } from "@shared/changePresentation";
 import { softHoldWords } from "@shared/holds";
 import { CHECK_WORDS } from "@shared/vocabulary";
@@ -23,17 +29,22 @@ import {
   fakeCrewTimersEachTest,
   intentOf,
   METER_RISK,
+  reboot,
   reportTurn,
   SETTLE_DISCARD,
   SETTLE_MERGE,
+  type SetupExtras,
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { deferred } from "../../../tests/helpers/deferred";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
-import { presentationCardBody, presentationMarkdown } from "../forge";
+import { type ForgePull, presentationCardBody, presentationMarkdown } from "../forge";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { bindTool } from "../session/tools";
+import { seedTask } from "../tasks/seedTask";
+import { TaskService } from "../tasks/taskService";
+import { CrewFacts } from "./crewFacts";
 import type { CrewmateSpec } from "./crewSession";
 import { MERGES_NEXT_WORDS, mergedWords, pendingMergeLine } from "./settleWords";
 
@@ -882,11 +893,16 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(tasks.get(taskId)?.delivery?.completionOffers).toEqual([firstmateOffer]);
   });
 
-  // INF-2533, the captain's words: "we should probably not show the note
-  // card and wait for the final update with "merged on its own" already
-  // present". The story note waits off the stack through its crewmate's
-  // close-out, and the first mate's merge shows it once, already merged.
-  it("keeps a self-merging task's story note off the stack until the first mate's merge, then shows it once saying it merged (INF-2533)", async () => {
+  /**
+   * A task that merges on its own, its story note held for the merge. With
+   * `ask`, the captain's message was first answered on the first mate's own
+   * decision card, and the first mate started the work under that message:
+   * INF-2677's case, where the note kept "Merges on its own" (INF-2678).
+   */
+  async function heldStoryNote(
+    ask?: { pick: boolean },
+    extras: Pick<SetupExtras, "readPull"> = {},
+  ) {
     const crewmate = fakeCrewmate();
     const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
     let story: ChangePresentation;
@@ -898,16 +914,48 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       pictures: story.pictures,
     }));
     const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Merged #1 on GitHub." }));
-    const { supervisor, tasks, specs } = setup(crewmate, {
+    const harness = setup(crewmate, {
       checkCi: async () => "green",
       completionPresentation,
       mergePullRequest,
+      ...extras,
     });
+    const { supervisor, tasks, specs } = harness;
+    let answerCard: string | undefined;
+    let askId: string | undefined;
+    if (ask) {
+      const message = tasks.capture.openAsk({
+        id: "ask-release-watch",
+        text: "did the release workflow watch catch the last main failure?",
+      });
+      askId = message.id;
+      seedTask(tasks, {
+        id: "answer-decision",
+        title: "No: it watches only releases",
+        kind: "decision",
+        status: "running",
+      });
+      tasks.capture.attachAsk(message.id, "answer-decision", "tool:emit_card");
+      answerCard = supervisor.addFirstmateCard({
+        title: "No: it watches only releases",
+        body: "<p>No. Pick what to do.</p>",
+        actions: [{ id: "picked", label: "Do what I picked", default: true }],
+        taskId: "answer-decision",
+      });
+      tasks.capture.closeAsk(message.id, "closed");
+      await tick();
+      if (ask.pick) {
+        supervisor.cardActions.act(answerCard, "picked");
+        await tick();
+      }
+    }
     const { taskId } = await supervisor.intake.commission({
       title: "Share the completed change",
       intent: intentOf("share the same story"),
       shape: { rigor_ask: "quick" },
     });
+    // The first mate names the same message on the work it starts.
+    if (askId) tasks.capture.attachAsk(askId, taskId, "tool:spawn_crewmate");
     await tick();
     vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(true);
@@ -958,11 +1006,24 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     await emitCard.run({ title: "Ignored", presentation: 1, actions: [] });
     crewmate.finishPrompt();
     await tick();
-    const note = () => supervisor.cards.snapshot().find((card) => card.taskId === taskId);
+    const note = () =>
+      supervisor.cards.snapshot().find((card) => card.taskId === taskId && isStoryNote(card));
     expect(note()?.body).toContain(MERGES_NEXT_WORDS);
     expect(note()?.awaiting).toBe("close-out");
     expect(onStage(note() as Card)).toBe(false);
+    return { ...harness, crewmate, emitCard, mergePullRequest, taskId, note, answerCard };
+  }
 
+  /** The note's merge line: its first paragraph. */
+  const mergeLineOf = (card: Card | undefined) =>
+    card?.body.slice(0, card.body.indexOf("</p>") + 4) ?? "";
+
+  // INF-2533, the captain's words: "we should probably not show the note
+  // card and wait for the final update with "merged on its own" already
+  // present". The story note waits off the stack through its crewmate's
+  // close-out, and the first mate's merge shows it once, already merged.
+  it("keeps a self-merging task's story note off the stack until the first mate's merge, then shows it once saying it merged (INF-2533)", async () => {
+    const { supervisor, tasks, taskId, note, mergePullRequest } = await heldStoryNote();
     await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
     expect(mergePullRequest).toHaveBeenCalledOnce();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
@@ -977,6 +1038,409 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         .timeline(taskId)
         .filter((event) => event.kind === "card_raised" && event.ref === shown.id),
     ).toHaveLength(1);
+  });
+
+  // INF-2678, the captain's screenshot of INF-2677's note: "these cards now
+  // doesn't update to "merged"? it still says "merges"". The captain's
+  // message was answered on the first mate's card and their pick started
+  // the fix under the same message; the merge closed the task with the
+  // first mate's sentence. The change's receipt draws the note's merged
+  // line whichever card answered the message, and the sentence goes on the
+  // note's merged line only (the captain's pick on INF-2678's plan).
+  it.each([
+    ["the captain picked on the first mate's card", true],
+    ["the first mate's card still up", false],
+  ])(
+    "shows a self-merging note merged with the first mate's sentence when the message was answered on another card: %s (INF-2678)",
+    async (_label, pick) => {
+      const SENTENCE =
+        "I merged PR #1, which keeps each confirmed upload, under your rule for main fixes.";
+      const { supervisor, tasks, taskId, note, answerCard } = await heldStoryNote({ pick });
+      await supervisor.settling.closing.withClosingSentence(taskId, SENTENCE, () =>
+        supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr"),
+      );
+      await tick();
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+      const shown = note() as Card;
+      expect(onStage(shown)).toBe(true);
+      const line = mergeLineOf(shown);
+      expect(line).toContain(mergedWords("", true).trim());
+      expect(line).toContain("PR #1");
+      expect(line).toContain(SENTENCE);
+      expect(shown.body).not.toContain(MERGES_NEXT_WORDS);
+      expect(
+        tasks
+          .timeline(taskId)
+          .filter((event) => event.kind === "card_raised" && event.ref === shown.id),
+      ).toHaveLength(1);
+      // No second note, and the first mate's card does not repeat the sentence.
+      const others = supervisor.cards.snapshot().filter((card) => card.id !== shown.id);
+      expect(others.map((card) => card.id)).toEqual(pick ? [] : [answerCard]);
+      for (const card of others) expect(card.body).not.toContain(SENTENCE);
+    },
+  );
+
+  // INF-2678's re-review: a release close counts as merging, so its
+  // sentence goes on the note's merged line once: the close does not also
+  // write a close line with it on the note that answers the message.
+  it("puts a release close's sentence on the note's merged line only (INF-2678)", async () => {
+    const SENTENCE = "I closed this once version 1.2.3 shipped it.";
+    const pull: ForgePull = {
+      number: 1,
+      state: "closed",
+      merged: true,
+      headSha: "5ca2d466ee21f9733827383f23df81f3874e0d10",
+      branch: "fm/task-x",
+      base: "main",
+      readiness: "clean",
+    };
+    const { supervisor, tasks, taskId, note } = await heldStoryNote(undefined, {
+      readPull: async (_id, number) => (number === 1 ? pull : undefined),
+    });
+    // The captain's message names this work alone.
+    const message = tasks.capture.openAsk({ id: "ask-release", text: "did the upload fix ship?" });
+    tasks.capture.attachAsk(message.id, taskId, "tool:spawn_crewmate");
+    tasks.turns.recordReport(taskId, { text: "Version 1.2.3 shipped the change." });
+    await supervisor.settling.closing.withClosingSentence(taskId, SENTENCE, () =>
+      supervisor.settling.declared.closeExternallyReleased(taskId, "v1.2.3 published"),
+    );
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "released" });
+    const shown = note() as Card;
+    expect(onStage(shown)).toBe(true);
+    expect(mergeLineOf(shown)).toContain(SENTENCE);
+    expect(shown.body.split(SENTENCE)).toHaveLength(2);
+    expect(supervisor.cards.snapshot().filter((card) => card.id !== shown.id)).toEqual([]);
+  });
+
+  // INF-2533 and INF-2678: a merge made where the project lives while a
+  // question of its crewmate is still up keeps the task open. The held
+  // note shows once that settle ends, with when it merged and that the task
+  // continues, read from the change's receipt alone.
+  //
+  // INF-2678's re-review: a pull request merged outside the app after a
+  // later push merges past its story's version; the note still tells that
+  // merge, since a later story of a pull request needs a change of its own.
+  it.each([
+    ["at its story's version", "5ca2d466ee21f9733827383f23df81f3874e0d10"],
+    ["after a later push", "7d0c3e1fa2b94c5d8e6f7a1b2c3d4e5f60718293"],
+  ])(
+    "shows a held story note with its merge time when a merge outside the app keeps the task open, %s (INF-2533, INF-2678)",
+    async (_label, head) => {
+      const pull: ForgePull = {
+        number: 1,
+        state: "closed",
+        merged: true,
+        headSha: head,
+        branch: "fm/task-x",
+        base: "main",
+        readiness: "clean",
+      };
+      const { supervisor, tasks, taskId, note, specs } = await heldStoryNote(undefined, {
+        readPull: async (_id, number) => (number === 1 ? pull : undefined),
+      });
+      await specs[0]?.onCard?.({
+        title: "Keep the old receipts?",
+        body: "<p>Should old receipts stay?</p>",
+        actions: [
+          { id: "keep", label: "Keep them", default: true },
+          { id: "drop", label: "Drop them" },
+        ],
+      });
+      await tick();
+      expect(await supervisor.settling.settle.reconcileExternalMerge(taskId)).toBe(true);
+      await tick();
+      expect(tasks.get(taskId)).toMatchObject({ status: "active", delivery: { ci: "merged" } });
+      const shown = note() as Card;
+      expect(onStage(shown)).toBe(true);
+      const at = new Date(tasks.get(taskId)?.delivery?.ciAt ?? Number.NaN).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      const line = mergeLineOf(shown);
+      expect(line).toContain(mergedWords(at, true));
+      expect(line).toContain(MERGE_CLOSES_WORDS.continues);
+      expect(shown.body).not.toContain(MERGES_NEXT_WORDS);
+      expect(
+        tasks
+          .timeline(taskId)
+          .filter((event) => event.kind === "card_raised" && event.ref === shown.id),
+      ).toHaveLength(1);
+    },
+  );
+
+  // INF-2678's review: the app quit after a merge was recorded and before
+  // the held note was shown. The next start draws the line from the
+  // receipt and shows the note once, without a settle to end.
+  it("shows a held story note merged at the next start when the app quit after recording its merge (INF-2678)", async () => {
+    const { supervisor, tasks, taskId, note, db, paths, workspace } = await heldStoryNote();
+    const held = note() as Card;
+    // The settle that read the merge recorded it, then the app quit before it ended.
+    supervisor.settling.locks.settlingTasks.set(taskId, "merge-pr");
+    tasks.delivery.recordChangeEvidence(taskId, { ci: "merged", ciAt: Date.now() });
+    expect(note()?.awaiting).toBe("close-out");
+    supervisor.disposeAll();
+    const autonomy = vi.spyOn(CrewFacts.prototype, "taskAutonomy").mockReturnValue(true);
+    const restartedTasks = new TaskService({ db, strict: true });
+    const restarted = reboot(
+      { paths, db, workspace },
+      vi.fn(async () => fakeCrewmate()),
+      { tasks: restartedTasks },
+    );
+    try {
+      const shown = restarted.cards.snapshot().find((card) => card.id === held.id) as Card;
+      expect(onStage(shown)).toBe(true);
+      expect(mergeLineOf(shown)).toContain(MERGE_CLOSES_WORDS.continues);
+      expect(shown.body).not.toContain(MERGES_NEXT_WORDS);
+      expect(
+        restartedTasks
+          .timeline(taskId)
+          .filter((event) => event.kind === "card_raised" && event.ref === held.id),
+      ).toHaveLength(1);
+    } finally {
+      restarted.disposeAll();
+      autonomy.mockRestore();
+    }
+  });
+
+  // INF-2678's review: a story note made after an earlier merge of the same
+  // change kept the task open is a new story: it waits for its own merge,
+  // with its pending line, rather than borrowing the earlier merge's.
+  it("holds a story note made after a merge that kept the task open for its own merge (INF-2678)", async () => {
+    const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+    const pull: ForgePull = {
+      number: 1,
+      state: "closed",
+      merged: true,
+      headSha: head,
+      branch: "fm/task-x",
+      base: "main",
+      readiness: "clean",
+    };
+    const { supervisor, crewmate, taskId, note, specs, emitCard } = await heldStoryNote(undefined, {
+      readPull: async (_id, number) => (number === 1 ? pull : undefined),
+    });
+    await specs[0]?.onCard?.({
+      title: "Keep the old receipts?",
+      body: "<p>Should old receipts stay?</p>",
+      actions: [
+        { id: "keep", label: "Keep them", default: true },
+        { id: "drop", label: "Drop them" },
+      ],
+    });
+    await tick();
+    expect(await supervisor.settling.settle.reconcileExternalMerge(taskId)).toBe(true);
+    await tick();
+    const first = note() as Card;
+    expect(onStage(first)).toBe(true);
+    await emitCard.run({ title: "Ignored", presentation: 1, actions: [] });
+    crewmate.finishPrompt();
+    await tick();
+    const later = supervisor.cards
+      .snapshot()
+      .find((card) => card.taskId === taskId && isStoryNote(card) && card.id !== first.id) as Card;
+    expect(later.createdAt).toBeGreaterThan(first.createdAt);
+    expect(later.awaiting).toBe("close-out");
+    expect(mergeLineOf(later)).toContain(MERGES_NEXT_WORDS);
+    supervisor.settling.locks.settlingTasks.set(taskId, "merge-pr");
+    supervisor.settling.locks.settlingTasks.delete(taskId);
+    expect(supervisor.cards.get(later.id)?.awaiting).toBe("close-out");
+  });
+
+  // INF-2678's re-review: a note revised under its own id keeps its first
+  // time. After a local merge kept the task open, the crewmate commits more
+  // and revises its story note under the same id for the new version: that
+  // revision waits for its own merge, not the earlier one's line.
+  it("draws a same-id story revision for a later version with its own pending line (INF-2678)", async () => {
+    const crewmate = fakeCrewmate();
+    const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+    const later = "9e1f6c2b7d4a8053e6c1b2a7f9d0e3c4b5a69788";
+    let stories: ChangePresentation[] = [];
+    const completionPresentation = vi.fn(async (_taskId: string, revision: number) => {
+      const story = stories.find((entry) => entry.revision === revision) as ChangePresentation;
+      return {
+        title: story.title,
+        body: presentationCardBody(story),
+        riskDeclaration: story.risk,
+        requiredActions: story.requiredActions,
+        pictures: story.pictures,
+      };
+    });
+    const harness = setup(crewmate, {
+      completionPresentation,
+      validateLocalStory: async () => (stories.at(-1) as ChangePresentation).head,
+    });
+    const { supervisor, tasks, specs, workspace } = harness;
+    (workspace.taskWorkStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      dirty: false,
+      unlandedCommits: 1,
+    });
+    const { taskId } = await supervisor.intake.commission({
+      title: "Share the completed change",
+      intent: intentOf("share the same story"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("local-only");
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(true);
+    const version = (revision: number, at: string): ChangePresentation => ({
+      version: 1,
+      taskId,
+      revision,
+      destination: { kind: "local", project: "repo-meter" },
+      title: "The upload survives restart",
+      base: head,
+      head: at,
+      why: ["Confirmed uploads must not be sent twice."],
+      whatChanged: ["The task keeps each confirmed receipt."],
+      before: ["Restart lost the receipt."],
+      after: ["Restart reuses the receipt."],
+      views: [],
+      noPicture: "This changes upload recovery, not a visible view.",
+      verification: ["Restart recovery passed."],
+      risk: METER_RISK,
+      requiredActions: [],
+      unfinished: [],
+      projectText: "",
+      assets: [],
+      pictures: [],
+    });
+    const prepare = (story: ChangePresentation) => {
+      stories = [...stories, story];
+      tasks.delivery.updateChangePresentation(taskId, () => ({
+        revisions: stories,
+        receipts: [],
+        completion: {
+          revision: story.revision,
+          head: story.head,
+          contentHash: "fixture-story-content",
+        },
+      }));
+    };
+    prepare(version(1, head));
+    seedDelivery(tasks, taskId, { ci: "green" });
+    const emitCard = bindTool(EMIT_CARD_TOOL, specs[0] as CrewmateSpec);
+    await emitCard.run({ id: "meter-story", title: "Ignored", presentation: 1, actions: [] });
+    // A question still open keeps the task open past its merge.
+    await specs[0]?.onCard?.({
+      title: "Keep the old receipts?",
+      body: "<p>Should old receipts stay?</p>",
+      actions: [
+        { id: "keep", label: "Keep them", default: true },
+        { id: "drop", label: "Drop them" },
+      ],
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const note = () =>
+      supervisor.cards
+        .snapshot()
+        .find((card) => card.taskId === taskId && isStoryNote(card)) as Card;
+    expect(note().awaiting).toBe("close-out");
+    await supervisor.settling.settle.settleTaskDetailed(taskId, "land");
+    expect(tasks.get(taskId)?.status).not.toBe("done");
+    expect(tasks.get(taskId)?.delivery?.landedHead).toBe(head);
+    await tick();
+    const first = note();
+    expect(onStage(first)).toBe(true);
+    expect(mergeLineOf(first)).toContain(MERGE_CLOSES_WORDS.continues);
+    // More work on the same change: a second story at the new commit, shown
+    // on the same note.
+    prepare(version(2, later));
+    await emitCard.run({ id: first.id, title: "Ignored", presentation: 2, actions: [] });
+    await tick();
+    const revised = supervisor.cards.get(first.id) as Card;
+    expect(revised.createdAt).toBe(first.createdAt);
+    expect(mergeLineOf(revised)).toContain(MERGES_NEXT_WORDS);
+    expect(mergeLineOf(revised)).not.toContain(MERGE_CLOSES_WORDS.continues);
+    // The question is answered and the later version merges, closing the
+    // task: its receipt names that version and the note says it merged.
+    const question = supervisor.cards
+      .snapshot()
+      .find((card) => card.title === "Keep the old receipts?") as Card;
+    supervisor.cardActions.act(question.id, "keep");
+    crewmate.finishPrompt();
+    await tick();
+    await supervisor.settling.settle.settleTaskDetailed(taskId, "land");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({
+      status: "done",
+      closedReason: "landed",
+      delivery: { landedHead: later },
+    });
+    const merged = supervisor.cards.get(first.id) as Card;
+    expect(mergeLineOf(merged)).not.toContain(MERGES_NEXT_WORDS);
+    expect(mergeLineOf(merged)).not.toContain(MERGE_CLOSES_WORDS.continues);
+  });
+
+  // INF-2678's review: after a merge that kept the task open, a later close
+  // that merged nothing leaves the line as the merge drew it - its own
+  // time, and that the task continued - and adds no sentence of its own.
+  it("keeps a merge's own line when a later close merged nothing (INF-2678)", async () => {
+    const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+    const pull: ForgePull = {
+      number: 1,
+      state: "closed",
+      merged: true,
+      headSha: head,
+      branch: "fm/task-x",
+      base: "main",
+      readiness: "clean",
+    };
+    const { supervisor, tasks, taskId, note, specs } = await heldStoryNote(undefined, {
+      readPull: async (_id, number) => (number === 1 ? pull : undefined),
+    });
+    await specs[0]?.onCard?.({
+      title: "Keep the old receipts?",
+      body: "<p>Should old receipts stay?</p>",
+      actions: [
+        { id: "keep", label: "Keep them", default: true },
+        { id: "drop", label: "Drop them" },
+      ],
+    });
+    await tick();
+    expect(await supervisor.settling.settle.reconcileExternalMerge(taskId)).toBe(true);
+    await tick();
+    const merged = mergeLineOf(note());
+    expect(merged).toContain(MERGE_CLOSES_WORDS.continues);
+    await supervisor.settling.closing.closeTask(taskId, {
+      status: "done",
+      reason: "finished",
+      actor: "firstmate",
+      text: "The receipts question is settled.",
+    });
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "finished" });
+    expect(mergeLineOf(note())).toBe(merged);
+  });
+
+  // INF-2678's review: a merge the captain's own click sent reads as theirs,
+  // never as merged on its own: the review's receipt names who sent it.
+  it("draws a captain-sent merge as the captain's on a held story note (INF-2678)", async () => {
+    const { supervisor, tasks, taskId, note } = await heldStoryNote();
+    const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+    const review = {
+      id: "review-1",
+      kind: "github" as const,
+      host: "github.com",
+      owner: "octo",
+      name: "meter",
+      number: 1,
+      headSha: head,
+      base: "main",
+      branch: tasks.get(taskId)?.branch ?? "",
+      method: "squash" as const,
+      title: "The upload survives restart",
+      at: Date.now(),
+      receipt: { head, at: Date.now() + 1, by: "captain" as const },
+    };
+    supervisor.settling.locks.settlingTasks.set(taskId, "merge-pr");
+    tasks.delivery.recordPermissionRecords(taskId, { mergeReviews: [review] });
+    supervisor.settling.locks.settlingTasks.delete(taskId);
+    const shown = note() as Card;
+    expect(onStage(shown)).toBe(true);
+    expect(mergeLineOf(shown)).toContain(mergedWords("", false).trim());
+    expect(mergeLineOf(shown)).not.toContain(mergedWords("", true).trim());
   });
 
   // INF-2490, the captain's q8 "include first-mate-merge": the first mate's

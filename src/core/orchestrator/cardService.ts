@@ -23,7 +23,6 @@ import {
   cardWord,
   compareStack,
   isPreviewBody,
-  isStoryNote,
   keepsTaskOpen,
   onStage,
   type PastCard,
@@ -69,6 +68,7 @@ import {
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { settleCardFacts } from "./settleCardFacts";
+import { withMergeLine } from "./settleWords";
 
 /**
  * The card stack (the primitives review's P4 and P6, docs/card-threads.md):
@@ -140,10 +140,14 @@ export type CardServiceHost = {
   /**
    * Whether a story note stays off the stack until its task's merge has a
    * result (INF-2533): the task merges on its own, is open, and its change
-   * has not merged - or, with `merging`, is merging now. Read from typed
-   * facts, never the card's words.
+   * has not merged. Read from typed facts, never the card's words.
    */
-  holdsUntilMerge?(card: Card, merging?: boolean): boolean;
+  holdsUntilMerge?(card: Card): boolean;
+  /**
+   * The merged line a story note carries once its change's receipt says
+   * merged (INF-2678); undefined while it has not, and for any other card.
+   */
+  mergedLine?(card: Card): string | undefined;
   /**
    * Another of the task's pull requests the record keeps that has not
    * merged, besides the one its completion offer merges (INF-2525).
@@ -219,6 +223,8 @@ export type CardStack = {
 export class CardService {
   /** The open cards as their authors last wrote them: the record. */
   private readonly cards = new Map<string, Card>();
+  /** Story notes `release` kept off the stack for their task's merge (INF-2533). */
+  private readonly heldForMerge = new Set<string>();
   /**
    * The version the stage still shows of a card on it whose author has
    * written it again and not yet closed out (a revision waiting on its
@@ -304,6 +310,9 @@ export class CardService {
       });
       this.cards.set(seeded.id, seeded);
     }
+    // A note whose merge came while the app was closed reads merged before
+    // it shows (INF-2678).
+    this.refreshSettleFacts();
     // The dead process ended every author's turn, which is a close-out: a
     // card that waited on one reaches the stage now. One the captain's
     // reply holds stays off it until its author answers.
@@ -325,7 +334,6 @@ export class CardService {
           });
       }
     }
-    this.refreshSettleFacts();
     this.unsubscribeTasks = host.tasks.onChange(({ taskIds }) => this.refreshSettleFacts(taskIds));
     if (this.cards.size > 0) this.scheduleBroadcast();
   }
@@ -338,10 +346,35 @@ export class CardService {
 
   /**
    * Host facts follow the record, not an author's revision or close-out:
-   * the fact strip, and the words of the merge it names (INF-23).
+   * the fact strip, the words of the merge it names (INF-23), and a story
+   * note's merge line, drawn from its change's receipt (INF-2678). It runs
+   * from the task change seam, so it writes no task itself.
    */
   refreshSettleFacts(taskIds?: readonly string[]): void {
     this.host.tasks.readProjection(() => this.refreshSettleFactsInProjection(taskIds));
+  }
+
+  /**
+   * A settle of these tasks ended (INF-2678): a story note held for its
+   * task's merge (INF-2533) shows once its merge line reads merged, so it
+   * shows once, as the settle that merged it ends.
+   */
+  releaseMerged(taskIds: readonly string[]): void {
+    this.refreshSettleFacts(taskIds);
+    let released = false;
+    for (const id of [...this.heldForMerge]) {
+      const card = this.cards.get(id);
+      if (!card?.taskId || !taskIds.includes(card.taskId)) continue;
+      if (card.awaiting !== "close-out" || !this.host.mergedLine?.(card)) continue;
+      this.release(card, "idle");
+      released = true;
+    }
+    if (released) this.scheduleBroadcast();
+  }
+
+  /** Whether the card stack draws this card's merged line from its change's receipt. */
+  drawsMergedLine(card: Card): boolean {
+    return this.host.mergedLine?.(card) !== undefined;
   }
 
   private refreshSettleFactsInProjection(taskIds?: readonly string[]): void {
@@ -353,6 +386,11 @@ export class CardService {
     const refreshed = (card: Card): Card => {
       if (!card.taskId || (taskIds && !taskIds.includes(card.taskId))) return card;
       const taskId = card.taskId;
+      const line = this.host.mergedLine?.(card);
+      if (line) {
+        const body = withMergeLine(card.body, line);
+        if (body !== card.body) card = { ...card, body };
+      }
       return settleCardFacts(card, {
         facts: () => {
           const record = this.host.tasks.get(taskId);
@@ -940,9 +978,14 @@ export class CardService {
    * arrival is the `card_raised` it always was, and a return after the
    * captain's reply says so, so the replay can count a late return.
    */
-  private release(card: Card, reason: CloseOut, held = false): void {
-    // A story note waits for its task's merge, not its author (INF-2533).
-    if (!held && card.awaiting === "close-out" && this.host.holdsUntilMerge?.(card)) return;
+  private release(card: Card, reason: CloseOut): void {
+    // A story note waits for its task's merge, not its author (INF-2533):
+    // `releaseMerged` shows it once a settle merged it.
+    if (card.awaiting === "close-out" && this.host.holdsUntilMerge?.(card)) {
+      this.heldForMerge.add(card.id);
+      return;
+    }
+    this.heldForMerge.delete(card.id);
     const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...shown } = card;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.upsert(shown);
@@ -1634,9 +1677,9 @@ export class CardService {
   /**
    * A closed task's notes still waiting on its crewmate reach the stage:
    * the crewmate is gone. The Firstmate is not, so a reply on its note
-   * keeps its wait. A close calls it after writing its outcome on the
-   * note, so a story note held for the merge shows once, with its merged
-   * line (INF-2533).
+   * keeps its wait. A close calls it once the close is recorded, so a story
+   * note held for the merge shows once, its merged line already drawn from
+   * the receipt (INF-2533, INF-2678).
    */
   releaseNotes(taskId: string): void {
     let moved = false;
@@ -1648,21 +1691,6 @@ export class CardService {
       moved = true;
     }
     if (moved) this.scheduleBroadcast();
-  }
-
-  /**
-   * A merge that kept the task open has a result (INF-2533): a story note
-   * held for it shows once, its body first revised by `revise`.
-   */
-  showHeld(taskId: string, revise: (body: string) => string): void {
-    for (const card of [...this.cards.values()]) {
-      if (card.taskId !== taskId || card.awaiting !== "close-out" || !isStoryNote(card)) continue;
-      if (!this.host.holdsUntilMerge?.(card, true)) continue;
-      this.reviseBody(card.id, revise(card.body));
-      const revised = this.cards.get(card.id);
-      if (revised) this.release(revised, "idle", true);
-    }
-    this.scheduleBroadcast();
   }
 
   /**

@@ -32,10 +32,8 @@ import {
   discardedText,
   folderNotUpdatedText,
   MERGE_STOPPED_TITLE,
-  mergedLine,
   placeOf,
   settlingText,
-  withMergeLine,
 } from "./settleWords";
 import { type TaskClose, type TaskClosing, workspaceOf } from "./taskClose";
 
@@ -220,10 +218,12 @@ export class SettleService {
         const text = this.host.folderMissing(repo.id, "land", record);
         return { ok: false, text: `Cannot merge: ${text}`, problem: text };
       }
+      // The version the checked story names is the one this merge lands.
+      let storyHead: string | undefined;
       if (record.delivery?.presentation) {
         if (!this.host.validateLocalStory)
           throw new Error("The current local story cannot be checked.");
-        await this.host.validateLocalStory(taskId);
+        storyHead = await this.host.validateLocalStory(taskId);
       }
       const { mode } = await this.host.workspace.landTaskWork(
         {
@@ -238,20 +238,27 @@ export class SettleService {
       // A question still open on the task keeps it open past the merge (INF-2525).
       const stillOpen = await this.stillOpen(record, undefined);
       if (stillOpen) {
+        // The receipt says merged, when, and at which version, while the
+        // task stays open.
+        this.host.tasks.delivery.recordChangeEvidence(taskId, {
+          landedMode: mode,
+          ...(storyHead ? { landedHead: storyHead } : {}),
+          ciAt: this.host.now(),
+        });
         const continued = {
           ok: true,
           text: `Merged "${record.title}" into main.`,
           continued: true,
           stillOpen,
         };
-        this.finishContinued(taskId, undefined, continued, actor);
+        this.finishContinued(taskId, undefined, continued);
         return continued;
       }
       await this.closing.closeTask(taskId, {
         status: "done",
         reason: "landed",
         actor,
-        delivery: { landedMode: mode },
+        delivery: { landedMode: mode, ...(storyHead ? { landedHead: storyHead } : {}) },
       });
       // Landing releases any queued row waiting on this task (R1).
       void this.host.sweepGates(this.host.now());
@@ -336,7 +343,7 @@ export class SettleService {
         ciWatch: undefined,
       });
       const continued = { ...result, continued: true, stillOpen };
-      this.finishContinued(taskId, undefined, continued, actor);
+      this.finishContinued(taskId, undefined, continued);
       return continued;
     }
     return this.closeMerged(record, actor, result);
@@ -620,30 +627,10 @@ export class SettleService {
     return text;
   }
 
-  finishContinued(
-    taskId: string,
-    review: MergeReview | undefined,
-    result: SettleOutcome,
-    actor: TaskClose["actor"],
-  ): void {
+  finishContinued(taskId: string, review: MergeReview | undefined, result: SettleOutcome): void {
     this.approvals.clearPendingMerge(taskId, "merged");
-    // The merge has a result: a story note held for it shows now, once,
-    // with the merged line and that the task continues (INF-2533).
-    const record = this.host.tasks.get(taskId);
-    const number = review?.number ?? record?.delivery?.prNumber;
-    const label = number !== undefined ? `PR ${changeName(record, number)}` : undefined;
-    const url = review ? undefined : record?.delivery?.prUrl;
-    this.host.cards.showHeld(taskId, (body) =>
-      withMergeLine(
-        body,
-        mergedLine({
-          at: this.host.now(),
-          onItsOwn: actor !== "captain",
-          ...(label ? { change: { label, ...(url ? { url } : {}) } } : {}),
-          continues: true,
-        }),
-      ),
-    );
+    // A story note held for the merge shows once the settle ends: the
+    // card stack draws its merged line from the change's receipt (INF-2678).
     this.host.tasks.atomic(
       () => {
         const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);

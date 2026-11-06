@@ -75,6 +75,7 @@ A remote version the host has not seen pushed carries nothing until it is; a rev
 - Every direct-pr task's pull request, its checks, its story and its merge.
 - A requested merge of any pull request the task names, a change of its own ([the forge seam](../docs/forge.md), "A requested merge").
 - The attestation a github.com story carries when a review passed and live proof was accepted at its version.
+- The merge line on the story note of a task that merges on its own, and when that held note shows: the card stack draws both from the change's receipt, which keeps the merge's time even when the task stays open ([card authoring](../docs/card-authoring.md), "Work that closed without the captain's click").
 
 ## Checks
 

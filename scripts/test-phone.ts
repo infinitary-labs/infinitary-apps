@@ -23,7 +23,7 @@ import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
-import { phoneSimulator, phoneXcode } from "./phone-simulator.ts";
+import { phoneSharedCacheFolder, phoneSimulator, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
 import { devicePhotos, PHONE_PARTS, type PhoneDevice, type PhoneJob, partSelection, partTestStarted, phoneAnimationWaits, phoneExecutionArguments, phonePasses, phoneStopsEarly, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
@@ -265,9 +265,18 @@ const packageCache = process.env.INFINITARY_PHONE_PACKAGE_CACHE || join(root, "s
 // simulator.
 const ownedSimulators = new Set<string>();
 type Lane = { device: PhoneDevice; owned: string; booted: Date; photos?: ReturnType<typeof devicePhotos> };
+// INF-2445: once per gate, before its first simulator starts, an empty cache folder of the pinned runtime goes, so the
+// kept log every recovery reads spells out the shared cache's words (`removeEmptyPhoneSharedCache`).
+let sharedCache: Promise<void> | undefined;
 const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const { kind, runtime } = phoneSimulator(catalog, device);
+  await (sharedCache ??= (async () => {
+    const folder = phoneSharedCacheFolder((await run("sw_vers", ["-buildVersion"])).trim(), runtime);
+    const removed = await removeEmptyPhoneSharedCache(folder,
+      () => run("xcrun", ["simctl", "runtime", "dyld_shared_cache", "remove", runtime.identifier]));
+    if (removed) console.log(removed);
+  })());
   const owned = (await run("xcrun", ["simctl", "create", GATE_SIMULATOR, kind.identifier, runtime.identifier])).trim();
   ownedSimulators.add(owned);
   // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.

@@ -554,6 +554,13 @@ A run that is killed, by a task stop or a restart, never reaches its own cleanup
 It deletes each simulator named `Infinitary isolated test`, shut down or booted, and each `infinitary-native-` scratch folder in its temporary folder that came into being before the earliest phone check process still running began.
 A gate makes both only after its process starts, so a running check's simulator and folder are never touched, nor a person's own simulator or another prefix's folder; the reading needs no record or age, so leftovers of runs before the sweep go the same way.
 It reads the process list itself, never through the command log the evidence keeps, and a removal that fails is reported while the gate goes on.
+Before its first simulator starts, each gate removes the pinned runtime's folder under `/Library/Developer/CoreSimulator/Caches/dyld/<Mac build>/` when that folder holds no cache (`removeEmptyPhoneSharedCache` in `scripts/phone-simulator.ts`, INF-2445).
+On the phone check's virtual Mac, which runs macOS 26.6, an obsolete cache build left that folder holding only its warning that the runtime ships its own cache.
+CoreSimulator still names such a folder as the simulator's cache folder: the simulator's processes fall back to the runtime's own cache, but its log never stores that cache's words.
+The kept log then writes `<compose failure [shared UUID]>` for every message whose words live in the shared cache, SpringBoard's appearance line, the text-size lines and UIKit's lines among them, so no recovery from the kept log can read them.
+Without the folder the simulator uses the runtime's own cache and stores its words within a minute of starting.
+`xcrun simctl runtime dyld_shared_cache remove` takes the folder away without administrator rights; a folder that holds a cache stays, and a Mac with no such folder runs nothing.
+A removal that fails, or leaves the folder, is printed while the gate goes on, and the observers then have only their live logs and the unreadable-record rule below.
 A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts.
 A `--both` run of every part writes each part's minutes on each device to `part-times.json` in the evidence folder, a record no workflow reads since INF-2539 removed the pull request's part budget.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
@@ -731,7 +738,7 @@ The picker logs `performAllAnimations for animator: <_UIContextMenuAnimator` as 
 The existing broad simulator log also feeds its `onLine` readings into that same preview validator, because it can retain a Photos response the narrow stream dropped (INF-2305).
 Its compact header uses the runner's local time zone and is normalized to an explicit timestamp before validation.
 When neither live source has supplied that witness, the same observer reads the owned simulator's kept log once inside its original wait, as the touch observer does.
-On the phone check's virtual Mac that kept log cannot spell out messages whose words live in the simulator's shared cache, UIKit's among them, and writes `<compose failure [shared UUID]>` in their place, with the process, subsystem, category and time intact (INF-2444).
+A kept log that cannot spell out messages whose words live in the simulator's shared cache, UIKit's among them, writes `<compose failure [shared UUID]>` in their place, with the process, subsystem, category and time intact (INF-2444); the gate removes the empty cache folder that caused this on the phone check's virtual Mac (INF-2445), and the rule below stays for any Mac where that removal fails.
 So the observer also selects the picker's records in UIKit's context-menu category (`com.apple.UIKit`, `UICMILifecycle`), and counts the first such unreadable record after the press as that line: the category logs only while a context menu animates, and none is open as the press begins.
 A readable record of that category counts only when it is the line itself.
 All sources require the same Photos process, context-menu line or its unreadable record, and timestamp after the press began; a stopped observer, failed read or missing witness authorizes no touch.
@@ -770,6 +777,7 @@ The app's read of the new size applies the change, even when it is logged in the
 A read of the old size after the save proves the app missed it, and only that proof sets the size once more; two proven misses fail the part.
 A missing line or a stopped observer is unknown and sets nothing more.
 A live log stream can drop a line the simulator's kept log holds, so before a witness answers unknown the runner reads the kept log since the change for it (INF-1799).
+All three lines come from the simulator's shared libraries, so that read spells them out only when the simulator stored its shared cache's words, which the gate's removal of an empty cache folder ensures (INF-2445).
 Every witness of one display request stops waiting at the journey's request cap less two minutes, one for that read and one for the request's way there and back (`phoneDisplayDeadline`), so the journey always hears the unknown before its own request ends.
 An appearance SpringBoard misses leaves no line, and the simulator writes nothing when asked for the appearance it already has, so the runner sets each appearance once and prints one it could not confirm.
 A text size the part already asked for changes nothing for the app to read, so the runner sets it again and answers unchanged without a witness (INF-2052).

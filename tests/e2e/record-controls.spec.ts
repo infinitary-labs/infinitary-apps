@@ -65,7 +65,9 @@ import { focusOn, pressKey } from "./windowKeys";
  * on its control even when the record grows under it (INF-204).
  * The model is a fact in a record's readout (FI3-565 piece 2) and an outline
  * chip beside the meta line on a card's head, never truncated and never
- * pushed out, even at the narrowest window.
+ * pushed out, even at the narrowest window. On the record it sits in the row
+ * of facts that scrolls with the Info body (INF-2261), so it reads whole once
+ * the body is scrolled to it.
  *
  * The fixture is a record the app boots into: backlog rows on request (one
  * behind a blocker, one a crewmate filed), and an idle crewmate with a
@@ -722,6 +724,25 @@ const readsWhole = (chip: Locator) =>
     ),
   );
 
+/**
+ * Scroll the record's body until the fact sits in the middle of its sight,
+ * the way a person scrolls down to the row of facts: at the narrowest window
+ * the body is shorter than its Info rows, and the row scrolls with the body
+ * (INF-2261, the captain's pick: "At the end of the Info body, under a
+ * hairline, scrolling with it"). Where the body rests depends on where it was
+ * left, so a check of the row must not read it there. Only up and down: a
+ * name pushed out sideways stays out of sight.
+ */
+async function scrollRecordBodyTo(fact: Locator): Promise<void> {
+  await fact.evaluate((el) => {
+    const body = el.closest<HTMLElement>("[data-card-body]");
+    if (!body) throw new Error("The fact is not inside the record's body");
+    const at = el.getBoundingClientRect();
+    const sight = body.getBoundingClientRect();
+    body.scrollTop += at.top + at.height / 2 - (sight.top + body.clientHeight / 2);
+  });
+}
+
 test("at the narrowest window the model a task ran on reads whole, on its record and on its card", async () => {
   const { page, app } = launched;
   // The record opens before the window narrows: at the narrowest window the
@@ -732,6 +753,7 @@ test("at the narrowest window the model a task ran on reads whole, on its record
   await expect(pane(page)).toHaveAttribute("data-task-record", "rc-decision");
   const recordModel = taskFact(pane(page), "model");
   await expect(recordModel).toHaveText(LONG_MODEL);
+  await scrollRecordBodyTo(recordModel);
   await expect(recordModel).toBeInViewport({ ratio: 1 });
   expect(await readsWhole(recordModel)).toBe(true);
 

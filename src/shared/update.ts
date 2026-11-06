@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UPDATE_PROBLEMS } from "./updateWords";
 
 /**
  * Which updates an installation is offered (docs/alpha.md "Update
@@ -56,6 +57,12 @@ export const updateStatusSchema = z.object({
   percent: z.number().min(0).max(100).optional(),
   problem: z.string().optional(),
   notice: z.string().optional(),
+  /**
+   * When the release source last answered a check, in milliseconds since the
+   * epoch: the up-to-date line says how long ago (docs/alpha.md "Update
+   * channels"). Absent before a first answer, and from an older core.
+   */
+  checkedAt: z.number().optional(),
   /** The crew's work around this update, while there is any to save or resume. */
   work: updateWorkSchema.optional(),
 });
@@ -82,3 +89,11 @@ export const presenceSettingsSchema = z.object({
   showInDock: z.boolean(),
 });
 export type PresenceSettings = z.infer<typeof presenceSettingsSchema>;
+
+/**
+ * A copy whose installation the app could not confirm cannot check for
+ * updates: it keeps its explanation and the releases page, and the app
+ * menu's Check for Updates… is greyed out.
+ */
+export const checksUpdates = (status: UpdateStatus | null): boolean =>
+  status?.problem !== UPDATE_PROBLEMS.unknownInstallation;

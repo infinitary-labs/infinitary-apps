@@ -548,6 +548,7 @@ describe("the app as a view of another Mac", () => {
       updateAvailable: true,
       releaseUrl: OFFERED.releaseUrl,
       upgradeCommand: upgradeCommandFor("alpha"),
+      checkedAt: expect.any(Number),
     });
     // View release opens that version's page here, though changes there are refused.
     expect(await air.shell.dispatch("inf:update:open-release", [])).toEqual({ ok: true });

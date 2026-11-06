@@ -5,6 +5,7 @@ import {
   UPDATE_LATER,
   UPDATE_NOTICES,
   UPDATE_PROBLEMS,
+  UPDATE_STEP_WORDS,
   UPDATE_WORDS,
   UPDATE_WORK_WORDS,
 } from "../../src/shared/updateWords";
@@ -55,7 +56,9 @@ test("a saved channel survives restart and stable never downgrades an ahead alph
   }
 });
 
-test("update consent exposes progress and a recoverable installation error", async () => {
+// INF-2670, the captain's answer: a failure the app cannot fix here withdraws Update and
+// restart, and Open the releases page becomes the next step.
+test("update consent exposes progress, and an installation error offers the releases page", async () => {
   const demo = await startDemo({ withMockProvider: true, size: { width: 1280, height: 800 } });
   const { page, app } = demo.launched;
   const failure = UPDATE_PROBLEMS.unwritable;
@@ -101,9 +104,10 @@ test("update consent exposes progress and a recoverable installation error", asy
           await expect(panel.getByRole("alert")).toHaveText(failure);
         });
         expect(await app.evaluate(() => globalThis.__macUpdateFixture.installations)).toBe(0);
+        await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toHaveCount(0);
         await regionShot(panel, test.info().outputPath("update-error-dark.png"));
         await demo.step(async () => {
-          await pressKey(panel.getByRole("button", { name: UPDATE_WORDS.release }), "Enter");
+          await pressKey(panel.getByRole("button", { name: UPDATE_WORDS.releasesPage }), "Enter");
           await expect
             .poll(() => app.evaluate(() => globalThis.__macUpdateFixture.opened.length))
             .toBe(1);
@@ -142,7 +146,7 @@ test("switching channels cancels a pending download without installing it", asyn
       "data-update-channel",
       "stable",
     );
-    await expect(page.locator("[data-update-problem]")).toHaveCount(0);
+    await expect(page.locator("[data-update-channel]").getByRole("alert")).toHaveCount(0);
   } finally {
     await launched.close();
   }
@@ -206,6 +210,15 @@ test("a staged update offers a keyboard restart retry and locks channel changes"
     const choice = page.getByRole("radiogroup", { name: UPDATE_WORDS.channel });
     for (const name of ["Stable", "Alpha"])
       await expect(choice.getByRole("radio", { name, exact: true })).toBeDisabled();
+    // INF-2670: the Version row offers the same Restart; the channel row keeps only its own problem.
+    const version = page.locator('[data-setting="version"]');
+    await expect(version.locator("[data-update-line]")).toHaveText(UPDATE_PROBLEMS.staged);
+    await expect(
+      version.getByRole("button", { name: UPDATE_WORDS.ready, exact: true }),
+    ).toBeVisible();
+    await expect(page.locator('[data-setting="update-channel"]')).not.toContainText(
+      UPDATE_PROBLEMS.staged,
+    );
     await regionShot(
       page.locator('[data-setting="update-channel"]'),
       test.info().outputPath("channel-ready-dark.png"),
@@ -254,18 +267,18 @@ test("an update saves running work first, and Update later installs nothing, by 
 
     // Saving work: the panel names the task whose running work it waits for.
     await update(1);
-    await expect(panel.locator("[data-update-saving]")).toContainText(UPDATE_WORK_WORDS.saving);
+    await expect(panel.locator("[data-update-line]")).toHaveText(UPDATE_WORK_WORDS.saving);
     await expect(panel.locator("[data-update-waiting]")).toHaveText(
       UPDATE_WORK_WORDS.waitingFor("Release notes"),
     );
     await regionShot(panel, test.info().outputPath("update-saving-dark.png"));
 
-    // Update later, reached by Tab from the release page button.
-    await focusOn(panel.getByRole("button", { name: UPDATE_WORDS.release }));
+    // Update later, reached by Tab from the update icon.
+    await focusOn(page.getByRole("button", { name: /Update available/ }));
     await page.keyboard.press("Tab");
     await untilFocused(panel.getByRole("button", { name: UPDATE_WORDS.later }));
     await page.keyboard.press("Enter");
-    await expect(panel.locator("[data-update-later-note]")).toHaveText(UPDATE_LATER);
+    await expect(panel.locator("[data-update-line]")).toHaveText(UPDATE_LATER);
     await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toBeEnabled();
     expect(await fixture("installations")).toBe(0);
     await regionShot(panel, test.info().outputPath("update-later-dark.png"));
@@ -276,7 +289,7 @@ test("an update saves running work first, and Update later installs nothing, by 
     await runFromSearch(app, page, "updates.later");
     await expect.poll(() => fixture("saves")).toBe(2);
     await runFromSearch(app, page, "updates.show");
-    await expect(panel.locator("[data-update-later-note]")).toHaveText(UPDATE_LATER);
+    await expect(panel.locator("[data-update-line]")).toHaveText(UPDATE_LATER);
     expect(await fixture("installations")).toBe(0);
 
     // Saved, it updates: the panel and the Version row say so.
@@ -284,8 +297,8 @@ test("an update saves running work first, and Update later installs nothing, by 
     await expect(panel.locator("[data-update-waiting]")).toBeVisible();
     await app.evaluate(() => globalThis.__macUpdateFixture.saved());
     await expect.poll(() => fixture("installations")).toBe(1);
-    await expect(panel.locator("[data-update-updating]")).toHaveText(UPDATE_WORK_WORDS.updating);
-    await expect(panel.locator("[data-update-saving]")).toHaveCount(0);
+    await expect(panel.locator("[data-update-line]")).toHaveText(UPDATE_WORK_WORDS.updating);
+    await expect(panel.locator("[data-update-waiting]")).toHaveCount(0);
     await regionShot(panel, test.info().outputPath("update-updating-dark.png"));
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Settings", exact: true }).click();
@@ -300,6 +313,8 @@ test("an update saves running work first, and Update later installs nothing, by 
 
 // Captain's revised INF-643: Homebrew remains supported and must never use native replacement.
 // The real controller/IPC/rendered notice choose from a cask-produced receipt; effects are stood in.
+// INF-2670, the captain's answer: the command shows in the Version row and the notice, with Copy
+// command, which hands the page's clipboard the command (stood in, never the Mac's own clipboard).
 test("a Homebrew installation keeps its upgrade command and never offers native update consent", async () => {
   const launched = await launchApp({ withMockProvider: true });
   try {
@@ -315,10 +330,22 @@ test("a Homebrew installation keeps its upgrade command and never offers native 
       await setThemeViaSettings(page, theme);
       await runFromSearch(app, page, "updates.show");
       const panel = page.locator("[data-update-channel]");
-      await expect(
-        panel.getByText(upgradeCommandFor("stable", INFINITARY_TAP), { exact: true }),
-      ).toBeVisible();
+      const command = upgradeCommandFor("stable", INFINITARY_TAP);
+      await expect(panel.getByText(command, { exact: true })).toBeVisible();
       await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toHaveCount(0);
+      await page.evaluate(() => {
+        const copied: string[] = [];
+        (globalThis as { __copied?: string[] }).__copied = copied;
+        Object.defineProperty(navigator, "clipboard", {
+          configurable: true,
+          value: { writeText: async (text: string) => void copied.push(text) },
+        });
+      });
+      await pressKey(panel.getByRole("button", { name: UPDATE_WORDS.copy }), "Enter");
+      await expect(panel.getByRole("button", { name: UPDATE_WORDS.copied })).toBeVisible();
+      expect(await page.evaluate(() => (globalThis as { __copied?: string[] }).__copied)).toEqual([
+        command,
+      ]);
       expect((await page.evaluate(() => window.infinitary.update.install())).ok).toBe(false);
       expect(await app.evaluate(() => globalThis.__macUpdateFixture.downloads)).toBe(0);
       expect(await app.evaluate(() => globalThis.__macUpdateFixture.installations)).toBe(0);
@@ -327,6 +354,9 @@ test("a Homebrew installation keeps its upgrade command and never offers native 
       await page.getByRole("button", { name: "Settings", exact: true }).click();
       await page.getByRole("tab", { name: "General", exact: true }).click();
       await expect(page.getByRole("radiogroup", { name: UPDATE_WORDS.channel })).toHaveCount(0);
+      const version = page.locator('[data-setting="version"]');
+      await expect(version.getByText(command, { exact: true })).toBeVisible();
+      await expect(version.getByRole("button", { name: UPDATE_WORDS.copy })).toBeVisible();
       await page.keyboard.press("Escape");
     }
   } finally {
@@ -348,6 +378,16 @@ test("unknown installation ownership explains the refusal without offering repla
     await expect(page.getByRole("radiogroup", { name: UPDATE_WORDS.channel })).toHaveCount(0);
     expect((await page.evaluate(() => window.infinitary.update.install())).ok).toBe(false);
     expect(await app.evaluate(() => globalThis.__macUpdateFixture.installations)).toBe(0);
+    // INF-2670: the explanation sits beside the button that opens the releases page.
+    await pressKey(
+      page
+        .locator('[data-setting="version"]')
+        .getByRole("button", { name: UPDATE_WORDS.releasesPage }),
+      "Enter",
+    );
+    await expect
+      .poll(() => app.evaluate(() => globalThis.__macUpdateFixture.opened.length))
+      .toBe(1);
     for (const theme of ["dark", "light"] as const) {
       await setThemeViaSettings(page, theme, { close: false });
       await regionShot(
@@ -362,6 +402,8 @@ test("unknown installation ownership explains the refusal without offering repla
 
 // INF-2073, the captain's direction A: Check for updates in Settings → General and command search,
 // reading the feed past the 4-hour saved answer. The feed and native effects are stood in.
+// INF-2670, the captain's direction A: the row's button is always the next step, the up-to-date
+// line says when it checked, and a failed check offers Try again and the releases page.
 // Completion: the line's words and the update notice, with nothing downloaded.
 test("Check for updates finds a release published within the same four hours, by keys", async () => {
   const launched = await launchApp({ withMockProvider: true });
@@ -374,7 +416,9 @@ test("Check for updates finds a release published within the same four hours, by
     const version = page.locator('[data-setting="version"]');
     const button = version.getByRole("button", { name: UPDATE_WORDS.check, exact: true });
     const line = version.locator("[data-update-line]");
-    await expect(line).toHaveText(UPDATE_NOTICES.latest);
+    await expect(line).toHaveText(
+      `${UPDATE_NOTICES.latest("stable")} ${UPDATE_STEP_WORDS.checked("now")}`,
+    );
     await untilFocused(button);
     expect(await button.evaluate((element) => element.matches(":focus-visible"))).toBe(true);
     // Tab reaches it: away and back again.
@@ -396,19 +440,26 @@ test("Check for updates finds a release published within the same four hours, by
     await expect(line).toHaveText(new RegExp(UPDATE_NOTICES.available("0.1.31")));
     expect(await app.evaluate(() => globalThis.__macUpdateFixture.checks)).toBe(checks + 1);
     await expect(page.getByRole("button", { name: "Update available: 0.1.31" })).toBeVisible();
+    // The row's next step is now Update and restart, as in the update notice; installing
+    // still waits for its own click.
+    await expect(version.getByRole("button", { name: UPDATE_WORDS.restart })).toBeVisible();
+    await expect(version.getByRole("button", { name: UPDATE_WORDS.check })).toHaveCount(0);
     await regionShot(version.locator(".."), test.info().outputPath("check-found-dark.png"));
-    // Show update opens the update notice; installing still waits for its own click.
-    await pressKey(line.getByRole("button", { name: UPDATE_WORDS.show }), "Enter");
+    await pressKey(page.getByRole("button", { name: "Update available: 0.1.31" }), "Enter");
     const panel = page.locator("[data-update-channel]");
+    await expect(panel.locator("[data-update-line]")).toHaveText(await line.innerText());
     await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toBeVisible();
     expect(await app.evaluate(() => globalThis.__macUpdateFixture.downloads)).toBe(0);
+    await page.keyboard.press("Escape");
 
-    // A press that cannot read the feed says so, never that the copy is up to date.
+    // A check that cannot read the feed says so, never that the copy is up to date.
     await app.evaluate(() => {
       globalThis.__macUpdateFixture.failCheck = true;
     });
-    await pressKey(button, "Enter");
+    await runFromSearch(app, page, "updates.check");
     await expect(line).toHaveText(UPDATE_PROBLEMS.checkFailed);
+    await expect(version.getByRole("button", { name: UPDATE_WORDS.releasesPage })).toBeVisible();
+    await untilFocused(version.getByRole("button", { name: UPDATE_WORDS.retry }));
     await regionShot(version.locator(".."), test.info().outputPath("check-failed-dark.png"));
   } finally {
     await launched.close();

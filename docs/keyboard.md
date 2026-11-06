@@ -10,7 +10,7 @@ The captain chose complete keyboard access with conventional controls and custom
 | The installed map, the window's commands heard before the page, and recording | `src/main/keyboard.ts` (`InstalledKeymap`, `followWindowCommands`, `recordWindowKeys`) |
 | Where the keys are kept | `ShellPreferencesService.keymap` (the `keyboard` settings row) on the Mac that holds the first mate, `ViewLook.keymap` on one that controls it, switched by the shell's `SwitchablePreferences` (`src/main/shell.ts`) |
 | The size commands' handlers | `src/main/windowSize.ts` (`sizeCommands`), held once by `src/main/shell.ts` (`Shell.size`) |
-| The app menu: the size items, Settings…, Keyboard Settings…, Reset All Keys… and the Help menu's What’s New | `src/main/appMenu.ts` (`installAppMenu`, `resetAllKeysAfterAsking`) |
+| The app menu: the size items, Check for Updates…, Settings…, Keyboard Settings…, Reset All Keys… and the Help menu's What’s New | `src/main/appMenu.ts` (`installAppMenu`, `resetAllKeysAfterAsking`) |
 | The shell's window commands: told to the page by id | `src/main/keyboard.ts` (`shellCommands`), the `inf:keyboard:command` push (`src/shared/ipc.ts`) |
 | A key the window took, told to the page without the key | `src/main/keyboard.ts` (`followWindowCommands`), the `inf:keyboard:taken` push, read by the dictation key (`src/renderer/src/app/dictationKey.ts`) |
 | The shell's window commands' handlers | `src/renderer/src/app/shellCommands.ts` (`followShellCommands`, `runWindowCommand`) |
@@ -101,7 +101,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `settings.open`, Open Settings | window, run by the shell page | ⌘, |
 | `settings.keyboard`, Open Keyboard settings | window, run by the shell page | none: chosen by name, or Keyboard Settings… in the app menu |
 | `updates.later`, Update later | window, run by the shell page | none: chosen by name (update, later, cancel, saving and work find it too) |
-| `updates.check`, Check for updates | window, run by the shell page | none: chosen by name (update, version, release and new find it too) |
+| `updates.check`, Check for updates | window, run by the shell page | none: chosen by name (update, version, release and new find it too), or Check for Updates… in the app menu |
 | `whats-new.show`, Show what's new | window, run by the shell page | none: chosen by name (release, notes, changes and version find it too), or What’s New in the Help menu |
 | `firstmate.reply`, Open the first mate's reply | window, run by the shell page | none: chosen by name (answer, message, note and last find it too), or a click, Enter or Space on the reply line |
 | `settings.runbooks`, Open Runbooks; `runbooks.open-folder`, Open your runbooks folder | window, run by the shell page | none: chosen by name |
@@ -288,7 +288,7 @@ The main process's own commands, the size keys, are never refused by the page.
   The app menu's Keyboard Settings… item tells the page the same command.
 - `updates.later`, Update later, is the update panel's Update later: it lets an update go while it saves the crew's work, so nothing is replaced and the work carries on (`docs/alpha.md`, "Saving work before an update").
   It refuses unless an update is saving work ("No update is saving work now"); once the copy is being replaced it cannot wait.
-- `updates.check`, Check for updates, opens Settings at General with focus on the Version row's Check for updates and presses it, reading the release source now (`docs/alpha.md`, "Update channels"); it works from Settings too.
+- `updates.check`, Check for updates, opens Settings at General with focus on the Version row's next step and presses Check for updates, reading the release source now (`docs/alpha.md`, "Update channels"); it works from Settings too.
   It refuses on a copy whose installation the app could not confirm, which has no button.
 - `whats-new.show`, Show what's new, goes home and asks the core's What's new door for the newest release note that listed changes: an open note comes to the front of the stack, a closed one comes back read-only (`showReleaseNote`, `docs/release-notes.md` "Reading a note again").
   It works from Settings too, and refuses until a note was shown ("No release notes yet").
@@ -540,7 +540,8 @@ Switching to or from a view of another Mac installs that Mac's own keys.
 ### The app menu
 
 A desktop with no menu bar (Linux) has no app menu: `src/main/app.ts` sets none, so no window carries Electron's default menu or its keys, and what the menu holds is reached elsewhere - Settings by its gear and Ctrl+,, Keyboard settings, Reset all keys and What's new in Settings and command search, and Quit and closing the window by Ctrl+Q and Ctrl+W ("Keys on each system").
-On a Mac, `installAppMenu` builds Electron's menu again at every install: the View menu's zoom items run the size commands, and after About the app menu has Settings…, Keyboard Settings… and Reset All Keys…, in the platform's title case.
+On a Mac, `installAppMenu` builds Electron's menu again at every install: the View menu's zoom items run the size commands, and after About the app menu has Check for Updates…, then Settings…, Keyboard Settings… and Reset All Keys…, in the platform's title case.
+Check for Updates… runs `updates.check` and is greyed out on a copy that cannot check, one whose installation the app could not confirm (`checksUpdates`, read once from `inf:update:status`).
 Electron's own menu has no Help menu, so the app adds one (`role: "help"`, where the Mac puts its menu search) holding What’s New in Infinitary, which runs `whats-new.show`; it is greyed out until a release note was shown, and the menu is built again when the core pushes the first one (`inf:release-notes`).
 Each shows its command's first single key from the installed map; the window takes a command's key before the menu does, so an accelerator only shows it.
 Keyboard Settings…, Reset All Keys… and What’s New stay whatever keys a person removes; Reset All Keys… asks first (`resetAllKeysAfterAsking`).
@@ -556,7 +557,7 @@ Recovery restarts the page and loses unsent drafts, but keeps the core and saved
 A hint shows a command's first key as its system draws it (`keyHint`, `chordLabel`: `⇧⌘L`, `⌘,`, `⇧⌘[` on a Mac, `Ctrl+Shift+L`, `Ctrl+,`, `Ctrl+Shift+[` on Linux).
 Command search shows it on every row; a control that does what a command does shows it after its words in the label the app draws on rest, and names every key in `aria-keyshortcuts` (`commandKeys`): the Settings gear (`settings.open`), the card pager's arrows (`cards.previous`, `cards.next`), the thread's Collapse thread (`cards.thread`, whose latest line names the key in `aria-keyshortcuts` alone), and a panel's header buttons (`panel:<panel>/<command>`), the Tasks panel's Search tasks (⇧⌘F) and Open task board (⌘B) among them.
 A card's footer choice shows its key inside the button after its label, the label moved left to make most of the room and the button six pixels wider (`Button`'s `keys`), and the empty reply field shows Go to the card's reply at its far end until it has focus or words; both name the key in `aria-keyshortcuts` and hide the drawn key from the accessible name.
-The app menu shows the size keys, Settings…'s, Keyboard Settings…'s and What’s New's keys through `menuAccelerator`.
+The app menu shows the size keys, Check for Updates…'s, Settings…'s, Keyboard Settings…'s and What’s New's keys through `menuAccelerator`.
 Every hint reads the installed map, the same keys the window resolves.
 
 ## Tests

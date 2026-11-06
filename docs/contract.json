@@ -23130,6 +23130,9 @@
           "notice": {
             "type": "string"
           },
+          "checkedAt": {
+            "type": "number"
+          },
           "work": {
             "type": "object",
             "properties": {
@@ -23247,6 +23250,9 @@
           },
           "notice": {
             "type": "string"
+          },
+          "checkedAt": {
+            "type": "number"
           },
           "work": {
             "type": "object",
@@ -23375,6 +23381,9 @@
           },
           "notice": {
             "type": "string"
+          },
+          "checkedAt": {
+            "type": "number"
           },
           "work": {
             "type": "object",
@@ -23557,6 +23566,9 @@
           },
           "notice": {
             "type": "string"
+          },
+          "checkedAt": {
+            "type": "number"
           },
           "work": {
             "type": "object",

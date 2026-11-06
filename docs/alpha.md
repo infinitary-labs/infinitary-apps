@@ -46,16 +46,21 @@ The host enables native replacement only for an installed release Mac, not a dev
   Automatic downloads and automatic installation on quit are disabled.
   The notice shows progress and bounded errors, with a link to the release page for recovery.
   The app refuses updates from a mounted or translocated copy, an unwritable installation, or an unsupported system.
+  Such a problem cannot pass on a retry, so the core withdraws Update and restart for the rest of that run (`blocked` in `src/core/update/macUpdates.ts`) and Open the releases page becomes the next step; a failure that can pass, such as a stopped download, offers Try again beside View release.
 - **Switching invalidates pending work.**
   A channel change saves first, invalidates prior checks and offers, and cancels an unfinished download.
   Native staging locks the channel until restart.
   If shutdown fails after staging, the ready state preserves the staged update and retries restart without downloading or staging it again.
 - **Settings and controlling views.**
   Settings → General places keyboard-accessible Stable and Alpha choices next to Version.
-  The Version row's Check for updates reads the release source now on every copy whose installation the app knows, past the 4-hour saved answer, and joins a check already reading (`checkNow`, `inf:update:check`); command search's Check for updates opens it and presses it.
-  Its line says what the check found: the latest release, a copy ahead of its channel, no release yet, the version available with Show update opening the update notice, or that updates could not be checked.
-  A failed press never says the copy is up to date, while the quiet hourly check stays silent on failure; the button is unavailable while an update downloads, installs or waits for a restart.
-  While an update saves the crew's work the line says Saving work, then Updating, and after the restart Resuming work until every turn the update stopped has started again.
+  The Version row and the top-right update notice draw one update part (`src/renderer/src/app/UpdateStepView.tsx`) from one ladder (`updateStep`, `src/renderer/src/app/updateStep.ts`): for every state a line that says where the update stands and, beside it, a button that takes the next step, with at most one more control.
+  Up to date, a copy ahead of its channel, or no release yet: the line says so and when the release source last answered (`checkedAt`; "Up to date on Stable. Checked just now."), with Check for updates.
+  Check for updates reads the release source now on every copy whose installation the app knows, past the 4-hour saved answer, and joins a check already reading (`checkNow`, `inf:update:check`); command search's Check for updates and the app menu's Check for Updates… open Settings → General with focus on the row's next step and press Check for updates.
+  A failed check says so beside Try again and Open the releases page; it never says the copy is up to date, while the quiet hourly check stays silent on failure.
+  A version available offers Update and restart (Install on Linux) beside View release, or, where a package manager installs it (Homebrew, Arch, NixOS), shows its command with Copy command.
+  While an update downloads the line shows its progress; while it saves the crew's work it says Saving work and whose running work it waits for, with Update later, then Updating, and after the restart Resuming work until every turn the update stopped has started again.
+  A staged update whose restart did not finish offers Restart; a copy of unknown installation explains itself beside Open the releases page.
+  The Update channel row shows only its own problem, a failed channel change.
   A Mac controlling another Mac changes and checks its own installed app, never the remote computer's.
   The release indicator and Settings share one renderer status store.
 

@@ -276,14 +276,14 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
   }
 
   /** What a successful read says when nothing newer is offered. */
-  const noticeFor = (offer: Offer | null): Pick<UpdateStatus, "notice"> => {
+  const noticeFor = (offer: Offer | null, channel: UpdateChannel): Pick<UpdateStatus, "notice"> => {
     if (offer && isNewerVersion(offer.version, options.currentVersion)) return {};
     return {
       notice: !offer
         ? UPDATE_NOTICES.none
         : isNewerVersion(options.currentVersion, offer.version)
           ? UPDATE_NOTICES.ahead
-          : UPDATE_NOTICES.latest,
+          : UPDATE_NOTICES.latest(channel),
     };
   };
 
@@ -297,7 +297,11 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     const next = (async () => {
       try {
         const offer = await readOffer(channel, tap);
-        const status = { ...statusFor(channel, tap, offer), ...noticeFor(offer) };
+        const status = {
+          ...statusFor(channel, tap, offer),
+          ...noticeFor(offer, channel),
+          checkedAt: now(),
+        };
         lastGood.set(key, status);
         lastOffer.set(key, offer);
         return status;

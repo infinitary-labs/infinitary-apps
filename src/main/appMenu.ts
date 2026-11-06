@@ -18,7 +18,8 @@ import type { InstalledKeymap, MainCommandHandlers } from "./keyboard";
  * The app menu (docs/keyboard.md, "The app menu"): Electron's own, without
  * developer roles in the release, with the
  * View menu's zoom items running the size commands, after About the
- * Settings…, Keyboard Settings… and Reset All Keys… items, and a Help menu
+ * Check for Updates… item (greyed out on a copy that cannot check), then
+ * Settings…, Keyboard Settings… and Reset All Keys…, and a Help menu
  * whose What’s New in Infinitary opens the newest release note again
  * (docs/release-notes.md "Reading a note again"). Every item that runs a
  * command shows that command's first key from the installed map, and the
@@ -38,6 +39,8 @@ export type AppMenuActions = {
   resetAllKeys: () => void;
   /** Whether a release note was shown: What’s New is greyed out until one was. */
   whatsNew: () => boolean;
+  /** Whether this copy can check for updates: Check for Updates… is greyed out on one that cannot. */
+  checksUpdates: () => boolean;
 };
 
 const DEVELOPER_ROLES = new Set(["reload", "forcereload", "toggledevtools"]);
@@ -57,6 +60,13 @@ const SIZE_ITEM_IDS: Readonly<Record<MainCommandId, string>> = {
 /** The items after About, each command's key read from `bindings`. */
 function settingsItems(bindings: Bindings, actions: AppMenuActions): MenuItemConstructorOptions[] {
   return [
+    {
+      id: "updates-check",
+      label: "Check for Updates…",
+      accelerator: menuAccelerator("updates.check", bindings),
+      enabled: actions.checksUpdates(),
+      click: () => actions.shell("updates.check"),
+    },
     { type: "separator" },
     {
       id: "settings-open",

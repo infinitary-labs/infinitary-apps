@@ -1,5 +1,5 @@
-import type { UpdateChannel, UpdateStatus } from "@shared/update";
-import { UPDATE_LATER, UPDATE_PROBLEMS } from "@shared/updateWords";
+import { checksUpdates, type UpdateChannel, type UpdateStatus } from "@shared/update";
+import { UPDATE_LATER, UPDATE_PROBLEMS, UPDATE_STEP_WORDS } from "@shared/updateWords";
 import { create } from "zustand";
 
 type State = {
@@ -7,7 +7,10 @@ type State = {
   busy: boolean;
   /** A pressed Check for updates is reading. */
   checking: boolean;
+  /** What the last pressed install answered, when it did not finish. */
   problem: string | null;
+  /** A failed channel change: the one problem the Update channel row shows. */
+  channelProblem: string | null;
   /** Update later let the last update go: it waits, and the work carries on. */
   later: string | null;
   noticeOpen: boolean;
@@ -17,6 +20,7 @@ export const useUpdateState = create<State>(() => ({
   busy: false,
   checking: false,
   problem: null,
+  channelProblem: null,
   later: null,
   noticeOpen: false,
 }));
@@ -29,14 +33,16 @@ export function setUpdateNoticeOpen(next: boolean | ((open: boolean) => boolean)
 export const savingForUpdate = (status: UpdateStatus | null): boolean =>
   status?.work?.state === "saving";
 
-/** A copy whose installation the app could not confirm keeps its explanation, with no check. */
-export const checksUpdates = (status: UpdateStatus | null): boolean =>
-  status?.problem !== UPDATE_PROBLEMS.unknownInstallation;
+export { checksUpdates };
 
 let reading = 0;
 let subscription = 0;
+let pressed: Promise<void> | null = null;
 
 export async function refreshUpdateStatus(): Promise<void> {
+  // A pressed check is reading now, so its answer is newer than this one: Check for
+  // updates from command search opens the Version row, whose own read starts after it.
+  if (pressed) return;
   const own = ++reading;
   try {
     const status = await window.infinitary.update.status();
@@ -45,8 +51,6 @@ export async function refreshUpdateStatus(): Promise<void> {
     /* An unanswered check never invents an offer. */
   }
 }
-
-let pressed: Promise<void> | null = null;
 
 /** Check for updates: a second press joins the check already reading. */
 export function checkForUpdates(): Promise<void> {
@@ -81,6 +85,7 @@ export async function chooseUpdateChannel(channel: UpdateChannel): Promise<void>
   useUpdateState.setState({
     busy: true,
     problem: null,
+    channelProblem: null,
     status: previous
       ? {
           ...previous,
@@ -103,8 +108,7 @@ export async function chooseUpdateChannel(channel: UpdateChannel): Promise<void>
       useUpdateState.setState({
         status: previous,
         busy: false,
-        problem:
-          "The update channel could not be changed. Try again after any update has finished.",
+        channelProblem: UPDATE_STEP_WORDS.channelFailed,
       });
       await refreshUpdateStatus();
     }
@@ -124,8 +128,7 @@ export async function installOfferedUpdate(): Promise<void> {
   } catch {
     if (own === subscription)
       useUpdateState.setState({
-        problem:
-          "The update could not be confirmed. Check Version in Settings before trying again.",
+        problem: UPDATE_STEP_WORDS.unconfirmed,
       });
   } finally {
     clearInterval(timer);

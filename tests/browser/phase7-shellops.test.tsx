@@ -25,13 +25,15 @@ test("the update indicator opens with the cask upgrade command", async () => {
   expect(latestVersion).toBeTruthy();
   expect(channel).toBe("stable");
   expect(upgradeCommand).toBeTruthy();
-  const offered = () => document.querySelector("[data-update-offered]");
+  // INF-2670: the notice's line names the offer and the step a package manager's copy takes.
+  const offered = () => document.querySelector("[data-update-channel] [data-update-line]");
   await expect.poll(() => offered()?.textContent).toContain(latestVersion as string);
   expect(document.querySelector("[data-update-channel]")?.getAttribute("data-update-channel")).toBe(
     "stable",
   );
   await expect.element(page.getByText(upgradeCommand, { exact: true })).toBeVisible();
   await expect.element(page.getByRole("button", { name: "View release" })).toBeVisible();
+  await expect.element(page.getByRole("button", { name: "Copy command" })).toBeVisible();
   await userEvent.keyboard("{Escape}");
   await expect.poll(offered).toBeNull();
   expect([...new Set(bridge.unanswered)]).toEqual([]);

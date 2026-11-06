@@ -19,7 +19,7 @@ brew install --cask infinitary-labs/tap/infinitary
 brew install --cask infinitary-labs/tap/infinitary@alpha
 ```
 
-A Homebrew copy shows its cask's upgrade command, never Update and restart.
+A Homebrew copy shows its cask's upgrade command with Copy command, never Update and restart.
 It reads the update targets published with that cask, including the older cask names for existing Firstmate 3000 installations.
 Switch channels through Homebrew, not the in-app channel selector.
 Both methods keep the same saved work; the installation method belongs to the running app copy, not its shared data folder.
@@ -34,10 +34,11 @@ Stable never offers an alpha.
 If this copy is newer than the chosen channel, Infinitary waits for that channel to catch up rather than installing an older version.
 A channel with no published release offers nothing.
 
-The update notice offers Update and restart; command search also opens it with Show available update, without consenting to installation.
+Settings → General's Version row and the update notice say where the update stands and offer its next step, Update and restart once a version is available; command search also opens the notice with Show available update, without consenting to installation.
 Checking does not download or install anything.
 After that choice, Infinitary downloads the ZIP, checks its checksum and Apple signature, stops running work safely, and restarts into the new app.
 The notice shows download progress and a readable problem if it cannot finish.
+A problem Infinitary cannot fix on that copy withdraws Update and restart and makes Open the releases page the next step.
 Changing channels during a download cancels that download and discards its offer.
 Once the native updater has staged the replacement, changing channels waits until restart; a failed shutdown leaves Restart available without downloading the update twice.
 A copy running from the disk image, a translocated copy, or an installation that cannot be replaced must be copied into a writable Applications location first.

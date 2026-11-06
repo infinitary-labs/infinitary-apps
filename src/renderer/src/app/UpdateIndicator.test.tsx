@@ -1,5 +1,11 @@
 import type { UpdateStatus } from "@shared/update";
-import { UPDATE_LATER, UPDATE_WORDS, UPDATE_WORK_WORDS } from "@shared/updateWords";
+import {
+  UPDATE_LATER,
+  UPDATE_NOTICES,
+  UPDATE_STEP_WORDS,
+  UPDATE_WORDS,
+  UPDATE_WORK_WORDS,
+} from "@shared/updateWords";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { UpdatePanel } from "./UpdateIndicator";
@@ -7,7 +13,8 @@ import { UpdatePanel } from "./UpdateIndicator";
 /**
  * The update panel (docs/alpha.md "Update channels"): it names the channel,
  * the offered version and the version this Mac has, so an offer reads as
- * new or not at a glance, and the channel's upgrade command.
+ * new or not at a glance, and the channel's upgrade command with Copy
+ * command (INF-2670: the same update part as the Version row).
  */
 
 const ALPHA_OFFER: UpdateStatus = {
@@ -22,10 +29,7 @@ const ALPHA_OFFER: UpdateStatus = {
 
 /** The panel's visible text per hook, with React's text separators removed. */
 function render(status: UpdateStatus): string {
-  return renderToStaticMarkup(<UpdatePanel status={status} onViewRelease={() => {}} />).replace(
-    /<!-- -->/g,
-    "",
-  );
+  return renderToStaticMarkup(<UpdatePanel status={status} />).replace(/<!-- -->/g, "");
 }
 
 function hookText(markup: string, hook: string): string | undefined {
@@ -37,12 +41,16 @@ describe("UpdatePanel", () => {
     const markup = render(ALPHA_OFFER);
     expect(markup).toContain('data-update-channel="alpha"');
     expect(markup).toContain("Alpha updates");
-    expect(hookText(markup, "data-update-offered")).toBe("Version 0.1.27-alpha.15 is available");
+    expect(hookText(markup, "data-update-line")).toBe(
+      `${UPDATE_NOTICES.available("0.1.27-alpha.15")} ${UPDATE_STEP_WORDS.command}`,
+    );
     expect(hookText(markup, "data-update-installed")).toBe("You have 0.1.26-alpha.14");
-    expect(markup.indexOf("data-update-offered")).toBeLessThan(
+    expect(markup.indexOf("data-update-line")).toBeLessThan(
       markup.indexOf("data-update-installed"),
     );
     expect(markup).toContain(ALPHA_OFFER.upgradeCommand.replaceAll("&", "&amp;"));
+    expect(markup).toContain('data-update-action="copy"');
+    expect(markup).toContain(UPDATE_WORDS.copy);
   });
 
   it("keeps the two versions apart when only the alpha suffix differs", () => {
@@ -52,7 +60,7 @@ describe("UpdatePanel", () => {
       currentVersion: "0.1.25-alpha.42",
       latestVersion: "0.1.25",
     });
-    expect(hookText(markup, "data-update-offered")).toBe("Version 0.1.25 is available");
+    expect(hookText(markup, "data-update-line")).toContain(UPDATE_NOTICES.available("0.1.25"));
     expect(hookText(markup, "data-update-installed")).toBe("You have 0.1.25-alpha.42");
   });
 });
@@ -66,10 +74,7 @@ describe("UpdatePanel around the crew's work", () => {
     return renderToStaticMarkup(
       <UpdatePanel
         status={status}
-        onViewRelease={() => {}}
-        onInstall={() => {}}
-        onLater={() => {}}
-        {...(extra.later ? { later: extra.later } : {})}
+        presses={{ checking: false, busy: false, problem: null, later: extra.later ?? null }}
       />,
     ).replace(/<!-- -->/g, "");
   }
@@ -80,29 +85,28 @@ describe("UpdatePanel around the crew's work", () => {
       phase: "installing",
       work: { state: "saving", tasks: ["Release notes", "Docs pass"] },
     });
-    expect(markup).toContain("data-update-saving");
-    expect(markup).toContain(UPDATE_WORK_WORDS.saving);
+    expect(markup).toContain('data-update-step="saving"');
+    expect(hookText(markup, "data-update-line")).toBe(UPDATE_WORK_WORDS.saving);
     expect(markup.match(/data-update-waiting/g)).toHaveLength(2);
     expect(markup).toContain(UPDATE_WORK_WORDS.waitingFor("Release notes"));
     expect(markup).toContain(UPDATE_WORK_WORDS.waitingFor("Docs pass"));
-    expect(markup).toContain("data-update-later");
+    expect(markup).toContain('data-update-action="later"');
     expect(markup).toContain(UPDATE_WORDS.later);
-    expect(markup).not.toContain("data-update-updating");
+    expect(markup).not.toContain('data-update-step="updating"');
   });
 
   it("says it is updating once the work is saved, with no Update later", () => {
     const markup = renderInstall({ ...INSTALLABLE, phase: "installing" });
-    expect(markup).toContain("data-update-updating");
-    expect(markup).toContain(UPDATE_WORK_WORDS.updating);
-    expect(markup).not.toContain("data-update-later");
-    expect(markup).not.toContain("data-update-saving");
+    expect(markup).toContain('data-update-step="updating"');
+    expect(hookText(markup, "data-update-line")).toBe(UPDATE_WORK_WORDS.updating);
+    expect(markup).not.toContain('data-update-action="later"');
+    expect(markup).not.toContain('data-update-step="saving"');
   });
 
   it("says the update waits after Update later, and offers Install again", () => {
     const markup = renderInstall(INSTALLABLE, { later: UPDATE_LATER });
-    expect(markup).toContain("data-update-later-note");
-    expect(markup).toContain(UPDATE_LATER);
-    expect(markup).toContain("data-update-install");
-    expect(markup).not.toContain("data-update-later=");
+    expect(hookText(markup, "data-update-line")).toBe(UPDATE_LATER);
+    expect(markup).toContain('data-update-action="install"');
+    expect(markup).not.toContain('data-update-action="later"');
   });
 });

@@ -22,6 +22,7 @@ import { platformArgument } from "@shared/platform";
 import { FRAME_FOCUS_BLINK_FEATURE } from "@shared/plugins/containment";
 import type { ReleaseNotesView } from "@shared/releaseTracking";
 import { SMALLEST_WINDOW } from "@shared/smallestWindow";
+import { checksUpdates } from "@shared/update";
 import { spellingOfUserDataFolder } from "@shared/userDataFolders";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, powerMonitor, session } from "electron";
 import { hostDesktop, hostPlatform } from "../core/platform";
@@ -546,6 +547,8 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
       // Whether a release note was shown, for the Help menu's What's New;
       // followed once the menu is installed below.
       let notesShown = false;
+      // Whether this copy can check for updates, for the app menu's Check for Updates….
+      let updatesChecked = true;
       let followReleaseNotes: (view: ReleaseNotesView) => void = () => {};
       // A development run may stand in another contract version for the Mac
       // where Firstmate lives, so a view on this build reads the two as too
@@ -763,6 +766,7 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
                 },
                 resetAllKeys: () => resetAllKeysAfterAsking(shell.keymap, focusedWindow()),
                 whatsNew: () => notesShown,
+                checksUpdates: () => updatesChecked,
               },
               isRelease,
             )
@@ -778,6 +782,16 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
       void shell
         .dispatch("inf:release-notes:list", [])
         .then(followReleaseNotes)
+        .catch(() => {});
+      // Check for Updates… is greyed out on a copy whose installation the app
+      // could not confirm, which cannot check (docs/keyboard.md, "The app menu").
+      void shell
+        .dispatch("inf:update:status", [])
+        .then((status) => {
+          if (updatesChecked === checksUpdates(status)) return;
+          updatesChecked = checksUpdates(status);
+          rebuildMenu();
+        })
         .catch(() => {});
       win.on("focus", () => shell.windowFocused());
       app.on("activate", () => {

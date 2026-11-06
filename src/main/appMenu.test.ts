@@ -37,13 +37,14 @@ const ELECTRON_MENU = {
   ],
 } as unknown as Menu;
 
-function actions(whatsNew: boolean) {
+function actions(whatsNew: boolean, checksUpdates = true) {
   const shell = vi.fn();
   const menuActions: AppMenuActions = {
     size: { "size.larger": vi.fn(), "size.smaller": vi.fn(), "size.reset": vi.fn() },
     shell,
     resetAllKeys: vi.fn(),
     whatsNew: () => whatsNew,
+    checksUpdates: () => checksUpdates,
   };
   return { shell, menuActions };
 }
@@ -67,6 +68,7 @@ describe("the Help menu", () => {
     // The app menu keeps its own items.
     expect(submenu(menu[0]).map((entry) => entry.id ?? entry.role)).toEqual([
       "about",
+      "updates-check",
       undefined,
       "settings-open",
       "settings-keyboard",
@@ -112,6 +114,29 @@ describe("the Help menu", () => {
       "separator",
       "normal",
     ]);
+  });
+});
+
+// The captain's INF-2670 answer: Check for Updates… under About, running the
+// same command as command search, greyed out on a copy that cannot check.
+describe("Check for Updates…", () => {
+  const checkItem = (menuActions: AppMenuActions) =>
+    submenu(appMenuTemplate(ELECTRON_MENU, DEFAULT_BINDINGS, menuActions)[0]).find(
+      (entry) => entry.id === "updates-check",
+    );
+
+  it("sits right after About and tells the page Check for updates, as its command would", () => {
+    const { shell, menuActions } = actions(true);
+    const check = checkItem(menuActions);
+    expect(check).toMatchObject({ label: "Check for Updates…", enabled: true });
+    const click = check?.click as (() => void) | undefined;
+    if (!click) throw new Error("Check for Updates… runs nothing");
+    click();
+    expect(shell).toHaveBeenCalledWith("updates.check");
+  });
+
+  it("is greyed out on a copy that cannot check", () => {
+    expect(checkItem(actions(true, false).menuActions)?.enabled).toBe(false);
   });
 });
 

@@ -63,6 +63,13 @@ export function createMacUpdateChecker(options: {
   let phase: NonNullable<UpdateStatus["phase"]> = "idle";
   let percent: number | undefined;
   let problem: string | undefined;
+  /**
+   * A problem the app cannot fix on this copy (not writable, not in
+   * Applications, an unsupported macOS): it stays for the rest of this run,
+   * and Update and restart is withdrawn for it, so the releases page is the
+   * way on.
+   */
+  let blocked: string | undefined;
   let offer: MacUpdateOffer | null = null;
 
   function status(): UpdateStatus {
@@ -77,16 +84,17 @@ export function createMacUpdateChecker(options: {
       upgradeCommand: "",
       channelChoice: true,
       phase,
-      ...(available ? { install: { asksPassword: false, restarts: true } } : {}),
+      ...(available && !blocked ? { install: { asksPassword: false, restarts: true } } : {}),
       ...(percent === undefined ? {} : { percent }),
-      ...(problem ? { problem } : {}),
+      ...(blocked || problem ? { problem: blocked ?? problem } : {}),
+      ...(checkedAt === undefined ? {} : { checkedAt }),
       ...(phase === "idle" && !available
         ? {
             notice: !offer
               ? UPDATE_NOTICES.none
               : isNewerVersion(options.currentVersion, offer.version)
                 ? UPDATE_NOTICES.ahead
-                : UPDATE_NOTICES.latest,
+                : UPDATE_NOTICES.latest(channel),
           }
         : {}),
       ...(work ? { work } : {}),
@@ -170,6 +178,7 @@ export function createMacUpdateChecker(options: {
   }
 
   async function install(): Promise<UpdateInstallResult> {
+    if (blocked) return { ok: false, problem: blocked };
     if (isInstalling()) return { ok: false, problem: "The update is already installing." };
     const consent = generation;
     const current = await getStatus();
@@ -222,6 +231,8 @@ export function createMacUpdateChecker(options: {
         phase = error instanceof MacUpdateReadyProblem ? "ready" : "error";
         problem = message;
       }
+      if (error instanceof MacUpdateProblem && !(error instanceof MacUpdateReadyProblem))
+        blocked = message;
       return { ok: false, problem: message };
     } finally {
       if (download === controller) download = undefined;

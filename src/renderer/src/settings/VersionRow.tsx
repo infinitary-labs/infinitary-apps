@@ -6,7 +6,7 @@ import { useShellStore } from "../app/store";
 import { Button } from "../design";
 import { focusWithRing } from "../design/focus";
 import { SettingRow } from "./settingRows";
-import { UpdateCheckButton, UpdateCheckLine } from "./UpdateCheck";
+import { UpdateRowControl, UpdateRowLine } from "./UpdateCheck";
 import "./version.css";
 
 /**
@@ -16,8 +16,8 @@ import "./version.css";
  * it was shown, through the same door as What's new in the Help menu.
  * The list is one Tab stop, and ↑, ↓, Home
  * and End move through it (docs/keyboard.md, "Lists and Settings").
- * Check for updates sits in its control, with the update line under the
- * version (UpdateCheck.tsx).
+ * The update step's buttons sit in its control, with the update line under
+ * the version (UpdateCheck.tsx).
  */
 
 const capitalized = (text: string) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
@@ -74,7 +74,7 @@ export function VersionRow() {
   return (
     <VersionRowView
       releaseNotes={useShellStore((s) => s.releaseNotes)}
-      update={{ line: <UpdateCheckLine />, control: <UpdateCheckButton /> }}
+      update={{ line: <UpdateRowLine />, control: <UpdateRowControl /> }}
     />
   );
 }
@@ -85,7 +85,7 @@ export function VersionRowView({
   update,
 }: {
   releaseNotes: ReleaseNotesView | null;
-  /** The update line and Check for updates, read from the update store. */
+  /** The update line and the step's buttons, read from the update store. */
   update?: { line: React.ReactNode; control: React.ReactNode };
 }) {
   const [expanded, setExpanded] = useState(false);

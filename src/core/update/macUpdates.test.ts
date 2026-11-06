@@ -322,6 +322,23 @@ describe("INF-640 Mac update consent and channel ownership", () => {
     expect(f.driver.install).not.toHaveBeenCalled();
   });
 
+  // The captain's INF-2670 answer: a failure the app cannot fix here withdraws
+  // Update and restart for this copy, so the releases page is the way on.
+  it("withdraws installing after a problem it cannot fix, through a new check", async () => {
+    const f = fixture();
+    f.driver.download.mockRejectedValue(new MacUpdateProblem(UPDATE_PROBLEMS.unwritable));
+    await f.checker.install();
+    const after = await f.checker.checkNow();
+    expect(after).toMatchObject({
+      updateAvailable: true,
+      phase: "idle",
+      problem: UPDATE_PROBLEMS.unwritable,
+    });
+    expect(after.install).toBeUndefined();
+    expect(await f.checker.install()).toEqual({ ok: false, problem: UPDATE_PROBLEMS.unwritable });
+    expect(f.driver.download).toHaveBeenCalledTimes(1);
+  });
+
   it("cannot change channels after native installation starts", async () => {
     const f = fixture();
     const staged = deferred<void>();
@@ -432,7 +449,7 @@ describe("a pressed check on a direct Mac copy", () => {
     const f = fixture("0.5.0-alpha.10");
     expect(await f.checker.getStatus()).toMatchObject({
       updateAvailable: false,
-      notice: UPDATE_NOTICES.latest,
+      notice: UPDATE_NOTICES.latest("alpha"),
     });
     f.driver.check.mockImplementation(async () => offer("0.5.0-alpha.11"));
     expect((await f.checker.getStatus()).updateAvailable).toBe(false);

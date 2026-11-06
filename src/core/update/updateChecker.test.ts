@@ -87,6 +87,7 @@ describe("channel-aware update notices", () => {
     });
     const updates = checker("0.1.25-alpha.2", "alpha", fetchImpl, { opened });
     expect(await updates.getStatus()).toEqual({
+      checkedAt: expect.any(Number),
       currentVersion: "0.1.25-alpha.2",
       channel: "alpha",
       latestVersion: "0.1.25-alpha.10",
@@ -128,6 +129,7 @@ describe("channel-aware update notices", () => {
       targets: targets({ stable: target("0.1.25"), alpha: target("0.1.26-alpha.43") }),
     });
     expect(await checker("0.1.25", "stable", fetchImpl).getStatus()).toEqual({
+      checkedAt: expect.any(Number),
       currentVersion: "0.1.25",
       channel: "stable",
       latestVersion: "0.1.25",
@@ -135,7 +137,7 @@ describe("channel-aware update notices", () => {
       releaseUrl: target("0.1.25").releaseUrl,
       upgradeCommand: upgradeCommandFor("stable"),
       // INF-2073: the Version row in Settings says what a read found.
-      notice: UPDATE_NOTICES.latest,
+      notice: UPDATE_NOTICES.latest("stable"),
     });
     // Even running an alpha build, a stable subscription never moves back.
     expect(
@@ -168,6 +170,7 @@ describe("channel-aware update notices", () => {
   it("offers nothing for a channel the valid targets file does not name", async () => {
     const { fetchImpl, requests } = tap({ targets: targets({ stable: target("0.1.26") }) });
     expect(await checker("0.1.25-alpha.2", "alpha", fetchImpl).getStatus()).toEqual({
+      checkedAt: expect.any(Number),
       currentVersion: "0.1.25-alpha.2",
       channel: "alpha",
       latestVersion: null,
@@ -207,6 +210,7 @@ describe("before the targets file exists", () => {
     const opened: string[] = [];
     const updates = checker("0.1.0", "stable", fetchImpl, { opened });
     expect(await updates.getStatus()).toEqual({
+      checkedAt: expect.any(Number),
       currentVersion: "0.1.0",
       channel: "stable",
       latestVersion: "0.2.0",
@@ -222,6 +226,7 @@ describe("before the targets file exists", () => {
     const opened: string[] = [];
     const updates = checker("0.1.0-alpha.1", "alpha", fetchImpl, { opened });
     expect(await updates.getStatus()).toEqual({
+      checkedAt: expect.any(Number),
       currentVersion: "0.1.0-alpha.1",
       channel: "alpha",
       latestVersion: null,
@@ -316,16 +321,18 @@ describe("a pressed check", () => {
     let time = 0;
     const { fetchImpl, replies } = tap({ targets: targets({ stable: target("0.1.30") }) });
     const updates = checker("0.1.30", "stable", fetchImpl, { now: () => time });
+    // The captain's INF-2670 answer: the up-to-date line says when the source last answered.
     expect(await updates.getStatus()).toMatchObject({
       updateAvailable: false,
-      notice: UPDATE_NOTICES.latest,
+      notice: UPDATE_NOTICES.latest("stable"),
+      checkedAt: 0,
     });
     // Within the interval the quiet check keeps its answer; a press does not.
     time = 500;
     replies.targets = targets({ stable: target("0.1.31") });
     expect((await updates.getStatus()).updateAvailable).toBe(false);
     const found = await updates.checkNow();
-    expect(found).toMatchObject({ latestVersion: "0.1.31", updateAvailable: true });
+    expect(found).toMatchObject({ latestVersion: "0.1.31", updateAvailable: true, checkedAt: 500 });
     expect(found.notice).toBeUndefined();
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     // The quiet check now answers what the press found.
@@ -473,6 +480,7 @@ describe("the installed app's checker", () => {
       fetchImpl,
     });
     expect(await updates.getStatus()).toEqual({
+      checkedAt: expect.any(Number),
       currentVersion: "0.4.2-alpha.1",
       channel: "alpha",
       latestVersion: "0.4.2-alpha.3",

@@ -110,6 +110,28 @@ export async function pageLaidOutAt(app: ElectronApplication, siteUrl: string): 
 }
 
 /**
+ * Whether a task's page fills its view: the size the page lays out at, as
+ * its own document reads it, when it is the view's room and the picture the
+ * view drew; otherwise all three, for the poll's message.
+ */
+export async function pageFillsView(
+  page: Page,
+  app: ElectronApplication,
+  taskId: string,
+  pageUrl: string,
+): Promise<string> {
+  const room = await browserView(page, taskId)
+    .locator("[data-browser-page]")
+    .evaluate((node) => `${node.clientWidth}x${node.clientHeight}`);
+  const laidOut = await pageLaidOutAt(app, pageUrl);
+  const drawn = (await canvasReading(page)).size;
+  return room === laidOut && laidOut === drawn ? laidOut : `${room} / ${laidOut} / ${drawn}`;
+}
+
+/** A size as `pageFillsView` answers it when the page fills its view: width by height. */
+export const SIZE = /^(\d+)x(\d+)$/;
+
+/**
  * Click an element of a task's hidden page, as the captain does: on the
  * view's picture of it, once the picture holds still. A view that has just
  * come up may still be easing into place - after a take its card settles

@@ -105,6 +105,11 @@ it("collects every spec once, isolates app boundaries and serializes voice, pain
     "phase2-crewmate.spec.ts",
     "run-work.spec.ts",
     "task-browser-booking.spec.ts",
+    // The task browser's journey, split in four, keeps its lane.
+    "task-browser.spec.ts",
+    "task-browser-handoff.spec.ts",
+    "task-browser-saved-sign-ins.spec.ts",
+    "task-browser-view.spec.ts",
     // INF-741: reviewed and run under the parallel lanes' load.
     "phase4-cards.spec.ts",
     "personal-panels.spec.ts",

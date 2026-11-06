@@ -29,12 +29,7 @@ export const CODE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".
  * shrinks: each piece of INF-2625's plan that brings a file under the ceiling
  * removes its entry in the same pull request.
  */
-export const OVER_CEILING: readonly string[] = [
-  "src/core/browser/taskBrowsers.test.ts",
-  "src/core/browser/taskBrowsers.ts",
-  "tests/e2e/task-browser.spec.ts",
-  "tests/helpers/phoneHome.ts",
-];
+export const OVER_CEILING: readonly string[] = ["tests/helpers/phoneHome.ts"];
 
 /** Whether the check reads this tracked file. */
 export function isCodeFile(path: string): boolean {

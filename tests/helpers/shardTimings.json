@@ -13,7 +13,6 @@
   "src/core/browser/diagnostics.test.ts": 0.1,
   "src/core/browser/outline.test.ts": 0.1,
   "src/core/browser/reading.test.ts": 0.1,
-  "src/core/browser/taskBrowsers.test.ts": 0.2,
   "src/core/browser/webSignIns.test.ts": 0.1,
   "src/core/browser/window.test.ts": 0.1,
   "src/core/claude/claudeAuth.test.ts": 0.2,

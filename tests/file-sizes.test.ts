@@ -15,7 +15,7 @@ import {
  * files.
  */
 describe("the size check", () => {
-  const LISTED = "src/core/browser/taskBrowsers.ts";
+  const LISTED = "tests/helpers/phoneHome.ts";
   const WAKES = "src/core/orchestrator/wakes.ts";
   const WAITS = "scripts/main-thread-waits.ts";
 

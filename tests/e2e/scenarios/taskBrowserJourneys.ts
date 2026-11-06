@@ -595,7 +595,7 @@ function taskBrowserCardStep(body: string): ScriptedCall[] | undefined {
 
 /**
  * The captain takes a task's browser while its crewmate's command runs
- * (docs/task-browser.md, "Taking control"; task-browser.spec.ts). A brief
+ * (docs/task-browser.md, "Taking control"; task-browser-handoff.spec.ts). A brief
  * carrying this marker and the account page this Mac serves ("keep the
  * account page at http://127.0.0.1:PORT/ open") opens its browser there and
  * waits on the page for "Ready to go on", again and again, its turn

@@ -3,8 +3,8 @@ import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import type { BrowserAnswer } from "../../src/core/browser/crewmateCommands";
 import {
-  type BrowserAnswer,
   type CrewmateBrowser,
   FORM_RESEND_CAPTAIN_WORDS,
   type TaskBrowsers,
@@ -184,7 +184,7 @@ test("POST popups refuse reload for both drivers while GET documents still reloa
           isPost ? { ok: false, code: FORM_RESEND } : { ok: true },
         );
         if (isPost) {
-          // taskBrowsers.test.ts owns the exact refusal wording; the real
+          // taskBrowsers.handoff.test.ts owns the exact refusal wording; the real
           // host's refusal must reach the command's answer about this form.
           expect(reloaded.page?.did).toContain("form");
           const captain = await launched.app.evaluate(async () => {

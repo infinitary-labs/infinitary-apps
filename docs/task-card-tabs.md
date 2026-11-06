@@ -114,4 +114,4 @@ Inside the Crewmate tab the transcript is one Tab stop that scrolls by keys, eac
 ## Tests
 
 `src/core/tasks/crewTranscript.test.ts` holds the transcript to both dialects, the senders, the queued line, redaction, pictures and diffs; `crewmateState.test.ts`, `taskTabs.test.ts` and `stackActions.test.ts` the window's side, `taskTabs.test.ts` the tab order and the Cards count; `crewSteer.lanes.test.ts` the steer and the interrupt.
-`tests/e2e/task-crewmate.spec.ts` replays a closed task's session by keys (folds, a diff, a picture, the blocks, Show Info and Show Crewmate), types a line a mock Claude crewmate takes mid-turn and reports on, and stops a turn with ⌃C; `tests/e2e/task-browser.spec.ts` walks the three kinds of tab.
+`tests/e2e/task-crewmate.spec.ts` replays a closed task's session by keys (folds, a diff, a picture, the blocks, Show Info and Show Crewmate), types a line a mock Claude crewmate takes mid-turn and reports on, and stops a turn with ⌃C; `tests/e2e/task-browser-view.spec.ts` walks the three kinds of tab.

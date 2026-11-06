@@ -1,6 +1,6 @@
 import { decode } from "@toon-format/toon";
 import { afterEach, describe, expect, it } from "vitest";
-import type { BrowserAnswer } from "../browser/taskBrowsers";
+import type { BrowserAnswer } from "../browser/crewmateCommands";
 import {
   BROWSER_COMMANDS,
   BROWSER_RULES,

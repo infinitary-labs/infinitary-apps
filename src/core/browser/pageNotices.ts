@@ -1,0 +1,215 @@
+import { HERE } from "@shared/deviceNames";
+import { TASK_BROWSER_PAGES_MAX } from "@shared/taskBrowser";
+import type { HostBrowserRefusal } from "../host";
+import { quoted, siteOf } from "./browserRecord";
+import { browserCommand } from "./commandWords";
+import type { GuardRefusalKind } from "./connectionGuard";
+import type { BlockKind } from "./destinations";
+
+/** Page errors and dialogs one answer lists before it counts the rest. */
+const NOTICES_SHOWN = 8;
+const NOTICE_MAX = 300;
+/** Notices kept between answers; older ones only count. */
+const NOTICES_KEPT = 50;
+
+/** A host the page asked for and did not get: refused by policy, or by its connection guard. */
+type Blocked = { count: number; kind: BlockKind | Exclude<GuardRefusalKind, "private"> };
+
+/**
+ * What each kind of refused request reads as, in the order an answer lists
+ * them: the words before the hosts, and the sentence after.
+ */
+const BLOCKED_WORDS: readonly [Blocked["kind"], readonly [string, string]][] = [
+  [
+    "private",
+    [
+      `Blocked what the page asked for on ${HERE.this}'s network or another private one: `,
+      `This browser reaches public websites and the pages on ${HERE.this} you open, never another device; a public name that leads to a private address is refused at the connection.`,
+    ],
+  ],
+  [
+    "insecure",
+    [
+      "Blocked what the page asked for from websites over plain http: ",
+      "This browser reaches websites only over https.",
+    ],
+  ],
+  [
+    "local",
+    [
+      `Blocked what the page asked for from other servers on ${HERE.this}: `,
+      `Open one with ${browserCommand("open <url>")} to let this task's pages reach it.`,
+    ],
+  ],
+  [
+    "scheme",
+    [
+      "Blocked what the page asked for that is not a web address: ",
+      "This browser opens no other app, and never the captain's own browser.",
+    ],
+  ],
+  ["unresolved", ["Could not find what the page asked for: ", "No such name was found."]],
+  ["unreachable", ["Could not reach what the page asked for: ", "Its server did not answer."]],
+];
+
+/** What the browser refused of a site on its own, as the crewmate reads it. */
+export function refusalWords(refusal: HostBrowserRefusal): string {
+  const site = siteOf(refusal.url);
+  switch (refusal.kind) {
+    case "certificate":
+      return `${site}: its certificate did not verify (${refusal.code}), so nothing came from it. This browser never goes past a certificate error.`;
+    case "sign-in-box":
+      return `${site}: it asked for a browser sign-in box, which this browser does not answer. If the task needs that site, ask the captain on a card.`;
+    case "client-certificate":
+      return `${site}: it asked for a client certificate, which this browser never offers.`;
+  }
+}
+
+export function clip(text: string, max = NOTICE_MAX): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}
+
+/** The lists of what a page said that an answer reads out and empties. */
+type KeptList = "dialogs" | "errors" | "popups" | "refusals" | "pageNotes";
+
+/**
+ * What a task's browser keeps to tell its crewmate at the head of its next
+ * answer (docs/task-browser.md, "What a crewmate reads"): requests and
+ * connections it refused, the page's dialogs and errors, downloads, refused
+ * windows, a second page opening or closing, and the one notice told once.
+ * While the captain holds the page, what it says is his and is kept for
+ * nobody (`paused`); a download is told whoever drives next, since the file
+ * is in the task's folder either way.
+ */
+export class PageNotices {
+  /** Requests refused since the last answer, by host. */
+  readonly blocked = new Map<string, Blocked>();
+  /** Why the guard last carried no connection to each host, for a load's own words. */
+  readonly tunnels = new Map<string, GuardRefusalKind>();
+  readonly dialogs: string[] = [];
+  readonly errors: string[] = [];
+  /**
+   * Downloads that ended since the last answer, in the crewmate's words:
+   * told whoever held the page, since the file is now in its folder.
+   */
+  readonly downloads: string[] = [];
+  /** Downloads still running, by the path they are saved at: the name the site gave. */
+  readonly downloading = new Map<string, string>();
+  /** A download started since the last load began: an address that was a file, not a page. */
+  downloaded?: boolean;
+  /** Windows a page tried to open past the browser's pages, refused. */
+  readonly popups: string[] = [];
+  /** Certificates, sign-in boxes and client certificates the browser refused. */
+  readonly refusals: string[] = [];
+  /** A second page opening or closing, in the words the crewmate reads. */
+  readonly pageNotes: string[] = [];
+  /** Notices past `NOTICES_KEPT` since the last answer: counted, not kept. */
+  dropped = 0;
+  /** Told to the crewmate once, at the head of its next answer. */
+  notice?: string;
+
+  constructor(private readonly paused: () => boolean) {}
+
+  /** A page's notice, kept for the crewmate's next answer unless the captain holds the page. */
+  keep(list: KeptList, text: string): void {
+    if (this.paused()) return;
+    if (this[list].length >= NOTICES_KEPT) {
+      this.dropped += 1;
+      return;
+    }
+    this[list].push(clip(text));
+  }
+
+  /** A download's line, for whoever drives next: past the kept count it is counted, not kept. */
+  keepDownload(text: string): void {
+    if (this.downloads.length >= NOTICES_KEPT) {
+      this.dropped += 1;
+      return;
+    }
+    this.downloads.push(text);
+  }
+
+  /** A request or connection the browser refused, counted by host for the next answer. */
+  block(host: string, kind: Blocked["kind"]): void {
+    if (this.paused()) return;
+    const seen = this.blocked.get(host);
+    this.blocked.set(host, { count: (seen?.count ?? 0) + 1, kind });
+  }
+
+  /** What the crewmate is told once about its browser, at the head of an answer. */
+  take(): string {
+    const notice = this.notice;
+    this.notice = undefined;
+    return notice ? `${notice}\n` : "";
+  }
+
+  /** Nothing the page said while the captain held it reaches the crewmate. */
+  forget(): void {
+    this.blocked.clear();
+    this.tunnels.clear();
+    this.dialogs.length = 0;
+    this.errors.length = 0;
+    this.popups.length = 0;
+    this.refusals.length = 0;
+    this.pageNotes.length = 0;
+    this.dropped = 0;
+  }
+
+  /**
+   * Every kept notice as an answer's lines, emptied as it is read. A page
+   * that may show the captain's account (`signedIn`) keeps its error words
+   * to itself.
+   */
+  drain(signedIn: boolean): string[] {
+    const lines: string[] = [];
+    const byKind = new Map<Blocked["kind"], string[]>();
+    for (const [host, blocked] of this.blocked) {
+      const entry = blocked.count > 1 ? `${host} (${blocked.count})` : host;
+      byKind.set(blocked.kind, [...(byKind.get(blocked.kind) ?? []), entry]);
+    }
+    this.blocked.clear();
+    for (const [kind, words] of BLOCKED_WORDS) {
+      const hosts = byKind.get(kind);
+      if (hosts) lines.push(`${words[0]}${hosts.join(", ")}. ${words[1]}`);
+    }
+    const listed = (label: string, list: string[]): void => {
+      if (list.length === 0) return;
+      const shown = list.slice(0, NOTICES_SHOWN).map((item) => `- ${item}`);
+      const more = list.length > NOTICES_SHOWN ? [`- and ${list.length - NOTICES_SHOWN} more`] : [];
+      lines.push(label, ...shown, ...more);
+      list.length = 0;
+    };
+    listed("The browser refused what a site asked of it:", this.refusals);
+    listed("The page showed dialogs, each dismissed:", this.dialogs);
+    listed(
+      "The browser downloaded files into the task's evidence folder, where you can read them and hand them on by path in your report:",
+      this.downloads,
+    );
+    if (this.downloading.size > 0) {
+      lines.push(
+        `Still downloading: ${[...this.downloading.values()].map(quoted).join(", ")}. Read the page again shortly to see where it was saved.`,
+      );
+    }
+    this.downloaded = false;
+    listed(
+      `The page tried to open another page, refused: this browser keeps ${TASK_BROWSER_PAGES_MAX} pages at most. Close one with ${browserCommand("closepage <n>")}, or open the address with ${browserCommand("open <url>")}:`,
+      this.popups,
+    );
+    if (signedIn && this.errors.length > 0) {
+      // A page that may show the captain's account keeps its error words to itself.
+      const count = this.errors.length;
+      lines.push(
+        `The page logged ${count === 1 ? "an error" : `${count} errors`}; on a page that may show the captain's account their words are not passed on.`,
+      );
+      this.errors.length = 0;
+    } else {
+      listed("The page logged errors:", this.errors);
+    }
+    if (this.dropped > 0) {
+      lines.push(`(${this.dropped} more page messages were not kept.)`);
+      this.dropped = 0;
+    }
+    return lines;
+  }
+}

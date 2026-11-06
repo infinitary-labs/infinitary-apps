@@ -5,7 +5,7 @@ import type {
   BrowserCloseInput,
   BrowserInspectInput,
   BrowserNavigateInput,
-} from "../browser/taskBrowsers";
+} from "../browser/crewmateCommands";
 import type { LoadOp } from "./loadCommands";
 import type { SecretsOp, SecretsReply } from "./secretsCommands";
 

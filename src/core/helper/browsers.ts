@@ -10,12 +10,8 @@ import {
 } from "@shared/work";
 import { AxiChannel, type TaskShell } from "../axi/channel";
 import type { GuardLookup } from "../browser/connectionGuard";
-import {
-  type BrowserFrameSink,
-  type CrewmateBrowser,
-  type SignInStore,
-  TaskBrowsers,
-} from "../browser/taskBrowsers";
+import type { SignInStore } from "../browser/savedSignInGrants";
+import { type BrowserFrameSink, type CrewmateBrowser, TaskBrowsers } from "../browser/taskBrowsers";
 import {
   type HeldSignIn,
   type SavedSignInRecord,
@@ -127,6 +123,16 @@ class LentSignIns implements SignInStore {
   }
 
   remove(): boolean {
+    return false;
+  }
+
+  /** A lent save keeps no mark here: the home keeps its own. */
+  markFailed(): boolean {
+    return false;
+  }
+
+  /** A lent save keeps no permission here: the home keeps its own. */
+  allowAutomatic(): boolean {
     return false;
   }
 

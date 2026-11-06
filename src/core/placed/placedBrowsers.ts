@@ -18,17 +18,15 @@ import {
   type BrowserOrderResponse,
   browserOrders,
 } from "@shared/work";
-import {
-  type BrowserAnswer,
-  type BrowserFrameSink,
-  type BrowserReturned,
-  type CrewmateBrowser,
-  failedSignInNote,
-  offeredOf,
-  offeredSignIn,
-  type ProjectPage,
-  siteNamed,
-  type TaskBrowsers,
+import { siteNamed } from "../browser/browserRecord";
+import type { BrowserAnswer } from "../browser/crewmateCommands";
+import { failedSignInNote, offeredOf, offeredSignIn } from "../browser/savedSignInGrants";
+import type {
+  BrowserFrameSink,
+  BrowserReturned,
+  CrewmateBrowser,
+  ProjectPage,
+  TaskBrowsers,
 } from "../browser/taskBrowsers";
 import {
   cookiesOfSite,

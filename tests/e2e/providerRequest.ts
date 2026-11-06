@@ -100,6 +100,19 @@ export function providerMessages(body: string): ProviderMessage[] {
   return items.flatMap(messagesOf);
 }
 
+/**
+ * Whether a request is the crewmate's of the task with this title. The
+ * captain's words precede the goal, so the task is known by its goal line,
+ * not its position (INF-1366).
+ */
+export function isTaskRequest(body: string, title: string): boolean {
+  return (
+    providerMessages(body)[0]
+      ?.text.split("\n")
+      .some((line) => line.startsWith(`Goal: Complete the task "${title}"`)) ?? false
+  );
+}
+
 /** One tool call the model made earlier in a request's conversation, its arguments parsed. */
 export type ProviderToolCall = { name: string; args: Record<string, unknown> };
 

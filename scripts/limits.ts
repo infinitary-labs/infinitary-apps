@@ -50,6 +50,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     CAP_MARGIN_MS: physical("the op keeps running; the shell's next command gets its kept answer"),
     REQUEST_MAX: physical("refused in words: arguments too long; the 1 MiB bound is not named"),
   },
+  "src/core/browser/crewmateCommands.ts": {
+    DID_NAME_MAX: physical("clipped with an ellipsis on the line; the action itself is unchanged"),
+  },
   "src/core/browser/diagnostics.ts": {
     TEXT_MAX: physical("clipped; the rest of the console line or address is not kept"),
   },
@@ -57,10 +60,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     FULL_TEXT_MAX: physical("clipped; the answer counts the characters left unread, no way on"),
     NAME_MAX: physical("cut short and marked so; snapshot @ref reads the passage in full"),
   },
+  "src/core/browser/pageNotices.ts": {
+    NOTICE_MAX: physical("clipped with an ellipsis; the rest of the notice is not kept"),
+  },
   "src/core/browser/taskBrowsers.ts": {
     TASK_BROWSERS_MAX: physical("refused in words; stop one, or try again once one closes"),
-    NOTICE_MAX: physical("clipped with an ellipsis; the rest of the notice is not kept"),
-    DID_NAME_MAX: physical("clipped with an ellipsis on the line; the action itself is unchanged"),
   },
   "src/core/browser/window.ts": {
     FOLD_MIN: physical("a repeat folds to a pointer naming the line of its first copy"),

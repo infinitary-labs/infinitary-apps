@@ -13,9 +13,10 @@ import { openSize, openWindow } from "./window";
  * try again; a refusal with no reason reads the request's own fallback
  * (src/preload/readableRequest.ts). The answers are held as the test
  * chooses, not on a timer, and each refusal reaches the window as Electron
- * hands it a handler's rejection, wrapped in the remote method's name. One
- * window with one disconnected account: Connect Codex first, then the
- * account's Sign in.
+ * hands it a handler's rejection, wrapped in the remote method's name. A
+ * refused attempt, and a refused allowance reading after it, leave no
+ * rejection unhandled in the window. One window with one disconnected
+ * account: Connect Codex first, then the account's Sign in.
  */
 
 const ACCOUNT_ID = "acct_settings_feedback";
@@ -60,28 +61,56 @@ async function expectReadable(reason: string): Promise<void> {
 }
 
 /**
- * Whether `reason` is a refused add's own rejection, which its sign-in
- * flight leaves unhandled (`runAccountAdd`'s `void promise.finally`,
- * src/renderer/src/accounts/signInFlight.ts); the window reads the same
- * refusal through its own catch, which this test checks.
+ * Refuses every allowance reading the window asks for, as Electron hands a
+ * handler's rejection on, and counts them.
  */
-const flightLeak = (reason: unknown) =>
-  reason instanceof Error &&
-  reason.message.startsWith(REQUEST_COPY["inf:accounts:add"].prefix.replace(/: $/, ""));
+function refuseReadings(bridge: FakeBridge) {
+  const probe = { calls: 0 };
+  bridge.answer("inf:quota:refresh", () => {
+    probe.calls += 1;
+    return Promise.reject(transported("inf:quota:refresh", "Error", REQUEST_REASON));
+  });
+  return probe;
+}
+
+/** The test's own rejection, which `reportedSoFar` makes and waits on. */
+class Mark extends Error {}
+
+/**
+ * Resolves once every rejection made before the call, that nobody handled,
+ * has been reported: the browser reports unhandled rejections in the order
+ * they were rejected, so once the test's own is reported, every earlier one
+ * the window left unhandled has been too.
+ */
+async function reportedSoFar(): Promise<void> {
+  const mark = new Mark();
+  const reported = new Promise<void>((resolve) => {
+    const seen = (event: PromiseRejectionEvent) => {
+      if (event.reason !== mark) return;
+      event.preventDefault();
+      window.removeEventListener("unhandledrejection", seen);
+      resolve();
+    };
+    window.addEventListener("unhandledrejection", seen);
+  });
+  void Promise.reject(mark);
+  await reported;
+}
 
 test("account connection and sign-in failures keep readable reasons and retryable controls", async () => {
   const home = subscribed(
     await seededHome({ accountId: ACCOUNT_ID, providerId: "openrouter", label: "Personal" }),
   );
   const bridge = fakeBridge(home);
-  // Each attempt's end asks the core to read the allowance again; it reads
-  // what it read at boot.
   const reading = home["inf:quota:snapshot"];
   if (reading === undefined || typeof reading === "function")
     throw new Error("The home answers no allowance reading");
-  bridge.answer("inf:quota:refresh", reading);
+  // Every rejection the window leaves unhandled, the test's own marks aside.
   const unhandled: unknown[] = [];
-  window.addEventListener("unhandledrejection", (event) => unhandled.push(event.reason));
+  const collect = (event: PromiseRejectionEvent) => {
+    if (!(event.reason instanceof Mark)) unhandled.push(event.reason);
+  };
+  window.addEventListener("unhandledrejection", collect);
   await openSize();
   await openWindow(bridge);
   await userEvent.click(page.getByRole("button", { name: "Settings", exact: true }));
@@ -99,6 +128,10 @@ test("account connection and sign-in failures keep readable reasons and retryabl
     ],
   ] as const;
   for (const [channel, control] of controls) {
+    // Each attempt's end asks the core to read the allowance again; it reads
+    // what it read at boot until the last section refuses it.
+    bridge.answer("inf:quota:refresh", reading);
+
     // Section: a refused request keeps its reason readable and its control retryable.
     let held = holdRefusal(bridge, channel, "TypeError", REQUEST_REASON);
     await expect.element(control()).toBeEnabled();
@@ -122,7 +155,22 @@ test("account connection and sign-in failures keep readable reasons and retryabl
     held.refuse();
     await expectReadable(REQUEST_COPY[channel].fallback);
     await expect.element(control()).toBeEnabled();
+
+    // Section: the allowance reading after a refused attempt is refused too;
+    // the attempt's reason still reads beside its step.
+    const readings = refuseReadings(bridge);
+    held = holdRefusal(bridge, channel, "TypeError", REQUEST_REASON);
+    await userEvent.click(control());
+    await expect.poll(() => held.calls).toBe(1);
+    held.refuse();
+    await expectReadable(REQUEST_REASON);
+    await expect.element(control()).toBeEnabled();
+    await expect.poll(() => readings.calls).toBe(1);
   }
-  expect(unhandled.filter((reason) => !flightLeak(reason)).map(String)).toEqual([]);
+  // No refused request, the window's own or its allowance reading after it,
+  // is left unhandled.
+  await reportedSoFar();
+  window.removeEventListener("unhandledrejection", collect);
+  expect(unhandled.map(String)).toEqual([]);
   expect([...new Set(bridge.unanswered)]).toEqual([]);
 });

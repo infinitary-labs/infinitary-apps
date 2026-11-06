@@ -98,7 +98,10 @@ export function runAccountAdd<T>(providerId: string, work: () => Promise<T>): Pr
   lastNotices.delete(providerId);
   emit();
   start();
-  void promise.finally(() => {
+  // The flight only needs to know the add ended; its caller reads how from
+  // the promise it is handed. Ending on both outcomes, rather than through
+  // `finally`, leaves no second promise to carry a refusal nobody catches.
+  const end = () => {
     if (flights.get(providerId) !== promise) return;
     flights.delete(providerId);
     if (flights.size === 0) {
@@ -106,6 +109,7 @@ export function runAccountAdd<T>(providerId: string, work: () => Promise<T>): Pr
       prompt = null;
     }
     emit();
-  });
+  };
+  promise.then(end, end);
   return promise;
 }

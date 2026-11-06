@@ -768,6 +768,19 @@ export function AccountRow({
   );
 }
 
+/**
+ * Asks the allowance sensor to read now, after a sign-in or an add ended,
+ * rather than at its next tick. A refused reading changes nothing: the row
+ * keeps what it last read, the attempt already said how it ended, and the
+ * sensor's own tick reads again.
+ */
+function askSensorNow(apply: (snapshot: QuotaSnapshotView | null) => void): void {
+  void window.infinitary.quota
+    .refresh()
+    .then(apply)
+    .catch(() => {});
+}
+
 /** No accounts read yet, as one value so the list's readers keep their identity. */
 const NO_ACCOUNTS: AccountView[] = [];
 
@@ -938,7 +951,7 @@ export function SubscriptionsTab() {
         refresh();
         // Same as signIn: ask the sensor now rather than wait for the tick,
         // so a sensed row leaves "reading…" once the first pass lands.
-        void window.infinitary.quota.refresh().then(setSnapshot);
+        askSensorNow(setSnapshot);
         const next = restart.current;
         restart.current = null;
         if (next) startAdd(next.provider, "oauth", next.host);
@@ -993,7 +1006,7 @@ export function SubscriptionsTab() {
           refresh();
           // The sensor's verdict on the old credential stands until it reads
           // the new one; ask now rather than at the next tick.
-          void window.infinitary.quota.refresh().then(setSnapshot);
+          askSensorNow(setSnapshot);
         });
     },
     [refresh, clearAuthFlow, ended],

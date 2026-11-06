@@ -37,7 +37,14 @@ export const replyProgress: Scenario =
           calls: [
             {
               name: "reply",
-              args: { card_id: shownCardId, text: REPLY_PROGRESS_INTERIM, interim: true },
+              // It names the captain's message, as crewmates do (INF-2730):
+              // the line still answers nothing, and the real answer ends the wait.
+              args: {
+                card_id: shownCardId,
+                text: REPLY_PROGRESS_INTERIM,
+                interim: true,
+                ...answering(latestUserTail),
+              },
             },
             { name: "bash", args: { command: "true", description: REPLY_PROGRESS_DOING } },
           ],

@@ -22,7 +22,8 @@ import { cardReply, shownCard, shownEntry } from "./stack";
  * provider, the real `reply` and command tools, the real card chrome -
  * the captain's reply under a crewmate's card gets, before its answer:
  *  1. the crewmate's one interim line in the thread, which leaves the
- *     reply waiting for the answer;
+ *     reply waiting for the answer even though it names the captain's
+ *     message (INF-2730);
  *  2. the thread's working row naming the command the crewmate runs.
  * Then the real answer lands and ends the wait.
  */

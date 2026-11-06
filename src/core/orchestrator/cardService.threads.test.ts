@@ -70,6 +70,85 @@ describe("card threads", () => {
     cards.dispose();
   });
 
+  it("keeps the captain's message waiting through an interim line that names it, and ends the wait with the answer that names it", () => {
+    // INF-2730, as INF-2678's card met it: the interim line named the
+    // message, and every real answer after it was saved as a comment.
+    const { make } = fixture();
+    const cards = make();
+    const id = crewCard(cards);
+    const title = "The meter reads in watts";
+    const asked = cards.addMessage(id, "captain", "Plan the meter's units first.");
+    expect(
+      cards.replyFromCrewmate("t1", {
+        cardId: id,
+        text: "Reading every place the units show.",
+        interim: true,
+        answersMessage: asked.id,
+      }),
+    ).toBe(
+      `Posted in the thread on "${title}" (${id}); the captain's message ${asked.id} still waits for your answer when the work is done, in a line naming it in answers_message.`,
+    );
+    expect(cards.threadAwaitingAuthor("t1")).toBe(true);
+    expect(
+      cards.replyFromCrewmate("t1", {
+        cardId: id,
+        text: "The plan is on the card.",
+        answersMessage: asked.id,
+      }),
+    ).toBe(
+      `Replied in the thread on "${title}" (${id}). It answers the captain's message ${asked.id}.`,
+    );
+    expect(cards.threadAwaitingAuthor("t1")).toBe(false);
+    expect(cards.messages(id).map((line) => [line.who, line.text, line.answersMessage])).toEqual([
+      ["captain", "Plan the meter's units first.", undefined],
+      ["crewmate", "Reading every place the units show.", undefined],
+      ["crewmate", "The plan is on the card.", asked.id],
+    ]);
+    cards.dispose();
+  });
+
+  it("ends the wait with a revision answering the message after an interim line named it, and shows the revision once the turn ends", () => {
+    // INF-2730's revision path, and INF-2803's card that kept its older
+    // body on the stage after the crewmate's turn ended.
+    const { make } = fixture();
+    const cards = make();
+    const id = crewCard(cards);
+    const asked = cards.addMessage(id, "captain", "Plan it around kilowatts instead.");
+    cards.replyFromCrewmate("t1", {
+      cardId: id,
+      text: "Reworking the plan around kilowatts.",
+      interim: true,
+      answersMessage: asked.id,
+    });
+    const revised = "<p>The meter now reads in kilowatts.</p>";
+    cards.emitCrewmateCard(
+      "t1",
+      {
+        id,
+        title: "The meter reads in watts",
+        body: revised,
+        actions: [],
+        reply: "Rebuilt the plan around kilowatts.",
+        answersMessage: asked.id,
+      },
+      "Fix the meter",
+      "model",
+    );
+    expect(cards.threadAwaitingAuthor("t1")).toBe(false);
+    expect(
+      cards
+        .messages(id)
+        .filter((line) => line.who === "crewmate")
+        .map((line) => [line.text, line.answersMessage]),
+    ).toEqual([
+      ["Reworking the plan around kilowatts.", undefined],
+      ["Rebuilt the plan around kilowatts.", asked.id],
+    ]);
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
+    expect(cards.snapshot().find((card) => card.id === id)?.body).toBe(revised);
+    cards.dispose();
+  });
+
   it("refuses a crewmate's reply that names no card or a card the record lacks", () => {
     const { make } = fixture();
     const cards = make();

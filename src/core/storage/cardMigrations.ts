@@ -95,3 +95,25 @@ export function addCardContributions(db: AppDatabase): void {
     ALTER TABLE crew_responses ADD COLUMN card_message_id INTEGER;
   `);
 }
+
+/**
+ * INF-2730: an author's interim line once kept the captain message it named
+ * as its answer, though the line ended nothing, so the author's real answer
+ * was saved as a comment and the question waited for good. Each line the
+ * card evidence recorded as interim (its `message_ref` observation) answers
+ * nothing again; a real answer, and a comment that answered nothing, stay
+ * as they are, so a card that was waiting still waits for its next answer.
+ */
+export function clearInterimAnswers(db: AppDatabase): void {
+  db.exec(`
+    UPDATE card_messages SET answers_message = NULL
+      WHERE answers_message IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM card_observations o
+            WHERE o.card_id = card_messages.card_id
+              AND o.message_id = card_messages.id
+              AND o.kind = 'message_ref'
+              AND json_extract(o.payload_json, '$.interim') = 1
+        );
+  `);
+}

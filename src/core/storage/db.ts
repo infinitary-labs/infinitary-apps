@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 import { repairMovedTaskFolders } from "../folderMove/taskFolders";
-import { addCardAnswerer, addCardContributions } from "./cardMigrations";
+import { addCardAnswerer, addCardContributions, clearInterimAnswers } from "./cardMigrations";
 import { addCrewResponses } from "./inboxMigrations";
 import { migrateChanges } from "./migrateChanges";
 import { addHousekeepingIndexes, addPluginKind, MIGRATIONS } from "./migrations";
@@ -47,6 +47,9 @@ export const CREW_RESPONSE_VERSION = MIGRATIONS.indexOf(addCrewResponses) + 1;
 
 /** The shared-card migration's identity (INF-2225), for exact predecessor-schema fixtures. */
 export const CARD_CONTRIBUTIONS_VERSION = MIGRATIONS.indexOf(addCardContributions) + 1;
+
+/** The migration that cleared the answers interim lines kept (INF-2730). */
+export const INTERIM_ANSWERS_VERSION = MIGRATIONS.indexOf(clearInterimAnswers) + 1;
 
 /** The current database format, derived from the embedded migration ledger. */
 export const DATABASE_VERSION = MIGRATIONS.length;

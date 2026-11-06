@@ -242,6 +242,15 @@ The published `keepsOpen` field and `streaming` status stay accepted for wire co
 New action observations retain their required `keepsOpen` field as false, so historical observations remain readable.
 `retireKeepOpen.test.ts` covers the upgrade, exact words, unchanged closed cards, undo rows and restart idempotence; `card-sent-settings.spec.ts` opens ready and streaming older cards and sends their settings by reply.
 
+## Interim lines that kept an answer
+
+Migration 113 clears `card_messages.answers_message` on each line its `message_ref` observation records as interim, and on nothing else (INF-2730).
+Such a line ended no captain question, so the cleared value was never a real answer; it only made the author's later answer read as a comment, and the card kept waiting.
+A real answer keeps its message, and a comment saved behind an interim line stays a comment: the repair never turns an earlier line into the answer, so a card that was waiting still waits for its author's next line naming the message.
+A line with no observation, written on a card with no lifecycle, keeps what it had.
+An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
+Nothing reverses it, and nothing needs to: an older build reading the cleared line sees an interim line that answers nothing, as it should have.
+
 ## What each device is
 
 The home keeps what each device said it is in its hello - its system and chip - in `devices/systems.json`, a file of its own beside the device list (`docs/devices.md`, "The saved list").

@@ -1128,6 +1128,10 @@ export class CardService {
       source: who === "host" ? "host" : "thread",
     };
     let held: Card | undefined;
+    // An interim line answers nothing, even when it names the captain's
+    // message: saved as an answer, it would make the author's real answer
+    // read as a comment and keep the question waiting for good (INF-2730).
+    const records = answersMessage !== undefined && who !== "host" && !interim;
     const message = this.host.cardStore.transaction(() => {
       const message = this.host.cardStore.appendMessage({
         cardId,
@@ -1135,7 +1139,7 @@ export class CardService {
         text,
         ...(revision ? { revision } : {}),
         ...(facts.contributor ? { contributor: facts.contributor } : {}),
-        ...(answersMessage !== undefined && who !== "host" ? { answersMessage } : {}),
+        ...(records ? { answersMessage } : {}),
         ...(facts.clarification ? { clarification: true as const } : {}),
         ...(facts.responseId ? { responseId: facts.responseId } : {}),
       });

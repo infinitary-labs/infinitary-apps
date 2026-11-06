@@ -1,6 +1,11 @@
 import { forgeOf } from "@shared/forge";
 import { addColumn } from "./addColumn";
-import { addCardAnswerer, addCardContributions, migrateCardEffects } from "./cardMigrations";
+import {
+  addCardAnswerer,
+  addCardContributions,
+  clearInterimAnswers,
+  migrateCardEffects,
+} from "./cardMigrations";
 import type { AppDatabase } from "./db";
 import {
   addCrewResponses,
@@ -1219,6 +1224,11 @@ export const MIGRATIONS: readonly Migration[] = [
   `,
   addCrewResponses,
   addCardContributions,
+  // INF-2730: an interim line answers no captain message. Clears the
+  // message an author's interim line named, read from the line's own
+  // `message_ref` observation; every other line keeps what it answers.
+  // Nothing reverses it: the cleared value was never a real answer.
+  clearInterimAnswers,
 ];
 
 export function addPluginKind(db: AppDatabase): void {

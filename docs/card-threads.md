@@ -122,6 +122,8 @@ A thread line shows as soon as it is sent, so `CARD_REPLY` and the steer preambl
 
 **An interim line** (INF-990 friction 3: replies asking for code changes went 26 and 41 minutes with no sign of work): when the work will take more than a few minutes, the crewmate's steer preamble tells it to post one line first with `reply` and `interim` true, saying what it is doing.
 The line paints in the thread at once, like any author line, but it is declared, never inferred: `CardService.addMessage` keeps the card's `answer` hold, so the reply still waits, the waiting line or `working` follows, a revision without `reply` is still refused, and the whose-turn rule and the idle ladder still see an answer owed.
+An interim line records no answer either: one that names the captain's message keeps no `answers_message`, so the author's later line naming that message is the answer, never a comment kept behind it (INF-2730).
+Migration `clearInterimAnswers` cleared the message an older build kept on such a line, found by the line's own `message_ref` observation, and left every other line as it was.
 Under a card nobody waits on, `interim` is an ordinary reply.
 The mark crosses from a computer that runs work too: `inf:work:reply` carries `interim`, so a crewmate there keeps the reply waiting the same way (INF-1623).
 An interim line never brings back a card the captain put aside, and neither does a handoff or a revision whose `reply` names no message: the card comes back with the final answer (`addMessage`, the revision's `aside`).
@@ -445,7 +447,7 @@ Rows written before this change name no contributor, and nothing guesses one.
 
 Captain replies still go to the card's own answerer: the author, or the first mate for its own cards and for a crewmate's card whose task has closed.
 Any line, the answerer's own included, ends a captain question only when it names that message with `answers_message` and the card is waiting on it (the captain's "Only a line that says it answers it; a handoff stays open").
-A line without it - a handoff, a comment, the host's `revised:` - ends nothing, as an interim line ends nothing.
+A line without it - a handoff, a comment, the host's `revised:` - ends nothing, as the answerer's own interim line ends nothing, even one that names it; anyone else's interim mark is dropped, so their line is an ordinary one.
 The answer is saved on the line (`card_messages.answers_message`), so when the card's own answerer, queued behind the steer, comes to the same question, the host tells it who already answered and with what (`CardService.answeredByContributor`), and its own line is kept as a comment.
 A response a crewmate's `reply` correlates with the line is saved once with it (`crew_responses.card_message_id`), so a report naming the same response notifies nobody a second time (`docs/inbox.md`).
 

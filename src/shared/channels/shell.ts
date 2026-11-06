@@ -28,6 +28,9 @@ export type WindowControl = z.infer<typeof windowControlSchema>;
 export const windowStateSchema = z.strictObject({ maximized: z.boolean() });
 export type WindowState = z.infer<typeof windowStateSchema>;
 
+/** The window's fence, asked and pushed back with the same token (`inf:window:fence`). */
+export const windowFenceSchema = z.strictObject({ token: z.number().int().nonnegative() });
+
 /** The window's own shell: first launch, keys, window controls, files, voice and watching a task's browser. */
 export const shellChannels = {
   // The first launch (docs/first-launch.md): whether the stage carries the
@@ -123,6 +126,16 @@ export const shellChannels = {
     surface: "host",
     request: z.tuple([]),
     response: windowStateSchema,
+  },
+  // Chromium can hand the window an answer before a push sent ahead of it,
+  // since the two arrive on separate queues. The fence comes back as the
+  // `inf:window:fence` push, behind every push this window was sent before
+  // it, so an answer applied after it is applied in push order.
+  "inf:window:fence": {
+    effect: "read",
+    surface: "host",
+    request: z.tuple([windowFenceSchema.shape.token]),
+    response: okSchema,
   },
   // The system's folder picker, opened at a starting folder when given:
   // the chosen folder's path, or null when the person cancels. Choosing

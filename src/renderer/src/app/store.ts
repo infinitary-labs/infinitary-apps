@@ -22,7 +22,7 @@ import { detectVoiceSupport } from "../voice/voiceInput";
 import { recognizerPlace } from "../voice/whisperClient";
 import { type AppearanceSlice, appearanceSlice } from "./appearance";
 import { type CardSlice, cardSlice } from "./cardActions";
-import { type ComposerSlice, composerSlice } from "./composer";
+import { type ComposerSlice, composerSlice, mainInputHeld } from "./composer";
 import { projectFocus } from "./projectFocus";
 import { shownEntry, withoutKey } from "./stack";
 import { readCardsAgain, type StackSlice, stackSlice } from "./stackActions";
@@ -190,6 +190,13 @@ function readBoard(): void {
     .catch(() => {});
 }
 
+/**
+ * Each read of the first-launch state, and the newest one applied: a read
+ * waiting at the window's fence never overwrites an answer read after it.
+ */
+let firstRunReads = 0;
+let firstRunApplied = 0;
+
 export const useShellStore = create<ShellState>()((set, get) => ({
   ...appearanceSlice(set, get),
   ...stackSlice(set, get),
@@ -336,8 +343,16 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     });
   },
   loadFirstRun: async () => {
+    const read = ++firstRunReads;
     try {
       const firstRun = await window.infinitary.app.firstRun();
+      // An answer that opens the input waits at the window's fence: the core
+      // publishes the welcome before it answers, and Chromium can hand the
+      // window this answer ahead of that push (docs/first-launch.md).
+      if (mainInputHeld(get()) && !mainInputHeld({ firstRun, firstRunSettled: true }))
+        await window.infinitary.app.fence();
+      if (read < firstRunApplied) return;
+      firstRunApplied = read;
       // In one update, so a gated profile's input never opens in between.
       set({ firstRun, firstRunSettled: true });
     } catch {

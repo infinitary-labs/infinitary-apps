@@ -115,6 +115,9 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
     return pushes.subscribe(channel, (value) => listener(value as PushPayload<C>));
   }
 
+  /** The tokens of this window's fences (`app.fence`), one per ask. */
+  let fences = 0;
+
   return {
     files: {
       // The path comes from Electron's own `webUtils.getPathForFile` on the
@@ -143,6 +146,22 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       controlWindow: (control) => invoke("inf:window:control", control),
       windowState: () => invoke("inf:window:state"),
       onWindowState: (listener) => subscribe("inf:window:state", listener),
+      // Main pushes the fence's token back behind every push it sent this
+      // window before, so it resolves once they have all arrived. A fence that
+      // cannot be asked holds nothing: what waits on it goes on as before.
+      fence: () =>
+        new Promise<void>((resolve) => {
+          const token = ++fences;
+          const off = subscribe("inf:window:fence", (payload) => {
+            if (payload.token !== token) return;
+            off();
+            resolve();
+          });
+          invoke("inf:window:fence", token).catch(() => {
+            off();
+            resolve();
+          });
+        }),
     },
     conversation: {
       send: (text) => invoke("inf:converse", text),

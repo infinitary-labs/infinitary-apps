@@ -8,7 +8,7 @@ import { knowledgeChannels } from "./channels/knowledge";
 import { modelChannels } from "./channels/models";
 import { panelChannels } from "./channels/panels";
 import { settingsChannels } from "./channels/settings";
-import { shellChannels, windowStateSchema } from "./channels/shell";
+import { shellChannels, windowFenceSchema, windowStateSchema } from "./channels/shell";
 import { signInChannels } from "./channels/signIns";
 import { talkChannels } from "./channels/talk";
 import { taskChannels } from "./channels/tasks";
@@ -406,6 +406,8 @@ export const pushContract = {
   "inf:keyboard:recorded": { payload: recordedKeySchema, surface: "host" },
   // The window filled the screen or stopped filling it.
   "inf:window:state": { payload: windowStateSchema, surface: "host" },
+  // The fence the window asked for, behind every push it was sent before it.
+  "inf:window:fence": { payload: windowFenceSchema, surface: "host" },
   // One picture of a watched task's page, to the window that watches it.
   "inf:browser:frame": { payload: taskBrowserFrameSchema, surface: "host" },
   // A page a first mate started by a command would open in a browser, such

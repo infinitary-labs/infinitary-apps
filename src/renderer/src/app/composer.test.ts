@@ -1,5 +1,5 @@
 import { CONVERSE_TEXT_MAX_CHARS, TURN_IMAGES_MAX } from "@shared/cards";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { MAIN_FILES_KEY, useIntakeStore } from "../attachments/intake";
 import { voiceController } from "../voice/voiceController";
 import { mainInputHeld } from "./composer";
@@ -301,18 +301,31 @@ describe("going to the main message", () => {
 
 describe("the main input before the first read of the gate (docs/first-launch.md)", () => {
   const state = () => useShellStore.getState();
-  const view = (gateOpen: boolean) => ({ welcomedAt: null, firstTurnAt: null, gateOpen });
-  let answer!: { resolve: (v: ReturnType<typeof view>) => void; reject: (e: Error) => void };
+  type View = {
+    welcomedAt: number | null;
+    welcomeState?: "consumed";
+    welcomeCardId?: string;
+    firstTurnAt: null;
+    gateOpen: boolean;
+  };
+  const view = (gateOpen: boolean): View => ({ welcomedAt: null, firstTurnAt: null, gateOpen });
+  let answers: { resolve: (v: View) => void; reject: (e: Error) => void }[];
+  let answer!: (typeof answers)[number];
+  let fence!: Mock<() => Promise<void>>;
 
   beforeEach(() => {
     const micAccess = vi.fn(async () => ({ access: "granted" as const }));
+    answers = [];
     const firstRun = vi.fn(
       () =>
-        new Promise<ReturnType<typeof view>>((resolve, reject) => {
+        new Promise<View>((resolve, reject) => {
           answer = { resolve, reject };
+          answers.push(answer);
         }),
     );
-    vi.stubGlobal("window", { infinitary: { app: { firstRun }, voice: { micAccess } } });
+    // The window's fence, here with no push left ahead of it.
+    fence = vi.fn(async () => {});
+    vi.stubGlobal("window", { infinitary: { app: { firstRun, fence }, voice: { micAccess } } });
     vi.spyOn(voiceController, "start").mockResolvedValue();
     // A launch with everything hold-to-talk needs, but no answer about the gate yet.
     useShellStore.setState({
@@ -367,5 +380,49 @@ describe("the main input before the first read of the gate (docs/first-launch.md
     await reading;
     expect(state()).toMatchObject({ firstRunSettled: true, firstRun: null });
     expect(tryInput()).toEqual({ recording: true, focused: true });
+  });
+
+  // INF-2494: connecting Claude on the stage, the core published the welcome
+  // card and then answered this read, and the window got the answer first.
+  // The answer the core gave then, read from that run.
+  const welcomed: View = {
+    welcomedAt: 1793958008360,
+    welcomeState: "consumed",
+    welcomeCardId: "card-fm-a5076263-af3c-47e4-ba7a-4d27186e1b86",
+    firstTurnAt: null,
+    gateOpen: false,
+  };
+
+  it("opens only once the pushes sent ahead of the answer have arrived", async () => {
+    useShellStore.setState({ firstRun: view(true), firstRunSettled: true });
+    let pushesArrived!: () => void;
+    fence.mockImplementationOnce(() => new Promise<void>((resolve) => (pushesArrived = resolve)));
+    const reading = state().loadFirstRun();
+    answer.resolve(welcomed);
+    await vi.waitFor(() => expect(fence).toHaveBeenCalledTimes(1));
+    // The answer is in, and the welcome's push is still on its way.
+    expect(mainInputHeld(state())).toBe(true);
+    expect(tryInput()).toEqual({ recording: false, focused: false });
+    pushesArrived();
+    await reading;
+    expect(state().firstRun).toEqual(welcomed);
+    expect(tryInput()).toEqual({ recording: true, focused: true });
+  });
+
+  it("keeps a newer answer over an older one still waiting at the fence", async () => {
+    useShellStore.setState({ firstRun: view(true), firstRunSettled: true });
+    let pushesArrived!: () => void;
+    fence.mockImplementationOnce(() => new Promise<void>((resolve) => (pushesArrived = resolve)));
+    const older = state().loadFirstRun();
+    answers[0]?.resolve(welcomed);
+    await vi.waitFor(() => expect(fence).toHaveBeenCalledTimes(1));
+    // The subscription went away meanwhile, and the next read says so.
+    const newer = state().loadFirstRun();
+    answers[1]?.resolve(view(true));
+    await newer;
+    pushesArrived();
+    await older;
+    expect(state().firstRun).toEqual(view(true));
+    expect(mainInputHeld(state())).toBe(true);
   });
 });

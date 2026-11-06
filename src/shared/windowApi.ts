@@ -154,6 +154,12 @@ export type FirstmateApi = {
     controlWindow: (control: WindowControl) => Promise<WindowState>;
     windowState: () => Promise<WindowState>;
     onWindowState: (listener: (state: WindowState) => void) => () => void;
+    /**
+     * Resolves once every push sent to this window before it has arrived.
+     * Chromium can hand the window an answer ahead of a push sent before it;
+     * an answer applied after the fence is applied in push order.
+     */
+    fence: () => Promise<void>;
   };
   conversation: {
     /** Send one user turn to the Firstmate agent (the orchestrator). Accepts string for backward compat or {text?, images?, visibleCardId?, taskId?} for attachments, the on-screen card, and the task it points at. */

@@ -861,6 +861,8 @@ Separate turns shorten the combined task, not an individual SQLite call: they ar
 SQLite keeps an advisory 32 MiB page cache, and task-card and feed-event indexes avoid scanning unrelated historical rows.
 The desktop transport groups a pass's consecutive event announcements into one `inf:events` push after its synchronous work; the preload delivers every event in order in that renderer task, letting reads and renders coalesce.
 It flushes pending announcements before a different push channel to preserve ordering; the core and paired connections keep their existing individual-event contract.
+Pushes reach the window in the order main sent them, but an invoke's answer arrives on a separate queue and can reach the window ahead of a push main sent before it.
+A window that must apply an answer in push order asks for the window's fence (`window.infinitary.app.fence`, the host channel `inf:window:fence`): main flushes pending announcements and pushes the fence's token back to that window, so the fence resolves only after every earlier push has arrived.
 Cadences count the design's one-minute period (`TICK_PERIOD_MS`).
 A development or end-to-end run may shorten the interval's period with `INFINITARY_TICK_PERIOD_MS` (`tickPeriodFor`), and every pass then runs sooner in proportion, so a journey waiting on a sweep need not wait out the minute; a packaged build always ticks once a minute.
 

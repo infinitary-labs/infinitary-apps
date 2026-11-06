@@ -70,6 +70,13 @@ export function fakeBridge(answers: Answers = {}): FakeBridge {
           `The window sent ${channel} a request the contract refuses: ${request.error}`,
         );
       received.set(channel, [...(received.get(channel) ?? []), args]);
+      // Main's own fence (src/main/ipc): its token comes back as a push. This
+      // fake hands each push over as it is given, so the fence is behind them all.
+      if (channel === "inf:window:fence" && !table.has(channel)) {
+        for (const handler of [...(listeners.get(channel) ?? [])])
+          handler(undefined, { token: args[0] });
+        return { ok: true };
+      }
       if (!table.has(channel)) {
         unanswered.push(channel);
         throw new Error(`The browser test gave no answer for ${channel}`);

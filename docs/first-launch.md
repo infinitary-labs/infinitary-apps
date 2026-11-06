@@ -26,6 +26,8 @@ Before the window's first read of the gate settles, nobody knows yet whether it 
 Words sent in that moment would reach a first mate that cannot answer and skip the welcome.
 The held input keeps full strength and its usual hint, so a launch that is ready never fades in; a fresh one dims when the gate's caption arrives.
 A first read that fails still settles it, and the input opens as it did before any read rather than waiting for a read that may not come.
+An answer that would open the input applies only after the window's fence (`docs/architecture.md` section 17), so every push the core sent before answering, the welcome's card among them, reaches the window before the input opens.
+A newer read wins over an older one still waiting at the fence.
 An account connected while the gate is up - one that cannot answer yet - shows in place of its chip, with a hollow dot and why when the app knows ("install Claude Code first" when the Mac has no Claude Code, "not signed in" for a login not signed in yet), and the caption restates the one remaining need: "Your first mate still needs a subscription that answers - Codex, Grok, Claude, Kimi Code, Copilot, or OpenRouter with an API key."
 
 When the gate is up only because the custom connection the first mate was chosen on needs one fresh check, the caption asks for that check instead of a subscription.

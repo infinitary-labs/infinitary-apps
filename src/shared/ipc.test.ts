@@ -283,6 +283,8 @@ describe("ipc contract", () => {
       // The window's own buttons where the app draws them (design skill
       // readme, "Linux desktop conventions").
       "inf:window:control",
+      // The window's fence, pushed back behind every push sent before it.
+      "inf:window:fence",
       "inf:window:state",
     ]);
     const corePush = new Set<string>(CORE_PUSH_CHANNELS);
@@ -295,6 +297,7 @@ describe("ipc contract", () => {
       "inf:keyboard:keymap",
       "inf:keyboard:recorded",
       "inf:window:state",
+      "inf:window:fence",
       "inf:browser:frame",
     ]);
   });

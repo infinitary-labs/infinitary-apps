@@ -141,6 +141,14 @@ export function registerIpc(options: IpcOptions): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     return win ? windowState(win) : { maximized: false };
   });
+  // The window's fence: it comes back on the push queue, after the pending
+  // announcements and every push sent to this window before it, which an
+  // answer on the invoke queue can overtake (docs/architecture.md section 17).
+  handleInvoke("inf:window:fence", rendererSource, (event, token) => {
+    announcements.flush();
+    if (!event.sender.isDestroyed()) event.sender.send("inf:window:fence", { token });
+    return { ok: true as const };
+  });
 
   // The system's folder picker (where new projects go, Settings -> Projects):
   // a sheet on the asking window that only answers the chosen path. Saving

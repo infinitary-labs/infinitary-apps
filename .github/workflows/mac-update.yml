@@ -64,6 +64,7 @@ jobs:
           cache: pnpm
       - name: Refuse the physical Mac before installing or changing the guest
         run: node scripts/installer-environment.ts
+      - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
       - name: Confirm the native architecture
         run: node -e 'if(process.arch !== "arm64") throw new Error("This runner is not Apple silicon");'

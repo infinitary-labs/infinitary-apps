@@ -79,6 +79,7 @@ jobs:
       - run: scripts/apt-install.sh rpm
         timeout-minutes: 10
       - uses: ./.github/actions/node-headers
+      - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
@@ -177,6 +178,7 @@ jobs:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
       - uses: ./.github/actions/node-headers
+      - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
         env:

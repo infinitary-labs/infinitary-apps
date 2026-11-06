@@ -50,6 +50,7 @@ jobs:
       - name: Refuse the physical Mac before installing or restoring credentials
         id: isolation
         run: node scripts/installer-environment.ts
+      - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
       - name: Isolate the signing home
         run: |
@@ -115,6 +116,7 @@ jobs:
           cache: pnpm
       - name: Refuse the physical Mac before installing or changing the guest
         run: node scripts/installer-environment.ts
+      - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
       - name: Confirm the native architecture
         env:

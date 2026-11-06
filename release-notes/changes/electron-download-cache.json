@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "electron-download-cache",
+      "reason": "Internal CI: an install on a GitHub-hosted runner restores Electron's downloaded binary from the Actions cache instead of downloading it from GitHub's release server every job, after one 504 there failed main's check; no app change."
+    }
+  ]
+}

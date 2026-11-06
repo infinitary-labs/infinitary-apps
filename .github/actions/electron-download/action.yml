@@ -1,0 +1,31 @@
+name: Electron's download
+description: Keep Electron's downloaded binary in the Actions cache, so a dependency install on a GitHub-hosted runner reads it there instead of from Electron's release server.
+inputs:
+  working-directory:
+    description: Checkout whose package.json names the Electron version.
+    default: .
+runs:
+  using: composite
+  steps:
+    # A hosted runner starts with no Electron, so electron's own installer,
+    # which pnpm install runs (scripts/ensure-electron-installed.mjs),
+    # downloads it from GitHub's release server on every job, with no retry;
+    # one 504 there failed main's Linux code checks. Restored here, a job
+    # reaches that server only on a version's first download. A self-hosted
+    # runner keeps Electron's own cache folder, so it skips both steps, as it
+    # skips setup-node's package cache.
+    - id: electron
+      if: runner.environment == 'github-hosted'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        # electron's install.js reads its download cache from electron_config_cache.
+        dir="$RUNNER_TEMP/electron-cache"
+        printf 'electron_config_cache=%s\n' "$dir" >> "$GITHUB_ENV"
+        printf 'dir=%s\n' "$dir" >> "$GITHUB_OUTPUT"
+        printf 'version=%s\n' "$(node -p 'require("./package.json").devDependencies.electron')" >> "$GITHUB_OUTPUT"
+    - if: runner.environment == 'github-hosted'
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.electron.outputs.dir }}
+        key: electron-${{ runner.os }}-${{ runner.arch }}-${{ steps.electron.outputs.version }}

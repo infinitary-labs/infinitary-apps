@@ -14,7 +14,13 @@ const workflows = readdirSync(join(root, ".github/workflows")).filter((file) =>
 );
 const actions = readdirSync(join(root, ".github/actions"));
 
-type Step = { name?: string; id?: string; run?: string };
+type Step = {
+  name?: string;
+  id?: string;
+  run?: string;
+  uses?: string;
+  with?: Record<string, unknown>;
+};
 type Permissions = string | Record<string, string>;
 type Job = { steps?: Step[]; uses?: string; permissions?: Permissions };
 type Workflow = { permissions?: Permissions; jobs: Record<string, Job> };
@@ -133,6 +139,35 @@ describe("every workflow", () => {
       "own asks statuses: write, granted none",
     ]);
     expect(permissionGaps({}, { jobs: { inherits: {} } })).toEqual([]);
+  });
+
+  // Main's check run 42287797114 failed at its install, which the captain's
+  // watch on main check failures sent to be fixed at its cause: Electron's
+  // own installer took a 504 from GitHub's release server, the one download
+  // an install still made after setup-node restored its packages. So every
+  // install that restores the package cache restores Electron's download
+  // first (.github/actions/electron-download).
+  it("restores Electron's download before every install that restores the package cache", () => {
+    const cached: string[] = [];
+    for (const file of workflows) {
+      for (const [id, job] of Object.entries(load(file).jobs)) {
+        const steps = job.steps ?? [];
+        const packages = steps.some(
+          (step) => step.uses?.startsWith("actions/setup-node@") && step.with?.cache !== undefined,
+        );
+        if (!packages) continue;
+        cached.push(`${file}:${id}`);
+        const install = steps.findIndex((step) => /\bpnpm install\b/.test(step.run ?? ""));
+        const download = steps.findIndex((step) =>
+          step.uses?.endsWith("/.github/actions/electron-download"),
+        );
+        expect(install, `${file}:${id} installs`).toBeGreaterThanOrEqual(0);
+        expect(download, `${file}:${id} restores Electron first`).toBeGreaterThanOrEqual(0);
+        expect(download, `${file}:${id} restores Electron first`).toBeLessThan(install);
+      }
+    }
+    // The job whose install failed in that run.
+    expect(cached).toContain("verify.yml:lane");
   });
 
   // A value a shell step reads comes through its environment, never pasted

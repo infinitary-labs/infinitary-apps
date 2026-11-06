@@ -301,6 +301,9 @@ jobs:
           cache: ${{ matrix.lane == 'linux-checks' && runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
       - id: install
         run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
@@ -691,6 +694,9 @@ jobs:
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
         env:

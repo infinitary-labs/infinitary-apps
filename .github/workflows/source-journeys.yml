@@ -143,6 +143,9 @@ jobs:
         timeout-minutes: 10
         run: scripts/apt-install.sh xvfb xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1
       - uses: ./Application Support/firstmate/.github/actions/node-headers
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
         env:

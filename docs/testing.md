@@ -279,6 +279,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   That setting belongs only to the install, so later Electron rebuilds keep their own headers.
   `ci.yml` also forces a better-sqlite3 source build with an empty header cache and an unreachable header server, then writes and reads a database.
   The same workflow contract test evaluates the cache input for both runners.
+  Every install that restores setup-node's package cache runs `.github/actions/electron-download` first: on a GitHub-hosted runner it restores Electron's downloaded binary from the Actions cache, under a key naming the Electron version `package.json` pins, and points Electron's own installer at it through `electron_config_cache`.
+  So a hosted install reaches GitHub's release server only for a version's first download, never on every job; a self-hosted runner keeps Electron's own cache folder and skips both steps.
+  `tests/workflow-hygiene.test.ts` holds every such install to it, and `tests/ensure-electron-installed.test.ts` runs its step and Electron's own installer.
   A new test file joins its cohort's job on its own; a new kind of check joins one of the jobs, never a step with a condition.
   The retained PR jobs have no release-branch exemption: they must actually run to provide the required project verification, even though the generic forge verdict accepts conditional skipped checks.
   CI green means every check on the exact head commit SHA reports status=completed and conclusion=success or skipped (`gh pr checks`); a project that runs no checks reads green with the empty list, but on GitHub an empty list where workflow runs exist or have run for earlier pull requests reads pending ("checks have not started yet"), and so does a pull request's list with none of its own workflow runs on the version yet where the project runs them (`docs/forge.md`, "The green rule").

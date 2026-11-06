@@ -35,7 +35,7 @@ import {
   splitSettleFacts,
 } from "@shared/cards";
 import type { ChangePresentation } from "@shared/changePresentation";
-import type { CheckChangeInput } from "@shared/checkRepair";
+import { type CheckChangeInput, REPAIR_ASSESSMENT_SOURCE } from "@shared/checkRepair";
 import {
   CHECKS_ABSENT_WORDS,
   CHECKS_NOT_REPORTED_WORDS,
@@ -148,7 +148,12 @@ import { hostEnv } from "../hostEnv";
 import { renderReferenceImport } from "../knowledge/context";
 import { KnowledgeService } from "../knowledge/knowledgeService";
 import { initOverflowDir, withPastedFiles, type MessageFile } from "../overflow";
-import { crewmateEvidenceDir, crewmateHandoverDir, crewmateTempDir } from "../paths";
+import {
+  crewmateCardPicturesDir,
+  crewmateEvidenceDir,
+  crewmateHandoverDir,
+  crewmateTempDir,
+} from "../paths";
 import { standingBaselineChecks } from "../tasks/dependencyWaits";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { CHECK_FAILS_ON_MAIN_WORDS } from "./checkVerdicts";
@@ -231,7 +236,7 @@ import {
   renderRigorSection,
   type SpawnIntent,
 } from "./intentBrief";
-import { keptFeedLine, type LineageFacts } from "./mergeAuthorization";
+import { ASSESSMENT_BOUND_MS, keptFeedLine, type LineageFacts } from "./mergeAuthorization";
 import {
   closingNoteTitle,
   droppedLine,
@@ -6070,6 +6075,138 @@ describe("CrewSupervisor", () => {
       vi.spyOn(harness.supervisor, "taskAutonomy").mockReturnValue(true);
       expect(await harness.supervisor.settling.settle.settleTask(harness.taskId, "merge-pr")).toContain(
         "the captain's merge approval ended because its crewmate declared that its repair changed the approved work",
+      );
+      expect(harness.forge.merges).toEqual([]);
+    });
+
+    /**
+     * The repair its crewmate declared unknown, handed to one independent
+     * assessment (FI3-663): the host files the assessment under the builder,
+     * starts it on the second crewmate, and reads its first line as the
+     * verdict. INF-2625's plan, the crew supervisor's third step, moves this
+     * path out of the supervisor; these pin what it does first.
+     */
+    async function assessed() {
+      const harness = await kept();
+      await repairTurn(harness, async () => {
+        harness.forge.headSha = REPAIRED;
+        await harness.declare(repair("unknown"));
+      });
+      await vi.waitFor(() =>
+        expect(harness.authorization()?.undecided?.assessment?.taskId).toBeDefined(),
+      );
+      const assessorId = harness.authorization()?.undecided?.assessment?.taskId ?? "";
+      await vi.waitFor(() => expect(harness.reviewer.promptCalls).toHaveLength(1));
+      return { ...harness, assessorId };
+    }
+
+    it("files one independent assessment of an unknown repair under the builder, and merges once it finds the work kept", async () => {
+      const harness = await assessed();
+      expect(harness.tasks.get(harness.assessorId)).toMatchObject({
+        kind: "work",
+        title: "Assess repair: Ship the meter",
+        parentId: harness.taskId,
+        status: "active",
+        shape: { kind: "review", kind_source: REPAIR_ASSESSMENT_SOURCE, basis: harness.taskId },
+      });
+      expect(
+        harness.tasks
+          .timeline(harness.taskId)
+          .some(
+            (event) =>
+              event.text ===
+              `An independent assessment of the repair to ${REPAIRED} started: Assess repair: Ship the meter.`,
+          ),
+      ).toBe(true);
+      const brief = harness.reviewer.promptCalls[0] ?? "";
+      for (const head of [APPROVED, REPAIRED, NEW_BASE]) expect(brief).toContain(head);
+      expect(brief).toContain("git range-diff shows the approved commit unchanged on the newer base");
+      expect(harness.forge.merges).toEqual([]);
+      await reportTurn(
+        harness.reviewer,
+        harness.assessorId,
+        "impact: none\nEvery path either change touches reads the same on the newer base.",
+      );
+      await vi.waitFor(() => expect(harness.forge.merges).toEqual([REPAIRED]));
+      expect(harness.authorization()).toMatchObject({
+        status: "consumed",
+        lineage: [
+          {
+            fromHead: APPROVED,
+            toHead: REPAIRED,
+            impact: "none",
+            assessment: { taskId: harness.assessorId, verdict: "none" },
+          },
+        ],
+      });
+      expect(harness.tasks.get(harness.assessorId)).toMatchObject({
+        status: "done",
+        closedReason: "finished",
+      });
+      expect(harness.reviewer.promptCalls).toHaveLength(1);
+    });
+
+    it("ends the kept approval with a hold when the assessment finds the work changed, and tells the builder once", async () => {
+      const harness = await assessed();
+      const builderPrompts = harness.crewmate.promptCalls.length;
+      await reportTurn(
+        harness.reviewer,
+        harness.assessorId,
+        "impact: changed-work\nThe repair rewrote how the meter rounds.",
+      );
+      await vi.waitFor(() =>
+        expect(harness.authorization()).toMatchObject({
+          status: "invalidated",
+          holds: true,
+          reason: "an independent assessment found that its repair changed the approved work",
+          undecided: { assessment: { taskId: harness.assessorId, verdict: "changed-work" } },
+        }),
+      );
+      await vi.waitFor(() =>
+        expect(harness.crewmate.promptCalls.length).toBeGreaterThan(builderPrompts),
+      );
+      const told = harness.crewmate.promptCalls.slice(builderPrompts).join("\n");
+      expect(told).toContain(
+        renderWake({
+          facts: {
+            kind: "repair-assessed",
+            head: REPAIRED,
+            verdict: "changed-work",
+            excerpt: "impact: changed-work\nThe repair rewrote how the meter rounds.",
+          },
+        }),
+      );
+      expect(harness.tasks.get(harness.assessorId)).toMatchObject({
+        status: "done",
+        closedReason: "finished",
+      });
+      expect(harness.forge.merges).toEqual([]);
+    });
+
+    it("fails a repair whose assessment is still open past its bound, and retires the assessment silently", async () => {
+      const harness = await assessed();
+      vi.setSystemTime(Date.now() + ASSESSMENT_BOUND_MS + 1);
+      await repairTurn(harness, async () => {});
+      await vi.waitFor(() =>
+        expect(harness.authorization()).toMatchObject({
+          status: "invalidated",
+          holds: true,
+          reason: "the independent assessment of its repair did not finish",
+          undecided: { assessment: { taskId: harness.assessorId, verdict: "failed" } },
+        }),
+      );
+      await vi.waitFor(() =>
+        expect(harness.tasks.get(harness.assessorId)).toMatchObject({
+          status: "dropped",
+          closedReason: "superseded",
+        }),
+      );
+      await vi.waitFor(() =>
+        expect(harness.crewmate.promptCalls.join("\n")).toContain(
+          renderWake({
+            facts: { kind: "repair-assessed", head: REPAIRED, verdict: "failed" },
+          }),
+        ),
       );
       expect(harness.forge.merges).toEqual([]);
     });
@@ -23144,6 +23281,186 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           ),
       ).toBe(true);
       expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  // INF-2625's plan, the crew supervisor's third step, moves the review's
+  // settling out of the supervisor: a typed verdict counts only for the
+  // commit the review was assigned before the turn that reported it.
+  it("records no verdict typed for a commit the review was not assigned at its turn's end, and none when no commit is assigned", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, ops, workspace, specs } = setup(builder, {
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      const { taskId: reviewId } = await supervisor.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      seedDelivery(tasks, builderId, { liveValidation: noSurfaceProof(HEAD, reviewId) });
+      seedDelivery(tasks, reviewId, {
+        validationAssignment: { head: HEAD, revision: 1, scenarioRevision: 1, effects: [] },
+      });
+      const unstated = (words: string) =>
+        served({
+          facts: {
+            kind: "review-unstated",
+            task: { id: reviewId, title: "Review: Fix the meter test" },
+            builder: { id: builderId, title: "Fix the meter test" },
+            crewmate: "crewmate 2",
+            excerpt: words,
+          },
+        });
+
+      // The builder's newer commit arrives while the reviewer reads: the
+      // review is assigned that commit before its turn ends.
+      const NEWER = "fedcba9876543210fedcba9876543210fedcba98";
+      await specs[1]!.onReport!("Reviewed the meter test.", undefined, {
+        validation: typedReview(tasks, reviewId, { code: "clear" }),
+      });
+      seedDelivery(tasks, reviewId, { headSha: NEWER });
+      await reportTurn(reviewer, reviewId, "Reviewed the meter test.");
+      await vi.waitFor(() =>
+        expect(ops).toContain(
+          unstated(
+            "The typed review names 0123456, not the assigned commit fedcba9. Steer the reviewer to review the assigned commit.",
+          ),
+        ),
+      );
+      expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBeUndefined();
+      expect(tasks.get(reviewId)?.status).toBe("active");
+
+      // A review left with no assigned commit records nothing either.
+      seedDelivery(tasks, reviewId, { headSha: HEAD });
+      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
+      await tick();
+      await specs[1]!.onReport!("Reviewed it again.", undefined, {
+        validation: typedReview(tasks, reviewId, { code: "clear" }),
+      });
+      seedDelivery(tasks, reviewId, { headSha: undefined });
+      await reportTurn(reviewer, reviewId, "Reviewed it again.");
+      await vi.waitFor(() =>
+        expect(ops).toContain(
+          unstated(
+            "No assigned review commit is recorded. Steer the reviewer for a new review before accepting a verdict.",
+          ),
+        ),
+      );
+      expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBeUndefined();
+      expect(tasks.get(reviewId)?.status).toBe("active");
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  // INF-288: a builder on another computer is reviewed where it runs. The
+  // crew supervisor's third step (INF-2625's plan) moves this read out of
+  // the supervisor; this pins it first.
+  it("reads a placed builder's review target and kept proof on its computer, and refuses while that computer is out of reach", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reachable = { now: false };
+      const copied: string[][] = [];
+      const machines = {
+        computers: () => [],
+        ready: () => reachable.now,
+        folders: (device: string, id: string) => ({
+          work: `/${device}/${id}/work`,
+          sessions: `/${device}/${id}/sessions`,
+          evidence: `/${device}/${id}/evidence`,
+        }),
+        revision: async () => ({
+          headSha: HEAD,
+          changedFiles: ["src/meter.test.ts"],
+          changeReading: "The meter test awaits the queue flush.",
+        }),
+        sourceFile: async (device: string, id: string, name: string, file: string) => {
+          copied.push([device, id, name, file]);
+          return `/${device}/${id}/${name}`;
+        },
+      } as unknown as CrewMachines;
+      const { supervisor, tasks, repos, paths } = setup(builder, { machines });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      tasks.placement.setDevice(builderId, "mini");
+      // The builder's kept proof: one transcript in its card pictures folder.
+      const transcript = "pnpm test src/meter.test.ts: 10 of 10 passed\n";
+      const file = `${builderId}-meter-run.txt`;
+      const pictures = crewmateCardPicturesDir(paths, builderId);
+      mkdirSync(pictures, { recursive: true });
+      writeFileSync(join(pictures, file), transcript);
+      const proof = noSurfaceProof(HEAD);
+      seedDelivery(tasks, builderId, {
+        liveValidation: {
+          ...proof,
+          runs: proof.runs.map((run) => ({
+            ...run,
+            evidence: [
+              {
+                id: "meter-run",
+                description: "The meter test's ten runs",
+                digest: createHash("sha256").update(transcript).digest("hex"),
+                bytes: Buffer.byteLength(transcript),
+                file,
+                text: transcript,
+              },
+            ],
+          })),
+        },
+      });
+      const review = () =>
+        supervisor.commission({
+          title: "Review",
+          intent: intentOf("fix it"),
+          shape: { review_of: builderId },
+        });
+      const reviews = () =>
+        tasks.graph.children(builderId).filter((child) => child.shape?.kind === "review");
+
+      await expect(review()).rejects.toThrow(
+        "The builder's computer is out of reach; the review must wait for it, not run here instead.",
+      );
+      expect(reviews()).toEqual([]);
+      expect(copied).toEqual([]);
+
+      reachable.now = true;
+      // Whether the reviewer then starts on that computer is the placement
+      // tests' to pin; this one reads the review the host opened.
+      await review().catch(() => {});
+      const [opened] = reviews();
+      expect(opened?.delivery).toMatchObject({
+        headSha: HEAD,
+        reviewChange: "The meter test awaits the queue flush.",
+      });
+      expect(opened?.prompt).toContain(`/mini/${builderId}/evidence`);
+      expect(opened?.prompt).toContain("src/meter.test.ts");
+      expect(opened?.prompt).toContain(`/mini/${builderId}/proof-${file}`);
+      expect(copied).toEqual([["mini", builderId, `proof-${file}`, join(pictures, file)]]);
     } finally {
       repo.dispose();
     }

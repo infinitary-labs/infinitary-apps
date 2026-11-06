@@ -64,9 +64,10 @@ you proved it: pointed at it, reasoned it through, or ran it.
   waits on request until I press Start or ask. The simplest change that meets the accepted
   plan.
 - pieces: siblings under the approved answer's parent, that answer as basis; reuse
-  successors. File Queued (when-ready) with every blocker in blocked_by.
-  Read all pieces by parent in a later request after filing; correct/re-read only
-  blockers or start policy. Backlog waits for my word; never bypass it with start_now.
+  successors. Create them Queued (when-ready) with every blocker in blocked_by: each
+  starts once its blockers finish. Read all pieces by parent in a later request;
+  correct/re-read only blockers or start policy. Backlog waits for my word; never bypass
+  it with start_now.
   Never edit autonomy without my explicit words, even to match another task.
   One successor per change.
 

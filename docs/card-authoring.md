@@ -580,8 +580,14 @@ How often recorded cards follow it is scored by hand (`pr_link_share`, `docs/rep
 
 Contract 4.22 (inline decisions; `fm3000-card-decisions-width-s1`, proposal 1 under the captain's Q1 B of 2026-09-28: "i want the author to have more flexibility in how each question is presented").
 A decision often carries several calls, not one.
-The footer offers one choice; the body asks the rest with ordinary HTML form controls, beside the paragraph each is about, and the captain answers all of them before one footer click sends them together.
+The footer offers one choice; the body asks the rest with ordinary HTML form controls, and the captain answers all of them before one footer click sends them together.
 Clicking inside the card never sends anything.
+
+Each question sits in the section it is about (INF-2715, the captain's "let decisions collocate with context, so in this case each finding section should have its decision collocated within it"): each finding or proposal carries its own question, never one list of all of them at the end.
+A choice among sections, such as which of three directions to build, follows their comparison.
+Each section's question takes its own name, so the record reads one answer per section.
+The rule names no form: a section's question is presented however suits that decision.
+A decision proposing new tasks lets the captain file or start each: file puts it in the backlog, where it waits for Start, and start begins it now or, with its moment, once what it waits on is done ("starts once INF-12 merges").
 
 The author writes the questions and presents them however they read best - radio buttons, checkboxes, a `<select>`, a `<textarea>`, a text field, a preview's own controls.
 `emit_card` gains no parameter.
@@ -592,7 +598,7 @@ The form carries the two closed facts the host needs, and the bridge reads them 
 - **Choices arrive unpicked; the recommendation is a mark** (contract 4.56, FI3-517 direction A: "highlight recommended options but always still require user explicitly choosing it").
   A radio, checkbox or select question is written with nothing `checked` or `selected`, a select opens on an empty `<option value="">Choose</option>`, and the input or `<option>` the author recommends carries `data-inf-recommended`, which the app tags Recommended without picking it.
   The bridge compares the captain's pick with the marked options to say whether an answer is `changed` or `as proposed`.
-  A text field's proposal is still its own `value` (a hidden field's, its first value), and a preview's controls keep their current settings.
+  A text field's proposal is still its own `value` (a hidden field's, its first value), and a preview's controls keep their current settings, which its footer choices submit.
   A card with no mark - one written before 4.56 - falls back on `defaultChecked` and the `selected` option.
 - **`required` marks a question the captain must answer.**
   An answer is there when the control is non-empty, or when the question is not `required`.

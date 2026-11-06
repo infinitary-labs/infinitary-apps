@@ -732,7 +732,7 @@ export class TaskIntake {
     });
     this.options.broadcastEvent({
       type: "firstmate_note",
-      text: `Planned "${title}" (${record.key}) - ${this.waitingText(record)}.`,
+      text: `Planned "${title}" (${record.key}) - ${this.plannedWaiting(record)}.`,
     });
     this.host.broadcastCrewCounts();
     // A when-ready plan with nothing in its way starts on this very sweep.
@@ -740,11 +740,16 @@ export class TaskIntake {
     return record;
   }
 
-  /** How a row plan() filed waits, phrased for the feed: it carries no gate, only its blockers. */
-  private waitingText(record: TaskRecord): string {
+  /**
+   * How a row plan() filed waits, phrased for the feed and the first mate's
+   * reply: it carries no gate, only its blockers. Work on request waits in
+   * the backlog for a Start whatever it is blocked by, and only queued work
+   * starts with its moment (INF-2715: file means the backlog).
+   */
+  plannedWaiting(record: TaskRecord): string {
+    if (record.startPolicy === "on-request") return "waits in the backlog";
     const waiting = this.options.tasks.graph.waitingOn(record.id);
-    if (waiting.length > 0) return blockedText(waiting);
-    return record.startPolicy === "on-request" ? "starts on request" : "starts now";
+    return waiting.length > 0 ? blockedText(waiting) : "starts now";
   }
 
   /**

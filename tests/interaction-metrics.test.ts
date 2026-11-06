@@ -40,6 +40,8 @@ import {
   parseEffectLabels,
   parsePlainLabelRows,
   parsePlainLabels,
+  parseSectionLabels,
+  parseTaskWordLabels,
   parseTermLabels,
   REVIEW_VERDICTS,
   type ReviewEvent,
@@ -79,6 +81,8 @@ function card(overrides: Partial<ObservedCard> & { id: string }): ObservedCard {
     prLinks: null,
     terms: null,
     affects: null,
+    sections: null,
+    taskWords: null,
     ...overrides,
   };
 }
@@ -435,6 +439,34 @@ describe("the plain-language sample (roadmap 1.5)", () => {
     ).toThrow("affects verdict is not true or false");
   });
 
+  it("scores the two decision rules apart, each only on the cards it applies to (INF-2715)", () => {
+    // INF-2715's approved plan: each question in the section it is about, and
+    // file only for the backlog, measured by the replay check. A card that is
+    // no decision across sections, or names no task's start, is out of that
+    // reading's denominator.
+    const scores = scoreSession(
+      observation({
+        cards: [
+          card({ id: "a", sections: false, taskWords: true }),
+          card({ id: "b", sections: true, taskWords: null }),
+          card({ id: "c", sections: null, taskWords: false }),
+          card({ id: "d", sections: true, taskWords: false }),
+        ],
+      }),
+    );
+    expect(scores.section_question_share).toEqual({ value: 2 / 3, numerator: 2, denominator: 3 });
+    expect(scores.task_verb_share).toEqual({ value: 1 / 3, numerator: 1, denominator: 3 });
+    const text = [
+      '{"key":"aaaaaaaaaaaa","plain":true,"note":"","sections":false,"sections_note":"one list at the end"}',
+      '{"key":"bbbbbbbbbbbb","plain":true,"note":"","task_words":true,"task_words_note":"filed in the backlog"}',
+    ].join("\n");
+    expect([...parseSectionLabels(text).entries()]).toEqual([["aaaaaaaaaaaa", false]]);
+    expect([...parseTaskWordLabels(text).entries()]).toEqual([["bbbbbbbbbbbb", true]]);
+    expect(() =>
+      parseSectionLabels('{"key":"aaaaaaaaaaaa","plain":true,"note":"","task_words":"yes"}'),
+    ).toThrow("task_words verdict is not true or false");
+  });
+
   it("keys a label by the card's own words, so it cannot drift onto another card", () => {
     const key = cardLabelKey({ title: "The checks passed", body: "<p>Ready to put in.</p>" });
     expect(key).toMatch(/^[0-9a-f]{12}$/);
@@ -507,6 +539,9 @@ describe("the plain-language sample (roadmap 1.5)", () => {
       // A card-word verdict (INF-2326) names the term or the opening it read.
       if (row.terms !== undefined) expect(row.terms_note?.trim(), row.key).toBeTruthy();
       if (row.affects !== undefined) expect(row.affects_note?.trim(), row.key).toBeTruthy();
+      // A decision-rule verdict (INF-2715) names the placement or the words it read.
+      if (row.sections !== undefined) expect(row.sections_note?.trim(), row.key).toBeTruthy();
+      if (row.task_words !== undefined) expect(row.task_words_note?.trim(), row.key).toBeTruthy();
     }
   });
 });

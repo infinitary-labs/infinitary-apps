@@ -74,6 +74,8 @@ export type MetricId =
   | "pr_link_share"
   | "term_explained_share"
   | "change_effect_share"
+  | "section_question_share"
+  | "task_verb_share"
   | "approval_handoff_share";
 
 /**
@@ -494,6 +496,30 @@ export const METRICS: readonly MetricDef[] = [
     target: null,
   },
   {
+    id: "section_question_share",
+    label: "Decisions that ask each question in the section it is about (hand-scored sample)",
+    group: "copy",
+    direction: "higher",
+    modes: [],
+    sep14: {
+      value: 4 / 5,
+      text: "4 of the 5 recorded decisions across several sections, read by hand",
+    },
+    target: null,
+  },
+  {
+    id: "task_verb_share",
+    label: "Cards that say file only for the backlog and start with its moment (hand-scored sample)",
+    group: "copy",
+    direction: "higher",
+    modes: [],
+    sep14: {
+      value: 6 / 11,
+      text: "6 of the 11 recorded cards that file, queue or start a task, read by hand",
+    },
+    target: null,
+  },
+  {
     id: "rigor_share_quick",
     label: "Dispatches shipped at the quick tier",
     group: "rigor",
@@ -769,6 +795,25 @@ export type PlainLabel = {
    */
   affects?: boolean;
   affects_note?: string;
+  /**
+   * The sixth reading (INF-2715): true when a decision across several
+   * sections - findings, proposals, options - asks each question in the
+   * section it is about, and a choice among sections after their comparison;
+   * false when it gathers them in one list away from what they ask about;
+   * absent on every other card. `sections_note` names the placement.
+   */
+  sections?: boolean;
+  sections_note?: string;
+  /**
+   * The seventh reading (INF-2715): true when a card that files, queues or
+   * starts a task says file only for work left in the backlog and gives
+   * work that starts by itself its moment, and a decision proposing new
+   * tasks lets the captain file or start each; false when "file" names work
+   * that starts, or such a decision offers neither; absent on every other
+   * card. `task_words_note` names the words.
+   */
+  task_words?: boolean;
+  task_words_note?: string;
 };
 
 /**
@@ -833,7 +878,7 @@ export function parsePlainLabelRows(text: string): PlainLabel[] {
     if (row.pr_links !== undefined && typeof row.pr_links !== "boolean") {
       throw new Error(`plain-language label whose pr_links verdict is not true or false: ${trimmed}`);
     }
-    for (const reading of ["terms", "affects"] as const) {
+    for (const reading of ["terms", "affects", "sections", "task_words"] as const) {
       if (row[reading] !== undefined && typeof row[reading] !== "boolean") {
         throw new Error(
           `plain-language label whose ${reading} verdict is not true or false: ${trimmed}`,
@@ -875,6 +920,24 @@ export function parseTermLabels(text: string): Map<string, boolean> {
   const labels = new Map<string, boolean>();
   for (const row of parsePlainLabelRows(text)) {
     if (row.terms !== undefined) labels.set(row.key, row.terms);
+  }
+  return labels;
+}
+
+/** The section-question verdicts in the same file: only decisions across several sections. */
+export function parseSectionLabels(text: string): Map<string, boolean> {
+  const labels = new Map<string, boolean>();
+  for (const row of parsePlainLabelRows(text)) {
+    if (row.sections !== undefined) labels.set(row.key, row.sections);
+  }
+  return labels;
+}
+
+/** The task-verb verdicts in the same file: only the cards that file, queue or start a task. */
+export function parseTaskWordLabels(text: string): Map<string, boolean> {
+  const labels = new Map<string, boolean>();
+  for (const row of parsePlainLabelRows(text)) {
+    if (row.task_words !== undefined) labels.set(row.key, row.task_words);
   }
   return labels;
 }
@@ -1569,6 +1632,10 @@ export type ObservedCard = PairableCard & {
   terms: boolean | null;
   /** The hand-scored change-effect label (INF-2326): null on a card about no change. */
   affects: boolean | null;
+  /** The hand-scored section-question label (INF-2715): null unless a decision spans several sections. */
+  sections: boolean | null;
+  /** The hand-scored task-verb label (INF-2715): null on a card that files, queues or starts no task. */
+  taskWords: boolean | null;
 };
 
 export type ObservedQuestion = CaptainQuestion & {
@@ -1724,6 +1791,14 @@ export function scoreSession(observation: SessionObservation): MetricScores {
     change_effect_share: (() => {
       const read = observation.cards.filter((card) => card.affects !== null);
       return ratio(read.filter((card) => card.affects === true).length, read.length);
+    })(),
+    section_question_share: (() => {
+      const read = observation.cards.filter((card) => card.sections !== null);
+      return ratio(read.filter((card) => card.sections === true).length, read.length);
+    })(),
+    task_verb_share: (() => {
+      const read = observation.cards.filter((card) => card.taskWords !== null);
+      return ratio(read.filter((card) => card.taskWords === true).length, read.length);
     })(),
     mean_card_body_chars: {
       value:

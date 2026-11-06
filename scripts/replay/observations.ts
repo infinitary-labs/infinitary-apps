@@ -28,6 +28,8 @@ import {
   parseEffectLabels,
   parsePlainLabels,
   parsePrLinkLabels,
+  parseSectionLabels,
+  parseTaskWordLabels,
   parseTermLabels,
   type ReviewEvent,
   reviewEventFrom,
@@ -42,6 +44,8 @@ export class CardObserver {
   private prLinkLabelMap: Map<string, boolean> | null = null;
   private termLabelMap: Map<string, boolean> | null = null;
   private effectLabelMap: Map<string, boolean> | null = null;
+  private sectionLabelMap: Map<string, boolean> | null = null;
+  private taskWordLabelMap: Map<string, boolean> | null = null;
 
   /** The hand labels, read once per engine; an unreadable file is a loud failure, never an empty sample. */
   private plainLabels(): Map<string, boolean> {
@@ -53,6 +57,8 @@ export class CardObserver {
     this.prLinkLabelMap = text === null ? new Map() : parsePrLinkLabels(text);
     this.termLabelMap = text === null ? new Map() : parseTermLabels(text);
     this.effectLabelMap = text === null ? new Map() : parseEffectLabels(text);
+    this.sectionLabelMap = text === null ? new Map() : parseSectionLabels(text);
+    this.taskWordLabelMap = text === null ? new Map() : parseTaskWordLabels(text);
     return this.plainLabelMap;
   }
 
@@ -72,6 +78,15 @@ export class CardObserver {
   private wordLabels(): { terms: Map<string, boolean>; affects: Map<string, boolean> } {
     this.plainLabels();
     return { terms: this.termLabelMap ?? new Map(), affects: this.effectLabelMap ?? new Map() };
+  }
+
+  /** The section-question and task-verb labels: the sixth and seventh readings (INF-2715). */
+  private decisionLabels(): { sections: Map<string, boolean>; taskWords: Map<string, boolean> } {
+    this.plainLabels();
+    return {
+      sections: this.sectionLabelMap ?? new Map(),
+      taskWords: this.taskWordLabelMap ?? new Map(),
+    };
   }
 
   /** One card the replay holds, as the metrics read it. */
@@ -121,6 +136,9 @@ export class CardObserver {
       // The hand-scored project-term and change-effect labels, filed in the same row.
       terms: this.wordLabels().terms.get(cardLabelKey({ title, body })) ?? null,
       affects: this.wordLabels().affects.get(cardLabelKey({ title, body })) ?? null,
+      // The hand-scored section-question and task-verb labels, filed in the same row.
+      sections: this.decisionLabels().sections.get(cardLabelKey({ title, body })) ?? null,
+      taskWords: this.decisionLabels().taskWords.get(cardLabelKey({ title, body })) ?? null,
       hasDefault: actions.some((action) => action.default === true),
       fakeSettle: actions.some(
         (action) =>

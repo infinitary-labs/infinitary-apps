@@ -223,7 +223,7 @@ describe("FirstmateAgent reply line", () => {
   });
 
   it.each(["none", "closing"])(
-    "states the filed task key and title unless the turn closed with words (%s)",
+    "states where the filed task landed, its key and title, unless the turn closed with words (%s)",
     async (closing) => {
       const f = setup({ silent: true });
       await f.agent.converse("file a task to build personal panels in isolation");
@@ -239,7 +239,8 @@ describe("FirstmateAgent reply line", () => {
       const words = `Filed ${filed?.key} for the panel build.`;
       await finish(f, closing === "closing" ? words : "");
       expect(f.tasks.capture.lastTurn()?.reply).toEqual({
-        text: closing === "closing" ? words : `Filed ${filed?.key}: ${title}`,
+        // INF-2601, folded into INF-2715: the reply says filed work is in the backlog.
+        text: closing === "closing" ? words : `Filed ${filed?.key} in the backlog: ${title}`,
         eligibility: "completed",
       });
     },

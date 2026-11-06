@@ -139,7 +139,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     name: "create_task",
     label: "Create task",
     description: [
-      "Record project work without starting: saved plans, waits or containers.",
+      "Record work without starting it: saved plans, waits, containers and every file, add, note or backlog ask.",
       "when-ready can start now; declare blocked_by.",
       "Basis checked at start.",
     ].join(" "),

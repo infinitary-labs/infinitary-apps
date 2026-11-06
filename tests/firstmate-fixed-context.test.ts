@@ -560,7 +560,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "on approval, read the saved plan by key before filing",
     home: "core",
-    says: "Read saved plans with tasks by key and file accepted work yourself",
+    says: "Read saved plans with tasks by key and create accepted work yourself",
   },
   // The same piece: update_task no longer restates the separate basis-then-start call.
   {

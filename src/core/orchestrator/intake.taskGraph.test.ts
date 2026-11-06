@@ -59,7 +59,8 @@ describe("the task graph (task-system P2)", () => {
     expect(planned).toMatchObject({ status: "open", startPolicy: "on-request", key: "SCR-1" });
     expect(events.at(-2)).toMatchObject({
       type: "firstmate_note",
-      text: 'Planned "Write the ADR" (SCR-1) - starts on request.',
+      // INF-2715 (folding INF-2601): filed work says it waits in the backlog.
+      text: 'Planned "Write the ADR" (SCR-1) - waits in the backlog.',
     });
     expect(
       supervisor.facts.crewStatus().find((entry) => entry.taskId === planned.id),
@@ -80,6 +81,11 @@ describe("the task graph (task-system P2)", () => {
       priority: 1,
     });
     expect(tasks.graph.blockers(step.id).map((r) => r.id)).toEqual([planned.id]);
+    // Queued work starts with its moment, never "filed" (INF-2715).
+    expect(events.at(-2)).toMatchObject({
+      type: "firstmate_note",
+      text: 'Planned "Implement the ADR" (SCR-2) - starts when SCR-1 finishes.',
+    });
     await supervisor.watch.sweepGates(Date.now());
     expect(sessions.open).not.toHaveBeenCalled();
     tasks.close(planned.id, { status: "done", reason: "landed", actor: "host" });

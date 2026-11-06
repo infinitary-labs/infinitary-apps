@@ -328,6 +328,8 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
       "After an answer authorizes a build, report without a new captain wait",
       "A preview ships nothing: scratch stays private in the working copy",
       "the footer choices submit the current settings, and so do author-directed replies",
+      // INF-2715: the Firstmate's own cards are static, so a card script is the crew's alone.
+      "An inline <script> (no src) may add behavior",
     ];
     for (const [name, served] of agents) {
       for (const fact of firstmateOnly) {
@@ -342,7 +344,7 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
     // INF-416 piece H: reading the saved plan by key stays in the core, not a second time in HANDOFF.
     const [, firstmate] = agents[0];
     expect(firstmate).toContain(
-      "Read saved plans with tasks by key and file accepted work yourself",
+      "Read saved plans with tasks by key and create accepted work yourself",
     );
     expect(firstmate).not.toContain("On approval, read original user words");
     expect(firstmate).not.toContain("Successful basis edit precedes separate start_now");
@@ -459,7 +461,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
   it("delegates evidence gathering to crewmates without exposing synchronous reading", () => {
     // INF-87: saved plan recovery belongs to the Firstmate, not a retrieval crewmate.
     expect(core).toContain(
-      "Read saved plans with tasks by key and file accepted work yourself, not through a retrieval.",
+      "Read saved plans with tasks by key and create accepted work yourself, not through a retrieval.",
     );
     expect(core).toContain("Work needing code, files, logs, git history");
     expect(core).toContain("Spawn an investigation with the read-only constraint");
@@ -1467,9 +1469,13 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain(
       "put data-inf-recommended on the input or <option> you recommend - the app tags it Recommended without picking it",
     );
+    expect(prompt).toContain("A text field keeps its prefilled text.");
+    // INF-2715: each question sits in the section it is about, and a new
+    // task's choice is file (the backlog) or start.
     expect(prompt).toContain(
-      "A text field keeps its prefilled text and a preview its current settings.",
+      "A decision asks each question inside the finding or section it is about, never in one closing list",
     );
+    expect(prompt).toContain("offering both for each proposed task");
     expect(prompt).toContain(
       "the default once every required question has an answer, any other button whatever is picked so far",
     );
@@ -1740,9 +1746,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-1177 moves lesson voice into its runbook; fixed card mechanics and runbook precedence stay.
   // INF-2142's approved plan adds the crewmate's sentence keeping clock times out of a change story.
   // INF-2326's approved plan adds the two rules for a card's words (a project's own term, a change's effect).
+  // INF-2715's approved plan asks each question in its section and adds the task words file and start.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "2fa430383c677328273ee41833b352894cfdf945b9655411ef83d644d9a548a1",
+    "9c75daeaa441ee04355fd48f4c012a605f9966d0b7decb8237f1ed908f335cee",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

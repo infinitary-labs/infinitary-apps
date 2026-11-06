@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "decisions-in-their-sections",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Each choice on a card sits beside what it is about",
+      "body": "When a card asks you about several findings or proposals, each question now sits inside the section it is about, instead of in one list at the end. Filing a task always puts it in your backlog, where it waits for Start, and your first mate says so when it files one.",
+      "noPicture": "This changes how the first mate and crew write cards and words, not a view of the app.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

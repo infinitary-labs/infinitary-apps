@@ -62,7 +62,12 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         throw caught;
       }
       host.asks.attach(record.id, "create_task", true);
-      host.turn.replyFacts.app = `Filed ${record.key}: ${record.title}`;
+      // The reply says where the work landed (INF-2715): filed means the
+      // backlog, and queued work says when it starts.
+      host.turn.replyFacts.app =
+        record.startPolicy === "on-request"
+          ? `Filed ${record.key} in the backlog: ${record.title}`
+          : `${record.key} ${supervisor.intake.plannedWaiting(record)}: ${record.title}`;
       host.noteDelivery({
         outcome: "action",
         kind: "record",

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-recorder-test-reads-unfinished-stalls",
+      "reason": "Test only: the freeze recorder's integration test reads its record the way every other reader does, accepting the start of a later stall that is still underway beside the line it looks for, instead of failing when a busy runner stalls the test again before it reads. Nothing in the shipped app changes."
+    }
+  ]
+}

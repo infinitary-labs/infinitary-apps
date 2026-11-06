@@ -15,7 +15,6 @@ import {
   type FreezeIncident,
   type FreezeLine,
   FreezeRecorder,
-  freezeLineSchema,
   HEARTBEAT_MS,
   RECORD_MAX_LINES,
 } from "./freezeRecorder";
@@ -24,7 +23,10 @@ import { armWatchdog } from "./watchdog";
 
 // INF-2066, INF-2061's approved plan: "A test holds the main thread in a
 // named function and finds that function in the record." It reads the
-// record's lines and their order, never a wall-clock budget.
+// record's lines and their order, never a wall-clock budget. It reads the
+// record through `readFreezes`, as every reader does: beside the line a case
+// looks for, the record can hold the start of a later stall still underway,
+// such as one a busy runner causes while the case reads it (INF-2205).
 
 // Each case holds the main thread 800 ms on the real clock; its fastest
 // measured run is 1.1 s, and 1.4 s for the case that first loads 30 MB of
@@ -84,10 +86,6 @@ function startRecorder(
   };
 }
 
-function readRecord(recordPath: string): FreezeLine[] {
-  return readFreezes(recordPath).map((line) => freezeLineSchema.parse(line));
-}
-
 /** Busy work on the main thread, the way a long synchronous database walk is. */
 function walkEveryRow(ms: number): number {
   const until = Date.now() + ms;
@@ -145,7 +143,7 @@ describe("the freeze recorder", () => {
     expect(Date.parse(seen.capturedAt ?? "")).toBeGreaterThanOrEqual(
       Date.parse(seen.captureRequestedAt ?? ""),
     );
-    expect(readRecord(recordPath)).toContainEqual(seen);
+    expect(readFreezes(recordPath)).toContainEqual(seen);
   });
 
   it("names a stall as the recorder starts, armed before the app's own code loaded", async () => {
@@ -163,7 +161,7 @@ describe("the freeze recorder", () => {
     const names = seen.frames.map((frame) => frame.name);
     expect(names).toContain("walkEveryRow");
     expect(names.indexOf("walkEveryRow")).toBeLessThan(names.indexOf("renderOpenMessages"));
-    expect(readRecord(recordPath)).toContainEqual(seen);
+    expect(readFreezes(recordPath)).toContainEqual(seen);
   });
 
   // INF-2262: native CPU work can defer the inspector to subsequent short JS.
@@ -188,7 +186,7 @@ describe("the freeze recorder", () => {
       commit: null,
       mutable: true,
     });
-    expect(readRecord(recordPath)).toContainEqual(seen);
+    expect(readFreezes(recordPath)).toContainEqual(seen);
     console.log("Native work capture (location, not cause):", JSON.stringify(seen));
   });
 
@@ -202,7 +200,7 @@ describe("the freeze recorder", () => {
 
     expect(seen.uncertain).toBe("waited");
     expect(seen.cpuMs * 2).toBeLessThan(seen.wallMs);
-    expect(readRecord(recordPath)).toContainEqual(seen);
+    expect(readFreezes(recordPath)).toContainEqual(seen);
   });
 
   it("completes the same incident whose start was visible before recovery (INF-2205)", async () => {
@@ -241,7 +239,7 @@ describe("the freeze recorder", () => {
         ...(start.captureRequestedAt ? { captureRequestedAt: completed.captureRequestedAt } : {}),
         ...(start.capturedAt ? { capturedAt: completed.capturedAt } : {}),
       });
-      expect(readRecord(recordPath)).toContainEqual(completed);
+      expect(readFreezes(recordPath)).toContainEqual(completed);
       console.info("Start observed before recovery:", JSON.stringify(start));
       console.info("Same incident completed:", JSON.stringify(completed));
     } finally {
@@ -340,7 +338,7 @@ describe("the freeze recorder", () => {
     const { stall } = startRecorder(recordPath);
     const seen = await stall(() => renderOpenMessages(FREEZE_THRESHOLD_MS * 8));
 
-    const record = readRecord(recordPath);
+    const record = readFreezes(recordPath);
     expect(record).toHaveLength(RECORD_MAX_LINES);
     expect(record).toContainEqual(seen);
     expect(record).not.toContainEqual(old[0]);

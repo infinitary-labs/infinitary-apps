@@ -5,7 +5,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { savedArrangement } from "./panelLayout";
 import { seedClockPanels } from "./personalFixtures";
-import { feedLine } from "./rails";
+import { expectRailsDrawn, feedLine } from "./rails";
 import { focusOn, pressKey, runFromSearch } from "./windowKeys";
 
 const cities = [
@@ -30,17 +30,29 @@ function row(page: Page, id: string): Locator {
   return page.locator(`[data-panels-settings] [data-panels-row="${id}"]`);
 }
 
-/** Drags a panel's header by its title on the rails to `to`, in small steps a person's hand makes. */
+/**
+ * Drags a panel's header by its title on the rails to just inside the top
+ * of the panel `onto`, where a drop lands above it, in small steps a
+ * person's hand makes. Both places are read once the rails hold still: a
+ * panel that has not drawn its page yet grows and moves every header below
+ * it (`expectRailsDrawn`).
+ */
 async function dragHeader(
   page: Page,
   id: string,
-  to: { x: number; y: number },
+  onto: string,
   before?: () => Promise<void>,
 ): Promise<void> {
+  await expectRailsDrawn(page);
   const header = page.locator(`[data-side-panel="${id}"] [data-panel-handle]`);
-  const from = await header.boundingBox();
+  const [from, target] = await Promise.all([
+    header.boundingBox(),
+    page.locator(`[data-side-panel="${onto}"]`).boundingBox(),
+  ]);
   if (!from) throw new Error(`${id} has no header on the rails`);
+  if (!target) throw new Error(`${onto} is not on the rails`);
   const start = { x: from.x + 24, y: from.y + from.height / 2 };
+  const to = { x: target.x + target.width / 2, y: target.y + 4 };
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   for (let step = 1; step <= 12; step++)
@@ -152,9 +164,7 @@ test("panels arrange from Settings → Panels by keys and from their headers on 
     });
 
     await test.step("a header dragged above another panel lands there, with no mode to turn on", async () => {
-      const target = await page.locator('[data-side-panel="clock-0"]').boundingBox();
-      if (!target) throw new Error("Tokyo is not on the rails");
-      await dragHeader(page, "clock-2", { x: target.x + target.width / 2, y: target.y + 4 });
+      await dragHeader(page, "clock-2", "clock-0");
       await expect
         .poll(() => savedClocks(page, "left", "top"))
         .toEqual(["clock-2", "clock-0", "clock-1"]);
@@ -163,11 +173,7 @@ test("panels arrange from Settings → Panels by keys and from their headers on 
     });
 
     await test.step("Escape during a drag puts the panel back where it was", async () => {
-      const target = await page.locator('[data-side-panel="clock-2"]').boundingBox();
-      if (!target) throw new Error("Paris is not on the rails");
-      await dragHeader(page, "clock-1", { x: target.x + target.width / 2, y: target.y + 4 }, () =>
-        page.keyboard.press("Escape"),
-      );
+      await dragHeader(page, "clock-1", "clock-2", () => page.keyboard.press("Escape"));
       await expect(page.locator("[data-panel-drag-ghost]")).toHaveCount(0);
       expect(await savedClocks(page, "left", "top")).toEqual(["clock-2", "clock-0", "clock-1"]);
     });

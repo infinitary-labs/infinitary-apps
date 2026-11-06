@@ -230,6 +230,27 @@ export async function atRest(page: Page, target: Locator): Promise<void> {
     .toBe(true);
 }
 
+/**
+ * Every panel open on the rails has drawn its page. The rails are drawn
+ * only at home (`App.tsx`), so the window coming back from Settings mounts
+ * each panel anew, and a panel's frame starts at no height and takes its
+ * page's height when that page first draws (`FrameMount`: the height and
+ * `data-frame-drawn` arrive in one render), moving every header below it
+ * down the rail. A press aimed at a header waits here before it reads where
+ * the header is, or it can go down where the header was, on the body of
+ * the panel above it (INF-2839, alpha run 42213366693: a drag that never
+ * picked its panel up). While the rails are folded no panel on them draws,
+ * and none is there to press.
+ */
+export async function expectRailsDrawn(page: Page): Promise<void> {
+  await expect(
+    page.locator(
+      "[data-rail] [data-side-panel]:not([hidden], [data-side-panel-collapsed]) :is([data-frame-mount-pending], [data-frame-mount]:not([data-frame-drawn]))",
+    ),
+    "every panel open on the rails has drawn its page",
+  ).toHaveCount(0);
+}
+
 /** Rests the pointer on `target` once it has stopped moving. */
 export async function restOnStill(page: Page, target: Locator): Promise<void> {
   await atRest(page, target);

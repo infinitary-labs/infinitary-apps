@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-journey-split-by-part",
+      "reason": "Tests only: the phone journey's test file splits into one file per phone part, each test keeping its name and body, and the app shows nothing new."
+    }
+  ]
+}

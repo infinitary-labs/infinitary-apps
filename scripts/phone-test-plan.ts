@@ -122,7 +122,7 @@ export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHO
 }
 
 /** INF-1735's soak: each relaunch part runs ten dark/light relaunch pairs, twenty across the two parts
- * (PhoneJourney.swift's testRelaunchPairsFirstTen and testRelaunchPairsSecondTen). */
+ * (PhoneJourney's testRelaunchPairsFirstTen and testRelaunchPairsSecondTen). */
 export const RELAUNCH_PAIRS_PER_PART = 10;
 
 /** How many relaunch pairs each relaunch part runs: every one unless a count is given. INF-2582 direction A:

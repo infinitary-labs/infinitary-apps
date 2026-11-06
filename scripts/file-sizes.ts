@@ -30,7 +30,6 @@ export const CODE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".
  * removes its entry in the same pull request.
  */
 export const OVER_CEILING: readonly string[] = [
-  "ios/Infinitary/InfinitaryUITests/PhoneJourney.swift",
   "src/core/browser/taskBrowsers.test.ts",
   "src/core/browser/taskBrowsers.ts",
   "src/core/orchestrator/crewSupervisor.test.ts",

@@ -25,7 +25,7 @@ import {
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { ForgeCheckState } from "../forge";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
-import { ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
+import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "../tasks/seedTask";
@@ -936,7 +936,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // crewmate declared its answer finished after each of eleven replies
     // under its note, and each report woke the first mate for a close the
     // note still held.
-    it("a finished report with its own card still up wakes nobody, however often the captain replies; his close wakes the first mate once (INF-731)", async () => {
+    it("a finished report with its own card still up wakes nobody, however often the captain replies; his close wakes the first mate once and restarts no turn (INF-731, INF-2718)", async () => {
       const { supervisor, crewmate, ops, sorts, specs, tasks, taskId, note } =
         await withOutcomeNote();
       const finishedWakes = () =>
@@ -947,7 +947,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         { finished: true },
       );
       expect(receipt).toContain("finished does not wake the first mate while it is up");
-      expect(receipt).toContain(ORDINARY_NOTE_READ_GUIDANCE);
+      expect(receipt).toContain(ORDINARY_NOTE_READ_ACK);
       await endTurn(crewmate, taskId);
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
 
@@ -979,24 +979,20 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(ops.slice(opsBefore)).toEqual([]);
 
-      // Reading the note starts its author's next turn; only that
-      // turn's finished report wakes the first mate, once, without a manual steer.
+      // INF-2718, from the captain's pick "skip restarting a finished
+      // task": reading the note of a crewmate that declared its work
+      // finished starts no turn for it - after an update, that turn ran in
+      // a fresh conversation that raised the closed note again (INF-2662).
+      // The first mate is woken once, now, for the close only it makes.
       supervisor.pressNote(note.id);
       await tick();
-      expect(finishedWakes()).toHaveLength(0);
-      expect(crewmate.promptCalls).toHaveLength(prompts + 1);
-      expect(crewmate.promptCalls.at(-1)).toContain(
-        renderWake({
-          facts: { kind: "card-closed", card: { id: note.id, title: note.title }, read: true },
-        }),
-      );
+      expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(tasks.get(taskId)?.status).not.toBe("done");
-      specs[0]?.onReport?.("The captain read the release note and nothing is left.", undefined, {
-        finished: true,
-      });
-      await endTurn(crewmate, taskId);
-      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "finished" });
-      expect(finishedWakes()).toHaveLength(1);
+      const closeAsks = ops
+        .slice(opsBefore)
+        .filter((line) => line.includes("declared its work finished"));
+      expect(closeAsks).toHaveLength(1);
+      expect(closeAsks[0]).toContain("Close the task if the record bears that out");
     });
 
     // INF-11, from the captain's words "make this missed escalation

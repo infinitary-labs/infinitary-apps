@@ -74,7 +74,7 @@ export type IdleFacts =
       finished?: boolean;
       /** How long ago it asked. */
       askedMs: number;
-      /** 2 for the first reminder, 3 for the last: the report's own wake was the first. */
+      /** 1 when the captain read its finished crewmate's card; 2 for the first reminder, 3 for the last: the report's own wake was the first. */
       wakes: number;
       /** The work built on the task, open or closed, when there is any (INF-976). */
       builtOn?: WakeBuiltOn[];

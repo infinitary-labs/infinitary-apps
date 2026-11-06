@@ -30,6 +30,7 @@ The buttons stay pinned; explicit choices, task endings and author withdrawals r
 The captain’s minimize corner is presentation only (INF-1879): a decision or a note stays open, and a note is read only by its own Done or Got it (INF-2794).
 A minimized decision or pending note sends no close steer, and consent waits rather than becoming a refusal.
 Reading an ordinary completed note still notifies its live crewmate author through the existing durable turn path; that acknowledgement never completes its task.
+A crewmate that already declared its work finished is not given that turn, since nothing is left for it: once no card of its own is up, the idle ladder wakes the first mate for its close at once (`IdleLadder.finishedRead`, INF-2718; after an update, INF-2662's turn ran in a fresh conversation that raised the closed note again).
 A marked saved answer keeps its receipt and ending for explicit Done.
 The host draws Done on a marked answer note and in its record; Done alone receipts that answer.
 Putting a decision away retains the card’s drafts and the task’s gate until an explicit choice, withdrawal or task ending.
@@ -38,7 +39,8 @@ A card the captain answered with a choice stays answered (INF-1389 friction 1, t
 While the choice still waits on the author's lane, not yet handed to a turn (`InboxStore.holdsUndeliveredChoice`, the first mate's lane for its own cards and the task's lane for a crewmate's), every emit under the id is refused, and the refusal carries the choice and the answers to the card's questions, because that revision was written without them.
 Once the author has heard the choice, an emit with actions under the id is refused, since it would ask the same question again: a new question is a new card with its own title.
 One without actions only tells the captain something, such as which crewmate took the work, and shows as a note.
-A card the captain closed without choosing, or one a script or its author closed, can still come back under its id.
+A note the captain closed with its Got it or Done stays closed (INF-2718, the captain's pick "Refuse re-showing a closed note"): every emit under its id is refused and nothing is shown, so a crewmate whose conversation restarted cannot raise it again, and something new goes on a new card.
+A decision the captain closed without choosing, or a card a script or its author closed, can still come back under its id.
 
 A reply does hand the turn to the author, and it never moves the card (INF-770 direction A, captain-approved 2026-10-21): the card stays shown in its place with the thread beside it, the pager and the arrows do not change, and the waiting line says who answers next.
 The minimize minus puts the card away and says what stays on rest (`docs/card-authoring.md`, "Put a card aside").

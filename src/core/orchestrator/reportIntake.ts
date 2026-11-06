@@ -14,7 +14,7 @@ import {
   verifyKeptValidationEvidence,
   verifyKeptValidationEvidenceSync,
 } from "../pi/validationEvidence";
-import { ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
+import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
 import type { FollowupInput } from "../session/tools";
 import type { TaskRecord } from "../storage/taskStore";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
@@ -400,7 +400,7 @@ export class ReportIntake {
     ) {
       // INF-1879: an open card, including one put away, still owns its explicit ending.
       receipt.push(
-        `A card of yours is still open, so finished does not wake the first mate while it is up. ${ORDINARY_NOTE_READ_GUIDANCE} A decision waits for its choice; Done receipts a marked answer note or its record.`,
+        `A card of yours is still open, so finished does not wake the first mate while it is up. ${ORDINARY_NOTE_READ_ACK} When the captain reads your note, the first mate is woken to close your task and no new turn starts for you. A decision waits for its choice; Done receipts a marked answer note or its record.`,
       );
     } else if (declaration?.finished) {
       receipt.push("The first mate hears it when this turn ends and closes your task.");

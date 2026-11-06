@@ -702,7 +702,9 @@ describe("CardService what changed since the captain looked", () => {
     expect(changes).toBeDefined();
     expect(shown(make(), id).changes).toEqual(changes);
 
-    cards.pressNote(cards.shown(id) as Card);
+    // Its author withdraws it: a note the captain closed never comes back
+    // under its id (INF-2718), one its author closed may.
+    cards.close(id, { kind: "firstmate" });
     // The same id up again is a new card: nothing seen on it yet.
     const again = cards.addFirstmateCard(note(v3));
     expect(again).toBe(id);

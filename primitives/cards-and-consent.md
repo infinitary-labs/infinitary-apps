@@ -41,13 +41,14 @@ A question that needs a structured answer uses the questions in the body ([decis
 
 - Emit: one card shape on the wire, a title, an HTML body and the declared actions.
 - Revise: `emit_card` with the same stable, namespaced kebab-case id replaces the open card in place; the replaced version is kept in `card_revisions` (`CardStore.history`) and the host marks what changed since the captain looked.
+  A note the captain closed stays closed: an emit under its id is refused, and the host does not raise it again when its task closes (INF-2718).
 - A distinct finding is a new card; there is no one-card-per-topic cap.
 - Release: a crewmate's card reaches the stage at its author's close-out (its next report or its idle); a card already shown waits for its author's idle (`docs/card-threads.md` "When a card reaches the stage"); the story note of a task that merges on its own waits for the merge's result (INF-2533), and its merge line follows the change's receipt (INF-2678).
   Someone else's write the stage holds, a revision or an answer it named, reaches it at that writer's own close-out; the author's close-out still ends what its own turn held.
 - Reply: the captain's words under a card go to its answerer (its author, or the first mate for its own cards and for a crewmate's card whose task closed) as a steer stamped `via: "thread"`; the answerer answers once, revising with `reply` or answering with `reply(card_id, text)` (`CARD_REPLY`), naming the message in `answers_message`.
 - Choose: every declared action closes its card; an action with no effect returns to its author as the captain's choice, and an action with an effect is run by the host.
 - Put away: the one minimize corner preserves decisions and consent, reads notes, or hides the window’s own panel; it never ends work.
-  Reading an ordinary completed note acknowledges its message and notifies its live crewmate author through the existing durable turn path; decisions, pending notes and marked saved answers send no such read steer.
+  Reading an ordinary completed note acknowledges its message and notifies its live crewmate author through the existing durable turn path; decisions, pending notes and marked saved answers send no such read steer, and neither does a crewmate that already declared its work finished, whose close the first mate is woken for instead (INF-2718).
 - Done: the host receipts a saved marked answer note from the note or its record, closing its task answered; time alone never does.
 - Contribute: a write on someone else's card keeps its author, task, lifecycle, source offer and answerer; a revision names the revision it read, and a closed card takes a dated clarification alone.
   Any writer's line, the answerer's own included, ends a captain question only when `answers_message` names the one the card waits on; a handoff stays open.

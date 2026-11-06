@@ -1052,6 +1052,15 @@ export class CardActions {
     const record = taskId ? this.core.options.tasks.get(taskId) : undefined;
     if (!taskId || !record || TaskService.isClosed(record)) return;
     if (cardEmitter(card.id, taskId) !== "crewmate") return;
+    // A crewmate that declared its work finished has nothing left to do
+    // (INF-2718): its read is not restarted as a turn - after an update a
+    // fresh conversation raised the closed note again (INF-2662) - and the
+    // idle ladder hands its close to the first mate once no card of its is
+    // up (`IdleLadder.finishedRead`).
+    if (!duplicateOf && record.delivery?.finishedAt !== undefined) {
+      this.core.ladder.finishedRead(taskId, this.core.now());
+      return;
+    }
     // A record no crewmate can hear - no live session and none to resume -
     // has nobody to tell; the close stays on the record alone.
     if (!this.core.tasks.has(taskId) && !record.sessionFile) return;

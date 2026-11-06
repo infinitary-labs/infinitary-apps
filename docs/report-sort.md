@@ -91,6 +91,7 @@ The ladder still climbs past it, but what it sends names the newest note up on t
 The wait lasts until the crewmate's next turn starts (`TaskService.turns.clearDeclaration` in `beginTurn`): a choice, reply or steer starts one, and that turn's report declares it again if it still holds.
 Putting a decision or pending note aside, or reading a marked saved answer, starts no turn and preserves its wait.
 Reading an ordinary note acknowledges it and starts its author's next turn through the existing durable path, clearing that declaration; the author reports finished if nothing remains.
+A crewmate whose latest report already declared its work finished gets no such turn: the read wakes the first mate for its close once no card of its own is up (`IdleLadder.finishedRead`, the rung-2 asked wake counted as its first; INF-2718).
 The minimize corner itself never declares work finished.
 A saved marked answer remains a captain-turn witness (`answerReady`) even after its note is read, until explicit Done on the note or its record; neither the idle clock nor a finished report takes that choice.
 The first mate’s crew context row carries the saved answer’s creation time and explicit Done receipt, so reading the note removes no answer witness and elapsed time does not rewrite that row.

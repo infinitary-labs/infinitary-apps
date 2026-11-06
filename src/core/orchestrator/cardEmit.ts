@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { NOTE_DONE_ACTION_ID } from "@shared/cardLeave";
 import {
   CARD_REPLY_MAX_CHARS,
   type Card,
@@ -477,10 +478,23 @@ export class CardEmits {
    * revision was written without it. Once the author has heard it, a
    * revision with actions would ask the same question again, so a new
    * question is a new card; one without actions only tells the captain
-   * something and shows as a note. A card closed without choosing can come back.
+   * something and shows as a note. A note the captain closed stays closed
+   * (INF-2718, from INF-2662's answer raised again after the captain's
+   * close): no emit under its id shows it again. A decision closed without
+   * a choice, or a card its author or the host closed, can come back.
    */
   private refuseAnsweredRevision(id: string, input: EmittedCardInput): void {
     const past = this.host.cardStore.past(id);
+    // The captain's read of a note is its Got it or Done (INF-2794), kept as
+    // that button's choice; a record from before it kept the corner's close.
+    const read =
+      past?.ending.how === "dismissed" ||
+      (past?.ending.how === "chose" && past.ending.actionId === NOTE_DONE_ACTION_ID);
+    if (read && past.actions.length === 0 && (past.ending.by ?? "captain") === "captain") {
+      throw new Error(
+        `Card refused: the captain closed your note "${id}" ("${past.title}"), so it stays closed and nothing was shown. Their close is their read of it, and a closed note is never raised again. When nothing is left, report finished. Only something new that they must see goes on a new card, with an id and title of its own.`,
+      );
+    }
     if (past?.ending.how !== "chose" || (past.ending.by && past.ending.by !== "captain")) return;
     const stored = this.host.cardStore.get(id);
     const choice = `"${past.ending.label ?? past.ending.actionId ?? "an action"}"`;

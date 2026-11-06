@@ -1,3 +1,4 @@
+import { NOTE_DONE_ACTION_ID } from "@shared/cardLeave";
 import { type Card, SETTLE_FACTS_OPEN } from "@shared/cards";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "../../../tests/helpers/cardServiceHarness";
@@ -354,6 +355,53 @@ describe("CardService", () => {
       expect(() => cards.emitCrewmateCard("t1", note, "m")).toThrow(/by choosing "Left"/);
       inbox.markDelivered([row]);
       expect(cards.emitCrewmateCard("t1", note, "m")).toBe(id);
+    });
+  });
+
+  // INF-2718, from the captain's pick "Refuse re-showing a closed note":
+  // after an update, INF-2662's crewmate woke in a fresh conversation and
+  // raised the answer note the captain had just closed under its same id.
+  it("refuses every emit under the id of a note the captain closed, and shows nothing", () => {
+    const { tasks, cardStore, db } = setup();
+    seedTask(tasks, { id: "t1", title: "Find the orange crewmate", status: "idle" });
+    const cards = new CardService({
+      now: () => 1000,
+      tasks,
+      cardStore,
+      syncCaptainGate: () => {},
+      closeAnsweredTask: () => false,
+      settleFacts: () => undefined,
+      followupNotice: () => undefined,
+      choiceUnheard: (card) =>
+        new InboxStore(db, { now: () => 1000 }).holdsUndeliveredChoice(card.taskId ?? "", card.id),
+      broadcastCrewCounts: () => {},
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    const answer = {
+      title: "The orange crewmate is a stale drawing",
+      body: "<p>The glyph points at a task the app cannot read.</p>",
+      actions: [],
+      answering: true,
+    };
+    const id = cards.emitCrewmateCard("t1", answer, "m");
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    expect(cards.pressNote(cards.shown(id) as Card)).toBe("got-it");
+    expect(cards.shown(id)).toBeUndefined();
+    for (const again of [
+      { ...answer, id },
+      { ...decision, id },
+    ]) {
+      expect(() => cards.emitCrewmateCard("t1", again, "m")).toThrow(
+        /the captain closed your note .* so it stays closed and nothing was shown/,
+      );
+    }
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    expect(cards.snapshot().filter((card) => card.taskId === "t1")).toEqual([]);
+    expect(cardStore.past(id)?.ending).toMatchObject({
+      how: "chose",
+      actionId: NOTE_DONE_ACTION_ID,
+      by: "captain",
     });
   });
 

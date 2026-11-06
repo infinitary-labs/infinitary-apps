@@ -173,7 +173,7 @@ export const ANSWER_ONLY_REFUSAL =
  * until the crewmate shows the answering card or says why it cannot.
  */
 export const CREWMATE_ANSWER_ASK =
-  "Report refused once: your task is the last work for the captain's message and no card of yours answers it. Show the card that answers it with emit_card and answering true - or revise your card under the same id with answering true, which raises it again if they closed it - then report. If you cannot answer it, report finished again saying why, and the first mate answers it.";
+  "Report refused once: your task is the last work for the captain's message and no card of yours answers it. Show the card that answers it with emit_card and answering true - or revise your open card under the same id with answering true - then report. A note the captain closed stays closed: if they closed the note that answers it, or you cannot answer it, report finished again saying so, and the first mate answers it.";
 
 /** The one notice's card title. */
 export const ANSWER_NOTICE_TITLE = "Your first mate has not answered your message";

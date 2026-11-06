@@ -623,6 +623,7 @@ The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `StackedCard` 
   The same card returns with its current draft; no close-confirmation popover appears.
   Preview settings and written replies stay drafts until an explicit send or choice.
 - Reading an ordinary completed note acknowledges its message and gives a live crewmate author its next turn, without completing the task.
+  A crewmate that already declared its work finished gets no turn: the first mate is woken for its close instead (`IdleLadder.finishedRead`, INF-2718).
   A marked saved answer instead keeps its acknowledgement and task ending for explicit Done on the note or its record.
   An author's withdrawal or an explicit task ending can still retire a card and its draft.
 
@@ -765,7 +766,8 @@ Every close the first mate makes of started work carries its one sentence: `sett
 The sentence is a fact of the close (`closingSentence` in its timeline data).
 Where it goes is one rule, at most one closing note for each of the captain's messages (`TaskClosing.placeOutcome`, `AskEnding.closingPlace`; `docs/task-capture.md`, "How a message ends"), after the one exception above: merged work whose story note carries the merge line takes the sentence on that line alone.
 
-- The card that answers the message, once the captain accepted it, takes the sentence as its close line (`closedLine`, or `mergedLine` after a merge), and comes back to the stack only when the work was dropped after they accepted it (INF-1533).
+- The card that answers the message, once the captain accepted it, takes the sentence as its close line (`closedLine`, or `mergedLine` after a merge), and a decision they chose on comes back to the stack only when the work was dropped after they accepted it (INF-1533).
+  A note they closed never comes back: the close stays on the task's record and in Activity (INF-2718, the captain's pick "Refuse re-showing a closed note" after DOP-201's note came back with its "dropped" line).
 - While other work of the message runs, or took the work over, nothing goes up (INF-1437).
 - An answering card that is up takes the sentence the same way.
 - Otherwise the sentence goes up as the first mate's own note, marked as the answer and titled with the task's key and its outcome (`merged`, `released` or `dropped`), with the pull request linked after a merge.
@@ -994,7 +996,7 @@ Every new list releases at the author's close-out, and an older link navigates t
 
 The `emit_card` description tells both authors to leave `holds_place` unset unless the use case requires continuous attention on the card.
 An author may set `holds_place: true` for such an interactive card so it comes forward when it arrives; every card keeps its place across thread replies (INF-770), and every choice still closes it immediately, with no waiting drawing.
-Each newly arriving marked card comes forward, even over another card, including a closed stable id raised again by its author, which after the captain's choice comes back only as a note (`docs/card-threads.md`).
+Each newly arriving marked card comes forward, even over another card, including a closed stable id raised again by its author, which after the captain's choice comes back only as a note, and never when it was a note the captain closed (`docs/card-threads.md`).
 A revision or a thread answer does not bring a card forward after the captain paged away.
 The declaration is optional and stored as `Card.holdsPlace`; a revision without it removes it, and unmarked cards are unchanged.
 This is generic card behavior, not a lesson type or a new action effect.

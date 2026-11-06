@@ -151,9 +151,10 @@ export class TaskClosing {
    * most one closing note, docs/task-capture.md "How a message ends"). The
    * captain's message the work covers decides, never the close's words:
    * - the card that answers it, recorded or accepted, or up for them, is
-   *   revised with the outcome - the merge line on a merge - and a card
-   *   they already closed comes back only when the work was dropped after
-   *   all, by someone other than them;
+   *   revised with the outcome - the merge line on a merge - and a
+   *   decision they already chose on comes back only when the work was
+   *   dropped after all, by someone other than them; a note they closed
+   *   never comes back;
    * - other work of the message still running, or the task that took this
    *   work over, keeps it quiet;
    * - otherwise the first mate's sentence goes up as the app's one closing
@@ -200,6 +201,10 @@ export class TaskClosing {
           ? { card: place.card, open: true }
           : undefined;
     if (answer) {
+      // A note the captain closed stays closed (INF-2718, DOP-201's note
+      // raised again with its "dropped" line): the close stays on the
+      // task's record and in Activity, never on their stack again.
+      if (!answer.open && answer.card.actions.length === 0) return;
       if (!answer.open && (outcome !== "dropped" || actor === "captain")) return;
       if (answer.open && outcome !== "merged" && !sentence) return;
       this.reviseAnswer(answer.card, answer.open, record, outcome, actor, sentence);
@@ -232,8 +237,8 @@ export class TaskClosing {
   /**
    * The card that answers the message, revised with what became of its
    * work: on a merge the merge line - when, its pull request and the first
-   * mate's sentence (INF-1219) - else the close line. A card the captain
-   * closed comes back as a note, since what it offered is gone.
+   * mate's sentence (INF-1219) - else the close line. A decision the
+   * captain chose on comes back as a note, since what it offered is gone.
    */
   private reviseAnswer(
     card: Card,

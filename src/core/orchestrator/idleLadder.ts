@@ -1031,6 +1031,23 @@ export class IdleLadder {
   }
 
   /**
+   * The captain read a card of a crewmate that declared its work finished
+   * (INF-2718): the read starts no turn for it, since nothing is left for
+   * it and after an update a fresh conversation raised the closed note
+   * again (INF-2662). Once no card of its own is up, the close it asks of
+   * the Firstmate is woken now, as the first of the rung's wakes; the
+   * reminders follow on the rung's own clock (`climbAsked`).
+   */
+  finishedRead(taskId: string, now: number): void {
+    const record = this.host.tasks.get(taskId);
+    const ask = record ? this.askOf(record) : undefined;
+    if (!record || !ask || !("finished" in ask)) return;
+    const runtime = this.host.runtime(taskId);
+    if (runtime && runtime.state !== "idle") return;
+    this.wake(record, runtime, now, 1, "asked");
+  }
+
+  /**
    * When the Firstmate last acted on a task, read from its timeline: a
    * steer, an interrupt, or a card of its own. A settle that went through
    * closes the task, so the ladder never reads it.
@@ -1111,7 +1128,9 @@ export class IdleLadder {
       turn === "asked"
         ? count >= ASKED_WAKES
           ? "the first mate has not acted on its crewmate's request since the first reminder; reminded it a last time."
-          : "the first mate has not acted on its crewmate's request since the report that asked woke it; reminded it."
+          : count <= 1
+            ? "its crewmate declared its work finished and the captain read its card; woke the first mate for its close."
+            : "the first mate has not acted on its crewmate's request since the report that asked woke it; reminded it."
         : turn === "owed"
           ? count >= 2
             ? "the first wake about this held task went ignored; woke the first mate again."

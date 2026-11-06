@@ -153,7 +153,7 @@ Who writes a missing answer, in the captain's order:
 
 At most one closing note: when work closes without the captain's click, `TaskClosing` asks `AskEnding.closingPlace` where its outcome goes.
 
-- The accepted or recorded answer is revised with the outcome line and comes back to the stack only when the work was dropped after the captain accepted it.
+- The accepted or recorded answer is revised with the outcome line, and a decision the captain chose on comes back to the stack only when the work was dropped after they accepted it; a note they closed never comes back (INF-2718).
 - Other running work of the message, or a handover, puts up nothing.
 - Work another task carries on closes done with no outcome of its own, so it puts up nothing; when the task carrying it closed first, that task's held-back outcome is placed once (`docs/task-record.md`, "Work carried on by another task").
 - An answering card that is up is revised, and so is the task's own card shaped as an answer that is still up, even when a later message asked about it.

@@ -280,9 +280,12 @@ describe("CrewSupervisor", () => {
       expect(up[0]?.body).toContain("The notice now reads");
     });
 
-    // Keep both acknowledgement routes covered: the decision case above and
-    // an ordinary note read through its Got it (INF-2794) before its later drop.
-    it("revises the same read note on a later drop without completing work on read", async () => {
+    // INF-2718, from the captain's pick "Refuse re-showing a closed note"
+    // and DOP-201's note raised again with its "dropped" line: an ordinary
+    // note read through the actual corner stays down on a later drop, and
+    // no closing note goes up beside it. The decision case above still
+    // comes back, since what it offered is gone.
+    it("keeps a read note closed on a later drop, and adds no note (INF-2718)", async () => {
       const h = await idleTask();
       await h.supervisor.steer.steerCrewmate(h.taskId, "Show the final outcome for me to read.");
       await tick();
@@ -310,13 +313,9 @@ describe("CrewSupervisor", () => {
         h.supervisor.settling.settle.settleTask(h.taskId, "discard"),
       );
       await tick();
-      const up = h.cards().filter((card) => card.taskId === h.taskId);
-      expect(up.map((card) => ({ id: card.id, actions: card.actions }))).toEqual([
-        { id: answer.id, actions: [] },
-      ]);
-      expect(up[0]?.body).toContain(closingNoteTitle(h.key, "dropped"));
-      expect(up[0]?.body).toContain(SENTENCE);
-      expect(up[0]?.body).toContain(words);
+      expect(h.tasks.get(h.taskId)?.status).toBe("dropped");
+      expect(left(h.cards(), h.taskId)).toEqual([]);
+      expect(h.supervisor.cards.stored(answer.id)?.body).not.toContain(SENTENCE);
     });
 
     it("puts up the sentence when the first mate cancels idle work", async () => {

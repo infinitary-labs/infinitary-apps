@@ -80,7 +80,7 @@ export const TASK_RELATIONSHIP_RULES = {
     store: "task_references",
   },
   // Its working copy's start is checked again when the task starts
-  // (`CrewSupervisor.branchFromSource`), which also needs saved work.
+  // (`branchFromSource` in `workShape.ts`), which also needs saved work.
   "branch-source": {
     cardinality: "one",
     holdsStart: false,

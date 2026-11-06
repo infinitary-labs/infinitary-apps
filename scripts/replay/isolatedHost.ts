@@ -1,9 +1,7 @@
 /** Shared model-free host wiring for replay and developer evaluations. */
 import { join } from "node:path";
-import {
-  CrewSupervisor,
-  type CrewSupervisorOptions,
-} from "../../src/core/orchestrator/crewSupervisor.ts";
+import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor.ts";
+import type { CrewSupervisorOptions } from "../../src/core/orchestrator/crewSupervisorOptions.ts";
 import {
   FirstmateAgent,
   type FirstmateAgentOptions,

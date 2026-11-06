@@ -193,7 +193,7 @@ describe("a task that runs on a computer that runs work", () => {
     const posture = () => {
       const record = home.tasks.get("t-claude-job");
       if (!record) throw new Error("No task t-claude-job.");
-      return home.supervisor.workPosture(record);
+      return home.supervisor.postures.workPosture(record);
     };
     await expect.poll(posture).toEqual({ state: "active", reason: "job" });
     const asked = claude.served().length;
@@ -234,7 +234,7 @@ describe("a task that runs on a computer that runs work", () => {
     await expect
       .poll(() => {
         const record = before.tasks.get("t-claude-let-go");
-        return record && before.supervisor.workPosture(record);
+        return record && before.supervisor.postures.workPosture(record);
       })
       .toEqual({ state: "active", reason: "job" });
     const asked = claude.served().length;

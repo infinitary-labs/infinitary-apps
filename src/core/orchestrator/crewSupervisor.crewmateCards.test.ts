@@ -36,7 +36,7 @@ import type { CrewMachines } from "../placed/crewMachines";
 import { bindTool } from "../session/tools";
 import { seedTask } from "../tasks/seedTask";
 import type { CrewmateSpec } from "./crewSession";
-import type { CrewSupervisorOptions } from "./crewSupervisor";
+import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { writeAskStrip } from "./requestStrips";
 
 type Browsers = NonNullable<CrewSupervisorOptions["browsers"]>;

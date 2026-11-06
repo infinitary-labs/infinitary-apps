@@ -172,7 +172,7 @@ A row an older build saved holds the types alone and has no copies to name.
 Whatever task the message attaches to, by a tool or by the fallback, holds its pictures: `TaskService.capture.pictures` reads them from every `ask` event on the task, in the order the messages attached, so a message about two tasks lands on both.
 The `tasks` query by key lists them by name and copy (`pictures`).
 
-The crewmate that takes the task is briefed with them (`CrewSupervisor.briefPictures`): the task's own pictures, then those of the work its brief carries forward - its basis, the task it was discovered or escalated from, the attempt it replaces - each picture once by digest.
+The crewmate that takes the task is briefed with them (`CrewBrief.briefPictures` in `crewBrief.ts`): the task's own pictures, then those of the work its brief carries forward - its basis, the task it was discovered or escalated from, the attempt it replaces - each picture once by digest.
 As many as one message may carry (`TURN_IMAGES_MAX`) ride the first turn as images; the brief's pictures section, right under the captain's words, names every copy by its path in the task’s `temp/handover/` folder on the computer running it, says how many did not fit, and counts a copy that is gone instead of sending its name as if it were there.
 When a copy is gone, the section tells the crewmate to say so plainly and ask the captain to send it again, rather than answer without it.
 The brief's inbox row keeps the riding copies (`attachments-kept`), so a retried or re-presented first turn carries them again (`docs/inbox.md`, "Pictures ride the row by reference").

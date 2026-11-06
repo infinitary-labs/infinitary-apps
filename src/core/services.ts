@@ -1012,8 +1012,8 @@ export async function createServices(
   computerMoveOf = (record) => supervisor.computerMoveFacts(record);
   closingResolutionOf = (taskId) => supervisor.cards.newestResolutionForTask(taskId);
   cardStack = supervisor;
-  readWorkPosture = (record) => supervisor.workPosture(record);
-  readWorkWaitFacts = (record) => supervisor.workWaitFacts(record);
+  readWorkPosture = (record) => supervisor.postures.workPosture(record);
+  readWorkWaitFacts = (record) => supervisor.postures.workWaitFacts(record);
   const workPresentation = new WorkPresentation({
     tasks,
     protocol: taskProtocol,

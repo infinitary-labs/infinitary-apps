@@ -169,6 +169,8 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/phone-release-process.test.ts` | the dispatched release command, temporary key fixtures and stand-in Xcode/upload commands; no signing or network | 5 s default |
 | `tests/run-evidence-playwright.test.ts` | two overlapping Playwright runs of a fixture config through the e2e global setup, its microphone check off; the build guard (node, `ps`) under one held run | 15 s |
 | `src/core/orchestrator/crewSupervisor.test.ts` | real git, at the run's own priority | 60 s on each real-git describe |
+| `src/core/orchestrator/reviews.test.ts` | real git in scratch projects for the review cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/crewBrief.test.ts` | real git in scratch projects for some rigor and picture cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `tests/e2e-lanes.test.ts` | playwright --list over every spec, and the real runner over fixture specs | 60 s; 180 s on the listing (Linux fastest 35.7 s; it grows with the suite) |
 | `tests/checks-mode.test.ts` | git with a scratch home's settings, the `test:phone` and `replay:gate` package scripts, the real Playwright runner over one spec, each refusing before setup | 5 s default, 30 s on the runner |
 | `tests/e2e-contract-lint.test.ts` | Biome, with the repository's plugins, over a fixture spec | 5 s default |

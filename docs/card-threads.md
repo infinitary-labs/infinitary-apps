@@ -135,7 +135,7 @@ While the captain's line is the newest on a crewmate's card (`awaiting: "answer"
 (INF-770).
 It is derived, never a message, and the card keeps showing what it showed.
 
-The line reads the task's work posture, the typed state the Tasks dot reads (`CrewSupervisor.workPosture`; `threadWait` and `threadWaitWords` in `src/shared/threadWait.ts`), and the task's assignee, both off the sequenced board (`useThreadWait`).
+The line reads the task's work posture, the typed state the Tasks dot reads (`WorkPostures.workPosture` in `workPosture.ts`; `threadWait` and `threadWaitWords` in `src/shared/threadWait.ts`), and the task's assignee, both off the sequenced board (`useThreadWait`).
 Nothing reads anyone's words.
 
 - `access`: the reply is kept, not sent.

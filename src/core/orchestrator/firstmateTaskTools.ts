@@ -8,6 +8,7 @@ import type { AskCapture } from "./askCapture";
 import { cardMutationText } from "./cardMutationText";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { startedReply } from "./replyLine";
+import { handOffShape } from "./workShape";
 
 /** What the graph tools reach of the first mate agent: its options, the running turn and its asks. */
 export type FirstmateTaskToolsHost = {
@@ -114,7 +115,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           // A typed hand-off is checked as a new task's is (INF-799); empty clears it.
           const handOff = (() => {
             if (input.resultSchema === undefined && input.branchFrom === undefined) return {};
-            const checked = supervisor.handOffShape(
+            const checked = handOffShape(
+              tasks,
               {
                 ...(input.resultSchema ? { result_schema: input.resultSchema } : {}),
                 ...(input.branchFrom?.trim() ? { branch_from: input.branchFrom } : {}),
@@ -391,7 +393,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         (repoId) => host.options.repos.get(repoId)?.name,
         (taskId) => host.options.supervisor.cards.newestBody(taskId),
         (taskId) => host.options.supervisor.cards.newestResolutionForTask(taskId),
-        (record) => host.options.supervisor.workPosture(record),
+        (record) => host.options.supervisor.postures.workPosture(record),
         host.options.supervisor.taskQueryReach(),
       ),
   };

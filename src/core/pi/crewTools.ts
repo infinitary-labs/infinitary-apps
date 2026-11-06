@@ -5,7 +5,7 @@ import type { Rigor } from "@shared/rigor";
 import { CLASSIFIABLE_KINDS, type WorkKind, type WorkShapeAsk } from "@shared/routingPolicy";
 import { Type } from "typebox";
 import type { CiReadingFact } from "../orchestrator/ciFact";
-import type { SteerDelivery } from "../orchestrator/crewSupervisor";
+import type { SteerDelivery } from "../orchestrator/crewRuntime";
 import { crewHoldWays, type HoldRefusal, renderHold } from "../orchestrator/holds";
 import { parseSpawnIntent, type SpawnIntent } from "../orchestrator/intentBrief";
 import { type NamedModel, namedModelWords } from "../orchestrator/namedModel";

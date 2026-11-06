@@ -24,7 +24,7 @@ import {
 /**
  * The kind classifier as the decision-model class's FIRST consumer (S7a,
  * design section 7.1). Nothing changes at the `KindClassifier` seam and
- * nothing changes at the call site: `CrewSupervisor.classifyShape` still
+ * nothing changes at the call site: `classifyShape` (`workShape.ts`) still
  * skips where the table decides above the kind, still bounds the call, and
  * still stamps `kind` and `kind_source` on the shape.
  *

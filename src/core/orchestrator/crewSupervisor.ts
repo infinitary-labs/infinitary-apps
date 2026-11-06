@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import {
@@ -24,7 +24,6 @@ import {
   type CardAnswer,
   type CardMutation,
   type CardThread,
-  cardAnswerLines,
   cardAnswersBytes,
   cardAnswersSchema,
   cardChromeValueSchema,
@@ -40,15 +39,11 @@ import {
   replyWithSettings,
   requestMergeEffectOf,
   requestWriteEffectOf,
-  SETTLE_FACT_VALUE_CLASS,
-  SETTLE_FACTS_OPEN,
-  type SettleFact,
   type ShellEffect,
   scriptChooser,
   settleEffectOf,
   type TaskLifecycleOp,
   type TaskMoveFrom,
-  TURN_IMAGES_MAX,
   type TurnImage,
 } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
@@ -56,15 +51,8 @@ import {
   type CheckChangeInput,
   everyFailureDiagnosed,
   isRepairAssessment,
-  REPAIR_ASSESSMENT_SOURCE,
 } from "@shared/checkRepair";
-import { currentCheckStatus, currentCheckSummary, everyFailureOnMain } from "@shared/checkSnapshot";
-import {
-  checksFinishedAgo,
-  checksRestWords,
-  checksSpanOf,
-  checksSpanWords,
-} from "@shared/checksSpan";
+import { currentCheckStatus, everyFailureOnMain } from "@shared/checkSnapshot";
 import { isClientIssueReason } from "@shared/claudeClient";
 import { type CrewResponse, crewResponseSchema, type ResponsePolicy } from "@shared/crewResponses";
 import { type CrewSpeed, type SpeedSelection, speedNote } from "@shared/crewSpeed";
@@ -83,14 +71,12 @@ import {
   updateStartRefusal,
   updateWaitLine,
 } from "@shared/deviceSetup";
-import type { ComputerReach } from "@shared/devices";
 import {
   noNewWorkDayLine,
   noNewWorkStartRefusal,
   noNewWorkWaitLine,
 } from "@shared/deviceUpdateNudge";
 import type { CrewCounts, FmEvent } from "@shared/events";
-import { factDotSvg } from "@shared/factDot";
 import { reportSummary } from "@shared/feed";
 import {
   type FolderNoticed,
@@ -106,26 +92,19 @@ import {
   holdNames,
   mergeClickRefusal,
   type OverridableHold,
-  overrideCellWords,
   overridePasses,
   overrideSpan,
   overrideWords,
   STANDING_WORDS_FROM,
   softHoldWords,
   standingOverride,
-  standingOverrideWords,
 } from "@shared/holds";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
-import type {
-  KeptValidationInput,
-  ValidationForgeWrite,
-  ValidationPermission,
-} from "@shared/liveValidation";
+import type { ValidationForgeWrite, ValidationPermission } from "@shared/liveValidation";
 import {
   keptValidationInputSchema,
   VALIDATION_GAPS_FIELD,
   validationAssignment,
-  validationPair,
   validationRevision,
   validationStateRevision,
 } from "@shared/liveValidation";
@@ -142,12 +121,7 @@ import {
 import type { TypedFailure } from "@shared/plainProblem";
 import { hostedPresentation } from "@shared/presentationDestination";
 import { projectPagePathRefusal } from "@shared/projectPage";
-import {
-  CREWMATE_TAB_VIA,
-  type InterruptEventData,
-  type SteerEventData,
-  TASK_CARD_VIA,
-} from "@shared/provenance";
+import { CREWMATE_TAB_VIA, type InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
 import {
   backendForProvider,
   catalogEntry,
@@ -174,11 +148,9 @@ import {
   RUNS_ON_THIS_MAC,
   runsHereOnly,
 } from "@shared/repos";
-import { REVIEW_VERDICT_OF_CODE, type Rigor, renderFinding } from "@shared/rigor";
-import { RISK_DIMENSIONS, RISK_WORDS, type RiskAssessment } from "@shared/risk";
+import type { Rigor } from "@shared/rigor";
+import type { RiskAssessment } from "@shared/risk";
 import {
-  type Deliverable,
-  type Escalation,
   type InPlaceFacts,
   type InPlacePull,
   isFolderRepair,
@@ -189,7 +161,6 @@ import {
   type WorkShape,
   type WorkShapeAsk,
 } from "@shared/routingPolicy";
-import type { RunbookFacts } from "@shared/runbooks";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import {
   attachmentStanding,
@@ -200,9 +171,7 @@ import {
   savedSignInLabel,
   TASK_BROWSER_REQUEST_MAX,
   type TaskBrowserCommandResult,
-  type TaskBrowserFact,
   type TaskBrowserHandle,
-  type TaskBrowserRequest,
   USE_SAVED_SIGN_IN_ACTION,
 } from "@shared/taskBrowser";
 import { type PlanItem, readPlanItems } from "@shared/taskPlan";
@@ -223,47 +192,33 @@ import type { MoveDestination, MoveOptions, TaskPlace, TaskView } from "@shared/
 import {
   CARE_WORDS,
   CHECK_WORDS,
-  CHECKS_NOT_READ_WORDS,
-  changeLinesWords,
-  DEFAULT_WORKSPACE_WORD,
   MERGE_AFTER_FIXING_WORDS,
   MERGE_WHEN_CHECKS_PASS_WORDS,
   MERGE_WORDS,
   REVIEW_CAREFULLY_WORDS,
-  REVIEW_WORDS,
   SKIP_RULES_MERGE_WORDS,
   sendWriteWords,
 } from "@shared/vocabulary";
 import type { HandoverFile } from "@shared/work";
 import { resolveWorkComputer } from "@shared/workComputer";
-import type { AccountHold } from "@shared/workPosture";
 import { type IntegrationAsk, NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
-import { AttachmentUnavailableError, attachmentPath, keepImages, loadImages } from "../attachments";
+import { AttachmentUnavailableError, keepImages, loadImages } from "../attachments";
 import { browserCommand } from "../browser/commandWords";
-import type { BrowserReturned, CrewmateBrowser } from "../browser/taskBrowsers";
+import type { BrowserReturned } from "../browser/taskBrowsers";
 import type {
   DownloadArtifactInput,
-  ForgePull,
   GithubReadInput,
   GithubWriteInput,
   ReadWorkflowInput,
 } from "../forge";
-import type { IntegrationAskTaken, TaskIntegrations } from "../integrations";
+import type { IntegrationAskTaken } from "../integrations";
 import { jobExitWake } from "../jobs/jobManager";
-import { PRIVATE_SCOPE } from "../knowledge/access";
-import {
-  knowledgeShortlist,
-  renderBriefKnowledge,
-  renderReferenceImport,
-} from "../knowledge/context";
 import { renderDirections } from "../knowledge/directions";
-import type { KnowledgeService } from "../knowledge/knowledgeService";
 import { knowledgeBinding } from "../knowledge/knowledgeTools";
 import { capWithOverflow, type MessageFile, withPastedFiles } from "../overflow";
 import {
-  type AppPaths,
   crewmateCardBodiesDir,
   crewmateCardPicturesDir,
   crewmateEvidenceDir,
@@ -273,12 +228,7 @@ import {
   crewmateTempDir,
 } from "../paths";
 import { errorText } from "../personal/errorText";
-import type {
-  LiveTurnCommit,
-  PanelCaptureResult,
-  PanelPlaceResult,
-} from "../personal/personalExtensions";
-import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
+import type { PanelPlaceResult } from "../personal/personalExtensions";
 import { lintCrewmateCard } from "../pi/cardLint";
 import { resolveFirstmateCardId } from "../pi/cardTool";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
@@ -288,45 +238,28 @@ import {
   verifyKeptValidationEvidence,
   verifyKeptValidationEvidenceSync,
 } from "../pi/validationEvidence";
-import type { AutomaticPlacement } from "../placed/automaticPlacement";
-import type { CrewMachines } from "../placed/crewMachines";
 import type { PlacedCopy } from "../placed/placedCopies";
 import { PreparationUnknown } from "../placed/placedCopies";
 import { askJson } from "../program/programAsk";
 import { type ProgramEnd, type ProgramPartAsk, ProgramRunner } from "../program/programRunner";
 import { programRefusal } from "../program/programScript";
 import { ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
-import { CLASSIFY_TIMEOUT_MS } from "../routing/decisionKindClassifier";
-import {
-  KIND_SOURCE,
-  type KindClassifier,
-  type KindInput,
-  kindEstablished,
-  resolveKind,
-} from "../routing/kindClassifier";
-import { escalationFloor, legacyShapeFromDifficulty, tierFor } from "../routing/policy";
-import {
-  type RoutePreview,
-  type RouteResult,
-  type Router,
-  requiresReasoningWait,
-} from "../routing/router";
+import { KIND_SOURCE, kindEstablished } from "../routing/kindClassifier";
+import { legacyShapeFromDifficulty, tierFor } from "../routing/policy";
+import { type RoutePreview, type RouteResult, requiresReasoningWait } from "../routing/router";
 import { isDowngrade } from "../routing/routingEngine";
-import { crewRunbookText, type Runbooks } from "../runbooks/runbooks";
+import { crewRunbookText } from "../runbooks/runbooks";
 import { followCompletions } from "../session/followCompletions";
 import { type AnsweredRead, OpenReads } from "../session/openReads";
 import {
-  type BackgroundJobName,
   type ClientBackgroundTask,
   type ControlProfile,
   LOCAL_MACHINE_ID,
   type ModelSession,
   type SessionBinding,
   type SessionEvent,
-  type SessionFactories,
   type SessionSpec,
   StoppedBeforeStartError,
-  type TaskShell,
 } from "../session/session";
 import {
   bindTools,
@@ -338,20 +271,18 @@ import {
   type FollowupInput,
   labeledActions,
 } from "../session/tools";
-import type { CardStore, DuplicateResult } from "../storage/cardStore";
+import type { DuplicateResult } from "../storage/cardStore";
 import { currentChange } from "../storage/changeProjection";
 import {
   FIRSTMATE_RECIPIENT,
   INBOX_ATTEMPT_MAX,
   type InboxRow,
-  type InboxStore,
   SUPERVISION_RECIPIENT,
 } from "../storage/inboxStore";
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type {
   CardRefusal,
   CompletionOffer,
-  MergeRepairAssessment,
   TaskGate,
   TaskRecord,
   TaskStartPolicy,
@@ -361,7 +292,6 @@ import {
   HANDOVER_IN_DIR_NAME,
   handoverFileName,
   keptHandoverFiles,
-  sha256OfFile,
   verifyHandoverFiles,
 } from "../tasks/handoverFiles";
 import {
@@ -378,7 +308,7 @@ import {
   type TaskQueryReach,
   type TaskQueryRow,
 } from "../tasks/taskQuery";
-import { resultRefusal, resultSchemaRefusal } from "../tasks/taskResult";
+import { resultRefusal } from "../tasks/taskResult";
 import { TaskService } from "../tasks/taskService";
 import { provisionTaskTemp } from "../tasks/taskTemp";
 import type { ReportDeclaration } from "../tasks/taskTurns";
@@ -387,15 +317,11 @@ import { compareSemver } from "../update/semver";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { gitFailure } from "../workspace/git";
 import { projectPageFile } from "../workspace/projectPage";
-import type { RepoRegistry } from "../workspace/repoRegistry";
 import { type MovedFolders, packWork, unpackWork } from "../workspace/workMove";
 import {
   type DependencyInstall,
   type DispatchBase,
-  keptRefFor,
   nearestFolderAbove,
-  type TaskWorkspace,
-  type WorkspaceService,
   type WorktreeAcquisition,
 } from "../workspace/workspaceService";
 import { CREWMATE_ANSWER_ASK } from "./answerDelivery";
@@ -408,15 +334,23 @@ import { cardMutationText } from "./cardMutationText";
 import { CardService } from "./cardService";
 import { escapeCardText } from "./cardText";
 import type { CardCaller } from "./cardThreads";
-import type { PrCiOverall } from "./changeChecks";
-import type { MergeGuard, PrOutcome } from "./changeMerge";
 import { declareRunCheck } from "./checkRepair";
-import { checkVerdicts } from "./checkVerdicts";
-import { CheckWatcher, type WatchedReading } from "./checkWatch";
+import { CheckWatcher } from "./checkWatch";
 import { ciFactOf } from "./ciFact";
+import { CrewBrief } from "./crewBrief";
+import {
+  type InterruptSource,
+  type MoveAsk,
+  type MoveTarget,
+  type PlacementRecord,
+  type SteerDelivery,
+  type SteerSource,
+  SUPERVISOR_STEER,
+  type TaskRuntime,
+  type UnreadSteer,
+} from "./crewRuntime";
 import {
   type CrewmateComputers,
-  type CrewmateProcedureFacts,
   type CrewmateRestart,
   type CrewmateSpec,
   crewmateProcedureFor,
@@ -424,6 +358,13 @@ import {
   crewmateResumeToken,
   crewmateSessionSpec,
 } from "./crewSession";
+import type {
+  CrewSupervisorOptions,
+  FirstmateHooks,
+  PersonalLiveDelegate,
+  PluginConsentHandler,
+  ProjectSetupHandler,
+} from "./crewSupervisorOptions";
 import type { WriteAskSent } from "./githubGateway";
 import { premiumRetryPossible } from "./holds";
 import {
@@ -436,51 +377,25 @@ import {
 import { integrationApprovalCard } from "./integrationApprovalCard";
 import {
   assertDeliverableConstraints,
-  type BasisBriefFacts,
   type BriefPart,
-  type BriefPictures,
-  basisSectionParts,
   briefText,
-  type CaptainCardFacts,
-  deliverableFor,
-  type EscalationBriefFacts,
-  FLEET_STARTED_CHANGE_WORDS,
   FOLDER_REPAIR_TITLE,
   type FolderBriefFacts,
-  joinParts,
   type PersonalBriefFacts,
   PULL_REPAIR_TITLE,
   parseSpawnIntent,
-  type ReviewBriefFacts,
-  renderAnswerShapeSection,
-  renderBranchFromLine,
   renderEscalationBrief,
   renderFolderRepairBrief,
   renderFollowupBrief,
   renderIntentBrief,
-  renderOperationShapeSection,
-  renderPicturesSection,
-  renderProgramPartSection,
   renderPullRepairBrief,
-  renderRepairAssessmentBrief,
-  renderResultShapeSection,
   renderReviewBrief,
-  renderRigorSection,
   type SpawnIntent,
   withDeliveryLine,
-  withoutOriginReadLine,
 } from "./intentBrief";
 import { checkBackAsk, checkBackAskOnce, unnamedBackgroundWork } from "./jobWakes";
-import { type MainBranchReading, MainCheckWatcher } from "./mainCheckWake";
-import {
-  ASSESSMENT_BOUND_MS,
-  approvableOffer,
-  decideMergeRepair,
-  isCaptainGuidance,
-  mergeHold,
-  parseRepairAssessment,
-  standingAuthorization,
-} from "./mergeAuthorization";
+import { MainCheckWatcher } from "./mainCheckWake";
+import { approvableOffer, isCaptainGuidance, mergeHold } from "./mergeAuthorization";
 import { type NamedModel, namedModelOf, namedModelWords } from "./namedModel";
 import { outageFailedWake } from "./outageWakes";
 import { implausibleReport } from "./reportPlausibility";
@@ -488,13 +403,13 @@ import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import {
   PENDING_RESPONSES_END,
   PENDING_RESPONSES_OPENING,
-  type ReviewVerdictFacts,
   type WakeOpenReview,
   wakeBuiltOn,
 } from "./reportWakes";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
-import { earlierHistory, reviewHistory } from "./reviewHistory";
-import { type RunReading, RunWatcher } from "./runWatch";
+import { Reviews } from "./reviews";
+import { RunWatcher } from "./runWatch";
+import { SettleFacts } from "./settleCardFacts";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
 import { folderMissingText, pendingMergeLine } from "./settleWords";
@@ -510,12 +425,22 @@ import {
   rowAttachments,
   type TypedWake,
   type WakeBody,
-  type WakeFacts,
   withAttachmentsDropped,
   withAttachmentsKept,
   withGuidanceMark,
 } from "./wakes";
-import { deriveWorkPosture, type PostureFacts } from "./workPosture";
+import { WorkPostures } from "./workPosture";
+import {
+  branchFromSource,
+  classifyShape,
+  deliverableOf,
+  type EscalationPlan,
+  handOffShape,
+  resolveEscalation,
+  withBasisVerdict,
+  withDeliverable,
+  workShape,
+} from "./workShape";
 
 /**
  * The crew supervisor: task lifecycle, event fan-out, and card production.
@@ -529,702 +454,6 @@ import { deriveWorkPosture, type PostureFacts } from "./workPosture";
  * owns the fleet, not any agent's transcript); lifecycle events reach the
  * Firstmate agent through the hooks as [fm-op] inbox messages.
  */
-
-/**
- * The consent card's two answers (one plugin vehicle, Phase A, A2a): the
- * captain's click on "Add it" adds the staged plugin, and only "Don't add"
- * turns it down. The minus keeps the staged offer pending. The installer is the only
- * implementation; the supervisor only routes the click it already owns.
- */
-export type PluginConsentHandler = {
-  add: (pluginId: string) => void;
-  decline: (pluginId: string) => void;
-};
-
-/**
- * The setup card's two answers (docs/fleet.md, "Asking the first mate to add a
- * project"): Add project sets the project up with the settings the
- * captain chose on the card, which its answers carry, and explicit Not now
- * declines it. The minus keeps the offer pending. `offer` is the card's own effect
- * argument, never words a body or an agent wrote.
- */
-export type ProjectSetupHandler = {
-  add: (offer: string | undefined, answers?: readonly CardAnswer[]) => void;
-  decline: (offer: string | undefined) => void;
-};
-
-export type FirstmateHooks = {
-  /**
-   * Queue an [fm-op] operational message for the Firstmate agent: a typed
-   * wake the drain renders (`wakes.ts`), never prose the host composed. The
-   * origin is what the wake is (a crewmate report, or any other host
-   * operation) - the consuming turn is classified by it, never by the text -
-   * and the optional ref names the task the wake is about.
-   */
-  notifyOp: (wake: TypedWake, origin: ServedWakeOrigin, ref?: string) => number | null | void;
-  /**
-   * Why the Firstmate cannot answer a Start right now, from typed facts: its
-   * seat is paused, or its lane is waiting out a provider outage. Absent, or
-   * undefined, means it can. Without the hook a Start goes ahead as it is.
-   */
-  firstmateCannotAnswer?: () => string | undefined;
-  /** An actual footer click, never a script-fired choice. */
-  notifyCaptainChoice?: (wake: TypedWake, ref?: string) => void;
-  /** Premium serveability at this moment; an absent reading is not exhausted. */
-  premiumCanServe?: () => boolean;
-  /** Retry the last failed Firstmate turn (the error card's action). */
-  retryConverse: () => void;
-  /**
-   * A captain reply on the Firstmate's own card (cards-as-threads phase 2):
-   * a captain turn about that card. Optional so supervisor tests without an
-   * agent still record the thread message.
-   */
-  converseAboutCard?: (
-    cardId: string,
-    text: string,
-    images?: TurnImage[],
-    messageFiles?: MessageFile[],
-  ) => void;
-  /** Apply the rung-2 ladder move: rebind Firstmate to another provider. */
-  moveFlagship?: (providerId: string) => void;
-  /** The refused card's "Try again": clear the account's refusal and drain once. */
-  tryAgain?: (accountId: string) => void;
-  /** The notice's "Ask again": the captain's message sent once more as a new turn. */
-  askAgain?: (askId: string) => void;
-  /** Watchdog pass over the Firstmate's own turn, on the shared tick (P4). */
-  checkQuiet?: (now: number) => void;
-  /** A durable-inbox delivery poke for the firstmate lane, on the shared tick. */
-  pokeInbox?: () => void;
-  /**
-   * A captain's message's work closed or the captain answered a card: the
-   * first mate's answer check reads how each message stands, once it is
-   * not mid-turn (INF-1610).
-   */
-  asksMoved?: () => void;
-  /** A card went up: a notice it answers is taken back (INF-2664). */
-  cardPlaced?: () => void;
-};
-
-/**
- * How a steer actually reached the crewmate. A backend whose ControlProfile
- * says `followup-queue` cannot interrupt its own running turn, so guidance
- * sent mid-turn is parked and delivered as the crewmate's NEXT turn. The
- * caller is told which happened (captain's phase-8 decision): a queued steer
- * is surfaced honestly, never dropped and never reported as if it had
- * reached the work in flight. `recorded-retrying` is the durable-inbox
- * outcome for a delivery that failed right now: the message is recorded,
- * the ladder retries it, and it escalates loudly if it keeps failing.
- * `recorded-queued` (interaction P0, WI-4): the task's latest update is being
- * handled right now, so the message waits durably on the task's lane and is
- * delivered, in order, the moment that handling ends. `recorded-held`: a
- * cut-off stands on the task's account, so the message is kept on its lane,
- * not attempted, and goes out when the account serves again - which the
- * Firstmate hears (docs/inbox.md, "A lane on a withheld account").
- */
-export type SteerDelivery =
-  | "mid-turn"
-  | "queued-next-turn"
-  | "recorded-retrying"
-  | "recorded-queued"
-  | "recorded-held";
-
-/** The account-selection surface the supervisor consumes (AccountSelector). */
-export type AccountAttachment = {
-  /** `crew` names the routed model, so its accounts rank in that model's scope (INF-1714). */
-  selectForSpawn(
-    taskId: string,
-    piProviderId: string,
-    crew?: { model: string },
-  ): string | undefined;
-  reselectForResume(
-    taskId: string,
-    accountId: string | null,
-  ): { accountId?: string; changed: boolean };
-  labelOf(accountId: string): string | undefined;
-};
-
-export type CrewSupervisorOptions = {
-  automaticPlacement?: AutomaticPlacement;
-  /**
-   * Starts the process a program's script runs in (docs/programs.md).
-   * Absent, a program is refused when it is filed.
-   */
-  programProcess?: import("../host").HostChildSpawner;
-  /**
-   * One JSON answer through the decision models' one-question session
-   * (`DecisionModels.answerJson`), for a program's ask(). Absent, ask()
-   * answers null.
-   */
-  answerJson?: (
-    caller: { purpose: string; taskId?: string },
-    instruction: string,
-    text: string,
-    signal: AbortSignal,
-  ) => Promise<{ text: string } | { failed: string }>;
-  /** The app build every card observation is stamped with (docs/card-evidence.md). */
-  build?: string;
-  /**
-   * Each backend's session factory (the session contract): a crewmate is
-   * the crewmate preset, opened by the factory of the backend its account
-   * binds to.
-   */
-  sessions: SessionFactories;
-  /**
-   * The computers that run work for this home (src/core/placed/): a task
-   * whose record names one (`deviceId`) opens its conversation there, with
-   * that computer's factories and its folders, and waits while it is out of
-   * reach or not yet caught up. Absent, every task runs on this Mac.
-   */
-  machines?: CrewMachines;
-  /**
-   * Whether a computer is connected on an older Firstmate and takes no new
-   * work until it is updated (`Computers.takesNoWorkUntilUpdated`): a task
-   * waiting for it says so, not that it is out of reach.
-   */
-  takesNoWorkUntilUpdated?: (deviceId: string) => boolean;
-  /** The one reach value (`reachFrom`). Absent, out of reach. */
-  reachOf?: (deviceId: string) => ComputerReach;
-  /** A task began waiting for that computer's update: its Update card returns, even after Not now. */
-  recallUpdateCard?: (deviceId: string) => void;
-  /**
-   * An account's binding, through the one binder: no account binds to the
-   * base runtime, and an account that cannot serve throws, so the spawn
-   * fails loudly rather than running somewhere else.
-   */
-  bind: (accountId: string | undefined, providerId?: string) => Promise<SessionBinding>;
-  /** The home's opt-in, carried without its files to whichever Mac opens the session. */
-  personalResourcesEnabled?: () => boolean;
-  source?: import("../selfSource/resolve").SelfSourceReader;
-  runbooks?: Runbooks;
-  /**
-   * The crewmate preset. Absent, `crewmateSessionSpec` over the app's paths;
-   * the replay and the tests hand in one that also keeps each crewmate's
-   * callbacks, so a recorded tool call plays straight into them.
-   */
-  sessionSpec?: (crewmate: CrewmateSpec, binding: SessionBinding) => SessionSpec;
-  workspace: WorkspaceService;
-  repos: RepoRegistry;
-  /** The one task writer (task-system P0): every record change goes through it. */
-  tasks: TaskService;
-  taskTimeline?: import("../tasks/taskTimeline").TaskTimeline;
-  cardStore: CardStore;
-  /**
-   * Knowledge (docs/knowledge.md): present in every build. Applicable
-   * directions ride each served turn. A task with a project or references
-   * grant gets the knowledge pair locally or on a compatible work computer.
-   * Optional only for isolated callers that provide no Knowledge service.
-   */
-  knowledge?: KnowledgeService;
-  /** The durable inbox: one lane per task, plus the firstmate lane. */
-  inbox: InboxStore;
-  /** Optional routing (D-7/D-18); absent defers to the runtime default. */
-  router?: Router;
-  /**
-   * Whether the account-less runtime serves any model of its own (a
-   * models.json provider): a start on this Mac that routing placed on no
-   * model opens there. With none, that session has nothing to answer it and
-   * fails as a sign-in, so the start is refused in words instead.
-   * Absent = it may serve.
-   */
-  accountlessServes?: () => boolean;
-  /**
-   * What establishes a spawn's KIND (intelligence-bucket routing S3).
-   * Absent is the honest S2 behaviour: every shape stays `unclear` and R8
-   * routes it high - the classifier can make routing cheaper, never
-   * possible.
-   */
-  classifier?: KindClassifier;
-  /** Optional account selection (broker phase 4); absent = base runtime. */
-  accounts?: AccountAttachment;
-  /**
-   * A typed cut-off a crewmate's turn observed, recorded on its account
-   * (`AccountVault.noteCutOff`): the fact every reader of serveability sees.
-   */
-  noteCutOff?: (accountId: string, cutOff: CutOff) => void;
-  /**
-   * Whether each account serves, and the cut-off standing on it (the
-   * cut-off contract): a lane is held while a cut-off stands on its
-   * account, and the Firstmate hears the cut-off once and its end once.
-   * Absent = no account is ever held.
-   */
-  serveability?: AccountServeability;
-  /** The latest available ledger reading, without aggregating historical rows. */
-  latestUsage?: (
-    taskId: string,
-  ) => ReturnType<import("../storage/usageStore").UsageStore["latestForTask"]>;
-  /** Records per-turn usage for burn tracking (D-18), per account. */
-  recordUsage?: (input: {
-    taskId: string;
-    accountId?: string;
-    model?: { provider: string; id: string };
-    usage: NonNullable<Extract<FmEvent, { type: "turn_end" }>["usage"]>;
-  }) => void;
-  paths: AppPaths;
-  /**
-   * Whether a quota-reset gate's scope has headroom again (R1). Refs are a
-   * quota provider id or `bucket:<intelligence>`; absent means such gates
-   * never clear on their own.
-   */
-  quotaGateCleared?: (ref: string) => boolean;
-  /**
-   * Whether a quota-reset ref names a real scope. Absent means refs are
-   * accepted unchecked (tests); wired in the composition root beside
-   * quotaGateCleared so a typo'd scope fails loudly at spawn instead of
-   * queueing a gate that can never clear (R1).
-   */
-  quotaGateRefValid?: (ref: string) => boolean;
-  /** A task's running background jobs count as liveness (R2 + P4). */
-  hasRunningJobs?: (taskId: string) => boolean;
-  /**
-   * A task's longest-running background job (the job registry's), for the
-   * bound on jobs as proof of life (docs/report-sort.md). Absent means a
-   * running job counts as moving however old it is (tests).
-   */
-  oldestRunningJob?: (
-    taskId: string,
-  ) => { jobId: string; command: string; startedAt: number } | undefined;
-  /** Kills a task's background jobs when the task ends (R2). */
-  killJobs?: (taskId: string) => void;
-  /**
-   * Put the change in where the project lives (the forge seam), injected
-   * beside check_pr_ci; a merge under the captain's kept approval passes
-   * its guard (FI3-304).
-   */
-  mergePullRequest?: (
-    taskId: string,
-    guard?: MergeGuard,
-    boundary?: import("./changeMerge").MergeBoundary,
-  ) => Promise<PrOutcome>;
-  /**
-   * Merge one stored review after the captain's click (FI3-1543): a
-   * continuing merge, so the task stays open (INF-2490).
-   */
-  mergeReview?: (taskId: string, reviewId: string, guard?: MergeGuard) => Promise<PrOutcome>;
-  /** Whether a stored review may be offered now. Absent in tests that publish unchecked. */
-  reviewGate?: (taskId: string, reviewId: string) => Promise<string | undefined>;
-  /**
-   * The captain's click on a `request_write` card (FI3-1571 piece 4): send
-   * the kept write once, through the gateway. Absent where nothing can be
-   * sent; the click then sends nothing.
-   */
-  sendWriteAsk?: (
-    taskId: string,
-    askId: string,
-    choice?: IntegrationApprovalChoice,
-  ) => Promise<WriteAskSent>;
-  /**
-   * Run the first mate's integration ask its card's click already took from
-   * the row the host filed for it (INF-1108), once, as the first mate's call.
-   */
-  sendTakenIntegrationAsk?: (
-    rowId: string,
-    taken: IntegrationAskTaken,
-    choice: IntegrationApprovalChoice,
-  ) => Promise<WriteAskSent>;
-  /**
-   * What the captain chose on a panel's approval card (docs/integrations.md,
-   * "Panels"): the panel's next call hears it, never the first mate.
-   */
-  panelAskAnswered?: (askId: string, choice: IntegrationApprovalChoice) => void;
-  /** The pinned pull request by its number, for a kept approval's reconcile. */
-  readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
-  /** Close the change where the project lives on discard, injected beside mergePullRequest. */
-  closePullRequest?: (taskId: string) => Promise<PrOutcome>;
-  /**
-   * A live check_pr_ci reading, injected beside mergePullRequest: the gate a
-   * crewmate's own completion card must clear before a merge decision
-   * reaches the captain (contract v2.0's "no captain card" clause,
-   * standing CI rule). Absent means the gate is not wired (tests, replay)
-   * and a crewmate's completion card publishes unchecked, as before.
-   */
-  checkCi?: (
-    taskId: string,
-  ) => Promise<PrCiOverall | { overall: PrCiOverall; recorded: boolean; problem?: string }>;
-  /**
-   * The crewmate's own pair where the project lives (git integration PR
-   * 1.2): `open_change` offers the task's branch as a proposed change and
-   * `check_change` reads its checks through the app's sign-in, recorded
-   * like check_pr_ci. Absent means neither tool is offered.
-   */
-  prepareChange?: (
-    taskId: string,
-    input: import("@shared/changePresentation").StagedChangePresentation,
-  ) => Promise<string>;
-  openChange?: (
-    taskId: string,
-    input: import("@shared/changePresentation").OpenChangeInput,
-  ) => Promise<string>;
-  completionPresentation?: (
-    taskId: string,
-    revision: number,
-  ) => Promise<
-    Pick<
-      DeclaredCardInput,
-      "title" | "body" | "pictures" | "riskDeclaration" | "requiredActions"
-    > & {
-      /** The revision shown, when the host republished the named one at a later version (INF-2509). */
-      revision?: number;
-    }
-  >;
-  validateLocalStory?: (taskId: string) => Promise<string>;
-  checkChange?: (taskId: string, input?: CheckChangeInput) => Promise<string>;
-  readWorkflow?: (taskId: string, input: ReadWorkflowInput) => Promise<string>;
-  downloadArtifact?: (taskId: string, input: DownloadArtifactInput) => Promise<string>;
-  githubRead?: (taskId: string, input: GithubReadInput) => Promise<string>;
-  githubWrite?: (taskId: string, input: GithubWriteInput) => Promise<string>;
-  /**
-   * The check watch's quiet read (`ChangeChecks.readWatched`, docs/forge.md
-   * "The check watch"): the host reads a watched change's checks on the
-   * shared tick, wakes the crewmate on the first failed check, and wakes it
-   * again when they finish. Absent means
-   * nothing is watched and a standing watch never holds the idle ladder.
-   */
-  readCheckWatch?: (taskId: string) => Promise<WatchedReading>;
-  /**
-   * The default branch's checks for projects with a standing baseline wait
-   * (INF-833 Fix 4, `ChangeChecks.readDefaultBranchChecks`). Absent means a
-   * main failure still resumes only when the named task closes.
-   */
-  readMainChecks?: (repoId: string) => Promise<MainBranchReading>;
-  readRunWatch?: (taskId: string, runId: number) => Promise<RunReading>;
-  /**
-   * Extra work on the shared 60s tick. Credential-health is the fourth
-   * rider (quiet watchdog, R1 gates, inbox ladder, then this): proactive
-   * renew at expiresAt-lead, not a new timer.
-   */
-  onWatchdogTick?: (now: number) => void;
-  /**
-   * The host's one clock (the ticker's, `ticker.ts`): every time the
-   * supervisor and its ladder stamp or compare. Absent reads `Date.now()`.
-   */
-  now?: () => number;
-  /**
-   * The record of every whose-turn sort (S7c, R4.4): one `sort` row in the
-   * decision ledger per sorted report or idle rung (P6), with the rule that
-   * sorted it and the wake's typed facts, so `flag_missed_escalation`, the
-   * miss deriver, the supervision extractor and the replay scorer keep
-   * reading one ledger. Absent = no record (tests).
-   */
-  recordSort?: (input: {
-    taskId: string;
-    /** The wake as it was served. */
-    wake: string;
-    /** Its typed facts; absent when the row records a line, not a typed wake. */
-    facts?: WakeFacts;
-    verdict: "routine" | "captain";
-    summary: string;
-    /** The rule that sorted it. */
-    rule: ReportSortRule | IdleRule;
-    wakeKind: ServedWakeOrigin;
-    /** The wake itself, run inside the store's own transaction. */
-    effect?: () => void;
-  }) => void;
-  /**
-   * The personal workspace's live build loop (talk-to-personalize Step 4):
-   * absent means a `personal-ui` spawn is refused as unavailable.
-   */
-  personal?: PersonalLiveDelegate;
-  /** The host's decoder for crewmates' demo recordings (`HostCapabilities.mediaProbe`). */
-  probeMedia?: MediaProbe;
-  /** The host's loader for crewmates' project fonts (`HostCapabilities.typefaceProbe`). */
-  probeTypeface?: TypefaceProbe;
-  /** The computer's declared-run owner and its advertised command capability. */
-  load?: {
-    forTask: (taskId: string) => import("../placed/loadLine").TaskLoad;
-    available: (machine: string) => boolean;
-  };
-  /**
-   * The task channel (docs/axi-commands.md): a task granted its browser gets
-   * `infinitary-browser-axi` in its shell. Absent, no crewmate has a browser.
-   */
-  taskCommands?: {
-    grant: (
-      taskId: string,
-      tools: {
-        browser?: CrewmateBrowser;
-        integrations?: TaskIntegrations;
-        load?: import("../placed/loadLine").TaskLoad;
-      },
-    ) => TaskShell;
-  };
-  /**
-   * Integrations (docs/integrations.md): a crewmate on this Mac reaches them
-   * through `infinitary-integrations-axi` on its task channel. Absent, it has none.
-   */
-  integrations?: { forTask: (taskId: string) => TaskIntegrations };
-  /**
-   * Each task's own browser (docs/task-browser.md), on this Mac or on the
-   * computer its task runs on ("On another computer"): absent, its crewmate
-   * has no browser. Its fact names the browser a card's browser button
-   * opens ("From a card").
-   */
-  browsers?: {
-    forTask: (taskId: string) => CrewmateBrowser;
-    fact: (taskId: string) => TaskBrowserFact | undefined;
-    /** The task's browser is in the captain's hands: the idle ladder reads it as his turn. */
-    withCaptain: (taskId: string) => boolean;
-    /** A crewmate's card asks the captain to take over (docs/task-browser.md, "Asking for help"). */
-    requestHelp: (
-      taskId: string,
-      request: TaskBrowserRequest & { site: string },
-    ) => Promise<{ ok: true; handle: TaskBrowserHandle } | { ok: false; text: string }>;
-    /** The captain's click on a request card's open-browser action. */
-    takeControl: (taskId: string, handle?: TaskBrowserHandle) => Promise<TaskBrowserCommandResult>;
-    /**
-     * The saved sign-in a request card on this site may offer
-     * (docs/task-browser.md, "Saved sign-ins"); absent where none.
-     */
-    savedSignInFor?: (taskId: string, site: string) => OfferedSignIn | undefined;
-    /**
-     * The crewmate's request card says the saved sign-in its browser was
-     * given did not sign the page in: that save keeps the mark. False when
-     * the browser uses none for the site.
-     */
-    markSavedSignInFailed?: (taskId: string, site: string) => boolean;
-    /** The captain's click on a request card's saved sign-in. */
-    grantSavedSignIn?: (
-      taskId: string,
-      handle: TaskBrowserHandle,
-    ) => Promise<TaskBrowserCommandResult>;
-  };
-  broadcastEvent: (event: FmEvent) => void;
-  broadcastCards: (cards: Card[]) => void;
-  presentationChanged?: () => void;
-  crewSpeed?: (model: { provider: string; id: string }) => import("@shared/crewSpeed").CrewSpeed;
-  /** A model by the name Settings → Models gives it (`ModelSlots.nameOf`); its id when absent. */
-  modelName?: (model: { provider: string; id: string }) => string;
-  /** One card's thread, whole, after any message lands on it (phase 1). */
-  broadcastThread?: (thread: CardThread) => void;
-};
-
-/**
- * What the supervisor needs from the personal extension host to run a task
- * on the personal workspace (Step 4): the workspace as a managed repo
- * (registered on first need), the surfaces that already exist (for the
- * brief), the stamp window (`beginLiveTask`/`endLiveTask`, so the running
- * dot follows the crewmate's saves), the commit at the end of each turn,
- * and the three checks the crewmate's tools call. Implemented by
- * `PersonalExtensions` plus the repo registry, wired in personal/homePersonal.ts.
- */
-export type PersonalLiveDelegate = {
-  workspaceDir: string;
-  repo: () => RepoView;
-  surfaces: () => PersonalBriefFacts["surfaces"];
-  beginLiveTask: (taskId: string) => void;
-  endLiveTask: (taskId: string) => void;
-  commitTurn: (taskId: string, message: string) => Promise<LiveTurnCommit>;
-  lint: (input: { id?: string }) => Promise<string>;
-  place: (input: { id?: string; taskId: string }) => Promise<PanelPlaceResult>;
-  capture: (input: { id: string; taskId: string }) => Promise<PanelCaptureResult>;
-};
-
-/** Who issued a steer, how it arrived, and the decision behind it (R2 capture). */
-type SteerSource = {
-  actor: "firstmate" | "captain" | "supervisor";
-  via: SteerEventData["via"];
-  decision: string | null;
-  cardId: string | null;
-  /** The panel the captain moved it from, by its title (a panel's Continue). */
-  panel?: string;
-  /** Where the captain's own words sit in the message (`replyWordsSpan`). */
-  words?: SteerEventData["words"];
-  /** The Firstmate steered in a turn that carries the captain's own words. */
-  captainWords?: boolean;
-};
-
-/** The host's own steer: the supervisor, through supervision, answering no message or card. */
-const SUPERVISOR_STEER: SteerSource = {
-  actor: "supervisor",
-  via: "supervision",
-  decision: null,
-  cardId: null,
-};
-
-/** Who asked for an interrupt or cancel, from where, and under which decision. */
-/**
- * A resolved escalation (S4): the attempt the captain rejected, the stamp
- * the tier table reads for R1b, and the facts the fresh crewmate's brief
- * is rendered from. Built once, before anything is created, so every
- * refusal happens before a row exists.
- */
-type EscalationPlan = {
-  previous: TaskRecord;
-  stamp: Escalation;
-  facts: EscalationBriefFacts;
-};
-
-/** What placement reads of a task, or of one about to exist (docs/helper.md, "Runs on"). */
-type PlacementRecord = {
-  branch?: string;
-  sessionFile?: string | null;
-  placement?: TaskRecord["placement"];
-  repoId: string | null;
-  parentId?: string | null;
-  deviceId?: string | null;
-  shape?: { kind?: string; runs_on_ask?: string; in_place?: object } | null;
-};
-
-export type InterruptSource = {
-  actor: "firstmate" | "captain";
-  via: InterruptEventData["via"];
-  decision: string | null;
-  /** The panel the captain moved it from, by its title (a panel's Drop task on started work). */
-  panel?: string;
-  /** The stop is part of a move back to the backlog (INF-2062), not a Stop of its own. */
-  backlog?: true;
-};
-
-/**
- * A move of a started task to another provider (INF-849): who asked, the
- * model they named (update_task's override_model_id), or none for the app's
- * pick with the current provider left out; `from` is the provider the card
- * offered to move off, so a card left up after another move does nothing;
- * `offered` is the model the card named, which the move takes or refuses,
- * never another in its place.
- */
-type MoveAsk = { by: "captain" | "firstmate"; model?: string; from?: string; offered?: string };
-
-/** Where a moving task reopens: the routed model, its account and effort, and its provider's name. */
-type MoveTarget = {
-  model: { provider: string; id: string };
-  accountId?: string;
-  thinkingLevel: NonNullable<CrewmateSpec["thinkingLevel"]>;
-  providerName: string;
-};
-
-type TaskRuntime = {
-  id: string;
-  title: string;
-  /** The conversational handle (`<PROJECT_KEY>-<seq>`), for card chrome; falls back to `id`. */
-  key: string;
-  crewmate: string;
-  /** The backend serving the open conversation, a fact the runbook selectors read. */
-  backend?: string;
-  workspace?: TaskWorkspace;
-  session?: ModelSession;
-  /** Why the current conversation opened, including ids minted on its first turn. */
-  conversationBegan?: string;
-  unsubscribe?: () => Promise<void>;
-  clientJobs?: number;
-  /** When the client's background work last went from none to some: the job bound's clock. */
-  clientJobsSince?: number;
-  /** The longest-running job of that work, when its runner names it (a computer's Pi shell). */
-  clientJob?: BackgroundJobName;
-  /**
-   * The background tasks this Mac's Claude client runs for the crewmate, by
-   * id, each with what the model said it is and when it was first seen: the
-   * ones a client end, or the quit, cuts off (`follow`, `disposeAll`).
-   */
-  clientTasks: Map<string, { description: string; since: number }>;
-  /** Text streamed in the current assistant turn. */
-  currentTurnText: string;
-  /** The last completed turn's text - the report shown on the task card. */
-  lastCompleteText: string;
-  /** The turn's FINAL message text so far, its closing words once its session closes it: its report candidate (WI-1). */
-  turnReport?: string;
-  /** What the turn in flight reported through the report tool (WI-1); wins over its text. */
-  explicitReport?: string;
-  /** The report tool's own one-line headline for `explicitReport`, when it gave one. */
-  explicitSummary?: string;
-  /** What `explicitReport` declared about whose turn follows it (FI3-435). */
-  explicitDeclared?: ReportDeclaration;
-  /** The typed review this turn's report recorded (INF-1875): a reviewer's verdict, read at the turn's end. */
-  turnReview?: Extract<KeptValidationInput, { kind: "review" }>;
-  /** Streaming while a prompt runs; idle between turns, still steerable. */
-  state: "starting" | "streaming" | "idle";
-  /** This boundary was opened by the provider rather than runTurn(). */
-  autonomousTurn?: boolean;
-  /** The vault account serving this crewmate; absent = base runtime. */
-  accountId?: string;
-  cancelled: boolean;
-  /**
-   * A settle stopped this runtime to close the task with its own reason
-   * (`closeTask`): the captain's choice on an answer, a discard. That close
-   * owns the record and what is queued about it, so the end of the turn it
-   * stopped is not a cancel (INF-721).
-   */
-  settling?: boolean;
-  /** Set by interrupt mode "interrupt": the abort keeps the task steerable. */
-  interruptRequested: boolean;
-  /**
-   * The follow-ups this turn filed (cards/tasks/agents P0, WI-4): a filing
-   * is a row, a link and a feed line, never a wake of its own; the report
-   * wake that ends the turn names them, and the list clears with it.
-   */
-  filedThisTurn: { key: string; title: string; blocks: boolean }[];
-  /** Watchdog signals (P4): any session event counts as activity. */
-  lastEventAt: number;
-  turnStartedAt: number;
-  /** 0 = active, 1 = quiet feed line sent, 2 = quiet card raised. */
-  quietLevel: 0 | 1 | 2;
-  /** When the watchdog last asked the live session whether this quiet turn still works (INF-2332). */
-  confirmedAt?: number;
-  /**
-   * The quiet pass's question to the task's computer is out: its quiet
-   * alert waits for the answer, and goes unless that answer ended the turn
-   * here (INF-2332).
-   */
-  quietAsk?: true;
-  /** The 2h wall-clock escalation fired for this turn. */
-  wallClockEscalated: boolean;
-  /**
-   * The calls the turn has open now, by call id, each by its tool and when
-   * it began (INF-2603): what a quiet turn waits on, named whoever started
-   * the call.
-   */
-  openCalls: Map<string, { tool: string; since: number }>;
-  /**
-   * The steers handed into the turn that its session has not read yet,
-   * oldest first: one is read once the session says so (`input_read`), or
-   * once a model request begins after it was handed over (INF-2603).
-   */
-  unreadSteers: UnreadSteer[];
-  /** The steers the previous twenty-minute check found unread: one still unread at the next wakes the first mate once. */
-  steersAtCheck?: readonly UnreadSteer[];
-  /** The app's own reads a conversation on this Mac has open, which the twenty-minute check may answer. */
-  openReads: OpenReads;
-  /** The twenty-minute check named this quiet stretch's wait: crew status names it until the turn moves. */
-  waitNamed?: true;
-  /** The twenty-minute check answered an app read: the quiet alert waits for the next check, which finds the turn moving or names it. */
-  readsAnsweredAt?: number;
-  /**
-   * Durable-inbox rows delivered into the current turn (the brief, steers,
-   * job results). Acknowledged when the turn ends clean; released for a
-   * grace-spaced retry when it fails. Guidance for a backend that cannot
-   * take it mid-turn simply stays pending on the task's lane until the turn
-   * ends - the lane IS the followup queue, and it survives a quit.
-   */
-  inFlightInboxIds: number[];
-  /**
-   * The rows each live steer carried into the current turn, oldest first
-   * (a sweep's steer can carry several). A steer the session accepted but no
-   * turn took in comes back from `takeUndeliveredSteers` at the turn's end,
-   * newest first to be left over, and its rows go back on the lane.
-   */
-  steeredInboxIds: number[][];
-  /**
-   * The provider error the current turn ended with (turn_failed), consumed
-   * by turnComplete: Pi resolves such turns instead of rejecting, so
-   * without this the failure would report as an empty "(no report)".
-   */
-  lastTurnError?: string;
-  /** The typed cut-off behind `lastTurnError`, when the backend reported one. */
-  lastTurnCutOff?: CutOff;
-  /** A move asked for mid-turn, run once the turn ends (INF-849). */
-  pendingMove?: MoveAsk;
-  /**
-   * The app stopped this turn because the computer it runs on is updated
-   * (`pauseForUpdate`, `saveForUpdate`): its end is a pause, never a failed
-   * turn, and `row` is the lane row that carries it on once that computer
-   * is back. A turn this computer's own update held before it reached its
-   * model has no row: its own rows go again. `computer` names another
-   * computer; this one's own update names none.
-   */
-  paused?: { computer?: string; row?: number; unstarted?: true };
-};
-
-/** A steer handed into a running turn, by its words' digest and when it was handed over. */
-type UnreadSteer = { sha: string; since: number; woken?: true };
 
 /** How a save for this computer's own update ended (`saveForUpdate`). */
 export type UpdateSaveOutcome = "saved" | "withdrawn";
@@ -1301,39 +530,6 @@ function gateText(gate: TaskGate): string {
       return gate.reason ?? "waiting on you";
   }
 }
-
-type FollowupState = "hold" | "after" | "working" | "queued" | "backlog";
-/**
- * Row order on a settle card, and each state's word and hover sentence. The
- * last three are the Tasks panel's own group words (src/shared/nowPanel.ts).
- */
-const FOLLOWUP_STATES: FollowupState[] = ["hold", "after", "working", "queued", "backlog"];
-const FOLLOWUP_WORDS: Record<FollowupState, { word: string; sentence: string }> = {
-  hold: {
-    word: "must merge first",
-    sentence:
-      "This merge waits on it. Merge is refused until it merges, or until the wait is removed.",
-  },
-  after: {
-    word: "starts once this merges",
-    sentence: "It waits for this to merge, then starts. It does not hold this merge up.",
-  },
-  working: {
-    word: "working",
-    sentence: "A crewmate is working on it. It does not hold this merge up.",
-  },
-  queued: {
-    word: "queued",
-    sentence: "It starts by itself when nothing holds it. It does not hold this merge up.",
-  },
-  backlog: {
-    word: "backlog",
-    sentence: "It waits for your word to start. It does not hold this merge up.",
-  },
-};
-
-/** One 10px state dot, the one drawing every fact strip shares (`@shared/factDot`). */
-const statusDot = factDotSvg;
 
 /** A link phrased for tool text: who waits on whom, in keys. */
 function linkPhrase(from: TaskRecord, to: TaskRecord, type: TaskLinkType): string {
@@ -1639,8 +835,6 @@ export class CrewSupervisor {
   private readonly deviceForgeSaid = new Set<string>();
   /** Folder repairs whose folder is being read now, so one tick reads each once. */
   private readonly closingFolders = new Set<string>();
-  /** Tasks whose change lines are being read now (`readChangeLines`). */
-  private readonly readingLines = new Set<string>();
   /**
    * Starts the captain pressed that wait for the Firstmate to apply his
    * standing directions: the wake's inbox row, and where the press came from
@@ -1665,12 +859,18 @@ export class CrewSupervisor {
   private readonly clearingMoves = new Set<string>();
   /** In-flight moves, including reopening and source/destination cleanup, until their writes end. */
   private readonly computerMoveOperations = new Set<Promise<void>>();
+  /** The facts a settle card's task writes on the card: its fact strip and its follow-ups. */
+  private readonly settleFacts: SettleFacts;
   /** The card stack: the open cards and every write to them. */
   readonly cards: CardService;
   /** How each captain's message ends (INF-1610, docs/task-capture.md "How a message ends"). */
   readonly askEnding: AskEnding;
   /** Settling and closing: land, merge-pr, discard, and every close's teardown. */
   readonly settling: SettleOwners;
+  /** A crewmate's brief at dispatch, and the runbook facts its instructions are selected by. */
+  private readonly briefs: CrewBrief;
+  /** Independent reviews and repair assessments: their reads, verdicts and tasks. */
+  private readonly reviews: Reviews;
   private crewmateSeq = 0;
   /** The watchdog's registrations on the shared ticker, undone at dispose. */
   private watchdog: (() => void)[] | undefined;
@@ -1700,8 +900,8 @@ export class CrewSupervisor {
   private hooks: FirstmateHooks = { notifyOp: () => {}, retryConverse: () => {} };
   /** The idle ladder and the holds: the witnesses, the gate, the caps and the ready sweep. */
   private readonly ladder: IdleLadder;
-  private readonly postureFact = Symbol("work posture");
-  private readonly postureInputs = Symbol("work posture inputs");
+  /** Each task's posture, and the wait facts read from the same snapshot. */
+  readonly postures: WorkPostures;
   private readonly placeFact = Symbol("task place");
   private readonly moveFact = Symbol("computer move facts");
   private readonly ciFact = Symbol("crew check summary");
@@ -1723,6 +923,11 @@ export class CrewSupervisor {
     this.now = now ? () => now() : () => Date.now();
     // A project moved: its tasks that have not started follow it (docs/helper.md, "Runs on").
     options.repos.onRunsOn?.((repo) => this.projectMoved(repo));
+    this.settleFacts = new SettleFacts(options, {
+      now: this.now,
+      taskDelivery: (taskId) => this.taskDelivery(taskId),
+      reviewOpen: (taskId) => this.openReviewOf(taskId) !== undefined,
+    });
     this.cards = new CardService({
       now: this.now,
       tasks: options.tasks,
@@ -1730,12 +935,12 @@ export class CrewSupervisor {
       syncCaptainGate: (taskId, at) => this.ladder.syncCaptainGate(taskId, at),
       closeAnsweredTask: (card, action, by) =>
         this.settling.declared.closeAnsweredTask(card, action, by),
-      settleFacts: (taskId) => this.settleFacts(taskId),
+      settleFacts: (taskId) => this.settleFacts.strip(taskId),
       mergeLabel: (card) => this.mergeLabel(card),
       mergeAnyway: (card) => this.mergeAnyway(card),
       holdsUntilMerge: (card, merging) => this.holdsUntilMerge(card, merging === true),
       otherChangeOpen: (taskId) => this.otherChangeOpen(taskId),
-      followupNotice: (taskId) => this.followupNotice(taskId),
+      followupNotice: (taskId) => this.settleFacts.followupNotice(taskId),
       choiceUnheard: (card) => {
         const lane = card.id.startsWith(FIRSTMATE_CARD_PREFIX) ? FIRSTMATE_RECIPIENT : card.taskId;
         return lane !== undefined && options.inbox.holdsUndeliveredChoice(lane, card.id);
@@ -1815,12 +1020,12 @@ export class CrewSupervisor {
       },
       ...(options.closePullRequest ? { closePullRequest: options.closePullRequest } : {}),
       ...(options.readPull ? { readPull: options.readPull } : {}),
-      assessRepair: (taskId) => this.assessRepair(taskId),
+      assessRepair: (taskId) => this.reviews.assessRepair(taskId),
       fileFolderRepair: (merged, refusal) => this.fileFolderRepair(merged, refusal),
       folderMissing: (repoId, noticed, by) => this.folderMissing(repoId, noticed, by),
       filePullRepair: (abandoned, problem) => this.filePullRepair(abandoned, problem),
       isPersonalTask: (taskId) => this.isPersonalTask(taskId),
-      deliverableOf: (record) => this.deliverableOf(record),
+      deliverableOf,
       taskDelivery: (taskId) => this.taskDelivery(taskId),
       taskAutonomy: (taskId) => this.taskAutonomy(taskId),
       resolveTaskRef: (ref, param) => this.resolveTaskRef(ref, param),
@@ -1829,6 +1034,23 @@ export class CrewSupervisor {
       sweepGates: (at) => this.sweepGates(at),
       broadcastCrewCounts: () => this.broadcastCrewCounts(),
       broadcastEvent: options.broadcastEvent,
+    });
+    this.briefs = new CrewBrief(options, {
+      cards: this.cards,
+      machineOf: (taskId) => this.machineOf(taskId),
+      deliverHandover: (taskId, path, name, sha256) =>
+        this.deliverHandover(taskId, path, name, sha256),
+      knowledgeFor: (taskId) => this.knowledgeFor(taskId),
+      backendOf: (taskId) => this.tasks.get(taskId)?.backend,
+    });
+    this.reviews = new Reviews(options, {
+      now: this.now,
+      cards: this.cards,
+      settling: this.settling,
+      notifyOp: (wake, origin, ref) => this.hooks.notifyOp(wake, origin, ref),
+      steer: (taskId, wake) => this.steerInternal(taskId, wake, SUPERVISOR_STEER),
+      startTask: (spec) => this.startTask(spec),
+      reviewBuilderOf: (record) => this.reviewBuilderOf(record),
     });
     this.programs = new ProgramRunner({
       tasks: options.tasks,
@@ -1882,6 +1104,12 @@ export class CrewSupervisor {
         ? { browserWithCaptain: (taskId: string) => options.browsers?.withCaptain(taskId) === true }
         : {}),
     });
+    this.postures = new WorkPostures(options, {
+      now: this.now,
+      witnesses: (taskId, at) => this.ladder.witnesses(taskId, at),
+      heldBy: (record) => this.ladder.heldBy(record),
+      runtime: (taskId) => this.tasks.get(taskId),
+    });
     const readRunWatch = options.readRunWatch;
     this.runWatch = readRunWatch
       ? new RunWatcher({
@@ -1905,7 +1133,7 @@ export class CrewSupervisor {
             : {}),
           // The posture the Tasks dot shows as "Blocked by another task".
           idleBehindOtherWork: (record) => {
-            const posture = this.workPosture(record);
+            const posture = this.postures.workPosture(record);
             return posture.state === "idle" && posture.reason === "dependency";
           },
           steer: (taskId, wake) => this.steerInternal(taskId, wake, SUPERVISOR_STEER),
@@ -2112,135 +1340,6 @@ export class CrewSupervisor {
       },
       known: (account) => machines?.knows(account) ?? true,
     };
-  }
-
-  /**
-   * The review target and evidence are read where the builder actually runs.
-   * The target is that computer's committed branch head, even when an older
-   * pull request already records a different head (INF-288).
-   */
-  private async reviewFacts(builder: TaskRecord): Promise<ReviewBriefFacts> {
-    const prUrl = builder.delivery?.prUrl;
-    const machines = this.options.machines;
-    const device = builder.deviceId;
-    let headSha: string | null;
-    let changedFiles: string[] | null;
-    let changeReading: string | undefined;
-    let evidenceDir: string;
-    if (device) {
-      const folders = machines?.folders(device, builder.id);
-      if (!machines?.ready(device, builder.id) || !folders)
-        throw new Error(
-          "The builder's computer is out of reach; the review must wait for it, not run here instead.",
-        );
-      ({ headSha, changedFiles, changeReading } = await machines.revision(device, builder.id));
-      evidenceDir = folders.evidence;
-    } else {
-      headSha = builder.branch
-        ? await this.options.workspace.branchHead(builder.repoDir, builder.branch)
-        : null;
-      changedFiles = headSha
-        ? await this.options.workspace.reviewChangedFiles(builder.repoDir, headSha)
-        : null;
-      changeReading = headSha
-        ? ((await this.options.workspace.reviewChangeReading(builder.repoDir, headSha)) ??
-          undefined)
-        : undefined;
-      evidenceDir = crewmateEvidenceDir(this.options.paths, builder.id);
-    }
-    if (!headSha)
-      throw new Error(
-        `${builder.key || builder.id} has no commits on its branch to review yet. Steer the crewmate to commit its work and report first.`,
-      );
-    const captainCard = this.captainCardFacts(builder);
-    const standing = standingOverride(builder.delivery, headSha);
-    const proof = builder.delivery?.liveValidation?.runs.at(-1);
-    if (proof)
-      await verifyKeptValidationEvidence(
-        proof.evidence,
-        crewmateCardPicturesDir(this.options.paths, builder.id),
-        builder.id,
-      );
-    const keptFile = async (name: string): Promise<string> => {
-      const file = join(crewmateCardPicturesDir(this.options.paths, builder.id), name);
-      if (!device) return file;
-      if (!machines?.sourceFile)
-        throw new Error("The kept proof cannot be copied to the reviewer's computer.");
-      return machines.sourceFile(device, builder.id, `proof-${name}`, file);
-    };
-    const proofFiles = await Promise.all(
-      (proof?.evidence ?? []).map(async (item) => ({
-        id: item.id,
-        file: await keptFile(item.file),
-        ...(item.posterFile ? { poster: await keptFile(item.posterFile) } : {}),
-      })),
-    );
-    const validation = builder.delivery?.liveValidation;
-    return {
-      builderTitle: builder.title,
-      branch: builder.branch,
-      headSha,
-      ...(prUrl ? { prUrl } : {}),
-      builderReport: builder.outcome ?? "The builder has not reported yet.",
-      evidenceDir,
-      changedFiles,
-      ...(changeReading ? { changeReading } : {}),
-      ...(captainCard ? { captainCard } : {}),
-      history: reviewHistory(this.options.tasks, builder),
-      ...(standing ? { override: standing } : {}),
-      proofFiles,
-      validation: validation
-        ? {
-            ...validation,
-            runs: proof
-              ? [{ ...proof, evidence: proof.evidence.map(({ text: _text, ...item }) => item) }]
-              : [],
-          }
-        : undefined,
-    };
-  }
-
-  /**
-   * The merge card the captain pressed Review carefully on (INF-562), as
-   * the stage showed it: the newest card on the builder whose chosen action
-   * set care. Saved whole beside the builder's other source cards when the
-   * work runs here; quoted in the brief when it runs on another computer.
-   */
-  private captainCardFacts(builder: TaskRecord): CaptainCardFacts | undefined {
-    const [raised] = this.options.cardStore.resolvedSince(
-      0,
-      1,
-      ({ card, offer, action }) =>
-        (offer?.actions ?? card.actions).some((entry) => entry.id === action && entry.care),
-      builder.id,
-    );
-    if (!raised) return undefined;
-    const shown = raised.offer ?? raised.card;
-    const declared = shown.risk?.declared;
-    const risk = declared
-      ? RISK_DIMENSIONS.map(
-          (dimension) =>
-            `- ${RISK_WORDS[dimension].label}: ${declared[dimension].level} - ${declared[dimension].why}`,
-        )
-      : undefined;
-    const files = cardPictureFiles(shown.body, this.options.paths.crewmatesDir);
-    const facts: CaptainCardFacts = {
-      title: shown.title,
-      ...(files.pictures.length && !builder.deviceId ? { pictures: files.pictures } : {}),
-      ...(risk ? { risk } : {}),
-    };
-    if (!builder.deviceId) {
-      const dir = crewmateSourceCardsDir(this.options.paths, builder.id);
-      const file = join(dir, `merge-card-${raised.card.id.replace(/[^A-Za-z0-9_-]/g, "-")}.html`);
-      try {
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(file, files.body, "utf8");
-        return { ...facts, file };
-      } catch {
-        // A card that cannot be saved rides in the brief whole.
-      }
-    }
-    return { ...facts, body: files.body };
   }
 
   /**
@@ -3282,7 +2381,11 @@ export class CrewSupervisor {
     // An escalation is resolved FIRST (S4): every refusal - an unknown or
     // never-run task, a lineage past its bound, nothing above premium -
     // happens before a row, a worktree or a rejection exists.
-    const escalation = this.resolveEscalation(input.shape?.escalate_from, input.shape?.premium_ask);
+    const escalation = resolveEscalation(
+      (ref, param) => this.resolveTaskRef(ref, param),
+      input.shape?.escalate_from,
+      input.shape?.premium_ask,
+    );
     const inheritedDeliveryAsk =
       input.shape?.delivery_ask ?? escalation?.previous.shape?.delivery_ask;
     const placement = this.resolveGraphPlacement(
@@ -3363,11 +2466,11 @@ export class CrewSupervisor {
     const runsOnRefused =
       runsOnAsk && this.placeRefusal(`"${title}"`, { repoId: boundRepoId }, runsOnAsk);
     if (runsOnRefused) throw new Error(`${NOTHING_SPAWNED} ${runsOnRefused}`);
-    const handOff = this.handOffShape(input.shape, boundRepoId);
+    const handOff = handOffShape(this.options.tasks, input.shape, boundRepoId);
     if ("refused" in handOff) throw new Error(`${NOTHING_SPAWNED} ${handOff.refused}`);
-    const shape = this.withDeliverable(
+    const shape = withDeliverable(
       {
-        ...this.workShape(input.shape, escalation),
+        ...workShape(this.options.tasks, input.shape, escalation),
         ...handOff,
         ...(runsOnAsk ? { runs_on_ask: runsOnAsk } : {}),
       },
@@ -3404,8 +2507,8 @@ export class CrewSupervisor {
     // instead, so the cheap call happens as late as it can still matter.
     // An escalation never reaches the classifier at all - its kind is
     // inherited from the attempt it replaces.
-    const classified = this.withDeliverable(
-      await this.classifyShape(taskId, title, input.intent, boundRepoId, shape, true),
+    const classified = withDeliverable(
+      await classifyShape(this.options, taskId, title, input.intent, boundRepoId, shape, true),
       input.intent,
     );
     const brief = renderBrief(classified);
@@ -3598,7 +2701,7 @@ export class CrewSupervisor {
     const delivery = this.taskDelivery(builder.id) ?? "local-only";
     // The reviewer reads the builder's branch at its current head and
     // evidence, including unpublished repairs to an existing PR.
-    const facts = await this.reviewFacts(builder);
+    const facts = await this.reviews.reviewFacts(builder);
     const { headSha, prUrl } = facts;
     const open = this.openReviewOf(builder.id);
     if (open) {
@@ -3631,7 +2734,7 @@ export class CrewSupervisor {
     // The host establishes the kind: a review is never classified, and its
     // basis is the builder, whose report it reads. The builder join is the
     // parent edge below, never a shape field.
-    const shape = this.withBasisVerdict({
+    const shape = withBasisVerdict(this.options.tasks, {
       kind: "review",
       kind_source: "host:review",
       basis: builder.id,
@@ -3764,7 +2867,7 @@ export class CrewSupervisor {
     // The first assignment is already prepared and briefed at commission.
     // Keep it through retries; only a later review turn takes a new head.
     if (review.delivery?.headSha && !review.outcome) return undefined;
-    const facts = await this.reviewFacts(builder);
+    const facts = await this.reviews.reviewFacts(builder);
     this.options.tasks.delivery.recordChangeEvidence(review.id, {
       validationAssignment: validationAssignment(builder.delivery?.liveValidation, facts.headSha),
     });
@@ -3810,116 +2913,6 @@ export class CrewSupervisor {
     // Re-send the assignment even when the head stayed put: a previous
     // prompt may have failed after preparation but before the model read it.
     return brief;
-  }
-
-  /**
-   * A repair its crewmate declared unknown gets one independent assessment
-   * (FI3-663; FI3-304's guard = builder: "uncertainty receives an
-   * independent bounded assessment"). The kept merge calls this whenever it
-   * reads the undecided repair - at the builder's idle boundary, on the
-   * tick and at boot - so the assessment starts once the builder's turn is
-   * over, and only once per repair. One still working is left to answer
-   * within its bound; one that stopped without answering, ran past the
-   * bound, or could not start ends the approval, so the merge never waits
-   * on it forever and never runs on an unknown.
-   */
-  private assessRepair(builderId: string): void {
-    const builder = this.options.tasks.get(builderId);
-    const authorization = standingAuthorization(builder?.delivery);
-    const undecided = authorization?.undecided;
-    if (!builder || !authorization || !undecided || TaskService.isClosed(builder)) return;
-    const open = undecided.assessment;
-    if (open) {
-      const assessor = this.options.tasks.get(open.taskId);
-      const live = assessor !== undefined && !TaskService.isClosed(assessor);
-      if (live && this.now() - open.at <= ASSESSMENT_BOUND_MS) return;
-      this.repairDecided(builderId, open.taskId, "failed");
-      if (live) void this.retireAssessments(builderId, "it ran past its time");
-      return;
-    }
-    // One still reading a repair the crewmate has since replaced answers nothing.
-    void this.retireAssessments(builderId, "a newer repair replaced the one it read");
-    const assessorId = randomUUID().slice(0, 8);
-    // Recorded before it exists, so a second read finds it and starts none,
-    // and one that cannot be made ends the approval like one that cannot finish.
-    this.options.tasks.delivery.recordPermissionRecords(builder.id, {
-      mergeAuthorization: {
-        ...authorization,
-        undecided: { ...undecided, assessment: { taskId: assessorId, at: this.now() } },
-      },
-    });
-    const title = `Assess repair: ${builder.title}`.slice(0, 64);
-    let brief: string;
-    let routed: RouteResult | undefined;
-    try {
-      const delivery = builder.delivery;
-      brief = renderRepairAssessmentBrief({
-        builderTitle: builder.title,
-        change: `${delivery?.changeLabel ?? `#${authorization.target.prNumber}`}${
-          delivery?.prUrl ? ` ${delivery.prUrl}` : ""
-        }`,
-        ...(builder.intent?.userWords ? { userWords: builder.intent.userWords } : {}),
-        approvedHead: authorization.approvedHead,
-        fromHead: undecided.fromHead,
-        toHead: undecided.toHead,
-        newBase: undecided.newBase,
-        paths: undecided.paths ?? { approved: [], repaired: undecided.changedPaths },
-        evidence: undecided.evidence,
-        validation: undecided.validation,
-      });
-      // The host establishes the kind, the way it does a review's: never
-      // classified, its basis the builder, delivery machinery under it.
-      const shape = this.withBasisVerdict({
-        kind: "review",
-        kind_source: REPAIR_ASSESSMENT_SOURCE,
-        basis: builder.id,
-      });
-      // Independent: the ladder prefers a provider other than the builder's.
-      const avoidProvider = this.options.router?.servedProvider(builder.id);
-      routed = this.options.router?.decide(
-        assessorId,
-        brief,
-        shape,
-        avoidProvider ? { avoidProvider } : {},
-      );
-      this.options.tasks.create({
-        id: assessorId,
-        kind: "work",
-        title,
-        prompt: brief,
-        intent: {
-          goal: `Assess whether bringing "${builder.title}" up to date kept the approved change.`,
-          userWords: builder.intent?.userWords ?? "",
-          constraints: [],
-        },
-        repoId: builder.repoId,
-        difficulty: routed?.bucket ?? tierFor(shape).bucket ?? null,
-        shape,
-        status: "active",
-        parentId: builder.id,
-        actor: "host",
-      });
-    } catch (caught) {
-      console.warn("[crew] a repair assessment could not be made:", caught);
-      this.repairDecided(builderId, assessorId, "failed");
-      return;
-    }
-    this.options.tasks.note(
-      builder.id,
-      `An independent assessment of the repair to ${undecided.toHead} started: ${title}.`,
-      { news: true, data: { repairAssessment: assessorId } },
-    );
-    void this.startTask({
-      taskId: assessorId,
-      title,
-      brief,
-      repoId: builder.repoId,
-      routed,
-      fresh: true,
-    }).catch((caught: unknown) => {
-      console.warn("[crew] a repair assessment could not start:", caught);
-      this.repairDecided(builderId, assessorId, "failed");
-    });
   }
 
   /**
@@ -4271,95 +3264,6 @@ export class CrewSupervisor {
     return `The project's folder is up to date: clean, on ${branch} and at or past ${facts.reach ? facts.reach.slice(0, 7) : `origin's ${branch}`}.`;
   }
 
-  /**
-   * An independent assessment's verdict on its builder's undecided repair
-   * (FI3-663). Accepted, the kept merge runs again under every gate; any
-   * other verdict ended the approval with a hold, and the builder is told
-   * so once, to put up a new completion card - the captain decides again.
-   */
-  private repairDecided(
-    builderId: string,
-    assessorId: string,
-    verdict: NonNullable<MergeRepairAssessment["verdict"]>,
-    excerpt?: string,
-  ): void {
-    const decided = decideMergeRepair(
-      this.options.tasks,
-      builderId,
-      assessorId,
-      verdict,
-      this.now(),
-    );
-    if (decided.decided === "accepted") {
-      void this.settling.kept.runMergeAuthorization(builderId).catch((caught: unknown) => {
-        console.warn("[crew] kept merge could not run:", caught);
-      });
-      return;
-    }
-    if (decided.decided !== "ended" || verdict === "none") return;
-    const wake: TypedWake = {
-      facts: {
-        kind: "repair-assessed",
-        head: decided.head,
-        verdict,
-        ...(excerpt ? { excerpt } : {}),
-      },
-      once: `repair-assessed:${assessorId}`,
-    };
-    void this.steerInternal(builderId, wake, SUPERVISOR_STEER).catch((caught: unknown) => {
-      // The record and the feed already say the approval ended.
-      console.warn("[crew] the repair assessment's steer was not delivered:", caught);
-    });
-  }
-
-  /** Stop a builder's live repair assessments, silently: their verdict would answer nothing. */
-  private async retireAssessments(builderId: string, why: string): Promise<void> {
-    const live = this.options.tasks.graph
-      .children(builderId)
-      .filter((child) => !TaskService.isClosed(child) && isRepairAssessment(child.shape));
-    for (const child of live) {
-      await this.settling.closing
-        .closeTask(child.id, {
-          status: "dropped",
-          reason: "superseded",
-          actor: "host",
-          text: `superseded - ${why}`,
-          feed: false,
-        })
-        .catch(() => {});
-    }
-  }
-
-  /**
-   * An independent repair assessment reported (FI3-663): its first line is
-   * its verdict, and its first report is its only one - the host records
-   * the verdict on the builder's approval, then closes the assessment.
-   */
-  private async settleRepairAssessment(task: TaskRuntime, report: string): Promise<void> {
-    const builderId = this.options.tasks.get(task.id)?.parentId;
-    const verdict = parseRepairAssessment(report);
-    if (builderId) {
-      this.repairDecided(builderId, task.id, verdict, capWithOverflow(report, "task-report"));
-    }
-    await this.settling.closing
-      .closeTask(task.id, {
-        status: "done",
-        reason: "finished",
-        actor: "host",
-        text: `assessed the repair: ${verdict}`,
-        feed: false,
-      })
-      .catch((caught: unknown) => {
-        const message = caught instanceof Error ? caught.message : String(caught);
-        if (this.options.tasks.get(task.id)) {
-          this.options.tasks.note(task.id, `could not close the assessment: ${message}`, {
-            news: true,
-            data: { closeFailed: message },
-          });
-        }
-      });
-  }
-
   /** Whether a task's events skip supervision: a review task itself. */
   private bypassesSupervision(taskId: string): boolean {
     return this.options.tasks.get(taskId)?.shape?.kind === "review";
@@ -4452,14 +3356,18 @@ export class CrewSupervisor {
     );
     const taskId = randomUUID().slice(0, 8);
     const title = (input.title.trim() || input.intent.goal || "Task").slice(0, 64);
-    const handOff = this.handOffShape(input.shape, placement.repoId);
+    const handOff = handOffShape(this.options.tasks, input.shape, placement.repoId);
     if ("refused" in handOff) throw new TaskGraphRefusal(`Nothing was filed. ${handOff.refused}`);
     const program = input.shape?.program
       ? this.programShape(input.shape, placement.repoId, placement.personal)
       : undefined;
     if (typeof program === "string") throw new TaskGraphRefusal(`Nothing was filed. ${program}`);
-    const shape = this.withDeliverable(
-      { ...this.workShape(input.shape), ...handOff, ...(program ? { program } : {}) },
+    const shape = withDeliverable(
+      {
+        ...workShape(this.options.tasks, input.shape),
+        ...handOff,
+        ...(program ? { program } : {}),
+      },
       input.intent,
     );
     const record = this.options.tasks.create({
@@ -4605,66 +3513,6 @@ export class CrewSupervisor {
   }
 
   /**
-   * The escalation an `escalate_from` asks for (S4, report section 4).
-   * Every check that can refuse runs here, before a row exists, and every
-   * refusal is a loud tool error the Firstmate reads in conversation:
-   *
-   * - the named task must exist and be crewmate work;
-   * - it must really have run (Q1's "never on first dispatch"): a row that
-   *   never started produced no result for the captain to reject;
-   * - the lineage may spend `maxEscalations` rungs, and nothing sits above
-   *   premium - both refusals come from the policy, not from here.
-   */
-  private resolveEscalation(
-    ref: string | undefined,
-    premiumAsk = false,
-  ): EscalationPlan | undefined {
-    const named = ref?.trim();
-    if (!named) return undefined;
-    const previous = this.resolveTaskRef(named, "escalate_from");
-    const handle = previous.key || previous.id;
-    if (previous.kind !== "work") {
-      throw new Error(
-        `${handle} is not crewmate work, so there is no attempt to escalate. Name the task whose result the captain rejected.`,
-      );
-    }
-    if (!previous.startedAt && !previous.outcome) {
-      throw new Error(
-        `${handle} has never run, so there is no result to reject. Escalation is for an attempt the captain has seen; start it, or spawn the work plainly.`,
-      );
-    }
-    const attempt = (previous.shape?.escalation?.attempt ?? 0) + 1;
-    // A row that never routed (dynamic routing off, or a pre-S2 record)
-    // is read at the engine's own default so the ladder still has a rung
-    // to climb from.
-    const floor = escalationFloor(previous.difficulty ?? "medium", attempt);
-    if ("refused" in floor) {
-      throw new Error(
-        `Cannot escalate ${handle}: ${floor.refused}. Ask the captain which model to try instead and pass it as override_model_id. ${softHoldWords("escalation", "firstmate")}`,
-      );
-    }
-    // R1a outranks R1b: the captain's premium click still spends a bounded
-    // escalation, but its brief, record and feed name the tier it serves.
-    const servedFloor = premiumAsk ? "premium" : floor.floor;
-    return {
-      previous,
-      stamp: { from: handle, attempt: floor.attempt, floor: servedFloor },
-      facts: {
-        attempt: floor.attempt,
-        previousKey: handle,
-        tier: servedFloor,
-        ...(previous.model ? { previousModel: previous.model } : {}),
-        ...(previous.outcome ? { previousOutcome: previous.outcome } : {}),
-        // The attempt's worktree and branch go when it is superseded; what
-        // it did is saved on its kept ref first (`supersedeAttempt`).
-        ...(previous.worktreeDir && previous.workspaceState === "present"
-          ? { previousWork: keptRefFor(previous.id) }
-          : {}),
-      },
-    };
-  }
-
-  /**
    * The escalation, once the fresh row exists (report section 4 steps 4-6):
    * the lineage edge, the rejected attempt stopped and closed superseded
    * with its branch kept, and the two `escalated` timeline rows - of which
@@ -4740,497 +3588,9 @@ export class CrewSupervisor {
     void this.sweepGates(this.now());
   }
 
-  /**
-   * The shape the tier is computed from (S2). The Firstmate supplies the
-   * facts only it can see; the host adds the two it must not be trusted
-   * for:
-   *
-   * - the KIND, which a classifier establishes (S3). Until then every
-   *   shape is `unclear`, which R8 routes high - the captain's own call
-   *   (Q5 A) that an unknown piece of work is worth the stronger model.
-   * - the BASIS verdict. A named basis buys a cheaper tier only when it
-   *   resolves to a real task that is done or has reported something; an
-   *   unnamed, unknown or still-running basis reads unverified and is
-   *   treated as absent, so a claimed spec can never talk the router down
-   *   on its own. The verdict rides the shape to the router and is derived
-   *   again at every read; the record never stores it.
-   */
-  private workShape(ask: WorkShapeAsk | undefined, escalation?: EscalationPlan): WorkShape {
-    const basis = ask?.basis?.trim();
-    if (escalation) {
-      // An escalation is the SAME work at a higher tier (S4): the kind and
-      // the basis are inherited rather than re-established, because nothing
-      // about the work changed - only the model that will attempt it. So
-      // `classifyShape` skips the call and stamps `skipped:escalation` over
-      // the placeholder below; the inherited kind's own provenance, and the
-      // confidence its classification carried, stay on the row the lineage
-      // edge points at rather than being restated here as if this row had
-      // measured them. The previous row's `premium_ask` is deliberately NOT
-      // inherited either: R1a outranks R1b, so a stale ask would decide this
-      // attempt's tier in place of the ladder. A premium ask the captain
-      // repeats in the rejection arrives on this spawn as its own fact.
-      const inherited = escalation.previous.shape;
-      const basisRef = basis ?? inherited?.basis;
-      const deliveryAsk = ask?.delivery_ask ?? inherited?.delivery_ask;
-      // The captain's word on who merges this work is a property of the
-      // work, not of the attempt that failed, so it rides the lineage the
-      // way the posture does.
-      const autonomyAsk = ask?.autonomy_ask ?? inherited?.autonomy_ask;
-      // So is the captain's word on where it runs (docs/helper.md, "A
-      // task's own Runs on").
-      const runsOnAsk = ask?.runs_on_ask ?? inherited?.runs_on_ask;
-      // Whether the work is one of the Firstmate's own steps does not change
-      // with the attempt either.
-      const internalStep = ask?.internal_step ?? inherited?.internal_step;
-      // So does working in the project's folder (INF-567).
-      const inFolder = ask?.in_folder || isFolderWork(inherited?.in_place);
-      return {
-        ...(inherited?.deliverable === "operation" ? { deliverable: "operation" as const } : {}),
-        ...((ask?.ongoing ?? inherited?.ongoing) !== undefined
-          ? { ongoing: ask?.ongoing ?? inherited?.ongoing }
-          : {}),
-        ...((ask?.intelligence ?? inherited?.intelligence)
-          ? { intelligence: ask?.intelligence ?? inherited?.intelligence }
-          : {}),
-        kind: inherited?.kind ?? "unclear",
-        kind_source: "none",
-        ...(ask?.premium_ask ? { premium_ask: true as const } : {}),
-        ...(ask?.override_model_id ? { override_model_id: ask.override_model_id } : {}),
-        ...(ask?.override_speed ? { override_speed: ask.override_speed } : {}),
-        ...(ask?.override_reasoning ? { override_reasoning: ask.override_reasoning } : {}),
-        ...(basisRef ? { basis: basisRef, basis_verified: this.basisHolds(basisRef) } : {}),
-        ...(ask?.rigor_ask ? { rigor_ask: ask.rigor_ask } : {}),
-        ...(deliveryAsk ? { delivery_ask: deliveryAsk } : {}),
-        ...(autonomyAsk !== undefined ? { autonomy_ask: autonomyAsk } : {}),
-        ...(runsOnAsk ? { runs_on_ask: runsOnAsk } : {}),
-        ...((ask?.placement_requirements ?? inherited?.placement_requirements)
-          ? {
-              placement_requirements:
-                ask?.placement_requirements ?? inherited?.placement_requirements,
-            }
-          : {}),
-        ...(internalStep ? { internal_step: true } : {}),
-        ...(inFolder ? { in_place: { folder: true as const } } : {}),
-        ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
-        escalate_from: escalation.stamp.from,
-        escalation: escalation.stamp,
-      };
-    }
-    return {
-      ...(ask?.ongoing !== undefined ? { ongoing: ask.ongoing } : {}),
-      ...(ask?.intelligence ? { intelligence: ask.intelligence } : {}),
-      kind: ask?.kind ?? "unclear",
-      kind_source: ask?.kind ? "firstmate:declared" : "none",
-      ...(ask?.premium_ask ? { premium_ask: true as const } : {}),
-      ...(ask?.override_model_id ? { override_model_id: ask.override_model_id } : {}),
-      ...(ask?.override_speed ? { override_speed: ask.override_speed } : {}),
-      ...(ask?.override_reasoning ? { override_reasoning: ask.override_reasoning } : {}),
-      ...(basis ? { basis, basis_verified: this.basisHolds(basis) } : {}),
-      ...(ask?.rigor_ask ? { rigor_ask: ask.rigor_ask } : {}),
-      ...(ask?.delivery_ask ? { delivery_ask: ask.delivery_ask } : {}),
-      ...(ask?.autonomy_ask !== undefined ? { autonomy_ask: ask.autonomy_ask } : {}),
-      ...(ask?.runs_on_ask?.trim() ? { runs_on_ask: ask.runs_on_ask.trim() } : {}),
-      ...(ask?.placement_requirements
-        ? { placement_requirements: ask.placement_requirements }
-        : {}),
-      ...(ask?.internal_step ? { internal_step: true } : {}),
-      ...(ask?.in_folder ? { in_place: { folder: true as const } } : {}),
-      ...(ask?.skipped_plan_because ? { skipped_plan_because: ask.skipped_plan_because } : {}),
-    };
-  }
-
-  /**
-   * Establish the shape's KIND (S3). Three shapes are never classified,
-   * because the table decides them ABOVE the kind and a call could only
-   * cost quota without changing the outcome: the captain named a model
-   * (R0), the captain asked for premium (R1a), or this is an escalation
-   * rung (R1b). Each records WHY it was skipped rather than leaving the
-   * stopgap `none`, so the audit row never has to guess.
-   *
-   * Everything else asks the classifier, which cannot throw: its failures
-   * and its abstentions both come back `unclear`, carrying their reason as
-   * `kind_source`, and R8 routes them high exactly as S2 did.
-   *
-   * `declared` says the intent is the Firstmate's own, whose `read-only`
-   * constraint decides the deliverable, so the classifier picks only within
-   * that branch (INF-1430 piece 1). A crewmate's filed follow-up declares
-   * nothing: its kind decides its deliverable, so every kind is offered.
-   */
-  private async classifyShape(
-    taskId: string,
-    title: string,
-    intent: SpawnIntent,
-    repoId: string | null,
-    shape: WorkShape,
-    declared: boolean,
-  ): Promise<WorkShape> {
-    if (shape.deliverable === "operation" || deliverableFor(intent, undefined) === "operation")
-      return { ...shape, kind: "unclear", kind_source: `${KIND_SOURCE.skipped}operation` };
-    if (shape.kind_source === "firstmate:declared") return shape;
-    const skip = shape.override_model_id
-      ? "override"
-      : shape.premium_ask
-        ? "premium-ask"
-        : shape.escalation
-          ? "escalation"
-          : undefined;
-    if (skip) return { ...shape, kind_source: `${KIND_SOURCE.skipped}${skip}` };
-    // A review's kind is the host's (delivery rigor phase 2), never asked.
-    if (shape.kind === "review") return shape;
-    const classifier = this.options.classifier;
-    if (!classifier) return shape;
-    const verdict = await classifier.classify(
-      this.classifierInput(taskId, title, intent, repoId, shape, declared),
-      AbortSignal.timeout(CLASSIFY_TIMEOUT_MS),
-    );
-    return {
-      ...shape,
-      kind: resolveKind(verdict),
-      kind_source: verdict.source,
-      ...(verdict.detail ? { kind_detail: verdict.detail } : {}),
-    };
-  }
-
-  /** The bounded facts the classifier is given: no transcript, no repo map. */
-  private classifierInput(
-    taskId: string,
-    title: string,
-    intent: SpawnIntent,
-    repoId: string | null,
-    shape: WorkShape,
-    declared: boolean,
-  ): KindInput {
-    const repo = repoId ? this.options.repos.get(repoId) : undefined;
-    const constraints = (intent.constraints ?? [])
-      .map((constraint) =>
-        constraint.text ? `${constraint.kind}: ${constraint.text}` : constraint.kind,
-      )
-      .join("; ");
-    // Only a VERIFIED basis is shown. An unverified one buys no cheaper
-    // tier (R3/R5), so letting it colour the classification would smuggle
-    // a claimed spec back in through the other door.
-    const basis =
-      shape.basis && this.basisHolds(shape.basis)
-        ? this.options.tasks.resolve(shape.basis)
-        : undefined;
-    return {
-      taskId,
-      title,
-      goal: intent.goal,
-      userWords: intent.userWords,
-      // The branch the classifier picks within: the read-only declaration,
-      // never the kind it is about to give (INF-1430 piece 1).
-      ...(declared
-        ? { deliverable: deliverableFor(intent, undefined) as "answer" | "change" }
-        : {}),
-      ...(constraints ? { constraints } : {}),
-      ...(repo
-        ? {
-            repoName: repo.name,
-            ...(repo.kind === "personal"
-              ? {}
-              : {
-                  delivery: deliveryForRecord({ shape }, repo.delivery),
-                }),
-          }
-        : {}),
-      ...(basis
-        ? {
-            basis: {
-              key: basis.key,
-              title: basis.title,
-              outcomeHead: basis.outcomeSummary ?? basis.outcome ?? "",
-            },
-          }
-        : {}),
-    };
-  }
-
-  /**
-   * Stamp what the work DELIVERS on its shape (Task B). Derived by the host
-   * from the typed `read-only` constraint the Firstmate declared
-   * (`deliverableFor`), or from the kind for a crewmate's follow-up, which
-   * carries no declaration, and re-derived wherever the kind moves. A
-   * `review` task keeps whatever the derivation says; it is ungated for its
-   * kind either way.
-   */
-  private withDeliverable(shape: WorkShape, intent: SpawnIntent | undefined): WorkShape {
-    assertDeliverableConstraints(
-      intent,
-      isFolderWork(shape.in_place) || shape.deliverable === "operation",
-    );
-    return {
-      ...shape,
-      deliverable:
-        isFolderWork(shape.in_place) || shape.deliverable === "operation"
-          ? "operation"
-          : deliverableFor(intent, shape.kind),
-    };
-  }
-
-  /** What a record's shape says it delivers; a pre-axis row shipped a change. */
-  private deliverableOf(record: TaskRecord | undefined): Deliverable {
-    return record?.shape?.deliverable ?? "change";
-  }
-
   /** Whether this task ships nothing: its deliverable is an answer. */
   private isAnswerTask(taskId: string): boolean {
-    return this.deliverableOf(this.options.tasks.get(taskId)) === "answer";
-  }
-
-  /**
-   * The answer a change is built on (Task B, F3 A). A verified basis is a
-   * task whose answer the host can hand over verbatim - its report and the
-   * card the captain read - so the builder starts from the finding instead
-   * of being told to go and repeat it. Nothing here judges: `basisHolds`
-   * decides the basis counts, and an unverified one buys neither a cheaper
-   * tier nor this section.
-   */
-  private basisFacts(record: TaskRecord | undefined): BasisBriefFacts | undefined {
-    const ref = record?.shape?.basis;
-    if (!ref || !this.basisHolds(ref)) return undefined;
-    const basis = this.options.tasks.resolve(ref);
-    if (!basis || basis.id === record.id) return undefined;
-    return this.sourceFacts(basis);
-  }
-
-  /** Read a declared source; its existence alone is never approval. */
-  private sourceFacts(basis: TaskRecord): BasisBriefFacts {
-    const timeline = this.options.tasks.timeline(basis.id);
-    const card = this.cards.newestAnswerForTask(basis.id);
-    // Only a change's working copy holds its work: an answer task commits
-    // nothing and its scratch copy goes with it, so its answer is the report
-    // and the card below, never a branch to start from.
-    const change = this.deliverableOf(basis) === "change";
-    // A branch on another computer is read here only once its work is home,
-    // on the kept ref.
-    const branch =
-      change && basis.workspaceState === "present" && basis.branch && !basis.deviceId
-        ? basis.branch
-        : undefined;
-    const keptRef = change && !branch ? this.keptRefOf(basis.id) : undefined;
-    // Each reply reaches the builder with the settings it was sent with, as
-    // its author read it then; the thread shows them apart (FI3-617).
-    const thread = card
-      ? this.cards
-          .messages(card.id)
-          .filter((message) => message.text.trim())
-          .map((message) => ({
-            who: message.who,
-            text: replyWithSettings(message.text, message.answers),
-          }))
-      : [];
-    // The choice, the answers and the body all come off that one card, so a
-    // later card on the task never lends the builder its choice instead.
-    const resolution = card ? this.cards.newestResolutionForTask(basis.id, card.id) : undefined;
-    const offer = resolution?.offer ?? resolution?.card;
-    const choice = offer?.actions.find((entry) => entry.id === resolution?.action)?.label;
-    // Current submissions on that card (actions or replies) supersede
-    // legacy resolution-only answers, including Firstmate-authored replies.
-    const submitted = card
-      ? this.options.cardStore
-          .observations(card.id)
-          .filter(
-            (event) =>
-              (event.kind === "action" || event.kind === "message_ref") &&
-              event.actor === "captain",
-          )
-          .map((event) =>
-            cardAnswersSchema.safeParse((event.payload as { answers?: unknown }).answers),
-          )
-          .filter((parsed) => parsed.success)
-          .at(-1)
-      : undefined;
-    const latest = submitted?.success ? submitted.data : resolution?.answers;
-    const answers = latest ? cardAnswerLines(latest) : undefined;
-    const result = this.options.tasks.latestResult(basis.id);
-    const rawBody = offer?.body ?? card?.body;
-    const cardBody = rawBody
-      ? cardPictureFiles(rawBody, this.options.paths.crewmatesDir)
-      : undefined;
-    return {
-      key: basis.key || basis.id,
-      taskId: basis.id,
-      title: basis.title,
-      ...(basis.intent?.userWords ? { userWords: basis.intent.userWords } : {}),
-      ...(basis.outcome ? { outcome: basis.outcome } : {}),
-      ...(result ? { result: result.value } : {}),
-      reports: timeline
-        .filter((event) => event.kind === "report")
-        .map((event) => ({ event_id: event.id, text: event.text })),
-      ...(cardBody ? { card: cardBody.body } : {}),
-      ...(cardBody?.pictures.length ? { pictures: cardBody.pictures } : {}),
-      ...(cardBody?.recordings.length ? { recordings: cardBody.recordings } : {}),
-      ...(branch ? { branch } : {}),
-      ...(keptRef ? { keptRef } : {}),
-      ...(thread.length > 0 ? { thread } : {}),
-      ...(choice ? { choice } : {}),
-      ...(answers ? { answers } : {}),
-    };
-  }
-
-  /**
-   * Hand a source's card over as a file (FI3-700): the body is saved whole
-   * - script, style and every picture path included, never cut (97c93aa4) -
-   * under the new task's own folder, and the brief names that file instead
-   * of pasting the HTML. The choice, answers and thread stay in the brief as
-   * words. A card that cannot be saved rides in the brief whole, as before.
-   */
-  private async withCardFile(
-    taskId: string,
-    facts: BasisBriefFacts,
-    handoff: "work" | "context" = "work",
-  ): Promise<BasisBriefFacts> {
-    // A finding carries its reports and card, not the origin's implementation.
-    // Strip local refs too: provenance must never invite recovery of unrelated code.
-    if (handoff === "context") {
-      const { branch: _branch, keptRef: _keptRef, startingRef: _startingRef, ...context } = facts;
-      facts = context;
-    }
-    const machine = this.machineOf(taskId);
-    const machines = this.options.machines;
-    const source = facts.taskId ? this.options.tasks.get(facts.taskId) : undefined;
-    // A live remote source is authoritative there, never the home's stale copy.
-    if (
-      handoff === "work" &&
-      source?.deviceId &&
-      source.workspaceState === "present" &&
-      source.branch &&
-      this.deliverableOf(source) === "change"
-    ) {
-      if (!machines) throw new Error("The source computer cannot be reached.");
-      await machines.bringBranchHome(source.id, true);
-      facts = { ...facts, branch: source.branch };
-    }
-    if (machine !== LOCAL_MACHINE_ID) {
-      if (!machines?.sourceFile || !machines.sourceRef)
-        throw new Error(
-          "Update Infinitary on the work computer to carry source files and starting work.",
-        );
-      const { branch, keptRef, ...rest } = facts;
-      facts = rest;
-      const startingRef = branch ?? keptRef;
-      if (startingRef) {
-        if ((source?.repoId ?? null) !== (this.options.tasks.get(taskId)?.repoId ?? null))
-          throw new Error("The starting work belongs to a different project.");
-        facts.startingRef = await machines.sourceRef(
-          machine,
-          taskId,
-          source?.repoId ?? null,
-          source?.id ?? facts.key,
-          startingRef,
-        );
-      }
-      const replacements = new Map<string, string>();
-      for (const [index, file] of [
-        ...(facts.pictures ?? []),
-        ...(facts.recordings ?? []),
-      ].entries()) {
-        const extension = file.split(".").at(-1) ?? "bin";
-        replacements.set(
-          file,
-          await machines.sourceFile(
-            machine,
-            taskId,
-            `${facts.taskId ?? facts.key}-media-${index}.${extension}`,
-            file,
-          ),
-        );
-      }
-      let body = facts.card;
-      for (const [before, after] of replacements) body = body?.replaceAll(before, after);
-      facts = {
-        ...facts,
-        ...(body ? { card: body } : {}),
-        pictures: facts.pictures?.map((file) => replacements.get(file) ?? file),
-        recordings: facts.recordings?.map((file) => replacements.get(file) ?? file),
-      };
-    }
-    const { card, ...rest } = facts;
-    if (!card) return facts;
-    const dir = crewmateSourceCardsDir(this.options.paths, taskId);
-    const file = join(dir, `${facts.key.replace(/[^A-Za-z0-9_-]/g, "-")}.html`);
-    try {
-      mkdirSync(dir, { recursive: true });
-      writeFileSync(file, card, "utf8");
-    } catch {
-      return facts;
-    }
-    if (machine === LOCAL_MACHINE_ID) return { ...rest, cardFile: file };
-    if (!machines?.sourceFile)
-      throw new Error("The source card cannot be copied to that computer.");
-    const remoteFile = await machines.sourceFile(
-      machine,
-      taskId,
-      `${facts.key.replace(/[^A-Za-z0-9_-]/g, "-")}.html`,
-      file,
-    );
-    return { ...rest, cardFile: remoteFile };
-  }
-
-  /**
-   * Where a task that branches from another starts (INF-799 piece 1,
-   * `branch_from`): that task's branch head while its working copy is
-   * present on this Mac, else the kept ref its work was saved on. Answers a
-   * refusal in words when the named task is unknown, is this task, is in
-   * another project, or has neither, so a tool call reads it as text and a
-   * start fails with it.
-   */
-  private branchFromSource(
-    ref: string,
-    repoId: string | null,
-    selfId?: string,
-  ): { task: TaskRecord; ref: string } | { refused: string } {
-    const source = this.options.tasks.resolve(ref.trim());
-    if (!source) return { refused: `Unknown branch_from "${ref}": name a task by its key.` };
-    const key = source.key || source.id;
-    if (source.id === selfId) return { refused: "A task cannot branch from itself." };
-    if (source.repoId !== repoId)
-      return {
-        refused: `branch_from ${key} is in another project; a task branches only from work in its own project.`,
-      };
-    if (source.workspaceState === "present" && source.branch && !source.deviceId)
-      return { task: source, ref: source.branch };
-    const kept = this.keptRefOf(source.id);
-    if (kept) return { task: source, ref: kept };
-    if (source.workspaceState === "present" && source.deviceId)
-      return {
-        refused: `branch_from ${key}'s working copy is on another computer; branch from it once its work is home and saved.`,
-      };
-    return {
-      refused: `branch_from ${key} has no branch or saved work to start from: name a task that has started work in this project.`,
-    };
-  }
-
-  /**
-   * The typed hand-off a new task declares (INF-799 piece 1): its result
-   * shape, checked to be a JSON Schema with an object at its root, and the
-   * task it branches from, checked to hold a branch or saved work in the
-   * same project and stored by key. A refusal is words, nothing filed.
-   */
-  handOffShape(
-    ask: Pick<WorkShapeAsk, "result_schema" | "branch_from"> | undefined,
-    repoId: string | null,
-    selfId?: string,
-  ): Pick<WorkShape, "result_schema" | "branch_from"> | { refused: string } {
-    const refused = ask?.result_schema ? resultSchemaRefusal(ask.result_schema) : undefined;
-    if (refused) return { refused };
-    const ref = ask?.branch_from?.trim();
-    const source = ref ? this.branchFromSource(ref, repoId, selfId) : undefined;
-    // A step filed behind the step it continues names work that has not
-    // started yet: its branch is checked again when this one starts.
-    const named = ref ? this.options.tasks.resolve(ref) : undefined;
-    const unstarted = named?.status === "open" && named.workspaceState === "none";
-    if (
-      source &&
-      "refused" in source &&
-      !(unstarted && named.repoId === repoId && named.id !== selfId)
-    )
-      return source;
-    return {
-      ...(ask?.result_schema ? { result_schema: ask.result_schema } : {}),
-      ...(named ? { branch_from: named.key || named.id } : {}),
-    };
+    return deliverableOf(this.options.tasks.get(taskId)) === "answer";
   }
 
   /**
@@ -5287,7 +3647,7 @@ export class CrewSupervisor {
       ...(part.schema ? { result_schema: part.schema } : {}),
       ...(from ? { branch_from: from.key || from.id } : {}),
     };
-    const handOff = this.handOffShape(ask, program.repoId);
+    const handOff = handOffShape(this.options.tasks, ask, program.repoId);
     if ("refused" in handOff) return { refused: handOff.refused };
     let intent: SpawnIntent;
     try {
@@ -5305,9 +3665,9 @@ export class CrewSupervisor {
       intent,
       shape: ask,
     });
-    const shape = this.withDeliverable(
+    const shape = withDeliverable(
       {
-        ...this.workShape(ask),
+        ...workShape(this.options.tasks, ask),
         ...handOff,
         program_part: {
           call: part.call,
@@ -5523,34 +3883,9 @@ export class CrewSupervisor {
   ): Promise<DispatchBase | undefined> {
     const ref = record?.shape?.branch_from;
     if (!record || !ref) return undefined;
-    const source = this.branchFromSource(ref, record.repoId, record.id);
+    const source = branchFromSource(this.options.tasks, ref, record.repoId, record.id);
     if ("refused" in source) throw new Error(source.refused);
     return this.options.workspace.baseAt(repoDir, source.ref);
-  }
-
-  /**
-   * The hidden ref a task's unlanded work was saved on when its working
-   * copy went, read off the timeline's save note (`retireWorktreeOf`); none
-   * when nothing was saved - an answer task, or work that was all in.
-   */
-  private keptRefOf(taskId: string): string | undefined {
-    const saves = this.options.tasks
-      .timeline(taskId)
-      .map((event) => (event.data as { saved?: { ref?: unknown } } | null)?.saved?.ref)
-      .filter((ref): ref is string => typeof ref === "string" && ref.length > 0);
-    return saves.at(-1);
-  }
-
-  /**
-   * A shape with its basis verdict derived now, for the routing table. The
-   * record never stores the verdict (`TaskService.graph.basisHolds`): a step
-   * planned behind the task it builds on names a basis that has not
-   * answered yet, and the verdict that counts is the one at the moment the
-   * work routes.
-   */
-  private withBasisVerdict(shape: WorkShape): WorkShape {
-    if (!shape.basis) return shape;
-    return { ...shape, basis_verified: this.basisHolds(shape.basis) };
   }
 
   /**
@@ -5565,11 +3900,6 @@ export class CrewSupervisor {
     const bucket = tierFor(shape).bucket ?? null;
     if (!record || record.difficulty === bucket) return;
     this.options.tasks.placement.recordShape(taskId, {}, bucket);
-  }
-
-  /** Whether a named basis really carries a spec, a plan or a reproduction. */
-  private basisHolds(ref: string): boolean {
-    return this.options.tasks.graph.basisHolds(ref);
   }
 
   /** A task by id or key, or a loud error naming the parameter at fault. */
@@ -5728,7 +4058,7 @@ export class CrewSupervisor {
     let cwd: string | undefined;
     let elsewhere: PlacedCopy | undefined;
     let minted: BriefPart[];
-    let pictures: Awaited<ReturnType<CrewSupervisor["briefPictures"]>>;
+    let pictures: Awaited<ReturnType<CrewBrief["briefPictures"]>>;
     try {
       // Routing chose no model for a start on this Mac. With Dynamic routing
       // off, or with an account-less runtime that serves no model of its
@@ -5760,7 +4090,7 @@ export class CrewSupervisor {
         if (
           record &&
           opensPullRequest(this.taskDelivery(taskId)) &&
-          this.deliverableOf(record) === "change" &&
+          deliverableOf(record) === "change" &&
           !machines.takesCheckDeclarations?.(machine)
         )
           throw new Error(
@@ -5854,7 +4184,7 @@ export class CrewSupervisor {
       if (accountId) task.accountId = accountId;
       // Care must be stamped before opening the session: its first request
       // already carries the model's chosen effort.
-      const rigor = this.deriveRigor(taskId);
+      const rigor = this.briefs.deriveRigor(taskId);
       const servedLevel = routed?.servedBucket ?? routed?.bucket ?? "medium";
       // The captain's word on this task's effort outranks the model's
       // Settings choice, which outranks the level's default. Read as the
@@ -5923,8 +4253,12 @@ export class CrewSupervisor {
       task.unsubscribe = await this.follow(task, session);
       // From here every save in the workspace carries the task (the
       // running dot), until the task closes.
-      pictures = await this.briefPictures(taskId, spec.attachments ?? [], spec.messageFiles ?? []);
-      minted = await this.mintBrief(taskId, brief, spec.repoId, pictures.section);
+      pictures = await this.briefs.briefPictures(
+        taskId,
+        spec.attachments ?? [],
+        spec.messageFiles ?? [],
+      );
+      minted = await this.briefs.mintBrief(taskId, brief, spec.repoId, pictures.section);
       if (this.tasks.get(taskId) !== task)
         throw new Error("The task closed while its source work was being copied.");
       personal?.beginLiveTask(taskId);
@@ -6103,7 +4437,7 @@ export class CrewSupervisor {
     let runbookSkills: SessionSpec["runbookSkills"];
     if (this.options.runbooks) {
       const served = this.options.runbooks.crew(
-        this.runbookFacts(task.id, briefed.procedure, binding.backend),
+        this.briefs.runbookFacts(task.id, briefed.procedure, binding.backend),
       );
       Object.assign(briefed, {
         runbookText: crewRunbookText(served),
@@ -6595,7 +4929,7 @@ export class CrewSupervisor {
     // lives, and nothing else (INF-549's sibling).
     if (
       this.worksInPlace(task.id) &&
-      this.deliverableOf(this.options.tasks.get(task.id)) !== "operation"
+      deliverableOf(this.options.tasks.get(task.id)) !== "operation"
     ) {
       if (!isPullRepair(this.options.tasks.get(task.id)?.shape?.in_place)) return {};
       const { githubRead, githubWrite } = this.options;
@@ -6621,9 +4955,7 @@ export class CrewSupervisor {
     const canPrepare =
       machine === LOCAL_MACHINE_ID || this.options.machines?.takesChangePresentations?.(machine);
     return {
-      ...(openChange &&
-      checkChange &&
-      this.deliverableOf(this.options.tasks.get(task.id)) === "change"
+      ...(openChange && checkChange && deliverableOf(this.options.tasks.get(task.id)) === "change"
         ? {
             ...(prepareChange && canPrepare
               ? {
@@ -6639,7 +4971,7 @@ export class CrewSupervisor {
         : {}),
       // An operation reads and reruns workflow runs with no pull request: its
       // check_change records the diagnosis and reserves the rerun (INF-2146).
-      ...(this.deliverableOf(this.options.tasks.get(task.id)) === "operation"
+      ...(deliverableOf(this.options.tasks.get(task.id)) === "operation"
         ? {
             onCheckChange: async (input?: CheckChangeInput) =>
               declareRunCheck(this.options.tasks, task.id, input ?? {}, this.now()),
@@ -6755,269 +5087,6 @@ export class CrewSupervisor {
   }
 
   /**
-   * The captain's pictures a fresh crewmate is briefed with
-   * (`docs/task-capture.md`, "Pictures stay with the task"): those the
-   * messages attached to this task keep copies of, then those of the work
-   * its brief carries forward - its basis, the task it was discovered or
-   * escalated from, the attempt it replaces - then `extra`, each picture
-   * once. As many as one message may carry ride the first turn; every
-   * copy is delivered to the task’s hand-over folder and named by its path there; a
-   * copy that is gone is counted, never sent as words alone.
-   */
-  private async briefPictures(
-    taskId: string,
-    extra: readonly AttachmentRef[],
-    extraFiles: readonly MessageFile[],
-  ): Promise<{ section: string; riding: AttachmentRef[]; images?: TurnImage[] }> {
-    const tasks = this.options.tasks;
-    const record = tasks.get(taskId);
-    const basis = record?.shape?.basis ? tasks.resolve(record.shape.basis) : undefined;
-    const sources = [
-      taskId,
-      ...(basis ? [basis.id] : []),
-      ...tasks.graph.discoveredOrigins(taskId).map((origin) => origin.id),
-      ...tasks.graph.replacedPredecessors(taskId).map((predecessor) => predecessor.id),
-    ];
-    const seen = new Set<string>();
-    const refs = [...sources.flatMap((id) => tasks.capture.pictures(id)), ...extra].filter(
-      (ref) => {
-        if (seen.has(ref.sha256)) return false;
-        seen.add(ref.sha256);
-        return true;
-      },
-    );
-    const files = [...sources.flatMap((id) => tasks.capture.messageFiles(id)), ...extraFiles];
-    const here = this.machineOf(taskId) === LOCAL_MACHINE_ID;
-    const machines = this.options.machines;
-    if (
-      !here &&
-      (refs.length || files.length) &&
-      (!machines?.sourceFile || !machines.takesHandover?.(this.machineOf(taskId)))
-    )
-      throw new Error(
-        "Update Infinitary on the work computer before it can receive this message’s attachments.",
-      );
-    const deliver = async (path: string, name: string, sha256: string) =>
-      (await this.deliverHandover(taskId, path, name, sha256)).path;
-    const facts: BriefPictures = { riding: [], more: [], missing: 0 };
-    const riding: AttachmentRef[] = [];
-    const images: TurnImage[] = [];
-    for (const ref of refs) {
-      let image: TurnImage | undefined;
-      try {
-        [image] = loadImages([ref]);
-      } catch {
-        facts.missing += 1;
-        continue;
-      }
-      const named = {
-        name: ref.name,
-        path: await deliver(attachmentPath(ref), ref.name, ref.sha256),
-      };
-      if (image && riding.length < TURN_IMAGES_MAX) {
-        riding.push(ref);
-        images.push(image);
-        facts.riding.push(named);
-      } else {
-        facts.more.push(named);
-      }
-    }
-    return {
-      section: [
-        renderPicturesSection(facts),
-        ...(await Promise.all(
-          [...new Map(files.map((file) => [file.sha256, file])).values()].map(async (file) => {
-            if ((await sha256OfFile(file.path)) !== file.sha256)
-              throw new Error(`The attached file ${file.name} changed.`);
-            return `Attached file ${file.name}: ${await deliver(file.path, file.name, file.sha256)} (the full copy in your hand-over folder).`;
-          }),
-        )),
-      ]
-        .filter(Boolean)
-        .join("\n"),
-      riding,
-      ...(images.length > 0 ? { images } : {}),
-    };
-  }
-
-  /**
-   * The single brief mint: the captain's pictures section (`briefPictures`),
-   * the rigor section the host derived for this
-   * dispatch (delivery rigor phase 2), the answer-shape section for a task
-   * whose deliverable is an answer (captain lock 2 of 2026-09-19, the
-   * visual-density audit; the deliverable is a stamped fact since Task B),
-   * the basis section for a change grounded in a verified answer (Task B,
-   * F3 A), then the project's knowledge lines. Runs at
-   * dispatch, after the classifier - the kind is never sorted on any of
-   * these lines - so a queued row is told the shape and rigor of the moment
-   * it starts. It answers in pieces, each report it copied marked as its
-   * event, for the receipt (`TaskService.recordBrief`).
-   */
-  private async mintBrief(
-    taskId: string,
-    brief: string,
-    repoId: string | null,
-    pictures = "",
-  ): Promise<BriefPart[]> {
-    const sections: BriefPart[][] = [];
-    // The captain's pictures sit right under the captain's words.
-    if (pictures) sections.push([pictures]);
-    const rigor = this.deriveRigor(taskId);
-    if (rigor) sections.push([renderRigorSection(rigor)]);
-    this.stampAutonomy(taskId, repoId);
-    const record = this.options.tasks.get(taskId);
-    const policies = this.options.tasks.policiesOf(record);
-    if (policies)
-      sections.push([
-        `Current task policies: ${JSON.stringify(policies)}. Read current policies before pushing or merging; later policy notices supersede this brief, not the scope.`,
-      ]);
-    // The captain's override already standing when work (re)starts (INF-1216).
-    const standing = standingOverride(record?.delivery, record?.delivery?.headSha);
-    if (standing && record?.shape?.kind !== "review")
-      sections.push([standingOverrideWords(standing)]);
-    const deliverable = this.deliverableOf(record);
-    let base = brief;
-    // Whatever the brief was rendered from: a crewmate's follow-up has no
-    // intent, and its tools follow the deliverable all the same (FI3-598).
-    if (deliverable === "answer") {
-      sections.push([
-        renderAnswerShapeSection(record?.shape?.internal_step === true, record?.shape?.kind),
-      ]);
-    }
-    if (deliverable === "operation") sections.push([renderOperationShapeSection()]);
-    // A typed hand-off (INF-799): the result shape the report must fit, and
-    // the task whose last commit the working copy began at.
-    if (record?.shape?.result_schema)
-      sections.push([renderResultShapeSection(record.shape.result_schema)]);
-    const program =
-      record?.shape?.program_part && record.parentId
-        ? this.options.tasks.get(record.parentId)
-        : undefined;
-    if (program)
-      sections.push([
-        renderProgramPartSection({ key: program.key || program.id, title: program.title }),
-      ]);
-    const branchFrom = record?.shape?.branch_from
-      ? this.branchFromSource(record.shape.branch_from, record.repoId, record.id)
-      : undefined;
-    if (branchFrom && !("refused" in branchFrom))
-      sections.push([
-        renderBranchFromLine({
-          key: branchFrom.task.key || branchFrom.task.id,
-          title: branchFrom.task.title,
-          ref: branchFrom.ref,
-        }),
-      ]);
-    if (deliverable === "change" && record?.shape?.internal_step)
-      sections.push([FLEET_STARTED_CHANGE_WORDS]);
-    if (deliverable === "change") {
-      const basis = this.basisFacts(record);
-      if (basis) sections.push(basisSectionParts(await this.withCardFile(taskId, basis)));
-      // A filing's discovered-from links are truthful provenance, not an
-      // inferred accepted basis or a routing discount. Preserve same-session
-      // direct builds/prototypes that legitimately have no external source.
-      for (const origin of this.options.tasks.graph.discoveredOrigins(taskId)) {
-        if (origin.id === taskId) continue;
-        if (origin.id === this.options.tasks.resolve(record?.shape?.basis ?? "")?.id) {
-          if (basis) base = withoutOriginReadLine(base, origin.key);
-          continue;
-        }
-        const facts = await this.withCardFile(taskId, this.sourceFacts(origin), "context");
-        sections.push(basisSectionParts(facts, "origin"));
-        // Its findings are in the brief now, so its filing's line telling
-        // it to go and read them goes: the origin reaches it once.
-        base = withoutOriginReadLine(base, origin.key);
-      }
-    }
-    // Dropped work can have saved edits without ever reporting. Its replacement
-    // carries that work independently of basisHolds and of the deliverable.
-    for (const predecessor of this.options.tasks.graph.replacedPredecessors(taskId)) {
-      if (predecessor.id === taskId) continue;
-      sections.push(
-        basisSectionParts(
-          await this.withCardFile(taskId, this.sourceFacts(predecessor)),
-          "replacement",
-        ),
-      );
-    }
-    const knowledge = this.knowledgeFor(taskId);
-    if (knowledge) {
-      const words = [record?.title ?? "", record?.goal ?? ""].join("\n");
-      sections.push([
-        renderBriefKnowledge(
-          knowledgeShortlist(knowledge, [PRIVATE_SCOPE], words),
-          (repoId ? this.options.repos.get(repoId)?.name : undefined) ?? "this task",
-        ),
-      ]);
-      sections.push([renderReferenceImport()]);
-    }
-    return joinParts([[base], ...sections], "\n\n");
-  }
-
-  /**
-   * The rigor a dispatch ships at (delivery rigor phase 2; derivation
-   * revised by the captain 2026-09-19), derived by the host from facts it
-   * holds - the posture, the captain's words on care, and the repository's
-   * own standing rigor (`repos.rigor`, the column set by talking since
-   * phase 3; null = derive) - and stamped on the shape so the record and a
-   * re-dispatch carry it. Neither the intelligence tier nor an escalation
-   * moves it: rejecting a result routes a stronger model, never more
-   * ceremony. A shape that already names one keeps it: a pre-phase-2 row
-   * reads as the quick work it was.
-   *
-   * Rigor exists only where a CHANGE lands through a gate. A task whose
-   * deliverable is an answer ships nothing at all (Task B), a review task
-   * reads a change rather than shipping one, and a task on the personal
-   * workspace builds in place - there is no branch to review and no pull
-   * request to hold - so none of those is gated and none takes a tier.
-   */
-  private deriveRigor(taskId: string): Rigor | undefined {
-    const record = this.options.tasks.get(taskId);
-    if (record?.kind !== "work") return undefined;
-    const shape = record.shape;
-    const decision = { rigor: this.options.tasks.policiesOf(record)?.rigor.value };
-    if (!decision.rigor) return undefined;
-    if (shape?.rigor) return decision.rigor;
-    // A quiet write, like the kind stamp (S3): the rigor explains what the
-    // crewmate was told, it is not a state change, and the facts it was
-    // derived from - posture, ask, repo rigor - are all on the record.
-    this.options.tasks.placement.recordShape(taskId, { rigor: decision.rigor }, record.difficulty);
-    return decision.rigor;
-  }
-
-  /**
-   * The autonomy a dispatch was commissioned under, stamped on the shape
-   * beside the rigor (captain ruling 2026-09-20: autonomy is a repository
-   * default with a per-task ask). A quiet write like the rigor stamp - it
-   * records what the task started under and changes nothing. It is NOT
-   * what a merge attempt reads: `taskAutonomy` derives the effective value
-   * live, so the captain turning a repository autonomous reaches the work
-   * already in flight.
-   */
-  private stampAutonomy(taskId: string, repoId: string | null): void {
-    const record = this.options.tasks.get(taskId);
-    if (record?.kind !== "work") return;
-    const shape = record.shape;
-    const repo = repoId ? this.options.repos.get(repoId) : undefined;
-    // A review ships nothing, the personal workspace builds in place, and
-    // an answer task commits nothing (Task B) - none of the three has a
-    // merge for anyone to be autonomous about. The same exemptions rigor
-    // takes, for the same reason, and the reason the deliverable speaks
-    // before this hold does.
-    if (
-      shape?.kind === "review" ||
-      repo?.kind === "personal" ||
-      shape?.in_place !== undefined ||
-      this.deliverableOf(record) !== "change"
-    ) {
-      return;
-    }
-    if (shape?.autonomy !== undefined) return;
-    const autonomy = this.options.tasks.policiesOf(record)?.autonomy.value ?? false;
-    this.options.tasks.placement.recordShape(taskId, { autonomy }, record.difficulty);
-  }
-
-  /**
    * Whether this task's green work may be merged without the captain: its
    * own ask, else the repository's standing flag (`autonomyFor`). The one
    * reader for the settle refusal, `crew_status` and the fact strip, so
@@ -7062,54 +5131,6 @@ export class CrewSupervisor {
     return this.options.tasks.policiesOf(record)?.autonomy.value ?? false;
   }
 
-  /**
-   * The closed facts the runbook selectors read for a task (docs/runbooks.md,
-   * "Typed crew reach"): its kind, place, delivery, care, backend and project.
-   */
-  private runbookFacts(
-    taskId: string,
-    procedure: CrewmateProcedureFacts,
-    backend: string,
-  ): RunbookFacts {
-    const record = this.options.tasks.get(taskId);
-    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-    return {
-      kind: record?.shape?.kind ?? "unclear",
-      place: repo?.kind === "personal" ? "personal" : "project",
-      delivery: procedure.delivery,
-      care: procedure.rigor,
-      backend,
-      ...(record?.repoId ? { project: record.repoId } : {}),
-    };
-  }
-
-  /**
-   * The runbook sections the changed policies select that the earlier ones
-   * did not (INF-1868, piece 5): a crewmate's instructions were served at
-   * its dispatch, so the policy notice carries what the change adds, such
-   * as what Careful asks when care rises to it. An unknown backend reads
-   * the sections no backend selector restricts.
-   */
-  private addedGuidance(
-    taskId: string,
-    before: EffectiveTaskPolicies | null | undefined,
-    policies: EffectiveTaskPolicies,
-  ): string[] {
-    if (!this.options.runbooks) return [];
-    const backend = this.tasks.get(taskId)?.backend ?? "";
-    const now = this.options.runbooks.crewSections(
-      this.runbookFacts(taskId, crewmateProcedureFor(policies), backend),
-    );
-    const earlier = new Set(
-      before
-        ? this.options.runbooks.crewSections(
-            this.runbookFacts(taskId, crewmateProcedureFor(before), backend),
-          )
-        : now,
-    );
-    return now.filter((section) => !earlier.has(section));
-  }
-
   /** Called after the atomic record edit; never dispatches or restarts work. */
   policiesChanged(
     taskId: string,
@@ -7119,7 +5140,7 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     const policies = this.options.tasks.policiesOf(record);
     if (!record || !policies) return "";
-    const guidance = this.addedGuidance(taskId, before, policies);
+    const guidance = this.briefs.addedGuidance(taskId, before, policies);
     const wake: TypedWake = {
       facts: {
         kind: "task-policies-changed",
@@ -7802,12 +5823,12 @@ export class CrewSupervisor {
     } else if (report && isRepairAssessment(this.options.tasks.get(task.id)?.shape)) {
       // An independent repair assessment's one report decides the kept
       // merge's undecided repair (FI3-663).
-      void this.settleRepairAssessment(task, report);
+      void this.reviews.settleRepairAssessment(task, report);
     } else if (report && this.options.tasks.get(task.id)?.shape?.kind === "review") {
       // A reviewer's report settles its review (INF-1875): the typed review
       // record the turn reported is the verdict, recorded on the builder,
       // and a pass closes the review.
-      void this.settleReview(task, report, turnReview);
+      void this.reviews.settleReview(task, report, turnReview);
     } else if (report && saved) {
       void saved.then((committed) => {
         const record = this.options.tasks.get(task.id);
@@ -8023,174 +6044,6 @@ export class CrewSupervisor {
       wakeKind: IDLE_RULES.has(rule) ? "agent" : "crewmate-report",
       effect,
     });
-  }
-
-  /**
-   * A review task reported (delivery rigor phase 2; verdict semantics
-   * revised by the captain 2026-09-19; the typed record, INF-1875). The
-   * verdict is the typed review record the turn reported on
-   * report.validation at the assigned head: its code judgment maps to the
-   * verdict, its findings and risk ride along, and nothing is read off the
-   * report's words. A report with no typed record, or one at another head,
-   * records nothing and spends no round: a reviewer's acknowledgment is not
-   * a review, and the review stays open regardless. Info findings never
-   * block (the no-mistakes rule), so they ride a clear review; the record
-   * itself refuses a contradiction, and the code judgment is the verdict
-   * as typed at every care.
-   * The verdict lands on the BUILDER's delivery facts as a `review`
-   * timeline event, the risk beside CI and never a hold (Q4). A pass
-   * closes the review task done - the one feed line is the builder's own
-   * "review passed" event, the close itself is silent; the wake to the
-   * Firstmate then refs the builder, because the next move is on it and
-   * a wake naming a closed task would be purged with it. Findings and
-   * blocked leave the reviewer idle and steerable for a re-review, and
-   * the wake refs the review task.
-   */
-  private async settleReview(
-    task: TaskRuntime,
-    report: string,
-    typed: Extract<KeptValidationInput, { kind: "review" }> | undefined,
-  ): Promise<void> {
-    const review = this.options.tasks.get(task.id);
-    const builder = this.reviewBuilderOf(review);
-    const excerpt = capWithOverflow(report, "task-report");
-    const reviewTask = { id: task.id, title: task.title };
-    if (!review || !builder) {
-      this.hooks.notifyOp(
-        {
-          facts: { kind: "review-orphan", task: reviewTask, crewmate: task.crewmate, excerpt },
-        },
-        "crewmate-report",
-        task.id,
-      );
-      return;
-    }
-    const builderTask = { id: builder.id, title: builder.title };
-    const unstated = (words = excerpt) =>
-      this.hooks.notifyOp(
-        {
-          facts: {
-            kind: "review-unstated",
-            task: reviewTask,
-            builder: builderTask,
-            crewmate: task.crewmate,
-            excerpt: words,
-          },
-        },
-        "crewmate-report",
-        task.id,
-      );
-    // The typed review record on the turn's report is the verdict
-    // (INF-1875). A report without one states nothing (captain ruling,
-    // 2026-09-19): a reviewer's acknowledgment - "standing by", "no new
-    // head yet" - is a plain report, never a verdict and never a round.
-    // The merge stays held either way, so this still fails toward the
-    // human.
-    if (!typed) {
-      unstated();
-      return;
-    }
-    // A verdict belongs to the commit assigned before this turn, not a
-    // newer builder commit that happened to arrive while the reviewer read.
-    const sha = review.delivery?.headSha;
-    if (!sha) {
-      unstated(
-        "No assigned review commit is recorded. Steer the reviewer for a new review before accepting a verdict.",
-      );
-      return;
-    }
-    if (typed.head !== sha) {
-      unstated(
-        `The typed review names ${typed.head.slice(0, 7)}, not the assigned commit ${sha.slice(0, 7)}. Steer the reviewer to review the assigned commit.`,
-      );
-      return;
-    }
-    // The typed code judgment is the verdict as typed, at every care: the
-    // live proof beside it is a typed fact the record keeps and the
-    // reviewer reads, never a hold the host converts a pass into.
-    const verdict = REVIEW_VERDICT_OF_CODE[typed.code];
-    const findings = (typed.findings ?? []).map(renderFinding);
-    const risk = typed.risk?.level;
-    const riskNote = typed.risk?.why;
-    const shortSha = sha.slice(0, 7);
-    const at = this.now();
-    const riskText = risk ? `risk ${risk}${riskNote ? `: ${riskNote}` : ""}` : "risk unstated";
-    const facts = {
-      reviewVerdict: verdict,
-      reviewSha: sha,
-      reviewChange: review.delivery?.reviewChange,
-      reviewCarrySha: undefined,
-      ...(risk ? { reviewRisk: risk } : {}),
-      ...(riskNote ? { reviewRiskNote: riskNote } : {}),
-      reviewedAt: at,
-    };
-    if (verdict === "pass") {
-      this.options.tasks.delivery.recordChangeEvidence(builder.id, facts, {
-        kind: "review",
-        text: `review passed at ${shortSha}, ${riskText}`,
-        feed: true,
-        data: { reviewTaskId: task.id },
-      });
-      try {
-        await this.settling.closing.closeTask(task.id, {
-          status: "done",
-          reason: "finished",
-          actor: "host",
-          text: `review passed - ${builder.title}`,
-          feed: false,
-        });
-      } catch (caught) {
-        // The verdict is on the record either way; a close that failed
-        // (a worktree that would not go) is a timeline fact, never a lost
-        // pass - the wake below still says the review passed.
-        const message = caught instanceof Error ? caught.message : String(caught);
-        if (this.options.tasks.get(task.id)) {
-          this.options.tasks.note(task.id, `could not close the review: ${message}`, {
-            news: true,
-            data: { closeFailed: message },
-          });
-        }
-      }
-      this.hooks.notifyOp(
-        {
-          facts: {
-            kind: "review-passed",
-            task: builderTask,
-            reviewKey: task.key,
-            crewmate: task.crewmate,
-            head: sha,
-            ...(risk ? { risk } : {}),
-            ...(riskNote ? { riskNote } : {}),
-            excerpt,
-          },
-        },
-        "crewmate-report",
-        builder.id,
-      );
-      return;
-    }
-    // The verdict is recorded without a host-owned review allowance.
-    this.options.tasks.delivery.recordChangeEvidence(builder.id, facts, {
-      kind: "review",
-      text: `review ${verdict} at ${shortSha}, ${riskText}`,
-      feed: false,
-      data: { reviewTaskId: task.id },
-    });
-    const history = earlierHistory(
-      reviewHistory(this.options.tasks, this.options.tasks.get(builder.id) ?? builder),
-    );
-    const verdictFacts: ReviewVerdictFacts = {
-      kind: "review-verdict",
-      task: reviewTask,
-      builder: builderTask,
-      crewmate: task.crewmate,
-      verdict,
-      excerpt,
-      ...(findings.length > 0 ? { findings } : {}),
-      cards: this.cards.shownCards(task.id),
-      ...(history.length > 0 ? { history } : {}),
-    };
-    this.hooks.notifyOp({ facts: verdictFacts }, "crewmate-report", task.id);
   }
 
   /**
@@ -10410,7 +8263,7 @@ export class CrewSupervisor {
         // there is no merge: the personal workspace, and an answer task,
         // which the deliverable hold refuses to merge whoever asks. The
         // rigor above is absent on the same rows for the same reason.
-        ...(repo?.kind === "personal" || this.deliverableOf(record) !== "change"
+        ...(repo?.kind === "personal" || deliverableOf(record) !== "change"
           ? {}
           : { autonomy: autonomyForRecord(record, repo?.autonomy) }),
       };
@@ -10810,7 +8663,7 @@ export class CrewSupervisor {
       );
     }
     if (
-      this.deliverableOf(this.options.tasks.get(task.id)) === "operation" &&
+      deliverableOf(this.options.tasks.get(task.id)) === "operation" &&
       (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
     )
       throw new Error(
@@ -11502,7 +9355,7 @@ export class CrewSupervisor {
     if (record.shape?.in_place) return false;
     // An answer task emits no completion card at all (Task B): it ships
     // nothing, so nobody owes one.
-    if (this.deliverableOf(record) !== "change") return false;
+    if (deliverableOf(record) !== "change") return false;
     return !this.cards.hasCompletionCard(taskId);
   }
 
@@ -11620,7 +9473,7 @@ export class CrewSupervisor {
   private recordCardRefusal(task: TaskRuntime, refusal: Omit<CardRefusal, "at">): void {
     const record = this.options.tasks.get(task.id);
     if (!record || TaskService.isClosed(record)) return;
-    if (this.isPersonalTask(task.id) || this.deliverableOf(record) !== "change") return;
+    if (this.isPersonalTask(task.id) || deliverableOf(record) !== "change") return;
     if (record.shape?.in_place) return;
     this.options.tasks.delivery.recordCardRefusal(task.id, refusal);
   }
@@ -12006,271 +9859,6 @@ export class CrewSupervisor {
   private taskTitle(taskId: string | null | undefined): string {
     if (!taskId) return "a task";
     return this.options.tasks.get(taskId)?.title ?? taskId;
-  }
-
-  /**
-   * What the host knows about a settle card's task and writes on the card
-   * itself (contract v2.0, captain ruling D4; restyled at v2.7 as the fact
-   * strip by the captain's design pass, 2026-09-19): the project, the
-   * crewmate's model, the task's effective care, the PR link, and the CI
-   * reading check_pr_ci recorded - facts the host holds at emit time, so
-   * the crewmate's completion card and any Firstmate settle card need not
-   * repeat them and cannot get them wrong. Each fact is one labeled
-   * single-line cell (`.inf-facts`, frameStylesheet.ts); what a merge does,
-   * the CI reading's age, and the review's risk note ride the cells'
-   * `title` attributes, never lines of their own (the captain's call).
-   * Returns an HTML fragment, or undefined when the task is unknown.
-   */
-  private settleFacts(taskId: string): string | undefined {
-    const record = this.options.tasks.get(taskId);
-    if (!record) return undefined;
-    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-    const delivery = this.taskDelivery(taskId) ?? "local-only";
-    const cells: string[] = [];
-    // Each cell names its fact in `data-fact`, so a reader finds a fact by
-    // what it is, never by its label's words.
-    const cell = (fact: SettleFact, label: string, value: string, title?: string) =>
-      cells.push(
-        `<span class="inf-fact" data-fact="${fact}"${title ? ` title="${escapeCardText(title)}"` : ""}><span class="inf-fact-k">${label}</span><span class="${SETTLE_FACT_VALUE_CLASS}">${value}</span></span>`,
-      );
-    cell("project", "Project", repo ? escapeCardText(repo.name) : DEFAULT_WORKSPACE_WORD);
-    // Where it runs, right after the project, for a task on a computer that
-    // runs work (design skill `components/devices/RunsOn`).
-    const place = record.deviceId ? this.options.machines?.placeOf(record.deviceId) : undefined;
-    if (place) cell("device", "Runs", escapeCardText(place.where));
-    // The model that built the work, named right after the project
-    // (captain, 2026-09-19): the task record's model - what the session
-    // reported at dispatch, kept current when the backend moved the work to
-    // another (`recordServedModel`) - by the one model-name lookup with the
-    // raw id as fallback, never the newest routing choice, which can
-    // disagree with what actually served (review F1). Labelled Model, as
-    // every surface labels a model (FI3-565 piece 2).
-    if (record.model) {
-      const slash = record.model.indexOf("/");
-      const ref =
-        slash > 0
-          ? { provider: record.model.slice(0, slash), id: record.model.slice(slash + 1) }
-          : undefined;
-      const label = ref ? (this.options.router?.modelLabel(ref) ?? ref.id) : record.model;
-      cell("crewmate", "Model", escapeCardText(label));
-    }
-    // The stamped tier is the care this task actually ran at, including
-    // the captain's per-task ask, not the project's standing setting.
-    const policies = this.options.tasks.policiesOf(record);
-    if (policies) cell("care", "Care", CARE_WORDS[policies.rigor.value]);
-    // The change by the forge's own label (`#N`, or the sent-up branch) and
-    // its page where the host has one - never parsed back out of a link.
-    const changeLabel =
-      record.delivery?.changeLabel ??
-      (record.delivery?.prNumber !== undefined ? `#${record.delivery.prNumber}` : undefined);
-    const prUrl = record.delivery?.prUrl;
-    const link = prUrl && /^https:\/\//.test(prUrl) ? escapeCardText(prUrl) : undefined;
-    // A change open_change opened in another managed project names that
-    // project beside its number (INF-2510).
-    const target = record.delivery?.checkTarget;
-    const elsewhere =
-      target?.repoId && target.repoId !== record.repoId
-        ? this.options.repos.get(target.repoId)?.name
-        : undefined;
-    if (changeLabel || link) {
-      const label = escapeCardText(
-        `${elsewhere ? `${elsewhere} ` : ""}${changeLabel ?? (prUrl as string)}`,
-      );
-      cell(
-        "change",
-        record.delivery?.prNumber !== undefined ? "Pull request" : "Branch",
-        link ? `<a href="${link}">${label}</a>` : label,
-      );
-    }
-    // What the whole offered change adds and deletes (INF-820), read from
-    // git by the host, beside the change it measures. Shown only while it
-    // was read at the version on offer; an unread change shows no cell,
-    // never a zero.
-    const lines = record.delivery?.changeLines;
-    const offered = record.delivery?.headSha;
-    if (lines && (offered === undefined || lines.head === offered)) {
-      cell(
-        "lines",
-        "Lines",
-        `<span class="inf-mono">${changeLinesWords(lines.added, lines.deleted)}</span>`,
-      );
-    }
-    this.readChangeLines(record);
-    const ci = record.delivery?.ci;
-    const observed = record.delivery ? currentCheckSummary(record.delivery) : undefined;
-    const ciAt = record.delivery?.ciAt;
-    if ((ci || observed) && ciAt !== undefined) {
-      // How long the checks ran or took and how long ago they finished, in
-      // the open; when they started and when the app last read them, on
-      // rest (INF-587). The host rewrites the strip on every tick, so both
-      // ages stay current while the card is up.
-      const span = record.delivery ? checksSpanOf(record.delivery) : null;
-      const words = observed?.words ?? (ci ? CHECK_WORDS[ci] : CHECKS_NOT_READ_WORDS);
-      const dot =
-        observed?.dot ??
-        (ci === "green" || ci === "merged"
-          ? "ok"
-          : ci === "red"
-            ? "failed"
-            : ci === "pending"
-              ? "running"
-              : "idle");
-      cell(
-        "checks",
-        "Checks",
-        `${statusDot(dot)}${span ? checksSpanWords(words, span, this.now()) : words}${span?.finishedAt != null ? ` · ${checksFinishedAgo(span.finishedAt, this.now())}` : ""}`,
-        checksRestWords(span, ciAt),
-      );
-    } else if (opensPullRequest(delivery)) {
-      cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
-    }
-    if (record.delivery) cells.push(checkVerdicts(record.delivery, this.now()));
-    // The independent review's word on a change (delivery rigor phase 2,
-    // at any care since INF-1875): the verdict and the head it read, the
-    // risk beside CI and never a hold (Q4), or where the review stands
-    // while it is live; only a Careful task awaits one.
-    {
-      const review = record.delivery;
-      if (review?.reviewVerdict) {
-        const at = review.reviewSha
-          ? ` <span class="inf-mono">${escapeCardText(review.reviewSha.slice(0, 7))}</span>`
-          : "";
-        const risk = review.reviewRisk ? ` · risk ${review.reviewRisk}` : "";
-        cell(
-          "review",
-          "Review",
-          `${statusDot(review.reviewVerdict === "pass" ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${REVIEW_WORDS[review.reviewVerdict]}${at}${risk}`,
-          review.reviewRiskNote,
-        );
-      } else if (this.openReviewOf(record.id)) {
-        cell("review", "Review", `${statusDot("running")}open`);
-      }
-    }
-    // The captain's standing override (docs/delivery-rigor.md, "The
-    // holds"): what his words passed, with his words and how long on rest.
-    // One for an earlier version passes nothing now, so it shows nothing.
-    const override = standingOverride(record.delivery, record.delivery?.headSha);
-    if (override) {
-      cell(
-        "override",
-        "Override",
-        `${statusDot("warn")}${escapeCardText(overrideCellWords(override.holds))}`,
-        overrideWords(override),
-      );
-    }
-    return `${SETTLE_FACTS_OPEN}${cells.join("")}</div>`;
-  }
-
-  /**
-   * Read the lines the task's offered change adds and deletes and keep them
-   * on its delivery facts (INF-820), when the version on offer or its base
-   * moved since the last reading. The offered version is the head the last
-   * check reading saw, else the task's branch, read on the computer holding
-   * that working copy. Recording the reading refreshes
-   * the open cards' strips; a closed card keeps the strip it was shown.
-   */
-  private readChangeLines(record: TaskRecord): void {
-    if (!record.deviceId && (!record.repoDir || !record.branch)) return;
-    if (this.readingLines.has(record.id)) return;
-    this.readingLines.add(record.id);
-    void (async () => {
-      const workspace = this.options.workspace;
-      const remote = record.deviceId
-        ? await this.options.machines?.revision(
-            record.deviceId,
-            record.id,
-            record.delivery?.headSha,
-          )
-        : undefined;
-      const head = record.deviceId
-        ? remote?.headSha
-        : (record.delivery?.headSha ??
-          (await workspace.branchHead(record.repoDir, record.branch as string)));
-      if (!head || (record.delivery?.headSha && record.delivery.headSha !== head)) return;
-      const reading = record.deviceId
-        ? remote?.changeLines
-        : await workspace.changeLines(record.repoDir, head);
-      if (!reading) return;
-      const current = this.options.tasks.get(record.id);
-      // A read crossing the connection may finish after the offered version or placement moved.
-      if (
-        !current ||
-        current.deviceId !== record.deviceId ||
-        current.delivery?.headSha !== record.delivery?.headSha
-      )
-        return;
-      const kept = current.delivery?.changeLines;
-      if (
-        kept?.head === head &&
-        kept.base === reading.base &&
-        kept.added === reading.added &&
-        kept.deleted === reading.deleted
-      )
-        return;
-      this.options.tasks.delivery.recordChangeEvidence(record.id, {
-        changeLines: { ...reading, head, at: this.now() },
-      });
-    })()
-      .catch(() => {
-        // An unreadable change keeps no reading: the strip shows no Lines cell.
-      })
-      .finally(() => {
-        this.readingLines.delete(record.id);
-        const current = this.options.tasks.get(record.id);
-        if (
-          current &&
-          (current.deviceId !== record.deviceId ||
-            current.delivery?.headSha !== record.delivery?.headSha)
-        )
-          this.readChangeLines(current);
-      });
-  }
-
-  /**
-   * What a settle card must say about work the crew filed under this task's
-   * name (captain, 2026-09-14; rows by FI3-430's plan): follow-ups are
-   * planned work the captain never chose, and the decision to land is the
-   * one moment they bear on it. Returns an HTML fragment - a micro label
-   * and one row per open follow-up (key, title, one word) - or undefined
-   * when there are none. The word comes from the record's links and status,
-   * never the title: this merge waits on it (`blocks_me`), it waits for
-   * this merge, a crewmate is on it, or it is queued or in the backlog by its
-   * start policy. Each row's `title` attribute is the full sentence.
-   */
-  private followupNotice(taskId: string): string | undefined {
-    const holding = new Set(
-      this.options.tasks.graph.blockersHoldingClose(taskId).map((blocker) => blocker.id),
-    );
-    const waiting = new Set(this.options.tasks.graph.blocking(taskId).map((task) => task.id));
-    const rows = this.options.tasks.graph
-      .discoveredFrom(taskId)
-      .filter((followUp) => !TaskService.isClosed(followUp))
-      .map((followUp) => {
-        const state = holding.has(followUp.id)
-          ? "hold"
-          : waiting.has(followUp.id)
-            ? "after"
-            : followUp.status === "active"
-              ? "working"
-              : followUp.startPolicy === "on-request"
-                ? "backlog"
-                : "queued";
-        return { followUp, state: state as FollowupState };
-      })
-      .map((row, index) => ({ ...row, index }))
-      .sort(
-        (a, b) =>
-          FOLLOWUP_STATES.indexOf(a.state) - FOLLOWUP_STATES.indexOf(b.state) || a.index - b.index,
-      );
-    if (rows.length === 0) return undefined;
-    const html = rows
-      .map(({ followUp, state }) => {
-        const { word, sentence } = FOLLOWUP_WORDS[state];
-        const mark = state === "hold" ? statusDot("warn") : "";
-        return `<div class="inf-followup" data-followup="${state}" title="${escapeCardText(sentence)}"><span class="inf-followup-key">${escapeCardText(followUp.key || followUp.id)}</span><span class="inf-followup-title">${escapeCardText(followUp.title)}</span><span class="inf-followup-word">${mark}${word}</span></div>`;
-      })
-      .join("");
-    return `<div class="inf-followups" data-followups><div class="inf-followups-k">Filed while working on this</div>${html}</div>`;
   }
 
   /**
@@ -14180,7 +11768,7 @@ export class CrewSupervisor {
       (repoId) => this.options.repos.get(repoId)?.name,
       (taskId) => this.cards.newestForTask(taskId)?.body,
       (taskId) => this.cards.newestResolutionForTask(taskId),
-      (record) => this.workPosture(record),
+      (record) => this.postures.workPosture(record),
       this.taskQueryReach(),
     );
   }
@@ -14272,8 +11860,9 @@ export class CrewSupervisor {
     const shape = this.queuedShape(record);
     if (kindEstablished(shape.kind_source)) return;
     const intent = record.intent ?? { goal: record.title, userWords: record.prompt };
-    const classified = this.withDeliverable(
-      await this.classifyShape(
+    const classified = withDeliverable(
+      await classifyShape(
+        this.options,
         record.id,
         record.title,
         intent,
@@ -14310,9 +11899,12 @@ export class CrewSupervisor {
    * legacy quick.
    */
   private queuedShape(record: TaskRecord): WorkShape {
-    return this.withBasisVerdict(
+    return withBasisVerdict(
+      this.options.tasks,
       record.shape ??
-        (record.intent ? legacyShapeFromDifficulty(record.difficulty) : this.workShape(undefined)),
+        (record.intent
+          ? legacyShapeFromDifficulty(record.difficulty)
+          : workShape(this.options.tasks, undefined)),
     );
   }
 
@@ -14799,7 +12391,7 @@ export class CrewSupervisor {
     // Only declarations carry over: dispatch stamps, chosen accounts/models,
     // escalation floors and delivery outcomes all belong to the old attempt.
     const { kind: _oldKind, ...oldAsk } = old.shape ?? { kind: "unclear" };
-    const shape = this.workShape({
+    const shape = workShape(this.options.tasks, {
       ...oldAsk,
       ...(old.shape?.kind_source === "firstmate:declared" && old.shape.kind !== "review"
         ? { kind: old.shape.kind }
@@ -14808,7 +12400,7 @@ export class CrewSupervisor {
     if (old.shape?.policies) shape.policies = { ...old.shape.policies, revision: 0 };
     const fresh = this.options.tasks.starts.startAgain(old.id, {
       id: randomUUID().slice(0, 8),
-      shape: old.intent ? this.withDeliverable(shape, old.intent) : shape,
+      shape: old.intent ? withDeliverable(shape, old.intent) : shape,
       actor: audience === "tool" ? "firstmate" : "captain",
       ...(audience === "captain" ? { via: TASK_CARD_VIA } : {}),
       ...(panel ? { panel } : {}),
@@ -14942,67 +12534,6 @@ export class CrewSupervisor {
     };
   }
 
-  /** Shared visual answer; deliberately independent of turn control and recovery. */
-  workPosture(record: TaskRecord) {
-    return this.options.tasks.projectedFact(record, this.postureFact, () =>
-      this.readWorkPosture(record),
-    );
-  }
-
-  private readWorkPosture(record: TaskRecord) {
-    return deriveWorkPosture(record, () => this.workPostureInputs(record));
-  }
-
-  /** The wait view shares the posture snapshot, including facts its precedence hides. */
-  workWaitFacts(record: TaskRecord) {
-    if (record.status !== "active") return { job: false, timerOwned: false };
-    const facts = this.workPostureInputs(record);
-    return {
-      job: facts.liveJobs || (facts.clientJobs ?? 0) > 0,
-      timerOwned: facts.timedWait,
-      ...(facts.hold ? { hold: facts.hold } : {}),
-    };
-  }
-
-  private workPostureInputs(record: TaskRecord): PostureFacts {
-    return this.options.tasks.projectedFact(record, this.postureInputs, () => {
-      const runtime = this.tasks.get(record.id);
-      const hold = this.holdOf(record);
-      return {
-        ...this.ladder.witnesses(record.id, this.now()),
-        turnRunning: runtime !== undefined && runtime.state !== "idle",
-        liveJobs: this.options.hasRunningJobs?.(record.id) === true,
-        clientJobs: runtime?.session ? runtime.clientJobs : undefined,
-        observable: runtime?.session?.controlProfile.backgroundWork === "host",
-        blocked: this.options.tasks.graph.flagsOf(record).blocked,
-        ...(hold ? { hold } : {}),
-      };
-    });
-  }
-
-  /**
-   * The typed cut-off on the account the hold witness reads
-   * (`IdleLadder.cutOffHolds`), as a card thread's waiting line names it:
-   * its class, the provider, and a spent allowance's reset.
-   */
-  private holdOf(record: TaskRecord): AccountHold | undefined {
-    const held = this.ladder.heldBy(record);
-    if (!held) return undefined;
-    const { account, cutOff } = held;
-    // A task on another computer waits on that computer's own sign-in, and
-    // the line says where (docs/helper.md, "Its own sign-ins").
-    const place = this.options.machines?.accountPlace(account);
-    return {
-      class: cutOff.class,
-      provider:
-        place?.provider ?? this.options.serveability?.providerName(account) ?? "the provider",
-      ...(cutOff.class === "no_headroom" && cutOff.resetsAt !== undefined
-        ? { resetsAt: cutOff.resetsAt }
-        : {}),
-      ...(place ? { where: place.where } : {}),
-    };
-  }
-
   /**
    * The crew counts, read as one projection like the presentation pass: each
    * active row's posture shares the rows, settings and sign-ins the others
@@ -15013,7 +12544,7 @@ export class CrewSupervisor {
     const active = tasks.listActive();
     return tasks.readProjection(() => {
       const tally = crewTally();
-      for (const record of active) tally.see(record, () => this.workPosture(record));
+      for (const record of active) tally.see(record, () => this.postures.workPosture(record));
       return tally.counts(tasks);
     }, active);
   }

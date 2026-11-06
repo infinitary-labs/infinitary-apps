@@ -665,7 +665,7 @@ function answered(at: World): string[] {
 function postureOf(at: World, taskId: string) {
   const record = at.home.tasks.get(taskId);
   if (!record) throw new Error(`No record for ${taskId}.`);
-  return at.home.supervisor.workPosture(record);
+  return at.home.supervisor.postures.workPosture(record);
 }
 
 /** What this Mac's own Claude account serves for its Firstmate and crew. */
@@ -693,7 +693,7 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     const t1 = home.tasks.get("t1");
     if (!t1) throw new Error("The task has no record.");
     // It is held on the Mac mini's own Claude, and the waiting line says where.
-    expect(home.supervisor.workPosture(t1)).toEqual({
+    expect(home.supervisor.postures.workPosture(t1)).toEqual({
       state: "paused",
       reason: "access",
       hold: { class: "signed_out", provider: "Claude", where: "on Mac mini" },
@@ -814,7 +814,7 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     await expect.poll(() => home.tasks.get("t1")?.activity).toBe("idle");
     const t1 = home.tasks.get("t1");
     if (!t1) throw new Error("The task has no record.");
-    expect(home.supervisor.workPosture(t1).hold).toEqual({
+    expect(home.supervisor.postures.workPosture(t1).hold).toEqual({
       class: "no_headroom",
       provider: "Claude",
       resetsAt: resetsAtMs,

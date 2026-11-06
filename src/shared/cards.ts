@@ -491,7 +491,7 @@ export type RiskAssessment = z.infer<typeof riskAssessmentSchema>;
 
 /**
  * The facts the host writes on a settle card's fact strip
- * (`CrewSupervisor.settleFacts`), in the order it writes them; each cell
+ * (`SettleFacts.strip`), in the order it writes them; each cell
  * carries its fact in `data-fact`. A cell is present only when the host
  * holds that fact.
  */

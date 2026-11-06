@@ -1,5 +1,8 @@
 import type { AccountHold, WorkPosture } from "@shared/workPosture";
 import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRuntime } from "./crewRuntime";
+import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
+import type { IdleLadder } from "./idleLadder";
 import type { Witnesses } from "./reportSort";
 
 /** The live facts a posture reads; gathering them reads the database and the card stack. */
@@ -44,4 +47,90 @@ export function deriveWorkPosture(record: TaskRecord, gather: () => PostureFacts
   if (!facts.observable && facts.clientJobs === undefined)
     return { state: "unknown", reason: "unobserved" };
   return { state: "idle", reason: "inactive" };
+}
+
+/** What a posture reads of the supervisor beyond its options. */
+export type WorkPostureHost = {
+  now(): number;
+  /** The idle ladder's typed facts for a task (`IdleLadder.witnesses`). */
+  witnesses: IdleLadder["witnesses"];
+  /** The account and cut-off a task's lane is held on (`IdleLadder.heldBy`). */
+  heldBy: IdleLadder["heldBy"];
+  /** A task's crewmate running here, when one runs. */
+  runtime(taskId: string): TaskRuntime | undefined;
+};
+
+/**
+ * Each task's posture - what its dot shows - and the wait facts read from
+ * the same snapshot, projected once per record change.
+ */
+export class WorkPostures {
+  private readonly postureFact = Symbol("work posture");
+  private readonly postureInputs = Symbol("work posture inputs");
+
+  constructor(
+    private readonly options: CrewSupervisorOptions,
+    private readonly host: WorkPostureHost,
+  ) {}
+
+  /** Shared visual answer; deliberately independent of turn control and recovery. */
+  workPosture(record: TaskRecord) {
+    return this.options.tasks.projectedFact(record, this.postureFact, () =>
+      this.readWorkPosture(record),
+    );
+  }
+
+  private readWorkPosture(record: TaskRecord) {
+    return deriveWorkPosture(record, () => this.workPostureInputs(record));
+  }
+
+  /** The wait view shares the posture snapshot, including facts its precedence hides. */
+  workWaitFacts(record: TaskRecord) {
+    if (record.status !== "active") return { job: false, timerOwned: false };
+    const facts = this.workPostureInputs(record);
+    return {
+      job: facts.liveJobs || (facts.clientJobs ?? 0) > 0,
+      timerOwned: facts.timedWait,
+      ...(facts.hold ? { hold: facts.hold } : {}),
+    };
+  }
+
+  private workPostureInputs(record: TaskRecord): PostureFacts {
+    return this.options.tasks.projectedFact(record, this.postureInputs, () => {
+      const runtime = this.host.runtime(record.id);
+      const hold = this.holdOf(record);
+      return {
+        ...this.host.witnesses(record.id, this.host.now()),
+        turnRunning: runtime !== undefined && runtime.state !== "idle",
+        liveJobs: this.options.hasRunningJobs?.(record.id) === true,
+        clientJobs: runtime?.session ? runtime.clientJobs : undefined,
+        observable: runtime?.session?.controlProfile.backgroundWork === "host",
+        blocked: this.options.tasks.graph.flagsOf(record).blocked,
+        ...(hold ? { hold } : {}),
+      };
+    });
+  }
+
+  /**
+   * The typed cut-off on the account the hold witness reads
+   * (`IdleLadder.cutOffHolds`), as a card thread's waiting line names it:
+   * its class, the provider, and a spent allowance's reset.
+   */
+  private holdOf(record: TaskRecord): AccountHold | undefined {
+    const held = this.host.heldBy(record);
+    if (!held) return undefined;
+    const { account, cutOff } = held;
+    // A task on another computer waits on that computer's own sign-in, and
+    // the line says where (docs/helper.md, "Its own sign-ins").
+    const place = this.options.machines?.accountPlace(account);
+    return {
+      class: cutOff.class,
+      provider:
+        place?.provider ?? this.options.serveability?.providerName(account) ?? "the provider",
+      ...(cutOff.class === "no_headroom" && cutOff.resetsAt !== undefined
+        ? { resetsAt: cutOff.resetsAt }
+        : {}),
+      ...(place ? { where: place.where } : {}),
+    };
+  }
 }

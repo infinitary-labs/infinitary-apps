@@ -61,7 +61,7 @@ import { setThemeViaSettings } from "./theme";
  * line and reports its green PR with NO completion card (this spec rides
  * the path where a pull request is already on record: the review still
  * reads the builder's committed branch head, which this journey keeps
- * equal to the recorded pull request head - `crewSupervisor.test.ts` covers
+ * equal to the recorded pull request head - `reviews.test.ts` covers
  * a recorded head that has fallen behind); the Firstmate checks CI and spawns the reviewer
  * with `review_of`; the host briefs the reviewer read-only and holds
  * nothing on the builder for it (INF-1876); the reviewer's findings reach

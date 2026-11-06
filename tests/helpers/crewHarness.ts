@@ -10,12 +10,12 @@ import { fileURLToPath } from "node:url";
 import type { ForgePull } from "@core/forge";
 import type { KnowledgeService } from "@core/knowledge/knowledgeService";
 import { type CrewmateSpec, crewmateSessionSpec } from "@core/orchestrator/crewSession";
-import {
-  type AccountAttachment,
-  CrewSupervisor,
-  type CrewSupervisorOptions,
-  type FirstmateHooks,
-} from "@core/orchestrator/crewSupervisor";
+import { CrewSupervisor } from "@core/orchestrator/crewSupervisor";
+import type {
+  AccountAttachment,
+  CrewSupervisorOptions,
+  FirstmateHooks,
+} from "@core/orchestrator/crewSupervisorOptions";
 import type { AccountServeability } from "@core/orchestrator/idleLadder";
 import type { SpawnIntent } from "@core/orchestrator/intentBrief";
 import { renderWake, type WakeBody, type WakeFacts } from "@core/orchestrator/wakes";
@@ -48,6 +48,7 @@ import {
 } from "@shared/cards";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import type { FmEvent } from "@shared/events";
+import type { KeptValidationInput } from "@shared/liveValidation";
 import type { RiskDeclaration } from "@shared/risk";
 import type { WorkShape } from "@shared/routingPolicy";
 import { afterEach, beforeEach, type Mock, vi } from "vitest";
@@ -587,7 +588,7 @@ export function served(wake: WakeBody): string {
  * A test file calls this once at its top level; a journey that needs real
  * scheduling switches back to real timers itself.
  */
-export function useFakeCrewTimers(): void {
+export function fakeCrewTimersEachTest(): void {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
   });
@@ -619,6 +620,52 @@ export async function endTurn(
   crewmate.emit({ type: "turn_end", taskId });
   crewmate.finishPrompt();
   await tick();
+}
+
+/**
+ * The reviewer's typed review record for the head and evidence revision
+ * assigned to its review (INF-1875): the verdict is this record, never a
+ * line of the report. Its live-proof judgment defaults to the no-surface
+ * one this lifecycle fixture's empty branch gets (`noSurfaceProof`).
+ */
+export function typedReview(
+  tasks: TaskService,
+  reviewId: string,
+  input: Partial<Omit<Extract<KeptValidationInput, { kind: "review" }>, "kind">> & {
+    code: "clear" | "findings" | "blocked";
+  },
+): Extract<KeptValidationInput, { kind: "review" }> {
+  const review = tasks.get(reviewId);
+  const head = review?.delivery?.headSha;
+  const assignment = review?.delivery?.validationAssignment;
+  if (!head || !assignment) throw new Error("the review has no assigned head");
+  return {
+    kind: "review",
+    head,
+    revision: assignment.revision,
+    coverage: "complete",
+    coverageReason: "No running surface exists in this lifecycle fixture.",
+    effects: [],
+    omitted: [],
+    verdict: "no-surface",
+    reason: "The reviewer accepts the empty branch's no-surface reason, not a live pass.",
+    ...input,
+  };
+}
+
+/** One reviewer turn: its typed review on the report tool, then the report text ending the turn. */
+export async function reviewTurn(
+  env: { tasks: TaskService; specs: CrewmateSpec[] },
+  reviewer: FakeCrewmate,
+  spec: number,
+  reviewId: string,
+  text: string,
+  input: Parameters<typeof typedReview>[2],
+) {
+  await env.specs[spec]!.onReport!(text, undefined, {
+    validation: typedReview(env.tasks, reviewId, input),
+  });
+  await reportTurn(reviewer, reviewId, text);
 }
 
 /**

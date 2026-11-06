@@ -38,7 +38,7 @@ Do not use buckets to choose a computer: Automatic placement compares computers'
 - Ladder: slotted offerings, then the starter map virtually, then every listed model at medium, then the whole signed-in pool; a shortlist is a preference, never a way to brick routing.
 - Pins: a captain-named model routes first when it can serve and otherwise falls back without a feed line; saved Settings pins come next and bypass the slots, since naming a model is its own placement.
 - Reasoning: a fresh crewmate inherits the served slot's level (premium and high Extra high, medium and low Medium), clamped to what the runtime offers; a Settings choice per offering and level, or a per-task `override_reasoning`, overrides it ([`../docs/model-lists.md`](../docs/model-lists.md), "Reasoning in each level").
-- Escalation to a stronger model is the ladder's one automatic rung: `spawn_crewmate` carries `escalate_from`, `CrewSupervisor.resolveEscalation` refuses an unknown task, one that never ran, a lineage past `maxEscalations` (2) or nothing above premium, and the fresh crewmate is briefed anew, never resumed.
+- Escalation to a stronger model is the ladder's one automatic rung: `spawn_crewmate` carries `escalate_from`, `resolveEscalation` in `workShape.ts` refuses an unknown task, one that never ran, a lineage past `maxEscalations` (2) or nothing above premium, and the fresh crewmate is briefed anew, never resumed.
 - An escalation or premium ask that cannot be served now waits on a `bucket:<tier>` gate (`quotaGateCleared`, [`../src/core/routing/quotaGate.ts`](../src/core/routing/quotaGate.ts)) rather than starting at a weaker tier.
 
 ## Authority

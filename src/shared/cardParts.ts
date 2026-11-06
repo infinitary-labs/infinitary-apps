@@ -35,7 +35,7 @@ const PART_TAGS = new Set([
 /** A container a question is drawn as without a fieldset (the bridge reads these too). */
 const QUESTION_ROLES = new Set(["group", "radiogroup"]);
 
-/** The host's own fragments on a settle card (`CrewSupervisor.settleFacts`, `followupNotice`). */
+/** The host's own fragments on a settle card (`SettleFacts.strip`, `SettleFacts.followupNotice`). */
 const HOST_FRAGMENTS = ["data-facts", "data-followups"];
 
 const PICTURE_PREFIX = `${APP_FRAME_SCHEME}://${CARD_PICTURE_HOST}/`;

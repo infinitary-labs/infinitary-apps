@@ -153,7 +153,7 @@ They hang off the frozen `window.infinitary.models` namespace; the top-level key
 ## The first consumer
 
 `DecisionKindClassifier` (`src/core/routing/decisionKindClassifier.ts`).
-`KindClassifier`, `KIND_SOURCE`, `resolveKind`, `CrewSupervisor.classifyShape` and the tier table are all unchanged - see `docs/kind-classifier.md`.
+`KindClassifier`, `KIND_SOURCE`, `resolveKind`, `classifyShape` (`workShape.ts`) and the tier table are all unchanged - see `docs/kind-classifier.md`.
 The module holds the question, the facts, and the mapping back to a `KindVerdict`, and owns no model, no transport and no setting.
 Adding a second consumer is adding a question.
 

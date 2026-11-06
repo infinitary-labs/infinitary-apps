@@ -352,7 +352,7 @@ async function buildRecord() {
       snapshot: () => supervisor.cards.snapshot(),
       forTask: (taskId, extraIds) => cardStore.forTask(taskId, extraIds),
     },
-    workPosture: (record) => supervisor.workPosture(record),
+    workPosture: (record) => supervisor.postures.workPosture(record),
     place: (record) => supervisor.taskPlace(record),
     computerMove: (record) => supervisor.computerMoveFacts(record),
     runsOn: (record) => supervisor.runsOnFact(record),

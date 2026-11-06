@@ -120,7 +120,7 @@ export type CheckWatcherHost = {
   read(taskId: string): Promise<WatchedReading>;
   /**
    * The task stands idle behind another task, nothing else moving it or
-   * before the captain (`CrewSupervisor.workPosture`'s `dependency`): its
+   * before the captain (`WorkPostures.workPosture`'s `dependency`): its
    * finished checks are not refreshed while it waits. Absent = never.
    */
   idleBehindOtherWork?(record: TaskRecord): boolean;

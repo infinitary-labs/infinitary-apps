@@ -1,13 +1,39 @@
 import {
   type Card,
   MERGE_ANYWAY_ACTION,
+  SETTLE_FACT_VALUE_CLASS,
+  SETTLE_FACTS_OPEN,
+  type SettleFact,
   settleEffectOf,
   splitSettleFacts,
   takesTaskFacts,
   withMergeClosesLine,
 } from "@shared/cards";
-import { MERGE_ANYWAY_WORDS } from "@shared/vocabulary";
+import { currentCheckSummary } from "@shared/checkSnapshot";
+import {
+  checksFinishedAgo,
+  checksRestWords,
+  checksSpanOf,
+  checksSpanWords,
+} from "@shared/checksSpan";
+import { factDotSvg } from "@shared/factDot";
+import { overrideCellWords, overrideWords, standingOverride } from "@shared/holds";
+import { opensPullRequest, type RepoDelivery } from "@shared/repos";
+import {
+  CARE_WORDS,
+  CHECK_WORDS,
+  CHECKS_NOT_READ_WORDS,
+  changeLinesWords,
+  DEFAULT_WORKSPACE_WORD,
+  MERGE_ANYWAY_WORDS,
+  REVIEW_WORDS,
+} from "@shared/vocabulary";
 import type { EmittedCardInput } from "../session/tools";
+import type { TaskRecord } from "../storage/taskStore";
+import { TaskService } from "../tasks/taskService";
+import { escapeCardText } from "./cardText";
+import { checkVerdicts } from "./checkVerdicts";
+import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 
 /**
  * What a settle card carries from the record rather than its author's words
@@ -104,4 +130,326 @@ export function emittedSettleFacts(
     if (notice) next = { ...next, body: `${next.body}${notice}` };
   }
   return next;
+}
+
+type FollowupState = "hold" | "after" | "working" | "queued" | "backlog";
+/**
+ * Row order on a settle card, and each state's word and hover sentence. The
+ * last three are the Tasks panel's own group words (src/shared/nowPanel.ts).
+ */
+const FOLLOWUP_STATES: FollowupState[] = ["hold", "after", "working", "queued", "backlog"];
+const FOLLOWUP_WORDS: Record<FollowupState, { word: string; sentence: string }> = {
+  hold: {
+    word: "must merge first",
+    sentence:
+      "This merge waits on it. Merge is refused until it merges, or until the wait is removed.",
+  },
+  after: {
+    word: "starts once this merges",
+    sentence: "It waits for this to merge, then starts. It does not hold this merge up.",
+  },
+  working: {
+    word: "working",
+    sentence: "A crewmate is working on it. It does not hold this merge up.",
+  },
+  queued: {
+    word: "queued",
+    sentence: "It starts by itself when nothing holds it. It does not hold this merge up.",
+  },
+  backlog: {
+    word: "backlog",
+    sentence: "It waits for your word to start. It does not hold this merge up.",
+  },
+};
+
+/** One 10px state dot, the one drawing every fact strip shares (`@shared/factDot`). */
+const statusDot = factDotSvg;
+
+/** What the fact strip reads of the supervisor beyond its options. */
+export type SettleFactsHost = {
+  now(): number;
+  /** How the task's change is delivered now. */
+  taskDelivery(taskId: string): RepoDelivery | undefined;
+  /** Whether a review of the task's change is open. */
+  reviewOpen(taskId: string): boolean;
+};
+
+/**
+ * The facts a settle card's task writes on the card: its fact strip, read
+ * from the record and kept current as the record changes, and the work the
+ * crew filed under its name.
+ */
+export class SettleFacts {
+  /** Tasks whose change lines are being read now (`readChangeLines`). */
+  private readonly readingLines = new Set<string>();
+
+  constructor(
+    private readonly options: CrewSupervisorOptions,
+    private readonly host: SettleFactsHost,
+  ) {}
+
+  /**
+   * What the host knows about a settle card's task and writes on the card
+   * itself (contract v2.0, captain ruling D4; restyled at v2.7 as the fact
+   * strip by the captain's design pass, 2026-09-19): the project, the
+   * crewmate's model, the task's effective care, the PR link, and the CI
+   * reading check_pr_ci recorded - facts the host holds at emit time, so
+   * the crewmate's completion card and any Firstmate settle card need not
+   * repeat them and cannot get them wrong. Each fact is one labeled
+   * single-line cell (`.inf-facts`, frameStylesheet.ts); what a merge does,
+   * the CI reading's age, and the review's risk note ride the cells'
+   * `title` attributes, never lines of their own (the captain's call).
+   * Returns an HTML fragment, or undefined when the task is unknown.
+   */
+  strip(taskId: string): string | undefined {
+    const record = this.options.tasks.get(taskId);
+    if (!record) return undefined;
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    const delivery = this.host.taskDelivery(taskId) ?? "local-only";
+    const cells: string[] = [];
+    // Each cell names its fact in `data-fact`, so a reader finds a fact by
+    // what it is, never by its label's words.
+    const cell = (fact: SettleFact, label: string, value: string, title?: string) =>
+      cells.push(
+        `<span class="inf-fact" data-fact="${fact}"${title ? ` title="${escapeCardText(title)}"` : ""}><span class="inf-fact-k">${label}</span><span class="${SETTLE_FACT_VALUE_CLASS}">${value}</span></span>`,
+      );
+    cell("project", "Project", repo ? escapeCardText(repo.name) : DEFAULT_WORKSPACE_WORD);
+    // Where it runs, right after the project, for a task on a computer that
+    // runs work (design skill `components/devices/RunsOn`).
+    const place = record.deviceId ? this.options.machines?.placeOf(record.deviceId) : undefined;
+    if (place) cell("device", "Runs", escapeCardText(place.where));
+    // The model that built the work, named right after the project
+    // (captain, 2026-09-19): the task record's model - what the session
+    // reported at dispatch, kept current when the backend moved the work to
+    // another (`recordServedModel`) - by the one model-name lookup with the
+    // raw id as fallback, never the newest routing choice, which can
+    // disagree with what actually served (review F1). Labelled Model, as
+    // every surface labels a model (FI3-565 piece 2).
+    if (record.model) {
+      const slash = record.model.indexOf("/");
+      const ref =
+        slash > 0
+          ? { provider: record.model.slice(0, slash), id: record.model.slice(slash + 1) }
+          : undefined;
+      const label = ref ? (this.options.router?.modelLabel(ref) ?? ref.id) : record.model;
+      cell("crewmate", "Model", escapeCardText(label));
+    }
+    // The stamped tier is the care this task actually ran at, including
+    // the captain's per-task ask, not the project's standing setting.
+    const policies = this.options.tasks.policiesOf(record);
+    if (policies) cell("care", "Care", CARE_WORDS[policies.rigor.value]);
+    // The change by the forge's own label (`#N`, or the sent-up branch) and
+    // its page where the host has one - never parsed back out of a link.
+    const changeLabel =
+      record.delivery?.changeLabel ??
+      (record.delivery?.prNumber !== undefined ? `#${record.delivery.prNumber}` : undefined);
+    const prUrl = record.delivery?.prUrl;
+    const link = prUrl && /^https:\/\//.test(prUrl) ? escapeCardText(prUrl) : undefined;
+    // A change open_change opened in another managed project names that
+    // project beside its number (INF-2510).
+    const target = record.delivery?.checkTarget;
+    const elsewhere =
+      target?.repoId && target.repoId !== record.repoId
+        ? this.options.repos.get(target.repoId)?.name
+        : undefined;
+    if (changeLabel || link) {
+      const label = escapeCardText(
+        `${elsewhere ? `${elsewhere} ` : ""}${changeLabel ?? (prUrl as string)}`,
+      );
+      cell(
+        "change",
+        record.delivery?.prNumber !== undefined ? "Pull request" : "Branch",
+        link ? `<a href="${link}">${label}</a>` : label,
+      );
+    }
+    // What the whole offered change adds and deletes (INF-820), read from
+    // git by the host, beside the change it measures. Shown only while it
+    // was read at the version on offer; an unread change shows no cell,
+    // never a zero.
+    const lines = record.delivery?.changeLines;
+    const offered = record.delivery?.headSha;
+    if (lines && (offered === undefined || lines.head === offered)) {
+      cell(
+        "lines",
+        "Lines",
+        `<span class="inf-mono">${changeLinesWords(lines.added, lines.deleted)}</span>`,
+      );
+    }
+    this.readChangeLines(record);
+    const ci = record.delivery?.ci;
+    const observed = record.delivery ? currentCheckSummary(record.delivery) : undefined;
+    const ciAt = record.delivery?.ciAt;
+    if ((ci || observed) && ciAt !== undefined) {
+      // How long the checks ran or took and how long ago they finished, in
+      // the open; when they started and when the app last read them, on
+      // rest (INF-587). The host rewrites the strip on every tick, so both
+      // ages stay current while the card is up.
+      const span = record.delivery ? checksSpanOf(record.delivery) : null;
+      const words = observed?.words ?? (ci ? CHECK_WORDS[ci] : CHECKS_NOT_READ_WORDS);
+      const dot =
+        observed?.dot ??
+        (ci === "green" || ci === "merged"
+          ? "ok"
+          : ci === "red"
+            ? "failed"
+            : ci === "pending"
+              ? "running"
+              : "idle");
+      cell(
+        "checks",
+        "Checks",
+        `${statusDot(dot)}${span ? checksSpanWords(words, span, this.host.now()) : words}${span?.finishedAt != null ? ` · ${checksFinishedAgo(span.finishedAt, this.host.now())}` : ""}`,
+        checksRestWords(span, ciAt),
+      );
+    } else if (opensPullRequest(delivery)) {
+      cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
+    }
+    if (record.delivery) cells.push(checkVerdicts(record.delivery, this.host.now()));
+    // The independent review's word on a change (delivery rigor phase 2,
+    // at any care since INF-1875): the verdict and the head it read, the
+    // risk beside CI and never a hold (Q4), or where the review stands
+    // while it is live; only a Careful task awaits one.
+    {
+      const review = record.delivery;
+      if (review?.reviewVerdict) {
+        const at = review.reviewSha
+          ? ` <span class="inf-mono">${escapeCardText(review.reviewSha.slice(0, 7))}</span>`
+          : "";
+        const risk = review.reviewRisk ? ` · risk ${review.reviewRisk}` : "";
+        cell(
+          "review",
+          "Review",
+          `${statusDot(review.reviewVerdict === "pass" ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${REVIEW_WORDS[review.reviewVerdict]}${at}${risk}`,
+          review.reviewRiskNote,
+        );
+      } else if (this.host.reviewOpen(record.id)) {
+        cell("review", "Review", `${statusDot("running")}open`);
+      }
+    }
+    // The captain's standing override (docs/delivery-rigor.md, "The
+    // holds"): what his words passed, with his words and how long on rest.
+    // One for an earlier version passes nothing now, so it shows nothing.
+    const override = standingOverride(record.delivery, record.delivery?.headSha);
+    if (override) {
+      cell(
+        "override",
+        "Override",
+        `${statusDot("warn")}${escapeCardText(overrideCellWords(override.holds))}`,
+        overrideWords(override),
+      );
+    }
+    return `${SETTLE_FACTS_OPEN}${cells.join("")}</div>`;
+  }
+
+  /**
+   * Read the lines the task's offered change adds and deletes and keep them
+   * on its delivery facts (INF-820), when the version on offer or its base
+   * moved since the last reading. The offered version is the head the last
+   * check reading saw, else the task's branch, read on the computer holding
+   * that working copy. Recording the reading refreshes
+   * the open cards' strips; a closed card keeps the strip it was shown.
+   */
+  private readChangeLines(record: TaskRecord): void {
+    if (!record.deviceId && (!record.repoDir || !record.branch)) return;
+    if (this.readingLines.has(record.id)) return;
+    this.readingLines.add(record.id);
+    void (async () => {
+      const workspace = this.options.workspace;
+      const remote = record.deviceId
+        ? await this.options.machines?.revision(
+            record.deviceId,
+            record.id,
+            record.delivery?.headSha,
+          )
+        : undefined;
+      const head = record.deviceId
+        ? remote?.headSha
+        : (record.delivery?.headSha ??
+          (await workspace.branchHead(record.repoDir, record.branch as string)));
+      if (!head || (record.delivery?.headSha && record.delivery.headSha !== head)) return;
+      const reading = record.deviceId
+        ? remote?.changeLines
+        : await workspace.changeLines(record.repoDir, head);
+      if (!reading) return;
+      const current = this.options.tasks.get(record.id);
+      // A read crossing the connection may finish after the offered version or placement moved.
+      if (
+        !current ||
+        current.deviceId !== record.deviceId ||
+        current.delivery?.headSha !== record.delivery?.headSha
+      )
+        return;
+      const kept = current.delivery?.changeLines;
+      if (
+        kept?.head === head &&
+        kept.base === reading.base &&
+        kept.added === reading.added &&
+        kept.deleted === reading.deleted
+      )
+        return;
+      this.options.tasks.delivery.recordChangeEvidence(record.id, {
+        changeLines: { ...reading, head, at: this.host.now() },
+      });
+    })()
+      .catch(() => {
+        // An unreadable change keeps no reading: the strip shows no Lines cell.
+      })
+      .finally(() => {
+        this.readingLines.delete(record.id);
+        const current = this.options.tasks.get(record.id);
+        if (
+          current &&
+          (current.deviceId !== record.deviceId ||
+            current.delivery?.headSha !== record.delivery?.headSha)
+        )
+          this.readChangeLines(current);
+      });
+  }
+
+  /**
+   * What a settle card must say about work the crew filed under this task's
+   * name (captain, 2026-09-14; rows by FI3-430's plan): follow-ups are
+   * planned work the captain never chose, and the decision to land is the
+   * one moment they bear on it. Returns an HTML fragment - a micro label
+   * and one row per open follow-up (key, title, one word) - or undefined
+   * when there are none. The word comes from the record's links and status,
+   * never the title: this merge waits on it (`blocks_me`), it waits for
+   * this merge, a crewmate is on it, or it is queued or in the backlog by its
+   * start policy. Each row's `title` attribute is the full sentence.
+   */
+  followupNotice(taskId: string): string | undefined {
+    const holding = new Set(
+      this.options.tasks.graph.blockersHoldingClose(taskId).map((blocker) => blocker.id),
+    );
+    const waiting = new Set(this.options.tasks.graph.blocking(taskId).map((task) => task.id));
+    const rows = this.options.tasks.graph
+      .discoveredFrom(taskId)
+      .filter((followUp) => !TaskService.isClosed(followUp))
+      .map((followUp) => {
+        const state = holding.has(followUp.id)
+          ? "hold"
+          : waiting.has(followUp.id)
+            ? "after"
+            : followUp.status === "active"
+              ? "working"
+              : followUp.startPolicy === "on-request"
+                ? "backlog"
+                : "queued";
+        return { followUp, state: state as FollowupState };
+      })
+      .map((row, index) => ({ ...row, index }))
+      .sort(
+        (a, b) =>
+          FOLLOWUP_STATES.indexOf(a.state) - FOLLOWUP_STATES.indexOf(b.state) || a.index - b.index,
+      );
+    if (rows.length === 0) return undefined;
+    const html = rows
+      .map(({ followUp, state }) => {
+        const { word, sentence } = FOLLOWUP_WORDS[state];
+        const mark = state === "hold" ? statusDot("warn") : "";
+        return `<div class="inf-followup" data-followup="${state}" title="${escapeCardText(sentence)}"><span class="inf-followup-key">${escapeCardText(followUp.key || followUp.id)}</span><span class="inf-followup-title">${escapeCardText(followUp.title)}</span><span class="inf-followup-word">${mark}${word}</span></div>`;
+      })
+      .join("");
+    return `<div class="inf-followups" data-followups><div class="inf-followups-k">Filed while working on this</div>${html}</div>`;
+  }
 }

@@ -113,7 +113,7 @@ Its brief says close the pull request or report why not (`renderPullRepairBrief`
 The same minute's read closes it as finished once the host reads that pull request closed or merged.
 
 Work on a project's folder itself is the first mate's to declare, by its own judgment (INF-567, direction A).
-`spawn_crewmate`'s `shape.in_folder` stamps `in_place: { folder: true }` and `deliverable: operation` (`CrewSupervisor.workShape`), and a stronger-model retry keeps it.
+`spawn_crewmate`'s `shape.in_folder` stamps `in_place: { folder: true }` and `deliverable: operation` (`workShape` in `workShape.ts`), and a stronger-model retry keeps it.
 Such a task runs on this Mac, which keeps the folder, whatever the project's Runs on says, and works in the folder with no working copy, branch, delivery, rigor or completion decision, as the folder repair does.
 Its brief is the first mate's intent with no Delivery line, closed by a paragraph naming the folder and that the captain's edits there are the captain's (`renderIntentBrief`'s folder facts).
 It needs a project other than the personal workspace, and refuses `runs_on_ask`, `delivery_ask` and `review_of` beside it; nothing spawns.
@@ -265,7 +265,7 @@ A crewmate's report text that ends a turn without the tool carries no result.
 A task running on another computer carries its result home on the report order; every computer taking work on the current contract major supports it.
 
 `branch_from` names, by key, the task whose last commit a task's working copy starts at: that task's branch head while its working copy is present on this Mac, else the kept ref its work was saved on.
-The host checks it when it is named and again when the task starts, and refuses as tool text an unknown task, the task itself, a task in another project, a working copy on another computer, or a task with neither a branch nor saved work (`CrewSupervisor.handOffShape`).
+The host checks it when it is named and again when the task starts, and refuses as tool text an unknown task, the task itself, a task in another project, a working copy on another computer, or a task with neither a branch nor saved work (`handOffShape` in `workShape.ts`).
 A step filed behind open work that has not started yet may name it; a start that then finds nothing to branch from fails in those words.
 At dispatch the working copy is created at that commit (`WorkspaceService.baseAt`) instead of the dispatch base, and the brief says so in one line (`renderBranchFromLine`).
 A task that branches from another starts only on this Mac.

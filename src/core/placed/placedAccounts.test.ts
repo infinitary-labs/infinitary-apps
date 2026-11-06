@@ -42,7 +42,8 @@ import { type HelperRun, startHelper } from "../helper/run";
 import { SessionHost } from "../helper/sessionHost";
 import { WorkingCopies } from "../helper/workingCopies";
 import { jobExitWake } from "../jobs/jobManager";
-import { type AccountAttachment, CrewSupervisor } from "../orchestrator/crewSupervisor";
+import { CrewSupervisor } from "../orchestrator/crewSupervisor";
+import type { AccountAttachment } from "../orchestrator/crewSupervisorOptions";
 import { Flagship } from "../orchestrator/flagship";
 import type { TypedWake } from "../orchestrator/wakes";
 import { appPathsFor } from "../paths";
@@ -596,7 +597,7 @@ describe("a task on another computer, on that computer's own sign-in", () => {
     // and the captain's words go to it rather than wait on this Mac's account.
     const record = home.tasks.get("t-placed");
     if (!record) throw new Error("The task has no record.");
-    expect(home.supervisor.workPosture(record).state).not.toBe("paused");
+    expect(home.supervisor.postures.workPosture(record).state).not.toBe("paused");
     expect(
       await home.supervisor.steerCrewmate("t-placed", "Also fix the header.", "captain"),
     ).not.toBe("recorded-held");

@@ -799,7 +799,7 @@ The raw words stay on the error for the record and `plainProblem`; the kind is w
 `ChangeChecks` (`src/core/orchestrator/changeChecks.ts`, read by the crewmate's `check_change` and the completion-card gate) asks the seam and records what it answers on the task's delivery facts: `changeLabel` from `label()`, `prNumber`/`prUrl` only where the host has them, `prBase` where the host names the branch the change targets, and each check reading stamped with the number of the pull request it was read of (`CheckSnapshot.prNumber`), which the change record binds it by (`docs/task-record.md`, "A task's change").
 When the branch has no open change but the task names a pull request, the reading asks for it by its number with `pull`: merged outside the app, it records `ci: merged`, and the strip reads "merged outside the app" until the shared watcher can close a task whose crewmate declared that merge finishes its work.
 A put-in made before that tick also answers the merge already made and closes the task without sending anything.
-The settle card's fact strip (`CrewSupervisor.settleFacts`) and the record card read that label and link - never parse a number back out of a URL.
+The settle card's fact strip (`SettleFacts.strip` in `settleCardFacts.ts`) and the record card read that label and link - never parse a number back out of a URL.
 The record card still names where the change goes from the repository's `host` ("goes in on GitHub", "goes in on git.example.com").
 Settings → Projects names no place on a closed row, which says only how a project differs from a new one; the open row's Where it lives shows the address, and stays empty on a project kept on this Mac: the captain's constraint is that a forge is never required.
 

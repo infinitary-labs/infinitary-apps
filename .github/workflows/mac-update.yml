@@ -92,6 +92,16 @@ jobs:
           UPDATE_TARGET_ZIP: ${{ steps.zip.outputs.path }}
           INSTALLER_EVIDENCE: ${{ runner.temp }}/update-evidence
         run: node scripts/check-update-from-alpha.mjs
+      # GitHub ends a job as lost when the runner's lease renewals stop reaching its
+      # job service, even after every step passed, and the virtual Mac's runner log
+      # is deleted with it; read the renewals and the path to that service while the
+      # job can still upload them (docs/alpha.md, "The update check").
+      - name: Read the runner's link to GitHub's job service
+        if: always()
+        timeout-minutes: 5
+        env:
+          INSTALLER_EVIDENCE: ${{ runner.temp }}/update-evidence
+        run: node scripts/runner-link-readings.ts
       - name: Keep the observed results
         if: always()
         uses: actions/upload-artifact@v4

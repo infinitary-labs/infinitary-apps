@@ -502,6 +502,10 @@ It is the release's only update check: the rehearsal that ran before signing rep
   The live reply must stop before the replacement, and the captain's message and a personal draft must survive.
 
 The check builds nothing, signs nothing and sends nothing to Apple; its observations are kept as `update-evidence-*` artifacts.
+GitHub ends a job as lost when the runner's lease renewals stop reaching its job service, even after every step passed, and the virtual Mac's runner log is deleted with it.
+So the job's next step, `scripts/runner-link-readings.ts`, reads the runner's own renewals from its diagnostics folder and waits out one more renewal when the last is overdue.
+It also probes the virtual Mac's path to the job service and the results service by name, address, route and open connections.
+It prints a summary, warns on a missed renewal, a listener error or a failed probe, keeps `runner-link.json` beside the other observations and never fails the job.
 The saved work is created by the installed published app itself, through its own interface, because an older app refuses a database a newer build wrote.
 A stable inherits its alpha's update check and does not run it.
 

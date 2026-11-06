@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "update-check-runner-link",
+      "reason": "Release-pipeline diagnostics only: the alpha update check's job now reads its runner's lease renewals and its path to GitHub's job service and keeps them with its evidence, so a job GitHub ends as lost after every step passed shows why; no app behavior changes."
+    }
+  ]
+}

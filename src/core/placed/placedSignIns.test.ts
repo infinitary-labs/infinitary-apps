@@ -340,7 +340,7 @@ describe("a task that runs on a computer that runs work", () => {
     await at.restartHome();
     await at.restartComputer();
     await at.inReach("t-resumed");
-    await at.home().supervisor.steerCrewmate("t-resumed", "Fix the header too.");
+    await at.home().supervisor.steer.steerCrewmate("t-resumed", "Fix the header too.");
     await expect
       .poll(() => at.home().tasks.get("t-resumed")?.outcome)
       .toBe("The header is fixed too.");

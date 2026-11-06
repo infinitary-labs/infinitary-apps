@@ -518,7 +518,7 @@ describe("a task's own Runs on", () => {
     askRunsOn(home, "t-parent", at.deviceId);
     expect(home.tasks.get("t-part")?.deviceId).toBe(at.deviceId);
 
-    await home.supervisor.stopTasksOn(at.deviceId);
+    await home.supervisor.sessions.stopTasksOn(at.deviceId);
     expect(home.tasks.get("t-parent")?.shape?.runs_on_ask).toBeUndefined();
     expect(home.tasks.get("t-parent")?.deviceId ?? null).toBeNull();
     expect(home.tasks.get("t-part")?.deviceId ?? null).toBeNull();

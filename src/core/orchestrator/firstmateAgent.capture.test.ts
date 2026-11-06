@@ -464,7 +464,7 @@ describe("FirstmateAgent capture", () => {
       ],
     });
     const commission = vi.spyOn(supervisor.intake, "commission");
-    const steer = vi.spyOn(supervisor, "steerCrewmate").mockResolvedValue("mid-turn");
+    const steer = vi.spyOn(supervisor.steer, "steerCrewmate").mockResolvedValue("mid-turn");
     // INF-1389 friction 3 also carries complete text files before ask capture attaches the spawn.
     initOverflowDir(scratchDir("infinitary-firstmate-files-"));
     const messageFiles: MessageFile[] = [];

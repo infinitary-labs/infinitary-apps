@@ -130,7 +130,7 @@ export type HomeDevices = {
 export type DevicesCrew = {
   supervisor: Pick<
     CrewSupervisor,
-    "stopTasksOn" | "updates" | "cards" | "placement" | "observeRequiredActionDevice"
+    "sessions" | "updates" | "cards" | "placement" | "observeRequiredActionDevice"
   >;
   placed: Pick<PlacedSessions, "bringHome">;
   repos: RepoRegistry;
@@ -544,7 +544,7 @@ export async function startHomeDevices(options: {
         work: workDevices,
         tasks,
         repos,
-        stopTasks: (deviceId) => supervisor.stopTasksOn(deviceId),
+        stopTasks: (deviceId) => supervisor.sessions.stopTasksOn(deviceId),
         bringHome: (deviceId) => placed.bringHome(deviceId),
         // Its crew pauses for its update and carries on after (docs/helper.md, "Updated by its home").
         pauseTasks: (deviceId) => supervisor.updates.pauseForUpdate(deviceId),

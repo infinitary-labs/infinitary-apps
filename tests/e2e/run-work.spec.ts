@@ -1648,9 +1648,9 @@ test("a crewmate's turn runs on the app as a computer that runs work: the home h
   await test.step("out of reach, the home holds the task and the turn goes on there", async () => {
     await home.drop();
     await expect.poll(() => home.devices.inReach(deviceId)).toBe(false);
-    expect(await home.supervisor.steerCrewmate("t-rivets", `Please ${CLAUDE_STEER_MARKER}.`)).toBe(
-      "recorded-held",
-    );
+    expect(
+      await home.supervisor.steer.steerCrewmate("t-rivets", `Please ${CLAUDE_STEER_MARKER}.`),
+    ).toBe("recorded-held");
     // The model goes on there; its progress note waits for the home.
     model.releaseHeldCrew();
     await expect.poll(() => model.heldRequests()).toBe(0);
@@ -1781,7 +1781,7 @@ test("a closed task with unreadable work history stays present and brings its wo
     writeFileSync(join(copy, "only-copy.txt"), "unique work\n");
     const metadata = readFileSync(join(copy, ".git"), "utf8");
     writeFileSync(join(copy, ".git"), `gitdir: ${join(me.homeDir, "missing")}\n`);
-    await home.supervisor.interruptCrewmate("t-tidy", "cancel");
+    await home.supervisor.sessions.interruptCrewmate("t-tidy", "cancel");
     await expect(home.placed.bringHome(deviceId)).rejects.toThrow();
     expect(home.tasks.get("t-tidy")?.workspaceState).toBe("present");
     expect(readFileSync(join(copy, "only-copy.txt"), "utf8")).toBe("unique work\n");
@@ -1875,7 +1875,7 @@ test("a task in a project works in a working copy the app that runs work cloned,
     await git(copy, ["add", "-A"]);
     await git(copy, [...identity, "commit", "-q", "-m", "docs: tidy the readme"]);
     writeFileSync(join(copy, "notes.txt"), "still thinking\n");
-    await home.supervisor.interruptCrewmate("t-tidy", "cancel");
+    await home.supervisor.sessions.interruptCrewmate("t-tidy", "cancel");
     await expect
       .poll(() => home.tasks.get("t-tidy")?.workspaceState, { timeout: 30_000 })
       .toBe("removed");
@@ -1976,7 +1976,7 @@ test("a Mac with no git of its own runs a project's work with the app's own git,
     writeFileSync(join(copy, "README.md"), "# website\n\nWhich git.\n");
     await git(copy, ["add", "-A"]);
     await git(copy, [...identity, "commit", "-q", "-m", "docs: say which git"]);
-    await home.supervisor.interruptCrewmate("t-git", "cancel");
+    await home.supervisor.sessions.interruptCrewmate("t-git", "cancel");
     await expect
       .poll(() => home.tasks.get("t-git")?.workspaceState, { timeout: 30_000 })
       .toBe("removed");

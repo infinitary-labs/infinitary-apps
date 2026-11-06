@@ -411,7 +411,7 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     // Its next turn there carries the note, never the message.
     model([{ text: "Lena's invoice is answered." }]);
     const requests = api.requests.length;
-    await home.supervisor.steerCrewmate("t-lena", "What did Lena ask for?");
+    await home.supervisor.steer.steerCrewmate("t-lena", "What did Lena ask for?");
     await expect.poll(() => home.tasks.get("t-lena")?.outcome).toBe("Lena's invoice is answered.");
     const next = said(api.requests[requests]);
     expect(next).toContain("What did Lena ask for?");

@@ -732,7 +732,7 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     expect(kinds(at)).toEqual(["queued-started", "provider-cut-off"]);
     expect(home.tasks.get("t2")?.status).toBe("open");
     // The captain's word meanwhile is kept for it.
-    expect(await home.supervisor.steerCrewmate("t1", "Also fix the header.", "captain")).toBe(
+    expect(await home.supervisor.steer.steerCrewmate("t1", "Also fix the header.", "captain")).toBe(
       "recorded-held",
     );
     expect(at.claude.turns).toHaveLength(1);

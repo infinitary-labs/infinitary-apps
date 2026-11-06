@@ -275,14 +275,15 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:conversation:state": () => ({ busy: services.firstmate.isBusy() }),
 
     "inf:task:abort": async (taskId) => {
-      await services.supervisor.abort(taskId);
+      await services.supervisor.sessions.abort(taskId);
       return { ok: true as const };
     },
 
     // The Crewmate tab's composer: the captain's own line, and his ⌃C or Stop.
-    "inf:task:steer": (taskId, text) => services.supervisor.steerFromCrewmateTab(taskId, text),
+    "inf:task:steer": (taskId, text) =>
+      services.supervisor.steer.steerFromCrewmateTab(taskId, text),
 
-    "inf:task:interrupt": (taskId) => services.supervisor.interruptFromCrewmateTab(taskId),
+    "inf:task:interrupt": (taskId) => services.supervisor.steer.interruptFromCrewmateTab(taskId),
 
     "inf:task:run": (taskId, op, review, from) => {
       const refusal = services.supervisor.runTaskOp(taskId, op, review, from);
@@ -1006,7 +1007,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       const replacement = services.vault.customReplacement(draftId);
       if (
         replacement &&
-        (services.supervisor.accountHasActiveTurns(replacement) ||
+        (services.supervisor.sessions.accountHasActiveTurns(replacement) ||
           ((services.firstmate.boundAccount() ?? services.settings.getFirstmateAccount()) ===
             replacement &&
             services.firstmate.isBusy()))
@@ -1064,7 +1065,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       if (custom) {
         services.vault.customClose(accountId);
         await services.firstmate.disconnectAccount(accountId);
-        await services.supervisor.disconnectAccount(accountId);
+        await services.supervisor.sessions.disconnectAccount(accountId);
       }
       await services.vault.remove(accountId);
       services.servedModels.forget(accountId);

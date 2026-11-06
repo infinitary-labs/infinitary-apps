@@ -305,7 +305,7 @@ describe("the deliverable axis (Task B)", () => {
       crewmate.finishPrompt();
       await tick();
       // A steer starts another turn, and the captain chooses while it runs.
-      await supervisor.steerCrewmate(taskId, "INF-599's helpers still hold the lock.");
+      await supervisor.steer.steerCrewmate(taskId, "INF-599's helpers still hold the lock.");
       await tick();
       expect(tasks.get(taskId)?.activity).toBe("running");
       if (endsWithAbort) {
@@ -337,11 +337,11 @@ describe("the deliverable axis (Task B)", () => {
       specs[0]?.onReport?.("Both jobs are stuck, not slow.");
       let cancelled: Promise<void>;
       if (first === "cancel") {
-        cancelled = supervisor.interruptCrewmate(taskId, "cancel");
+        cancelled = supervisor.sessions.interruptCrewmate(taskId, "cancel");
         supervisor.act(card.id, "free-and-restart");
       } else {
         supervisor.act(card.id, "free-and-restart");
-        cancelled = supervisor.interruptCrewmate(taskId, "cancel");
+        cancelled = supervisor.sessions.interruptCrewmate(taskId, "cancel");
       }
       await cancelled;
       crewmate.finishPrompt();
@@ -542,7 +542,7 @@ describe("the deliverable axis (Task B)", () => {
     crewmate.finishPrompt();
     await tick();
     supervisor.close(card.id);
-    await supervisor.steerCrewmate(taskId, "I read the answer; report what remains.");
+    await supervisor.steer.steerCrewmate(taskId, "I read the answer; report what remains.");
     await tick();
     specs[0]?.onReport?.("Own vs rent: owning wins for sustained work.", undefined, {
       finished: true,

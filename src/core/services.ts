@@ -1443,15 +1443,15 @@ export async function createServices(
       busy: (reader) =>
         reader === FIRSTMATE_READER
           ? firstmate.conversationBusy()
-          : supervisor.conversationBusy(reader),
+          : supervisor.sessions.conversationBusy(reader),
       release: (reader) =>
         reader === FIRSTMATE_READER
           ? firstmate.releaseConversation()
-          : supervisor.releaseConversation(reader),
+          : supervisor.sessions.releaseConversation(reader),
       held: (reader) =>
         reader === FIRSTMATE_READER
           ? firstmate.conversationHeld()
-          : supervisor.conversationHeld(reader),
+          : supervisor.sessions.conversationHeld(reader),
     },
     // A crewmate on a computer that runs work: replaced there, by that computer.
     placed: (record, due, files) => placed.deleteOutside(record, due, files),

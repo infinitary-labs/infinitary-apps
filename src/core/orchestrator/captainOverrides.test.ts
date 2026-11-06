@@ -94,7 +94,7 @@ describe("the captain's override", () => {
       ok: false,
       text: `Override refused: nothing was recorded. The record holds no words the captain typed in ${h.key}'s Crewmate tab.`,
     });
-    await h.supervisor.steerFromCrewmateTab(h.taskId, "  merge it without the review ");
+    await h.supervisor.steer.steerFromCrewmateTab(h.taskId, "  merge it without the review ");
     await tick();
     expect(h.supervisor.overrides.citedCaptainWords(h.taskId, CREWMATE_TAB_VIA)).toEqual({
       ok: true,

@@ -326,7 +326,7 @@ describe("a task that runs on a computer that runs work", () => {
       earlier: transcript,
     });
     const asked = claude.served().length;
-    await home.supervisor.steerCrewmate("t-renew", "Make it blue too.");
+    await home.supervisor.steer.steerCrewmate("t-renew", "Make it blue too.");
     await expect.poll(() => claude.served().length).toBe(asked + 1);
     expect(claude.served().at(-1)?.said).toBe(`${told}\n\nMake it blue too.`);
     await expect.poll(() => home.tasks.get("t-renew")?.activity).toBe("idle");
@@ -337,7 +337,7 @@ describe("a task that runs on a computer that runs work", () => {
     // A home restart while that computer still holds it: the same conversation, said nothing again.
     await at.restartHome();
     const after = at.home();
-    await after.supervisor.steerCrewmate("t-renew", "And the header.");
+    await after.supervisor.steer.steerCrewmate("t-renew", "And the header.");
     await expect.poll(() => claude.served().length).toBe(asked + 2);
     const since = claude.served().at(-1)?.said ?? "";
     expect(since).toContain("And the header.");
@@ -391,7 +391,7 @@ describe("a task that runs on a computer that runs work", () => {
     await at.restartHome(() => at.moveComputer());
     await at.inReach("t-moved");
     const requests = api.requests.length;
-    await at.home().supervisor.steerCrewmate("t-moved", "Fix the header too.");
+    await at.home().supervisor.steer.steerCrewmate("t-moved", "Fix the header too.");
     await expect
       .poll(() => at.home().tasks.get("t-moved")?.outcome)
       .toBe("The header is fixed too.");
@@ -423,7 +423,7 @@ describe("a task that runs on a computer that runs work", () => {
     // same paths mapped, and its crewmate is not told a second time.
     await at.restartComputer();
     await at.inReach("t-moved");
-    await at.home().supervisor.steerCrewmate("t-moved", "Check the footer again.");
+    await at.home().supervisor.steer.steerCrewmate("t-moved", "Check the footer again.");
     await expect
       .poll(() => at.home().tasks.get("t-moved")?.outcome)
       .toBe("The footer still holds.");

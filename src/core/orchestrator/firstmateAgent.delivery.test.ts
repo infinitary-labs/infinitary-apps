@@ -123,7 +123,7 @@ describe("FirstmateAgent answer delivery", () => {
         { id: "t1", title: "Add pagination", status: "idle", sessionFile: "/tmp/t1.jsonl" },
       ],
     });
-    vi.spyOn(f.supervisor, "steerCrewmate").mockResolvedValue("recorded-held");
+    vi.spyOn(f.supervisor.steer, "steerCrewmate").mockResolvedValue("recorded-held");
     await f.agent.converse("tell the crew to use cursors");
     const steered = await toolsOf(f.specs)
       .get("steer_crewmate")
@@ -141,7 +141,7 @@ describe("FirstmateAgent answer delivery", () => {
         { id: "t1", title: "Add pagination", status: "idle", sessionFile: "/tmp/t1.jsonl" },
       ],
     });
-    const steer = vi.spyOn(f.supervisor, "steerCrewmate");
+    const steer = vi.spyOn(f.supervisor.steer, "steerCrewmate");
     await f.agent.converse("how is pagination going?");
     const tools = toolsOf(f.specs);
     await tools.get("tasks")?.execute("q1", {});
@@ -783,7 +783,7 @@ describe("FirstmateAgent answer delivery", () => {
         { id: "t1", title: "Add pagination", status: "idle", sessionFile: "/tmp/t1.jsonl" },
       ],
     });
-    vi.spyOn(f.supervisor, "steerCrewmate").mockResolvedValue("mid-turn");
+    vi.spyOn(f.supervisor.steer, "steerCrewmate").mockResolvedValue("mid-turn");
     await f.agent.converse("how is pagination going?");
     await finish(f);
     await drained(f.session, 2);

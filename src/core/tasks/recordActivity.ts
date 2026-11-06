@@ -471,7 +471,7 @@ function replyWords(
 
 /**
  * A move to another model, as the timeline and the feed say it
- * (`CrewSupervisor.recordServedModel`), each model by the name the captain
+ * (`CrewTurns.recordServedModel`), each model by the name the captain
  * knows it by: the backend's own fallback names the model whose safeguards
  * stopped a reply.
  */

@@ -1023,7 +1023,7 @@ export class FirstmateSeat {
    * adds its terminal sign-in instructions and paths into the app's files.
    * The raw text stays on the turn's own records (its ask and decision
    * rows). A crewmate's card says it the same way
-   * (`CrewSupervisor.signInCardBody`): a custom connection is named, with the
+   * (`CrewTurns.signInCardBody`): a custom connection is named, with the
    * way to check it again, since a sign-in is not what it needs. With no
    * provider to name, it lists the ones that can serve Firstmate.
    */

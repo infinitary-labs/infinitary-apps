@@ -33,7 +33,7 @@ The former public `recordDelivery` field bag is private; fixture injection of ol
 ## Conversations on a task
 
 `TaskService.turns.setSessionFile` commits the current resume pointer and its `task_sessions` association together.
-`CrewSupervisor.recordCrewSession` supplies the resume token, durable transcript file, computer and device, provider and model, account, and why the conversation opened at start, renewal, move, recovery and turn completion.
+`CrewSessions.recordCrewSession` supplies the resume token, durable transcript file, computer and device, provider and model, account, and why the conversation opened at start, renewal, move, recovery and turn completion.
 A conversation key comes from its resume token: a Pi file name without its suffix, or a Claude conversation id, never a placed proxy's construction id.
 One row belongs to one conversation on one task; reopening it updates its last observed activity and serving metadata without replacing its first observation or opening reason.
 `opened_at` is when this association was first recorded, and `last_at` is the latest recorded lifecycle boundary, not a claim about a provider's message timestamp.

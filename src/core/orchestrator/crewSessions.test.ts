@@ -1,14 +1,12 @@
 /**
- * A crewmate's session as the crew supervisor holds it (docs/helper.md,
- * "Holding a conversation"): who holds a conversation's files and when one
- * is let go, which account's turns are running and what disconnecting that
- * account stops, the stop and cancel controls' edge cases, and every task
- * stopped when a computer that runs work is removed. INF-2625's plan, the
- * crew supervisor's ninth step, moves this code out of the supervisor into
- * owners of its own (crew sessions, turns and steering); these cases pin,
- * before it moves, the behaviour no other test reaches. Each drives a
- * public door of the supervisor and reads its answer, the crewmate's
- * session and the record.
+ * A crewmate's session as the crew's session owner holds it (`CrewSessions`;
+ * docs/helper.md, "Holding a conversation"): who holds a conversation's
+ * files and when one is let go, which account's turns are running and what
+ * disconnecting that account stops, the stop and cancel controls' edge
+ * cases, and every task stopped when a computer that runs work is removed.
+ * These cases pin the behaviour no other test reaches. Each drives a public
+ * door of the owner and reads its answer, the crewmate's session and the
+ * record.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -42,7 +40,7 @@ function computer(fields: { ready: boolean; confirm?: (taskId: string) => Promis
   });
 }
 
-describe("a crewmate's session, before it moves out of the crew supervisor", () => {
+describe("a crewmate's session, as CrewSessions holds it", () => {
   it("holds a live crewmate's conversation, and lets go of it only between turns", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
@@ -52,25 +50,25 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
     });
     await tick();
 
-    expect(h.supervisor.conversationHeld(taskId)).toBe(true);
-    expect(h.supervisor.conversationBusy(taskId)).toBe(true);
-    expect(await h.supervisor.releaseConversation(taskId)).toBe(false);
-    expect(h.supervisor.conversationHeld(taskId)).toBe(true);
+    expect(h.supervisor.sessions.conversationHeld(taskId)).toBe(true);
+    expect(h.supervisor.sessions.conversationBusy(taskId)).toBe(true);
+    expect(await h.supervisor.sessions.releaseConversation(taskId)).toBe(false);
+    expect(h.supervisor.sessions.conversationHeld(taskId)).toBe(true);
     expect(crewmate.dispose).not.toHaveBeenCalled();
 
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
     await tick();
-    expect(h.supervisor.conversationBusy(taskId)).toBe(false);
-    expect(await h.supervisor.releaseConversation(taskId)).toBe(true);
+    expect(h.supervisor.sessions.conversationBusy(taskId)).toBe(false);
+    expect(await h.supervisor.sessions.releaseConversation(taskId)).toBe(true);
     expect(crewmate.dispose).toHaveBeenCalledTimes(1);
-    expect(h.supervisor.conversationHeld(taskId)).toBe(false);
+    expect(h.supervisor.sessions.conversationHeld(taskId)).toBe(false);
     // The task itself stays open: its next delivery resumes it from the saved conversation.
     expect(h.tasks.get(taskId)?.status).toBe("active");
 
     // Nothing holds a conversation no crewmate is running, so it is free at once.
-    expect(h.supervisor.conversationHeld("t-none")).toBe(false);
-    expect(await h.supervisor.releaseConversation("t-none")).toBe(true);
+    expect(h.supervisor.sessions.conversationHeld("t-none")).toBe(false);
+    expect(await h.supervisor.sessions.releaseConversation("t-none")).toBe(true);
   });
 
   it("knows which account's turns are running, and disconnecting one stops only that account's crewmates", async () => {
@@ -103,11 +101,11 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
     await tick();
     expect(accountOf).toEqual({ [work.taskId]: "acct-work", [home.taskId]: "acct-home" });
 
-    expect(h.supervisor.accountHasActiveTurns("acct-work")).toBe(true);
-    expect(h.supervisor.accountHasActiveTurns("acct-home")).toBe(true);
-    expect(h.supervisor.accountHasActiveTurns("acct-other")).toBe(false);
+    expect(h.supervisor.sessions.accountHasActiveTurns("acct-work")).toBe(true);
+    expect(h.supervisor.sessions.accountHasActiveTurns("acct-home")).toBe(true);
+    expect(h.supervisor.sessions.accountHasActiveTurns("acct-other")).toBe(false);
 
-    await h.supervisor.disconnectAccount("acct-work");
+    await h.supervisor.sessions.disconnectAccount("acct-work");
     expect(killJobs.mock.calls).toEqual([[work.taskId]]);
     expect(interrupts(h.tasks, work.taskId)).toEqual(["requested", "aborted-turn"]);
     expect(interrupts(h.tasks, home.taskId)).toEqual([]);
@@ -119,14 +117,14 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
     first.emit({ type: "turn_end", taskId: work.taskId });
     first.finishPrompt();
     await tick();
-    expect(h.supervisor.accountHasActiveTurns("acct-work")).toBe(false);
-    expect(h.supervisor.accountHasActiveTurns("acct-home")).toBe(true);
+    expect(h.supervisor.sessions.accountHasActiveTurns("acct-work")).toBe(false);
+    expect(h.supervisor.sessions.accountHasActiveTurns("acct-home")).toBe(true);
   });
 
   it("answers a stop and a cancel that find no running turn, and restores a cancel whose abort failed", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
-    await expect(h.supervisor.interruptCrewmate("t-none", "interrupt")).rejects.toThrow(
+    await expect(h.supervisor.sessions.interruptCrewmate("t-none", "interrupt")).rejects.toThrow(
       'Unknown task "t-none".',
     );
 
@@ -139,7 +137,7 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
       sessionFile: "/sessions/t-idle.jsonl",
       status: "idle",
     });
-    await h.supervisor.interruptCrewmate("t-idle", "interrupt");
+    await h.supervisor.sessions.interruptCrewmate("t-idle", "interrupt");
     expect(interrupts(h.tasks, "t-idle")).toEqual(["no-turn"]);
     expect(h.tasks.get("t-idle")?.status).toBe("active");
 
@@ -152,7 +150,7 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
     crewmate.abort = vi.fn(async () => {
       throw new Error("the session is gone");
     });
-    await expect(h.supervisor.interruptCrewmate(taskId, "cancel")).rejects.toThrow(
+    await expect(h.supervisor.sessions.interruptCrewmate(taskId, "cancel")).rejects.toThrow(
       "the session is gone",
     );
     expect(interrupts(h.tasks, taskId)).toEqual(["requested", "abort-failed"]);
@@ -163,7 +161,7 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
     crewmate.finishPrompt();
     await tick();
     expect(h.tasks.get(taskId)?.status).toBe("active");
-    expect(h.supervisor.conversationHeld(taskId)).toBe(true);
+    expect(h.supervisor.sessions.conversationHeld(taskId)).toBe(true);
   });
 
   it("asks the computer a running turn is on whether it still runs after a stop", async () => {
@@ -178,7 +176,7 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
     // Its conversation is held on the Mac mini now.
     h.tasks.placement.setDevice(taskId, MINI);
 
-    await h.supervisor.interruptCrewmate(taskId, "interrupt");
+    await h.supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     expect(interrupts(h.tasks, taskId)).toEqual(["requested", "aborted-turn"]);
     expect(confirm.mock.calls).toEqual([[taskId]]);
     // The computer says it still runs: nothing here ends the turn.
@@ -211,13 +209,13 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
     await tick();
     h.tasks.placement.setDevice(taskId, MINI);
 
-    await h.supervisor.stopTasksOn(MINI);
+    await h.supervisor.sessions.stopTasksOn(MINI);
 
     expect(h.tasks.get("t-there")?.status).toBe("dropped");
     expect(interrupts(h.tasks, "t-there")).toEqual(["cancelled-record"]);
     expect(h.tasks.get(taskId)?.status).toBe("dropped");
     expect(interrupts(h.tasks, taskId)).toEqual(["requested"]);
-    expect(h.supervisor.conversationHeld(taskId)).toBe(false);
+    expect(h.supervisor.sessions.conversationHeld(taskId)).toBe(false);
     // The out-of-reach crewmate is never asked: its computer cannot hear it.
     expect(crewmate.aborts).toHaveLength(0);
     expect(h.tasks.get("t-elsewhere")?.status).toBe("active");

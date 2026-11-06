@@ -67,7 +67,7 @@ async function midTurnChip(
   session = await world.factory.open({ ...spec, tools: [tool] });
   const atTurnEnd: string[] = [];
   session.subscribe((event) => {
-    // What the supervisor's recordUsage reads on turn_end (crewSupervisor.ts recordUsage).
+    // What the crew's recordUsage reads on turn_end (crewTurns.ts recordUsage).
     if (event.type === "turn_end") atTurnEnd.push(session.modelRef()?.id ?? "no model");
   });
   await session.prompt("Which way?");

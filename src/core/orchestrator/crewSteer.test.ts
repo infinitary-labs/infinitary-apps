@@ -1,14 +1,12 @@
 /**
- * How the crew supervisor steers a crewmate and hands it files
- * (docs/inbox.md, docs/integrations.md "Google", INF-992): the steers it
- * refuses before anything reaches the task's lane, a steer kept on the lane
- * while the crewmate's computer is out of reach or its resume failed, and
- * files handed on from another task's report or saved from outside, here or
- * on a computer that runs work. INF-2625's plan, the crew supervisor's ninth
- * step, moves this code out of the supervisor into owners of its own (crew
- * sessions, turns and steering); these cases pin, before it moves, the
- * behaviour no other test reaches. Each drives a public door of the
- * supervisor and reads its answer, the lane and the record.
+ * How the crew steers a crewmate (`CrewSteer`) and hands it files (the
+ * hand-over doors of `CrewSessions`; docs/inbox.md, docs/integrations.md
+ * "Google", INF-992): the steers it refuses before anything reaches the
+ * task's lane, a steer kept on the lane while the crewmate's computer is out
+ * of reach or its resume failed, and files handed on from another task's
+ * report or saved from outside, here or on a computer that runs work. These
+ * cases pin the behaviour no other test reaches. Each drives a public door of
+ * those owners and reads its answer, the lane and the record.
  */
 
 import { createHash } from "node:crypto";
@@ -51,7 +49,7 @@ function steers(h: Awaited<ReturnType<typeof running>>, taskId: string) {
     .map((event) => event.data?.outcome);
 }
 
-describe("a crewmate's steer, before it moves out of the crew supervisor", () => {
+describe("a crewmate's steer, as CrewSteer delivers it", () => {
   it("refuses a steer it cannot carry before anything reaches the task's lane", async () => {
     let takesResponses = true;
     const h = await running({ takesResponses: () => takesResponses });
@@ -59,7 +57,7 @@ describe("a crewmate's steer, before it moves out of the crew supervisor", () =>
     const before = lane();
 
     await expect(
-      h.supervisor.steerCrewmate(h.taskId, "check the meter", "captain", {
+      h.supervisor.steer.steerCrewmate(h.taskId, "check the meter", "captain", {
         response: { mode: "expected" },
       }),
     ).rejects.toThrow("Only a first mate message creates or cancels its response expectations.");
@@ -71,7 +69,7 @@ describe("a crewmate's steer, before it moves out of the crew supervisor", () =>
       "It counts every press.",
     );
     await expect(
-      h.supervisor.steerCrewmate(h.taskId, "never mind", "firstmate", {
+      h.supervisor.steer.steerCrewmate(h.taskId, "never mind", "firstmate", {
         response: { mode: "guidance-only", cancel: [answered.request.id] },
       }),
     ).rejects.toThrow("An answered request cannot be cancelled. Nothing was sent.");
@@ -79,7 +77,7 @@ describe("a crewmate's steer, before it moves out of the crew supervisor", () =>
     seedTask(h.tasks, { id: "t-other", title: "Fix the nav", status: "idle" });
     const foreign = h.inbox.requestResponse("t-other", "Is the nav fixed?");
     await expect(
-      h.supervisor.steerCrewmate(h.taskId, "never mind", "firstmate", {
+      h.supervisor.steer.steerCrewmate(h.taskId, "never mind", "firstmate", {
         response: { mode: "guidance-only", cancel: [foreign.request.id] },
       }),
     ).rejects.toThrow(
@@ -90,7 +88,7 @@ describe("a crewmate's steer, before it moves out of the crew supervisor", () =>
     h.tasks.placement.setDevice(h.taskId, MINI);
     takesResponses = false;
     await expect(
-      h.supervisor.steerCrewmate(h.taskId, "does it count?", "firstmate", {
+      h.supervisor.steer.steerCrewmate(h.taskId, "does it count?", "firstmate", {
         response: { mode: "expected" },
       }),
     ).rejects.toThrow(
@@ -110,7 +108,7 @@ describe("a crewmate's steer, before it moves out of the crew supervisor", () =>
     h.tasks.placement.setDevice(h.taskId, MINI);
     ready = false;
 
-    expect(await h.supervisor.steerCrewmate(h.taskId, "count the long presses too")).toBe(
+    expect(await h.supervisor.steer.steerCrewmate(h.taskId, "count the long presses too")).toBe(
       "recorded-held",
     );
     expect(h.crewmate.steer).not.toHaveBeenCalled();
@@ -128,12 +126,12 @@ describe("a crewmate's steer, before it moves out of the crew supervisor", () =>
       status: "idle",
     });
     ready = true;
-    expect(await h.supervisor.steerCrewmate("t-there", "use the new icons")).toBe(
+    expect(await h.supervisor.steer.steerCrewmate("t-there", "use the new icons")).toBe(
       "recorded-retrying",
     );
     expect(steers(h, "t-there")).toEqual(["recorded-retrying"]);
     expect(h.inbox.pending("t-there").map(renderWake)).toEqual(["use the new icons"]);
-    expect(h.supervisor.conversationHeld("t-there")).toBe(false);
+    expect(h.supervisor.sessions.conversationHeld("t-there")).toBe(false);
   });
 
   it("hands another task's reported files on, refusing what it cannot deliver", async () => {
@@ -152,26 +150,26 @@ describe("a crewmate's steer, before it moves out of the crew supervisor", () =>
     if (!kept) throw new Error("the picture was not kept");
     const key = (id: string) => h.tasks.get(id)?.key;
 
-    await expect(h.supervisor.handFiles("t-none", h.taskId)).rejects.toThrow(
+    await expect(h.supervisor.sessions.handFiles("t-none", h.taskId)).rejects.toThrow(
       "There is no task t-none to hand files from.",
     );
-    await expect(h.supervisor.handFiles("t-finder", "t-none")).rejects.toThrow(
+    await expect(h.supervisor.sessions.handFiles("t-finder", "t-none")).rejects.toThrow(
       "There is no task t-none to hand files to.",
     );
-    await expect(h.supervisor.handFiles("t-empty", h.taskId)).rejects.toThrow(
+    await expect(h.supervisor.sessions.handFiles("t-empty", h.taskId)).rejects.toThrow(
       `${key("t-empty")} has no reported files to hand on: its crewmate passes them in report files.`,
     );
-    await expect(h.supervisor.handFiles("t-finder", "t-later")).rejects.toThrow(
+    await expect(h.supervisor.sessions.handFiles("t-finder", "t-later")).rejects.toThrow(
       `${key("t-later")} has not started, so there is no folder to hand files into yet.`,
     );
     h.tasks.placement.setDevice(h.taskId, MINI);
-    await expect(h.supervisor.handFiles("t-finder", h.taskId)).rejects.toThrow(
+    await expect(h.supervisor.sessions.handFiles("t-finder", h.taskId)).rejects.toThrow(
       `${key(h.taskId)} runs on Studio Mac mini, which needs an update to Infinitary before it can take handed files.`,
     );
     expect(sourceFile).not.toHaveBeenCalled();
 
     takesHandover = true;
-    const guidance = await h.supervisor.handFiles("t-finder", h.taskId);
+    const guidance = await h.supervisor.sessions.handFiles("t-finder", h.taskId);
     expect(sourceFile.mock.calls).toEqual([
       [MINI, h.taskId, kept.file, join(handover, kept.file), "handover"],
     ]);
@@ -189,23 +187,23 @@ describe("a crewmate's steer, before it moves out of the crew supervisor", () =>
     seedTask(h.tasks, { id: "t-later", title: "Fix the clipped card", status: "queued" });
     const bytes = Buffer.from("the invoice");
 
-    expect(h.supervisor.outsideFileRefusal("t-later")).toBe(
+    expect(h.supervisor.sessions.outsideFileRefusal("t-later")).toBe(
       "this task is not running, so it has no hand-over folder to save into.",
     );
-    expect(h.supervisor.outsideFileRefusal(h.taskId)).toBeUndefined();
+    expect(h.supervisor.sessions.outsideFileRefusal(h.taskId)).toBeUndefined();
     h.tasks.placement.setDevice(h.taskId, MINI);
     const refusal =
       "update Infinitary on Studio Mac mini before a file from outside can be saved into this task's folder there.";
-    expect(h.supervisor.outsideFileRefusal(h.taskId)).toBe(refusal);
-    await expect(h.supervisor.saveOutsideFile(h.taskId, "invoice.pdf", bytes)).rejects.toThrow(
-      refusal,
-    );
+    expect(h.supervisor.sessions.outsideFileRefusal(h.taskId)).toBe(refusal);
+    await expect(
+      h.supervisor.sessions.saveOutsideFile(h.taskId, "invoice.pdf", bytes),
+    ).rejects.toThrow(refusal);
     expect(sourceFile).not.toHaveBeenCalled();
 
     takesOutsideFiles = true;
-    expect(h.supervisor.outsideFileRefusal(h.taskId)).toBeUndefined();
+    expect(h.supervisor.sessions.outsideFileRefusal(h.taskId)).toBeUndefined();
     const file = handoverFileName("invoice.pdf", createHash("sha256").update(bytes).digest("hex"));
-    expect(await h.supervisor.saveOutsideFile(h.taskId, "invoice.pdf", bytes)).toEqual({
+    expect(await h.supervisor.sessions.saveOutsideFile(h.taskId, "invoice.pdf", bytes)).toEqual({
       file,
       path: `/mini/temp/${h.taskId}/${file}`,
     });

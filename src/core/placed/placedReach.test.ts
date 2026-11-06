@@ -22,7 +22,8 @@ import {
 } from "../../../tests/helpers/scriptedClaudeContract";
 import { PlacedTasks } from "../helper/placedTasks";
 import { crewmateRenewedNote } from "../orchestrator/crewSession";
-import { QUIET_CARD_MS, UNHEARD_END_NOTE } from "../orchestrator/crewSupervisor";
+import { QUIET_CARD_MS } from "../orchestrator/crewSupervisor";
+import { UNHEARD_END_NOTE } from "../orchestrator/crewTurns";
 import { renderWake } from "../orchestrator/wakes";
 import { crewmatePlacedDir } from "../paths";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
@@ -145,7 +146,7 @@ describe("a task that runs on a computer that runs work", () => {
 
     // Out of reach: words wait on its lane, nothing calls it stuck, and after
     // a minute the feed says so once.
-    expect(await home.supervisor.steerCrewmate("t-drop", "Make it blue too.")).toBe(
+    expect(await home.supervisor.steer.steerCrewmate("t-drop", "Make it blue too.")).toBe(
       "recorded-held",
     );
     const before = kinds(home, "t-drop").length;
@@ -225,7 +226,7 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => api.openRequests()).toBe(1);
     await at
       .home()
-      .supervisor.steerCrewmate(
+      .supervisor.steer.steerCrewmate(
         taskId,
         "What is the full path to setup/shell-pc/shell-pc-job-host-remove.cmd?",
         "firstmate",
@@ -497,7 +498,7 @@ describe("a task that runs on a computer that runs work", () => {
         ).toHaveLength(1);
         const asked = claude.served().length;
         claude.answer({ text: "Carrying on." });
-        await home.supervisor.steerCrewmate(taskId, "Now the header.");
+        await home.supervisor.steer.steerCrewmate(taskId, "Now the header.");
         await expect.poll(() => claude.served().length).toBeGreaterThan(asked);
         const said = claude.served().at(-1)?.said ?? "";
         expect(said).toContain(join(at.folders(taskId).sessions, `${earlier}.jsonl`));
@@ -579,7 +580,7 @@ describe("a task that runs on a computer that runs work", () => {
         } else if (trigger === "quiet") {
           home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
         } else {
-          await home.supervisor.interruptCrewmate(taskId, "interrupt");
+          await home.supervisor.sessions.interruptCrewmate(taskId, "interrupt");
         }
         await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
         expect(home.tasks.timeline(taskId).map((event) => event.text)).toContain(UNHEARD_END_NOTE);
@@ -696,7 +697,7 @@ describe("a task that runs on a computer that runs work", () => {
       claude.continueTurn();
       await expect.poll(() => readAsked).toBe(true);
       // INF-2558: a steer reaches the turn the crewmate carries on by itself.
-      await home.supervisor.steerCrewmate(taskId, "Check the header too.");
+      await home.supervisor.steer.steerCrewmate(taskId, "Check the header too.");
       const asked = claude.served().length;
       home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
       await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Done reading.");
@@ -818,7 +819,7 @@ describe("a task that runs on a computer that runs work", () => {
     await at.inReach("t-contract");
     expect(home.placed.takesChangePresentations(at.deviceId)).toBe(true);
     const requests = api.requests.length;
-    await home.supervisor.steerCrewmate("t-contract", "Fix the header too.");
+    await home.supervisor.steer.steerCrewmate("t-contract", "Fix the header too.");
     await expect.poll(() => home.tasks.get("t-contract")?.outcome).toBe("The header is next.");
     const served = api.requests.at(-1)?.body.tools?.map((tool) => tool.name) ?? [];
     expect(api.requests.length).toBeGreaterThan(requests);

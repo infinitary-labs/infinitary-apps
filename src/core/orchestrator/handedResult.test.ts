@@ -11,7 +11,8 @@ import { InboxStore } from "../storage/inboxStore";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
-import { CrewSupervisor } from "./crewSupervisor";
+import type { CrewCore } from "./crewCore";
+import { CrewSessions } from "./crewSessions";
 import type { SettleServiceHost } from "./settleHost";
 import { createSettleOwners } from "./settleOwners";
 
@@ -76,8 +77,8 @@ describe("handed-on result completion", () => {
       new URL("../../../release-notes/pictures/action-reply-line-dark.webp", import.meta.url),
     );
     const [kept] = await keepHandoverFiles([original], crewmateHandoverDir(paths, "finder"));
-    const supervisor = { options: { tasks, paths } } as unknown as CrewSupervisor;
-    const guidance = await CrewSupervisor.prototype.handFiles.call(supervisor, "finder", "builder");
+    const sessions = new CrewSessions({ options: { tasks, paths } } as unknown as CrewCore);
+    const guidance = await sessions.handFiles("finder", "builder");
     if (!kept) throw new Error("the screenshot was not retained");
     const delivered = join(crewmateTempDir(paths, "builder"), "handover", kept.file);
     expect(guidance).toContain(delivered);
@@ -91,10 +92,8 @@ describe("handed-on result completion", () => {
   it("does not record a handoff when no files arrived", async () => {
     const { tasks } = fixture("change");
     const paths = { crewmatesDir: scratchDir("infinitary-missing-result-") } as AppPaths;
-    const supervisor = { options: { tasks, paths } } as unknown as CrewSupervisor;
-    await expect(
-      CrewSupervisor.prototype.handFiles.call(supervisor, "finder", "builder"),
-    ).rejects.toThrow("no reported files");
+    const sessions = new CrewSessions({ options: { tasks, paths } } as unknown as CrewCore);
+    await expect(sessions.handFiles("finder", "builder")).rejects.toThrow("no reported files");
     expect(tasks.capture.resultHandoffOf("finder")).toBe(false);
   });
 

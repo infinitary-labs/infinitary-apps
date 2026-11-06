@@ -1266,7 +1266,7 @@ class Replay {
         const taskId = this.ids.toReplay.get(event.alias);
         const record = taskId ? this.tasks.get(taskId) : undefined;
         if (!taskId || !record || TaskService.isClosed(record)) return;
-        await this.supervisor.interruptCrewmate(taskId, "cancel").catch(() => {});
+        await this.supervisor.sessions.interruptCrewmate(taskId, "cancel").catch(() => {});
         return;
       }
       case "card-resolution": {

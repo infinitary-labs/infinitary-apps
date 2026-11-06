@@ -1,10 +1,8 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { isAbsolute, join, resolve as resolvePath } from "node:path";
-import { type AttachmentRef, attachmentWords, fileSizeWords } from "@shared/attachments";
-import { type CutOff, isAuthFailureMessage } from "@shared/authFailure";
+import { rm } from "node:fs/promises";
+import { join, resolve as resolvePath } from "node:path";
+import { type AttachmentRef, attachmentWords } from "@shared/attachments";
 import {
   anythingElseOf,
   CARD_ANSWERS_BOUND_REFUSAL,
@@ -38,10 +36,7 @@ import { readyPresentation } from "@shared/changePresentation";
 import { type CheckChangeInput, isRepairAssessment } from "@shared/checkRepair";
 import { currentCheckStatus } from "@shared/checkSnapshot";
 import { isClientIssueReason } from "@shared/claudeClient";
-import type { ResponsePolicy } from "@shared/crewResponses";
 import { type CrewSpeed, type SpeedSelection, speedNote } from "@shared/crewSpeed";
-import type { CrewSendResult } from "@shared/crewTranscript";
-import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
 import { noSignInsStartRefusal, updateStartRefusal } from "@shared/deviceSetup";
 import { noNewWorkStartRefusal } from "@shared/deviceUpdateNudge";
@@ -66,11 +61,9 @@ import {
   validationRevision,
   validationStateRevision,
 } from "@shared/liveValidation";
-import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
 import { UNCOMPARED_WAIT } from "@shared/placement";
-import type { TypedFailure } from "@shared/plainProblem";
-import { CREWMATE_TAB_VIA, type InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
-import { catalogEntry, isRetiredProvider, PROVIDER_CATALOG } from "@shared/providers";
+import { TASK_CARD_VIA } from "@shared/provenance";
+import { catalogEntry } from "@shared/providers";
 import { formatDurationShort } from "@shared/quotaSignals";
 import {
   DROP_REVIEW_STALE,
@@ -78,7 +71,6 @@ import {
   dropStartedRefusal,
   NO_LONGER_WANTED,
 } from "@shared/recordDrop";
-import { waitStall } from "@shared/recovery";
 import {
   autonomyForRecord,
   deliveryForRecord,
@@ -117,7 +109,6 @@ import {
   MERGE_WORDS,
   REVIEW_CAREFULLY_WORDS,
 } from "@shared/vocabulary";
-import type { HandoverFile } from "@shared/work";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
 import { AttachmentUnavailableError, keepImages, loadImages } from "../attachments";
@@ -130,7 +121,6 @@ import type {
 } from "../forge";
 import type { IntegrationAskTaken } from "../integrations";
 import { jobExitWake } from "../jobs/jobManager";
-import { renderDirections } from "../knowledge/directions";
 import { knowledgeBinding } from "../knowledge/knowledgeTools";
 import { capWithOverflow, type MessageFile, withPastedFiles } from "../overflow";
 import {
@@ -154,17 +144,13 @@ import { KIND_SOURCE, kindEstablished } from "../routing/kindClassifier";
 import { legacyShapeFromDifficulty, tierFor } from "../routing/policy";
 import { type RouteResult, requiresReasoningWait } from "../routing/router";
 import { isDowngrade } from "../routing/routingEngine";
-import { crewRunbookText } from "../runbooks/runbooks";
 import { followCompletions } from "../session/followCompletions";
 import { type AnsweredRead, OpenReads } from "../session/openReads";
 import {
   type ClientBackgroundTask,
-  type ControlProfile,
   LOCAL_MACHINE_ID,
   type ModelSession,
   type SessionEvent,
-  type SessionSpec,
-  StoppedBeforeStartError,
 } from "../session/session";
 import { bindTools, type EmittedCardInput } from "../session/tools";
 import type { DuplicateResult } from "../storage/cardStore";
@@ -176,36 +162,21 @@ import {
   SUPERVISION_RECIPIENT,
 } from "../storage/inboxStore";
 import type { CompletionOffer, TaskGate, TaskRecord } from "../storage/taskStore";
-import {
-  deliverHandoverFile,
-  HANDOVER_IN_DIR_NAME,
-  handoverFileName,
-  keptHandoverFiles,
-  verifyHandoverFiles,
-} from "../tasks/handoverFiles";
 import { StaleValidationDecisionError } from "../tasks/liveValidation";
 import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
-import { carryOnWords, modelMoveWords } from "../tasks/recordActivity";
+import { carryOnWords } from "../tasks/recordActivity";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import {
-  builtOnRows,
   queryTasks,
   type TaskQueryInput,
   type TaskQueryReach,
   type TaskQueryRow,
 } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
-import { provisionTaskTemp } from "../tasks/taskTemp";
-import type { ReportDeclaration } from "../tasks/taskTurns";
 import { crewTally } from "../tasks/workPresentation";
 import { compareSemver } from "../update/semver";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
-import { gitFailure } from "../workspace/git";
-import type {
-  DependencyInstall,
-  DispatchBase,
-  WorktreeAcquisition,
-} from "../workspace/workspaceService";
+import type { DispatchBase, WorktreeAcquisition } from "../workspace/workspaceService";
 import { type AskEnding, askEndingOf } from "./askEnding";
 import { CaptainOverrides } from "./captainOverrides";
 import type { WakeChoice } from "./captainWakes";
@@ -217,26 +188,18 @@ import { declareRunCheck } from "./checkRepair";
 import { CheckWatcher } from "./checkWatch";
 import { ciFactOf } from "./ciFact";
 import { CrewBrief } from "./crewBrief";
+import type { CrewCore } from "./crewCore";
 import { CrewmateCards } from "./crewmateCards";
 import {
   type InterruptSource,
-  type MoveTarget,
   type PlacementRecord,
   QUIT_SETTLE_MS,
-  type SteerDelivery,
-  type SteerSource,
   SUPERVISOR_STEER,
   type TaskRuntime,
-  type UnreadSteer,
 } from "./crewRuntime";
-import {
-  type CrewmateRestart,
-  type CrewmateSpec,
-  crewmateProcedureFor,
-  crewmateRenewedNote,
-  crewmateResumeToken,
-  crewmateSessionSpec,
-} from "./crewSession";
+import type { CrewmateSpec } from "./crewSession";
+import { CrewSessions } from "./crewSessions";
+import { CrewSteer } from "./crewSteer";
 import type {
   CrewSupervisorOptions,
   FirstmateHooks,
@@ -244,6 +207,7 @@ import type {
   PluginConsentHandler,
   ProjectSetupHandler,
 } from "./crewSupervisorOptions";
+import { CrewTurns, crewSignInCardId } from "./crewTurns";
 import { CrewUpdates } from "./crewUpdates";
 import { premiumRetryPossible } from "./holds";
 import {
@@ -265,20 +229,12 @@ import {
   renderReviewBrief,
   withDeliveryLine,
 } from "./intentBrief";
-import { checkBackAsk, checkBackAskOnce, unnamedBackgroundWork } from "./jobWakes";
+import { unnamedBackgroundWork } from "./jobWakes";
 import { MainCheckWatcher } from "./mainCheckWake";
-import { approvableOffer, isCaptainGuidance, mergeHold } from "./mergeAuthorization";
+import { approvableOffer, mergeHold } from "./mergeAuthorization";
 import { namedModelOf, namedModelWords } from "./namedModel";
-import { outageFailedWake } from "./outageWakes";
 import { ReportIntake } from "./reportIntake";
-import { implausibleReport } from "./reportPlausibility";
-import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
-import {
-  PENDING_RESPONSES_END,
-  PENDING_RESPONSES_OPENING,
-  type WakeOpenReview,
-  wakeBuiltOn,
-} from "./reportWakes";
+import type { WakeOpenReview } from "./reportWakes";
 import { RestartWatch } from "./restartWatch";
 import { Reviews } from "./reviews";
 import { RunWatcher } from "./runWatch";
@@ -286,22 +242,18 @@ import { SettleFacts } from "./settleCardFacts";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
 import { computerLeftOutWake, systemWaitWake } from "./startWakes";
-import { installText, TaskMoves } from "./taskMoves";
+import { TaskMoves } from "./taskMoves";
 import { placedCutOffStartRefusal, TaskPlacement } from "./taskPlacement";
-import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
+import { askedUnderCardLine } from "./threadWords";
 import type { Ticker } from "./ticker";
-import { conversationRestartWake, type OpenCallFact } from "./turnWakes";
+import type { OpenCallFact } from "./turnWakes";
 import {
   laneText,
   laneTurnText,
-  renderWake,
-  replyWordsSpan,
   rowAttachments,
   type TypedWake,
   type WakeBody,
-  withAttachmentsDropped,
   withAttachmentsKept,
-  withGuidanceMark,
 } from "./wakes";
 import { WorkPostures } from "./workPosture";
 import {
@@ -342,12 +294,6 @@ export const QUIET_CARD_MS = 20 * 60 * 1000;
 /** A turn's wall-clock bound; a background job counts as moving for the same (idleLadder.ts). */
 const TURN_WALL_CLOCK_MS = JOB_BOUND_MS;
 const WATCHDOG_TICK_MS = 60 * 1000;
-/**
- * The task timeline's line for a turn whose end never arrived, ended once
- * the live session that ran it said it no longer works (INF-2332).
- */
-export const UNHEARD_END_NOTE =
-  "its turn had already ended where it ran, but that end never arrived; ended here as interrupted";
 /**
  * Why a start on request refuses a row that waits on blockers. Only a done
  * blocker clears its wait (`TaskService.blockerCleared`) and a dropped edge
@@ -432,43 +378,10 @@ function worktreeText(acquired: WorktreeAcquisition, where?: string): string {
   }
 }
 
-/** Lane rows that are the crewmate's own work, sent by nobody: they draw no spark (INF-759). */
-const OWN_LANE_KINDS: ReadonlySet<string> = new Set([
-  "job-exit",
-  "conversation-restart",
-  "turn-resumed",
-]);
-
-/**
- * The feed line for guidance that waited for a turn to end and goes out as
- * the next one (WI-5), and the fold that keeps one such line per task in
- * the feed (`feedOnce`, `recentFeed`; INF-1137).
- */
-export const QUEUED_GUIDANCE_LINE = "Delivered guidance that waited for its turn to end";
-
-/**
- * What a started task in the backlog hears with words sent to it (INF-2062):
- * it answers them and stays there, since only a Start picks it up again.
- */
-export const BACKLOG_STEER_LINE =
-  "This task waits in the backlog: answer what follows, then stop and wait. Do not carry on with the work until it is started again.";
-
 /** The one line a Start puts before what waited on a started task's lane in the backlog. */
 export function backlogLeftLine(actor: "captain" | "firstmate"): string {
   return `This task left the backlog: ${actor === "captain" ? "the captain" : "the first mate"} started it again. Carry on from where you stopped, with anything that waited on this task while it was there.`;
 }
-const QUEUED_GUIDANCE_FOLD = "queued-guidance";
-
-/** The idle ladder's rule ids: its wakes are the host's own, never a report's. */
-const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
-  "idle-nudge",
-  "idle-wake",
-  "idle-repeat",
-  "idle-card",
-  "job-bound",
-  "provider-cut-off",
-  "provider-back",
-]);
 
 /** Typed refusal lets non-UI consumers retain the open card rather than accept it. */
 export class CardChoiceUnavailableError extends Error {
@@ -515,27 +428,6 @@ export function downgradeLine(
   return `${held} right now.`;
 }
 
-/**
- * A report's handed files in the words the first mate reads (INF-992):
- * kept names and sizes, never content, and the task its steer names.
- */
-function handedFilesLine(
-  task: { id: string; key: string },
-  files: readonly HandoverFile[],
-): string {
-  const named = files.map((file) => `${file.file} (${fileSizeWords(file.size)})`).join(", ");
-  return `Files handed on, kept for steer_crewmate files_from ${task.key || task.id}: ${named}.`;
-}
-
-/**
- * The sign-in card a crewmate's turn raises when its provider no longer
- * accepts the sign-in: one per task, taken down once the account it was held
- * on serves again (`IdleLadder.checkCutOffs`).
- */
-export function crewSignInCardId(taskId: string): string {
-  return `card-auth-${taskId}`;
-}
-
 export class CrewSupervisor {
   private readonly tasks = new Map<string, TaskRuntime>();
   /**
@@ -552,8 +444,6 @@ export class CrewSupervisor {
 
   /** Charted starts requested and not yet claimed. A drop in that window refuses. */
   private readonly starting = new Set<string>();
-  /** Each task's conversation opening here now (`resumeTask`), which a plain resume joins. */
-  private readonly resuming = new Map<string, Promise<TaskRuntime>>();
   /** The facts a settle card's task writes on the card: its fact strip and its follow-ups. */
   private readonly settleFacts: SettleFacts;
   /** The card stack: the open cards and every write to them. */
@@ -586,17 +476,18 @@ export class CrewSupervisor {
   readonly inPlaceWork: InPlaceWork;
   /** How the crew takes in new work: commissions, plans, reviews and the task graph's links and drops. */
   readonly intake: TaskIntake;
-  private crewmateSeq = 0;
+  /** A crewmate's session and its conversation: opening, resuming, interrupting, stopping and letting go. */
+  readonly sessions: CrewSessions;
+  /** A crewmate's turn from its first prompt to its end, and what waits on its lane. */
+  readonly turns: CrewTurns;
+  /** Steering a crewmate: words kept on its lane, delivered into its turn or as the next one. */
+  readonly steer: CrewSteer;
   /** The watchdog's registrations on the shared ticker, undone at dispose. */
   private watchdog: (() => void)[] | undefined;
-  /** Sessions let go of mid-turn, each until it is gone (`releaseSession`). */
-  private readonly releasing = new Set<Promise<void>>();
   /** Ready sweeps running now, each until it ends (`sweepGates`). */
   private readonly sweeping = new Set<Promise<void>>();
   /** The app is quitting: a turn that settles now is not the crew's to act on. */
   private disposed = false;
-  /** Who waits for a task's running turn to end here, by task (`untilTurnOver`). */
-  private readonly turnWaiters = new Map<string, Set<() => void>>();
   private readonly now: () => number;
   /** Serializes inbox sweeps: a resume-heavy pass must not overlap itself. */
   private sweepingInbox = false;
@@ -627,7 +518,7 @@ export class CrewSupervisor {
       disposed: () => this.disposed,
       runtimes: () => this.tasks.values(),
       machineOf: (taskId) => this.machineOf(taskId),
-      untilTurnOver: (task) => this.untilTurnOver(task),
+      untilTurnOver: (task) => this.turns.untilTurnOver(task),
       sweepTaskLane: (taskId, at) => this.sweepTaskLane(taskId, at),
       sweepGates: (at) => this.sweepGates(at),
       broadcastCrewCounts: () => this.broadcastCrewCounts(),
@@ -692,16 +583,16 @@ export class CrewSupervisor {
       now: this.now,
       placement: this.placement,
       runtime: (taskId) => this.tasks.get(taskId),
-      releaseSession: (runtime) => this.releaseSession(runtime),
+      releaseSession: (runtime) => this.sessions.releaseSession(runtime),
       forgetRuntime: (taskId) => this.tasks.delete(taskId),
-      resumeTask: (taskId, move) => this.resumeTask(taskId, move),
-      deliverPendingToTask: (task) => this.deliverPendingToTask(task),
+      resumeTask: (taskId, move) => this.sessions.resumeTask(taskId, move),
+      deliverPendingToTask: (task) => this.turns.deliverPendingToTask(task),
       deliverLane: (taskId) => this.deliverLane(taskId),
       machineOf: (taskId) => this.machineOf(taskId),
       isPersonalTask: (taskId) => this.isPersonalTask(taskId),
       queuedShape: (record) => this.queuedShape(record),
       clientJobStart: (taskId) => this.clientJobStart(taskId),
-      modelName: (model) => this.modelName(model),
+      modelName: (model) => this.turns.modelName(model),
       beingUpdated: (deviceId) => this.updates.isUpdating(deviceId),
       clearSignInCard: (taskId) => this.cards.clearAuthDecisionCard(crewSignInCardId(taskId)),
       disposed: () => this.disposed,
@@ -717,10 +608,10 @@ export class CrewSupervisor {
       askEnding: this.askEnding,
       asksMoved: () => this.hooks.asksMoved?.(),
       runtimeState: (taskId) => this.tasks.get(taskId)?.state,
-      stopRuntime: (taskId) => this.stopRuntime(taskId),
+      stopRuntime: (taskId) => this.sessions.stopRuntime(taskId),
       hasRunningJobs: (taskId) =>
         options.hasRunningJobs?.(taskId) === true || this.clientJobStart(taskId) !== undefined,
-      announceReach: (taskId) => this.announceReach(taskId),
+      announceReach: (taskId) => this.steer.announceReach(taskId),
       ...(options.killJobs ? { killJobs: options.killJobs } : {}),
       ...(options.machines ? { placed: options.machines } : {}),
       endLiveTask: (taskId) => options.personal?.endLiveTask(taskId),
@@ -732,30 +623,32 @@ export class CrewSupervisor {
         const still = this.options.tasks.get(taskId);
         if (!still || TaskService.isClosed(still)) return;
         // A host result is not new captain guidance about the kept approval.
-        void this.steerInternal(
-          taskId,
-          {
-            facts: {
-              kind: "merge-continued",
-              ok: outcome.ok,
-              ...(outcome.stop === "outcome" ? { unknown: true } : {}),
-              change: review
-                ? `#${review.number}`
-                : still?.delivery?.prNumber !== undefined && outcome.stillOpen
-                  ? `#${still.delivery.prNumber}`
-                  : "the reviewed pull request",
-              ...(outcome.receipt?.head || review?.headSha
-                ? { head: outcome.receipt?.head ?? review?.headSha }
-                : {}),
-              ...(outcome.stillOpen ? { open: outcome.stillOpen } : {}),
-              text: outcome.text,
+        void this.steer
+          .steerInternal(
+            taskId,
+            {
+              facts: {
+                kind: "merge-continued",
+                ok: outcome.ok,
+                ...(outcome.stop === "outcome" ? { unknown: true } : {}),
+                change: review
+                  ? `#${review.number}`
+                  : still?.delivery?.prNumber !== undefined && outcome.stillOpen
+                    ? `#${still.delivery.prNumber}`
+                    : "the reviewed pull request",
+                ...(outcome.receipt?.head || review?.headSha
+                  ? { head: outcome.receipt?.head ?? review?.headSha }
+                  : {}),
+                ...(outcome.stillOpen ? { open: outcome.stillOpen } : {}),
+                text: outcome.text,
+              },
+              ...(outcome.ok && review ? { once: `merge-continued:${review.id}` } : {}),
             },
-            ...(outcome.ok && review ? { once: `merge-continued:${review.id}` } : {}),
-          },
-          SUPERVISOR_STEER,
-        ).catch((caught: unknown) => {
-          console.warn("[crew] merge continuation not delivered:", caught);
-        });
+            SUPERVISOR_STEER,
+          )
+          .catch((caught: unknown) => {
+            console.warn("[crew] merge continuation not delivered:", caught);
+          });
       },
       ...(options.closePullRequest ? { closePullRequest: options.closePullRequest } : {}),
       ...(options.readPull ? { readPull: options.readPull } : {}),
@@ -786,7 +679,7 @@ export class CrewSupervisor {
       cards: this.cards,
       machineOf: (taskId) => this.machineOf(taskId),
       deliverHandover: (taskId, path, name, sha256) =>
-        this.deliverHandover(taskId, path, name, sha256),
+        this.sessions.deliverHandover(taskId, path, name, sha256),
       knowledgeFor: (taskId) => this.knowledgeFor(taskId),
       backendOf: (taskId) => this.tasks.get(taskId)?.backend,
     });
@@ -795,7 +688,7 @@ export class CrewSupervisor {
       cards: this.cards,
       settling: this.settling,
       notifyOp: (wake, origin, ref) => this.hooks.notifyOp(wake, origin, ref),
-      steer: (taskId, wake) => this.steerInternal(taskId, wake, SUPERVISOR_STEER),
+      steer: (taskId, wake) => this.steer.steerInternal(taskId, wake, SUPERVISOR_STEER),
       startTask: (spec) => this.startTask(spec),
       reviewBuilderOf: (record) => this.reviewBuilderOf(record),
     });
@@ -834,7 +727,7 @@ export class CrewSupervisor {
       cards: this.cards,
       settling: this.settling,
       runtime: (taskId) => this.tasks.get(taskId),
-      steer: (taskId, message) => this.steerInternal(taskId, message, SUPERVISOR_STEER),
+      steer: (taskId, message) => this.steer.steerInternal(taskId, message, SUPERVISOR_STEER),
       broadcastCrewCounts: () => this.broadcastCrewCounts(),
       sweepGates: (at) => this.sweepGates(at),
     });
@@ -845,19 +738,19 @@ export class CrewSupervisor {
       placement: this.placement,
       reviews: this.reviews,
       runtime: (taskId) => this.tasks.get(taskId),
-      releaseSession: (runtime) => this.releaseSession(runtime),
+      releaseSession: (runtime) => this.sessions.releaseSession(runtime),
       forgetRuntime: (taskId) => {
         this.tasks.delete(taskId);
       },
       recordInterrupt: (taskId, mode, source, effect) =>
-        this.recordInterrupt(taskId, mode, source, effect),
+        this.sessions.recordInterrupt(taskId, mode, source, effect),
       personalFacts: () => this.personalFacts(),
       taskDelivery: (taskId) => this.taskDelivery(taskId),
       openReviewOf: (builderId) => this.openReviewOf(builderId),
       startTask: (spec) => this.startTask(spec),
       dispatchQueuedTask: (taskId, dispatch) => this.dispatchQueuedTask(taskId, dispatch),
       wakeReasoningWait: (taskId, title, routed) => this.wakeReasoningWait(taskId, title, routed),
-      announceReach: (taskId) => this.announceReach(taskId),
+      announceReach: (taskId) => this.steer.announceReach(taskId),
       haltProgram: (programId) => this.programs.halt(programId),
       broadcastCrewCounts: () => this.broadcastCrewCounts(),
       sweepGates: (at) => this.sweepGates(at),
@@ -895,8 +788,8 @@ export class CrewSupervisor {
       notifyOp: (wake, origin, taskId) => this.hooks.notifyOp(wake, origin, taskId),
       premiumCanServe: () => this.premiumCanServe(),
       recordSort: (taskId, title, wake, verdict, reason, rule, effect) =>
-        this.recordSort(taskId, title, wake, verdict, reason, rule, effect),
-      steer: (taskId, message) => this.steerInternal(taskId, message, SUPERVISOR_STEER),
+        this.turns.recordSort(taskId, title, wake, verdict, reason, rule, effect),
+      steer: (taskId, message) => this.steer.steerInternal(taskId, message, SUPERVISOR_STEER),
       raiseCard: (card) => this.cards.put(card),
       withdrawCard: (id, resolution) => this.cards.takeDown(id, resolution),
       answerOwed: (id) => this.cards.answerOwed(id),
@@ -934,7 +827,7 @@ export class CrewSupervisor {
           tasks: options.tasks,
           inbox: options.inbox,
           read: readRunWatch,
-          steer: (taskId, wake) => this.steerInternal(taskId, wake, SUPERVISOR_STEER),
+          steer: (taskId, wake) => this.steer.steerInternal(taskId, wake, SUPERVISOR_STEER),
         })
       : undefined;
     const readCheckWatch = options.readCheckWatch;
@@ -954,7 +847,7 @@ export class CrewSupervisor {
             const posture = this.postures.workPosture(record);
             return posture.state === "idle" && posture.reason === "dependency";
           },
-          steer: (taskId, wake) => this.steerInternal(taskId, wake, SUPERVISOR_STEER),
+          steer: (taskId, wake) => this.steer.steerInternal(taskId, wake, SUPERVISOR_STEER),
         })
       : undefined;
     const readMainChecks = options.readMainChecks;
@@ -965,10 +858,66 @@ export class CrewSupervisor {
           read: readMainChecks,
           steer: async (taskId, wake) => {
             this.options.tasks.turns.endIdle(taskId);
-            await this.steerInternal(taskId, wake, SUPERVISOR_STEER);
+            await this.steer.steerInternal(taskId, wake, SUPERVISOR_STEER);
           },
         })
       : undefined;
+    const core: CrewCore = {
+      options,
+      tasks: this.tasks,
+      now: this.now,
+      disposed: () => this.disposed,
+      hooks: () => this.hooks,
+      get sessions() {
+        return sessions;
+      },
+      get turns() {
+        return turns;
+      },
+      get steer() {
+        return steer;
+      },
+      briefs: this.briefs,
+      cards: this.cards,
+      crewPrograms: this.crewPrograms,
+      ladder: this.ladder,
+      moves: this.moves,
+      placement: this.placement,
+      programs: this.programs,
+      reportIntake: this.reportIntake,
+      restarts: this.restarts,
+      reviews: this.reviews,
+      settling: this.settling,
+      updates: this.updates,
+      broadcastCrewCounts: () => this.broadcastCrewCounts(),
+      bypassesSupervision: (taskId) => this.bypassesSupervision(taskId),
+      clientJobStart: (taskId) => this.clientJobStart(taskId),
+      crewmateHooks: (task, personal) => this.crewmateHooks(task, personal),
+      deliverableRows: (taskId, now) => this.deliverableRows(taskId, now),
+      follow: (task, session) => this.follow(task, session),
+      inBacklog: (taskId) => this.inBacklog(taskId),
+      isPersonalTask: (taskId) => this.isPersonalTask(taskId),
+      laneHeld: (taskId) => this.laneHeld(taskId),
+      machineOf: (taskId) => this.machineOf(taskId),
+      oldestJob: (taskId) => this.oldestJob(taskId),
+      outOfReach: (taskId) => this.outOfReach(taskId),
+      recordUndeliveredGuidance: (taskId, title, why, rows) =>
+        this.recordUndeliveredGuidance(taskId, title, why, rows),
+      refreshReview: (task) => this.refreshReview(task),
+      reportCardEffectFailure: (taskId, caught) => this.reportCardEffectFailure(taskId, caught),
+      reviewBuilderOf: (record) => this.reviewBuilderOf(record),
+      reviewToReread: (builder) => this.reviewToReread(builder),
+      routeCrewEvent: (taskId, wake, origin) => this.routeCrewEvent(taskId, wake, origin),
+      rowPictures: (taskId, rows) => this.rowPictures(taskId, rows),
+      serveability: () => this.serveability(),
+      sweepGates: (now) => this.sweepGates(now),
+    };
+    const sessions = new CrewSessions(core);
+    const turns = new CrewTurns(core);
+    const steer = new CrewSteer(core);
+    this.sessions = sessions;
+    this.turns = turns;
+    this.steer = steer;
   }
 
   private pluginConsent: PluginConsentHandler | null = null;
@@ -1174,7 +1123,7 @@ export class CrewSupervisor {
   private deliverLane(taskId: string): void {
     const task = this.tasks.get(taskId);
     if (task) {
-      this.deliverPendingToTask(task);
+      this.turns.deliverPendingToTask(task);
       return;
     }
     void this.sweepTaskLane(taskId, this.now());
@@ -1595,8 +1544,7 @@ export class CrewSupervisor {
     if (this.tasks.has(taskId)) {
       throw new Error(`Task ${taskId} already has a running crewmate.`);
     }
-    this.crewmateSeq += 1;
-    const crewmate = `crewmate ${this.crewmateSeq}`;
+    const crewmate = this.sessions.nameCrewmate();
     const record = this.options.tasks.get(taskId);
     if (record && TaskService.isClosed(record))
       throw new Error("The task closed before it could start.");
@@ -1781,7 +1729,7 @@ export class CrewSupervisor {
         ? (this.options.tasks.get(taskId)?.shape?.override_reasoning ??
           this.options.router?.reasoningChoice?.(routedModel, servedLevel))
         : undefined;
-      const session = await this.openCrewmate(
+      const session = await this.sessions.openCrewmate(
         task,
         {
           taskId,
@@ -1817,7 +1765,7 @@ export class CrewSupervisor {
         model: session.modelRef() ?? routedModel,
         reasoning: session.reasoning(),
       });
-      this.recordCrewSession(task, session, task.conversationBegan ?? "start");
+      this.sessions.recordCrewSession(task, session, task.conversationBegan ?? "start");
       // Right after `dispatched`, so the timeline reads in a fixed order:
       // where the working copy came from and the commit it starts at.
       const acquired = task.workspace?.acquired ?? elsewhere?.acquired;
@@ -1938,7 +1886,7 @@ export class CrewSupervisor {
         this.cards.scheduleBroadcast();
         this.broadcastCrewCounts();
       } else {
-        await this.cleanupFailedSpawn(task);
+        await this.sessions.cleanupFailedSpawn(task);
       }
       throw new Error(`Could not commission a crewmate: ${message}`);
     }
@@ -1965,243 +1913,8 @@ export class CrewSupervisor {
         : briefText(minted),
     );
     this.options.inbox.markDelivered([briefRowId]);
-    void this.prepareFirstTurn(task, minted, [briefRowId], pictures.images);
+    void this.turns.prepareFirstTurn(task, minted, [briefRowId], pictures.images);
     return { taskId, crewmate };
-  }
-
-  /**
-   * Open a crewmate's session: its account's binding, the crewmate preset on
-   * it, and the factory of that binding's backend. A recorded conversation
-   * its backend cannot reopen (a token of another backend's shape) starts
-   * fresh, and the task's timeline says so. `servedModel` is the model a
-   * resumed conversation's record names ("provider/id"), so a task on
-   * another computer binds the account there that served it at its start.
-   * `movedTo` names the provider a moved task now runs on (INF-849): a
-   * conversation that provider's client cannot reopen restarts as moved.
-   */
-  private async openCrewmate(
-    task: TaskRuntime,
-    crewmate: CrewmateSpec,
-    accountId: string | undefined,
-    servedModel?: string,
-    movedTo?: string,
-  ): Promise<ModelSession> {
-    const binding =
-      crewmate.machineId === LOCAL_MACHINE_ID
-        ? await this.options.bind(accountId, crewmate.model?.provider)
-        : await this.placement.placedBinding(
-            crewmate.machineId,
-            crewmate.model?.provider ?? this.options.router?.servedProvider(task.id),
-            accountId,
-            crewmate.model ?? (servedModel ? parseOfferingKey(servedModel) : undefined),
-          );
-    const factories =
-      crewmate.machineId === LOCAL_MACHINE_ID
-        ? this.options.sessions
-        : this.options.machines?.factories(crewmate.machineId);
-    if (!factories) throw new Error("This task runs on another computer this app cannot reach.");
-    const factory = factories[binding.backend];
-    if (!factory) {
-      throw new Error(`No backend is registered to serve account "${accountId ?? ""}".`);
-    }
-    // Provision before the prompt is served, so a new folder is the app's.
-    // A temp directory that already holds files is left on the old policy.
-    if (crewmate.machineId === LOCAL_MACHINE_ID) {
-      provisionTaskTemp(join(this.options.paths.crewmatesDir, task.id));
-    }
-    const briefed = {
-      ...crewmate,
-      ...(this.options.source ? { source: await this.options.source() } : {}),
-      procedure: crewmateProcedureFor(
-        this.options.tasks.policiesOf(this.options.tasks.get(task.id)),
-      ),
-      // Every crewmate is told the captain's computers and which one it runs on (INF-992).
-      ...this.placement.computersFor(crewmate.machineId),
-      // Its app reads here are answerable by the quiet check; there, that computer keeps its own.
-      ...(crewmate.machineId === LOCAL_MACHINE_ID ? { openReads: task.openReads } : {}),
-    };
-    task.backend = binding.backend;
-    let runbookSkills: SessionSpec["runbookSkills"];
-    if (this.options.runbooks) {
-      const served = this.options.runbooks.crew(
-        this.briefs.runbookFacts(task.id, briefed.procedure, binding.backend),
-      );
-      Object.assign(briefed, {
-        runbookText: crewRunbookText(served),
-      });
-      runbookSkills = served.skills;
-    }
-    const spec = this.options.sessionSpec
-      ? this.options.sessionSpec(briefed, binding)
-      : crewmateSessionSpec(this.options.paths, briefed, binding);
-    if (
-      spec.speed &&
-      (binding.backend === "claude" || (spec.model && spec.model.provider !== "openai-codex"))
-    ) {
-      const model = spec.model ?? { provider: "anthropic-claude", id: "This model" };
-      const requested = await spec.speed.requested(model);
-      if (requested !== "standard")
-        spec.speed.record(model, {
-          requested,
-          sent: "standard",
-          reason: "this model and account do not offer Codex crew speeds",
-        });
-      delete spec.speed;
-    }
-    spec.personalResources = this.options.personalResourcesEnabled?.() === true;
-    if (runbookSkills) spec.runbookSkills = runbookSkills;
-    if (this.disposed) throw new Error("This computer is stopping.");
-    const session = await factory.open(spec);
-    const unopenable =
-      Boolean(crewmate.resumeToken) && spec.shape.turns === "rolling" && !spec.shape.record.resume;
-    if (unopenable) {
-      this.options.tasks.note(
-        task.id,
-        movedTo
-          ? `it moved to a new conversation on ${movedTo}, which cannot reopen its earlier one; the earlier one is kept`
-          : "its earlier conversation could not be reopened, so it starts a fresh one",
-        { news: true },
-      );
-    }
-    this.carryRestart(
-      task,
-      crewmate.machineId,
-      session,
-      unopenable ? crewmate.resumeToken : undefined,
-      movedTo,
-    );
-    return session;
-  }
-
-  /** One association writer for starts, replacements, moves and completed turns. */
-  private recordCrewSession(
-    task: TaskRuntime,
-    session: ModelSession,
-    began: string,
-    machine = this.machineOf(task.id),
-  ): void {
-    task.conversationBegan = began;
-    const token = crewmateResumeToken(session.resume());
-    if (!token) return;
-    const folders =
-      machine === LOCAL_MACHINE_ID
-        ? { sessions: crewmateSessionsDir(this.options.paths, task.id) }
-        : this.options.machines?.folders(machine, task.id);
-    // A Claude token is not a path. Its durable copy belongs to the computer
-    // running the session, not to this computer's copy of the transcript.
-    const file = isAbsolute(token)
-      ? token
-      : folders
-        ? join(folders.sessions, `${token}.jsonl`)
-        : undefined;
-    if (!file) return;
-    const model = session.modelRef();
-    this.options.tasks.turns.setSessionFile(task.id, token, {
-      file,
-      computer:
-        machine === LOCAL_MACHINE_ID
-          ? HOME.the
-          : (this.options.machines?.nameOf(machine) ?? `another ${COMPUTER.one}`),
-      device_id: machine,
-      provider: model?.provider ?? null,
-      model: model?.id ?? null,
-      account_id: task.accountId ?? null,
-      began,
-    });
-  }
-
-  /**
-   * A conversation that replaced the task's earlier one: a Claude
-   * conversation resumed under changed instructions renews as it opens -
-   * here, or on its computer again after that computer restarted
-   * (`placedReopened`) - or the earlier one, `unopenable`, could not be
-   * reopened. A renewal is noted, and the record names the one it moved to
-   * now, so a quit before its first turn ends does not reopen the earlier
-   * one again; either way the lane keeps why, and the next turn serves it.
-   */
-  private carryRestart(
-    task: TaskRuntime,
-    machine: string,
-    session: ModelSession,
-    unopenable?: string,
-    movedTo?: string,
-  ): void {
-    const renewal = session.takeRenewal();
-    if (renewal) {
-      this.options.tasks.note(task.id, crewmateRenewedNote(renewal), {
-        news: false,
-        data: { conversation: { from: renewal.from, changed: [...renewal.changed] } },
-      });
-    }
-    const restart: CrewmateRestart | undefined =
-      renewal ??
-      (unopenable
-        ? movedTo
-          ? { from: unopenable, changed: "moved", to: movedTo }
-          : { from: unopenable, changed: "unopenable" }
-        : undefined);
-    if (restart) {
-      this.recordCrewSession(
-        task,
-        session,
-        renewal ? "renewal" : movedTo ? "move" : "unopenable",
-        machine,
-      );
-      this.recordRestart(task, machine, restart);
-    }
-  }
-
-  /**
-   * What a crewmate whose conversation replaced its task's earlier one is
-   * told first, queued once on its lane: the brief its first turn served,
-   * read back off the record, and where its earlier conversation's
-   * transcript is saved on the computer it runs on. The turn that brings it
-   * back serves the wake first, and a quit before that turn ends clean
-   * still has the row.
-   */
-  private recordRestart(task: TaskRuntime, machine: string, restart: CrewmateRestart): void {
-    const briefed = this.options.tasks
-      .timeline(task.id)
-      .filter((event) => event.kind === "briefed")
-      .at(-1);
-    const brief = briefed ? this.options.tasks.servedBrief(briefed) : undefined;
-    // A Pi conversation's token is its file; a Claude one's names the
-    // app's copy in the task's sessions folder.
-    const named = (dir: string) =>
-      isAbsolute(restart.from) ? restart.from : join(dir, `${restart.from}.jsonl`);
-    let earlier: string | undefined;
-    if (machine === LOCAL_MACHINE_ID) {
-      const path = named(crewmateSessionsDir(this.options.paths, task.id));
-      if (existsSync(path)) earlier = path;
-    } else {
-      const folders = this.options.machines?.folders(machine, task.id);
-      if (folders) earlier = named(folders.sessions);
-    }
-    this.options.inbox.enqueueWake(
-      task.id,
-      conversationRestartWake({
-        restart,
-        taskKey: task.key,
-        ...(brief ? { brief } : {}),
-        ...(earlier ? { earlier } : {}),
-      }),
-      "agent",
-      task.id,
-    );
-  }
-
-  /**
-   * A renewed conversation's reason still waiting on the lane, claimed for
-   * the turn about to start so it rides that turn and a clean end acks it.
-   */
-  private claimConversationRestart(taskId: string, already: readonly number[]): InboxRow[] {
-    const claimed = new Set(already);
-    const leading = this.options.inbox
-      .pending(taskId, this.now(), { maxAttempts: INBOX_ATTEMPT_MAX })
-      .filter((row) => row.facts?.kind === "conversation-restart" && !claimed.has(row.id));
-    if (leading.length === 0) return [];
-    this.options.inbox.markDelivered(leading.map((row) => row.id));
-    return leading;
   }
 
   /** What a crewmate's tools run on: this task's callbacks into the host. */
@@ -2242,7 +1955,7 @@ export class CrewSupervisor {
       onFollowup: (input) => this.reportIntake.fileFollowup(task, input),
       onProgress: (text, plan) => this.reportIntake.noteProgress(task, text, plan),
       onReport: (text, summary, declared) =>
-        this.recordReportFromSession(task, text, summary, declared),
+        this.turns.recordReportFromSession(task, text, summary, declared),
       onReply: (input) => this.cards.replyFromCrewmate(task.id, input),
       onReviseRequiredAction: (input) =>
         cardMutationText(
@@ -2399,15 +2112,15 @@ export class CrewSupervisor {
           return;
         }
         if (event.type === "continuation_started") {
-          this.startAutonomousTurn(task, laneRowsOf(event.order));
+          this.turns.startAutonomousTurn(task, laneRowsOf(event.order));
           return;
         }
         if (event.type === "continuation_ended") {
-          this.endAutonomousTurn(task, event.error, event.cutOff, event.unheard);
+          this.turns.endAutonomousTurn(task, event.error, event.cutOff, event.unheard);
           return;
         }
         if (event.type === "model_served") {
-          this.recordServedModel(task, event);
+          this.turns.recordServedModel(task, event);
           return;
         }
         if (event.type === "turn_closed") {
@@ -2619,61 +2332,6 @@ export class CrewSupervisor {
   }
 
   /**
-   * A commissioned worktree can build before the crewmate's first turn
-   * (interaction P0, WI-7): dependencies install from the shared pnpm store,
-   * recorded on the task's timeline. It runs behind commission's return so
-   * spawn_crewmate still answers at once; a steer that arrives meanwhile is
-   * recorded on the lane like any mid-start steer. A failed install is a
-   * timeline fact, never a failed task - the crewmate can still run it.
-   */
-  private async prepareFirstTurn(
-    task: TaskRuntime,
-    brief: readonly BriefPart[],
-    inboxIds: number[],
-    images?: TurnImage[],
-  ): Promise<void> {
-    const cwd = task.workspace?.cwd;
-    const machine = this.machineOf(task.id);
-    // On a computer that runs work, that computer installs its own copy's.
-    const installing =
-      machine !== LOCAL_MACHINE_ID
-        ? this.options.machines?.install(machine, task.id)
-        : cwd
-          ? this.options.workspace.installDependencies(cwd)
-          : undefined;
-    if (installing) {
-      const install = await installing.catch(
-        (caught): DependencyInstall => ({
-          outcome: "failed",
-          ms: 0,
-          error: caught instanceof Error ? caught.message : String(caught),
-        }),
-      );
-      if (install.outcome !== "skipped" && this.options.tasks.get(task.id)) {
-        // A failed install is news: the crewmate's first turn runs without it.
-        this.options.tasks.note(task.id, installText(install), {
-          news: install.outcome === "failed",
-          data: {
-            install: install.outcome,
-            ms: install.ms,
-            ...(install.outcome === "failed" ? { error: install.error } : {}),
-          },
-        });
-      }
-    }
-    // Settled while installing: the close already retired the runtime and
-    // the brief row. Cancelled while installing: no turn is running to end,
-    // so the cancel finishes here.
-    if (this.tasks.get(task.id) !== task) return;
-    if (task.cancelled) {
-      this.finish(task, "cancelled");
-      return;
-    }
-    this.options.tasks.recordBrief(task.id, brief);
-    await this.runTurn(task, briefText(brief), inboxIds, images);
-  }
-
-  /**
    * Whether this task's green work may be merged without the captain: its
    * own ask, else the repository's standing flag (`autonomyFor`). The one
    * reader for the settle refusal, `crew_status` and the fact strip, so
@@ -2792,1758 +2450,6 @@ export class CrewSupervisor {
     });
   }
 
-  /** What another writer already answered of the thread replies these rows carry. */
-  private answeredWhileQueued(inboxIds: readonly number[]): string[] {
-    return inboxIds.flatMap((id) => {
-      const facts = this.options.inbox.get(id)?.facts;
-      if (facts?.kind !== "thread-reply" || facts.card.messageId === undefined) return [];
-      const line = this.cards.answeredByContributor(facts.card.id, facts.card.messageId);
-      if (!line?.contributor) return [];
-      return [
-        `On card "${facts.card.title}" (${facts.card.id}), ${line.contributor.label} already answered the captain's message ${facts.card.messageId} (message ${line.id}): "${line.text}" Do not answer it again; write on its thread only with something new, as a comment.`,
-      ];
-    });
-  }
-
-  /** A spawn that failed before the crewmate ran leaves nothing behind. */
-  private async cleanupFailedSpawn(task: TaskRuntime): Promise<void> {
-    await task.unsubscribe?.();
-    task.session?.dispose();
-    this.tasks.delete(task.id);
-    this.cards.deleteRowsForTask(task.id);
-    if (this.options.tasks.get(task.id)) {
-      this.options.tasks.archive.discardFailedSpawn(task.id);
-    }
-    if (task.workspace) {
-      await this.options.workspace.removeTaskWorktree(task.workspace).catch(() => {});
-    }
-    this.cards.scheduleBroadcast();
-    this.broadcastCrewCounts();
-  }
-
-  /** One crewmate turn: prompt to completion, then idle (multi-turn). */
-  private async runTurn(
-    task: TaskRuntime,
-    text: string,
-    inboxIds: number[] = [],
-    images?: TurnImage[],
-  ): Promise<void> {
-    // A new conversation hears why first, on this turn, even when the row
-    // was queued after the message it rides.
-    const leading = this.claimConversationRestart(task.id, inboxIds);
-    const ids = [...leading.map((row) => row.id), ...inboxIds];
-    this.beginTurn(task, ids);
-    // The rows it delivers name the turn, so a conversation on another
-    // computer starts it once however often it is asked.
-    const order = laneOrder(ids);
-    let served = leading.length > 0 ? `${laneTurnText(leading)}\n\n${text}` : text;
-    // A captain question someone else answered while this steer waited is
-    // told now, so its answerer does not answer it twice ("Shared cards").
-    for (const answered of this.answeredWhileQueued(inboxIds)) served += `\n\n${answered}`;
-    try {
-      // The one place a crewmate is told its project's directions: the
-      // brief holds none, so a first turn carries them once, and a brief
-      // served again to a new conversation carries no stale copy.
-      const repoId = this.options.tasks.get(task.id)?.repoId;
-      if (this.options.knowledge && repoId) {
-        const directions = renderDirections(
-          this.options.knowledge.directions.standing({
-            kind: "crewmate",
-            taskId: task.id,
-            repoId,
-          }),
-        );
-        served += `\n\n${directions}`;
-      }
-      // A request already in this prompt's guidance is served there once.
-      // Only other pending requests need the recovery-context snapshot.
-      const servedInboxIds = new Set(ids);
-      const pendingResponses = this.options.inbox
-        .pendingResponses(task.id)
-        .filter((request) => !servedInboxIds.has(request.inboxId));
-      if (pendingResponses.length)
-        served += `${PENDING_RESPONSES_OPENING}${task.key || task.id} after context loss):\n${capWithOverflow(pendingResponses.map((request) => `${request.id}: ${request.body}`).join("\n\n"), "pending-responses")}${PENDING_RESPONSES_END}`;
-      const assignment = await this.refreshReview(task);
-      if (assignment)
-        served += `\n\nCurrent review assignment (supersedes earlier heads):\n${assignment}`;
-      // This computer is being updated: the turn never reaches its model,
-      // and its rows go again once the update is over (`saveForUpdate`).
-      if (this.updates.heldForUpdate(task.id)) {
-        task.paused ??= {};
-        throw new StoppedBeforeStartError();
-      }
-      if (images?.length) await task.session?.prompt(served, images, order);
-      else if (order) await task.session?.prompt(served, undefined, order);
-      else await task.session?.prompt(served);
-      if (this.disposed) return;
-      if (task.cancelled) {
-        this.finish(task, "cancelled");
-      } else {
-        // A session settles the turn an interrupt cut short (Pi and Claude
-        // alike); the interrupt the host asked for is what makes it one.
-        const interrupted = task.interruptRequested;
-        task.interruptRequested = false;
-        this.turnComplete(task, { interrupted });
-      }
-    } catch (caught) {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      if (this.disposed) return;
-      if (!task.paused) this.restarts.recordRestartOutcome(task.id, "stopped", message);
-      if (task.cancelled) {
-        this.finish(task, "cancelled");
-      } else if (task.interruptRequested) {
-        task.interruptRequested = false;
-        this.turnComplete(task, { interrupted: true });
-      } else if (task.paused) {
-        // The update the app stopped it for ended it there: a pause. One
-        // its model never took sends its words again.
-        if (caught instanceof StoppedBeforeStartError) task.paused.unstarted = true;
-        task.lastTurnError ??= message;
-        this.turnComplete(task);
-      } else if (isSignInFailure(task.session?.controlProfile, message)) {
-        // A sign-in the provider refused as the turn started (Pi's "No API
-        // key found") is the captain's to fix, like one a turn reports: the
-        // task stays open and idle with its working copy and the card up,
-        // never closed failed (INF-849).
-        task.lastTurnError ??= message;
-        this.turnComplete(task);
-      } else {
-        this.finish(task, "failed", message);
-      }
-    }
-  }
-
-  /** Reset every per-turn buffer before either host- or provider-initiated work. */
-  private beginTurn(task: TaskRuntime, inboxIds: number[] = []): void {
-    task.inFlightInboxIds = inboxIds;
-    task.steeredInboxIds = [];
-    task.state = "streaming";
-    task.currentTurnText = "";
-    task.turnReport = undefined;
-    task.explicitReport = undefined;
-    task.explicitSummary = undefined;
-    task.explicitDeclared = undefined;
-    task.lastTurnError = undefined;
-    task.lastTurnCutOff = undefined;
-    task.lastEventAt = this.now();
-    task.turnStartedAt = this.now();
-    task.quietLevel = 0;
-    task.wallClockEscalated = false;
-    this.clearWait(task);
-    // The task moving on its own ends its idle episode (docs/report-sort.md):
-    // the clock, the rungs and the host's stall card all go. The one turn
-    // that does not is the ladder's own nudge - that turn is the ladder
-    // acting, and its episode goes on until something else moves the task.
-    if (!this.isLadderTurn(task.id, inboxIds)) {
-      this.options.tasks.turns.endIdle(task.id);
-      this.ladder.withdrawStallCard(task.id);
-    }
-    // Whatever the last report declared about whose turn followed it no
-    // longer stands once a turn runs: a delivered input started this one,
-    // and its own report says it again if it still holds.
-    if (this.options.tasks.turns.clearDeclaration(task.id)) {
-      this.ladder.syncCaptainGate(task.id, this.now());
-    }
-    this.broadcastCrewCounts();
-    this.options.tasks.turns.setActivity(task.id, "running");
-  }
-
-  /**
-   * The sign-in card's body, in product words from what the host knows - the
-   * crewmate's provider and connection - and never the failure's own text: a
-   * client's words name a terminal command, and Pi's add its sign-in
-   * instructions and paths into the app's files. The raw text stays on the
-   * task's timeline and behind its feed line. A custom connection is named,
-   * with the way to check it again, since a sign-in is not what it needs.
-   */
-  private signInCardBody(task: TaskRuntime): string {
-    // A task on another computer runs on that computer's own sign-in, so
-    // that is where the captain signs in again (docs/helper.md, "Its own
-    // sign-ins"); this Mac's own account is not the one that lapsed.
-    const record = this.options.tasks.get(task.id);
-    const device = record?.deviceId;
-    const where = device ? this.options.machines?.placeOf(device).where : undefined;
-    const crewmate = where ? `The crewmate ${where}` : "The crewmate";
-    const provider = signInProvider(task.session?.modelRef()?.provider, record?.model);
-    if (provider && isCustomApiProvider(provider)) {
-      const label = task.accountId ? this.options.accounts?.labelOf(task.accountId) : undefined;
-      const connection = label ? `${label}, your custom connection` : "its custom connection";
-      return `${crewmate} could not reach ${connection}. In Settings → Intelligence, press Edit on ${label ? "it" : "that connection"}${where ? ` ${where}` : ""}, then Save to check it again.`;
-    }
-    const name = PROVIDER_CATALOG.find((entry) => entry.id === provider)?.name;
-    return `${crewmate} could not reach ${name ?? "its subscription"}, which needs you to sign in again${where ? ` ${where}` : ""}.`;
-  }
-
-  /**
-   * The rows of the steers the session accepted that no turn took in: the
-   * window is the turn's own tail (the run made its last check of the
-   * queue, or ended, before the steer landed). A session delivers its
-   * steers oldest first, so what is left over is the newest. Taken at every
-   * turn end, whatever becomes of the rows, so a steer left over from one
-   * turn is never counted against the next one's.
-   */
-  private undeliveredSteerRows(task: TaskRuntime): number[] {
-    const steered = task.steeredInboxIds;
-    task.steeredInboxIds = [];
-    const left = task.session?.takeUndeliveredSteers().length ?? 0;
-    return left === 0 ? [] : steered.slice(-left).flat();
-  }
-
-  /** Whether a turn delivers nothing but the idle ladder's own nudge. */
-  private isLadderTurn(taskId: string, inboxIds: number[]): boolean {
-    const record = this.options.tasks.get(taskId);
-    if (!record || record.recoveryAt == null) return false;
-    return this.options.tasks.turns.onlyLadderSteers(taskId, inboxIds);
-  }
-
-  /**
-   * An MCP report can reach the host before the SDK exposes the assistant
-   * message that reveals an autonomous continuation. Open the boundary at
-   * the earliest observable session signal so the prior turn's buffers
-   * cannot consume or later erase this report.
-   */
-  private recordReportFromSession(
-    task: TaskRuntime,
-    text: string,
-    summary?: string,
-    declared?: ReportDeclaration,
-  ): string | Promise<string> {
-    if (task.state === "idle") this.startAutonomousTurn(task);
-    // Handed files are checked whole here before the report counts, and
-    // named in it by kept name and size only, never content (INF-992).
-    if (declared?.files && declared.files.length > 0) {
-      const { files, ...rest } = declared;
-      return verifyHandoverFiles(crewmateHandoverDir(this.options.paths, task.id), files).then(() =>
-        this.recordReportBody(
-          task,
-          `${text}\n\n${handedFilesLine(task, files)}`,
-          summary,
-          rest,
-          text,
-        ),
-      );
-    }
-    return this.recordReportBody(task, text, summary, declared);
-  }
-
-  /** A report whose handed files, if any, are already checked. */
-  private recordReportBody(
-    task: TaskRuntime,
-    text: string,
-    summary?: string,
-    declared?: ReportDeclaration,
-    responseText = text,
-  ): string | Promise<string> {
-    if (declared?.validation)
-      return this.reportIntake
-        .recordValidationReport(task, text, summary, declared, responseText)
-        .then((receipt) => {
-          this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
-          return receipt;
-        });
-    const receipt = this.reportIntake.recordExplicitReport(
-      task,
-      text,
-      summary,
-      declared,
-      responseText,
-    );
-    // The report is the crewmate's close-out for its new cards: they reach
-    // the stage now. A card the captain already had waits for the turn's
-    // end, so it comes back once, with the crewmate's last word (INF-926).
-    this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
-    return receipt;
-  }
-
-  /**
-   * Claude can continue after prompt() settled when background work
-   * completes; a conversation on another computer runs a turn this Mac did
-   * not start here - one a restart here left running there - with the lane
-   * rows it delivers, which its end acknowledges.
-   */
-  private startAutonomousTurn(task: TaskRuntime, inboxIds: number[] = []): void {
-    if (this.tasks.get(task.id) !== task || task.cancelled || task.state !== "idle") return;
-    task.autonomousTurn = true;
-    this.beginTurn(task, inboxIds);
-    // Its computer is being updated: the turn it began there stops too.
-    this.updates.turnBegan(task);
-  }
-
-  /**
-   * Complete an autonomous boundary exactly once, using the normal report
-   * path; an interrupt the host asked for ends it the way it ends a prompt.
-   * One whose end never arrived (`unheard`), because the live session that
-   * ran it says it no longer works, ends as interrupted too, so the idle
-   * ladder takes the task from there (INF-2332).
-   */
-  private endAutonomousTurn(
-    task: TaskRuntime,
-    error?: string,
-    cutOff?: CutOff,
-    unheard?: boolean,
-  ): void {
-    if (!task.autonomousTurn || this.tasks.get(task.id) !== task) return;
-    task.autonomousTurn = false;
-    if (error && !task.lastTurnError) {
-      task.lastTurnError = error;
-      task.lastTurnCutOff = cutOff;
-    }
-    if (unheard) this.options.tasks.note(task.id, UNHEARD_END_NOTE, { news: true });
-    const interrupted = task.interruptRequested || unheard === true;
-    task.interruptRequested = false;
-    this.turnComplete(task, { interrupted });
-  }
-
-  /**
-   * Asks the live session whether a turn the supervisor holds as working
-   * still works (INF-2332). A crewmate here is read from its own session:
-   * a turn it carried on by itself, which that session no longer runs, ends
-   * as interrupted, while a prompt's turn ends with its own prompt. One on
-   * another computer is asked of that computer, which ends such a turn once
-   * every event it counted is in. Nothing that still runs is stopped.
-   */
-  private confirmTurn(task: TaskRuntime, answered?: (ended: boolean) => void): void {
-    if (task.state !== "streaming" && task.state !== "starting") return;
-    if (this.machineOf(task.id) === LOCAL_MACHINE_ID) {
-      if (task.autonomousTurn && task.session && !task.session.isStreaming())
-        this.endAutonomousTurn(task, undefined, undefined, true);
-      return;
-    }
-    const asked = this.options.machines?.confirm?.(task.id) ?? Promise.resolve(false);
-    void asked
-      .catch((caught: unknown) => {
-        const error = caught instanceof Error ? caught.message : String(caught);
-        console.warn(`[crew] could not ask whether ${task.id}'s turn still works: ${error}`);
-        return false;
-      })
-      .then((ended) => answered?.(ended));
-  }
-
-  /**
-   * A turn ended: the task stays steerable, and the Firstmate hears about it
-   * only when the crewmate actually reported (interaction P0, WI-1). The
-   * report is the explicit report call, else the turn's final message when
-   * that message has text - never an earlier turn's text re-sent. A turn
-   * that ends silently (a job result it only noted, a card click, a provider
-   * hiccup) wakes nobody - even when it filed follow-ups: the rows stand on
-   * the record and the task index shows them (P0, WI-4); the quiet watchdog
-   * still covers a stuck turn. A report that is not plausible prose is a
-   * failed turn, never an outcome.
-   */
-  private turnComplete(task: TaskRuntime, options: { interrupted?: boolean } = {}): void {
-    this.clearWait(task);
-    const placement = this.options.tasks.get(task.id)?.placement;
-    if (placement)
-      this.options.tasks.placement.releasePlacement(task.id, placement.snapshot.orderId, "ended");
-    // A turn the app stopped for its computer's update ends as a pause
-    // (`pauseForUpdate`): whatever cut it there is the update, never the
-    // provider, so it fails nothing and wakes nobody.
-    const paused = task.paused;
-    task.paused = undefined;
-    // Another computer's update cut the turn there, or this one's own
-    // stopped it before its model took it: its words go again. A turn this
-    // computer's own update stopped safely kept what it read.
-    const cutByUpdate =
-      paused !== undefined &&
-      (paused.computer !== undefined
-        ? task.lastTurnError !== undefined
-        : paused.unstarted === true);
-    const providerError = paused ? undefined : task.lastTurnError;
-    let cutOff = paused ? undefined : task.lastTurnCutOff;
-    task.lastTurnError = undefined;
-    task.lastTurnCutOff = undefined;
-    // A cut-off is a fact about the account, not only this turn: it stands
-    // there until a fact changes (docs/quota.md "Typed cut-offs"). A turn on
-    // another computer met it on that computer's own sign-in, which records
-    // it there (docs/helper.md, "Its own sign-ins"): never on this Mac's
-    // account, whose Firstmate and crew keep serving.
-    if (cutOff && task.accountId && this.machineOf(task.id) === LOCAL_MACHINE_ID)
-      this.options.noteCutOff?.(task.accountId, cutOff);
-    // A spent allowance that named no reset (xAI's 402) was held against the
-    // sign-in's own reading when it was recorded: the retry waits for that.
-    if (cutOff?.class === "no_headroom" && cutOff.resetsAt === undefined && task.accountId) {
-      const standing = this.serveability()?.cutOff(task.accountId);
-      if (standing?.class === "no_headroom" && standing.resetsAt !== undefined) {
-        cutOff = { ...cutOff, resetsAt: standing.resetsAt };
-      }
-    }
-    const finalText =
-      task.turnReport ?? (task.currentTurnText.trim() ? task.currentTurnText : undefined);
-    // A paused turn's last words are where it stopped, never its report.
-    const candidate = providerError
-      ? undefined
-      : paused
-        ? task.explicitReport
-        : (task.explicitReport ?? finalText);
-    // The tool's own headline belongs to the tool's report, never to a
-    // final text that stood in for it.
-    const candidateSummary = task.explicitReport !== undefined ? task.explicitSummary : undefined;
-    const declared = task.explicitReport !== undefined ? task.explicitDeclared : undefined;
-    const turnReview = task.turnReview;
-    task.turnReport = undefined;
-    task.explicitReport = undefined;
-    task.explicitSummary = undefined;
-    task.explicitDeclared = undefined;
-    task.turnReview = undefined;
-    task.currentTurnText = "";
-    const filed = task.filedThisTurn;
-    task.filedThisTurn = [];
-    const implausible =
-      candidate && !options.interrupted ? implausibleReport(candidate) : undefined;
-    const turnError =
-      providerError ??
-      (implausible ? `its report was set aside because ${implausible}` : undefined);
-    const report = turnError ? undefined : candidate;
-    // Ack after handling: the rows this turn consumed are deleted when it
-    // ended clean - an interrupt counts, it is a deliberate captain act and
-    // the content already reached the transcript, and so does a turn whose
-    // report was implausible - and released for a retry only when the
-    // provider failed the turn. That release is the honest retry (the
-    // captain's Q1, docs/inbox.md): a provider failure spends no attempt
-    // and backs off, forever, so the guidance is delivered on the first
-    // attempt after the provider answers. A sign-in failure is the
-    // captain's to fix, so it spends the ladder as any refusal does. Every
-    // other cut-off class keeps the provider-failure path for now.
-    const signInFailure =
-      providerError !== undefined &&
-      isSignInFailure(task.session?.controlProfile, providerError, cutOff);
-    const outage = this.options.inbox.outage(task.id);
-    const unread = new Set(this.undeliveredSteerRows(task));
-    const inFlight = task.inFlightInboxIds;
-    const consumed = inFlight.filter((id) => !unread.has(id));
-    task.inFlightInboxIds = [];
-    if (inFlight.length > 0) {
-      if (providerError && !signInFailure) {
-        // A spent allowance is not asked again before its reset.
-        this.options.inbox.releaseAfterProviderFailure(
-          inFlight,
-          cutOff?.class === "no_headroom" && cutOff.resetsAt !== undefined
-            ? { notBefore: cutOff.resetsAt }
-            : {},
-        );
-      } else if (providerError) {
-        this.options.inbox.release(inFlight);
-      } else if (cutByUpdate) {
-        // Cut before it ended there: its words go again, due once its
-        // computer is back, with no attempt spent.
-        this.options.inbox.reparkUndelivered(inFlight);
-      } else {
-        // A steer no turn took in never reached the transcript: its rows
-        // go back on the lane, due now, and the delivery below serves them
-        // as the next turn - the Firstmate's own rule for its steers
-        // (`redeliverUndeliveredSteers`).
-        // Acknowledge below, together with any missing-response obligation,
-        // after the turn's report has its durable reference.
-        this.options.inbox.reparkUndelivered(inFlight.filter((id) => unread.has(id)));
-      }
-    }
-    // The first provider failure of an outage wakes the Firstmate; the rest
-    // are the retry's, and each is still its own line on the task's
-    // timeline. A failed turn that carried no guidance has no retry, so it
-    // is reported as it always was.
-    const retrying = providerError !== undefined && !signInFailure && inFlight.length > 0;
-    const firstFailure = !retrying || outage.failures === 0;
-    if (!providerError && !paused && outage.failures > 0)
-      this.ladder.endOutage(task, outage.failures);
-    // A paused turn that reported needs no carrying on: its report stands.
-    // Nor does one its model never took: its own rows carry it.
-    if (paused?.row !== undefined && (report || paused.unstarted))
-      this.options.inbox.withdraw([paused.row]);
-    task.state = "idle";
-    this.turnOver(task.id);
-    if (report) task.lastCompleteText = report;
-    // The record carries the report (task-system P0): crew_status reads the
-    // outcome column after a restart, when no runtime remembers it.
-    let reportEventId: number | undefined;
-    if (turnError) {
-      // A typed backend's provider failure keeps its class for the record,
-      // so the feed line reads the class, never the words.
-      let typed: TypedFailure | undefined;
-      if (providerError !== undefined && task.session?.controlProfile.failureSignals === "typed") {
-        typed = cutOff ? { cutOff } : {};
-      } else if (providerError !== undefined && cutOff) {
-        // A prose backend's failure with a typed class (xAI's 402) keeps the
-        // class too, so the feed line reads the class and not the words.
-        typed = { cutOff };
-      }
-      this.options.tasks.turns.recordTurnFailure(task.id, turnError, typed);
-    } else if (report) {
-      reportEventId = this.options.tasks.turns.recordReport(task.id, {
-        text: report,
-        ...(candidateSummary ? { summary: candidateSummary } : {}),
-        ...(declared ? { declared } : {}),
-      });
-      // A declared wait places the captain gate before the sort reads it.
-      if (declared?.wait) this.ladder.syncCaptainGate(task.id, this.now());
-    }
-    if (!providerError && !cutByUpdate && consumed.length) {
-      const missing = this.options.inbox.transaction(() => {
-        // The ordered remote event lane supplies the same completed-turn
-        // boundary. An interrupted, paused or failed turn proves no miss.
-        const ids =
-          !turnError && !options.interrupted && !paused
-            ? this.options.inbox.noteMissingResponses(task.id, consumed, {
-                id: `${task.id}:${task.turnStartedAt}:${consumed.join(",")}`,
-                since: task.turnStartedAt,
-                session: task.session?.recordPath(),
-                reportEventId,
-                ...(report ? { report } : {}),
-              })
-            : [];
-        this.options.inbox.ack(consumed);
-        return ids;
-      });
-      if (missing.length) this.hooks.pokeInbox?.();
-    }
-    this.options.tasks.turns.setActivity(task.id, "idle");
-    this.options.tasks.turns.markIdle(task.id, { providerFailed: providerError !== undefined });
-    // Going idle is the crewmate's close-out: a card the captain already had
-    // comes back or redraws with its last write, and a new card no report
-    // released reaches the stage.
-    this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "idle");
-    if (report) {
-      const summary = candidateSummary || reportSummary(report);
-      this.options.broadcastEvent({
-        type: "task_report",
-        taskId: task.id,
-        title: task.title,
-        crewmate: task.crewmate,
-        ...(summary ? { summary } : {}),
-      });
-    }
-    this.broadcastCrewCounts();
-    // A backend that mints its conversation id when the first turn starts
-    // only becomes resumable here. Re-reading the token every turn
-    // is a no-op for backends whose token was known at creation - and a
-    // missing token never erases a good one.
-    if (task.session)
-      this.recordCrewSession(task, task.session, task.conversationBegan ?? "resume");
-    // The personal workspace (Step 4): a report is the turn's commit. The
-    // host commits the workspace with the report as the message and, once
-    // the commit lands, routes the report like any other (INF-1677): its
-    // completion is the ordinary one, which the first mate closes as
-    // finished. A commit that fails keeps the task open and tells the
-    // Firstmate instead (`commitFailed`), so it never reads as finished.
-    const personal = this.options.personal;
-    // Ongoing work commits every personal turn without waking the first mate
-    // for routine progress. Coordination and completion route normally.
-    if (
-      !turnError &&
-      !options.interrupted &&
-      personal &&
-      this.isPersonalTask(task.id) &&
-      this.options.tasks.get(task.id)?.shape?.ongoing === true &&
-      !declared?.needsFirstmate &&
-      declared?.finished !== true
-    ) {
-      void this.commitLiveTurn(task, report || "ongoing work turn", personal);
-      return;
-    }
-    const saved =
-      report && !turnError && !options.interrupted && personal && this.isPersonalTask(task.id)
-        ? this.commitLiveTurn(task, report, personal)
-        : undefined;
-    if (turnError) {
-      // A provider-failed turn: the session lives and stays steerable, but
-      // the failure is never reported as an empty report. The feed line
-      // already rode the turn_failed broadcast. Auth is captain territory
-      // by definition (deterministic classification, sign-in card) and
-      // stays on the firstmate lane; other failures are triageable.
-      const error = capWithOverflow(turnError, "turn-error");
-      // A cut-off standing on the account is the account's to tell: the
-      // Firstmate hears it once for all the crewmates it pauses, never once
-      // per failed turn (the cut-off contract).
-      if (cutOff) this.ladder.checkCutOffs();
-      const accountTells =
-        cutOff !== undefined &&
-        this.ladder.cutOffHolds({
-          id: task.id,
-          accountId: task.accountId ?? null,
-          deviceId: this.options.tasks.get(task.id)?.deviceId ?? null,
-        });
-      const failedOp: TypedWake = retrying
-        ? outageFailedWake(task, error)
-        : {
-            facts: {
-              kind: "turn-failed",
-              task: { id: task.id, title: task.title },
-              crewmate: task.crewmate,
-              error,
-            },
-          };
-      if (signInFailure) {
-        if (!accountTells) this.hooks.notifyOp(failedOp, "agent", task.id);
-        // Auth-required is never silent (docs/architecture.md section 6): a
-        // decision card offers the way back to a signed-in provider. Its
-        // head reads the task's key and title, never the crewmate counter a
-        // restart renumbers.
-        // Its default moves the task to the app's pick when another
-        // provider serves (INF-849); Open settings stays beside it.
-        const plan = this.moves.planMove(task.id);
-        const move =
-          "refused" in plan || !plan.from
-            ? undefined
-            : {
-                arg: `${task.id}:${plan.from}:${offeringKey(plan.choice)}`,
-                modelName: this.modelName(plan.choice),
-              };
-        this.cards.addAuthDecisionCard(
-          crewSignInCardId(task.id),
-          task.title,
-          this.signInCardBody(task),
-          { taskId: task.id, ...(move ? { move } : {}) },
-        );
-      } else if (firstFailure && !accountTells) {
-        this.routeCrewEvent(task.id, failedOp, "agent");
-      }
-    } else if (options.interrupted) {
-      // The Firstmate asked for this interrupt (interrupt_crewmate is its
-      // tool) and the tool already said it happened: the receipt is a feed
-      // line, never a wake (Q4a).
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Task ${task.title} interrupted: it can still be told what to do`,
-      });
-    } else if (paused && !report) {
-      // Nobody has anything to act on: the lane carries it on once the
-      // computer is back, and the feed says so once.
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `${task.title} paused while Infinitary on ${paused.computer} is updated. It carries on once ${paused.computer} is back.`,
-      });
-    } else if (report && isRepairAssessment(this.options.tasks.get(task.id)?.shape)) {
-      // An independent repair assessment's one report decides the kept
-      // merge's undecided repair (FI3-663).
-      void this.reviews.settleRepairAssessment(task, report);
-    } else if (report && this.options.tasks.get(task.id)?.shape?.kind === "review") {
-      // A reviewer's report settles its review (INF-1875): the typed review
-      // record the turn reported is the verdict, recorded on the builder,
-      // and a pass closes the review.
-      void this.reviews.settleReview(task, report, turnReview);
-    } else if (report && saved) {
-      void saved.then((committed) => {
-        const record = this.options.tasks.get(task.id);
-        if (committed && record && !TaskService.isClosed(record))
-          this.sortReport(task, report, filed, declared);
-      });
-    } else if (report) {
-      this.sortReport(task, report, filed, declared);
-    }
-    if (!turnError && !options.interrupted && !paused) this.askForCheckBack(task, declared);
-    // A captured settle owns this idle boundary. Do not start another queued
-    // guidance turn before its normal close/CI gates run.
-    const move = task.pendingMove;
-    task.pendingMove = undefined;
-    if (this.options.tasks.get(task.id)?.pendingSettle) {
-      this.settling.locks.releaseSettleBoundary(task.id);
-    } else if (move) {
-      // A move asked for mid-turn runs at this boundary, and delivers what
-      // waits once the task reopens on its new provider (INF-849).
-      void this.moves.runMove(task.id, move);
-    } else if (this.options.tasks.get(task.id)?.shape?.computer_move?.phase === "waiting") {
-      // The safe pause a move to another computer waited for.
-      void this.moves.runComputerMove(task.id);
-    } else {
-      this.deliverPendingToTask(task, { announce: true });
-    }
-    // Every idle boundary runs the one reconciler the tick runs.
-    this.ladder.reconcileIdleTask(task.id, this.now());
-    // The captain's kept merge approval runs once the crewmate's turn is
-    // over; a no-op when none stands (FI3-304).
-    void this.settling.kept.runMergeAuthorization(task.id).catch((caught: unknown) => {
-      console.warn("[crew] kept merge could not run:", caught);
-    });
-  }
-
-  /**
-   * A turn ended with a background job still running and no check-back
-   * named (INF-1244): the crewmate is asked once, per job, when it will
-   * look at the job again, so a job that stalls silently is read within
-   * the time it names rather than at the job's bound. A turn that hands
-   * the task to the captain or ends it asks nothing.
-   */
-  private askForCheckBack(task: TaskRuntime, declared: ReportDeclaration | undefined): void {
-    if (declared?.checkBack || declared?.wait || declared?.finished) return;
-    if (this.bypassesSupervision(task.id)) return;
-    const running =
-      this.options.hasRunningJobs?.(task.id) === true || this.clientJobStart(task.id) !== undefined;
-    const job = running ? this.oldestJob(task.id) : undefined;
-    if (!job || this.options.inbox.woken(task.id, checkBackAskOnce(job))) return;
-    const ask = checkBackAsk(
-      { ...job, command: capWithOverflow(job.command, "check-back-command") },
-      this.now(),
-      JOB_BOUND_MS,
-    );
-    void this.steerInternal(task.id, ask, SUPERVISOR_STEER).catch((caught: unknown) => {
-      console.warn("[crew] the check-back ask was not delivered:", caught);
-    });
-  }
-
-  /**
-   * Whose turn is it now (S7c, captain call C7 A; the restated rule at the
-   * end of the scout report's R4.8)? The decision itself is `sortReport`
-   * (`reportSort.ts`), pure and table-tested; this reads the witnesses the
-   * idle ladder gathers for both readers (`IdleLadder.witnesses`), records
-   * the sort, and wakes the
-   * Firstmate only when the answer is "nobody's". No word of the report is
-   * read - the retired supervision session was the only thing that ever
-   * did that, and 103 of its last 120 wakes went to a task whose card was
-   * already on the captain's screen.
-   *
-   * The reviewed lane is untouched: a reviewed-tier task's events and a
-   * review task's go straight to the Firstmate, which owns the routing of
-   * findings by instruction (delivery rigor phase 2). Those were never
-   * sorted, so they record nothing here either.
-   */
-  private sortReport(
-    task: TaskRuntime,
-    report: string,
-    filed: TaskRuntime["filedThisTurn"],
-    declared: ReportDeclaration | undefined,
-  ): void {
-    this.options.tasks.readProjection(() =>
-      this.sortReportInProjection(task, report, filed, declared),
-    );
-  }
-
-  private sortReportInProjection(
-    task: TaskRuntime,
-    report: string,
-    filed: TaskRuntime["filedThisTurn"],
-    declared: ReportDeclaration | undefined,
-  ): void {
-    const finished = declared?.finished === true;
-    const needsFirstmate = declared?.needsFirstmate;
-    // Read what the report owner normalized and kept, never the uncapped declaration.
-    const reports = this.options.tasks.lastReportEntries(task.id);
-    const kept = report ? reports.at(-1) : undefined;
-    const workWait = kept?.declared.workWait;
-    const record = this.options.tasks.get(task.id);
-    // F3 of INF-1554 (R1 of INF-1644): the ladder's one rule, a check-back
-    // with no claimed job owns no wait; its witnesses already leave it out.
-    const unownedTimer =
-      declared?.checkBack !== undefined && record !== undefined && this.ladder.unownedTimer(record);
-    const stall = workWait
-      ? waitStall(workWait, reports.at(-2)?.declared.workWait)
-      : unownedTimer && declared?.checkBack
-        ? { kind: "wait-without-owner" as const, observation: declared.checkBack.waitingFor }
-        : undefined;
-    const recoveryWays = kept?.declared.recoveryWays;
-    const refused = record?.delivery?.cardRefusal;
-    const ci = ciFactOf(record?.delivery, this.now());
-    const waits = (record ? this.ladder.unstartedWaits(record) : []).map((wait) => ({
-      key: wait.key || wait.id,
-      title: wait.title,
-      state: wait.status === "dropped" ? ("dropped" as const) : ("not-started" as const),
-    }));
-    // A hold on this task's finding ends when it reports, not when it
-    // closes (INF-735): the work held on it is named on every wake.
-    const waiting = (record ? this.ladder.heldOn(record) : []).map((held) => ({
-      id: held.id,
-      key: held.key || held.id,
-      title: held.title,
-    }));
-    const review = record ? this.reviewToReread(record) : undefined;
-    const builtOn = wakeBuiltOn(builtOnRows(this.options.tasks, task.id));
-    const witnesses = this.ladder.witnesses(task.id, this.now());
-    // A wait it declared with nothing on the captain's screen to answer is
-    // the card the Firstmate owes (INF-11): the wake says what he must decide.
-    const unseenWait = witnesses.decisionCardOpen ? undefined : record?.delivery?.captainWait;
-    const wake: TypedWake = {
-      facts: {
-        kind: "report",
-        task: { id: task.id, title: task.title },
-        crewmate: task.crewmate,
-        excerpt: capWithOverflow(kept?.text ?? report, "task-report"),
-        filed: filed.map(({ key, title, blocks }) => ({ key, title, blocks })),
-        ...(waits.length > 0 ? { waits } : {}),
-        ...(waiting.length > 0 ? { waiting } : {}),
-        cards: this.cards.shownCards(task.id),
-        ...(refused ? { refused } : {}),
-        ...(unseenWait ? { captainWait: unseenWait.reason } : {}),
-        ...(finished ? { finished: true } : {}),
-        ...(needsFirstmate ? { needsFirstmate } : {}),
-        ...(stall ? { stall } : {}),
-        ...(recoveryWays ? { recoveryWays } : {}),
-        ...(workWait ? { workWait } : {}),
-        ...(builtOn ? { builtOn } : {}),
-        ...(declared?.result ? { result: declared.result } : {}),
-        ...(ci ? { ci } : {}),
-        ...(review ? { review } : {}),
-      },
-    };
-    // A program's part answering its call is the program's to read (INF-799);
-    // one that names a check-back says its work still runs (INF-2037).
-    const programPart =
-      this.programs.awaits(task.id) &&
-      !declared?.checkBack &&
-      (declared?.result !== undefined ||
-        (!record?.shape?.result_schema && !declared?.wait && !declared?.needsFirstmate));
-    if (this.bypassesSupervision(task.id) && !programPart) {
-      this.hooks.notifyOp(wake, "crewmate-report", task.id);
-      return;
-    }
-    const sort = sortReport({
-      ...witnesses,
-      filedFollowups: filed.length > 0,
-      internalStep: record?.shape?.internal_step === true,
-      finished,
-      needsFirstmate: needsFirstmate !== undefined,
-      recovery: stall !== undefined || recoveryWays !== undefined,
-      waitedOn: waiting.length > 0,
-      reviewReread: review !== undefined,
-      programPart,
-      // A session that is gone cannot prove anything either; the record
-      // keeps that the host could not tell, and the report still wakes.
-      workObservable: task.session?.controlProfile.backgroundWork === "host",
-    });
-    this.recordSort(task.id, task.title, wake, sort.verdict, sort.reason, sort.rule, () => {
-      if (sort.wake) this.hooks.notifyOp(wake, "crewmate-report", task.id);
-    });
-    // Follow-ups it filed wake the first mate; the program still reads its answer.
-    if (programPart && (sort.rule === "program-part" || sort.rule === "filed-followups"))
-      void this.crewPrograms.closeProgramPart(task.id);
-  }
-
-  /**
-   * One row per sort, with the rule that sorted it (R4.4) and the wake's
-   * typed facts beside its served text (P6), so `flag_missed_escalation`,
-   * the miss deriver, the supervision extractor and the replay scorer keep
-   * reading one ledger. The wake rides the store's own transaction: the
-   * record of a decision and its effect still commit together.
-   */
-  private recordSort(
-    taskId: string,
-    title: string,
-    wake: string | TypedWake,
-    verdict: "routine" | "captain",
-    reason: string,
-    rule: ReportSortRule | IdleRule,
-    effect: () => void,
-  ): void {
-    const record = this.options.recordSort;
-    if (!record) {
-      effect();
-      return;
-    }
-    record({
-      taskId,
-      ...(typeof wake === "string" ? { wake } : { wake: renderWake(wake), facts: wake.facts }),
-      verdict,
-      summary: `"${title}": ${reason}`,
-      rule,
-      wakeKind: IDLE_RULES.has(rule) ? "agent" : "crewmate-report",
-      effect,
-    });
-  }
-
-  /**
-   * The end of a live crewmate turn (Step 4): stamp, lint and commit. The
-   * commit and the lint land on the task's timeline (never the feed). It
-   * answers whether the turn's work is saved, so only a saved report routes;
-   * a commit that fails tells the Firstmate instead (`commitFailed`).
-   */
-  private async commitLiveTurn(
-    task: TaskRuntime,
-    report: string,
-    personal: PersonalLiveDelegate,
-  ): Promise<boolean> {
-    try {
-      const commit = await personal.commitTurn(task.id, report);
-      if (!this.options.tasks.get(task.id)) return false;
-      if (commit.committed && commit.sha) {
-        this.options.tasks.note(
-          task.id,
-          `committed ${commit.sha.slice(0, 7)} in the personal workspace${
-            commit.touched.length > 0 ? ` (${commit.touched.join(", ")})` : ""
-          }`,
-          { news: true, data: { commit: commit.sha, touched: commit.touched } },
-        );
-      }
-      if (commit.findings.length > 0) {
-        const summary = commit.findings
-          .slice(0, 8)
-          .map((finding) => `${finding.severity} ${finding.file}:${finding.line} ${finding.rule}`)
-          .join("; ");
-        this.options.tasks.note(
-          task.id,
-          `lint at commit: ${commit.findings.length} finding${commit.findings.length === 1 ? "" : "s"} - ${summary}`,
-          { news: false, data: { findings: commit.findings } },
-        );
-      }
-    } catch (caught) {
-      this.commitFailed(task, caught);
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * A turn's commit failed (FI3-1218): what the crewmate changed is saved in
-   * the workspace but not committed, so the task stays open - never done
-   * and "built in place". Git's words go on the timeline (its whole error in
-   * the note's data) and to the Firstmate, whose steer starts the crewmate's
-   * next turn; that turn's report commits again. The idle ladder watches
-   * the open task as any other.
-   */
-  private commitFailed(task: TaskRuntime, caught: unknown): void {
-    const record = this.options.tasks.get(task.id);
-    if (!record) return;
-    const reason = gitFailure(caught);
-    this.options.tasks.note(
-      task.id,
-      `could not commit the personal workspace, so its changes are saved there uncommitted: ${reason}`,
-      {
-        news: true,
-        data: { commitFailed: caught instanceof Error ? caught.message : String(caught) },
-      },
-    );
-    if (TaskService.isClosed(record)) return;
-    this.routeCrewEvent(
-      task.id,
-      {
-        facts: {
-          kind: "commit-failed",
-          task: { id: task.id, title: task.title },
-          crewmate: task.crewmate,
-          error: reason,
-        },
-      },
-      "agent",
-    );
-  }
-
-  /**
-   * Deliver the task lane's due rows as the crewmate's next turn: the
-   * followup-queue fallback (guidance a backend could not take mid-turn),
-   * failed steers past their grace, and job results alike. With announce,
-   * when the rows carry guidance someone sent, the feed says so rather than
-   * letting the guidance arrive as if the crewmate had thought of it - one
-   * quiet feed line, never a Firstmate wake (interaction P0, WI-5): the
-   * Firstmate queued that guidance itself and has nothing to act on. The
-   * line is a row on the task that the feed shows once per task, the
-   * newest (`QUEUED_GUIDANCE_FOLD`, INF-1137). Rows are marked in-flight
-   * here and acknowledged at the turn's end (runTurn -> turnComplete).
-   */
-  private deliverPendingToTask(
-    task: TaskRuntime,
-    options: { announce?: boolean; sent?: boolean } = {},
-  ): void {
-    if (task.cancelled || !task.session || task.state !== "idle") return;
-    if (this.laneHeld(task.id)) return;
-    // A started task in the backlog (INF-2062) takes a turn only for words
-    // the captain or the first mate sent, told it stays there.
-    const backlog = this.inBacklog(task.id);
-    if (backlog && !options.sent) return;
-    const rows = this.deliverableRows(task.id, this.now());
-    if (rows.length === 0) return;
-    const pictures = this.rowPictures(task.id, rows);
-    if (pictures.blocked) return;
-    if (options.announce && rows.some((row) => !OWN_LANE_KINDS.has(row.facts?.kind ?? ""))) {
-      this.options.tasks.note(task.id, QUEUED_GUIDANCE_LINE, {
-        news: false,
-        feed: true,
-        data: { feedLine: true, feedOnce: QUEUED_GUIDANCE_FOLD },
-      });
-    }
-    const ids = this.deliverRows(task.id, rows);
-    const text = laneTurnText(rows);
-    void this.runTurn(
-      task,
-      backlog ? `${BACKLOG_STEER_LINE}\n\n${text}` : text,
-      ids,
-      pictures.images,
-    );
-  }
-
-  /**
-   * Lane rows go out: marked in flight, and when one is a sent row going
-   * out for the first time the crewmate's center spark flies now, as it
-   * reaches it (INF-759). The crewmate's own rows - a job's result, a
-   * renewed conversation's reason - were sent by nobody and draw nothing;
-   * a row delivered again already drew its spark.
-   */
-  private deliverRows(taskId: string, rows: readonly InboxRow[]): number[] {
-    const ids = rows.map((row) => row.id);
-    const sent = rows.some(
-      (row) => row.lastAttemptAt === null && !OWN_LANE_KINDS.has(row.facts?.kind ?? ""),
-    );
-    this.options.inbox.markDelivered(ids);
-    if (sent) this.announceReach(taskId);
-    return ids;
-  }
-
-  /**
-   * Something sent reached a crewmate (INF-759): words entered its turn,
-   * its turn was stopped, its task closed under it or was edited. One push
-   * says so, and the center draws its spark out to the crewmate then. Only
-   * a crewmate on the ring has a place for it.
-   */
-  announceReach(taskId: string): void {
-    const record = this.options.tasks.get(taskId);
-    if (record?.kind !== "work" || record.status !== "active") return;
-    this.options.broadcastEvent({
-      type: "task_event",
-      taskId,
-      key: record.key,
-      kind: "reached",
-      text: "",
-      at: this.now(),
-      feed: false,
-      reached: true,
-    });
-  }
-
-  /**
-   * The steer data plane, on the durable inbox: the message is recorded on
-   * the task's lane FIRST, then delivered - into the running turn on a
-   * native-steer backend, as the next turn otherwise. A streaming task on a
-   * `followup-queue` backend keeps the row pending until its turn ends, and
-   * the return value says so - the guidance is neither dropped nor reported
-   * as if the work in flight had heard it. A delivery that fails right now
-   * returns `recorded-retrying`: the row is durable, the tick sweep retries
-   * it, and the ladder escalates loudly if it keeps failing. (`recorded-queued`
-   * was the supervision claim's outcome; nothing produces it since S7c
-   * retired the claim, and it stays in the vocabulary for the record.)
-   */
-  /**
-   * Delivers one file into a task's hand-over folder on the computer it
-   * runs on, verified and 0600, named by its sha256 and its own name
-   * (`handoverFileName`): a copy here, or the source-file order there.
-   * Answers its kept name and its path there.
-   */
-  private async deliverHandover(
-    taskId: string,
-    path: string,
-    name: string,
-    sha256: string,
-  ): Promise<{ file: string; path: string }> {
-    const file = handoverFileName(name, sha256);
-    const machine = this.machineOf(taskId);
-    if (machine === LOCAL_MACHINE_ID)
-      return {
-        file,
-        path: await deliverHandoverFile(
-          path,
-          join(crewmateTempDir(this.options.paths, taskId), HANDOVER_IN_DIR_NAME),
-          file,
-        ),
-      };
-    const machines = this.options.machines;
-    if (!machines?.sourceFile)
-      throw new Error("The work computer cannot receive this message’s attachments.");
-    return { file, path: await machines.sourceFile(machine, taskId, file, path, "handover") };
-  }
-
-  /**
-   * Why a task cannot take a file from outside into its hand-over folder
-   * now (docs/integrations.md, "Google"): it is not running, or its
-   * computer could not remove the file when it is due.
-   */
-  outsideFileRefusal(taskId: string): string | undefined {
-    const record = this.options.tasks.get(taskId);
-    if (!record || record.status !== "active")
-      return "this task is not running, so it has no hand-over folder to save into.";
-    const machine = this.machineOf(taskId);
-    if (machine === LOCAL_MACHINE_ID) return undefined;
-    const machines = this.options.machines;
-    if (machines?.sourceFile && machines.takesOutsideFiles?.(machine)) return undefined;
-    return `update Infinitary on ${machines?.nameOf(machine) ?? `the other ${COMPUTER.one}`} before a file from outside can be saved into this task's folder there.`;
-  }
-
-  /**
-   * Saves a file from outside, such as a Gmail attachment, into a task's
-   * hand-over folder (`IntegrationsServiceOptions.files`): written 0600 in a
-   * private folder of its own, delivered verified, and removed here.
-   */
-  async saveOutsideFile(
-    taskId: string,
-    name: string,
-    bytes: Buffer,
-  ): Promise<{ file: string; path: string }> {
-    const refusal = this.outsideFileRefusal(taskId);
-    if (refusal) throw new Error(refusal);
-    const staging = await mkdtemp(join(tmpdir(), "infinitary-outside-"));
-    try {
-      const path = join(staging, "file");
-      await writeFile(path, bytes, { mode: 0o600 });
-      const sha256 = createHash("sha256").update(bytes).digest("hex");
-      return await this.deliverHandover(taskId, path, name, sha256);
-    } finally {
-      await rm(staging, { recursive: true, force: true });
-    }
-  }
-
-  /**
-   * Delivers the files a task's reports handed on into another task's
-   * hand-over folder on the computer it runs on (INF-992, direction B): a
-   * verified local copy here, or the source-file order there, each 0600 in
-   * its temporary folder, so it goes when that task closes. Answers the
-   * words the steer carries: paths and sizes, never content.
-   */
-  async handFiles(fromTask: string, toTask: string): Promise<string> {
-    const from = this.options.tasks.resolve(fromTask);
-    const to = this.options.tasks.resolve(toTask);
-    if (!from) throw new Error(`There is no task ${fromTask} to hand files from.`);
-    if (!to) throw new Error(`There is no task ${toTask} to hand files to.`);
-    const handle = (record: TaskRecord) => record.key || record.id;
-    const kept = await keptHandoverFiles(crewmateHandoverDir(this.options.paths, from.id));
-    if (kept.length === 0)
-      throw new Error(
-        `${handle(from)} has no reported files to hand on: its crewmate passes them in report files.`,
-      );
-    if (to.status !== "active")
-      throw new Error(
-        `${handle(to)} has not started, so there is no folder to hand files into yet.`,
-      );
-    const machine = to.deviceId;
-    const machines = this.options.machines;
-    if (machine && !machines?.takesHandover?.(machine))
-      throw new Error(
-        `${handle(to)} runs on ${machines?.nameOf(machine) ?? `another ${COMPUTER.one}`}, which needs an update to Infinitary before it can take handed files.`,
-      );
-    const lines: string[] = [];
-    for (const file of kept) {
-      const path =
-        machine && machines?.sourceFile
-          ? await machines.sourceFile(machine, to.id, file.file, file.path, "handover")
-          : await deliverHandoverFile(
-              file.path,
-              join(crewmateTempDir(this.options.paths, to.id), HANDOVER_IN_DIR_NAME),
-              file.file,
-            );
-      lines.push(`${path} (${fileSizeWords(file.size)})`);
-    }
-    // Only a complete, verified delivery is a receipt; failed copies leave none.
-    this.options.tasks.capture.recordResultHandoff(from.id, { taskId: to.id });
-    // Paths and sizes only: a handed file may hold secrets (the captain's words on INF-992).
-    return `Files handed to you from ${handle(from)}, verified byte for byte, in your hand-over folder: ${lines.join(", ")}. They may hold secrets: never print, quote or paste their content anywhere, and read only what your work needs. They are removed when this task closes.`;
-  }
-
-  async steerCrewmate(
-    taskId: string,
-    message: WakeBody,
-    actor: "firstmate" | "captain" = "firstmate",
-    source: {
-      via?: "tool" | "card" | "thread" | typeof TASK_CARD_VIA | typeof CREWMATE_TAB_VIA;
-      decision?: string | null;
-      cardId?: string | null;
-      /** The panel the captain moved it from, by its title. */
-      panel?: string;
-      /** The Firstmate steers in a turn that carries the captain's own words. */
-      captainWords?: boolean;
-      images?: TurnImage[];
-      /** The message's own copies of `images`, kept when it was accepted. */
-      attachments?: AttachmentRef[];
-      /** First mate tool messages expect answers; host/captain steers do not. */
-      response?: ResponsePolicy;
-    } = {},
-  ): Promise<SteerDelivery> {
-    const record = this.options.tasks.get(taskId);
-    if (source.response && actor !== "firstmate")
-      throw new Error("Only a first mate message creates or cancels its response expectations.");
-    if (
-      source.response?.mode === "expected" &&
-      record?.deviceId &&
-      !this.options.machines?.takesResponses?.(record.deviceId)
-    )
-      throw new Error(
-        "Update Infinitary on the work computer before requesting a tracked response. Nothing was sent.",
-      );
-    for (const id of source.response?.cancel ?? []) {
-      const request = this.options.inbox.responseRequest(id);
-      if (request?.state === "answered")
-        throw new Error("An answered request cannot be cancelled. Nothing was sent.");
-      if (request?.targetTask !== taskId)
-        throw new Error(`Response request ${id} does not belong to this task. Nothing was sent.`);
-    }
-    if (source.response?.card) this.reportIntake.checkResponseCard(source.response.card);
-    const steer: SteerSource = {
-      actor,
-      via: source.via ?? "tool",
-      decision: source.decision ?? null,
-      cardId: source.cardId ?? null,
-      ...(source.panel ? { panel: source.panel } : {}),
-      ...(source.captainWords ? { captainWords: true } : {}),
-    };
-    return this.steerInternal(
-      taskId,
-      message,
-      steer,
-      source.images,
-      source.attachments,
-      source.response,
-    );
-  }
-
-  /**
-   * `body` is the guidance as its lane stores it: the words given, or a
-   * typed wake (the ladder's nudge) that renders to the words the crewmate
-   * is steered with and the timeline records.
-   */
-  private async steerInternal(
-    taskId: string,
-    body: WakeBody,
-    given: SteerSource,
-    images?: TurnImage[],
-    attachments?: readonly AttachmentRef[],
-    response?: ResponsePolicy,
-  ): Promise<SteerDelivery> {
-    let message = renderWake(body);
-    // A reply the captain typed under a card: the record reads the captain's words in the message.
-    const words = replyWordsSpan(body);
-    const source = words ? { ...given, words } : given;
-    const reviewBuilder = this.reviewBuilderOf(this.options.tasks.get(taskId));
-    const hasImages = Boolean(images?.length);
-    const withPictures = (guidance: WakeBody): WakeBody =>
-      attachments?.length
-        ? withAttachmentsKept(guidance, attachments)
-        : hasImages
-          ? withAttachmentsDropped(guidance)
-          : guidance;
-    let durable = withPictures(body);
-    const liveImages = hasImages ? images : undefined;
-    // The captain's guidance while his kept merge approval stands takes its
-    // mark as its row is recorded, and the mark rides the message, so the
-    // crewmate can declare only guidance it read (FI3-662).
-    const guidance = isCaptainGuidance(given, body);
-    // The host's own steer - a timed wait's end, a closed dependency, a
-    // check's result - waits on a started task's lane in the backlog.
-    const sentByHost = given.actor === "supervisor";
-    const enqueue = (): number => {
-      if (this.restarts.observing(taskId)) {
-        this.restarts.recordRestartOutcome(
-          taskId,
-          "stopped",
-          "new guidance arrived before automatic recovery was confirmed",
-        );
-        this.restarts.forget(taskId);
-      }
-      const mark = guidance ? this.settling.approvals.holdForGuidance(taskId) : undefined;
-      if (mark !== undefined) {
-        const marked = withGuidanceMark(body, mark);
-        message = renderWake(marked);
-        durable = withPictures(marked);
-      }
-      return this.options.inbox.transaction(() => {
-        for (const id of response?.cancel ?? []) this.options.inbox.cancelResponse(id);
-        if (response?.cancel?.length) {
-          durable = {
-            facts: {
-              kind: "responses-cancelled",
-              requests: response.cancel,
-              guidance: typeof durable === "string" ? durable : durable.facts,
-            },
-            ...(typeof durable !== "string" && durable.ways ? { ways: durable.ways } : {}),
-          };
-          message = renderWake(durable);
-        }
-        if (response?.mode !== "expected") return this.enqueueSteer(taskId, durable);
-        const requested = this.options.inbox.requestResponse(
-          taskId,
-          renderWake(body),
-          {
-            session: response.sourceSession,
-            message: given.decision,
-            card: response.card,
-            targetSession:
-              this.tasks.get(taskId)?.session?.recordPath() ??
-              this.options.tasks.get(taskId)?.sessionFile,
-          },
-          durable,
-        );
-        durable = requested.body;
-        message = renderWake(durable);
-        return requested.inboxId;
-      });
-    };
-    const task = this.tasks.get(taskId);
-    if (task?.session && !task.cancelled) {
-      if (task.state === "streaming" || task.state === "starting") {
-        // Its computer is out of reach, or this one is being updated: kept
-        // on the lane, and steered into the turn once it is back and caught
-        // up, or served by the turn that carries it on.
-        if (this.outOfReach(taskId) || this.updates.heldForUpdate(taskId)) {
-          const held = enqueue();
-          this.recordSteer(taskId, message, source, "recorded-held", held);
-          return "recorded-held";
-        }
-        if (reviewBuilder || task.session.controlProfile.steer === "followup-queue") {
-          const queued = enqueue();
-          this.recordSteer(taskId, message, source, "queued-next-turn", queued);
-          return "queued-next-turn";
-        }
-        const id = enqueue();
-        this.options.inbox.markDelivered([id]);
-        this.announceReach(taskId);
-        try {
-          // Handled when the turn it landed in ends: ack rides turnComplete.
-          await this.steerIntoTurn(task, task.session, message, [id], liveImages);
-          this.recordSteer(taskId, message, source, "mid-turn", id);
-          return "mid-turn";
-        } catch {
-          this.options.inbox.release([id]);
-          this.recordSteer(taskId, message, source, "recorded-retrying", id);
-          return "recorded-retrying";
-        }
-      }
-      const pending = enqueue();
-      if (this.laneHeld(taskId) || (sentByHost && this.inBacklog(taskId))) {
-        // Kept on the lane until the account serves again, or the task leaves the backlog.
-        this.recordSteer(taskId, message, source, "recorded-held", pending);
-        return "recorded-held";
-      }
-      this.recordSteer(taskId, message, source, "mid-turn", pending);
-      this.deliverPendingToTask(task, { sent: true });
-      return "mid-turn";
-    }
-    const record = this.options.tasks.get(taskId);
-    if (!record) {
-      throw new Error(`Unknown task "${taskId}". Check crew_status for live task ids.`);
-    }
-    if (!TaskService.isResumable(record)) {
-      throw new Error(
-        `Task ${taskId} is ${describeStatus(record)} and no longer steerable. ${record.status === "dropped" ? "On the captain’s request, use update_task start_again to create a replacement." : "Spawn a follow-up crewmate instead."}`,
-      );
-    }
-    if (!record.sessionFile) {
-      throw new Error(`Task ${taskId} has no session to resume. Spawn a follow-up instead.`);
-    }
-    if (this.retiredProviderOf(taskId)) throw new Error(retiredResumeText(taskId));
-    const resumeId = enqueue();
-    if (this.laneHeld(taskId) || (sentByHost && this.inBacklog(taskId))) {
-      this.recordSteer(taskId, message, source, "recorded-held", resumeId);
-      return "recorded-held";
-    }
-    try {
-      const resumed = await this.resumeTask(record.id);
-      this.recordSteer(taskId, message, source, "mid-turn", resumeId);
-      this.deliverPendingToTask(resumed, { sent: true });
-      return "mid-turn";
-    } catch {
-      // The row is durable; the tick sweep retries the resume.
-      this.recordSteer(taskId, message, source, "recorded-retrying", resumeId);
-      return "recorded-retrying";
-    }
-  }
-
-  /**
-   * A steer's durable row. A host steer that goes out once per fact (the
-   * check watch's) records its name with the row (`enqueueSteerOnce`).
-   */
-  private enqueueSteer(taskId: string, body: WakeBody): number {
-    return typeof body !== "string" && body.once !== undefined
-      ? this.options.inbox.enqueueSteerOnce(taskId, { ...body, once: body.once })
-      : this.options.inbox.enqueue(taskId, body);
-  }
-
-  /**
-   * Steer the running turn with lane rows already marked in flight. The
-   * rows are the turn's before the session is asked, so a steer that lands
-   * in the turn's own tail is known to the turn's end, which takes it back
-   * (`undeliveredSteerRows`); a steer the session refuses takes its rows
-   * back out and throws.
-   */
-  private async steerIntoTurn(
-    task: TaskRuntime,
-    session: ModelSession,
-    text: string,
-    ids: number[],
-    images?: TurnImage[],
-  ): Promise<void> {
-    task.inFlightInboxIds.push(...ids);
-    task.steeredInboxIds.push(ids);
-    const handed: UnreadSteer = {
-      sha: createHash("sha256").update(text).digest("hex"),
-      since: this.now(),
-    };
-    task.unreadSteers.push(handed);
-    const order = laneOrder(ids);
-    try {
-      if (images) await session.steer(text, images, order);
-      else if (order) await session.steer(text, undefined, order);
-      else await session.steer(text);
-    } catch (caught) {
-      task.inFlightInboxIds = task.inFlightInboxIds.filter((id) => !ids.includes(id));
-      task.steeredInboxIds = task.steeredInboxIds.filter((steered) => steered !== ids);
-      task.unreadSteers = task.unreadSteers.filter((steer) => steer !== handed);
-      throw caught;
-    }
-  }
-
-  /**
-   * The steer's timeline event (R2 forward capture), written once the
-   * control plane has decided what happened to it. Bookkeeping never takes
-   * a steer down with it.
-   */
-  private recordSteer(
-    taskId: string,
-    message: string,
-    source: SteerSource,
-    outcome: SteerDelivery,
-    inboxId: number,
-  ): void {
-    try {
-      this.options.tasks.turns.recordSteer(taskId, {
-        text: message,
-        actor: source.actor,
-        outcome,
-        via: source.via,
-        decision: source.decision,
-        cardId: source.cardId,
-        inboxId,
-        ...(source.panel ? { panel: source.panel } : {}),
-        ...(source.words ? { words: source.words } : {}),
-      });
-    } catch (caught) {
-      console.warn("[crew] steer capture failed:", caught);
-    }
-  }
-
-  /**
-   * The provider a task was last routed to, when this build no longer
-   * offers it (Cursor). Its resume token belongs to that
-   * provider's own client, so no backend here can reopen the session.
-   */
-  private retiredProviderOf(taskId: string): string | undefined {
-    const provider = this.options.router?.servedProvider(taskId);
-    return provider && isRetiredProvider(provider) ? provider : undefined;
-  }
-
-  /**
-   * Reopen the session of an idle task left by a previous process, or of
-   * one moving to another provider (`move`, INF-849): it opens on the
-   * move's model and account in the same working copy, resuming the same
-   * conversation when the new backend can reopen it. With `restart`, a new
-   * conversation opens instead, told why and where the earlier one is: a
-   * task that moved to another computer (docs/helper.md, "Moving a started
-   * task"). A plain resume while the task's conversation is opening joins
-   * that open rather than opening a second conversation over it: a computer
-   * that runs work can ask for the conversation (`adoptPlaced`) before it
-   * has answered the open a move or a wake asked of it.
-   */
-  private resumeTask(
-    taskId: string,
-    move?: MoveTarget,
-    restart?: CrewmateRestart,
-  ): Promise<TaskRuntime> {
-    const opening = this.resuming.get(taskId);
-    if (opening && !move && !restart) return opening;
-    const resuming = this.openResumed(taskId, move, restart);
-    this.resuming.set(taskId, resuming);
-    const opened = () => {
-      if (this.resuming.get(taskId) === resuming) this.resuming.delete(taskId);
-    };
-    resuming.then(opened, opened);
-    return resuming;
-  }
-
-  private async openResumed(
-    taskId: string,
-    move?: MoveTarget,
-    restart?: CrewmateRestart,
-  ): Promise<TaskRuntime> {
-    const record = this.options.tasks.get(taskId);
-    if (!record) throw new Error(`Unknown task "${taskId}".`);
-    // A committed move to another computer opens a new conversation there,
-    // whichever path resumes it first (docs/helper.md, "Moving a started task").
-    const movedFrom = record.shape?.computer_move?.restartFrom;
-    const fresh: CrewmateRestart | undefined =
-      restart ??
-      (!move && movedFrom !== undefined
-        ? {
-            from: movedFrom,
-            changed: "computer",
-            to: this.moves.computerName(this.moves.computerOf(record)),
-          }
-        : undefined);
-    if (!record.sessionFile) {
-      throw new Error(`Task ${taskId} has no session to resume. Spawn a follow-up instead.`);
-    }
-    if (this.retiredProviderOf(taskId)) throw new Error(retiredResumeText(taskId));
-    // A resume is an attachment point: re-check the recorded account and
-    // move to a sibling (transcript intact) if it died or was removed.
-    const previousProvider = this.options.router?.servedProvider(taskId);
-    const custom = previousProvider && isCustomApiProvider(previousProvider);
-    const machine = this.machineOf(record.id);
-    if (
-      machine === LOCAL_MACHINE_ID &&
-      custom &&
-      (!record.accountId || !this.options.accounts?.labelOf(record.accountId))
-    )
-      throw new Error(
-        "This task’s custom connection was disconnected. It cannot resume on another server automatically.",
-      );
-    // A task on a computer that runs work binds that computer's own
-    // account again there; no account of this Mac's is chosen for it.
-    const attachment: { accountId?: string; changed: boolean } = move
-      ? { ...(move.accountId ? { accountId: move.accountId } : {}), changed: false }
-      : machine !== LOCAL_MACHINE_ID
-        ? { changed: false }
-        : custom
-          ? { accountId: record.accountId ?? undefined, changed: false }
-          : (this.options.accounts?.reselectForResume(record.id, record.accountId) ?? {
-              ...(record.accountId ? { accountId: record.accountId } : {}),
-              changed: false,
-            });
-    if (attachment.changed) {
-      this.options.tasks.placement.setAccountId(record.id, attachment.accountId ?? null);
-      const moved = attachment.accountId
-        ? `moved to ${this.options.accounts?.labelOf(attachment.accountId) ?? "another account"}`
-        : "continuing without a bound account";
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Task "${record.title}" ${moved} - its previous account is no longer available.`,
-        taskId: record.id,
-      });
-    }
-    // On a computer that runs work, its working copy is there; this Mac holds none.
-    // A folder repair that started above its missing folder resumes there (INF-572).
-    const startedIn = isFolderRepair(record.shape?.in_place)
-      ? record.shape.in_place.started_in
-      : undefined;
-    const cwd =
-      machine === LOCAL_MACHINE_ID
-        ? startedIn || record.worktreeDir || record.repoDir
-        : this.options.machines?.folders(machine, record.id)?.work;
-    if (cwd === undefined) throw new Error("The computer this task runs on is out of reach.");
-    this.crewmateSeq += 1;
-    const task: TaskRuntime = {
-      id: record.id,
-      title: record.title,
-      key: record.key || record.id,
-      crewmate: `crewmate ${this.crewmateSeq}`,
-      ...(machine === LOCAL_MACHINE_ID
-        ? {
-            workspace: {
-              taskId: record.id,
-              // A live task has no worktree: its cwd is the workspace itself.
-              cwd,
-              branch: record.branch,
-              repoDir: record.repoDir,
-            },
-          }
-        : {}),
-      currentTurnText: "",
-      // The durable record remembers the last report across the restart.
-      lastCompleteText: record.outcome ?? "",
-      state: "idle",
-      ...(attachment.accountId ? { accountId: attachment.accountId } : {}),
-      cancelled: false,
-      interruptRequested: false,
-      filedThisTurn: [],
-      lastEventAt: this.now(),
-      turnStartedAt: this.now(),
-      quietLevel: 0,
-      wallClockEscalated: false,
-      inFlightInboxIds: [],
-      steeredInboxIds: [],
-      clientTasks: new Map(),
-      openCalls: new Map(),
-      unreadSteers: [],
-      openReads: new OpenReads(this.now),
-    };
-    const livePersonal = this.isPersonalTask(record.id) ? this.options.personal : undefined;
-    // Register before opening the session: a resumed provider can carry on
-    // with work of its own the moment it is back.
-    this.tasks.set(record.id, task);
-    let session: ModelSession;
-    try {
-      session = await this.openCrewmate(
-        task,
-        {
-          taskId: record.id,
-          machineId: machine,
-          cwd,
-          ...(fresh ? {} : { resumeToken: record.sessionFile }),
-          ...(move
-            ? { model: move.model, thinkingLevel: move.thinkingLevel }
-            : this.reopenedOn(record)),
-          ...this.crewmateHooks(task, livePersonal),
-        },
-        attachment.accountId,
-        record.model ?? undefined,
-        move?.providerName,
-      );
-    } catch (caught) {
-      if (this.tasks.get(record.id) === task) this.tasks.delete(record.id);
-      throw caught;
-    }
-    task.session = session;
-    task.unsubscribe = await this.follow(task, session);
-    // A moved task's record names the conversation it opened now, so a quit
-    // before its first turn ends reopens this one.
-    this.recordCrewSession(
-      task,
-      session,
-      task.conversationBegan ?? (move || fresh ? "move" : "resume"),
-    );
-    if (fresh) this.recordRestart(task, machine, fresh);
-    const opened = this.options.tasks.get(record.id)?.shape?.computer_move;
-    if (opened?.restartFrom !== undefined) {
-      const { restartFrom: _told, ...rest } = opened;
-      this.options.tasks.placement.setComputerMove(record.id, rest);
-    }
-    livePersonal?.beginLiveTask(record.id);
-    // A conversation on another computer may be in a turn this Mac follows
-    // from here (`continuation_started`), which is no idle boundary.
-    if (task.state === "idle") {
-      this.options.tasks.turns.setActivity(record.id, "idle");
-      // A resume that went idle is an idle boundary: the record's own clock
-      // carries across the restart, and a record a quit interrupted mid-turn
-      // starts one now.
-      this.options.tasks.turns.markIdle(record.id);
-    }
-    this.broadcastCrewCounts();
-    return task;
-  }
-
-  /**
-   * What a reopen asks for (INF-1272): the model of the task's newest
-   * routing choice, its start's or its newest move's, at the effort a move
-   * works out - here or on a computer that runs work. A Claude conversation
-   * that starts over after an update has no transcript to restore a model
-   * from, so without this it opens on the client's default. A client's
-   * fallback is not a routing choice, so the reopen asks for the original
-   * again. A task that never routed opens as its session restores it.
-   */
-  private reopenedOn(record: TaskRecord): Pick<CrewmateSpec, "model" | "thinkingLevel" | "quick"> {
-    const routed = this.options.router?.servedChoice(record.id);
-    if (!routed) return {};
-    const chosen =
-      record.shape?.override_reasoning ??
-      this.options.router?.reasoningChoice(routed.model, routed.slot);
-    return {
-      model: routed.model,
-      thinkingLevel: chosen ?? levelDefaultReasoning(routed.slot),
-      // As its start did: Quick care opens a rung lower unless an effort was chosen.
-      ...(record.shape?.rigor === "quick" && !chosen ? { quick: true } : {}),
-    };
-  }
-
-  /** A model by its Settings name, as the sign-in card's Move names it. */
-  private modelName(model: { provider: string; id: string }): string {
-    return this.options.modelName?.(model) ?? model.id;
-  }
-
-  /**
-   * The lifecycle control plane (interrupt_crewmate, the Firstmate's tool;
-   * the shell's abort is a cancel). An interrupt's receipt is a feed line:
-   * the tool that asked for it already said it happened.
-   */
-  async interruptCrewmate(
-    taskId: string,
-    mode: "interrupt" | "cancel",
-    source: InterruptSource = { actor: "firstmate", via: "tool", decision: null },
-    closingSentence?: string,
-  ): Promise<void> {
-    if (mode !== "cancel" || !closingSentence) return this.interruptOnce(taskId, mode, source);
-    // The first mate's cancel carries its sentence to the close it brings
-    // about, now or when the stopped turn ends (INF-547), keyed by the
-    // record the close names.
-    const id = this.options.tasks.resolve(taskId)?.id ?? taskId;
-    this.settling.closing.expectClosingSentence(id, closingSentence);
-    try {
-      await this.interruptOnce(taskId, mode, source);
-    } catch (caught) {
-      this.settling.closing.forgetClosingSentence(id);
-      throw caught;
-    }
-    // With no turn left to end, no later close will take it.
-    if (!this.tasks.has(id)) this.settling.closing.forgetClosingSentence(id);
-  }
-
-  private async interruptOnce(
-    taskId: string,
-    mode: "interrupt" | "cancel",
-    source: InterruptSource,
-  ): Promise<void> {
-    const task = this.tasks.get(taskId);
-    // A stop or a cancel reaches the crewmate: its spark flies first.
-    this.announceReach(taskId);
-    if (!task) {
-      const record = this.options.tasks.get(taskId);
-      if (!record) throw new Error(`Unknown task "${taskId}".`);
-      // Already-closed work must not be relabelled cancelled (a second
-      // cancel on a done row, including after a merge).
-      if (record.status === "done") {
-        this.recordInterrupt(taskId, mode, source, "already-done");
-        return;
-      }
-      if (TaskService.isResumable(record)) {
-        if (mode === "cancel") {
-          this.recordInterrupt(taskId, mode, source, "cancelled-record");
-          this.settling.closing.closeRecord(record.id, "cancelled", undefined, source.actor);
-          this.options.broadcastEvent({
-            type: "task_finished",
-            taskId,
-            status: "cancelled",
-            title: record.title,
-          });
-          this.broadcastCrewCounts();
-          // As `finish` does: the record may be what a queued row, or an
-          // active task's wait (FI3-250), is waiting on.
-          void this.sweepGates(this.now());
-        } else {
-          this.recordInterrupt(taskId, mode, source, "no-turn");
-        }
-        return;
-      }
-      throw new Error(`Task ${taskId} is already ${describeStatus(record)}.`);
-    }
-    if (mode === "cancel") {
-      if (task.state === "idle") {
-        this.recordInterrupt(taskId, mode, source, "cancelled-idle");
-        this.finish(task, "cancelled");
-      } else if (!task.session) {
-        task.cancelled = true;
-        this.recordInterrupt(taskId, mode, source, "no-turn");
-      } else {
-        this.recordInterrupt(taskId, mode, source, "requested");
-        task.cancelled = true;
-        try {
-          await task.session.abort();
-          this.recordInterrupt(taskId, mode, source, "aborted-turn");
-        } catch (caught) {
-          task.cancelled = false;
-          const error = caught instanceof Error ? caught.message : String(caught);
-          this.recordInterrupt(taskId, mode, source, "abort-failed", error);
-          throw caught;
-        }
-        // An abort asks the turn to stop; it never promises the turn ends.
-        // A Claude client answers the steers it still holds in a turn of its
-        // own, and a turn on another computer may never report its end, so
-        // waiting for that end left a cancelled task running. The cancel
-        // ends the task here, as a settle's stop does; the turn's own end,
-        // whenever it comes, finds it gone (`finish`).
-        this.finish(task, "cancelled");
-      }
-      return;
-    }
-    if (task.state === "streaming" || task.state === "starting") {
-      if (!task.session) {
-        this.recordInterrupt(taskId, mode, source, "no-turn");
-        return;
-      }
-      this.recordInterrupt(taskId, mode, source, "requested");
-      task.interruptRequested = true;
-      try {
-        await task.session.abort();
-        this.recordInterrupt(taskId, mode, source, "aborted-turn");
-        // A stop that found nothing running leaves no end to wait for: the
-        // live session is asked at once (INF-2332).
-        this.confirmTurn(task);
-      } catch (caught) {
-        task.interruptRequested = false;
-        const error = caught instanceof Error ? caught.message : String(caught);
-        this.recordInterrupt(taskId, mode, source, "abort-failed", error);
-        throw caught;
-      }
-      return;
-    }
-    this.recordInterrupt(taskId, mode, source, "no-turn");
-  }
-
   /**
    * update_task withdraw_merge (FI3-304 section 6): the captain takes back
    * a merge he clicked. The work stays where it is; the task's merge is
@@ -4562,45 +2468,13 @@ export class CrewSupervisor {
         feed: true,
       },
     );
-    if (ended) this.announceReach(taskId);
+    if (ended) this.steer.announceReach(taskId);
     return ended
       ? {
           ok: true,
           text: `Withdrew the captain's kept merge approval on ${handle}. Its work stays; only their new merge click merges it.`,
         }
       : { ok: false, text: `${handle} has no kept merge approval to withdraw.` };
-  }
-
-  /** The interrupt request or outcome's timeline event (R2 forward capture). */
-  private recordInterrupt(
-    taskId: string,
-    mode: "interrupt" | "cancel",
-    source: InterruptSource,
-    effect: InterruptEventData["effect"],
-    error?: string,
-  ): void {
-    // An interruption withdraws the captain's kept merge approval (FI3-304:
-    // interrupt = revoke); resuming work needs a new click.
-    this.settling.approvals.revokeMergeAuthorization(
-      taskId,
-      source.actor === "captain"
-        ? "the captain interrupted the crewmate"
-        : "the first mate interrupted the crewmate",
-    );
-    try {
-      this.options.tasks.turns.recordInterrupt(taskId, {
-        actor: source.actor,
-        mode,
-        effect,
-        via: source.via,
-        decision: source.decision,
-        error,
-        ...(source.panel ? { panel: source.panel } : {}),
-        ...(source.backlog ? { backlog: true as const } : {}),
-      });
-    } catch (caught) {
-      console.warn("[crew] interrupt capture failed:", caught);
-    }
   }
 
   /**
@@ -4913,7 +2787,7 @@ export class CrewSupervisor {
       }
       case "tool_end": {
         task.openCalls.delete(event.callId);
-        if (event.usage) this.recordUsage(task, event.usage);
+        if (event.usage) this.turns.recordUsage(task, event.usage);
         break;
       }
       case "turn_end": {
@@ -4923,7 +2797,7 @@ export class CrewSupervisor {
         // stand in its place.
         task.turnReport = task.currentTurnText.trim() ? task.currentTurnText : undefined;
         task.currentTurnText = "";
-        if (event.usage) this.recordUsage(task, event.usage);
+        if (event.usage) this.turns.recordUsage(task, event.usage);
         break;
       }
       default:
@@ -5040,272 +2914,23 @@ export class CrewSupervisor {
           answers,
         },
       };
-      void this.steerCrewmate(taskId, reply, "captain", {
-        via: "thread",
-        cardId: id,
-        images: hasImages ? images : undefined,
-        attachments: kept,
-      }).catch((caught: unknown) => {
-        const message = caught instanceof Error ? caught.message : String(caught);
-        this.options.broadcastEvent({
-          type: "firstmate_note",
-          text: `Could not deliver the reply on "${card.title}": ${message}`,
-          taskId,
+      void this.steer
+        .steerCrewmate(taskId, reply, "captain", {
+          via: "thread",
+          cardId: id,
+          images: hasImages ? images : undefined,
+          attachments: kept,
+        })
+        .catch((caught: unknown) => {
+          const message = caught instanceof Error ? caught.message : String(caught);
+          this.options.broadcastEvent({
+            type: "firstmate_note",
+            text: `Could not deliver the reply on "${card.title}": ${message}`,
+            taskId,
+          });
         });
-      });
     }
     return this.cards.thread(id);
-  }
-
-  private finish(task: TaskRuntime, status: "cancelled" | "failed", error?: string): void {
-    // The turn a settle stopped ends before or after that settle's close,
-    // as its backend goes. Either way the close keeps its own reason and
-    // hands on what it carries - the captain's choice on an answer reaches
-    // the first mate - so this end neither closes the record cancelled nor
-    // purges what is queued about it (INF-721: a choice outranks a cancel).
-    // The settle releases the runtime once the abort returns.
-    if (task.settling) return;
-    // A runtime no longer in the crew has ended already: a cancel ended it
-    // when its abort returned, before the turn it stopped came to an end.
-    // Ending it again would announce a second finish, and could close or
-    // purge what a runtime now holding its place carries.
-    if (this.tasks.get(task.id) !== task) return;
-    // A finished task's background jobs die with it, quietly (R2).
-    this.options.killJobs?.(task.id);
-    // This is a terminal close, not an idle boundary: closeRecord retires
-    // its cards without presenting work the captain can no longer answer.
-    // Rows the final turn consumed reached the transcript; they are not
-    // "never delivered" even when that turn failed - the failure op above
-    // already reports it. What was still waiting on the lane is, and so is
-    // a steer the session accepted that no turn took in.
-    const unread = this.undeliveredSteerRows(task);
-    if (task.inFlightInboxIds.length > 0) {
-      this.options.inbox.ack(task.inFlightInboxIds.filter((id) => !unread.includes(id)));
-      this.options.inbox.reparkUndelivered(unread);
-      task.inFlightInboxIds = [];
-    }
-    const undeliveredRows = this.options.inbox.allFor(task.id);
-    if (undeliveredRows.length > 0) {
-      // The task ended before its recorded guidance could become a turn.
-      // Saying so is the whole point of recording it visibly - on the task's
-      // own timeline, which keeps the guidance, and as one feed line; never
-      // a Firstmate wake about a task that is closing (WI-5).
-      this.recordUndeliveredGuidance(
-        task.id,
-        task.title,
-        `the task ${status} first`,
-        undeliveredRows,
-      );
-    }
-    this.releaseSession(task);
-    this.tasks.delete(task.id);
-    this.settling.locks.releaseSettleBoundary(task.id);
-    this.options.personal?.endLiveTask(task.id);
-    // A record another close already ended keeps its own reason; the turn's
-    // end must not relabel it. Either way nothing queued about the task
-    // survives.
-    const record = this.options.tasks.get(task.id);
-    if (record && (record.status === "open" || record.status === "active")) {
-      // A typed backend's session failure has no class: it is never read as
-      // a sign-in or an allowance from its words (a client exit is a session
-      // failure, docs/quota.md "Typed cut-offs").
-      const typed = task.session?.controlProfile.failureSignals === "typed" ? {} : undefined;
-      this.settling.closing.closeRecord(task.id, status, error, "host", typed);
-    } else {
-      this.options.inbox.purgeTask(task.id);
-    }
-    if (status === "failed") {
-      // After the purge and straight to the Firstmate: the task is closed,
-      // so a triage wake would be set aside unread (WI-2), and a terminal
-      // failure is the captain's to hear.
-      this.hooks.notifyOp(
-        {
-          facts: {
-            kind: "task-failed",
-            task: { id: task.id, title: task.title },
-            error: capWithOverflow(error ?? "unknown error", "task-failed"),
-          },
-        },
-        "agent",
-        task.id,
-      );
-    }
-    this.options.broadcastEvent({
-      type: "task_finished",
-      taskId: task.id,
-      status,
-      title: task.title,
-      ...(error ? { error } : {}),
-    });
-    this.broadcastCrewCounts();
-    // A finished task may be the gate a queued row waits on (R1).
-    void this.sweepGates(this.now());
-  }
-
-  /** Stop a task's live crewmate: its turn aborted, its runtime gone. */
-  private stopRuntime(taskId: string): Promise<void> | undefined {
-    const runtime = this.tasks.get(taskId);
-    if (!runtime) return undefined;
-    runtime.cancelled = true;
-    runtime.settling = true;
-    return (async () => {
-      await runtime.session?.abort().catch(() => {});
-      this.releaseSession(runtime);
-      this.tasks.delete(taskId);
-    })();
-  }
-
-  /**
-   * Let go of a crewmate's session: the task stops hearing it and the
-   * session is disposed. A turn it is still settling is owed to the usage
-   * ledger - an interrupted Claude turn reports its tokens and cost only in
-   * the result that arrives after the interrupt's round trip - so a
-   * usage-only listener takes the task's place until the session is gone.
-   * Only usage: the task is closing, and its state, feed and cards are not
-   * the settling turn's to change. A turn that already settled was recorded
-   * by the task's own subscriber and emits nothing more, so nothing is
-   * counted twice.
-   */
-  private releaseSession(runtime: TaskRuntime): void {
-    const session = runtime.session;
-    this.turnOver(runtime.id);
-    // A copy replaced by an update waits for every client to be gone, so
-    // each conversation is written down before the new copy reads it.
-    if (session?.isStreaming() || (session && this.updates.savedHere())) {
-      const unsubscribe = session.subscribe((event) => {
-        if ((event.type === "turn_end" || event.type === "tool_end") && event.usage) {
-          this.recordUsage(runtime, event.usage);
-        }
-      });
-      const released: Promise<void> = session
-        .closed()
-        .catch(() => {})
-        .then(() => {
-          unsubscribe();
-          this.releasing.delete(released);
-        });
-      this.releasing.add(released);
-    }
-    const following = runtime.unsubscribe?.();
-    runtime.unsubscribe = undefined;
-    if (following) {
-      const released = following.finally(() => this.releasing.delete(released));
-      this.releasing.add(released);
-    }
-    session?.dispose();
-  }
-
-  /**
-   * The model answering for a crewmate, kept on its task's record whenever
-   * the record names another (FI3-967): the record, and so the fact strip
-   * and the crew's labels, name the model doing the work, and the timeline
-   * and the feed say what moved it - the backend's own fallback, or a
-   * reattach that asked for the routed model again. The routing ledger keeps
-   * the router's decision as it was made. A record that named no model
-   * learns it without a line: nothing moved.
-   */
-  private recordServedModel(
-    task: TaskRuntime,
-    event: Extract<SessionEvent, { type: "model_served" }>,
-  ): void {
-    const record = this.options.tasks.get(task.id);
-    if (!record || TaskService.isClosed(record)) return;
-    const served = `${event.model.provider}/${event.model.id}`;
-    if (record.model === served) return;
-    this.noticeUnaskedModel(task, record, event);
-    if (!record.model) {
-      this.options.tasks.starts.recordServedModel(task.id, event.model);
-      return;
-    }
-    const name = (ref: { provider: string; id: string }) =>
-      this.options.router?.modelLabel(ref) ?? ref.id;
-    const slash = record.model.indexOf("/");
-    const was =
-      slash > 0
-        ? { provider: record.model.slice(0, slash), id: record.model.slice(slash + 1) }
-        : undefined;
-    const fallback = event.fallback;
-    const from = fallback?.from ?? was;
-    this.options.tasks.starts.recordServedModel(task.id, event.model, {
-      text: modelMoveWords({
-        from: from ? name(from) : record.model,
-        to: name(event.model),
-        fallback: fallback !== undefined,
-      }),
-      data: {
-        servedModel: served,
-        from: record.model,
-        ...(fallback
-          ? {
-              fallback: {
-                from: `${fallback.from.provider}/${fallback.from.id}`,
-                ...(fallback.category ? { category: fallback.category } : {}),
-              },
-            }
-          : {}),
-      },
-    });
-  }
-
-  /**
-   * The first mate is told once when a task answers on a model its routing
-   * did not choose (INF-1272): both models, why, and whether the captain
-   * named the one asked for, so it can tell them. An answer back on the
-   * asked model, or on a task that never routed, says nothing.
-   */
-  private noticeUnaskedModel(
-    task: TaskRuntime,
-    record: TaskRecord,
-    event: Extract<SessionEvent, { type: "model_served" }>,
-  ): void {
-    const asked = this.options.router?.servedChoice(task.id)?.model;
-    if (!asked || offeringKey(asked) === offeringKey(event.model)) return;
-    const named = record.shape?.override_model_id;
-    const category = event.fallback?.category;
-    this.hooks.notifyOp(
-      {
-        facts: {
-          kind: "model-unasked",
-          task: { id: record.id, key: record.key || record.id, title: record.title },
-          asked: this.modelName(asked),
-          served: this.modelName(event.model),
-          cause: event.fallback ? "fallback" : "client",
-          ...(category ? { category } : {}),
-          named:
-            named !== undefined &&
-            (named.includes("/") ? named === offeringKey(asked) : named === asked.id),
-        },
-        once: `model-unasked:${offeringKey(asked)}:${offeringKey(event.model)}`,
-      },
-      "agent",
-      record.id,
-    );
-  }
-
-  /** One settled turn's tokens and cost, on the account and model that served it. */
-  private recordUsage(
-    task: TaskRuntime,
-    usage: NonNullable<Extract<FmEvent, { type: "turn_end" }>["usage"]>,
-  ): void {
-    const model = task.session?.modelRef();
-    const accountId = this.servingAccount(task);
-    this.options.recordUsage?.({
-      taskId: task.id,
-      ...(accountId ? { accountId } : {}),
-      ...(model ? { model } : {}),
-      usage,
-    });
-  }
-
-  /**
-   * The account a task's turns are served by: the account picked here for a
-   * task on this Mac, and for a task on another computer that computer's
-   * own, as it said - never the account this Mac picked for it
-   * (docs/helper.md, "Its own sign-ins").
-   */
-  private servingAccount(task: TaskRuntime): string | undefined {
-    if (this.machineOf(task.id) === LOCAL_MACHINE_ID) return task.accountId;
-    return task.session ? this.options.machines?.servingAccount(task.session) : undefined;
   }
 
   /** A task's title for a feed line, or what the caller had when there is no record. */
@@ -5433,15 +3058,6 @@ export class CrewSupervisor {
     task.waitNamed = undefined;
   }
 
-  /** A turn began or ended: nothing it had open, or was handed, waits any more. */
-  private clearWait(task: TaskRuntime): void {
-    task.openCalls.clear();
-    task.unreadSteers = [];
-    task.steersAtCheck = undefined;
-    task.waitNamed = undefined;
-    task.readsAnsweredAt = undefined;
-  }
-
   /**
    * A background job's exit becomes the crewmate's next turn (R2), through
    * the durable inbox: recorded on the task's lane, delivered now on an
@@ -5455,7 +3071,7 @@ export class CrewSupervisor {
     if (task?.session && !task.cancelled) {
       this.noteTaskActivity(task);
       this.options.inbox.enqueue(taskId, result);
-      if (task.state === "idle") this.deliverPendingToTask(task);
+      if (task.state === "idle") this.turns.deliverPendingToTask(task);
       return;
     }
     const record = this.options.tasks.get(taskId);
@@ -5464,8 +3080,9 @@ export class CrewSupervisor {
       // A held lane keeps it until its account serves again, or until a
       // started task in the backlog is started again.
       if (this.laneHeld(taskId) || this.inBacklog(taskId)) return;
-      void this.resumeTask(taskId)
-        .then((resumed) => this.deliverPendingToTask(resumed))
+      void this.sessions
+        .resumeTask(taskId)
+        .then((resumed) => this.turns.deliverPendingToTask(resumed))
         .catch(() => {
           // The row is durable; the tick sweep retries the resume.
         });
@@ -5602,7 +3219,7 @@ export class CrewSupervisor {
       if (task.cancelled || !task.session) return;
       if (this.laneHeld(taskId)) return;
       if (task.state === "idle") {
-        this.deliverPendingToTask(task);
+        this.turns.deliverPendingToTask(task);
         return;
       }
       // Streaming: a due row here is a failed native steer past its grace.
@@ -5610,9 +3227,9 @@ export class CrewSupervisor {
       if (task.session.controlProfile.steer !== "native") return;
       const pictures = this.rowPictures(taskId, due);
       if (pictures.blocked) return;
-      const ids = this.deliverRows(taskId, due);
+      const ids = this.turns.deliverRows(taskId, due);
       try {
-        await this.steerIntoTurn(task, task.session, laneTurnText(due), ids, pictures.images);
+        await this.steer.steerIntoTurn(task, task.session, laneTurnText(due), ids, pictures.images);
       } catch {
         this.options.inbox.release(ids);
       }
@@ -5635,7 +3252,7 @@ export class CrewSupervisor {
       );
       return;
     }
-    if (this.retiredProviderOf(taskId)) {
+    if (this.sessions.retiredProviderOf(taskId)) {
       // Its session belongs to a subscription this build no longer offers:
       // no backend can reopen it, so the guidance is kept, not retried.
       this.restarts.recordRestartOutcome(
@@ -5653,10 +3270,10 @@ export class CrewSupervisor {
     if (this.laneHeld(taskId)) return;
     const pictures = this.rowPictures(taskId, due);
     if (pictures.blocked) return;
-    const ids = this.deliverRows(taskId, due);
+    const ids = this.turns.deliverRows(taskId, due);
     try {
-      const resumed = await this.resumeTask(taskId);
-      void this.runTurn(resumed, laneTurnText(due), ids, pictures.images);
+      const resumed = await this.sessions.resumeTask(taskId);
+      void this.turns.runTurn(resumed, laneTurnText(due), ids, pictures.images);
     } catch (caught) {
       this.restarts.recordRestartOutcome(
         taskId,
@@ -5761,7 +3378,7 @@ export class CrewSupervisor {
         task.confirmedAt = now;
         if (this.machineOf(task.id) !== LOCAL_MACHINE_ID) {
           task.quietAsk = true;
-          this.confirmTurn(task, (ended) => {
+          this.turns.confirmTurn(task, (ended) => {
             if (!task.quietAsk || task.confirmedAt !== now) return;
             if (ended) {
               task.quietAsk = undefined;
@@ -5775,7 +3392,7 @@ export class CrewSupervisor {
             });
           });
         } else {
-          this.confirmTurn(task);
+          this.turns.confirmTurn(task);
           if (task.state === "streaming" || task.state === "starting")
             this.nameWait(task, now, task.openReads.answer(now - QUIET_CARD_MS));
         }
@@ -5987,7 +3604,7 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     if (!record?.deviceId || !TaskService.isResumable(record))
       throw new Error(`Task ${taskId} does not run on another computer.`);
-    await this.resumeTask(taskId);
+    await this.sessions.resumeTask(taskId);
   }
 
   /**
@@ -6011,7 +3628,7 @@ export class CrewSupervisor {
           text: carryOnWords([{ key: task.key, title: task.title }]),
         });
       }
-      this.carryRestart(task, this.machineOf(taskId), task.session);
+      this.sessions.carryRestart(task, this.machineOf(taskId), task.session);
     }
   }
 
@@ -6046,24 +3663,6 @@ export class CrewSupervisor {
     }
     void this.sweepGates(this.now());
     this.broadcastCrewCounts();
-  }
-
-  /** Resolves once the task's running turn here has ended, at once when none runs. */
-  private untilTurnOver(task: TaskRuntime): Promise<void> {
-    if (this.tasks.get(task.id) !== task || task.state === "idle") return Promise.resolve();
-    return new Promise((resolve) => {
-      const waiters = this.turnWaiters.get(task.id) ?? new Set<() => void>();
-      waiters.add(resolve);
-      this.turnWaiters.set(task.id, waiters);
-    });
-  }
-
-  /** The task's running turn ended here, or its session was let go. */
-  private turnOver(taskId: string): void {
-    const waiters = this.turnWaiters.get(taskId);
-    if (!waiters) return;
-    this.turnWaiters.delete(taskId);
-    for (const resolve of waiters) resolve();
   }
 
   /** The idle reconciler over every live idle record (docs/report-sort.md; idleLadder.ts). */
@@ -6897,44 +4496,6 @@ export class CrewSupervisor {
   }
 
   /**
-   * A crewmate in a turn, opening, settling or moving, or with work of its
-   * client's own still running: its conversation's files are not to be
-   * written by anyone else now (`SavedOutsideData`).
-   */
-  conversationBusy(taskId: string): boolean {
-    const runtime = this.tasks.get(taskId);
-    if (this.moves.isMoving(taskId)) return true;
-    if (!runtime) return false;
-    return (
-      runtime.state !== "idle" ||
-      !runtime.session ||
-      runtime.session.isStreaming() ||
-      runtime.settling === true ||
-      runtime.clientTasks.size > 0
-    );
-  }
-
-  /** A live crewmate holds its conversation's files. */
-  conversationHeld(taskId: string): boolean {
-    return this.tasks.has(taskId) || this.moves.isMoving(taskId);
-  }
-
-  /**
-   * Let go of an idle crewmate's session, as a move does, so a pass can
-   * write its files again whole: its next delivery resumes it from them.
-   * False while it is busy.
-   */
-  async releaseConversation(taskId: string): Promise<boolean> {
-    if (this.conversationBusy(taskId)) return false;
-    const runtime = this.tasks.get(taskId);
-    if (!runtime) return true;
-    this.releaseSession(runtime);
-    this.tasks.delete(taskId);
-    await runtime.session?.closed().catch(() => {});
-    return true;
-  }
-
-  /**
    * The retention purge control (D-13): the one destructive control. Every
    * task, its worktree, its session JSONL, its cards, lane, timeline and
    * links go; projects stay.
@@ -6947,7 +4508,7 @@ export class CrewSupervisor {
       if (runtime) {
         runtime.cancelled = true;
         await runtime.session?.abort().catch(() => {});
-        this.releaseSession(runtime);
+        this.sessions.releaseSession(runtime);
         this.tasks.delete(record.id);
       }
       await rm(join(this.options.paths.crewmatesDir, record.id), {
@@ -6981,98 +4542,6 @@ export class CrewSupervisor {
     this.cards.scheduleBroadcast();
     this.broadcastCrewCounts();
     return records.length;
-  }
-
-  /** Candidate credentials may replace a connection only between matching turns. */
-  accountHasActiveTurns(accountId: string): boolean {
-    return [...this.tasks.values()].some(
-      (task) =>
-        task.accountId === accountId &&
-        (task.state === "starting" || task.state === "streaming" || task.session?.isStreaming()),
-    );
-  }
-
-  /** Disconnect preserves task/session history and stops this account's work only. */
-  async disconnectAccount(accountId: string): Promise<void> {
-    const matching = [...this.tasks.values()].filter((task) => task.accountId === accountId);
-    for (const task of matching) {
-      this.options.killJobs?.(task.id);
-      await this.interruptCrewmate(task.id, "interrupt", {
-        actor: "captain",
-        via: "shell",
-        decision: null,
-      });
-    }
-  }
-
-  /** The shell's abort: the captain cancelling directly, not through the Firstmate. */
-  async abort(taskId: string): Promise<void> {
-    await this.interruptCrewmate(taskId, "cancel", {
-      actor: "captain",
-      via: "shell",
-      decision: null,
-    }).catch(() => {});
-  }
-
-  /**
-   * A line the captain typed in the task card's Crewmate tab
-   * (docs/task-card-tabs.md, "Typing"): his steer on the crewmate's own
-   * lane, as a reply under its card is, with his words verbatim, and one
-   * feed line. Firstmate is not in the loop; it reads the steer on the
-   * task's timeline. A task no crewmate can be told anything about refuses
-   * in words and writes nothing.
-   */
-  async steerFromCrewmateTab(taskId: string, words: string): Promise<CrewSendResult> {
-    const text = words.trim();
-    if (!text) return { ok: false, text: "There is nothing to send." };
-    const record = this.options.tasks.get(taskId);
-    if (!record) return { ok: false, text: "This task is not on the record." };
-    if (TaskService.isClosed(record)) {
-      return { ok: false, text: "This task is closed, so its crewmate cannot be told anything." };
-    }
-    if (!this.tasks.has(taskId) && !record.sessionFile) {
-      return { ok: false, text: "This task's crewmate has not started yet." };
-    }
-    try {
-      await this.steerCrewmate(
-        taskId,
-        { facts: { kind: "crewmate-tab-line", words: text } },
-        "captain",
-        {
-          via: CREWMATE_TAB_VIA,
-        },
-      );
-    } catch (caught) {
-      return { ok: false, text: caught instanceof Error ? caught.message : String(caught) };
-    }
-    const crewmate = this.tasks.get(taskId)?.crewmate ?? record.assignee ?? "the crewmate";
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text: toldInCrewmateTabLine(crewmate, record.title),
-    });
-    return { ok: true };
-  }
-
-  /**
-   * ⌃C or Stop in the task card's Crewmate tab: the captain's interrupt of
-   * the crewmate's running turn, on the path Firstmate's interrupt takes;
-   * the task stays steerable. With no turn running it refuses in words.
-   */
-  async interruptFromCrewmateTab(taskId: string): Promise<CrewSendResult> {
-    const task = this.tasks.get(taskId);
-    if (!task || (task.state !== "streaming" && task.state !== "starting")) {
-      return { ok: false, text: "Its turn is not running." };
-    }
-    try {
-      await this.interruptCrewmate(taskId, "interrupt", {
-        actor: "captain",
-        via: CREWMATE_TAB_VIA,
-        decision: null,
-      });
-      return { ok: true };
-    } catch (caught) {
-      return { ok: false, text: caught instanceof Error ? caught.message : String(caught) };
-    }
   }
 
   /** When the crewmate's running turn began; null while none runs (the Crewmate tab's clock). */
@@ -7353,19 +4822,21 @@ export class CrewSupervisor {
       // The app's own notice (INF-765): the captain's click was refused, so
       // it is neither his answer nor the first mate's steer, and it reopens
       // no cap either would.
-      void this.steerInternal(
-        card.taskId,
-        {
-          facts: {
-            kind: "validation-question-stale",
-            card: card.id,
-            reason: error.message,
+      void this.steer
+        .steerInternal(
+          card.taskId,
+          {
+            facts: {
+              kind: "validation-question-stale",
+              card: card.id,
+              reason: error.message,
+            },
           },
-        },
-        { ...SUPERVISOR_STEER, cardId: card.id },
-      ).catch((caught: unknown) => {
-        console.warn("[crew] stale validation notice not delivered:", caught);
-      });
+          { ...SUPERVISOR_STEER, cardId: card.id },
+        )
+        .catch((caught: unknown) => {
+          console.warn("[crew] stale validation notice not delivered:", caught);
+        });
       throw new CardChoiceUnavailableError("action-changed");
     }
     const choice: WakeChoice = {
@@ -7604,28 +5075,30 @@ export class CrewSupervisor {
     choice: WakeChoice,
     browserGone?: "stopped" | "quit",
   ): void {
-    void this.steerCrewmate(
-      taskId,
-      {
-        facts: {
-          kind: "card-choice",
-          to: "crewmate",
-          source,
-          card: { title: card.title, id: card.id },
-          choice,
-          ...(browserGone ? { browserGone } : {}),
-        },
-      },
-      source === "chrome" ? "captain" : "firstmate",
-      { via: "card", cardId: card.id },
-    ).catch((caught: unknown) => {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Could not deliver the card choice for "${this.taskTitle(taskId)}": ${message}`,
+    void this.steer
+      .steerCrewmate(
         taskId,
+        {
+          facts: {
+            kind: "card-choice",
+            to: "crewmate",
+            source,
+            card: { title: card.title, id: card.id },
+            choice,
+            ...(browserGone ? { browserGone } : {}),
+          },
+        },
+        source === "chrome" ? "captain" : "firstmate",
+        { via: "card", cardId: card.id },
+      )
+      .catch((caught: unknown) => {
+        const message = caught instanceof Error ? caught.message : String(caught);
+        this.options.broadcastEvent({
+          type: "firstmate_note",
+          text: `Could not deliver the card choice for "${this.taskTitle(taskId)}": ${message}`,
+          taskId,
+        });
       });
-    });
   }
 
   /**
@@ -7763,7 +5236,7 @@ export class CrewSupervisor {
       },
       once: returned.once,
     };
-    void this.steerInternal(taskId, wake, SUPERVISOR_STEER).catch((caught: unknown) => {
+    void this.steer.steerInternal(taskId, wake, SUPERVISOR_STEER).catch((caught: unknown) => {
       // No conversation to resume: the ladder reads the task on its own clock.
       console.warn("[crew] browser return's steer not delivered:", caught);
     });
@@ -7861,28 +5334,30 @@ export class CrewSupervisor {
           actor: "host",
         });
       }
-      void this.steerCrewmate(
-        taskId,
-        {
-          facts: {
-            kind: "write-answered",
-            ask: askId,
-            call: sent.call,
-            place: sent.place,
-            outcome: sent.outcome.kind,
-            ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
-            ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
-              ? { why: sent.outcome.why }
-              : {}),
-            ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
+      void this.steer
+        .steerCrewmate(
+          taskId,
+          {
+            facts: {
+              kind: "write-answered",
+              ask: askId,
+              call: sent.call,
+              place: sent.place,
+              outcome: sent.outcome.kind,
+              ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
+              ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
+                ? { why: sent.outcome.why }
+                : {}),
+              ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
+            },
+            once: `write-answered:${askId}`,
           },
-          once: `write-answered:${askId}`,
-        },
-        "captain",
-        { via: "card", cardId: card.id },
-      ).catch((caught: unknown) => {
-        console.warn("[crew] write outcome not delivered:", caught);
-      });
+          "captain",
+          { via: "card", cardId: card.id },
+        )
+        .catch((caught: unknown) => {
+          console.warn("[crew] write outcome not delivered:", caught);
+        });
     });
   }
 
@@ -7958,7 +5433,7 @@ export class CrewSupervisor {
         if (effect.arg) this.continueStuckTask(effect.arg, "card");
         return {};
       case "stop-task":
-        if (effect.arg) this.stopTask(effect.arg, "shell");
+        if (effect.arg) this.sessions.stopTask(effect.arg, "shell");
         return {};
       case "start-task":
         if (effect.arg) this.startOnRequest(effect.arg);
@@ -8042,7 +5517,7 @@ export class CrewSupervisor {
         this.continueStuckTask(taskId, TASK_CARD_VIA, panel);
         return undefined;
       case "stop-task":
-        this.stopTask(taskId, TASK_CARD_VIA, panel);
+        this.sessions.stopTask(taskId, TASK_CARD_VIA, panel);
         return undefined;
     }
   }
@@ -8162,11 +5637,11 @@ export class CrewSupervisor {
     });
     if (!result.ok) return result;
     if (!result.changed) return { ok: true, text: `${handle} already waits in the backlog.` };
-    void this.interruptCrewmate(taskId, "interrupt", { ...source, backlog: true }).catch(
-      (caught: unknown) => {
+    void this.sessions
+      .interruptCrewmate(taskId, "interrupt", { ...source, backlog: true })
+      .catch((caught: unknown) => {
         console.warn("[crew] the backlog move could not stop the turn:", caught);
-      },
-    );
+      });
     this.broadcastCrewCounts();
     this.intake.graphChanged();
     return {
@@ -8193,16 +5668,17 @@ export class CrewSupervisor {
       ...(panel ? { panel } : {}),
     });
     if (!left) return `${handle} is not in the backlog.`;
-    this.announceReach(record.id);
+    this.steer.announceReach(record.id);
     this.options.inbox.enqueue(record.id, backlogLeftLine(actor));
     const task = this.tasks.get(record.id);
     if (task?.session && !task.cancelled) {
-      this.deliverPendingToTask(task);
+      this.turns.deliverPendingToTask(task);
     } else {
       const now = this.options.tasks.get(record.id);
       if (now && TaskService.isResumable(now) && now.sessionFile && !this.laneHeld(record.id))
-        void this.resumeTask(record.id)
-          .then((resumed) => this.deliverPendingToTask(resumed))
+        void this.sessions
+          .resumeTask(record.id)
+          .then((resumed) => this.turns.deliverPendingToTask(resumed))
           .catch(() => {
             // The row is durable; the tick sweep retries the resume.
           });
@@ -8426,88 +5902,16 @@ export class CrewSupervisor {
     from: "card" | typeof TASK_CARD_VIA,
     panel?: string,
   ): void {
-    void this.steerCrewmate(
-      taskId,
-      this.ladder.nudgeFor(taskId),
-      "captain",
-      from === "card"
-        ? { via: "card", cardId: stallCardId(taskId) }
-        : { via: from, ...(panel ? { panel } : {}) },
-    ).catch((caught: unknown) => this.reportCardEffectFailure(taskId, caught));
-  }
-
-  /** Drop task on started work: the captain's cancel, which keeps its unfinished work. */
-  private stopTask(taskId: string, via: "shell" | typeof TASK_CARD_VIA, panel?: string): void {
-    void this.interruptCrewmate(taskId, "cancel", {
-      actor: "captain",
-      via,
-      decision: null,
-      ...(panel ? { panel } : {}),
-    }).catch((caught: unknown) => this.reportCardEffectFailure(taskId, caught));
-  }
-
-  /**
-   * A computer that runs work is being removed (docs/devices.md, "Remove"):
-   * each task started there stops, as the captain's Stop stops one, and
-   * this resolves once each one's record is closed. One whose computer is
-   * out of reach cannot end its turn there, so it stops here at once, and
-   * so does one still open after `boundMs`. A task that has not started
-   * follows its project instead (`TaskPlacement.projectMoved`), and one the
-   * captain said runs there follows its parent's or its project's again.
-   */
-  async stopTasksOn(deviceId: string, boundMs = 60_000): Promise<void> {
-    for (const taskId of this.options.tasks.placement.forgetRunsOn(deviceId))
-      this.placement.runsOnChanged(taskId);
-    const source: InterruptSource = { actor: "captain", via: "shell", decision: null };
-    const started = this.options.tasks
-      .listLive()
-      .filter(
-        (record) =>
-          record.deviceId === deviceId &&
-          Boolean(
-            record.placement || record.branch || record.sessionFile || this.tasks.has(record.id),
-          ),
+    void this.steer
+      .steerCrewmate(
+        taskId,
+        this.ladder.nudgeFor(taskId),
+        "captain",
+        from === "card"
+          ? { via: "card", cardId: stallCardId(taskId) }
+          : { via: from, ...(panel ? { panel } : {}) },
       )
-      .map((record) => record.id);
-    const stopHere = (taskId: string) => {
-      const task = this.tasks.get(taskId);
-      if (!task) {
-        const record = this.options.tasks.get(taskId);
-        if (record?.placement && !TaskService.isClosed(record))
-          this.settling.closing.closeRecord(taskId, "cancelled", undefined, "captain");
-        return;
-      }
-      this.recordInterrupt(taskId, "cancel", source, "requested");
-      this.finish(task, "cancelled");
-    };
-    for (const taskId of started) {
-      if (this.tasks.has(taskId) && this.outOfReach(taskId)) {
-        stopHere(taskId);
-        continue;
-      }
-      await this.interruptCrewmate(taskId, "cancel", source).catch(() => stopHere(taskId));
-    }
-    const open = () =>
-      started.filter((taskId) => {
-        const record = this.options.tasks.get(taskId);
-        return record !== undefined && !TaskService.isClosed(record);
-      });
-    if (open().length === 0) return;
-    await new Promise<void>((resolve) => {
-      const done = () => {
-        clearTimeout(timer);
-        off();
-        resolve();
-      };
-      const off = this.options.tasks.onChange(() => {
-        if (open().length === 0) done();
-      });
-      const timer = setTimeout(() => {
-        for (const taskId of open()) stopHere(taskId);
-        done();
-      }, boundMs);
-      timer.unref?.();
-    });
+      .catch((caught: unknown) => this.reportCardEffectFailure(taskId, caught));
   }
 
   /** A stall card's effect that could not run: one feed line, as a card choice's does. */
@@ -8542,25 +5946,27 @@ export class CrewSupervisor {
     // A record no crewmate can hear - no live session and none to resume -
     // has nobody to tell; the close stays on the record alone.
     if (!this.tasks.has(taskId) && !record.sessionFile) return;
-    void this.steerCrewmate(
-      taskId,
-      {
-        facts: {
-          kind: "card-closed",
-          card: { id: card.id, title: card.title },
-          ...(duplicateOf ? { duplicateOf } : { read: true as const }),
-        },
-      },
-      "captain",
-      { via: "card", cardId },
-    ).catch((caught: unknown) => {
-      const message = caught instanceof Error ? caught.message : String(caught);
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Could not deliver your close of "${card.title}" for "${this.taskTitle(taskId)}": ${message}`,
+    void this.steer
+      .steerCrewmate(
         taskId,
+        {
+          facts: {
+            kind: "card-closed",
+            card: { id: card.id, title: card.title },
+            ...(duplicateOf ? { duplicateOf } : { read: true as const }),
+          },
+        },
+        "captain",
+        { via: "card", cardId },
+      )
+      .catch((caught: unknown) => {
+        const message = caught instanceof Error ? caught.message : String(caught);
+        this.options.broadcastEvent({
+          type: "firstmate_note",
+          text: `Could not deliver your close of "${card.title}" for "${this.taskTitle(taskId)}": ${message}`,
+          taskId,
+        });
       });
-    });
   }
 
   /**
@@ -8596,7 +6002,7 @@ export class CrewSupervisor {
         this.machineOf(task.id) === LOCAL_MACHINE_ID
       )
         this.options.inbox.enqueue(task.id, { facts: { kind: "turn-resumed", stopped: "quit" } });
-      this.releaseSession(task);
+      this.sessions.releaseSession(task);
     }
     this.tasks.clear();
     // An update that saved the crew's work replaces this copy only once
@@ -8611,7 +6017,7 @@ export class CrewSupervisor {
    * operation is its caller's to hear, never the quit's.
    */
   private settled(boundMs?: number): Promise<void> {
-    const pending = [...this.releasing, ...this.sweeping, ...this.moves.operations()];
+    const pending = [...this.sessions.releases(), ...this.sweeping, ...this.moves.operations()];
     if (pending.length === 0) return Promise.resolve();
     if (boundMs === undefined) return Promise.allSettled(pending).then(() => {});
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -8636,17 +6042,6 @@ function routingAskMoved(
   return before?.override_model_id !== after?.override_model_id || before?.basis !== after?.basis;
 }
 
-/**
- * The order one delivery of lane rows is, for a conversation on another
- * computer (src/shared/work.ts): its rows, and this delivery among their
- * attempts. Asked again after a drop it is the same order, which that
- * computer answers without acting again; a later delivery of the same rows,
- * after a turn there was lost, is a new one.
- */
-function laneOrder(ids: readonly number[]): string | undefined {
-  return ids.length > 0 ? `rows:${ids.join(",")}:${randomUUID().slice(0, 8)}` : undefined;
-}
-
 /** The lane rows an order names; none for one this Mac did not mint from rows. */
 function laneRowsOf(order: string | undefined): number[] {
   if (!order?.startsWith("rows:")) return [];
@@ -8654,45 +6049,6 @@ function laneRowsOf(order: string | undefined): number[] {
     .split(",")
     .map(Number)
     .filter((id) => Number.isSafeInteger(id) && id > 0);
-}
-
-/** Why a task on a subscription this build no longer offers cannot be resumed. */
-function retiredResumeText(taskId: string): string {
-  return `Task ${taskId} ran on a subscription Infinitary no longer offers, so its session cannot be resumed. Spawn a follow-up crewmate instead.`;
-}
-
-/**
- * Whether a failed turn needs the captain's sign-in. A backend that reports
- * typed failures is read by its class alone - a failure without one is never
- * a sign-in, whatever its words say (a session that exits is a session
- * failure); a prose backend goes through the one prose classifier.
- */
-function isSignInFailure(
-  profile: ControlProfile | undefined,
-  error: string,
-  cutOff?: CutOff,
-): boolean {
-  if (cutOff) return cutOff.class === "signed_out";
-  if (profile?.failureSignals === "typed") return false;
-  return isAuthFailureMessage(error);
-}
-
-/**
- * The provider a sign-in card names: the session's own while it knows one
- * the app offers, else the one the task's record keeps (`provider/id`). A Pi
- * session whose custom connection has no runtime no longer knows its
- * provider (it reads "unknown").
- */
-function signInProvider(
-  session: string | undefined,
-  recorded: string | null | undefined,
-): string | undefined {
-  const known = (provider: string | undefined) =>
-    provider &&
-    (isCustomApiProvider(provider) || PROVIDER_CATALOG.some((entry) => entry.id === provider))
-      ? provider
-      : undefined;
-  return known(session) ?? known(recorded?.split("/")[0]);
 }
 
 /** The session events that are also feed events: everything but owner-only session facts. */

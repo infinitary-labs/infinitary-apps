@@ -167,7 +167,7 @@ The scorer sits behind Observe's development gate like the other offline tools.
 
 A decision model answers a question; the ledger records what the host decided.
 Every decision about a task - which model and tier a spawn is routed to, which account serves it, and whose turn a report or an idle crewmate is - is one row of `decisions` (migration 50, the primitives review's P6) with its `kind`: `routing`, `account` or `sort`.
-`DecisionStore` (`src/core/storage/decisionStore.ts`) is its one writer: `Router`, `AccountSelector` and the supervisor's `recordSort` seam write through it, and a sort row commits in one transaction with the wake it records.
+`DecisionStore` (`src/core/storage/decisionStore.ts`) is its one writer: `Router`, `AccountSelector` and the crew's `CrewTurns.recordSort` seam write through it, and a sort row commits in one transaction with the wake it records.
 
 One shape: the task, the time, the `rule` that decided (a routing policy row R0-R9, or the whose-turn or idle rule of a sort; none for an account pick or a retired triage verdict, whose judging model sits in `model`), the reasons for a routing or account pick, and each kind's own columns - routing's provider, model, asked and served slot; the account; a sort's wake, verdict, summary, provenance stamps and the write-once missed-escalation label.
 A sort row that recorded a typed wake carries its facts (`facts_json`; `docs/inbox.md`, "The wake envelope") beside the text it was served as.

@@ -259,8 +259,8 @@ describe("the host's own operations, before they move out of the crew supervisor
     h.supervisor.moveToBacklog(taskId, { actor: "firstmate", via: "tool", decision: null });
     await tick();
     // Its conversation is let go while it waits, as a quit or a release would.
-    expect(await h.supervisor.releaseConversation(taskId)).toBe(true);
-    expect(h.supervisor.conversationHeld(taskId)).toBe(false);
+    expect(await h.supervisor.sessions.releaseConversation(taskId)).toBe(true);
+    expect(h.supervisor.sessions.conversationHeld(taskId)).toBe(false);
     const opened = h.sessions.open.mock.calls.length;
 
     const key = h.tasks.get(taskId)?.key || taskId;

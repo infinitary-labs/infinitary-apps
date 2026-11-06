@@ -89,7 +89,7 @@ export type ComputersOptions = {
   work: WorkDevices;
   tasks: TaskService;
   repos: RepoRegistry;
-  /** Each task started on that computer stops (`CrewSupervisor.stopTasksOn`), resolving once each is closed. */
+  /** Each task started on that computer stops (`CrewSessions.stopTasksOn`), resolving once each is closed. */
   stopTasks: (deviceId: string) => Promise<void>;
   /** Every closed task's work there comes here (`PlacedSessions.bringHome`); rejects when some could not. */
   bringHome: (deviceId: string) => Promise<void>;

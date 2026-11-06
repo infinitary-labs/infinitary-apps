@@ -202,15 +202,13 @@ import { COMPLETION_REVISED_WHILE_RUNNING } from "./crewmateCards";
 import { QUIT_SETTLE_MS } from "./crewRuntime";
 import { type CrewmateSpec, crewmateRenewedNote, crewmateRestartText } from "./crewSession";
 import {
-  BACKLOG_STEER_LINE,
   backlogLeftLine,
   CardChoiceUnavailableError,
   CrewSupervisor,
   QUIET_CARD_MS,
-  QUEUED_GUIDANCE_LINE,
-  UNHEARD_END_NOTE,
 } from "./crewSupervisor";
 import type { AccountAttachment, CrewSupervisorOptions } from "./crewSupervisorOptions";
+import { BACKLOG_STEER_LINE, QUEUED_GUIDANCE_LINE, UNHEARD_END_NOTE } from "./crewTurns";
 import { type AccountServeability, JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } from "./idleLadder";
 import { FLEET_STARTED_CHANGE_WORDS, type SpawnIntent } from "./intentBrief";
 import { ASSESSMENT_BOUND_MS, keptFeedLine, type LineageFacts } from "./mergeAuthorization";
@@ -278,7 +276,7 @@ describe("CrewSupervisor", () => {
     expect(ops.at(-1)).toContain("reported on task");
     expect(ops.at(-1)).toContain("Refactor finished.");
 
-    await supervisor.steerCrewmate(taskId, "also make it blue");
+    await supervisor.steer.steerCrewmate(taskId, "also make it blue");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe("also make it blue");
     expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
@@ -345,7 +343,7 @@ describe("CrewSupervisor", () => {
 
     crewmate.emit({ type: "continuation_started" });
     expect(legacyStateOf(tasks.get(taskId))).toBe("running");
-    await supervisor.steerCrewmate(taskId, "include the latest branch head");
+    await supervisor.steer.steerCrewmate(taskId, "include the latest branch head");
     // The steer names the lane row it delivers.
     expect(crewmate.steer).toHaveBeenCalledWith(
       "include the latest branch head",
@@ -403,7 +401,7 @@ describe("CrewSupervisor", () => {
       expect(crewmate.isStreaming()).toBe(false);
 
       if (trigger === "quiet") supervisor.checkQuietTasks(Date.now() + QUIET_CARD_MS);
-      else await supervisor.interruptCrewmate(taskId, "interrupt");
+      else await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
       await tick();
 
       expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
@@ -460,7 +458,7 @@ describe("CrewSupervisor", () => {
       { path: "/repos/acme/shop/actions/runs?per_page=100" },
       new AbortController().signal,
     );
-    await supervisor.steerCrewmate(taskId, "Also say which of them failed on the phone.");
+    await supervisor.steer.steerCrewmate(taskId, "Also say which of them failed on the phone.");
     expect(crewmate.steer).toHaveBeenCalledTimes(1);
 
     supervisor.checkQuietTasks(start + QUIET_CARD_MS + 60_000);
@@ -496,7 +494,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const start = Date.now();
     crewmate.emit({ type: "tool_start", taskId, callId: "call-1", toolName: "bash" });
-    await supervisor.steerCrewmate(taskId, "Stop after the first failure.");
+    await supervisor.steer.steerCrewmate(taskId, "Stop after the first failure.");
 
     supervisor.checkQuietTasks(start + QUIET_CARD_MS + 60_000);
     await tick();
@@ -644,7 +642,7 @@ describe("CrewSupervisor", () => {
     ]);
     // A message the captain sent meanwhile is tried again on Copilot, and the
     // click waits for that turn to end: a turn is never cut short.
-    await supervisor.steerCrewmate(taskId, "the release run finished");
+    await supervisor.steer.steerCrewmate(taskId, "the release run finished");
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(2));
     supervisor.act(card?.id ?? "", "move-task");
     await tick();
@@ -755,7 +753,7 @@ describe("CrewSupervisor", () => {
     crewmate.finishPrompt();
     await vi.waitFor(() => expect(specs).toHaveLength(2));
     // The next message reaches the new conversation after what it is told first.
-    await supervisor.steerCrewmate(taskId, "carry on");
+    await supervisor.steer.steerCrewmate(taskId, "carry on");
     await vi.waitFor(() => expect(moved.promptCalls.length).toBeGreaterThan(0));
     expect(moved.promptCalls[0]).toContain("carry on");
     expect(specs.at(-1)).toMatchObject({ model: codex });
@@ -829,7 +827,7 @@ describe("CrewSupervisor", () => {
     // The session survives: still steerable, and the next clean turn
     // reports normally again.
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
-    await supervisor.steerCrewmate(taskId, "try again");
+    await supervisor.steer.steerCrewmate(taskId, "try again");
     await tick();
     crewmate.emit({ type: "assistant_delta", taskId, text: "All done." });
     crewmate.emit({ type: "turn_end", taskId });
@@ -1275,7 +1273,7 @@ describe("CrewSupervisor", () => {
     };
     signedOut();
     await tick();
-    await supervisor.steerCrewmate(taskId, "try again");
+    await supervisor.steer.steerCrewmate(taskId, "try again");
     await tick();
     signedOut();
     await tick();
@@ -1336,7 +1334,7 @@ describe("CrewSupervisor", () => {
       ],
       [{ class: "refused" }, "Problem: something went wrong - try again"],
     ] as const) {
-      await supervisor.steerCrewmate(taskId, "again");
+      await supervisor.steer.steerCrewmate(taskId, "again");
       await tick();
       crewmate.emit({ type: "turn_failed", taskId, error: "Not now.", cutOff });
       crewmate.emit({ type: "turn_end", taskId });
@@ -1425,7 +1423,7 @@ describe("CrewSupervisor", () => {
       });
       try {
         expect(protocol.detail(taskId).waitingCardId).not.toBeNull();
-        if (reason === "cancelled") await supervisor.interruptCrewmate(taskId, "cancel");
+        if (reason === "cancelled") await supervisor.sessions.interruptCrewmate(taskId, "cancel");
         crewmate.failPrompt(reason === "cancelled" ? "aborted" : "The client exited.");
         await tick();
         expect(tasks.get(taskId)).toMatchObject({
@@ -1479,7 +1477,7 @@ describe("CrewSupervisor", () => {
         ],
       });
       if (boundary === "interruption") {
-        await supervisor.interruptCrewmate(taskId, "interrupt");
+        await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
         crewmate.failPrompt("aborted");
       } else {
         crewmate.emit({ type: "turn_failed", taskId, error: "Provider unavailable." });
@@ -1492,7 +1490,7 @@ describe("CrewSupervisor", () => {
       expect(supervisor.cards.snapshot().find((card) => card.id === id)?.awaiting).toBeUndefined();
       expect(cardStore.chosenAction(id)).toBeUndefined();
       // Retire this test's now-idle runtime and pending retry through the real lifecycle.
-      await supervisor.interruptCrewmate(taskId, "cancel");
+      await supervisor.sessions.interruptCrewmate(taskId, "cancel");
       await tick();
     },
   );
@@ -1505,7 +1503,7 @@ describe("CrewSupervisor", () => {
       intent: intentOf("long running work"),
     });
     await tick();
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     crewmate.failPrompt("aborted");
     await tick();
     expect(events.filter((e) => e.type === "task_finished").at(-1)).toMatchObject({
@@ -1539,7 +1537,7 @@ describe("CrewSupervisor", () => {
     }
     expect(legacyStateOf(tasks.get(taskId))).toBe("running");
 
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     await tick();
 
     expect(crewmate.aborts).toHaveLength(1);
@@ -1573,7 +1571,7 @@ describe("CrewSupervisor", () => {
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
 
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     expect(legacyStateOf(tasks.get(taskId))).toBe("cancelled");
     expect(events.filter((e) => e.type === "task_finished").at(-1)).toMatchObject({
       type: "task_finished",
@@ -1603,7 +1601,7 @@ describe("CrewSupervisor", () => {
     await tick();
     expect(tasks.get("t-done")?.status).toBe("done");
     const finishedBefore = events.filter((e) => e.type === "task_finished").length;
-    await supervisor.interruptCrewmate("t-done", "cancel");
+    await supervisor.sessions.interruptCrewmate("t-done", "cancel");
     expect(tasks.get("t-done")).toMatchObject({ status: "done", closedReason: "landed" });
     expect(events.filter((e) => e.type === "task_finished").length).toBe(finishedBefore);
   });
@@ -1635,7 +1633,7 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     expect(cards().map((card) => card.id)).toEqual([cardId]);
-    await supervisor.interruptCrewmate("t-idle", "cancel");
+    await supervisor.sessions.interruptCrewmate("t-idle", "cancel");
     await tick();
     expect(cards()).toEqual([]);
     expect(cardStore.chosenAction(cardId)).toBe("cancelled");
@@ -1663,7 +1661,7 @@ describe("CrewSupervisor", () => {
       status: "interrupted",
       createdAt: Date.now(),
     });
-    await supervisor.interruptCrewmate("t-int", "cancel");
+    await supervisor.sessions.interruptCrewmate("t-int", "cancel");
     expect(legacyStateOf(tasks.get("t-int"))).toBe("cancelled");
     expect(events.filter((e) => e.type === "task_finished").at(-1)).toMatchObject({
       type: "task_finished",
@@ -1680,13 +1678,13 @@ describe("CrewSupervisor", () => {
       intent: intentOf("long running work"),
     });
     await tick();
-    await supervisor.interruptCrewmate(taskId, "interrupt");
+    await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     crewmate.failPrompt("aborted");
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
     // The interrupt is the Firstmate's own tool; its receipt is never a wake.
     expect(ops.some((line) => line.includes("interrupted"))).toBe(false);
-    await supervisor.steerCrewmate(taskId, "carry on");
+    await supervisor.steer.steerCrewmate(taskId, "carry on");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe("carry on");
   });
@@ -1701,7 +1699,7 @@ describe("CrewSupervisor", () => {
     });
     await tick();
 
-    await supervisor.interruptCrewmate(taskId, "interrupt");
+    await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
 
     expect(
       tasks
@@ -1726,7 +1724,7 @@ describe("CrewSupervisor", () => {
     });
     await tick();
 
-    await expect(supervisor.interruptCrewmate(taskId, "interrupt")).rejects.toThrow("hunter2");
+    await expect(supervisor.sessions.interruptCrewmate(taskId, "interrupt")).rejects.toThrow("hunter2");
 
     const events = tasks.timeline(taskId).filter((event) => event.kind === "interrupted");
     expect(events.map((event) => event.data?.effect)).toEqual(["requested", "abort-failed"]);
@@ -1743,7 +1741,7 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     const opsBefore = ops.length;
-    await supervisor.interruptCrewmate(taskId, "interrupt");
+    await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     crewmate.failPrompt("aborted");
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
@@ -1765,7 +1763,7 @@ describe("CrewSupervisor", () => {
       intent: intentOf("long running work"),
     });
     await tick();
-    await supervisor.interruptCrewmate(taskId, "interrupt");
+    await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     crewmate.emit({ type: "assistant_delta", taskId, text: "Halfway through the rivet count." });
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
@@ -1780,7 +1778,7 @@ describe("CrewSupervisor", () => {
     expect(receipts()).toHaveLength(1);
 
     // The interrupt is spent: the next turn ends as an ordinary one.
-    await supervisor.steerCrewmate(taskId, "carry on");
+    await supervisor.steer.steerCrewmate(taskId, "carry on");
     await tick();
     crewmate.emit({ type: "assistant_delta", taskId, text: "Counted all forty rivets." });
     crewmate.emit({ type: "turn_end", taskId });
@@ -1804,7 +1802,7 @@ describe("CrewSupervisor", () => {
 
     // The backend resumed on its own; the Firstmate interrupts that work.
     crewmate.emit({ type: "continuation_started" });
-    await supervisor.interruptCrewmate(taskId, "interrupt");
+    await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.emit({ type: "continuation_ended" });
     await tick();
@@ -2021,7 +2019,7 @@ describe("CrewSupervisor", () => {
       expect(taskFeedLine(record, close)?.text).toBe(droppedLine(sentence));
 
       const cancelled = await step("Rebuild the runner image");
-      await h.supervisor.interruptCrewmate(cancelled, "cancel", undefined, SENTENCE);
+      await h.supervisor.sessions.interruptCrewmate(cancelled, "cancel", undefined, SENTENCE);
       await tick();
       expect(legacyStateOf(h.tasks.get(cancelled))).toBe("cancelled");
       expect(left(h.cards(), cancelled)).toEqual([]);
@@ -2086,7 +2084,7 @@ describe("CrewSupervisor", () => {
       await tick();
       const note = h.cards().find((card) => card.taskId === taskId) as Card;
       h.supervisor.close(note.id);
-      await h.supervisor.steerCrewmate(taskId, "I read the outcome; report what is left.");
+      await h.supervisor.steer.steerCrewmate(taskId, "I read the outcome; report what is left.");
       await tick();
       h.specs[0]?.onReport?.("The captain read my note and nothing is left.", undefined, {
         finished: true,
@@ -2109,7 +2107,7 @@ describe("CrewSupervisor", () => {
     // revised with the drop and the first mate's sentence, once.
     it("brings the answer the captain accepted back revised with a later drop, and adds no note (INF-1533)", async () => {
       const h = await idleTask();
-      await h.supervisor.steerCrewmate(h.taskId, "Show the final outcome for my choice.");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Show the final outcome for my choice.");
       await tick();
       h.specs[0]?.onCard?.({
         title: "The notice is renamed",
@@ -2145,7 +2143,7 @@ describe("CrewSupervisor", () => {
     // an ordinary note read through the actual corner before its later drop.
     it("revises the same read note on a later drop without completing work on read", async () => {
       const h = await idleTask();
-      await h.supervisor.steerCrewmate(h.taskId, "Show the final outcome for me to read.");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Show the final outcome for me to read.");
       await tick();
       const words = "The notice now reads Your first mate has not answered your message.";
       h.specs[0]?.onCard?.({
@@ -2182,7 +2180,7 @@ describe("CrewSupervisor", () => {
 
     it("puts up the sentence when the first mate cancels idle work", async () => {
       const h = await idleTask();
-      await h.supervisor.interruptCrewmate(h.taskId, "cancel", undefined, SENTENCE);
+      await h.supervisor.sessions.interruptCrewmate(h.taskId, "cancel", undefined, SENTENCE);
       await tick();
       expect(legacyStateOf(h.tasks.get(h.taskId))).toBe("cancelled");
       expect(left(h.cards(), h.taskId)).toEqual([
@@ -2199,7 +2197,7 @@ describe("CrewSupervisor", () => {
       });
       askedFor(tasks, taskId, "long running work");
       await tick();
-      await supervisor.interruptCrewmate(taskId, "cancel", undefined, SENTENCE);
+      await supervisor.sessions.interruptCrewmate(taskId, "cancel", undefined, SENTENCE);
       crewmate.failPrompt("aborted");
       await tick();
       expect(legacyStateOf(tasks.get(taskId))).toBe("cancelled");
@@ -2621,7 +2619,7 @@ describe("CrewSupervisor", () => {
       } else if (path === "failed") {
         crewmate.failPrompt("The client exited.");
       } else {
-        await supervisor.interruptCrewmate(taskId, "cancel");
+        await supervisor.sessions.interruptCrewmate(taskId, "cancel");
         if (path === "cancel-running") crewmate.failPrompt("aborted");
       }
       await tick();
@@ -2685,7 +2683,7 @@ describe("CrewSupervisor", () => {
       } else {
         crewmate.finishPrompt();
         await tick();
-        if (path === "cancel") await supervisor.interruptCrewmate(taskId, "cancel");
+        if (path === "cancel") await supervisor.sessions.interruptCrewmate(taskId, "cancel");
         else
           await supervisor.intake.commission({
             title: "Fresh attempt",
@@ -2718,7 +2716,7 @@ describe("CrewSupervisor", () => {
     else {
       crewmate.finishPrompt();
       await tick();
-      await supervisor.interruptCrewmate(taskId, "cancel");
+      await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     }
     await tick();
     expect(closePullRequest).not.toHaveBeenCalled();
@@ -2902,7 +2900,7 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     const card = supervisor.cards.snapshot().find((entry) => entry.title === "Pick a course");
-    vi.spyOn(supervisor, "steerCrewmate").mockRejectedValue(new Error("session unreachable"));
+    vi.spyOn(supervisor.steer, "steerCrewmate").mockRejectedValue(new Error("session unreachable"));
     specs[0]?.onReport?.("The decision is ready.");
     supervisor.act(card?.id ?? "", "change");
     await vi.waitFor(() =>
@@ -3214,7 +3212,7 @@ describe("CrewSupervisor", () => {
         policies: expect.objectContaining({ revision: 1 }),
       }),
     ]);
-    await restarted.steerCrewmate(task.id, "Continue the requested fix");
+    await restarted.steer.steerCrewmate(task.id, "Continue the requested fix");
     await tick();
     expect(openSession).toHaveBeenCalledTimes(1);
     expect(resumed.promptCalls.join("\n")).toContain('"revision":1');
@@ -4225,7 +4223,7 @@ describe("CrewSupervisor", () => {
 
     it("INF-1246 newer captain guidance holds a continued merge until its impact is declared", async () => {
       const h = await continued();
-      await h.supervisor.steerCrewmate(h.taskId, "Keep the same approved work", "captain");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Keep the same approved work", "captain");
       expect(h.authorization()?.guidance).toMatchObject({ latest: 1, declared: 0 });
       h.forge.headSha = REPAIRED;
       await h.declare(repair("none"));
@@ -4332,7 +4330,7 @@ describe("CrewSupervisor", () => {
       harness: Awaited<ReturnType<typeof approved>>,
       moves: () => Promise<void>,
     ) {
-      await harness.supervisor.steerCrewmate(harness.taskId, "bring it up to date");
+      await harness.supervisor.steer.steerCrewmate(harness.taskId, "bring it up to date");
       await moves();
       harness.crewmate.finishPrompt();
       await tick();
@@ -6269,7 +6267,7 @@ describe("CrewSupervisor", () => {
     it("stands across a quit that cuts the crewmate's turn, where an interrupt ends it", async () => {
       const harness = await kept();
       const standing = harness.authorization();
-      await harness.supervisor.steerCrewmate(harness.taskId, "bring it up to date");
+      await harness.supervisor.steer.steerCrewmate(harness.taskId, "bring it up to date");
       await harness.supervisor.disposeAll();
       expect(harness.authorization()).toEqual(standing);
       expect(harness.authorization()?.status).not.toBe("revoked");
@@ -6333,8 +6331,8 @@ describe("CrewSupervisor", () => {
       });
       expect(harness.authorization()).toMatchObject({ status: "superseded" });
       const again = await kept();
-      await again.supervisor.steerCrewmate(again.taskId, "bring it up to date");
-      await again.supervisor.interruptCrewmate(again.taskId, "interrupt");
+      await again.supervisor.steer.steerCrewmate(again.taskId, "bring it up to date");
+      await again.supervisor.sessions.interruptCrewmate(again.taskId, "interrupt");
       expect(again.authorization()).toMatchObject({ status: "revoked", holds: true });
       expect(again.forge.merges).toEqual([]);
     });
@@ -6342,7 +6340,7 @@ describe("CrewSupervisor", () => {
     // INF-2062: moving a started task back to the backlog ends a kept approval, as an interrupt does.
     it("a move back to the backlog revokes it with a hold", async () => {
       const harness = await kept();
-      await harness.supervisor.steerCrewmate(harness.taskId, "bring it up to date");
+      await harness.supervisor.steer.steerCrewmate(harness.taskId, "bring it up to date");
       expect(harness.supervisor.runTaskOp(harness.taskId, "unqueue-task")).toBeUndefined();
       await vi.waitFor(() =>
         expect(harness.authorization()).toMatchObject({ status: "revoked", holds: true }),
@@ -6370,7 +6368,7 @@ describe("CrewSupervisor", () => {
       // While his approval stands, the captain asks through the Firstmate.
       // The crewmate brings the change up to date in that turn but says
       // nothing about his words.
-      await h.supervisor.steerCrewmate(h.taskId, "Should the meter be renamed?", "firstmate", {
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Should the meter be renamed?", "firstmate", {
         captainWords: true,
       });
       expect(h.crewmate.promptCalls.at(-1)).toContain(`${GUIDANCE_MARK_WORDS} 1 `);
@@ -6457,7 +6455,7 @@ describe("CrewSupervisor", () => {
 
     it("a line he types in the task's Crewmate tab holds it too, and his words stay his on the record (FI3-662)", async () => {
       const h = await kept();
-      expect(await h.supervisor.steerFromCrewmateTab(h.taskId, "Rename it to gauge.")).toEqual({
+      expect(await h.supervisor.steer.steerFromCrewmateTab(h.taskId, "Rename it to gauge.")).toEqual({
         ok: true,
       });
       expect(h.authorization()?.guidance).toMatchObject({ latest: 1, declared: 0 });
@@ -6473,12 +6471,12 @@ describe("CrewSupervisor", () => {
 
     it("guidance that comes while his own click waits for the crewmate's turn keeps the click instead of merging (FI3-662)", async () => {
       const h = await approved();
-      await h.supervisor.steerCrewmate(h.taskId, "polish the docs");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "polish the docs");
       // He clicks while the crewmate works, then gives it new guidance.
       h.supervisor.act(h.card.id, "merge");
       await tick();
       expect(h.authorization()?.status).toBe("standing");
-      await h.supervisor.steerCrewmate(h.taskId, "Hold on, rename it first.", "firstmate", {
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Hold on, rename it first.", "firstmate", {
         captainWords: true,
       });
       expect(h.authorization()?.guidance).toMatchObject({ latest: 1, declared: 0 });
@@ -7562,7 +7560,7 @@ describe("CrewSupervisor", () => {
     await tick();
     expect(noteCutOff).not.toHaveBeenCalled();
 
-    await supervisor.steerCrewmate(taskId, "go on");
+    await supervisor.steer.steerCrewmate(taskId, "go on");
     await tick();
     fail({ type: "turn_failed", taskId, error: "Claude said no.", cutOff: { class: "refused" } });
     await tick();
@@ -7655,7 +7653,7 @@ describe("CrewSupervisor", () => {
       createdAt: Date.now(),
     });
 
-    await supervisor.steerCrewmate("t-resume", "carry on");
+    await supervisor.steer.steerCrewmate("t-resume", "carry on");
     await tick();
     expect(accounts.reselectForResume).toHaveBeenCalledWith("t-resume", "acct_dead");
     expect(specs[0]).toMatchObject({ resumeToken: "/tmp/old-session.jsonl" });
@@ -7722,7 +7720,7 @@ describe("CrewSupervisor", () => {
       // and the client answers on whatever the reopen asked for.
       const boot = fakeCrewmate({ model: fable });
       const { fresh, specs } = relaunch(h, boot);
-      await fresh.steerCrewmate(taskId, "carry on");
+      await fresh.steer.steerCrewmate(taskId, "carry on");
       await tick();
       expect(specs[0]).toMatchObject({
         resumeToken: "/tmp/s1.jsonl",
@@ -7758,7 +7756,7 @@ describe("CrewSupervisor", () => {
 
       const boot = fakeCrewmate({ model: opus55 });
       const reopened = relaunch(h, boot);
-      await reopened.fresh.steerCrewmate(taskId, "carry on");
+      await reopened.fresh.steer.steerCrewmate(taskId, "carry on");
       await tick();
       // No word on its effort and no Settings choice: the routed level's default.
       expect(reopened.specs[0]).toMatchObject({
@@ -7777,7 +7775,7 @@ describe("CrewSupervisor", () => {
       expect(reopened.specs.at(-1)).toMatchObject({ model: codex, thinkingLevel: "low" });
       await reopened.fresh.disposeAll();
       const again = relaunch(h, fakeCrewmate({ model: codex }));
-      await again.fresh.steerCrewmate(taskId, "carry on");
+      await again.fresh.steer.steerCrewmate(taskId, "carry on");
       await tick();
       expect(again.specs[0]).toMatchObject({ model: codex, thinkingLevel: "low" });
       await again.fresh.disposeAll();
@@ -7952,7 +7950,7 @@ describe("CrewSupervisor", () => {
         const saving = h.supervisor.updates.saveForUpdate({ waiting: (tasks) => waiting.push(tasks) });
         expect(waiting.at(-1)).toEqual(["Release notes"]);
         // The captain's words while it saves wait on the lane, never steered in.
-        expect(await h.supervisor.steerCrewmate(taskId, "Mention the new keys too", "captain")).toBe(
+        expect(await h.supervisor.steer.steerCrewmate(taskId, "Mention the new keys too", "captain")).toBe(
           "recorded-held",
         );
         expect(crewmate.steer).not.toHaveBeenCalled();
@@ -8011,7 +8009,7 @@ describe("CrewSupervisor", () => {
         await tick();
         const later = new AbortController();
         const saving = h.supervisor.updates.saveForUpdate({ signal: later.signal });
-        await h.supervisor.steerCrewmate(taskId, "Mention the new keys too", "captain");
+        await h.supervisor.steer.steerCrewmate(taskId, "Mention the new keys too", "captain");
         later.abort();
         expect(await saving).toBe("withdrawn");
         await tick();
@@ -8038,7 +8036,7 @@ describe("CrewSupervisor", () => {
         // Already idle: no stop, no row that would wake it after the restart.
         expect(crewmate.stops).toEqual([]);
         expect(updateRows(h, taskId)).toEqual([]);
-        await h.supervisor.steerCrewmate(taskId, "One more paragraph", "captain");
+        await h.supervisor.steer.steerCrewmate(taskId, "One more paragraph", "captain");
         await tick();
         expect(crewmate.promptCalls).toHaveLength(1);
         // The update did not replace the copy: what waited goes now.
@@ -8068,7 +8066,7 @@ describe("CrewSupervisor", () => {
             saving = h.supervisor.updates.saveForUpdate();
           return result;
         });
-        await h.supervisor.steerCrewmate(taskId, "One more paragraph", "captain");
+        await h.supervisor.steer.steerCrewmate(taskId, "One more paragraph", "captain");
         await tick();
         expect(saving).toBeDefined();
         expect(await saving).toBe("saved");
@@ -8169,7 +8167,7 @@ describe("CrewSupervisor", () => {
         if (outcome === "held") h.tasks.placement.setAccountId(taskId, "test-account");
         now += 100_000;
         if (outcome === "guided")
-          await fresh.steerCrewmate(taskId, "Please check the restart", "captain");
+          await fresh.steer.steerCrewmate(taskId, "Please check the restart", "captain");
         else await fresh.sweepInbox(now);
         if (outcome === "resumed") {
           await tick();
@@ -8265,7 +8263,7 @@ describe("CrewSupervisor", () => {
         knows: () => false,
       } as unknown as CrewMachines;
       const { fresh, specs } = relaunch(h, boot, machines);
-      await fresh.steerCrewmate(taskId, "carry on");
+      await fresh.steer.steerCrewmate(taskId, "carry on");
       await tick();
       expect(specs[0]).toMatchObject({ machineId: "mac-mini", model: fable, thinkingLevel: "xhigh" });
       expect(opened[0]).toMatchObject({ machine: "mac-mini", model: fable });
@@ -8296,7 +8294,7 @@ describe("CrewSupervisor", () => {
       file: `/tmp/records/${earlierToken}.jsonl`, computer: HOME.the, device_id: "local",
       provider: "anthropic-claude", model: "claude-fable-5", account_id: null, began: "start",
     });
-    await supervisor.steerCrewmate("t-foreign", "carry on");
+    await supervisor.steer.steerCrewmate("t-foreign", "carry on");
     await tick();
     expect(specs[0]?.resumeToken).toBe("0f3a2c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b");
     expect(sessionSpecs[0]?.shape).toMatchObject({ turns: "rolling" });
@@ -8315,7 +8313,7 @@ describe("CrewSupervisor", () => {
     ]);
     crewmate.finishPrompt();
     await tick();
-    await supervisor.steerCrewmate("t-foreign", "Inspect the header too.");
+    await supervisor.steer.steerCrewmate("t-foreign", "Inspect the header too.");
     await tick();
     expect(tasks.archive.sessions("t-foreign")).toHaveLength(2);
     expect(tasks.archive.sessions("t-foreign").filter((session) => session.current)).toHaveLength(1);
@@ -8351,7 +8349,7 @@ describe("CrewSupervisor", () => {
       model: "mock-1", account_id: null, began: "start",
     });
 
-    await supervisor.steerCrewmate("t-renew", "carry on");
+    await supervisor.steer.steerCrewmate("t-renew", "carry on");
     await tick();
     // The record says so, and names the new conversation before its turn ends.
     const note = tasks
@@ -8379,7 +8377,7 @@ describe("CrewSupervisor", () => {
     // Once a turn took it in, the next prompt is the message alone.
     crewmate.finishPrompt();
     await tick();
-    await supervisor.steerCrewmate("t-renew", "and then this");
+    await supervisor.steer.steerCrewmate("t-renew", "and then this");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe("and then this");
   });
@@ -8418,7 +8416,7 @@ describe("CrewSupervisor", () => {
       earlier,
     });
 
-    await supervisor.steerCrewmate("t-renew-restart", "carry on");
+    await supervisor.steer.steerCrewmate("t-renew-restart", "carry on");
     await tick();
     // The words are the same as the in-memory prefix they replace.
     expect(crewmate.promptCalls).toEqual([`${reason}\n\ncarry on`]);
@@ -8457,7 +8455,7 @@ describe("CrewSupervisor", () => {
     bootCrewmate.emit({ type: "turn_end", taskId: "t-renew-restart" });
     bootCrewmate.finishPrompt();
     await tick();
-    await fresh.steerCrewmate("t-renew-restart", "and then this");
+    await fresh.steer.steerCrewmate("t-renew-restart", "and then this");
     await tick();
     expect(bootCrewmate.promptCalls.at(-1)).toBe("and then this");
     expect(bootCrewmate.promptCalls.at(-1)).not.toContain(reason);
@@ -8521,7 +8519,7 @@ describe("CrewSupervisor", () => {
     });
 
     // A steer is refused as text, with the way out.
-    await expect(supervisor.steerCrewmate("t-cursor", "carry on")).rejects.toThrow(
+    await expect(supervisor.steer.steerCrewmate("t-cursor", "carry on")).rejects.toThrow(
       /no longer offers.*Spawn a follow-up/,
     );
     // Guidance a previous process left on its lane is kept on the record,
@@ -8590,7 +8588,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         body: completionBody("<p>The change is ready.</p>"),
         actions: [{ id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE }],
       });
-      if (reason === "cancelled") await supervisor.interruptCrewmate(taskId, "cancel");
+      if (reason === "cancelled") await supervisor.sessions.interruptCrewmate(taskId, "cancel");
       crewmate.failPrompt(reason === "cancelled" ? "aborted" : "The client exited.");
       await tick();
       check.resolve("green");
@@ -9496,7 +9494,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
 
     // The proposed change can be read and the card goes up: the refusal no longer stands.
     checks.overall = "green";
-    await supervisor.steerCrewmate(taskId, "the checks passed; emit the completion card");
+    await supervisor.steer.steerCrewmate(taskId, "the checks passed; emit the completion card");
     await tick();
     const shown = await emitCard.run({
       required_actions: [],
@@ -10656,7 +10654,7 @@ describe("the task graph (R1)", () => {
     });
     tasks.placement.markWorkspaceRemoved(old.id);
     expect(await supervisor.startQueuedNow(old.key)).toContain("start_again");
-    await expect(supervisor.steerCrewmate(old.id, "continue")).rejects.toThrow("start_again");
+    await expect(supervisor.steer.steerCrewmate(old.id, "continue")).rejects.toThrow("start_again");
     const result = supervisor.startAgain(old.id);
     if (!result.ok) throw new Error(result.text);
     await result.started;
@@ -11996,7 +11994,7 @@ describe("background job results (R2)", () => {
     const { supervisor } = setup(crewmate, { killJobs: (taskId) => killed.push(taskId) });
     const { taskId } = await supervisor.intake.commission({ title: "Doomed", intent: intentOf("work") });
     await tick();
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     crewmate.failPrompt("aborted");
     await tick();
     expect(killed).toContain(taskId);
@@ -12118,7 +12116,7 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
     await tick();
 
     // Mid-turn: the running turn cannot hear this.
-    const delivery = await supervisor.steerCrewmate(taskId, "use the other library");
+    const delivery = await supervisor.steer.steerCrewmate(taskId, "use the other library");
     // The caller is told it was queued rather than applied - the captain's
     // phase-8 decision, and the whole difference between honest and not.
     expect(delivery).toBe("queued-next-turn");
@@ -12144,8 +12142,8 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
     const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
-    expect(await supervisor.steerCrewmate(taskId, "first")).toBe("queued-next-turn");
-    expect(await supervisor.steerCrewmate(taskId, "second")).toBe("queued-next-turn");
+    expect(await supervisor.steer.steerCrewmate(taskId, "first")).toBe("queued-next-turn");
+    expect(await supervisor.steer.steerCrewmate(taskId, "second")).toBe("queued-next-turn");
     crewmate.finishPrompt();
     await tick();
 
@@ -12158,8 +12156,8 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
     const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
-    await supervisor.steerCrewmate(taskId, "stop and do this instead");
-    await supervisor.interruptCrewmate(taskId, "interrupt");
+    await supervisor.steer.steerCrewmate(taskId, "stop and do this instead");
+    await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     crewmate.failPrompt("The turn was interrupted.");
     await tick();
 
@@ -12176,7 +12174,7 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
     const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
-    await supervisor.steerCrewmate(taskId, "one more thing");
+    await supervisor.steer.steerCrewmate(taskId, "one more thing");
     crewmate.failPrompt("the crewmate crashed");
     await tick();
 
@@ -12197,7 +12195,7 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
     await tick();
 
     // The fallback is for backends that need it, and for nobody else.
-    expect(await supervisor.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
+    expect(await supervisor.steer.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
     expect(crewmate.steer).toHaveBeenCalledWith(
       "also make it blue",
       undefined,
@@ -12216,7 +12214,7 @@ describe("a steer that lands after the run's last look at its queue", () => {
     // The run has made its last check of the queue: the session accepts the
     // steer, and the turn ends without reading it.
     crewmate.holdSteers();
-    expect(await supervisor.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
+    expect(await supervisor.steer.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
     await tick();
@@ -12243,9 +12241,9 @@ describe("a steer that lands after the run's last look at its queue", () => {
     await tick();
 
     // The first steer reaches the running turn; the second lands in its tail.
-    await supervisor.steerCrewmate(taskId, "first");
+    await supervisor.steer.steerCrewmate(taskId, "first");
     crewmate.holdSteers();
-    await supervisor.steerCrewmate(taskId, "second");
+    await supervisor.steer.steerCrewmate(taskId, "second");
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
     await tick();
@@ -12262,7 +12260,7 @@ describe("a steer that lands after the run's last look at its queue", () => {
     await tick();
 
     crewmate.holdSteers();
-    await supervisor.steerCrewmate(taskId, "one more thing");
+    await supervisor.steer.steerCrewmate(taskId, "one more thing");
     crewmate.failPrompt("the crewmate crashed");
     await tick();
 
@@ -12928,7 +12926,7 @@ describe("the durable inbox (design A)", () => {
     await tick();
 
     // Mid-turn guidance on a followup-queue backend: durably recorded.
-    expect(await supervisor.steerCrewmate(taskId, "use the other library")).toBe(
+    expect(await supervisor.steer.steerCrewmate(taskId, "use the other library")).toBe(
       "queued-next-turn",
     );
 
@@ -13130,7 +13128,7 @@ describe("the durable inbox (design A)", () => {
     await tick();
 
     (crewmate.steer as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("busy"));
-    expect(await supervisor.steerCrewmate(taskId, "make it blue")).toBe("recorded-retrying");
+    expect(await supervisor.steer.steerCrewmate(taskId, "make it blue")).toBe("recorded-retrying");
     expect(inbox.pending(taskId, hostNow + 120000)).toHaveLength(1);
 
     // The tick sweep retries once the grace passes; the steer now lands.
@@ -13165,7 +13163,7 @@ describe("the durable inbox (design A)", () => {
     await tick();
 
     (crewmate.steer as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("always busy"));
-    expect(await supervisor.steerCrewmate(taskId, "urgent fix")).toBe("recorded-retrying");
+    expect(await supervisor.steer.steerCrewmate(taskId, "urgent fix")).toBe("recorded-retrying");
     for (let round = 0; round < 3; round += 1) {
       passGrace();
       await supervisor.sweepInbox(hostNow);
@@ -13369,7 +13367,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     // The first mate passes the finding on and ends the wait: the next
     // report from the still-running task holds nobody and stays quiet.
     supervisor.intake.unlinkTasks(taskId, held.id, "blocks");
-    await supervisor.steerCrewmate(taskId, "go on");
+    await supervisor.steer.steerCrewmate(taskId, "go on");
     await tick();
     await report(crewmate, taskId, "Second clean phone run passed.");
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
@@ -13494,7 +13492,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       accountId: null,
       assignee: "crewmate",
     });
-    await supervisor.steerCrewmate(taskId, "go on");
+    await supervisor.steer.steerCrewmate(taskId, "go on");
     await tick();
     await report(clientSide, taskId, "Still waiting on the flaky test fix.");
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
@@ -13543,7 +13541,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
 
     // The crewmate pushed again: the diagnosis was about another version.
     seedDelivery(tasks, taskId, { headSha: "head-2", ci: "pending" });
-    await supervisor.steerCrewmate(taskId, "go on");
+    await supervisor.steer.steerCrewmate(taskId, "go on");
     await tick();
     await report(clientSide, taskId, "Pushed a new version; its checks are running.");
     expect(sorts.at(-1)?.rule).toBe("cannot-tell");
@@ -13590,7 +13588,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
 
       // PR #496 merges: the storage task now waits only on a start.
       tasks.close(secrets.id, { status: "done", reason: "merged", actor: "host" });
-      await supervisor.steerCrewmate(taskId, "go on");
+      await supervisor.steer.steerCrewmate(taskId, "go on");
       await tick();
       await report(clientSide, taskId, "Still blocked on INF-1659.");
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
@@ -13625,7 +13623,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
 
       // With the dropped blocker gone from its waits, the parked one is what needs a start.
       supervisor.intake.unlinkTasks(secrets.id, storage.id, "blocks");
-      await supervisor.steerCrewmate(taskId, "go on");
+      await supervisor.steer.steerCrewmate(taskId, "go on");
       await tick();
       await report(clientSide, taskId, "Still blocked on INF-1659.");
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
@@ -13743,7 +13741,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     await report(clientSide, taskId, "Filed what blocks me.");
     expect(sorts.at(-1)?.rule).toBe("filed-followups");
     // The Firstmate left it planned: the next report still names it.
-    await supervisor.steerCrewmate(taskId, "go on");
+    await supervisor.steer.steerCrewmate(taskId, "go on");
     await tick();
     await report(clientSide, taskId, "Still blocked.");
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
@@ -13756,7 +13754,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       accountId: null,
       assignee: "crewmate",
     });
-    await supervisor.steerCrewmate(taskId, "go on");
+    await supervisor.steer.steerCrewmate(taskId, "go on");
     await tick();
     await report(clientSide, taskId, "Waiting for it to merge.");
     expect(sorts.at(-1)?.rule).toBe("still-moving");
@@ -13889,7 +13887,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       expect(reportWakes(ops)).toHaveLength(1);
       expect(reportWakes(ops)[0]).not.toContain("It asks the first mate to act");
 
-      await supervisor.steerCrewmate(taskId, "go on");
+      await supervisor.steer.steerCrewmate(taskId, "go on");
       await tick();
       specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
       await endTurn(crewmate, taskId);
@@ -13932,7 +13930,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
       await endTurn(crewmate, taskId);
       // The same relay on a later turn says nothing new: the inbox keeps one.
-      await supervisor.steerCrewmate(taskId, "go on");
+      await supervisor.steer.steerCrewmate(taskId, "go on");
       await tick();
       specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
       await endTurn(crewmate, taskId);
@@ -14842,7 +14840,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ),
       );
     protocol.dispose();
-    await h.supervisor.interruptCrewmate(taskId, "cancel");
+    await h.supervisor.sessions.interruptCrewmate(taskId, "cancel");
   });
 
   describe("self-resolving stalls (INF-1550, approved B/C)", () => {
@@ -14852,7 +14850,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         h.specs[0]?.onCard?.({ title: "Choose the remaining consent", body: "<p>Signing needs your consent.</p>", actions: [{ id: "allow", label: "Allow signing", default: true }, { id: "hold", label: "Keep waiting" }] });
         await tick();
       }
-      await h.supervisor.steerCrewmate(h.taskId, "Report only the current state.");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Report only the current state.");
       await tick();
       const before = h.ops.length;
       h.specs[0]?.onReport?.("The current owner still has the next move.", undefined, { recoveryWays: [] });
@@ -14867,7 +14865,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("INF-1554 F5: serves the kept bounded recovery facts, retained overflow and one procedure", async () => {
       initOverflowDir(scratchDir("infinitary-recovery-wake-"));
       const h = await stopped();
-      await h.supervisor.steerCrewmate(h.taskId, "Report the observations and alternatives.");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Report the observations and alternatives.");
       await tick();
       const observation = "The host fix is merged, but the running app still lacks it; the branch can move without an alpha. ".repeat(8);
       h.specs[0]?.onReport?.("The wait has alternatives.", undefined, {
@@ -14888,7 +14886,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     it("wakes for an unowned wait even behind a timed gate, then reports typed recovery ways without a card", async () => {
       const h = await stopped();
-      await h.supervisor.steerCrewmate(
+      await h.supervisor.steer.steerCrewmate(
         h.taskId,
         "Report the release wait and cheapest alternative.",
       );
@@ -14914,7 +14912,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         cheapestWay: "Move the branch to a fresh task.",
       });
 
-      await h.supervisor.steerCrewmate(
+      await h.supervisor.steer.steerCrewmate(
         h.taskId,
         "Read-only: find ways around this host record; report, no card, then stop.",
       );
@@ -14951,7 +14949,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // Source: R6 of INF-1644, "rejects legitimate reports across the supported boundary".
     it("keeps a report whose recovery way names a hold this build retired, read as the captain's", async () => {
       const h = await stopped();
-      await h.supervisor.steerCrewmate(h.taskId, "Read-only: report ways around the failing checks.");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Read-only: report ways around the failing checks.");
       await tick();
       // INF-1688 retired the repair limit; a same-major work computer on an older build still names it.
       const way = {
@@ -14979,7 +14977,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         // A verdict from before the wait is not an attempt at it.
         h.tasks.updateFields(h.taskId, { verdict: "Let the crewmate finish step one." }, "firstmate");
         hostNow += 1;
-        await h.supervisor.steerCrewmate(h.taskId, "Name the wait.");
+        await h.supervisor.steer.steerCrewmate(h.taskId, "Name the wait.");
         await tick();
         h.specs[0]?.onReport?.("No release owner exists.", undefined, {
           workWait: { observation: "No alpha is being cut", cheapestWay: "Take over the branch" },
@@ -15028,7 +15026,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         await endTurn(h.crewmate, h.taskId);
         await h.at(h.base + minutes(20));
         hostNow += 1;
-        await h.supervisor.steerCrewmate(h.taskId, "Read the owner again.");
+        await h.supervisor.steer.steerCrewmate(h.taskId, "Read the owner again.");
         await tick();
         h.specs[0]?.onReport?.("The takeover started on the branch.");
         await endTurn(h.crewmate, h.taskId);
@@ -15052,7 +15050,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         cheapestWay: "Start the existing takeover now",
       };
       const report = async () => {
-        await h.supervisor.steerCrewmate(h.taskId, "Check the named owner once.");
+        await h.supervisor.steer.steerCrewmate(h.taskId, "Check the named owner once.");
         await tick();
         h.specs[0]?.onReport?.("Checked the takeover owner.", undefined, {
           workWait: wait,
@@ -15084,7 +15082,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         await endTurn(h.crewmate, h.taskId);
       };
       hostNow += 1;
-      await h.supervisor.steerCrewmate(h.taskId, "Check the release owner.");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Check the release owner.");
       await tick();
       await lookLater();
       const base = hostNow - h.idleSince;
@@ -15116,7 +15114,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("INF-2133: a check-back with nothing running is told to start a background sleep, which then owns the wait", async () => {
       let sleeping = false;
       const h = await stopped({ hasRunningJobs: () => sleeping });
-      await h.supervisor.steerCrewmate(h.taskId, "Look at the release again in half an hour.");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Look at the release again in half an hour.");
       await tick();
       const receipt = h.specs[0]?.onReport?.("The release is not out yet.", undefined, {
         checkBack: { minutes: 30, waitingFor: "the release to publish" },
@@ -15135,7 +15133,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         reason: "the release to publish",
       });
       // A second check-back while the sleep runs keeps today's reply.
-      await h.supervisor.steerCrewmate(h.taskId, "Any change?");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Any change?");
       await tick();
       expect(
         h.specs[0]?.onReport?.("Still waiting.", undefined, {
@@ -15153,7 +15151,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         cheapestWay: "Start the existing takeover now",
       };
       const report = async (observation: string) => {
-        await h.supervisor.steerCrewmate(h.taskId, "Check the named owner once.");
+        await h.supervisor.steer.steerCrewmate(h.taskId, "Check the named owner once.");
         await tick();
         h.specs[0]?.onReport?.("Checked the takeover owner.", undefined, {
           workWait: { ...wait, observation },
@@ -15288,7 +15286,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // The Firstmate asks for an interrupt at 40 minutes: an action on the
     // task, read from its timeline, so the first wake was not ignored.
     hostNow = hostNow + minutes(20);
-    await supervisor.interruptCrewmate(taskId, "interrupt");
+    await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     await at(minutes(50));
     expect(idleWakes(ops)).toHaveLength(1);
     await at(minutes(71));
@@ -15302,7 +15300,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     for (const step of [20, 50, 80]) await at(minutes(step));
     expect(cards().some((card) => card.id === `card-stall-${taskId}`)).toBe(true);
 
-    await supervisor.steerCrewmate(taskId, "carry on with step two");
+    await supervisor.steer.steerCrewmate(taskId, "carry on with step two");
     await tick();
     expect(cards().some((card) => card.id === `card-stall-${taskId}`)).toBe(false);
     expect(tasks.get(taskId)).toMatchObject({ idleSince: null, recoveryRung: 0, recoveryCount: 0 });
@@ -15373,7 +15371,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     ).toBe("firstmate");
 
     // The task moves before the first mate answers: the card stays up.
-    await supervisor.steerCrewmate(taskId, "carry on with step two");
+    await supervisor.steer.steerCrewmate(taskId, "carry on with step two");
     await tick();
     expect(cards().some((card) => card.id === stall)).toBe(true);
     await endTurn(crewmate, taskId, "Step two done.");
@@ -15383,7 +15381,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(
       supervisor.cards.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,
     ).toBe("firstmate");
-    await supervisor.steerCrewmate(taskId, "and step three");
+    await supervisor.steer.steerCrewmate(taskId, "and step three");
     await tick();
     expect(cards().some((card) => card.id === stall)).toBe(true);
     await endTurn(crewmate, taskId, "Step three done.");
@@ -15406,7 +15404,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     ]);
 
     // Answered, the next move takes it down as before.
-    await supervisor.steerCrewmate(taskId, "and step four");
+    await supervisor.steer.steerCrewmate(taskId, "and step four");
     await tick();
     expect(cards().some((card) => card.id === stall)).toBe(false);
   });
@@ -15487,7 +15485,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       {
         name: "guidance waiting out its backoff",
         arrange: async ({ supervisor, crewmate, taskId }) => {
-          await supervisor.steerCrewmate(taskId, "try the other route");
+          await supervisor.steer.steerCrewmate(taskId, "try the other route");
           await tick();
           await failTurn(crewmate, taskId);
         },
@@ -15730,7 +15728,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     it("a report on a Pi crewmate waiting on work underway wakes nobody", async () => {
       const { crewmate, ops, sorts, supervisor, taskId } = await waitingOn("baseline");
-      await supervisor.steerCrewmate(taskId, "how is it going?");
+      await supervisor.steer.steerCrewmate(taskId, "how is it going?");
       await tick();
       await endTurn(crewmate, taskId, "Still waiting on the shared fixture fix.");
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
@@ -16210,7 +16208,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         // `stopped` ended the first turn with the job running: one ask went out.
         expect(checkBackAsks(crewmate.promptCalls)).toHaveLength(1);
         expect(checkBackAsks(crewmate.promptCalls)[0]).toContain(`"${TEST_RUN}"`);
-        await supervisor.steerCrewmate(taskId, "rebase onto main");
+        await supervisor.steer.steerCrewmate(taskId, "rebase onto main");
         await tick();
         await endTurn(crewmate, taskId, "Rebased; the tests still run.");
         expect(checkBackAsks(crewmate.promptCalls)).toHaveLength(1);
@@ -16218,7 +16216,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
       it("holds the task until its time, then wakes the crewmate naming the job and its age", async () => {
         const { supervisor, crewmate, specs, tasks, taskId, idleSince, at } = await withJob();
-        await supervisor.steerCrewmate(taskId, "rebase onto main");
+        await supervisor.steer.steerCrewmate(taskId, "rebase onto main");
         await tick();
         expect(() =>
           specs[0]?.onReport?.("Waiting on the tests.", undefined, {
@@ -16263,7 +16261,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
       it("a check-back past the job's bound leaves the bound as the backstop", async () => {
         const { supervisor, crewmate, specs, ops, taskId, idleSince, at } = await withJob();
-        await supervisor.steerCrewmate(taskId, "rebase onto main");
+        await supervisor.steer.steerCrewmate(taskId, "rebase onto main");
         await tick();
         specs[0]?.onReport?.("The tests run in the background.", undefined, {
           checkBack: { minutes: 300, waitingFor: "the tests" },
@@ -16500,7 +16498,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         "<p>It waits on you to decide whether to keep the old build, and no card has asked you. Your first mate was told twice, and nothing has moved since.</p>",
       );
 
-      await supervisor.steerCrewmate(taskId, "The captain keeps the old build.");
+      await supervisor.steer.steerCrewmate(taskId, "The captain keeps the old build.");
       await tick();
       expect(tasks.get(taskId)?.gate).toBeNull();
       expect(tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
@@ -16538,7 +16536,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     /** The stopped crewmate asks the first mate to act, on the host's clock. */
     async function asks(harness: Awaited<ReturnType<typeof stopped>>) {
       const { supervisor, crewmate, specs, tasks, taskId } = harness;
-      await supervisor.steerCrewmate(taskId, "the captain approved it");
+      await supervisor.steer.steerCrewmate(taskId, "the captain approved it");
       await tick();
       specs.at(-1)?.onReport?.("The captain approved the plan.", undefined, {
         needsFirstmate: ASK,
@@ -16596,7 +16594,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   it("never nudges a crewmate that reported finished with no card up, and reminds the first mate to close it (INF-1428)", async () => {
     const harness = await stopped();
     const { supervisor, crewmate, specs, ops, sorts, ledgerFacts, tasks, taskId } = harness;
-    await supervisor.steerCrewmate(taskId, "the captain closed your card");
+    await supervisor.steer.steerCrewmate(taskId, "the captain closed your card");
     await tick();
     expect(
       specs.at(-1)?.onReport?.("PR #612 merged and the captain closed the card.", undefined, {
@@ -16721,7 +16719,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     };
     const harness = await stopped({}, claude);
     const { supervisor, taskId, inbox } = harness;
-    await supervisor.steerCrewmate(taskId, "use the other library");
+    await supervisor.steer.steerCrewmate(taskId, "use the other library");
     await tick();
     for (let failure = 1; failure <= 4; failure += 1) {
       await failTurn(claude, taskId, "API Error: 529 Overloaded");
@@ -16904,7 +16902,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     it("stops its turn, wakes nothing for three hours, holds a job result and starts again with it", async () => {
       const h = await stopped();
-      await h.supervisor.steerCrewmate(h.taskId, "Carry on with step two.", "captain");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Carry on with step two.", "captain");
       await tick();
       expect(h.tasks.get(h.taskId)?.activity).toBe("running");
       const work = h.tasks.get(h.taskId);
@@ -16973,7 +16971,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(moved).toMatchObject({ ok: true, text: expect.stringContaining("back to the backlog") });
       await tick();
       expect(h.tasks.timeline(h.taskId).some((event) => event.data?.reason === "The captain asked to pause it.")).toBe(true);
-      await h.supervisor.steerCrewmate(h.taskId, "What is left to do?", "firstmate");
+      await h.supervisor.steer.steerCrewmate(h.taskId, "What is left to do?", "firstmate");
       await tick();
       const answered = h.crewmate.promptCalls.at(-1) ?? "";
       expect(answered.startsWith(BACKLOG_STEER_LINE)).toBe(true);
@@ -17159,7 +17157,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const login = claudeLogin();
       const harness = await stopped(login.extras, claudeCrewmate());
       const { supervisor, crewmate, taskId, inbox, ops, sorts, ledgerFacts, cards } = harness;
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       await cutOffTurn(crewmate, taskId, { class: "refused" });
       const prompts = crewmate.promptCalls.length;
@@ -17189,7 +17187,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(idleWakes(ops)).toEqual([]);
       expect(cards().filter((card) => card.id.startsWith("card-stall-"))).toEqual([]);
       // Guidance given while it waits is kept, and says so.
-      expect(await supervisor.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
+      expect(await supervisor.steer.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
       await tick();
       expect(crewmate.promptCalls).toHaveLength(prompts);
 
@@ -17217,7 +17215,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const login = claudeLogin();
       const harness = await stopped(login.extras, claudeCrewmate());
       const { supervisor, crewmate, taskId, events } = harness;
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       await cutOffTurn(crewmate, taskId, { class: "refused" });
       const sparks = () =>
@@ -17226,7 +17224,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ).length;
       const before = sparks();
       const prompts = crewmate.promptCalls.length;
-      expect(await supervisor.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
+      expect(await supervisor.steer.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
       await tenTicks(supervisor);
       expect(sparks()).toBe(before);
       login.clear();
@@ -17251,7 +17249,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ],
       });
       await tick();
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       const resetsAt = hostNow + minutes(70);
       await cutOffTurn(crewmate, taskId, { class: "no_headroom", resetsAt });
@@ -17302,7 +17300,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const login = claudeLogin();
       const harness = await stopped(login.extras, claudeCrewmate());
       const { supervisor, crewmate, taskId, ops } = harness;
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       await cutOffTurn(crewmate, taskId, { class: "refused" });
       expect(cutOffWakes(ops)).toHaveLength(1);
@@ -17337,7 +17335,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
       await tick();
       await endTurn(other, otherId, "Started on the other job.");
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       const resetsAt = hostNow + minutes(120);
       await cutOffTurn(crewmate, taskId, { class: "no_headroom", resetsAt });
@@ -17346,8 +17344,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // New guidance is kept, not sent into the spent window - on this lane
       // and on every other lane of the account.
       hostNow += minutes(1);
-      expect(await supervisor.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
-      expect(await supervisor.steerCrewmate(otherId, "and the docs")).toBe("recorded-held");
+      expect(await supervisor.steer.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
+      expect(await supervisor.steer.steerCrewmate(otherId, "and the docs")).toBe("recorded-held");
       await tick();
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(other.promptCalls).toHaveLength(otherPrompts);
@@ -17384,13 +17382,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const login = claudeLogin();
       const harness = await stopped(login.extras, claudeCrewmate());
       const { supervisor, crewmate, taskId, ops } = harness;
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       const resetsAt = hostNow + minutes(120);
       await cutOffTurn(crewmate, taskId, { class: "no_headroom", resetsAt });
       const prompts = crewmate.promptCalls.length;
       hostNow += minutes(1);
-      expect(await supervisor.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
+      expect(await supervisor.steer.steerCrewmate(taskId, "and the tests")).toBe("recorded-held");
       await tick();
       expect(crewmate.promptCalls).toHaveLength(prompts);
 
@@ -17412,7 +17410,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const prompts = crewmate.promptCalls.length;
       // No client, or a read that says not connected: no typed cut-off
       // stands, so the guidance is attempted and fails as it always has.
-      expect(await supervisor.steerCrewmate(taskId, "use the other library")).toBe("mid-turn");
+      expect(await supervisor.steer.steerCrewmate(taskId, "use the other library")).toBe("mid-turn");
       await tick();
       expect(crewmate.promptCalls.slice(prompts)).toEqual(["use the other library"]);
       crewmate.emit({ type: "turn_failed", taskId, error: "Claude Code is not installed." });
@@ -17444,7 +17442,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const login = claudeLogin();
       const harness = await stopped(login.extras, claudeCrewmate());
       const { supervisor, crewmate, taskId, ops } = harness;
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       await cutOffTurn(crewmate, taskId, { class: "refused" });
       const prompts = crewmate.promptCalls.length;
@@ -17488,7 +17486,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const login = claudeLogin();
       const harness = await stopped(login.extras, claudeCrewmate());
       const { supervisor, crewmate, taskId, inbox, ops, cards } = harness;
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       await cutOffTurn(crewmate, taskId, { class: "signed_out" });
       const prompts = crewmate.promptCalls.length;
@@ -17517,7 +17515,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const login = claudeLogin();
       const harness = await stopped(login.extras, claudeCrewmate());
       const { supervisor, crewmate, taskId, ops } = harness;
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       // A spent allowance with no reset to wait for stands nowhere.
       await cutOffTurn(crewmate, taskId, { class: "no_headroom" });
@@ -17542,7 +17540,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         );
       const harness = await stopped({ ...login.extras, noteCutOff }, fakeCrewmate());
       const { supervisor, crewmate, taskId, inbox, ops, tasks } = harness;
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       crewmate.emit({
         type: "turn_failed",
@@ -17758,7 +17756,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     async function failing(failures: number) {
       const harness = await stopped();
       const { supervisor, crewmate, taskId } = harness;
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       await failTurn(crewmate, taskId);
       for (let failure = 2; failure <= failures; failure += 1) {
@@ -17961,7 +17959,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await sweepWhenDue(harness, taskId);
       await endTurn(crewmate, taskId);
       expect(stillDownWakes(ops)).toHaveLength(1);
-      await harness.supervisor.steerCrewmate(taskId, "now the tests");
+      await harness.supervisor.steer.steerCrewmate(taskId, "now the tests");
       await tick();
       await failTurn(crewmate, taskId);
       for (let failure = 2; failure <= 5; failure += 1) {
@@ -17988,7 +17986,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       wakesThroughInbox(harness, "paused");
       const { supervisor, crewmate, inbox, db, taskId, idleSince } = harness;
       job = { ...job, startedAt: idleSince };
-      await supervisor.steerCrewmate(taskId, "use the other library");
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
       await tick();
       await failTurn(crewmate, taskId);
       const since = inbox.outage(taskId).since ?? 0;
@@ -19325,7 +19323,7 @@ describe("the task graph (task-system P2)", () => {
     expect(ops[0]).toContain("Each waits on request, discovered from this task.");
     expect(ops[0]).not.toContain("update_task");
     // The next turn's report names nothing filed: the list is per turn.
-    await supervisor.steerCrewmate(taskId, "carry on");
+    await supervisor.steer.steerCrewmate(taskId, "carry on");
     crewmate.emit({ type: "assistant_delta", taskId, text: "Nothing more to file today." });
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
@@ -19476,7 +19474,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
     expect(inbox.allFor(taskId)).toHaveLength(0);
 
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
-    await supervisor.steerCrewmate(taskId, "say that again in plain words");
+    await supervisor.steer.steerCrewmate(taskId, "say that again in plain words");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe("say that again in plain words");
   });
@@ -19489,7 +19487,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
     await endTurn(crewmate, taskId);
     expect(wakes(taskId)).toHaveLength(0);
 
-    await supervisor.steerCrewmate(taskId, "keep going");
+    await supervisor.steer.steerCrewmate(taskId, "keep going");
     await tick();
     supervisor.checkQuietTasks(Date.now() + QUIET_CARD_MS);
     expect(supervisor.cards.snapshot()).toEqual([]);
@@ -19507,7 +19505,7 @@ describe("the cancel purge (interaction P0, WI-2)", () => {
     const { taskId } = await supervisor.intake.commission({ title: "Doomed", intent: intentOf("go") });
     await tick();
 
-    expect(await supervisor.steerCrewmate(taskId, "one more thing")).toBe("queued-next-turn");
+    expect(await supervisor.steer.steerCrewmate(taskId, "one more thing")).toBe("queued-next-turn");
     inbox.enqueue("supervision", `[fm-op] crewmate 1 reported on task ${taskId}: stale`, taskId);
     inbox.enqueue("firstmate", `[fm-op] fleet event escalated to you (task ${taskId})`, taskId);
     inbox.enqueue("supervision", "[fm-op] another task's report", "other-task");
@@ -19519,7 +19517,7 @@ describe("the cancel purge (interaction P0, WI-2)", () => {
     ];
     expect(aboutTask()).toHaveLength(3);
 
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     crewmate.failPrompt("aborted");
     await tick();
 
@@ -19542,7 +19540,7 @@ describe("the cancel purge (interaction P0, WI-2)", () => {
     inbox.enqueue("firstmate", `[fm-op] a wake about task ${taskId}`, taskId);
     expect(inbox.allFor("firstmate").filter((row) => row.ref === taskId)).toHaveLength(1);
 
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     expect(inbox.allFor("firstmate").filter((row) => row.ref === taskId)).toHaveLength(0);
   });
 
@@ -19576,7 +19574,7 @@ describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
     });
     await tick();
 
-    expect(await supervisor.steerCrewmate(taskId, "also cover the reset")).toBe("queued-next-turn");
+    expect(await supervisor.steer.steerCrewmate(taskId, "also cover the reset")).toBe("queued-next-turn");
     crewmate.finishPrompt();
     await tick();
 
@@ -19597,9 +19595,9 @@ describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
     });
     await tick();
 
-    await supervisor.steerCrewmate(taskId, "stop after the first file");
+    await supervisor.steer.steerCrewmate(taskId, "stop after the first file");
     // Cancel mid-turn: the lane still holds the steer when the turn ends.
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     crewmate.failPrompt("aborted");
     await tick();
 
@@ -19618,7 +19616,7 @@ describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
       intent: intentOf("Start"),
     });
     await tick();
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     crewmate.failPrompt("aborted");
     await tick();
 
@@ -19693,7 +19691,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
     const { taskId } = await supervisor.intake.commission({ title: "Build", intent: intentOf("go") });
     await tick();
 
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     install.resolve({ outcome: "skipped" });
     await tick();
 
@@ -19707,7 +19705,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
 
   it("a task cancelled while idle closes as dropped with no worktree", async () => {
     const { supervisor, tasks, workspace, taskId, paths } = await idleCommissioned();
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     await tick();
 
     const record = tasks.get(taskId);
@@ -19737,7 +19735,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
         };
       });
     });
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     await tick();
 
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", workspaceState: "removed" });
@@ -19759,7 +19757,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
         reason: "fatal: unable to write new index file",
       });
     });
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     await tick();
 
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", workspaceState: "present" });
@@ -19944,7 +19942,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
   }
 
   async function cancelAndSettle(harness: Awaited<ReturnType<typeof commissionReal>>) {
-    await harness.supervisor.interruptCrewmate(harness.taskId, "cancel");
+    await harness.supervisor.sessions.interruptCrewmate(harness.taskId, "cancel");
     await vi.waitFor(
       () => expect(harness.tasks.get(harness.taskId)?.workspaceState).not.toBe("present"),
       REAL_GIT_WAIT,
@@ -20097,7 +20095,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
     expect(tasks.get(taskId)?.outcome).toBeNull();
     // Click immediately after cancellation: restart must join retirement,
     // not race its save and deliver a branch that is about to disappear.
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     const result = supervisor.startAgain(taskId, "captain");
     if (!result.ok) throw new Error(result.text);
     await result.started;
@@ -20132,7 +20130,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
     );
     crewmate.finishPrompt();
     await vi.waitFor(() => expect(tasks.get(fresh.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
-    await supervisor.interruptCrewmate(fresh.id, "cancel");
+    await supervisor.sessions.interruptCrewmate(fresh.id, "cancel");
     await vi.waitFor(
       () => expect(tasks.get(fresh.id)?.workspaceState).toBe("removed"),
       REAL_GIT_WAIT,
@@ -20214,7 +20212,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
     const objects = join(repoDir, ".git", "objects");
     execFileSync("chmod", ["-R", "a-w", objects]);
     try {
-      await harness.supervisor.interruptCrewmate(taskId, "cancel");
+      await harness.supervisor.sessions.interruptCrewmate(taskId, "cancel");
       await vi.waitFor(
         () => expect(tasks.timeline(taskId).find((event) => event.data?.kept)).toBeTruthy(),
         REAL_GIT_WAIT,
@@ -20284,7 +20282,7 @@ describe("crewmate session replays (Sep 14)", () => {
       if (line.type === "replay_control") {
         wakesAtCancel = wakes().length;
         cancelledAt = Date.parse(line.timestamp);
-        await supervisor.interruptCrewmate(taskId, "cancel");
+        await supervisor.sessions.interruptCrewmate(taskId, "cancel");
         await tick();
         continue;
       }
@@ -20410,9 +20408,9 @@ describe("crewmate session replays (Sep 14)", () => {
       try {
         if (line.verb === "steer") {
           steers.push(line.message);
-          await supervisor.steerCrewmate(taskId, line.message);
+          await supervisor.steer.steerCrewmate(taskId, line.message);
         } else {
-          await supervisor.interruptCrewmate(taskId, line.mode);
+          await supervisor.sessions.interruptCrewmate(taskId, line.mode);
         }
       } catch (caught) {
         refusals.push(`${line.entry ?? line.task}: ${String(caught)}`);
@@ -20456,7 +20454,7 @@ describe("crewmate session replays (Sep 14)", () => {
     const { taskId } = await supervisor.intake.commission({ title: "Replay", intent: intentOf("go") });
     await tick();
     for (const message of steers) {
-      expect(await supervisor.steerCrewmate(taskId, message)).toBe("queued-next-turn");
+      expect(await supervisor.steer.steerCrewmate(taskId, message)).toBe("queued-next-turn");
       crewmate.finishPrompt();
       await tick();
     }
@@ -20820,13 +20818,13 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(crewmate.promptCalls[0]).toContain("Always use compact rows in my panels.");
     crewmate.finishPrompt();
     await tick();
-    await h.supervisor.steerCrewmate(taskId, "make it bigger");
+    await h.supervisor.steer.steerCrewmate(taskId, "make it bigger");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain("Always use compact rows in my panels.");
     crewmate.finishPrompt();
     await tick();
     knowledge?.directions.change({ op: "retire", id: "compact-rows", reason: "captain retired it" });
-    await h.supervisor.steerCrewmate(taskId, "and blue");
+    await h.supervisor.steer.steerCrewmate(taskId, "and blue");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain("and blue");
     expect(crewmate.promptCalls.at(-1)).not.toContain("Always use compact rows in my panels.");
@@ -20914,7 +20912,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(h.ops[0]).not.toContain("Tokyo clock panel added.");
 
     // A steer starts the next turn; its report commits again and routes.
-    await h.supervisor.steerCrewmate(taskId, "the lock is gone, report again");
+    await h.supervisor.steer.steerCrewmate(taskId, "the lock is gone, report again");
     await tick();
     crewmate.emit({ type: "assistant_delta", taskId, text: "Tokyo clock panel added again." });
     crewmate.emit({ type: "turn_end", taskId });
@@ -21248,7 +21246,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         reason: "The effect has not been requested.",
         risk: { level: "medium", why: "a shared write is proposed." },
       });
-      await supervisor.steerCrewmate(taskId, "Record the exact effect request.");
+      await supervisor.steer.steerCrewmate(taskId, "Record the exact effect request.");
       await tick();
       await report("The proposed write needs code review and the captain's approval.", undefined, {
         validation: { kind: "request", request },
@@ -21270,7 +21268,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         taskId,
         "The code is ready for review before requesting the shared write.",
       );
-      await supervisor.steerCrewmate(
+      await supervisor.steer.steerCrewmate(
         reviewId,
         "Re-review the newly requested effect at the same version and evidence revision.",
       );
@@ -21303,7 +21301,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         reviewId,
         "verdict: blocked\nCode clearance only; required proof awaits approval.\nrisk: medium",
       );
-      await supervisor.steerCrewmate(taskId, "Ask the captain about this exact cleared effect.");
+      await supervisor.steer.steerCrewmate(taskId, "Ask the captain about this exact cleared effect.");
       await tick();
       const cardId = String(await offer());
       await reportTurn(builder, taskId, "The scoped validation question waits for the captain.");
@@ -23088,7 +23086,7 @@ describe("CrewSupervisor: a file from outside lands in the task's hand-over fold
     seedTask(h.tasks, { ...base, id: "t-closed", title: "Dropped", status: "cancelled" });
     const pdf = randomBytes(48_211);
 
-    const saved = await h.supervisor.saveOutsideFile("t-save", "invoice 2214.pdf", pdf);
+    const saved = await h.supervisor.sessions.saveOutsideFile("t-save", "invoice 2214.pdf", pdf);
     expect(saved.path).toBe(
       join(crewmateTempDir(h.paths, "t-save"), "handover", saved.file),
     );
@@ -23096,8 +23094,8 @@ describe("CrewSupervisor: a file from outside lands in the task's hand-over fold
     expect(readFileSync(saved.path).equals(pdf)).toBe(true);
     expect(statSync(saved.path).mode & 0o777).toBe(0o600);
 
-    expect(h.supervisor.outsideFileRefusal("t-closed")).toContain("not running");
-    await expect(h.supervisor.saveOutsideFile("t-closed", "invoice.pdf", pdf)).rejects.toThrow(
+    expect(h.supervisor.sessions.outsideFileRefusal("t-closed")).toContain("not running");
+    await expect(h.supervisor.sessions.saveOutsideFile("t-closed", "invoice.pdf", pdf)).rejects.toThrow(
       "not running",
     );
   });
@@ -23549,7 +23547,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     await tick();
     expect(aside()).toBe(true);
 
-    await harness.supervisor.steerCrewmate(taskId, "Go on.");
+    await harness.supervisor.steer.steerCrewmate(taskId, "Go on.");
     await tick();
     const answer = "Yes; retiring one resets it into the warm pool. I reworded What changed.";
     syncCardId(
@@ -23604,7 +23602,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     await tick();
     expect(shown()).toMatchObject({ minimized: true, awaiting: "answer" });
 
-    await harness.supervisor.steerCrewmate(taskId, "Go on.");
+    await harness.supervisor.steer.steerCrewmate(taskId, "Go on.");
     await tick();
     spec?.onReply?.({
       cardId,
@@ -24625,7 +24623,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     vi.mocked(crewmate.steer).mockRejectedValue(new Error("always busy"));
-    await supervisor.steerCrewmate(taskId, "urgent fix");
+    await supervisor.steer.steerCrewmate(taskId, "urgent fix");
     for (let round = 0; round < 3; round += 1) {
       ageRows(db);
       await supervisor.sweepInbox(Date.now());
@@ -26174,7 +26172,7 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
     });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     expect(
-      await supervisor.steerFromCrewmateTab(taskId, "  count the starboard hatch too "),
+      await supervisor.steer.steerFromCrewmateTab(taskId, "  count the starboard hatch too "),
     ).toEqual({
       ok: true,
     });
@@ -26195,7 +26193,7 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
     expect(told).toHaveLength(1);
     expect(told[0]).not.toHaveProperty("taskId");
     expect(supervisor.turnStartedAt(taskId)).toEqual(expect.any(Number));
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     await tick();
   });
 
@@ -26203,11 +26201,11 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
     seedTask(tasks, { id: "queued", title: "Not started", status: "queued" });
-    expect(await supervisor.steerFromCrewmateTab("queued", "go")).toMatchObject({ ok: false });
-    expect(await supervisor.steerFromCrewmateTab("queued", "   ")).toMatchObject({ ok: false });
+    expect(await supervisor.steer.steerFromCrewmateTab("queued", "go")).toMatchObject({ ok: false });
+    expect(await supervisor.steer.steerFromCrewmateTab("queued", "   ")).toMatchObject({ ok: false });
     seedTask(tasks, { id: "closed", title: "Closed", status: "idle" });
     tasks.close("closed", { status: "done", reason: "merged", actor: "host" });
-    expect(await supervisor.steerFromCrewmateTab("closed", "go")).toMatchObject({ ok: false });
+    expect(await supervisor.steer.steerFromCrewmateTab("closed", "go")).toMatchObject({ ok: false });
     expect(
       [...tasks.timeline("queued"), ...tasks.timeline("closed")].some(
         (event) => event.kind === "steered",
@@ -26223,7 +26221,7 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
       intent: intentOf("count the hatches"),
     });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
-    expect(await supervisor.interruptFromCrewmateTab(taskId)).toEqual({ ok: true });
+    expect(await supervisor.steer.interruptFromCrewmateTab(taskId)).toEqual({ ok: true });
     expect(crewmate.aborts).toHaveLength(1);
     const interrupted = tasks.timeline(taskId).filter((event) => event.kind === "interrupted");
     expect(
@@ -26233,8 +26231,8 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(supervisor.turnStartedAt(taskId)).toBeNull();
-    expect(await supervisor.interruptFromCrewmateTab(taskId)).toMatchObject({ ok: false });
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    expect(await supervisor.steer.interruptFromCrewmateTab(taskId)).toMatchObject({ ok: false });
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     await tick();
   });
 });
@@ -27498,7 +27496,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
     const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     expect(sparks(events, taskId)).toBe(0);
-    expect(await supervisor.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
+    expect(await supervisor.steer.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
     expect(crewmate.steer).toHaveBeenCalledTimes(1);
     expect(sparks(events, taskId)).toBe(1);
   });
@@ -27508,7 +27506,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
     const { supervisor, events } = setup(crewmate);
     const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
-    expect(await supervisor.steerCrewmate(taskId, "use the other library")).toBe(
+    expect(await supervisor.steer.steerCrewmate(taskId, "use the other library")).toBe(
       "queued-next-turn",
     );
     expect(sparks(events, taskId)).toBe(0);
@@ -27520,7 +27518,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
 
   it("sparks a message to an idle crewmate as its turn starts", async () => {
     const { supervisor, events, crewmate, taskId } = await idleCrewmate();
-    await supervisor.steerCrewmate(taskId, "and the docs");
+    await supervisor.steer.steerCrewmate(taskId, "and the docs");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe("and the docs");
     expect(sparks(events, taskId)).toBe(1);
@@ -27548,20 +27546,20 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
     const { supervisor, events } = setup(crewmate);
     const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
-    await supervisor.interruptCrewmate(taskId, "interrupt");
+    await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     expect(sparks(events, taskId)).toBe(1);
     crewmate.failPrompt("The turn was interrupted.");
     await tick();
-    await supervisor.steerCrewmate(taskId, "go on");
+    await supervisor.steer.steerCrewmate(taskId, "go on");
     await tick();
     const before = sparks(events, taskId);
-    expect(await supervisor.interruptFromCrewmateTab(taskId)).toEqual({ ok: true });
+    expect(await supervisor.steer.interruptFromCrewmateTab(taskId)).toEqual({ ok: true });
     expect(sparks(events, taskId)).toBe(before + 1);
   });
 
   it("sparks a cancel once, before the task closes", async () => {
     const { supervisor, events, tasks, taskId } = await idleCrewmate();
-    await supervisor.interruptCrewmate(taskId, "cancel");
+    await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     await tick();
     expect(tasks.get(taskId)?.status).toBe("dropped");
     expect(sparks(events, taskId)).toBe(1);
@@ -27931,7 +27929,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
     it("starts at the kept ref once the first stage's working copy is gone", async () => {
       const harness = await firstStage();
       const { supervisor, tasks, first, head } = harness;
-      await supervisor.interruptCrewmate(first.id, "cancel");
+      await supervisor.sessions.interruptCrewmate(first.id, "cancel");
       await vi.waitFor(
         () => expect(tasks.get(first.id)?.workspaceState).not.toBe("present"),
         REAL_GIT_WAIT,
@@ -28257,7 +28255,7 @@ describe("programs (INF-799 piece 2)", () => {
     /** The app wakes the part's crewmate, which reports, and its turn ends. */
     const turn = async (text: string, declared: ReportDeclaration) => {
       const prompts = crewmate.promptCalls.length;
-      await h.supervisor.steerCrewmate(part.id, "The app woke you: look at the meter's checks.");
+      await h.supervisor.steer.steerCrewmate(part.id, "The app woke you: look at the meter's checks.");
       await vi.waitFor(() => expect(crewmate.promptCalls.length).toBeGreaterThan(prompts));
       await h.specs[0]?.onReport?.(text, undefined, declared);
       crewmate.emit({ type: "turn_end", taskId: part.id });
@@ -28539,7 +28537,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
         if (
           move.phase === "retiring" &&
           (move.restartFrom !== undefined || move.preparing) &&
-          !supervisor.conversationBusy(task.id)
+          !supervisor.sessions.conversationBusy(task.id)
         ) return false;
         return true;
       });
@@ -28754,8 +28752,8 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     // task does not move, nor start a new turn, until it is back.
     h.reach.mini = false;
     h.crewmate.finishPrompt();
-    await vi.waitFor(() => expect(h.supervisor.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
-    expect(await h.supervisor.steerCrewmate(h.taskId, "Check the header too.")).toBe(
+    await vi.waitFor(() => expect(h.supervisor.sessions.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
+    expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe(
       "recorded-held",
     );
     await h.supervisor.sweepGates(Date.now());
@@ -28810,8 +28808,8 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       text: `${h.tasks.get(h.taskId)?.key} "Fix the meter" stays on ${HERE.this}.`,
     });
     h.crewmate.finishPrompt();
-    await vi.waitFor(() => expect(h.supervisor.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
-    expect(await h.supervisor.steerCrewmate(h.taskId, "Check the header too.")).toBe("mid-turn");
+    await vi.waitFor(() => expect(h.supervisor.sessions.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
+    expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe("mid-turn");
     expect(h.crewmate.promptCalls.at(-1)).toContain("Check the header too.");
     expect(h.moveIn).not.toHaveBeenCalled();
     expect(h.tasks.get(h.taskId)).toMatchObject({ deviceId: null, worktreeDir: h.cwd });
@@ -28833,7 +28831,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       `its move to Kun's Mac mini did not finish: the Mac mini's disk is full. It stays on ${HERE.this}`,
     );
     // Its conversation here reopens as it was.
-    await h.supervisor.steerCrewmate(h.taskId, "carry on");
+    await h.supervisor.steer.steerCrewmate(h.taskId, "carry on");
     await vi.waitFor(() => expect(h.crewmate.promptCalls.at(-1)).toContain("carry on"), REAL_GIT_WAIT);
     expect(h.opened).toHaveLength(0);
     await h.supervisor.disposeAll();
@@ -28888,7 +28886,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(existsSync(h.thereOf(MINI))).toBe(false);
     expect(h.opened.map((spec) => spec.machine)).toEqual([MINI, AIR]);
     // Told it moved with the next thing on its lane, there and never on the Mac mini.
-    expect(await h.supervisor.steerCrewmate(h.taskId, "Check the header too.")).toBe("mid-turn");
+    expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe("mid-turn");
     await vi.waitFor(() => expect(h.boots[1]?.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     expect(h.boots[1]?.promptCalls[0]).toContain("your task moved to Kun's MacBook Air");
     expect(h.boot.promptCalls).toHaveLength(0);
@@ -28916,7 +28914,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     // One conversation there, the one the move opened, and it is the task's.
     expect(h.opened.map((spec) => spec.machine)).toEqual([MINI]);
     expect(existsSync(h.cwd)).toBe(false);
-    expect(await h.supervisor.steerCrewmate(h.taskId, "Check the header too.")).toBe("mid-turn");
+    expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe("mid-turn");
     await vi.waitFor(() => expect(h.boot.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     expect(h.boot.promptCalls[0]).toContain("your task moved to Kun's Mac mini");
     await h.supervisor.disposeAll();
@@ -28941,7 +28939,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     await h.supervisor.disposeAll();
 
     const { fresh } = relaunched(h);
-    expect(await fresh.steerCrewmate(h.taskId, "Check the header too.")).toBe("recorded-held");
+    expect(await fresh.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe("recorded-held");
     await fresh.sweepGates(Date.now());
     await vi.waitFor(() => expect(h.opened).toHaveLength(1), REAL_GIT_WAIT);
     expect(h.opened[0]).toMatchObject({ machine: MINI });
@@ -28982,7 +28980,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     await h.supervisor.disposeAll();
 
     const { fresh } = relaunched(h);
-    expect(await fresh.steerCrewmate(h.taskId, "Check the header too.")).toBe("recorded-held");
+    expect(await fresh.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe("recorded-held");
     await fresh.sweepGates(Date.now());
     await vi.waitFor(() => expect(h.install).toHaveBeenCalledTimes(2), REAL_GIT_WAIT);
     await fresh.sweepGates(Date.now());
@@ -29075,7 +29073,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.moveIn).toHaveBeenCalled(), REAL_GIT_WAIT);
-    expect(await h.supervisor.steerCrewmate(h.taskId, "Use watt-hours.")).toBe("recorded-held");
+    expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Use watt-hours.")).toBe("recorded-held");
     await h.supervisor.sweepGates(Date.now());
     expect(h.crewmate.promptCalls).toHaveLength(1);
     h.arrive.resolve();
@@ -29130,7 +29128,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.boot.promptCalls[0]).toContain("Use watt-hours for the small screen.");
     expect(h.cardStore.get(card.id)).toMatchObject({ status: "ready", taskId: h.taskId });
     h.boot.finishPrompt();
-    await vi.waitFor(() => expect(h.supervisor.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
+    await vi.waitFor(() => expect(h.supervisor.sessions.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
     h.supervisor.act(card.id, "wh");
     await vi.waitFor(() => expect(h.boot.promptCalls).toHaveLength(2), REAL_GIT_WAIT);
     expect(h.boot.promptCalls[1]).toContain("Watt-hours");
@@ -29167,7 +29165,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     const h = await startedHere({ browser });
     expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
-    await vi.waitFor(() => expect(h.supervisor.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
+    await vi.waitFor(() => expect(h.supervisor.sessions.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
     await h.supervisor.sweepGates(Date.now());
     expect(h.supervisor.moves.computerMoveFacts(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
       computerMove: {
@@ -29296,7 +29294,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       expect(h.tasks.get(h.taskId)?.shape?.computer_move?.phase).toBe("retiring");
       if (phase === "reopening") {
         expect(h.tasks.get(h.taskId)?.shape?.computer_move?.preparing).toBe(true);
-        expect(h.supervisor.conversationBusy(h.taskId)).toBe(true);
+        expect(h.supervisor.sessions.conversationBusy(h.taskId)).toBe(true);
       }
       await Promise.resolve();
       expect(finished).toBe(false);
@@ -29332,7 +29330,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
         preparing: true,
         restartFrom: "s1",
       });
-      expect(h.supervisor.conversationBusy(h.taskId)).toBe(false);
+      expect(h.supervisor.sessions.conversationBusy(h.taskId)).toBe(false);
       expect(existsSync(h.cwd)).toBe(true);
       // Exercise the same barrier as afterEach before any next-launch work.
       await movesFinished(h.tasks, h.supervisor);
@@ -29670,7 +29668,7 @@ describe("INF-2214 reliable requested answers", () => {
     await tick();
     const poke = vi.fn();
     h.supervisor.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn(), pokeInbox: poke });
-    await h.supervisor.steerCrewmate(
+    await h.supervisor.steer.steerCrewmate(
       taskId,
       "What is the full path to setup/shell-pc/shell-pc-job-host-remove.cmd?",
       "firstmate",
@@ -29715,16 +29713,16 @@ describe("INF-2214 reliable requested answers", () => {
       intent: intentOf("Find the full path"),
     });
     await tick();
-    await h.supervisor.steerCrewmate(taskId, "Please keep checking.", "firstmate", {
+    await h.supervisor.steer.steerCrewmate(taskId, "Please keep checking.", "firstmate", {
       response: { mode: "guidance-only" },
     });
     expect(h.inbox.pendingResponses(taskId)).toEqual([]);
-    await h.supervisor.steerCrewmate(taskId, "What is its full path?", "firstmate", {
+    await h.supervisor.steer.steerCrewmate(taskId, "What is its full path?", "firstmate", {
       response: { mode: "expected" },
     });
     const consumed = h.inbox.pendingResponses(taskId)[0]!;
     crewmate.holdSteers();
-    await h.supervisor.steerCrewmate(taskId, "Did the tests finish?", "firstmate", {
+    await h.supervisor.steer.steerCrewmate(taskId, "Did the tests finish?", "firstmate", {
       response: { mode: "expected" },
     });
     const unread = h.inbox.pendingResponses(taskId)[1]!;
@@ -29772,7 +29770,7 @@ describe("INF-2214 reliable requested answers", () => {
       lifecycle: card.lifecycleId!,
       messageId: thread.messages.findLast((message) => message.who === "captain")!.id,
     };
-    await h.supervisor.steerCrewmate(taskId, "Answer the path question.", "firstmate", {
+    await h.supervisor.steer.steerCrewmate(taskId, "Answer the path question.", "firstmate", {
       response: { mode: "expected", card: reference },
     });
     const first = h.inbox.pendingResponses(taskId)[0]!;
@@ -29785,7 +29783,7 @@ describe("INF-2214 reliable requested answers", () => {
     await h.specs[0]?.onReport?.("The full path is verified.", undefined, {
       responses: [response],
     });
-    await h.supervisor.steerCrewmate(taskId, "Verify the result too.", "firstmate", {
+    await h.supervisor.steer.steerCrewmate(taskId, "Verify the result too.", "firstmate", {
       response: { mode: "expected", card: reference },
     });
     const pending = h.inbox.pendingResponses(taskId)[0]!;
@@ -29805,7 +29803,7 @@ describe("INF-2214 reliable requested answers", () => {
       responses: [response],
     });
     expect(h.inbox.allFor(FIRSTMATE_RECIPIENT)).toHaveLength(1);
-    await h.supervisor.steerCrewmate(
+    await h.supervisor.steer.steerCrewmate(
       taskId,
       "That question no longer needs an answer.",
       "firstmate",
@@ -29826,11 +29824,11 @@ describe("INF-2214 reliable requested answers", () => {
       intent: intentOf("Find the full path"),
     });
     await tick();
-    await h.supervisor.steerCrewmate(taskId, "What is its full path?", "firstmate", {
+    await h.supervisor.steer.steerCrewmate(taskId, "What is its full path?", "firstmate", {
       response: { mode: "expected" },
     });
     if (cut === "provider") crewmate.emit({ type: "turn_failed", taskId, error: "provider unavailable" });
-    else await h.supervisor.interruptCrewmate(taskId, "interrupt");
+    else await h.supervisor.sessions.interruptCrewmate(taskId, "interrupt");
     crewmate.finishPrompt();
     await tick();
     expect(

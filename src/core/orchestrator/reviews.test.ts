@@ -236,7 +236,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // INF-125 supplies this lifecycle fixture's proof separately from the
       // existing assertion that review uses the committed repair, not the PR.
       seedDelivery(tasks, builderId, { liveValidation: noSurfaceProof(later, reviewId) });
-      await supervisor.steerCrewmate(reviewId, "re-review the repaired commit");
+      await supervisor.steer.steerCrewmate(reviewId, "re-review the repaired commit");
       await tick();
       expect(tasks.get(reviewId)?.delivery?.headSha).toBe(later);
       expect(reviewer.promptCalls.at(-1)).toContain(`at head ${later}`);
@@ -340,7 +340,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBe("findings");
       vi.mocked(workspace.branchHead).mockResolvedValue(fixed);
-      await supervisor.steerCrewmate(updateId, `re-review at head ${fixed}`);
+      await supervisor.steer.steerCrewmate(updateId, `re-review at head ${fixed}`);
       await tick();
       const reread = updateReviewer.promptCalls.at(-1) ?? "";
       expect(reread).toContain(`at head ${fixed}`);
@@ -563,7 +563,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // is a decision on the captain's screen, and the open review's
       // verdict still wakes the Firstmate above it, who alone steers the
       // reviewer to the new head.
-      await supervisor.steerCrewmate(
+      await supervisor.steer.steerCrewmate(
         builderId,
         "F1 error src/meter.test.ts:12 the flush is awaited after the read - auto-fix",
       );
@@ -604,7 +604,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
 
       // A re-review at the new head: the reviewer is steered like any idle
       // crewmate, and its pass closes the review.
-      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
+      await supervisor.steer.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
       await tick();
       expect(reviewer.promptCalls.at(-1)).toContain("re-review at head");
       seedDelivery(tasks, builderId, {
@@ -864,20 +864,20 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         actions: [],
       });
       await tick();
-      await supervisor.steerCrewmate(reviewId, "review again");
+      await supervisor.steer.steerCrewmate(reviewId, "review again");
       await tick();
       await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "The test is racy.", {
         code: "findings",
         findings: [RACY],
         risk: { level: "medium", why: "one line moves." },
       });
-      await supervisor.steerCrewmate(reviewId, "review again");
+      await supervisor.steer.steerCrewmate(reviewId, "review again");
       await tick();
       await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "no access to the branch", {
         code: "blocked",
       });
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      await supervisor.steerCrewmate(reviewId, "review again");
+      await supervisor.steer.steerCrewmate(reviewId, "review again");
       await tick();
       seedDelivery(tasks, builderId, {
         liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
@@ -1104,7 +1104,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
 
       // Info findings ride a clear review: info never blocks (the
       // no-mistakes rule), so the review closes and the hold releases.
-      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
+      await supervisor.steer.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
       await tick();
       seedDelivery(tasks, builderId, {
         liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
@@ -1222,7 +1222,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
 
       // A review left with no assigned commit records nothing either.
       seedDelivery(tasks, reviewId, { headSha: HEAD });
-      await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
+      await supervisor.steer.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
       await tick();
       await specs[1]!.onReport!("Reviewed it again.", undefined, {
         validation: typedReview(tasks, reviewId, { code: "clear" }),

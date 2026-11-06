@@ -1,11 +1,9 @@
 /**
- * A crewmate's turn as the crew supervisor runs it (docs/report-sort.md,
- * docs/inbox.md, INF-992): a report that hands files on, checked whole and
- * named by kept name and size only, and the guidance a backend could not take
- * mid-turn, served as the next turn once the report's turn is over, which
- * reports nothing of its own. INF-2625's plan, the crew supervisor's ninth
- * step, moves this code out of the supervisor into owners of its own (crew
- * sessions, turns and steering); these cases pin, before it moves, the
+ * A crewmate's turn as the crew's turn owner runs it (`CrewTurns`;
+ * docs/report-sort.md, docs/inbox.md, INF-992): a report that hands files on,
+ * checked whole and named by kept name and size only, and the guidance a
+ * backend could not take mid-turn, served as the next turn once the report's
+ * turn is over, which reports nothing of its own. These cases pin the
  * behaviour no other test reaches. Each plays the crewmate's session and
  * tools and reads the receipt, the report the first mate is served and the
  * record.
@@ -27,7 +25,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { crewmateHandoverDir } from "../paths";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 
-describe("a crewmate's turn, before it moves out of the crew supervisor", () => {
+describe("a crewmate's turn, as CrewTurns runs it", () => {
   it("names a report's handed files by kept name and size once they arrived whole, and refuses one that did not", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
@@ -74,7 +72,7 @@ describe("a crewmate's turn, before it moves out of the crew supervisor", () => 
     });
     await tick();
 
-    expect(await h.supervisor.steerCrewmate(taskId, "count the long presses too")).toBe(
+    expect(await h.supervisor.steer.steerCrewmate(taskId, "count the long presses too")).toBe(
       "queued-next-turn",
     );
     expect(crewmate.promptCalls).toHaveLength(1);

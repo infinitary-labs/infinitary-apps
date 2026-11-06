@@ -329,7 +329,7 @@ Persistence:
 - **One writer per table** (the primitives review's R2, built as P6): every table has one store or service that writes it, and `src/core/orchestrator/` runs no SQL.
   The task record - `tasks`, `task_events`, `task_links`, `captain_asks`, `projects`, `task_board` - is `TaskService` over its stores (`taskStore`, `taskEventStore`, `taskLinkStore`, `askStore`, `projectStore`); `repos` is `RepoRegistry`.
   `cards`, `card_revisions`, `card_messages`, `card_contributions`, `card_observations` and `card_capture_epochs` are `CardStore`, which only `CardService` (the card stack, `src/core/orchestrator/cardService.ts`, with the owners it composes beside it) writes; a task's close - record, lane, cards and worktree - is `TaskClosing` (`taskClose.ts`), one of the settle owners `createSettleOwners` composes (`settleOwners.ts`).
-  `inbox` is `InboxStore`, `decisions` `DecisionStore` (which `Router`, `AccountSelector` and the supervisor's `recordSort` write through), `activity_events` `ActivityStore`, `schedules` `ScheduleStore`, `settings` `SettingsStore`, `usage_events` `UsageStore`, `quota_snapshots` `QuotaSnapshotStore`, `jobs` `JobStore` (all under `src/core/storage/`); `pushed_quota` is `PushedQuotaStore`, `plugins` `PluginRecords`, `plugin_kv` `PersonalStore`.
+  `inbox` is `InboxStore`, `decisions` `DecisionStore` (which `Router`, `AccountSelector` and the crew's `CrewTurns.recordSort` write through), `activity_events` `ActivityStore`, `schedules` `ScheduleStore`, `settings` `SettingsStore`, `usage_events` `UsageStore`, `quota_snapshots` `QuotaSnapshotStore`, `jobs` `JobStore` (all under `src/core/storage/`); `pushed_quota` is `PushedQuotaStore`, `plugins` `PluginRecords`, `plugin_kv` `PersonalStore`.
   Knowledge keeps its own database, `knowledge/knowledge.db`, whose one connection `KnowledgeService` holds through `KnowledgeStore`, in every build (`docs/knowledge.md`).
   The published views' SQL, and the ledger's three read-only views, is `views.ts` alone.
 - **Sessions**: Pi's file-backed `SessionManager` in app-scoped dirs - each crewmate's `userData/crewmates/<taskId>/sessions/` and the first mate's rolling dir - resumable (the supervision session retired with S7c, `docs/report-sort.md`); a Claude crewmate's record is the app's copy of its client's transcript in that same `sessions/` dir, beside a served sidecar (the session contract's step 6).
@@ -632,7 +632,7 @@ The mitigation is the cut-off contract (§16.8); the standing clean exit is a fi
 ### 16.2 The Cursor backend
 
 Cursor is not a supported subscription.
-A stored Cursor account is skipped on load, and a task that ran on it is never resumed into another transport (`isRetiredProvider`, `CrewSupervisor.retiredProviderOf`).
+A stored Cursor account is skipped on load, and a task that ran on it is never resumed into another transport (`isRetiredProvider`, `CrewSessions.retiredProviderOf`).
 
 ### 16.3 The live model catalog (captain-approved, 2026-08-17)
 
@@ -924,7 +924,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   User-turn images ride Pi's `PromptOptions.images` / `steer(text, images)` as flat `{ type, data, mimeType }` parts, never as a content array in the text position - Pi's `prompt()` does string work on `text` and crashes on an array (`firstmateSession.realSession.test.ts` pins the shape).
 - A provider is served by the backend its `PROVIDER_CATALOG` entry names (`src/shared/providers.ts`), and may only serve the `roles` it lists.
   Claude Max rides its own first-party client because Pi's Anthropic OAuth is refused for third-party clients, serves both roles since rev-9 (it was `crewmate`-only before), and uses the machine's default `claude login` as its one credential (CD-1=B: one Claude account ever, `binding()` is `{ via: "default-login" }`, `CLAUDE_CONFIG_DIR` left unset so the client uses the bare Keychain item, unbind does not run `claude auth logout` but for a login the first mate made on a computer that runs work); the bare `anthropic` Pi provider is still not offered, and leftover Anthropic auth/sessions must not crash the app.
-  Cursor was removed (on 2026-09-24, under the 2026-09-24 standing product principle in `docs/principles.md`): a stored account for a retired id is skipped on load (`isRetiredProvider`), its files stay, and a task that ran on Cursor is never resumed into another transport (`CrewSupervisor.retiredProviderOf`).
+  Cursor was removed (on 2026-09-24, under the 2026-09-24 standing product principle in `docs/principles.md`): a stored account for a retired id is skipped on load (`isRetiredProvider`), its files stay, and a task that ran on Cursor is never resumed into another transport (`CrewSessions.retiredProviderOf`).
   A backend is a catalog entry plus a registration in `src/core/services.ts` - see `docs/architecture.md` section 16.1.
 - Crewmate isolation is social (system prompt + git worktree), not a filesystem jail.
   The first mate's turns are steer-only (`inf:converse` steers when busy; no `inf:firstmate:abort`).

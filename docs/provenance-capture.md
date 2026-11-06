@@ -78,11 +78,11 @@ Timeline compaction never folds `decided`, `steered` or `interrupted`; those row
 Before R2 a steer or interrupt left no durable event.
 Now the crew control plane writes one through the task writer at the moment it decides what happened:
 
-- `steered` (`TaskService.turns.recordSteer`, from `CrewSupervisor.steerCrewmate` / `steerInternal`): actor `firstmate` or `captain` (a card choice); the `supervisor` actor, the `supervision` via and the `recorded-queued` delivery were the retired session's and stay in the vocabulary for the record.
+- `steered` (`TaskService.turns.recordSteer`, from `CrewSteer.steerCrewmate` / `steerInternal`): actor `firstmate` or `captain` (a card choice); the `supervisor` actor, the `supervision` via and the `recorded-queued` delivery were the retired session's and stay in the vocabulary for the record.
   `data` is `SteerEventData` - the delivery outcome (`mid-turn`, `queued-next-turn`, `recorded-retrying`, `recorded-queued`), `via` (`tool` / `card` / `supervision`), the issuing decision, the card id, and the inbox row.
   The message is redacted at capture.
   A refused steer (unknown or closed task) throws as before and records nothing.
-- `interrupted` (`TaskService.turns.recordInterrupt`, from `CrewSupervisor.interruptCrewmate`): actor `firstmate` (the tool) or `captain` (the shell's abort); `data` is `InterruptEventData` - mode, `effect`, a redacted error when present, `via` (`tool` / `shell`) and the issuing decision.
+- `interrupted` (`TaskService.turns.recordInterrupt`, from `CrewSessions.interruptCrewmate`): actor `firstmate` (the tool) or `captain` (the shell's abort); `data` is `InterruptEventData` - mode, `effect`, a redacted error when present, `via` (`tool` / `shell`) and the issuing decision.
   An abort records `requested` before the transport call, then `aborted-turn` on success or `abort-failed` on rejection.
   Effects that need no transport call (`cancelled-idle`, `cancelled-record`, `no-turn`, `already-done`) record once.
 

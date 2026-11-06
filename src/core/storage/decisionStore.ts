@@ -15,7 +15,7 @@ import { prepared } from "./statements";
  *   the shape's rule (`Router`).
  * - `account` - which account of that provider serves it (`AccountSelector`).
  * - `sort` - the whose-turn sort and the idle ladder's rungs (the
- *   supervisor's `recordSort`), and the retired triage session's verdicts
+ *   crew's `CrewTurns.recordSort`), and the retired triage session's verdicts
  *   before them: the wake, its typed facts, routine or captain, and why.
  *   Append-only apart from the one write-once missed-escalation label
  *   (migration 16). A decision and its effect commit in one transaction

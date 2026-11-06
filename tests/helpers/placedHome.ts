@@ -422,9 +422,9 @@ export function startPlacedHome(options: {
           },
           reads: outsideReads,
           files: {
-            refusal: (taskId): string | undefined => supervisor.outsideFileRefusal(taskId),
+            refusal: (taskId): string | undefined => supervisor.sessions.outsideFileRefusal(taskId),
             save: (taskId, name, bytes): Promise<{ file: string; path: string }> =>
-              supervisor.saveOutsideFile(taskId, name, bytes),
+              supervisor.sessions.saveOutsideFile(taskId, name, bytes),
           },
           now,
         })
@@ -502,10 +502,12 @@ export function startPlacedHome(options: {
           claudeConfigDir: () => join(options.userData, "claude"),
           firstmateClaudeSessions: () => [],
           conversations: {
-            busy: (reader) => reader !== FIRSTMATE_READER && supervisor.conversationBusy(reader),
+            busy: (reader) =>
+              reader !== FIRSTMATE_READER && supervisor.sessions.conversationBusy(reader),
             release: async (reader) =>
-              reader === FIRSTMATE_READER || supervisor.releaseConversation(reader),
-            held: (reader) => reader !== FIRSTMATE_READER && supervisor.conversationHeld(reader),
+              reader === FIRSTMATE_READER || supervisor.sessions.releaseConversation(reader),
+            held: (reader) =>
+              reader !== FIRSTMATE_READER && supervisor.sessions.conversationHeld(reader),
           },
           placed: (record, due, files) => placed.deleteOutside(record, due, files),
           runs: { rewrite: () => 0 },

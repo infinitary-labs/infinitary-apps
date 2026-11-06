@@ -196,7 +196,7 @@ describe("removing a computer that runs work", () => {
       work: home.devices,
       tasks: home.tasks,
       repos: home.repos,
-      stopTasks: (deviceId) => home.supervisor.stopTasksOn(deviceId),
+      stopTasks: (deviceId) => home.supervisor.sessions.stopTasksOn(deviceId),
       bringHome: (deviceId) => home.placed.bringHome(deviceId),
       ...(removeThere ? { removeThere } : {}),
       emit: (list) => pushed.push(list),

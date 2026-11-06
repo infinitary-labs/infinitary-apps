@@ -207,7 +207,7 @@ describe("a task that runs on a computer that runs work", () => {
       },
       { text: "The story is prepared." },
     ]);
-    await home.supervisor.steerCrewmate("t-story", "Prepare the selected story now.");
+    await home.supervisor.steer.steerCrewmate("t-story", "Prepare the selected story now.");
     await expect.poll(() => home.tasks.get("t-story")?.outcome).toBe("The story is prepared.");
     expect(
       home.tasks.delivery.changePresentation("t-story")?.revisions.length,
@@ -278,7 +278,7 @@ describe("a task that runs on a computer that runs work", () => {
     ];
     model(publication);
     const opening = api.requests.length;
-    await home.supervisor.steerCrewmate("t-copy", "Open the change.");
+    await home.supervisor.steer.steerCrewmate("t-copy", "Open the change.");
     await expect.poll(() => api.requests.length - opening).toBe(publication.length);
     await expect.poll(() => home.tasks.get("t-copy")?.activity).toBe("idle");
 
@@ -313,7 +313,7 @@ describe("a task that runs on a computer that runs work", () => {
 
     // The task closes: its work is kept there, comes home, and only then is
     // the working copy deleted there.
-    await home.supervisor.interruptCrewmate("t-copy", "cancel");
+    await home.supervisor.sessions.interruptCrewmate("t-copy", "cancel");
     await expect.poll(() => home.tasks.get("t-copy")?.workspaceState).toBe("removed");
     expect(existsSync(work)).toBe(false);
     const kept = await git(project.home, ["rev-parse", keptRefFor("t-copy")]);
@@ -364,7 +364,7 @@ describe("a task that runs on a computer that runs work", () => {
     ];
     model(publication);
     const opening = api.requests.length;
-    await home.supervisor.steerCrewmate("t-other", "Open the reading fix.");
+    await home.supervisor.steer.steerCrewmate("t-other", "Open the reading fix.");
     await expect.poll(() => api.requests.length - opening).toBe(publication.length);
     await expect.poll(() => home.tasks.get("t-other")?.activity).toBe("idle");
 
@@ -512,7 +512,7 @@ describe("a task that runs on a computer that runs work", () => {
       },
       { text: "The checkout scenario is recorded." },
     ]);
-    await home.supervisor.steerCrewmate(
+    await home.supervisor.steer.steerCrewmate(
       "t-validation",
       "Record the scenario before reading its result.",
     );
@@ -591,7 +591,7 @@ describe("a task that runs on a computer that runs work", () => {
       },
       { text: "The home has the proof and unanswered request." },
     ]);
-    await home.supervisor.steerCrewmate(
+    await home.supervisor.steer.steerCrewmate(
       "t-validation",
       "Record the observed run and request, not approval.",
     );
@@ -623,7 +623,7 @@ describe("a task that runs on a computer that runs work", () => {
       },
       { text: "The dirty report was refused." },
     ]);
-    await home.supervisor.steerCrewmate(
+    await home.supervisor.steer.steerCrewmate(
       "t-validation",
       "Check whether a dirty checkout can record the same proof.",
     );
@@ -678,7 +678,7 @@ describe("a task that runs on a computer that runs work", () => {
     ];
     model(publication);
     const requests = api.requests.length;
-    await home.supervisor.steerCrewmate("t-moved", "Open the change.");
+    await home.supervisor.steer.steerCrewmate("t-moved", "Open the change.");
     await expect.poll(() => api.requests.length - requests).toBe(publication.length);
     await expect.poll(() => home.tasks.get("t-moved")?.activity).toBe("idle");
 
@@ -867,7 +867,7 @@ describe("a task that runs on a computer that runs work", () => {
 
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
-    await home.supervisor.interruptCrewmate("t-away", "cancel");
+    await home.supervisor.sessions.interruptCrewmate("t-away", "cancel");
     expect(home.tasks.get("t-away")?.status).toBe("dropped");
     // Nothing is deleted there, and nothing is counted as gone here.
     expect(existsSync(work)).toBe(true);
@@ -902,7 +902,7 @@ describe("a task that runs on a computer that runs work", () => {
     // It closes while that computer is out of reach, which then stops.
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
-    await home.supervisor.interruptCrewmate("t-review", "cancel");
+    await home.supervisor.sessions.interruptCrewmate("t-review", "cancel");
     await at.stopComputer();
     // The keep that version answered: the checkout alone, saved there and remembered.
     const clone = await git(work, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);

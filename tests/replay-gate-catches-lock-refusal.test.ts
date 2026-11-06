@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { compareToBaseline } from "../scripts/interaction-metrics.ts";
 import { replaySession } from "../scripts/replay/engine.ts";
 import { discoverFixtures, readBaseline } from "../scripts/replay-captain-session.ts";
-import { CrewSupervisor } from "../src/core/orchestrator/crewSupervisor.ts";
+import { CrewSteer } from "../src/core/orchestrator/crewSteer.ts";
 
 /**
  * The P3 exit check, kept honest past S7c. The Sep 14 failure mode was a
@@ -18,7 +18,7 @@ const FIXTURES = fileURLToPath(new URL("./fixtures/replay/", import.meta.url));
 
 describe("the replay gate catches a lock-refusal regression", () => {
   it("counts the refused steers again and fails the baseline on them", async () => {
-    vi.spyOn(CrewSupervisor.prototype, "steerCrewmate").mockImplementation(async (taskId) => {
+    vi.spyOn(CrewSteer.prototype, "steerCrewmate").mockImplementation(async (taskId) => {
       throw new Error(
         `task ${taskId} is being triaged by fleet supervision right now; try again in a moment`,
       );

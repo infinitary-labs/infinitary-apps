@@ -2,7 +2,7 @@
 
 What happens when a crewmate reports.
 Captain call **C7 A, heuristics only** ("Send and End", 2026-09-20), on the scout report `fm3000-s7c-supervision-decision-model-s1`, revisions R4 and R5.
-Code: `src/core/orchestrator/reportSort.ts` (the rule, `sortReport` and `idleTurn`), `src/core/orchestrator/idleLadder.ts` (`IdleLadder`: the one `witnesses(taskId, now)` both readers call, the reconciler, the ladder, the gate, the caps and the ready sweep), and `CrewSupervisor.sortReport`, which composes them.
+Code: `src/core/orchestrator/reportSort.ts` (the rule, `sortReport` and `idleTurn`), `src/core/orchestrator/idleLadder.ts` (`IdleLadder`: the one `witnesses(taskId, now)` both readers call, the reconciler, the ladder, the gate, the caps and the ready sweep), and `CrewTurns.sortReport` (`src/core/orchestrator/crewTurns.ts`), which composes them.
 Tests: `reportSort.test.ts` (the table), `crewSupervisor.test.ts` ("the whose-turn rule at the report's call site", "the idle ladder"), `core.boot.test.ts` ("the idle ladder across a restart"), `tests/e2e/report-sort.spec.ts`, `tests/e2e/idle-ladder.spec.ts`, `tests/e2e/relayed-decision.spec.ts`, `tests/e2e/sequences.spec.ts`, `tests/e2e/sequences-claude.spec.ts`.
 
 A report is sorted from typed state the host already holds, never by a second model reading its prose.
@@ -139,7 +139,7 @@ Removing a `blocks` wait through `link_tasks remove` clears both its graph edge 
 Other dependency owners and historical diagnoses whose waits no longer stand remain unchanged.
 
 **"Still moving" is decidable because only the host starts a turn.**
-`CrewSupervisor.runTurn` is the one caller of `transport.prompt`, and what feeds it is the task's durable inbox lane.
+`CrewTurns.runTurn` is the one caller of `transport.prompt`, and what feeds it is the task's durable inbox lane.
 So there are four in-process witnesses to "will this crewmate move again with nobody acting": `TaskRuntime.state`, the job registry (`hasRunningJobs`), rows pending on the task's lane, and `pendingSettle`.
 
 **One witness set, one gatherer** (the primitives review's F10, captain- approved 2026-09-26).
@@ -311,7 +311,7 @@ The job registry exposes the oldest running job per owner (`JobManager.oldestRun
 Its report's `check_back` carries the minutes until then and what it waits for; the host keeps it on the record (`delivery.checkBack`) and sets the task's `at-time` gate, so the task reads as moving until then (row 3) while its job runs.
 At that time the sweep ends the wait with one steer that names the task's oldest running job, its command and how long it has run (`timed-wait-over`); a check-back with no job behind it ends silently ("Self-resolving work waits" above).
 A job that ends first, or any other turn, clears it with the rest of the report's declaration.
-A turn that ends with a job running, no `check_back` and no wait on the captain or finished work gets one steer asking for a time, once per job (`check-back-ask`, `CrewSupervisor.askForCheckBack`).
+A turn that ends with a job running, no `check_back` and no wait on the captain or finished work gets one steer asking for a time, once per job (`check-back-ask`, `CrewTurns.askForCheckBack`).
 A check-back later than the bound never silences it: the job bound stays the backstop.
 `crew_status` and the first mate's crew line carry the oldest job's age and command (`job`), how long ago the crewmate last reported (`reported`) and the check-back (`check_back`), so the first mate reads durations rather than guessing them.
 A job this Mac cannot see is named as its runner names it: a computer that runs work names its Pi shell's oldest job with the count (`docs/helper.md`), and work no one named is a Claude client's here or that computer's by name (`unnamedBackgroundWork`).
@@ -337,7 +337,7 @@ The host does not parse a free-text "I am waiting on X until Y".
 
 ## What it writes
 
-Every sort is one `sort` row of the decision ledger (`decisions`, migration 50; `docs/decision-models.md`, "The decision ledger"), with the rule that sorted it in `rule` and the wake's typed facts beside its served text, written through `CrewSupervisor`'s `recordSort` seam into `DecisionStore`; the wake rides the store's own transaction, so a decision and its effect still commit together.
+Every sort is one `sort` row of the decision ledger (`decisions`, migration 50; `docs/decision-models.md`, "The decision ledger"), with the rule that sorted it in `rule` and the wake's typed facts beside its served text, written through the `CrewTurns.recordSort` seam into `DecisionStore`; the wake rides the store's own transaction, so a decision and its effect still commit together.
 Read through `supervision_outcomes`, the view over those rows, a rule's sort still names its rule where the triage model's name used to sit (`model = "rule:<id>"`).
 The verdict vocabulary is unchanged: `routine | captain`.
 So `flag_missed_escalation` (C3), the miss deriver (C2), the supervision-turn extractor (G1) and the replay scorer all keep reading one ledger - a rule-sorted row simply has no transcript to join, which G1 already reports as a miss with a reason, the way it always did for a host-sorted repeat.
@@ -352,7 +352,7 @@ Its ledger rows live in `decisions`; Observe does not open the retired session, 
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
-- The whose-turn rule (S7c, captain call C7 A "heuristics only", 2026-09-20; `docs/report-sort.md` is the one home; `src/core/orchestrator/reportSort.ts` + `CrewSupervisor.sortReport`/`reconcileIdle`).
+- The whose-turn rule (S7c, captain call C7 A "heuristics only", 2026-09-20; `docs/report-sort.md` is the one home; `src/core/orchestrator/reportSort.ts` + `CrewTurns.sortReport` and `CrewSupervisor.reconcileIdle`).
   A crewmate's report is sorted in CODE from typed state at its call site, never by reading its prose: (0) the captain wrote the newest message in one of the task's card threads - the crewmate's turn, above the card branch because the captain has spoken since that card went up - no wake; (1) an open DECISION card for the task is the captain's turn - a note never holds it, since `cardWord` derives the word from the actions alone - no wake; (2) filings this turn wake; (3) a running job, rows pending on the task's lane or a `pendingSettle` is the crewmate's turn - no wake; (4) none of those and the host can see ALL of this backend's work: nobody's turn, wake NOW with the report's own words; (5) it cannot: wake now too (INF-11), the rule's name keeping that the host could not tell.
   Observability is DECLARED, not guessed - `ControlProfile.backgroundWork` is `host` for Pi (its crewmate's bash is the host's own tool, so a job is in the registry and its exit is a lane row) and `client` for Claude, as it is for a task whose transport is gone.
   The stall check it once armed was replaced by the idle ladder (2026-09-26, "The idle ladder" above): one reconciler over every idle record, on a durable clock.

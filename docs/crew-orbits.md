@@ -64,7 +64,7 @@ The size control's zoom also changes the window's height in CSS pixels, which re
 ## The spark out to a crewmate
 
 The spark out to a crewmate flies when something sent reaches it, never when a message is only recorded (INF-759).
-The core announces it as a `task_event` push with `reached: true` (`announceReach` in `crewSupervisor.ts`), and `applyCrewEvent` draws the spark from it.
+The core announces it as a `task_event` push with `reached: true` (`announceReach` in `crewSteer.ts`), and `applyCrewEvent` draws the spark from it.
 A message sparks when its lane row first goes out into a turn (`deliverRows`), so a message held for an account or a computer, or queued behind a turn, sparks when the crewmate takes it, and one delivered again sparks only once.
 An interrupt or cancel sparks as it is asked, the first mate's or the captain's Stop alike; a settle sparks before the task closes, except a superseded one, whose successor's start is its spark.
 An edit the crewmate never hears also sparks, because its task changed: an `update_task` field edit other than its policies, a withdrawn merge, and a wait added or removed by `link_tasks`; a policy change sparks as its notice lands.

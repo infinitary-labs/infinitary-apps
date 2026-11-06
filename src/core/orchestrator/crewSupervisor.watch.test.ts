@@ -26,7 +26,7 @@ describe("the crew's watch between turns, before it moves out of the crew superv
     });
     await tick();
     await endTurn(crewmate, taskId, "The tests are running in the background.");
-    expect(await h.supervisor.releaseConversation(taskId)).toBe(true);
+    expect(await h.supervisor.sessions.releaseConversation(taskId)).toBe(true);
     const opened = h.sessions.open.mock.calls.length;
     const prompts = crewmate.promptCalls.length;
 

@@ -113,7 +113,7 @@ A turn that answered is `ok` whatever its pushed reading said, and so is a turn 
 When one turn carries several signals the sign-in wins, then a refusal, then a spent allowance.
 A backend declares which kind of failure it reports (`ControlProfile.failureSignals`: `typed` for Claude, `text` for Pi); a typed backend's failure without a class is never read as a sign-in.
 The record keeps the class: `TaskService.turns.recordTurnFailure` stores `failureSignals: "typed"` and the `cutOff` beside the words (a typed backend's fatal close, `TaskClosing.closeRecord`, stores `failureSignals: "typed"` too, with no class: a session that exits is a session failure), and the feed line and the stall card read it back through `typedFailureOf`, so `plainProblem` picks the line by class (`signed_out` the sign-in line, `no_headroom` the allowance line, `refused` the plain fallback until it has its own) and never runs its sign-in, allowance or slow-down word rules over a typed failure.
-A typed `signed_out` takes the crewmate's sign-in path (`CrewSupervisor.turnComplete`); `no_headroom` and `refused` take the provider-failure path, and the account's fact then holds the lane (`docs/inbox.md`, "A lane on a withheld account").
+A typed `signed_out` takes the crewmate's sign-in path (`CrewTurns.turnComplete`); `no_headroom` and `refused` take the provider-failure path, and the account's fact then holds the lane (`docs/inbox.md`, "A lane on a withheld account").
 A Pi failure is prose, with one typed exception: xAI's `402` (credits spent) is read from where Pi's error puts the status, `xai API error (402): ...` or `402: ...`, never from its words, and only for xAI (`isOutOfCreditsRefusal`, with the session's provider; another provider's 402 can be about one oversized request).
 `piEvents` types it as `no_headroom` with no reset; the host fills the reset where the hold is recorded (`recordCutOff` in `src/core/quota/spentAllowance.ts`, and `ownAccounts` on a computer that runs work), from the limiting window of that sign-in's latest reading on the computer where the refusal happened.
 A 402 with no reset to hold against stays an ordinary failed turn, retried as before.
@@ -126,7 +126,7 @@ The rules above still hold: only a 401 renews, and "sign in again" comes only fr
 ### The cut-off on the account
 
 W1 S7.
-Whoever observes a typed cut-off - a crewmate's turn (`CrewSupervisor.turnComplete`), the seat's (`FirstmateAgent.onSessionEvent`) or the kind classifier's (`AdaptedDecisionModel`, W1 S10) - records it on the account with `AccountVault.noteCutOff`.
+Whoever observes a typed cut-off - a crewmate's turn (`CrewTurns.turnComplete`), the seat's (`FirstmateAgent.onSessionEvent`) or the kind classifier's (`AdaptedDecisionModel`, W1 S10) - records it on the account with `AccountVault.noteCutOff`.
 A crewmate's turn on another computer met it on that computer's own sign-in, so that computer records it in its own store and this Mac records nothing; that computer's account rows carry it to this Mac, which holds the task on it as it holds one on its own (`docs/helper.md`, "Its own sign-ins").
 The fact lives on the account's registry row (`cutOff`, additive: a row an older build wrote has none, which is no cut-off), so it survives a restart, and it goes with the account when the account is removed.
 

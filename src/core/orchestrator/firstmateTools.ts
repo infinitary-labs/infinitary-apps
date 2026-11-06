@@ -120,7 +120,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // says about it - a refused settle is still about that task.
     steerCrewmate: async (taskId, message, response) => {
       host.asks.attach(taskId, "steer_crewmate");
-      const delivery = await supervisor.steerCrewmate(taskId, message, "firstmate", {
+      const delivery = await supervisor.steer.steerCrewmate(taskId, message, "firstmate", {
         via: "tool",
         decision: host.decisions.current() ?? null,
         response: {
@@ -143,10 +143,10 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       host.replyEmote("nod");
       return delivery;
     },
-    handFiles: (fromTask, toTask) => supervisor.handFiles(fromTask, toTask),
+    handFiles: (fromTask, toTask) => supervisor.sessions.handFiles(fromTask, toTask),
     interruptCrewmate: async (taskId, mode, closingSentence) => {
       host.asks.attach(taskId, "interrupt_crewmate");
-      await supervisor.interruptCrewmate(
+      await supervisor.sessions.interruptCrewmate(
         taskId,
         mode,
         {

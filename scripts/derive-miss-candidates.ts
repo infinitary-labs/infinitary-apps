@@ -260,7 +260,7 @@ export type DeriveResult = {
 };
 
 /**
- * Host-written failed-turn op (crewSupervisor.turnComplete):
+ * Host-written failed-turn op (CrewTurns.turnComplete):
  * `[fm-op] ${crewmate}'s turn on task ${id} "${title}" failed: ${error}`
  */
 export function isTurnFailedWake(wake: string, taskId: string): boolean {
@@ -268,7 +268,7 @@ export function isTurnFailedWake(wake: string, taskId: string): boolean {
 }
 
 /**
- * Host-written terminal-failure op (crewSupervisor.finish):
+ * Host-written terminal-failure op (CrewSessions.finish):
  * `[fm-op] task ${id} "${title}" failed: ${error}`
  * Distinct from the turn-failed form, which also contains `task ${id}`.
  */
@@ -278,7 +278,7 @@ export function isTaskFailedWake(wake: string, taskId: string): boolean {
 }
 
 /**
- * Historical host-written interrupt receipt (crewSupervisor.turnComplete):
+ * Historical host-written interrupt receipt (CrewTurns.turnComplete):
  * `[fm-op] ${crewmate} was interrupted on task ${id} "${title}"; …`
  * The text carries no actor. Today this receipt follows the Firstmate's own
  * interrupt tool and is a feed line, but old outcomes can still contain it.

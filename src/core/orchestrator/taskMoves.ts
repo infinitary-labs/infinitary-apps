@@ -55,7 +55,7 @@ export type TaskMovesHost = {
   readonly placement: TaskPlacement;
   /** The crewmate running a task here now, if one is. */
   runtime(taskId: string): TaskRuntime | undefined;
-  /** Let go of a crewmate's session (`CrewSupervisor.releaseSession`). */
+  /** Let go of a crewmate's session (`CrewSessions.releaseSession`). */
   releaseSession(runtime: TaskRuntime): void;
   /** The supervisor stops tracking a task's crewmate. */
   forgetRuntime(taskId: string): void;

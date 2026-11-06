@@ -46,10 +46,7 @@ export type HomeIntegrations = {
 };
 
 /** What an integration's ask and a saved attachment reach of the crew. */
-export type IntegrationsCrew = Pick<
-  CrewSupervisor,
-  "integrationAsks" | "outsideFileRefusal" | "saveOutsideFile"
->;
+export type IntegrationsCrew = Pick<CrewSupervisor, "integrationAsks" | "sessions">;
 
 export function startHomeIntegrations(options: {
   host: Pick<HostCapabilities, "app" | "openExternal">;
@@ -179,8 +176,8 @@ export function startHomeIntegrations(options: {
     panelReads: (panel, label, at) => options.panelOutside.noted(panel, label, at),
     // A saved Gmail attachment lands in the calling task's hand-over folder, wherever it runs.
     files: {
-      refusal: (taskId) => options.crew().outsideFileRefusal(taskId),
-      save: (taskId, name, bytes) => options.crew().saveOutsideFile(taskId, name, bytes),
+      refusal: (taskId) => options.crew().sessions.outsideFileRefusal(taskId),
+      save: (taskId, name, bytes) => options.crew().sessions.saveOutsideFile(taskId, name, bytes),
     },
     now,
     push: (view) => options.emit("inf:integrations", view),

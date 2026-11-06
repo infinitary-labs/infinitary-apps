@@ -507,7 +507,7 @@ describe("a task that runs on a computer that runs work", () => {
     );
     // The first mate's steer hands it to the waiting task, in its hand-over folder there.
     model([{ text: "Using it." }]);
-    const words = await home.supervisor.handFiles("t-find", "t-wait");
+    const words = await home.supervisor.sessions.handFiles("t-find", "t-wait");
     const delivered = join(at.folders("t-wait").temp, "handover", kept);
     expect(words).toContain(delivered);
     expect(readFileSync(delivered)).toEqual(readFileSync(found));
@@ -652,13 +652,13 @@ describe("a task that runs on a computer that runs work", () => {
         tasks: { task: string; closed: boolean }[];
       };
 
-    await home.supervisor.interruptCrewmate("t-close-now", "cancel");
+    await home.supervisor.sessions.interruptCrewmate("t-close-now", "cancel");
     await expect
       .poll(async () => (await roster()).tasks.find((task) => task.task === "t-close-now")?.closed)
       .toBe(true);
 
     await home.drop();
-    await home.supervisor.interruptCrewmate("t-close-later", "cancel");
+    await home.supervisor.sessions.interruptCrewmate("t-close-later", "cancel");
     await home.listen();
     await expect
       .poll(

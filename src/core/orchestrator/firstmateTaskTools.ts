@@ -251,7 +251,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           ) {
             // An edit its crewmate never hears still sparks to it: its task
             // changed (INF-759). A policy notice sparks as it lands.
-            supervisor.announceReach(record.id);
+            supervisor.steer.announceReach(record.id);
             supervisor.intake.graphChanged();
           }
           const now = tasks.get(record.id);

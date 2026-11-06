@@ -277,7 +277,7 @@ describe("the captain's override, cited from his message on the task", () => {
     });
     await finish();
     // His line in the Crewmate tab, cited the same way, replaces it.
-    await f.supervisor.steerFromCrewmateTab("ab12", tabLine);
+    await f.supervisor.steer.steerFromCrewmateTab("ab12", tabLine);
     notifyProse(
       f.db,
       f.agent,

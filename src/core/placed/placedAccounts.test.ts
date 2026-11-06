@@ -599,7 +599,7 @@ describe("a task on another computer, on that computer's own sign-in", () => {
     if (!record) throw new Error("The task has no record.");
     expect(home.supervisor.postures.workPosture(record).state).not.toBe("paused");
     expect(
-      await home.supervisor.steerCrewmate("t-placed", "Also fix the header.", "captain"),
+      await home.supervisor.steer.steerCrewmate("t-placed", "Also fix the header.", "captain"),
     ).not.toBe("recorded-held");
     // The Firstmate hears this Mac's cut-off for no task that runs there.
     expect(

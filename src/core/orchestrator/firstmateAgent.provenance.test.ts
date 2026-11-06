@@ -340,7 +340,7 @@ describe("FirstmateAgent provenance (R2)", () => {
     expect(steered?.data).toMatchObject({ via: "card", cardId: "card-t1-1", decision: null });
     expect(typeof steered?.data?.inboxId).toBe("number");
 
-    await supervisor.abort("t2");
+    await supervisor.sessions.abort("t2");
     const interrupted = tasks.timeline("t2").find((event) => event.kind === "interrupted");
     expect(interrupted).toMatchObject({ actor: "captain", ref: null });
     expect(interrupted?.data).toEqual({

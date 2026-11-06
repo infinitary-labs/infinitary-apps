@@ -71,7 +71,7 @@ import { DecisionStore } from "../../src/core/storage/decisionStore.ts";
 import { seedTask } from "../../src/core/tasks/seedTask.ts";
 import { TaskService } from "../../src/core/tasks/taskService.ts";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry.ts";
-import type { Card } from "../../src/shared/cards.ts";
+import { type Card, cardPresentation } from "../../src/shared/cards.ts";
 import { resolveFirstmateCardId } from "../../src/core/pi/cardTool.ts";
 import { renderWake, type WakeFacts } from "../../src/core/orchestrator/wakes.ts";
 import { UNSTATED_TURN_ERROR } from "../../src/shared/events.ts";
@@ -1273,7 +1273,11 @@ class Replay {
           this.fidelity.skipped_card_resolutions += 1;
           return;
         }
-        if (event.action === "close") this.supervisor.close(card.id);
+        // A note's recorded close is its read, which is now the note's own
+        // Got it or Done; the corner only puts a card aside (INF-2794).
+        if (event.action === "close" && cardPresentation(card) === "note")
+          this.supervisor.pressNote(card.id);
+        else if (event.action === "close") this.supervisor.close(card.id);
         else this.applyChoice(card, event.action, event.source);
         return;
       }

@@ -651,14 +651,14 @@ describe("recorded task card retirements", () => {
 
   it("keeps a captain dismissal as an input", async () => {
     const root = retirementRecording({ card: { chosen_action: "close" } });
-    const closes = vi.spyOn(CrewSupervisor.prototype, "close");
+    const reads = vi.spyOn(CrewSupervisor.prototype, "pressNote"); // A note's read (INF-2794).
     try {
       const report = await replaySession(discoverSources({ name: "dismissal", root }));
-      expect(closes).toHaveBeenCalledOnce();
+      expect(reads).toHaveBeenCalledOnce();
       expect(report.details.retired_cards).toEqual([]);
       expect(report.fidelity.skipped_card_resolutions).toBe(0);
     } finally {
-      closes.mockRestore();
+      reads.mockRestore();
       rmSync(root, { recursive: true, force: true });
     }
   });

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "browser-diagnostics-refs-none",
+      "reason": "A crewmate's console or network read of its browser now names a page with no numbered ref book as refs: none, as its other answers and typed facts already did, instead of refs: gundefined. Only the crewmate reads this line; nothing a person sees changes."
+    }
+  ]
+}

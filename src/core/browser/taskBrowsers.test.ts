@@ -491,6 +491,30 @@ describe("guarded diagnostic lists", () => {
     await browser.navigate({ url: "http://localhost:5173/" });
     expect((await browser.inspect({ show: "console" })).text).toContain("0 messages");
   });
+
+  it("names the page's ref book in its refs line as the typed facts do, none until a read numbers it", async () => {
+    const h = harness();
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const refsLine = (text: string) => text.split("\n").find((line) => line.startsWith("refs: "));
+    const numbered = await browser.inspect({ show: "console" });
+    expect(numbered.page?.refs).toMatch(/^g\d+$/);
+    expect(refsLine(numbered.text)).toBe(`refs: ${numbered.page?.refs}`);
+    // Handing the page back gives it a fresh book that no read has numbered yet.
+    const handle = { session: h.browsers.session, generation: 1 };
+    await h.browsers.takeControl("t1", handle);
+    await h.browsers.returnControl("t1", handle);
+    for (const show of ["console", "network"] as const) {
+      const listed = await browser.inspect({ show });
+      expect(listed.page?.refs).toBe("none");
+      expect(refsLine(listed.text)).toBe("refs: none");
+    }
+    await browser.inspect({});
+    const renumbered = await browser.inspect({ show: "network" });
+    expect(renumbered.page?.refs).toMatch(/^g\d+$/);
+    expect(renumbered.page?.refs).not.toBe(numbered.page?.refs);
+    expect(refsLine(renumbered.text)).toBe(`refs: ${renumbered.page?.refs}`);
+  });
 });
 
 describe("a task's own browser", () => {

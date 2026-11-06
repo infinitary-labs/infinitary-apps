@@ -608,6 +608,11 @@ function quoted(text: string): string {
   return JSON.stringify(text);
 }
 
+/** A page's ref book as its answer names it: `none` until a read has numbered it. */
+function refsOf(book: RefBook): string {
+  return book.number === undefined ? "none" : `g${book.number}`;
+}
+
 function labelOf(entry: RefEntry): string {
   return entry.name
     ? `${entry.role} ${quoted(entry.name)} [${entry.ref}]`
@@ -1704,7 +1709,7 @@ export class TaskBrowsers {
         return {
           text: [
             ...head.lines,
-            `refs: g${browser.current.refs.number}`,
+            `refs: ${refsOf(browser.current.refs)}`,
             `did: ${did}`,
             notice,
             text,
@@ -3046,7 +3051,7 @@ export class TaskBrowsers {
     return {
       title: entry.page.title().trim(),
       url: this.shown(browser, entry.page.url()),
-      refs: entry.refs.number === undefined ? "none" : `g${entry.refs.number}`,
+      refs: refsOf(entry.refs),
       ...(controls !== undefined ? { controls } : {}),
       ...(head.place ? { page: head.place } : {}),
       errors,
@@ -3073,9 +3078,8 @@ export class TaskBrowsers {
     const window = windowOf(outline.lines, ask);
     const samePage = action?.entry === entry && action.refs === entry.refs;
     const head = this.pageHead(browser);
-    const refs = entry.refs.number === undefined ? "none" : `g${entry.refs.number}`;
     const did = `${lead || "Read the page."}${action ? (samePage ? " The page did not move." : " The page changed; this is a fresh outline.") : ""}`;
-    const facts = [...head.lines, `refs: ${refs}`, `did: ${did}`];
+    const facts = [...head.lines, `refs: ${refsOf(entry.refs)}`, `did: ${did}`];
     const rest: string[] = [];
     if (notice) rest.push(notice);
     if (ask.kind === "find" && window.found) {

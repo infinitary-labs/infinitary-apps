@@ -834,12 +834,19 @@ describe("the home's connection", () => {
 
   it("forwards what a view may ask as the captain, and refuses the rest without asking the core", async () => {
     const at = await home();
-    const a = await connectClient(await at.join("view"));
+    const grant = await at.join("view");
+    const a = await connectClient(grant);
 
     const health = await a.invoke("inf:app:healthcheck", []);
     expect(health.capabilities).toEqual(["connection"]);
+    // INF-2631: the captain, naming the view that asked, so a phone's own
+    // usage events go under that phone's install ID.
     expect(at.asked).toEqual([
-      { channel: "inf:app:healthcheck", args: [], actor: { kind: "captain" } },
+      {
+        channel: "inf:app:healthcheck",
+        args: [],
+        actor: { kind: "captain", view: grant.deviceId },
+      },
     ]);
     // The core's own refusal comes back as the answer.
     await expect(a.invoke("inf:cards:act", ["card-1"])).rejects.toThrow("malformed request");
@@ -865,7 +872,8 @@ describe("the home's connection", () => {
   // that window would; a home with its window keeps the rule above.
   it("answers a view of a first mate started by a command every home request but those that stay there", async () => {
     const run = await home({ startedByCommand: true });
-    const a = await connectClient(await run.join("view"));
+    const grant = await run.join("view");
+    const a = await connectClient(grant);
     expect(a.welcome.startedByCommand).toBe(true);
 
     await expect(a.invoke("inf:settings:routing:set", [{}])).rejects.toThrow("malformed request");
@@ -875,7 +883,7 @@ describe("the home's connection", () => {
       "asked only by a computer that runs work",
     );
     expect(run.asked.map((ask) => ask.channel)).toEqual(["inf:settings:routing:set"]);
-    expect(run.asked[0]?.actor).toEqual({ kind: "captain" });
+    expect(run.asked[0]?.actor).toEqual({ kind: "captain", view: grant.deviceId });
 
     // Only a view hears it, and only from a home a command started.
     const builder = await connectClient(await run.join("work", "Builder"));
@@ -1204,7 +1212,11 @@ describe("the home's connection", () => {
     );
     await expect.poll(() => at.asked.length).toBe(1);
     expect(at.asked).toEqual([
-      { channel: "inf:app:healthcheck", args: [], actor: { kind: "captain" } },
+      {
+        channel: "inf:app:healthcheck",
+        args: [],
+        actor: { kind: "captain", view: grant.deviceId },
+      },
     ]);
     await device.close();
   });
@@ -1255,7 +1267,7 @@ describe("the home's connection", () => {
     );
     expect(work.pushes).toEqual([]);
     expect(at.asked.map(({ channel, actor }) => ({ channel, actor }))).toEqual([
-      { channel: "inf:app:healthcheck", actor: { kind: "captain" } },
+      { channel: "inf:app:healthcheck", actor: { kind: "captain", view: grant.deviceId } },
       { channel: "inf:work:progress", actor: { kind: "device", deviceId: grant.deviceId } },
     ]);
 

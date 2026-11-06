@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  DIAGNOSTIC_VERSION_PATTERN,
+  PHONE_DEVICES,
+  PHONE_DIAGNOSTIC_EVENT_NAMES,
+  type PhoneDiagnosticEventName,
+} from "./diagnostics";
 
 /**
  * The two switches (roadmap 1.4; captain locks F2b and F4c, written out in
@@ -8,7 +14,8 @@ import { z } from "zod";
  *
  * - `diagnostics`: the events `src/shared/diagnostics.ts` declares - the
  *   app launching, a Firstmate turn ending or failing, and the first-run
- *   funnel - each with enum/boolean/number fields, the app version and an
+ *   funnel, and a paired phone's own events under its own ID - each with
+ *   enum/boolean/number fields, the app version and an
  *   anonymous random install ID, and never a transcript, a prompt, code, a
  *   card body or anything else a person wrote. It is ON by default (the
  *   switch is the opt-out), and nothing goes until the person has been
@@ -35,8 +42,24 @@ export const DATA_TERMS = {
   /** The file, beside the code that sends the payload. */
   file: "DATA-TERMS.md",
   /** The version of the terms this build ships; a widening bumps it. */
-  version: "draft-2",
+  version: "draft-3",
 } as const;
+
+/**
+ * One event a paired phone hands its computer (docs/sharing.md, "A phone's
+ * events"): a declared `ios_*` name, its fields, the phone's own app
+ * version and when it happened on the phone. The computer keeps it only
+ * while its own Diagnostics would send.
+ */
+export const phoneDiagnosticSchema = z.strictObject({
+  name: z.enum(
+    PHONE_DIAGNOSTIC_EVENT_NAMES as [PhoneDiagnosticEventName, ...PhoneDiagnosticEventName[]],
+  ),
+  data: z.strictObject({ device: z.enum(PHONE_DEVICES) }),
+  version: z.string().regex(DIAGNOSTIC_VERSION_PATTERN),
+  at: z.number().int().nonnegative(),
+});
+export type PhoneDiagnostic = z.infer<typeof phoneDiagnosticSchema>;
 
 export const sharingChannelSchema = z.enum(["diagnostics", "contribution"]);
 export type SharingChannel = z.infer<typeof sharingChannelSchema>;
@@ -62,8 +85,19 @@ export const pendingDiagnosticSchema = z.strictObject({
   at: z.number(),
   name: z.string(),
   data: z.record(z.string(), z.unknown()),
+  /** The paired phone a phone event came from: its install ID is that phone's own. */
+  phone: z.string().optional(),
+  /** The phone's own app version, which a phone event carries in place of this app's. */
+  version: z.string().optional(),
 });
 export type PendingDiagnostic = z.infer<typeof pendingDiagnosticSchema>;
+
+/** One paired phone's install ID and the first-run steps it has reached. */
+export const phoneDiagnosticsSchema = z.strictObject({
+  installId: z.string(),
+  milestones: z.array(z.string()).default([]),
+});
+export type PhoneDiagnostics = z.infer<typeof phoneDiagnosticsSchema>;
 
 /**
  * Diagnostics' row: the switch, plus the anonymous install ID (a random
@@ -77,6 +111,13 @@ export const diagnosticsSwitchSchema = sharingSwitchSchema.extend({
   milestones: z.array(z.string()).default([]),
   /** Recorded events not yet accepted by the endpoint, oldest first. */
   pending: z.array(pendingDiagnosticSchema).default([]),
+  /**
+   * Each paired phone that handed an event while Diagnostics was on, by its
+   * device id: the phone's own install ID and first-run steps. Dropped with
+   * the switch, and when the phone leaves the list (docs/sharing.md, "A
+   * phone's events").
+   */
+  phones: z.record(z.string(), phoneDiagnosticsSchema).default({}),
 });
 export type DiagnosticsSwitch = z.infer<typeof diagnosticsSwitchSchema>;
 
@@ -112,6 +153,7 @@ export const DEFAULT_SHARING: Sharing = {
     installId: null,
     milestones: [],
     pending: [],
+    phones: {},
   },
   contribution: OFF,
   ask: { askedAt: null, answeredAt: null, answer: null },
@@ -166,11 +208,11 @@ export type SharingPreview = z.infer<typeof sharingPreviewSchema>;
  * notice and the alpha notice use (`docs/sharing.md`).
  */
 export const DIAGNOSTICS_SUMMARY =
-  "Anonymous events - the app opening, your first mate finishing or failing a turn, and how far first-time setup has come - with the app version and a random install ID that resets when Diagnostics is turned off and back on.";
+  "Anonymous events - the app opening, your first mate finishing or failing a turn, how far first-time setup has come, and on an iPhone or iPad you pair the app opening, being set up, a message sent and a card answered - with the app version and a random install ID that resets when Diagnostics is turned off and back on.";
 
 /** The first-launch notice's words, under the input. */
 export const DIAGNOSTICS_NOTICE_TEXT =
-  "Infinitary sends anonymous usage events with a random install ID, reset when you turn them off and on - never what you type. Turn off here or in Settings.";
+  "Infinitary sends anonymous usage events, from this computer and any phone you pair, with a random install ID, reset when you turn them off and on - never what you type. Turn off here or in Settings.";
 
 /** The viewer's empty waiting list, by whether Diagnostics is on. */
 export const DIAGNOSTICS_NOTHING_WAITING = {

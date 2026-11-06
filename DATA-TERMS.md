@@ -1,6 +1,6 @@
 # Data terms
 
-**Status: draft 2. Not in force, not published.** These terms name the company as the party, and the company does not exist yet. Until it is formed and these terms are published with the public beta, nothing is collected under them, and the contribution switch is absent from every build. Counsel reviews this document before publication. The version in force is the one in the repository beside the code that sends the payload.
+**Status: draft 3. Not in force, not published.** These terms name the company as the party, and the company does not exist yet. Until it is formed and these terms are published with the public beta, nothing is collected under them, and the contribution switch is absent from every build. Counsel reviews this document before publication. The version in force is the one in the repository beside the code that sends the payload.
 
 ## 1. Who we are and what this covers
 
@@ -14,7 +14,7 @@ Your conversations, tasks, code, knowledge and the record of every task stay on 
 
 ## 3. Two switches
 
-**Diagnostics, on by default.** Anonymous usage events from a fixed list in the app's code: the app opening, a first mate turn finishing or failing, and how far first-time setup has come. Each carries the app version and a random install ID tied to nothing about you. Never a transcript, a prompt, code, a card, a name or a path. The app tells you on its first launch, before anything is sent, and one switch turns it off. Turning it back on starts a new, unrelated install ID.
+**Diagnostics, on by default.** Anonymous usage events from a fixed list in the app's code: the app opening, a first mate turn finishing or failing, and how far first-time setup has come; and, from an iPhone or iPad paired to your computer, the phone app opening, being set up, a message sent and a card answered, which your computer sends for the phone only while its own Diagnostics switch is on. Each carries the app version and a random install ID tied to nothing about you, a separate one for each phone. Never a transcript, a prompt, code, a card, a name or a path. The app tells you on its first launch, before anything is sent, and one switch turns it off. Turning it back on starts a new, unrelated install ID.
 
 **Contribution.** Redacted records of the first mate's own decisions: what it was asked, what it chose to do, and what came of it, in the same shapes the app's own corpus export packages, with secrets scrubbed. Before the first record is sent, the app shows you the full payload. Every record after that is inspectable in the app before and after it is sent.
 

@@ -9,6 +9,7 @@ import {
 } from "../preferences";
 import { runbookViewSchema } from "../runbooks";
 import {
+  phoneDiagnosticSchema,
   sharingAskAnswerSchema,
   sharingChannelSchema,
   sharingPreviewSchema,
@@ -114,6 +115,16 @@ export const settingsChannels = {
     reach: "home",
     request: z.tuple([sharingAskAnswerSchema]),
     response: sharingViewSchema,
+  },
+  // A paired phone hands one of its usage events to its computer, which
+  // sends it only while its own Diagnostics would (docs/sharing.md, "A
+  // phone's events"). The answer says nothing of the switch.
+  "inf:settings:sharing:phone": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([phoneDiagnosticSchema]),
+    response: z.null(),
   },
   "inf:settings:dictation:get": {
     effect: "read",

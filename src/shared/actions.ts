@@ -1523,7 +1523,12 @@ export type ActionValue<A extends ActionName> = z.input<(typeof actionLines)[A][
 export const ACTIONS: Record<ActionName, ActionLine> = actionLines;
 export const ACTION_NAMES = Object.keys(ACTIONS) as ActionName[];
 export type ActionActor =
-  | { kind: "captain"; projectBefore?: unknown }
+  | {
+      kind: "captain";
+      projectBefore?: unknown;
+      /** The paired view (a phone, or a Mac that controls this one) that asked, by its device id. */
+      view?: string;
+    }
   | {
       kind: "firstmate";
       wake: "captain" | "captain-choice" | "scheduled" | "other";

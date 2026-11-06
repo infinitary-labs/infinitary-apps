@@ -18,6 +18,7 @@ import {
   DIAGNOSTIC_INSTALL_ID_PATTERN,
   type DiagnosticEvent,
   diagnosticDataViolation,
+  isPhoneDiagnosticEvent,
 } from "@shared/diagnostics";
 
 const HARDCODED_FALLBACK_HOST = "https://a.kunchenguid.com";
@@ -25,6 +26,15 @@ const UMAMI_PATH = "/api/send";
 const DEFAULT_HOSTNAME = "app";
 const DEFAULT_TITLE = "Firstmate 3000";
 const DEFAULT_APP = "firstmate-3000";
+/**
+ * A phone's events go under names of their own on the same site, so the
+ * computer's series keeps its names (docs/sharing.md, "A phone's events").
+ */
+export const PHONE_DIAGNOSTIC_NAMES = {
+  hostname: "ios",
+  title: "Infinitary",
+  app: "infinitary-ios",
+} as const;
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 
 /** Every key a body's payload has: no more, no fewer. */
@@ -166,7 +176,8 @@ export class DiagnosticPolicyError extends Error {}
 /**
  * The exact request body of one event - the ONE place a body is built, so
  * what the payload viewer shows is what the wire carries. The payload is
- * Umami's event shape: the endpoint's site key, fixed names, the event's
+ * Umami's event shape: the endpoint's site key, fixed names (a phone's
+ * event goes under `PHONE_DIAGNOSTIC_NAMES`), the event's
  * name and data (its declared fields plus the app version), the time it
  * happened to the second, and `id`, the anonymous install ID, which Umami
  * takes as the session's distinct identifier - so actives, the first-run
@@ -179,13 +190,14 @@ export function buildDiagnosticBody(
   installId: string,
   atMs: number,
 ): Record<string, unknown> {
-  const app = config.app || DEFAULT_APP;
+  const names = fixedNamesFor(event.name);
+  const app = names.app ?? (config.app || DEFAULT_APP);
   const body = {
     type: "event",
     payload: {
       website: config.websiteID,
-      hostname: DEFAULT_HOSTNAME,
-      title: DEFAULT_TITLE,
+      hostname: names.hostname,
+      title: names.title,
       url: `app://${app}/${event.name}`,
       name: event.name,
       data: { ...event.data, version: config.version },
@@ -217,10 +229,14 @@ export function diagnosticBodyViolation(body: unknown): string | null {
     return `payload keys are not exactly ${PAYLOAD_KEYS.join(", ")}`;
   }
   if (typeof payload.website !== "string" || !payload.website) return "no site key";
-  if (payload.hostname !== DEFAULT_HOSTNAME || payload.title !== DEFAULT_TITLE) {
+  if (typeof payload.name !== "string") return "no event name";
+  const names = fixedNamesFor(payload.name);
+  if (payload.hostname !== names.hostname || payload.title !== names.title) {
     return "hostname and title are not the fixed names";
   }
-  if (typeof payload.name !== "string") return "no event name";
+  if (names.app && payload.url !== `app://${names.app}/${payload.name}`) {
+    return "url is not the phone's event url";
+  }
   if (typeof payload.url !== "string" || !/^app:\/\/[a-z0-9-]+\/[a-z0-9_]+$/.test(payload.url)) {
     return "url is not the app's event url";
   }
@@ -234,6 +250,12 @@ export function diagnosticBodyViolation(body: unknown): string | null {
     return "id is not an anonymous install ID";
   }
   return null;
+}
+
+/** The fixed names an event goes under: a phone's own, or the computer's. */
+function fixedNamesFor(name: string): { hostname: string; title: string; app?: string } {
+  if (isPhoneDiagnosticEvent(name)) return PHONE_DIAGNOSTIC_NAMES;
+  return { hostname: DEFAULT_HOSTNAME, title: DEFAULT_TITLE };
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

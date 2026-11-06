@@ -3,7 +3,7 @@
 Roadmap 1.4.
 Diagnostics was turned on by default by the captain's decision of 2026-09-22 ("on from the first cask ... opt-out, disclosed in the notice") and, the same day, widened from one anonymous daily count to the event set below with an anonymous install ID (captain: "i need accurate accounting for user funnel and retention").
 This page is the one home for what may leave this machine for us, and the code that keeps the promise.
-`DATA-TERMS.md` is draft 2 of the terms, unpublished and not in force.
+`DATA-TERMS.md` is draft 3 of the terms, unpublished and not in force.
 It describes Diagnostics as it ships, and counsel reviews it before it is published with the public beta.
 Until then this page and the alpha notice (`packaging/alpha-notice.txt`) are what describe the build.
 
@@ -52,9 +52,25 @@ Every event also carries `version` (the app version) and the install ID.
 | `ftue_first_spawn_started` | - | The first crewmate started work |
 | `ftue_first_spawn_succeeded` | - | The first crewmate reported back |
 | `ftue_first_disposal` | `outcome`: `landed` \| `merged` \| `released` \| `answered` \| `settled` \| `finished` \| `cancelled` \| `discarded` \| `failed` \| `superseded` | The first crewmate's task closed |
+| `ios_launch` | `device`: `iphone` \| `ipad` | The phone app started |
+| `ios_opened` | `device` | The phone app came to the front |
+| `ios_ftue_joined` | `device` | The phone joined its computer |
+| `ios_ftue_first_message` | `device` | The phone's first message to the first mate (the computer derives it from the first `ios_message_sent`) |
+| `ios_message_sent` | `device` | The phone sent the first mate a message |
+| `ios_card_answered` | `device` | The phone chose an action on a card |
 
 The `ftue_*` events are the first-run funnel: each goes at most once per install, the first time it happens.
 The milestone is kept on the row even while Diagnostics is off - a local fact - so turning it on later never reports an old step as new.
+
+### A phone's events
+
+The captain's choice on INF-2631: the phone app (Infinitary on iPhone and iPad, `docs/ios.md`) sends nothing to the endpoint itself; it hands its `ios_*` events to the computer it is paired with, and the computer sends them under the computer's own Diagnostics switch and notice.
+Nothing about this shows on the phone.
+
+- The phone keeps a short queue of what happened (`PhoneDiagnosticsQueue`) and hands it over the connection on `inf:settings:sharing:phone` only when the computer's welcome names the `phone-diagnostics` change and its access is full; an older computer, or a read-only one, gets nothing and the queue is dropped.
+- The connection names the asking phone (`view` on the captain actor), and only a paired phone may hand one; `SharingService.recordPhone` keeps it only while Diagnostics is on, the notice was answered and the build has a destination - otherwise it is dropped, never held for later.
+- Each phone gets its own random install ID on its first event, kept on the row under `phones` by device; turning Diagnostics off drops every phone's ID, and removing a phone, or a phone leaving, drops its ID and what of it waits.
+- A phone event goes out with hostname `ios`, title `Infinitary`, the url `app://infinitary-ios/<event>`, the phone app's version and the phone's install ID; the `ios_ftue_*` steps go once per phone ID.
 
 ### The body, exactly
 
@@ -120,7 +136,7 @@ The address a request comes from is the endpoint's configuration to drop, not th
   The last `DIAGNOSTICS_SENT_KEEP` sent events stay inspectable for the session.
 - The events come from three seams, each passing no content: the first mate's `onTurnSettled` (who the turn answered and, failed, only `turnFailureReason`'s kind, classified from the raw message in `firstmateAgent.ts`); `FirstRunService`'s `onStep` (gate shown, first sign-in, first turn); and `crewMilestoneFor` on the `broadcastEvent` seam (a crewmate's `task_started`, its first `task_report`, its work task closing).
   The contribution backlog is `TaskService.decisionBacklog` (the `decided` events newer than the last send), redacted with `redactDeep` on the way to the viewer and the sender alike.
-- The channels are `inf:settings:sharing:get|set|viewed|preview|ask` on the core surface; the push is `inf:sharing`.
+- The channels are `inf:settings:sharing:get|set|viewed|preview|ask|phone` on the core surface (`phone` is reached only by a paired phone); the push is `inf:sharing`.
 - The window is `src/renderer/src/settings/SharingSection.tsx`: the rows, the "What would leave this computer" viewer (the install ID, what waits, what went, and every event and field the allowlist has, read from the allowlist itself), "The terms" (the file this build ships, bundled with `?raw`, shown only once `DATA_TERMS.published` is true - the draft is not in force, so an alpha build shows no terms and the row, the viewer and the alpha notice describe it), and the ask panel `SharingAsk` at the top of Settings while an ask is pending.
   The first-launch notice is `DiagnosticsNotice`, in the design skill's strip under the input (`components/voice/VoiceInput.prompt.md`, "Under the pill").
 - The ask (terms §6) is `SharingService.noteLocalModelEnabled()`: the seam the local model's own enablement calls, once, under published terms.
@@ -131,6 +147,7 @@ The address a request comes from is the endpoint's configuration to drop, not th
 
 - `src/shared/diagnostics.test.ts`: the policy over the allowlist - only enum/boolean/number fields, code words for every name and value, the exact event set field by field, and refusals of free text, unknown fields and events, and an odd version.
 - `src/core/telemetry.test.ts`: every body the allowlist can produce (every event, every value) checked key by key; the builder's refusals; the wire refusing a widened body unsent.
+- `src/core/core.connection.test.ts`: a paired phone's event reaching a stand-in endpoint under its own ID, nothing while off, a new ID after, the window refused, and removal dropping the ID.
 - `src/core/sharing/sharingService.test.ts`: on by default and silent until told, the launch minting the ID, sends in order and only once accepted, a refused send surviving a relaunch, each first-run step once even across an off stretch, the opt-out dropping the ID and a new one on return, a policy-refused entry dropped unsent, an older row parsing, the destination rule, the cap, the retry timer, the crew milestones, the unpublished refusal, the ask.
 - `src/core/firstRun.test.ts` and `src/core/orchestrator/firstmateAgent.flagship.test.ts`: the first-run steps, and each turn's trigger and failure kind (never its message).
 - `src/renderer/src/settings/SharingSection.test.tsx` and `src/renderer/src/app/DiagnosticsNotice.test.tsx`: the rows, the viewer with the install ID and the whole catalog, the notice's words and when it is owed, the words that reach no surface.

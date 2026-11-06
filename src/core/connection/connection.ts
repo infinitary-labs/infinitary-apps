@@ -145,7 +145,8 @@ export type PairedDevices = {
 
 /**
  * What a connection in each role may ask (docs/devices.md): a view the
- * channels whose reach is `views`, as the captain at another Mac, and of a
+ * channels whose reach is `views`, as the captain at another Mac, naming the
+ * device so a phone's own usage events go under its own ID, and of a
  * first mate started by a command every `home` channel but those that stay
  * there (docs/run.md, "Control from another computer"); a computer's work
  * the channels whose reach is `work`, as itself, about a conversation it
@@ -159,7 +160,7 @@ function askerOf(
 ): CoreActor | null {
   if (role === "view")
     return (startedByCommand ? isRunViewInvokeChannel(channel) : isViewInvokeChannel(channel))
-      ? { kind: "captain" }
+      ? { kind: "captain", view: device.id }
       : null;
   return isWorkInvokeChannel(channel) ? { kind: "device", deviceId: device.id } : null;
 }

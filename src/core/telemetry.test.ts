@@ -224,6 +224,37 @@ describe("buildDiagnosticBody", () => {
     });
   });
 
+  // INF-2631: a phone's event goes under the phone's names on the same site, and the wire holds each
+  // event to its own pair, so neither series can borrow the other's.
+  it("puts a phone's event under hostname ios and title Infinitary, and refuses the names swapped", () => {
+    const at = Date.UTC(2026, 10, 5, 8);
+    const body = buildDiagnosticBody(
+      { websiteID: "site-1", version: "0.1.0" },
+      { name: "ios_launch", data: { device: "ipad" } },
+      INSTALL_ID,
+      at,
+    );
+    const payload = body.payload as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      hostname: "ios",
+      title: "Infinitary",
+      url: "app://infinitary-ios/ios_launch",
+      data: { device: "ipad", version: "0.1.0" },
+    });
+    const computer = buildDiagnosticBody(
+      { websiteID: "site-1", version: "0.1.0" },
+      { name: "app_launch", data: {} },
+      INSTALL_ID,
+      at,
+    ).payload as Record<string, unknown>;
+    for (const swapped of [
+      { ...payload, hostname: "app", title: "Firstmate 3000" },
+      { ...payload, url: "app://firstmate-3000/ios_launch" },
+      { ...computer, hostname: "ios", title: "Infinitary" },
+    ])
+      expect(diagnosticBodyViolation({ ...body, payload: swapped })).not.toBeNull();
+  });
+
   it("throws rather than build a body outside the policy", () => {
     const config = { websiteID: "site-1", version: "0.1.0" };
     const at = Date.UTC(2026, 8, 22);

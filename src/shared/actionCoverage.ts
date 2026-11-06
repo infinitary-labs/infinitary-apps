@@ -73,6 +73,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:cards:seen": "View stamp",
   "inf:cards:seen-update": "View stamp",
   "inf:settings:sharing:viewed": "View stamp",
+  "inf:settings:sharing:phone":
+    "A paired phone handing its own usage events to Diagnostics; not an app setting",
   "inf:app:first-run:crew-word": "First-run view stamp",
   "inf:plugins:fetch": "Panel internal operation",
   "inf:plugins:invoke": "Panel internal operation",

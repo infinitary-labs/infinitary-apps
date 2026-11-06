@@ -367,6 +367,7 @@ describe("SharingService - diagnostics", () => {
       installId: null,
       milestones: [],
       pending: [],
+      phones: {},
     });
   });
 
@@ -410,6 +411,160 @@ describe("SharingService - diagnostics", () => {
     expect(raw.sent).toHaveLength(3);
     await service.close(250);
     expect(raw.closed).toBe(250);
+  });
+});
+
+/**
+ * INF-2631, the captain's "Approve and build" on a phone's usage events
+ * going through its computer, gated on the computer's own switch: hostname
+ * ios, title Infinitary, the phone's own install ID, kept on the computer.
+ */
+describe("SharingService - a phone's events", () => {
+  const PHONE = "device-iphone";
+  const IPAD = "device-ipad";
+  const launch = { name: "ios_launch", data: { device: "iphone" } } as const;
+
+  it("on and told, a phone's event goes under the phone's own ID, names and version", async () => {
+    const { service, raw, tick } = setup();
+    service.start();
+    service.markViewed("diagnostics");
+    await drain();
+    const computerSent = raw.sent.length;
+    tick(1000);
+    service.recordPhone(PHONE, launch, "0.1.0", 10_500);
+    service.recordPhone(IPAD, { name: "ios_opened", data: { device: "ipad" } }, "0.2.0", 10_900);
+    await drain();
+    const phoneBodies = raw.sent.slice(computerSent);
+    expect(phoneBodies).toEqual([
+      {
+        type: "event",
+        payload: {
+          website: "site-1",
+          hostname: "ios",
+          title: "Infinitary",
+          url: "app://infinitary-ios/ios_launch",
+          name: "ios_launch",
+          data: { device: "iphone", version: "0.1.0" },
+          timestamp: 10,
+          id: installId(2),
+        },
+      },
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          name: "ios_opened",
+          data: { device: "ipad", version: "0.2.0" },
+          id: installId(3),
+        }),
+      }),
+    ]);
+    // The computer's own ID and names stay its own.
+    expect(service.get().diagnostics.installId).toBe(installId(1));
+    expect(service.get().diagnostics.phones).toEqual({
+      [PHONE]: { installId: installId(2), milestones: [] },
+      [IPAD]: { installId: installId(3), milestones: [] },
+    });
+  });
+
+  it("off, untold or with nowhere to send, a phone's event is not built or kept, nor its ID", async () => {
+    const untold = setup();
+    untold.service.start();
+    untold.service.recordPhone(PHONE, launch, "0.1.0", 10_000);
+    expect(untold.service.get().diagnostics.phones).toEqual({});
+    expect(untold.service.get().diagnostics.pending.map((entry) => entry.name)).toEqual([
+      "ftue_first_launch",
+      "app_launch",
+    ]);
+
+    const off = setup();
+    off.service.start();
+    off.service.markViewed("diagnostics");
+    off.service.setSwitch("diagnostics", false);
+    off.service.recordPhone(PHONE, launch, "0.1.0", 10_000);
+    await drain();
+    expect(off.raw.sent.map((body) => payloadOf(body).hostname)).not.toContain("ios");
+    expect(off.service.get().diagnostics).toMatchObject({ pending: [], phones: {} });
+
+    const nowhere = setup({ destination: null });
+    nowhere.service.start();
+    nowhere.service.markViewed("diagnostics");
+    nowhere.service.recordPhone(PHONE, launch, "0.1.0", 10_000);
+    expect(nowhere.service.get().diagnostics).toMatchObject({ pending: [], phones: {} });
+  });
+
+  it("turning Diagnostics off drops every phone's ID, and on again gives the phone a new one", async () => {
+    const { service, raw } = setup();
+    service.start();
+    service.markViewed("diagnostics");
+    service.recordPhone(PHONE, launch, "0.1.0", 10_000);
+    await drain();
+    service.setSwitch("diagnostics", false);
+    expect(service.get().diagnostics.phones).toEqual({});
+    service.setSwitch("diagnostics", true);
+    service.recordPhone(PHONE, launch, "0.1.0", 10_000);
+    await drain();
+    const ids = raw.sent
+      .map(payloadOf)
+      .filter((payload) => payload.hostname === "ios")
+      .map((payload) => payload.id);
+    expect(ids).toEqual([installId(2), installId(4)]);
+  });
+
+  it("a phone that left the list drops its ID and what of it still waits; joining again is a new install", async () => {
+    const { service, raw } = setup();
+    raw.accept = false;
+    service.start();
+    service.markViewed("diagnostics");
+    service.recordPhone(PHONE, launch, "0.1.0", 10_000);
+    service.recordPhone(IPAD, { name: "ios_launch", data: { device: "ipad" } }, "0.1.0", 10_000);
+    service.keepPhones((deviceId) => deviceId === IPAD);
+    const diagnostics = service.get().diagnostics;
+    expect(Object.keys(diagnostics.phones)).toEqual([IPAD]);
+    expect(diagnostics.pending.filter((entry) => entry.phone === PHONE)).toEqual([]);
+    expect(diagnostics.pending.filter((entry) => entry.phone === IPAD)).toHaveLength(1);
+    raw.accept = true;
+    service.recordPhone(PHONE, launch, "0.1.0", 10_000);
+    expect(service.get().diagnostics.phones[PHONE]?.installId).toBe(installId(4));
+  });
+
+  it("each phone's first-run steps go once per its ID, and its first message comes with the first message sent", async () => {
+    const { service, raw } = setup();
+    service.start();
+    service.markViewed("diagnostics");
+    await drain();
+    const from = raw.sent.length;
+    const sent = { name: "ios_message_sent", data: { device: "iphone" } } as const;
+    const joined = { name: "ios_ftue_joined", data: { device: "iphone" } } as const;
+    service.recordPhone(PHONE, joined, "0.1.0", 10_000);
+    service.recordPhone(PHONE, joined, "0.1.0", 10_000);
+    service.recordPhone(PHONE, sent, "0.1.0", 10_000);
+    service.recordPhone(PHONE, sent, "0.1.0", 10_000);
+    service.recordPhone(
+      PHONE,
+      { name: "ios_card_answered", data: { device: "iphone" } },
+      "0.1.0",
+      10_000,
+    );
+    await drain();
+    expect(raw.sent.slice(from).map((body) => payloadOf(body).name)).toEqual([
+      "ios_ftue_joined",
+      "ios_ftue_first_message",
+      "ios_message_sent",
+      "ios_message_sent",
+      "ios_card_answered",
+    ]);
+    expect(service.get().diagnostics.phones[PHONE]?.milestones).toEqual([
+      "ios_ftue_joined",
+      "ios_ftue_first_message",
+    ]);
+  });
+
+  it("the computer's own way in never sends a phone's event under the computer's ID", async () => {
+    const { service, raw } = setup();
+    service.start();
+    service.markViewed("diagnostics");
+    service.record(launch);
+    await drain();
+    expect(raw.sent.map((body) => payloadOf(body).name)).not.toContain("ios_launch");
   });
 });
 

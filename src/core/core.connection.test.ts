@@ -669,3 +669,100 @@ describe("a development run keeps the connection to loopback at its own port", (
     expect(booted.services.devices.port).not.toBe(port);
   }, 60_000);
 });
+
+/**
+ * INF-2631, the captain's "Approve and build" on a phone's usage events going
+ * through its computer, gated on the computer's own Diagnostics: a paired
+ * phone hands an event over the connection, and the real core posts it to a
+ * stand-in Umami under the phone's own install ID - only while the switch is
+ * on and the person was told, and never again for a phone that left.
+ */
+describe("a phone's usage events reach Diagnostics through its computer", () => {
+  let userDataDir: string;
+  let core: Core;
+  let connection: ReturnType<typeof startConnection>;
+  let at: string;
+  const posted: { payload: Record<string, unknown> }[] = [];
+  let umami: import("node:http").Server;
+
+  beforeAll(async () => {
+    const { createServer } = await import("node:http");
+    umami = createServer((request, response) => {
+      let raw = "";
+      request.on("data", (chunk: Buffer) => {
+        raw += chunk.toString("utf8");
+      });
+      request.on("end", () => {
+        if (request.url === "/api/send") posted.push(JSON.parse(raw));
+        response.end("ok");
+      });
+    });
+    await new Promise<void>((resolve) => umami.listen(0, "127.0.0.1", resolve));
+    const { port } = umami.address() as import("node:net").AddressInfo;
+    userDataDir = scratchDir("infinitary-core-phone-diagnostics-");
+    process.env.PI_OFFLINE = "1";
+    // The runtime override a release build reads for its ids, read once at boot.
+    process.env.INFINITARY_UMAMI_HOST = `http://127.0.0.1:${port}`;
+    process.env.INFINITARY_UMAMI_WEBSITE_ID = "site-1";
+    try {
+      core = await startCore(fakeHost(userDataDir).host);
+    } finally {
+      delete process.env.INFINITARY_UMAMI_HOST;
+      delete process.env.INFINITARY_UMAMI_WEBSITE_ID;
+    }
+    ({ connection, at } = await serveConnection(core));
+  }, 60_000);
+
+  afterAll(async () => {
+    await connection?.close();
+    await core?.dispose();
+    await new Promise<void>((resolve) => umami?.close(() => resolve()));
+    rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  const phoneEvents = () => posted.filter((body) => body.payload.hostname === "ios");
+  const handed = (name: string) => [
+    { name, data: { device: "iphone" }, version: "0.1.0", at: Date.now() },
+  ];
+
+  it("posts a phone's event under its own ID while Diagnostics is on, nothing while off, and a new ID after", async () => {
+    await core.dispatch("inf:settings:sharing:viewed", ["diagnostics"]);
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const grant = await claimLink(link, { ...AT_FIRST_LAUNCH, name: "iPhone" });
+    const phone = await connectClient(grant, { system: { system: "ios" } });
+
+    expect(await phone.invoke("inf:settings:sharing:phone", handed("ios_launch"))).toBeNull();
+    await waitFor(() => phoneEvents().length === 1, 10_000);
+    const computerId = (await core.dispatch("inf:settings:sharing:get", [])).diagnostics.installId;
+    const [launch] = phoneEvents();
+    expect(launch?.payload).toMatchObject({
+      website: "site-1",
+      hostname: "ios",
+      title: "Infinitary",
+      name: "ios_launch",
+      data: { device: "iphone", version: "0.1.0" },
+    });
+    expect(launch?.payload.id).not.toBe(computerId);
+    // Only a paired phone hands one: the computer's own window cannot.
+    await expect(
+      core.dispatch("inf:settings:sharing:phone", handed("ios_launch") as never),
+    ).rejects.toThrow("handed only by a paired phone");
+
+    await core.dispatch("inf:settings:sharing:set", ["diagnostics", false]);
+    await phone.invoke("inf:settings:sharing:phone", handed("ios_opened"));
+    const off = (await core.dispatch("inf:settings:sharing:get", [])).diagnostics;
+    expect(off).toMatchObject({ pending: [], phones: {} });
+
+    await core.dispatch("inf:settings:sharing:set", ["diagnostics", true]);
+    await phone.invoke("inf:settings:sharing:phone", handed("ios_opened"));
+    await waitFor(() => phoneEvents().length === 2, 10_000);
+    expect(phoneEvents().map((body) => body.payload.name)).toEqual(["ios_launch", "ios_opened"]);
+    expect(phoneEvents()[1]?.payload.id).not.toBe(launch?.payload.id);
+
+    // Removing the phone drops its ID.
+    await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
+    expect((await core.dispatch("inf:settings:sharing:get", [])).diagnostics.phones).toEqual({});
+  }, 60_000);
+});

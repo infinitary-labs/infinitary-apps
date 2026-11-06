@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-diagnostics",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Diagnostics now counts how Infinitary on your iPhone or iPad is used",
+      "body": "When Diagnostics is on, your computer also sends a few anonymous events from a paired iPhone or iPad: the app opening, being set up, a message sent and a card answered. Each phone has its own random install ID, which resets when you turn Diagnostics off and on, and the phone itself connects only to your computer. Turning Diagnostics off in Settings stops it for every phone.",
+      "noPicture": "Nothing new appears on the phone; on the computer only a few words of the Diagnostics notice and its Settings summary change.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1191,6 +1191,11 @@ export class DevicePairing implements PairedDevices {
     return this.farewells.size > 0;
   }
 
+  /** Whether the saved list could be read: an unreadable one holds no device, yet loses none. */
+  readable(): boolean {
+    return !this.unreadable;
+  }
+
   holds(deviceId: string): boolean {
     return !this.unreadable && this.entries.some((entry) => entry.id === deviceId);
   }

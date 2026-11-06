@@ -3,6 +3,9 @@ import {
   type DiagnosticEvent,
   diagnosticDataViolation,
   FTUE_MILESTONES,
+  isPhoneDiagnosticEvent,
+  PHONE_FTUE_MILESTONES,
+  type PhoneDiagnosticEventName,
 } from "@shared/diagnostics";
 import type { FmEvent } from "@shared/events";
 import {
@@ -10,6 +13,7 @@ import {
   type DiagnosticRecord,
   type DiagnosticsSwitch,
   type PendingDiagnostic,
+  type PhoneDiagnostics,
   type Sharing,
   type SharingAskAnswer,
   type SharingChannel,
@@ -96,6 +100,9 @@ export type SharingServiceOptions = {
   newInstallId?: () => string;
 };
 
+/** A phone event as a phone hands it: a declared `ios_*` name and its fields. */
+export type PhoneDiagnosticEvent = Extract<DiagnosticEvent, { name: PhoneDiagnosticEventName }>;
+
 export class SharingService {
   private readonly settings: SettingsStore;
   private readonly emit: CoreEventSink;
@@ -163,6 +170,9 @@ export class SharingService {
           enabled,
           installId: enabled ? this.newInstallId() : null,
           pending: [],
+          // Every phone's ID goes with the computer's; back on, each phone
+          // that hands an event again gets a new one.
+          phones: {},
         },
       });
     } else {
@@ -253,6 +263,8 @@ export class SharingService {
    * accepts it, which needs the person to have been told.
    */
   record(event: DiagnosticEvent): void {
+    // A phone's event goes only through `recordPhone`, under the phone's own ID.
+    if (isPhoneDiagnosticEvent(event.name)) return;
     let state = this.state();
     if (FTUE_MILESTONES.includes(event.name)) {
       if (state.diagnostics.milestones.includes(event.name)) return;
@@ -272,6 +284,63 @@ export class SharingService {
     const entry: PendingDiagnostic = { at: this.now(), name: event.name, data: { ...event.data } };
     this.write(this.withDiagnostics(state, { pending: [...diagnostics.pending, entry] }));
     this.flushDiagnostics();
+  }
+
+  /**
+   * One event a paired phone handed over (docs/sharing.md, "A phone's
+   * events"). It is kept only when this computer's own events would go:
+   * Diagnostics on, the person told, and a build with a destination.
+   * Otherwise nothing is built or kept, not even the phone's ID. The phone
+   * gets an install ID of its own here the first time, and its first-run
+   * steps are kept once per that ID. A message sent from the phone is also
+   * the phone's first message, the first time.
+   */
+  recordPhone(deviceId: string, event: PhoneDiagnosticEvent, version: string, atMs: number): void {
+    const state = this.state();
+    const diagnostics = state.diagnostics;
+    if (!diagnostics.enabled || !diagnostics.installId || diagnostics.viewedAt === null) return;
+    if (this.destination === null) return;
+    if (diagnosticDataViolation(event.name, { ...event.data, version })) return;
+    let phone: PhoneDiagnostics = diagnostics.phones[deviceId] ?? {
+      installId: this.newInstallId(),
+      milestones: [],
+    };
+    const at = Math.min(atMs, this.now());
+    const names: PhoneDiagnosticEventName[] =
+      event.name === "ios_message_sent" ? ["ios_ftue_first_message", event.name] : [event.name];
+    const pending = [...diagnostics.pending];
+    for (const name of names) {
+      if (PHONE_FTUE_MILESTONES.includes(name)) {
+        if (phone.milestones.includes(name)) continue;
+        phone = { ...phone, milestones: [...phone.milestones, name] };
+      }
+      if (pending.length >= DIAGNOSTICS_PENDING_CAP) break;
+      pending.push({ at, name, data: { ...event.data }, phone: deviceId, version });
+    }
+    this.write(
+      this.withDiagnostics(state, {
+        pending,
+        phones: { ...diagnostics.phones, [deviceId]: phone },
+      }),
+    );
+    this.flushDiagnostics();
+  }
+
+  /**
+   * The paired devices changed: a phone no longer on the list drops its
+   * install ID and whatever of it still waits, so a phone that joins again
+   * is a new install.
+   */
+  keepPhones(held: (deviceId: string) => boolean): void {
+    const state = this.state();
+    const { phones, pending } = state.diagnostics;
+    const gone = Object.keys(phones).filter((deviceId) => !held(deviceId));
+    const waiting = pending.filter((entry) => entry.phone === undefined || held(entry.phone));
+    if (gone.length === 0 && waiting.length === pending.length) return;
+    const kept = Object.fromEntries(
+      Object.entries(phones).filter(([deviceId]) => !gone.includes(deviceId)),
+    );
+    this.write(this.withDiagnostics(state, { phones: kept, pending: waiting }));
   }
 
   /** Stop retrying and drain the wire on quit. */
@@ -320,7 +389,8 @@ export class SharingService {
       // Off (or off and on) while it flew: the row's list is already empty.
       const pending = [...latest.diagnostics.pending];
       const index = pending.findIndex(
-        (waiting) => waiting.at === entry.at && waiting.name === entry.name,
+        (waiting) =>
+          waiting.at === entry.at && waiting.name === entry.name && waiting.phone === entry.phone,
       );
       if (index >= 0) pending.splice(index, 1);
       this.write(this.withDiagnostics(latest, { pending, sentAt: entry.at }));
@@ -333,16 +403,22 @@ export class SharingService {
     entry: PendingDiagnostic,
     diagnostics: DiagnosticsSwitch,
   ): DiagnosticRecord | null {
-    if (!diagnostics.installId) return null;
+    // A phone's event goes under that phone's own ID and version; one whose
+    // phone left is never sent.
+    const installId =
+      entry.phone === undefined
+        ? diagnostics.installId
+        : (diagnostics.phones[entry.phone]?.installId ?? null);
+    if (!installId) return null;
+    if (entry.phone !== undefined && entry.version === undefined) return null;
+    const config =
+      entry.phone === undefined
+        ? this.telemetryConfig
+        : { ...this.telemetryConfig, version: entry.version as string };
     const event = { name: entry.name, data: entry.data } as DiagnosticEvent;
     try {
       // The builder throws for anything outside the policy.
-      const body = buildDiagnosticBody(
-        this.telemetryConfig,
-        event,
-        diagnostics.installId,
-        entry.at,
-      );
+      const body = buildDiagnosticBody(config, event, installId, entry.at);
       return { at: entry.at, name: entry.name, body };
     } catch {
       return null;

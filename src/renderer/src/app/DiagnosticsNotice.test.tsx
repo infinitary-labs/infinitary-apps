@@ -17,6 +17,7 @@ const FRESH: SharingView = {
     installId: "00000000-0000-4000-8000-000000000001",
     milestones: [],
     pending: [],
+    phones: {},
   },
   contribution: { enabled: false, viewedAt: null, sentAt: null },
   ask: { askedAt: null, answeredAt: null, answer: null },

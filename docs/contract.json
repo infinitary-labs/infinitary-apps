@@ -36175,12 +36175,44 @@
                         "type": "string"
                       },
                       "additionalProperties": {}
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "at",
                     "name",
                     "data"
+                  ]
+                }
+              },
+              "phones": {
+                "default": {},
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "installId": {
+                      "type": "string"
+                    },
+                    "milestones": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "installId",
+                    "milestones"
                   ]
                 }
               }
@@ -36191,7 +36223,8 @@
               "sentAt",
               "installId",
               "milestones",
-              "pending"
+              "pending",
+              "phones"
             ]
           },
           "contribution": {
@@ -36387,12 +36420,44 @@
                         "type": "string"
                       },
                       "additionalProperties": {}
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "at",
                     "name",
                     "data"
+                  ]
+                }
+              },
+              "phones": {
+                "default": {},
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "installId": {
+                      "type": "string"
+                    },
+                    "milestones": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "installId",
+                    "milestones"
                   ]
                 }
               }
@@ -36403,7 +36468,8 @@
               "sentAt",
               "installId",
               "milestones",
-              "pending"
+              "pending",
+              "phones"
             ]
           },
           "contribution": {
@@ -36596,12 +36662,44 @@
                         "type": "string"
                       },
                       "additionalProperties": {}
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "at",
                     "name",
                     "data"
+                  ]
+                }
+              },
+              "phones": {
+                "default": {},
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "installId": {
+                      "type": "string"
+                    },
+                    "milestones": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "installId",
+                    "milestones"
                   ]
                 }
               }
@@ -36612,7 +36710,8 @@
               "sentAt",
               "installId",
               "milestones",
-              "pending"
+              "pending",
+              "phones"
             ]
           },
           "contribution": {
@@ -36905,12 +37004,44 @@
                         "type": "string"
                       },
                       "additionalProperties": {}
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "at",
                     "name",
                     "data"
+                  ]
+                }
+              },
+              "phones": {
+                "default": {},
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "installId": {
+                      "type": "string"
+                    },
+                    "milestones": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "installId",
+                    "milestones"
                   ]
                 }
               }
@@ -36921,7 +37052,8 @@
               "sentAt",
               "installId",
               "milestones",
-              "pending"
+              "pending",
+              "phones"
             ]
           },
           "contribution": {
@@ -37030,6 +37162,68 @@
           "diagnosticsDestination",
           "askPending"
         ]
+      }
+    },
+    "inf:settings:sharing:phone": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": [
+                  "ios_launch",
+                  "ios_opened",
+                  "ios_ftue_joined",
+                  "ios_ftue_first_message",
+                  "ios_message_sent",
+                  "ios_card_answered"
+                ]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "device": {
+                    "type": "string",
+                    "enum": [
+                      "iphone",
+                      "ipad"
+                    ]
+                  }
+                },
+                "required": [
+                  "device"
+                ],
+                "additionalProperties": false
+              },
+              "version": {
+                "type": "string",
+                "pattern": "^\\d{1,6}\\.\\d{1,6}\\.\\d{1,6}(?:-[0-9A-Za-z.-]{1,40})?(?:\\+[0-9A-Za-z.-]{1,40})?$"
+              },
+              "at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "name",
+              "data",
+              "version",
+              "at"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "null"
       }
     },
     "inf:settings:dictation:get": {
@@ -61467,12 +61661,44 @@
                         "type": "string"
                       },
                       "additionalProperties": {}
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "at",
                     "name",
                     "data"
+                  ]
+                }
+              },
+              "phones": {
+                "default": {},
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "installId": {
+                      "type": "string"
+                    },
+                    "milestones": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "installId",
+                    "milestones"
                   ]
                 }
               }
@@ -61483,7 +61709,8 @@
               "sentAt",
               "installId",
               "milestones",
-              "pending"
+              "pending",
+              "phones"
             ]
           },
           "contribution": {

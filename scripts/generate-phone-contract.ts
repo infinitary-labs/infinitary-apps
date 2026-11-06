@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { assertPhoneReaderShapes } from "./phone-contract-shapes.ts";
@@ -43,6 +43,20 @@ const cardCases = Object.entries(cardRequests).map(([name, channel]) => `    cas
 const cardChanges = Object.entries(cardRequests).filter(([, channel]) => contract.requests[channel].effect === "change")
   .map(([name]) => `.${name}`).join(", ");
 const cardEnum = `\npublic enum PhoneCardRequest: String, Sendable {\n${cardCases}\n    public var changes: Bool {\n        switch self { case ${cardChanges}: true; default: false }\n    }\n}\n`;
+// INF-2631: the phone's usage events and their one field come from the request the computer answers.
+const diagnosticsRequest = "inf:settings:sharing:phone";
+const diagnosticsChange = "phone-diagnostics";
+if (!existsSync(join(REPO_ROOT, "src/shared/contract-changes", `${diagnosticsChange}.md`))) throw new Error(`No contract change is named ${diagnosticsChange}`);
+const diagnostic = contract.requests[diagnosticsRequest];
+if (diagnostic?.reach !== "views") throw new Error(`The phone cannot ask ${diagnosticsRequest}`);
+const diagnosticEvent = diagnostic.request.prefixItems[0].properties;
+const diagnosticCases = (diagnosticEvent.name.enum as string[]).map((name) => {
+  const swift = name.replace(/^ios_/, "").replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+  if (!/^[a-z][A-Za-z0-9]*$/.test(swift)) throw new Error(`Cannot generate a Swift case for ${name}`);
+  return `    case \`${swift}\` = ${JSON.stringify(name)}`;
+}).join("\n");
+const deviceCases = (diagnosticEvent.data.properties.device.enum as string[]).map((device) => `    case \`${device}\` = ${JSON.stringify(device)}`).join("\n");
+const diagnosticsEnum = `\npublic enum PhoneDiagnosticEvent: String, Sendable, CaseIterable {\n${diagnosticCases}\n    public static let request = ${JSON.stringify(diagnosticsRequest)}\n    public static let change = ${JSON.stringify(diagnosticsChange)}\n}\n\npublic enum PhoneDiagnosticDevice: String, Sendable {\n${deviceCases}\n}\n`;
 const runner = await openModuleRunner();
 try {
   const { FEED_EVENT_TYPES } = await runner.import<typeof import("../src/shared/feed.ts")>(join(REPO_ROOT, "src/shared/feed.ts"));
@@ -94,8 +108,8 @@ try {
   } else writeFileSync(wordsPath, cardWords);
   const path = join(REPO_ROOT, "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneContract.generated.swift");
   if (process.argv.includes("--check")) {
-    if (readFileSync(path, "utf8") !== text + cardEnum + requestEnum + limits + groupEnum + pastWords + sshCommands) throw new Error("Run node scripts/generate-phone-contract.ts");
-  } else writeFileSync(path, text + cardEnum + requestEnum + limits + groupEnum + pastWords + sshCommands);
+    if (readFileSync(path, "utf8") !== text + cardEnum + requestEnum + limits + groupEnum + pastWords + sshCommands + diagnosticsEnum) throw new Error("Run node scripts/generate-phone-contract.ts");
+  } else writeFileSync(path, text + cardEnum + requestEnum + limits + groupEnum + pastWords + sshCommands + diagnosticsEnum);
 } finally { await runner.close(); }
 
 /**

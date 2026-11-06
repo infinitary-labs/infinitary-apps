@@ -1178,6 +1178,11 @@ describe("the private alpha (roadmap 1.2)", () => {
     expect(notice).toContain(
       "the app opening, a first mate turn finishing or failing, and how far first-time setup has come",
     );
+    // A paired phone's events go through its computer (INF-2631, the captain:
+    // "update the notice, Settings summary, alpha notice and draft terms").
+    expect(notice).toContain(
+      "from an iPhone or iPad paired to it, the phone app opening, being set up, sending a message and answering a card",
+    );
     expect(notice).toContain(
       "a random install ID that is tied to nothing about you and resets whenever Diagnostics is turned off and back on",
     );

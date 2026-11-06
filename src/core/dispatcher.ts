@@ -76,6 +76,7 @@ import { customCapabilityProfiles } from "./pi/customApiModels";
 import { listSurfaces, type SurfaceView } from "./pi/personalizeTool";
 import type { AuthInteractionBridge } from "./pi/piAuth";
 import { releaseNotesView } from "./releaseNotes/shown";
+import type { PhoneDiagnosticEvent } from "./sharing/sharingService";
 import type { ScheduleRecord } from "./storage/scheduleStore";
 import { recordStartAtLogin } from "./storage/startAtLoginRecord";
 import { ProjectKeyRefusal } from "./tasks/projectKey";
@@ -89,6 +90,9 @@ import { projectPageFile } from "./workspace/projectPage";
  * pairing its socket proved.
  */
 export type CoreActor = ActionActor | { kind: "device"; deviceId: string };
+
+/** What a phone's usage event answers when no paired phone handed it. */
+const PHONE_DIAGNOSTIC_ONLY = "A phone's usage event is handed only by a paired phone.";
 
 /** What a task browser command answers on a core that keeps none (an installed build). */
 const NO_TASK_BROWSERS = `${HERE.This} keeps no task browsers.`;
@@ -854,6 +858,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:settings:sharing:preview": () => services.sharing.preview(),
 
     "inf:settings:sharing:ask": (answer) => services.sharing.answerAsk(answer),
+
+    // Answered in `answerPhoneDiagnostic`, which knows the phone that asked.
+    "inf:settings:sharing:phone": () => {
+      throw new Error(PHONE_DIAGNOSTIC_ONLY);
+    },
 
     "inf:settings:dictation:get": () => services.settings.getDictation(),
     "inf:settings:dictation:set": (setting) => {
@@ -1873,12 +1882,29 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     return services.placed.answer(actor.deviceId, channel, request);
   };
 
+  // A phone's usage event goes under that phone's own install ID, so only a
+  // paired view, named by the connection, hands one (docs/sharing.md, "A
+  // phone's events").
+  const answerPhoneDiagnostic = async (rawArgs: unknown, actor: CoreActor | undefined) => {
+    if (actor?.kind !== "captain" || !actor.view) throw new Error(PHONE_DIAGNOSTIC_ONLY);
+    const [event] = parseInvokeRequest("inf:settings:sharing:phone", rawArgs);
+    services.sharing.recordPhone(
+      actor.view,
+      { name: event.name, data: event.data } as PhoneDiagnosticEvent,
+      event.version,
+      event.at,
+    );
+    return null;
+  };
+
   return (<C extends CoreInvokeChannel>(
     channel: C,
     rawArgs: unknown,
     actor?: CoreActor,
   ): Promise<InvokeResponse<C>> => {
     if (isWorkInvokeChannel(channel)) return answerWork(channel, rawArgs, actor);
+    if (channel === "inf:settings:sharing:phone")
+      return answerPhoneDiagnostic(rawArgs, actor) as Promise<InvokeResponse<C>>;
     if (actor?.kind === "device")
       return Promise.reject(
         new Error(`${channel} is not a request a computer that runs work asks.`),

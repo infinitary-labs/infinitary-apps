@@ -604,6 +604,13 @@ export async function createServices(
     remoteLogin,
     signIns: deviceSignIns,
   } = homeDevices;
+  // A phone that left the list drops its Diagnostics install ID
+  // (docs/sharing.md, "A phone's events"); an unreadable list drops none.
+  const keepPhones = () => {
+    if (devices.readable()) sharing.keepPhones((deviceId) => devices.holds(deviceId));
+  };
+  keepPhones();
+  devices.subscribe(keepPhones);
   readTaskFacts = (read) =>
     settings.readProjection(() =>
       repos.readProjection(() =>

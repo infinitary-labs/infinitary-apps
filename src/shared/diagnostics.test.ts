@@ -96,6 +96,13 @@ describe("the allowlist", () => {
           "superseded",
         ],
       },
+      // INF-2631: a phone's events, handed to its computer.
+      ios_launch: { device: ["iphone", "ipad"] },
+      ios_opened: { device: ["iphone", "ipad"] },
+      ios_ftue_joined: { device: ["iphone", "ipad"] },
+      ios_ftue_first_message: { device: ["iphone", "ipad"] },
+      ios_message_sent: { device: ["iphone", "ipad"] },
+      ios_card_answered: { device: ["iphone", "ipad"] },
     });
   });
 });

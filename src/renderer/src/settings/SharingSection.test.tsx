@@ -1,5 +1,5 @@
 import { DIAGNOSTIC_EVENT_NAMES } from "@shared/diagnostics";
-import type { SharingPreview, SharingView } from "@shared/sharing";
+import { DIAGNOSTICS_SUMMARY, type SharingPreview, type SharingView } from "@shared/sharing";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
@@ -30,6 +30,7 @@ const OFF: SharingView = {
     installId: null,
     milestones: [],
     pending: [],
+    phones: {},
   },
   contribution: { enabled: false, viewedAt: null, sentAt: null },
   ask: { askedAt: null, answeredAt: null, answer: null },
@@ -129,10 +130,10 @@ describe("SharingSectionView", () => {
 
   it("says what Diagnostics sends, the install ID and its reset, and where it goes - or that this build sends nowhere", () => {
     expect(sharingRowDescription(OFF, "diagnostics")).toBe(
-      "Anonymous events - the app opening, your first mate finishing or failing a turn, and how far first-time setup has come - with the app version and a random install ID that resets when Diagnostics is turned off and back on. Sent to a.example.com. Never a conversation, code or a card.",
+      `${DIAGNOSTICS_SUMMARY} Sent to a.example.com. Never a conversation, code or a card.`,
     );
     expect(sharingRowDescription({ ...OFF, diagnosticsDestination: null }, "diagnostics")).toBe(
-      "Anonymous events - the app opening, your first mate finishing or failing a turn, and how far first-time setup has come - with the app version and a random install ID that resets when Diagnostics is turned off and back on. This build has nowhere to send them, so nothing leaves either way.",
+      `${DIAGNOSTICS_SUMMARY} This build has nowhere to send them, so nothing leaves either way.`,
     );
     expect(render({ ...OFF, diagnosticsDestination: null }, null)).toContain("nothing leaves");
   });

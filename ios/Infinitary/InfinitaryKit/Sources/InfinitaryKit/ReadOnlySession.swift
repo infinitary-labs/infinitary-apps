@@ -78,6 +78,11 @@ public struct PhoneNotice: Equatable, Sendable {
     /// The contract the computer's welcome said it speaks, which names the side a reads-only phone updates.
     public private(set) var homeVersion: String?
     public var notice: PhoneNotice?
+    /// INF-2631: what this phone's usage events say of it; nil sends none.
+    public var usage: PhoneUsage?
+    @ObservationIgnored private var usageWaiting = PhoneDiagnosticsQueue()
+    /// The computer's welcome named the change that takes a phone's usage events.
+    @ObservationIgnored private var homeTakesUsage = false
     /// Offers the stage has drawn while the person could see it, kept for this computer's session only.
     private var seenCards = Set<String>()
     public private(set) var sharedCardSeen = false
@@ -324,6 +329,7 @@ public struct PhoneNotice: Equatable, Sendable {
             let result = try await ask(channel, args)
             if let refusal = result["refusal"].text { refuse(id, refusal); throw PhoneRequestError(refusal) }
             accept(id)
+            if channel == .act { noteUsage(.cardAnswered) }
             return result
         } catch { settle(id, after: error); throw error }
     }
@@ -339,6 +345,7 @@ public struct PhoneNotice: Equatable, Sendable {
                 refuse(id, words); throw PhoneError.refused(words)
             }
             accept(id)
+            if channel == .converse { noteUsage(.messageSent) }
         } catch { settle(id, after: error); throw error }
     }
 
@@ -890,6 +897,7 @@ public struct PhoneNotice: Equatable, Sendable {
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardCurrentUpdateSeen)
             sceneObservations = homeMajor >= PhoneContract.sceneObservationsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.sceneObservations)
+            homeTakesUsage = (frame["changes"] as? [String] ?? []).contains(PhoneDiagnosticEvent.change)
             if !sceneObservations { computers = [] }
             sceneGeneration += 1
             contact = "reaching"
@@ -1057,7 +1065,26 @@ public struct PhoneNotice: Equatable, Sendable {
         let reached = contact != "in-reach"
         contact = "in-reach"
         if missed { missed = false; returns += 1 }
-        if reached { reaches += 1; wakeReachWaiters() }
+        if reached { reaches += 1; wakeReachWaiters(); handUsage() }
+    }
+
+    // MARK: INF-2631: the phone's usage events go to its computer, which alone decides whether any leaves.
+
+    /// Notes one usage event: it waits in memory until the computer is in reach, then is handed over once.
+    public func noteUsage(_ event: PhoneDiagnosticEvent) {
+        guard usage != nil, !removed else { return }
+        usageWaiting.note(event, at: Date())
+        handUsage()
+    }
+
+    /// Hands every waiting event to a computer in reach. One that does not take them, or that this phone may only read
+    /// from, is sent nothing and keeps nothing. A lost answer is never sent again.
+    private func handUsage() {
+        guard let usage, contact == "in-reach", socket != nil else { return }
+        guard homeTakesUsage, access == "full" else { usageWaiting.drop(); return }
+        for argument in usageWaiting.handOver(as: usage) {
+            Task { _ = try? await self.invoke(PhoneDiagnosticEvent.request, changes: true, args: [argument]) }
+        }
     }
 
     private func refresh(_ channel: String, on socket: URLSessionWebSocketTask) async throws {

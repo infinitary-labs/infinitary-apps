@@ -158,3 +158,19 @@ public enum PhoneSSHCommand {
     public static let tooOld = "too-old"
     public static let noCurl = "no-curl"
 }
+
+public enum PhoneDiagnosticEvent: String, Sendable, CaseIterable {
+    case `launch` = "ios_launch"
+    case `opened` = "ios_opened"
+    case `ftueJoined` = "ios_ftue_joined"
+    case `ftueFirstMessage` = "ios_ftue_first_message"
+    case `messageSent` = "ios_message_sent"
+    case `cardAnswered` = "ios_card_answered"
+    public static let request = "inf:settings:sharing:phone"
+    public static let change = "phone-diagnostics"
+}
+
+public enum PhoneDiagnosticDevice: String, Sendable {
+    case `iphone` = "iphone"
+    case `ipad` = "ipad"
+}

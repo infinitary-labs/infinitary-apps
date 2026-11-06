@@ -20,7 +20,9 @@
  *    on the first launch, derived from nothing about the person or the
  *    machine, dropped when Diagnostics is turned off and minted afresh when
  *    it is turned back on. It is what lets actives, the first-run funnel
- *    and retention count per install; it identifies no one.
+ *    and retention count per install; it identifies no one. A phone's
+ *    events (`ios_*`) carry an install ID of their own, which the computer
+ *    keeps for that phone and drops the same way, and when the phone leaves.
  *
  * `diagnosticDataViolation` is the check (the wire refuses anything that
  * fails it, `src/core/telemetry.ts`). `diagnostics.test.ts` fails if an
@@ -75,6 +77,16 @@ export const DISPOSAL_OUTCOMES = [
   "failed",
   "superseded",
 ] as const;
+
+/** Which kind of phone a phone event came from. */
+export const PHONE_DEVICES = ["iphone", "ipad"] as const;
+export type PhoneDevice = (typeof PHONE_DEVICES)[number];
+
+const device = {
+  type: "enum",
+  values: PHONE_DEVICES,
+  description: "the kind of phone",
+} as const;
 
 const trigger = {
   type: "enum",
@@ -141,14 +153,58 @@ export const DIAGNOSTIC_EVENTS = {
       },
     },
   },
+  ios_launch: {
+    description: "Phone: the Infinitary app started on a phone joined to this computer.",
+    fields: { device },
+  },
+  ios_opened: {
+    description: "Phone: the app came to the front.",
+    fields: { device },
+  },
+  ios_ftue_joined: {
+    description: "Phone first-time setup: the phone joined this computer.",
+    fields: { device },
+  },
+  ios_ftue_first_message: {
+    description: "Phone first-time setup: the first message to your first mate from the phone.",
+    fields: { device },
+  },
+  ios_message_sent: {
+    description: "Phone: a message to your first mate was sent from the phone.",
+    fields: { device },
+  },
+  ios_card_answered: {
+    description: "Phone: a card was answered with one of its choices from the phone.",
+    fields: { device },
+  },
 } as const satisfies Readonly<Record<string, DiagnosticEventSpec>>;
 
 export type DiagnosticEventName = keyof typeof DIAGNOSTIC_EVENTS;
 
 export const DIAGNOSTIC_EVENT_NAMES = Object.keys(DIAGNOSTIC_EVENTS) as DiagnosticEventName[];
 
+/**
+ * The events a phone hands its computer (docs/sharing.md, "A phone's
+ * events"): each name starts `ios_`. The computer sends them under the
+ * phone's own install ID and names (`src/core/telemetry.ts`), only while its
+ * own Diagnostics would send its own events.
+ */
+export const PHONE_DIAGNOSTIC_EVENT_NAMES = DIAGNOSTIC_EVENT_NAMES.filter((name) =>
+  name.startsWith("ios_"),
+);
+export type PhoneDiagnosticEventName = Extract<DiagnosticEventName, `ios_${string}`>;
+
+export function isPhoneDiagnosticEvent(name: string): name is PhoneDiagnosticEventName {
+  return (PHONE_DIAGNOSTIC_EVENT_NAMES as readonly string[]).includes(name);
+}
+
 /** The first-run funnel: each sent once per install, the first time it happens. */
 export const FTUE_MILESTONES = DIAGNOSTIC_EVENT_NAMES.filter((name) => name.startsWith("ftue_"));
+
+/** A phone's first-run funnel: each sent once per phone install ID, the first time it happens. */
+export const PHONE_FTUE_MILESTONES = PHONE_DIAGNOSTIC_EVENT_NAMES.filter((name) =>
+  name.startsWith("ios_ftue_"),
+);
 
 /** The field every event carries besides its own: the app version. */
 export const DIAGNOSTIC_VERSION_FIELD = "version";

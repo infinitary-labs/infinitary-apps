@@ -1,4 +1,8 @@
-import { type McpSdkServerConfigWithInstance, tool } from "@anthropic-ai/claude-agent-sdk";
+import {
+  type HookCallback,
+  type McpSdkServerConfigWithInstance,
+  tool,
+} from "@anthropic-ai/claude-agent-sdk";
 import type {
   BashInput,
   FileEditInput,
@@ -16,7 +20,7 @@ import {
   type CrewmateToolDelegate,
   toolContent,
 } from "../session/tools";
-import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
+import { CLAUDE_SEAT_TOOL_PREFIX, CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
 
 /**
  * The tool spec (primitives P7) over Claude's in-process tool server. Every
@@ -252,6 +256,46 @@ export function claudeToolServer(
     })),
   }));
   return { type: "sdk", name: CLAUDE_SEAT_TOOL_SERVER, instance: server };
+}
+
+/**
+ * The line a call of one of the app's tools by its own name comes back
+ * with: the name the client serves it under (`mcp__infinitary__<name>`).
+ */
+export function claudeFullToolNameLine(name: string): string {
+  return `There is no tool named ${name}: the app's ${name} tool is ${CLAUDE_SEAT_TOOL_PREFIX}${name}, so call it by that full name.`;
+}
+
+/**
+ * The full name back for a call of one of the session's own tools by its
+ * own name. Every served instruction names the app's tools as Pi serves
+ * them (`report`, `note_progress`), while the client serves each under the
+ * app's server (`mcp__infinitary__report`), so a model that calls the name
+ * it read gets the client's bare refusal, "No such tool available", and
+ * often moves on without the call (INF-2835: ten lost in a day). The client
+ * asks no per-call hook about a tool it does not have, but it does ask the
+ * batch's (`PostToolBatch`), with the refused call's name, and that hook's
+ * context reaches the model inside the same tool result, so the refusal
+ * carries the full name and the next call can be the right one
+ * (`claudeToolNames.integration.test.ts`). Only a name that is exactly one
+ * of the session's own tools is answered: the client names none of its own
+ * tools that way.
+ */
+export function claudeToolNameHint(tools: readonly BoundTool[]): HookCallback {
+  const own = new Set(tools.map((bound) => bound.name));
+  return async (input) => {
+    if (input.hook_event_name !== "PostToolBatch") return {};
+    const named = [...new Set(input.tool_calls.map((call) => call.tool_name))].filter((name) =>
+      own.has(name),
+    );
+    if (named.length === 0) return {};
+    return {
+      hookSpecificOutput: {
+        hookEventName: "PostToolBatch",
+        additionalContext: named.map(claudeFullToolNameLine).join("\n"),
+      },
+    };
+  };
 }
 
 /** A Claude crewmate's app-owned tools: every entry its callbacks bind, in the spec's order. */

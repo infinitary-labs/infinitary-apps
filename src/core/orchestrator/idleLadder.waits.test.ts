@@ -847,8 +847,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(crewmate.promptCalls).toHaveLength(prompts);
     });
 
-    /** A crewmate mid-turn on a fresh task, its outcome note up and not yet reported. */
-    async function withOutcomeNote() {
+    /**
+     * A crewmate mid-turn on a fresh task, its outcome note up and not yet
+     * reported, under the id it gives emit_card when it gives one.
+     */
+    async function withOutcomeNote(id?: string) {
       const crewmate = fakeCrewmate();
       const harness = wakesThroughInbox(clockedSetup(crewmate));
       const { taskId } = await harness.supervisor.intake.commission({
@@ -857,6 +860,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
       await tick();
       harness.specs[0]?.onCard?.({
+        ...(id ? { id } : {}),
         title: "Version 1.2 is out",
         body: "<p>Version 1.2 is published.</p><p>The release page lists it.</p>",
         actions: [],
@@ -1064,6 +1068,27 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         }),
       ).toThrow(/needs a reason/);
       expect(tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
+    });
+
+    // INF-2835: four reports in a day were refused for naming the crewmate's
+    // own card by the id it gave emit_card ("inf-2755-completion"), or by a
+    // guess at the full one, and the refusal never said which id it wanted.
+    it("takes a wait naming its card by the id it gave emit_card, and refuses another name with its open card's full id (INF-2835)", async () => {
+      const { crewmate, specs, tasks, taskId, note } = await withOutcomeNote("release-note");
+      const report = (cardId: string) =>
+        specs[0]?.onReport?.("Version 1.2 is released and the note says so.", undefined, {
+          wait: { reason: "read the release note", cardId },
+        });
+      expect(() => report(`${taskId}-release-note`)).toThrow(
+        new RegExp(`not an open card of yours.*"${note.id}"`),
+      );
+      expect(report("release-note")).toContain("waits on the captain");
+      await endTurn(crewmate, taskId);
+      expect(tasks.get(taskId)?.gate).toEqual({
+        kind: "captain",
+        ref: note.id,
+        reason: "read the release note",
+      });
     });
   });
 

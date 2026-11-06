@@ -13,7 +13,7 @@ import {
   type ClaudeProjectResources,
   claudeProjectInstructionsText,
 } from "./claudeProjectResources";
-import { claudeToolServer } from "./claudeTaskTools";
+import { claudeToolNameHint, claudeToolServer } from "./claudeTaskTools";
 import { attributedClaudeProcess } from "./processResources";
 import { claudeCodingReasoning } from "./reasoning";
 
@@ -170,6 +170,24 @@ function toolServer(
 }
 
 /**
+ * The hooks a session's query carries: the safe stop's gate when it has one,
+ * and, for a session serving the app's tools, the full name back for a call
+ * of one by its own name (`claudeToolNameHint`). The client asks the app's
+ * own hooks even with `disableAllHooks`, which a staged skill sets: that
+ * switch turns off the hooks settings and skills declare.
+ */
+function sessionHooks(
+  tools: readonly BoundTool[],
+  toolGate?: HookCallback,
+): Pick<Options, "hooks"> {
+  const hooks: NonNullable<Options["hooks"]> = {
+    ...(toolGate ? { PreToolUse: [{ hooks: [toolGate] }] } : {}),
+    ...(tools.length > 0 ? { PostToolBatch: [{ hooks: [claudeToolNameHint(tools)] }] } : {}),
+  };
+  return Object.keys(hooks).length > 0 ? { hooks } : {};
+}
+
+/**
  * The exact options a session's query hands the SDK, from its spec (and, for
  * a rolling session, its attachment) alone. Its call shape is the backend's
  * one Claude touchpoint, pinned by the seat's and the question's tests;
@@ -296,7 +314,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       ...(coding || thinks ? {} : { thinking: { type: "disabled" as const } }),
       ...(request?.maxModelTurns !== undefined ? { maxTurns: request.maxModelTurns } : {}),
       ...(attachment.model ? { model: attachment.model } : {}),
-      ...(attachment.toolGate ? { hooks: { PreToolUse: [{ hooks: [attachment.toolGate] }] } } : {}),
+      ...sessionHooks(spec.tools, attachment.toolGate),
       ...("resume" in attachment.session
         ? { resume: attachment.session.resume }
         : { sessionId: attachment.session.sessionId }),
@@ -335,6 +353,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
           allowDangerouslySkipPermissions: true,
         }
       : {}),
+    ...sessionHooks(spec.tools),
     strictMcpConfig: true,
     ...(request?.maxModelTurns !== undefined ? { maxTurns: request.maxModelTurns } : {}),
     ...(level !== "off" ? { effort: level } : {}),

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-tool-full-name",
+      "kind": "fix",
+      "title": "A Claude crewmate that calls an action by its short name gets the full name back",
+      "body": "When a Claude crewmate calls one of Infinitary's actions, such as noting where its work stands or reporting, by its short name, Claude refuses the call. Infinitary now adds the action's full name to that answer, so the crewmate's next call goes through and its progress or report reaches you instead of being dropped. A crewmate that names its own card by the short name it gave it is understood too, instead of being refused.",
+      "area": "crewmates",
+      "noPicture": "The change is in what a crewmate's model is told after a refused call; no screen looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

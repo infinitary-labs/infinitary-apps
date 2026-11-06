@@ -312,6 +312,7 @@
         "!src/core/claude/claudeProjectResources.integration.test.ts",
         "!src/core/claude/claudeToolWait.integration.test.ts",
         "!src/core/claude/claudeCrewCard.integration.test.ts",
+        "!src/core/claude/claudeToolNames.integration.test.ts",
         "!src/core/claude/claudeSession.contract.integration.test.ts",
         "!src/core/claude/claudeSession.integration.test.ts",
         "!src/core/claude/interruptWedge.integration.test.ts",

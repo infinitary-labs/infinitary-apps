@@ -23,7 +23,7 @@ import { TaskService } from "../tasks/taskService";
 import type { ReportDeclaration } from "../tasks/taskTurns";
 import { CREWMATE_ANSWER_ASK } from "./answerDelivery";
 import type { AskEnding } from "./askEnding";
-import { cardEmitter } from "./cardEmit";
+import { cardEmitter, crewmateCardId } from "./cardEmit";
 import type { CardService } from "./cardService";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
@@ -532,13 +532,31 @@ export class ReportIntake {
         "Report refused: waiting_on_captain needs a reason - what the captain still has to read or decide.",
       );
     }
-    const cardId = wait.cardId?.trim();
-    if (cardId && !this.host.cards.openCardsFor(task.id).some((card) => card.id === cardId)) {
-      throw new Error(
-        `Report refused: "${cardId}" is not an open card of yours. Pass the id emit_card returned, or omit card_id when no card is up.`,
-      );
-    }
+    const named = wait.cardId?.trim();
+    const cardId = named ? this.ownOpenCard(task, named) : undefined;
     return { wait: { reason: reason.slice(0, 300), ...(cardId ? { cardId } : {}) }, ...needs };
+  }
+
+  /**
+   * The open card of its own a report's wait names: by the id emit_card
+   * returned, or by the id the crewmate gave emit_card, which names the
+   * same card (`crewmateCardId`). Any other name is refused with the full
+   * id of each card it has open, so the next report can name one (INF-2835).
+   */
+  private ownOpenCard(task: TaskRuntime, named: string): string {
+    const open = this.host.cards.openCardsFor(task.id).map((card) => card.id);
+    const id = [named, crewmateCardId(task.id, named)].find((candidate) =>
+      open.includes(candidate),
+    );
+    if (id) return id;
+    const ids = open.map((full) => `"${full}"`).join(", ");
+    throw new Error(
+      open.length === 0
+        ? `Report refused: "${named}" is not an open card of yours, and no card of yours is open. Omit card_id.`
+        : open.length === 1
+          ? `Report refused: "${named}" is not an open card of yours. Your open card is ${ids}; pass that id, or omit card_id.`
+          : `Report refused: "${named}" is not an open card of yours. Your open cards are ${ids}; pass one of those ids, or omit card_id.`,
+    );
   }
 
   /**

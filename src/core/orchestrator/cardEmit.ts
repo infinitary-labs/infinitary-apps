@@ -608,7 +608,8 @@ export function buildEmittedCard(
  * A crewmate card's id on its task. Idempotent, like resolveFirstmateCardId:
  * emit_card hands the model back the resolved id, so a crewmate revising its
  * own card resends that id. Prefixing it again would mint a duplicate instead.
+ * A report naming its card reads the id the same way (`ReportIntake`).
  */
-function crewmateCardId(taskId: string, stableId: string): string {
+export function crewmateCardId(taskId: string, stableId: string): string {
   return stableId.startsWith(`card-${taskId}-`) ? stableId : `card-${taskId}-${stableId}`;
 }

@@ -53,9 +53,9 @@ Record the version, selection reasons, files or parts, required platforms or dev
   Declare the whole batch's processor and memory needs through the local load path, and bound Vitest workers to that declaration.
   `scripts/mac-unit-tests.ts` identifies native prerequisites, not an exclusion of portable files from local rounds.
   A developer without a Mac cannot count skipped native cases as proof.
-- Edited phone parts retain three runs on each device.
-  Complete affected selections get ordinary coverage once and only distance-zero parts twice more in the same CI gate; proper subsets retain the selected local repeats, which also satisfy ordinary proof for those parts.
-  Other affected parts run once, on the iPhone alone, and unreadable test changes keep conservative all-parts repetitions on both devices.
+- Edited phone parts retain three runs on the iPhone and one on the iPad (INF-2732, the captain: "run each edited phone part three times on the iPhone and once on the iPad").
+  Complete affected selections get ordinary coverage once and only distance-zero parts twice more, on the iPhone alone, in the same CI gate; proper subsets retain the selected local repeats, which also satisfy ordinary proof for those parts.
+  Other affected parts run once, on the iPhone alone, and unreadable test changes keep conservative all-parts repetitions on the iPhone and one run of every part on the iPad.
   See "The phone check on request" for its exact route and isolation.
 - Replay runs once in Linux CI when relevant; pictures and demos remain local.
 
@@ -625,11 +625,11 @@ Explicit `parts` still overrides automatic selection for diagnostic runs.
 The chooser compares ordinary coverage with the complete live part table, independent of order, and keeps `coverage`, `iphoneOnly` and `repeats` in `phone-placement`.
 INF-2582 direction A (the captain's choices "A: wait once and trim the soak" and "iPhone only; iPad waits for the release check") shapes the gate of an affected request in three ways.
 A part the change only reaches runs on the iPhone alone (the chooser's `iphone_parts`), and the iPad runs it in the next phone release; a part whose test code changed, or every part of a change the chooser could not read, runs on both devices.
-A complete selection runs once, then distance-zero edited-test parts run twice more on each device in the same gate step, on the build and simulators it started, so the request waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
+A complete selection runs once, then distance-zero edited-test parts run twice more on the iPhone alone in the same gate step (the iPad runs each once, INF-2732), on the build and simulators it started, so the request waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
 A request on a branch runs one of each relaunch part's ten dark and light relaunch pairs (INF-1735), so 2 of the 20, through the gate's `--relaunch-pairs`; a request on `main` and the phone release run all 20.
 Named `parts` and every-part requests run their parts on both devices.
 Unreadable test changes retain all-parts repeats; a product-only shared input does not invent edited tests.
-Each device runs a later pass only after its own ordinary pass, each pass of a part starts from a fresh test home and app, and a complete selection's first failure stops every later part and pass, with no retries.
+The iPhone runs a later pass only after its own ordinary pass, each pass of a part starts from a fresh test home and app, and a complete selection's first failure stops every later part and pass, with no retries.
 Each pass keeps 90 minutes of the gate step's limit.
 A later pass writes its part's folder beside the ordinary one, named `<part>-round-<n>`, so its logs, pictures and failure results ride the ordinary artifacts.
 An unavailable CI route leaves missing proof, never an automatic complete local fallback.

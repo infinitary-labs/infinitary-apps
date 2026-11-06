@@ -210,7 +210,7 @@ describe("complete phone selection repeat accounting", () => {
   });
 
   // INF-2582 (the captain's "iPhone only; iPad waits for the release check"): the gate the chooser's
-  // outputs start, on the same real changes. An edited part runs three times on each device; a part
+  // outputs start, on the same real changes. An edited part runs three times on the iPhone and once on the iPad (INF-2732); a part
   // the change only reaches runs once, on the iPhone.
   const runs = (reach: ReturnType<typeof reached>) => {
     const iphoneOnly = iphoneOnlyParts(all, reach);
@@ -222,12 +222,12 @@ describe("complete phone selection repeat accounting", () => {
     return (part: string, device: string) =>
       jobs.filter((job) => job.part === part && job.device === device).length;
   };
-  it("runs reached parts on the iPhone alone and edited parts three times on both devices", () => {
+  it("runs reached parts on the iPhone alone and edited parts three times on the iPhone and once on the iPad", () => {
     const reach = reached("2dbbedc52");
     const count = runs(reach);
     for (const { part, distance } of reach) {
       expect(count(part, "iphone")).toBe(distance === 0 ? 3 : 1);
-      expect(count(part, "ipad")).toBe(distance === 0 ? 3 : 0);
+      expect(count(part, "ipad")).toBe(distance === 0 ? 1 : 0);
     }
     expect(reach.some(({ distance }) => distance > 0)).toBe(true);
   });
@@ -236,7 +236,7 @@ describe("complete phone selection repeat accounting", () => {
     const unreadable = runs(reached("2dbbedc52", true));
     for (const part of all) {
       expect([shared(part, "iphone"), shared(part, "ipad")]).toEqual([1, 0]);
-      expect([unreadable(part, "iphone"), unreadable(part, "ipad")]).toEqual([3, 3]);
+      expect([unreadable(part, "iphone"), unreadable(part, "ipad")]).toEqual([3, 1]);
     }
   });
 });

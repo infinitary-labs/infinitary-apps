@@ -423,7 +423,8 @@ describe("a part's animation waits", () => {
 });
 
 // INF-2582 direction A (the captain's "A: wait once and trim the soak" and "iPhone only; iPad waits
-// for the release check"): one gate runs all three passes on the devices it started, so a request
+// for the release check") and INF-2732 (the captain's "run each edited phone part three times on the
+// iPhone and once on the iPad"): one gate runs every pass on the devices it started, so a request
 // waits for a phone Mac once. The selection is the shape the chooser gives a change that edits the
 // talk-tasks test and reaches join-read and rest.
 describe("every pass in one gate", () => {
@@ -432,14 +433,12 @@ describe("every pass in one gate", () => {
     iphoneOnly: ["join-read", "rest"],
     repeats: ["talk-tasks"],
   };
-  it("runs reached parts on the iPhone alone and edited parts three times on each device", () => {
+  it("runs reached parts on the iPhone alone and edited parts three times on the iPhone and once on the iPad", () => {
     const jobs = phonePasses(["iphone", "ipad"], selection);
     const label = ({ device, part, round }: { device: string; part: string; round: number }) =>
       `${device} ${part} ${round}`;
     expect(jobs.map(label)).toEqual([
       "ipad talk-tasks 1",
-      "ipad talk-tasks 2",
-      "ipad talk-tasks 3",
       "iphone join-read 1",
       "iphone talk-tasks 1",
       "iphone rest 1",
@@ -482,10 +481,16 @@ describe("every pass in one gate", () => {
     const passing = lane();
     await passing.run();
     expect(passing.started).toEqual(jobs.map((job) => `${job.device} ${job.part} ${job.round}`));
-    const failing = lane("ipad talk-tasks 2");
+    const failing = lane("iphone talk-tasks 2");
     const outcomes = await failing.run();
-    expect(failing.started).toEqual(["ipad talk-tasks 1", "ipad talk-tasks 2"]);
-    expect(outcomes.filter(Boolean)).toHaveLength(2);
+    expect(failing.started).toEqual([
+      "ipad talk-tasks 1",
+      "iphone join-read 1",
+      "iphone talk-tasks 1",
+      "iphone rest 1",
+      "iphone talk-tasks 2",
+    ]);
+    expect(outcomes.filter(Boolean)).toHaveLength(5);
   });
 });
 

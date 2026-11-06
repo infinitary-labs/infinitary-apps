@@ -556,7 +556,7 @@ function main(): void {
       ...(decision.run ? decision.reasons.map((reason) => `- ${reason}`) : ["No phone input the gate uses changed beyond the contract version number."]),
       "", `Ordinary coverage: ${kept.join(" ") || "none"}; complete live selection: ${repeats.full}.`,
       `On the iPhone only (the iPad waits for the release check): ${iphoneOnly.join(" ") || "none"}.`,
-      `Two additional passes on each device, in the same job: ${repeats.repeatParts.join(" ") || "none"}.`,
+      `Two additional passes on the iPhone, in the same job (the iPad runs each once): ${repeats.repeatParts.join(" ") || "none"}.`,
       "", ...(placement.length ? ["#### Parts", "", ...placement.map(row), ""] : [])].join("\n"));
 }
 

@@ -3,7 +3,7 @@
 # first taking over from the machine's own automatic updates
 # (docs/testing.md, "The runner's automatic updates").
 #
-# usage: apt-install.sh <package or path to a .deb>...
+# usage: apt-install.sh [apt-get install option]... <package or path to a .deb>...
 #
 # A fresh Ubuntu machine may start its automatic updates as it boots, and
 # they hold apt's locks: the list refresh holds the package lists' lock, and

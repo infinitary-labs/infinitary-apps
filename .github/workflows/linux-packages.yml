@@ -191,9 +191,13 @@ jobs:
         with:
           name: linux-packages
           path: ${{ runner.temp }}/linux-packages
+      # Without apt's recommended packages: ImageMagick's, Ghostscript and its
+      # fonts, are 25 MB the AppImage check's one screenshot never uses, and a
+      # slow mirror can stretch them past the step's limit (docs/testing.md,
+      # "The runner's automatic updates").
       - name: Install the virtual screen
         timeout-minutes: 10
-        run: scripts/apt-install.sh xvfb xdotool imagemagick
+        run: scripts/apt-install.sh --no-install-recommends xvfb xdotool imagemagick
       - if: matrix.system == 'nix'
         uses: cachix/install-nix-action@v31
       - name: Install, open and run a crew turn

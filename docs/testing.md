@@ -1323,6 +1323,8 @@ It then waits for a run already going to end, which apt's daily script marks by 
 Meanwhile it asks that run's `unattended-upgrade` to stop, the way the package's own shutdown helper does, and it stops after the package it is installing, leaving dpkg consistent.
 `apt-get` then waits for dpkg's lock (`DPkg::Lock::Timeout=-1`) should anything else hold it; apt's own wait covers only dpkg's lock, never the lists' lock `apt-get update` takes, which is why the helper waits for the daily run itself.
 Each wait lasts as long as its step's time limit, ten minutes for each install step.
+That limit holds the download too, so the Linux packages' virtual screen installs with `--no-install-recommends`.
+ImageMagick's recommended packages, Ghostscript and its fonts, are 25 MB that the AppImage check's one screenshot never uses, and a slow mirror can stretch them past ten minutes.
 An install inside a container needs none of this: the container's apt is its own, and nothing in it updates automatically.
 
 ## The Linux source desktop

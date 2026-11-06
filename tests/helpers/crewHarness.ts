@@ -229,6 +229,8 @@ export type SetupExtras = {
   githubRead?: CrewSupervisorOptions["githubRead"];
   githubWrite?: CrewSupervisorOptions["githubWrite"];
   sendTakenIntegrationAsk?: CrewSupervisorOptions["sendTakenIntegrationAsk"];
+  /** A panel's held call was answered: the panel hears the choice (`HomeIntegrations`). */
+  panelAskAnswered?: CrewSupervisorOptions["panelAskAnswered"];
   checkCi?: CrewSupervisorOptions["checkCi"];
   /** The bundled runbooks, when a test reads the guidance the task's facts select. */
   runbooks?: CrewSupervisorOptions["runbooks"];
@@ -493,6 +495,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.sendTakenIntegrationAsk
       ? { sendTakenIntegrationAsk: extras.sendTakenIntegrationAsk }
       : {}),
+    ...(extras.panelAskAnswered ? { panelAskAnswered: extras.panelAskAnswered } : {}),
     ...(extras.checkCi ? { checkCi: extras.checkCi } : {}),
     ...(extras.runbooks ? { runbooks: extras.runbooks } : {}),
     ...(extras.openChange ? { openChange: extras.openChange } : {}),

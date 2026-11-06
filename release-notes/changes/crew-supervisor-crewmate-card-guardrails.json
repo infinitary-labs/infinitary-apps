@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-crewmate-card-guardrails",
+      "reason": "Internal: tests pin how the crew supervisor takes a crewmate's cards, its browser and page buttons and the integration calls it holds, before that code moves out of the supervisor; only tests change and nothing a person sees changes."
+    }
+  ]
+}

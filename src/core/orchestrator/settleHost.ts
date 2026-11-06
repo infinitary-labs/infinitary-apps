@@ -133,21 +133,22 @@ export type SettleServiceHost = {
    */
   assessRepair?: (taskId: string) => void;
   /**
-   * A merge's project folder could not be brought up to date: the supervisor
-   * files the task that does it, or updates the one standing (INF-549).
+   * A merge's project folder could not be brought up to date: the in-place
+   * work (`InPlaceWork`) files the task that does it, or updates the one
+   * standing (INF-549).
    */
   fileFolderRepair?: (
     merged: TaskRecord,
     refusal: FolderRefreshRefusal & { reach?: string },
   ) => { record: TaskRecord; filed: boolean } | undefined;
   /**
-   * Work found the project's folder missing: the supervisor files the task
-   * that brings it back, or names the one standing, and answers the words
-   * refusing that work (INF-572).
+   * Work found the project's folder missing: the in-place work files the
+   * task that brings it back, or names the one standing, and answers the
+   * words refusing that work (INF-572).
    */
   folderMissing?: (repoId: string, noticed: FolderNoticed, by?: TaskRecord) => string;
   /**
-   * An abandoned task's pull request could not be closed: the supervisor
+   * An abandoned task's pull request could not be closed: the in-place work
    * files the task that closes it, or names the one standing (INF-549's
    * sibling).
    */

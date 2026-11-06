@@ -46,7 +46,7 @@ import { readyPresentation } from "@shared/changePresentation";
 import { type CheckChangeInput, isRepairAssessment } from "@shared/checkRepair";
 import { currentCheckStatus } from "@shared/checkSnapshot";
 import { isClientIssueReason } from "@shared/claudeClient";
-import { type CrewResponse, crewResponseSchema, type ResponsePolicy } from "@shared/crewResponses";
+import type { ResponsePolicy } from "@shared/crewResponses";
 import { type CrewSpeed, type SpeedSelection, speedNote } from "@shared/crewSpeed";
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
@@ -55,11 +55,6 @@ import { noSignInsStartRefusal, updateStartRefusal } from "@shared/deviceSetup";
 import { noNewWorkStartRefusal } from "@shared/deviceUpdateNudge";
 import type { CrewCounts, FmEvent } from "@shared/events";
 import { reportSummary } from "@shared/feed";
-import {
-  type FolderNoticed,
-  type FolderRefreshRefusal,
-  folderRefreshWords,
-} from "@shared/folderRefresh";
 import { forgePlace } from "@shared/forge";
 import { forgeSignInCardId } from "@shared/forges";
 import {
@@ -76,9 +71,7 @@ import {
   standingOverride,
 } from "@shared/holds";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
-import type { ValidationForgeWrite } from "@shared/liveValidation";
 import {
-  keptValidationInputSchema,
   VALIDATION_GAPS_FIELD,
   validationAssignment,
   validationRevision,
@@ -97,7 +90,7 @@ import {
   dropStartedRefusal,
   NO_LONGER_WANTED,
 } from "@shared/recordDrop";
-import { keptRecoveryWaySchema, waitStall, workWaitSchema } from "@shared/recovery";
+import { waitStall } from "@shared/recovery";
 import {
   autonomyForRecord,
   deliveryFor,
@@ -109,8 +102,6 @@ import {
 } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import {
-  type InPlaceFacts,
-  type InPlacePull,
   isFolderRepair,
   isFolderWork,
   isPullRepair,
@@ -125,7 +116,6 @@ import {
   type TaskBrowserCommandResult,
   type TaskBrowserHandle,
 } from "@shared/taskBrowser";
-import { type PlanItem, readPlanItems } from "@shared/taskPlan";
 import {
   type EffectiveTaskPolicies,
   policyEditConsequences,
@@ -176,16 +166,11 @@ import { resolveFirstmateCardId } from "../pi/cardTool";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { type CrewStatusEntry, NOTHING_SPAWNED } from "../pi/crewTools";
 import { renderPlaceText } from "../pi/panelTools";
-import {
-  verifyKeptValidationEvidence,
-  verifyKeptValidationEvidenceSync,
-} from "../pi/validationEvidence";
 import type { PlacedCopy } from "../placed/placedCopies";
 import { PreparationUnknown } from "../placed/placedCopies";
 import { askJson } from "../program/programAsk";
 import { type ProgramEnd, type ProgramPartAsk, ProgramRunner } from "../program/programRunner";
 import { programRefusal } from "../program/programScript";
-import { ORDINARY_NOTE_READ_GUIDANCE } from "../prompts/cardContract";
 import { KIND_SOURCE, kindEstablished } from "../routing/kindClassifier";
 import { legacyShapeFromDifficulty, tierFor } from "../routing/policy";
 import { type RoutePreview, type RouteResult, requiresReasoningWait } from "../routing/router";
@@ -202,7 +187,7 @@ import {
   type SessionSpec,
   StoppedBeforeStartError,
 } from "../session/session";
-import { bindTools, type EmittedCardInput, type FollowupInput } from "../session/tools";
+import { bindTools, type EmittedCardInput } from "../session/tools";
 import type { DuplicateResult } from "../storage/cardStore";
 import { currentChange } from "../storage/changeProjection";
 import {
@@ -240,13 +225,11 @@ import { compareSemver } from "../update/semver";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { gitFailure } from "../workspace/git";
 import { type MovedFolders, packWork, unpackWork } from "../workspace/workMove";
-import {
-  type DependencyInstall,
-  type DispatchBase,
-  nearestFolderAbove,
-  type WorktreeAcquisition,
+import type {
+  DependencyInstall,
+  DispatchBase,
+  WorktreeAcquisition,
 } from "../workspace/workspaceService";
-import { CREWMATE_ANSWER_ASK } from "./answerDelivery";
 import { type AskEnding, askEndingOf } from "./askEnding";
 import type { WakeChoice } from "./captainWakes";
 import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
@@ -292,19 +275,16 @@ import {
   type RunningJob,
   stallCardId,
 } from "./idleLadder";
+import { InPlaceWork } from "./inPlaceWork";
 import { IntegrationAsks, writeSentLine } from "./integrationAsks";
 import {
   assertDeliverableConstraints,
   type BriefPart,
   briefText,
-  FOLDER_REPAIR_TITLE,
   type FolderBriefFacts,
   type PersonalBriefFacts,
-  PULL_REPAIR_TITLE,
   parseSpawnIntent,
   renderEscalationBrief,
-  renderFolderRepairBrief,
-  renderFollowupBrief,
   renderIntentBrief,
   renderPullRepairBrief,
   renderReviewBrief,
@@ -316,6 +296,7 @@ import { MainCheckWatcher } from "./mainCheckWake";
 import { approvableOffer, isCaptainGuidance, mergeHold } from "./mergeAuthorization";
 import { type NamedModel, namedModelOf, namedModelWords } from "./namedModel";
 import { outageFailedWake } from "./outageWakes";
+import { ReportIntake } from "./reportIntake";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import {
@@ -329,7 +310,6 @@ import { RunWatcher } from "./runWatch";
 import { SettleFacts } from "./settleCardFacts";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
-import { folderMissingText } from "./settleWords";
 import { computerLeftOutWake, systemWaitWake } from "./startWakes";
 import { type PlacedWaitFor, placedCutOffStartRefusal, TaskPlacement } from "./taskPlacement";
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
@@ -674,8 +654,6 @@ export function crewSignInCardId(taskId: string): string {
 
 export class CrewSupervisor {
   private readonly tasks = new Map<string, TaskRuntime>();
-  /** Folder repairs whose folder is being read now, so one tick reads each once. */
-  private readonly closingFolders = new Set<string>();
   /**
    * Starts the captain pressed that wait for the Firstmate to apply his
    * standing directions: the wake's inbox row, and where the press came from
@@ -718,6 +696,10 @@ export class CrewSupervisor {
   readonly crewmateCards: CrewmateCards;
   /** Integration calls held for the captain: their approval cards and what came of them. */
   readonly integrationAsks: IntegrationAsks;
+  /** What a crewmate reports: its follow-ups, progress, report, responses and validation records. */
+  readonly reportIntake: ReportIntake;
+  /** The host's own work in a project's folder: its repairs, the start check and their close. */
+  readonly inPlaceWork: InPlaceWork;
   private crewmateSeq = 0;
   /** The watchdog's registrations on the shared ticker, undone at dispose. */
   private watchdog: (() => void)[] | undefined;
@@ -802,7 +784,8 @@ export class CrewSupervisor {
         this.hooks.asksMoved?.();
       },
       cardPlaced: () => this.hooks.cardPlaced?.(),
-      checkCardResponse: (_taskId, response, card) => this.checkCardResponse(response, card),
+      checkCardResponse: (_taskId, response, card) =>
+        this.reportIntake.checkCardResponse(response, card),
       submitCardResponse: (taskId, response, text, line) => {
         options.inbox.submitResponse(
           response,
@@ -875,9 +858,9 @@ export class CrewSupervisor {
       ...(options.closePullRequest ? { closePullRequest: options.closePullRequest } : {}),
       ...(options.readPull ? { readPull: options.readPull } : {}),
       assessRepair: (taskId) => this.reviews.assessRepair(taskId),
-      fileFolderRepair: (merged, refusal) => this.fileFolderRepair(merged, refusal),
-      folderMissing: (repoId, noticed, by) => this.folderMissing(repoId, noticed, by),
-      filePullRepair: (abandoned, problem) => this.filePullRepair(abandoned, problem),
+      fileFolderRepair: (merged, refusal) => this.inPlaceWork.fileFolderRepair(merged, refusal),
+      folderMissing: (repoId, noticed, by) => this.inPlaceWork.folderMissing(repoId, noticed, by),
+      filePullRepair: (abandoned, problem) => this.inPlaceWork.filePullRepair(abandoned, problem),
       isPersonalTask: (taskId) => this.isPersonalTask(taskId),
       deliverableOf,
       taskDelivery: (taskId) => this.taskDelivery(taskId),
@@ -917,12 +900,33 @@ export class CrewSupervisor {
       worksInPlace: (taskId) => this.worksInPlace(taskId),
       mergeModeFor: (taskId) => this.mergeModeFor(taskId),
       machineOf: (taskId) => this.machineOf(taskId),
-      validationHead: (record) => this.validationHead(record),
+      validationHead: (record) => this.reportIntake.validationHead(record),
       keepOffer: (taskId, offers, offer) => this.keepOffer(taskId, offers, offer),
     });
     this.integrationAsks = new IntegrationAsks(options, {
       cards: this.cards,
       notifyOp: (wake, origin, ref) => this.hooks.notifyOp(wake, origin, ref),
+    });
+    this.reportIntake = new ReportIntake(options, {
+      cards: this.cards,
+      askEnding: this.askEnding,
+      isPersonalTask: (taskId) => this.isPersonalTask(taskId),
+      personalFacts: () => this.personalFacts(),
+      taskDelivery: (taskId) => this.taskDelivery(taskId),
+      reviewBuilderOf: (record) => this.reviewBuilderOf(record),
+      noteTaskActivity: (task) => this.noteTaskActivity(task),
+      pokeInbox: () => this.hooks.pokeInbox?.(),
+      clientJobStart: (taskId) => this.clientJobStart(taskId),
+      broadcastCrewCounts: () => this.broadcastCrewCounts(),
+    });
+    this.inPlaceWork = new InPlaceWork(options, {
+      now: this.now,
+      cards: this.cards,
+      settling: this.settling,
+      runtime: (taskId) => this.tasks.get(taskId),
+      steer: (taskId, message) => this.steerInternal(taskId, message, SUPERVISOR_STEER),
+      broadcastCrewCounts: () => this.broadcastCrewCounts(),
+      sweepGates: (at) => this.sweepGates(at),
     });
     this.programs = new ProgramRunner({
       tasks: options.tasks,
@@ -2040,355 +2044,6 @@ export class CrewSupervisor {
     return brief;
   }
 
-  /**
-   * The host's own task for a project folder a merge could not bring up to
-   * date (INF-549, the captain's approved plan): filed under the project and
-   * started like any queued task whose wait ended, working in place with a
-   * brief filled from the facts. One stands per project: a later refusal
-   * while it stands updates its facts and files nothing new. Answers the
-   * task, and whether it was filed now.
-   */
-  fileFolderRepair(
-    merged: TaskRecord,
-    refusal: FolderRefreshRefusal & { reach?: string },
-  ): { record: TaskRecord; filed: boolean } | undefined {
-    const repo = merged.repoId ? this.options.repos.get(merged.repoId) : undefined;
-    if (!repo) return undefined;
-    const facts: InPlaceFacts = {
-      cause: refusal.cause,
-      ...(refusal.branch ? { branch: refusal.branch } : {}),
-      ...(refusal.reach ? { reach: refusal.reach } : {}),
-      ...(refusal.remote ? { remote: refusal.remote } : {}),
-      ...(merged.key ? { after: merged.key } : {}),
-    };
-    return this.fileRepairFor(
-      repo,
-      facts,
-      `Another merge, ${merged.key || merged.id}, could not bring the folder up to date either: ${folderRefreshWords(facts.cause)}. The folder must now reach ${facts.reach ?? `origin's ${facts.branch ?? "default branch"}`}.`,
-    );
-  }
-
-  /**
-   * Work that needs a project's folder found it missing (INF-572, the
-   * captain's approved plan): a task starting on this computer, a branch
-   * coming home, or a merge into the folder. The repair that brings it back
-   * is filed, or the standing one named, and the words refusing that work
-   * return, naming the folder and the repair.
-   */
-  folderMissing(repoId: string, noticed: FolderNoticed, by?: TaskRecord): string {
-    const repo = this.options.repos.get(repoId);
-    if (!repo) return "The project's folder is missing.";
-    let repair: { record: TaskRecord; filed: boolean } | undefined;
-    try {
-      repair = this.fileRepairFor(
-        repo,
-        { cause: "missing", noticed, ...(by?.key ? { after: by.key } : {}) },
-        `The folder ${repo.path} is now missing: bring it back instead. Find out why it is missing, and clone it again into the same path only if it was deleted; otherwise ask the captain on a card.`,
-      );
-    } catch (caught) {
-      console.warn("[crew] the folder repair could not be filed:", caught);
-    }
-    return folderMissingText(
-      repo.path,
-      noticed,
-      repair ? { key: repair.record.key || repair.record.id, filed: repair.filed } : undefined,
-    );
-  }
-
-  /**
-   * The check at each app start, on the computer that keeps the record
-   * (INF-572, the captain's answers): every project with an address where it
-   * lives is read once, in the background. A missing folder waits until work
-   * needs it; a folder on another branch or on none is left alone; one that
-   * is behind and clean on its default branch is brought up to date, with
-   * one Activity line; one behind with edits or its own commits gets the
-   * repair, unless the captain closed one for that same version of where
-   * the project lives. A read that fails changes nothing.
-   */
-  async checkFoldersAtStart(): Promise<void> {
-    if (typeof this.options.workspace.refreshAtStart !== "function") return;
-    for (const repo of this.options.repos.list()) {
-      if (repo.kind !== "project" || !repo.origin) continue;
-      try {
-        const reading = await this.options.workspace.refreshAtStart(repo.path);
-        if (reading.outcome === "refreshed") {
-          this.options.broadcastEvent({
-            type: "firstmate_note",
-            text: `The folder of ${repo.name} was behind where the project lives; Infinitary brought its ${reading.branch} up to date.`,
-          });
-          continue;
-        }
-        if (reading.outcome !== "refused") continue;
-        const { refusal } = reading;
-        if (this.repairClosedAt(repo.id, refusal.remote)) continue;
-        this.fileRepairFor(
-          repo,
-          {
-            cause: refusal.cause,
-            noticed: "app-start",
-            ...(refusal.branch ? { branch: refusal.branch } : {}),
-            ...(refusal.remote ? { remote: refusal.remote } : {}),
-          },
-          `At the app's start the folder was still behind where the project lives: ${folderRefreshWords(refusal.cause)}.`,
-        );
-      } catch (caught) {
-        console.warn(`[crew] reading the folder of ${repo.name} at start:`, caught);
-      }
-    }
-  }
-
-  /**
-   * Whether the captain closed this project's latest folder repair while
-   * where the project lives stood at `remote` (INF-572, the captain's answer 4): the
-   * start check files it again only once that has moved on.
-   */
-  private repairClosedAt(repoId: string, remote: string | undefined): boolean {
-    if (!remote) return false;
-    const last = this.options.tasks
-      .list()
-      .filter((row) => row.repoId === repoId && isFolderRepair(row.shape?.in_place))
-      .filter((row) => row.status === "dropped")
-      .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))[0]?.shape?.in_place;
-    return isFolderRepair(last) && (last.remote === remote || last.reach === remote);
-  }
-
-  /**
-   * Files a project's folder repair, or updates the one standing with the
-   * newer facts and tells its crewmate `update`. A folder found missing
-   * again while its repair already knows tells nobody anything new.
-   */
-  private fileRepairFor(
-    repo: RepoView,
-    facts: InPlaceFacts,
-    update: string,
-  ): { record: TaskRecord; filed: boolean } | undefined {
-    const standing = [...this.options.tasks.listOpen(), ...this.options.tasks.listActive()].find(
-      (row) => row.repoId === repo.id && isFolderRepair(row.shape?.in_place),
-    );
-    if (standing) {
-      const prior = standing.shape?.in_place;
-      if (isFolderRepair(prior) && prior.cause === "missing" && facts.cause === "missing") {
-        return { record: standing, filed: false };
-      }
-      const kept =
-        isFolderRepair(prior) && prior.started_in ? { started_in: prior.started_in } : {};
-      this.options.tasks.placement.recordShape(
-        standing.id,
-        { in_place: { ...facts, ...kept } },
-        standing.difficulty,
-      );
-      this.options.tasks.note(standing.id, update, { news: true });
-      if (this.tasks.has(standing.id)) {
-        void this.steerInternal(standing.id, update, SUPERVISOR_STEER).catch(() => {});
-      }
-      const record = this.options.tasks.get(standing.id);
-      return record ? { record, filed: false } : undefined;
-    }
-    const shape: WorkShape = {
-      kind: "chore",
-      kind_source: `${KIND_SOURCE.skipped}in-place`,
-      deliverable: "change",
-      in_place: facts,
-    };
-    const goal =
-      facts.cause === "missing"
-        ? `Bring back the folder of ${repo.name}, which is missing.`
-        : facts.reach
-          ? `Bring the folder of ${repo.name} up to date with the merged version.`
-          : `Bring the folder of ${repo.name} up to date with where the project lives.`;
-    const record = this.options.tasks.create({
-      id: randomUUID().slice(0, 8),
-      kind: "work",
-      title: FOLDER_REPAIR_TITLE,
-      goal,
-      prompt: this.folderRepairBrief(repo, facts),
-      repoId: repo.id,
-      difficulty: tierFor(shape).bucket ?? null,
-      shape,
-      startPolicy: "when-ready",
-      status: "open",
-      actor: "host",
-    });
-    this.broadcastCrewCounts();
-    // It starts on this very sweep, the way a when-ready plan does.
-    void this.sweepGates(this.now());
-    return { record, filed: true };
-  }
-
-  /** A folder repair's brief, rendered from its facts and its project as they stand now. */
-  private folderRepairBrief(
-    repo: Pick<RepoView, "name" | "path" | "origin">,
-    facts: InPlaceFacts,
-  ): string {
-    // Rendered just before a start, so it names where that start opens (`inPlaceDir`).
-    const workdir = existsSync(repo.path) ? undefined : nearestFolderAbove(repo.path);
-    return renderFolderRepairBrief({
-      ...facts,
-      project: repo.name,
-      folder: repo.path,
-      origin: repo.origin,
-      ...(workdir ? { workdir } : {}),
-    });
-  }
-
-  /**
-   * Where a task that works in place starts: its project's folder, or, for a
-   * folder repair that finds it missing, the folder above it that exists,
-   * kept on the record so a resume opens there again (INF-572). Each start
-   * opens a new conversation, so it reads the project's folder as it stands
-   * now: one the captain has since named somewhere else, or one that is back,
-   * is where it starts (INF-757).
-   */
-  private inPlaceDir(taskId: string, folder: string): string {
-    const record = this.options.tasks.get(taskId);
-    const facts = record?.shape?.in_place;
-    if (!record || !isFolderRepair(facts)) return folder;
-    const { started_in: before, ...rest } = facts;
-    const started_in = existsSync(folder) ? undefined : nearestFolderAbove(folder);
-    if (started_in !== before) {
-      this.options.tasks.placement.recordShape(
-        taskId,
-        { in_place: started_in ? { ...rest, started_in } : rest },
-        record.difficulty,
-      );
-    }
-    return started_in ?? folder;
-  }
-
-  /**
-   * The host's own task for a pull request an abandoned task could not
-   * close (INF-549's sibling, the captain's "close the pull request or
-   * report why not"): filed under the project and started like the folder
-   * repair, working in place with a brief filled from the facts. One stands
-   * per pull request. Answers the task, and whether it was filed now.
-   */
-  filePullRepair(
-    abandoned: TaskRecord,
-    problem: string | undefined,
-  ): { record: TaskRecord; filed: boolean } | undefined {
-    const repo = abandoned.repoId ? this.options.repos.get(abandoned.repoId) : undefined;
-    const number = abandoned.delivery?.prNumber;
-    if (!repo || number === undefined) return undefined;
-    const standing = [...this.options.tasks.listOpen(), ...this.options.tasks.listActive()].find(
-      (row) => {
-        const facts = row.shape?.in_place;
-        return row.repoId === repo.id && isPullRepair(facts) && facts.pull.number === number;
-      },
-    );
-    if (standing) return { record: standing, filed: false };
-    const label = abandoned.delivery?.changeLabel ?? `#${number}`;
-    const facts: InPlacePull = {
-      pull: {
-        number,
-        label,
-        ...(abandoned.delivery?.prUrl ? { url: abandoned.delivery.prUrl } : {}),
-        ...(abandoned.branch ? { branch: abandoned.branch } : {}),
-        ...(problem ? { problem } : {}),
-      },
-      ...(abandoned.key ? { after: abandoned.key } : {}),
-      after_id: abandoned.id,
-    };
-    const shape: WorkShape = {
-      kind: "chore",
-      kind_source: `${KIND_SOURCE.skipped}in-place`,
-      deliverable: "change",
-      in_place: facts,
-    };
-    const record = this.options.tasks.create({
-      id: randomUUID().slice(0, 8),
-      kind: "work",
-      title: PULL_REPAIR_TITLE,
-      goal: `Close the pull request ${label} of ${repo.name}, which ${abandoned.key || abandoned.id} left open, or report why it cannot be closed.`,
-      prompt: renderPullRepairBrief({ ...facts, project: repo.name, folder: repo.path }),
-      repoId: repo.id,
-      difficulty: tierFor(shape).bucket ?? null,
-      shape,
-      startPolicy: "when-ready",
-      status: "open",
-      actor: "host",
-    });
-    this.broadcastCrewCounts();
-    void this.sweepGates(this.now());
-    return { record, filed: true };
-  }
-
-  /**
-   * The closing half of a task that works in place (INF-549): it closes as
-   * settled, with a feed line, once the host reads what it was for done - a
-   * folder clean, on the default branch and at or past the merged version,
-   * or a pull request closed where the project lives. A crewmate mid-turn,
-   * or a card of the task's still up, keeps it open.
-   */
-  async closeCurrentFolders(): Promise<void> {
-    const live = [...this.options.tasks.listOpen(), ...this.options.tasks.listActive()];
-    for (const record of live) {
-      const facts = record.shape?.in_place;
-      const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-      if (!facts || isFolderWork(facts) || !repo || this.closingFolders.has(record.id)) continue;
-      if (isPullRepair(facts) && !this.options.readPull) continue;
-      const state = this.tasks.get(record.id)?.state;
-      if (state !== undefined && state !== "idle") continue;
-      if (this.cards.snapshot().some((card) => card.taskId === record.id)) continue;
-      this.closingFolders.add(record.id);
-      try {
-        const line = await this.inPlaceDone(facts, repo.path);
-        if (!line) continue;
-        const now = this.options.tasks.get(record.id);
-        if (!now || TaskService.isClosed(now)) continue;
-        const after = this.tasks.get(record.id)?.state;
-        if (after !== undefined && after !== "idle") continue;
-        this.options.tasks.note(record.id, line, {
-          news: true,
-          feed: true,
-          data: { feedLine: true },
-        });
-        await this.settling.closing.closeTask(record.id, {
-          status: "done",
-          reason: "finished",
-          actor: "host",
-          text: isPullRepair(facts) ? "the pull request is closed" : "the folder is up to date",
-          feed: false,
-        });
-      } finally {
-        this.closingFolders.delete(record.id);
-      }
-    }
-  }
-
-  /**
-   * What an in-place task was for, read without changing anything: the
-   * Activity line saying it is done, or undefined while it is not, or when
-   * it cannot be read.
-   */
-  private async inPlaceDone(
-    facts: InPlaceFacts | InPlacePull,
-    folder: string,
-  ): Promise<string | undefined> {
-    if (isPullRepair(facts)) {
-      const pull = await this.options
-        .readPull?.(facts.after_id, facts.pull.number)
-        .catch(() => undefined);
-      if (pull?.state !== "closed") return undefined;
-      return `The pull request ${facts.pull.label} is ${pull.merged ? "merged" : "closed"} where the project lives.`;
-    }
-    // A repair that never read a default branch - the folder was missing,
-    // or named none - reads it from the folder as it stands now (INF-572).
-    const branch =
-      facts.branch ??
-      (typeof this.options.workspace.folderDefaultBranch === "function"
-        ? await this.options.workspace.folderDefaultBranch(folder).catch(() => "")
-        : "");
-    if (!branch) return undefined;
-    const current = await this.options.workspace
-      .folderCurrent(folder, branch, facts.reach)
-      .catch(() => false);
-    if (!current) return undefined;
-    if (facts.cause === "missing") {
-      return `The project's folder is back: clean, on ${branch} and level with origin's ${branch}.`;
-    }
-    return `The project's folder is up to date: clean, on ${branch} and at or past ${facts.reach ? facts.reach.slice(0, 7) : `origin's ${branch}`}.`;
-  }
-
   /** Whether a task's events skip supervision: a review task itself. */
   private bypassesSupervision(taskId: string): boolean {
     return this.options.tasks.get(taskId)?.shape?.kind === "review";
@@ -3246,15 +2901,19 @@ export class CrewSupervisor {
           !isFolderRepair(record?.shape?.in_place) &&
           !existsSync(repoDir)
         ) {
-          throw new Error(this.folderMissing(spec.repoId, "start", this.options.tasks.get(taskId)));
+          throw new Error(
+            this.inPlaceWork.folderMissing(spec.repoId, "start", this.options.tasks.get(taskId)),
+          );
         }
-        const cwd = inPlace ? this.inPlaceDir(taskId, repoDir) : repoDir;
+        const cwd = inPlace ? this.inPlaceWork.inPlaceDir(taskId, repoDir) : repoDir;
         task.workspace = { taskId, cwd, branch: "", repoDir };
       } else {
         // A task that needs the project's folder here is refused while it
         // is missing, naming it and the repair that brings it back (INF-572).
         if (spec.repoId && repoDir && !existsSync(repoDir)) {
-          throw new Error(this.folderMissing(spec.repoId, "start", this.options.tasks.get(taskId)));
+          throw new Error(
+            this.inPlaceWork.folderMissing(spec.repoId, "start", this.options.tasks.get(taskId)),
+          );
         }
         const headSha = this.reviewBuilderOf(record) ? record?.delivery?.headSha : undefined;
         // A task that branches from another starts at that task's last commit (INF-799).
@@ -3772,8 +3431,8 @@ export class CrewSupervisor {
       onCardRefused: (refusal) => this.crewmateCards.recordCardRefusal(task, refusal),
       onCloseCard: (input) =>
         this.closeCard(input.cardId, { kind: "crewmate", taskId: task.id }, input.reason),
-      onFollowup: (input) => this.fileFollowup(task, input),
-      onProgress: (text, plan) => this.noteProgress(task, text, plan),
+      onFollowup: (input) => this.reportIntake.fileFollowup(task, input),
+      onProgress: (text, plan) => this.reportIntake.noteProgress(task, text, plan),
       onReport: (text, summary, declared) =>
         this.recordReportFromSession(task, text, summary, declared),
       onReply: (input) => this.cards.replyFromCrewmate(task.id, input),
@@ -4568,13 +4227,19 @@ export class CrewSupervisor {
     responseText = text,
   ): string | Promise<string> {
     if (declared?.validation)
-      return this.recordValidationReport(task, text, summary, declared, responseText).then(
-        (receipt) => {
+      return this.reportIntake
+        .recordValidationReport(task, text, summary, declared, responseText)
+        .then((receipt) => {
           this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
           return receipt;
-        },
-      );
-    const receipt = this.recordExplicitReport(task, text, summary, declared, responseText);
+        });
+    const receipt = this.reportIntake.recordExplicitReport(
+      task,
+      text,
+      summary,
+      declared,
+      responseText,
+    );
     // The report is the crewmate's close-out for its new cards: they reach
     // the stage now. A card the captain already had waits for the turn's
     // end, so it comes back once, with the crewmate's last word (INF-926).
@@ -5486,7 +5151,7 @@ export class CrewSupervisor {
       if (request?.targetTask !== taskId)
         throw new Error(`Response request ${id} does not belong to this task. Nothing was sent.`);
     }
-    if (source.response?.card) this.checkResponseCard(source.response.card);
+    if (source.response?.card) this.reportIntake.checkResponseCard(source.response.card);
     const steer: SteerSource = {
       actor,
       via: source.via ?? "tool",
@@ -8092,7 +7757,11 @@ export class CrewSupervisor {
       ticker.register("idle-ladder", WATCHDOG_TICK_MS, (now) => this.reconcileIdle(now)),
       ticker.register("firstmate-quiet", WATCHDOG_TICK_MS, (now) => this.hooks.checkQuiet?.(now)),
       ticker.register("gate-sweep", WATCHDOG_TICK_MS, (now) => void this.sweepGates(now)),
-      ticker.register("in-place-folders", WATCHDOG_TICK_MS, () => void this.closeCurrentFolders()),
+      ticker.register(
+        "in-place-folders",
+        WATCHDOG_TICK_MS,
+        () => void this.inPlaceWork.closeCurrentFolders(),
+      ),
       ticker.register("check-watch", WATCHDOG_TICK_MS, (now) => void this.pollCheckWatches(now)),
       ticker.register("kept-merges", WATCHDOG_TICK_MS, (now) =>
         this.settling.kept.reconcileMergeAuthorizations(now),
@@ -9151,579 +8820,6 @@ export class CrewSupervisor {
   }
 
   /**
-   * file_followup (design section 7): the crewmate found work it should not
-   * do itself. The record files it as an on-request task of its own,
-   * discovered-from the crewmate's task but never a child of it: a row, a
-   * link, and one feed line - never a card and never a wake of its own
-   * (cards/tasks/agents P0, WI-4). The Firstmate hears about it with the
-   * report that ends this turn and triages it there, deciding whether the
-   * follow-up runs now, later, or not at all. Only `blocks_me` holds the
-   * origin up, and then the origin's settle says which task and why.
-   */
-  private fileFollowup(task: TaskRuntime, input: FollowupInput): string {
-    const origin = this.options.tasks.get(task.id);
-    if (!origin) throw new Error(`Task ${task.id} no longer exists.`);
-    const title = input.title.trim().slice(0, 64);
-    const goal = input.goal.trim();
-    const why = input.why.trim();
-    if (!title) throw new Error("title is required.");
-    if (!goal) throw new Error("goal is required: one sentence saying what done looks like.");
-    if (!why) throw new Error("why is required: what you found that makes this follow-up needed.");
-    const personal = this.isPersonalTask(task.id);
-    // The follow-up's own posture, never the origin's: an ask made of the
-    // origin is not one made of it (FI3-733). It is written again at start.
-    const repo = origin.repoId ? this.options.repos.get(origin.repoId) : undefined;
-    const delivery = personal ? undefined : deliveryFor({ repo: repo?.delivery }).delivery;
-    const filed = this.options.tasks.fileFollowup({
-      id: randomUUID().slice(0, 8),
-      originId: origin.id,
-      title,
-      goal,
-      why,
-      prompt: renderFollowupBrief(
-        { goal, why, filedBy: task.crewmate, originTitle: origin.title, originKey: origin.key },
-        delivery,
-        personal ? this.personalFacts() : undefined,
-      ),
-      ...(input.blocksMe ? { blocksOrigin: true } : {}),
-      ...(input.testFailure ? { testFailure: true } : {}),
-      ...(input.testPath ? { testPath: input.testPath } : {}),
-    });
-    if (filed.duplicate) {
-      return `Already filed as ${filed.record.key} "${filed.record.title}" for ${input.testPath?.trim()}. Name that key in your report; do not file another.`;
-    }
-    const record = filed.record;
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text: `Task ${origin.title} follow-up filed: ${record.key} ${title}${input.blocksMe ? `; ${origin.title} must wait` : ""}`,
-    });
-    this.broadcastCrewCounts();
-    task.filedThisTurn.push({ key: record.key, title, blocks: Boolean(input.blocksMe) });
-    return `Filed follow-up ${record.key} "${title}", discovered from your task${input.blocksMe ? " and blocking it: your task cannot land until this one closes" : " and not holding it up"}. The first mate hears about it with your report and decides when it runs; keep going on your own task.`;
-  }
-
-  verifyValidationEvidence(taskId: string): void {
-    const run = this.options.tasks.get(taskId)?.delivery?.liveValidation?.runs.at(-1);
-    if (run)
-      verifyKeptValidationEvidenceSync(
-        run.evidence,
-        crewmateCardPicturesDir(this.options.paths, taskId),
-        taskId,
-      );
-  }
-
-  /** The write gateway calls this at execution, including a captain-approved kept write. */
-  async consumeValidationEffect(
-    taskId: string,
-    request: string,
-    write?: ValidationForgeWrite,
-  ): Promise<void> {
-    const task = this.options.tasks.get(taskId);
-    if (!task) throw new Error("The task no longer exists; nothing was sent.");
-    if (write) {
-      const requested = task.delivery?.liveValidation?.permissions.find(
-        (item) => item.request.id === request,
-      )?.request;
-      const approved = requested?.kind === "effect" ? requested.forgeWrite : undefined;
-      if (
-        !approved ||
-        approved.host !== write.host ||
-        approved.method !== write.method ||
-        approved.path !== write.path ||
-        approved.bodyDigest !== write.bodyDigest
-      )
-        throw new Error(
-          "This exact write was not included in the validation request. Ask about its destination, action and contents before sending it.",
-        );
-    }
-    const head = await this.validationHead(task);
-    await this.requireCleanValidationWork(task, head);
-    if (!head) throw new Error("The current version cannot be read; nothing was sent.");
-    this.options.tasks.delivery.recordLiveValidation(
-      taskId,
-      {
-        kind: "effect-state",
-        request,
-        state: "started",
-        evidence: "The approved validation write passed the execution gate.",
-      },
-      { head },
-    );
-    this.options.tasks.delivery.recordLiveValidation(
-      taskId,
-      {
-        kind: "effect-state",
-        request,
-        state: "unknown",
-        evidence:
-          "The write is being sent. Reconcile its result before any further action; never replay an unknown outcome.",
-      },
-      { head },
-    );
-  }
-
-  private async validationHead(record: TaskRecord): Promise<string> {
-    const head = record.deviceId
-      ? (await this.options.machines?.revision(record.deviceId, record.id))?.headSha
-      : record.branch
-        ? await this.options.workspace.branchHead(record.repoDir, record.branch)
-        : undefined;
-    if (!head)
-      throw new Error("The task's committed version cannot be read; validation remains held.");
-    return head;
-  }
-
-  private async requireCleanValidationWork(record: TaskRecord, head: string): Promise<void> {
-    if ((!record.deviceId && !record.worktreeDir) || !record.branch)
-      throw new Error("The validation working copy cannot be read; nothing may run.");
-    const status = record.deviceId
-      ? await this.options.machines?.workStatus(record.id)
-      : await this.options.workspace.taskWorkStatus(
-          {
-            taskId: record.id,
-            cwd: record.worktreeDir,
-            repoDir: record.repoDir,
-            branch: record.branch,
-          },
-          { strict: true },
-        );
-    const actual = record.deviceId
-      ? (await this.options.machines?.revision(record.deviceId, record.id))?.headSha
-      : await this.options.workspace.branchHead(record.worktreeDir, "HEAD");
-    if (!status || status.dirty || actual !== head)
-      throw new Error(
-        "Commit the current work before validation; proof and permission name one clean committed version.",
-      );
-  }
-
-  private async recordValidationReport(
-    task: TaskRuntime,
-    text: string,
-    summary: string | undefined,
-    declared: ReportDeclaration,
-    responseText: string,
-  ): Promise<string> {
-    const input = keptValidationInputSchema.parse(declared.validation);
-    const record = this.options.tasks.get(task.id);
-    if (!record) throw new Error("The task no longer exists.");
-    const builder = this.reviewBuilderOf(record);
-    const owner = builder ?? record;
-    // INF-994: records are kept at every care level, so a raise to Careful
-    // mid-task keeps them. A review's record is the verdict on any change
-    // (INF-1875), however it delivers.
-    if (input.kind !== "review" && !opensPullRequest(this.taskDelivery(owner.id)))
-      throw new Error("Live validation belongs to a change delivered through a pull request.");
-    // A review's record binds to the head its turn was assigned (INF-1875):
-    // the version under review, read when the turn began, never the
-    // builder's branch as it stands now.
-    const currentHead =
-      input.kind === "review" && builder ? undefined : await this.validationHead(owner);
-    const head = builder ? record.delivery?.validationAssignment?.head : currentHead;
-    if (!head)
-      throw new Error(
-        "The review has no assigned validation revision. Request a fresh review turn.",
-      );
-    if (input.kind === "decision")
-      throw new Error(
-        "Bind validation permission with emit_card.validation_request so the shown offer carries its exact facts; a report cannot attach permission to an unrelated card.",
-      );
-    if (
-      currentHead !== undefined &&
-      (input.kind === "run" ||
-        (input.kind === "request" && input.request.kind === "effect") ||
-        (input.kind === "effect-state" && input.state === "started"))
-    )
-      await this.requireCleanValidationWork(owner, currentHead);
-    if (input.kind === "request" && input.request.kind === "effect" && input.request.preChange) {
-      const files = owner.deviceId
-        ? (await this.options.machines?.revision(owner.deviceId, owner.id))?.changedFiles
-        : await this.options.workspace.reviewChangedFiles(owner.repoDir, head);
-      if (!files || files.length)
-        throw new Error(
-          "A changed branch needs code review before a validation effect; it is not a pre-change reproduction.",
-        );
-    }
-    if (input.kind === "run")
-      await verifyKeptValidationEvidence(
-        input.evidence,
-        crewmateCardPicturesDir(this.options.paths, owner.id),
-        owner.id,
-      );
-    this.options.tasks.delivery.recordLiveValidation(owner.id, input, {
-      head,
-      ...(builder ? { reviewer: task.id, assignment: record.delivery?.validationAssignment } : {}),
-    });
-    if (currentHead !== undefined)
-      this.options.tasks.delivery.recordChangeEvidence(owner.id, { validationHead: currentHead });
-    // The reviewer's typed review is this turn's verdict (INF-1875); the
-    // turn's end records it on the builder.
-    if (input.kind === "review") task.turnReview = input;
-    const { validation: _validation, ...declaration } = declared;
-    const revision = validationRevision(this.options.tasks.get(owner.id)?.delivery?.liveValidation);
-    if (
-      input.kind !== "run" &&
-      input.kind !== "review" &&
-      !declaration.needsFirstmate &&
-      !declaration.responses?.length &&
-      !declaration.wait &&
-      !declaration.finished
-    )
-      return `Validation ${input.kind} recorded at evidence revision ${revision}. This records facts, not a finished-work report or permission. Continue the task; report when the first mate must act.`;
-    return `${this.recordExplicitReport(task, text, summary, declaration, responseText)} Validation recorded at evidence revision ${revision}.`;
-  }
-
-  /**
-   * report (WI-1): the crewmate's explicit report for the turn in flight.
-   * It wins over the turn's final text and is sorted exactly once, when the
-   * turn ends; implausible text is refused here, with the fix, instead of
-   * being set aside later. What it declares about whose turn follows
-   * (FI3-435) is checked here too: a wait or finished, never both, and a
-   * wait's card is one of the crewmate's own that is up. The receipt says
-   * only what the sort will do (FI3-710): a report wakes the Firstmate when
-   * the task's state or its own needs_firstmate says so, not by itself.
-   */
-  private recordExplicitReport(
-    task: TaskRuntime,
-    text: string,
-    summary?: string,
-    declared?: ReportDeclaration,
-    responseText = text,
-  ): string {
-    const report = text.trim();
-    if (!report) {
-      throw new Error("text is required: what you finished, found, or are blocked on.");
-    }
-    const implausible = implausibleReport(report);
-    if (implausible) {
-      throw new Error(`Report refused: ${implausible}. Write it again in plain words.`);
-    }
-    const declaration = this.checkDeclaration(task, declared);
-    // The crewmate step (INF-1610): the last running work of a captain's
-    // message reports finished with no card answering it, so its crewmate
-    // is asked once for that card; a second finished report is its reason.
-    if (declaration?.finished && this.askEnding.crewmateStep(task.id)) {
-      throw new Error(CREWMATE_ANSWER_ASK);
-    }
-    const { recordedReleases, linked, responseReceipts } = this.options.tasks.atomic(
-      () => ({
-        responseReceipts: (declaration?.responses ?? []).map((response) =>
-          this.options.inbox.submitResponse(
-            response,
-            { task: task.id, session: task.session?.recordPath() ?? null },
-            responseText,
-          ),
-        ),
-        recordedReleases: declaration?.firstRelease
-          ? this.options.tasks.delivery.recordFirstRelease(task.id, declaration.firstRelease)
-          : undefined,
-        linked: this.linkReportedWaits(task, declaration?.waitsOn),
-      }),
-      () => {},
-    );
-    task.explicitReport = report;
-    task.explicitSummary = summary?.replace(/\s+/g, " ").trim() || undefined;
-    task.explicitDeclared = declaration;
-    this.noteTaskActivity(task);
-    if (responseReceipts.length) this.hooks.pokeInbox?.();
-    const receipt = ["Reported."];
-    if (responseReceipts.length)
-      receipt.push(
-        ...responseReceipts.map(
-          (response) =>
-            `Saved response ${response.responseId}; first mate notification ${response.handledAt !== null ? "already handled (delivery handling, not correctness)" : response.deliveredAt !== null ? "delivered to its session; handling still pending" : "queued immediately (not yet confirmed delivered or handled)"}. Later reports do not replace it.`,
-        ),
-      );
-    if (recordedReleases !== undefined)
-      receipt.push(
-        `Recorded ${recordedReleases} first-release attribution(s); existing attributions kept unless explicitly corrected.`,
-      );
-    if (declaration?.wait) {
-      receipt.push(
-        "Your task now waits on the captain: nothing nudges you, and you hear when they act or you are steered.",
-      );
-      // He answers what is on his screen; with nothing there the Firstmate asks (INF-11).
-      if (!declaration.wait.cardId && this.cards.openCardsFor(task.id).length === 0) {
-        receipt.push(
-          "No card of yours is up, so the first mate is woken to ask them unless one is up when this turn ends.",
-        );
-      }
-    }
-    if (linked) receipt.push(linked);
-    if (declaration?.checkBack) {
-      const minutes = formatDurationShort(declaration.checkBack.minutes * 60_000);
-      // A check-back owns a wait only while a job runs (INF-1644 R1); with
-      // nothing running, a crewmate waiting for time starts a background
-      // sleep, which the app counts as its job and whose end wakes it (INF-2133).
-      const running =
-        this.options.hasRunningJobs?.(task.id) === true ||
-        this.clientJobStart(task.id) !== undefined;
-      receipt.push(
-        running
-          ? `When this turn ends, the app wakes you in ${minutes} with your running job's facts, unless a turn starts before then.`
-          : `Nothing of yours is running, so this check-back alone wakes nothing and the task reads as stopped when this turn ends. To wait ${minutes} for time to pass, start a background sleep for that long before this turn ends: it counts as your running job, and its end wakes you.`,
-      );
-    }
-    if (declaration?.needsFirstmate) {
-      receipt.push(
-        this.cards.threadAwaitingAuthor(task.id)
-          ? "The first mate is woken for it when this turn ends only if the captain's reply under your card has your answer by then: answer it in that thread or revise the card."
-          : "The first mate is woken for it when this turn ends.",
-      );
-    } else if (declaration?.finished && this.cards.answerNoteForTask(task.id)) {
-      receipt.push(
-        "Your saved answer still waits for the captain's Done on its note or record. This report does not close it or wake the first mate; putting it away is not an acknowledgement.",
-      );
-    } else if (
-      declaration?.finished &&
-      this.cards.openCardsFor(task.id).some((card) => cardEmitter(card.id, task.id) === "crewmate")
-    ) {
-      // INF-1879: an open card, including one put away, still owns its explicit ending.
-      receipt.push(
-        `A card of yours is still open, so finished does not wake the first mate while it is up. ${ORDINARY_NOTE_READ_GUIDANCE} A decision waits for its choice; Done receipts a marked answer note or its record.`,
-      );
-    } else if (declaration?.finished) {
-      receipt.push("The first mate hears it when this turn ends and closes your task.");
-    } else if (!declaration?.wait && this.options.tasks.get(task.id)?.shape?.internal_step) {
-      receipt.push(
-        "Your internal step's report is handed to the first mate when this turn ends, unless a card, pending reply, or continuing work holds its turn.",
-      );
-    } else if (!declaration?.wait) {
-      receipt.push(
-        "It goes on your task's record when this turn ends; whether the first mate is woken for it depends on your task's state. If the first mate must act on it, report again with needs_firstmate.",
-      );
-    }
-    return receipt.join(" ");
-  }
-
-  /**
-   * A response a card line carries (docs/card-threads.md, "Shared cards"):
-   * its request is live, a request about a card names this card's current
-   * lifecycle, and an answer names the captain message the request is
-   * about. An identity already saved is refused: a correction is a new one.
-   * Nothing is written here; a refusal changes nothing.
-   */
-  private checkCardResponse(
-    response: CrewResponse,
-    card: { id: string; lifecycleId?: string; messageId?: number },
-  ): void {
-    const parsed = crewResponseSchema.parse(response);
-    const request = this.options.inbox.responseRequest(parsed.requestId);
-    if (!request) throw new Error(`there is no response request ${parsed.requestId}.`);
-    if (request.state === "cancelled") throw new Error("that response request was cancelled.");
-    if (this.options.inbox.savedResponse(parsed.responseId))
-      throw new Error(
-        `response ${parsed.responseId} is already saved; a corrected answer needs a new response identity.`,
-      );
-    if (!request.card) return;
-    if (request.card.id !== card.id || request.card.lifecycle !== card.lifecycleId)
-      throw new Error(
-        `request ${request.id} is about card ${request.card.id} in lifecycle ${request.card.lifecycle}; answer it there.`,
-      );
-    if (parsed.status === "answered" && card.messageId !== request.card.messageId)
-      throw new Error(
-        `request ${request.id} asks about the captain's message ${request.card.messageId}; name it in answers_message.`,
-      );
-  }
-
-  /** A response's optional captain reference is factual routing, never edit authority. */
-  private checkResponseCard(reference: NonNullable<ResponsePolicy["card"]>): void {
-    const card = this.options.cardStore.get(reference.id);
-    if (
-      !card ||
-      card.lifecycleId !== reference.lifecycle ||
-      !this.options.cardStore
-        .observations(reference.id)
-        .some(
-          (observation) =>
-            observation.lifecycleId === reference.lifecycle &&
-            observation.kind === "message_ref" &&
-            observation.payload.messageId === reference.messageId &&
-            observation.payload.who === "captain",
-        )
-    )
-      throw new Error(
-        "The response reference does not name that card's current lifecycle and captain message. Nothing changed; read the current card before resubmitting.",
-      );
-  }
-
-  /** A report's declaration, normalized, or a refusal with the fix (FI3-435, FI3-710). */
-  private checkDeclaration(
-    task: TaskRuntime,
-    declared: ReportDeclaration | undefined,
-  ): ReportDeclaration | undefined {
-    const wait = declared?.wait;
-    if (wait && declared?.finished) {
-      throw new Error("Report refused: pass waiting_on_captain or finished, not both.");
-    }
-    if (declared?.checkBack && (wait || declared.finished)) {
-      throw new Error(
-        "Report refused: check_back is for work of your own still running; pass it without waiting_on_captain or finished.",
-      );
-    }
-    const ask = declared?.needsFirstmate?.replace(/\s+/g, " ").trim();
-    if (declared?.needsFirstmate !== undefined && !ask) {
-      throw new Error(
-        "Report refused: needs_firstmate needs a reason - what the first mate must do.",
-      );
-    }
-    const completion = declared?.mergeCompletesTask;
-    if (completion) {
-      const delivery = this.options.tasks.get(task.id)?.delivery;
-      if (
-        !opensPullRequest(this.taskDelivery(task.id)) ||
-        delivery?.prNumber !== completion.prNumber ||
-        delivery?.headSha !== completion.headSha
-      ) {
-        throw new Error(
-          "Report refused: merge_completes_task must name this task's recorded pull request and checked version.",
-        );
-      }
-    }
-    const workWait = declared?.workWait ? workWaitSchema.parse(declared.workWait) : undefined;
-    const recoveryWays = declared?.recoveryWays?.length
-      ? declared.recoveryWays.map((way) => keptRecoveryWaySchema.parse(way))
-      : undefined;
-    const result = this.checkResult(task, declared);
-    const checkBack = checkBackOf(declared);
-    const waitsOn = this.reportedWaits(task, declared);
-    const responses = declared?.responses?.map((response) => crewResponseSchema.parse(response));
-    for (const response of responses ?? []) {
-      const request = this.options.inbox.responseRequest(response.requestId);
-      if (request?.card && !this.options.inbox.savedResponse(response.responseId))
-        this.checkResponseCard(request.card);
-    }
-    const needs = {
-      ...(responses?.length ? { responses } : {}),
-      ...(waitsOn ? { waitsOn } : {}),
-      ...(workWait ? { workWait } : {}),
-      ...(recoveryWays ? { recoveryWays } : {}),
-      ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
-      ...(declared?.firstRelease ? { firstRelease: declared.firstRelease } : {}),
-      ...(completion ? { mergeCompletesTask: completion } : {}),
-      ...(result ? { result } : {}),
-      ...(checkBack ? { checkBack } : {}),
-    };
-    if (declared?.finished) return { finished: true, ...needs };
-    if (!wait) return Object.keys(needs).length > 0 ? needs : undefined;
-    const reason = wait.reason.replace(/\s+/g, " ").trim();
-    if (!reason) {
-      throw new Error(
-        "Report refused: waiting_on_captain needs a reason - what the captain still has to read or decide.",
-      );
-    }
-    const cardId = wait.cardId?.trim();
-    if (cardId && !this.cards.openCardsFor(task.id).some((card) => card.id === cardId)) {
-      throw new Error(
-        `Report refused: "${cardId}" is not an open card of yours. Pass the id emit_card returned, or omit card_id when no card is up.`,
-      );
-    }
-    return { wait: { reason: reason.slice(0, 300), ...(cardId ? { cardId } : {}) }, ...needs };
-  }
-
-  /**
-   * The tasks a report says its task waits on (INF-1428, `waits_on`),
-   * resolved to live tasks by key or id, or a refusal naming the first that
-   * is unknown, closed or the task itself. A wait is for work still to
-   * come, so finished refuses it. A cycle is refused when the links are
-   * written (`linkReportedWaits`).
-   */
-  private reportedWaits(
-    task: TaskRuntime,
-    declared: ReportDeclaration | undefined,
-  ): string[] | undefined {
-    const refs = (declared?.waitsOn ?? []).map((ref) => ref.trim()).filter(Boolean);
-    if (refs.length === 0) return undefined;
-    if (declared?.finished) {
-      throw new Error(
-        "Report refused: waits_on names work your task still waits on; pass it without finished.",
-      );
-    }
-    const ids: string[] = [];
-    for (const ref of refs) {
-      const named = this.options.tasks.resolve(ref);
-      if (!named) {
-        throw new Error(
-          `Report refused: waits_on names "${ref}", which is no task. Search with tasks and pass its key.`,
-        );
-      }
-      // A replaced task's wait is recorded on the task carrying its work (INF-1826).
-      const record = this.options.tasks.graph.carrierOf(named.id) ?? named;
-      if (record.id !== named.id && record.status === "done") {
-        throw new Error(
-          `Report refused: waits_on names ${named.key || named.id}, whose work moved to ${record.key || record.id}, which is already done, so nothing waits on it any more.`,
-        );
-      }
-      if (record.id === task.id) {
-        throw new Error(`Report refused: waits_on names your own task, ${ref}.`);
-      }
-      if (TaskService.isClosed(record)) {
-        throw new Error(
-          `Report refused: waits_on names ${record.key || record.id}, which is ${record.status}, so nothing waits on it any more.`,
-        );
-      }
-      if (!ids.includes(record.id)) ids.push(record.id);
-    }
-    return ids;
-  }
-
-  /**
-   * Records a report's waits as `blocks` links (INF-1428): a recorded wait,
-   * holding no merge, which the idle ladder and the report's sort read like
-   * any other (docs/report-sort.md). A cycle refuses the report with the
-   * graph's own words. Returns the receipt's line, if any link was new.
-   */
-  private linkReportedWaits(task: TaskRuntime, waitsOn: string[] | undefined): string | undefined {
-    if (!waitsOn?.length) return undefined;
-    let linked: string[];
-    try {
-      linked = this.options.tasks.graph.linkWaits(task.id, waitsOn, "crewmate");
-    } catch (caught) {
-      if (caught instanceof TaskGraphRefusal) throw new Error(`Report refused: ${caught.message}`);
-      throw caught;
-    }
-    const names = waitsOn.map((id) => {
-      const record = this.options.tasks.get(id);
-      return record?.key || id;
-    });
-    return `${linked.length > 0 ? "Recorded" : "Already recorded"}: your task waits on ${names.join(", ")}. While that work is underway nothing nudges you, and when it closes you are steered; work nobody has started goes to the first mate.`;
-  }
-
-  /**
-   * A report's typed result against its task's declared shape (INF-799
-   * piece 1): a result that does not fit, or none where a shape stands, is
-   * refused naming the first failing field, so the crewmate reports again.
-   * A report that hands the turn to the captain or the first mate, or names
-   * a check-back on work still running (INF-2037), is taken without one. A
-   * task with no shape keeps whatever object it was given.
-   */
-  private checkResult(
-    task: TaskRuntime,
-    declared: ReportDeclaration | undefined,
-  ): Record<string, unknown> | undefined {
-    const schema = this.options.tasks.get(task.id)?.shape?.result_schema;
-    const result = declared?.result;
-    if (!schema) return result;
-    if (result === undefined) {
-      if (
-        declared?.wait ||
-        declared?.needsFirstmate?.trim() ||
-        declared?.checkBack ||
-        declared?.responses?.length
-      )
-        return undefined;
-      throw new Error(
-        "Report refused: result is missing. Your task declares a result shape (your brief prints it): pass result, a JSON object that fits it, or declare waiting_on_captain, needs_firstmate, check_back or a correlated response.",
-      );
-    }
-    const refusal = resultRefusal(schema, result);
-    if (refusal)
-      throw new Error(
-        `Report refused: ${refusal} Fix that field so result fits your task's result shape, and report again.`,
-      );
-    return result;
-  }
-
-  /**
    * The crewmate's read-only `tasks` query (cards/tasks/agents P0, WI-4):
    * the same query the Firstmate and supervision read, so a crewmate can
    * search the backlog before filing a follow-up.
@@ -9773,39 +8869,6 @@ export class CrewSupervisor {
         return { computer, ...(evidence ? { evidence_folder: evidence } : {}) };
       },
     };
-  }
-
-  /**
-   * note_progress: one line on the crewmate's own timeline; proof of life
-   * too. A note that carries a list replaces the plan; one that omits it
-   * keeps the last list standing rather than being refused (INF-484 move 5:
-   * never refuse a shape). Only a list no surface could draw is refused in
-   * words, writing nothing.
-   */
-  private noteProgress(task: TaskRuntime, text: string, plan?: unknown): string {
-    const line = text.replace(/\s+/g, " ").trim();
-    if (!line) throw new Error("text is required: one line of progress.");
-    let items: PlanItem[] | undefined;
-    if (plan !== undefined) {
-      const read = readPlanItems(plan);
-      if ("refusal" in read) return read.refusal;
-      items = read.items;
-    }
-    const planned =
-      !items &&
-      this.options.tasks
-        .timeline(task.id)
-        .some(
-          (event) =>
-            (event.kind === "progress" || event.kind === "compacted") &&
-            !("refusal" in readPlanItems(event.data?.plan)),
-        );
-    this.options.tasks.noteProgress(task.id, line.slice(0, 500), "crewmate", items);
-    this.noteTaskActivity(task);
-    if (items) return "Noted on your task's timeline, with your plan.";
-    return planned
-      ? "Noted on your task's timeline; your last plan stands."
-      : "Noted on your task's timeline.";
   }
 
   /**
@@ -9904,7 +8967,7 @@ export class CrewSupervisor {
       }
       return isPullRepair(shape.in_place)
         ? renderPullRepairBrief({ ...shape.in_place, ...where })
-        : this.folderRepairBrief(repo, shape.in_place);
+        : this.inPlaceWork.folderRepairBrief(repo, shape.in_place);
     }
     const personal = this.isPersonalTask(record.id);
     const delivery =
@@ -12391,29 +11454,6 @@ function programReportText(
       ? `Its branch: the last commit of ${branch.key || branch.id} "${branch.title}".`
       : "Its script returned no branch, so there is nothing to ship.",
   ].join(" ");
-}
-
-/**
- * A report's check-back, normalized, or a refusal with the fix (INF-1244):
- * a positive number of minutes and what the crewmate waits for.
- */
-function checkBackOf(
-  declared: ReportDeclaration | undefined,
-): ReportDeclaration["checkBack"] | undefined {
-  const back = declared?.checkBack;
-  if (!back) return undefined;
-  if (!Number.isFinite(back.minutes) || back.minutes <= 0) {
-    throw new Error(
-      "Report refused: check_back minutes must be a number above 0 - how long until you look at the job again.",
-    );
-  }
-  const waitingFor = back.waitingFor.replace(/\s+/g, " ").trim();
-  if (!waitingFor) {
-    throw new Error(
-      "Report refused: check_back needs waiting_for - what the running job is doing.",
-    );
-  }
-  return { minutes: back.minutes, waitingFor: waitingFor.slice(0, 300) };
 }
 
 /** A move step that threw past its own handling; the next tick tries it again. */

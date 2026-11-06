@@ -1,16 +1,13 @@
 /**
- * What a crewmate reports, as the crew supervisor takes it in (docs/report-sort.md,
- * docs/card-threads.md "Shared cards", docs/delivery-rigor.md): its follow-ups,
- * its report's declarations, a response its card line carries, and its live
- * validation records. INF-2625's plan, the crew supervisor's sixth step, moves
- * this code out of the supervisor into an owner of its own; these cases pin,
- * before it moves, the behaviour no other test reaches: a follow-up's
- * refusals and the one already filed for a failing test, a merge that
- * completes the task naming what the record holds, each refusal of a
- * response on a card line, the validation records a report may not carry,
- * and the kept proof re-read before a draft is offered. Each drives the
- * crewmate's own tools or a public door of the supervisor and reads the
- * receipt, the refusal and the record.
+ * What a crewmate reports, as the crew's report intake takes it in
+ * (docs/report-sort.md, docs/card-threads.md "Shared cards",
+ * docs/delivery-rigor.md; `ReportIntake`). These cases pin the behaviour no
+ * other test reaches: a follow-up's refusals and the one already filed for a
+ * failing test, a merge that completes the task naming what the record
+ * holds, each refusal of a response on a card line, the validation records a
+ * report may not carry, and the kept proof re-read before a draft is offered.
+ * Each drives the crewmate's own tools or a public door of the supervisor or
+ * its report intake and reads the receipt, the refusal and the record.
  */
 
 import { createHash } from "node:crypto";
@@ -67,7 +64,7 @@ async function builder(delivery: "direct-pr" | "local-only" = "direct-pr") {
   };
 }
 
-describe("what a crewmate reports, before its intake moves out of the crew supervisor", () => {
+describe("what a crewmate reports", () => {
   it("refuses a follow-up without a title, a goal or a reason, and names the one already filed for the same failing test", async () => {
     const h = await builder();
     expect(() => h.followup({ title: "  ", goal: "g", why: "w" })).toThrow("title is required.");
@@ -229,20 +226,20 @@ describe("what a crewmate reports, before its intake moves out of the crew super
   it("sends no validation write for a task that is gone or whose committed version cannot be read", async () => {
     const h = await builder();
     await expect(
-      h.supervisor.consumeValidationEffect("no-such-task", "post-count"),
+      h.supervisor.reportIntake.consumeValidationEffect("no-such-task", "post-count"),
     ).rejects.toThrow("The task no longer exists; nothing was sent.");
     vi.mocked(h.workspace.branchHead).mockResolvedValue(null);
-    await expect(h.supervisor.consumeValidationEffect(h.taskId, "post-count")).rejects.toThrow(
-      "The task's committed version cannot be read; validation remains held.",
-    );
+    await expect(
+      h.supervisor.reportIntake.consumeValidationEffect(h.taskId, "post-count"),
+    ).rejects.toThrow("The task's committed version cannot be read; validation remains held.");
     expect(h.tasks.get(h.taskId)?.delivery?.liveValidation).toBeUndefined();
   });
 
   it("re-reads the newest run's kept proof before a draft is offered, and refuses it once the bytes changed", async () => {
     const h = await builder();
     // No run yet: nothing to re-read.
-    expect(() => h.supervisor.verifyValidationEvidence(h.taskId)).not.toThrow();
-    expect(() => h.supervisor.verifyValidationEvidence("no-such-task")).not.toThrow();
+    expect(() => h.supervisor.reportIntake.verifyValidationEvidence(h.taskId)).not.toThrow();
+    expect(() => h.supervisor.reportIntake.verifyValidationEvidence("no-such-task")).not.toThrow();
 
     const transcript = "pressed three times; the meter read 3\n";
     const file = `${h.taskId}-count.txt`;
@@ -294,10 +291,10 @@ describe("what a crewmate reports, before its intake moves out of the crew super
       },
       { head: HEAD },
     );
-    expect(() => h.supervisor.verifyValidationEvidence(h.taskId)).not.toThrow();
+    expect(() => h.supervisor.reportIntake.verifyValidationEvidence(h.taskId)).not.toThrow();
 
     writeFileSync(join(dir, file), transcript.replace("3", "2"));
-    expect(() => h.supervisor.verifyValidationEvidence(h.taskId)).toThrow(
+    expect(() => h.supervisor.reportIntake.verifyValidationEvidence(h.taskId)).toThrow(
       "Kept validation proof changed; record and review fresh evidence.",
     );
   });

@@ -1,16 +1,15 @@
 /**
- * The host's own work in a project's folder, as the crew supervisor files and
- * closes it (INF-549 a folder a merge left behind, INF-572 a folder missing
- * or behind at start, the pull request an abandoned task left open).
- * INF-2625's plan, the crew supervisor's sixth step, moves this code out of
- * the supervisor into an owner of its own; these cases pin, before it moves,
- * the behaviour the real-git journeys beside it do not reach: a start check
- * that cannot read a folder, a project with no address, a folder found
- * missing twice, a later refusal on a standing repair, one pull repair per
- * pull request, and what keeps a repair open - a crewmate still working, a
- * card of its own up, a read that fails, a close that came first. Each
- * drives a public door of the supervisor over the stand-in workspace and
- * reads the record, the feed and the words.
+ * The host's own work in a project's folder, as the crew's in-place work files
+ * and closes it (INF-549 a folder a merge left behind, INF-572 a folder
+ * missing or behind at start, the pull request an abandoned task left open;
+ * `InPlaceWork`). These cases pin the behaviour the real-git journeys beside
+ * it do not reach: a start check that cannot read a folder, a project with no
+ * address, a folder found missing twice, a later refusal on a standing
+ * repair, one pull repair per pull request, and what keeps a repair open - a
+ * crewmate still working, a card of its own up, a read that fails, a close
+ * that came first. Each drives a public door of the supervisor or its
+ * in-place work over the stand-in workspace and reads the record, the feed
+ * and the words.
  */
 
 import type { FmEvent } from "@shared/events";
@@ -74,17 +73,17 @@ async function pullRepair(h: ReturnType<typeof shop>): Promise<string> {
   seedDelivery(h.tasks, "dropped1", { prNumber: 12 });
   const abandoned = h.tasks.get("dropped1");
   if (!abandoned) throw new Error("the dropped task was not seeded");
-  const id = h.supervisor.filePullRepair(abandoned, undefined)?.record.id;
+  const id = h.supervisor.inPlaceWork.filePullRepair(abandoned, undefined)?.record.id;
   if (!id) throw new Error("no pull repair was filed");
   await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1));
   return id;
 }
 
-describe("the host's own work in a project's folder, before it moves out of the crew supervisor", () => {
+describe("the host's own work in a project's folder", () => {
   it("at start says nothing and files nothing for a project with no address or a folder that cannot be read, and skips the check where folders cannot be read at start", async () => {
     const h = shop();
     h.reads.refreshAtStart.mockRejectedValueOnce(new Error("git is gone"));
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(h.reads.refreshAtStart).toHaveBeenCalledTimes(1);
     expect(h.repairs()).toEqual([]);
     expect(feed(h.events)).toEqual([]);
@@ -92,12 +91,12 @@ describe("the host's own work in a project's folder, before it moves out of the 
     // Where folders cannot be read at start, nothing is read at all.
     const unreadable = shop();
     Object.assign(unreadable.workspace, { refreshAtStart: undefined });
-    await expect(unreadable.supervisor.checkFoldersAtStart()).resolves.toBeUndefined();
+    await expect(unreadable.supervisor.inPlaceWork.checkFoldersAtStart()).resolves.toBeUndefined();
     expect(unreadable.repairs()).toEqual([]);
 
     // A project with no address where it lives is never read.
     const local = shop({ origin: null });
-    await local.supervisor.checkFoldersAtStart();
+    await local.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(local.reads.refreshAtStart).not.toHaveBeenCalled();
     expect(local.repairs()).toEqual([]);
   });
@@ -108,20 +107,20 @@ describe("the host's own work in a project's folder, before it moves out of the 
       outcome: "refused",
       refusal: { refreshed: false, cause: "fetch-failed" },
     });
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     const [closed] = h.repairs();
     if (!closed) throw new Error("no repair task was filed");
     expect(closed.shape?.in_place).toEqual({ cause: "fetch-failed", noticed: "app-start" });
     h.tasks.close(closed.id, { status: "dropped", reason: "cancelled", actor: "captain" });
 
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(h.repairs().filter((row) => row.id !== closed.id)).toHaveLength(1);
   });
 
   it("files one repair for a folder found missing: a second notice names the standing repair and tells nobody anything new", async () => {
     const h = shop();
     const by = merged(h);
-    const first = h.supervisor.folderMissing("shop", "start", by);
+    const first = h.supervisor.inPlaceWork.folderMissing("shop", "start", by);
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     expect(repair).toMatchObject({
@@ -137,7 +136,7 @@ describe("the host's own work in a project's folder, before it moves out of the 
     expect(first).toContain(repair.key);
     const notes = h.tasks.timeline(repair.id).length;
 
-    const second = h.supervisor.folderMissing("shop", "land");
+    const second = h.supervisor.inPlaceWork.folderMissing("shop", "land");
     expect(h.repairs()).toHaveLength(1);
     expect(second).toContain(repair.key);
     expect(second).not.toBe(first);
@@ -145,12 +144,14 @@ describe("the host's own work in a project's folder, before it moves out of the 
     expect(h.tasks.timeline(repair.id)).toHaveLength(notes);
 
     // A project the record no longer holds is named only as a project's folder.
-    expect(h.supervisor.folderMissing("gone", "start")).toBe("The project's folder is missing.");
+    expect(h.supervisor.inPlaceWork.folderMissing("gone", "start")).toBe(
+      "The project's folder is missing.",
+    );
   });
 
   it("a later refusal updates the standing repair's facts, keeps where it started, and tells its crewmate; a merge outside any project files nothing", async () => {
     const h = shop();
-    h.supervisor.folderMissing("shop", "start");
+    h.supervisor.inPlaceWork.folderMissing("shop", "start");
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     // The repair starts above the missing folder and keeps where it started.
@@ -158,7 +159,7 @@ describe("the host's own work in a project's folder, before it moves out of the 
     const startedIn = h.tasks.get(repair.id)?.shape?.in_place;
     expect(startedIn).toMatchObject({ started_in: expect.any(String) });
 
-    const answer = h.supervisor.fileFolderRepair(merged(h, "merged2"), {
+    const answer = h.supervisor.inPlaceWork.fileFolderRepair(merged(h, "merged2"), {
       refreshed: false,
       cause: "dirty",
       branch: "main",
@@ -186,14 +187,14 @@ describe("the host's own work in a project's folder, before it moves out of the 
     const loose = h.tasks.get("loose");
     if (!loose) throw new Error("the loose task was not seeded");
     expect(
-      h.supervisor.fileFolderRepair(loose, { refreshed: false, cause: "dirty" }),
+      h.supervisor.inPlaceWork.fileFolderRepair(loose, { refreshed: false, cause: "dirty" }),
     ).toBeUndefined();
   });
 
   it("files one pull repair per pull request, and none for a task with no project or no pull request", () => {
     const h = shop();
     const abandoned = merged(h, "dropped1");
-    expect(h.supervisor.filePullRepair(abandoned, "it is protected")).toBeUndefined();
+    expect(h.supervisor.inPlaceWork.filePullRepair(abandoned, "it is protected")).toBeUndefined();
     seedDelivery(h.tasks, "dropped1", {
       prNumber: 12,
       prUrl: "https://github.com/octo/shop/pull/12",
@@ -201,7 +202,7 @@ describe("the host's own work in a project's folder, before it moves out of the 
     const withPull = h.tasks.get("dropped1");
     if (!withPull) throw new Error("the abandoned task is gone");
 
-    const first = h.supervisor.filePullRepair(withPull, "it is protected");
+    const first = h.supervisor.inPlaceWork.filePullRepair(withPull, "it is protected");
     expect(first).toMatchObject({ filed: true, record: { title: PULL_REPAIR_TITLE } });
     expect(first?.record.goal).toBe(
       `Close the pull request #12 of shop, which ${withPull.key} left open, or report why it cannot be closed.`,
@@ -216,7 +217,7 @@ describe("the host's own work in a project's folder, before it moves out of the 
       after_id: "dropped1",
     });
 
-    const again = h.supervisor.filePullRepair(withPull, "still protected");
+    const again = h.supervisor.inPlaceWork.filePullRepair(withPull, "still protected");
     expect(again).toEqual({
       record: expect.objectContaining({ id: first?.record.id }),
       filed: false,
@@ -227,7 +228,7 @@ describe("the host's own work in a project's folder, before it moves out of the 
     seedDelivery(h.tasks, "loose", { prNumber: 12 });
     const loose = h.tasks.get("loose");
     if (!loose) throw new Error("the loose task was not seeded");
-    expect(h.supervisor.filePullRepair(loose, undefined)).toBeUndefined();
+    expect(h.supervisor.inPlaceWork.filePullRepair(loose, undefined)).toBeUndefined();
   });
 
   it("closes a pull repair once its pull request is merged, and keeps it open while its crewmate works, a card of its own is up, the pull request cannot be read or was not closed", async () => {
@@ -247,7 +248,7 @@ describe("the host's own work in a project's folder, before it moves out of the 
 
     // Its crewmate is mid-turn: not even read.
     answer = "merged";
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(readPull).not.toHaveBeenCalled();
     expect(h.tasks.get(id)?.status).toBe("active");
     h.crewmate.finishPrompt();
@@ -260,19 +261,19 @@ describe("the host's own work in a project's folder, before it moves out of the 
       taskId: id,
       actions: [],
     });
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(id)?.status).toBe("active");
     h.supervisor.cards.close(card, { kind: "firstmate" });
 
     // Open, then unreadable: it stays.
     answer = "open";
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     answer = "fails";
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(id)?.status).toBe("active");
 
     answer = "merged";
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(id)).toMatchObject({ status: "done", closedReason: "finished" });
     expect(h.tasks.timeline(id).map((event) => event.text)).toContain(
       "The pull request #12 is merged where the project lives.",
@@ -284,7 +285,7 @@ describe("the host's own work in a project's folder, before it moves out of the 
     const unreadId = await pullRepair(unread);
     unread.crewmate.finishPrompt();
     await tick();
-    await unread.supervisor.closeCurrentFolders();
+    await unread.supervisor.inPlaceWork.closeCurrentFolders();
     expect(unread.tasks.get(unreadId)?.status).toBe("active");
 
     // The captain drops the repair while the host reads the pull request.
@@ -299,7 +300,7 @@ describe("the host's own work in a project's folder, before it moves out of the 
     repairId = await pullRepair(h);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.tasks.get(repairId)?.activity).toBe("idle"));
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repairId)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
     expect(h.tasks.timeline(repairId).map((event) => event.text)).not.toContainEqual(
       expect.stringContaining("is closed where the project lives"),
@@ -309,7 +310,11 @@ describe("the host's own work in a project's folder, before it moves out of the 
   it("a folder repair that named no branch reads the folder's own, stays open while either read fails, and closes at or past the merged version", async () => {
     const h = shop({ folder: scratchDir("infinitary-shop-here-") });
     const reach = "d".repeat(40);
-    h.supervisor.fileFolderRepair(merged(h), { refreshed: false, cause: "diverged", reach });
+    h.supervisor.inPlaceWork.fileFolderRepair(merged(h), {
+      refreshed: false,
+      cause: "diverged",
+      reach,
+    });
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1));
@@ -317,14 +322,14 @@ describe("the host's own work in a project's folder, before it moves out of the 
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"));
 
     h.reads.folderDefaultBranch.mockRejectedValueOnce(new Error("no HEAD"));
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.reads.folderCurrent).not.toHaveBeenCalled();
     h.reads.folderCurrent.mockRejectedValueOnce(new Error("locked"));
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)?.status).toBe("active");
 
     h.reads.folderCurrent.mockResolvedValue(true);
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.reads.folderCurrent).toHaveBeenLastCalledWith(h.folder, "main", reach);
     expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
     expect(h.tasks.timeline(repair.id).map((event) => event.text)).toContain(

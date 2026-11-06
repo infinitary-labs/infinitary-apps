@@ -21318,7 +21318,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         { bodyDigest: createHash("sha256").update('{"body":"Different contents"}').digest("hex") },
       ]) {
         await expect(
-          supervisor.consumeValidationEffect(taskId, request.id, {
+          supervisor.reportIntake.consumeValidationEffect(taskId, request.id, {
             ...request.forgeWrite,
             ...changed,
           }),
@@ -21327,18 +21327,18 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       }
       vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce(editedStatus());
       await expect(
-        supervisor.consumeValidationEffect(taskId, request.id, request.forgeWrite),
+        supervisor.reportIntake.consumeValidationEffect(taskId, request.id, request.forgeWrite),
       ).rejects.toThrow("Commit the current work");
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("approved");
       rmSync(edit);
       vi.mocked(workspace.branchHead).mockResolvedValue("b".repeat(40));
       await expect(
-        supervisor.consumeValidationEffect(taskId, request.id, request.forgeWrite),
+        supervisor.reportIntake.consumeValidationEffect(taskId, request.id, request.forgeWrite),
       ).rejects.toThrow("current version");
       vi.mocked(workspace.branchHead).mockResolvedValue(head);
-      await supervisor.consumeValidationEffect(taskId, request.id, request.forgeWrite);
+      await supervisor.reportIntake.consumeValidationEffect(taskId, request.id, request.forgeWrite);
       await expect(
-        supervisor.consumeValidationEffect(taskId, request.id, request.forgeWrite),
+        supervisor.reportIntake.consumeValidationEffect(taskId, request.id, request.forgeWrite),
       ).rejects.toThrow("once");
       const restored = new TaskService({ db });
       expect(restored.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("unknown");
@@ -26690,14 +26690,14 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
 
     // Still behind: the host leaves it open.
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)?.status).toBe("active");
 
     // The crewmate sets the draft aside and fast-forwards; the host sees it
     // and closes the task as settled, with its own line.
     await run(h.folder, "stash", "push", "-u", "-m", `${repair.key}: the captain's draft`);
     await run(h.folder, "pull", "--ff-only", "origin", "main");
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
     expect(h.tasks.timeline(repair.id)).toContainEqual(
       expect.objectContaining({
@@ -26772,13 +26772,13 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
       // HEAD unset, so the host still reads no default branch.
       if (cause === "no-origin") await run(h.folder, "remote", "add", "origin", h.remote);
       await run(h.folder, "pull", "--ff-only", "origin", "main");
-      await h.supervisor.closeCurrentFolders();
+      await h.supervisor.inPlaceWork.closeCurrentFolders();
       expect(h.tasks.get(repair.id)?.status).toBe("active");
 
       // The crewmate names it as its brief says; the host reads the folder
       // current and closes the task as settled, with its own line.
       await run(h.folder, "remote", "set-head", "origin", "--auto");
-      await h.supervisor.closeCurrentFolders();
+      await h.supervisor.inPlaceWork.closeCurrentFolders();
       expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
       expect(h.tasks.timeline(repair.id)).toContainEqual(
         expect.objectContaining({
@@ -26880,12 +26880,12 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
 
     // Still missing: it stays open.
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)?.status).toBe("active");
 
     // The crewmate clones it again; the host reads it back and closes the task.
     await git(parent, ["clone", h.remote, h.folder]);
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
     expect(h.tasks.timeline(repair.id)).toContainEqual(
       expect.objectContaining({
@@ -27121,7 +27121,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     const h = await project();
     // Merged on the website: the clean folder moves forward, with one line.
     const first = await h.mergeOnWebsite("feat: merged on the website (#3)");
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(await git(h.folder, ["rev-parse", "HEAD"])).toBe(first);
     expect(h.notes()).toEqual([
       "The folder of shop was behind where the project lives; Infinitary brought its main up to date.",
@@ -27131,14 +27131,14 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     // On another branch: left alone, and nothing is said.
     const second = await h.mergeOnWebsite("feat: another merge (#4)");
     await run(h.folder, "checkout", "-b", "spike");
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(await git(h.folder, ["rev-parse", "main"])).toBe(first);
     expect(h.repairs()).toEqual([]);
 
     // Behind with the captain's edits: the repair, which says the start found it.
     await run(h.folder, "checkout", "main");
     writeFileSync(join(h.folder, "draft.txt"), "the captain's draft\n");
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     expect(repair.shape?.in_place).toMatchObject({
@@ -27156,7 +27156,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     const h = await project();
     await h.mergeOnWebsite("feat: merged on the website (#3)");
     rmSync(h.folder, { recursive: true, force: true });
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(h.repairs()).toEqual([]);
     expect(h.notes()).toEqual([]);
     await h.supervisor.disposeAll();
@@ -27166,19 +27166,19 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     const h = await project();
     await h.mergeOnWebsite("feat: merged on the website (#3)");
     await run(h.folder, "commit", "--allow-empty", "-m", "chore: the captain's own commit");
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     const [closed] = h.repairs();
     if (!closed) throw new Error("no repair task was filed");
     expect(closed.shape?.in_place).toMatchObject({ cause: "diverged" });
     h.tasks.close(closed.id, { status: "dropped", reason: "cancelled", actor: "captain" });
 
     // The next start: nothing moved where the project lives, so nothing is filed.
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     expect(h.repairs()).toHaveLength(1);
 
     // Where the project lives moved on: the repair comes back once.
     const moved = await h.mergeOnWebsite("feat: a later merge (#5)");
-    await h.supervisor.checkFoldersAtStart();
+    await h.supervisor.inPlaceWork.checkFoldersAtStart();
     const again = h.repairs().filter((row) => row.id !== closed.id);
     expect(again).toHaveLength(1);
     expect(again[0]?.shape?.in_place).toMatchObject({ cause: "diverged", remote: moved });
@@ -27297,12 +27297,12 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"));
 
     // Still open where the project lives: the host leaves it open.
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)?.status).toBe("active");
 
     // Closed on GitHub: the host reads it closed and closes the task, with its own line.
     h.closeOnGitHub();
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(repair.id)).toMatchObject({ status: "done", closedReason: "finished" });
     expect(h.tasks.timeline(repair.id)).toContainEqual(
       expect.objectContaining({
@@ -27333,7 +27333,7 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
     // The same pull request again names the standing task.
     const discarded = h.tasks.get(h.taskId);
     if (!discarded) throw new Error("the discarded task is gone");
-    expect(h.supervisor.filePullRepair(discarded, refused)).toMatchObject({
+    expect(h.supervisor.inPlaceWork.filePullRepair(discarded, refused)).toMatchObject({
       record: { id: repair.id },
       filed: false,
     });
@@ -27440,7 +27440,7 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
     expect(h.supervisor.crewStatus(folder.taskId)[0]?.computer).toBe("this computer");
 
     // The host's folder-repair closing never reads this task.
-    await h.supervisor.closeCurrentFolders();
+    await h.supervisor.inPlaceWork.closeCurrentFolders();
     expect(h.tasks.get(folder.taskId)?.status).toBe("active");
     await h.supervisor.disposeAll();
   });

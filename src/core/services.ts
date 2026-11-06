@@ -639,7 +639,7 @@ export async function createServices(
     // A branch never comes into a missing folder: the refusal names it and
     // the repair that brings it back (INF-572). Late-bound: the crew is set up below.
     folderMissing: (repoId, taskId): string =>
-      supervisor.folderMissing(repoId, "branch-home", tasks.get(taskId)),
+      supervisor.inPlaceWork.folderMissing(repoId, "branch-home", tasks.get(taskId)),
     projectOrigin: (repoId) => repos.get(repoId)?.origin,
     projects: () => repos.list().map((repo) => repo.id),
     // A task there is routed among that computer's own sign-ins, with the
@@ -732,7 +732,8 @@ export async function createServices(
     onNote: (text, taskId) => broadcastEvent({ type: "firstmate_note", text, taskId }),
     bringBranchHome: (taskId, strict, branch) => placed.bringBranchHome(taskId, strict, branch),
     checkedOut: (taskId) => placed.checkedOut(taskId),
-    verifyValidationEvidence: (taskId): void => supervisor.verifyValidationEvidence(taskId),
+    verifyValidationEvidence: (taskId): void =>
+      supervisor.reportIntake.verifyValidationEvidence(taskId),
     now: ticker.now,
   });
   const githubGateway = new GithubGatewayService({
@@ -742,7 +743,7 @@ export async function createServices(
     accountForge: forges.accountForge,
     readChecks: (taskId) => changeDelivery.checkTool.checkForCrew(taskId),
     beforeValidationWrite: (taskId, request, write): Promise<void> =>
-      supervisor.consumeValidationEffect(taskId, request, write),
+      supervisor.reportIntake.consumeValidationEffect(taskId, request, write),
     watchRun: (taskId, runId) => workflowEvidence.watchStarted(taskId, runId),
     now: ticker.now,
   });

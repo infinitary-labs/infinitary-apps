@@ -65,7 +65,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   await services.projectChanges.inspectAll();
   // Each project's folder is read once against where the project lives, in
   // the background, so the window opens as fast as before (INF-572).
-  void services.supervisor.checkFoldersAtStart();
+  void services.supervisor.inPlaceWork.checkFoldersAtStart();
   return {
     services,
     paths: services.paths,

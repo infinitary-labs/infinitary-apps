@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "electron-43-8-7",
+      "reason": "Library upgrade: the app's Electron engine moves from 43.4.0 to the 43.8.7 patch release, which carries upstream Chromium security fixes; nothing a person sees changes."
+    }
+  ]
+}

@@ -279,6 +279,20 @@ export async function serveNotesHttp(
   };
 }
 
+/**
+ * Publish a notes file whole, for the child below or a test changing its
+ * notes: a complete sibling renamed over it in one step. The child polls
+ * the file it serves, and a rewrite in place first shows it a truncated
+ * file. A reader then sees an empty or half-written book (INF-1573), and
+ * the child's watcher, its read late under load, tells one edit as two
+ * changes (INF-2782).
+ */
+export function publishNotes(file: string, book: NotesBook): void {
+  const pending = `${file}.${process.pid}.tmp`;
+  writeFileSync(pending, JSON.stringify(book));
+  renameSync(pending, file);
+}
+
 /** The child program: the notes from a file, told about when the file changes. */
 async function serveNotesStdio(era: StandInEra, file: string): Promise<void> {
   const read = (): string[] => JSON.parse(readFileSync(file, "utf8")).notes;
@@ -293,13 +307,8 @@ async function serveNotesStdio(era: StandInEra, file: string): Promise<void> {
     tell();
   });
   process.stdin.on("end", () => unwatchFile(file));
-  const added = () => {
-    // INF-1573: a journey may read while this child writes. Publish a complete
-    // sibling in one rename instead of truncating the file it is polling.
-    const pending = `${file}.${process.pid}.tmp`;
-    writeFileSync(pending, JSON.stringify({ notes: book.notes }));
-    renameSync(pending, file);
-  };
+  // INF-1573: a journey may read while this child writes.
+  const added = () => publishNotes(file, { notes: book.notes });
   if (era === "modern") {
     serveStdio(() => {
       const server = modernNotes(book, added);

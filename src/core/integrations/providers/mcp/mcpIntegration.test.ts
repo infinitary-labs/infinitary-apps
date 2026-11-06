@@ -9,6 +9,7 @@ import {
   NOTES_URI,
   type NotesBook,
   type NotesHttpServer,
+  publishNotes,
   SAMPLE_NOTES,
   type StandInEra,
   serveNotesHttp,
@@ -114,7 +115,8 @@ async function serve(era: StandInEra, transport: "stdio" | "http", root: string)
   return {
     // The program and its paths as a person writes them, quoted where a folder has a space.
     runs: `'${process.execPath}' '${STAND_IN}' stdio ${era} '${file}'`,
-    addNote: (text) => writeFileSync(file, JSON.stringify({ notes: [...notes(), text] })),
+    // Whole, in one rename: the child polls this file while it runs (INF-2782).
+    addNote: (text) => publishNotes(file, { notes: [...notes(), text] }),
     notes,
   };
 }

@@ -463,6 +463,41 @@ describe("the device's side of the connection", () => {
     await air.until(() => air.link.state().contact === "lost");
     expect(air.link.state().heardAt).toBeNull();
   });
+
+  // Main's check failed on two uncaught "WebSocket was closed before the
+  // connection was established" errors: a computer's restart closed its link
+  // while a dial was under way, and the link ended the socket that dial
+  // handed back with nothing listening for the error its unfinished
+  // handshake raises, which would end the process that holds the link.
+  it("ends the socket a dial hands back after the link was closed, raising nothing", async () => {
+    const at = await home();
+    const grant = await at.join();
+    let letDial: () => void = () => {};
+    const dialing = new Promise<void>((resolve) => {
+      letDial = resolve;
+    });
+    let ended: (socket: WebSocket) => void = () => {};
+    const closed = new Promise<WebSocket>((resolve) => {
+      ended = resolve;
+    });
+    const link = new HomeLink({
+      grant,
+      onPush: () => {},
+      dial: async (dialed) => {
+        await dialing;
+        const socket = await dialHome(dialed);
+        // Heard here, so the close cannot pass before anyone listens; never
+        // through `events.once`, whose own error listener would hide the bug.
+        socket.once("close", () => ended(socket));
+        return socket;
+      },
+    });
+    link.start();
+    link.close();
+    letDial();
+    const socket = await closed;
+    expect(socket.readyState).toBe(socket.CLOSED);
+  });
 });
 
 describe("a computer that runs work, on its side of the connection", () => {

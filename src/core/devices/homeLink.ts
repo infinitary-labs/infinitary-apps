@@ -372,8 +372,13 @@ export class HomeLink {
     let ending: Ending = { welcomed: false };
     try {
       const socket = await this.dial(this.grant);
-      if (this.stopped) socket.terminate();
-      else {
+      if (this.stopped) {
+        // Closed while the dial was under way: nobody reads this socket. Its
+        // handshake is not finished, so ending it raises an error event, and
+        // one with no listener would be uncaught and end this process.
+        socket.on("error", () => {});
+        socket.terminate();
+      } else {
         this.socket = socket;
         ending = await this.run(socket);
       }

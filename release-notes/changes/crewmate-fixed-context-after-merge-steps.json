@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crewmate-fixed-context-after-merge-steps",
+      "reason": "Shortens a sentence of the Default care guidance and the artifact download description without changing a rule, restoring the crewmate fixed-context budget the after-merge steps outgrew; no visible app change."
+    }
+  ]
+}

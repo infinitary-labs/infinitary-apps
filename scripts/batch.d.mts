@@ -17,7 +17,15 @@ export type QueueState = {
 };
 export type Member = { number: number; head: string };
 export type QueueEntry = Member & { queue: QueueState | null };
-export type BatchRun = { id: number; status: string; conclusion: string | null; run_attempt: number };
+export type BatchJob = { name: string; status: string; conclusion: string | null };
+export type BatchRun = {
+  id: number;
+  status: string;
+  conclusion: string | null;
+  run_attempt: number;
+  /** The first attempt's verdict job, read only when that attempt failed. */
+  verdict?: BatchJob | null;
+};
 export type StatusWrite = Member & { state: string; description: string; url: string };
 
 export const QUEUE: string;

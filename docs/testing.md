@@ -508,6 +508,8 @@ Its concurrency group never cancels a batch, and every start reads the queue aga
 Every GitHub call in it retries a dropped connection or a server error three times (github-script's `retries`), so one lost answer fails neither the batch's run nor `main`'s check of it.
 
 A batch forms only when no green batch is still merging and no batch run still owns a change.
+A batch run owns its changes while it runs, and after a failed first attempt only while that attempt's `verdict` job passed, since only a passing verdict asked for the rerun.
+A first attempt whose verdict failed, or never ran because an earlier job such as `compose` failed, starts no rerun, so its changes wait for the next batch.
 It takes every waiting change in approval order, from when its approval mark was first written.
 The `compose` job merges each change onto `main` with `scripts/batch-compose.sh`, the way a merge on GitHub combines files, with a fixed author and date.
 A change that conflicts with `main` itself fails with "Conflicts with main"; a change that conflicts only with an earlier change in the batch waits for the next one.

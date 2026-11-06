@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BatchRun } from "../scripts/batch.mjs";
+import type { BatchJob, BatchRun } from "../scripts/batch.mjs";
 import {
   formBatch,
   inBatch,
@@ -7,6 +7,7 @@ import {
   QUEUE,
   readMainPush,
   readQueueStatus,
+  readRuns,
   sortMainPush,
   verdict,
   WAITING,
@@ -133,9 +134,17 @@ describe("forming a batch", () => {
     expect(
       formBatch(entries, run({ status: "in_progress", run_attempt: 1, conclusion: null })).action,
     ).toBe("wait");
+    // Its first attempt failed and its verdict asked for the rerun.
     expect(
-      formBatch(entries, run({ status: "completed", run_attempt: 1, conclusion: "failure" }))
-        .action,
+      formBatch(
+        entries,
+        run({
+          status: "completed",
+          run_attempt: 1,
+          conclusion: "failure",
+          verdict: { name: verdictName(), status: "completed", conclusion: "success" },
+        }),
+      ).action,
     ).toBe("wait");
     // Its rerun ended without writing a verdict: its change waits again.
     const freed = formBatch(
@@ -146,8 +155,146 @@ describe("forming a batch", () => {
     expect(freed.members.map((member) => member.number)).toEqual([931, 930]);
   });
 
+  // A first attempt can fail before its verdict asks for the rerun: the
+  // verdict job itself fails, or compose's mark step fails after writing "In
+  // batch run N", so no later job runs. Nothing then starts the rerun, and a
+  // run that kept its changes would hold every batch back for good.
+  it("frees a first attempt that failed without its verdict asking for the rerun", () => {
+    const entries = [
+      entry(
+        930,
+        readQueueStatus([status("pending", inBatch(41_600_000_001), "2026-11-03T21:00:00Z")]),
+      ),
+      entry(931, readQueueStatus([approved("2026-11-03T20:31:00Z")])),
+    ];
+    const failedFirst = (verdict: BatchJob | null) =>
+      new Map<number, BatchRun>([
+        [
+          41_600_000_001,
+          {
+            id: 41_600_000_001,
+            status: "completed",
+            run_attempt: 1,
+            conclusion: "failure",
+            verdict,
+          },
+        ],
+      ]);
+    for (const verdictJob of [
+      { name: verdictName(), status: "completed", conclusion: "failure" },
+      { name: SKIPPED_VERDICT, status: "completed", conclusion: "skipped" },
+      null,
+    ]) {
+      const plan = formBatch(entries, failedFirst(verdictJob));
+      expect(plan.action, verdictJob?.conclusion ?? "no verdict job").toBe("sweep");
+      expect(plan.members.map((member) => member.number)).toEqual([931, 930]);
+    }
+  });
+
   it("does nothing when no change waits", () => {
     expect(formBatch([entry(932, null)], new Map()).action).toBe("none");
+  });
+});
+
+// The jobs of a first attempt, as GitHub lists them: main's batch run
+// 42256632762 listed a verdict job that never ran under its unevaluated name.
+const SKIPPED_VERDICT =
+  "inputs.rehearsal != '' && format('Requested batch rehearsal · Batch report (tree {0})', needs.compose.outputs.tree) || format('Merge batch · Batch verdict (tree {0})', needs.compose.outputs.tree)";
+/** The name batch.yml gives a merge batch's verdict job that ran. */
+const verdictName = () =>
+  workflowString(String(workflow(".github/workflows/batch.yml").jobs.verdict?.name), {
+    github: { event_name: "push" },
+    inputs: {},
+    needs: { compose: { outputs: { tree: pr917.tree } } },
+  });
+const job = (name: string, conclusion: string) => ({
+  name,
+  status: "completed",
+  conclusion,
+  run_attempt: 1,
+});
+
+describe("reading the batch runs the queue names", () => {
+  const runId = (n: number) => 41_600_000_000 + n;
+  const githubOf = (
+    runs: Record<number, Omit<BatchRun, "id">>,
+    attemptJobs: Record<number, ReturnType<typeof job>[]>,
+  ) => {
+    const jobReads: { run_id: number; attempt_number: number }[] = [];
+    const github = {
+      rest: {
+        actions: {
+          getWorkflowRun: async ({ run_id }: { run_id: number }) => ({
+            data: { id: run_id, path: ".github/workflows/batch.yml", ...runs[run_id] },
+          }),
+          listJobsForWorkflowRunAttempt: "attempt jobs",
+        },
+      },
+      paginate: async (method: string, parameters: { run_id: number; attempt_number: number }) => {
+        expect(method).toBe("attempt jobs");
+        jobReads.push({ run_id: parameters.run_id, attempt_number: parameters.attempt_number });
+        return attemptJobs[parameters.run_id] ?? [];
+      },
+    };
+    return { github, jobReads };
+  };
+  const inRun = (number: number, run: number) =>
+    entry(number, readQueueStatus([status("pending", inBatch(run), "2026-11-03T21:00:00Z")]));
+  const waiting = entry(940, readQueueStatus([approved("2026-11-03T20:31:00Z")]));
+
+  it("holds a failed first attempt's changes only while its verdict asked for the rerun", async () => {
+    const failed = { status: "completed", run_attempt: 1, conclusion: "failure" };
+    const sweptRed = [
+      job("Merge batch · Compose the batch", "success"),
+      job("Merge batch · Desktop checks / Merge batch · Code checks and build (Linux)", "success"),
+      job("Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac)", "failure"),
+      job(
+        "Merge batch · Critical-path journey / Merge batch · Selected app journeys (Linux; serial)",
+        "success",
+      ),
+    ];
+    const { github, jobReads } = githubOf(
+      { [runId(1)]: failed, [runId(2)]: failed, [runId(3)]: failed },
+      {
+        [runId(1)]: [...sweptRed, job(verdictName(), "success")],
+        [runId(2)]: [...sweptRed, job(verdictName(), "failure")],
+        // Compose's mark step wrote "In batch run N", then failed.
+        [runId(3)]: [
+          job("Merge batch · Compose the batch", "failure"),
+          job("Merge batch · Desktop checks", "skipped"),
+          job("Merge batch · Critical-path journey", "skipped"),
+          job(SKIPPED_VERDICT, "skipped"),
+        ],
+      },
+    );
+    const read = async (run: number) => {
+      const entries = [inRun(930, run), waiting];
+      return formBatch(entries, await readRuns(github, repo, entries));
+    };
+    expect(await read(runId(1))).toMatchObject({ action: "wait" });
+    expect((await read(runId(2))).members.map((member) => member.number)).toEqual([940, 930]);
+    expect((await read(runId(3))).members.map((member) => member.number)).toEqual([940, 930]);
+    // Attempt 1's own jobs, so a rerun that starts meanwhile hides nothing.
+    expect(jobReads).toEqual([
+      { run_id: runId(1), attempt_number: 1 },
+      { run_id: runId(2), attempt_number: 1 },
+      { run_id: runId(3), attempt_number: 1 },
+    ]);
+  });
+
+  it("reads no jobs of a run that sweeps or whose rerun ended", async () => {
+    const { github, jobReads } = githubOf(
+      {
+        [runId(4)]: { status: "in_progress", run_attempt: 1, conclusion: null },
+        [runId(5)]: { status: "completed", run_attempt: 2, conclusion: "failure" },
+      },
+      {},
+    );
+    const entries = [inRun(930, runId(4)), inRun(931, runId(5)), waiting];
+    const runs = await readRuns(github, repo, entries);
+    expect(formBatch(entries, runs)).toMatchObject({ action: "wait" });
+    expect(formBatch([inRun(931, runId(5)), waiting], runs).action).toBe("sweep");
+    expect(jobReads).toEqual([]);
   });
 });
 

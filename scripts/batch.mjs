@@ -53,15 +53,24 @@ export function readQueueStatus(statuses) {
   return { ...base, kind: "failed" };
 }
 
+/** The name batch.yml gives a merge batch's verdict job, which carries the tree it swept. */
+const VERDICT_JOB = /^Merge batch · Batch verdict \(tree [0-9a-f]{40}\)$/;
+
+const firstAttemptFailed = (run) =>
+  run.status === "completed" && run.conclusion === "failure" && run.run_attempt === 1;
+
 /**
- * A batch run still owns its changes while it runs, and while its first
- * attempt failed and its one rerun has not yet started. A run whose last
- * attempt ended without writing its verdict owns nothing.
+ * A batch run still owns its changes while it runs, and after its first
+ * attempt failed only while that attempt's verdict job passed: the verdict
+ * asked for the one rerun, which has not yet started. A first attempt whose
+ * verdict failed, or never ran because an earlier job failed, asked for no
+ * rerun, so it owns nothing. Neither does a run whose last attempt ended
+ * without writing its verdict. Changes a run does not own join the next batch.
  */
 export function ownsChanges(run) {
   if (!run) return false;
   if (run.status !== "completed") return true;
-  return run.conclusion === "failure" && run.run_attempt === 1;
+  return firstAttemptFailed(run) && run.verdict?.conclusion === "success";
 }
 
 /**
@@ -202,13 +211,28 @@ export async function readOpenQueue(github, repo) {
   );
 }
 
-/** The batch runs the queue states name, read once each. */
+/**
+ * The batch runs the queue states name, read once each. A run whose first
+ * attempt failed also carries that attempt's verdict job, or null when it
+ * has none: read from attempt 1 itself, so a rerun that starts meanwhile
+ * does not hide it.
+ */
 export async function readRuns(github, repo, entries) {
   const ids = [...new Set(entries.flatMap((entry) => (entry.queue?.run ? [entry.queue.run] : [])))];
   const runs = new Map();
   for (const id of ids) {
     const { data } = await github.rest.actions.getWorkflowRun({ ...repo, run_id: id });
-    runs.set(id, data);
+    if (!firstAttemptFailed(data)) {
+      runs.set(id, data);
+      continue;
+    }
+    const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
+      ...repo,
+      run_id: id,
+      attempt_number: 1,
+      per_page: 100,
+    });
+    runs.set(id, { ...data, verdict: jobs.find((job) => VERDICT_JOB.test(job.name)) ?? null });
   }
   return runs;
 }

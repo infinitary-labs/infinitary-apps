@@ -258,6 +258,10 @@ export type SetupExtras = {
   savedCards?: Card[];
   /** The computers that run work for this one, as the crew reads them. */
   machines?: CrewMachines;
+  /** Whether a computer takes no new work until it is updated (`Computers.takesNoWorkUntilUpdated`). */
+  takesNoWorkUntilUpdated?: CrewSupervisorOptions["takesNoWorkUntilUpdated"];
+  /** A task began waiting for a computer's update: its Update card returns. */
+  recallUpdateCard?: CrewSupervisorOptions["recallUpdateCard"];
   /** The process a program's script runs in (docs/programs.md). */
   programProcess?: CrewSupervisorOptions["programProcess"];
 };
@@ -465,6 +469,10 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.accounts ? { accounts: extras.accounts } : {}),
     ...(extras.accountlessServes ? { accountlessServes: extras.accountlessServes } : {}),
     ...(extras.machines ? { machines: extras.machines } : {}),
+    ...(extras.takesNoWorkUntilUpdated
+      ? { takesNoWorkUntilUpdated: extras.takesNoWorkUntilUpdated }
+      : {}),
+    ...(extras.recallUpdateCard ? { recallUpdateCard: extras.recallUpdateCard } : {}),
     ...(extras.programProcess ? { programProcess: extras.programProcess } : {}),
     ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
     ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),

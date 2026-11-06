@@ -1,0 +1,277 @@
+/**
+ * Where a task runs, as the crew supervisor reads and says it (docs/helper.md,
+ * "Runs on" and "A task's own Runs on"). INF-2625's plan, the crew
+ * supervisor's fourth step, moves this placement code out of the supervisor
+ * into its own owner; these cases pin, before it moves, the behaviour no
+ * other test reaches: the wait for a computer on an older version, the wait
+ * of a task with no project for a computer too old to take one, a lost
+ * start's reconciliation, whether a placed task's turn is running, and the
+ * refusals and Details words of a task's own Runs on. Each drives a public
+ * door of the supervisor and reads the record, the feed and the words.
+ */
+
+import { HERE } from "@shared/deviceNames";
+import { updateWaitLine } from "@shared/deviceSetup";
+import { noNewWorkDayLine, noNewWorkWaitLine } from "@shared/deviceUpdateNudge";
+import type { FmEvent } from "@shared/events";
+import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD, UNCOMPARED_WAIT } from "@shared/placement";
+import { RUNS_ON_THIS_MAC } from "@shared/repos";
+import { RUNS_ON_SOURCE_WORDS } from "@shared/taskPolicies";
+import { describe, expect, it, vi } from "vitest";
+import { fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
+import type { CrewMachines } from "../placed/crewMachines";
+import { seedTask } from "../tasks/seedTask";
+import { PLACED_WAIT_DAY_MS } from "./crewSupervisor";
+
+const MINI = "mini";
+const MINI_NAME = "Mac mini";
+
+/** One computer that runs work, as the crew reads it; `reach.now` says whether it is in reach. */
+function oneComputer(options: { takesRepoless?: boolean } = {}) {
+  const reach = { now: false };
+  const machines = {
+    computers: () => [MINI],
+    ready: () => reach.now,
+    nameOf: () => MINI_NAME,
+    placeOf: () => ({ label: MINI_NAME, where: `on ${MINI_NAME}`, who: MINI_NAME }),
+    signInWait: () => undefined,
+    signInsOf: async () => undefined,
+    takesRepoless: () => options.takesRepoless ?? true,
+    served: async () => undefined,
+    accountOf: () => undefined,
+    cutOffOf: () => undefined,
+  } as unknown as CrewMachines;
+  return { machines, reach };
+}
+
+/** The feed's lines, in order. */
+function feed(events: FmEvent[]): string[] {
+  return events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
+}
+
+describe("where a task runs, before its placement moves out of the crew supervisor", () => {
+  it("says once that a task waits for a computer on an older version, brings back its Update card, and says so again after a day", async () => {
+    let at = 1_000_000;
+    const recallUpdateCard = vi.fn();
+    const { machines } = oneComputer();
+    const { supervisor, tasks, events } = setup(fakeCrewmate(), {
+      machines,
+      now: () => at,
+      takesNoWorkUntilUpdated: (device) => device === MINI,
+      recallUpdateCard,
+    });
+    seedTask(tasks, {
+      id: "t-older",
+      title: "Footer",
+      status: "queued",
+      repoId: null,
+      shape: { kind: "unclear", runs_on_ask: MINI },
+    });
+
+    await supervisor.dispatchQueuedTask("t-older");
+    await supervisor.dispatchQueuedTask("t-older");
+    expect(tasks.get("t-older")).toMatchObject({ status: "open", deviceId: MINI });
+    expect(feed(events)).toEqual([noNewWorkWaitLine('"Footer"', MINI_NAME)]);
+    expect(recallUpdateCard.mock.calls).toEqual([[MINI]]);
+    const record = tasks.get("t-older");
+    expect(record && supervisor.taskPlace(record)).toEqual({
+      name: MINI_NAME,
+      where: `on ${MINI_NAME}`,
+      reach: "out-of-reach",
+      noNewWork: true,
+    });
+
+    // A day on, the feed says it once more, with the way to run it here.
+    at += PLACED_WAIT_DAY_MS;
+    await supervisor.dispatchQueuedTask("t-older");
+    await supervisor.dispatchQueuedTask("t-older");
+    expect(feed(events).slice(1)).toEqual([
+      noNewWorkDayLine(MINI_NAME, '"Footer"'),
+      `To run it here instead, ask your first mate to run "Footer" on ${HERE.this}.`,
+    ]);
+    expect(recallUpdateCard).toHaveBeenCalledTimes(1);
+  });
+
+  it("holds a task with no project for a computer too old to take one, and says so once", async () => {
+    const { machines, reach } = oneComputer({ takesRepoless: false });
+    reach.now = true;
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, events } = setup(crewmate, { machines });
+    seedTask(tasks, {
+      id: "t-repoless",
+      title: "Notes",
+      status: "queued",
+      repoId: null,
+      shape: { kind: "unclear", runs_on_ask: MINI },
+    });
+
+    await supervisor.dispatchQueuedTask("t-repoless");
+    await supervisor.dispatchQueuedTask("t-repoless");
+    expect(tasks.get("t-repoless")).toMatchObject({ status: "open", deviceId: MINI });
+    expect(feed(events)).toEqual([updateWaitLine(MINI_NAME, '"Notes"')]);
+    expect(crewmate.promptCalls).toHaveLength(0);
+  });
+
+  it("settles each lost start once contact is back: a recorded session started, none returns it to the queue, and one on a computer still out of reach keeps waiting", async () => {
+    const { machines, reach } = oneComputer();
+    const { supervisor, tasks } = setup(fakeCrewmate(), { machines });
+    /** A start accepted, claimed, then cut off before its session was confirmed. */
+    const lost = (id: string, device?: string) => {
+      seedTask(tasks, {
+        id,
+        title: id,
+        status: "queued",
+        repoId: null,
+        ...(device ? { deviceId: device } : {}),
+      });
+      expect(tasks.starts.beginStartAttempt(id)).toBe(true);
+      expect(tasks.starts.claimForDispatch(id)).toBe(true);
+      tasks.starts.markStartChecking(id);
+    };
+    lost("t-here");
+    lost("t-recorded");
+    tasks.turns.setSessionFile("t-recorded", "session-1");
+    lost("t-away", MINI);
+
+    supervisor.reconcileCutOffs();
+    // None recorded here: back to open work, with no failure, and Start is offered again.
+    expect(tasks.get("t-here")).toMatchObject({ status: "open", startNotice: null });
+    expect(tasks.starts.startAttemptOf("t-here")).toBeUndefined();
+    expect(tasks.timeline("t-here").map((event) => event.text)).toContain(
+      "returned to the queue - the start was not confirmed",
+    );
+    // A recorded session means it started: it stays where it is.
+    expect(tasks.starts.startAttemptOf("t-recorded")).toBeUndefined();
+    expect(tasks.get("t-recorded")?.status).toBe("active");
+    // Its computer is out of reach: nothing is known yet.
+    expect(tasks.starts.startAttemptOf("t-away")?.phase).toBe("checking");
+    expect(tasks.get("t-away")?.status).toBe("active");
+
+    // That computer is back with no session recorded: it did not start.
+    reach.now = true;
+    supervisor.reconcileCutOffs();
+    expect(tasks.starts.startAttemptOf("t-away")).toBeUndefined();
+    expect(tasks.get("t-away")?.status).toBe("open");
+  });
+
+  it("calls a placed task's turn running only while it streams and its computer is in reach", async () => {
+    const { machines, reach } = oneComputer();
+    reach.now = true;
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate, { machines });
+    const { taskId } = await supervisor.commission({
+      title: "Fix the meter",
+      intent: intentOf("Fix the meter's unit."),
+    });
+    await tick();
+    const running = () => {
+      const record = tasks.get(taskId);
+      return record ? supervisor.placementRunning(record) : undefined;
+    };
+    expect(running()).toBe(true);
+    tasks.placement.setDevice(taskId, MINI);
+    expect(running()).toBe(true);
+    reach.now = false;
+    expect(running()).toBe(false);
+    reach.now = true;
+    crewmate.finishPrompt();
+    await tick();
+    expect(running()).toBe(false);
+  });
+
+  it("refuses a task's own Runs on for closed work, a project the record lacks, and Automatic without a project", () => {
+    const { machines } = oneComputer();
+    const { supervisor, tasks } = setup(fakeCrewmate(), { machines });
+    seedTask(tasks, { id: "t-closed", title: "Old", status: "cancelled", repoId: null });
+    seedTask(tasks, { id: "t-lost", title: "Lost", status: "queued", repoId: "gone" });
+    seedTask(tasks, { id: "t-free", title: "Free", status: "queued", repoId: null });
+    const handle = (id: string) => `${tasks.get(id)?.key} "${tasks.get(id)?.title}"`;
+
+    expect(supervisor.runsOnRefusal("t-closed", MINI)).toBe(
+      `${handle("t-closed")} is not open work, so where it runs cannot change.`,
+    );
+    expect(supervisor.runsOnRefusal("t-lost", MINI)).toBe(
+      `${handle("t-lost")} has no project, so it runs on ${HERE.this}.`,
+    );
+    expect(supervisor.runsOnRefusal("t-free", AUTOMATIC_COMPUTER)).toBe(
+      "Automatic needs a project that can run on another computer.",
+    );
+    expect(supervisor.runsOnRefusal("t-free", MINI)).toBeUndefined();
+    expect(supervisor.runsOnRefusal("t-free", RUNS_ON_THIS_MAC)).toBeUndefined();
+  });
+
+  it("names where a task runs in Details only once a computer is listed and the task can follow one", () => {
+    const listed = { now: false };
+    const machines = {
+      ...oneComputer().machines,
+      computers: () => (listed.now ? [MINI] : []),
+    } as unknown as CrewMachines;
+    const { supervisor, tasks } = setup(fakeCrewmate(), { machines });
+    seedTask(tasks, {
+      id: "t-asked",
+      title: "Asked",
+      status: "queued",
+      repoId: null,
+      shape: { kind: "unclear", runs_on_ask: MINI },
+    });
+    seedTask(tasks, {
+      id: "t-part",
+      title: "Part",
+      status: "queued",
+      repoId: null,
+      parentId: "t-asked",
+    });
+    seedTask(tasks, { id: "t-free", title: "Free", status: "queued", repoId: null });
+    seedTask(tasks, { id: "t-lost", title: "Lost", status: "queued", repoId: "gone" });
+    const fact = (id: string) => {
+      const record = tasks.get(id);
+      return record && supervisor.runsOnFact(record);
+    };
+
+    // No computer that runs work is listed: nothing to say.
+    expect(fact("t-asked")).toBeUndefined();
+    listed.now = true;
+    expect(fact("t-asked")).toEqual({ label: MINI_NAME, source: "task" });
+    expect(fact("t-part")).toEqual({ label: MINI_NAME, source: "parent" });
+    // A task with no project nobody asked about, and one whose project runs only here.
+    expect(fact("t-free")).toBeUndefined();
+    expect(fact("t-lost")).toBeUndefined();
+    expect(supervisor.runsOnWords("t-free", MINI)).toBe(
+      `${MINI_NAME} (${RUNS_ON_SOURCE_WORDS.task})`,
+    );
+    expect(supervisor.runsOnWords("t-free", null)).toBe(HERE.This);
+  });
+
+  it("says why a task on Automatic has no computer yet, by how it starts", () => {
+    const { machines } = oneComputer();
+    const { supervisor, tasks } = setup(fakeCrewmate(), {
+      automatic: { choose: async () => undefined },
+      machines,
+    });
+    const shape = { kind: "unclear" as const, runs_on_ask: AUTOMATIC_COMPUTER };
+    seedTask(tasks, { id: "t-ready", title: "Ready", status: "queued", repoId: null, shape });
+    seedTask(tasks, {
+      id: "t-asked",
+      title: "Asked",
+      status: "queued",
+      repoId: null,
+      shape,
+      startPolicy: "on-request",
+    });
+    const fact = (id: string) => {
+      const record = tasks.get(id);
+      return record && supervisor.runsOnFact(record);
+    };
+
+    expect(fact("t-ready")).toEqual({
+      label: AUTOMATIC_WORD,
+      source: "task",
+      reason: UNCOMPARED_WAIT.words,
+    });
+    expect(fact("t-asked")).toEqual({
+      label: AUTOMATIC_WORD,
+      source: "task",
+      reason: "Your first mate chooses a computer when this task starts. It stays there.",
+    });
+  });
+});

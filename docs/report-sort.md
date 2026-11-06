@@ -3,7 +3,7 @@
 What happens when a crewmate reports.
 Captain call **C7 A, heuristics only** ("Send and End", 2026-09-20), on the scout report `fm3000-s7c-supervision-decision-model-s1`, revisions R4 and R5.
 Code: `src/core/orchestrator/reportSort.ts` (the rule, `sortReport` and `idleTurn`), `src/core/orchestrator/idleLadder.ts` (`IdleLadder`: the one `witnesses(taskId, now)` both readers call, the reconciler, the ladder, the gate, the caps and the ready sweep), and `CrewTurns.sortReport` (`src/core/orchestrator/crewTurns.ts`), which composes them.
-Tests: `reportSort.test.ts` (the table), `crewSupervisor.test.ts` ("the whose-turn rule at the report's call site", "the idle ladder"), `core.boot.test.ts` ("the idle ladder across a restart"), `tests/e2e/report-sort.spec.ts`, `tests/e2e/idle-ladder.spec.ts`, `tests/e2e/relayed-decision.spec.ts`, `tests/e2e/sequences.spec.ts`, `tests/e2e/sequences-claude.spec.ts`.
+Tests: `reportSort.test.ts` (the table), `crewTurns.whoseTurn.test.ts` ("the whose-turn rule at the report's call site"), `idleLadder.test.ts`, `idleLadder.waits.test.ts` and `idleLadder.served.test.ts` ("the idle ladder"), `core.boot.test.ts` ("the idle ladder across a restart"), `tests/e2e/report-sort.spec.ts`, `tests/e2e/idle-ladder.spec.ts`, `tests/e2e/relayed-decision.spec.ts`, `tests/e2e/sequences.spec.ts`, `tests/e2e/sequences-claude.spec.ts`.
 
 A report is sorted from typed state the host already holds, never by a second model reading its prose.
 The question is whose turn it is now.
@@ -362,4 +362,4 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   RETIRED with the model: `SupervisionAgent`, `supervisionSession.ts`, `buildSupervisionSystemPrompt`, `createSupervisionTools`, the rolling transcript, the supervision lane, the `supervision_note` event, and the per-task claims (`claimForSupervision`, the claim-queued lane parking, `steerForSupervision`, the bounded settle/interrupt wait) - never bring back a "try again in a moment" refusal.
   Observe no longer lists the retired session; its historical files and exporters remain.
   The replay had to learn two recorded facts for this: the job registry is reconstructed from a crewmate session's own `Still running as background job <id>` / `[job] … finished` pair (without it branch 3 is unreachable and the wake count is an upper bound), and an escalation is scored from the rule's `captain` verdict with one ref alias (`reported:X` also matches the retired prefix's `escalated:X`); an escalation the recording cannot answer stays out of `escalation_precision`'s denominator.
-  `reportSort.test.ts`, `crewSupervisor.test.ts` and `tests/e2e/report-sort.spec.ts` are the binding tests.
+  `reportSort.test.ts`, `crewTurns.whoseTurn.test.ts` and `tests/e2e/report-sort.spec.ts` are the binding tests.

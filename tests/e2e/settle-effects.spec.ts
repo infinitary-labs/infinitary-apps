@@ -218,7 +218,7 @@ for (const passing of PASSING) {
       await page.getByRole("button", { name: "Merge the pull request", exact: true }).click();
       // The click is acknowledged at once, in a line on the task, and the
       // outcome takes that line's place: the task's own put-in line
-      // (INF-1845). The words are crewSupervisor.test.ts's and changeMerge.test.ts's.
+      // (INF-1845). The words are cardActions.settle.test.ts's and changeMerge.test.ts's.
       await expectNoCard(page, READY_CARD_TITLE);
       const key = await taskKey(page, "Ship the PR");
       await expect(putInLine(page, key)).toBeVisible({ timeout: 20_000 });

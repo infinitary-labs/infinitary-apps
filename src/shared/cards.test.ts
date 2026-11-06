@@ -254,7 +254,7 @@ describe("isPreviewBody", () => {
 });
 
 describe("splitSettleFacts", () => {
-  // The strip as the host writes it (crewSupervisor.test.ts pins the same markup).
+  // The strip as the host writes it (intake.taskGraph.test.ts pins the same markup).
   const strip =
     '<div class="inf-facts" data-facts>' +
     '<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">Default workspace</span></span>' +

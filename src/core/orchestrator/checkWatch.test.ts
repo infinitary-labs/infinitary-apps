@@ -17,7 +17,7 @@ import { renderWake, type TypedWake } from "./wakes";
  * The check watch's own clock and outcomes (docs/forge.md, "The check
  * watch"), over the real task record and inbox with a scripted read. The
  * whole path - check_change, the supervisor's tick and steer, a restart -
- * is `crewSupervisor.test.ts` ("the host's check watch").
+ * is `crewWatch.git.test.ts` ("the host's check watch").
  */
 
 const HEAD = "cafe0001feedbeef";

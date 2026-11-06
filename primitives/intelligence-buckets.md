@@ -79,7 +79,7 @@ Do not use buckets to choose a computer: Automatic placement compares computers'
 - [`../src/core/routing/candidates.test.ts`](../src/core/routing/candidates.test.ts): "never offers a premium model - including through the uncatalogued tail".
 - [`../src/core/routing/router.test.ts`](../src/core/routing/router.test.ts) and [`../src/core/routing/routingEngine.test.ts`](../src/core/routing/routingEngine.test.ts): the ladder, pins, requested and served slots.
 - [`../src/core/routing/modelSlots.test.ts`](../src/core/routing/modelSlots.test.ts): the per-offering record and its seeding.
-- [`../src/core/routing/modelReason.test.ts`](../src/core/routing/modelReason.test.ts) and [`../src/core/orchestrator/crewSupervisor.test.ts`](../src/core/orchestrator/crewSupervisor.test.ts): the reason line, commission and escalation.
+- [`../src/core/routing/modelReason.test.ts`](../src/core/routing/modelReason.test.ts) and [`../src/core/orchestrator/starts.classify.test.ts`](../src/core/orchestrator/starts.classify.test.ts): the reason line, commission and escalation.
 - `pnpm score:kinds` scores the kind classifier; `scoreRouting` in `scripts/interaction-metrics.ts` holds the routing numbers.
 
 ## Where the detail lives

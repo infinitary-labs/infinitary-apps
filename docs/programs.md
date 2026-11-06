@@ -117,6 +117,6 @@ Dropping a program with `update_task drop` stops its process, drops its started 
 
 ## Tests
 
-`src/core/program/programScript.test.ts` (what is refused, the digest), `programRunner.test.ts` (through the forked process: answers, the realm's missing clock, replay after a quit, the bound and its raise, `from: null`), `programAsk.test.ts` (parse and the retry), `src/core/orchestrator/reportSort.test.ts` (row 2b), and `crewSupervisor.test.ts` (a program files its parts, reads their results, finishes and wakes the first mate; the bound wake).
+`src/core/program/programScript.test.ts` (what is refused, the digest), `programRunner.test.ts` (through the forked process: answers, the realm's missing clock, replay after a quit, the bound and its raise, `from: null`), `programAsk.test.ts` (parse and the retry), `src/core/orchestrator/reportSort.test.ts` (row 2b), and `crewPrograms.test.ts` (a program files its parts, reads their results, finishes and wakes the first mate; the bound wake).
 `tests/e2e/program-run.spec.ts` runs a program in the launched app: the first mate files it in a project, its three parts run as child tasks, and it closes done with the script's result.
 The replay fixture `oct22-program` (`tests/fixtures/replay/README.md`) holds the first mate answering a loop ask with the loop shape, and `tests/replay-captain-session.test.ts` replays it as one program task the runner starts; the replay runs no script (`docs/replay-harness.md`).

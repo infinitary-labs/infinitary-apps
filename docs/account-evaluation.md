@@ -65,7 +65,7 @@ A dispatch and owner read show that the selected alternative started, not that i
 The failed-first-way case supplies the earlier failed attempt as a recorded fact; it does not show the evaluated model performing that attempt.
 The investigator's report call and receipt remain in the trace, but the inert owner does not replay a real crewmate turn-end, so the fixture does not prove durable report completion.
 The three first mate cases put the stalled task's committed meter change on its branch in a registered disposable project, so the inspection and any investigation start from that commit through the production branch and working-copy paths, and their records name that project.
-`tests/stall-recovery-eval.test.ts` checks the disconnected fixtures, native alternative dispatch and a recorded investigation's start from the committed branch; the served-tool takeover regression in `crewSupervisor.test.ts` separately owns the takeover's real Git branch, handed-file and relationship chain.
+`tests/stall-recovery-eval.test.ts` checks the disconnected fixtures, native alternative dispatch and a recorded investigation's start from the committed branch; the served-tool takeover regression in `intake.git.test.ts` separately owns the takeover's real Git branch, handed-file and relationship chain.
 Those checks prove host behavior, never real-model instruction following, and a live run still requires the named-account run-sheet approval above.
 
 ## The Claude crewmate's client

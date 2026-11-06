@@ -80,7 +80,7 @@ A quit reruns the program at the next start and replays its journal; compaction 
 - [`../src/core/program/programScript.test.ts`](../src/core/program/programScript.test.ts): refusals and the digest.
 - [`../src/core/program/programRunner.test.ts`](../src/core/program/programRunner.test.ts): answers, the realm's missing clock, replay after a quit, the bound and its raise.
 - [`../src/core/program/programAsk.test.ts`](../src/core/program/programAsk.test.ts): parsing and the retry.
-- [`../src/core/orchestrator/reportSort.test.ts`](../src/core/orchestrator/reportSort.test.ts) (row 2b) and [`../src/core/orchestrator/crewSupervisor.test.ts`](../src/core/orchestrator/crewSupervisor.test.ts).
+- [`../src/core/orchestrator/reportSort.test.ts`](../src/core/orchestrator/reportSort.test.ts) (row 2b) and [`../src/core/orchestrator/crewPrograms.test.ts`](../src/core/orchestrator/crewPrograms.test.ts).
 - [`../tests/e2e/program-run.spec.ts`](../tests/e2e/program-run.spec.ts) and [`../tests/firstmate-fixed-context.test.ts`](../tests/firstmate-fixed-context.test.ts) (the served guide's size).
 
 ## Where the detail lives

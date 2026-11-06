@@ -169,7 +169,20 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/virtual-mac-phone.test.ts` | Node tool-cache installation, guest-service settings, clean shutdown, runtime import and phone scripts against stand-ins, real git, bash and tar on a scratch working copy | 5 s default |
 | `tests/phone-release-process.test.ts` | the dispatched release command, temporary key fixtures and stand-in Xcode/upload commands; no signing or network | 5 s default |
 | `tests/run-evidence-playwright.test.ts` | two overlapping Playwright runs of a fixture config through the e2e global setup, its microphone check off; the build guard (node, `ps`) under one held run | 15 s |
-| `src/core/orchestrator/crewSupervisor.test.ts` | real git, at the run's own priority | 60 s on each real-git describe |
+| `src/core/orchestrator/captainOverrides.checks.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/crewBrief.context.test.ts` | real git in scratch projects for the brief's directions and knowledge, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/crewPrograms.test.ts` | real git and each program's own child process, at the run's own priority | 5 s default (Mac slowest case 0.8 s) |
+| `src/core/orchestrator/crewTurns.whoseTurn.test.ts` | real git for a few cases, at the run's own priority, and a local HTTP server whose stream one case cuts for Pi's own retry | 5 s default; 30 s on the cut stream case, kept (Mac slowest case 1.0 s, the cut stream 0.1 s) |
+| `src/core/orchestrator/crewTurns.workspace.test.ts` | real git in the personal workspace's folder, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/crewWatch.git.test.ts` | real git and `chmod` for closed tasks' working copies and the check watch, at the run's own priority | 60 s on the working copies describe, kept; 5 s default elsewhere (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/idleLadder.waits.test.ts` | real git for one wait case, at the run's own priority | 5 s default (Mac slowest case 0.7 s) |
+| `src/core/orchestrator/inPlaceWork.folders.test.ts` | real git in a project's folder, at the run's own priority | 60 s on each real-git describe, kept above the rule's 10 s (Mac slowest case 1.2 s) |
+| `src/core/orchestrator/intake.git.test.ts` | real git for settle facts, delivery overrides, typed results and branch_from, at the run's own priority | 5 s default; 60 s on branch_from, kept (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/reviews.tier.test.ts` | real git in scratch projects for the reviewed tier, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/settleOwners.keptMerge.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/settleOwners.keptMergeRepairs.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.8 s) |
+| `src/core/orchestrator/starts.automatic.test.ts` | real git for a task Automatic places, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
+| `src/core/orchestrator/taskMoves.computer.test.ts` | real git across two computers' working copies, at the run's own priority | 10 s on the moves to another computer, kept: its slowest case (Mac fastest 4.4 s) mostly waits out a quit's fixed 2 s settle, 1.4 s with that wait shortened; 5 s default elsewhere |
 | `src/core/orchestrator/reviews.test.ts` | real git in scratch projects for the review cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/crewBrief.test.ts` | real git in scratch projects for some rigor and picture cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `tests/e2e-lanes.test.ts` | playwright --list over every spec, and the real runner over fixture specs | 60 s; 180 s on the listing (Linux fastest 35.7 s; it grows with the suite) |

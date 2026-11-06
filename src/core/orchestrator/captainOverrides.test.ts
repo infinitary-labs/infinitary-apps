@@ -7,7 +7,7 @@
  * a declaration and a withdrawal that have nothing to record. These cases
  * pin the behaviour no other test reaches. A click on a merge passing its
  * checks stays pinned by the kept merge approval's real-git cases in
- * crewSupervisor.test.ts. Each case drives a public door of the
+ * settleOwners.keptMerge.test.ts. Each case drives a public door of the
  * supervisor or its overrides and reads its answer and the record.
  */
 

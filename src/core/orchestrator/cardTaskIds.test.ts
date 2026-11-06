@@ -12,7 +12,7 @@ import { requiredActionCard } from "./requiredActionCard";
  * task, so it's not inconsistent"): the card's head draws the task's key
  * from `taskId`, so a host card that knows its task sets it, and one about
  * no task leaves it out. The stall card's is pinned where the idle ladder
- * raises it (crewSupervisor.test.ts, "has been stuck for").
+ * raises it (idleLadder.test.ts, "has been stuck for").
  */
 describe("the app's own cards about a task", () => {
   it("name the task on the required action card and on a sign-in asked for a task", () => {

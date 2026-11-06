@@ -640,7 +640,7 @@ An item is done when its result is recorded where it names; it is never ticked h
 - `src/main/host/macUpdates.test.ts` owns native configuration, writable-install checks, signature failure and shutdown ordering.
 - `src/core/update/releaseFeeds.test.ts` exercises the actual updater metadata parser, immutable manifests and channel advancement.
 - `tests/e2e/mac-updates.spec.ts` drives keyboard selection, restart persistence, progress, recovery, cancellation, Saving work and Update later through the hermetic app.
-- `src/core/orchestrator/crewSupervisor.test.ts` ("saving work before this computer's update") owns the hold, the safe stop, Update later and the carry-on after the restart; `tests/helpers/sessionContract.ts` owns each backend's safe stop.
+- `src/core/orchestrator/crewSessions.reopen.test.ts` ("saving work before this computer's update") owns the hold, the safe stop, Update later and the carry-on after the restart; `tests/helpers/sessionContract.ts` owns each backend's safe stop.
 - `src/core/update/linuxInstall.test.ts` and `src/core/update/updateChecker.test.ts` own the Linux save before replacement and its Update later.
 - The `tests/release-workflows-*.test.ts` files evaluate the release workflow's conditions, promotion evidence and no-publication rehearsals.
 - `tests/e2e/installed-update-work.spec.ts` checks that a fresh app accepts the proof's local connection and message while its real provider stream stays open, then retains the message after stopping.

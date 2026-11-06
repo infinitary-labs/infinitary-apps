@@ -16,6 +16,7 @@ import type {
   CrewSupervisorOptions,
   FirstmateHooks,
 } from "@core/orchestrator/crewSupervisorOptions";
+import { QUEUED_GUIDANCE_LINE } from "@core/orchestrator/crewTurns";
 import type { AccountServeability } from "@core/orchestrator/idleLadder";
 import type { SpawnIntent } from "@core/orchestrator/intentBrief";
 import { renderWake, type WakeBody, type WakeFacts } from "@core/orchestrator/wakes";
@@ -157,6 +158,51 @@ export function crewSessions(
       return crewmateSessionSpec(paths, crewmate, binding);
     },
   };
+}
+
+/** What a reboot keeps: the database, folders and workspace, and each store handed over open. */
+export type RebootOver = {
+  paths: AppPaths;
+  db: AppDatabase;
+  workspace: WorkspaceService;
+  repos?: RepoRegistry;
+  tasks?: TaskService;
+  cardStore?: CardStore;
+  inbox?: InboxStore;
+};
+
+/**
+ * The supervisor the app's next launch builds over what the last one left:
+ * the same database, folders and workspace, each store `over` or `options`
+ * hands over kept open, and every other store opened again over that
+ * database in the order the app opens them - the projects, then the task
+ * record (whose opening marks running work interrupted, as a launch does),
+ * the cards and the inbox, the last two on `options.now` when it is given.
+ * `open` and `specs` are the new launch's crewmate sessions
+ * (`crewSessions`); every other option passes through as given.
+ */
+export function reboot(
+  over: RebootOver,
+  open: (spec: SessionSpec) => Promise<ModelSession>,
+  options: Partial<CrewSupervisorOptions> & { specs?: CrewmateSpec[] } = {},
+): CrewSupervisor {
+  const { specs, ...given } = options;
+  const now = given.now;
+  return new CrewSupervisor({
+    ...crewSessions(over.paths, open, specs),
+    workspace: over.workspace,
+    repos: given.repos ?? over.repos ?? new RepoRegistry(over.db, over.paths.fleetDir),
+    tasks:
+      given.tasks ??
+      over.tasks ??
+      new TaskService({ db: over.db, strict: true, ...(now ? { now } : {}) }),
+    cardStore: given.cardStore ?? over.cardStore ?? new CardStore(over.db),
+    inbox: given.inbox ?? over.inbox ?? new InboxStore(over.db, now ? { now } : undefined),
+    paths: over.paths,
+    broadcastEvent: () => {},
+    broadcastCards: () => {},
+    ...given,
+  });
 }
 
 type RecordUsageInput = {
@@ -725,6 +771,11 @@ export function settleLines(tasks: TaskService, taskId: string): string[] {
  * that only need "some work text" put it in both goal and user words - the
  * host-rendered template then contains it, so content assertions hold.
  */
+/** The queued-guidance lines a task's timeline holds. */
+export function queuedGuidanceLines(tasks: TaskService, taskId: string) {
+  return tasks.timeline(taskId).filter((event) => event.text === QUEUED_GUIDANCE_LINE);
+}
+
 export function intentOf(text: string): SpawnIntent {
   return { goal: text, userWords: text };
 }

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-test-owners",
+      "reason": "Internal: the crew supervisor's one large test file splits into test files that each follow one owner of the supervisor, with every test moved unchanged, its restarts built through one reboot helper and its real-git fixture shared, so the file leaves the size list; nothing a person sees changes."
+    }
+  ]
+}

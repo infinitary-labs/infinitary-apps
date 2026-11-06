@@ -32,7 +32,6 @@ export const CODE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".
 export const OVER_CEILING: readonly string[] = [
   "src/core/browser/taskBrowsers.test.ts",
   "src/core/browser/taskBrowsers.ts",
-  "src/core/orchestrator/crewSupervisor.test.ts",
   "tests/e2e/task-browser.spec.ts",
   "tests/helpers/phoneHome.ts",
 ];

@@ -149,7 +149,7 @@ test("a crewmate stuck past every nudge and wake is the app's own card, which ta
  * The same last rung on a task that reached its limit of tries at the
  * checks, whose question the Firstmate never put to the captain: its
  * captain gate does not hold the card back. The card's words are
- * crewSupervisor.test.ts's.
+ * idleLadder.test.ts's.
  */
 
 /**
@@ -160,7 +160,7 @@ test("a crewmate stuck past every nudge and wake is the app's own card, which ta
  * Nothing on his screen asks him, so the first mate owes the card; its
  * clock is as overdue as the stuck task's above, with both wakes let go, so
  * the app puts the wait to him on its own card. The card's words are
- * crewSupervisor.test.ts's; only a ready card lists a task under "waiting
+ * idleLadder.waits.test.ts's; only a ready card lists a task under "waiting
  * on you" (FI3-702), which task-wait-reason.spec.ts owns.
  */
 test("a crewmate's declared wait on the captain with no card up is put to him on the app's own card", async () => {

@@ -6,7 +6,7 @@
  * move cancelled before it crosses, and the move facts a task's record
  * shows. These cases pin the behaviour no other test reaches. The move
  * itself, carrying real work between computers, stays pinned by the
- * real-git journey in crewSupervisor.test.ts. Each case drives a public
+ * real-git journey in taskMoves.computer.test.ts. Each case drives a public
  * door of the supervisor's moves and reads its answer and the record.
  */
 

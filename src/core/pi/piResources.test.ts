@@ -798,7 +798,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     // Autonomy is the third of the same shape (contract v3.9, captain
     // ruling of 2026-09-20): a repository default with a per-task ask on
     // the user's words alone, and the host - not this rule - enforces it.
-    // Its refusal says so when a merge is tried (INF-490; crewSupervisor.test.ts
+    // Its refusal says so when a merge is tried (INF-490; settleOwners.keptMergeRepairs.test.ts
     // owns the words), so the core does not.
     expect(core).not.toContain("With autonomy off the host refuses a merge of yours");
     expect(core).not.toContain("free constraint (rigor: quick)");

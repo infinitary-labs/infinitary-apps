@@ -19,7 +19,8 @@ import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";
  * before it and the words never name the task again (INF-1845); and the words around
  * the first mate's own sentence when it closes started work without their
  * click. A plain module, so a journey reads the receipt from its owner;
- * `crewSupervisor.test.ts` owns the sentences.
+ * The settle owners' tests (`settleOwners.discard.test.ts`,
+ * `settleOwners.keptMerge.test.ts`) and the card tests that import it own the sentences.
  */
 
 /**

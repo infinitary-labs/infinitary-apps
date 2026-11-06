@@ -202,6 +202,28 @@ public struct PhoneBoard: Decodable, Sendable {
                           projects: delta.projects, links: edges.sorted { key($0) < key($1) })
     }
 
+    /// INF-2773: a run of deltas read in one catch-up, folded with one sort at the end. It gives the board that
+    /// applying them one at a time gives, keyed by id and link as the Mac's `applyTaskBoardDelta` is: an older delta
+    /// is passed over, and a gap anywhere is nil, which resyncs from a full read.
+    public func applying(run deltas: [PhoneBoardDelta]) -> PhoneBoard? {
+        guard deltas.contains(where: { $0.seq > seq }) else { return self }
+        func key(_ link: Link) -> String { "\(link.fromId) \(link.toId) \(link.type)" }
+        var rows = Dictionary(tasks.map { ($0.id, $0) }, uniquingKeysWith: { _, later in later })
+        var edges = Dictionary((links ?? []).map { (key($0), $0) }, uniquingKeysWith: { _, later in later })
+        var at = seq, projects = self.projects
+        for delta in deltas where delta.seq > at {
+            guard delta.baseSeq == at else { return nil }
+            for id in delta.removed { rows[id] = nil }
+            for task in delta.upserts { rows[task.id] = task }
+            for link in delta.links.removed { edges[key(link)] = nil }
+            for link in delta.links.added { edges[key(link)] = link }
+            at = delta.seq; projects = delta.projects
+        }
+        return PhoneBoard(seq: at,
+                          tasks: rows.values.sorted { $0.createdAt == $1.createdAt ? $0.id < $1.id : $0.createdAt < $1.createdAt },
+                          projects: projects, links: edges.values.sorted { key($0) < key($1) })
+    }
+
     /// INF-1517: the Mac's `presentTask` rule (src/shared/taskWaiting.ts, docs/task-record.md "Minimized cards in
     /// Tasks") for a card put aside: its task lists under Waiting on you, unless the task is active and its author still
     /// works or owes the card an answer. Presentation only; the card stays minimized until a row brings it back.

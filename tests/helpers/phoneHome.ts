@@ -504,6 +504,7 @@ export async function startPhoneHome(
   const token = randomBytes(24).toString("hex");
   let changed = 0;
   let boardTasks = 0;
+  const awayCards: string[] = [];
   let ssh: SshServer | undefined;
   const control = createServer(async (request, response) => {
     const [_, supplied, command] = (request.url ?? "").split("/");
@@ -1657,6 +1658,64 @@ export async function startPhoneHome(
           result = { id: added.id };
           break;
         }
+        case "POST away-traffic": {
+          // INF-2773: what a phone misses while away, replayed at its return: board updates, cards and a reaction.
+          // The board and the cards each go out on their own short timer, so each change waits for its own push:
+          // six board updates and two card lists, never one coalesced update, and none the phone reads live.
+          const pushed = new Set<string>();
+          const cardsPushed = new Set<string>();
+          const stopWatching = core.events.subscribe((channel, payload) => {
+            const rows =
+              channel === "inf:tasks:delta"
+                ? (payload as { upserts: { id: string }[] }).upserts
+                : channel === "inf:tasks"
+                  ? (payload as { tasks: { id: string }[] }).tasks
+                  : [];
+            for (const row of rows) pushed.add(row.id);
+            if (channel === "inf:cards")
+              for (const card of payload as { id: string }[]) cardsPushed.add(card.id);
+          });
+          const ids: string[] = [];
+          const cards: string[] = [];
+          try {
+            for (let i = 0; i < 6; i++) {
+              boardTasks += 1;
+              const id = seedTask(core.services.tasks, {
+                id: `phone-board-${boardTasks}`,
+                title: `Chart the harbour's ${boardTasks}th mooring`,
+                status: "queued",
+                startPolicy: "on-request",
+              }).id;
+              ids.push(id);
+              await until(() => pushed.has(id));
+            }
+            for (const [n, title] of ["The pilot boat came in", "The tide turned"].entries()) {
+              const card = core.services.supervisor.addFirstmateCard({
+                id: `phone-away-${n}`,
+                title,
+                body: `<p>${title} while you were away.</p>`,
+                actions: [],
+              });
+              cards.push(card);
+              awayCards.push(card);
+              await until(() => cardsPushed.has(card));
+            }
+          } finally {
+            stopWatching();
+          }
+          core.events.emit("inf:event", { type: "firstmate_emote", emote: "salute" });
+          result = { ids, cards };
+          break;
+        }
+        case "POST emote":
+          core.events.emit("inf:event", { type: "firstmate_emote", emote: "ponder" });
+          result = { ok: true };
+          break;
+        case "POST away-cleanup":
+          for (const card of awayCards.splice(0))
+            core.services.supervisor.closeCard(card, { kind: "firstmate" }, "Catch-up test");
+          result = { ok: true };
+          break;
         case "POST empty-cards":
           for (const card of await core.dispatch("inf:cards:list", []))
             await core.dispatch("inf:cards:close", [card.id]);

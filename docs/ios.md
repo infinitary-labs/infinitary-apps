@@ -91,6 +91,12 @@ A return consumes numbered replay pushes, or reads fresh snapshots after a reloa
 All four initial snapshots must arrive before the app says **In reach**.
 A card or task-board push supplies the new snapshot directly and supersedes any older initial read still in flight.
 A task-board delta folds onto the board the app holds, as the Mac’s `applyTaskBoardDelta` does (`PhoneBoard.applying`), because a full read of a large board on every task change stalled the crew scene on the main thread (INF-1854).
+A welcome that replays is caught up in one step (INF-2773, the captain's pick "keep what they showed, then change once when the catch-up is read"): while the phone reads the replayed pushes, they update its own copies of the cards, board and threads and its held busy state, presence and work count, and the screens keep what they showed.
+The screens change once, at the last replayed push or when the connection ends first, and live pushes after it show one by one as before.
+A run of replayed board deltas is applied with one sort at that point (`PhoneBoard.applying(run:)`), giving the board that applying them one at a time gives.
+A change the captain made that waits on the computer still sees every replayed snapshot, so it settles as it would one push at a time.
+Cards that left while away are read into Past, and the new-card notice goes to the newest card that arrived while away and is still up, as before.
+`PhoneCatchUpTests` reconnects to the test home after six board updates, a card and a reaction (`away-traffic`) and checks the board and cards change once, the board matches a fresh read, the reaction stays silent and a live one (`emote`) plays.
 Each frame from the computer is parsed, and its board, delta, card, feed and presence payloads decoded, off the main thread (`PhoneFrame.decode`, INF-2566); the session then reads the decoded frames on the main actor in the order they arrived.
 A payload that cannot decode fails only where the session reads it, as decoding in place did.
 Only a delta whose base is not the board held requests a coalesced full board, the published resynchronization path.
@@ -100,6 +106,7 @@ A gap in numbering drops the cursor and reconnects rather than silently losing u
 Successful frames and pongs update the last-heard time.
 A connection is cut for silence, never because an answer is slow (INF-2668): quiet for `ReadOnlySession.patience` (the captain's 20 s, two missed pings) while nothing is awaited, or for `ReadOnlySession.answerWait` while the welcome or a read is out, since a pong waits behind an answer on its way.
 URLSession's WebSocket reports no bytes before a whole message arrives, so silence is measured in frames and pongs; a read the computer leaves unanswered that long while it sends nothing else, and a Leave unanswered for 15 s, cut it too.
+The phone works out its preferred address order once a connection first reaches its address, not on every frame (INF-2773).
 Each round dials every saved and nearby address together (INF-2157): private IPv4 candidates first and the rest a quarter second later (`ReadOnlySession.privateLead`, RFC 8305's attempt delay), so the private network wins when both answer.
 The first attempt whose WebSocket opens (`PinnedTransport.opened`, after the pinned TLS, the phone's key and the upgrade) is kept and greeted; the others are closed before any hello, so each round makes one welcomed connection.
 A round fails once every attempt failed or none opened within `ReadOnlySession.dialLimit`, which cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
@@ -295,7 +302,7 @@ The first character a person sees after opening or joining greets once (`Charact
 A turn that starts mid-greeting lets the greeting play on as the ember eases in, then the character works, as on the Mac.
 A character that leaves mid-greeting, such as the empty stage a join shows before its cards arrive, hands the greeting on to the next one shown.
 A live `firstmate_emote` reaches the characters on screen; reply reactions wait for the turn to finish, with the first request winning as on the desktop.
-A reaction replayed while reconnecting is not played, and a character off screen does not keep one for later.
+A reaction replayed while reconnecting is not played, even when a caught-up welcome already says In reach, and a character off screen does not keep one for later.
 The wire and halo boosts come from the design skill's tokens through `scripts/generate-phone-theme.ts`, like its colours.
 The crew scene draws on its own render thread, never the main thread (INF-2566, the captain's approved direction B): `PhoneSceneRenderer` runs a display link on that thread's run loop, paints the first mate, the crew, the warp and the selection and summary marks through Core Graphics (`ScenePen`), and presents each frame on a Metal layer, so a busy main thread no longer drops the scene's frames.
 The painters draw through `ScenePen`, which a SwiftUI Canvas also uses through `withCGContext`, so the character elsewhere in the app draws with the same code; the scene's halo is a three-pass box blur standing in for SwiftUI's Gaussian blur.

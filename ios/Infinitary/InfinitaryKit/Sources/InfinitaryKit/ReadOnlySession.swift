@@ -143,6 +143,21 @@ public struct PhoneNotice: Equatable, Sendable {
     /// Reads that were still out when a connection ended; a replaying welcome sends them again without waiting on them.
     @ObservationIgnored private var owed = Set<String>()
     @ObservationIgnored private var reachWaiters: [UUID: CheckedContinuation<Void, Error>] = [:]
+    /// INF-2773, the captain's pick "keep what they showed, then change once when the catch-up is read": while a
+    /// welcome's replay is read, its pushes update the synced copies and this record, and the screens change once.
+    @ObservationIgnored private var held: HeldCatchUp?
+    private struct HeldCatchUp {
+        /// The cards before the replay, so the cards that left while away are read into Past once.
+        let cards: [PhoneCard]
+        var cardsChanged = false
+        /// Board deltas not yet applied: a run on one base folds with one sort (`PhoneBoard.applying(run:)`).
+        var deltas: [PhoneBoardDelta] = []
+        /// The board's seq once those deltas apply, or -1 with no board held.
+        var boardSeq: Int
+        var work = false
+        var busy: Bool?
+        var computers: [PhoneComputerPresence]?
+    }
     private var initialReads: [String] {
         [PhoneContract.cards, PhoneContract.feed, PhoneRequest.board.rawValue, PhoneRequest.lastTurn.rawValue]
             + (sceneObservations ? [PhoneRequest.conversationState.rawValue, PhoneRequest.computers.rawValue] : [])
@@ -242,6 +257,7 @@ public struct PhoneNotice: Equatable, Sendable {
 
     private func clearContent() {
         computers = []
+        held = nil
         syncedCards = []; activity = []; syncedBoard = nil; syncedTurn = nil; notice = nil; firstmateBusy = false; firstmateObserved = false
         syncedThreads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]; seenCards = []
         ledger.clear(); restorers = [:]; changeNotice = nil; takenBack = [:]; refold()
@@ -399,7 +415,9 @@ public struct PhoneNotice: Equatable, Sendable {
 
     /// A snapshot from the home: retire what it holds, void what changed under it, and take back with today's
     /// unconfirmed words what it contradicts after reconnecting.
-    private func saw(_ snapshot: PhoneSnapshot, replayed: Bool = false) {
+    /// A held snapshot (`show` false) is still checked against every pending change, and shows with the catch-up.
+    private func saw(_ snapshot: PhoneSnapshot, replayed: Bool = false, show: Bool = true) {
+        if !show && ledger.intents.isEmpty { return }
         let before = ledger.intents.map(\.id)
         // A push the welcome replays can predate a change whose result was lost, so it settles only what it holds.
         let contradicted = ledger.saw(snapshot, welcome: replayed ? Int.min : welcomes)
@@ -409,6 +427,7 @@ public struct PhoneNotice: Equatable, Sendable {
         }
         let after = Set(ledger.intents.map(\.id))
         for id in before where !after.contains(id) { restorers.removeValue(forKey: id) }
+        if !show { return }
         if after.count != before.count { refold(); return }
         switch snapshot {
         case .cards: cards = PhoneIntentFold.cards(syncedCards, ledger.intents)
@@ -417,6 +436,32 @@ public struct PhoneNotice: Equatable, Sendable {
         case .turn: lastTurn = PhoneIntentFold.lastTurn(syncedTurn, ledger.intents)
         case .task, .crew: break
         }
+    }
+
+    /// Applies the held board deltas with one sort. A change waiting on the computer has already seen each one.
+    private func foldHeldBoard() {
+        guard let deltas = held?.deltas, !deltas.isEmpty else { return }
+        held?.deltas = []
+        guard let board = syncedBoard, let next = board.applying(run: deltas) else { return }
+        syncedBoard = next
+        saw(.board(next), replayed: true, show: false)
+    }
+
+    /// INF-2773: the one change a catch-up makes on the screens, at its last push or when the connection ends first.
+    private func showHeld() {
+        guard held != nil else { return }
+        foldHeldBoard()
+        guard let fold = held else { return }
+        held = nil
+        if fold.cardsChanged {
+            let departed = fold.cards.filter { old in !syncedCards.contains { $0.id == old.id } }.map(\.id)
+            for id in departed { Task { try? await self.readPast(id) } }
+            observeCards(syncedCards)
+        }
+        refold()
+        if fold.work { workRevision += 1 }
+        if let busy = fold.busy { firstmateBusy = busy; firstmateObserved = true }
+        if let computers = fold.computers { self.computers = computers }
     }
 
     private func refold() {
@@ -578,6 +623,7 @@ public struct PhoneNotice: Equatable, Sendable {
     }
 
     public func stop() {
+        showHeld()
         generation += 1
         loop?.cancel(); loop = nil
         endPause()
@@ -769,17 +815,24 @@ public struct PhoneNotice: Equatable, Sendable {
                 try await receive(frame, on: socket)
                 guard current == generation, !Task.isCancelled else { break }
                 if contact == "in-reach" {
-                    reached = true; refused = 0
-                    reachedAddress = address
-                    let preferred = Array(PhoneAddresses.preferred(mac.addresses + [address]).prefix(25))
-                    if mac.addresses != preferred {
-                        mac.addresses = preferred
-                        onMacChanged?(mac)
+                    refused = 0
+                    // INF-2773: the preference is worked out when this connection first reaches its address.
+                    if !reached || reachedAddress != address {
+                        reached = true
+                        if reachedAddress != address { reachedAddress = address }
+                        let preferred = Array(PhoneAddresses.preferred(mac.addresses + [address]).prefix(25))
+                        if mac.addresses != preferred {
+                            mac.addresses = preferred
+                            onMacChanged?(mac)
+                        }
                     }
                 }
             }
         } catch {
-            guard current == generation, !Task.isCancelled else { transport.close(); return reached }
+            guard current == generation, !Task.isCancelled else {
+                if current == generation { showHeld() }
+                transport.close(); return reached
+            }
             lastCut = cutting ?? .failed; cutting = nil
             if socket.closeCode.rawValue == 4401 {
                 removed = true; clearContent()
@@ -788,6 +841,7 @@ public struct PhoneNotice: Equatable, Sendable {
                 finishLeave(PhoneError.unavailable)
             }
         }
+        if current == generation { showHeld() }
         owed.formUnion(pending.values)
         failCalls(); firstmateBusy = false; firstmateObserved = false
         transport.close()
@@ -801,6 +855,8 @@ public struct PhoneNotice: Equatable, Sendable {
         let frame = decoded.frame
         guard let kind = frame["t"] as? String else { throw PhoneError.invalidReply }
         hear(); framed = .now
+        // A held catch-up covers only the run of replayed pushes; anything else shows it first.
+        if kind != "push" { showHeld() }
         switch kind {
         case "welcome":
             guard let epoch = frame["epoch"] as? String, !epoch.isEmpty,
@@ -812,6 +868,9 @@ public struct PhoneNotice: Equatable, Sendable {
             homeVersion = frame["protocolVersion"] as? String
             self.epoch = epoch
             welcomeSeq = seq
+            if catchUp == "replay", seq > sequence {
+                held = HeldCatchUp(cards: syncedCards, boardSeq: syncedBoard?.seq ?? -1)
+            }
             welcomes += 1
             refused = 0
             if let name = frame["name"] as? String, !name.isEmpty {
@@ -857,7 +916,14 @@ public struct PhoneNotice: Equatable, Sendable {
             guard seq == sequence + 1 else { epoch = nil; throw PhoneError.invalidReply }
             sequence = seq
             let replayed = seq <= welcomeSeq
-            if frame["channel"] as? String == "inf:cards" {
+            if !replayed { showHeld() }
+            let holding = held != nil
+            defer { if seq >= welcomeSeq { showHeld() } }
+            if holding, frame["channel"] as? String == "inf:cards" {
+                guard frame["payload"] != nil else { throw PhoneError.invalidReply }
+                syncedCards = try decoded.cards(); held?.cardsChanged = true
+                saw(.cards(syncedCards), replayed: true, show: false)
+            } else if frame["channel"] as? String == "inf:cards" {
                 guard frame["payload"] != nil else { throw PhoneError.invalidReply }
                 let updated = try decoded.cards()
                 let departed = syncedCards.filter { old in !updated.contains { $0.id == old.id } }.map(\.id)
@@ -869,10 +935,14 @@ public struct PhoneNotice: Equatable, Sendable {
                 if !replayed { supersede(PhoneContract.cards) }
             }
             if frame["channel"] as? String == "inf:computers:presence", frame["payload"] != nil, sceneObservations {
-                computers = try decoded.computers()
+                if holding { held?.computers = try decoded.computers() } else { computers = try decoded.computers() }
                 supersede(PhoneRequest.computers.rawValue)
             }
-            if frame["channel"] as? String == "inf:tasks", frame["payload"] != nil {
+            if holding, frame["channel"] as? String == "inf:tasks", frame["payload"] != nil {
+                syncedBoard = try decoded.board()
+                held?.deltas = []; held?.boardSeq = syncedBoard!.seq; held?.work = true
+                saw(.board(syncedBoard!), replayed: true, show: false)
+            } else if frame["channel"] as? String == "inf:tasks", frame["payload"] != nil {
                 syncedBoard = try decoded.board()
                 saw(.board(syncedBoard!), replayed: replayed)
                 if !replayed { supersede(PhoneRequest.board.rawValue) }
@@ -880,7 +950,19 @@ public struct PhoneNotice: Equatable, Sendable {
             }
             // A delta folds onto the board held, as on the Mac (INF-1854); a full read is the contract's resync path
             // for a delta with no base to apply to.
-            if frame["channel"] as? String == "inf:tasks:delta", frame["payload"] != nil {
+            if holding, let base = held?.boardSeq, frame["channel"] as? String == "inf:tasks:delta", frame["payload"] != nil {
+                let delta = try decoded.delta()
+                if delta.seq <= base {
+                    // Older than the board held, as `applying` passes it over.
+                } else if syncedBoard != nil, delta.baseSeq == base {
+                    held?.deltas.append(delta); held?.boardSeq = delta.seq; held?.work = true
+                    // A change waiting on the computer sees every board, as it does one push at a time.
+                    if !ledger.intents.isEmpty { foldHeldBoard() }
+                } else {
+                    foldHeldBoard()
+                    try await refresh(PhoneRequest.board.rawValue, on: socket)
+                }
+            } else if frame["channel"] as? String == "inf:tasks:delta", frame["payload"] != nil {
                 let delta = try decoded.delta()
                 if let held = syncedBoard, let next = held.applying(delta) {
                     if next.seq != held.seq { syncedBoard = next; saw(.board(next), replayed: replayed); if !replayed { supersede(PhoneRequest.board.rawValue) }; workRevision += 1 }
@@ -890,22 +972,25 @@ public struct PhoneNotice: Equatable, Sendable {
             }
             if frame["channel"] as? String == "inf:event", let event = frame["payload"] as? [String: Any], let type = event["type"] as? String {
                 if type == "firstmate_state", let busy = event["busy"] as? Bool {
-                    firstmateBusy = busy; firstmateObserved = true
+                    if holding { held?.busy = busy } else { firstmateBusy = busy; firstmateObserved = true }
                     if sceneObservations { supersede(PhoneRequest.conversationState.rawValue) }
                 }
-                if contact == "in-reach", let signal = PhoneSceneSignal.read(event) { onSceneSignal?(signal) }
-                if type == "firstmate_emote", contact == "in-reach", let emote = event["emote"] as? String { onEmote?(emote) }
+                // A reaction replayed while reconnecting is not played (INF-2773: a caught-up replay is in reach).
+                if contact == "in-reach", !replayed, let signal = PhoneSceneSignal.read(event) { onSceneSignal?(signal) }
+                if type == "firstmate_emote", contact == "in-reach", !replayed, let emote = event["emote"] as? String { onEmote?(emote) }
                 if type == "user_turn" || type == "firstmate_reply" {
                     try await refresh(PhoneRequest.lastTurn.rawValue, on: socket)
                 }
-                if ["task_changed", "task_event", "turn_end", "tool_execution_end"].contains(type) { workRevision += 1 }
+                if ["task_changed", "task_event", "turn_end", "tool_execution_end"].contains(type) {
+                    if holding { held?.work = true } else { workRevision += 1 }
+                }
             }
             if frame["channel"] as? String == "inf:cards:thread", let payload = frame["payload"] {
                 let thread = try PhoneJSON.read(payload)
                 if let id = thread["cardId"].text {
                     threadRevisions[id, default: 0] += 1
                     syncedThreads[id] = thread
-                    saw(.thread(card: id, thread), replayed: replayed)
+                    saw(.thread(card: id, thread), replayed: replayed, show: !holding)
                 }
             }
             if frame["channel"] as? String == "inf:event", let event = frame["payload"] as? [String: Any],

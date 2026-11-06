@@ -3,6 +3,7 @@ import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { answersLine as answersWords } from "../../src/renderer/src/cards/answersLine";
+import { NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
 import {
   ANYTHING_ELSE_ANSWER,
   CARD_CHAT_LABEL,
@@ -802,7 +803,7 @@ test("a 37-question card's footer sends its answers", async () => {
 
 /** What the captain writes in the card's one field, as the spec types it. */
 const COMMENT = "Check the light theme too";
-/** The title of the note the one-field journey seeds, which has no choices. */
+/** The title of the note the one-field journey seeds, whose author gave it no choices. */
 const NOTE_TITLE = "The access plan is filed";
 
 /**
@@ -837,11 +838,18 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
   });
   const { app, page } = launched;
   try {
-    // A note with no choices ends with the field and a lone Chat.
+    // A note its author gave no choices ends with the field, the note's own
+    // Got it as its one choice (INF-2794) and Chat after it.
     await showCard(page, NOTE_TITLE);
     await expect(cardReply(page).field).toHaveAttribute("placeholder", CARD_REPLY_HINT);
     await expect(cardReply(page).send).toBeVisible();
-    await expect(shownCard(page, NOTE_TITLE).locator("[data-card-choice]")).toHaveCount(0);
+    const noteChoices = shownCard(page, NOTE_TITLE).locator("[data-card-choice]");
+    await expect(noteChoices).toHaveCount(1);
+    await expect(noteChoices).toHaveAttribute("data-note-done", "got-it");
+    await expect(noteChoices).toContainText(NOTE_GOT_IT_LABEL);
+    await expect(
+      shownEntry(page).locator("[data-card-actions] button").last(),
+    ).toHaveAccessibleName(CARD_CHAT_LABEL);
 
     const prompt = page.getByRole("textbox", { name: "Task prompt" });
     await prompt.fill(`${SPAWN_PROMPT_MARKER} ${INLINE_QUESTIONS_PROMPT_MARKER}`);

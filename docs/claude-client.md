@@ -89,6 +89,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Background completion-refusal records run outside that invocation's scope, so a cancelled card still leaves its refusal on the home.
   There are no hand-written Claude twins any more, so a rule reaches both runtimes in one edit and the self-source map lists the same set (`crewmateTools`).
   A tool is served only when the crewmate's delegate hands the callback it runs on.
+  The conversation serves the bound list with each answer too long to read whole saved to a file, on the computer that runs it: `crewmateSessionSpec` on this Mac, `SessionHost` on a computer that runs work, beside the crewmate's shell there ("Complete task reads through the tool-result cap", below).
   `prepare_change` shares this spec: on a paired computer, `inf:work:prepare-change` transfers inspected media to the home behind `CHANGE_PRESENTATIONS_SINCE` (`docs/forge.md`, "Saved change stories").
   The task's browser is no tool: the client's own shell carries the task's command, `infinitary-browser-axi`, in its environment (`docs/axi-commands.md`).
   `crewmateTaskTools.test.ts` holds both runtimes to the spec by what they serve and do, and shows that a new entry reaches both and the pin; `claudeToolSurface.test.ts` still captures what the real client sends.
@@ -295,11 +296,18 @@ The first mate’s explicit cap gives that client a 200,000-character unconditio
 The client also has a second, separate limit: it saves a tool result longer than 50,000 characters to a file and serves the model a 2,000-character `<persisted-output>` preview, whatever the token cap.
 A tool raises that limit by declaring `_meta["anthropic/maxResultSizeChars"]`, which the client honors up to 500,000 characters (2.1.303, and the SDK’s own 2.1.234).
 Every first mate tool declares `CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS` (`claudeToolServer`), the same 200,000 characters derived from the seat’s cap, so a first mate result of up to 200,000 characters reaches the model whole and a longer one becomes the preview.
-A coding session’s tools keep the client’s 50,000-character default: a crewmate can open the saved file.
+A coding session’s tools keep the client’s 50,000-character default, and no crewmate answer reaches the client past it.
+Every crewmate tool answer longer than `ANSWER_WHOLE_MAX_CHARACTERS` (50,000 characters, derived from that same band) is saved whole in the task’s temporary folder, under `answers/`, and the model reads the file’s path between backticks (a task’s folder on a Mac holds a space), the answer’s size and how to read it in its place (`serveAnswerFiles`, `src/core/session/answerFiles.ts`).
+The answer stays a success.
+Without it, the client would save a longer answer in its own folder and serve the model its 2,000-character preview, or, past its token cap, an error naming that file, and Pi would hand the model all of it.
+It adds no paging of its own: the crewmate reads the file in parts with its file tools or searches it with its shell.
+A file that cannot be written leaves the answer whole, since the call has already done its work.
+The first mate’s tools never go through it: it has no file tools.
 Two of the client’s remote switches can still save a shorter result: a limit it sets for a tool by name, and a per-message budget that saves the largest results of one message’s parallel calls once together they pass 200,000 characters.
 The `tasks` tool pages a by-key read that does not fit one answer, by field and offset, instead of compressing it (`docs/task-record.md`, “By-key closing resolution”); it never drops distinct content.
 A read whose original heading and indented JSON fit 50,000 characters stays byte-for-byte unchanged on every provider.
 That page size remains independent of the first mate’s larger Claude cap.
+It is `ANSWER_WHOLE_MAX_CHARACTERS` itself, so a full page reaches a crewmate’s model whole and never goes to a file.
 Every page of the original accepted-plan fixture and the larger INF-91 design record must fit that unconditional band (`tests/account-eval.test.ts` and `taskTools.test.ts`, with the verified client limit in `tests/helpers/claudeMcpLimit.ts`).
 `claudeToolSurface.test.ts` sends both production-host evaluation reads and the captured INF-91 row through the installed client, boxed into a scratch HOME with a local provider stub, and requires the model-bound request to carry each byte for byte.
 It also sends a first mate result between the client’s default and the seat’s band, the captured INF-91 row read whole and that record filling the band to its last character, and requires each to arrive byte for byte.

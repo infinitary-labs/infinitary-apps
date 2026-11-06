@@ -133,9 +133,11 @@ export function standInHome() {
   let through = 0;
   let kept = 0;
   const gates = new Map<string, { reached: () => void; open: Promise<void> }>();
+  const answers = new Map<string, unknown>();
   let cards = 0;
 
   const answerFor = (channel: string, request: Record<string, unknown>): unknown => {
+    if (answers.has(channel)) return answers.get(channel);
     switch (channel) {
       case "inf:work:card":
         cards += 1;
@@ -216,6 +218,10 @@ export function standInHome() {
     typefaces,
     /** The event types the home took in, in order. */
     types: () => events.map((record) => record.event.type),
+    /** The home's answer to every request of one kind from now on, in place of its usual one. */
+    answer(channel: string, value: unknown) {
+      answers.set(channel, value);
+    },
     /** Holds every request of one kind until `open()`; `reached` resolves when the first arrives. */
     hold(channel: string) {
       let reached!: () => void;

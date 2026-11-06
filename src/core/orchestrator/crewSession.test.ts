@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
@@ -9,8 +10,10 @@ import {
   crewmateCardBodiesDir,
   crewmateCardPicturesDir,
   crewmateEvidenceDir,
+  crewmateTempDir,
 } from "../paths";
 import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
+import { answersDir, savedAnswerText } from "../session/answerFiles";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { crewmateContractStamp, crewmateRestartText, crewmateSessionSpec } from "./crewSession";
 
@@ -68,6 +71,38 @@ it.each(["pi", "claude"] as const)(
     expect(`${named?.[1]} (${named?.[2]})`).toBe(timeZoneFact(Date.now()));
   },
 );
+
+// INF-2589, the captain: "any too big answer gets stored in a file and we
+// return the path to the file instead of the full answer".
+it("serves a crewmate on this Mac an answer too long to read whole as a file in its task's temporary folder", async () => {
+  const root = scratchDir("crew-answer-files-");
+  const paths = appPathsFor(root);
+  const tempDir = crewmateTempDir(paths, "task-1");
+  // A real answer past the band: the captured INF-91 record as one read serves it whole.
+  const answer = JSON.stringify(
+    JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf91.json", "utf8")),
+    null,
+    2,
+  );
+  const session = crewmateSessionSpec(
+    paths,
+    {
+      ...crewmateToolDelegate(),
+      onGithubRead: async () => answer,
+      machineId: LOCAL_MACHINE_ID,
+      taskId: "task-1",
+      cwd: root,
+      tempDir,
+    },
+    { backend: "claude", accountId: "acct_claude" },
+  );
+  const read = session.tools.find((tool) => tool.name === "github_read");
+  const output = await read?.run({ path: "/repos/acme/shop/actions/runs?per_page=100" });
+  const [saved] = readdirSync(answersDir(tempDir));
+  const path = join(answersDir(tempDir), saved ?? "");
+  expect(output?.text).toBe(savedAnswerText(path, answer));
+  expect(readFileSync(path, "utf8")).toBe(answer);
+});
 
 it("stamps a crewmate's conversation with the prompt and tools it serves, the same at every open of the same build", () => {
   const root = scratchDir("crew-contract-");

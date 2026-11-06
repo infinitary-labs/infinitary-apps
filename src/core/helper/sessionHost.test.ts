@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { placedTaskFolders, type WorkOrderChannel, workRequests } from "@shared/work";
 import { describe, expect, it, vi } from "vitest";
@@ -13,6 +13,7 @@ import {
   TASK,
 } from "../../../tests/helpers/sessionHostWorld";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
+import { answersDir, savedAnswerText } from "../session/answerFiles";
 import { PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 
@@ -109,6 +110,54 @@ describe("a conversation held on a computer that runs work", () => {
       }
     },
   );
+  // INF-2589, the captain: "any too big answer gets stored in a file and we
+  // return the path to the file instead of the full answer". The file is
+  // saved where the crewmate's shell runs, so it can open it.
+  it("saves an answer too long to read whole in the task's temporary folder there, and the model reads its path", async () => {
+    // A real answer past the band: the captured INF-91 record as one read serves it whole.
+    const answer = JSON.stringify(
+      JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf91.json", "utf8")),
+      null,
+      2,
+    );
+    const at = await placed();
+    at.spec.tools.push("github_read");
+    at.home.answer("inf:work:github-read", { text: answer });
+    await at.open();
+    model([
+      {
+        tools: [
+          { name: "github_read", args: { path: "/repos/acme/shop/actions/runs?per_page=100" } },
+        ],
+      },
+      { text: "Read the runs." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "runs:1", task: TASK, text: "List the latest runs." },
+    ]);
+    await at.ended(1);
+    const answers = answersDir(placedTaskFolders(join(at.dataDir, "tasks"), TASK).temp);
+    const [saved] = readdirSync(answers);
+    const path = join(answers, saved ?? "");
+    expect(readFileSync(path, "utf8")).toBe(answer);
+    const result = api.requests
+      .at(-1)
+      ?.body.messages?.flatMap((message) => (Array.isArray(message.content) ? message.content : []))
+      .findLast((block: { type?: string }) => block.type === "tool_result") as
+      | { content?: string | { text?: string }[] }
+      | undefined;
+    const served =
+      typeof result?.content === "string"
+        ? result.content
+        : result?.content?.map((block) => block.text ?? "").join("\n");
+    expect(served).toBe(savedAnswerText(path, answer));
+    expect(
+      at.home.events.find(
+        (record) => record.event.type === "tool_end" && record.event.toolName === "github_read",
+      )?.event,
+    ).toMatchObject({ isError: false });
+  });
+
   it("forwards first-release facts and a task list page to the home that records them (INF-1607)", async () => {
     const at = await placed();
     await at.open();

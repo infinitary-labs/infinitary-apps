@@ -58,6 +58,7 @@ import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
 import { type SelfSourceReader, sourceContext } from "../selfSource/resolve";
+import { serveAnswerFiles } from "../session/answerFiles";
 import { followCompletions } from "../session/followCompletions";
 import { APP_TOOL_REQUESTS, OpenReads } from "../session/openReads";
 import {
@@ -854,16 +855,20 @@ export class SessionHost {
               ...(spec.integrations ? { integrations: this.integrationsOf(held) } : {}),
             })
           : undefined;
-      const tools = held.openReads.serve(
-        bindTools(
-          (
-            this.options.tools ?? CREWMATE_TOOLS.filter((tool) => FORWARDED_TOOLS.has(tool.name))
-          ).filter((tool) => spec.tools.includes(tool.name)),
-          {
-            ...this.delegate(held, folders),
-            ...(granted?.browser ? { browser: granted.browser } : {}),
-          },
+      // An answer too long to read whole is saved here, beside its shell.
+      const tools = serveAnswerFiles(
+        held.openReads.serve(
+          bindTools(
+            (
+              this.options.tools ?? CREWMATE_TOOLS.filter((tool) => FORWARDED_TOOLS.has(tool.name))
+            ).filter((tool) => spec.tools.includes(tool.name)),
+            {
+              ...this.delegate(held, folders),
+              ...(granted?.browser ? { browser: granted.browser } : {}),
+            },
+          ),
         ),
+        folders.temp,
       );
       const sessionSpec: SessionSpec = {
         machine: LOCAL_MACHINE_ID,

@@ -385,6 +385,7 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   Each try is one of the task's calls, and each smaller try asks for fewer items, so the tries end.
   The answer's note names the `per_page` it was read at, and its `nextPath` goes on at that size.
   An answer no smaller page would shrink is refused with the reason: one object, a list that ignores `per_page`, a first item that alone passes the cap, a page not named by number, or an answer past the hold.
+  An answer within the cap that is still longer than a crewmate's model takes whole, 50,000 characters, reaches the crewmate as a file in its task's temporary folder whose path the answer names (`docs/claude-client.md`, "Complete task reads through the tool-result cap").
   A release file has its own 2 GB cap and a 30-minute send ("Release files", below).
   Redirects are never followed.
   The answer carries the status, request id, rate limit or retry-after, and `nextPath` whenever GitHub's next page stays on the API origin and under its own path - including a repository listing's `/repositories/{id}/...` pages (FI3-1546).

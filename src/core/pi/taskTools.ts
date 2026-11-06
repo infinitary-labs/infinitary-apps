@@ -8,6 +8,7 @@ import { CLASSIFIABLE_KINDS, type WorkShapeAsk } from "@shared/routingPolicy";
 import type { TaskPolicyEdits } from "@shared/taskPolicies";
 import { type Static, Type } from "typebox";
 import { parseSpawnIntent, type SpawnIntent } from "../orchestrator/intentBrief";
+import { ANSWER_WHOLE_MAX_CHARACTERS } from "../session/answerFiles";
 import {
   bindTool,
   boundTool,
@@ -603,9 +604,11 @@ export const TASKS_QUERY_TOOL_DESCRIPTION = [
  * A page fits the client's unconditional text band (docs/claude-client.md),
  * in characters and in UTF-8 bytes. INF-416 piece K: a longer by-key read
  * pages by field and offset instead of compressing. INF-133's 100,000-token
- * cap stays the outer limit and is not this band.
+ * cap stays the outer limit and is not this band. It is the longest answer
+ * a crewmate's tool hands its model whole, so a full page reaches the model
+ * itself and never goes to a file (`serveAnswerFiles`).
  */
-export const TASK_QUERY_PAGE_CHARACTERS = 50_000;
+export const TASK_QUERY_PAGE_CHARACTERS = ANSWER_WHOLE_MAX_CHARACTERS;
 
 const PAGE_NOTE =
   "This record does not fit one read. Read remaining fields before acting; nextOffset continues.";

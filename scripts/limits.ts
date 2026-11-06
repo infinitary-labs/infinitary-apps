@@ -288,6 +288,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/routing/decisionKindClassifier.ts": {
     LIMITS: physical("clipped with ... for the classifier; the whole text stays on the task"),
   },
+  "src/core/session/answerFiles.ts": {
+    ANSWER_WHOLE_MAX_CHARACTERS: outside(
+      "saved whole in the task's temporary folder; the crewmate reads the file it names",
+    ),
+  },
   "src/core/sharing/sharingService.ts": {
     DIAGNOSTICS_PENDING_CAP: physical("none yet: a new event past it is silently dropped"),
     CONTRIBUTION_PREVIEW_LIMIT: physical("the viewer shows 20 in full and counts the rest"),

@@ -14,6 +14,7 @@ import {
 import { timeZoneFact } from "../prompts/timeZone";
 import type { SelfSourceFacts } from "../selfSource/resolve";
 import { sourceContext, sourceIdentity } from "../selfSource/resolve";
+import { serveAnswerFiles } from "../session/answerFiles";
 import type { OpenReads } from "../session/openReads";
 import {
   type ContractStamp,
@@ -234,7 +235,13 @@ export function crewmateSessionSpec(
       ? `\n${sourceContext(spec.source, spec.source && sourceIdentity(spec.source))}`
       : "\nThe executing computer supplies its own Infinitary source facts separately. If absent, its source is unknown; never reuse a path from another computer.");
   const bound = bindTools(CREWMATE_TOOLS, spec);
-  const tools = spec.openReads ? spec.openReads.serve(bound) : bound;
+  const served = spec.openReads ? spec.openReads.serve(bound) : bound;
+  // An answer too long to read whole goes to a file beside the crewmate's
+  // shell; a computer that runs work saves its own (`SessionHost`).
+  const tools =
+    spec.tempDir !== undefined && spec.machineId === LOCAL_MACHINE_ID
+      ? serveAnswerFiles(served, spec.tempDir)
+      : served;
   return {
     ...(spec.source ? { homeSource: sourceIdentity(spec.source) } : {}),
     machine: spec.machineId,

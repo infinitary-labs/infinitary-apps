@@ -1267,6 +1267,8 @@ export function main(
   return 0;
 }
 
+// The exit code, never process.exit: a pipe takes stdout asynchronously, and
+// exiting at once drops whatever the reader has not taken yet.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  process.exit(main(process.argv.slice(2)));
+  process.exitCode = main(process.argv.slice(2));
 }

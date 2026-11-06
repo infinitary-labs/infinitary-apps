@@ -10,6 +10,7 @@ import {
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { HERE } from "../../shared/deviceNames";
 import {
   FORM_RESEND,
   type HostBrowserCookies,
@@ -30,6 +31,7 @@ import {
   REF_FROM_EARLIER_PAGE,
   REF_PATTERN,
 } from "./outline";
+import type { ProjectServer } from "./projectServer";
 import {
   type BrowserReturned,
   FORM_RESEND_CAPTAIN_WORDS,
@@ -350,6 +352,9 @@ function harness(
     automaticSignIn?: TaskBrowsersOptions["automaticSignIn"];
     workingCopy?: string;
     chooseFiles?: HostTaskBrowser["chooseFiles"];
+    serve?: TaskBrowsersOptions["serve"];
+    /** Set when the host should open no page, as one that cannot start a browser. */
+    refuseOpen?: () => boolean;
   } = {},
 ) {
   const pages: FakePage[] = [];
@@ -362,6 +367,7 @@ function harness(
   const guards: (ConnectionGuardOptions & { closed: boolean })[] = [];
   const host: HostTaskBrowser = {
     open: async (input) => {
+      if (options.refuseOpen?.()) throw new Error("no browser could start");
       const page = new FakePage(input);
       pages.push(page);
       return page;
@@ -379,6 +385,7 @@ function harness(
     ...(options.signIns ? { signIns: options.signIns } : {}),
     ...(options.now ? { now: options.now } : {}),
     ...(options.automaticSignIn ? { automaticSignIn: options.automaticSignIn } : {}),
+    ...(options.serve ? { serve: options.serve } : {}),
     guard: async (guardOptions) => {
       const guard = { ...guardOptions, closed: false };
       guards.push(guard);
@@ -1764,6 +1771,169 @@ describe('taking control and handing it back (docs/task-browser.md, "Taking cont
     expect(browsers.isOpen("t1")).toBe(false);
     expect(browsers.fact("t1")).toBeUndefined();
     expect(returned).toEqual([]);
+  });
+});
+
+describe('a page from the project (docs/task-browser.md, "A page from the project")', () => {
+  // Guardrails for TaskBrowsers.openPage before INF-2625's plan splits
+  // taskBrowsers.ts: no other test reaches opening a page, serving its
+  // folder or loading it.
+  const FOLDER = "/Users/someone/projects/meteor-run";
+
+  /** The project folders the browsers served, each a stand-in for the loopback server. */
+  function folderServers(refuse: () => boolean = () => false) {
+    const served: { folder: string; origin: string; closed: boolean }[] = [];
+    const serve = async (folder: string): Promise<ProjectServer> => {
+      if (refuse()) throw new Error("no port to listen on");
+      const record = {
+        folder,
+        origin: `http://127.0.0.1:${41_000 + served.length}`,
+        closed: false,
+      };
+      served.push(record);
+      return {
+        folder,
+        origin: record.origin,
+        close: () => {
+          record.closed = true;
+        },
+      };
+    };
+    return { served, serve };
+  }
+
+  it("opens it in a fresh browser that is the captain's own from the start, which only the task's removal stops", async () => {
+    const { served, serve } = folderServers();
+    const { browsers, pages, notes } = harness({ serve });
+    const opened = await browsers.openPage("t1", { folder: FOLDER, path: "play/index.html" });
+    expect(opened).toEqual({ ok: true, handle: { session: browsers.session, generation: 1 } });
+    expect(served).toEqual([{ folder: FOLDER, origin: "http://127.0.0.1:41000", closed: false }]);
+    expect(pages).toHaveLength(1);
+    const page = pages[0] as FakePage;
+    expect(page.effects).toEqual(["load http://127.0.0.1:41000/play/index.html"]);
+    expect(notes).toEqual(["t1: you opened play/index.html from its project in its browser"]);
+    expect(browsers.fact("t1")).toMatchObject({
+      state: "open",
+      site: "127.0.0.1:41000",
+      url: "http://127.0.0.1:41000/play/index.html",
+      control: "captain",
+      own: true,
+      generation: 1,
+    });
+    // The served folder's origin is the browser's own; another server on this Mac is not.
+    expect(page.opened.allow({ url: "http://127.0.0.1:41000/play/game.js", topLevel: false })).toBe(
+      true,
+    );
+    expect(page.opened.allow({ url: "http://127.0.0.1:5173/", topLevel: false })).toBe(false);
+    // No crewmate opened it, so none uses it.
+    expect((await browsers.forTask("t1").inspect({})).text).toContain(
+      "The captain has control of this task's browser",
+    );
+    browsers.closeTask("t1");
+    expect(browsers.isOpen("t1")).toBe(true);
+    expect(served[0]?.closed).toBe(false);
+    browsers.closeTask("t1", { gone: true });
+    expect(browsers.isOpen("t1")).toBe(false);
+    expect(page.closed).toBe(true);
+    expect(served[0]?.closed).toBe(true);
+  });
+
+  it("closes on Close page with its server and wakes nobody, and Open again serves the folder afresh as his", async () => {
+    const { served, serve } = folderServers();
+    const { browsers, pages, notes, returned } = harness({ serve });
+    const opened = await browsers.openPage("t1", { folder: FOLDER, path: "index.html" });
+    if (!opened.ok) throw new Error(opened.text);
+    expect(await browsers.returnControl("t1", opened.handle)).toEqual({ ok: true });
+    expect(browsers.isOpen("t1")).toBe(false);
+    expect(served[0]?.closed).toBe(true);
+    expect(returned).toEqual([]);
+    expect(notes).toContain("t1: you closed the page you opened in its browser");
+    expect(browsers.fact("t1")).toMatchObject({ state: "stopped", stopped: "captain" });
+    expect(await browsers.reopen("t1")).toEqual({ ok: true });
+    expect(served).toEqual([
+      { folder: FOLDER, origin: "http://127.0.0.1:41000", closed: true },
+      { folder: FOLDER, origin: "http://127.0.0.1:41001", closed: false },
+    ]);
+    expect(pages[1]?.effects).toEqual(["load http://127.0.0.1:41001/index.html"]);
+    expect(browsers.fact("t1")).toMatchObject({
+      state: "open",
+      url: "http://127.0.0.1:41001/index.html",
+      control: "captain",
+      own: true,
+      generation: 2,
+    });
+  });
+
+  it("takes the crewmate's open browser first, keeps one server for one folder, and hands it back as usual", async () => {
+    const { served, serve } = folderServers();
+    const { browsers, pages, notes, returned } = harness({ serve });
+    const browser = browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const page = pages[0] as FakePage;
+    const opened = await browsers.openPage("t1", { folder: FOLDER, path: "index.html" });
+    expect(opened).toEqual({ ok: true, handle: { session: browsers.session, generation: 1 } });
+    expect(pages).toHaveLength(1);
+    expect(notes).toContain("t1: you took control of its browser");
+    expect(page.effects.at(-1)).toBe("load http://127.0.0.1:41000/index.html");
+    const fact = browsers.fact("t1");
+    expect(fact).toMatchObject({ state: "open", control: "captain", generation: 1 });
+    expect(fact).not.toHaveProperty("own");
+    // The same folder again is served by the same server; another folder replaces it.
+    await browsers.openPage("t1", { folder: FOLDER, path: "about.html" });
+    expect(page.effects.at(-1)).toBe("load http://127.0.0.1:41000/about.html");
+    expect(served).toHaveLength(1);
+    await browsers.openPage("t1", { folder: `${FOLDER}-two`, path: "index.html" });
+    expect(page.effects.at(-1)).toBe("load http://127.0.0.1:41001/index.html");
+    expect(served.map((server) => server.closed)).toEqual([true, false]);
+    if (!opened.ok) throw new Error(opened.text);
+    expect(await browsers.returnControl("t1", opened.handle)).toEqual({ ok: true });
+    expect(returned.map((wake) => wake.taskId)).toEqual(["t1"]);
+    expect(browsers.isOpen("t1")).toBe(true);
+    expect(served[1]?.closed).toBe(false);
+    await browser.close();
+    expect(served[1]?.closed).toBe(true);
+  });
+
+  it("refuses in words when the folder cannot be served, past the cap, or with no browser to start, keeping no server", async () => {
+    let refuseServe = true;
+    let refuseOpen = false;
+    const { served, serve } = folderServers(() => refuseServe);
+    const { browsers, pages } = harness({ serve, max: 1, refuseOpen: () => refuseOpen });
+    const page = { folder: FOLDER, path: "index.html" };
+    expect(await browsers.openPage("t1", page)).toEqual({
+      ok: false,
+      text: `${HERE.This} could not serve this project's files.`,
+    });
+    expect(pages).toHaveLength(0);
+    refuseServe = false;
+    refuseOpen = true;
+    expect(await browsers.openPage("t1", page)).toEqual({
+      ok: false,
+      text: `${HERE.This} could not open a browser for this task right now.`,
+    });
+    expect(served).toEqual([{ folder: FOLDER, origin: "http://127.0.0.1:41000", closed: true }]);
+    refuseOpen = false;
+    await browsers.forTask("t2").navigate({ url: "http://localhost:5174/" });
+    expect(await browsers.openPage("t1", page)).toEqual({
+      ok: false,
+      text: `One task browsers are already open on ${HERE.this}. Stop one, then press the button again.`,
+    });
+    expect(served).toHaveLength(1);
+    expect(browsers.isOpen("t1")).toBe(false);
+  });
+
+  it("leaves the crewmate's browser in the captain's hands when the folder cannot be served", async () => {
+    let refuseServe = false;
+    const { serve } = folderServers(() => refuseServe);
+    const { browsers, pages } = harness({ serve });
+    await browsers.forTask("t1").navigate({ url: "http://localhost:5173/" });
+    refuseServe = true;
+    expect(await browsers.openPage("t1", { folder: FOLDER, path: "index.html" })).toEqual({
+      ok: false,
+      text: `${HERE.This} could not serve this project's files.`,
+    });
+    expect(browsers.fact("t1")).toMatchObject({ state: "open", control: "captain" });
+    expect(pages[0]?.effects.at(-1)).toBe("load http://localhost:5173/");
   });
 });
 

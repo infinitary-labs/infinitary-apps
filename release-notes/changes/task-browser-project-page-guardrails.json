@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-project-page-guardrails",
+      "reason": "Tests only: guardrail tests for opening a page from the project in a task's browser, before the task browser files are split. Nothing a person sees changes."
+    }
+  ]
+}

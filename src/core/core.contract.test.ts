@@ -81,7 +81,9 @@ describe("a client that knows only the published contract", () => {
     await waitFor(
       () =>
         stuck.every((id) =>
-          booted.services.supervisor.cardsSnapshot().some((card) => card.id === `card-stall-${id}`),
+          booted.services.supervisor.cards
+            .snapshot()
+            .some((card) => card.id === `card-stall-${id}`),
         ),
       10_000,
     );

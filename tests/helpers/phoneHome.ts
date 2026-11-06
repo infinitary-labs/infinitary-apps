@@ -9,7 +9,6 @@ import { claimLink } from "@core/devices/dial";
 import { createKeyIdentity } from "@core/devices/identity";
 import { absentKeychain } from "@core/host";
 import { startCore } from "@core/index";
-import type { CardService } from "@core/orchestrator/cardService";
 import { appPathsFor } from "@core/paths";
 import { seedTask } from "@core/tasks/seedTask";
 import { CARD_LEAVE } from "@shared/cardLeave";
@@ -755,7 +754,7 @@ export async function startPhoneHome(
         case "POST held-card-fixture": {
           for (const card of await core.dispatch("inf:cards:list", []))
             await core.dispatch("inf:cards:close", [card.id]);
-          core.services.supervisor.raiseHostCard({
+          core.services.supervisor.cards.raiseHostCard({
             id: "card-phone-readiness",
             title: "Keep the harbour entrance clear",
             meta: "Harbour survey",
@@ -772,36 +771,36 @@ export async function startPhoneHome(
             body: "<p>This reading can already be used.</p>",
             actions: [],
           });
-          core.services.supervisor.flushCards();
+          core.services.supervisor.cards.flushBroadcast();
           result = { held: "Keep the harbour entrance clear", ready: "The tide reading is ready" };
           break;
         }
         case "POST release-held-card": {
-          const card = core.services.supervisor
-            .cardsSnapshot()
+          const card = core.services.supervisor.cards
+            .snapshot()
             .find((card) => card.id === "card-phone-readiness");
           if (!card) throw new Error("The readiness fixture has no held card");
           const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...released } = card;
-          core.services.supervisor.raiseHostCard({
+          core.services.supervisor.cards.raiseHostCard({
             ...released,
             body: "<p>The harbour survey is ready for your choice.</p>",
           });
-          core.services.supervisor.flushCards();
+          core.services.supervisor.cards.flushBroadcast();
           result = { ok: true };
           break;
         }
         case "POST replied-under-card": {
-          const card = core.services.supervisor
-            .cardsSnapshot()
+          const card = core.services.supervisor.cards
+            .snapshot()
             .find((card) => card.id === "card-phone-readiness");
           if (!card) throw new Error("The readiness fixture has no released card");
-          core.services.supervisor.raiseHostCard({
+          core.services.supervisor.cards.raiseHostCard({
             ...card,
             awaiting: "answer",
             sentBackAt: Date.now(),
             body: "<p>The surveyor is answering your harbour question.</p>",
           });
-          core.services.supervisor.flushCards();
+          core.services.supervisor.cards.flushBroadcast();
           result = { ok: true };
           break;
         }
@@ -816,7 +815,7 @@ export async function startPhoneHome(
             status: "idle",
             shape: { kind: "research", deliverable: "answer" },
           });
-          const cards = (core.services.supervisor as unknown as { cards: CardService }).cards;
+          const cards = core.services.supervisor.cards;
           const answerText = "The review stays beside the launch checklist.";
           const id = cards.emitCrewmateCard(
             answer.id,
@@ -851,7 +850,7 @@ export async function startPhoneHome(
             expectedStatus?: string;
             expectedCardOpen?: boolean;
           };
-          const cards = (core.services.supervisor as unknown as { cards: CardService }).cards;
+          const cards = core.services.supervisor.cards;
           if (expectedStatus !== undefined || expectedCardOpen !== undefined)
             await until(
               () =>
@@ -903,8 +902,8 @@ export async function startPhoneHome(
           result = {
             status: question?.status,
             reason: question?.closedReason ?? null,
-            cardOnStack: core.services.supervisor
-              .cardsSnapshot()
+            cardOnStack: core.services.supervisor.cards
+              .snapshot()
               .some((card) => card.id === cardId),
             runs: writes
               .filter(
@@ -1000,7 +999,7 @@ export async function startPhoneHome(
             body: "<p>The next tide is in the morning.</p>",
             actions: [],
           });
-          core.services.supervisor.addCardMessage(
+          core.services.supervisor.cards.addMessage(
             cardIDs.conversation,
             "firstmate",
             "The chart is ready.",
@@ -1048,7 +1047,7 @@ export async function startPhoneHome(
             status: "idle",
           });
           // The crew's own writer, as a crewmate's completion card reaches it; the supervisor's emit needs a live session.
-          const cards = (core.services.supervisor as unknown as { cards: CardService }).cards;
+          const cards = core.services.supervisor.cards;
           const story = (extra: string) => ({
             id: "harbour-merge",
             title: "Merge the north entrance chart",
@@ -1099,7 +1098,7 @@ export async function startPhoneHome(
           );
           // The crewmate's turn ends, which brings its card to the stage.
           cards.closeOut({ kind: "crewmate", taskId: merging.id }, "idle");
-          const tideQuestion = core.services.supervisor.addCardMessage(
+          const tideQuestion = core.services.supervisor.cards.addMessage(
             cardIDs.merge,
             "captain",
             "Does it cover the evening tide too?",
@@ -1175,23 +1174,23 @@ export async function startPhoneHome(
               { id: "drain", label: "Let it drain", default: true },
             ],
           });
-          flipQuestion = core.services.supervisor.addCardMessage(
+          flipQuestion = core.services.supervisor.cards.addMessage(
             cardIDs.flip,
             "captain",
             "but is the mini indeed running out of ram?",
           ).id;
           // INF-2225 (the captain: "Only a line that says it answers it; a handoff stays open"): this line hands
           // off, so the captain's question still waits on the first mate's revision.
-          core.services.supervisor.addCardMessage(
+          core.services.supervisor.cards.addMessage(
             cardIDs.flip,
             "firstmate",
             "I can't see the mini's live memory from here, so I don't know yet. I'll update this card with the answer.",
           );
-          core.services.supervisor.firstmateClosedOut();
-          core.services.supervisor.flushCards();
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+          core.services.supervisor.cards.flushBroadcast();
           result = {
             offerId:
-              core.services.supervisor.cardsSnapshot().find((card) => card.id === cardIDs.flip)
+              core.services.supervisor.cards.snapshot().find((card) => card.id === cardIDs.flip)
                 ?.offerId ?? null,
             title: "Yes, crewmates on the Mac mini are waiting in its test line",
             mate: "I can't see the mini's live memory from here, so I don't know yet. I'll update this card with the answer.",
@@ -1214,15 +1213,15 @@ export async function startPhoneHome(
             reply: "No: it has memory to spare. I added that to the card.",
             answersMessage: flipQuestion,
           });
-          core.services.supervisor.firstmateClosedOut();
-          core.services.supervisor.flushCards();
-          const shown = core.services.supervisor
-            .cardsSnapshot()
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+          core.services.supervisor.cards.flushBroadcast();
+          const shown = core.services.supervisor.cards
+            .snapshot()
             .find((card) => card.id === cardIDs.flip);
           result = {
             added,
             offerId: shown?.offerId ?? null,
-            messages: core.services.supervisor.cardThread(cardIDs.flip),
+            messages: core.services.supervisor.cards.thread(cardIDs.flip),
           };
           break;
         }
@@ -1235,10 +1234,7 @@ export async function startPhoneHome(
             actions: [],
           });
           // The first mate's turn ends, as its own card reaches the stage.
-          (core.services.supervisor as unknown as { cards: CardService }).cards.closeOut(
-            { kind: "firstmate" },
-            "turn-end",
-          );
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
           result = { title: "The survey boat is back" };
           break;
         case "POST show-merge-past":
@@ -1439,7 +1435,7 @@ export async function startPhoneHome(
           break;
         // INF-2022: real owner, native sightings, exact same-offer answers and legacy fallback.
         case "POST shared-seen-fixture": {
-          for (const card of core.services.supervisor.cardsSnapshot())
+          for (const card of core.services.supervisor.cards.snapshot())
             await core.dispatch("inf:cards:close", [card.id]);
           const cards = core.services.supervisor;
           cards.addFirstmateCard({
@@ -1458,8 +1454,8 @@ export async function startPhoneHome(
           break;
         }
         case "POST shared-seen-mark": {
-          const card = core.services.supervisor
-            .cardsSnapshot()
+          const card = core.services.supervisor.cards
+            .snapshot()
             .find((card) => card.title === "Latency findings")!;
           await core.dispatch("inf:cards:seen-update", [
             card.id,
@@ -1470,21 +1466,21 @@ export async function startPhoneHome(
           break;
         }
         case "POST shared-seen-answer": {
-          const cards = core.services.supervisor;
-          const card = cards.cardsSnapshot().find((card) => card.title === "Latency findings")!;
-          cards.addCardMessage(
+          const cards = core.services.supervisor.cards;
+          const card = cards.snapshot().find((card) => card.title === "Latency findings")!;
+          cards.addMessage(
             card.id,
             "firstmate",
             "The same findings also apply after reconnecting.",
           );
-          cards.firstmateClosedOut();
+          cards.closeOut({ kind: "firstmate" }, "turn-end");
           result = { ok: true };
           break;
         }
         case "POST shared-seen-wait": {
           const read = () =>
-            core.services.supervisor
-              .cardsSnapshot()
+            core.services.supervisor.cards
+              .snapshot()
               .find((card) => card.title === "Latency findings");
           await until(() => read()?.currentUpdateSeen === true);
           result = { card: read(), calls: structuredClone(cardRequests) };
@@ -1499,32 +1495,32 @@ export async function startPhoneHome(
             if (title.length > 1024) throw new Error("A card title is too long");
           }
           const read = () =>
-            core.services.supervisor.cardsSnapshot().find((card) => card.title === title);
+            core.services.supervisor.cards.snapshot().find((card) => card.title === title);
           if (!read()) throw new Error(`No card is titled ${title}`);
           await until(() => read()?.currentUpdateSeen === true);
           result = { ok: true };
           break;
         }
         case "GET card-state": {
-          const conversation = core.services.supervisor.cardPast(cardIDs.conversation);
+          const conversation = core.services.supervisor.cards.past(cardIDs.conversation);
           result = {
             calls: structuredClone(cardRequests),
             leaks,
             cards: await core.dispatch("inf:cards:list", []),
-            choice: core.services.supervisor.cardPast(cardIDs.choice) ?? null,
+            choice: core.services.supervisor.cards.past(cardIDs.choice) ?? null,
             conversation: conversation ?? null,
             conversationEnding: conversation
               ? pastEndingWords({ ...conversation.ending, by: "firstmate" })
               : null,
-            saved: core.services.supervisor.cardPast(cardIDs.saved) ?? null,
-            fallback: core.services.supervisor.cardPast(cardIDs.fallback) ?? null,
-            note: core.services.supervisor.cardPast(cardIDs.note) ?? null,
-            merge: core.services.supervisor.cardPast(cardIDs.merge) ?? null,
+            saved: core.services.supervisor.cards.past(cardIDs.saved) ?? null,
+            fallback: core.services.supervisor.cards.past(cardIDs.fallback) ?? null,
+            note: core.services.supervisor.cards.past(cardIDs.note) ?? null,
+            merge: core.services.supervisor.cards.past(cardIDs.merge) ?? null,
             mergeCard:
               (
                 (await core.dispatch("inf:cards:list", [])) as { id: string; minimized?: boolean }[]
               ).find((card) => card.id === cardIDs.merge) ?? null,
-            thread: core.services.supervisor.cardThread(cardIDs.conversation),
+            thread: core.services.supervisor.cards.thread(cardIDs.conversation),
           };
           observations.push({ check: "cards", result });
           break;
@@ -1534,20 +1530,27 @@ export async function startPhoneHome(
           leaks += 1;
           result = { ok: true };
           break;
-        case "POST thread-answer":
+        case "POST thread-answer": {
           // The first mate's answer names the captain's reply; its closing
           // words before it left that reply open.
-          core.services.supervisor.addCardMessage(
+          const { cards } = core.services.supervisor;
+          const harbourReply = cards
+            .thread(cardIDs.conversation)
+            .messages.findLast((line) => line.who === "captain")?.id;
+          cards.addMessage(
             cardIDs.conversation,
             "firstmate",
             "I kept your harbour reply with this chart.",
-            core.services.supervisor
-              .cardThread(cardIDs.conversation)
-              .messages.findLast((line) => line.who === "captain")?.id,
+            undefined,
+            undefined,
+            undefined,
+            false,
+            harbourReply !== undefined ? { answersMessage: harbourReply } : {},
           );
-          core.services.supervisor.firstmateClosedOut();
+          cards.closeOut({ kind: "firstmate" }, "turn-end");
           result = { ok: true };
           break;
+        }
         case "POST show-past":
           result = await core.dispatch("inf:cards:show-past", [cardIDs.choice]);
           break;
@@ -1889,7 +1892,7 @@ export async function startPhoneHome(
           break;
         case "POST talk-started":
           await until(() =>
-            core.services.supervisor.cardsSnapshot().some((card) => card.taskId === "phone-work"),
+            core.services.supervisor.cards.snapshot().some((card) => card.taskId === "phone-work"),
           );
           result = await core.dispatch("inf:tasks:detail", ["phone-work"]);
           observations.push({ check: "phone-start-ran-on-mac", result });

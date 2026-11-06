@@ -1640,7 +1640,7 @@ test("a crewmate's turn runs on the app as a computer that runs work: the home h
     expect(home.tasks.get("t-rivets")).toMatchObject({ status: "active", deviceId });
     // The model's next step is held open there: the turn is mid-way.
     await expect.poll(() => model.heldRequests(), { timeout: 30_000 }).toBe(1);
-    expect(home.supervisor.openCardsFor("t-rivets").map((card) => card.title)).toEqual([
+    expect(home.supervisor.cards.openCardsFor("t-rivets").map((card) => card.title)).toEqual([
       MOCK_CLAUDE_CARD_TITLE,
     ]);
   });

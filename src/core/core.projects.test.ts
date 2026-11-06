@@ -278,7 +278,7 @@ describe("the core, driven with no Electron in the process", () => {
           ?.title,
       ).toBe(`Set up project ${added.repo.name}`);
       // A project already on the list is named, never carded or added twice.
-      const cardsBefore = core.services.supervisor.cardsSnapshot().length;
+      const cardsBefore = core.services.supervisor.cards.snapshot().length;
       expect(
         (
           await change.run({
@@ -288,7 +288,7 @@ describe("the core, driven with no Electron in the process", () => {
           })
         ).text,
       ).toContain(`repo_id ${added.repo.id}`);
-      expect(core.services.supervisor.cardsSnapshot()).toHaveLength(cardsBefore);
+      expect(core.services.supervisor.cards.snapshot()).toHaveLength(cardsBefore);
       expect(setups()).toBe(before + 1);
       expect(events.filter((e) => e.type === "repo_setup")).toHaveLength(1);
       // Firstmate's ask puts up the setup card and adds nothing; the
@@ -298,8 +298,8 @@ describe("the core, driven with no Electron in the process", () => {
         value: { kind: "init", name: "catalog-setup", rigor: "quick" },
         evidence: "start catalog-setup",
       });
-      const card = core.services.supervisor
-        .cardsSnapshot()
+      const card = core.services.supervisor.cards
+        .snapshot()
         .find((c) => c.title === SETUP_CARD_WORDS.title("catalog-setup"));
       expect(card?.author).toBe("host");
       expect(proposed.text).toContain(card?.id);
@@ -363,9 +363,9 @@ describe("the core, driven with no Electron in the process", () => {
     } finally {
       told.mockRestore();
       off();
-      for (const card of core.services.supervisor.cardsSnapshot())
+      for (const card of core.services.supervisor.cards.snapshot())
         if (card.id.startsWith("card-project-setup-"))
-          core.services.supervisor.withdrawHostCard(card.id, "test over");
+          core.services.supervisor.cards.withdrawHostCard(card.id, "test over");
       for (const repo of core.services.repos.list()) {
         if (repo.path === folder || repo.name === "catalog-setup")
           core.services.repos.unregister(repo.id);
@@ -397,8 +397,8 @@ describe("the core, driven with no Electron in the process", () => {
     const addFromCard = async (value: { kind: "clone"; origin: string }) => {
       const calls = told.mock.calls.length;
       await change.run({ action: "project-setup", value, evidence: "clone private" });
-      const card = core.services.supervisor
-        .cardsSnapshot()
+      const card = core.services.supervisor.cards
+        .snapshot()
         .find((c) => c.title === SETUP_CARD_WORDS.title("private"));
       await core.dispatch("inf:cards:act", [card?.id ?? "", "add", "chrome"]);
       await waitFor(() => told.mock.calls.length > calls, 10_000);
@@ -464,8 +464,8 @@ describe("the core, driven with no Electron in the process", () => {
         value: { kind: "init", name: "keyed-setup", key: "kys" },
         evidence: "start keyed-setup, its tasks as KYS",
       });
-      const card = core.services.supervisor
-        .cardsSnapshot()
+      const card = core.services.supervisor.cards
+        .snapshot()
         .find((c) => c.title === SETUP_CARD_WORDS.title("keyed-setup"));
       expect(card?.body).toContain(`>${SETUP_CARD_WORDS.key}</span>`);
       expect(card?.body).toContain(">KYS</span>");
@@ -478,7 +478,7 @@ describe("the core, driven with no Electron in the process", () => {
       expect(await keyOf("keyed-setup")).toBe("KYS");
 
       // A key another project has is refused at the ask, in words, with no card.
-      const cards = core.services.supervisor.cardsSnapshot().length;
+      const cards = core.services.supervisor.cards.snapshot().length;
       const inUse = "KYS is already the task key of keyed-setup. Choose another.";
       expect(
         (
@@ -489,7 +489,7 @@ describe("the core, driven with no Electron in the process", () => {
           })
         ).text,
       ).toBe(inUse);
-      expect(core.services.supervisor.cardsSnapshot()).toHaveLength(cards);
+      expect(core.services.supervisor.cards.snapshot()).toHaveLength(cards);
       // Settings' clone hears the same refusal, never a sign-in it does not need.
       await expect(
         core.dispatch("inf:repos:setup", [
@@ -500,9 +500,9 @@ describe("the core, driven with no Electron in the process", () => {
     } finally {
       signedIn.mockRestore();
       told.mockRestore();
-      for (const card of core.services.supervisor.cardsSnapshot())
+      for (const card of core.services.supervisor.cards.snapshot())
         if (card.id.startsWith("card-project-setup-"))
-          core.services.supervisor.withdrawHostCard(card.id, "test over");
+          core.services.supervisor.cards.withdrawHostCard(card.id, "test over");
       for (const repo of core.services.repos.list())
         if (repo.name === "keyed-setup") core.services.repos.unregister(repo.id);
     }
@@ -1084,7 +1084,7 @@ describe("the core, driven with no Electron in the process", () => {
       if (channel === "inf:cards") cardPushes.push(payload as Card[]);
     });
 
-    core.services.supervisor.addSystemNoteCard("card-core-test", "Core test", "A note body.");
+    core.services.supervisor.cards.addSystemNoteCard("card-core-test", "Core test", "A note body.");
     // Card broadcasts coalesce on a short timer, so wait for the push.
     await waitFor(() => cardPushes.length > 0);
     expect(cardPushes.at(-1)?.some((card) => card.id === "card-core-test")).toBe(true);

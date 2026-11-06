@@ -198,6 +198,7 @@ import {
   readChangeReading,
   type WorkspaceService,
 } from "../workspace/workspaceService";
+import type { CardService } from "./cardService";
 import { type ChangeDelivery, createChangeDelivery } from "./changeDelivery";
 import type { PrOutcome } from "./changeMerge";
 import { BASELINE_OBSERVATIONS_NEXT, CHECK_DIAGNOSIS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
@@ -806,8 +807,8 @@ const tick = () =>
  * answers_message, since only a line naming it ends their question (the
  * captain's "Only a line that says it answers it; a handoff stays open").
  */
-function askedOn(supervisor: Pick<CrewSupervisor, "cardThread">, cardId: string) {
-  return supervisor.cardThread(cardId).messages.findLast((line) => line.who === "captain")?.id;
+function askedOn(supervisor: Pick<CrewSupervisor, "cards">, cardId: string) {
+  return supervisor.cards.thread(cardId).messages.findLast((line) => line.who === "captain")?.id;
 }
 
 /** A crewmate's whole risk declaration: every dimension rated. */
@@ -940,7 +941,7 @@ describe("CrewSupervisor", () => {
 
     // A finished crewmate stays idle until the captain settles it; landing
     // closes it done and tears the worktree down (WI-11 - no `finish`).
-    const settled = await supervisor.settleTask(taskId, "land", undefined, "captain");
+    const settled = await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain");
     expect(settled).toContain("into main.");
     expect(crewmate.dispose).toHaveBeenCalled();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
@@ -2057,14 +2058,14 @@ describe("CrewSupervisor", () => {
       await emit("hidden");
       ids.push(`card-${taskId}-hidden`);
       ids.push(supervisor.addFirstmateCard({ ...decision, taskId }));
-      supervisor.addAuthDecisionCard("task-sign-in", "crewmate 1", "Sign in again.", { taskId });
+      supervisor.cards.addAuthDecisionCard("task-sign-in", "crewmate 1", "Sign in again.", { taskId });
       ids.push("task-sign-in");
       const other = supervisor.addFirstmateCard({ ...decision, title: "Another task's choice" });
       await tick();
-      expect(supervisor.cardsSnapshot().find((card) => card.id === ids[1])?.awaiting).toBe(
+      expect(supervisor.cards.snapshot().find((card) => card.id === ids[1])?.awaiting).toBe(
         "answer",
       );
-      expect(supervisor.cardsSnapshot().find((card) => card.id === ids[3])?.awaiting).toBe(
+      expect(supervisor.cards.snapshot().find((card) => card.id === ids[3])?.awaiting).toBe(
         "close-out",
       );
       expect(cardStore.history(ids[0] as string)).toHaveLength(1);
@@ -2072,7 +2073,7 @@ describe("CrewSupervisor", () => {
       const protocol = new TaskProtocol({
         tasks,
         repos,
-        cards: { listOpen: () => cardStore.listOpen(), snapshot: () => supervisor.cardsSnapshot() },
+        cards: { listOpen: () => cardStore.listOpen(), snapshot: () => supervisor.cards.snapshot() },
         broadcastEvent: () => {},
         emit: () => {},
       });
@@ -2141,8 +2142,8 @@ describe("CrewSupervisor", () => {
       await tick();
       expect(tasks.get(taskId)?.status).toBe("active");
       const id = `card-${taskId}-inspection`;
-      expect(supervisor.cardsSnapshot().map((card) => card.id)).toContain(id);
-      expect(supervisor.cardsSnapshot().find((card) => card.id === id)?.awaiting).toBeUndefined();
+      expect(supervisor.cards.snapshot().map((card) => card.id)).toContain(id);
+      expect(supervisor.cards.snapshot().find((card) => card.id === id)?.awaiting).toBeUndefined();
       expect(cardStore.chosenAction(id)).toBeUndefined();
       // Retire this test's now-idle runtime and pending retry through the real lifecycle.
       await supervisor.interruptCrewmate(taskId, "cancel");
@@ -2252,7 +2253,7 @@ describe("CrewSupervisor", () => {
       createdAt: Date.now(),
     });
     // Landing closes it done; a later cancel must not relabel a closed row.
-    await supervisor.settleTask("t-done", "land", undefined, "captain");
+    await supervisor.settling.settle.settleTask("t-done", "land", undefined, "captain");
     await tick();
     expect(tasks.get("t-done")?.status).toBe("done");
     const finishedBefore = events.filter((e) => e.type === "task_finished").length;
@@ -2564,7 +2565,7 @@ describe("CrewSupervisor", () => {
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
 
-    expect(await supervisor.settleTask(taskId, "discard")).toBe('Discarded.');
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe('Discarded.');
     await tick();
     // The row survives, closed; its timeline says why; the card row stays
     // resolved rather than deleted.
@@ -2587,7 +2588,7 @@ describe("CrewSupervisor", () => {
       expect.objectContaining({ taskId, branch: `fm/task-${taskId}` }),
     );
     // Settled means settled: a second discard has nothing to do.
-    expect(await supervisor.settleTask(taskId, "discard")).toContain("already discarded");
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toContain("already discarded");
   });
 
   // INF-547, the captain's words: "the tasks were done but i never got any
@@ -2626,8 +2627,8 @@ describe("CrewSupervisor", () => {
 
     it("puts up the first mate's sentence when it discards started work, and Activity says Dropped: and the same words", async () => {
       const h = await idleTask();
-      await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
-        h.supervisor.settleTask(h.taskId, "discard"),
+      await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
+        h.supervisor.settling.settle.settleTask(h.taskId, "discard"),
       );
       await tick();
       expect(left(h.cards(), h.taskId)).toEqual([
@@ -2662,8 +2663,8 @@ describe("CrewSupervisor", () => {
       const discarded = await step("Bring INF-643's branch up to date on the Mac mini");
       const sentence =
         "INF-1461 handed INF-643's updated branch over as a bundle, so its own copy on the Mac mini is no longer needed.";
-      await h.supervisor.withClosingSentence(discarded, sentence, () =>
-        h.supervisor.settleTask(discarded, "discard"),
+      await h.supervisor.settling.closing.withClosingSentence(discarded, sentence, () =>
+        h.supervisor.settling.settle.settleTask(discarded, "discard"),
       );
       await tick();
       expect(h.tasks.get(discarded)?.status).toBe("dropped");
@@ -2710,8 +2711,8 @@ describe("CrewSupervisor", () => {
     it("adds nothing when the captain's own click closes the work", async () => {
       const h = await idleTask();
       // Even with the first mate's sentence pending, their close carries none.
-      await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
-        h.supervisor.settleTask(h.taskId, "discard", undefined, "captain"),
+      await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
+        h.supervisor.settling.settle.settleTask(h.taskId, "discard", undefined, "captain"),
       );
       await tick();
       expect(h.tasks.get(h.taskId)?.status).toBe("dropped");
@@ -2748,8 +2749,8 @@ describe("CrewSupervisor", () => {
       await tick();
       expect(h.tasks.get(taskId)?.delivery?.finishedAt).toBeDefined();
 
-      await h.supervisor.withClosingSentence(taskId, SENTENCE, () =>
-        h.supervisor.settleTask(taskId, "discard"),
+      await h.supervisor.settling.closing.withClosingSentence(taskId, SENTENCE, () =>
+        h.supervisor.settling.settle.settleTask(taskId, "discard"),
       );
       await tick();
       expect(h.tasks.get(taskId)?.status).toBe("dropped");
@@ -2781,8 +2782,8 @@ describe("CrewSupervisor", () => {
       await tick();
       expect(left(h.cards(), h.taskId)).toEqual([]);
 
-      await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
-        h.supervisor.settleTask(h.taskId, "discard"),
+      await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
+        h.supervisor.settling.settle.settleTask(h.taskId, "discard"),
       );
       await tick();
       const up = h.cards().filter((card) => card.taskId === h.taskId);
@@ -2820,8 +2821,8 @@ describe("CrewSupervisor", () => {
       await tick();
       expect(left(h.cards(), h.taskId)).toEqual([]);
 
-      await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
-        h.supervisor.settleTask(h.taskId, "discard"),
+      await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
+        h.supervisor.settling.settle.settleTask(h.taskId, "discard"),
       );
       await tick();
       const up = h.cards().filter((card) => card.taskId === h.taskId);
@@ -2869,8 +2870,8 @@ describe("CrewSupervisor", () => {
       const crewmate = fakeCrewmate();
       const { supervisor, cards, tasks } = setup(crewmate);
       tasks.create({ id: "t-open", title: "Never started", prompt: "p", repoId: null });
-      await supervisor.withClosingSentence("t-open", SENTENCE, () =>
-        supervisor.settleTask("t-open", "discard"),
+      await supervisor.settling.closing.withClosingSentence("t-open", SENTENCE, () =>
+        supervisor.settling.settle.settleTask("t-open", "discard"),
       );
       await tick();
       const record = tasks.get("t-open");
@@ -2922,7 +2923,7 @@ describe("CrewSupervisor", () => {
       const waiter = seedTask(h.tasks, { id: "waiter", title: "Ship the notice", status: "idle" });
       h.tasks.graph.link(h.taskId, waiter.id, "blocks", "firstmate");
 
-      const text = await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+      const text = await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
         h.supervisor.carryOnTask(h.taskId, h.carrier.key),
       );
       await tick();
@@ -3000,8 +3001,8 @@ describe("CrewSupervisor", () => {
       // The carrier worked for the same message, so the old task held its outcome back.
       h.tasks.capture.attachAsk(h.ask.id, h.carrier.id, "tool:spawn_crewmate");
       const merged = "The notice fix merged in PR #12.";
-      await h.supervisor.withClosingSentence(h.carrier.id, merged, () =>
-        h.supervisor.closeTask(h.carrier.id, {
+      await h.supervisor.settling.closing.withClosingSentence(h.carrier.id, merged, () =>
+        h.supervisor.settling.closing.closeTask(h.carrier.id, {
           status: "done",
           reason: "merged",
           actor: "firstmate",
@@ -3224,7 +3225,7 @@ describe("CrewSupervisor", () => {
     await tick();
     vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
 
-    const result = await supervisor.settleTask(taskId, "discard");
+    const result = await supervisor.settling.settle.settleTask(taskId, "discard");
     expect(closePullRequest).toHaveBeenCalledWith(taskId);
     expect(result).toBe(
       'Discarded. Closed PR #9 on GitHub. https://github.com/x/y/pull/9',
@@ -3389,7 +3390,7 @@ describe("CrewSupervisor", () => {
     crewmate.finishPrompt();
     await tick();
 
-    const result = await supervisor.settleTask(taskId, "discard");
+    const result = await supervisor.settling.settle.settleTask(taskId, "discard");
     expect(closePullRequest).not.toHaveBeenCalled();
     expect(result).toBe('Discarded.');
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
@@ -3410,14 +3411,14 @@ describe("CrewSupervisor", () => {
     crewmate.finishPrompt();
     await tick();
 
-    const refused = await supervisor.settleTask(taskId, "discard");
+    const refused = await supervisor.settling.settle.settleTask(taskId, "discard");
     expect(refused).toContain("without confirm");
     expect(refused).toContain("2 commits and uncommitted edits");
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
     expect(cards().find((card) => card.id === `card-discard-${taskId}`)).toBeUndefined();
 
-    const confirmed = await supervisor.settleTask(taskId, "discard", true);
+    const confirmed = await supervisor.settling.settle.settleTask(taskId, "discard", true);
     expect(confirmed).toContain("Discarded");
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
     expect(workspace.removeTaskWorktree).toHaveBeenCalled();
@@ -3434,7 +3435,7 @@ describe("CrewSupervisor", () => {
     await tick();
     crewmate.finishPrompt();
     await tick();
-    const result = await supervisor.settleTask(taskId, "land", undefined, "captain");
+    const result = await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain");
     expect(result).toContain("into main.");
     expect(workspace.landTaskWork).toHaveBeenCalled();
     expect(tasks.get(taskId)).toMatchObject({
@@ -3444,7 +3445,7 @@ describe("CrewSupervisor", () => {
     });
     // Settled work is history: it leaves crew_status, and a second land refuses.
     expect(supervisor.crewStatus().find((entry) => entry.taskId === taskId)).toBeUndefined();
-    expect(await supervisor.settleTask(taskId, "land", undefined, "captain")).toContain(
+    expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toContain(
       "already landed",
     );
   });
@@ -3465,7 +3466,7 @@ describe("CrewSupervisor", () => {
     crewmate.finishPrompt();
     await tick();
     const stage = cards().find((card) => card.id === first) as Card;
-    supervisor.cardSeen(stage.id, stage.offerId as string);
+    supervisor.cards.seen(stage.id, stage.offerId as string);
 
     const small = await onCard?.(note("<p>One.</p><p>Two.</p><p>Three again.</p>"));
     expect(small).toContain("1 part new and 1 removed");
@@ -3554,7 +3555,7 @@ describe("CrewSupervisor", () => {
       ],
     });
     await tick();
-    const card = supervisor.cardsSnapshot().find((entry) => entry.title === "Pick a course");
+    const card = supervisor.cards.snapshot().find((entry) => entry.title === "Pick a course");
     vi.spyOn(supervisor, "steerCrewmate").mockRejectedValue(new Error("session unreachable"));
     specs[0]?.onReport?.("The decision is ready.");
     supervisor.act(card?.id ?? "", "change");
@@ -3568,7 +3569,7 @@ describe("CrewSupervisor", () => {
         taskId: expect.any(String),
       }),
     );
-    expect(supervisor.cardsSnapshot()).toEqual([]);
+    expect(supervisor.cards.snapshot()).toEqual([]);
   });
 
   it("close_card removes a card from the snapshot and fails loudly on a second close", async () => {
@@ -3710,7 +3711,7 @@ describe("CrewSupervisor", () => {
       expect(settleLines(tasks, "receipt")).toEqual([
         action === "discard" ? "Discarding" : "Merging",
       ]);
-      expect(supervisor.cardsSnapshot().map((card) => card.id)).not.toContain(first);
+      expect(supervisor.cards.snapshot().map((card) => card.id)).not.toContain(first);
       expect(cardStore.chosenAction(first)).toBe(action);
       expect(cardStore.listOpen().map((card) => card.id)).not.toContain(first);
       expect(tasks.get("receipt")?.status).toBe("active");
@@ -3720,7 +3721,7 @@ describe("CrewSupervisor", () => {
       });
       supervisor.act(first, action); // Same-card double click is a no-op.
       supervisor.act(second, action); // Another card cannot race this task.
-      expect(await supervisor.settleTask("receipt", "merge-pr")).toContain("already in progress");
+      expect(await supervisor.settling.settle.settleTask("receipt", "merge-pr")).toContain("already in progress");
       await tick();
       // Coalesced push is independent of the operation. A merge click stays
       // in view as one pending note until its outcome (INF-1275).
@@ -3735,7 +3736,7 @@ describe("CrewSupervisor", () => {
       expect(workspace.taskWorkStatus).toHaveBeenCalledTimes(action === "discard" ? 1 : 0);
       operation.resolve();
       await vi.waitFor(() => expect(workspace.removeTaskWorktree).toHaveBeenCalledTimes(1));
-      expect(await supervisor.settleTask("receipt", "discard")).toContain("already in progress");
+      expect(await supervisor.settling.settle.settleTask("receipt", "discard")).toContain("already in progress");
       cleanup.resolve();
       await vi.waitFor(() =>
         expect(tasks.timeline("receipt").at(-1)).toMatchObject(
@@ -3747,7 +3748,7 @@ describe("CrewSupervisor", () => {
       expect(cardStore.chosenAction(first)).toBe(action); // Receipt is never rewritten as success.
       // A merge writes its line as it closes the task, a moment before the settle lets the task go.
       await vi.waitFor(async () =>
-        expect(await supervisor.settleTask("receipt", "discard")).not.toContain("in progress"),
+        expect(await supervisor.settling.settle.settleTask("receipt", "discard")).not.toContain("in progress"),
       );
       // The merge went in: its pending note is gone (INF-1275).
       await vi.waitFor(() => expect(cards()).toEqual([]));
@@ -3948,7 +3949,7 @@ describe("CrewSupervisor", () => {
     expect(() => supervisor.act(cardId, "land", "frame", { tiltDeg: 42 })).toThrow(
       "available only from the card controls",
     );
-    expect(supervisor.cardsSnapshot().some((card) => card.id === cardId)).toBe(true);
+    expect(supervisor.cards.snapshot().some((card) => card.id === cardId)).toBe(true);
     expect(workspace.landTaskWork).not.toHaveBeenCalled();
     expect(tasks.get("revision")?.status).toBe("active");
 
@@ -3968,7 +3969,7 @@ describe("CrewSupervisor", () => {
       body: "<p>Choose.</p>",
       actions: [{ id: "land", label: "Land", default: true, effect: SETTLE_MERGE }],
     });
-    const shown = supervisor.cardsSnapshot().find((card) => card.id === cardId) as Card;
+    const shown = supervisor.cards.snapshot().find((card) => card.id === cardId) as Card;
 
     supervisor.act(cardId, "land", "chrome", undefined, {
       id: "gesture-0100",
@@ -4016,7 +4017,7 @@ describe("CrewSupervisor", () => {
     expect(() => supervisor.act(stray, "not-offered", "chrome")).toThrow(
       "This choice is not offered on this card",
     );
-    expect(supervisor.cardsSnapshot().some((card) => card.id === stray)).toBe(true);
+    expect(supervisor.cards.snapshot().some((card) => card.id === stray)).toBe(true);
     expect(cardStore.chosenAction(stray)).toBeUndefined();
     expect(tasks.timeline("look")).toEqual(before);
 
@@ -4039,20 +4040,20 @@ describe("CrewSupervisor", () => {
       outcome: "Published through release-please",
       worktreeDir: "/work",
     });
-    expect((await supervisor.closeExternallyReleased("release", "")).text).toContain(
+    expect((await supervisor.settling.declared.closeExternallyReleased("release", "")).text).toContain(
       "name the release",
     );
     expect(tasks.get("release")?.status).toBe("active");
     vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: true, unlandedCommits: 0 });
     expect(
-      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published")).text,
     ).toContain("uncommitted edits");
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
     // INF-2628, the captain's "Release close accepts closed pull requests and
     // squash merges": commits only history calls unmerged no longer refuse,
     // since the close saves them before the working copy goes.
     vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: false, unlandedCommits: 2 });
-    const settled = await supervisor.closeExternallyReleased("release", "v1.2.3 published");
+    const settled = await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published");
     expect(settled.text).toContain("v1.2.3 published");
     expect(tasks.get("release")).toMatchObject({ status: "done", closedReason: "released" });
     expect(
@@ -4061,7 +4062,7 @@ describe("CrewSupervisor", () => {
     expect(workspace.landTaskWork).not.toHaveBeenCalled();
     expect(workspace.removeTaskWorktree).toHaveBeenCalledOnce();
     expect(
-      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published")).text,
     ).toContain("wait for its crewmate");
   });
 
@@ -4083,7 +4084,7 @@ describe("CrewSupervisor", () => {
       worktreeDir: "/work",
     });
     expect(
-      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published")).text,
     ).toContain("has not reported");
     tasks.turns.recordReport("release", { text: "Published externally" });
     seedDelivery(tasks, "release", { prUrl: "https://github.com/o/r/pull/1", prNumber: 1 });
@@ -4097,11 +4098,11 @@ describe("CrewSupervisor", () => {
     };
     pulls.set(1, pull);
     expect(
-      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published")).text,
     ).toContain("is still open");
     pulls.set(1, new ForgeError("transient", "GitHub answered 502 to GET /repos/o/r/pulls/1"));
     expect(
-      (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
+      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published")).text,
     ).toContain("could not be read, so it may still be open");
     expect(tasks.get("release")?.status).toBe("active");
     seedTask(tasks, {
@@ -4112,7 +4113,7 @@ describe("CrewSupervisor", () => {
       worktreeDir: "/other",
     });
     vi.mocked(workspace.taskWorkStatus).mockRejectedValueOnce(new Error("cannot inspect"));
-    expect((await supervisor.closeExternallyReleased("other", "v1.2.3 published")).text).toContain(
+    expect((await supervisor.settling.declared.closeExternallyReleased("other", "v1.2.3 published")).text).toContain(
       "cannot inspect",
     );
     expect(tasks.get("other")?.status).toBe("active");
@@ -4129,16 +4130,16 @@ describe("CrewSupervisor", () => {
       actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
     });
     supervisor.act(id, "discard");
-    expect(supervisor.cardsSnapshot()).toEqual([]);
+    expect(supervisor.cards.snapshot()).toEqual([]);
     await vi.waitFor(() =>
       expect(settleLines(tasks, "dirty").some((line) => line.includes("never merged"))).toBe(true),
     );
-    const refusal = await supervisor.settleTask("dirty", "discard");
+    const refusal = await supervisor.settling.settle.settleTask("dirty", "discard");
     expect(refusal).toContain("2 commits and uncommitted edits that were never merged");
     expect(settleLines(tasks, "dirty")).toContain(refusal);
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
     expect(tasks.get("dirty")?.status).toBe("active");
-    expect(await supervisor.settleTask("dirty", "discard", true)).toBe('Discarded.');
+    expect(await supervisor.settling.settle.settleTask("dirty", "discard", true)).toBe('Discarded.');
   });
 
   it("wakes the Firstmate with a confirm-gated discard refusal, so the dead end is orchestratable", async () => {
@@ -4445,8 +4446,8 @@ describe("CrewSupervisor", () => {
           outcome === "discard" ? "discard" : outcome === "merge-pr" ? "merge-pr" : "land";
         text =
           via === "tool"
-            ? await supervisor.settleTask("root", mode)
-            : (await supervisor.settleTaskDetailed("root", mode)).text;
+            ? await supervisor.settling.settle.settleTask("root", mode)
+            : (await supervisor.settling.settle.settleTaskDetailed("root", mode)).text;
         expect(wakes.filter((wake) => wake.kind === "settled")).toEqual([]);
       }
       const merged = outcome === "land" || outcome === "merge-pr";
@@ -4505,7 +4506,7 @@ describe("CrewSupervisor", () => {
     seedTask(tasks, { id: "shell", title: "Leftover", status: "idle", worktreeDir: "/work" });
     inbox.enqueue(FIRSTMATE_RECIPIENT, "stale wake", "shell");
 
-    await supervisor.requestDiscard("shell");
+    await supervisor.settling.settle.requestDiscard("shell");
 
     const rows = inbox.allFor(FIRSTMATE_RECIPIENT);
     expect(rows.map((row) => row.ref)).toEqual(["shell"]);
@@ -4521,7 +4522,7 @@ describe("CrewSupervisor", () => {
     vi.mocked(workspace.taskWorkStatus).mockResolvedValue({ dirty: true, unlandedCommits: 1 });
 
     // The agent's own tool call already receives this text as its result.
-    expect(await supervisor.settleTask("done", "discard")).toContain("uncommitted edits");
+    expect(await supervisor.settling.settle.settleTask("done", "discard")).toContain("uncommitted edits");
     expect(settleWakes(ops)).toEqual([]);
   });
 
@@ -4540,9 +4541,9 @@ describe("CrewSupervisor", () => {
       actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
     });
     supervisor.act(id, "merge-pr");
-    expect(await supervisor.landTask("merge", "captain")).toContain("already in progress");
-    expect(await supervisor.mergePrTask("merge", "captain")).toContain("already in progress");
-    expect(await supervisor.settleTask("other", "discard")).toBe('Discarded.');
+    expect(await supervisor.settling.settle.settleTask("merge", "land", undefined, "captain")).toContain("already in progress");
+    expect(await supervisor.settling.settle.settleTask("merge", "merge-pr", undefined, "captain")).toContain("already in progress");
+    expect(await supervisor.settling.settle.settleTask("other", "discard")).toBe('Discarded.');
     operation.reject(new Error("GitHub is unreachable"));
     // The feed says what it means; the raw failure is kept on the record.
     await vi.waitFor(() =>
@@ -4556,7 +4557,7 @@ describe("CrewSupervisor", () => {
       text: "Could not complete merge-pr for task merge: GitHub is unreachable",
     });
     mergePullRequest.mockResolvedValue({ ok: false, text: "PR merge blocked: CI is red." });
-    expect(await supervisor.mergePrTask("merge", "captain")).toBe("PR merge blocked: CI is red.");
+    expect(await supervisor.settling.settle.settleTask("merge", "merge-pr", undefined, "captain")).toBe("PR merge blocked: CI is red.");
     expect(mergePullRequest).toHaveBeenCalledTimes(2);
   });
 
@@ -4581,13 +4582,13 @@ describe("CrewSupervisor", () => {
       data: { problem: "The main worktree is dirty." },
     });
     vi.mocked(workspace.removeTaskWorktree).mockRejectedValue(new Error("Cleanup failed."));
-    await supervisor.requestDiscard("land");
+    await supervisor.settling.settle.requestDiscard("land");
     expect(settleLines(tasks, "land")).toContain("Could not discard: something went wrong - try again");
     // The row closed but its worktree is still there, so a second discard
     // retries the cleanup instead of claiming there is nothing left (WI-7).
     expect(tasks.get("land")).toMatchObject({ status: "dropped", workspaceState: "present" });
     vi.mocked(workspace.removeTaskWorktree).mockResolvedValue(undefined);
-    expect(await supervisor.settleTask("land", "discard")).toBe('Discarded.');
+    expect(await supervisor.settling.settle.settleTask("land", "discard")).toBe('Discarded.');
     expect(tasks.get("land")).toMatchObject({
       status: "dropped",
       closedReason: "discarded",
@@ -5186,7 +5187,7 @@ describe("CrewSupervisor", () => {
       if (!repoId) throw new Error("Missing project");
       h.repos.configure(repoId, { autonomy: true });
       expect(h.tasks.get(h.taskId)?.gate?.kind).toBe("captain");
-      await h.supervisor.settleTask(h.taskId, "merge-pr");
+      await h.supervisor.settling.settle.settleTask(h.taskId, "merge-pr");
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
       expect(h.forge.merges).toHaveLength(1);
     });
@@ -5211,8 +5212,8 @@ describe("CrewSupervisor", () => {
 
       it("puts up the sentence with the pull request when nothing of the task stays up", async () => {
         const h = await selfMerging();
-        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
-          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settling.settle.settleTask(h.taskId, "merge-pr"),
         );
         await tick();
         const record = h.tasks.get(h.taskId);
@@ -5238,8 +5239,8 @@ describe("CrewSupervisor", () => {
             actions: [],
           });
         });
-        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
-          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settling.settle.settleTask(h.taskId, "merge-pr"),
         );
         await tick();
         expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
@@ -5268,8 +5269,8 @@ describe("CrewSupervisor", () => {
         h.crewmate.finishPrompt();
         await tick();
         expect(h.cards().some((card) => card.id === story.id)).toBe(false);
-        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
-          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settling.settle.settleTask(h.taskId, "merge-pr"),
         );
         await tick();
         expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
@@ -5295,8 +5296,8 @@ describe("CrewSupervisor", () => {
         await tick();
         h.crewmate.finishPrompt();
         await tick();
-        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
-          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settling.settle.settleTask(h.taskId, "merge-pr"),
         );
         await tick();
         const record = h.tasks.get(h.taskId);
@@ -5314,8 +5315,8 @@ describe("CrewSupervisor", () => {
         const repoId = h.tasks.get(h.taskId)?.repoId;
         if (!repoId) throw new Error("Missing project");
         h.repos.configure(repoId, { autonomy: true });
-        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
-          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settling.settle.settleTask(h.taskId, "merge-pr"),
         );
         await tick();
         const record = h.tasks.get(h.taskId);
@@ -5354,7 +5355,7 @@ describe("CrewSupervisor", () => {
         h.inbox.allFor(h.taskId).some((row) => row.facts?.kind === "task-policies-changed"),
       ).toBe(true);
       expect(h.crewmate.promptCalls).toHaveLength(1);
-      const result = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      const result = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(result.text).toContain("Merged");
       expect(h.forge.merges).toEqual([APPROVED]);
       expect(h.tasks.get(h.taskId)?.status).toBe("done");
@@ -5487,13 +5488,13 @@ describe("CrewSupervisor", () => {
       const h = await approved();
       h.forge.states = ["failure"];
       editPolicies(h, { autonomy: true });
-      expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+      expect((await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
         "the checks failed",
       );
       expect(h.forge.merges).toEqual([]);
       expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("red");
       h.forge.states = ["success"];
-      await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(h.forge.merges).toEqual([APPROVED]);
     });
 
@@ -5513,7 +5514,7 @@ describe("CrewSupervisor", () => {
                 : { delivery: "local-only" },
           );
         };
-        const result = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+        const result = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
         expect(result.text).toContain("policies changed");
         expect(h.forge.merges).toEqual([]);
         expect(h.tasks.get(h.taskId)?.delivery?.prNumber).toBe(7);
@@ -5532,7 +5533,7 @@ describe("CrewSupervisor", () => {
       expect(h.forge.merges).toEqual([]);
       expect(h.authorization()?.status).toBe("invalidated");
       editPolicies(h, { autonomy: true });
-      await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(h.forge.merges).toEqual([APPROVED]);
     });
 
@@ -5555,7 +5556,7 @@ describe("CrewSupervisor", () => {
         prNumber: 7,
       });
       expect(h.supervisor.crewStatus(h.taskId)[0]?.review).toBe("review passed");
-      await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(h.forge.merges).toEqual([APPROVED]);
     });
 
@@ -5580,7 +5581,7 @@ describe("CrewSupervisor", () => {
 
       it("passes the checks at the version his words cover, and a newer version brings them back", async () => {
         const h = await failedChecks();
-        expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+        expect((await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
           softHoldWords("checks", "firstmate"),
         );
         expect(
@@ -5602,12 +5603,12 @@ describe("CrewSupervisor", () => {
         expect(row).toMatchObject({ kind: "note", actor: "firstmate" });
         // A fix pushed after his words is a version they did not cover.
         h.forge.headSha = "fixed0004";
-        expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+        expect((await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
           softHoldWords("checks", "firstmate"),
         );
         expect(h.forge.merges).toEqual([]);
         h.forge.headSha = APPROVED;
-        await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+        await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
         expect(h.forge.merges).toEqual([APPROVED]);
       });
 
@@ -5641,12 +5642,12 @@ describe("CrewSupervisor", () => {
         h.supervisor.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
         h.supervisor.withdrawOverride(h.taskId);
         expect(h.tasks.get(h.taskId)?.delivery?.override).toBeUndefined();
-        expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+        expect((await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
           softHoldWords("checks", "firstmate"),
         );
         h.supervisor.declareOverride(h.taskId, { words, holds: ["checks"], until: "task" });
         h.forge.headSha = "fixed0004";
-        await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+        await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
         expect(h.forge.merges).toEqual(["fixed0004"]);
         // The metrics read each declaration off the row it wrote, and the
         // take-back is none (INF-484 move 8 counts overrides per hold kind).
@@ -6060,7 +6061,7 @@ describe("CrewSupervisor", () => {
         await h.specs[0]?.onCard?.({ ...question, id: "unit" });
         await tick();
         h.supervisor.addFirstmateCard({ ...question, title: "Merge it now?", taskId: h.taskId });
-        expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
+        expect((await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
           softHoldWords("decisions", "firstmate"),
         );
         h.supervisor.closeCard(
@@ -6069,7 +6070,7 @@ describe("CrewSupervisor", () => {
           "the unit is settled",
         );
         await tick();
-        await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+        await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
         expect(h.forge.merges).toEqual([APPROVED]);
       });
 
@@ -6121,14 +6122,14 @@ describe("CrewSupervisor", () => {
       expect(h.cards().some((card) => card.title === "Approval after withdrawal")).toBe(true);
       editPolicies(h, { autonomy: true });
       expect(h.cards().some((card) => card.title === "Approval after withdrawal")).toBe(true);
-      expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).refusal?.refused).toBe(
+      expect((await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr")).refusal?.refused).toBe(
         "autonomy-off",
       );
       expect(h.forge.merges).toEqual([]);
       const other = await approved();
       editPolicies(other, { autonomy: true });
       other.tasks.placement.setGate(other.taskId, { kind: "captain", ref: "unrelated-decision" });
-      expect((await other.supervisor.settleTaskDetailed(other.taskId, "merge-pr")).text).toContain(
+      expect((await other.supervisor.settling.settle.settleTaskDetailed(other.taskId, "merge-pr")).text).toContain(
         "another decision",
       );
       expect(other.forge.merges).toEqual([]);
@@ -6145,7 +6146,7 @@ describe("CrewSupervisor", () => {
         h.forge.merges.push(head);
         return { sha: `squash-${head}` };
       };
-      const merging = h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      const merging = h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       await sent.promise;
       expect(editPolicies(h, { autonomy: false })).toContain("merge already sent");
       expect(h.supervisor.taskAutonomy(h.taskId)).toBe(false);
@@ -6160,14 +6161,14 @@ describe("CrewSupervisor", () => {
       const { supervisor, tasks, taskId, forge } = harness;
       // The project asks before merging: while #7 is open, the merge is the captain's.
       expect(supervisor.taskAutonomy(taskId)).toBe(false);
-      expect((await supervisor.settleTaskDetailed(taskId, "merge-pr")).refusal?.refused).toBe(
+      expect((await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr")).refusal?.refused).toBe(
         "autonomy-off",
       );
       // The captain merges #7 on GitHub himself; the branch has no open pull request now.
       forge.merged = true;
       expect(await harness.declare({})).toContain("overall: merged");
       expect(tasks.get(taskId)?.delivery).toMatchObject({ ci: "merged", prNumber: 7 });
-      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(result.text).toBe("#7 is already merged on GitHub.");
       expect(result.refusal).toBeUndefined();
       expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
@@ -6218,12 +6219,12 @@ describe("CrewSupervisor", () => {
       };
       seedDelivery(tasks, taskId, { mergeReviews: [next] });
       forge.openNumbers.add(8);
-      const held = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      const held = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(held.text).toContain("#8 on this task is still open");
       expect(tasks.get(taskId)?.status).not.toBe("done");
       // #8 merges too: nothing of the task is open, so it closes as merged.
       forge.openNumbers.delete(8);
-      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(result.text).toBe("#7 is already merged on GitHub.");
       expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
       expect(forge.merges).toEqual([]);
@@ -6237,7 +6238,7 @@ describe("CrewSupervisor", () => {
       const harness = await approved({ referenced: true });
       const { supervisor, tasks, taskId, forge } = harness;
       expect(tasks.get(taskId)?.delivery?.checkTarget).toMatchObject({ number: 7, branch: "fm/task-earlier" });
-      const held = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      const held = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(held.text).not.toContain("Merged");
       expect(forge.merges).toEqual([]);
       expect(tasks.get(taskId)?.status).not.toBe("done");
@@ -6254,7 +6255,7 @@ describe("CrewSupervisor", () => {
       });
       harness.crewmate.finishPrompt();
       await tick();
-      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(result.text).toContain("Merged #7");
       expect(forge.merges).toEqual([APPROVED]);
       expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
@@ -6290,12 +6291,12 @@ describe("CrewSupervisor", () => {
       seedDelivery(tasks, taskId, { mergeReviews: [] });
       expect(tasks.changesFor(taskId).map((change) => change.handle?.number)).toContain(8);
       forge.unreadable.add(8);
-      const held = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      const held = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(held.text).toContain("#8 on this task could not be read, so it may still be open");
       expect(tasks.get(taskId)?.status).not.toBe("done");
       // Read again and closed: nothing of the task is open, so it closes as merged.
       forge.unreadable.delete(8);
-      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(result.text).toBe("#7 is already merged on GitHub.");
       expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
       expect(forge.merges).toEqual([]);
@@ -6318,7 +6319,7 @@ describe("CrewSupervisor", () => {
         ],
       });
       await tick();
-      const merge = () => h.supervisor.cardsSnapshot().find((card) => card.id === h.card.id);
+      const merge = () => h.supervisor.cards.snapshot().find((card) => card.id === h.card.id);
       expect(splitSettleFacts(merge()?.body ?? "")?.facts).toContain(MERGE_CLOSES_WORDS.continues);
       h.supervisor.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
@@ -6337,14 +6338,14 @@ describe("CrewSupervisor", () => {
       h.crewmate.finishPrompt();
       await tick();
       // The first mate's close waits too while the question is open.
-      const held = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      const held = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(held.text).toContain(
         'the card "Which unit should the meter show?" on this task is still open',
       );
       expect(h.tasks.get(h.taskId)?.status).toBe("active");
       // The crewmate settles its question; the first mate closes as merged.
       h.supervisor.closeCard(question?.id ?? "", { kind: "crewmate", taskId: h.taskId });
-      const result = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      const result = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(result.text).toBe("#7 is already merged on GitHub.");
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
       expect(h.forge.merges).toEqual([APPROVED]);
@@ -6401,7 +6402,7 @@ describe("CrewSupervisor", () => {
 
       // The merge close reads its own closed #7, so it cannot close it.
       editPolicies(h, { autonomy: true });
-      const merge = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      const merge = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(merge.text).toContain("closed without merging");
       expect(h.tasks.get(h.taskId)?.status).toBe("active");
 
@@ -6688,7 +6689,7 @@ describe("CrewSupervisor", () => {
       expect(said).toContain("put up a new completion card");
       expect(harness.authorization()).toMatchObject({ status: "invalidated", holds: true });
       vi.spyOn(harness.supervisor, "taskAutonomy").mockReturnValue(true);
-      expect(await harness.supervisor.settleTask(harness.taskId, "merge-pr")).toContain(
+      expect(await harness.supervisor.settling.settle.settleTask(harness.taskId, "merge-pr")).toContain(
         "the captain's merge approval ended because its crewmate declared that its repair changed the approved work",
       );
       expect(harness.forge.merges).toEqual([]);
@@ -6878,7 +6879,7 @@ describe("CrewSupervisor", () => {
       expect(harness.authorization()).toMatchObject({ status: "revoked", holds: true });
       expect(harness.supervisor.withdrawMergeApproval(harness.taskId)).toMatchObject({ ok: false });
       vi.spyOn(harness.supervisor, "taskAutonomy").mockReturnValue(true);
-      expect(await harness.supervisor.settleTask(harness.taskId, "merge-pr")).toContain(
+      expect(await harness.supervisor.settling.settle.settleTask(harness.taskId, "merge-pr")).toContain(
         "is not yours to do: the captain's merge approval ended because the captain withdrew it",
       );
       // His own idle boundary runs nothing for a withdrawn approval.
@@ -6970,7 +6971,7 @@ describe("CrewSupervisor", () => {
       expect(h.authorization()).toMatchObject({ status: "invalidated", holds: true });
       expect(h.forge.merges).toEqual([]);
       vi.spyOn(h.supervisor, "taskAutonomy").mockReturnValue(true);
-      expect(await h.supervisor.settleTask(h.taskId, "merge-pr")).toContain(
+      expect(await h.supervisor.settling.settle.settleTask(h.taskId, "merge-pr")).toContain(
         "its crewmate declared that the captain's newer guidance changes the approved work",
       );
       expect(h.forge.merges).toEqual([]);
@@ -7129,7 +7130,7 @@ describe("CrewSupervisor", () => {
         "Cannot merge: the project's host did not accept the sign-in on this computer",
       ),
     );
-    await supervisor.requestDiscard("gone");
+    await supervisor.settling.settle.requestDiscard("gone");
     expect(settleLines(tasks, "gone")).toContain(
       "Discarded. Its pull request is still open where the project lives: could not reach the project's host - try again",
     );
@@ -7321,7 +7322,7 @@ describe("CrewSupervisor", () => {
     const settle = cards().find((card) => card.title === "The PR is ready") as Card;
 
     supervisor.act(settle.id, "merge");
-    expect(supervisor.cardsSnapshot().some((card) => card.id === settle.id)).toBe(false);
+    expect(supervisor.cards.snapshot().some((card) => card.id === settle.id)).toBe(false);
     await tick();
 
     expect(mergePullRequest).toHaveBeenCalledWith(
@@ -7379,7 +7380,7 @@ describe("CrewSupervisor", () => {
     expect(tasks.get(taskId)?.status).toBe("active");
 
     // A retry is the Firstmate settling again.
-    expect(await supervisor.settleTask(taskId, "merge-pr", undefined, "captain")).toContain(
+    expect(await supervisor.settling.settle.settleTask(taskId, "merge-pr", undefined, "captain")).toContain(
       "Merged #23",
     );
     expect(mergePullRequest).toHaveBeenCalledTimes(2);
@@ -7780,7 +7781,7 @@ describe("CrewSupervisor", () => {
     await tick();
     expect(cards()).toEqual([]);
 
-    const result = await supervisor.settleTask(taskId, "land", undefined, "captain");
+    const result = await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain");
     expect(result).toContain("into main.");
     expect(workspace.landTaskWork).toHaveBeenCalledWith(
       expect.objectContaining({ taskId, branch: `fm/task-${taskId}` }),
@@ -7804,7 +7805,7 @@ describe("CrewSupervisor", () => {
       intent: intentOf("still going"),
     });
     await tick();
-    const settling = supervisor.settleTask(taskId, "land", undefined, "captain");
+    const settling = supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain");
     await tick();
     expect(workspace.landTaskWork).not.toHaveBeenCalled();
     expect(tasks.get(taskId)?.pendingSettle?.mode).toBe("land");
@@ -7828,7 +7829,7 @@ describe("CrewSupervisor", () => {
     await tick();
     crewmate.finishPrompt();
     await tick();
-    const result = await supervisor.settleTask(taskId, "land", undefined, "captain");
+    const result = await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain");
     expect(result).toContain("uncommitted changes");
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
     expect(cards().find((card) => card.title === "Cannot merge")).toBeUndefined();
@@ -7872,7 +7873,7 @@ describe("CrewSupervisor", () => {
     expect(cardStore.chosenAction(note.id)).toBe("close");
     expect(ops).toHaveLength(opsBefore);
     expect(events.filter(event => event.type === "firstmate_note")).toEqual([]);
-    expect(supervisor.captainResolutionsSince(0, 8)).toEqual([
+    expect(supervisor.cards.captainResolutionsSince(0, 8)).toEqual([
       expect.objectContaining({ action: "close", card: expect.objectContaining({ id: note.id }) }),
     ]);
     expect(crewmate.steer).not.toHaveBeenCalled();
@@ -9084,7 +9085,7 @@ describe("CrewSupervisor", () => {
       broadcastEvent: () => {},
       broadcastCards: () => {},
     });
-    const titles = fresh.cardsSnapshot().map((card) => card.title);
+    const titles = fresh.cards.snapshot().map((card) => card.title);
     expect(titles).toContain("Persisted note");
   });
 });
@@ -9576,7 +9577,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       actions: [],
     };
     const firstmateId = supervisor.addFirstmateCard(firstmateNote);
-    const unchangedCard = supervisor.cardsSnapshot().find((card) => card.id === firstmateId);
+    const unchangedCard = supervisor.cards.snapshot().find((card) => card.id === firstmateId);
     const unchangedDelivery = tasks.get(taskId)?.delivery;
     const refusals: string[] = [];
     const mergeOffer = {
@@ -9596,7 +9597,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
           throw error;
         }
       }).toThrow("is not published at its newest revision");
-      expect(supervisor.cardsSnapshot()).toEqual([unchangedCard]);
+      expect(supervisor.cards.snapshot()).toEqual([unchangedCard]);
       expect(tasks.get(taskId)?.delivery).toEqual(unchangedDelivery);
     }
     // Published, the same offer shows with the app's line and binds the story it carries.
@@ -9607,7 +9608,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       published: publication,
     }));
     supervisor.addFirstmateCard({ ...mergeOffer, id: firstmateId });
-    const offered = supervisor.cardsSnapshot().find((card) => card.id === firstmateId);
+    const offered = supervisor.cards.snapshot().find((card) => card.id === firstmateId);
     expect(offered?.actions.map((action) => action.id)).toContain("merge");
     expect(splitSettleFacts(offered?.body ?? "")?.facts).toContain(MERGE_CLOSES_WORDS.closes);
     const firstmateOffer = tasks.get(taskId)?.delivery?.completionOffers?.at(-1);
@@ -9623,7 +9624,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         join(evidence, "emit-refusals.json"),
         JSON.stringify({
           refusals,
-          cards: supervisor.cardsSnapshot(),
+          cards: supervisor.cards.snapshot(),
           deliveryUnchanged:
             JSON.stringify(tasks.get(taskId)?.delivery) === JSON.stringify(unchangedDelivery),
           completionOffers: tasks.get(taskId)?.delivery?.completionOffers ?? [],
@@ -9733,12 +9734,12 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     await emitCard.run({ title: "Ignored", presentation: 1, actions: [] });
     crewmate.finishPrompt();
     await tick();
-    const note = () => supervisor.cardsSnapshot().find((card) => card.taskId === taskId);
+    const note = () => supervisor.cards.snapshot().find((card) => card.taskId === taskId);
     expect(note()?.body).toContain(MERGES_NEXT_WORDS);
     expect(note()?.awaiting).toBe("close-out");
     expect(onStage(note() as Card)).toBe(false);
 
-    await supervisor.settleTaskDetailed(taskId, "merge-pr");
+    await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
     expect(mergePullRequest).toHaveBeenCalledOnce();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
     const shown = note() as Card;
@@ -9746,7 +9747,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(shown.body).toContain(mergedWords("", true).trim());
     expect(shown.body).not.toContain(MERGES_NEXT_WORDS);
     // One card, raised once: no second note beside it.
-    expect(supervisor.cardsSnapshot()).toHaveLength(1);
+    expect(supervisor.cards.snapshot()).toHaveLength(1);
     expect(
       tasks.timeline(taskId).filter((event) => event.kind === "card_raised" && event.ref === shown.id),
     ).toHaveLength(1);
@@ -10167,7 +10168,7 @@ describe("the task record (task-system P0)", () => {
     const { supervisor, tasks, workspace } = setup(crewmate);
     const { taskId } = await supervisor.commission({ title: "Mid-flight", intent: intentOf("go") });
     await tick();
-    const result = await supervisor.settleTask(taskId, "discard", true);
+    const result = await supervisor.settling.settle.settleTask(taskId, "discard", true);
     expect(result).toBe('Discarded.');
     // The abort resolves the turn; its finish path sees a closed record and
     // leaves the discard reason alone.
@@ -10238,7 +10239,7 @@ describe("the task record (task-system P0)", () => {
 
     crewmate.finishPrompt();
     await tick();
-    await supervisor.settleTask(first.taskId, "land", undefined, "captain");
+    await supervisor.settling.settle.settleTask(first.taskId, "land", undefined, "captain");
     await tick();
     expect(tasks.get(second.taskId)).toMatchObject({ status: "active" });
     expect(events).toContainEqual({
@@ -10745,7 +10746,7 @@ describe("the task graph (R1)", () => {
     const protocol = new TaskProtocol({
       tasks,
       repos,
-      cards: { listOpen: () => cardStore.listOpen(), snapshot: () => supervisor.cardsSnapshot() },
+      cards: { listOpen: () => cardStore.listOpen(), snapshot: () => supervisor.cards.snapshot() },
       broadcastEvent: () => {},
       emit: () => {},
     });
@@ -12277,7 +12278,7 @@ describe("the task graph (R1)", () => {
   it("opens Settings on exactly the clicks `opensSettings` names, so a Mac controlling this one can tell before it asks (docs/view.md)", async () => {
     const { supervisor, cards } = setup(fakeCrewmate());
     // The host's own cards, as it builds them.
-    supervisor.addAuthDecisionCard(
+    supervisor.cards.addAuthDecisionCard(
       "auth-restore",
       "Codex",
       "Codex (Work) needs you to sign in again.",
@@ -12285,8 +12286,8 @@ describe("the task graph (R1)", () => {
         restoreAccountId: "acct_codex",
       },
     );
-    supervisor.addAuthDecisionCard("auth-any", "Codex", "A provider needs sign in.");
-    supervisor.addFirstmateMoveBackCard({
+    supervisor.cards.addAuthDecisionCard("auth-any", "Codex", "A provider needs sign in.");
+    supervisor.cards.addFirstmateMoveBackCard({
       providerId: "openai-codex",
       providerName: "Codex",
       body: "Codex serves again.",
@@ -12327,7 +12328,7 @@ describe("the task graph (R1)", () => {
   it("the agent-down singletons keep their host card, with only their own way out", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, cards } = setup(crewmate);
-    supervisor.addFirstmatePauseCard({
+    supervisor.cards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "No headroom anywhere.",
       providerName: "Codex",
@@ -12880,7 +12881,7 @@ describe("emit_card stable id revision", () => {
 
   it("does not overwrite an app-raised singleton unless the id matches", async () => {
     const { supervisor, cards } = setup(fakeCrewmate());
-    supervisor.addFirstmatePauseCard({
+    supervisor.cards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "Move the flagship.",
       providerName: "Grok",
@@ -12960,7 +12961,7 @@ describe("emit_card stable id revision", () => {
   // docs/card-threads.md "Shared cards").
   it("does not let a crewmate clobber an app-raised singleton", async () => {
     const { supervisor, cards, specs } = setup(fakeCrewmate());
-    supervisor.addAuthDecisionCard("card-fm-auth", "firstmate", "Sign in needed.");
+    supervisor.cards.addAuthDecisionCard("card-fm-auth", "firstmate", "Sign in needed.");
     await supervisor.commission({ title: "proto", intent: intentOf("work") });
     await tick();
     const result = await specs[0]?.onCard?.({
@@ -12980,14 +12981,14 @@ describe("emit_card stable id revision", () => {
 describe("needs_reauth card (CD-3=A)", () => {
   it("a proof-gated needs_reauth card is a singleton with a one-step Sign in restore", () => {
     const { supervisor } = setup(fakeCrewmate());
-    supervisor.addAuthDecisionCard(
+    supervisor.cards.addAuthDecisionCard(
       "card-auth-account-acct_cl1",
       "Claude",
       "Claude (Personal) needs you to sign in again.",
       { restoreAccountId: "acct_cl1" },
     );
     const card = supervisor
-      .cardsSnapshot()
+      .cards.snapshot()
       .find((entry) => entry.id === "card-auth-account-acct_cl1");
     expect(card?.title).toBe("Claude (Personal) needs you to sign in again.");
     expect(card?.body).toBe(NEEDS_REAUTH_CONSEQUENCE);
@@ -12998,21 +12999,21 @@ describe("needs_reauth card (CD-3=A)", () => {
       restoreAccountId: "acct_cl1",
     });
     expect(
-      supervisor.cardsSnapshot().find((entry) => entry.id === "card-auth-account-acct_cl1"),
+      supervisor.cards.snapshot().find((entry) => entry.id === "card-auth-account-acct_cl1"),
     ).toBeUndefined();
   });
 
   it("clears a recovered needs_reauth card without leaving it on the stack", () => {
     const { supervisor } = setup(fakeCrewmate());
-    supervisor.addAuthDecisionCard(
+    supervisor.cards.addAuthDecisionCard(
       "card-auth-account-acct_cl1",
       "Claude",
       "Claude (Personal) needs you to sign in again.",
       { restoreAccountId: "acct_cl1" },
     );
-    supervisor.clearAuthDecisionCard("card-auth-account-acct_cl1");
+    supervisor.cards.clearAuthDecisionCard("card-auth-account-acct_cl1");
     expect(
-      supervisor.cardsSnapshot().find((entry) => entry.id === "card-auth-account-acct_cl1"),
+      supervisor.cards.snapshot().find((entry) => entry.id === "card-auth-account-acct_cl1"),
     ).toBeUndefined();
   });
 });
@@ -13029,7 +13030,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
 
   it("a host card with actions and no task files an open operation row that its answer closes", () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
-    supervisor.addFirstmatePauseCard({
+    supervisor.cards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "<p>Move Firstmate?</p>",
       providerName: "Grok",
@@ -13043,7 +13044,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
       gate: { kind: "captain", ref: "card-fm-flagship-move" },
     });
     // A revision or a second raise files nothing more.
-    supervisor.addFirstmatePauseCard({
+    supervisor.cards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "<p>Move Firstmate?</p>",
       providerName: "Grok",
@@ -13061,26 +13062,26 @@ describe("a card places the captain gate (cards as tasks)", () => {
 
   it("a host withdrawal drops its row; INF-1879 putting it away keeps it open", () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
-    supervisor.addAuthDecisionCard(
+    supervisor.cards.addAuthDecisionCard(
       "card-auth-account-acct_cl1",
       "Claude",
       "Claude (Personal) needs you to sign in again.",
       { restoreAccountId: "acct_cl1" },
     );
     const [recovered] = hostRows(tasks, "card-auth-account-acct_cl1");
-    supervisor.clearAuthDecisionCard("card-auth-account-acct_cl1");
+    supervisor.cards.clearAuthDecisionCard("card-auth-account-acct_cl1");
     expect(tasks.get(recovered?.id ?? "")).toMatchObject({
       status: "dropped",
       closedReason: "superseded",
     });
 
-    supervisor.addFirstmateFailureCard("<p>The turn failed.</p>");
+    supervisor.cards.addFirstmateFailureCard("<p>The turn failed.</p>");
     const [failure] = hostRows(tasks, "card-fm-turn-failure");
     expect(failure?.status).toBe("open");
     supervisor.close("card-fm-turn-failure");
     expect(tasks.get(failure?.id ?? "")).toMatchObject({ status: "open", closedReason: null });
     // A note asks nothing, so it files nothing.
-    supervisor.addSystemNoteCard("card-note", "A note", "<p>FYI.</p>");
+    supervisor.cards.addSystemNoteCard("card-note", "A note", "<p>FYI.</p>");
     expect(hostRows(tasks, "card-note")).toEqual([]);
   });
 
@@ -13088,7 +13089,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
     // A card from a version that filed no row, or a crash between the two
     // writes: the card is up and nothing gates it.
-    supervisor.addFirstmatePauseCard({
+    supervisor.cards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "<p>Nothing has headroom.</p>",
       providerName: "Codex",
@@ -13117,11 +13118,11 @@ describe("a card places the captain gate (cards as tasks)", () => {
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
     await tick();
-    const card = supervisor.cardsSnapshot().find((entry) => entry.id === `card-auth-${taskId}`);
+    const card = supervisor.cards.snapshot().find((entry) => entry.id === `card-auth-${taskId}`);
     expect(card?.taskId).toBe(taskId);
     expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: `card-auth-${taskId}` });
     expect(tasks.list().filter((record) => record.kind === "operation")).toEqual([]);
-    supervisor.clearAuthDecisionCard(`card-auth-${taskId}`);
+    supervisor.cards.clearAuthDecisionCard(`card-auth-${taskId}`);
     expect(tasks.get(taskId)?.gate).toBeNull();
   });
 
@@ -13164,9 +13165,9 @@ describe("a card places the captain gate (cards as tasks)", () => {
 describe("the sign-in where a project lives", () => {
   it("raises one host card on the host's refusal whose action starts the sign-in in Projects", () => {
     const { supervisor } = setup(fakeCrewmate());
-    supervisor.addForgeSignInCard("card-forge-github.com", "github.com", "GitHub", 2);
-    supervisor.addForgeSignInCard("card-forge-github.com", "github.com", "GitHub", 2);
-    const raised = supervisor.cardsSnapshot().filter((card) => card.id === "card-forge-github.com");
+    supervisor.cards.addForgeSignInCard("card-forge-github.com", "github.com", "GitHub", 2);
+    supervisor.cards.addForgeSignInCard("card-forge-github.com", "github.com", "GitHub", 2);
+    const raised = supervisor.cards.snapshot().filter((card) => card.id === "card-forge-github.com");
     expect(raised).toHaveLength(1);
     const card = raised[0] as Card;
     expect(card.author).toBe("host");
@@ -13195,7 +13196,7 @@ describe("the sign-in where a project lives", () => {
       worktreeDir: "/work/signin-merge",
     });
     vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
-    const result = await supervisor.settleTaskDetailed(
+    const result = await supervisor.settling.settle.settleTaskDetailed(
       "signin-merge",
       "merge-pr",
       undefined,
@@ -13441,7 +13442,7 @@ describe("the durable inbox (design A)", () => {
   /** The harness on the host's clock, its card stack read as the broadcast carries it. */
   const clockedSetup = (crewmate: FakeCrewmate, extras: SetupExtras = {}) => {
     const harness = setup(crewmate, { now: hostClock, ...extras });
-    return { ...harness, cards: () => harness.supervisor.cardsSnapshot() };
+    return { ...harness, cards: () => harness.supervisor.cards.snapshot() };
   };
 
   /** Two minutes pass: every attempted row is past the retry grace. */
@@ -13785,7 +13786,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     expect(reportWakes(ops)).toHaveLength(1);
     expect(reportWakes(ops)[0]).toContain("Done, tests green.");
     expect(sorts).toEqual([{ taskId, verdict: "captain", rule: "stopped" }]);
-    expect(supervisor.cardsSnapshot()).toEqual([]);
+    expect(supervisor.cards.snapshot()).toEqual([]);
   });
 
   it("records the report's typed facts beside the text it was served as (P6)", async () => {
@@ -13822,7 +13823,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
 
     // The captain answers it; the card leaves the stack and the next report
     // falls through the rule as if none had ever been up.
-    const card = supervisor.cardsSnapshot().find((entry) => entry.title === "Pick a course");
+    const card = supervisor.cards.snapshot().find((entry) => entry.title === "Pick a course");
     supervisor.act(card?.id ?? "", "change");
     await tick();
     await report(crewmate, taskId, "Course plotted.");
@@ -13961,7 +13962,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       expect(reportWakes(ops)).toEqual([
         `[fm-op] crewmate 1 reported on task ${taskId} "Job": ${DOP_18_NOT_DONE}`,
       ]);
-      expect(supervisor.cardsSnapshot()).toEqual([]);
+      expect(supervisor.cards.snapshot()).toEqual([]);
     });
 
     it("a Claude crewmate whose client has listed no background task (INF-410)", async () => {
@@ -15149,7 +15150,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await tick();
     // The request is answered and leaves; the card that asked nothing stays.
     expect(open()).toEqual(["The fare on aurora.example"]);
-    expect(h.supervisor.cardsSnapshot().map((card) => card.title)).not.toContain(REQUEST.title);
+    expect(h.supervisor.cards.snapshot().map((card) => card.title)).not.toContain(REQUEST.title);
     // Its crewmate hears only the return's one wake, never a choice he did not make.
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
     expect(h.crewmate.promptCalls.at(-1)).toBe(
@@ -15201,7 +15202,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   /** The harness on the host's clock, its card stack read as the broadcast carries it. */
   const clockedSetup = (crewmate: FakeCrewmate, extras: SetupExtras = {}) => {
     const harness = setup(crewmate, { now: hostClock, ...extras });
-    return { ...harness, cards: () => harness.supervisor.cardsSnapshot() };
+    return { ...harness, cards: () => harness.supervisor.cards.snapshot() };
   };
 
   const minutes = (n: number) => n * 60_000;
@@ -15910,7 +15911,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(converseAboutCard).toHaveBeenCalledWith(stall, question, undefined);
     expect(crewmate.promptCalls.some((call) => call.includes(question))).toBe(false);
     expect(
-      supervisor.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,
+      supervisor.cards.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,
     ).toBe("firstmate");
 
     // The task moves before the first mate answers: the card stays up.
@@ -15920,9 +15921,9 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await endTurn(crewmate, taskId, "Step two done.");
     // The first mate's closing words are its line, naming no message: their
     // question stays open (the captain's "a handoff stays open").
-    expect(supervisor.recordFirstmateThreadAnswer(stall, "Reading PR #496 now.")).toBe(true);
+    expect(supervisor.cards.recordFirstmateThreadAnswer(stall, "Reading PR #496 now.")).toBe(true);
     expect(
-      supervisor.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,
+      supervisor.cards.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,
     ).toBe("firstmate");
     await supervisor.steerCrewmate(taskId, "and step three");
     await tick();
@@ -15940,7 +15941,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         answersMessage: askedOn(supervisor, stall),
       }),
     ).toMatchObject({ effect: "reply-only" });
-    expect(supervisor.cardThread(stall).messages.map((message) => message.who)).toEqual([
+    expect(supervisor.cards.thread(stall).messages.map((message) => message.who)).toEqual([
       "captain",
       "firstmate",
       "firstmate",
@@ -16000,7 +16001,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       {
         name: "a host card with actions",
         arrange: ({ supervisor, taskId }) =>
-          supervisor.raiseHostCard({
+          supervisor.cards.raiseHostCard({
             id: "card-host-consent",
             taskId,
             title: "Add a panel",
@@ -16014,7 +16015,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       {
         name: "the crewmate's sign-in card",
         arrange: ({ supervisor, taskId }) =>
-          supervisor.addAuthDecisionCard(`card-auth-${taskId}`, "crewmate 1", "Sign in.", {
+          supervisor.cards.addAuthDecisionCard(`card-auth-${taskId}`, "crewmate 1", "Sign in.", {
             taskId,
           }),
       },
@@ -16065,7 +16066,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // Cards are read by task, never by id: a card that only LOOKS like the
     // task's sign-in card, carrying no task, holds nothing.
     const named = await stopped();
-    named.supervisor.addAuthDecisionCard(`card-auth-${named.taskId}`, "crewmate 1", "Sign in.");
+    named.supervisor.cards.addAuthDecisionCard(`card-auth-${named.taskId}`, "crewmate 1", "Sign in.");
     await named.at(minutes(10));
     expect(named.crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
   });
@@ -17184,7 +17185,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     }
     expect(crewmate.promptCalls).toHaveLength(promptsBefore);
     expect(reminders()).toHaveLength(1);
-    expect(supervisor.cardsSnapshot().filter((card) => card.id.startsWith("card-stall-"))).toEqual(
+    expect(supervisor.cards.snapshot().filter((card) => card.id.startsWith("card-stall-"))).toEqual(
       [],
     );
   });
@@ -17392,7 +17393,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
   it("a closed task is never read", async () => {
     const closed = await stopped();
-    await closed.supervisor.settleTask(closed.taskId, "discard", true);
+    await closed.supervisor.settling.settle.settleTask(closed.taskId, "discard", true);
     await closed.at(minutes(200));
     expect(idleWakes(closed.ops)).toEqual([]);
     expect(closed.sorts.filter((sort) => sort.rule.startsWith("idle"))).toEqual([]);
@@ -17801,7 +17802,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       /** The thread's wait as the shell reads it: the shown card and the task's posture. */
       const wait = () => {
         const record = tasks.get(taskId);
-        const shown = supervisor.cardsSnapshot().find((entry) => entry.id === card.id);
+        const shown = supervisor.cards.snapshot().find((entry) => entry.id === card.id);
         return record && shown ? threadWait(shown, supervisor.workPosture(record)) : undefined;
       };
       expect(wait()).toBeUndefined();
@@ -18780,7 +18781,7 @@ describe("CrewSupervisor direction context", () => {
     });
     await tick();
     const card = supervisor
-      .cardsSnapshot()
+      .cards.snapshot()
       .find((entry) => entry.title === "Article explained") as Card;
     supervisor.replyToCard(card.id, "Save its concepts and findings with the source.");
     await tick();
@@ -19053,10 +19054,10 @@ describe("the task graph (task-system P2)", () => {
     supervisor.plan({ title: "Child", intent: intentOf("c"), parent: parent.taskId });
     crewmate.finishPrompt();
     await tick();
-    expect(await supervisor.settleTask(parent.taskId, "discard")).toMatch(
+    expect(await supervisor.settling.settle.settleTask(parent.taskId, "discard")).toMatch(
       /^Cannot close SCR-1 while its child is still open: SCR-2 "Child"/,
     );
-    expect(await supervisor.landTask(parent.taskId)).toMatch(/^Cannot merge: Cannot close/);
+    expect(await supervisor.settling.settle.settleTask(parent.taskId, "land")).toMatch(/^Cannot merge: Cannot close/);
     expect(tasks.get(parent.taskId)?.status).toBe("active");
   });
 
@@ -19079,7 +19080,7 @@ describe("the task graph (task-system P2)", () => {
     crewmate.finishPrompt();
     await tick();
     expect(tasks.graph.discoveredFrom(taskId)).toHaveLength(3);
-    expect(await supervisor.landTask(taskId, "captain")).toBe(
+    expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toBe(
       'Merged "Fix the keychain prompt" into main.',
     );
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
@@ -19114,7 +19115,7 @@ describe("the task graph (task-system P2)", () => {
     expect(tasks.graph.linksTo(taskId).find((link) => link.type === "blocks")?.holdsMerge).toBe(false);
     crewmate.finishPrompt();
     await tick();
-    expect(await supervisor.landTask(taskId, "captain")).toBe(
+    expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toBe(
       'Merged "Fix the keychain prompt" into main.',
     );
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
@@ -19132,7 +19133,7 @@ describe("the task graph (task-system P2)", () => {
     spec.onFollowup?.({ title: "Rotate the signing key", goal: "g", why: "w", blocksMe: true });
     crewmate.finishPrompt();
     await tick();
-    expect(await supervisor.landTask(taskId, "captain")).toBe(
+    expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toBe(
       `Cannot merge: Cannot close SCR-1 while it waits on: SCR-2 "Rotate the signing key". Merge it first, drop it if the work is not wanted, or remove the wait with link_tasks remove. ${softHoldWords("waits", "firstmate")}`,
     );
     expect(tasks.get(taskId)?.status).toBe("active");
@@ -19146,7 +19147,7 @@ describe("the task graph (task-system P2)", () => {
     );
     crewmate.finishPrompt();
     await tick();
-    expect(await supervisor.landTask(taskId, "captain")).toContain("into main.");
+    expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toContain("into main.");
   });
 
   it("a wait never forbids a discard - only containment does", async () => {
@@ -19165,7 +19166,7 @@ describe("the task graph (task-system P2)", () => {
     });
     crewmate.finishPrompt();
     await tick();
-    expect(await supervisor.settleTask(taskId, "discard")).toBe(
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe(
       'Discarded.',
     );
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
@@ -19439,7 +19440,7 @@ describe("the task graph (task-system P2)", () => {
       repoId: onPlainHost.repo.id,
       worktreeDir: "/work",
     });
-    const refusal = await supervisor.mergePrTask("ledgeridle", "captain");
+    const refusal = await supervisor.settling.settle.settleTask("ledgeridle", "merge-pr", undefined, "captain");
     expect(refusal).toContain("git.example.com is not reachable from here");
     expect(refusal).not.toContain("GitHub");
   });
@@ -20040,7 +20041,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
     await supervisor.steerCrewmate(taskId, "keep going");
     await tick();
     supervisor.checkQuietTasks(Date.now() + QUIET_CARD_MS);
-    expect(supervisor.cardsSnapshot()).toEqual([]);
+    expect(supervisor.cards.snapshot()).toEqual([]);
     expect(wakes(taskId).map((row) => row.payload)).toEqual([
       expect.stringContaining("has produced no events"),
     ]);
@@ -20106,7 +20107,7 @@ describe("the cancel purge (interaction P0, WI-2)", () => {
     vi.spyOn(tasks, "close").mockImplementationOnce(() => {
       throw new Error("disk full");
     });
-    await expect(supervisor.settleTask(taskId, "discard")).rejects.toThrow("disk full");
+    await expect(supervisor.settling.settle.settleTask(taskId, "discard")).rejects.toThrow("disk full");
     expect(inbox.allFor("supervision").filter((row) => row.ref === taskId)).toHaveLength(1);
     expect(tasks.get(taskId)?.status).toBe("active");
   });
@@ -20318,8 +20319,8 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
       data: { reason: "fatal: unable to write new index file" },
     });
 
-    expect(await supervisor.settleTask(taskId, "discard")).toContain("2 commits");
-    expect(await supervisor.settleTask(taskId, "discard", true)).toBe(
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toContain("2 commits");
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard", true)).toBe(
       'Discarded.',
     );
     // The close stands as cancelled; only the worktree it kept is gone.
@@ -20339,7 +20340,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
     expect(tasks.get(taskId)).toMatchObject({ status: "active", activity: "idle" });
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
     // It is settled by landing, merging, or discarding - here, landing.
-    await supervisor.settleTask(taskId, "land", undefined, "captain");
+    await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain");
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
   });
@@ -20552,13 +20553,13 @@ describe("closed task worktrees always go, work saved first (real git)", {
     await git(repoDir, ["commit", "-m", "fix the meter (#65)"]);
 
     // While its own pull request is open, the close refuses and keeps everything.
-    const held = await supervisor.closeExternallyReleased(taskId, "PR #65 merged with this work");
+    const held = await supervisor.settling.declared.closeExternallyReleased(taskId, "PR #65 merged with this work");
     expect(held.text).toContain("#66 is still open");
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(existsSync(cwd)).toBe(true);
 
     ownPull = { ...ownPull, state: "closed" };
-    const closed = await supervisor.closeExternallyReleased(taskId, "PR #65 merged with this work");
+    const closed = await supervisor.settling.declared.closeExternallyReleased(taskId, "PR #65 merged with this work");
     expect(closed.text).toContain("Closed");
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "released" });
     expect(
@@ -20596,7 +20597,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
     await git(repoDir, ["commit", "-m", "fix the meter (#40)"]);
     seedDelivery(tasks, taskId, { prNumber: 40 });
 
-    await supervisor.settleTaskDetailed(taskId, "merge-pr");
+    await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
     await vi.waitFor(() => expect(tasks.get(taskId)?.workspaceState).toBe("removed"), REAL_GIT_WAIT);
 
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
@@ -21391,13 +21392,13 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     });
     await tick();
     // No settle mode applies to a personal task, with the reason.
-    expect(await h.supervisor.settleTask(taskId, "land")).toContain(
+    expect(await h.supervisor.settling.settle.settleTask(taskId, "land")).toContain(
       "builds in place on the personal workspace",
     );
-    expect(await h.supervisor.settleTask(taskId, "discard")).toContain(
+    expect(await h.supervisor.settling.settle.settleTask(taskId, "discard")).toContain(
       "nothing to merge, land, or discard",
     );
-    expect(await h.supervisor.settleTask(taskId, "merge-pr")).toContain("personal workspace");
+    expect(await h.supervisor.settling.settle.settleTask(taskId, "merge-pr")).toContain("personal workspace");
     expect(h.tasks.get(taskId)?.status).toBe("active");
 
     crewmate.emit({ type: "assistant_delta", taskId, text: "Tokyo clock panel added." });
@@ -21410,7 +21411,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(h.tasks.get(taskId)?.status).toBe("active");
     expect(crewmate.dispose).not.toHaveBeenCalled();
     expect(
-      (await h.supervisor.closeFinishedFolderWork(taskId, "the clock is on the right rail")).text,
+      (await h.supervisor.settling.declared.closeFinishedFolderWork(taskId, "the clock is on the right rail")).text,
     ).toContain("as finished");
     expect(h.tasks.get(taskId)).toMatchObject({
       status: "done",
@@ -21498,10 +21499,10 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(h.sorts.at(-1)).toMatchObject({ taskId, verdict: "captain" });
     expect(h.commits).toEqual([{ taskId, message: "Tokyo clock panel added." }]);
     expect(
-      (await h.supervisor.closeFinishedFolderWork(taskId, "the clock is on the right rail")).text,
+      (await h.supervisor.settling.declared.closeFinishedFolderWork(taskId, "the clock is on the right rail")).text,
     ).toContain("as finished");
     expect(h.tasks.get(taskId)?.closedReason).toBe("finished");
-    expect(h.supervisor.cardsSnapshot().find((card) => card.id === cardId)).toMatchObject({
+    expect(h.supervisor.cards.snapshot().find((card) => card.id === cardId)).toMatchObject({
       taskId,
       actions: [],
     });
@@ -22450,10 +22451,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         reviewCapOwner: "firstmate",
       });
       seedDelivery(tasks, taskId, { validationHead: "b".repeat(40) });
-      const before = supervisor.cardsSnapshot().find((card) => card.id === cardId);
+      const before = supervisor.cards.snapshot().find((card) => card.id === cardId);
       expect(() => supervisor.act(cardId, "approve", "chrome")).toThrow(CardChoiceUnavailableError);
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("expired");
-      expect(supervisor.cardsSnapshot().find((card) => card.id === cardId)?.actions).toEqual([]);
+      expect(supervisor.cards.snapshot().find((card) => card.id === cardId)?.actions).toEqual([]);
       expect(
         events.some((event) => event.type === "open_card_shown" && event.cardId === cardId),
       ).toBe(true);
@@ -22474,7 +22475,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         "INF-203 stale question",
         JSON.stringify({
           before,
-          after: supervisor.cardsSnapshot().find((card) => card.id === cardId),
+          after: supervisor.cards.snapshot().find((card) => card.id === cardId),
         }),
       );
     } finally {
@@ -22520,7 +22521,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         ci: "green",
       });
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const held = await supervisor.settleTaskDetailed(
+      const held = await supervisor.settling.settle.settleTaskDetailed(
         "legacy-careful",
         "merge-pr",
         undefined,
@@ -23317,7 +23318,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       const findingCard = supervisor
-        .cardsSnapshot()
+        .cards.snapshot()
         .find((entry) => entry.title === "Keep the Later copy?");
       expect(findingCard).toBeDefined();
       const beforeFix = ops.length;
@@ -23408,7 +23409,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(card?.body).toContain('passed <span class="inf-mono">0123456</span> · risk low');
       // The review risk note remains; retired findings counts do not ride it.
       expect(card?.body).toContain('title="one test file changed."');
-      expect(await supervisor.settleTask(builderId, "merge-pr", undefined, "captain")).toContain(
+      expect(await supervisor.settling.settle.settleTask(builderId, "merge-pr", undefined, "captain")).toContain(
         "Change #55",
       );
       expect(mergePullRequest).toHaveBeenCalledTimes(1);
@@ -23537,7 +23538,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // delivery child is not the captain's planned work - and the cascade
       // retires it with the builder: closed superseded, silently, its
       // worktree removed with its own close.
-      expect(await supervisor.settleTask(builderId, "discard", true)).toContain("Discarded");
+      expect(await supervisor.settling.settle.settleTask(builderId, "discard", true)).toContain("Discarded");
       expect(tasks.get(builderId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
       expect(tasks.get(reviewId)).toMatchObject({
         status: "dropped",
@@ -24138,12 +24139,12 @@ describe("the deliverable axis (Task B)", () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, taskId } = await investigation(crewmate);
     for (const mode of ["merge-pr", "land"] as const) {
-      expect(await supervisor.settleTask(taskId, mode, true, "firstmate")).toContain(
+      expect(await supervisor.settling.settle.settleTask(taskId, mode, true, "firstmate")).toContain(
         "delivers an answer, not a change",
       );
     }
     expect(tasks.get(taskId)?.status).toBe("active");
-    await supervisor.settleTask(taskId, "discard", true, "captain");
+    await supervisor.settling.settle.settleTask(taskId, "discard", true, "captain");
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "discarded" });
   });
 
@@ -24547,7 +24548,7 @@ describe("the deliverable axis (Task B)", () => {
     const { supervisor, tasks, specs, taskId, card } = await answerCardUp(fakeCrewmate());
     supervisor.close(card.id);
     await tick();
-    expect(supervisor.cardsSnapshot().some((entry) => entry.id === card.id)).toBe(false);
+    expect(supervisor.cards.snapshot().some((entry) => entry.id === card.id)).toBe(false);
     const receipt = specs[0]?.onReport?.("The answer is complete.", undefined, { finished: true });
     expect(receipt).toContain(ANSWER_DONE_LABEL);
     expect(tasks.get(taskId)?.status).toBe("active");
@@ -24583,7 +24584,7 @@ describe("the deliverable axis (Task B)", () => {
     supervisor.close(card.id);
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
-    expect(supervisor.cardsSnapshot().find(entry => entry.id === card.id)?.minimized).toBe(true);
+    expect(supervisor.cards.snapshot().find(entry => entry.id === card.id)?.minimized).toBe(true);
     expect(supervisor.runTaskOp(taskId, "answer-done")).toContain("no answer ready");
   });
 
@@ -24622,11 +24623,11 @@ describe("the deliverable axis (Task B)", () => {
       body: "<p>Buying Macs costs far less for steady use.</p>",
       actions: [],
     });
-    const settled = await supervisor.closeAnswerUsedAsBasis(taskId);
+    const settled = await supervisor.settling.declared.closeAnswerUsedAsBasis(taskId);
     await tick();
     expect(settled).toMatchObject({ ok: true });
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
-    expect(supervisor.cardsSnapshot().map((entry) => entry.id)).toContain(fmCardId);
+    expect(supervisor.cards.snapshot().map((entry) => entry.id)).toContain(fmCardId);
   });
 
   it("keeps a Firstmate note emitted in an earlier turn when the task closes answered (FI3-1581)", async () => {
@@ -24638,10 +24639,10 @@ describe("the deliverable axis (Task B)", () => {
       body: "<p>Buying Macs costs far less for steady use.</p>",
       actions: [],
     });
-    supervisor.firstmateClosedOut();
+    supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
     await tick();
     expect(cards().map((entry) => entry.id)).toContain(fmCardId);
-    expect(await supervisor.closeAnswerUsedAsBasis(taskId)).toMatchObject({ ok: true });
+    expect(await supervisor.settling.declared.closeAnswerUsedAsBasis(taskId)).toMatchObject({ ok: true });
     await tick();
     expect(cards().map((entry) => entry.id)).toContain(fmCardId);
   });
@@ -24658,11 +24659,11 @@ describe("the deliverable axis (Task B)", () => {
         { id: "more", label: "Dig further" },
       ],
     });
-    const settled = await supervisor.closeAnswerUsedAsBasis(taskId);
+    const settled = await supervisor.settling.declared.closeAnswerUsedAsBasis(taskId);
     expect(settled.ok).toBe(false);
     expect(settled.text).toContain('its card "Own vs rent for Mac CI" still asks the captain');
     expect(tasks.get(taskId)?.status).toBe("active");
-    expect(supervisor.cardsSnapshot().map((entry) => entry.id)).toContain(fmCardId);
+    expect(supervisor.cards.snapshot().map((entry) => entry.id)).toContain(fmCardId);
   });
 
   it("keeps a queued row a change when the classifier calls it research (INF-990 friction 7)", async () => {
@@ -25002,7 +25003,7 @@ describe("the deliverable axis (Task B)", () => {
       shape: { kind: "plan", kind_source: "classifier:test", deliverable: "answer" },
       outcome: "Two meters; the captain picked the tilted one.",
     });
-    supervisor.addCardMessage("card-proto7-1", "captain", "tilt it a little less");
+    supervisor.cards.addMessage("card-proto7-1", "captain", "tilt it a little less");
     supervisor.act("card-proto7-1", "build-it", "chrome", {
       answers: [{ name: "tilt", values: ["57"], changed: true }],
     });
@@ -25232,7 +25233,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
         supervisor.crewStatus().find((row) => row.taskId === taskId)?.autonomy,
       ).toBeUndefined();
       // The refusal the Firstmate reads is the deliverable's, not autonomy's.
-      const result = await supervisor.settleTaskDetailed(taskId, "merge-pr");
+      const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
       expect(result.text).toContain("delivers an answer, not a change");
       expect(result.refusal?.refused).not.toBe("autonomy-off");
       expect(mergePullRequest).not.toHaveBeenCalled();
@@ -25270,7 +25271,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       // invented label never reaches the captain, so the way names the
       // button he is actually reading.
       expect([merge?.id, merge?.label]).toEqual(["merge", "Merge the pull request"]);
-      const result = await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
+      const result = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(result.refusal).toMatchObject({
         refused: "autonomy-off",
         task: { id: h.taskId },
@@ -25283,7 +25284,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "active", closedReason: null });
       expect(h.cards().some((entry) => entry.id === card?.id)).toBe(true);
       // A land is held the same way: the hold is on merging, not on GitHub.
-      expect((await h.supervisor.settleTaskDetailed(h.taskId, "land")).refusal?.refused).toBe(
+      expect((await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "land")).refusal?.refused).toBe(
         "autonomy-off",
       );
     } finally {
@@ -25298,10 +25299,10 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       // card's settle effect arrives as actor captain, which this rule does
       // not read: his click IS the way out the refusal named.
       expect(
-        (await held.supervisor.settleTaskDetailed(held.taskId, "merge-pr")).refusal?.refused,
+        (await held.supervisor.settling.settle.settleTaskDetailed(held.taskId, "merge-pr")).refusal?.refused,
       ).toBe("autonomy-off");
       expect(held.mergePullRequest).not.toHaveBeenCalled();
-      expect(await held.supervisor.settleTask(held.taskId, "merge-pr", undefined, "captain")).toBe(
+      expect(await held.supervisor.settling.settle.settleTask(held.taskId, "merge-pr", undefined, "captain")).toBe(
         "Change #7 is in on GitHub.",
       );
       expect(held.mergePullRequest).toHaveBeenCalledTimes(1);
@@ -25319,7 +25320,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
         autonomy_ask: true,
         autonomy: true,
       });
-      expect(await asked.supervisor.settleTask(asked.taskId, "merge-pr")).toBe(
+      expect(await asked.supervisor.settling.settle.settleTask(asked.taskId, "merge-pr")).toBe(
         "Change #7 is in on GitHub.",
       );
       expect(asked.mergePullRequest).toHaveBeenCalledTimes(1);
@@ -25331,7 +25332,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
     try {
       expect(held.supervisor.taskAutonomy(held.taskId)).toBe(false);
       expect(
-        (await held.supervisor.settleTaskDetailed(held.taskId, "merge-pr")).refusal,
+        (await held.supervisor.settling.settle.settleTaskDetailed(held.taskId, "merge-pr")).refusal,
       ).toMatchObject({ refused: "autonomy-off", ways: [] });
       expect(held.mergePullRequest).not.toHaveBeenCalled();
     } finally {
@@ -25378,8 +25379,8 @@ describe("CrewSupervisor: the card thread", () => {
     const row = h.tasks.listOpen().find((task) => task.delivery?.captainAction);
     expect(row).toBeDefined();
     const taskId = row?.id ?? "missing";
-    h.supervisor.showRequiredAction(taskId);
-    const card = h.supervisor.cardsSnapshot().find((entry) => entry.taskId === taskId) as Card;
+    h.supervisor.cards.presentRequiredAction(taskId);
+    const card = h.supervisor.cards.snapshot().find((entry) => entry.taskId === taskId) as Card;
     return { h, taskId, card };
   }
 
@@ -25396,10 +25397,10 @@ describe("CrewSupervisor: the card thread", () => {
     expect(converse).toHaveBeenCalledWith(card.id, output, undefined);
     expect(() => h.supervisor.act(card.id, "confirm")).toThrow();
     // Reopening and repeating a refused confirmation must not erase the pending reply.
-    h.supervisor.showRequiredAction(taskId);
+    h.supervisor.cards.presentRequiredAction(taskId);
     expect(() => h.supervisor.act(card.id, "confirm")).toThrow();
     expect(h.tasks.get(taskId)?.status).toBe("open");
-    expect(h.supervisor.cardThread(card.id).messages).toMatchObject([
+    expect(h.supervisor.cards.thread(card.id).messages).toMatchObject([
       { who: "captain", text: output },
     ]);
     const answer =
@@ -25414,14 +25415,14 @@ describe("CrewSupervisor: the card thread", () => {
         answersMessage: askedOn(h.supervisor, card.id),
       }),
     ).toBe(card.id);
-    const current = h.supervisor.cardsSnapshot().find((entry) => entry.id === card.id);
+    const current = h.supervisor.cards.snapshot().find((entry) => entry.id === card.id);
     expect(current).toMatchObject({
       body: card.body,
       title: card.title,
       actions: card.actions,
       offerId: card.offerId,
     });
-    expect(h.supervisor.cardThread(card.id).messages.at(-1)).toMatchObject({
+    expect(h.supervisor.cards.thread(card.id).messages.at(-1)).toMatchObject({
       who: "firstmate",
       text: answer,
     });
@@ -25445,7 +25446,7 @@ describe("CrewSupervisor: the card thread", () => {
       label: "It failed",
     });
     h.supervisor.act(card.id, "failed", "chrome", { answers });
-    const reopened = h.supervisor.cardsSnapshot().find((entry) => entry.id === card.id) as Card;
+    const reopened = h.supervisor.cards.snapshot().find((entry) => entry.id === card.id) as Card;
     expect(reopened.offerId).not.toBe(card.offerId);
     expect(reopened).toMatchObject({
       title: card.title,
@@ -25454,7 +25455,7 @@ describe("CrewSupervisor: the card thread", () => {
       awaiting: "answer",
     });
     expect(h.tasks.get(taskId)?.status).toBe("open");
-    expect(h.supervisor.cardThread(card.id).messages.at(-1)).toMatchObject({
+    expect(h.supervisor.cards.thread(card.id).messages.at(-1)).toMatchObject({
       who: "captain",
       text: `It failed\n\n${output}`,
     });
@@ -25511,7 +25512,7 @@ describe("CrewSupervisor: the card thread", () => {
     ).toContain(`it answers the captain's message ${asked} and ends that question`);
 
     // One card, under its own task, now naming the path at generation 2.
-    const cards = h.supervisor.cardsSnapshot();
+    const cards = h.supervisor.cards.snapshot();
     expect(cards.filter((entry) => entry.taskId === taskId)).toHaveLength(1);
     expect(cards.filter((entry) => entry.taskId === helper)).toEqual([]);
     const now = cards.find((entry) => entry.id === card.id) as Card;
@@ -25522,7 +25523,7 @@ describe("CrewSupervisor: the card thread", () => {
     });
     expect(
       h.supervisor
-        .cardThread(card.id)
+        .cards.thread(card.id)
         .messages.map((message) => [message.who, message.contributor?.taskId, message.answersMessage]),
     ).toEqual([
       ["captain", undefined, undefined],
@@ -25673,7 +25674,7 @@ describe("CrewSupervisor: the card thread", () => {
     const { card, taskId } = await withCard(harness);
 
     // The host's own agent-down cards answer to nobody.
-    harness.supervisor.addSystemNoteCard("card-host-1", "Host note", "nothing to reply to");
+    harness.supervisor.cards.addSystemNoteCard("card-host-1", "Host note", "nothing to reply to");
     await tick();
     expect(() => harness.supervisor.replyToCard("card-host-1", "hello")).toThrow(
       /no author to reply to/,
@@ -25702,7 +25703,7 @@ describe("CrewSupervisor: the card thread", () => {
 
     // An update alone does not answer him: refused, card and thread unchanged.
     expect(() => harness.specs[0]?.onCard?.(revision)).toThrow(/waits on your answer/);
-    expect(harness.supervisor.cardThread(card.id).messages.map((m) => m.who)).toEqual(["captain"]);
+    expect(harness.supervisor.cards.thread(card.id).messages.map((m) => m.who)).toEqual(["captain"]);
 
     harness.specs[0]?.onCard?.({
       ...revision,
@@ -25710,7 +25711,7 @@ describe("CrewSupervisor: the card thread", () => {
     });
     await tick();
 
-    const messages = harness.supervisor.cardThread(card.id).messages;
+    const messages = harness.supervisor.cards.thread(card.id).messages;
     expect(messages.map((message) => message.who)).toEqual(["captain", "host", "crewmate"]);
     expect(messages[1]?.text).toBe("revised: Pick one");
     expect(messages[2]?.text).toBe("You are right; I corrected the second option.");
@@ -25725,7 +25726,7 @@ describe("CrewSupervisor: the card thread", () => {
     expect(spec?.onReply?.({ cardId: card.id, text: "rebased; the checks pass again" })).toContain(
       "Replied in the thread",
     );
-    expect(harness.supervisor.cardThread(card.id).messages).toMatchObject([
+    expect(harness.supervisor.cards.thread(card.id).messages).toMatchObject([
       { who: "crewmate", text: "rebased; the checks pass again" },
     ]);
     // Refusals are tool text, never throws - a conversational miss is guidance.
@@ -25782,7 +25783,7 @@ describe("CrewSupervisor: the card thread", () => {
     const harness = setup(crewmate);
     const { taskId, card } = await withCard(harness, { title: "Owner note" });
     const awaiting = () =>
-      harness.supervisor.cardsSnapshot().find((shown) => shown.id === card.id)?.awaiting;
+      harness.supervisor.cards.snapshot().find((shown) => shown.id === card.id)?.awaiting;
 
     harness.supervisor.replyToCard(card.id, "rename review to audit and rerun the evaluations");
     await tick();
@@ -25790,7 +25791,7 @@ describe("CrewSupervisor: the card thread", () => {
     expect(
       harness.specs[0]?.onReply?.({ cardId: card.id, text: interim, interim: true }),
     ).toContain("still waits for your answer");
-    expect(harness.supervisor.cardThread(card.id).messages.map((m) => m.text)).toEqual([
+    expect(harness.supervisor.cards.thread(card.id).messages.map((m) => m.text)).toEqual([
       "rename review to audit and rerun the evaluations",
       interim,
     ]);
@@ -25831,7 +25832,7 @@ describe("CrewSupervisor: the card thread", () => {
     expect(harness.supervisor.crewStatus(taskId)[0]?.thread).toBe(
       "thread: 1 message, last from captain",
     );
-    expect(harness.supervisor.threadActivitySince(0)).toMatchObject([
+    expect(harness.supervisor.cards.threadActivitySince(0)).toMatchObject([
       {
         card: { id: card.id },
         count: 1,
@@ -25840,7 +25841,7 @@ describe("CrewSupervisor: the card thread", () => {
       },
     ]);
     // Everything before the window is already behind the Firstmate.
-    expect(harness.supervisor.threadActivitySince(Date.now() + 1000)).toEqual([]);
+    expect(harness.supervisor.cards.threadActivitySince(Date.now() + 1000)).toEqual([]);
   });
 
   it("keeps a crewmate's note when its task closes done, and sends a reply on it to the Firstmate", async () => {
@@ -25859,7 +25860,7 @@ describe("CrewSupervisor: the card thread", () => {
     await tick();
     expect(harness.cards().map((entry) => entry.id)).toContain(note.id);
 
-    const closed = await harness.supervisor.closeExternallyReleased(taskId, "v1.2.3 published");
+    const closed = await harness.supervisor.settling.declared.closeExternallyReleased(taskId, "v1.2.3 published");
     await tick();
     expect(closed.text).toContain("v1.2.3 published");
     expect(harness.tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "released" });
@@ -25927,7 +25928,7 @@ describe("CrewSupervisor: the card thread", () => {
     });
     await tick();
     harness.supervisor.replyToCard(cardId, "the second option is wrong");
-    expect(harness.supervisor.recordFirstmateThreadAnswer(cardId, "You are right; B is wrong.")).toBe(
+    expect(harness.supervisor.cards.recordFirstmateThreadAnswer(cardId, "You are right; B is wrong.")).toBe(
       true,
     );
     const revision = {
@@ -25937,14 +25938,14 @@ describe("CrewSupervisor: the card thread", () => {
       actions: [{ id: "a", label: "A", default: true }],
     };
     expect(() => harness.supervisor.addFirstmateCard(revision)).toThrow(/under which heading/);
-    harness.supervisor.firstmateClosedOut();
+    harness.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
     harness.supervisor.addFirstmateCard({
       ...revision,
       reply: "I replaced B with C under Options.",
     });
     await tick();
     expect(
-      harness.supervisor.cardThread(cardId).messages.map((message) => [message.who, message.text]),
+      harness.supervisor.cards.thread(cardId).messages.map((message) => [message.who, message.text]),
     ).toEqual([
       ["captain", "the second option is wrong"],
       ["firstmate", "You are right; B is wrong."],
@@ -26591,7 +26592,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     );
     await tick();
     expect(
-      harness.supervisor.cardThread(cardId).messages.map((message) => [message.who, message.text]),
+      harness.supervisor.cards.thread(cardId).messages.map((message) => [message.who, message.text]),
     ).toEqual([
       ["captain", "wait - do you mean worktrees? aren't we supposed to keep warm worktrees?"],
       [
@@ -26628,15 +26629,15 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       body: "<h2>What changed</h2><p>A closed task's copy is retired into the warm pool.</p>",
       actions: [],
     };
-    const before = harness.supervisor.cardThread(cardId).messages.map((m) => m.who);
+    const before = harness.supervisor.cards.thread(cardId).messages.map((m) => m.who);
     expect(() => spec?.onCard?.(revision)).toThrow(/under which heading/);
-    expect(harness.supervisor.cardThread(cardId).messages.map((m) => m.who)).toEqual(before);
+    expect(harness.supervisor.cards.thread(cardId).messages.map((m) => m.who)).toEqual(before);
     expect(harness.cardStore.get(cardId)?.body).toBe(
       "<h2>What changed</h2><p>A closed task's copy is deleted.</p>",
     );
     syncCardId(spec?.onCard?.({ ...revision, reply: "I reworded the bullet under What changed." }));
     await tick();
-    expect(harness.supervisor.cardThread(cardId).messages.map((m) => m.who)).toEqual([
+    expect(harness.supervisor.cards.thread(cardId).messages.map((m) => m.who)).toEqual([
       "captain",
       "crewmate",
       "host",
@@ -26663,7 +26664,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     const aside = () => harness.cards().find((card) => card.id === cardId)?.minimized;
     harness.supervisor.replyToCard(cardId, "do you mean worktrees?");
     await tick();
-    harness.supervisor.setCardMinimized(cardId, true);
+    harness.supervisor.cards.setMinimized(cardId, true);
     const spec = harness.specs[0];
     expect(
       spec?.onReply?.({ cardId, text: "Checking the warm pool first.", interim: true }),
@@ -26690,7 +26691,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     crewmate.finishPrompt();
     await tick();
     expect(aside()).toBeUndefined();
-    expect(harness.supervisor.cardThread(cardId).messages.at(-1)).toMatchObject({
+    expect(harness.supervisor.cards.thread(cardId).messages.at(-1)).toMatchObject({
       who: "crewmate",
       text: answer,
     });
@@ -26711,7 +26712,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     const shown = () => harness.cards().find((card) => card.id === cardId);
     harness.supervisor.replyToCard(cardId, "do you mean worktrees?");
     await tick();
-    harness.supervisor.setCardMinimized(cardId, true);
+    harness.supervisor.cards.setMinimized(cardId, true);
     const spec = harness.specs[0];
     spec?.onReply?.({ cardId, text: "I'm asking the first mate which copies count as warm." });
     syncCardId(
@@ -26759,7 +26760,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     const aside = () => harness.cards().find((card) => card.id === cardId)?.minimized;
     harness.supervisor.replyToCard(cardId, "what about the windows build?");
     await tick();
-    harness.supervisor.setCardMinimized(cardId, true);
+    harness.supervisor.cards.setMinimized(cardId, true);
     expect(aside()).toBe(true);
 
     const spec = harness.specs[0];
@@ -26945,7 +26946,7 @@ describe("parent tasks with planned children", () => {
     expect(tasks.get(implement.id)?.shape).toMatchObject({ basis: planKey });
     expect(tasks.graph.basisOf(implement)).toEqual({ ref: planKey, verified: false });
 
-    const asked = supervisor.addCardMessage(
+    const asked = supervisor.cards.addMessage(
       card.id,
       "captain",
       "B, but keep the gear icon where it is",
@@ -26955,11 +26956,15 @@ describe("parent tasks with planned children", () => {
       taskId: plan.taskId,
       text: "Two directions; B groups the rows into sections.",
     });
-    supervisor.addCardMessage(
+    supervisor.cards.addMessage(
       card.id,
       "crewmate",
       "B groups the rows into sections and keeps the gear icon in place.",
-      asked.id,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      { answersMessage: asked.id },
     );
     planner.emit({ type: "turn_end", taskId: plan.taskId });
     planner.finishPrompt();
@@ -27038,14 +27043,14 @@ describe("parent tasks with planned children", () => {
     ];
     supervisor.act(card.id, "agree", "chrome", { answers });
     await tick();
-    const saved = supervisor.newestCardResolution(plan.taskId);
+    const saved = supervisor.cards.newestResolutionForTask(plan.taskId);
     expect(saved).toMatchObject({ action: "agree", answers });
     expect(saved?.offer?.body).toContain("Proposal default: one record");
     cardStore.upsert({ ...card, id: `${card.id}-retired`, createdAt: card.createdAt + 1 });
     await vi.advanceTimersByTimeAsync(1);
     cardStore.resolve(`${card.id}-retired`, "task-retired");
     expect(cardStore.resolvedSince(0, 1, () => true, plan.taskId)[0]?.action).toBe("task-retired");
-    expect(supervisor.newestCardResolution(plan.taskId)?.answers).toEqual(answers);
+    expect(supervisor.cards.newestResolutionForTask(plan.taskId)?.answers).toEqual(answers);
     // A plan that also shipped ends on a merge card: it never replaces the answered card (FI3-658).
     cardStore.upsert({
       ...card,
@@ -27286,8 +27291,8 @@ describe("parent tasks with planned children", () => {
       status: "ready",
       createdAt: Date.now(),
     });
-    supervisor.addCardMessage("card-ans1-1", "captain", "and the dock too?");
-    supervisor.addCardMessage("card-ans1-1", "crewmate", "Yes,\n the dock reads the same query.");
+    supervisor.cards.addMessage("card-ans1-1", "captain", "and the dock too?");
+    supervisor.cards.addMessage("card-ans1-1", "crewmate", "Yes,\n the dock reads the same query.");
     await supervisor.commission({
       title: "Fix the claim query",
       intent: intentOf("fix it"),
@@ -27390,7 +27395,7 @@ describe("closing an answer task another task builds on", () => {
         deliverable: "answer",
         internal_step: true,
       });
-      const result = await supervisor.closeAnswerUsedAsBasis(step.key);
+      const result = await supervisor.settling.declared.closeAnswerUsedAsBasis(step.key);
       expect(result.ok).toBe(true);
       expect(tasks.get(step.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
       const closed = tasks.get(step.taskId) as TaskRecord;
@@ -27403,7 +27408,7 @@ describe("closing an answer task another task builds on", () => {
         `Answered: its answer carries on in ${step.next.key} "${step.next.title}"`,
       );
       expect(line?.text).not.toContain("discard");
-      expect((await supervisor.closeAnswerUsedAsBasis(step.key)).text).toContain("already");
+      expect((await supervisor.settling.declared.closeAnswerUsedAsBasis(step.key)).text).toContain("already");
     }
     // Their scratch copies go with them, like any answer task's.
     expect(workspace.removeTaskWorktree).toHaveBeenCalledTimes(2);
@@ -27436,7 +27441,7 @@ describe("closing an answer task another task builds on", () => {
     expect(tasks.graph.blocking(check.taskId).map((row) => row.id)).toEqual([build.taskId]);
     expect(tasks.graph.blockerRefusal(build.taskId)).toBeUndefined();
 
-    const result = await supervisor.closeAnswerUsedAsBasis(checkKey);
+    const result = await supervisor.settling.declared.closeAnswerUsedAsBasis(checkKey);
     expect(result).toMatchObject({ ok: true });
     expect(result.text).toContain(`its answer carries on in ${buildKey} "Implement the meter"`);
     const closed = tasks.get(check.taskId) as TaskRecord;
@@ -27465,7 +27470,7 @@ describe("closing an answer task another task builds on", () => {
     tasks.graph.link(late.taskId, gone.id, "blocks", "firstmate");
     tasks.close(gone.id, { status: "dropped", reason: "cancelled", actor: "host" });
     await reportAndIdle(lateChecker, late.taskId, "checks: pass - eight of eight.");
-    const closedLate = await supervisor.closeAnswerUsedAsBasis(late.taskId);
+    const closedLate = await supervisor.settling.declared.closeAnswerUsedAsBasis(late.taskId);
     expect(closedLate).toMatchObject({ ok: true });
     expect(closedLate.text).toContain("its crewmate reported the answer");
     expect(closedLate.text).not.toContain("Fix the dock");
@@ -27492,7 +27497,7 @@ describe("closing an answer task another task builds on", () => {
     );
     const key = tasks.get(check.taskId)?.key ?? check.taskId;
 
-    const result = await supervisor.closeAnswerUsedAsBasis(key);
+    const result = await supervisor.settling.declared.closeAnswerUsedAsBasis(key);
     expect(result).toMatchObject({ ok: true });
     const closed = tasks.get(check.taskId) as TaskRecord;
     expect(closed).toMatchObject({ status: "done", closedReason: "answered" });
@@ -27514,7 +27519,7 @@ describe("closing an answer task another task builds on", () => {
     const plan = await answered(harness, planner, "Plan the dock", false);
     for (const asked of [reproduce, plan]) {
       expect(tasks.get(asked.taskId)?.shape?.internal_step).toBeUndefined();
-      const refused = await supervisor.closeAnswerUsedAsBasis(asked.key);
+      const refused = await supervisor.settling.declared.closeAnswerUsedAsBasis(asked.key);
       expect(refused).toMatchObject({ ok: false });
       expect(refused.text).toContain("it was not opened as an internal step of yours");
       expect(tasks.get(asked.taskId)?.status).toBe("active");
@@ -27553,7 +27558,7 @@ describe("closing an answer task another task builds on", () => {
     await tick();
     const busyKey = tasks.get(busy.taskId)?.key ?? busy.taskId;
     supervisor.plan({ title: "Fix the drift", intent: intentOf("fix"), shape: { basis: busyKey } });
-    const stillWorking = await supervisor.closeAnswerUsedAsBasis(busyKey);
+    const stillWorking = await supervisor.settling.declared.closeAnswerUsedAsBasis(busyKey);
     expect(stillWorking).toMatchObject({ ok: false });
     expect(stillWorking.text).toContain("its crewmate is still working");
 
@@ -27568,14 +27573,14 @@ describe("closing an answer task another task builds on", () => {
     unused.finishPrompt();
     await tick();
     expect(tasks.get(lone.taskId)?.outcome).toBeNull();
-    const nobody = await supervisor.closeAnswerUsedAsBasis(
+    const nobody = await supervisor.settling.declared.closeAnswerUsedAsBasis(
       tasks.get(lone.taskId)?.key ?? lone.taskId,
     );
     expect(nobody).toMatchObject({ ok: false });
     expect(nobody.text).toContain("its crewmate has reported no answer yet");
 
     const change = await answered(harness, builder, "Implement the rename", true);
-    const notAnswer = await supervisor.closeAnswerUsedAsBasis(change.key);
+    const notAnswer = await supervisor.settling.declared.closeAnswerUsedAsBasis(change.key);
     expect(notAnswer).toMatchObject({ ok: false });
     expect(notAnswer.text).toContain("delivers a change, not an answer");
 
@@ -27600,7 +27605,7 @@ describe("closing an answer task another task builds on", () => {
       intent: intentOf("fix"),
       shape: { basis: shownKey },
     });
-    const waiting = await supervisor.closeAnswerUsedAsBasis(shownKey);
+    const waiting = await supervisor.settling.declared.closeAnswerUsedAsBasis(shownKey);
     expect(waiting).toMatchObject({ ok: false });
     expect(waiting.text).toContain(
       'its answer card "The flash reproduces" is waiting on the captain',
@@ -28314,7 +28319,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     await tick();
     const checks = () =>
       supervisor
-        .cardsSnapshot()
+        .cards.snapshot()
         .find((c) => c.title === "Ship it is ready")
         ?.body.match(/data-fact="checks"[\s\S]*?<\/span><\/span>/)?.[0];
     expect(checks()).toContain("passed");
@@ -28542,7 +28547,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
     await tick();
     expect(crewmate.isStreaming()).toBe(true);
 
-    await supervisor.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
+    await supervisor.settling.closing.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
     expect(crewmate.aborts).toEqual([undefined]);
     expect(tasks.get(taskId)?.status).toBe("done");
     expect(recordUsage).not.toHaveBeenCalled();
@@ -28575,7 +28580,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
       intent: intentOf("answer the question"),
     });
     await tick();
-    await supervisor.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
+    await supervisor.settling.closing.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
     crewmate.emit({
       type: "tool_end",
       taskId,
@@ -28607,7 +28612,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
       crewmate.finishPrompt();
     };
 
-    await supervisor.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
+    await supervisor.settling.closing.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
     await tick();
     crewmate.emit({ type: "turn_end", taskId, usage });
     await tick();
@@ -28744,7 +28749,7 @@ describe("ready-card choice admission", () => {
             }),
           ) ?? "";
         specs[0]?.onReport?.("The decision is ready.");
-        const card = supervisor.cardsSnapshot().find((entry) => entry.id === id);
+        const card = supervisor.cards.snapshot().find((entry) => entry.id === id);
         const record = tasks.get(taskId);
         const timeline = tasks.timeline(taskId);
         const observations = cardStore.observations(id);
@@ -28755,7 +28760,7 @@ describe("ready-card choice admission", () => {
             "This choice is not offered on this card",
           );
         await tick();
-        expect(supervisor.cardsSnapshot().find((entry) => entry.id === id)).toEqual(card);
+        expect(supervisor.cards.snapshot().find((entry) => entry.id === id)).toEqual(card);
         expect(cardStore.chosenAction(id)).toBeUndefined();
         expect(cardStore.observations(id)).toEqual(observations);
         expect(tasks.get(taskId)).toEqual(record);
@@ -28852,10 +28857,10 @@ describe("ready-card choice admission", () => {
     let time = Date.now();
     const clock = vi.spyOn(Date, "now").mockImplementation(() => ++time);
     let result: ReturnType<CrewSupervisor["act"]>;
-    let saved: ReturnType<CrewSupervisor["newestCardResolution"]>;
+    let saved: ReturnType<CardService["newestResolutionForTask"]>;
     try {
       result = supervisor.act(id, "open");
-      saved = supervisor.newestCardResolution(taskId);
+      saved = supervisor.cards.newestResolutionForTask(taskId);
     } finally {
       clock.mockRestore();
     }
@@ -28888,7 +28893,7 @@ describe("ready-card choice admission", () => {
       tasks.close("closed", { status: "done", reason: "answered", actor: "captain" });
       const timeline = tasks.timeline("closed");
       expect(() => supervisor.act(id, "open")).toThrow("Its task is no longer open");
-      expect(supervisor.cardsSnapshot().some((card) => card.id === id)).toBe(true);
+      expect(supervisor.cards.snapshot().some((card) => card.id === id)).toBe(true);
       expect(cardStore.chosenAction(id)).toBeUndefined();
       expect(tasks.timeline("closed")).toEqual(timeline);
       expect(ops).toEqual([]);
@@ -28979,7 +28984,7 @@ describe("a cardless internal step's report", () => {
           kind: "reproduce",
         });
         expect(tasks.get(fix.id)?.status).toBe("open");
-        expect(supervisor.cardsSnapshot()).toHaveLength(0);
+        expect(supervisor.cards.snapshot()).toHaveLength(0);
         expect(ledgerFacts.at(-1)).toMatchObject({ kind: "report" });
         // The failing check: the step's report is the Firstmate's cue to start
         // the next step (docs/sequences.md), so it must wake the Firstmate now.
@@ -29006,7 +29011,7 @@ describe("a cardless internal step's report", () => {
       crewmate.emit({ type: "turn_end", taskId });
       crewmate.finishPrompt();
       await tick();
-      const card = supervisor.cardsSnapshot().find((entry) => entry.taskId === taskId)!;
+      const card = supervisor.cards.snapshot().find((entry) => entry.taskId === taskId)!;
       expect(card.author).toBe("crewmate");
       expect(sorts.at(-1)?.rule).toBe("captain-card");
       expect(ops).toEqual([]);
@@ -29763,7 +29768,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     const h = await behindAfterMerge();
     h.ship("shipped1", "Ship the shop");
 
-    const reply = await h.supervisor.settleTask("shipped1", "merge-pr");
+    const reply = await h.supervisor.settling.settle.settleTask("shipped1", "merge-pr");
 
     const [repair] = repairOf(h.tasks, h.repo.id);
     if (!repair) throw new Error("no repair task was filed");
@@ -29805,7 +29810,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.tasks.get(repair.id)?.activity).toBe("idle"), REAL_GIT_WAIT);
     h.ship("shipped2", "Ship the shop again");
-    expect(await h.supervisor.settleTask("shipped2", "merge-pr")).toContain(
+    expect(await h.supervisor.settling.settle.settleTask("shipped2", "merge-pr")).toContain(
       `${repair.key} "Bring the folder up to date" is already doing it.`,
     );
     expect(repairOf(h.tasks, h.repo.id)).toHaveLength(1);
@@ -29877,7 +29882,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
       else await run(h.folder, "symbolic-ref", "--delete", "refs/remotes/origin/HEAD");
       h.ship("shipped1", "Ship the shop");
 
-      await h.supervisor.settleTask("shipped1", "merge-pr");
+      await h.supervisor.settling.settle.settleTask("shipped1", "merge-pr");
 
       const [repair] = repairOf(h.tasks, h.repo.id);
       if (!repair) throw new Error("no repair task was filed");
@@ -29982,7 +29987,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     });
     rmSync(h.folder, { recursive: true, force: true });
 
-    const reply = await h.supervisor.settleTask("shipped1", "merge-pr");
+    const reply = await h.supervisor.settling.settle.settleTask("shipped1", "merge-pr");
 
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
@@ -30231,7 +30236,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     });
     rmSync(h.folder, { recursive: true, force: true });
 
-    const reply = await h.supervisor.settleTask("landed01", "land");
+    const reply = await h.supervisor.settling.settle.settleTask("landed01", "land");
 
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
@@ -30384,7 +30389,7 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
   it("the first mate's discard files and starts a task that closes the pull request or says why not, and it closes once the pull request is closed", async () => {
     const h = await discardRefused();
 
-    const reply = await h.supervisor.settleTask(h.taskId, "discard");
+    const reply = await h.supervisor.settling.settle.settleTask(h.taskId, "discard");
 
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
@@ -30442,7 +30447,7 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
   it("the captain's discard click says it once on the feed, and a second try at the same pull request files nothing new", async () => {
     const h = await discardRefused();
 
-    await h.supervisor.requestDiscard(h.taskId);
+    await h.supervisor.settling.settle.requestDiscard(h.taskId);
 
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
@@ -30695,7 +30700,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
 
   it("sparks a settle once, before the task closes", async () => {
     const { supervisor, events, tasks, taskId } = await idleCrewmate();
-    await supervisor.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
+    await supervisor.settling.closing.closeTask(taskId, { status: "done", reason: "answered", actor: "captain" });
     expect(tasks.get(taskId)?.status).toBe("done");
     expect(sparks(events, taskId)).toBe(1);
   });
@@ -30940,7 +30945,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
       );
       expect(h.tasks.get(h.first.id)?.delivery?.ciRepair).toEqual(original?.delivery?.ciRepair);
       expect(h.tasks.get(h.first.id)?.status).toBe("active");
-      expect(h.supervisor.cardsSnapshot()).toEqual([]);
+      expect(h.supervisor.cards.snapshot()).toEqual([]);
       console.info(
         "[recovery] branch takeover:",
         JSON.stringify({
@@ -30950,7 +30955,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
           originalEvidenceKept:
             JSON.stringify(h.tasks.get(h.first.id)?.delivery?.ciRepair) ===
             JSON.stringify(original?.delivery?.ciRepair),
-          cards: h.supervisor.cardsSnapshot().length,
+          cards: h.supervisor.cards.snapshot().length,
         }),
       );
     });
@@ -31037,7 +31042,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
           status: "active",
           delivery: original.delivery,
         });
-        expect(h.supervisor.cardsSnapshot()).toEqual([]);
+        expect(h.supervisor.cards.snapshot()).toEqual([]);
         console.info(
           "[recovery] served takeover tools:",
           JSON.stringify({
@@ -31046,7 +31051,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
             handoverBytesPreserved: readFileSync(delivered).equals(readFileSync(artifact)),
             successorBlockers: h.tasks.graph.blockers(next.id).length,
             originWaitsForSuccessor: h.tasks.graph.blockers(h.first.id).some((task) => task.id === next.id),
-            captainCards: h.supervisor.cardsSnapshot().length,
+            captainCards: h.supervisor.cards.snapshot().length,
           }),
         );
       } finally {
@@ -31580,7 +31585,7 @@ describe("the first mate's integration approval card (INF-1108)", () => {
     const { supervisor, tasks, sent, wakes } = firstmateSetup();
     const ask = heldCall("ia0000000001");
     const cardId = supervisor.askIntegrationForFirstmate(ask);
-    const card = supervisor.cardsSnapshot().find((shown) => shown.id === cardId);
+    const card = supervisor.cards.snapshot().find((shown) => shown.id === cardId);
     expect(card).toMatchObject({ author: "host", title: "Allow Add a note on Notes?" });
     expect(card?.taskId).toBeUndefined();
     expect(card?.body).toContain("Your first mate wants to use this action.");
@@ -32230,9 +32235,9 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     h.specs[0]?.onReport?.("Asked the captain which unit the meter shows.", undefined, {
       wait: { reason: "Which unit the meter shows", cardId: card.id },
     });
-    h.supervisor.addCardMessage(card.id, "captain", "Which one do the other meters show?");
-    h.supervisor.addCardMessage(card.id, "crewmate", "The other meters show kilowatt-hours.");
-    const thread = h.supervisor.cardThread(card.id).messages.map(({ who, text }) => ({ who, text }));
+    h.supervisor.cards.addMessage(card.id, "captain", "Which one do the other meters show?");
+    h.supervisor.cards.addMessage(card.id, "crewmate", "The other meters show kilowatt-hours.");
+    const thread = h.supervisor.cards.thread(card.id).messages.map(({ who, text }) => ({ who, text }));
     expect((await h.supervisor.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     // It moved; its new conversation there waits on its dependencies.
@@ -32240,7 +32245,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
     expect(h.cardStore.get(card.id)).toMatchObject({ status: "ready", taskId: h.taskId });
     expect(
-      h.supervisor.cardThread(card.id).messages.map(({ who, text }) => ({ who, text })),
+      h.supervisor.cards.thread(card.id).messages.map(({ who, text }) => ({ who, text })),
     ).toEqual(thread);
     expect(h.tasks.get(h.taskId)?.delivery?.captainWait).toMatchObject({
       reason: "Which unit the meter shows",

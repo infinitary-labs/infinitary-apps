@@ -360,8 +360,8 @@ it("INF-2373: a delayed captain request uses the replacement after a pending mod
     await captainClosed.promise;
     await admissionClock.advance(0);
     console.info("CONVERSATION_HANDOFF", JSON.stringify(entries));
-    const card = f.supervisor
-      .cardsSnapshot()
+    const card = f.supervisor.cards
+      .snapshot()
       .find((card) => card.title === "Your first mate hit a problem");
     expect(card).toBeUndefined();
     expect(entries.filter((entry) => entry.startsWith("prompt "))).toEqual([

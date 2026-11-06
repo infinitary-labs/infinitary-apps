@@ -271,7 +271,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       }),
     reviseRequiredAction: (input) =>
       asText(() => {
-        const mutation = supervisor.reviseRequiredActionAs({ actor: "firstmate" }, input);
+        const mutation = supervisor.cards.reviseRequiredAction({ actor: "firstmate" }, input);
         if (mutation.effect === "revised") {
           host.noteDelivery({
             outcome: "action",
@@ -389,8 +389,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         tasks,
         input,
         (repoId) => host.options.repos.get(repoId)?.name,
-        (taskId) => host.options.supervisor.newestCardBody(taskId),
-        (taskId) => host.options.supervisor.newestCardResolution(taskId),
+        (taskId) => host.options.supervisor.cards.newestBody(taskId),
+        (taskId) => host.options.supervisor.cards.newestResolutionForTask(taskId),
         (record) => host.options.supervisor.workPosture(record),
         host.options.supervisor.taskQueryReach(),
       ),

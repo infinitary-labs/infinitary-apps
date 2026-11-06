@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-forwards",
+      "reason": "Internal: the crew supervisor's card and settle forwards go, with every caller reaching the card stack and settling directly, and its unused readers and duplicate policy reader removed; nothing a person sees changes."
+    }
+  ]
+}

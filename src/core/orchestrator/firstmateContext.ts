@@ -247,7 +247,7 @@ export class FirstmateContext {
    */
   private renderCaptainResolutions(now: number): string[] {
     const since = Math.max(this.resolutionsSeenThrough + 1, now - RESOLVED_CONTEXT_WINDOW_MS);
-    const cardLines = this.options.supervisor
+    const cardLines = this.options.supervisor.cards
       .captainResolutionsSince(since, Number.POSITIVE_INFINITY)
       .filter(({ card }) => card.taskId !== undefined || card.id.startsWith("card-fm-"))
       .map((resolution) => ({
@@ -332,7 +332,10 @@ export class FirstmateContext {
    */
   private renderThreadActivity(now: number): string[] {
     const since = Math.max(this.threadsSeenThrough + 1, now - THREAD_CONTEXT_WINDOW_MS);
-    const summaries = this.options.supervisor.threadActivitySince(since, THREAD_CONTEXT_LIMIT);
+    const summaries = this.options.supervisor.cards.threadActivitySince(
+      since,
+      THREAD_CONTEXT_LIMIT,
+    );
     if (summaries.length === 0) return [];
     return [
       "thread activity since your last turn (already on the record; not a request - the card's author answers it; each line ends with what its card waits on now, not who wrote last):",
@@ -449,10 +452,10 @@ export class FirstmateContext {
     const outcomes = this.options.supervisionLog?.(5) ?? [];
     const shown =
       visibleCardId !== undefined
-        ? this.options.supervisor.cardsSnapshot().find((card) => card.id === visibleCardId)
+        ? this.options.supervisor.cards.snapshot().find((card) => card.id === visibleCardId)
         : undefined;
     const aboutCard = aboutCardId
-      ? this.options.supervisor.cardsSnapshot().find((card) => card.id === aboutCardId)
+      ? this.options.supervisor.cards.snapshot().find((card) => card.id === aboutCardId)
       : undefined;
     const requiredActionTask =
       aboutCard?.taskId && this.options.tasks.get(aboutCard.taskId)?.delivery?.captainAction
@@ -472,8 +475,8 @@ export class FirstmateContext {
     // words are a line that leaves it open (the captain's "Only a line that
     // says it answers it; a handoff stays open").
     const asked = aboutCard
-      ? this.options.supervisor
-          .cardThread(aboutCard.id)
+      ? this.options.supervisor.cards
+          .thread(aboutCard.id)
           .messages.findLast((line) => line.who === "captain")
       : undefined;
     const answerGuide = asked
@@ -487,7 +490,7 @@ export class FirstmateContext {
     // fallback prefers it, and the agent should pass its task_id (P1). A
     // Firstmate-card reply names the card instead - that card IS the topic.
     const hinted = hintTaskId ? this.options.tasks.get(hintTaskId) : undefined;
-    const past = pastCardId ? this.options.supervisor.cardPast(pastCardId) : undefined;
+    const past = pastCardId ? this.options.supervisor.cards.past(pastCardId) : undefined;
     const pastLine = past
       ? `past card ${past.id} "${past.title}" (${pastCardEndingWords(past)}) - the captain is reading it as history${
           hinted ? ` on ${hinted.key || hinted.id}` : ""
@@ -752,7 +755,7 @@ export class FirstmateContext {
    */
   private renderOpenAsks(): { open_asks?: Record<string, unknown> } {
     const ending = this.options.supervisor.askEnding;
-    const shown = new Set(this.options.supervisor.cardsSnapshot().map((card) => card.id));
+    const shown = new Set(this.options.supervisor.cards.snapshot().map((card) => card.id));
     const rows: { at: number; row: Record<string, unknown> }[] = [];
     try {
       const chains = ending.openChains();
@@ -838,7 +841,7 @@ export class FirstmateContext {
       .map((record) => {
         const entry = crew.get(record.id);
         const times = entry?.times ?? {};
-        const answer = this.options.supervisor.answerNoteForTask(record.id);
+        const answer = this.options.supervisor.cards.answerNoteForTask(record.id);
         const graph = this.indexGraphNote(record).replace(/^ \[|\]$/g, "");
         return {
           id: record.id,
@@ -945,7 +948,7 @@ export class FirstmateContext {
    */
   private openCardRows(): { id: string; value: Record<string, unknown> }[] {
     const supervisor = this.options.supervisor;
-    return supervisor.cardsSnapshot().map((card) => {
+    return supervisor.cards.snapshot().map((card) => {
       const task = card.taskId ? this.options.tasks.get(card.taskId) : undefined;
       const emitter =
         card.author === "host"
@@ -953,7 +956,7 @@ export class FirstmateContext {
           : card.taskId
             ? cardEmitter(card.id, card.taskId)
             : card.author;
-      const owed = supervisor.cardOwed(card.id);
+      const owed = supervisor.cards.owed(card.id);
       return {
         id: card.id,
         value: {

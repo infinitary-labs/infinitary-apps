@@ -292,7 +292,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:task:delete": async (taskId) => {
       // Behaves like discard (task-system P0): the worktree goes, the
       // record closes as discarded, its session stays (D2).
-      await services.supervisor.requestDiscard(taskId);
+      await services.supervisor.settling.settle.requestDiscard(taskId);
       return { ok: true as const };
     },
 
@@ -474,7 +474,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:devices:custom:recheck": (deviceId, accountId) =>
       services.deviceSignIns.custom(deviceId, "inf:sign-ins:custom-recheck", [accountId]),
 
-    "inf:cards:list": () => services.supervisor.cardsSnapshot(),
+    "inf:cards:list": () => services.supervisor.cards.snapshot(),
 
     // INF-2553: a captain's choice or close goes out to every view before its
     // result does, so a view settling its prediction on the next snapshot
@@ -482,7 +482,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:cards:act": (cardId, actionId, source, value, submission) => {
       try {
         const result = services.supervisor.act(cardId, actionId, source, value, submission);
-        services.supervisor.flushCards();
+        services.supervisor.cards.flushBroadcast();
         return result;
       } catch (error) {
         if (!(error instanceof CardChoiceUnavailableError)) throw error;
@@ -491,24 +491,26 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     "inf:cards:minimize": (cardId, minimized) => {
-      services.supervisor.setCardMinimized(cardId, minimized);
+      services.supervisor.cards.setMinimized(cardId, minimized);
       return { ok: true as const };
     },
     "inf:cards:show": (cardId) => {
-      const open = services.supervisor.showOpenCard(cardId);
+      const { cards } = services.supervisor;
+      if (cards.has(cardId)) cards.showOpenCard(cardId);
+      const open = cards.shown(cardId);
       if (open) return open;
-      const past = services.supervisor.cardPast(cardId);
+      const past = cards.past(cardId);
       if (!past) throw new Error(`No card ${cardId}. Read its id from the task record.`);
       services.broadcastEvent({ type: "past_card_shown", cardId });
       return past;
     },
     "inf:cards:close": (cardId, submission) => {
       services.supervisor.close(cardId, submission);
-      services.supervisor.flushCards();
+      services.supervisor.cards.flushBroadcast();
       return { ok: true as const };
     },
 
-    "inf:cards:thread": (cardId) => services.supervisor.cardThread(cardId),
+    "inf:cards:thread": (cardId) => services.supervisor.cards.thread(cardId),
 
     // The home's own copy of a picture a card names, for a view's frames
     // (docs/view.md). Located from the minted name alone, as the frame
@@ -577,7 +579,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // control. The card is left as it was; the answer names the browser
     // for the view to open on.
     "inf:cards:open-page": async (cardId) => {
-      const card = services.supervisor.cardsSnapshot().find((shown) => shown.id === cardId);
+      const card = services.supervisor.cards.snapshot().find((shown) => shown.id === cardId);
       const page = card?.attachment;
       if (page?.kind !== "page" || page.taskId !== card?.taskId) {
         return { refusal: "This card has no page to open." };
@@ -595,9 +597,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return opened.ok ? { browser: opened.handle } : { refusal: opened.text };
     },
 
-    "inf:cards:past": (cardId) => services.supervisor.cardPast(cardId) ?? null,
+    "inf:cards:past": (cardId) => services.supervisor.cards.past(cardId) ?? null,
     "inf:cards:show-past": (cardId) => {
-      const past = services.supervisor.cardPast(cardId);
+      const past = services.supervisor.cards.past(cardId);
       if (!past)
         throw new Error(
           `No closed card ${cardId}. Read the card id from the task's closing resolution (tasks by key); a card still on the stage is already shown.`,
@@ -619,8 +621,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
             ? `No release note for ${version} was shown here. Read the versions from app_state.`
             : "No release notes yet.",
         );
-      const open = services.supervisor.hasCard(note.cardId);
-      if (!open && !services.supervisor.cardPast(note.cardId))
+      const open = services.supervisor.cards.has(note.cardId);
+      if (!open && !services.supervisor.cards.past(note.cardId))
         throw new Error(`The release note for ${note.version} can no longer be read.`);
       services.broadcastEvent({
         type: open ? "open_card_shown" : "past_card_shown",
@@ -630,12 +632,12 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     "inf:cards:seen": (cardId, offerId) => {
-      services.supervisor.cardSeen(cardId, offerId);
+      services.supervisor.cards.seen(cardId, offerId);
       return { ok: true as const };
     },
 
     "inf:cards:seen-update": (cardId, lifecycleId, updateId) => {
-      services.supervisor.cardSeenUpdate(cardId, lifecycleId, updateId);
+      services.supervisor.cards.seenUpdate(cardId, lifecycleId, updateId);
       return { ok: true as const };
     },
 
@@ -1235,7 +1237,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:automation:history": (id) => {
       // What a delivery led to, as it is now: a task by its key, a card by
       // its title, and whether that card is still up.
-      const shown = new Map(services.supervisor.cardsSnapshot().map((card) => [card.id, card]));
+      const shown = new Map(services.supervisor.cards.snapshot().map((card) => [card.id, card]));
       return services.scheduler.history(id).map((run) => ({
         id: run.id,
         revision: run.revision,
@@ -1255,7 +1257,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         cards: run.cards.flatMap((cardId): { id: string; title: string; open: boolean }[] => {
           const open = shown.get(cardId);
           if (open) return [{ id: cardId, title: open.title, open: true }];
-          const past = services.supervisor.cardPast(cardId);
+          const past = services.supervisor.cards.past(cardId);
           return past ? [{ id: cardId, title: past.title, open: false }] : [];
         }),
       }));

@@ -514,8 +514,8 @@ describe("FirstmateAgent reply line", () => {
       eligibility: "completed",
     });
     expect(
-      f.supervisor
-        .cardThread(cardId)
+      f.supervisor.cards
+        .thread(cardId)
         .messages.filter((message) => message.who === "firstmate")
         .map((message) => message.text),
     ).toEqual(["A keeps the queue in order."]);

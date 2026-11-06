@@ -184,7 +184,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       host.asks.attach(taskId, "settle_task");
       const close = () => supervisor.carryOnTask(taskId, carriedBy);
       const text = closingSentence
-        ? await supervisor.withClosingSentence(
+        ? await supervisor.settling.closing.withClosingSentence(
             host.options.tasks.resolve(taskId)?.id ?? taskId,
             closingSentence,
             close,
@@ -200,16 +200,21 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       host.asks.attach(taskId, "settle_task");
       const settle = async (): Promise<{ text: string; refusal?: SettleRefusal }> =>
         mode === "answered"
-          ? { text: (await supervisor.closeAnswerUsedAsBasis(taskId)).text }
+          ? { text: (await supervisor.settling.declared.closeAnswerUsedAsBasis(taskId)).text }
           : mode === "released"
-            ? await supervisor.closeExternallyReleased(taskId, evidence ?? "")
+            ? await supervisor.settling.declared.closeExternallyReleased(taskId, evidence ?? "")
             : mode === "finished"
-              ? await supervisor.closeFinishedFolderWork(taskId, evidence ?? "")
-              : await supervisor.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen);
+              ? await supervisor.settling.declared.closeFinishedFolderWork(taskId, evidence ?? "")
+              : await supervisor.settling.settle.settleTaskDetailed(
+                  taskId,
+                  mode,
+                  confirm,
+                  proceedWithOpen,
+                );
       // The close carries the first mate's sentence (INF-547), keyed by
       // the record whichever reference named it.
       const result = closingSentence
-        ? await supervisor.withClosingSentence(
+        ? await supervisor.settling.closing.withClosingSentence(
             host.options.tasks.resolve(taskId)?.id ?? taskId,
             closingSentence,
             settle,
@@ -292,7 +297,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           // is gone: there is nobody to steer, so its note is no refusal.
           const record = host.options.tasks.get(taskId);
           if (record && TaskService.isClosed(record)) return undefined;
-          const crew = supervisor
+          const crew = supervisor.cards
             .openCardDigests(taskId)
             .filter((open) => open.emitter === "crewmate")
             .at(-1);
@@ -300,7 +305,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           return crewCard;
         },
         isOpenFirstmateCard: (cardId, taskId) =>
-          supervisor
+          supervisor.cards
             .openCardDigests(taskId)
             .some((open) => open.id === cardId && open.emitter === "firstmate"),
         // The merge decision is the crewmate's (contract v3.6, captain
@@ -452,11 +457,11 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         {
           tasks: host.options.tasks,
           ending: supervisor.askEnding,
-          openCards: () => supervisor.cardsSnapshot(),
-          storedCard: (id) => supervisor.storedCard(id),
-          pastCard: (id) => supervisor.cardPast(id),
-          owed: (id) => supervisor.cardOwed(id),
-          thread: (id) => supervisor.cardThread(id),
+          openCards: () => supervisor.cards.snapshot(),
+          storedCard: (id) => supervisor.cards.get(id) ?? supervisor.cards.stored(id),
+          pastCard: (id) => supervisor.cards.past(id),
+          owed: (id) => supervisor.cards.owed(id),
+          thread: (id) => supervisor.cards.thread(id),
         },
         input,
       ),
@@ -508,7 +513,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           [
             createFlagDuplicateTool({
               flag: (input) => {
-                const card = supervisor.cardsSnapshot().find((open) => open.id === input.cardId);
+                const card = supervisor.cards.snapshot().find((open) => open.id === input.cardId);
                 if (card?.taskId && host.options.tasks.get(card.taskId)) {
                   host.asks.attach(card.taskId, "flag_duplicate");
                 }
@@ -583,7 +588,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       handover: (target, offer) => {
         // The app's own card for a computer behind is the one card.
         const standing = deviceUpdateCardOfOffer(offer.cardId);
-        if (standing && supervisor.hasCard(standing))
+        if (standing && supervisor.cards.has(standing))
           return "The update card for that computer is already on the stack.";
         const card: EmittedCard = {
           id: offer.cardId,

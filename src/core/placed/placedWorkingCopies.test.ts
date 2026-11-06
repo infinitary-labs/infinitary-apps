@@ -710,7 +710,7 @@ describe("a task that runs on a computer that runs work", () => {
     const home = at.home();
     expect(home.tasks.get("t-land")?.repoDir).toBe(moved);
     await at.inReach("t-land");
-    const landed = await home.supervisor.settleTaskDetailed(
+    const landed = await home.supervisor.settling.settle.settleTaskDetailed(
       "t-land",
       "land",
       undefined,
@@ -755,7 +755,7 @@ describe("a task that runs on a computer that runs work", () => {
     writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
     await commit(work, "feat: a blue footer");
 
-    const landed = await home.supervisor.settleTaskDetailed(
+    const landed = await home.supervisor.settling.settle.settleTaskDetailed(
       "t-gone",
       "land",
       undefined,
@@ -946,13 +946,16 @@ describe("a task that runs on a computer that runs work", () => {
     writeFileSync(join(work, "footer.html"), "<footer></footer>\n");
     await commit(work, "feat: add the footer");
 
-    const refused = await home.supervisor.settleTaskDetailed("t-discard", "discard");
+    const refused = await home.supervisor.settling.settle.settleTaskDetailed(
+      "t-discard",
+      "discard",
+    );
     expect(refused.refusal?.refused).toBe("unlanded-work");
     expect(refused.text).toContain("1 commit that were never merged");
 
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
-    const held = await home.supervisor.settleTaskDetailed("t-discard", "discard");
+    const held = await home.supervisor.settling.settle.settleTaskDetailed("t-discard", "discard");
     expect(held.refusal?.refused).toBe("unlanded-work");
     expect(held.text).toContain("out of reach, so nobody can tell");
     expect(home.tasks.get("t-discard")?.status).toBe("active");

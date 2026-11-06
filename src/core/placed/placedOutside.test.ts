@@ -170,7 +170,7 @@ describe("the integrations command on a computer that runs work", () => {
       }),
     ]);
     expect(github.seen).toHaveLength(1);
-    const approval = home.supervisor.cardsSnapshot().find((card) => card.taskId === "t-reach");
+    const approval = home.supervisor.cards.snapshot().find((card) => card.taskId === "t-reach");
     expect(approval).toMatchObject({
       author: "host",
       actions: expect.arrayContaining([

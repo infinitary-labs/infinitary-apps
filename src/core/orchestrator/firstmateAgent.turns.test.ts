@@ -721,7 +721,7 @@ describe("FirstmateAgent", () => {
       body: "You are on pace this week.",
       actions: [],
     });
-    const card = supervisor.cardsSnapshot()[0];
+    const card = supervisor.cards.snapshot()[0];
     expect(card).toBeDefined();
     await agent.converse({ text: "hello there", visibleCardId: card?.id });
     expect(session.prompts).toHaveLength(1);
@@ -770,7 +770,7 @@ describe("FirstmateAgent", () => {
     const accepted = vi.fn();
     const f = setup({ onCaptainTurnAccepted: accepted });
     const body = "<p>An approved introduction.</p>";
-    const id = f.supervisor.addRecordedFirstmateNote(
+    const id = f.supervisor.cards.addRecordedFirstmateNote(
       { title: "Welcome aboard", body },
       (cardId) => {
         f.settings.setFirstRun({
@@ -804,7 +804,7 @@ describe("FirstmateAgent", () => {
     f.session.emitTurnEnd("Choose a project.");
     f.session.resolveNextPrompt();
     await vi.waitFor(() =>
-      expect(f.supervisor.cardThread(id).messages.at(-1)?.text).toBe("Choose a project."),
+      expect(f.supervisor.cards.thread(id).messages.at(-1)?.text).toBe("Choose a project."),
     );
     f.agent.dispose();
     f.db.close();
@@ -813,15 +813,15 @@ describe("FirstmateAgent", () => {
   it("refuses a reply to a recorded note that takes none, the welcome, before any turn", async () => {
     const accepted = vi.fn();
     const f = setup({ onCaptainTurnAccepted: accepted });
-    const id = f.supervisor.addRecordedFirstmateNote(
+    const id = f.supervisor.cards.addRecordedFirstmateNote(
       { title: "Welcome aboard", body: "<p>An approved introduction.</p>" },
       () => {},
       { replies: false },
     );
-    expect(f.supervisor.cardsSnapshot().find((card) => card.id === id)?.replies).toBe(false);
+    expect(f.supervisor.cards.snapshot().find((card) => card.id === id)?.replies).toBe(false);
     expect(() => f.supervisor.replyToCard(id, "Where should I begin?")).toThrow("takes no reply");
     expect(accepted).not.toHaveBeenCalled();
-    expect(f.supervisor.cardThread(id).messages).toEqual([]);
+    expect(f.supervisor.cards.thread(id).messages).toEqual([]);
     expect(f.tasks.capture.listAsks()).toEqual([]);
     expect(f.specs).toEqual([]);
     // Await the supervisor's boot microtask before retiring its database.
@@ -865,7 +865,7 @@ describe("FirstmateAgent", () => {
     );
     const action = f.tasks.listOpen().find((task) => task.delivery?.captainAction);
     expect(action).toBeDefined();
-    f.supervisor.showRequiredAction(action?.id ?? "missing");
+    f.supervisor.cards.presentRequiredAction(action?.id ?? "missing");
     const cardId = action?.delivery?.captainAction?.cardId;
     const about = decodeContext(f.agent.buildContextBlock(undefined, undefined, cardId)).about;
     expect(about).toContain(`required captain action task_id ${action?.id}`);
@@ -883,12 +883,12 @@ describe("FirstmateAgent", () => {
       body: "<p>A or B.</p>",
       actions: [{ id: "a", label: "A", default: true }],
     });
-    const card = supervisor.cardsSnapshot()[0];
+    const card = supervisor.cards.snapshot()[0];
     expect(card).toBeDefined();
     supervisor.replyToCard(card?.id ?? "", "the second option is wrong");
     await drained(session, 1);
     const turn = session.prompts[0] as string;
-    const asked = supervisor.cardThread(card?.id ?? "").messages[0]?.id;
+    const asked = supervisor.cards.thread(card?.id ?? "").messages[0]?.id;
     expect(decodeContext(turn).about).toBe(
       `about: card ${card?.id} (decision) "Pick one" - the captain replied in its thread as message ${asked}; answer it with an emit_card reply on this id naming answers_message ${asked}, since your closing words alone leave it open`,
     );
@@ -898,7 +898,7 @@ describe("FirstmateAgent", () => {
     session.resolveNextPrompt();
     await vi.waitFor(() =>
       expect(
-        supervisor.cardThread(card?.id ?? "").messages.map((message) => ({
+        supervisor.cards.thread(card?.id ?? "").messages.map((message) => ({
           who: message.who,
           text: message.text,
         })),
@@ -909,7 +909,7 @@ describe("FirstmateAgent", () => {
     );
     // The closing words name no message: the captain's question stays open
     // (the captain's "Only a line that says it answers it; a handoff stays open").
-    expect(supervisor.cardsSnapshot().find((one) => one.id === card?.id)?.awaiting).toBe("answer");
+    expect(supervisor.cards.snapshot().find((one) => one.id === card?.id)?.awaiting).toBe("answer");
   });
 
   /**
@@ -933,15 +933,15 @@ describe("FirstmateAgent", () => {
     });
     // The card as the stage draws it once its author has answered.
     const shown = () =>
-      supervisor
-        .cardsSnapshot()
+      supervisor.cards
+        .snapshot()
         .find((card) => card.id === cardId && onStage(card) && !card.awaiting);
     expect(shown()).toBeDefined();
 
     supervisor.replyToCard(cardId, "what are the rules?");
     await drained(session, 1);
     expect(shown()).toBeUndefined();
-    const waiting = supervisor.cardsSnapshot().find((card) => card.id === cardId);
+    const waiting = supervisor.cards.snapshot().find((card) => card.id === cardId);
     expect(waiting?.awaiting).toBe("answer");
     // Still on the stage, in its place, showing what it showed.
     expect(waiting && onStage(waiting)).toBe(true);
@@ -956,7 +956,7 @@ describe("FirstmateAgent", () => {
     };
     // An update alone does not answer him: refused, thread unchanged.
     await expect(emit?.execute("c0", revision)).rejects.toThrow(/waits on your answer/);
-    expect(supervisor.cardThread(cardId).messages.map((message) => message.who)).toEqual([
+    expect(supervisor.cards.thread(cardId).messages.map((message) => message.who)).toEqual([
       "captain",
     ]);
     await emit?.execute("c1", { ...revision, reply: "A crewmate is checking the exact rules." });
@@ -967,19 +967,19 @@ describe("FirstmateAgent", () => {
     // Its own reply after the revised line is its line, so the closing words
     // are not a second one, and the handoff left the question open.
     await vi.waitFor(() =>
-      expect(supervisor.cardThread(cardId).messages.map((message) => message.who)).toEqual([
+      expect(supervisor.cards.thread(cardId).messages.map((message) => message.who)).toEqual([
         "captain",
         "host",
         "firstmate",
       ]),
     );
-    const held = supervisor.cardsSnapshot().find((card) => card.id === cardId);
+    const held = supervisor.cards.snapshot().find((card) => card.id === cardId);
     expect(held?.awaiting).toBe("answer");
     expect(held?.body).toContain("Default is the care every project starts with");
 
     // The research lands and the same card carries it, naming the question,
     // and the turn's end redraws it on the stage.
-    const asked = supervisor.cardThread(cardId).messages[0]?.id;
+    const asked = supervisor.cards.thread(cardId).messages[0]?.id;
     await emit?.execute("c2", {
       id: cardId,
       title: "How Default Care is chosen",
@@ -990,9 +990,9 @@ describe("FirstmateAgent", () => {
     });
     expect(shown()).toBeUndefined();
     // The turn that carried the research ends: its close-out.
-    supervisor.firstmateClosedOut();
+    supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
     expect(shown()?.title).toBe("How Default Care is chosen");
-    expect(supervisor.cardsSnapshot().filter((card) => card.author === "firstmate")).toHaveLength(
+    expect(supervisor.cards.snapshot().filter((card) => card.author === "firstmate")).toHaveLength(
       1,
     );
   });
@@ -1007,18 +1007,18 @@ describe("FirstmateAgent", () => {
     await agent.converse("status?");
     supervisor.replyToCard(cardId, "why A?");
     await vi.waitFor(() => expect(session.steers).toHaveLength(1));
-    expect(supervisor.cardsSnapshot().find((card) => card.id === cardId)?.awaiting).toBe("answer");
+    expect(supervisor.cards.snapshot().find((card) => card.id === cardId)?.awaiting).toBe("answer");
 
     session.emitTurnEnd("A keeps the queue in order.");
     session.resolveNextPrompt();
     await vi.waitFor(() =>
-      expect(supervisor.cardThread(cardId).messages.map((message) => message.text)).toEqual([
+      expect(supervisor.cards.thread(cardId).messages.map((message) => message.text)).toEqual([
         "why A?",
         "A keeps the queue in order.",
       ]),
     );
     expect(
-      supervisor.cardsSnapshot().find((card) => card.id === cardId && onStage(card)),
+      supervisor.cards.snapshot().find((card) => card.id === cardId && onStage(card)),
     ).toBeDefined();
   });
 
@@ -1040,7 +1040,7 @@ describe("FirstmateAgent", () => {
     await vi.waitFor(() => expect(crewSpecs).toHaveLength(1));
     const preview = { title: "Preview", body: "<p>A or B.</p>", actions: [] };
     await crewSpecs[0]?.callbacks?.onCard?.(preview);
-    const cardId = supervisor.openCardsFor(taskId)[0]?.id ?? "";
+    const cardId = supervisor.cards.openCardsFor(taskId)[0]?.id ?? "";
     // FI3-347's path: the captain's words, then the card withdrawn and raised
     // again under its id - a new lifecycle that owes them nothing.
     supervisor.replyToCard(cardId, "build it");
@@ -1106,7 +1106,7 @@ describe("FirstmateAgent", () => {
       body: "<p>The plan.</p>",
       actions: [{ id: "go", label: "Go", default: true }],
     });
-    const card = supervisor.cardsSnapshot()[0];
+    const card = supervisor.cards.snapshot()[0];
     expect(card).toBeDefined();
     // INF-1879: only the question's explicit Dismiss creates dismissed history.
     const question = seedTask(tasks, {
@@ -1117,7 +1117,7 @@ describe("FirstmateAgent", () => {
       gate: { kind: "captain", reason: "Choose the plan", ref: card!.id },
     });
     expect(supervisor.runTaskOp(question.id, "dismiss-question")).toBeUndefined();
-    expect(supervisor.cardsSnapshot()).toHaveLength(0);
+    expect(supervisor.cards.snapshot()).toHaveLength(0);
     await agent.converse({ text: "build this plan again", pastCardId: card?.id });
     const turn = session.prompts[0] as string;
     expect(decodeContext(turn).about).toBe(
@@ -1138,7 +1138,7 @@ describe("FirstmateAgent", () => {
     await drained(session, 1);
     session.emitTurnEnd("Kept the chart.");
     session.resolveNextPrompt();
-    expect(supervisor.cardPast(id)?.ending).toMatchObject({ how: "chose", by: "frame" });
+    expect(supervisor.cards.past(id)?.ending).toMatchObject({ how: "chose", by: "frame" });
     await agent.converse({ text: "why was this kept?", pastCardId: id });
     expect(decodeContext(session.prompts.at(-1) as string).about).toMatch(
       new RegExp(
@@ -1170,7 +1170,7 @@ describe("FirstmateAgent", () => {
       body: '<div class="inf-row">secret markup</div><script>draw();</script>',
       actions: [{ id: "hold", label: "Hold", default: true }],
     });
-    const card = supervisor.cardsSnapshot()[0];
+    const card = supervisor.cards.snapshot()[0];
     await agent.converse({ text: "looks good", visibleCardId: card?.id });
     const turn = session.prompts[0] as string;
     expect(decodeContext(turn).visible_card_hint).toBe(

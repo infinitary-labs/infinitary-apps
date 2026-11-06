@@ -10,6 +10,7 @@ import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repo
 import type { WorkShape } from "@shared/routingPolicy";
 import type { PlanItem } from "@shared/taskPlan";
 import {
+  type EffectiveTaskPolicies,
   effectiveTaskPolicies,
   POLICY_CARE_BOUND,
   POLICY_DELIVERY_WORDS,
@@ -927,14 +928,16 @@ export class TaskService {
 
   // ---- graph writes (P2) --------------------------------------------------
 
-  /** Edit the plain fields of a record; one `note` event lists what changed. */
-  policiesOf(record: TaskRecord) {
+  /** A task's policies now, read with its project's settings; none for a missing record. */
+  policiesOf(record: TaskRecord | undefined): EffectiveTaskPolicies | null {
+    if (!record) return null;
     return effectiveTaskPolicies(
       record,
       record.repoId ? this.options.repos?.get(record.repoId) : undefined,
     );
   }
 
+  /** Edit the plain fields of a record; one `note` event lists what changed. */
   updateFields(id: string, patch: UpdateTaskPatch, actor: TaskEventActor): string[] {
     const at = this.writer.now();
     const run = this.writer.write((): string[] => {

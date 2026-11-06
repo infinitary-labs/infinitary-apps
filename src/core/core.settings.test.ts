@@ -1018,8 +1018,8 @@ describe("the core, driven with no Electron in the process", () => {
     const operations = () => core.services.tasks.list().filter((t) => t.kind === "operation");
     const supervisor = core.services.supervisor;
     try {
-      supervisor.addSystemNoteCard("card-show-open", "Still open", "On the stage.");
-      supervisor.addSystemNoteCard("card-show-past", "An earlier plan", "What it said.");
+      supervisor.cards.addSystemNoteCard("card-show-open", "Still open", "On the stage.");
+      supervisor.cards.addSystemNoteCard("card-show-past", "An earlier plan", "What it said.");
       supervisor.close("card-show-past");
       const stack = async () => (await core.dispatch("inf:cards:list", [])).map((c) => c.id);
       const stackBefore = await stack();
@@ -1124,9 +1124,17 @@ describe("the core, driven with no Electron in the process", () => {
 
       // An earlier note that listed changes, closed; a newer one that said
       // nothing was new, still open.
-      supervisor.addSystemNoteCard("card-note-listed", "What’s new in stable 0.0.2", "Changes.");
+      supervisor.cards.addSystemNoteCard(
+        "card-note-listed",
+        "What’s new in stable 0.0.2",
+        "Changes.",
+      );
       supervisor.close("card-note-listed");
-      supervisor.addSystemNoteCard("card-note-quiet", "Your alpha is now stable", "Nothing new.");
+      supervisor.cards.addSystemNoteCard(
+        "card-note-quiet",
+        "Your alpha is now stable",
+        "Nothing new.",
+      );
       settings.setReleaseTracking({
         ...saved,
         deliveries: {

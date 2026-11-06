@@ -139,7 +139,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
             { id: "south", label: "South marker" },
           ],
         });
-        core.services.supervisor.setCardMinimized(waitingCard, true);
+        core.services.supervisor.cards.setMinimized(waitingCard, true);
         // INF-1777: one crewmate waits on a real background command and one on its watched checks,
         // so the scene draws both banked looks inside the wait ring.
         const job = crew[crew.length - 3] as string;

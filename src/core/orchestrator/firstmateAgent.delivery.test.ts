@@ -60,7 +60,7 @@ describe("FirstmateAgent answer delivery", () => {
     standalone: true,
   });
   const noticeOf = (f: Fixture) =>
-    f.supervisor.cardsSnapshot().find((card) => card.id.startsWith("card-ask-"));
+    f.supervisor.cards.snapshot().find((card) => card.id.startsWith("card-ask-"));
   const retries = (f: Fixture) =>
     f.session.prompts.filter((prompt) => prompt.includes(ANSWER_MISSING_OPENING));
 
@@ -107,8 +107,8 @@ describe("FirstmateAgent answer delivery", () => {
     await finish(f, "The app is asking you on its card.");
     expect(states(f)).toEqual(["covered"]);
     expect(retries(f)).toEqual([]);
-    const card = f.supervisor
-      .cardsSnapshot()
+    const card = f.supervisor.cards
+      .snapshot()
       .find((shown) => shown.id.startsWith("integration-ask-"));
     expect(card).toBeDefined();
     expect(f.tasks.capture.listAsks()[0]?.taskId).toBe(
@@ -221,7 +221,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(notice?.actions.map((action) => action.id)).toEqual(["ask-again", "leave-it"]);
     expect(notice?.body).toContain("is PR 58 merged? &lt;b&gt;now&lt;/b&gt;");
     expect(notice?.body).not.toContain("SECRET");
-    expect(JSON.stringify(f.supervisor.cardsSnapshot())).not.toContain("SECRET");
+    expect(JSON.stringify(f.supervisor.cards.snapshot())).not.toContain("SECRET");
     expect(ask).toMatchObject({ delivery: "unresolved", noticeCardId: `card-ask-${ask?.id}` });
     expect(retries(f)).toHaveLength(1);
     f.agent.pokeInbox();
@@ -332,7 +332,7 @@ describe("FirstmateAgent answer delivery", () => {
     await f.crewSpecs[0]?.tools
       ?.find((tool) => tool.name === "report")
       ?.run({ text: "The indexer holds the memory.", summary: "Found the indexer." });
-    const answer = f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "";
+    const answer = f.supervisor.cards.openCardsFor(work?.id ?? "")[0]?.id ?? "";
     f.supervisor.act(answer, "pause");
     expect(f.tasks.capture.getAsk(ask?.id ?? "")?.answerCardId).toBe(answer);
     expect(retries(f)).toEqual([]);
@@ -379,8 +379,8 @@ describe("FirstmateAgent answer delivery", () => {
       ],
     });
     const crewCard = () =>
-      f.supervisor
-        .cardsSnapshot()
+      f.supervisor.cards
+        .snapshot()
         .find((card) => card.taskId === work?.id && card.title === "PR 58 merged");
     expect(crewCard()?.awaiting).toBe("close-out");
     expect(noticeOf(f)?.id).toBe(notice);
@@ -392,10 +392,10 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.tasks.capture.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
 
     // The approved minus rule preserves this unanswered decision and its coverage.
-    const answerId = f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "";
+    const answerId = f.supervisor.cards.openCardsFor(work?.id ?? "")[0]?.id ?? "";
     f.tasks.close(work?.id ?? "", { status: "done", reason: "answered", actor: "host" });
     f.supervisor.close(answerId);
-    expect(f.supervisor.cardsSnapshot().find((card) => card.id === answerId)).toMatchObject({
+    expect(f.supervisor.cards.snapshot().find((card) => card.id === answerId)).toMatchObject({
       minimized: true,
     });
     expect(f.tasks.capture.getAsk(ask?.id ?? "")?.delivery).toBe("covered");
@@ -407,7 +407,7 @@ describe("FirstmateAgent answer delivery", () => {
       { kind: "crewmate", taskId: work?.id ?? "" },
       "Withdraw the unanswered offer",
     );
-    expect(f.supervisor.cardsSnapshot().some((card) => card.id === answerId)).toBe(false);
+    expect(f.supervisor.cards.snapshot().some((card) => card.id === answerId)).toBe(false);
     await vi.waitFor(() => expect(noticeOf(f)?.id).toBe(notice));
     expect(f.tasks.capture.getAsk(ask?.id ?? "")).toMatchObject({
       delivery: "unresolved",
@@ -493,10 +493,10 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.tasks.capture.getAsk(newer?.id ?? "")?.continues).toBe(ask?.id);
 
     // The approved minus rule keeps this decision available to the newer message.
-    const answerId = f.supervisor.openCardsFor(work?.id ?? "")[0]?.id ?? "";
+    const answerId = f.supervisor.cards.openCardsFor(work?.id ?? "")[0]?.id ?? "";
     f.tasks.close(work?.id ?? "", { status: "done", reason: "answered", actor: "host" });
     f.supervisor.close(answerId);
-    expect(f.supervisor.cardsSnapshot().find((card) => card.id === answerId)).toMatchObject({
+    expect(f.supervisor.cards.snapshot().find((card) => card.id === answerId)).toMatchObject({
       minimized: true,
     });
     expect(f.tasks.capture.getAsk(newer?.id ?? "")?.delivery).toBe("covered");
@@ -508,7 +508,7 @@ describe("FirstmateAgent answer delivery", () => {
       { kind: "crewmate", taskId: work?.id ?? "" },
       "Withdraw the unanswered offer",
     );
-    expect(f.supervisor.cardsSnapshot().some((card) => card.id === answerId)).toBe(false);
+    expect(f.supervisor.cards.snapshot().some((card) => card.id === answerId)).toBe(false);
     await vi.waitFor(() =>
       expect(f.tasks.capture.getAsk(newer?.id ?? "")?.delivery).toBe("retrying"),
     );
@@ -735,7 +735,7 @@ describe("FirstmateAgent answer delivery", () => {
     await tick();
     // The failure keeps today's handling: its own card, and no answer-missing retry.
     expect(states(f)).toEqual(["held"]);
-    expect(f.supervisor.cardsSnapshot().map((card) => card.id)).toEqual(["card-fm-turn-failure"]);
+    expect(f.supervisor.cards.snapshot().map((card) => card.id)).toEqual(["card-fm-turn-failure"]);
     expect(retries(f)).toEqual([]);
     f.supervisor.act("card-fm-turn-failure", "retry-firstmate");
     await tick();
@@ -757,7 +757,7 @@ describe("FirstmateAgent answer delivery", () => {
     f.supervisor.replyToCard(cardId, "why A?");
     await drained(f.session, 1);
     await finish(f, "A keeps the queue in order.");
-    expect(f.supervisor.cardThread(cardId).messages.map((message) => message.who)).toContain(
+    expect(f.supervisor.cards.thread(cardId).messages.map((message) => message.who)).toContain(
       "firstmate",
     );
     expect(states(f)).toEqual(["covered"]);

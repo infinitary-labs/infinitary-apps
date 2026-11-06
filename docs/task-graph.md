@@ -126,7 +126,7 @@ A parent that never started - on request, no crewmate, no working copy, no card 
 Once every child is closed, the ready sweep (`CrewSupervisor.completeContainers`, which runs after any close) closes it through `TaskService` as the host: `done/finished` when at least one child is done, else `dropped/cancelled`, with one feed line ("KEY done: everything under it is finished", or "stopped: nothing under it went ahead").
 A parent that carries a crewmate, ever started, or still has an open child is never touched, and `closeRefusal` is unchanged.
 
-`settle_task` in every mode, `landTask`, and `mergePrTask` check these first.
+`settle_task` in every mode and every settle through `SettleService.settleTask` check these first.
 An externally delivered work task may close `done/released` only through an explicit `settle_task released` with a specific verified release named in `release_evidence`; it needs an idle reported change task, none of its own pull requests reading open or unreadable, and a successfully inspected working copy with no uncommitted edits.
 A pull request of its own closed without merging, or commits only history calls unmerged, such as a squash merge's originals, do not refuse it: the close keeps those commits on the task's kept ref (INF-2628).
 The release evidence is recorded in its close event.

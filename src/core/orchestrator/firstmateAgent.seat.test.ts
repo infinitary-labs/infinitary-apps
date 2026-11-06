@@ -594,7 +594,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     const before = await claudeLoginSeat();
     await before.agent.converse("hello");
     await cutOffTurn(before.sessions[0] as FakeSession, { class: "refused" });
-    expect(before.supervisor.cardsSnapshot().map((card) => card.id)).toEqual(["card-fm-refused"]);
+    expect(before.supervisor.cards.snapshot().map((card) => card.id)).toEqual(["card-fm-refused"]);
     before.agent.dispose();
 
     const after = await claudeLoginSeat({
@@ -603,7 +603,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     after.agent.pokeInbox();
     await tick();
     // Still refused: the restored card stands, and nothing is said or recorded twice.
-    expect(after.supervisor.cardsSnapshot().map((card) => card.id)).toEqual(["card-fm-refused"]);
+    expect(after.supervisor.cards.snapshot().map((card) => card.id)).toEqual(["card-fm-refused"]);
     expect(notes(after.events)).toEqual([]);
     expect(after.ledger).toEqual([]);
     expect(after.sessions.flatMap((session) => session.prompts)).toEqual([]);
@@ -613,13 +613,13 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     after.agent.pokeInbox();
     await tick();
     expect(notes(after.events)).toContain("Your first mate is answering again on Claude.");
-    expect(after.supervisor.cardsSnapshot()).toEqual([]);
+    expect(after.supervisor.cards.snapshot()).toEqual([]);
     expect((after.sessions[0] as FakeSession).prompts[0]).toContain("hello");
   });
 
   it("takes down a pause card a previous run left, even with no pause on record, once the seat serves (review S3)", async () => {
     const t = await claudeLoginSeat();
-    t.supervisor.addFirstmatePauseCard({
+    t.supervisor.cards.addFirstmatePauseCard({
       pause: "refused",
       body: "Claude is not answering your first mate right now.",
       accountId: CLAUDE_ACCOUNT,
@@ -631,7 +631,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     seat.resolveNextPrompt();
     await tick();
     expect(seat.prompts).toHaveLength(1);
-    expect(t.supervisor.cardsSnapshot()).toEqual([]);
+    expect(t.supervisor.cards.snapshot()).toEqual([]);
   });
 
   it("a Pi seat's failed sign-in shows one card: the pause card replaces the generic sign-in card (review S4)", async () => {

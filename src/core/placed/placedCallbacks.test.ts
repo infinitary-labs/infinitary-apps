@@ -397,8 +397,8 @@ describe("a task that runs on a computer that runs work", () => {
     expect(answer).toMatchObject({
       refused: { reason: "other", why: expect.stringContaining("runs an older Infinitary") },
     });
-    expect(home.supervisor.cardThread(id).messages).toEqual([]);
-    const cards = home.supervisor.cardsSnapshot();
+    expect(home.supervisor.cards.thread(id).messages).toEqual([]);
+    const cards = home.supervisor.cards.snapshot();
     expect(cards.find((card) => card.id === id)?.body).toBe(
       "<p>Run the remover on the shell PC.</p>",
     );

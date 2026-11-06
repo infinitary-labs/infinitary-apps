@@ -66,7 +66,7 @@ export async function startHomePersonal(options: {
   integrations: Pick<IntegrationsService, "forPanel">;
   panelAsks: PanelAsks;
   /** The crew, built after the panels and read only once the captain asks again. */
-  crew: () => Pick<CrewSupervisor, "showOpenCard" | "askIntegrationForPanel">;
+  crew: () => Pick<CrewSupervisor, "cards" | "askIntegrationForPanel">;
   pluginRecords: Pick<PluginRecords, "installed">;
   now: () => number;
   emit: CoreEventSink;
@@ -139,8 +139,11 @@ export async function startHomePersonal(options: {
         const held = panelAsks.held(panel, integration, action);
         if (!held) return false;
         // Its card is still up: show it again rather than raise a second.
-        if (held.state === "asking" && held.card && options.crew().showOpenCard(held.card))
+        const { cards } = options.crew();
+        if (held.state === "asking" && held.card && cards.has(held.card)) {
+          cards.showOpenCard(held.card);
           return true;
+        }
         const ask = {
           ...held.ask,
           id: `ia${randomBytes(6).toString("hex")}`,

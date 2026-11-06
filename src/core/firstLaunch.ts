@@ -58,7 +58,7 @@ export function startFirstLaunch(options: {
   >;
   cards: Pick<CardStore, "hasHistory">;
   repos: Pick<RepoRegistry, "list">;
-  supervisor: Pick<CrewSupervisor, "addRecordedFirstmateNote" | "hasCard">;
+  supervisor: Pick<CrewSupervisor, "cards">;
   sharing: Pick<SharingService, "record">;
   now: () => number;
   emit: CoreEventSink;
@@ -120,7 +120,7 @@ export function startFirstLaunch(options: {
     createWelcome: (consume) => {
       // The welcome takes no reply - the message box under it is where to
       // type - and is the regular card its picture was drawn for.
-      supervisor.addRecordedFirstmateNote(WELCOME_NOTE, consume, {
+      supervisor.cards.addRecordedFirstmateNote(WELCOME_NOTE, consume, {
         replies: false,
         width: "regular",
       });
@@ -143,10 +143,10 @@ export function startFirstLaunch(options: {
     ? new ReleaseNotesService(
         {
           settings,
-          isOpen: (cardId) => supervisor.hasCard(cardId),
+          isOpen: (cardId) => supervisor.cards.has(cardId),
           catalog: () => loadCatalog(notesDir, host.app.version),
           createNote: (note, record) => {
-            supervisor.addRecordedFirstmateNote(note, record, { onTop: true });
+            supervisor.cards.addRecordedFirstmateNote(note, record, { onTop: true });
             // What's new can open it now: the window and the Help menu look again.
             options.emit(
               "inf:release-notes",

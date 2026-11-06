@@ -403,16 +403,7 @@ export async function createServices(
   // Dev/e2e may lower the delta trigger (P5) to drive the delta carrier on
   // a small fleet; a packaged build always measures against the design's.
   // Task readers can run during async boot, before the supervisor restores the stack.
-  let cardStack:
-    | Pick<
-        CrewSupervisor,
-        | "taskCardsSnapshot"
-        | "taskCardHeads"
-        | "flushCards"
-        | "browserReturned"
-        | "answerNoteForTask"
-      >
-    | undefined;
+  let cardStack: Pick<CrewSupervisor, "cards" | "browserReturned"> | undefined;
   const taskProtocol = new TaskProtocol({
     tasks,
     timeline: { history: (id) => timeline.history(id) },
@@ -420,12 +411,12 @@ export async function createServices(
       readKeptValidationEvidence(evidence, crewmateCardPicturesDir(paths, taskId), taskId),
     repos,
     cards: {
-      listOpen: () => cardStack?.taskCardHeads() ?? cardStore.listOpen(),
-      answerNoteForTask: (taskId) => cardStack?.answerNoteForTask(taskId),
-      snapshot: () => cardStack?.taskCardsSnapshot() ?? [],
+      listOpen: () => (cardStack ? [...cardStack.cards.values()] : cardStore.listOpen()),
+      answerNoteForTask: (taskId) => cardStack?.cards.answerNoteForTask(taskId),
+      snapshot: () => cardStack?.cards.taskSnapshot() ?? [],
       forTask: (taskId, extraIds) => cardStore.forTask(taskId, extraIds),
     },
-    beforePush: () => cardStack?.flushCards(),
+    beforePush: () => cardStack?.cards.flushBroadcast(),
     workPosture: (record) =>
       readWorkPosture?.(record) ?? { state: "unknown", reason: "unobserved" },
     waitFacts: (record) => readWorkWaitFacts?.(record) ?? { job: false, timerOwned: false },
@@ -1019,7 +1010,7 @@ export async function createServices(
   runsOnOf = (record) => supervisor.runsOnFact(record);
   placeOf = (record) => supervisor.taskPlace(record);
   computerMoveOf = (record) => supervisor.computerMoveFacts(record);
-  closingResolutionOf = (taskId) => supervisor.newestCardResolution(taskId);
+  closingResolutionOf = (taskId) => supervisor.cards.newestResolutionForTask(taskId);
   cardStack = supervisor;
   readWorkPosture = (record) => supervisor.workPosture(record);
   readWorkWaitFacts = (record) => supervisor.workWaitFacts(record);
@@ -1049,10 +1040,10 @@ export async function createServices(
   // The microphone note an earlier version raised on the first hold to talk
   // is a line under the input now (docs/composer.md, "Voice"); one still on
   // the stack comes down.
-  supervisor.withdrawHostCard("card-voice-mic-primer", "microphone line under the input");
+  supervisor.cards.withdrawHostCard("card-voice-mic-primer", "microphone line under the input");
   // Seed the notifier with the restored stack: cards surviving a restart are
   // old news, and only cards born after this moment ping.
-  notifier.observe(supervisor.cardsSnapshot());
+  notifier.observe(supervisor.cards.snapshot());
   // Install by talking (Phase A, A2a): the installer stages a plugin and
   // asks on the host's consent card; the supervisor routes the captain's
   // click on it (a host effect only his click on the card's controls runs).
@@ -1064,9 +1055,9 @@ export async function createServices(
     checkCacheDir: join(paths.pluginsStagingDir, ".check"),
     store: personalStore,
     cards: {
-      raise: (card) => supervisor.raiseHostCard(card),
-      withdraw: (id, reason) => supervisor.withdrawHostCard(id, reason),
-      has: (id) => supervisor.hasCard(id),
+      raise: (card) => supervisor.cards.raiseHostCard(card),
+      withdraw: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
+      has: (id) => supervisor.cards.has(id),
     },
     broadcast: (event) => broadcastEvent(event),
     refresh: () => personal.refresh(),
@@ -1104,7 +1095,7 @@ export async function createServices(
   const projectSetups = new ProjectSetups({
     repos,
     devices: () => devices.list(),
-    raiseCard: (card) => supervisor.raiseHostCard(card),
+    raiseCard: (card) => supervisor.cards.raiseHostCard(card),
     tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
     broadcast: (event) => broadcastEvent(event),
   });
@@ -1122,7 +1113,7 @@ export async function createServices(
   const projectChanges = new ProjectChanges({
     repos,
     devices: () => devices.list(),
-    raiseCard: (card) => supervisor.raiseHostCard(card),
+    raiseCard: (card) => supervisor.cards.raiseHostCard(card),
     tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
   });
   supervisor.setProjectChange({
@@ -1561,7 +1552,7 @@ export async function createServices(
   onQuotaRefreshed = () => {
     const snapshot = quota.latest();
     // The terminal needs_reauth card, only from proof (homeQuota.ts).
-    if (snapshot) homeQuota.syncNeedsReauthCards(snapshot, supervisor);
+    if (snapshot) homeQuota.syncNeedsReauthCards(snapshot, supervisor.cards);
     firstmate.onQuotaRefreshed();
     // A refresh may clear a quota-reset gate (R1).
     void supervisor.sweepGates(ticker.now());
@@ -1641,7 +1632,7 @@ export async function createServices(
       firstmateSessionFile: firstmate.sessionFile(),
     }),
     crewmateTranscript,
-    cardThreads: (sessionId) => supervisor.observeThreads(sessionId),
+    cardThreads: (sessionId) => supervisor.cards.observeThreads(sessionId),
   });
   eventSeam.attachObserve((event) => observe.onEvent(event));
   quota.start();

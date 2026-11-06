@@ -8,7 +8,6 @@ import type { MergeReview } from "@shared/mergeReview";
 import { plainProblem } from "@shared/plainProblem";
 import { hostedPresentation } from "@shared/presentationDestination";
 import { opensPullRequest } from "@shared/repos";
-import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import type { ForgePull } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type { MergeWait, TaskRecord } from "../storage/taskStore";
@@ -97,13 +96,6 @@ export class SettleService {
     private readonly closing: TaskClosing,
   ) {}
 
-  private policiesOf(record: TaskRecord) {
-    return effectiveTaskPolicies(
-      record,
-      record.repoId ? this.host.repos.get(record.repoId) : undefined,
-    );
-  }
-
   /** Last synchronous check, after every asynchronous read and before each send. */
   private mergeBoundary(
     taskId: string,
@@ -112,7 +104,7 @@ export class SettleService {
     proceedWithOpen: boolean,
   ) {
     const initial = this.host.tasks.get(taskId);
-    const signature = initial ? JSON.stringify(this.policiesOf(initial)) : "";
+    const signature = initial ? JSON.stringify(this.host.tasks.policiesOf(initial)) : "";
     // A waiting attempt keeps the exact story across restart, never recaptures a newer one.
     const initialStory = initial?.pendingSettle
       ? initial.pendingSettle.story
@@ -120,7 +112,7 @@ export class SettleService {
     return (head?: string): string | undefined => {
       const record = this.host.tasks.get(taskId);
       if (!record || TaskService.isClosed(record)) return "the task closed";
-      if (signature !== JSON.stringify(this.policiesOf(record)))
+      if (signature !== JSON.stringify(this.host.tasks.policiesOf(record)))
         return "its policies changed; recheck the current requirements before trying again";
       if (this.locks.working(taskId)) return "its crewmate is still working";
       if (this.host.deliverableOf(record) !== "change" || record.shape?.kind === "review")

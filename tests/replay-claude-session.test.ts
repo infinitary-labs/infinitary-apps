@@ -330,7 +330,7 @@ describe("a Claude-served Firstmate session, recorded and replayed (W1 S11)", ()
     await app.turnsSettled(2);
     await app.agent.converse(CAPTAIN.ask);
     await app.turnsSettled(3);
-    const card = app.supervisor.cardsSnapshot().find((open) => open.title === CARD.title);
+    const card = app.supervisor.cards.snapshot().find((open) => open.title === CARD.title);
     if (!card) throw new Error("the card never showed");
     app.supervisor.act(card.id, "wait-for-fix");
     await app.turnsSettled(4);

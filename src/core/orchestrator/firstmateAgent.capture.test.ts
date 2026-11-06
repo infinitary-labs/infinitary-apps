@@ -91,8 +91,8 @@ describe("FirstmateAgent capture", () => {
       body: "<p>The hidden test does not establish the visible lag’s cause.</p>",
       ask_id: "",
     });
-    const card = supervisor
-      .cardsSnapshot()
+    const card = supervisor.cards
+      .snapshot()
       .find((card) => card.title === "Visible-app latency findings");
     expect(card?.asked?.text).toBe(panelWords);
     const quoted = (id: string) => {
@@ -269,7 +269,7 @@ describe("FirstmateAgent capture", () => {
     expect(ask?.attachedVia).toBe("tool:emit_card");
     // The card itself carries no task id: a question task is the record of
     // the answer, not a settle target for the card's buttons.
-    expect(supervisor.cardsSnapshot()[0]?.taskId).toBeUndefined();
+    expect(supervisor.cards.snapshot()[0]?.taskId).toBeUndefined();
     // Revising the same card keeps its row and updates the answer.
     await emit?.execute("c2", {
       id: cardId,
@@ -294,7 +294,7 @@ describe("FirstmateAgent capture", () => {
     await expect(
       emit?.execute("c2", { title: "A fact", body: "Something.", task_id: "nope" }),
     ).rejects.toThrow(/unknown task_id "nope"/);
-    expect(supervisor.cardsSnapshot()).toHaveLength(0);
+    expect(supervisor.cards.snapshot()).toHaveLength(0);
     expect(tasks.list()).toHaveLength(0);
   });
 
@@ -323,7 +323,7 @@ describe("FirstmateAgent capture", () => {
 
     // The card carries exactly the two declared actions: nothing parks it
     // and nothing brings it back (cards/tasks/agents P0, WI-1).
-    const shownCard = supervisor.cardsSnapshot().find((card) => card.id === cardId);
+    const shownCard = supervisor.cards.snapshot().find((card) => card.id === cardId);
     expect(shownCard?.actions.map((action) => action.id)).toEqual(["wait", "ship-now"]);
     expect(tasks.list().filter((record) => record.id.startsWith("park-"))).toHaveLength(0);
 
@@ -367,7 +367,7 @@ describe("FirstmateAgent capture", () => {
     supervisor.close(firstId);
     const firstQuestion = tasks.capture.openDecisionFor(firstId)!;
     expect(firstQuestion.status).toBe("open");
-    expect(supervisor.cardsSnapshot().find((card) => card.id === firstId)).toMatchObject({
+    expect(supervisor.cards.snapshot().find((card) => card.id === firstId)).toMatchObject({
       minimized: true,
     });
     expect(supervisor.runTaskOp(firstQuestion.id, "dismiss-question")).toBeUndefined();

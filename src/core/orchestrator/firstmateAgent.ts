@@ -521,7 +521,7 @@ export class FirstmateAgent {
     if (!this.running || entry.outcome !== "action") return;
     this.turn.replyFacts.acted = true;
     if (entry.kind === "card" && entry.ref) {
-      const shown = this.options.supervisor.cardsSnapshot().find((card) => card.id === entry.ref);
+      const shown = this.options.supervisor.cards.snapshot().find((card) => card.id === entry.ref);
       if (shown?.title) this.turn.replyFacts.latest = shown.title;
     }
   }
@@ -581,11 +581,11 @@ export class FirstmateAgent {
       tasks: options.tasks,
       inbox: options.inbox,
       now: () => this.now(),
-      raiseNotice: (card) => options.supervisor.raiseHostCard(card),
+      raiseNotice: (card) => options.supervisor.cards.raiseHostCard(card),
       withdrawNotice: (cardId) =>
-        options.supervisor.withdrawHostCard(cardId, "an answering card went up"),
+        options.supervisor.cards.withdrawHostCard(cardId, "an answering card went up"),
       cardTitle: (cardId) =>
-        options.supervisor.cardsSnapshot().find((card) => card.id === cardId)?.title,
+        options.supervisor.cards.snapshot().find((card) => card.id === cardId)?.title,
       ending: options.supervisor.askEnding,
       observe: options.answerDelivery === "observe",
     });
@@ -903,10 +903,10 @@ export class FirstmateAgent {
       const explicit = turn.taskId?.trim();
       if (explicit && tasks.get(explicit)) return explicit;
     }
-    const past = pastCardId ? this.options.supervisor.cardPast(pastCardId) : undefined;
+    const past = pastCardId ? this.options.supervisor.cards.past(pastCardId) : undefined;
     if (past?.taskId && tasks.get(past.taskId)) return past.taskId;
     if (!visibleCardId) return undefined;
-    const card = this.options.supervisor.cardsSnapshot().find((c) => c.id === visibleCardId);
+    const card = this.options.supervisor.cards.snapshot().find((c) => c.id === visibleCardId);
     if (!card) return undefined;
     if (card.taskId && tasks.get(card.taskId)) return card.taskId;
     return tasks.capture.openDecisionFor(card.id)?.id;
@@ -1404,7 +1404,7 @@ export class FirstmateAgent {
     } else if (!threw) {
       // A clean turn answered what it carried: nothing is left to retry.
       this.lastUserTurn = undefined;
-      this.options.supervisor.withdrawHostCard(FIRSTMATE_FAILURE_CARD_ID, "recovered");
+      this.options.supervisor.cards.withdrawHostCard(FIRSTMATE_FAILURE_CARD_ID, "recovered");
     }
     // The capture floor (P1): whatever no tool attached lands now - on
     // the hinted task, else as its own question task. A failed turn files
@@ -1506,7 +1506,7 @@ export class FirstmateAgent {
     if (!failed && threadAnswer) {
       for (const cardId of repliedUnder) {
         try {
-          if (this.options.supervisor.recordFirstmateThreadAnswer(cardId, threadAnswer)) {
+          if (this.options.supervisor.cards.recordFirstmateThreadAnswer(cardId, threadAnswer)) {
             this.delivery.creditReply(cardId);
           }
         } catch (caught) {
@@ -1517,7 +1517,7 @@ export class FirstmateAgent {
     this.turn.aboutCardId = undefined;
     // The turn's end is the Firstmate's close-out: a card of its own it
     // answered since the captain's reply reaches the stage now.
-    this.options.supervisor.firstmateClosedOut();
+    this.options.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
     // Answer delivery: the normal capture above is done, so each message
     // this turn read is judged by what took effect after it.
     const unread = [...this.unreadAsks];
@@ -1611,7 +1611,7 @@ export class FirstmateAgent {
     const minutes = Math.round(quietFor / 60_000);
     if (quietFor >= QUIET_CARD_MS && this.quietLevel < 2) {
       this.quietLevel = 2;
-      this.options.supervisor.addFirstmateQuietCard(
+      this.options.supervisor.cards.addFirstmateQuietCard(
         `Your first mate has said nothing for ${minutes} minutes while working. It may be stuck; it recovers on its own when it finishes.`,
       );
     } else if (quietFor >= QUIET_FEED_MS && this.quietLevel < 1) {
@@ -1631,7 +1631,7 @@ export class FirstmateAgent {
 
   private clearQuiet(): void {
     this.quietLevel = 0;
-    this.options.supervisor.clearFirstmateQuietCard();
+    this.options.supervisor.cards.clearFirstmateQuietCard();
   }
 
   /**

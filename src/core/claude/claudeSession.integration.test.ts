@@ -429,7 +429,7 @@ describe("a crewmate's turn a close cuts, on the real client", () => {
     const { b, crew, taskId } = await midTurn();
 
     // The settle path an answered card, a discard or a parent's close takes.
-    await crew.supervisor.closeTask(taskId, {
+    await crew.supervisor.settling.closing.closeTask(taskId, {
       status: "done",
       reason: "answered",
       actor: "captain",

@@ -198,7 +198,10 @@ export function startPlacedHome(options: {
   const { now } = options;
   const db: AppDatabase = openDatabase(options.userData);
   const paths = appPathsFor(options.userData);
-  const tasks = new TaskService({ db, now });
+  // The task service reads each task's policies through the same projects
+  // the crew does, as the app wires them.
+  const repos = new RepoRegistry(db, paths.fleetDir);
+  const tasks = new TaskService({ db, repos, now });
   const cardStore = new CardStore(db);
   const inbox = new InboxStore(db, { now });
   inbox.resetInFlight(
@@ -211,7 +214,6 @@ export function startPlacedHome(options: {
   const wakes: TypedWake[] = [];
   let cards: Card[] = [];
   const devices = new WorkDevices();
-  const repos = new RepoRegistry(db, paths.fleetDir);
   // What a computer says of its sign-ins reaches the crew once it exists.
   let signInsChanged: (deviceId: string) => void = () => {};
   const signIns = new DeviceSignIns({
@@ -521,11 +523,11 @@ export function startPlacedHome(options: {
       signInsOf: (deviceId) => signIns.signInsOf(deviceId),
     },
     cards: {
-      raise: (card) => supervisor.raiseHostCard(card),
-      withdraw: (id, reason) => supervisor.withdrawHostCard(id, reason),
-      has: (id) => supervisor.hasCard(id),
-      stored: (id) => supervisor.cardStored(id),
-      chosenAction: (id) => supervisor.cardChosenAction(id),
+      raise: (card) => supervisor.cards.raiseHostCard(card),
+      withdraw: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
+      has: (id) => supervisor.cards.has(id),
+      stored: (id) => supervisor.cards.stored(id) !== undefined,
+      chosenAction: (id) => supervisor.cards.chosenAction(id),
     },
     broadcastEvent: (event) => events.push(event),
     forgeNeeded: (deviceId, host, repo) =>

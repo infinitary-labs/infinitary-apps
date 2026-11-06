@@ -15,7 +15,7 @@ import {
 } from "../claude/claudeQuota";
 import type { HostCapabilities } from "../host";
 import type { ServedModels } from "../models/servedModels";
-import type { CrewSupervisor } from "../orchestrator/crewSupervisor";
+import type { CardService } from "../orchestrator/cardService";
 import type { AccountVault } from "../pi/accountVault";
 import type { PiAuthService } from "../pi/piAuth";
 import type { StandIns } from "../standIns";
@@ -69,7 +69,7 @@ export type HomeQuota = {
    */
   syncNeedsReauthCards: (
     snapshot: QuotaSnapshotView,
-    cards: Pick<CrewSupervisor, "addAuthDecisionCard" | "cardsSnapshot" | "clearAuthDecisionCard">,
+    cards: Pick<CardService, "addAuthDecisionCard" | "snapshot" | "clearAuthDecisionCard">,
   ) => void;
 };
 
@@ -311,7 +311,7 @@ export function startHomeQuota(options: {
           { restoreAccountId: target.accountId },
         );
       }
-      for (const card of cards.cardsSnapshot()) {
+      for (const card of cards.snapshot()) {
         const accountId = accountIdFromNeedsReauthCard(card.id);
         if (accountId !== undefined && !wanted.has(card.id)) {
           cards.clearAuthDecisionCard(card.id);

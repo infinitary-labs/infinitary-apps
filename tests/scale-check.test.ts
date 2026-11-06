@@ -339,8 +339,8 @@ async function buildRecord() {
     tasks,
     inbox,
     now,
-    raiseNotice: (notice) => supervisor.raiseHostCard(notice),
-    cardTitle: (cardId) => supervisor.cardsSnapshot().find((shown) => shown.id === cardId)?.title,
+    raiseNotice: (notice) => supervisor.cards.raiseHostCard(notice),
+    cardTitle: (cardId) => supervisor.cards.snapshot().find((shown) => shown.id === cardId)?.title,
     ending: supervisor.askEnding,
   });
   // The board as services.ts builds it, over the supervisor's facts.
@@ -349,7 +349,7 @@ async function buildRecord() {
     repos,
     cards: {
       listOpen: () => cardStore.listOpen(),
-      snapshot: () => supervisor.cardsSnapshot(),
+      snapshot: () => supervisor.cards.snapshot(),
       forTask: (taskId, extraIds) => cardStore.forTask(taskId, extraIds),
     },
     workPosture: (record) => supervisor.workPosture(record),

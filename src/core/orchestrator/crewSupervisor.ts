@@ -22,11 +22,8 @@ import {
   CARD_REPLY_MAX_CHARS,
   type Card,
   type CardAnswer,
-  type CardMessage,
-  type CardMessageWho,
   type CardMutation,
   type CardThread,
-  type CardWidth,
   cardAnswerLines,
   cardAnswersBytes,
   cardAnswersSchema,
@@ -40,7 +37,6 @@ import {
   LIVE_ATTACHMENT_LABEL_MAX,
   type LiveAttachment,
   onStage,
-  type PastCard,
   replyWithSettings,
   requestMergeEffectOf,
   requestWriteEffectOf,
@@ -178,7 +174,6 @@ import {
   RUNS_ON_THIS_MAC,
   runsHereOnly,
 } from "@shared/repos";
-import type { RequiredActionRevisionInput } from "@shared/requiredActions";
 import { REVIEW_VERDICT_OF_CODE, type Rigor, renderFinding } from "@shared/rigor";
 import { RISK_DIMENSIONS, RISK_WORDS, type RiskAssessment } from "@shared/risk";
 import {
@@ -213,7 +208,6 @@ import {
 import { type PlanItem, readPlanItems } from "@shared/taskPlan";
 import {
   type EffectiveTaskPolicies,
-  effectiveTaskPolicies,
   policyEditConsequences,
   RUNS_ON_SOURCE_WORDS,
   type TaskPolicyEdits,
@@ -278,6 +272,7 @@ import {
   crewmateSourceCardsDir,
   crewmateTempDir,
 } from "../paths";
+import { errorText } from "../personal/errorText";
 import type {
   LiveTurnCommit,
   PanelCaptureResult,
@@ -343,7 +338,7 @@ import {
   type FollowupInput,
   labeledActions,
 } from "../session/tools";
-import type { CardResolution, CardStore, DuplicateResult } from "../storage/cardStore";
+import type { CardStore, DuplicateResult } from "../storage/cardStore";
 import { currentChange } from "../storage/changeProjection";
 import {
   FIRSTMATE_RECIPIENT,
@@ -375,7 +370,7 @@ import {
 } from "../tasks/liveValidation";
 import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
 import { carryOnWords, modelMoveWords, RESTART_RESUMED_WORDS } from "../tasks/recordActivity";
-import { type SettleRefusal, TaskGraphRefusal } from "../tasks/taskGraph";
+import { TaskGraphRefusal } from "../tasks/taskGraph";
 import {
   builtOnRows,
   queryTasks,
@@ -411,7 +406,7 @@ import type { CardInteractionEvidence } from "./cardEvidence";
 import { cardMutationText } from "./cardMutationText";
 import { CardService } from "./cardService";
 import { escapeCardText } from "./cardText";
-import type { CardCaller, ThreadActivity, ThreadOwed } from "./cardThreads";
+import type { CardCaller } from "./cardThreads";
 import type { PrCiOverall } from "./changeChecks";
 import type { MergeGuard, PrOutcome } from "./changeMerge";
 import { declareRunCheck } from "./checkRepair";
@@ -430,7 +425,6 @@ import {
 } from "./crewSession";
 import type { WriteAskSent } from "./githubGateway";
 import { premiumRetryPossible } from "./holds";
-import type { FirstmatePauseCard } from "./hostCards";
 import {
   type AccountServeability,
   IdleLadder,
@@ -494,7 +488,6 @@ import { type RunReading, RunWatcher } from "./runWatch";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
 import { folderMissingText, pendingMergeLine } from "./settleWords";
-import type { TaskClose } from "./taskClose";
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
 import type { Ticker } from "./ticker";
 import {
@@ -1041,6 +1034,14 @@ type SteerSource = {
   captainWords?: boolean;
 };
 
+/** The host's own steer: the supervisor, through supervision, answering no message or card. */
+const SUPERVISOR_STEER: SteerSource = {
+  actor: "supervisor",
+  via: "supervision",
+  decision: null,
+  cardId: null,
+};
+
 /** Who asked for an interrupt or cancel, from where, and under which decision. */
 /**
  * A resolved escalation (S4): the attempt the captain rejected, the stamp
@@ -1286,15 +1287,6 @@ export const UNHEARD_END_NOTE =
  * rather than holding the quit.
  */
 export const QUIT_SETTLE_MS = 2_000;
-
-/**
- * The four tiers. Since the work-shape policy (S2) the Firstmate judges
- * none of them: the host computes the tier from the shape, and `premium`
- * is reached only because the captain asked for it by name - which is what
- * makes it the one whose downgrade is worth a captain card rather than a
- * feed line.
- */
-export type Difficulty = "low" | "medium" | "high" | "premium";
 
 /** The waiting phrased for the feed, at queue time. */
 function gateText(gate: TaskGate): string {
@@ -1676,11 +1668,11 @@ export class CrewSupervisor {
   /** In-flight moves, including reopening and source/destination cleanup, until their writes end. */
   private readonly computerMoveOperations = new Set<Promise<void>>();
   /** The card stack: the open cards and every write to them. */
-  private readonly cards: CardService;
+  readonly cards: CardService;
   /** How each captain's message ends (INF-1610, docs/task-capture.md "How a message ends"). */
   readonly askEnding: AskEnding;
   /** Settling and closing: land, merge-pr, discard, and every close's teardown. */
-  private readonly settling: SettleOwners;
+  readonly settling: SettleOwners;
   private crewmateSeq = 0;
   /** The watchdog's registrations on the shared ticker, undone at dispose. */
   private watchdog: (() => void)[] | undefined;
@@ -1818,7 +1810,7 @@ export class CrewSupervisor {
             },
             ...(outcome.ok && review ? { once: `merge-continued:${review.id}` } : {}),
           },
-          { actor: "supervisor", via: "supervision", decision: null, cardId: null },
+          SUPERVISOR_STEER,
         ).catch((caught: unknown) => {
           console.warn("[crew] merge continuation not delivered:", caught);
         });
@@ -1866,13 +1858,7 @@ export class CrewSupervisor {
       premiumCanServe: () => this.premiumCanServe(),
       recordSort: (taskId, title, wake, verdict, reason, rule, effect) =>
         this.recordSort(taskId, title, wake, verdict, reason, rule, effect),
-      steer: (taskId, message) =>
-        this.steerInternal(taskId, message, {
-          actor: "supervisor",
-          via: "supervision",
-          decision: null,
-          cardId: null,
-        }),
+      steer: (taskId, message) => this.steerInternal(taskId, message, SUPERVISOR_STEER),
       raiseCard: (card) => this.cards.put(card),
       withdrawCard: (id, resolution) => this.cards.takeDown(id, resolution),
       answerOwed: (id) => this.cards.answerOwed(id),
@@ -1904,13 +1890,7 @@ export class CrewSupervisor {
           tasks: options.tasks,
           inbox: options.inbox,
           read: readRunWatch,
-          steer: (taskId, wake) =>
-            this.steerInternal(taskId, wake, {
-              actor: "supervisor",
-              via: "supervision",
-              decision: null,
-              cardId: null,
-            }),
+          steer: (taskId, wake) => this.steerInternal(taskId, wake, SUPERVISOR_STEER),
         })
       : undefined;
     const readCheckWatch = options.readCheckWatch;
@@ -1930,13 +1910,7 @@ export class CrewSupervisor {
             const posture = this.workPosture(record);
             return posture.state === "idle" && posture.reason === "dependency";
           },
-          steer: (taskId, wake) =>
-            this.steerInternal(taskId, wake, {
-              actor: "supervisor",
-              via: "supervision",
-              decision: null,
-              cardId: null,
-            }),
+          steer: (taskId, wake) => this.steerInternal(taskId, wake, SUPERVISOR_STEER),
         })
       : undefined;
     const readMainChecks = options.readMainChecks;
@@ -1947,12 +1921,7 @@ export class CrewSupervisor {
           read: readMainChecks,
           steer: async (taskId, wake) => {
             this.options.tasks.turns.endIdle(taskId);
-            await this.steerInternal(taskId, wake, {
-              actor: "supervisor",
-              via: "supervision",
-              decision: null,
-              cardId: null,
-            });
+            await this.steerInternal(taskId, wake, SUPERVISOR_STEER);
           },
         })
       : undefined;
@@ -2988,60 +2957,6 @@ export class CrewSupervisor {
 
   // ---- the card stack (CardService) -----------------------------------------
 
-  /** A task's open cards, oldest first (WI-6). Read-only. */
-  openCardsFor(taskId: string): Pick<Card, "id" | "title" | "actions" | "createdAt">[] {
-    return this.cards.openCardsFor(taskId);
-  }
-
-  /** A task's open cards with body, actions and emitter (WI-8, WI-12). Read-only. */
-  openCardDigests(taskId: string): ReturnType<CardService["openCardDigests"]> {
-    return this.cards.openCardDigests(taskId);
-  }
-
-  flushCards(): void {
-    this.cards.flushBroadcast();
-  }
-
-  setCardMinimized(cardId: string, minimized: boolean): void {
-    this.cards.setMinimized(cardId, minimized);
-  }
-
-  showOpenCard(cardId: string): Card | undefined {
-    if (!this.cards.shown(cardId)) return undefined;
-    this.cards.showOpenCard(cardId);
-    return this.cards.shown(cardId);
-  }
-
-  cardsSnapshot(): Card[] {
-    return this.cards.snapshot();
-  }
-
-  /** Shown card actions for task flags, without rebuilding message or task presentation. */
-  taskCardsSnapshot(): Card[] {
-    return this.cards.taskSnapshot();
-  }
-
-  /** Durable open heads for task holds; a pending shown revision may have different actions. */
-  taskCardHeads(): Card[] {
-    return [...this.cards.values()];
-  }
-
-  /** The persisted closing offer/action/answers for recovery reads. */
-  newestCardResolution(taskId: string): CardResolution | undefined {
-    return this.cards.newestResolutionForTask(taskId);
-  }
-
-  /** A task's newest card body (Task B): an answer task's card IS its deliverable. */
-  newestCardBody(taskId: string): string | undefined {
-    return this.cards.newestBody(taskId);
-  }
-
-  /** A card the Firstmate agent emits: its only user-facing output channel. */
-  /** A required action's words corrected by a first mate or crewmate (docs/required-actions.md). */
-  reviseRequiredActionAs(caller: CardCaller, input: RequiredActionRevisionInput): CardMutation {
-    return this.cards.reviseRequiredAction(caller, input);
-  }
-
   /**
    * Whether the first mate's emit_card names a card that is not its own -
    * someone else's open or closed card, or a card id the record lacks -
@@ -3162,15 +3077,6 @@ export class CrewSupervisor {
     void this.sweepGates(this.now());
   }
 
-  /** Approved host-presented copy, owned by Firstmate and recorded atomically. */
-  addRecordedFirstmateNote(
-    input: Pick<EmittedCardInput, "title" | "body" | "pictures"> & { answer?: string },
-    record: (cardId: string) => void,
-    presentation: { onTop?: boolean; replies?: false; width?: CardWidth } = {},
-  ): string {
-    return this.cards.addRecordedFirstmateNote(input, record, presentation);
-  }
-
   /** An emitter withdraws its own card (close_card). */
   closeCard(
     cardId: string,
@@ -3182,24 +3088,6 @@ export class CrewSupervisor {
     // coverage through the existing sweep, never a captain acknowledgement.
     this.hooks.asksMoved?.();
     return result;
-  }
-
-  cardThread(cardId: string): CardThread {
-    return this.cards.thread(cardId);
-  }
-
-  /** Who owes an answer on an open card now (`ThreadOwed`), for the first mate's reads. */
-  cardOwed(cardId: string): ThreadOwed {
-    return this.cards.owed(cardId);
-  }
-
-  /** A card's row, open or closed, for the first mate's exact card read. */
-  storedCard(cardId: string): Card | undefined {
-    return this.cards.get(cardId) ?? this.cards.stored(cardId);
-  }
-
-  showRequiredAction(taskId: string): boolean {
-    return this.cards.presentRequiredAction(taskId);
   }
 
   /** Called only from the authenticated connection's fresh hello, not cached device reads. */
@@ -3226,58 +3114,6 @@ export class CrewSupervisor {
     void this.sweepGates(this.now());
   }
 
-  /** The saved answer still offering the captain an explicit Done. */
-  answerNoteForTask(taskId: string): Card | undefined {
-    return this.cards.answerNoteForTask(taskId);
-  }
-
-  /** A closed card as the captain last saw it (`CardService.past`). */
-  cardPast(cardId: string): PastCard | undefined {
-    return this.cards.past(cardId);
-  }
-
-  /** The window showed the captain this version of the card (`CardService.seen`). */
-  cardSeen(cardId: string, offerId: string): void {
-    this.cards.seen(cardId, offerId);
-  }
-
-  /** A foreground view drew this exact released update. */
-  cardSeenUpdate(cardId: string, lifecycleId: string, updateId: string): void {
-    this.cards.seenUpdate(cardId, lifecycleId, updateId);
-  }
-
-  /** A line in a card's thread; it answers a captain message only when it names it. */
-  addCardMessage(
-    cardId: string,
-    who: CardMessageWho,
-    text: string,
-    answersMessage?: number,
-  ): CardMessage {
-    return this.cards.addMessage(
-      cardId,
-      who,
-      text,
-      undefined,
-      undefined,
-      undefined,
-      false,
-      answersMessage !== undefined ? { answersMessage } : {},
-    );
-  }
-
-  recordFirstmateThreadAnswer(cardId: string, text: string): boolean {
-    return this.cards.recordFirstmateThreadAnswer(cardId, text);
-  }
-
-  /** The Firstmate's turn ended: its close-out, so its answered cards reach the stage. */
-  firstmateClosedOut(): void {
-    this.cards.closeOut({ kind: "firstmate" }, "turn-end");
-  }
-
-  observeThreads(sessionId: string): ReturnType<CardService["observeThreads"]> {
-    return this.cards.observeThreads(sessionId);
-  }
-
   flagDuplicate(input: { cardId: string; duplicateOf: string; note: string }): DuplicateResult {
     const card = this.cards.shown(input.cardId);
     const result = this.cards.flagDuplicate(input);
@@ -3286,55 +3122,6 @@ export class CrewSupervisor {
     if (result.status === "flagged" && card)
       this.tellCardClosed(card, { id: result.original.id, title: result.original.title });
     return result;
-  }
-
-  addFirstmatePauseCard(input: FirstmatePauseCard, options: { reviseOnly?: boolean } = {}): void {
-    this.cards.addFirstmatePauseCard(input, options);
-  }
-
-  addFirstmateMoveBackCard(input: {
-    providerId: string;
-    providerName: string;
-    body: string;
-  }): void {
-    this.cards.addFirstmateMoveBackCard(input);
-  }
-
-  withdrawFirstmatePauseCards(reason: string): void {
-    this.cards.withdrawFirstmatePauseCards(reason);
-  }
-
-  addAuthDecisionCard(
-    id: string,
-    meta: string,
-    body: string,
-    options?: { restoreAccountId?: string; taskId?: string },
-  ): void {
-    this.cards.addAuthDecisionCard(id, meta, body, options);
-  }
-
-  addForgeSignInCard(
-    id: string,
-    host: string,
-    name: string,
-    waitingChanges: number,
-    options: { reauth?: boolean; cli?: boolean } = {},
-  ): void {
-    this.cards.addForgeSignInCard(id, host, name, waitingChanges, options);
-  }
-
-  clearAuthDecisionCard(id: string): void {
-    this.cards.clearAuthDecisionCard(id);
-  }
-
-  /** The action that resolved a host card, while it stays resolved (`CardService.chosenAction`). */
-  cardChosenAction(id: string): string | undefined {
-    return this.cards.chosenAction(id);
-  }
-
-  /** Whether the stack ever held a card under this id, open or resolved. */
-  cardStored(id: string): boolean {
-    return this.cards.stored(id) !== undefined;
   }
 
   /**
@@ -3418,42 +3205,6 @@ export class CrewSupervisor {
       );
       await this.dispatchQueuedTask(record.id);
     }
-  }
-
-  raiseHostCard(card: Omit<Card, "author" | "priority" | "status" | "createdAt">): void {
-    this.cards.raiseHostCard(card);
-  }
-
-  withdrawHostCard(id: string, reason: string): void {
-    this.cards.withdrawHostCard(id, reason);
-  }
-
-  hasCard(id: string): boolean {
-    return this.cards.has(id);
-  }
-
-  addFirstmateQuietCard(body: string): void {
-    this.cards.addFirstmateQuietCard(body);
-  }
-
-  clearFirstmateQuietCard(): void {
-    this.cards.clearFirstmateQuietCard();
-  }
-
-  addFirstmateFailureCard(body: string): void {
-    this.cards.addFirstmateFailureCard(body);
-  }
-
-  addSystemNoteCard(id: string, title: string, body: string): void {
-    this.cards.addSystemNoteCard(id, title, body);
-  }
-
-  threadActivitySince(since: number, limit = 8): ThreadActivity[] {
-    return this.cards.threadActivitySince(since, limit);
-  }
-
-  captainResolutionsSince(since: number, limit: number): CardResolution[] {
-    return this.cards.captainResolutionsSince(since, limit);
   }
 
   /**
@@ -4312,12 +4063,7 @@ export class CrewSupervisor {
       );
       this.options.tasks.note(standing.id, update, { news: true });
       if (this.tasks.has(standing.id)) {
-        void this.steerInternal(standing.id, update, {
-          actor: "supervisor",
-          via: "supervision",
-          decision: null,
-          cardId: null,
-        }).catch(() => {});
+        void this.steerInternal(standing.id, update, SUPERVISOR_STEER).catch(() => {});
       }
       const record = this.options.tasks.get(standing.id);
       return record ? { record, filed: false } : undefined;
@@ -4562,12 +4308,7 @@ export class CrewSupervisor {
       },
       once: `repair-assessed:${assessorId}`,
     };
-    void this.steerInternal(builderId, wake, {
-      actor: "supervisor",
-      via: "supervision",
-      decision: null,
-      cardId: null,
-    }).catch((caught: unknown) => {
+    void this.steerInternal(builderId, wake, SUPERVISOR_STEER).catch((caught: unknown) => {
       // The record and the feed already say the approval ended.
       console.warn("[crew] the repair assessment's steer was not delivered:", caught);
     });
@@ -6352,7 +6093,9 @@ export class CrewSupervisor {
     const briefed = {
       ...crewmate,
       ...(this.options.source ? { source: await this.options.source() } : {}),
-      procedure: crewmateProcedureFor(this.policiesOf(this.options.tasks.get(task.id))),
+      procedure: crewmateProcedureFor(
+        this.options.tasks.policiesOf(this.options.tasks.get(task.id)),
+      ),
       // Every crewmate is told the captain's computers and which one it runs on (INF-992).
       ...this.computersFor(crewmate.machineId),
       // Its app reads here are answerable by the quiet check; there, that computer keeps its own.
@@ -7125,7 +6868,7 @@ export class CrewSupervisor {
     if (rigor) sections.push([renderRigorSection(rigor)]);
     this.stampAutonomy(taskId, repoId);
     const record = this.options.tasks.get(taskId);
-    const policies = this.policiesOf(record);
+    const policies = this.options.tasks.policiesOf(record);
     if (policies)
       sections.push([
         `Current task policies: ${JSON.stringify(policies)}. Read current policies before pushing or merging; later policy notices supersede this brief, not the scope.`,
@@ -7234,7 +6977,7 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     if (record?.kind !== "work") return undefined;
     const shape = record.shape;
-    const decision = { rigor: this.policiesOf(record)?.rigor.value };
+    const decision = { rigor: this.options.tasks.policiesOf(record)?.rigor.value };
     if (!decision.rigor) return undefined;
     if (shape?.rigor) return decision.rigor;
     // A quiet write, like the kind stamp (S3): the rigor explains what the
@@ -7272,7 +7015,7 @@ export class CrewSupervisor {
       return;
     }
     if (shape?.autonomy !== undefined) return;
-    const autonomy = this.policiesOf(record)?.autonomy.value ?? false;
+    const autonomy = this.options.tasks.policiesOf(record)?.autonomy.value ?? false;
     this.options.tasks.placement.recordShape(taskId, { autonomy }, record.difficulty);
   }
 
@@ -7318,15 +7061,7 @@ export class CrewSupervisor {
   taskAutonomy(taskId: string): boolean {
     const record = this.options.tasks.get(taskId);
     if (!record) return false;
-    return this.policiesOf(record)?.autonomy.value ?? false;
-  }
-
-  private policiesOf(record: TaskRecord | undefined): EffectiveTaskPolicies | null {
-    if (!record) return null;
-    return effectiveTaskPolicies(
-      record,
-      record.repoId ? this.options.repos.get(record.repoId) : undefined,
-    );
+    return this.options.tasks.policiesOf(record)?.autonomy.value ?? false;
   }
 
   /**
@@ -7384,7 +7119,7 @@ export class CrewSupervisor {
     before?: EffectiveTaskPolicies | null,
   ): string {
     const record = this.options.tasks.get(taskId);
-    const policies = this.policiesOf(record);
+    const policies = this.options.tasks.policiesOf(record);
     if (!record || !policies) return "";
     const guidance = this.addedGuidance(taskId, before, policies);
     const wake: TypedWake = {
@@ -8129,12 +7864,7 @@ export class CrewSupervisor {
       this.now(),
       JOB_BOUND_MS,
     );
-    void this.steerInternal(task.id, ask, {
-      actor: "supervisor",
-      via: "supervision",
-      decision: null,
-      cardId: null,
-    }).catch((caught: unknown) => {
+    void this.steerInternal(task.id, ask, SUPERVISOR_STEER).catch((caught: unknown) => {
       console.warn("[crew] the check-back ask was not delivered:", caught);
     });
   }
@@ -9829,7 +9559,7 @@ export class CrewSupervisor {
         // Nothing has changed anywhere yet: the move waits, and says why.
         this.options.tasks.placement.setComputerMove(taskId, {
           ...move,
-          problem: `its work could not be packed: ${messageOf(caught)}`,
+          problem: `its work could not be packed: ${errorText(caught)}`,
         });
         this.broadcastCrewCounts();
         return;
@@ -9893,12 +9623,12 @@ export class CrewSupervisor {
     } catch (caught) {
       if (!committed) {
         this.computerMoving.delete(taskId);
-        await this.endUnfinishedMove(taskId, messageOf(caught));
+        await this.endUnfinishedMove(taskId, errorText(caught));
       } else {
         // Its record names the destination: the next tick reopens it there.
         this.options.tasks.note(
           taskId,
-          `it moved, but could not reopen yet: ${messageOf(caught)}`,
+          `it moved, but could not reopen yet: ${errorText(caught)}`,
           {
             news: true,
           },
@@ -9944,7 +9674,7 @@ export class CrewSupervisor {
             ? this.options.workspace.installDependencies(resumed.workspace.cwd)
             : undefined;
       const install = await installing?.catch(
-        (caught): DependencyInstall => ({ outcome: "failed", ms: 0, error: messageOf(caught) }),
+        (caught): DependencyInstall => ({ outcome: "failed", ms: 0, error: errorText(caught) }),
       );
       if (install && install.outcome !== "skipped" && this.options.tasks.get(taskId))
         this.options.tasks.note(taskId, installText(install), {
@@ -9962,7 +9692,7 @@ export class CrewSupervisor {
       }
     } catch (caught) {
       // Its record names the destination: the next tick reopens it there.
-      const problem = `it moved, but could not reopen yet: ${messageOf(caught)}`;
+      const problem = `it moved, but could not reopen yet: ${errorText(caught)}`;
       const move = this.options.tasks.get(taskId)?.shape?.computer_move;
       if (move && move.problem !== problem) {
         this.options.tasks.placement.setComputerMove(taskId, { ...move, problem });
@@ -10073,7 +9803,7 @@ export class CrewSupervisor {
           actor: "host",
         });
     } catch (caught) {
-      const problem = `the working copy it left on ${this.computerName(move.from)} is not removed yet: ${messageOf(caught)}`;
+      const problem = `the working copy it left on ${this.computerName(move.from)} is not removed yet: ${errorText(caught)}`;
       if (move.problem !== problem && this.sameMove(taskId, move))
         this.options.tasks.placement.setComputerMove(taskId, { ...move, problem });
     } finally {
@@ -10597,7 +10327,7 @@ export class CrewSupervisor {
                 (record.startPolicy === "on-request" ? "starts on request" : undefined))
             : undefined));
       const computer = this.taskComputer(record);
-      const rigor = this.policiesOf(record)?.rigor.value;
+      const rigor = this.options.tasks.policiesOf(record)?.rigor.value;
       const review = this.reviewState(record);
       const thread = threads.get(record.id);
       const restart = this.restartFact(record.id);
@@ -11197,7 +10927,7 @@ export class CrewSupervisor {
     // The shape lint runs at the crewmate boundary too (WI-11), whichever
     // backend's tool emitted the card; a refusal is the tool's error text.
     const refusal = lintCrewmateCard(finished, {
-      rigor: this.policiesOf(this.options.tasks.get(task.id))?.rigor.value,
+      rigor: this.options.tasks.policiesOf(this.options.tasks.get(task.id))?.rigor.value,
       tieredStory:
         presentationChecked !== undefined &&
         ownPresentation?.revisions.find((story) => story.revision === presentationChecked.revision)
@@ -11234,7 +10964,8 @@ export class CrewSupervisor {
     // that says so, in the app's words from the setting (INF-1219); the
     // merge rewrites it on the same note (`SettleService`).
     const selfMergeNote = presentationChecked !== undefined && shown.actions.length === 0;
-    const autonomySource = this.policiesOf(this.options.tasks.get(task.id))?.autonomy.source;
+    const autonomySource = this.options.tasks.policiesOf(this.options.tasks.get(task.id))?.autonomy
+      .source;
     const lead = selfMergeNote ? pendingMergeLine(autonomySource ?? "project") : "";
     const card = strip || lead ? { ...shown, body: `${lead}${shown.body}${strip}` } : shown;
     // A request for the captain's help pauses the browser before the card
@@ -11753,7 +11484,7 @@ export class CrewSupervisor {
    */
   private offersCareful(taskId: string): boolean {
     if (this.mergeModeFor(taskId) !== "merge-pr") return false;
-    const policies = this.policiesOf(this.options.tasks.get(taskId));
+    const policies = this.options.tasks.policiesOf(this.options.tasks.get(taskId));
     return policies !== null && !policies.autonomy.value && policies.rigor.value !== "reviewed";
   }
 
@@ -12107,81 +11838,6 @@ export class CrewSupervisor {
     void this.sweepGates(this.now());
   }
 
-  /**
-   * Lands a finished task's branch (captain decision Q5): a forge-agnostic
-   * local merge through the workspace service, then the task CLOSES as
-   * done/landed - the record and its session JSONL stay (captain decision
-   * D2), only the worktree and branch go. Fail closed: the reason returns
-   * to the caller; the supervisor never mints a card.
-   */
-  landTask(taskId: string, actor: "captain" | "firstmate" = "firstmate"): Promise<string> {
-    return this.settleTask(taskId, "land", undefined, actor);
-  }
-
-  /** Put a direct-PR task's change in where the project lives, then close it and remove its worktree. */
-  mergePrTask(taskId: string, actor: "captain" | "firstmate" = "firstmate"): Promise<string> {
-    return this.settleTask(taskId, "merge-pr", undefined, actor);
-  }
-
-  /**
-   * Conversational merge-pr / land / discard. Fail-closed reasons return as
-   * the result text so Firstmate can judge the standing card rule; this
-   * method never mints a card.
-   */
-  settleTask(
-    taskId: string,
-    mode: "merge-pr" | "land" | "discard",
-    confirm?: boolean,
-    actor: "captain" | "firstmate" = "firstmate",
-    proceedWithOpen = false,
-  ): Promise<string> {
-    return this.settling.settle.settleTask(taskId, mode, confirm, actor, proceedWithOpen);
-  }
-
-  /**
-   * One of the first mate's settles with its closing sentence (INF-547):
-   * the close it makes carries the sentence.
-   */
-  withClosingSentence<T>(taskId: string, sentence: string, run: () => Promise<T>): Promise<T> {
-    return this.settling.closing.withClosingSentence(taskId, sentence, run);
-  }
-
-  /** The settle a tool runs (WI-12): its prose, and the structured refusal when there is one. */
-  settleTaskDetailed(
-    taskId: string,
-    mode: "merge-pr" | "land" | "discard",
-    confirm?: boolean,
-    proceedWithOpen?: boolean,
-    actor: "captain" | "firstmate" = "firstmate",
-  ): Promise<{ text: string; refusal?: SettleRefusal }> {
-    return this.settling.settle.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen, actor);
-  }
-
-  /** Verified folder work closes without touching the project's files or git state. */
-  closeFinishedFolderWork(taskRef: string, completionEvidence: string) {
-    return this.settling.declared.closeFinishedFolderWork(taskRef, completionEvidence);
-  }
-
-  /** A verified external release closes work without a task-owned change. */
-  closeExternallyReleased(taskRef: string, releaseEvidence: string) {
-    return this.settling.declared.closeExternallyReleased(taskRef, releaseEvidence);
-  }
-
-  /** settle_task mode `answered`: a completed answer or a verified result handoff. */
-  closeAnswerUsedAsBasis(taskRef: string): Promise<{ ok: boolean; text: string }> {
-    return this.settling.declared.closeAnswerUsedAsBasis(taskRef);
-  }
-
-  /** A user-initiated discard from a leftover task card, or the shell's delete. */
-  requestDiscard(taskId: string): Promise<void> {
-    return this.settling.settle.requestDiscard(taskId);
-  }
-
-  /** Settle a task: the crewmate stops, and the record, lane, cards and worktree close. */
-  closeTask(taskId: string, close: TaskClose): Promise<void> {
-    return this.settling.closing.closeTask(taskId, close);
-  }
-
   /** Stop a task's live crewmate: its turn aborted, its runtime gone. */
   private stopRuntime(taskId: string): Promise<void> | undefined {
     const runtime = this.tasks.get(taskId);
@@ -12402,7 +12058,7 @@ export class CrewSupervisor {
     }
     // The stamped tier is the care this task actually ran at, including
     // the captain's per-task ask, not the project's standing setting.
-    const policies = this.policiesOf(record);
+    const policies = this.options.tasks.policiesOf(record);
     if (policies) cell("care", "Care", CARE_WORDS[policies.rigor.value]);
     // The change by the forge's own label (`#N`, or the sent-up branch) and
     // its page where the host has one - never parsed back out of a link.
@@ -12745,12 +12401,6 @@ export class CrewSupervisor {
     task.steersAtCheck = undefined;
     task.waitNamed = undefined;
     task.readsAnsweredAt = undefined;
-  }
-
-  /** External activity proof for a task (a running R2 job reporting in). */
-  taskActivity(taskId: string): void {
-    const task = this.tasks.get(taskId);
-    if (task) this.noteTaskActivity(task);
   }
 
   /**
@@ -13134,7 +12784,7 @@ export class CrewSupervisor {
       return answered.map((read) => ({ tool: read.tool, since: at - read.waitedMs }));
     } catch (caught) {
       console.warn(
-        `[crew] could not ask ${taskId}'s computer to answer its open reads: ${messageOf(caught)}`,
+        `[crew] could not ask ${taskId}'s computer to answer its open reads: ${errorText(caught)}`,
       );
       return [];
     }
@@ -13650,7 +13300,7 @@ export class CrewSupervisor {
         this.options.tasks.delivery.captainActionReady(record.id) &&
         (action.presentedGeneration < action.generation || action.state === "blocked")
       )
-        this.showRequiredAction(record.id);
+        this.cards.presentRequiredAction(record.id);
     }
     await this.ladder.sweepGates(now);
   }
@@ -14239,7 +13889,7 @@ export class CrewSupervisor {
         "Your task now waits on the captain: nothing nudges you, and you hear when they act or you are steered.",
       );
       // He answers what is on his screen; with nothing there the Firstmate asks (INF-11).
-      if (!declaration.wait.cardId && this.openCardsFor(task.id).length === 0) {
+      if (!declaration.wait.cardId && this.cards.openCardsFor(task.id).length === 0) {
         receipt.push(
           "No card of yours is up, so the first mate is woken to ask them unless one is up when this turn ends.",
         );
@@ -14272,7 +13922,7 @@ export class CrewSupervisor {
       );
     } else if (
       declaration?.finished &&
-      this.openCardsFor(task.id).some((card) => cardEmitter(card.id, task.id) === "crewmate")
+      this.cards.openCardsFor(task.id).some((card) => cardEmitter(card.id, task.id) === "crewmate")
     ) {
       // INF-1879: an open card, including one put away, still owns its explicit ending.
       receipt.push(
@@ -14409,7 +14059,7 @@ export class CrewSupervisor {
       );
     }
     const cardId = wait.cardId?.trim();
-    if (cardId && !this.openCardsFor(task.id).some((card) => card.id === cardId)) {
+    if (cardId && !this.cards.openCardsFor(task.id).some((card) => card.id === cardId)) {
       throw new Error(
         `Report refused: "${cardId}" is not an open card of yours. Pass the id emit_card returned, or omit card_id when no card is up.`,
       );
@@ -15710,7 +15360,7 @@ export class CrewSupervisor {
         !this.options.tasks.delivery.captainActionReady(id)
       ) {
         if (id && this.options.tasks.delivery.captainActionReady(id)) {
-          this.showRequiredAction(id);
+          this.cards.presentRequiredAction(id);
           this.cards.showOpenCard(action?.cardId ?? card.id);
         }
         throw new CardChoiceUnavailableError("action-changed");
@@ -15839,7 +15489,7 @@ export class CrewSupervisor {
             reason: error.message,
           },
         },
-        { actor: "supervisor", via: "supervision", decision: null, cardId: card.id },
+        { ...SUPERVISOR_STEER, cardId: card.id },
       ).catch((caught: unknown) => {
         console.warn("[crew] stale validation notice not delivered:", caught);
       });
@@ -15937,7 +15587,7 @@ export class CrewSupervisor {
       // An ordinary conversational choice closes its offer, just like any
       // card action. The outstanding operation is then offered again so its
       // author can answer on the same card, without completing the action.
-      this.showRequiredAction(card.taskId);
+      this.cards.presentRequiredAction(card.taskId);
       const output = anythingElseOf(answers);
       this.replyToCard(card.id, output ? `${chosen.label}\n\n${output}` : chosen.label);
       return {};
@@ -15976,7 +15626,7 @@ export class CrewSupervisor {
    * card as where it came from. A refusal is a feed line, never a silent no-op.
    */
   private careFromCard(taskId: string, care: Rigor): boolean {
-    const before = this.policiesOf(this.options.tasks.get(taskId));
+    const before = this.options.tasks.policiesOf(this.options.tasks.get(taskId));
     try {
       this.options.tasks.updateFields(
         taskId,
@@ -16240,12 +15890,7 @@ export class CrewSupervisor {
       },
       once: returned.once,
     };
-    void this.steerInternal(taskId, wake, {
-      actor: "supervisor",
-      via: "supervision",
-      decision: null,
-      cardId: null,
-    }).catch((caught: unknown) => {
+    void this.steerInternal(taskId, wake, SUPERVISOR_STEER).catch((caught: unknown) => {
       // No conversation to resume: the ladder reads the task on its own clock.
       console.warn("[crew] browser return's steer not delivered:", caught);
     });
@@ -16475,7 +16120,8 @@ export class CrewSupervisor {
     switch (effect.op) {
       case "confirm-required-action": {
         const [id] = (effect.arg ?? "").split(":");
-        if (id && this.options.tasks.get(id)?.status === "open") this.showRequiredAction(id);
+        if (id && this.options.tasks.get(id)?.status === "open")
+          this.cards.presentRequiredAction(id);
         void this.sweepGates(this.now());
         return {};
       }
@@ -16579,7 +16225,7 @@ export class CrewSupervisor {
         return this.cards.dismissQuestion(taskId);
       case "show-card": {
         const action = this.options.tasks.get(taskId)?.delivery?.captainAction;
-        if (action && !this.showRequiredAction(taskId))
+        if (action && !this.cards.presentRequiredAction(taskId))
           return "This action cannot be shown until its prerequisites finish.";
         const cardId =
           action?.cardId ??
@@ -17143,10 +16789,6 @@ export class CrewSupervisor {
     });
   }
 
-  workingCount(): number {
-    return [...this.tasks.values()].filter((task) => task.state !== "idle").length;
-  }
-
   /**
    * The quit: every crewmate is let go of, a running turn cut, and nothing
    * more starts. The returned promise waits, at most `QUIT_SETTLE_MS`, for
@@ -17392,10 +17034,6 @@ function checkBackOf(
 /** A move step that threw past its own handling; the next tick tries it again. */
 function warnMove(caught: unknown): void {
   console.warn("[crew] a move to another computer could not go on yet:", caught);
-}
-
-function messageOf(caught: unknown): string {
-  return caught instanceof Error ? caught.message : String(caught);
 }
 
 /** A contribution refused before it reached the card's writer, in its typed shape. */

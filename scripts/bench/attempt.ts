@@ -500,7 +500,7 @@ export async function runAttempt(options: AttemptOptions): Promise<AttemptRow> {
         end = { reason: "timeout", detail: `over the ${Math.round(capMs / 60_000)}-minute cap` };
         break;
       }
-      const cards = core.services.supervisor.cardsSnapshot();
+      const cards = core.services.supervisor.cards.snapshot();
       let ready: Card | undefined;
       let hostCard: Card | undefined;
       for (const card of cards) {

@@ -183,7 +183,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
         { id: "fade", label: "Short opacity fade" },
       ],
     });
-    supervisor.flushCards();
+    supervisor.cards.flushBroadcast();
     expect(cards()).toContainEqual(
       expect.objectContaining({
         taskId: tasks.byKey("SCR-1")?.id,
@@ -201,7 +201,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     const question = cards().find((card) => card.title === "Choose reduced-motion reveal");
     if (!question) throw new Error("missing question");
     supervisor.act(question.id, "instant");
-    supervisor.flushCards();
+    supervisor.cards.flushBroadcast();
     expect(cards().find((card) => card.id === question.id)).toBeUndefined();
     // This test explicitly removes its test hold before authorized recovery;
     // production must retain a captain's real hold until its prerequisite closes.

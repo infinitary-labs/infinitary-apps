@@ -133,11 +133,7 @@ export type DevicesCrew = {
     | "stopTasksOn"
     | "pauseForUpdate"
     | "resumeAfterUpdate"
-    | "raiseHostCard"
-    | "withdrawHostCard"
-    | "hasCard"
-    | "cardStored"
-    | "cardChosenAction"
+    | "cards"
     | "projectForgeSignInNeeded"
     | "resumeDeviceForgeSignInTasks"
     | "observeRequiredActionDevice"
@@ -633,11 +629,11 @@ export async function startHomeDevices(options: {
           signInsOf: (deviceId) => deviceSignIns.signInsOf(deviceId),
         },
         cards: {
-          raise: (card) => supervisor.raiseHostCard(card),
-          withdraw: (id, reason) => supervisor.withdrawHostCard(id, reason),
-          has: (id) => supervisor.hasCard(id),
-          stored: (id) => supervisor.cardStored(id),
-          chosenAction: (id) => supervisor.cardChosenAction(id),
+          raise: (card) => supervisor.cards.raiseHostCard(card),
+          withdraw: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
+          has: (id) => supervisor.cards.has(id),
+          stored: (id) => supervisor.cards.stored(id) !== undefined,
+          chosenAction: (id) => supervisor.cards.chosenAction(id),
         },
         broadcastEvent,
         forgeNeeded: (deviceId, forgeHost, repo) =>
@@ -654,10 +650,10 @@ export async function startHomeDevices(options: {
         devices: () => list.list(),
         homeApp: () => host.app.version,
         cards: {
-          raise: (card) => supervisor.raiseHostCard(card),
-          withdraw: (id, reason) => supervisor.withdrawHostCard(id, reason),
-          has: (id) => supervisor.hasCard(id),
-          chosenAction: (id) => supervisor.cardChosenAction(id),
+          raise: (card) => supervisor.cards.raiseHostCard(card),
+          withdraw: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
+          has: (id) => supervisor.cards.has(id),
+          chosenAction: (id) => supervisor.cards.chosenAction(id),
         },
         broadcastEvent,
       });

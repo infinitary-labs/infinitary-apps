@@ -762,7 +762,7 @@ describe("the idle ladder across a restart", () => {
       (await booted.dispatch("inf:cards:list", [])).filter(
         (card) => card.id === "card-stall-stuck-task",
       );
-    await waitFor(() => booted.services.supervisor.cardsSnapshot().length > 0, 10_000);
+    await waitFor(() => booted.services.supervisor.cards.snapshot().length > 0, 10_000);
     const [card] = await stallCards();
     expect(card).toMatchObject({
       taskId: "stuck-task",
@@ -809,7 +809,7 @@ describe("a microphone card an earlier version left", () => {
     process.env.PI_OFFLINE = "1";
     const earlier = await startCore(fakeHost(userDataDir).host);
     core = earlier;
-    earlier.services.supervisor.addSystemNoteCard(
+    earlier.services.supervisor.cards.addSystemNoteCard(
       "card-voice-mic-primer",
       "Microphone access",
       "macOS will ask for microphone access the first time you hold to talk.",

@@ -51,8 +51,8 @@ describe("FirstmateAgent", () => {
     expect((await change("device-invite", { name: "MacBook Air" })).text).toMatch(
       /^Settings button offered on /,
     );
-    const connect = supervisor
-      .cardsSnapshot()
+    const connect = supervisor.cards
+      .snapshot()
       .find((card) => card.title === "Connect your MacBook Air") as Card;
     expect(connect.body).toBe(
       "<p>Your first mate stays on this computer. Your MacBook Air will show it and can run work for it.</p>\n<p>Make a link here, then paste it into Infinitary on your MacBook Air.</p>\n<p>It works once, for ten minutes. Only your click can make it, so I never see it.</p>",
@@ -67,8 +67,8 @@ describe("FirstmateAgent", () => {
     expect(asked).not.toContain("inf:devices:invite");
 
     expect((await change("device-remove", { deviceId: "mac-1" })).text).toMatch(/offered on/);
-    const remove = supervisor
-      .cardsSnapshot()
+    const remove = supervisor.cards
+      .snapshot()
       .find((card) => card.title === "Remove <b>Mini</b>?") as Card;
     expect(remove.actions.find((action) => action.default)).toMatchObject({
       label: "Remove <b>Mini</b>",
@@ -113,7 +113,7 @@ describe("FirstmateAgent", () => {
     const change = (action: string, value: unknown) =>
       app.run({ action, value, evidence: "the captain asked" });
     const card = (title: string) =>
-      supervisor.cardsSnapshot().find((entry) => entry.title === title) as Card;
+      supervisor.cards.snapshot().find((entry) => entry.title === title) as Card;
 
     expect((await change("device-invite", { name: "Mac mini", how: "command" })).text).toMatch(
       /offered on/,
@@ -213,7 +213,7 @@ describe("FirstmateAgent", () => {
     const change = (action: string, value: unknown) =>
       app.run({ action, value, evidence: "the captain asked" });
     const card = (title: string) =>
-      supervisor.cardsSnapshot().find((entry) => entry.title === title) as Card;
+      supervisor.cards.snapshot().find((entry) => entry.title === title) as Card;
 
     expect(
       (await change("device-invite", { how: "address", address: "sam@mini.local" })).text,
@@ -321,8 +321,8 @@ describe("FirstmateAgent", () => {
     expect((await change({ deviceId: "mini-1", provider: "openai-codex" })).text).toMatch(
       /^Settings button offered on /,
     );
-    const card = supervisor
-      .cardsSnapshot()
+    const card = supervisor.cards
+      .snapshot()
       .find((entry) => entry.title === "Sign in to Codex on Mac mini") as Card;
     expect(card.body).toBe(
       "<p>Mac mini signs in to Codex with a sign-in of its own. Nothing from this computer's sign-in goes there.</p>\n<p>Sign in opens Settings, where it starts under Mac mini.</p>",
@@ -338,7 +338,7 @@ describe("FirstmateAgent", () => {
     expect(card.actions.find((action) => !action.default)).toMatchObject({ label: "Not now" });
     // Another macOS user on this Mac is named by that user.
     await change({ deviceId: "builder-1", provider: "openrouter" });
-    expect(supervisor.cardsSnapshot().map((entry) => entry.title)).toContain(
+    expect(supervisor.cards.snapshot().map((entry) => entry.title)).toContain(
       "Sign in to OpenRouter as Builder",
     );
     // Nothing started: the Firstmate only read the list.
@@ -593,7 +593,7 @@ describe("FirstmateAgent", () => {
         task_id: "t58",
       }),
     ).rejects.toThrow(/emit_card with id card-t58-1/);
-    expect(supervisor.cardsSnapshot()).toHaveLength(1);
+    expect(supervisor.cards.snapshot()).toHaveLength(1);
   });
 
   it("answers a reply under a done task's kept note in that thread, and its card on that task is not refused", async () => {
@@ -612,7 +612,7 @@ describe("FirstmateAgent", () => {
       task_id: "t58",
     });
     expect(shown?.content[0]?.text).toContain("Card shown");
-    const asked = supervisor.cardThread("card-t58-1").messages[0]?.id;
+    const asked = supervisor.cards.thread("card-t58-1").messages[0]?.id;
     await toolsOf(specs).get("emit_card")?.execute("c2", {
       id: "card-t58-1",
       title: "Release shipped",
@@ -623,12 +623,12 @@ describe("FirstmateAgent", () => {
     session.emitTurnEnd("It shipped as 0.2.");
     session.resolveNextPrompt();
     await vi.waitFor(() =>
-      expect(supervisor.cardThread("card-t58-1").messages.map((message) => message.who)).toEqual([
+      expect(supervisor.cards.thread("card-t58-1").messages.map((message) => message.who)).toEqual([
         "captain",
         "firstmate",
       ]),
     );
-    expect(supervisor.cardsSnapshot().find((card) => card.id === "card-t58-1")?.awaiting).toBe(
+    expect(supervisor.cards.snapshot().find((card) => card.id === "card-t58-1")?.awaiting).toBe(
       undefined,
     );
   });
@@ -652,7 +652,7 @@ describe("FirstmateAgent", () => {
     await expect(emit?.execute("c1", { ...card, task_id: "36410f14" })).rejects.toThrow(
       /task 36410f14 is closed.*basis 36410f14/,
     );
-    expect(supervisor.cardsSnapshot()).toHaveLength(0);
+    expect(supervisor.cards.snapshot()).toHaveLength(0);
     // ...and a note may still name the closed task.
     const noted = await emit?.execute("c2", {
       title: "The thread settings task closed",
@@ -667,7 +667,7 @@ describe("FirstmateAgent", () => {
     session.resolveNextPrompt();
     await tick();
     expect(() => supervisor.act(cardId, "build-now")).not.toThrow();
-    expect(supervisor.cardsSnapshot().some((shownCard) => shownCard.id === cardId)).toBe(false);
+    expect(supervisor.cards.snapshot().some((shownCard) => shownCard.id === cardId)).toBe(false);
   });
 
   it("names the work an active task's baseline wait names on its index row (FI3-250)", () => {
@@ -1547,7 +1547,7 @@ describe("FirstmateAgent", () => {
     expect(flagged?.content[0]?.text).toBe(
       "Recorded card card-t1-2 as a duplicate of card-t1-1 and closed it.",
     );
-    expect(supervisor.cardsSnapshot().map((card) => card.id)).toEqual(["card-t1-1"]);
+    expect(supervisor.cards.snapshot().map((card) => card.id)).toEqual(["card-t1-1"]);
     expect(events).toContainEqual({
       type: "firstmate_note",
       text: 'Closed "What delivered means" as a duplicate of "Delivered means stopped".',
@@ -1583,7 +1583,7 @@ describe("FirstmateAgent", () => {
       task_id: "t77",
     });
     expect(shown?.content[0]?.text).toContain("Card shown");
-    expect(supervisor.cardsSnapshot()).toHaveLength(1);
+    expect(supervisor.cards.snapshot()).toHaveLength(1);
   });
 
   it("renders authoritative directions and keeps them from a scheduled turn too", async () => {

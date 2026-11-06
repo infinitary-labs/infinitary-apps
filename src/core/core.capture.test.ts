@@ -145,8 +145,8 @@ describe("capture: every captain ask lands in a task", () => {
     // answers it and files the setup's own operation.
     const asked = core.services.tasks.get(ask.taskId ?? "");
     expect(asked?.kind).toBe("operation");
-    const card = core.services.supervisor
-      .cardsSnapshot()
+    const card = core.services.supervisor.cards
+      .snapshot()
       .find((c) => c.title === SETUP_CARD_WORDS.title(basename(adoptDir)));
     expect(asked?.gate?.ref).toBe(card?.id);
     await core.dispatch("inf:cards:act", [card?.id ?? "", "add", "chrome"]);
@@ -192,7 +192,7 @@ describe("capture: every captain ask lands in a task", () => {
     expect(task?.kind).toBe("decision");
     expect(task?.status).toBe("open");
     const cardId = task?.gate?.ref ?? "";
-    const card = core.services.supervisor.cardsSnapshot().find((c) => c.id === cardId);
+    const card = core.services.supervisor.cards.snapshot().find((c) => c.id === cardId);
     expect(card?.actions.length).toBeGreaterThan(0);
     const choice = card?.actions.find((action) => action.id !== "later");
     await core.dispatch("inf:cards:act", [cardId, choice?.id ?? "", "chrome"]);

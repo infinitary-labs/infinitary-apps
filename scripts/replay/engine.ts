@@ -1184,10 +1184,10 @@ class Replay {
   private recordedAnswer(args: JsonRecord, ids: string[]): number | undefined {
     if (typeof args.answers_message === "number") return args.answers_message;
     const card = this.supervisor
-      .cardsSnapshot()
+      .cards.snapshot()
       .find((shown) => ids.includes(shown.id) && shown.awaiting === "answer");
     if (!card) return undefined;
-    return this.supervisor.cardThread(card.id).messages.findLast((line) => line.who === "captain")
+    return this.supervisor.cards.thread(card.id).messages.findLast((line) => line.who === "captain")
       ?.id;
   }
 
@@ -1255,7 +1255,7 @@ class Replay {
         } else if (event.input.kind === "choice") {
           const title = event.input.title;
           const card = this.supervisor
-            .cardsSnapshot()
+            .cards.snapshot()
             .find((candidate) => candidate.taskId === taskId && candidate.title === title);
           if (card) this.applyChoice(card, event.input.actionId);
           else this.fidelity.skipped_card_resolutions += 1;
@@ -1309,7 +1309,7 @@ class Replay {
     taskAlias: string | null,
     title: string | null,
   ): Card | undefined {
-    const open = this.supervisor.cardsSnapshot();
+    const open = this.supervisor.cards.snapshot();
     const mapped = this.ids.toReplay.get(cardId);
     const taskId = taskAlias ? this.ids.toReplay.get(taskAlias) : undefined;
     const sameTitle = (candidate: Card) =>

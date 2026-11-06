@@ -5,12 +5,14 @@ name: Wait for the alpha cut
 # cut successfully, not while the alpha cut is still happening";
 # docs/testing.md, "Main's desktop release check").
 #
-# The alpha a main check waits for is the one cut from the newest earlier
-# main check that ran (it passed, or failed, which release.yml also reads).
-# release.yml names each rolling alpha run after its main run, so this finds
-# it by name and waits until it ends, however it ends: a failed cut must not
-# hold main's fixes. While it waits, main's concurrency group keeps every new
-# merge in one waiting run. When it did wait and main moved meanwhile, this
+# A main check waits while any rolling alpha is being cut. release.yml names
+# each rolling alpha run after its main run ("Alpha from main run N"), so this
+# lists them by name and waits until none is still running, including one
+# re-run after it ended (INF-2780). It also waits for the alpha GitHub is about
+# to start from the newest earlier main check that ran (it passed, or failed,
+# which release.yml also reads). An alpha ends the wait however it ends: a
+# failed cut must not hold main's fixes. While it waits, main's concurrency
+# group keeps every new merge in one waiting run. When it did wait and main moved meanwhile, this
 # run cancels itself, so that waiting run checks every merge at once.
 #
 # The captain's pause (PERS-51, the captain: "add a "pause/resume" button on
@@ -52,7 +54,7 @@ jobs:
             // GitHub stops this job within moments; until it does, no check behind it starts.
             await new Promise((done) => setTimeout(done, 10 * 60_000));
             core.setFailed('GitHub had not cancelled this paused check after ten minutes.');
-      - name: Wait while the previous main check's alpha is cut
+      - name: Wait while an alpha is cut
         if: vars.ROLLING_ALPHA_PAUSED != 'true' || github.event_name != 'push'
         uses: actions/github-script@v7
         with:
@@ -67,24 +69,26 @@ jobs:
             const previous = mains.workflow_runs
               .filter((run) => run.run_number < me.run_number && ['success', 'failure'].includes(run.conclusion))
               .sort((a, b) => b.run_number - a.run_number)[0];
-            if (!previous) return;
-            const title = `Alpha from main run ${previous.run_number}`;
+            const prefix = 'Alpha from main run ';
+            const title = previous && `${prefix}${previous.run_number}`;
             let waited = false;
             for (;;) {
               const {data} = await github.rest.actions.listWorkflowRuns({
                 ...context.repo, workflow_id: 'release.yml', event: 'workflow_run', per_page: 100
               });
-              const alpha = data.workflow_runs.find((run) => run.display_title === title);
-              if (alpha?.status === 'completed') {
-                await core.summary.addHeading('Alpha cut ended').addRaw(`${alpha.html_url} ended ${alpha.conclusion} before this check started.`).write();
-                break;
-              }
+              const alphas = data.workflow_runs.filter((run) => run.display_title?.startsWith(prefix));
+              const alpha = alphas.find((run) => run.display_title === title);
+              const running = alphas.filter((run) => run.status !== 'completed');
               // GitHub starts the alpha run moments after the main check ends;
               // one that never started, such as before run names, holds nothing.
-              if (!alpha && Date.now() - Date.parse(previous.updated_at) > 10 * minute) break;
+              const pending = previous && !alpha && Date.now() - Date.parse(previous.updated_at) <= 10 * minute;
+              if (!running.length && !pending) {
+                if (alpha) await core.summary.addHeading('Alpha cut ended').addRaw(`${alpha.html_url} ended ${alpha.conclusion} before this check started.`).write();
+                break;
+              }
               // Before GitHub's own job limit ends the wait as a failure.
               if (Date.now() - started > 340 * minute) {
-                await core.summary.addHeading('Alpha cut still running').addRaw(`${alpha?.html_url ?? title} had not ended after the longest wait a job allows, so this check starts.`).write();
+                await core.summary.addHeading('Alpha cut still running').addRaw(`${running[0]?.html_url ?? title} had not ended after the longest wait a job allows, so this check starts.`).write();
                 break;
               }
               waited = true;

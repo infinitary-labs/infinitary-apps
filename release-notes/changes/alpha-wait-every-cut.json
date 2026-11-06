@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-wait-every-cut",
+      "reason": "Main's check now waits while any rolling alpha is being cut, including one re-run after it ended; only how the project is checked changes."
+    }
+  ]
+}

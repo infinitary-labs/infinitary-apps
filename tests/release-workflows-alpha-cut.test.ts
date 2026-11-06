@@ -574,12 +574,14 @@ describe("the next main check waits for the alpha cut", () => {
    * Runs the job's own script against GitHub's answers on a clock that moves
    * only when the script pauses. `alpha(minutes)` is the alpha run as GitHub
    * lists it that many minutes after the previous main check ended, and
-   * `head(minutes)` main's newest commit then.
+   * `head(minutes)` main's newest commit then, and `others(minutes)` the
+   * other rolling alpha runs GitHub lists then.
    */
   const runWait = async (options: {
     mains: Run[];
     alpha: (minutes: number) => Run | undefined;
     head: (minutes: number) => string;
+    others?: (minutes: number) => Run[];
   }) => {
     const ended = Date.parse("2026-11-03T17:35:00Z");
     let now = ended + 5_000;
@@ -618,7 +620,8 @@ describe("the next main check waits for the alpha cut", () => {
               conclusion: "skipped",
               display_title: "release",
             };
-            return { data: { workflow_runs: alpha ? [alpha, older] : [older] } };
+            const others = options.others?.(elapsed()) ?? [];
+            return { data: { workflow_runs: [...(alpha ? [alpha] : []), ...others, older] } };
           },
           cancelWorkflowRun: async ({ run_id }: { run_id: number }) => {
             cancelled.push(run_id);
@@ -719,6 +722,42 @@ describe("the next main check waits for the alpha cut", () => {
       head: () => "b2c0ffee00000000000000000000000000000000",
     });
     expect(first.minutes).toBe(0);
+  });
+
+  /**
+   * INF-2780, the captain: "i thought we made it so that while an alpha is
+   * being cut, we don't start another main check - why do we still seem to
+   * have multiple in parallel?" Main run 152 started while alpha.156, cut from
+   * main run 148, was re-run after its first attempt failed, because the wait
+   * read only the alpha of main run 151, which ended at once.
+   */
+  it("waits while any alpha is cut, including an older one re-run after it ended", async () => {
+    const older = (status: string, conclusion: string | null = null): Run => ({
+      id: 42130788825,
+      run_number: 160,
+      status,
+      conclusion,
+      display_title: alphaName(70),
+      html_url: "https://github.com/example/project/actions/runs/42130788825",
+    });
+    const result = await runWait({
+      mains: [previous("success")],
+      alpha: () => alphaRun("completed", "skipped"),
+      // A re-run lists the run in progress again under its own id.
+      others: (at) => [at < 45 ? older("in_progress") : older("completed", "success")],
+      head: () => "9d6f4a248f3b1c1e1c2b8c4a6f1d0e2a3b4c5d6e",
+    });
+    expect(result.minutes).toBeGreaterThanOrEqual(45);
+    expect(result.cancelled).toEqual([]);
+    // With no earlier main check that ran, an alpha in flight still holds it.
+    const first = await runWait({
+      mains: [previous("cancelled")],
+      alpha: () => undefined,
+      others: (at) => [at < 20 ? older("queued") : older("completed", "failure")],
+      head: () => "b2c0ffee00000000000000000000000000000000",
+    });
+    expect(first.minutes).toBeGreaterThanOrEqual(20);
+    expect(first.cancelled).toEqual([first.runId]);
   });
 
   it("stops waiting for an alpha run GitHub never started, and for one that outlasts a job", async () => {

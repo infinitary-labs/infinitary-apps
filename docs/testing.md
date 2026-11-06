@@ -460,7 +460,8 @@ It replaces the nightly full check, which requested it and the phone check on `m
 Main runs no phone check (INF-2492, the captain: "remove phone check from main altogether. we run all phone check parts at release"): `ios-release.yml` calls `phone.yml` at its resolved source before each TestFlight upload, which runs every part on iPhone and iPad.
 The workflow's concurrency group never cancels a run in progress, so GitHub keeps the running run and at most one waiting run; a newer push replaces the waiting one, and a burst of merges is checked once at its newest version.
 No check starts while the previous check's alpha is being cut (INF-2465, the captain: "i want to make it so that the next main check keeps queueing all merges until the alpha is actually cut successfully, not while the alpha cut is still happening").
-The run's wait, `alpha-wait.yml`, finds the alpha run cut from the newest earlier main run that passed or failed, by the name `release.yml` gives it ("Alpha from main run N"), and waits until it ends.
+The run's wait, `alpha-wait.yml`, lists the rolling alpha runs by the name `release.yml` gives them ("Alpha from main run N") and waits while any is still running, including one re-run after it ended.
+It also waits for the alpha cut from the newest earlier main run that passed or failed, which GitHub starts moments after that run ends.
 A failed cut ends the wait too, so it never holds main's fixes; an alpha run that never started holds nothing after ten minutes, and the wait ends before GitHub's six-hour job limit.
 While it waits, merges keep queueing in the one waiting run; when main moved meanwhile, the run cancels itself, so the waiting run checks every merge at once.
 While the captain has paused the rolling pipeline, a run a push started cancels itself in that first job, and the next merge after Resume starts the run that covers the pause (`docs/alpha.md`, "Pausing the rolling pipeline").

@@ -26,6 +26,7 @@ import {
   SavedOutsideData,
 } from "../../src/core/integrations";
 import { jobExitWake } from "../../src/core/jobs/jobManager";
+import { KnowledgeService } from "../../src/core/knowledge/knowledgeService";
 import {
   type ChangeDelivery,
   createChangeDelivery,
@@ -125,6 +126,8 @@ export type PlacedHome = {
   settled: () => Promise<void>;
   /** The pass that deletes Google's words from saved conversations, given Google's stand-in. */
   outsideData: SavedOutsideData | undefined;
+  /** The home's knowledge, given `knowledge`. */
+  knowledge?: KnowledgeService;
 };
 
 /**
@@ -171,6 +174,12 @@ export function startPlacedHome(options: {
    * signs in, and the pass over saved conversations with it.
    */
   google?: { base: string };
+  /**
+   * The home's knowledge, composed as `createServices` composes it over its
+   * projects, in its folder here: the standing directions a crewmate is
+   * told (docs/knowledge.md). Absent, the crew has none.
+   */
+  knowledge?: boolean;
   /**
    * This Mac's own subscriptions, for a home that routes as `createServices`
    * composes it: the models its own sign-ins serve, their allowance as read
@@ -430,6 +439,12 @@ export function startPlacedHome(options: {
         })
       : undefined;
   const composed = integrations;
+  const knowledge = options.knowledge
+    ? new KnowledgeService({
+        dir: paths.knowledgeDir,
+        projects: { get: (id) => repos.get(id), list: () => repos.list() },
+      })
+    : undefined;
   const supervisor = new CrewSupervisor({
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
     sessions: {
@@ -437,6 +452,7 @@ export function startPlacedHome(options: {
       claude: { ...nothingHere, backend: "claude" },
     },
     machines: placed,
+    ...(knowledge ? { knowledge } : {}),
     ...(options.reachOf ? { reachOf: options.reachOf } : {}),
     ...(composed
       ? {
@@ -597,6 +613,7 @@ export function startPlacedHome(options: {
     signIns.dispose();
     await integrations?.dispose();
     await drop();
+    knowledge?.close();
     db.close();
   };
   return {
@@ -622,6 +639,7 @@ export function startPlacedHome(options: {
       await connection?.settled();
     },
     outsideData,
+    ...(knowledge ? { knowledge } : {}),
   };
 }
 

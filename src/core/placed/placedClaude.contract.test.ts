@@ -558,6 +558,34 @@ it.each([
   },
 );
 
+// INF-2599 (the captain: "Send a crewmate its directions once, and again only
+// when they change"): the crew sends a crewmate its directions again after a
+// fold, so a fold where its conversation is held reaches the crew's session
+// at home, through the home's own reading of the computer's events.
+it("tells the home's session when the placed Claude conversation folds", async () => {
+  const claude = await scriptedClaudeWorld();
+  const world = await placedContractWorld(claude);
+  const { paths, deviceId } = world.placement;
+  const session = await world.factory.open(
+    crewmateSessionSpec(
+      paths,
+      { taskId: CREWMATE_TASK, machineId: deviceId, cwd: world.homeDir, model: world.model },
+      world.binding,
+    ),
+  );
+  const events: string[] = [];
+  session.subscribe((event) => events.push(event.type));
+  try {
+    await session.prompt("Read the footer.");
+    expect(events).not.toContain("context_compacted");
+    claude.fold();
+    await expect.poll(() => events).toContain("context_compacted");
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
+});
+
 describeSessionContract({
   name: "Claude, scripted, held on a computer that runs work",
   backend: "claude",

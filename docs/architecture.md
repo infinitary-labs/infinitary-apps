@@ -973,7 +973,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `scripts/ensure-electron-installed.mjs` runs from our own `postinstall` and invokes electron's `install.js` directly so `pnpm install` alone is always enough (see `tests/ensure-electron-installed.test.ts`).
   Don't assume future Electron majors have this fixed - verify from the actual tarball (`npm pack`/`pnpm store`), not `npm view`, before relying on a real postinstall again.
 - Standing directions belong to Knowledge (`docs/knowledge.md`), with host-stamped origin and a write-boundary scan (`src/core/knowledge/threatScan.ts`).
-  Every first mate turn carries all current directions independently of search; every crewmate turn carries its own project's directions, never private global context.
+  Every first mate conversation carries all current directions independently of search; a crewmate's conversation carries its own project's directions once and again on change, never private global context.
   The first mate adds, revises and retires a direction on its own judgment through the app action catalog's `direction` line, never `record_knowledge` (`docs/knowledge.md`, "Directions are the first mate's to keep").
   The old note store and tools are gone; startup carries active directions and deletes the old tables, without an archive.
   The captain-approved cleanup also removes old project-owned concepts and findings, not captain-owned knowledge.

@@ -92,6 +92,13 @@ export type CrewMachines = {
   /** The computer understands current check declarations and offer-based readiness. */
   takesCheckDeclarations?(machine: string): boolean;
   /**
+   * Whether the computer tells the home each time a conversation it holds
+   * folds its context (`CONVERSATION_FOLDS`), so a crewmate there is sent
+   * its directions only again after a fold or a change; false while the
+   * home cannot tell.
+   */
+  reportsFolds?(machine: string): boolean;
+  /**
    * The task's working copy there, made now or found as it was: its
    * project cloned there once, then a working copy on the task's branch
    * (docs/helper.md, "Its working copies").

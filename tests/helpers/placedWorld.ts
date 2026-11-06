@@ -161,7 +161,7 @@ export function startHome(
   forgeFor?: ForgeFor,
   extra: Pick<
     Parameters<typeof startPlacedHome>[0],
-    "routing" | "runsForAnotherFirstmate" | "github" | "google" | "browsers"
+    "routing" | "runsForAnotherFirstmate" | "github" | "google" | "browsers" | "knowledge"
   > & {
     /** A task that moves home runs its conversation here on real Pi. */
     runsHere?: boolean;
@@ -190,6 +190,7 @@ export function startHome(
     ...(extra.github ? { github: extra.github } : {}),
     ...(extra.google ? { google: extra.google } : {}),
     ...(extra.browsers ? { browsers: extra.browsers } : {}),
+    ...(extra.knowledge ? { knowledge: true } : {}),
     ...(extra.runsHere
       ? { here: createPiSessionFactory({ agentDir: join(userData, "pi-agent") }) }
       : {}),
@@ -287,6 +288,8 @@ export async function world(
     github?: Parameters<typeof startPlacedHome>[0]["github"];
     /** Google's stand-in, which the home's integrations reach. */
     google?: Parameters<typeof startPlacedHome>[0]["google"];
+    /** The home's knowledge, whose standing directions its crew is told. */
+    knowledge?: boolean;
     /** A task that moves home runs its conversation here on real Pi. */
     runsHere?: boolean;
     /** Where the computer's task browsers report on the home. */

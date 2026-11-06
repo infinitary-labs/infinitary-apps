@@ -51814,6 +51814,18 @@
                               "properties": {
                                 "type": {
                                   "type": "string",
+                                  "const": "context_compacted"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
                                   "const": "request_started"
                                 }
                               },

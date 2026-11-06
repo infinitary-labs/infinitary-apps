@@ -37,6 +37,7 @@ import {
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { contractChange, listsChange } from "../connection/contractChanges";
+import { CONVERSATION_FOLDS } from "../connection/conversationFolds";
 import { SHARED_CARDS } from "../connection/sharedCards";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
@@ -941,9 +942,13 @@ export class SessionHost {
       held.unsubscribe = await followCompletions(
         session,
         (event) => {
-          // Context-scoped first-mate facts are local to their session owner;
-          // a placed crewmate has no snapshot to invalidate at home.
-          if (event.type === "context_compacted") return;
+          // A fold is all the home hears of it, and only a home that reads
+          // it (`conversation-folds.md`): its crewmate's directions go again.
+          if (event.type === "context_compacted") {
+            if (listsChange(this.options.homeChanges?.(), CONVERSATION_FOLDS))
+              this.record(held, { type: "context_compacted" });
+            return;
+          }
           // A cut-off is a fact about the account that served the turn: this
           // computer's own, kept in its own store and never the home's.
           if (event.type === "turn_failed" && event.cutOff && held.account)

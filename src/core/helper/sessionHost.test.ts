@@ -1,8 +1,14 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { placedTaskFolders, type WorkOrderChannel, workRequests } from "@shared/work";
+import {
+  type PlacedSpec,
+  placedTaskFolders,
+  type WorkOrderChannel,
+  workRequests,
+} from "@shared/work";
 import { describe, expect, it, vi } from "vitest";
 import { expectBytesEqual } from "../../../tests/helpers/expectBytes";
+import { scriptedClaudeWorld } from "../../../tests/helpers/scriptedClaudeContract";
 import {
   api,
   MODEL,
@@ -158,6 +164,39 @@ describe("a conversation held on a computer that runs work", () => {
     ).toMatchObject({ isError: false });
   });
 
+  // INF-2599 (the captain: "Send a crewmate its directions once, and again
+  // only when they change"): the home sends directions again after a fold,
+  // so it must hear one; an older home would refuse the event it does not
+  // know, so it hears nothing.
+  it.each([true, false])(
+    "tells a home that reads it when its Claude conversation folds (INF-2599; supported: %s)",
+    async (supported) => {
+      const claude = await scriptedClaudeWorld();
+      const at = await placed({
+        claude,
+        homeChanges: supported ? ["conversation-folds"] : [],
+      });
+      const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
+      claude.answer({ text: "Counted every press." });
+      await at.order("inf:session:open", [{ orderId: "open:fold", task: TASK, spec }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "rows:fold", task: TASK, text: "Count every press." },
+      ]);
+      await at.ended(1);
+      claude.fold();
+      // The home hears what the conversation did in order: a model it named
+      // after the fold is heard after the fold too, with or without it.
+      claude.answer({ text: "Counted the long presses." });
+      await at.order("inf:session:prompt", [
+        { orderId: "rows:after-fold", task: TASK, text: "Count the long presses." },
+      ]);
+      await at.ended(2);
+      const folds = at.home.events.filter(({ event }) => event.type === "context_compacted");
+      expect(folds.map(({ event }) => event)).toEqual(
+        supported ? [{ type: "context_compacted" }] : [],
+      );
+    },
+  );
   it("forwards first-release facts and a task list page to the home that records them (INF-1607)", async () => {
     const at = await placed();
     await at.open();

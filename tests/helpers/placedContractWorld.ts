@@ -189,10 +189,12 @@ export async function placedContractWorld(
     protocolVersion: options.protocolVersion,
     say: () => {},
     retryMs: [20],
-    conversations: async ({ dataDir: dir, ask }) => {
+    conversations: async ({ dataDir: dir, ask, homeChanges }) => {
       const host = new SessionHost({
         tasks: new PlacedTasks(dir),
         ask,
+        // What the home's welcome listed, as the work mode hands it on.
+        ...(homeChanges ? { homeChanges } : {}),
         factories: { [inner.factory.backend]: inner.factory },
         bind: async () => inner.binding,
         tools: [lookUpThere],

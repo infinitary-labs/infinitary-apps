@@ -212,7 +212,8 @@ export type CrewSupervisorOptions = {
   cardStore: CardStore;
   /**
    * Knowledge (docs/knowledge.md): present in every build. Applicable
-   * directions ride each served turn. A task with a project or references
+   * directions ride a conversation's first turn and any turn after they
+   * change (`crewDirections.ts`). A task with a project or references
    * grant gets the knowledge pair locally or on a compatible work computer.
    * Optional only for isolated callers that provide no Knowledge service.
    */

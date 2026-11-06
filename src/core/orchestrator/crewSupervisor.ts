@@ -1162,6 +1162,10 @@ export class CrewSupervisor {
   placedReopened(taskId: string): void {
     const task = this.tasks.get(taskId);
     if (task?.session) {
+      // The conversation there may have started over, or folded while that
+      // computer could not say so, under the session held here: its next
+      // turn is told the project's directions again (`crewDirections.ts`).
+      task.directions = undefined;
       if (task.state !== "idle" && !this.restarts.observing(taskId)) {
         this.restarts.observe(taskId);
         this.restarts.recordRestartOutcome(

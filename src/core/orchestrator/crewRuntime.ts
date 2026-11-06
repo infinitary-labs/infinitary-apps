@@ -6,6 +6,7 @@ import type { BackgroundJobName, ModelSession } from "../session/session";
 import type { TaskRecord } from "../storage/taskStore";
 import type { ReportDeclaration } from "../tasks/taskTurns";
 import type { TaskWorkspace } from "../workspace/workspaceService";
+import type { HeldDirections } from "./crewDirections";
 import type { CrewmateSpec } from "./crewSession";
 import type { WakeWithdrawn } from "./reportWakes";
 
@@ -200,6 +201,12 @@ export type TaskRuntime = {
    * once a model request begins after it was handed over (INF-2603).
    */
   unreadSteers: UnreadSteer[];
+  /**
+   * The standing directions this conversation holds (`crewDirections.ts`,
+   * INF-2599): a turn sends them again only when it does not hold the
+   * current set. Kept in memory, so a restart of this app sends them once.
+   */
+  directions?: HeldDirections;
   /** The steers the previous twenty-minute check found unread: one still unread at the next wakes the first mate once. */
   steersAtCheck?: readonly UnreadSteer[];
   /** The app's own reads a conversation on this Mac has open, which the twenty-minute check may answer. */

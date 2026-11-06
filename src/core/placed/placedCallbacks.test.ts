@@ -405,6 +405,24 @@ describe("a task that runs on a computer that runs work", () => {
     expect(cards.filter((card) => card.taskId === "t-old-cards")).toEqual([]);
   });
 
+  // INF-2599 (the captain: "Send a crewmate its directions once, and again
+  // only when they change"): the home holds a crewmate's directions as read
+  // only where its computer tells it of each fold, and serves them on every
+  // turn to one that does not.
+  it.each([true, false])(
+    "reads whether a computer tells it of its conversations' folds (lists the change: %s)",
+    async (lists) => {
+      const at = await world(undefined, {
+        changes: CONTRACT_CHANGES.names.filter(
+          (change) => lists || change !== "conversation-folds",
+        ),
+      });
+      const home = at.home();
+      await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
+      expect(home.placed.reportsFolds(at.deviceId)).toBe(lists);
+    },
+  );
+
   // INF-1555 F12: both declaration and offer semantics are required before remote work begins.
   it("keeps a direct-pr change queued until its computer runs this contract major", async () => {
     // The check tool's declarations and merge offers are part of this major (major-13.md).

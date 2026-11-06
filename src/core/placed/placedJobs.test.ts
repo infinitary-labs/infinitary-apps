@@ -3,7 +3,9 @@ import { join, relative } from "node:path";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { describe, expect, it, vi } from "vitest";
 import {
+  adoptHere,
   api,
+  gitProject,
   model,
   placedWorldHooks,
   said,
@@ -14,6 +16,7 @@ import {
   scriptedClaudeCleanup,
   scriptedClaudeWorld,
 } from "../../../tests/helpers/scriptedClaudeContract";
+import { renderDirections } from "../knowledge/directions";
 import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
 import { JOB_BOUND_MS } from "../orchestrator/idleLadder";
 import { unnamedBackgroundWork } from "../orchestrator/jobWakes";
@@ -359,6 +362,60 @@ describe("a task that runs on a computer that runs work", () => {
         .timeline("t-renew")
         .filter((event) => event.kind === "note" && event.text === crewmateRenewedNote(renewal)),
     ).toHaveLength(1);
+  });
+
+  // INF-2599, the captain: "Send a crewmate its directions once, and again
+  // only when they change". The home holds what a placed conversation was
+  // told by the session it holds, which a computer's restart keeps while the
+  // conversation there starts over (INF-2842's finding).
+  it("tells a Claude crewmate its project's directions again when that computer's update starts its conversation over (INF-2599)", async () => {
+    const project = await gitProject();
+    const claude = await scriptedClaudeWorld();
+    stops.push(scriptedClaudeCleanup);
+    const at = await world(undefined, { claude, knowledge: true });
+    const home = at.home();
+    const knowledge = home.knowledge;
+    if (!knowledge) throw new Error("the home has no knowledge");
+    const { repo } = await adoptHere(home.repos, project.home);
+    knowledge.directions.change({
+      op: "add",
+      id: "review-once",
+      scope: repo.id,
+      text: "Do not re-review a task only because main moved.",
+      reason: "the captain said so",
+    });
+    const directions =
+      renderDirections(
+        knowledge.directions.standing({ kind: "crewmate", taskId: "t-told", repoId: repo.id }),
+      ) ?? "";
+    expect(directions).toContain("Do not re-review a task only because main moved.");
+    claude.answer({ text: "Looking at the footer." });
+    // The conversation there as its newest request showed it, and the copies of the set it holds.
+    const said = () => claude.served().at(-1)?.said ?? "";
+    const copies = () => said().split(directions).length - 1;
+    await at.start("t-told", "Fix the footer.", repo.id);
+    await expect.poll(() => home.tasks.get("t-told")?.activity).toBe("idle");
+    expect(copies()).toBe(1);
+    const steer = async (text: string) => {
+      const asked = claude.served().length;
+      await home.supervisor.steer.steerCrewmate("t-told", text);
+      await expect.poll(() => claude.served().length).toBe(asked + 1);
+      await expect.poll(() => home.tasks.get("t-told")?.activity).toBe("idle");
+    };
+    await steer("Make it blue too.");
+    expect(said()).toContain("Make it blue too.");
+    expect(copies()).toBe(1);
+
+    // Its update starts the conversation over there, under the session the home holds.
+    const earlier = home.tasks.get("t-told")?.sessionFile;
+    await at.restartComputer({ tools: reworded("report") });
+    await expect.poll(() => home.tasks.get("t-told")?.sessionFile).not.toBe(earlier);
+    await steer("And the header.");
+    expect(said()).toContain("Fix the footer.");
+    expect(said()).not.toContain("Make it blue too.");
+    expect(copies()).toBe(1);
+    await steer("And the links.");
+    expect(copies()).toBe(1);
   });
 
   // INF-284: after its update moves Firstmate 3000's folder into

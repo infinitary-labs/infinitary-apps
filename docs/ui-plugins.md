@@ -697,7 +697,7 @@ Every outcome is one `personalized` FmEvent - the feed line's text verbatim (`sw
 Refusals are text, never throws.
 
 **Panel instructions are standing directions** (INF-1054): "always use compact rows in my panels" is one `app_change` `direction` add scoped to the personal workspace, which is registered as a project at startup.
-Every crewmate working there, building a panel or teaching a lesson, receives it with each turn, and the captain sees, revises or retires it in the Knowledge browser like any direction (`primitives/standing-directions.md`).
+Every crewmate working there, building a panel or teaching a lesson, receives it on its first turn and again when it changes, and the captain sees, revises or retires it in the Knowledge browser like any direction (`primitives/standing-directions.md`).
 The seeded `AGENTS.md` and both personal briefs tell the crewmate to follow the directions its turns carry.
 An older build kept these lines in `.claude/skills/captain/SKILL.md`; `carryPanelInstructions` (`src/core/personal/panelInstructions.ts`) carries them to directions once at startup and removes the file.
 

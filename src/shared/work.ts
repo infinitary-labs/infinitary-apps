@@ -249,6 +249,11 @@ export const placedEventSchema = z.union([
       job: z.object({ id: z.string().min(1), command: z.string() }).optional(),
     }),
     z.object({ type: z.literal("turn_closed"), text: z.string().optional() }),
+    /**
+     * The conversation folded its context (`conversation-folds.md`): sent
+     * only to a home that lists the change.
+     */
+    z.object({ type: z.literal("context_compacted") }),
     z.object({ type: z.literal("request_started") }),
     z.object({ type: z.literal("input_read"), textSha256: z.string() }),
     z.object({ type: z.literal("continuation_started") }),

@@ -240,7 +240,7 @@ A follow-up so handed its origin, as an origin section or as its basis, loses th
 No natural language scan attaches a basis, no self-basis is invented, and same-session prototypes and narrow direct builds remain valid without external sources.
 
 The brief a first turn serves is appended as a non-feed `briefed` event just before serving it; Activity leaves this host receipt out as evidence ("What Activity holds").
-The project's standing directions are not part of it: every served turn, the first included, adds the current ones (`docs/knowledge.md`, "Knowledge first").
+The project's standing directions are not part of it: the first served turn of a conversation adds the current ones, and a later turn adds them again after they change (`docs/knowledge.md`, "Knowledge as needed").
 Each report the brief copies off a task's timeline is stored in the receipt as a reference to its event wherever the reference is smaller than the copy (`src/core/tasks/briefReceipt.ts`): a short stand-in naming the event in the text, and its offset, task, event id and the text's hash in `data.reports`.
 Report events are never compacted, so `TaskService.servedBrief` reads the receipt back as served, for the `tasks` query's `brief` and the record's timeline; the hash finds the report again when an export reloads it under a new event id.
 The card is already a file the brief names, so the receipt holds its path; a card that could not be saved rides in the brief, and the receipt, whole.

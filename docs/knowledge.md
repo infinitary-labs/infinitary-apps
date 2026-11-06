@@ -13,7 +13,7 @@ Saving an article does not mean the captain believes it, and neither a stored cl
 
 Knowledge runs in every build, including stable.
 The panel, browser, tools, context and purge share the same service.
-A task held on another computer (`docs/helper.md`) receives its project directions on every served turn and has the same Knowledge tools as one on this Mac: each call asks this Mac to read or write under the same actor and factual access, and nothing of the collection is kept there.
+A task held on another computer (`docs/helper.md`) receives its project directions on its served turns, as a task here does once that computer reports its conversation's folds, and has the same Knowledge tools as one on this Mac: each call asks this Mac to read or write under the same actor and factual access, and nothing of the collection is kept there.
 
 ## Where it is kept
 
@@ -128,7 +128,7 @@ A crewmate on a computer that runs work (`docs/helper.md`, "Holding a conversati
 That computer serves both tools and asks this Mac to run each call (`inf:work:knowledge`, `inf:work:record-knowledge`); this Mac answers with that binding and keeps the answer, so a call asked again after a drop is answered from what it kept.
 Its brief carries the same knowledge lines, written here.
 Its working copy there is no folder of this Mac's, so its actor names none: a kept file source reads against the project's own folder here, as the first mate's reads do, and a new file citation is refused there as it is here.
-A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/contractFeatures.ts`) is given neither the tool pair nor the factual candidate lines; applicable directions still ride each served turn.
+A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/contractFeatures.ts`) is given neither the tool pair nor the factual candidate lines; applicable directions still ride its served turns.
 
 | Bound | Size |
 | --- | --- |
@@ -159,8 +159,10 @@ Knowledge is the only source for personal context, saved references and standing
 
 - The first context of every first mate conversation carries the complete current directions in `directions`, regardless of the words searched or whether the turn is a background wake.
   When any direction changes, the next context carries the complete set again, and one emptied says so (`docs/orchestrator-contract.md`, "What a context carries").
-- Every crewmate turn carries the complete current project directions, superseding earlier copies; retired directions have no active influence.
-  The brief holds none of its own, so a first turn carries them once, and a brief served again to a new conversation carries no stale copy.
+- A crewmate's first turn in a conversation carries the complete current project directions, superseding earlier copies; retired directions have no active influence.
+  A later turn carries the complete set again only when it changed, the conversation folded its context, its session is a new conversation, the computer holding it reopened it, or the conversation never read the turn that carried them (INF-2599, `src/core/orchestrator/crewDirections.ts`).
+  A conversation on a computer that does not report its folds (`conversation-folds`) carries them on every turn.
+  The brief holds none of its own, so a brief served again to a new conversation carries no stale copy.
 - Rendering never truncates directions to a character budget or a search page.
 - Captain-origin directions are instructions, other origins are labeled advice, and neither grants permission.
 - The first mate's `knowledge` shortlist contains topical personal entries matched from the captain's words; operational wakes carry none.

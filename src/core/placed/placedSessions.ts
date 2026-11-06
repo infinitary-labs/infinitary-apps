@@ -24,6 +24,7 @@ import {
 } from "@shared/work";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
 import { contractChange, listsChange } from "../connection/contractChanges";
+import { CONVERSATION_FOLDS } from "../connection/conversationFolds";
 import { SHARED_CARDS } from "../connection/sharedCards";
 import {
   dueIn,
@@ -331,6 +332,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return (
       this.options.devices.takesCurrentWork(machine) &&
       listsChange(this.options.devices.version(machine)?.changes, SHARED_CARDS)
+    );
+  }
+
+  reportsFolds(machine: string): boolean {
+    return (
+      this.options.devices.takesCurrentWork(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, CONVERSATION_FOLDS)
     );
   }
 

@@ -38,6 +38,7 @@ import {
 import { cardMutationText } from "./cardMutationText";
 import { declareRunCheck } from "./checkRepair";
 import type { CrewCore } from "./crewCore";
+import { heardDirections } from "./crewDirections";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewmateSpec } from "./crewSession";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
@@ -240,6 +241,8 @@ export class CrewToolHooks {
           const at = task.unreadSteers.findIndex((steer) => steer.sha === event.textSha256);
           if (at >= 0) task.unreadSteers.splice(at, 1);
         } else if (event.type === "request_started") task.unreadSteers = [];
+        // The directions it read stay held until a fold (INF-2599).
+        task.directions = heardDirections(task.directions, event);
         if (event.type === "background_work_changed") {
           task.clientJobs = event.count;
           task.clientJobsSince =

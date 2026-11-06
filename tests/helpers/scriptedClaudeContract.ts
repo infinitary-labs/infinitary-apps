@@ -151,6 +151,7 @@ export async function scriptedClaudeWorld(
   ContractWorld & {
     continueTurn: () => void;
     listBackgroundTasks: (tasks: { id: string; type?: string; description: string }[]) => void;
+    fold: () => void;
     endClient: (error?: Error) => void;
   }
 > {
@@ -541,6 +542,20 @@ export async function scriptedClaudeWorld(
           task_type: type ?? "local_bash",
           description,
         })),
+        uuid: randomUUID(),
+        session_id: clientOf(attachment).sessionId,
+      });
+    },
+    // INF-2599: the client folds its context on its own, between requests,
+    // and says so with its compact boundary (the shape `claudeSession.test.ts`
+    // reads).
+    fold: () => {
+      const attachment = attachments.at(-1);
+      if (!attachment) throw new Error("No client is attached.");
+      attachment.emit({
+        type: "system",
+        subtype: "compact_boundary",
+        compact_metadata: { trigger: "auto", pre_tokens: 160000 },
         uuid: randomUUID(),
         session_id: clientOf(attachment).sessionId,
       });

@@ -182,10 +182,12 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
   /**
    * INF-1054 (the captain's "A. One store, one way in: panel instructions
    * are ordinary directions"): a panel instruction is a direction scoped to
-   * the personal workspace, so the crewmate building a panel hears it on
-   * every turn, and a retired one is gone from the next.
+   * the personal workspace, so the crewmate building a panel hears it, and a
+   * retired one is gone from the next set. Its conversation holds the set
+   * it read until the set changes (INF-2599: "Send a crewmate its directions
+   * once, and again only when they change").
    */
-  it("serves the personal workspace's directions on every turn and drops a retired one", async () => {
+  it("serves the personal workspace's directions, then again only without a retired one", async () => {
     const crewmate = fakeCrewmate();
     let knowledge: KnowledgeService | undefined;
     const h = liveSetup(crewmate, {
@@ -204,17 +206,29 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
       text: "Always use compact rows in my panels.",
       reason: "captain said so",
     });
+    knowledge?.directions.change({
+      op: "add",
+      id: "tokyo-time",
+      scope: personal.id,
+      text: "Show times in Tokyo time.",
+      reason: "captain said so",
+    });
     const { taskId } = await h.supervisor.intake.commission({
       title: "Tokyo clock",
       intent: { goal: "g", userWords: "w", kind: "personal-ui" },
     });
     await tick();
     expect(crewmate.promptCalls[0]).toContain("Always use compact rows in my panels.");
+    expect(crewmate.promptCalls[0]).toContain("Show times in Tokyo time.");
+    // The model reads the turn's input: its first request starts.
+    crewmate.emit({ type: "request_started" });
     crewmate.finishPrompt();
     await tick();
     await h.supervisor.steer.steerCrewmate(taskId, "make it bigger");
     await tick();
-    expect(crewmate.promptCalls.at(-1)).toContain("Always use compact rows in my panels.");
+    expect(crewmate.promptCalls.at(-1)).toContain("make it bigger");
+    expect(crewmate.promptCalls.at(-1)).not.toContain("Show times in Tokyo time.");
+    crewmate.emit({ type: "request_started" });
     crewmate.finishPrompt();
     await tick();
     knowledge?.directions.change({
@@ -225,6 +239,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     await h.supervisor.steer.steerCrewmate(taskId, "and blue");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain("and blue");
+    expect(crewmate.promptCalls.at(-1)).toContain("Show times in Tokyo time.");
     expect(crewmate.promptCalls.at(-1)).not.toContain("Always use compact rows in my panels.");
   });
 

@@ -1,12 +1,12 @@
 # Standing directions
 
-Standing directions carry the captain's ongoing instructions, about how the first mate runs the work, into every turn they apply to.
+Standing directions carry the captain's ongoing instructions, about how the first mate runs the work, into every conversation they apply to.
 
 ## Intended use
 
 Use a standing direction for an instruction the captain wants applied every time from now on, such as who merges, when work starts or which models a project uses.
 A direction is either global (the captain's scope, `captain`) or bound to one exact project identifier.
-**Knowledge replaces notes in every build, stable included (2026-10-12)**: `KnowledgeService` owns standing directions separately from personal facts, and every turn receives the complete applicable directions, never an older-notes fallback (`../docs/knowledge.md`).
+**Knowledge replaces notes in every build, stable included (2026-10-12)**: `KnowledgeService` owns standing directions separately from personal facts, and every conversation holds the complete applicable directions, never an older-notes fallback (`../docs/knowledge.md`).
 Directions are instructions to weigh with the work, not data to search: they never appear in the factual graph or among factual search candidates.
 
 ## When to use it, and when not
@@ -16,8 +16,8 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - Do not use it for a fact about the captain or a saved source: those are [knowledge-graph.md](knowledge-graph.md) entries.
 - Do not use it for a one-off ask, a reminder or a recurring job: a task carries one-off work, and [automation.md](automation.md) carries work that starts at a time or on an event.
 - Do not build a second instruction store (a settings file of preferences, a skill file of rules, a per-feature "remember this" table, a prompt fragment a feature appends to).
-  A second store drifts from this one, is not delivered whole on every turn, and the captain cannot see or retire it in one place.
-- The captain's panel instructions ("always use compact rows in my panels") are ordinary directions scoped to the personal workspace, so every crewmate building a panel or teaching a lesson there receives them on every turn.
+  A second store drifts from this one, is not delivered whole to every conversation, and the captain cannot see or retire it in one place.
+- The captain's panel instructions ("always use compact rows in my panels") are ordinary directions scoped to the personal workspace, so every crewmate building a panel or teaching a lesson there receives them.
   The personal workspace is registered as a project at startup so a direction can name it before any panel exists.
 
 ## Owner and entry points
@@ -26,7 +26,8 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - Write: `StandingDirections.change` (`add`, `revise`, `retire`, with an optional `expectedRevision` and a required reason).
 - Read for a turn: `StandingDirections.standing(actor)`, the full active set visible to that actor, never shortened to a search or formatting budget.
 - Render for a turn: `renderDirections` and `renderDirection` in [`../src/core/knowledge/directions.ts`](../src/core/knowledge/directions.ts).
-- Delivery: the first mate's context (`../src/core/orchestrator/firstmateContext.ts`) and every crewmate turn (`../src/core/orchestrator/crewTurns.ts`) call `renderDirections` over `StandingDirections.standing`.
+- Delivery: the first mate's context (`../src/core/orchestrator/firstmateContext.ts`) and a crewmate's turns (`../src/core/orchestrator/crewTurns.ts`) call `renderDirections` over `StandingDirections.standing`.
+- What a crewmate's conversation holds: `../src/core/orchestrator/crewDirections.ts`, which says whether a turn carries the set and keeps it held once the conversation reads it.
 - The agent's door: the app action catalog's `direction` line (`../src/shared/actions.ts`), whose change channel `inf:knowledge:direction:set` (`../src/shared/channels/knowledge.ts`) runs `StandingDirections.change` through the dispatcher.
 - Window reads: `knowledge.directions` and `knowledge.direction` (`../src/shared/reads.ts`, shapes in `../src/shared/knowledge.ts`), answered by `StandingDirections.page` and `StandingDirections.read`.
 
@@ -35,9 +36,13 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - Add creates a direction with `text` and `scope`; revise replaces its wording by `d:` identifier; retire removes its active influence.
 - Every change is a new revision with the reason the first mate gave; the history stays readable, and retirement is not secure erasure.
 - A write naming an older revision than the current one is refused, so a stale edit never overwrites a newer one.
-- Delivery is whole on every turn:
-  - every first mate context block carries all current directions, whatever the words searched and whether or not the turn is a background wake;
-  - every crewmate turn (fresh, resumed, or placed on another computer) carries the complete current directions of its own project, superseding earlier copies;
+- Delivery is whole, once per conversation and again on change (INF-1712 for the first mate, INF-2599 for a crewmate):
+  - the first context of every first mate conversation carries all current directions, whatever the words searched and whether or not the turn is a background wake, and after any change the next context carries the whole set again;
+  - a crewmate's first turn in a conversation (fresh, resumed, or placed on another computer) carries the complete current directions of its own project, superseding earlier copies;
+  - a later crewmate turn carries them again only when the set changed, the conversation folded its context, its session is a new conversation, the computer holding it reopened it, or the conversation never read the turn that carried them;
+  - the conversation holds a set once its backend reports the input read (`request_started`, or an `input_read` of that exact input), so an unread copy goes again;
+  - what a crewmate's conversation holds is kept in memory, so a restart of the app sends the set once more;
+  - a crewmate's conversation on a computer that does not report its folds (`conversation-folds`) carries them on every turn;
   - a brief holds no copy of its own, so a brief served again carries no stale direction;
   - rendering never truncates directions.
 - The first mate reviews directions against facts arriving on its turns, including reports and updates.
@@ -66,7 +71,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 
 - Rides the app action catalog (`../docs/orchestrator-contract.md`, "App action catalog"), so each change leaves one operation and one feed line like any other setting change.
 - Shares storage, purge and availability with [knowledge-graph.md](knowledge-graph.md) but keeps separate tables, so directions never become factual search candidates.
-- Reaches a task on another computer through each served turn ([`../docs/helper.md`](../docs/helper.md)); nothing of the collection is kept there.
+- Reaches a task on another computer through its served turns ([`../docs/helper.md`](../docs/helper.md)), which carry the set as on this Mac once that computer reports its conversation's folds; nothing of the collection is kept there.
 - A [decision-questions.md](decision-questions.md) answer or a [cards-and-consent.md](cards-and-consent.md) choice may become a direction only when the first mate judges it an ongoing instruction and writes it.
 
 ## Failure and recovery
@@ -78,8 +83,8 @@ Directions are instructions to weigh with the work, not data to search: they nev
 
 ## Uses
 
-- The first mate's served context: the complete directions in `directions` on every turn, including background wakes.
-- Crewmate turns: a crewmate working in a project receives that project's directions on every turn, including a task held on another computer.
+- The first mate's served context: the complete directions in `directions` in each conversation's first context and again after any change, including background wakes.
+- Crewmate turns: a crewmate working in a project receives that project's directions once per conversation and again after a change or a fold, including a task held on another computer.
 - The Knowledge panel and the browser's Directions tab list active directions, captain instructions before advice, with project tags, and Ask about this drafts a question naming `d:<id>`.
 - A direction the captain chooses on a crewmate's card is saved by the first mate on that crewmate's report, without the captain typing it (`../tests/e2e/knowledge-directions.spec.ts`).
 
@@ -89,7 +94,9 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - [`../src/core/knowledge/directions.test.ts`](../src/core/knowledge/directions.test.ts): the active directions carried once, a retried and a conflicting carry, and the browser's pages and one-direction reads.
 - [`../src/core/core.settings.test.ts`](../src/core/core.settings.test.ts) ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line and its reason in the history.
 - [`../src/core/orchestrator/firstmateAgent.actions.test.ts`](../src/core/orchestrator/firstmateAgent.actions.test.ts) ("renders authoritative directions and keeps them from a scheduled turn too"): whole delivery to the first mate, background wakes included.
-- [`../src/core/orchestrator/crewBrief.context.test.ts`](../src/core/orchestrator/crewBrief.context.test.ts) ("serves active project directions with their authority once on the first turn") and [`../src/core/orchestrator/crewTurns.workspace.test.ts`](../src/core/orchestrator/crewTurns.workspace.test.ts) ("serves the personal workspace's directions on every turn and drops a retired one"): project directions on a crewmate turn.
+- [`../src/core/orchestrator/crewBrief.context.test.ts`](../src/core/orchestrator/crewBrief.context.test.ts) ("serves active project directions with their authority once on the first turn") and [`../src/core/orchestrator/crewTurns.workspace.test.ts`](../src/core/orchestrator/crewTurns.workspace.test.ts) ("serves the personal workspace's directions, then again only without a retired one"): project directions on a crewmate turn.
+- [`../src/core/orchestrator/crewTurns.test.ts`](../src/core/orchestrator/crewTurns.test.ts) ("a crewmate's standing directions, as its turns carry them"): once, again on a change, a fold, an unread turn and a new conversation, and nothing on an unchanged turn.
+- [`../src/core/helper/sessionHost.test.ts`](../src/core/helper/sessionHost.test.ts) ("tells a home that reads it when its Claude conversation folds"): a fold reaches a home that lists `conversation-folds`, and nothing reaches an older one.
 - [`../src/core/personal/panelInstructions.test.ts`](../src/core/personal/panelInstructions.test.ts): the panel instructions carry, its repeat and its unreadable-Knowledge case.
 - [`../tests/e2e/personalize.spec.ts`](../tests/e2e/personalize.spec.ts) ("a panel instruction is a standing direction for the personal workspace"): the captain's words become a direction listed in the Knowledge browser.
 - [`../tests/e2e/knowledge-directions.spec.ts`](../tests/e2e/knowledge-directions.spec.ts): directions stay distinct from personal facts, forty directions arrive on an unrelated ask, carry-over and restart, forget and purge without a notes fallback.

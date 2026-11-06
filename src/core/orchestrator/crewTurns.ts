@@ -31,6 +31,7 @@ import { gitFailure } from "../workspace/git";
 import type { DependencyInstall } from "../workspace/workspaceService";
 import { ciFactOf } from "./ciFact";
 import type { CrewCore } from "./crewCore";
+import { handedDirections, servesDirections } from "./crewDirections";
 import { SUPERVISOR_STEER, type TaskRuntime } from "./crewRuntime";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
 import { JOB_BOUND_MS } from "./idleLadder";
@@ -192,6 +193,31 @@ export class CrewTurns {
     });
   }
 
+  /**
+   * The project's directions this turn carries, or undefined when its
+   * conversation already holds the current set or the task has no project.
+   * A conversation on a computer that cannot say it folded is served them
+   * on every turn (`CrewMachines.reportsFolds`).
+   */
+  private directionsFor(task: TaskRuntime): string | undefined {
+    const repoId = this.core.options.tasks.get(task.id)?.repoId;
+    if (!this.core.options.knowledge || !repoId) return undefined;
+    const block = renderDirections(
+      this.core.options.knowledge.directions.standing({
+        kind: "crewmate",
+        taskId: task.id,
+        repoId,
+      }),
+    );
+    if (!block) return undefined;
+    const machine = this.core.facts.machineOf(task.id);
+    const foldsHeard =
+      machine === LOCAL_MACHINE_ID || this.core.options.machines?.reportsFolds?.(machine) === true;
+    return servesDirections(task.directions, task.session?.sessionId, block, foldsHeard)
+      ? block
+      : undefined;
+  }
+
   /** One crewmate turn: prompt to completion, then idle (multi-turn). */
   async runTurn(
     task: TaskRuntime,
@@ -214,18 +240,11 @@ export class CrewTurns {
     try {
       // The one place a crewmate is told its project's directions: the
       // brief holds none, so a first turn carries them once, and a brief
-      // served again to a new conversation carries no stale copy.
-      const repoId = this.core.options.tasks.get(task.id)?.repoId;
-      if (this.core.options.knowledge && repoId) {
-        const directions = renderDirections(
-          this.core.options.knowledge.directions.standing({
-            kind: "crewmate",
-            taskId: task.id,
-            repoId,
-          }),
-        );
-        served += `\n\n${directions}`;
-      }
+      // served again to a new conversation carries no stale copy. A later
+      // turn carries them only when its conversation does not hold the
+      // current set (`crewDirections.ts`).
+      const directions = this.directionsFor(task);
+      if (directions) served += `\n\n${directions}`;
       // A request already in this prompt's guidance is served there once.
       // Only other pending requests need the recovery-context snapshot.
       const servedInboxIds = new Set(ids);
@@ -243,6 +262,10 @@ export class CrewTurns {
         task.paused ??= {};
         throw new StoppedBeforeStartError();
       }
+      // Held once the session reads this input (`heardDirections`).
+      const conversation = task.session?.sessionId;
+      if (directions && conversation)
+        task.directions = handedDirections(conversation, directions, served);
       if (images?.length) await task.session?.prompt(served, images, order);
       else if (order) await task.session?.prompt(served, undefined, order);
       else await task.session?.prompt(served);

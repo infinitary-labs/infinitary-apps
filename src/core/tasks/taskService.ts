@@ -717,8 +717,8 @@ export class TaskService {
 
   /**
    * Pin the brief a first turn serves independently of later report
-   * replacement; the standing directions every turn adds are not part of
-   * it. The report text it copied off the record is kept as a
+   * replacement; the standing directions a turn adds are not part of it.
+   * The report text it copied off the record is kept as a
    * reference to its event where that is smaller (`./briefReceipt.ts`);
    * `servedBrief` reads it back whole.
    */

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "run-alone-native-guard",
+      "reason": "Test tooling only: on a Mac that sends its heavy checks through CI, the local Mac journey route's run-alone pass now names the Mac-only tag and --no-deps to each test it runs by itself, so the route's guard admits it as it admits the rounds; the app shows nothing new."
+    }
+  ]
+}

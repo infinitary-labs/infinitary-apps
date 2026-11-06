@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { ciModeRefusal } from "../scripts/checks-mode.ts";
 import {
   type AloneTest,
+  aloneRunArguments,
   laterTests,
   shardTests,
   sharesOneApp,
@@ -187,6 +189,43 @@ describe("the run-alone pass on Linux and the Mac", () => {
     expect(untagged.status).toBe("failed");
     expect(untagged.error).toContain(MAC_ONLY_TAG);
     expect(skipped(macOnly, "darwin", 3).status).toBe("failed");
+  });
+
+  // The selected native route (scripts/local-mac-journeys.ts) runs on a Mac
+  // kept in CI mode, whose guard admits a journey only under the route's load
+  // hold with --no-deps and --grep MAC_ONLY_TAG (scripts/checks-mode.ts). Each
+  // test the Mac-only pass runs alone carries both, in every lane, or the
+  // guard refuses it after its rounds pass.
+  it("names the pass's tag and --no-deps to each test's own run, which the native route's guard admits", () => {
+    const admitted = {
+      INFINITARY_CHECKS: "ci",
+      INFINITARY_SELECTED_MAC: "1",
+      INFINITARY_LOAD_HOLD: "selected-native-proof",
+    };
+    // playwright.config.ts hands the guard the runner's arguments after "test".
+    const guard = (args: string[], env: NodeJS.ProcessEnv = admitted) =>
+      ciModeRefusal("journeys", env, process.cwd(), args.slice(args.indexOf("test") + 1));
+    for (const lane of ["application", "renderer", "desktop"]) {
+      const args = aloneRunArguments({ ...macOnly, lane }, "out/alone", MAC_ONLY_TAG);
+      expect(args).toEqual([
+        "exec",
+        "playwright",
+        "test",
+        `tests/e2e/${macOnly.file}:${macOnly.line}`,
+        `--project=${lane}`,
+        "--output=out/alone",
+        "--no-deps",
+        "--grep",
+        MAC_ONLY_TAG,
+      ]);
+      expect(guard(args) === undefined, lane).toBe(process.platform === "darwin");
+      // The guard still refuses it outside the route's load hold.
+      expect(guard(args, { ...admitted, INFINITARY_LOAD_HOLD: "" })).toContain("journeys.yml");
+    }
+    // A pass that keeps no tag, as on Linux, names none, and stays outside the native exception.
+    const untagged = aloneRunArguments(plain, "out/alone");
+    expect(untagged).not.toContain("--grep");
+    expect(guard(untagged)).toContain("journeys.yml");
   });
 
   it("summarizes the pass's counts, skips apart, and names each test that failed alone", () => {

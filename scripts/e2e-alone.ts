@@ -19,8 +19,9 @@ import { MAC_ONLY_TAG } from "../tests/e2e/tags.ts";
  * the named files; with none it covers every spec file, which, like a full
  * e2e run, only CI does (source-journeys.yml's `journeys (run alone N/4)` jobs on
  * Linux), split by `--shard <index>/<total>` across hosted jobs.
- * `--tag <tag>` keeps only the tests that carry it: verify.yml's mac
- * lane runs the MAC_ONLY_TAG tests, which skip on Linux. It runs against the
+ * `--tag <tag>` keeps only the tests that carry it, and each test's own run
+ * names it as `--grep`: the Mac routes run the MAC_ONLY_TAG tests, which skip
+ * on Linux. It runs against the
  * current build (`pnpm build` first), prints one line per test, writes
  * `ALONE_RESULTS` and each test's output, trace and picture to its
  * directory (`--out <dir>`, else this pass's own run directory under
@@ -233,13 +234,32 @@ function firstError(json: string): string | undefined {
   return report.errors?.find((error) => error.message)?.message;
 }
 
-function runAlone(test: AloneTest, out: string): Promise<AloneResult> {
+/**
+ * One test's own Playwright run, by file:line in its lane. --no-deps keeps the
+ * desktop lane, the other lanes' teardown, out of it; the desktop lane itself
+ * has no dependencies, so it changes nothing there. A pass that keeps one tag
+ * names it to the child as --grep, as its rounds do: a loop's line then
+ * selects only its tagged tests, and on a computer in CI mode the selected
+ * native route's guard (scripts/checks-mode.ts) admits the child as it
+ * admits the rounds.
+ */
+export function aloneRunArguments(test: AloneTest, dir: string, tag?: string): string[] {
+  return [
+    "exec",
+    "playwright",
+    "test",
+    `${E2E_DIR}/${test.file}:${test.line}`,
+    `--project=${test.lane}`,
+    `--output=${dir}`,
+    "--no-deps",
+    ...(tag ? ["--grep", tag] : []),
+  ];
+}
+
+function runAlone(test: AloneTest, out: string, tag: string | undefined): Promise<AloneResult> {
   const dir = join(out, `${basename(test.file, ".spec.ts")}-${test.line}-${test.lane}`);
   const json = join(dir, "e2e-results.json");
-  const args = ["exec", "playwright", "test", `${E2E_DIR}/${test.file}:${test.line}`];
-  args.push(`--project=${test.lane}`, `--output=${dir}`);
-  // The desktop lane is the other lanes' teardown; --no-deps keeps it out.
-  if (test.lane !== "desktop") args.push("--no-deps");
+  const args = aloneRunArguments(test, dir, tag);
   const started = Date.now();
   return new Promise((done) => {
     const child = spawn("pnpm", args, { cwd: REPO_ROOT, env: childEnv(json) });
@@ -332,8 +352,10 @@ async function main(args: string[]): Promise<number> {
   const parallel = tests.filter((test) => PARALLEL_LANES.has(test.lane));
   const serial = tests.filter((test) => !PARALLEL_LANES.has(test.lane));
   const results = [
-    ...(await pool(parallel, Math.min(4, availableParallelism()), (test) => runAlone(test, out))),
-    ...(await pool(serial, 1, (test) => runAlone(test, out))),
+    ...(await pool(parallel, Math.min(4, availableParallelism()), (test) =>
+      runAlone(test, out, tag),
+    )),
+    ...(await pool(serial, 1, (test) => runAlone(test, out, tag))),
   ].sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
   const failed = results.filter((result) => result.status === "failed");
   writeFileSync(join(out, ALONE_RESULTS), `${JSON.stringify({ results }, null, 2)}\n`);

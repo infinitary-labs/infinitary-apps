@@ -229,7 +229,7 @@ Queued or waiting work does not start merely because a policy changed, and activ
 
 Every merge card on a Quick or Default pull request the captain merges personally carries a Review carefully button between Discard and Merge, keyed ⌘2 (INF-562; Merge keeps ⌘1 and Discard moves to ⌘3).
 Local merges, work that merges on its own, Careful tasks, requests to merge another pull request and the first mate's own cards get no button.
-The host adds it in `withCompletionActions` as an action with `care: reviewed` and no effect; the card lint does not count it among the author's two or three choices.
+The host adds it in `CrewmateCards.withCompletionActions` as an action with `care: reviewed` and no effect; the card lint does not count it among the author's two or three choices.
 The captain's click closes the card and mints no merge approval.
 It sets care to Careful through `TaskService.updateFields` with the captain as the actor and "from the merge card" in Activity and the feed, then the choice reaches the crewmate like any choice on its card, which starts it with the care notice ahead of it.
 A body's script cannot press it.
@@ -377,7 +377,7 @@ The delivery guidance tells the crew how to judge readiness, diagnose a failure,
 A merge offer expresses readiness only for its named version and grants no merge permission.
 The checks hold a new completion offer until the pull request's own checks pass (INF-1891, the captain: the app turns the merge card down until the pull request's own checks pass), while a revision of a completion card already up goes up as they run.
 A pull request with no check registered reads pending, not no checks, until the crew's absence declaration for that version is stored (INF-1955; `docs/forge.md`, "Check facts and crew judgment"): the refusal names `check_change` `absentChecks`, the stored declaration makes the reading say no checks and lets the offer up, and the captain's kept click on an empty reading completes once that declaration arrives at the approved version, with no checks override.
-A failed reading lets the offer up with Merge anyway beside the merge in two cases (`CrewSupervisor.pendingCiGate`): every failed check at that version carries the crewmate's diagnosis, or the default branch's newest run of every failed check failed too (`TaskDelivery.mainChecks`, INF-1915 fix 1), which the card states from that fact under its Checks cell.
+A failed reading lets the offer up with Merge anyway beside the merge in two cases (`CrewmateCards.pendingCiGate`): every failed check at that version carries the crewmate's diagnosis, or the default branch's newest run of every failed check failed too (`TaskDelivery.mainChecks`, INF-1915 fix 1), which the card states from that fact under its Checks cell.
 In the second case the crewmate spends no rerun and asks for no reopening: the captain decides on that card, merging now with Merge anyway or waiting for main's fix, which the app watches (`docs/forge.md`, "A main failure's wake").
 The captain's click on Merge anyway passes the checks hold for that version.
 Normal check replies carry current facts and unresolved repair identities, not the whole historical ledger; the task record retains declaration history.
@@ -404,7 +404,7 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
 
 - **The baseline.**
   When a crewmate offers a merge, that offer itself expresses the crew's judgment that the work is ready; no separate ready/red declaration is required or recorded.
-  After the current change lookup obtains its target (`pendingCiGate`), `CrewSupervisor.recordCompletionOffer` keeps the shown offer's id with that head and its pull request (`delivery.completionOffers`, the newest four).
+  After the current change lookup obtains its target (`CrewmateCards.pendingCiGate`), `CrewmateCards.recordCompletionOffer` keeps the shown offer's id with that head and its pull request (`delivery.completionOffers`, the newest four).
   Pending and partially unreadable checks hold a new offer, and failed checks hold it unless each is diagnosed or fails on the default branch too ("Check facts and declarations" above); the facts remain visible on the card and hold the merge at the click.
   A lookup that obtains no target cannot bind an exact-version offer and reports why; it cannot reuse a stale earlier reading as fresh.
   An offer that shows the same content at another head keeps no baseline.

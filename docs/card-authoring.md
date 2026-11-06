@@ -85,7 +85,7 @@ Completed captain-requested work gets an outcome card before the final report.
 Without a change of the task's own to put in, it is a factual note naming what happened and how it was verified, with no settle action; the first mate can then close or continue the task.
 Answer tasks already deliver their card, and internal reviews and hand-off steps deliver their report; a personal-workspace build ends with the factual note like any other work with nothing to merge (INF-1677).
 With a change to put in, the completion card has two actions: the merge (`default`, `settle merge`) and the discard (`danger`, `settle discard`).
-The host writes that pair (captain lock 3): a crewmate declares one action carrying `settle merge` and the host replaces every settle action with the merge labelled for the task's posture and the discard beside it (`CrewSupervisor.withCompletionActions`).
+The host writes that pair (captain lock 3): a crewmate declares one action carrying `settle merge` and the host replaces every settle action with the merge labelled for the task's posture and the discard beside it (`CrewmateCards.withCompletionActions`).
 A `request_merge` action is not that pair: the host labels it Merge the pull request and leaves the crewmate's other actions, including Not now, so a pull request the task did not open is not discarded with the task (`docs/forge.md`, "A requested merge").
 Every merge card's strip ends with the host's line on whether its click closes the task: "Merging closes this task" for a settle merge, "The task continues after this merge" for a `request_merge`, which gets a strip holding only that line (`withMergeClosesLine`, INF-2490).
 A settle merge says the task continues too while a question or another pull request on the task is open, and changes back when that clears (INF-2525; `docs/forge.md`, "A requested merge").
@@ -241,7 +241,7 @@ The task's final report needs no tool: its record shows a sandboxed body with pl
 
 ## A refused completion card
 
-A crewmate's completion card - any card it emits that declares a settle effect - can be refused on its way up: its checks have not passed (`CrewSupervisor.pendingCiGate`), the shape lint above, or the card tool's own checks on its size, id, pictures and risk.
+A crewmate's completion card - any card it emits that declares a settle effect - can be refused on its way up: its checks have not passed (`CrewmateCards.pendingCiGate`), the shape lint above, or the card tool's own checks on its size, id, pictures and risk.
 A revision of the completion card already on the stack is the one exception to the checks: it goes up while they run, and its merge waits for them (`docs/delivery-rigor.md`, "A kept merge approval").
 The crewmate reads the refusal as the tool's error text, and the card never reaches the stage.
 FI3-401 is why that is not enough: on PR #549 the gate refused a card a second after the crewmate asked, the crewmate still reported "Completion card emitted", and the first mate relayed the card and later explained its absence with a mechanism that does not exist.
@@ -729,7 +729,7 @@ Prefer closing an obsolete card over stacking a correction, and prefer revising 
 ## A card places the gate
 
 A card with actions is a captain decision, so it is on the record the way every captain decision is (the owner's call 3 on the primitives review, 2026-09-26: "every card with actions places the captain gate on its task; host cards file an operation task").
-A card with actions and a task id - a crewmate's (`addCrewmateCard`), the first mate's (`addFirstmateCard`), or the host's own, including the stall card and the crewmate's sign-in card, which now carries its task - places the `captain` gate on that task with the card id as its ref (`IdleLadder.syncCaptainGate`; `docs/task-graph.md` "Gates on active rows").
+A card with actions and a task id - a crewmate's (`CrewmateCards.addCrewmateCard`), the first mate's (`addFirstmateCard`), or the host's own, including the stall card and the crewmate's sign-in card, which now carries its task - places the `captain` gate on that task with the card id as its ref (`IdleLadder.syncCaptainGate`; `docs/task-graph.md` "Gates on active rows").
 A host card with actions and no task files an open `operation` row gated on the card (`TaskService.capture.fileHostCardTask`), so it has a row for "waiting on you" to count.
 A note places nothing on its own; its crewmate places the gate by declaring `waiting_on_captain` in its report, naming the note (`docs/report-sort.md`).
 
@@ -742,7 +742,7 @@ No reader of whose turn it is finds a card by its id pattern any more - a card i
 
 The captain's words on INF-547: "the tasks were done but i never got any update."
 Started work that closes without the captain's click leaves them one card about it, and only their close takes it down.
-A crewmate whose task merges on its own shows its completion story before the merge, on a note with no actions: the same saved story a merge offer carries, with its risk chart and the merge card's fact strip, and with no button or required actions (`CrewSupervisor.addCrewmateCard` refuses a saved-story note on a task that asks first).
+A crewmate whose task merges on its own shows its completion story before the merge, on a note with no actions: the same saved story a merge offer carries, with its risk chart and the merge card's fact strip, and with no button or required actions (`CrewmateCards.addCrewmateCard` refuses a saved-story note on a task that asks first).
 The captain's words on INF-1219: "it misses the radar chart, and also it's not clear that this was a change merged by itself."
 The host opens that note with the merge line, written after the card lint: "Merges on its own", what happens next, and who set it, in the app's words from the setting (`pendingMergeLine`, `src/core/orchestrator/settleWords.ts`).
 The captain's words on INF-2533: "we should probably not show the note card and wait for the final update with "merged on its own" already present".

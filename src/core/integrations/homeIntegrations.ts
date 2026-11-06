@@ -48,11 +48,7 @@ export type HomeIntegrations = {
 /** What an integration's ask and a saved attachment reach of the crew. */
 export type IntegrationsCrew = Pick<
   CrewSupervisor,
-  | "askIntegration"
-  | "askIntegrationForFirstmate"
-  | "askIntegrationForPanel"
-  | "outsideFileRefusal"
-  | "saveOutsideFile"
+  "integrationAsks" | "outsideFileRefusal" | "saveOutsideFile"
 >;
 
 export function startHomeIntegrations(options: {
@@ -162,15 +158,15 @@ export function startHomeIntegrations(options: {
     secrets: integrationSecrets,
     asks: {
       keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
-      present: (taskId, ask) => options.crew().askIntegration(taskId, ask),
-      keepForFirstmate: (ask) => options.crew().askIntegrationForFirstmate(ask),
+      present: (taskId, ask) => options.crew().integrationAsks.askIntegration(taskId, ask),
+      keepForFirstmate: (ask) => options.crew().integrationAsks.askIntegrationForFirstmate(ask),
       // One ask per panel and action at a time (docs/integrations.md, "Panels").
       keepForPanel: (ask) => {
         const held = ask.panel
           ? panelAsks.held(ask.panel.key, ask.integration, ask.action)
           : undefined;
         if (held) return { held: held.state };
-        const card = options.crew().askIntegrationForPanel(ask);
+        const card = options.crew().integrationAsks.askIntegrationForPanel(ask);
         panelAsks.asking(ask, card);
         return { card };
       },

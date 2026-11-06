@@ -158,7 +158,7 @@ A first mate card has none: the paused seat writes its own saved line for every 
 
 The author's side says the same.
 A revision of the open completion card goes up while its checks run, carrying that answer with it (INF-834 friction 4).
-A new completion card the checks refuse while a captain reply waits on one of the task's cards asks for the thread answer now - one line saying what it did and who goes next - and the card update once they pass (`CrewSupervisor.waitingReplyNote`).
+A new completion card the checks refuse while a captain reply waits on one of the task's cards asks for the thread answer now - one line saying what it did and who goes next - and the card update once they pass (`CrewmateCards.waitingReplyNote`).
 `HANDOFF` (contract 4.70) answers a reply that only authorizes a build the same way: one thread line naming who is next, the card unchanged.
 An answer task's author then reports the approval with `needs_firstmate` (contract 4.73), which wakes the first mate to start the builder.
 While the first mate has not acted on that task since, the idle ladder raises the request again, with the card still up (`docs/report-sort.md`, "A request the first mate leaves unanswered is raised again").

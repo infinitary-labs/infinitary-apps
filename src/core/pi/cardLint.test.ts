@@ -23,7 +23,7 @@ const MERGE_ACTION = { id: "merge", label: "Merge PR", default: true, effect: ME
 /**
  * A completion decision as the crewmate lint reads it: the crewmate declares
  * the merge and the host writes the merge and discard pair before the lint
- * (`CrewSupervisor.withCompletionActions`).
+ * (`CrewmateCards.withCompletionActions`).
  */
 const COMPLETION_PAIR = [
   MERGE_ACTION,

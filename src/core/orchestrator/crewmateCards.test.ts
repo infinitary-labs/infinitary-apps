@@ -1,19 +1,17 @@
 /**
- * A crewmate's cards as the crew supervisor takes them, and the integration
- * calls it holds for the captain (docs/card-threads.md, docs/task-browser.md
+ * A crewmate's cards as the crew takes them, and the integration calls it
+ * holds for the captain (docs/card-threads.md, docs/task-browser.md
  * "A page from the project" and "Asking for help", docs/forge.md "A write
- * that asks", docs/integrations.md). INF-2625's plan, the crew supervisor's
- * fifth step, moves this code out of the supervisor into owners of its
- * own - the crewmate's cards, the card's browser door and the integration
- * asks; these cases pin, before it moves, the behaviour no other test
+ * that asks", docs/integrations.md; `CrewmateCards`, `CardBrowserActions`
+ * and `IntegrationAsks`). These cases pin the behaviour no other test
  * reaches: a page from the project on a card's button and each of its
  * refusals, a card that asks to send a kept write, a write on another
  * writer's card, a hand-off with no browser to pause, the merge request's
  * review gate, who still owes a completion card, which refusals the task
  * keeps, and the integration asks of a task, a panel and a first mate
  * whose call never came back. Each drives a public door - the crewmate's
- * own emit_card, a card choice, the supervisor's ask doors - and reads the
- * record, the stack and the words.
+ * own emit_card, a card choice, the crewmate cards' and the integration
+ * asks' own doors - and reads the record, the stack and the words.
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -174,7 +172,7 @@ function heldCall(id: string, by?: IntegrationAsk["by"]): IntegrationAsk {
   };
 }
 
-describe("a page from the project on a crewmate's card, before it moves out of the crew supervisor", () => {
+describe("a page from the project on a crewmate's card", () => {
   it("puts the page on the card's button once the file is in the project folder, its label and path trimmed", async () => {
     const h = await crewmateOn({ browsers: taskBrowser() }, { project: projectWithPage() });
     await h.emitCard.run({ ...PLAY, browser_button: " Play ", browser_page: " game/index.html " });
@@ -236,7 +234,7 @@ describe("a page from the project on a crewmate's card, before it moves out of t
   });
 });
 
-describe("a crewmate's browser door and hand-off, before they move out of the crew supervisor", () => {
+describe("a crewmate's browser door and hand-off", () => {
   it("refuses a hand-off when the host has no browser to pause, and puts no card up", async () => {
     const browsers = taskBrowser({ helps: false });
     const h = await crewmateOn({ browsers });
@@ -258,7 +256,7 @@ describe("a crewmate's browser door and hand-off, before they move out of the cr
   });
 });
 
-describe("a crewmate's card that asks to send a kept write, before it moves out of the crew supervisor", () => {
+describe("a crewmate's card that asks to send a kept write", () => {
   it("names the send after where the write goes, makes it the default, and shows the exact call under the body", async () => {
     const h = await crewmateOn();
     const ask = keptWrite("wa000000000001");
@@ -303,7 +301,7 @@ describe("a crewmate's card that asks to send a kept write, before it moves out 
   });
 });
 
-describe("a crewmate's write on a card, before it moves out of the crew supervisor", () => {
+describe("a crewmate's write on a card", () => {
   it("refuses a revision of its own card read at another revision, and leaves the card as it was", async () => {
     const h = await crewmateOn();
     await h.emitCard.run({
@@ -394,16 +392,16 @@ describe("a crewmate's write on a card, before it moves out of the crew supervis
       body: "<p>The forest or the cave.</p>",
       actions: [],
     });
-    expect(JSON.parse(h.supervisor.readCard(` ${id} `))).toEqual(
+    expect(JSON.parse(h.supervisor.crewmateCards.readCard(` ${id} `))).toEqual(
       JSON.parse(JSON.stringify(h.supervisor.cards.cardRead(id))),
     );
-    expect(h.supervisor.readCard(" card-gone ")).toBe(
+    expect(h.supervisor.crewmateCards.readCard(" card-gone ")).toBe(
       'No card "card-gone" is on the record. Read the id again.',
     );
   });
 });
 
-describe("a crewmate's merge cards and refusals, before they move out of the crew supervisor", () => {
+describe("a crewmate's merge cards and refusals", () => {
   const MERGE_REQUEST = {
     title: "Merge the level editor's pull request",
     body: "<p>The level editor's pull request is reviewed.</p>",
@@ -470,10 +468,10 @@ describe("a crewmate's merge cards and refusals, before they move out of the cre
 
   it("says a task's crewmate owes its completion card only on active change work with none up yet", async () => {
     const h = await crewmateOn();
-    expect(h.supervisor.crewmateOwesCompletion(h.taskId)).toBe(true);
+    expect(h.supervisor.crewmateCards.crewmateOwesCompletion(h.taskId)).toBe(true);
     const seeded = (id: string, shape: Parameters<typeof seedTask>[1]["shape"]) => {
       seedTask(h.tasks, { id, title: id, status: "running", shape });
-      return h.supervisor.crewmateOwesCompletion(id);
+      return h.supervisor.crewmateCards.crewmateOwesCompletion(id);
     };
     expect(seeded("t-change", { kind: "unclear", deliverable: "change" })).toBe(true);
     expect(seeded("t-review", { kind: "review", deliverable: "change" })).toBe(false);
@@ -482,20 +480,20 @@ describe("a crewmate's merge cards and refusals, before they move out of the cre
     ).toBe(false);
     expect(seeded("t-answer", { kind: "unclear", deliverable: "answer" })).toBe(false);
     seedTask(h.tasks, { id: "t-queued", title: "t-queued", status: "queued" });
-    expect(h.supervisor.crewmateOwesCompletion("t-queued")).toBe(false);
+    expect(h.supervisor.crewmateCards.crewmateOwesCompletion("t-queued")).toBe(false);
   });
 });
 
-describe("integration calls held for the captain, before they move out of the crew supervisor", () => {
+describe("integration calls held for the captain", () => {
   it("puts a task's held call on its own card, and none for a task that has closed", async () => {
     const h = await crewmateOn();
-    h.supervisor.askIntegration(h.taskId, heldCall("ia000000000010"));
+    h.supervisor.integrationAsks.askIntegration(h.taskId, heldCall("ia000000000010"));
     expect(h.own()).toEqual([
       expect.objectContaining({ author: "host", title: "Allow Add a note on Notes?" }),
     ]);
     seedTask(h.tasks, { id: "t-closed", title: "Old notes", status: "running" });
     h.tasks.close("t-closed", { status: "dropped", reason: "cancelled", actor: "host" });
-    h.supervisor.askIntegration("t-closed", heldCall("ia000000000011"));
+    h.supervisor.integrationAsks.askIntegration("t-closed", heldCall("ia000000000011"));
     expect(h.supervisor.cards.snapshot().filter((card) => card.taskId === "t-closed")).toEqual([]);
   });
 
@@ -511,7 +509,7 @@ describe("integration calls held for the captain, before they move out of the cr
     })) as NonNullable<CrewSupervisorOptions["sendTakenIntegrationAsk"]>;
     const h = setup(fakeCrewmate(), { sendTakenIntegrationAsk, panelAskAnswered });
     const ask = heldCall("ia000000000020", "panel");
-    const cardId = h.supervisor.askIntegrationForPanel(ask);
+    const cardId = h.supervisor.integrationAsks.askIntegrationForPanel(ask);
     const row = h.tasks.capture.openCardTaskFor(cardId);
     expect(row?.delivery?.writeAsks).toEqual([expect.objectContaining({ id: ask.id })]);
     expect(
@@ -531,7 +529,7 @@ describe("integration calls held for the captain, before they move out of the cr
     });
     const h = setup(fakeCrewmate(), { sendTakenIntegrationAsk });
     const ask = heldCall("ia000000000030", "firstmate");
-    const cardId = h.supervisor.askIntegrationForFirstmate(ask);
+    const cardId = h.supervisor.integrationAsks.askIntegrationForFirstmate(ask);
     const row = h.tasks.capture.openCardTaskFor(cardId);
     h.supervisor.act(cardId, "once");
     await tick();

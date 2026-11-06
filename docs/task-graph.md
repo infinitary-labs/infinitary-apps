@@ -88,7 +88,7 @@ A task also does not close while something it waits on is still live work - open
 That wait is a soft hold (`waits`): the captain's recorded override passes it, and a close refused on it says so (`docs/delivery-rigor.md`, "The holds").
 A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
 A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does (`closeGateRefusal`, `settleRefusals.ts`).
-A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewSupervisor.addCrewmateCard`; open children stay a click-time choice because the captain can override them).
+A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewmateCards.addCrewmateCard`; open children stay a click-time choice because the captain can override them).
 The `link_tasks` description says a blocks link holds the start, and says nothing about a merge.
 It says `related` is for work neither task is waiting on.
 The first mate records a practical wait as `blocks` that turn, even when it is not a strict prerequisite, so Tasks draws the arrow.

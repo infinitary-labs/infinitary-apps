@@ -359,7 +359,7 @@ export type TaskDelivery = {
    * cause for the crew's diagnosis and the completion card, never a merge
    * input: the merge boundary does not read it; the completion card's
    * checks hold does, letting the card up at once when that branch fails
-   * every failed check too (`CrewSupervisor.pendingCiGate`).
+   * every failed check too (`CrewmateCards.pendingCiGate`).
    */
   mainChecks?: MainCheckEvidence & { head: string };
   /** The newest watched run's state and host times, kept after its watch ends (INF-594). */

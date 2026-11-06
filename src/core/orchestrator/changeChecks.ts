@@ -94,7 +94,7 @@ export class ChangeChecks {
   /**
    * check_pr_ci's verdict alone, for a caller that only needs the overall
    * reading rather than the tool's descriptive text - the crewmate
-   * completion-card CI gate (`CrewSupervisor.pendingCiGate`), which must
+   * completion-card CI gate (`CrewmateCards.pendingCiGate`), which must
    * not let a stale or never-checked reading read as green. Answers
    * "pending" unless THIS call recorded a reading: an early return or a
    * failed forge call leaves an earlier reading on the record, and that

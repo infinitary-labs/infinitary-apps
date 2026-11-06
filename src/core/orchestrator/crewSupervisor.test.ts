@@ -198,12 +198,12 @@ import { type ChangeDelivery, createChangeDelivery } from "./changeDelivery";
 import type { PrOutcome } from "./changeMerge";
 import { BASELINE_OBSERVATIONS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
 import { ciFactOf } from "./ciFact";
+import { COMPLETION_REVISED_WHILE_RUNNING } from "./crewmateCards";
 import { type CrewmateSpec, crewmateRenewedNote, crewmateRestartText } from "./crewSession";
 import {
   BACKLOG_STEER_LINE,
   backlogLeftLine,
   CardChoiceUnavailableError,
-  COMPLETION_REVISED_WHILE_RUNNING,
   CrewSupervisor,
   QUIET_CARD_MS,
   QUEUED_GUIDANCE_LINE,
@@ -7056,7 +7056,7 @@ describe("CrewSupervisor", () => {
       SETTLE_DISCARD,
     );
     // And the window on a Firstmate merge card closed with that card.
-    expect(supervisor.crewmateOwesCompletion(taskId)).toBe(false);
+    expect(supervisor.crewmateCards.crewmateOwesCompletion(taskId)).toBe(false);
   });
 
   it("words a merge its crewmate declared without a label, as the crewmate is told (FI3-249)", async () => {
@@ -7191,8 +7191,8 @@ describe("CrewSupervisor", () => {
     // While the crewmate is live and has carded nothing, the merge decision
     // is still its own to make: on 2026-09-19 the Firstmate emitted one
     // beside it four times and closed three of its own as duplicates.
-    expect(supervisor.crewmateOwesCompletion(taskId)).toBe(true);
-    expect(supervisor.crewmateOwesCompletion("no-such-task")).toBe(false);
+    expect(supervisor.crewmateCards.crewmateOwesCompletion(taskId)).toBe(true);
+    expect(supervisor.crewmateCards.crewmateOwesCompletion("no-such-task")).toBe(false);
     // A note of its own does not close the window - only a completion card.
     await specs[0]?.onCard?.({
       title: "One thing I noticed",
@@ -7201,7 +7201,7 @@ describe("CrewSupervisor", () => {
     });
     crewmate.finishPrompt();
     await tick();
-    expect(supervisor.crewmateOwesCompletion(taskId)).toBe(true);
+    expect(supervisor.crewmateCards.crewmateOwesCompletion(taskId)).toBe(true);
   });
 
   it("a deferral a crewmate declares itself is an ordinary reply, never a park (P0, WI-1)", async () => {
@@ -28453,7 +28453,7 @@ describe("the first mate's integration approval card (INF-1108)", () => {
   it("keeps the call on the card's own row, runs it once on the click, and wakes the first mate once", async () => {
     const { supervisor, tasks, sent, wakes } = firstmateSetup();
     const ask = heldCall("ia0000000001");
-    const cardId = supervisor.askIntegrationForFirstmate(ask);
+    const cardId = supervisor.integrationAsks.askIntegrationForFirstmate(ask);
     const card = supervisor.cards.snapshot().find((shown) => shown.id === cardId);
     expect(card).toMatchObject({ author: "host", title: "Allow Add a note on Notes?" });
     expect(card?.taskId).toBeUndefined();
@@ -28486,7 +28486,7 @@ describe("the first mate's integration approval card (INF-1108)", () => {
   it("INF-1879: putting consent away waits; only Not now refuses it", async () => {
     const { supervisor, tasks, sent, wakes } = firstmateSetup();
     const ask = heldCall("ia0000000002");
-    const cardId = supervisor.askIntegrationForFirstmate(ask);
+    const cardId = supervisor.integrationAsks.askIntegrationForFirstmate(ask);
     const row = tasks.capture.openCardTaskFor(cardId);
     supervisor.close(cardId);
     await tick();

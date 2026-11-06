@@ -140,7 +140,7 @@ export type EmittedCardInput = {
 /**
  * An action as a crewmate's emit_card declares it: an `EmittedAction` whose
  * label may be missing. A completion decision's settle actions are the
- * host's to word (`CrewSupervisor.withCompletionActions`), so the crewmate
+ * host's to word (`CrewmateCards.withCompletionActions`), so the crewmate
  * is told to declare no labels and its schema asks for none (FI3-249); the
  * host refuses any action it keeps that has no words.
  */

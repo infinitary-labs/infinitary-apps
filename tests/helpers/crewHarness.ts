@@ -734,7 +734,7 @@ export function handedCard(brief: string): { file: string; body: string } {
 
 /**
  * onCard's return can be a promise now that a merge decision on a
- * direct-pr task may clear a live CI gate first (`pendingCiGate`), but
+ * direct-pr task may clear a live CI gate first (`CrewmateCards.pendingCiGate`), but
  * none of these fixtures wire `checkCi`, so every call here stays the
  * synchronous string it always was. Fails loudly instead of silently
  * comparing a Promise if that assumption ever stops holding.

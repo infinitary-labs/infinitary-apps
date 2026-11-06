@@ -67,7 +67,7 @@ export async function startHomePersonal(options: {
   integrations: Pick<IntegrationsService, "forPanel">;
   panelAsks: PanelAsks;
   /** The crew, built after the panels and read only once the captain asks again. */
-  crew: () => Pick<CrewSupervisor, "cards" | "askIntegrationForPanel">;
+  crew: () => Pick<CrewSupervisor, "cards" | "integrationAsks">;
   pluginRecords: Pick<PluginRecords, "installed">;
   now: () => number;
   emit: CoreEventSink;
@@ -150,7 +150,7 @@ export async function startHomePersonal(options: {
           id: `ia${randomBytes(6).toString("hex")}`,
           at: options.now(),
         };
-        panelAsks.asking(ask, options.crew().askIntegrationForPanel(ask));
+        panelAsks.asking(ask, options.crew().integrationAsks.askIntegrationForPanel(ask));
         return true;
       },
     },

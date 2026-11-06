@@ -64,7 +64,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - Effects an agent may declare: `settle merge`, `settle discard` (always danger; `confirm` only when the body says work is unlanded), `open` a Settings section or the task browser, `request_merge` of a stored review, and `request_write` of a kept forge write.
 - The `host` effect kind belongs only to cards the app authors; every emit boundary refuses it from an agent.
 - An ordinary `request_merge` click keeps its exact reviewed target through a refused merge and an accepted unchanged repair, using the same merge-authorization owner as `settle merge`; rule-skipping clicks remain one-shot (`docs/forge.md`, "A requested merge").
-- On a completion offer the crewmate declares one `settle merge` and the host writes the merge-and-discard pair for the task's posture (`CrewSupervisor.withCompletionActions`, captain lock 3).
+- On a completion offer the crewmate declares one `settle merge` and the host writes the merge-and-discard pair for the task's posture (`CrewmateCards.withCompletionActions`, captain lock 3).
   A first-mate `settle merge` card on a task with a saved story binds that story once it is published, and is refused before display until then (INF-2490).
   Every merge offer names the change it was shown for, and its click refuses once another change is current.
   A merge leaves a task open while a question or another of its pull requests is open, and the crewmate judges what comes next (INF-2525; `docs/forge.md`, "A requested merge").

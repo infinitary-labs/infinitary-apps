@@ -285,7 +285,7 @@ Both are core channels this Mac's window alone may ask.
 ## From a card
 
 A crewmate's card may carry one door to its task's browser: the crewmate names the label (`Try it`, `View search`, `View booking`) with `browser_button`, and the host names the browser.
-At emit the supervisor reads the task's browser fact and writes the card's live attachment (`LiveAttachment` in `src/shared/cards.ts`, `cards.attachment_json`): the label, the task, this run's `session` and the browser's `generation`.
+At emit the card's browser door (`CardBrowserActions.browserAttachment`) reads the task's browser fact and writes the card's live attachment (`LiveAttachment` in `src/shared/cards.ts`, `cards.attachment_json`): the label, the task, this run's `session` and the browser's `generation`.
 `TaskBrowsers` mints a new `session` each time the app starts and counts each task's browsers in that run, so the two name one browser: Open again or the crewmate's next open after a stop is a newer generation, and a card from before a restart names a session no browser has.
 A label that is empty or longer than 32 characters is refused in words, and so is a button on a task with no browser, or whose browser stopped when the task closed, unless it names a page from the project (below); a stopped browser Open again can still start is a door too.
 A revision without `browser_button` takes the door away, and the attachment is part of the card's offer and its fingerprint (`docs/card-evidence.md`).
@@ -300,7 +300,7 @@ The card's line says `this card's browser has stopped` in both cases.
 
 A browser button may open a page from the task's project instead of the browser as it is: a crewmate gives `browser_page`, an HTML file's path relative to its working copy, which is its path in the project folder too, such as `index.html` for a finished game's `Play`.
 The card's live attachment is then kind `page` (`LiveAttachment` in `src/shared/cards.ts`): the label, the task and the path, with no browser named, because none need be open.
-At emit the supervisor (`CrewSupervisor.pageAttachment`) refuses `browser_page` without a label, beside `browser_handoff`, and on a path that is not an `.html` or `.htm` file relative to the folder with no empty, `.`, `..` or `.git` part (`projectPagePathRefusal`, `src/shared/projectPage.ts`).
+At emit the card's browser door (`CardBrowserActions.pageAttachment`) refuses `browser_page` without a label, beside `browser_handoff`, and on a path that is not an `.html` or `.htm` file relative to the folder with no empty, `.`, `..` or `.git` part (`projectPagePathRefusal`, `src/shared/projectPage.ts`).
 It refuses a task with no project, one that runs on another computer, and a file it finds neither in the task's working copy nor in the project folder.
 Finding is `projectFile` (`src/core/workspace/projectPage.ts`): the folder is resolved once, then every part of the path is read without following it, so a link anywhere on the way is refused, and the end must be a regular file.
 
@@ -422,7 +422,7 @@ The browser records the grant, hides signed-in-page diagnostics as for a manual 
 A browser attempts a site once; a website that rejects the sign-in needs the captain, not another automatic attempt.
 Turning the permission off stops future grants but leaves browsers already using the save signed in; Remove also signs them out.
 
-When a crewmate asks for help on a site this Mac has a sign-in saved for that its page can use - a cookie still alive, or local or session storage for the very origin the page is on - and its browser holds nothing of the captain's yet - no page the captain handed back, no saved sign-in - the host adds `Use my saved <site> sign-in` to the request card as its default, last in the row, and relabels the crewmate's open-browser action `Sign in myself` (`CrewSupervisor.withSavedSignIn`, `TaskBrowsers.savedSignInFor`).
+When a crewmate asks for help on a site this Mac has a sign-in saved for that its page can use - a cookie still alive, or local or session storage for the very origin the page is on - and its browser holds nothing of the captain's yet - no page the captain handed back, no saved sign-in - the host adds `Use my saved <site> sign-in` to the request card as its default, last in the row, and relabels the crewmate's open-browser action `Sign in myself` (`CardBrowserActions.withSavedSignIn`, `TaskBrowsers.savedSignInFor`).
 The crewmate never learns which sites are saved, and only the host adds that action: its effect is `{ kind: "open", target: "browser", savedSignIn: true }`, which the crewmate's tool cannot declare and the supervisor refuses from any other author.
 The host adds it after the card lint, so the 2 or 3 actions a decision gives are counted over the crewmate's own (`docs/card-authoring.md`, "The shape lint").
 The captain's click is the grant: `TaskBrowsers.grantSavedSignIn` copies that one site's saved cookies, and its local and session storage for the origin the page is on, into the browser the card's attachment names, reloads its page so the site reads them, hands the browser back to its crewmate - refusing every older ref, as a return does - and writes one line on the task's timeline, `you let it use your saved sign-in at <site>`, beside the control handoffs.

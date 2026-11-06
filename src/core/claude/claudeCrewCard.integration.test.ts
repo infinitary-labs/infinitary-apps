@@ -31,7 +31,7 @@ import { createClaudeSessionFactory } from "./session";
  * makes declares the merge alone. The client checks that call against the
  * schema it was served, and the app's tool server checks it again; the
  * card must reach the host, which words the buttons
- * (`CrewSupervisor.withCompletionActions`, held in its own tests).
+ * (`CrewmateCards.withCompletionActions`, held in its own tests).
  */
 
 // One client start, one tool call and one answer. Measured 2026-10-04 on

@@ -208,7 +208,7 @@ The first mate hears git's words in a `commit-failed` wake, on any personal task
 A report with a captain-turn witness routes as any other: an open decision card or a declared wait on the captain keeps the task open.
 It stays quiet while a card of the task is on the captain's screen; a declared wait with no card up wakes the first mate, which owes that card (`docs/report-sort.md`).
 A note alone never holds the turn, and stays on the captain's screen after the task closes done.
-Every other settle mode is refused on a personal task with the reason, and a crewmate card carrying a settle effect is refused at `addCrewmateCard` - there is nothing to merge, land, or discard.
+Every other settle mode is refused on a personal task with the reason, and a crewmate card carrying a settle effect is refused at `CrewmateCards.addCrewmateCard` - there is nothing to merge, land, or discard.
 
 **Fix forward, remove.**
 The first mate's context block lists "your surfaces" in the saved layout's order (id, title, rail, position, its place in its slot, and the window's own word on its state - drawn, collapsed, folded for room, in its rail's More row, loading, stopped, off, hidden or refused, with the reason, or "no word from the window"); a follow-up resolves to the surface's id, rides a second `personal_ui` spawn naming it, and produces a second commit on the same directory.

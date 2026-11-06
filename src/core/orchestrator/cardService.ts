@@ -1755,7 +1755,7 @@ export class CardService {
 
   /**
    * The crewmate's open completion card's merge action on a task, when one is up: the
-   * card, the action the host itself attached (`withCompletionActions`),
+   * card, the action the host itself attached (`CrewmateCards.withCompletionActions`),
    * and the label the captain is reading. Found by the declared EFFECT, the
    * way every other host dispatch is, never by an action id.
    */

@@ -87,7 +87,7 @@ describe("FirstmateAgent answer delivery", () => {
           secrets: new FileIntegrationSecrets(scratchDir("infinitary-agent-integration-keys-")),
           asks: {
             keep: (taskId, ask) => f.tasks.delivery.keepWriteAsk(taskId, ask),
-            keepForFirstmate: (ask) => supervisor.askIntegrationForFirstmate(ask),
+            keepForFirstmate: (ask) => supervisor.integrationAsks.askIntegrationForFirstmate(ask),
             take: (taskId, askId) => f.tasks.delivery.takeWriteAsk(taskId, askId),
             record: (taskId, askId, outcome) =>
               f.tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),

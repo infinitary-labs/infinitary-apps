@@ -415,7 +415,7 @@ export function startPlacedHome(options: {
           secrets,
           asks: {
             keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
-            present: (taskId, ask) => supervisor.askIntegration(taskId, ask),
+            present: (taskId, ask) => supervisor.integrationAsks.askIntegration(taskId, ask),
             take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
             record: (taskId, askId, outcome) =>
               tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),

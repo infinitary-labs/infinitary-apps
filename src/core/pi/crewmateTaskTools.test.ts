@@ -622,7 +622,7 @@ describe("the crewmate tool spec", () => {
   it("takes a completion decision that declares the merge without a label on both runtimes (FI3-249)", async () => {
     // The crewmate is told the host attaches the completion buttons and to
     // declare no labels, so its schema must let the merge go unlabeled; the
-    // host words the buttons (`CrewSupervisor.withCompletionActions`).
+    // host words the buttons (`CrewmateCards.withCompletionActions`).
     const call = {
       id: "call-1",
       name: "emit_card",

@@ -392,7 +392,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       }
       return text;
     },
-    readCard: (cardId) => supervisor.readCard(cardId),
+    readCard: (cardId) => supervisor.crewmateCards.readCard(cardId),
     query: (input) =>
       queryTasks(
         tasks,

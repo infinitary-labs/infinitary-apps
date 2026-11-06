@@ -45,6 +45,11 @@ export function baseEnv(dir: string): NodeJS.ProcessEnv {
  * alone leaves a new full release on the badge. STANDIN_GH_CROWNS_NEW=1
  * stands in for a GitHub that marks every new full release whatever it is
  * asked.
+ *
+ * STANDIN_GH_CREATE_ERRORS stands in for GitHub answering a release's
+ * creates with HTTP 500, one comma-separated word per create of that tag in
+ * order: `lost` makes nothing, as release run 42122748351 met it, and `made`
+ * makes the release before answering; an empty word or none creates it.
  */
 export function standInGh(COMMIT: string) {
   const dir = scratchDir("infinitary-release-assets-");
@@ -119,13 +124,21 @@ if (verb === "view") {
   if (!exists) fail("release not found");
   if (flag("--json") === "assets") process.stdout.write(assets().map((name) => name + "\\n").join(""));
 } else if (verb === "create") {
+  const tries = path.join(state, "creates." + flag("--repo").replace("/", "__") + "." + tag);
+  const tried = fs.existsSync(tries) ? Number(fs.readFileSync(tries, "utf8")) : 0;
+  fs.writeFileSync(tries, String(tried + 1));
+  const serverError = (process.env.STANDIN_GH_CREATE_ERRORS ?? "").split(",")[tried];
   if (exists) fail("a release with the same tag name already exists");
-  const named = flag("--target");
-  const commit = /^[0-9a-f]{40}$/.test(named) ? named : "f".repeat(40);
-  const prerelease = args.includes("--prerelease");
-  record(flag("--repo"), tag, { commit, args, prerelease });
-  const marks = !args.includes("--latest=false") || process.env.STANDIN_GH_CROWNS_NEW === "1";
-  if (marks && !prerelease) markLatest(flag("--repo"), tag);
+  if (serverError !== "lost") {
+    const named = flag("--target");
+    const commit = /^[0-9a-f]{40}$/.test(named) ? named : "f".repeat(40);
+    const prerelease = args.includes("--prerelease");
+    record(flag("--repo"), tag, { commit, args, prerelease });
+    const marks = !args.includes("--latest=false") || process.env.STANDIN_GH_CROWNS_NEW === "1";
+    if (marks && !prerelease) markLatest(flag("--repo"), tag);
+  }
+  // What gh printed when GitHub answered release run 42122748351's create.
+  if (serverError) fail("HTTP 500 (https://api.github.com/repos/" + flag("--repo") + "/releases)");
 } else if (verb === "upload") {
   if (!exists) fail("release not found");
   for (const file of args.slice(3).filter((arg, at, all) => !arg.startsWith("--") && all[at - 1] !== "--repo")) {

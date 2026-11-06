@@ -13,9 +13,11 @@
 # to mark a full release: while no release is marked, GitHub shows the
 # newest full release as latest anyway. So a full release kept off the
 # badge first marks the release showing now, and checks it still shows once
-# the new one exists, marking it again if it moved. Then,
-# when the release already carries the zip - a retry of the same release,
-# whose rebuild never reproduces the same bytes - the published bytes win:
+# the new one exists, marking it again if it moved. A create GitHub answers
+# with a server error is read back, and created once more only while the
+# release is still missing. Then, when the release already carries the zip
+# - a retry of the same release, whose rebuild never reproduces the same
+# bytes - the published bytes win:
 #
 #   adopt  the record: the release's tag must name SOURCE_COMMIT, and the
 #          published zip is fetched back and becomes this run's artifact;
@@ -62,6 +64,28 @@ latest_release() {
 }
 mark_latest() { gh api --method PATCH "repos/$REPO/releases/${1%% *}" -f make_latest=true >/dev/null; }
 
+# GitHub can answer a create with a server error (HTTP 5xx) whether or not
+# it made the release; an alpha's record once met HTTP 500 with nothing
+# made. So after a server error the release is read again and, only while
+# it is still missing, created once more. Any other failure, or a second
+# one, fails the run.
+create_release() {
+  local answer="$WORK/create-answer"
+  mkdir -p "$WORK"
+  if gh release create "$TAG" "${CREATE[@]}" 2>"$answer"; then
+    cat "$answer" >&2
+    return
+  fi
+  cat "$answer" >&2
+  grep -qE 'HTTP 5[0-9]{2}([^0-9]|$)' "$answer" || fail "GitHub refused creating $REPO's release $TAG"
+  if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+    echo "publish-release-asset: GitHub answered a server error, but $REPO holds $TAG" >&2
+  else
+    echo "publish-release-asset: GitHub answered a server error and $REPO holds no $TAG; creating it again" >&2
+    gh release create "$TAG" "${CREATE[@]}"
+  fi
+}
+
 if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
   : "${TITLE:?Missing TITLE}" "${NOTES_FILE:?Missing NOTES_FILE}" "${TARGET:?Missing TARGET}"
   CREATE=(--repo "$REPO" --target "$TARGET" --title "$TITLE" --notes-file "$NOTES_FILE")
@@ -74,7 +98,7 @@ if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
     KEEP_LATEST="$(latest_release)"
     [[ -z "$KEEP_LATEST" ]] || mark_latest "$KEEP_LATEST"
   fi
-  gh release create "$TAG" "${CREATE[@]}"
+  create_release
   if [[ -n "$KEEP_LATEST" ]]; then
     if [[ "$(latest_release)" != "$KEEP_LATEST" ]]; then
       mark_latest "$KEEP_LATEST"

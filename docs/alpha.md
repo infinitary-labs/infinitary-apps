@@ -261,6 +261,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   No urgent-alpha bypass.
 - **Published bytes never change** (`scripts/publish-release-asset.sh`).
   The source release is the record: its tag must name the source commit.
+  When GitHub answers a release's create with a server error, the script reads the release again and creates it once more only while it is still missing; a second error, or any other refusal, fails the upload.
   A retry adopts an already-published ZIP: its signing job reads the record before the disk image, builds the image from that ZIP's finalized, stapled app rather than the retry's rebuilt app, and hands that ZIP over.
   The upload job's record must then name the same bytes; a record another run of the version changed since that read fails before anything uploads, and a fresh dispatch signs from it.
   A disk image or Linux package any place already holds is adopted too, and the adopted disk image's app must match the ZIP exactly; two places holding different bytes fail before any upload.

@@ -754,6 +754,56 @@ describe("a release's published assets", () => {
     expect(gh.calls().flat()).not.toContain("--clobber");
   });
 
+  // INF-2771: release run 42122748351's upload failed when GitHub answered the
+  // record's create with HTTP 500 and made nothing.
+  it("reads the release again after GitHub answers its create with a server error, and creates it once more only while missing", () => {
+    const gh = standInGh(COMMIT);
+    const zip = gh.zip(VERSION, "build");
+    const sha = sha256Of(`${VERSION} build`);
+    const creates = () =>
+      gh.calls().filter(([command, verb]) => command === "release" && verb === "create").length;
+
+    // As in run 42122748351: nothing was made, so the record is created again.
+    const lost = gh.run("adopt", PRIVATE, `v${VERSION}`, zip, {
+      PRERELEASE: "true",
+      LATEST: "false",
+      STANDIN_GH_CREATE_ERRORS: "lost",
+    });
+    expect(lost.status, lost.stderr).toBe(0);
+    expect(lost.stderr).toContain(`HTTP 500 (https://api.github.com/repos/${PRIVATE}/releases)`);
+    expect(lost.outputs).toEqual({ zip, sha256: sha, state: "uploaded" });
+    expect(creates()).toBe(2);
+    expect(gh.created(PRIVATE, `v${VERSION}`)).toEqual(
+      expect.arrayContaining(["--target", COMMIT, "--prerelease", "--latest=false"]),
+    );
+    expect(gh.published(PRIVATE, `v${VERSION}`)).toEqual({
+      [NAME]: `${VERSION} build`,
+      [`${NAME}.sha256`]: `${sha}  ${NAME}\n`,
+    });
+
+    // GitHub made the release before its server error: that release is kept.
+    const made = gh.run("match", PUBLIC, `infinitary-alpha-v${VERSION}`, zip, {
+      TARGET: "main",
+      PRERELEASE: "true",
+      LATEST: "false",
+      STANDIN_GH_CREATE_ERRORS: "made",
+    });
+    expect(made.status, made.stderr).toBe(0);
+    expect(made.outputs.state).toBe("uploaded");
+    expect(creates()).toBe(3);
+    expect(gh.published(PUBLIC, `infinitary-alpha-v${VERSION}`)?.[NAME]).toBe(`${VERSION} build`);
+
+    // A second server error fails the run, with nothing published.
+    const record = "kunchenguid/stand-in-record";
+    const twice = gh.run("adopt", record, `v${VERSION}`, zip, {
+      PRERELEASE: "true",
+      STANDIN_GH_CREATE_ERRORS: "lost,lost",
+    });
+    expect(twice.status).toBe(1);
+    expect(creates()).toBe(5);
+    expect(gh.published(record, `v${VERSION}`)).toBeNull();
+  });
+
   it("refuses a record whose tag names another commit, and a sidecar that disagrees", () => {
     const gh = standInGh(COMMIT);
     gh.seed(PRIVATE, `v${VERSION}`, OTHER_COMMIT, {});

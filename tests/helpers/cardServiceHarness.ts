@@ -8,12 +8,13 @@ import type { Card, CardThread } from "@shared/cards";
 import { CardService, type CardServiceHost } from "../../src/core/orchestrator/cardService";
 import { CardStore } from "../../src/core/storage/cardStore";
 import type { AppDatabase } from "../../src/core/storage/db";
-import { TaskService } from "../../src/core/tasks/taskService";
+import { TaskService, type TaskServiceOptions } from "../../src/core/tasks/taskService";
 import { freshDatabase } from "./database";
 
 export function setup(
   db: AppDatabase = freshDatabase(),
   now = () => 1000,
+  repos?: TaskServiceOptions["repos"],
 ): {
   db: AppDatabase;
   tasks: TaskService;
@@ -27,7 +28,7 @@ export function setup(
     extra?: Partial<CardServiceHost>,
   ) => CardService;
 } {
-  const tasks = new TaskService({ db, strict: true, now });
+  const tasks = new TaskService({ db, repos, strict: true, now });
   const cardStore = new CardStore(db);
   const gates: string[] = [];
   const pushes: Card[][] = [];

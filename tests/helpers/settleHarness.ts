@@ -83,13 +83,15 @@ export type SettleWorld = SettleOwners & {
 export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
   const now = 1_000;
   const db = freshDatabase();
-  const { tasks, make } = cardWorld(db, () => now);
-  const cards = make();
-  const inbox = new InboxStore(db, { now: () => now });
   db.prepare(
     "INSERT INTO repos (id, path, name, added_at, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, 'direct-pr', 0)",
   ).run("project", "/not-mounted/project", "Meter", 1, "https://github.com/o/meter.git");
   const repos = new RepoRegistry(db, "/not-mounted/fleet");
+  // The task service reads each task's policies through the same projects
+  // the settle does, as the app wires them: a project change is a policy change.
+  const { tasks, make } = cardWorld(db, () => now, repos);
+  const cards = make();
+  const inbox = new InboxStore(db, { now: () => now });
   seedTask(tasks, {
     id: TASK,
     title: "Correct the meter",

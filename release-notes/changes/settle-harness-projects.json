@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "settle-harness-projects",
+      "reason": "Internal: the settle service's test harness gives its task service the same projects the app does, so its guardrail test sees a project change as a policy change again; nothing a person sees changes."
+    }
+  ]
+}

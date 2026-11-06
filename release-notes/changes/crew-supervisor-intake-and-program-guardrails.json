@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-intake-and-program-guardrails",
+      "reason": "Internal: tests pin how the crew supervisor takes in new work - a commission's refusals, start_after waits, an escalation that queues, drops, carry-ons and parents that close - and how it runs a program's ask(), a refused part and a drop, before that code moves out of the supervisor; only tests change and nothing a person sees changes."
+    }
+  ]
+}

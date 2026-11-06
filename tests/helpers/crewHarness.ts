@@ -267,6 +267,8 @@ export type SetupExtras = {
   recallUpdateCard?: CrewSupervisorOptions["recallUpdateCard"];
   /** The process a program's script runs in (docs/programs.md). */
   programProcess?: CrewSupervisorOptions["programProcess"];
+  /** The one-question session a program's ask() reads its answer from. */
+  answerJson?: CrewSupervisorOptions["answerJson"];
 };
 
 export function routingOffRouter(
@@ -477,6 +479,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
       : {}),
     ...(extras.recallUpdateCard ? { recallUpdateCard: extras.recallUpdateCard } : {}),
     ...(extras.programProcess ? { programProcess: extras.programProcess } : {}),
+    ...(extras.answerJson ? { answerJson: extras.answerJson } : {}),
     ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
     ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),
     ...(extras.modelName ? { modelName: extras.modelName } : {}),

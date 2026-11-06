@@ -1,0 +1,282 @@
+/**
+ * How the crew supervisor takes in new work (docs/task-record.md,
+ * docs/programs.md "Filing a program"): a commission's refusals before a row
+ * exists, a start_after's waits, an escalation that queues, the task graph's
+ * drop and carry-on, a parent that closes when everything under it has, and
+ * a program declared on a plan. INF-2625's plan, the crew supervisor's
+ * seventh step, moves this intake out of the supervisor into an owner of its
+ * own; these cases pin, before it moves, the behaviour no other test
+ * reaches. Each drives a public door of the supervisor and reads the
+ * refusal, the receipt, the feed line and the record.
+ */
+
+import type { HostChildSpawner } from "@core/host";
+import { describe, expect, it } from "vitest";
+import { fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedTask } from "../tasks/seedTask";
+
+/** A program process for a plan that is refused before anything spawns. */
+const NEVER_SPAWNED: HostChildSpawner = {
+  spawn: () => {
+    throw new Error("a refused program never starts its process");
+  },
+};
+
+/** The feed lines the supervisor broadcast, in order. */
+function notes(events: { type: string; text?: string }[]): string[] {
+  return events.flatMap((event) =>
+    event.type === "firstmate_note" && event.text ? [event.text] : [],
+  );
+}
+
+/** A supervisor with "meter", a project of the captain's that merges nothing. */
+async function withProject(extras: Parameters<typeof setup>[1] = {}) {
+  const h = setup(fakeCrewmate(), extras);
+  const { repo } = await h.repos.setup({ kind: "init", name: "meter" });
+  return { ...h, repo };
+}
+
+describe("new work, before its intake moves out of the crew supervisor", () => {
+  it("refuses a commission whose shape cannot be met before any row exists", async () => {
+    const h = await withProject();
+    const personal = h.repos.ensurePersonal(scratchDir("infinitary-personal-"));
+    seedTask(h.tasks, { id: "builder1", title: "Correct the meter", status: "running" });
+    const commission = (repoId: string | undefined, shape: Record<string, unknown>) =>
+      h.supervisor.commission({
+        title: "Read the meter",
+        intent: intentOf("read what the meter shows"),
+        ...(repoId ? { repoId } : {}),
+        shape,
+      });
+
+    await expect(commission(h.repo.id, { review_of: "builder1", in_folder: true })).rejects.toThrow(
+      "A review reads its builder's branch; omit in_folder.",
+    );
+    await expect(commission(undefined, { in_folder: true })).rejects.toThrow(
+      "in_folder needs a project: pass the repo_id of the project whose folder the task works in.",
+    );
+    await expect(commission(personal.id, { in_folder: true })).rejects.toThrow(
+      "The personal workspace already builds in place; omit in_folder.",
+    );
+    await expect(
+      commission(h.repo.id, { in_folder: true, delivery_ask: "local-only" }),
+    ).rejects.toThrow(
+      "Folder work runs on the computer keeping meter's folder and ships nothing; omit delivery_ask.",
+    );
+    await expect(commission(h.repo.id, { runs_on_ask: "Basement Mac" })).rejects.toThrow(
+      /^Nothing was spawned\./,
+    );
+    // Only the seeded builder is on the record: no refusal left a row behind.
+    expect(h.tasks.list().map((row) => row.id)).toEqual(["builder1"]);
+  });
+
+  it("refuses a start_after that names no task, no known allowance or nothing at all", async () => {
+    const h = await withProject({ quotaGateRefValid: (ref) => ref === "bucket:high" });
+    const queue = (startAfter: { afterTask?: string; whenQuotaResets?: string; at?: number }) =>
+      h.supervisor.commission({
+        title: "Read the meter",
+        intent: intentOf("read what the meter shows"),
+        repoId: h.repo.id,
+        startAfter,
+      });
+
+    await expect(queue({ afterTask: "NOPE-9" })).rejects.toThrow(
+      'Unknown task "NOPE-9" in start_after. Use a task id from crew_status.',
+    );
+    await expect(queue({ whenQuotaResets: "openai" })).rejects.toThrow(
+      'Unknown quota scope "openai" in start_after.',
+    );
+    await expect(queue({})).rejects.toThrow(
+      "start_after needs after_task, when_quota_resets, or at_time.",
+    );
+    expect(h.tasks.list()).toEqual([]);
+  });
+
+  it("queues a commission behind both its allowance or its time and the tasks it names", async () => {
+    const h = await withProject({ quotaGateRefValid: () => true });
+    const first = seedTask(h.tasks, { id: "first001", title: "Measure", status: "queued" });
+    const second = seedTask(h.tasks, { id: "second01", title: "Calibrate", status: "queued" });
+
+    const quota = await h.supervisor.commission({
+      title: "Read the meter",
+      intent: intentOf("read what the meter shows"),
+      repoId: h.repo.id,
+      blockedBy: [first.key],
+      startAfter: { afterTask: second.id, whenQuotaResets: "bucket:high" },
+    });
+    expect(quota.crewmate).toBe("queued");
+    expect(h.tasks.get(quota.taskId)?.gate).toEqual({ kind: "quota-reset", ref: "bucket:high" });
+    expect(h.tasks.graph.blockers(quota.taskId).map((row) => row.id)).toEqual([
+      first.id,
+      second.id,
+    ]);
+    expect(notes(h.events).at(-1)).toBe(
+      'Queued "Read the meter" - starts when a high model has allowance again.',
+    );
+
+    const until = Date.UTC(2031, 0, 2, 3, 4);
+    const timed = await h.supervisor.commission({
+      title: "Read it later",
+      intent: intentOf("read what the meter shows later"),
+      repoId: h.repo.id,
+      startAfter: { afterTask: first.key, at: until },
+    });
+    expect(h.tasks.get(timed.taskId)?.gate).toEqual({ kind: "at-time", until });
+    expect(h.tasks.graph.blockers(timed.taskId).map((row) => row.id)).toEqual([first.id]);
+    expect(h.sessions.open).not.toHaveBeenCalled();
+  });
+
+  it("queues an escalation that waits, closing the attempt it replaces and linking the two", async () => {
+    const h = await withProject();
+    const previous = seedTask(h.tasks, {
+      id: "attempt1",
+      title: "Correct the meter",
+      status: "idle",
+      repoId: h.repo.id,
+      difficulty: "medium",
+      branch: "fm/task-attempt1",
+      worktreeDir: "/w/attempt1",
+    });
+
+    const fresh = await h.supervisor.commission({
+      title: "Correct the meter again",
+      intent: intentOf("correct the meter with a stronger model"),
+      shape: { escalate_from: previous.key },
+      startAfter: { at: Date.UTC(2031, 0, 2) },
+    });
+    await tick();
+
+    expect(fresh.crewmate).toBe("queued");
+    const row = h.tasks.get(fresh.taskId);
+    // The lineage stays in the attempt's project.
+    expect(row).toMatchObject({ status: "open", repoId: h.repo.id });
+    expect(h.tasks.get(previous.id)).toMatchObject({
+      status: "dropped",
+      closedReason: "superseded",
+    });
+    expect(h.tasks.graph.discoveredOrigins(fresh.taskId).map((origin) => origin.id)).toEqual([
+      previous.id,
+    ]);
+    expect(h.sessions.open).not.toHaveBeenCalled();
+  });
+
+  it("refuses to drop a closed task or a parent whose child has started, and drops a carried-on open task done", async () => {
+    const h = await withProject();
+    const closed = seedTask(h.tasks, { id: "closed01", title: "Old meter", status: "cancelled" });
+    expect(h.supervisor.dropTask(closed.key, { reason: "gone" })).toBe(
+      `${closed.key} "Old meter" is already cancelled.`,
+    );
+
+    const parent = h.supervisor.plan({
+      title: "Rework the meter",
+      intent: intentOf("rework the meter"),
+      repoId: h.repo.id,
+    });
+    const child = seedTask(h.tasks, {
+      id: "child001",
+      title: "Rewire the gauge",
+      status: "running",
+      parentId: parent.id,
+    });
+    expect(h.supervisor.dropTask(parent.key, { reason: "changed course", confirm: true })).toBe(
+      `Cannot drop ${parent.key} "Rework the meter": its child has started (${child.key} "Rewire the gauge"). Settle them first.`,
+    );
+    expect(h.tasks.get(parent.id)?.status).toBe("open");
+
+    const planned = h.supervisor.plan({
+      title: "Label the meter",
+      intent: intentOf("label the meter"),
+      repoId: h.repo.id,
+    });
+    const carrier = h.supervisor.plan({
+      title: "Label every gauge",
+      intent: intentOf("label every gauge"),
+      repoId: h.repo.id,
+    });
+    expect(await h.supervisor.carryOnTask(planned.key, carrier.key)).toBe(
+      `Closed ${planned.key} "Label the meter" as done: ${carrier.key} carries on its work.`,
+    );
+    expect(h.tasks.get(planned.id)).toMatchObject({ status: "done" });
+    expect(notes(h.events).at(-1)).toBe(
+      `"Label the meter" (${planned.key}) is carried on by ${carrier.key}.`,
+    );
+  });
+
+  it("leaves a parent whose children have all closed open while it has a card of its own, and closes it once the card goes", async () => {
+    const h = await withProject();
+    const carded = h.supervisor.plan({
+      title: "Carded parent",
+      intent: intentOf("hold a card"),
+      repoId: h.repo.id,
+    });
+    const kid = h.supervisor.plan({
+      title: "Its child",
+      intent: intentOf("do the child's work"),
+      repoId: h.repo.id,
+      parent: carded.key,
+    });
+    const cardId = h.supervisor.addFirstmateCard({
+      title: "Which meter?",
+      body: "<p>Which meter does this rework?</p>",
+      taskId: carded.id,
+      actions: [
+        { id: "gauge", label: "The gauge", default: true },
+        { id: "dial", label: "The dial" },
+      ],
+    });
+    h.tasks.close(kid.id, { status: "done", reason: "finished", actor: "host" });
+    await h.supervisor.sweepGates(Date.now());
+    expect(h.tasks.get(carded.id)?.status).toBe("open");
+
+    h.supervisor.closeCard(cardId, { kind: "firstmate" });
+    await h.supervisor.sweepGates(Date.now());
+    expect(h.tasks.get(carded.id)).toMatchObject({ status: "done", closedReason: "finished" });
+  });
+
+  it("refuses a program on a plan this app cannot run, one that branches, or one whose script cannot be filed", async () => {
+    const without = await withProject();
+    const plan =
+      (h: Awaited<ReturnType<typeof withProject>>, shape: Record<string, unknown>) => () =>
+        h.supervisor.plan({
+          title: "Cap results",
+          intent: intentOf("cap what the meter renders"),
+          repoId: h.repo.id,
+          shape,
+        });
+    expect(plan(without, { program: { script: "return 1;", bound: 1 } })).toThrow(
+      "Nothing was filed. This app cannot run a program.",
+    );
+
+    const h = await withProject({ programProcess: NEVER_SPAWNED });
+    const personal = h.repos.ensurePersonal(scratchDir("infinitary-personal-"));
+    seedTask(h.tasks, {
+      id: "source01",
+      title: "Source",
+      status: "completed",
+      repoId: h.repo.id,
+      branch: "fm/task-source01",
+      worktreeDir: "/w/source01",
+    });
+    expect(() =>
+      h.supervisor.plan({
+        title: "Cap results",
+        intent: intentOf("cap what the meter renders"),
+        repoId: personal.id,
+        shape: { program: { script: "return 1;", bound: 1 } },
+      }),
+    ).toThrow("A program runs its parts in a project");
+    expect(
+      plan(h, { program: { script: "return 1;", bound: 1 }, branch_from: "source01" }),
+    ).toThrow(
+      "Nothing was filed. A program has no working copy of its own; give branch_from to its parts.",
+    );
+    expect(plan(h, { program: { script: "const x = await import('fs');", bound: 1 } })).toThrow(
+      "Nothing was filed. program.script imports code; a program has only task(), ask(), log(), phase() and args.",
+    );
+    expect(plan(h, { program: { script: "return 1;", bound: 0 } })).toThrow(
+      "Nothing was filed. program.bound must be your proposed upper bound",
+    );
+    expect(h.tasks.list().map((row) => row.id)).toEqual(["source01"]);
+  });
+});

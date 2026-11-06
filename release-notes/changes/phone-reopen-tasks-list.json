@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-reopen-tasks-list",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Your iPhone and iPad stay smooth when you reopen Infinitary",
+      "body": "When you came back to Infinitary on your iPhone or iPad after a while away, it could stutter for several seconds while it caught up with your computer. The Tasks list no longer rebuilds while another tab shows, so a large board catches up without the stutter.",
+      "noPicture": "The screens look the same; the change is how much work the phone does while it catches up.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

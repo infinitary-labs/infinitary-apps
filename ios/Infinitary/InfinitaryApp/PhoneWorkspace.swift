@@ -103,7 +103,8 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         TabView(selection: Binding(get: { shown }, set: { _ in })) {
             tab(.home) { home }
             // INF-944 item 6: Activity is the last tab.
-            if let tasks { tab(.tasks) { noticed(tasks.background(PhoneTheme.background)) } }
+            // INF-2764: the Tasks list kept while another tab shows reads nothing until it shows again.
+            if let tasks { tab(.tasks) { noticed(tasks.background(PhoneTheme.background)).environment(\.phoneTasksShown, shown == .tasks) } }
             tab(.activity) { noticed(activity.background(PhoneTheme.background).accessibilityIdentifier("activity-list")) }
         }
         .toolbar {

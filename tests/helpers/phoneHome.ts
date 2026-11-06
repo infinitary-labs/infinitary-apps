@@ -503,6 +503,7 @@ export async function startPhoneHome(
   });
   const token = randomBytes(24).toString("hex");
   let changed = 0;
+  let boardTasks = 0;
   let ssh: SshServer | undefined;
   const control = createServer(async (request, response) => {
     const [_, supplied, command] = (request.url ?? "").split("/");
@@ -1642,6 +1643,18 @@ export async function startPhoneHome(
           });
           result = { before, title: "Streaming finished" };
           observations.push({ check: "stream-start", result });
+          break;
+        }
+        case "POST board-task": {
+          // INF-2764: a board update while the phone shows another tab; each call adds one queued task.
+          boardTasks += 1;
+          const added = seedTask(core.services.tasks, {
+            id: `phone-board-${boardTasks}`,
+            title: `Chart the harbour's ${boardTasks}th mooring`,
+            status: "queued",
+            startPolicy: "on-request",
+          });
+          result = { id: added.id };
           break;
         }
         case "POST empty-cards":

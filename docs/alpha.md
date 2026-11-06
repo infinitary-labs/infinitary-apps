@@ -54,7 +54,8 @@ The host enables native replacement only for an installed release Mac, not a dev
 - **Settings and controlling views.**
   Settings → General places keyboard-accessible Stable and Alpha choices next to Version.
   The Version row and the top-right update notice draw one update part (`src/renderer/src/app/UpdateStepView.tsx`) from one ladder (`updateStep`, `src/renderer/src/app/updateStep.ts`): for every state a line that says where the update stands and, beside it, a button that takes the next step, with at most one more control.
-  Up to date, a copy ahead of its channel, or no release yet: the line says so and when the release source last answered (`checkedAt`; "Up to date on Stable. Checked just now."), with Check for updates.
+  Up to date, a copy ahead of its channel, or no release yet: the line says so and when the release source last answered (`checkedAt`; "Up to date on Stable.
+  Checked just now."), with Check for updates.
   Check for updates reads the release source now on every copy whose installation the app knows, past the 4-hour saved answer, and joins a check already reading (`checkNow`, `inf:update:check`); command search's Check for updates and the app menu's Check for Updates… open Settings → General with focus on the row's next step and press Check for updates.
   A failed check says so beside Try again and Open the releases page; it never says the copy is up to date, while the quiet hourly check stays silent on failure.
   A version available offers Update and restart (Install on Linux) beside View release, or, where a package manager installs it (Homebrew, Arch, NixOS), shows its command with Copy command.

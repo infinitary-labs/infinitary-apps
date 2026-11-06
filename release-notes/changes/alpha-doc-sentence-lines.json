@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-doc-sentence-lines",
+      "reason": "Puts docs/alpha.md back at one sentence per line so the documentation line check passes; documentation only, nothing a person notices."
+    }
+  ]
+}

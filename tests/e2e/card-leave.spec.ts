@@ -11,7 +11,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedRepo } from "./githubStub";
 import { launchApp } from "./launch";
-import { expandDock, nowFrame, pressRow, recordCard } from "./rails";
+import { expandDock, expectRecordBody, nowFrame, pressRow, recordCard } from "./rails";
 import { readSavedData } from "./savedData";
 import { clickInBody, showCard, shownCard, shownEntry } from "./stack";
 import { boardCard } from "./taskBoard";
@@ -103,6 +103,15 @@ test("each registered corner puts away without ending work; only Done receipts t
   const { page } = app;
   const status = (id: string) => readSavedData(home, (db) => new TaskStore(db).get(id)?.status);
   const leave = () => shownEntry(page).locator("[data-card-leave]");
+  // A record that replaces a card stays unseen until its body draws, while
+  // Playwright already reads it as visible. A dismissed card leaving first
+  // turns it inert under the keyboard's focus, so its controls are pressed
+  // only once it appears (docs/e2e-contracts.md).
+  const recordAppeared = async () => {
+    await expect(recordCard(page)).toBeVisible();
+    await expectRecordBody(page);
+    await expect(shownEntry(page)).toHaveCSS("opacity", "1");
+  };
   try {
     const rows = {
       decision: async () => {
@@ -126,7 +135,7 @@ test("each registered corner puts away without ending work; only Done receipts t
         await pressRow(page, keys.question!);
         await expect(shownCard(page, "Choose when to review")).toBeVisible();
         await shownEntry(page).locator("[data-task-key]").first().click();
-        await expect(recordCard(page)).toBeVisible();
+        await recordAppeared();
         await expect(
           shownEntry(page).getByRole("button", { name: "Show the card", exact: true }),
         ).toBeVisible();
@@ -152,7 +161,7 @@ test("each registered corner puts away without ending work; only Done receipts t
         await expandDock(page, "now");
         await expect(nowFrame(page).locator(`[data-now-key="${keys.note}"]`)).toBeVisible();
         await pressRow(page, keys.note!);
-        await expect(recordCard(page)).toBeVisible();
+        await recordAppeared();
         await expect(
           shownEntry(page).getByRole("button", { name: "Done", exact: true }),
         ).toBeVisible();
@@ -170,7 +179,7 @@ test("each registered corner puts away without ending work; only Done receipts t
       record: async () => {
         await showCard(page, "Launch decision");
         await shownEntry(page).locator("[data-task-key]").first().click();
-        await expect(recordCard(page)).toBeVisible();
+        await recordAppeared();
         await pressKey(leave(), "Enter");
         await expect(shownCard(page, "Launch decision")).toBeVisible();
       },

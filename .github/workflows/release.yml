@@ -402,11 +402,18 @@ jobs:
   # offline catalog is generated here, where the full history is, with a
   # stable's picked highlights, and the signing job packages exactly this
   # file and re-verifies its identity.
+  # The two history walks, the coverage check and the catalog, run side by
+  # side as the parts of one matrix job, so every dependent still reads one
+  # `notes` result that holds only when both parts passed.
   # Declarations only: the workflow cannot judge whether the prose is true.
   notes:
-    name: ${{ format('{0} · Check release notes', needs.resolve.outputs.trigger) }}
+    name: ${{ format('{0} · Check release notes{1}', needs.resolve.outputs.trigger, matrix.part == 'catalog' && ' · catalog' || '') }}
     needs: resolve
     if: ${{ needs.resolve.outputs.skip != 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [check, catalog]
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     steps:
@@ -438,6 +445,7 @@ jobs:
             src/core
 
       - name: Check the notes cover this release
+        if: ${{ matrix.part == 'check' }}
         env:
           CHANNEL: ${{ needs.resolve.outputs.channel }}
           DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
@@ -462,6 +470,7 @@ jobs:
           node "$TOOL" "${ARGS[@]}" --repo .
 
       - name: Generate the offline catalog
+        if: ${{ matrix.part == 'catalog' }}
         env:
           SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
           VERSION: ${{ needs.resolve.outputs.version }}
@@ -473,7 +482,7 @@ jobs:
           node "$TOOL" generate --repo . --version "$VERSION" --source "$SOURCE_COMMIT" --out "$RUNNER_TEMP/release-notes/release-notes.json"
 
       - name: Write the picked highlights
-        if: ${{ needs.resolve.outputs.highlights != '' }}
+        if: ${{ matrix.part == 'catalog' && needs.resolve.outputs.highlights != '' }}
         env:
           HIGHLIGHTS: ${{ needs.resolve.outputs.highlights }}
           SOURCE_COMMIT: ${{ needs.resolve.outputs.source_commit }}
@@ -487,6 +496,7 @@ jobs:
       # The catalog and, beside it in release-notes/pictures, its highlights'
       # hero pictures.
       - name: Keep the catalog for packaging
+        if: ${{ matrix.part == 'catalog' }}
         uses: actions/upload-artifact@v4
         with:
           name: release-notes-catalog

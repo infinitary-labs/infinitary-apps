@@ -294,6 +294,7 @@ describe("an alpha with nothing new to build", () => {
   });
   const notesJob = workflowString(release.jobs.notes?.name as string, {
     needs: { resolve: { outputs: { trigger } } },
+    matrix: { part: "check" },
   });
   const url = (n: number) => `https://github.com/example/project/actions/runs/${n}`;
 

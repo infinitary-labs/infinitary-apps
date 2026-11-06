@@ -289,7 +289,11 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
       "Requested alpha rehearsal",
     );
     expect(trigger({ event_name: "workflow_dispatch" }, {})).toBe("Requested stable");
-    const later = { needs: { resolve: { outputs: { trigger: "Any trigger" } } }, inputs: {} };
+    const later = {
+      needs: { resolve: { outputs: { trigger: "Any trigger" } } },
+      inputs: {},
+      matrix: { part: "check" },
+    };
     for (const [id, job] of Object.entries(jobs)) {
       if (id === "resolve") continue;
       expect(workflowString(job.name ?? id, later), id).toMatch(/^Any trigger · /);

@@ -250,7 +250,8 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   An automatic alpha validates its exact-main source with `--verified-main`; it makes no new notes commit that would invalidate the reused main check.
   The existing published-release reader derives historical manifests from immutable tags when no committed record exists.
   A manual notes-only candidate keeps its existing reviewed-source and committed-history checks.
-  The job generates the offline catalog, the signing job packages it as `Resources/release-notes.json`, and the packaged copy's logical version and source commit are verified before notarization.
+  The job runs its check and its catalog as two parts side by side, so a release waits for the slower walk rather than both.
+  The catalog part generates the offline catalog, the signing job packages it as `Resources/release-notes.json`, and the packaged copy's logical version and source commit are verified before notarization.
   A stable promotion proves `release-notes/` is identical to its alpha's, so promoted stables reuse the alpha's entries and ids; prose corrections need a new alpha.
   Its highlights are the captain's picks, written into the generated catalog by the workflow's own tooling ("Promoting an alpha").
   The publication itself changes nothing in the project, and a rehearsal pins nothing.

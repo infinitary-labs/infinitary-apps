@@ -197,6 +197,33 @@ describe("the signed channel workflow", () => {
     expect(placed?.run).toContain("packaging/generated/release-notes/pictures");
   });
 
+  // The captain's checked fix (INF-2674, "Split a release's notes job into its two parts, run side by side"):
+  // the coverage check and the catalog each walk the full history, so they run as parallel parts.
+  it("runs the notes check and the catalog as two parts side by side, each step on its own part", () => {
+    const notes = jobOf(release, "notes");
+    expect(notes.strategy?.matrix).toEqual({ part: ["check", "catalog"] });
+    // Neither part waits for the other: no step of one needs the other's output.
+    const steps = notes.steps ?? [];
+    const partOf = (name: string) => steps.find((candidate) => candidate.name === name)?.if ?? "";
+    expect(partOf("Check the notes cover this release")).toContain("matrix.part == 'check'");
+    for (const name of [
+      "Generate the offline catalog",
+      "Write the picked highlights",
+      "Keep the catalog for packaging",
+    ]) {
+      expect(partOf(name), name).toContain("matrix.part == 'catalog'");
+    }
+    // Both parts walk the history themselves and name themselves apart.
+    expect(steps[0]).toMatchObject({ with: { "fetch-depth": 0 } });
+    const names = ["check", "catalog"].map((part) =>
+      workflowString((notes as { name?: string }).name as string, {
+        needs: { resolve: { outputs: { trigger: "Requested alpha" } } },
+        matrix: { part },
+      }),
+    );
+    expect(new Set(names).size).toBe(2);
+  });
+
   it("writes a stable's picked highlights with the workflow's own tooling, after the alpha's catalog and before it is kept", () => {
     const input = release.on.workflow_dispatch?.inputs?.highlights;
     expect(input).toMatchObject({ type: "string", required: false });
@@ -238,7 +265,10 @@ describe("the signed channel workflow", () => {
         ["", false],
       ] as const)
         expect(
-          workflowValue(step?.if ?? "", { needs: { resolve: { outputs: { highlights } } } }),
+          workflowValue(step?.if ?? "", {
+            needs: { resolve: { outputs: { highlights } } },
+            matrix: { part: "catalog" },
+          }),
         ).toBe(runs);
   });
 

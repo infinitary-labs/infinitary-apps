@@ -118,7 +118,8 @@ Commits the changelog does not list are covered by one exclusion per release.
 ## The release check
 
 `node scripts/release-notes.ts` (Node type stripping; no install) is the one tool.
-`release.yml`'s `notes` job runs it before `verify` or any signing:
+`release.yml`'s `notes` job runs it before `verify` or any signing, as two parts of one matrix that run side by side, each with its own full-history checkout: `check` runs step 1 and `catalog` runs steps 2 and 3.
+Every later job reads the one `notes` result, which holds only when both parts passed.
 
 1. `check` validates the ledger (schema, unique ids, references, promotion mappings, each entry's area, kind and hero picture and the picture files, published manifests unchanged, the record of past releases), refuses a published release this one stands on that has no record in `releases/` (except the release being cut and the alpha a stable promotes), refuses an alpha whose candidate (`--reviewed`, or `--verified-main` for exact-main cuts) is missing or is not the workflow's resolved source (a rehearsal may omit it), and refuses a source change since the previous release that no note or exclusion covers.
    An automatic exact-main check derives uncommitted historical manifests from immutable tags rather than requiring another notes commit.

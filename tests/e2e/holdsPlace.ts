@@ -1,9 +1,9 @@
 import { expect } from "@playwright/test";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { waitForFirstmateIdle } from "./crew";
+import { FM_THREAD_CARD_TITLE } from "./crewCards";
 import { askFirstmate } from "./lastTurn";
 import type { LaunchedApp } from "./launch";
-import { FM_THREAD_CARD_TITLE } from "./mockProvider";
 import { served } from "./providerRequest";
 
 /**

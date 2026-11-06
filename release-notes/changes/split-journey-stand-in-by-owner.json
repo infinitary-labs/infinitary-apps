@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-journey-stand-in-by-owner",
+      "reason": "Tests only: the journey stand-in is split into its owners (browser scripts, card fixtures, crew scripts, models files and request readers), its unused exports and renaming aliases are gone, and every test imports from the owning file. The app shows nothing new."
+    }
+  ]
+}

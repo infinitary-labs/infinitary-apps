@@ -1,16 +1,18 @@
 import { GUIDANCE_MARK_WORDS } from "../../../src/core/orchestrator/wakes";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import {
+  CLAUDE_CREW_MODEL,
+  type Scenario,
+  type ScenarioAnswer,
+  SPAWN_PROMPT_MARKER,
+} from "../mockProvider";
 import {
   answering,
-  CLAUDE_CREW_MODEL,
   contextRepos,
   findCrewTaskId,
   indexTaskId,
-  type Scenario,
-  type ScenarioAnswer,
-  type ScriptedCall,
-  SPAWN_PROMPT_MARKER,
   sinceLastUser,
-} from "../mockProvider";
+} from "../providerRequest";
 import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeStory";
 import { KEPT_MERGE_ON_CLAUDE } from "./keptMerge";
 import { mergeShellCall, mergeShellTurn } from "./mergeShell";

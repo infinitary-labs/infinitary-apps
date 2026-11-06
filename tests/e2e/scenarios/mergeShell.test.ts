@@ -6,7 +6,8 @@ import { checkBackAsk, renderWake } from "../../../src/core/orchestrator/wakes";
 import { createEventBashTool } from "../../../src/core/pi/bashTool";
 import { frameServedInput } from "../../../src/shared/servedFrame";
 import { scratchDir } from "../../helpers/scratchDirs";
-import type { Scenario, ScenarioAnswer, ScriptedCall } from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import type { Scenario, ScenarioAnswer } from "../mockProvider";
 import { GUIDED_MERGE_MARKER, GUIDED_MERGE_STEER, guidedMerge } from "./guidedMerge";
 import { KEPT_MERGE_MARKER, KEPT_MERGE_REPAIR, keptMerge } from "./keptMerge";
 

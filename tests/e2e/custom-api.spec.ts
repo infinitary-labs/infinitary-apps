@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { WELCOME_TITLE } from "@shared/welcome";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { customApiCaFixture } from "../helpers/customApiCaFixture";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
@@ -18,7 +19,6 @@ import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   ANSWER_PROMPT_MARKER,
-  FM_SYSTEM_MARKER,
   MOCK_ANSWER_TEXT,
   MOCK_ANSWER_TITLE,
   MOCK_COMPLETION_TEXT,
@@ -338,7 +338,7 @@ for (const protocol of ["openai-completions", "openai-responses"] as const) {
         !JSON.stringify(request.body).includes("synthetic API connection check") &&
         request.body.stream,
     );
-    expect(work.some((request) => JSON.stringify(request.body).includes(FM_SYSTEM_MARKER))).toBe(
+    expect(work.some((request) => JSON.stringify(request.body).includes(FIRSTMATE_PERSONA))).toBe(
       true,
     );
     expect(

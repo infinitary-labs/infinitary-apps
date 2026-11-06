@@ -5,7 +5,7 @@ import Database from "better-sqlite3";
 import { namedModelWords } from "../../src/core/orchestrator/namedModel";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { type LaunchedApp, launchApp } from "./launch";
-import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockProvider";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import { promptInput } from "./prompt";
 import {
   NAMED_SPAWN_ASK,

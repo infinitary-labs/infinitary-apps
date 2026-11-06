@@ -6,21 +6,13 @@ import {
 } from "node:http";
 import type { AddressInfo } from "node:net";
 import { zstdDecompressSync } from "node:zlib";
-import { parseServedInput, type ServedSegment } from "@shared/servedFrame";
-import { BROWSER_COMMAND } from "../../src/core/browser/commandWords";
-import { REF_PATTERN } from "../../src/core/browser/outline";
-import { BUILD_IN_PLACE_OPENING } from "../../src/core/orchestrator/intentBrief";
+import type { ServedSegment } from "@shared/servedFrame";
 import {
   ANSWER_MISSING_ENDED_OPENING,
   ANSWER_MISSING_OPENING,
-  BROWSER_RETURNED_OPENING,
-  CARD_CLOSED_STEER_PREFIX,
   FINISHED_REPORT_WORDS,
-  renderWake,
   WELCOME_WAKE_WORDS,
 } from "../../src/core/orchestrator/wakes";
-import { backgroundJobReceipt } from "../../src/core/pi/bashWords";
-import { NOTHING_SPAWNED } from "../../src/core/pi/crewTools";
 import { FIRSTMATE_PERSONA, KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../../src/core/storage/sessionReader";
 import {
@@ -30,21 +22,21 @@ import {
   writeAnthropicText,
   writeAnthropicToolUse,
 } from "../helpers/anthropicDialect";
-import { completionCardBody } from "../helpers/completionCard";
-import type { ScriptedArgs, ScriptedCall, ScriptedCardAction } from "../helpers/scriptedCalls";
+import type { ScriptedArgs, ScriptedCall } from "../helpers/scriptedCalls";
 import { WRITE_ASK_ANSWER_MARKER } from "./apiWriteCases";
-import { DEMO_CAPTION, DEMO_POSTER } from "./demoFixtures";
 import {
-  bytesOf,
-  CHANGE_AFTER_PICTURES,
-  CHANGE_BEFORE_PICTURES,
-  type PictureFixture,
-} from "./pictureFixtures";
+  CLAUDE_CREW_PROMPT_MARKER,
+  CLAUDE_ORG_REFUSAL_MESSAGE,
+  type CrewScriptAnswer,
+  crewScriptAnswer,
+  MOCK_CLAUDE_HELD_PROGRESS,
+} from "./crewScripts";
+import { MOCK_MODEL_ID } from "./mockModels";
 import {
+  contextRepos,
+  findCrewTaskId,
   holdsSegment,
-  latestContext,
   latestServedTurn,
-  providerMessages,
   type ServedTurn,
   scriptedResponseInput,
 } from "./providerRequest";
@@ -54,9 +46,11 @@ import { starterFor } from "./starters";
  * A minimal OpenAI-completions-compatible server so e2e runs exercise the
  * real Pi pipeline (session -> provider request -> streamed deltas -> card)
  * without real credentials or network. The app points at it through its
- * app-scoped models.json - exactly how a real custom provider would connect.
+ * app-scoped models.json - exactly how a real custom provider would connect
+ * (`mockModels.ts`). It answers the first mate's own commands, a journey's
+ * scenarios (`scenarios/`) and the built-in crew scripts (`crewScripts.ts`),
+ * and reads each request through `providerRequest.ts`.
  */
-
 export const MOCK_COMPLETION_TEXT =
   "Steady as she goes. The worktree is ready and this report streamed from the mock provider.";
 
@@ -107,423 +101,19 @@ function withDeclaredRisk(call: ScriptedCall): ScriptedCall {
 }
 
 /**
- * The longest command one bash call carries: `bash -c` takes its command as
- * one argument, and Linux refuses an argument over 128 KiB, so a crewmate
- * there writes a long run of files in several calls (a Mac allows far more).
- */
-const LONGEST_COMMAND = 128 * 1024 - 1;
-
-/** The bash calls a mock crewmate writes `files` into `shots/` of its working copy with, one file each. */
-export function writeFilesCalls(
-  files: ReadonlyArray<{ path: string; bytes: Buffer }>,
-): ScriptedCall[] {
-  return files.map(({ path, bytes }) => {
-    const command = `mkdir -p shots && printf '%s' '${bytes.toString("base64")}' | base64 --decode > ${path}`;
-    if (Buffer.byteLength(command) > LONGEST_COMMAND) {
-      throw new Error(`${path} is too long to write in one bash call on Linux`);
-    }
-    return { name: "bash", args: { command } };
-  });
-}
-
-/** A 2x2 opaque red PNG: small enough to read back pixel by pixel. */
-export const INLINE_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91" +
-  "JpzAAAAFElEQVR4nGP8z4AATAxQxhAXAAAA//8DTQEBc0GFdgAAAABJRU5ErkJggg==";
-
-export function writeChangePicturesCalls(): ScriptedCall[] {
-  return writeFilesCalls([...CHANGE_BEFORE_PICTURES, ...CHANGE_AFTER_PICTURES].map(pictureFile));
-}
-
-export const DEMO_CARD_TITLE = "Dragging the box moves it";
-
-export function demoCardCall(recording: string, title = DEMO_CARD_TITLE): ScriptedCall {
-  const before = CHANGE_BEFORE_PICTURES[0] as PictureFixture;
-  return {
-    name: "emit_card",
-    args: {
-      title,
-      body: completionCardBody(
-        "<p>A box could not be moved by dragging.</p>",
-        "<p>Dragging the box moves it to its new place.</p>",
-        `<p>The box stayed where it was.</p><figure><img src="${before.path}" alt="${before.alt}"><figcaption>The box</figcaption></figure>`,
-        `<p>The box slides to where it is dropped.</p><figure data-inf-demo="${recording}"><img src="${DEMO_POSTER.path}" alt="${DEMO_POSTER.alt}"><figcaption>${DEMO_CAPTION}</figcaption></figure>`,
-      ),
-      actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
-    },
-  };
-}
-
-export const pictureFile = (picture: PictureFixture) => ({
-  path: picture.path,
-  bytes: bytesOf(picture),
-});
-
-/**
- * Delivery rigor, phase 1 (the standard tier): a crewmate briefed with
- * "ship at the standard tier" reports under the five headings the tier
- * prescribes and emits its completion card with the four-heading outline.
- * The mock is the shape the prompt asks for, so
- * the e2e proves the shape renders through the real emit -> lint -> frame
- * path and the report reaches the feed - not that a model obeyed.
+ * Delivery rigor, phase 1 (the standard tier): a spawn whose title carries
+ * this asks for the standard tier; the crewmate that reports under its five
+ * headings is `scenarios/standardTier.ts`, its words `crewCards.ts`.
  */
 export const STANDARD_TIER_PROMPT_MARKER = "ship at the standard tier";
-export const STANDARD_TIER_HEADINGS = [
-  "Intent",
-  "What changed",
-  "Verified",
-  "Risk",
-  "Not done",
-] as const;
-export const MOCK_STANDARD_SECTIONS: Record<(typeof STANDARD_TIER_HEADINGS)[number], string> = {
-  Intent: "The meter test passes ten runs in a row.",
-  "What changed": "The test awaits the job queue flush before it reads the meter.",
-  Verified:
-    "pnpm test and pnpm test:e2e on the final commit; the meter test passed ten runs in a row. No screenshot: nothing a person sees changed.",
-  Risk: "Low - one test file changed and no production code.",
-  "Not done": "Nothing.",
-};
-/** The completion card's After words. */
-export const MOCK_STANDARD_AFTER = "The read now follows the flush; ten consecutive runs passed.";
-export const MOCK_STANDARD_CARD_BODY = completionCardBody(
-  "<p>The meter test sometimes read before the pending write finished.</p>",
-  `<p>${MOCK_STANDARD_SECTIONS["What changed"]}</p>`,
-  "<p>The test could read the old meter value while a write was still queued.</p>",
-  `<p>${MOCK_STANDARD_AFTER}</p>`,
-);
-
-/** The report under the same five headings; the feed line carries the outcome after Intent. */
-export const MOCK_STANDARD_REPORT = STANDARD_TIER_HEADINGS.map(
-  (heading) => `${heading}: ${MOCK_STANDARD_SECTIONS[heading]}`,
-).join(" ");
-
-/** The label the crewmate invents; the captain must never see it. */
-export const MOCK_STANDARD_INVENTED_LABEL = "Ship it";
-
-export const MOCK_STANDARD_DRAWN_BODY = completionCardBody(
-  "<p>The meter test sometimes read before the pending write finished.</p>",
-  `<p>${MOCK_STANDARD_SECTIONS["What changed"]}</p>`,
-  "<p>The test could read the old meter value while a write was still queued.</p>",
-  `<p>${MOCK_STANDARD_AFTER}</p>` +
-    '<figure aria-label="Ten runs, all passed"><svg viewBox="0 0 510 50" width="100%"><rect x="5" y="5" width="500" height="40" rx="8" fill="var(--ok-dim)"/><text x="20" y="30" fill="var(--fg-1)">Ten consecutive runs passed</text></svg></figure>',
-);
-
-export const MOCK_STANDARD_MERGE_ONLY_ACTIONS: ScriptedCardAction[] = [
-  {
-    id: "ship",
-    label: MOCK_STANDARD_INVENTED_LABEL,
-    default: true,
-    effect: { kind: "settle", mode: "merge" },
-  },
-];
-
 /**
- * Cards as threads, phase 1: `THREAD_PROMPT_MARKER` emits a plain decision
- * card and then answers the captain's replies the two ways the shared
- * contract prescribes - a REVISION of the card under the same id when his
- * words change what the card should say, and a prose `reply` when nothing on
- * it changes. The settle hand-off is `scenarios/threadSettle.ts`.
+ * A spawn whose title carries either of these is filed under
+ * THREAD_TREE_PARENT_KEY; the sibling that keeps working is held open by
+ * `scenarios/threadSettle.ts`.
  */
-export const THREAD_PROMPT_MARKER = "keep a thread open";
 export const THREAD_TREE_PROMPT_MARKER = "with a waiting tree";
 export const THREAD_TREE_PARENT_KEY = "SCR-1";
 export const THREAD_WORKING_SIBLING_MARKER = "keep the sibling working";
-export const THREAD_CARD_TITLE = "Two ways to fix the flaky test";
-export const THREAD_CARD_REVISED_TITLE = "Await the queue, not the clock";
-/** The captain's reply that changes what the card should say: a revision. */
-export const THREAD_REVISE_REPLY = "the second option is wrong";
-/** The crewmate's short answer, passed as the revision's `reply`. */
-export const THREAD_REVISE_ANSWER = "You are right; the card now leads with awaiting the queue.";
-/** The captain's reply that changes nothing on the card: prose in the thread. */
-export const THREAD_PROSE_REPLY = "and the flaky retry - keep it?";
-export const THREAD_PROSE_ANSWER = "Kept it; the queue flush makes the retry harmless either way.";
-/**
- * The card return rule's case A (docs/card-threads.md "When a card reaches
- * the stage"): a reply the crewmate first ACKNOWLEDGES in the thread - the
- * shape the contract now forbids, scripted so the host is shown holding the
- * card anyway - then works on, held open until the spec calls
- * `releaseThreadAnswer`, and only then answers by revising the card and
- * reporting.
- */
-export const THREAD_ACK_REPLY = "does it cover the retry on windows too?";
-export const THREAD_ACK_TEXT = "I'll check the windows retry and update the card.";
-export const THREAD_ACK_REVISED_TITLE = "Await the queue on every platform";
-/** The revision's own answer: every revision while answering says what changed (INF-1623). */
-export const THREAD_ACK_ANSWER =
-  "The windows retry waits on the same queue flush, so I added it to the card.";
-export const MOCK_THREAD_ACK_REPORT =
-  "Checked the windows retry: awaiting the queue covers it too, and the card now says so.";
-
-/**
- * Cards as threads, phase 2: a Firstmate-authored card. The captain's
- * reply is a captain TURN about that card (not a crewmate steer). The
- * Firstmate revises under the same id, or its closing words land as
- * prose in the thread - it has no reply tool.
- */
-
-export const FM_THREAD_CARD_TITLE = "Two ways to phrase the welcome";
-/** Tiny PNG the image-on-steer e2e pastes. */
-export const THREAD_IMAGE_PNG =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
-
-/**
- * A crewmate's browser command, as it runs it in its shell
- * (docs/axi-commands.md): `infinitary-browser-axi` and its arguments, each one
- * shell word. Pi serves the shell as `bash` and Claude's client as `Bash`
- * (`servedToolName`), so one script drives both.
- */
-export function browser(...args: (string | number)[]): ScriptedCall {
-  const words = args.map((arg) => {
-    const word = String(arg);
-    return /^[A-Za-z0-9@:._/=-]+$/.test(word) ? word : `'${word.replaceAll("'", "'\\''")}'`;
-  });
-  return {
-    name: "bash",
-    args: {
-      command: [BROWSER_COMMAND, ...words].join(" "),
-      description: "Use this task's browser",
-    },
-  };
-}
-
-/** Whether a tool answer is a browser command's: what infinitary-browser-axi printed. */
-function isBrowserAnswer(text: string): boolean {
-  return /^(?:page:|browser:|running:|earlier:|error:|pages\[|bin: )/m.test(shellOutput(text));
-}
-
-/** What a shell command printed, after the exit line Pi's shell (or Claude's on a failure) puts first. */
-function shellOutput(text: string): string {
-  return text.replace(/^(?:Error: )?(?:exit|Exit code) \d+\n/, "");
-}
-
-/**
- * A browser command's answer as the scripts read it, in the browser's own
- * words: an error is its message, and a quoted fact line reads unquoted, so
- * `did: Clicked button "Send" [g1:e3].` reads as the browser wrote it.
- */
-function browserWords(text: string): string {
-  const printed = shellOutput(text);
-  const error = printed.match(/^error: (.*)$/m)?.[1];
-  const unquote = (value: string): string => {
-    try {
-      return value.startsWith('"') ? (JSON.parse(value) as string) : value;
-    } catch {
-      return value;
-    }
-  };
-  if (error !== undefined) return unquote(error);
-  return printed
-    .split("\n")
-    .map((line) => {
-      const fact = /^(\s*(?:did|title|url|browser|earlier): )(".*")$/.exec(line);
-      return fact ? `${fact[1]}${unquote(fact[2] as string)}` : line;
-    })
-    .join("\n");
-}
-
-/** A command that ran past the shell's limit said so; its answer comes with the next look. */
-function stillRunning(text: string): boolean {
-  const printed = shellOutput(text);
-  return /^running: /m.test(printed) || /^code: BUSY$/m.test(printed);
-}
-
-/**
- * INF-634: the shell may legitimately become a job before the launcher
- * reaches the app, or after its bounded grace. Its receipt is not browser
- * output. Resume from that job's exit wake, never by sending the action again.
- * Keep message positions so handoff scripts can still slice at their wake.
- */
-export function browserShellMessages(messages: ReturnType<typeof providerMessages>) {
-  const pending = new Set<string>();
-  const readings = messages.map((message) => {
-    const job =
-      message.role === "tool" ? /^Still running as background job (\S+);/.exec(message.text) : null;
-    if (job) {
-      pending.add(job[1] as string);
-      return { role: "assistant" as const, text: "" };
-    }
-    if (message.role !== "user") return message;
-    const wakes = parseServedInput(message.text)
-      ?.filter((part) => part.kind === "wake")
-      .map((part) => part.body) ?? [message.text];
-    for (const wake of wakes) {
-      const exit = /^\[job\] background job (\S+) finished:/.exec(wake);
-      if (!exit || !pending.delete(exit[1] as string)) continue;
-      const output = wake.indexOf(". Output tail:\n");
-      return {
-        role: "tool" as const,
-        text: output < 0 ? wake : wake.slice(output + ". Output tail:\n".length),
-      };
-    }
-    return message;
-  });
-  return { readings, pending: pending.size > 0 };
-}
-
-/** Stands for the part of a composer's words a reader looks for around them. */
-const HOLE = "\u0000";
-
-/** The job a bash answer says is still running, read in the bash tool's own words; none when it finished. */
-function receiptJob(answer: string): string | undefined {
-  const [before, after] = backgroundJobReceipt(HOLE).split(HOLE) as [string, string];
-  const end = answer.startsWith(before) ? answer.indexOf(after, before.length) : -1;
-  return end < 0 ? undefined : answer.slice(before.length, end);
-}
-
-/** Whether `wake` is job `id`'s exit, read in the wake renderer's own words. */
-function exitOf(wake: string, id: string): boolean {
-  const exit = renderWake({
-    facts: {
-      kind: "job-exit",
-      to: "crewmate",
-      jobId: id,
-      command: HOLE,
-      exitCode: 0,
-      durationMs: 0,
-    },
-  });
-  return wake.startsWith(exit.slice(0, exit.indexOf(HOLE)));
-}
-
-/**
- * Whether a shell command of this conversation is still running as a
- * background job: its receipt came back and no exit wake has followed yet,
- * across every message, so several jobs may end in one wake turn. A file a
- * stand-in wrote that way is not written until its job has exited (INF-1128).
- */
-export function shellJobsRunning(body: string): boolean {
-  const running = new Set<string>();
-  for (const message of providerMessages(body)) {
-    const job = message.role === "tool" ? receiptJob(message.text) : undefined;
-    if (job) running.add(job);
-    if (message.role !== "user") continue;
-    const wakes = parseServedInput(message.text)
-      ?.filter((part) => part.kind === "wake")
-      .map((part) => part.body) ?? [message.text];
-    for (const id of running) if (wakes.some((wake) => exitOf(wake, id))) running.delete(id);
-  }
-  return running.size > 0;
-}
-
-/**
- * The tool answers after a place in the conversation, oldest first, each
- * browser command once in the browser's own words: one that ran past a
- * Pi shell's limit answered `running`, and its answer came with the next
- * look (`earlier`), so the two read as the one answer the browser gave.
- */
-export function toolAnswers(messages: ReturnType<typeof providerMessages>, from = 0): string[] {
-  const answers: string[] = [];
-  let waiting = false;
-  for (const message of browserShellMessages(messages).readings.slice(from)) {
-    if (message.role !== "tool") continue;
-    if (!isBrowserAnswer(message.text)) {
-      answers.push(message.text);
-      continue;
-    }
-    if (stillRunning(message.text)) {
-      waiting = true;
-      continue;
-    }
-    const words = browserWords(message.text);
-    if (waiting) {
-      waiting = false;
-      answers.push(
-        words
-          .replace(/^earlier: .*\n/m, "")
-          .replace(
-            /^Your earlier \S+ finished(?:, so this \S+ was not run; run it again if you still need it)?: /,
-            "",
-          ),
-      );
-      continue;
-    }
-    answers.push(words);
-  }
-  return answers;
-}
-
-/** The wake a returned browser brings, which the browser journeys read. */
-export const HANDOFF_WAKE = BROWSER_RETURNED_OPENING;
-
-/** The first sentence of an answer, as a report quotes it. */
-export function firstSentence(text: string | undefined): string {
-  const passage =
-    (text ?? "").split("\n").find((line) => line.startsWith("The captain returned control")) ??
-    (text ?? "").match(/^did: (.*)$/m)?.[1] ??
-    text;
-  return (passage ?? "").split("\n")[0]?.split(/(?<=[.:])\s/)[0] ?? "";
-}
-
-/**
- * The captain message a reply's served words name - a crewmate's thread
- * steer ("This is the captain's message N") or the first mate's about line
- * ("replied in its thread as message N") - as `answers_message`, which a
- * real answer passes: only a line naming it ends the captain's question
- * (the captain's "Only a line that says it answers it; a handoff stays
- * open"). Empty when the words name none, so an acknowledgement stays unnamed.
- */
-export function answering(served: string): { answers_message?: number } {
-  const named = [
-    ...served.matchAll(/(?:This is the captain's message|replied in its thread as message) (\d+)/g),
-  ].at(-1)?.[1];
-  return named ? { answers_message: Number(named) } : {};
-}
-
-/** The tool answers after a place in the conversation, oldest first, as the scripts read them. */
-export function answersAfter(
-  messages: ReturnType<typeof providerMessages>,
-  from: number,
-): string[] {
-  return toolAnswers(messages, from);
-}
-
-/**
- * The ref an outline gave a control, by its role and the start of its name;
- * `text` with no name finds the first cut passage, the one text line a ref names.
- */
-export function refOf(outline: string | undefined, role: string, name: string): string | undefined {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return outline?.match(new RegExp(`${role} "${escaped}[^"]*" \\[(${REF_PATTERN})\\]`))?.[1];
-}
-
-/** A same-page action need not repeat unchanged controls. Keep refs only in the current book. */
-export function knownRefOf(
-  answers: readonly string[],
-  role: string,
-  name: string,
-): string | undefined {
-  const book = [...answers]
-    .reverse()
-    .map((text) => text.match(/^\s*refs: (g\d+)$/m)?.[1])
-    .find(Boolean);
-  for (const answer of [...answers].reverse()) {
-    const current = answer
-      .split("\n")
-      .filter((line) => !line.startsWith("- old line "))
-      .join("\n");
-    const ref = refOf(current, role, name);
-    if (ref && (!book || ref.startsWith(`${book}:`))) return ref;
-  }
-  return undefined;
-}
-
-/**
- * A browser journey's next step, looking again first while the crewmate's
- * last command still runs in its browser: a command past a Pi shell's
- * limit keeps running, and the bare command reads its answer.
- */
-export function lookingAgain(
-  body: string,
-  step: (body: string) => ScriptedCall[] | undefined,
-): ScriptedCall[] | undefined {
-  const { readings, pending } = browserShellMessages(providerMessages(body));
-  if (pending) return undefined;
-  const last = readings.at(-1);
-  if (last?.role === "tool" && isBrowserAnswer(last.text) && stillRunning(last.text)) {
-    return [browser()];
-  }
-  return step(body);
-}
 
 /** Scripted retrieval exercises plumbing, not live semantic accuracy. */
 export const RETRIEVAL_TASK_ASK =
@@ -531,31 +121,6 @@ export const RETRIEVAL_TASK_ASK =
 export const RETRIEVAL_TASK_GOAL =
   "Explain from release-info.json why its release reports video demos, citing its fields; do not test playback.";
 
-/**
- * Only ordinary reads and duplicate closures deliver `card-closed` to a
- * live author; only the ordinary read acknowledges its note. The scripted
- * ordinary-read reaction reports `finished: true`, then the mock Firstmate
- * settles an answer task `answered`. Aside and saved-answer reads deliver
- * no such steer; explicit Done receipts and ends a saved answer in the host.
- */
-export const CARD_CLOSED_STEER_NEEDLE = CARD_CLOSED_STEER_PREFIX.trim();
-export const FINISHED_WAKE_NEEDLE = FINISHED_REPORT_WORDS;
-
-/**
- * Delivery rigor, phase 2 (the reviewed tier). A builder briefed with "ship
- * at the reviewed tier" on a direct-pr repository reports under the five
- * headings that its PR is green and emits NO card (its brief's rigor line
- * says so); when steered with the reviewer's auto-fix finding it reports the
- * fix and the new head; when told the review passed it emits the completion
- * card. The reviewer - recognised by the host's review brief - answers its
- * first brief with one auto-fix and one ask-user finding, and a re-review
- * steer with a pass. The mock Firstmate routes exactly as the contract's
- * rule says: read the wake's recorded checks, then spawn_crewmate with
- * review_of on the green report, the auto-fix as a steer plus one decision card for the ask-user
- * finding, and a steer to emit the completion card on the pass (the
- * repository's autonomy is off). The re-review is the captain's word in the
- * spec, so the merge hold can be observed in between.
- */
 /**
  * The host-attached completion buttons and the freed body (contract v3.6,
  * captain lock 3). Briefed with this marker on a direct-pr repository, the
@@ -588,23 +153,10 @@ export const MERGE_PROMPT_MARKER = "merge the task ";
 export const MOCK_FOLLOWUP_TITLE = "Flaky meter test";
 
 /**
- * Persona detection: requests carry their session's system prompt, so the
- * persona line identifies who is asking (the Firstmate or a crewmate).
+ * The model a commission whose title carries CLAUDE_CREW_PROMPT_MARKER
+ * (`crewScripts.ts`) or CLAUDE_CREWMATE_MARKER is pinned to through
+ * `override_model_id`: a Claude crewmate.
  */
-export const FM_SYSTEM_MARKER = FIRSTMATE_PERSONA;
-
-/**
- * A Claude crewmate's turn (mockClaudeClient.ts turn mode). A commission
- * whose title carries this phrase makes the mock Firstmate pin the spawn to
- * CLAUDE_CREW_MODEL through `override_model_id`. The crewmate behind it
- * emits one card, then its next step is held open - the model still
- * working - until the spec calls `releaseHeldCrew`, which answers it with a
- * progress note. A steer the captain sent meanwhile rides into the running
- * turn at that step; a request carrying CLAUDE_STEER_MARKER reports that it
- * heard the steer and closes. The hold is what makes "mid-turn" a fact
- * rather than a race.
- */
-export const CLAUDE_CREW_PROMPT_MARKER = "on the Claude login";
 export const CLAUDE_CREW_MODEL = `anthropic-claude/${starterFor("anthropic-claude", "low")}`;
 /**
  * A commission whose title carries this is put on the Claude crew model
@@ -613,43 +165,6 @@ export const CLAUDE_CREW_MODEL = `anthropic-claude/${starterFor("anthropic-claud
  * a Pi crewmate and a Claude crewmate alike (task-browser-booking.spec.ts).
  */
 export const CLAUDE_CREWMATE_MARKER = "with a Claude crewmate";
-export const MOCK_CLAUDE_CARD_TITLE = "Rivet count";
-export const MOCK_CLAUDE_CARD_TEXT = "Forty rivets on the port hatch, all tight.";
-export const CLAUDE_STEER_MARKER = "count the starboard hatch too";
-export const MOCK_CLAUDE_STEERED_REPORT =
-  "Counted the starboard hatch too, as steered: thirty-eight rivets, all tight.";
-/** The progress note `releaseHeldCrew` answers the held step with. */
-export const MOCK_CLAUDE_HELD_PROGRESS = "Counted the port hatch.";
-/** A ready decision released by report while the client remains in its held step. */
-export const CLAUDE_CARD_RETIRE_MARKER = "with a choice to retire";
-
-/**
- * A Claude crewmate on a login its organisation refuses (W1 S8). A
- * commission whose title carries this phrase beside CLAUDE_CREW_PROMPT_MARKER
- * runs on Claude, and while the server refuses Claude (`refuseClaude`) every
- * turn it starts is answered with the vendor's organisation refusal: a 403
- * carrying CLAUDE_ORG_REFUSAL_MESSAGE, which the real client types
- * `oauth_org_not_allowed`. Once the server stops refusing, a turn carrying
- * CLAUDE_REFUSAL_OVER_MARKER reports MOCK_CLAUDE_REFUSAL_OVER_REPORT.
- */
-export const CLAUDE_REFUSED_PROMPT_MARKER = "while refused";
-export const CLAUDE_REFUSAL_OVER_MARKER = "count the rivets again now";
-export const MOCK_CLAUDE_REFUSAL_OVER_REPORT =
-  "Counted the rivets again once Claude answered: forty, all tight.";
-/**
- * The refused-login crewmate with a card first (FI3-592, the thread's
- * waiting line): a commission whose title also carries this phrase puts up
- * MOCK_CLAUDE_HELD_CARD_TITLE on its first turn, while Claude still serves
- * it (the spec turns `refuseClaude` off first: the server starts refusing). A captain reply carrying CLAUDE_HELD_REPLY that gets through is
- * answered in the card's thread with MOCK_CLAUDE_HELD_ANSWER.
- */
-export const CLAUDE_HELD_CARD_MARKER = "with a chart first";
-export const MOCK_CLAUDE_HELD_CARD_TITLE = "Reef chart";
-export const CLAUDE_HELD_REPLY = "chart the northern reef too";
-export const MOCK_CLAUDE_HELD_ANSWER = "Charted the northern reef too: two shoals, both marked.";
-/** The words the vendor's organisation refusal carries; the client types it by them. */
-export const CLAUDE_ORG_REFUSAL_MESSAGE =
-  "OAuth authentication is currently not allowed for this organization.";
 
 /**
  * The Firstmate on the Claude seat (W1 S12). A captain turn carrying
@@ -669,7 +184,7 @@ export const FM_SEAT_STEERED_TITLE = "Anchor chain checked";
  * vendor's 401, a 429 on a spent plan with its reset, or its 403
  * organisation refusal.
  */
-export type ClaudeSeatCut =
+type ClaudeSeatCut =
   | { class: "signed_out" }
   | { class: "no_headroom"; resetsAt: number }
   | { class: "refused" };
@@ -692,10 +207,9 @@ export const TALL_ANSWER_PROMPT_MARKER = `a tall ${ANSWER_PROMPT_MARKER}`;
  * says the captain "has never seen a card", and the mock Firstmate answers
  * it with one standalone note - the app's first card.
  */
-export const FIRST_RUN_WAKE_MARKER = WELCOME_WAKE_WORDS;
-export const MOCK_WELCOME_TITLE = "How I work";
+const MOCK_WELCOME_TITLE = "How I work";
 // e2e-typed-words: the mock Firstmate's own welcome note, written as the wake asks; it only shares a phrase with the wake
-export const MOCK_WELCOME_TEXT =
+const MOCK_WELCOME_TEXT =
   "<p>Ask for something and a card comes back: an answer, a decision, or word that a crewmate is on it. There is no chat to scroll.</p><p>Start by pointing me at a project.</p>";
 /**
  * Talk-to-personalize Step 1 (Tier A): the mock Firstmate answers
@@ -710,12 +224,6 @@ export const FAIL_PROVIDER_PROMPT_MARKER = "fail this turn with a provider error
 export const LAND_PROMPT_MARKER = "land the task ";
 /** Steer marker: "steer the task <title>: <guidance>" -> steer_crewmate on that task. */
 export const STEER_PROMPT_MARKER = "steer the task ";
-/**
- * Every request answering a message that carries this phrase reports a huge
- * token count (past the token flicker's top), so the character that spent it
- * flickers at full brightness; every other request reports a few dozen.
- */
-export const BIG_USAGE_PROMPT_MARKER = "a mountain of tokens";
 export const DISCARD_PROMPT_MARKER = "discard the task ";
 /**
  * "finish the task <title>" -> settle it. WI-11 retired the `finish` mode
@@ -738,95 +246,6 @@ export const MOCK_CLOSING_SENTENCES = {
   released: "It went out in the verified external release.",
   cancel: "Stopped, as the captain asked.",
 } as const;
-/** The tool boundary's refusal, as the spec looks for it in the served body. */
-export const ESCALATION_REFUSAL_PHRASE = NOTHING_SPAWNED;
-/**
- * The talk-to-personalize build loop (Step 4): the first mate's spawn and
- * remove are `scenarios/personalPanels.ts`. The mock crewmate, on a brief
- * that builds in place, writes the extension with Pi's own write tool, runs
- * lint_panel and capture_panel on the draft, places its version on the rail
- * with place_panel, photographs it there with capture_panel again, and
- * reports after a short delay so the running dot is observable; on the
- * change brief it rewrites the panel with smaller rows, captures, places
- * and captures it again, and reports after the same delay, so a spec can
- * watch the rails while the change is underway. Each build shows its
- * answering note before it reports.
- */
-export const MOCK_PANEL_ID = "tokyo-clock";
-export const MOCK_PANEL_TITLE = "Tokyo clock";
-export const MOCK_PANEL_REPORT =
-  "Tokyo clock panel added; it shows the time in Tokyo and how many lines the activity feed holds.";
-export const MOCK_PANEL_REVISED_REPORT = "The Tokyo clock rows are smaller now.";
-export const MOCK_PANEL_REPORT_DELAY_MS = 2_500;
-/**
- * What tells the mock crewmate its task builds in place: the personal
- * workspace's own brief sentence. It read `Delivery: live` until the
- * crew-posture rationalization's Task A made the workspace a KIND - a
- * personal brief carries no Delivery line at all now.
- */
-const LIVE_BRIEF_MARKER = `${BUILD_IN_PLACE_OPENING}:`;
-const ROWS_SMALLER_MARKER = "rows smaller";
-
-/**
- * The answering note a panel build ends with before its report (INF-1677):
- * the ordinary completion of work with nothing to merge.
- */
-export const MOCK_PANEL_NOTE_TITLE = "Your Tokyo clock panel is on the rail";
-function panelNote(result: string): ScriptedCall {
-  return {
-    name: "emit_card",
-    args: {
-      title: MOCK_PANEL_NOTE_TITLE,
-      answering: true,
-      body: completionCardBody(
-        "<p>You asked for a Tokyo clock panel.</p>",
-        `<p>${result}</p>`,
-        "<p>Your rail had no such panel.</p>",
-        "<p>The panel is on your rail now.</p>",
-      ),
-    },
-  };
-}
-
-function mockPanelSource(rows: "regular" | "small"): string {
-  return [
-    'import type { PanelFeedLine, PanelProps } from "@infinitary/contracts";',
-    'import { MicroLabel, Row } from "@infinitary/ui";',
-    'import { useEffect, useState } from "react";',
-    "",
-    'const clock = new Intl.DateTimeFormat("en-GB", {',
-    '  timeZone: "Asia/Tokyo",',
-    '  hour: "2-digit",',
-    '  minute: "2-digit",',
-    "});",
-    "",
-    "export default function Panel({ reads }: PanelProps) {",
-    "  const [lines, setLines] = useState<PanelFeedLine[]>([]);",
-    '  useEffect(() => reads.subscribe("feed.recent", setLines), [reads]);',
-    "  return (",
-    "    <div",
-    '      data-mock-panel=""',
-    `      data-mock-rows="${rows}"`,
-    `      style={{ display: "flex", flexDirection: "column", gap: "${rows === "small" ? "var(--space-1)" : "var(--space-2)"}" }}`,
-    "    >",
-    "      <MicroLabel count={lines.length}>Activity</MicroLabel>",
-    `      <Row title="Tokyo" tone="idle" trailing={clock.format(Date.now())}${rows === "small" ? ' style={{ padding: "1px 6px" }}' : ""} />`,
-    "    </div>",
-    "  );",
-    "}",
-    "",
-  ].join("\n");
-}
-
-// No placement: the panel lands where a panel that names none does.
-const MOCK_PANEL_MANIFEST = `${JSON.stringify(
-  {
-    title: MOCK_PANEL_TITLE,
-    reads: ["feed.recent"],
-  },
-  null,
-  2,
-)}\n`;
 
 /**
  * The Responses dialect Codex's client speaks (`POST .../codex/responses`,
@@ -873,56 +292,24 @@ function finishResponsesStream(
   res.end();
 }
 
+/** Claude's client serves its own shell to a coding session as `Bash`, where Pi serves `bash`. */
+const CLAUDE_SHELL = "Bash";
+
 /**
- * The prefix Claude's client serves an in-process tool under: the app's
+ * The name a scripted call goes out under: the way the request serves the
+ * tool. Claude's client serves an in-process tool under a prefix: the app's
  * tool server is named `infinitary`, so `emit_card` reaches the model as
  * `mcp__infinitary__emit_card` (docs/claude-client.md). The scripts name
  * tools as the app does; the Anthropic dialect adds the prefix where the
  * request declared it, so one marker drives a Pi turn and a Claude turn.
  */
-const CLAUDE_TOOL_PREFIX = CLAUDE_SEAT_TOOL_PREFIX;
-
-/** Claude's client serves its own shell to a coding session as `Bash`, where Pi serves `bash`. */
-const CLAUDE_SHELL = "Bash";
-
-/** The name a scripted call goes out under: the way the request serves the tool. */
 function servedToolName(body: string, name: string): string {
-  const prefixed = `${CLAUDE_TOOL_PREFIX}${name}`;
+  const prefixed = `${CLAUDE_SEAT_TOOL_PREFIX}${name}`;
   if (body.includes(`"name":"${prefixed}"`)) return prefixed;
   if (name === "bash" && body.includes(`"name":"${CLAUDE_SHELL}"`)) return CLAUDE_SHELL;
   return name;
 }
 
-/** Whether the conversation so far carries a CALL of the named tool (not its definition). */
-export function calledTool(body: string, name: string): boolean {
-  return toolCallCount(body, name) > 0;
-}
-
-/** How many CALLs of the named tool the conversation so far carries (not its definition). */
-function toolCallCount(body: string, name: string): number {
-  let count = 0;
-  for (const served of [name, `${CLAUDE_TOOL_PREFIX}${name}`]) {
-    for (const call of [
-      `"name":"${served}","arguments"`,
-      `"name": "${served}", "arguments"`,
-      // Anthropic messages calls carry `input`; definitions carry `input_schema`.
-      `"name":"${served}","input":`,
-      `"name": "${served}", "input":`,
-    ]) {
-      count += body.split(call).length - 1;
-    }
-  }
-  return count;
-}
-
-/**
- * Pi 0.87's OpenRouter catalog serves Claude models on anthropic-messages.
- * The mock still decides from the raw body (the markers are in the text);
- * only the wire format changes (`tests/helpers/anthropicDialect.ts`). A
- * follow-up leg carries `tool_use_id`.
- */
-/** The kind classifier's system prompt (routing S3), recognised by its opening. */
-export const CLASSIFIER_SYSTEM_MARKER = KIND_CLASSIFIER_OPENING;
 /** Work whose title carries this is sorted as a chore by the mock classifier. */
 export const CLASSIFY_CHORE_MARKER = "tidy the rivet gauge";
 export const MOCK_ANSWER_TITLE = "Mock answer";
@@ -940,130 +327,16 @@ export const SILENT_ANSWER_MARKER = "say nothing the captain can see";
 export const REACT_PROMPT_MARKER = "give a thumbs up";
 export const RETRY_SILENT_MARKER = "stay silent again";
 export const RETRY_ACTS_MARKER = "try to start work in the retry";
-export const RETRY_ACTS_TASK_TITLE = "Work the retry tried to start";
+const RETRY_ACTS_TASK_TITLE = "Work the retry tried to start";
 export const RETRY_ANSWER_TITLE = "Here is the answer";
 const RETRY_ANSWER_BODY = "<p>The retry showed this answer in a card.</p>";
 /** Closing words with markup and a script, which must never become a card. */
-export const SILENT_CLOSING_WORDS = "<p>HIDDEN closing words</p><script>alert(1)</script>";
+const SILENT_CLOSING_WORDS = "<p>HIDDEN closing words</p><script>alert(1)</script>";
 export const MOCK_FM_DONE_TEXT = "The crew has it under way.";
 
 /** The step goal a sequences reproduce step carries; the kind classifier sorts it (`scenarios/sequences.ts`). */
 export const SEQ_REPRODUCE_GOAL =
   "as reported, in a clean setup; open your report with reproduced:";
-
-export type ChatRequest = { messages?: { role: string; content?: unknown }[] };
-
-export function messageText(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return "";
-  return content
-    .map((part) =>
-      (part as { type?: string; text?: string }).type === "text"
-        ? ((part as { text?: string }).text ?? "")
-        : "",
-    )
-    .join("");
-}
-
-/**
- * A message's tool results, in order: a `tool` message's text, or the
- * `tool_result` blocks the Anthropic dialect carries in a user message.
- */
-export function toolResults(message: { role: string; content?: unknown }): string[] {
-  if (message.role === "tool") return [messageText(message.content)];
-  if (message.role !== "user" || !Array.isArray(message.content)) return [];
-  return message.content
-    .filter((part) => (part as { type?: string }).type === "tool_result")
-    .map((part) => messageText((part as { content?: unknown }).content));
-}
-
-/** A note Claude's client adds to a message on its own (`<system-reminder>`), never anyone's words. */
-const CLIENT_NOTE = /^\s*<system-reminder>[\s\S]*<\/system-reminder>\s*$/;
-
-/** A message's text, the client's own notes aside. */
-function saidIn(content: unknown): string {
-  if (!Array.isArray(content)) return messageText(content);
-  return messageText(
-    content.filter((part) => !CLIENT_NOTE.test((part as { text?: string }).text ?? "")),
-  );
-}
-
-/**
- * The newest user message's text and the tool results that followed it, in
- * order. A user message that carries tool results and nobody's words (the
- * Anthropic dialect's) is a step of that turn, not a new one.
- */
-export function sinceLastUser(body: string): { user: string; results: string[]; tail: string } {
-  if (!body.trimStart().startsWith("{")) return { user: "", results: [], tail: "" };
-  const messages = (JSON.parse(body) as ChatRequest).messages ?? [];
-  let at = -1;
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    const step = message && toolResults(message).length > 0 && !saidIn(message.content);
-    if (message?.role === "user" && !step) {
-      at = index;
-      break;
-    }
-  }
-  if (at < 0) return { user: "", results: [], tail: "" };
-  return {
-    user: messageText(messages[at]?.content),
-    tail: JSON.stringify(messages.slice(at)),
-    results: messages.slice(at + 1).flatMap(toolResults),
-  };
-}
-
-/** The instructions a request carries (system or developer), whichever dialect. */
-export function servedInstructions(body: string): string {
-  if (!body.trimStart().startsWith("{")) return "";
-  const request = JSON.parse(body) as {
-    system?: unknown;
-    instructions?: unknown;
-    messages?: { role: string; content?: unknown }[];
-  };
-  const roles = new Set(["system", "developer"]);
-  return [
-    request.system,
-    request.instructions,
-    ...(request.messages ?? []).filter((m) => roles.has(m.role)).map((m) => m.content),
-  ]
-    .map(messageText)
-    .join("\n");
-}
-
-/** A started task's id off the context's crew, by its exact title. */
-export function indexTaskId(body: string, title: string): string | undefined {
-  return contextCrew(body).find((entry) => entry.title === title)?.task_id;
-}
-
-/** A task's id off a `tasks` read's result, by its exact title. */
-export function queriedTaskId(result: string | undefined, title: string): string | undefined {
-  const start = result?.indexOf("[") ?? -1;
-  if (!result || start < 0) return undefined;
-  const end = result.lastIndexOf("]");
-  const rows = JSON.parse(result.slice(start, end + 1)) as Array<{
-    task_id: string;
-    title: string;
-  }>;
-  return rows.find((row) => row.title === title)?.task_id;
-}
-
-/**
- * Unstarted work is not in the context (INF-1712): the first mate reads it
- * with `tasks` by its title, then makes the call that names it. Undefined
- * once both went out; the caller's later moves count two results more.
- */
-export function lookUpTask(
-  title: string,
-  results: string[],
-  then: (taskId: string) => ScriptedCall[],
-): { calls: ScriptedCall[] } | undefined {
-  if (results.length === 0) return { calls: [{ name: "tasks", args: { text: title } }] };
-  if (results.length === 1) return { calls: then(queriedTaskId(results[0], title) ?? "missing") };
-  return undefined;
-}
-
-export type { ScriptedCall } from "../helpers/scriptedCalls";
 
 /**
  * What became of a Firstmate turn a spec scripted ahead: `armed` until its
@@ -1072,7 +345,7 @@ export type { ScriptedCall } from "../helpers/scriptedCalls";
  * inputs the Firstmate was served while it waited, newest last - and
  * `results` what came back for its calls.
  */
-export type ScriptedTurnOutcome = {
+type ScriptedTurnOutcome = {
   state: "armed" | "answered" | "closed";
   unmatched: string[];
   results: string[];
@@ -1171,21 +444,6 @@ export type MockProviderServer = {
   close: () => Promise<void>;
 };
 
-function contextCrew(body: string) {
-  return latestContext(body)?.crew ?? [];
-}
-
-export function contextRepos(body: string): Array<[name: string, id: string]> {
-  return (latestContext(body)?.repos ?? []).map((repo) => [repo.name, repo.repo_id]);
-}
-
-export function findCrewTaskId(body: string, titleNeedle: string): string | undefined {
-  const needle = titleNeedle.trim();
-  return needle
-    ? contextCrew(body).find((entry) => entry.title.includes(needle))?.task_id
-    : undefined;
-}
-
 export function settleNeedle(haystack: string, marker: string): string {
   const after = haystack.split(marker)[1] ?? "";
   return after.split(/["\\]/)[0]?.trim() ?? "";
@@ -1229,6 +487,11 @@ export async function startMockProvider(
       res.end("reached");
       return;
     }
+    // Claude's client, and Pi's OpenRouter catalog for Claude models, take
+    // Anthropic's messages wire. The mock still decides from the raw body
+    // (the markers are in the text); only the wire format changes
+    // (`tests/helpers/anthropicDialect.ts`). A follow-up leg carries
+    // `tool_use_id`.
     const anthropicMessages =
       req.method === "POST" &&
       Boolean(req.url?.includes("/messages")) &&
@@ -1256,7 +519,10 @@ export async function startMockProvider(
         requestBodies.push(rawBody);
         for (const record of recorders) record(rawBody);
         requestHeaders.push(req.headers);
-        const isFirstmate = rawBody.includes(FM_SYSTEM_MARKER);
+        // Persona detection: requests carry their session's system prompt,
+        // so the persona line identifies who is asking (the Firstmate or a
+        // crewmate).
+        const isFirstmate = rawBody.includes(FIRSTMATE_PERSONA);
         const scriptedInput = scriptedResponseInput(rawBody, !isFirstmate);
         const body = scriptedInput.body;
         const wantsStream = body.includes('"stream":true') || body.includes('"stream": true');
@@ -1269,9 +535,7 @@ export async function startMockProvider(
           body.lastIndexOf('"role": "user"'),
         );
         const latestUserTail = lastUserIndex >= 0 ? body.slice(lastUserIndex) : body;
-        const usage = latestUserTail.includes(BIG_USAGE_PROMPT_MARKER)
-          ? { prompt_tokens: 600_000, completion_tokens: 4_000, total_tokens: 604_000 }
-          : { prompt_tokens: 42, completion_tokens: 17, total_tokens: 59 };
+        const usage = { prompt_tokens: 42, completion_tokens: 17, total_tokens: 59 };
         const hasToolResults =
           latestUserTail.includes('"tool_call_id"') ||
           latestUserTail.includes('"tool_use_id"') ||
@@ -1445,6 +709,22 @@ export async function startMockProvider(
           res.on("close", () => held.delete(res));
         };
 
+        // One answer a scenario or a built-in crew script gives, sent on
+        // this request's wire; `afterMs` holds it back that long.
+        const send = (answer: CrewScriptAnswer) => {
+          const now = () => {
+            if ("calls" in answer) streamToolCalls(answer.calls);
+            else if ("text" in answer) streamText(answer.text);
+            else if ("held" in answer) holdOpen();
+            else if ("threadHeld" in answer) {
+              const calls = answer.threadHeld;
+              heldThreadAnswers.push(() => streamToolCalls(calls));
+            } else writeAnthropicError(res, answer.refusal.status, answer.refusal.error);
+          };
+          if ("afterMs" in answer && answer.afterMs) setTimeout(now, answer.afterMs);
+          else now();
+        };
+
         if (isFirstmate && failFirstmate) {
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(
@@ -1553,7 +833,7 @@ export async function startMockProvider(
         // fall through to the chat default. It abstains, which is exactly
         // what an unclassified spawn did before S3 - so every spec's routing
         // is unchanged while the real call path is still exercised.
-        if (body.includes(CLASSIFIER_SYSTEM_MARKER)) {
+        if (body.includes(KIND_CLASSIFIER_OPENING)) {
           // A sequences reproduce step is sorted as what it is, so it is an
           // answer task the way a real classifier makes it one.
           if (body.includes(RETRIEVAL_TASK_GOAL)) streamText("retrieval");
@@ -1680,14 +960,7 @@ export async function startMockProvider(
         for (const scenario of scenarios) {
           const answer = scenario(scenarioRequest);
           if (!answer) continue;
-          const send = () => {
-            if ("calls" in answer) streamToolCalls(answer.calls);
-            else if ("text" in answer) streamText(answer.text);
-            else if ("held" in answer) holdOpen();
-            else writeAnthropicError(res, answer.refusal.status, answer.refusal.error);
-          };
-          if (answer.afterMs) setTimeout(send, answer.afterMs);
-          else send();
+          send(answer);
           return;
         }
         if (isFirstmate && wantsStream) {
@@ -1764,7 +1037,7 @@ export async function startMockProvider(
             streamToolCalls([{ name: "steer_crewmate", args: { task_id: taskId, message } }]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(FINISHED_WAKE_NEEDLE)) {
+          if (!hasToolResults && latestUserTail.includes(FINISHED_REPORT_WORDS)) {
             const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
             streamToolCalls([{ name: "settle_task", args: { task_id: taskId, mode: "answered" } }]);
             return;
@@ -1822,7 +1095,7 @@ export async function startMockProvider(
             ]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(FIRST_RUN_WAKE_MARKER)) {
+          if (!hasToolResults && latestUserTail.includes(WELCOME_WAKE_WORDS)) {
             // The welcome: one standalone note in the Firstmate's own voice.
             streamToolCalls([
               {
@@ -1875,291 +1148,12 @@ export async function startMockProvider(
           return;
         }
 
-        // The mock live-build crewmate (Step 4): write the extension with
-        // Pi's own write tool, lint it and photograph its draft, place it on
-        // the rail and photograph it there (docs/personal-panels.md, "Placed
-        // on the rail"), then report after a pause so the running dot is
-        // observable; a change brief rewrites, photographs, places,
-        // photographs and reports. Each capture is its own turn, so the
-        // first reads the draft and the second the rail the place left.
-        // Match the task brief across the whole conversation. Tool-result
-        // follow-ups can be serialized as a newer user message, so limiting
-        // this session marker to `latestUserTail` makes the second leg fall
-        // through to the generic crewmate response before it can report.
-        if (!isFirstmate && body.includes(LIVE_BRIEF_MARKER) && wantsStream) {
-          // The change brief, by the same whole-conversation match: a
-          // capture's pictures come back as a newer user message.
-          if (body.includes(ROWS_SMALLER_MARKER)) {
-            if (!calledTool(body, "write")) {
-              streamToolCalls([
-                {
-                  name: "write",
-                  args: { path: `${MOCK_PANEL_ID}/panel.tsx`, content: mockPanelSource("small") },
-                },
-              ]);
-              return;
-            }
-            if (!calledTool(body, "capture_panel")) {
-              streamToolCalls([{ name: "capture_panel", args: { id: MOCK_PANEL_ID } }]);
-              return;
-            }
-            if (!calledTool(body, "place_panel")) {
-              streamToolCalls([{ name: "place_panel", args: { id: MOCK_PANEL_ID } }]);
-              return;
-            }
-            if (toolCallCount(body, "capture_panel") < 2) {
-              streamToolCalls([{ name: "capture_panel", args: { id: MOCK_PANEL_ID } }]);
-              return;
-            }
-            if (!calledTool(body, "emit_card")) {
-              streamToolCalls([panelNote(MOCK_PANEL_REVISED_REPORT)]);
-              return;
-            }
-            if (!calledTool(body, "report")) {
-              setTimeout(() => {
-                streamToolCalls([{ name: "report", args: { text: MOCK_PANEL_REVISED_REPORT } }]);
-              }, MOCK_PANEL_REPORT_DELAY_MS);
-              return;
-            }
-            streamText("done");
-            return;
-          }
-          if (!calledTool(body, "write")) {
-            streamToolCalls([
-              {
-                name: "write",
-                args: { path: `${MOCK_PANEL_ID}/panel.tsx`, content: mockPanelSource("regular") },
-              },
-              {
-                name: "write",
-                args: { path: `${MOCK_PANEL_ID}/manifest.json`, content: MOCK_PANEL_MANIFEST },
-              },
-              { name: "note_progress", args: { text: "Wrote the panel; checking it next." } },
-            ]);
-            return;
-          }
-          if (!calledTool(body, "lint_panel")) {
-            streamToolCalls([
-              { name: "lint_panel", args: {} },
-              { name: "capture_panel", args: { id: MOCK_PANEL_ID } },
-            ]);
-            return;
-          }
-          if (!calledTool(body, "place_panel")) {
-            streamToolCalls([{ name: "place_panel", args: { id: MOCK_PANEL_ID } }]);
-            return;
-          }
-          if (toolCallCount(body, "capture_panel") < 2) {
-            streamToolCalls([{ name: "capture_panel", args: { id: MOCK_PANEL_ID } }]);
-            return;
-          }
-          if (!calledTool(body, "emit_card")) {
-            streamToolCalls([panelNote(MOCK_PANEL_REPORT)]);
-            return;
-          }
-          if (!calledTool(body, "report")) {
-            setTimeout(() => {
-              streamToolCalls([{ name: "report", args: { text: MOCK_PANEL_REPORT } }]);
-            }, MOCK_PANEL_REPORT_DELAY_MS);
-            return;
-          }
-          streamText("done");
-          return;
-        }
-        // Cards as threads, phase 1: the crewmate that keeps a thread. Its
-        // card's id is the one emit_card handed back, read out of the
-        // transcript exactly as a real model would read it.
-        if (!isFirstmate && body.includes(THREAD_PROMPT_MARKER) && wantsStream) {
-          const shownCardId = body.match(/Card shown: [^(]*\((card-[\w-]+)\)/)?.[1] ?? "";
-          // Case A: acknowledge, work (held until released), then answer by
-          // revising the card, and report. Every step reads only this
-          // reply's own leg of the conversation.
-          if (latestUserTail.includes(THREAD_ACK_REPLY)) {
-            if (!calledTool(latestUserTail, "reply")) {
-              streamToolCalls([
-                { name: "reply", args: { card_id: shownCardId, text: THREAD_ACK_TEXT } },
-              ]);
-              return;
-            }
-            if (!calledTool(latestUserTail, "emit_card")) {
-              heldThreadAnswers.push(() =>
-                streamToolCalls([
-                  {
-                    name: "emit_card",
-                    args: {
-                      id: "thread-card",
-                      reply: THREAD_ACK_ANSWER,
-                      // The answer names the reply; the acknowledgement did not.
-                      ...answering(latestUserTail),
-                      title: THREAD_ACK_REVISED_TITLE,
-                      body: "<p>Awaiting the job queue removes the race on every platform.</p><p>The windows retry waits on the same queue flush.</p>",
-                      actions: [
-                        { id: "mock-clock", label: "Mock the clock" },
-                        { id: "await-queue", label: "Await the queue", default: true },
-                      ],
-                    },
-                  },
-                ]),
-              );
-              return;
-            }
-            if (!calledTool(latestUserTail, "report")) {
-              streamToolCalls([{ name: "report", args: { text: MOCK_THREAD_ACK_REPORT } }]);
-              return;
-            }
-            streamText("Answered on the card.");
-            return;
-          }
-          // The captain's words change what the card says: revise the head
-          // under the same id. The thread gets the host's "revised" line.
-          if (!hasToolResults && latestUserTail.includes(THREAD_REVISE_REPLY)) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "thread-card",
-                  reply: THREAD_REVISE_ANSWER,
-                  ...answering(latestUserTail),
-                  title: THREAD_CARD_REVISED_TITLE,
-                  body: "<p>Awaiting the job queue removes the race entirely.</p><p>Mocking the clock leaves write order uncertain, which is what you spotted.</p>",
-                  actions: [
-                    { id: "mock-clock", label: "Mock the clock" },
-                    { id: "await-queue", label: "Await the queue", default: true },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          // Nothing on the card changes: answer in the thread itself.
-          if (!hasToolResults && latestUserTail.includes(THREAD_PROSE_REPLY)) {
-            streamToolCalls([
-              {
-                name: "reply",
-                args: {
-                  card_id: shownCardId,
-                  text: THREAD_PROSE_ANSWER,
-                  ...answering(latestUserTail),
-                },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && !calledTool(body, "emit_card")) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "thread-card",
-                  title: THREAD_CARD_TITLE,
-                  body: "<p>Awaiting the job queue removes the race entirely.</p><p>Mocking the clock is quicker but leaves write order uncertain.</p>",
-                  actions: [
-                    { id: "mock-clock", label: "Mock the clock" },
-                    { id: "await-queue", label: "Await the queue", default: true },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          streamText("The card is up and I am holding for the captain.");
-          return;
-        }
-        // The Claude crewmate on a refused login (CLAUDE_REFUSED_PROMPT_MARKER):
-        // the organisation refusal while the server refuses, then a report.
-        if (
-          !isFirstmate &&
-          anthropicMessages &&
-          wantsStream &&
-          body.includes(CLAUDE_REFUSED_PROMPT_MARKER)
-        ) {
-          if (refusingClaude) {
-            res.writeHead(403, { "Content-Type": "application/json" });
-            res.end(
-              JSON.stringify({
-                type: "error",
-                error: { type: "permission_error", message: CLAUDE_ORG_REFUSAL_MESSAGE },
-              }),
-            );
-            return;
-          }
-          if (hasToolResults) {
-            streamText("done");
-            return;
-          }
-          if (body.includes(CLAUDE_HELD_CARD_MARKER)) {
-            const cardId = latestUserTail.includes(CLAUDE_HELD_REPLY)
-              ? latestUserTail.match(/\((card-[\w-]+)\)/)?.[1]
-              : undefined;
-            streamToolCalls([
-              cardId
-                ? {
-                    name: "reply",
-                    args: {
-                      card_id: cardId,
-                      text: MOCK_CLAUDE_HELD_ANSWER,
-                      ...answering(latestUserTail),
-                    },
-                  }
-                : {
-                    name: "emit_card",
-                    args: {
-                      title: MOCK_CLAUDE_HELD_CARD_TITLE,
-                      body: "<p>The reef has one shoal on the southern side.</p><p>It is marked on the chart.</p>",
-                    },
-                  },
-            ]);
-            return;
-          }
-          if (latestUserTail.includes(CLAUDE_REFUSAL_OVER_MARKER)) {
-            streamToolCalls([{ name: "report", args: { text: MOCK_CLAUDE_REFUSAL_OVER_REPORT } }]);
-            return;
-          }
-          streamText("Nothing new to add.");
-          return;
-        }
-        // The Claude crewmate (CLAUDE_CREW_PROMPT_MARKER): card, held step,
-        // steer, report. The steer is checked first because the client
-        // sends it in the same user message as the held step's tool result.
-        if (!isFirstmate && body.includes(CLAUDE_CREW_PROMPT_MARKER) && wantsStream) {
-          if (latestUserTail.includes(CLAUDE_STEER_MARKER)) {
-            streamToolCalls([{ name: "report", args: { text: MOCK_CLAUDE_STEERED_REPORT } }]);
-            return;
-          }
-          if (hasToolResults && body.includes(CLAUDE_STEER_MARKER)) {
-            streamText("done");
-            return;
-          }
-          if (hasToolResults) {
-            holdOpen();
-            return;
-          }
-          const retireChoice = body.includes(CLAUDE_CARD_RETIRE_MARKER);
-          streamToolCalls([
-            {
-              name: "emit_card",
-              args: {
-                title: MOCK_CLAUDE_CARD_TITLE,
-                body: `<p>${MOCK_CLAUDE_CARD_TEXT}</p>${retireChoice ? "<p>Inspect port first because it is closest; starboard can wait.</p>" : ""}`,
-                ...(retireChoice
-                  ? {
-                      actions: [
-                        { id: "port", label: "Inspect the port hatch", default: true },
-                        { id: "starboard", label: "Inspect the starboard hatch" },
-                      ],
-                    }
-                  : {}),
-              },
-            },
-            ...(retireChoice
-              ? [
-                  {
-                    name: "report",
-                    args: { text: MOCK_CLAUDE_HELD_PROGRESS },
-                  } satisfies ScriptedCall,
-                ]
-              : []),
-          ]);
+        // The built-in crew scripts (`crewScripts.ts`): the panel crewmate,
+        // the thread crewmate and the Claude crewmate, asked after the first
+        // mate's own commands and before the default close-out.
+        const crewAnswer = crewScriptAnswer({ ...scenarioRequest, refusingClaude });
+        if (crewAnswer) {
+          send(crewAnswer);
           return;
         }
 
@@ -2262,59 +1256,4 @@ export async function startMockProvider(
         server.closeAllConnections();
       }),
   };
-}
-
-/** The provider the app's models.json defines the mock model under. */
-export const MOCK_PROVIDER_ID = "fm-mock";
-
-/** The id of the one mock model, as the app's models.json defines it. */
-export const MOCK_MODEL_ID = "mock-1";
-
-/** The catalog name of the one mock model - what a card's model chip calls it. */
-const MOCK_MODEL_LABEL = "Mock model";
-
-/** The app-scoped models.json contents pointing Pi at the mock server. */
-/**
- * A models.json that defines NO custom provider and only points a real,
- * key-signed catalog provider at the mock server. The base runtime then
- * serves nothing (no key), so the first-launch gate is up; a key pasted
- * through the gate's own chip signs an OpenRouter account in, and that
- * account's runtime - reading the same app-scoped file - sends every turn
- * to the mock. The hermetic way to connect an account through the UI.
- * `provider` names another catalog provider a key signs in the same way,
- * such as Grok (`xai`), whose models routing may give a crewmate.
- */
-export const MOCK_KEY_PROVIDER_ID = "openrouter";
-
-export function mockProviderOverrideModelsJson(
-  port: number,
-  provider: string = MOCK_KEY_PROVIDER_ID,
-): string {
-  return `${JSON.stringify(
-    {
-      providers: {
-        [provider]: { baseUrl: `http://127.0.0.1:${port}/v1` },
-      },
-    },
-    null,
-    2,
-  )}\n`;
-}
-
-export function mockModelsJson(port: number): string {
-  return `${JSON.stringify(
-    {
-      providers: {
-        [MOCK_PROVIDER_ID]: {
-          name: "Mock provider",
-          baseUrl: `http://127.0.0.1:${port}/v1`,
-          api: "openai-completions",
-          apiKey: "mock-key",
-          models: [{ id: MOCK_MODEL_ID, name: MOCK_MODEL_LABEL, input: ["text", "image"] }],
-        },
-      },
-    },
-    null,
-    2,
-  )}\n`;
 }

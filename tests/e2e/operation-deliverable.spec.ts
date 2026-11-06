@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
@@ -10,12 +11,7 @@ import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accoun
 import { waitForFirstmateIdle } from "./crew";
 import { seedRepo } from "./githubStub";
 import { launchApp } from "./launch";
-import {
-  CLASSIFIER_SYSTEM_MARKER,
-  MOCK_MODEL_ID,
-  MOCK_PROVIDER_ID,
-  mockModelsJson,
-} from "./mockProvider";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID, mockModelsJson } from "./mockModels";
 import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { seedQuotaFixture } from "./quotaFixtures";
@@ -127,7 +123,7 @@ test("an operation makes its named effect and closes finished from reported evid
       bucket: "medium",
     });
     const requests = launched.mockProvider?.requestBodies() ?? [];
-    expect(requests.some((b) => b.includes(CLASSIFIER_SYSTEM_MARKER))).toBe(false);
+    expect(requests.some((b) => b.includes(KIND_CLASSIFIER_OPENING))).toBe(false);
     const worker = requests
       .map((b) => JSON.parse(b))
       .filter((b) => JSON.stringify(b.messages).includes("Operation shape:"));

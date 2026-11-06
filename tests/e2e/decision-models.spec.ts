@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import Database from "better-sqlite3";
 import { CLASSIFIER_MAX_OUTPUT_TOKENS } from "../../src/core/orchestrator/seat";
+import { KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
 import { USE_OPENROUTER_DECISION_MODEL } from "../../src/renderer/src/settings/modelsWords";
 import {
   DECISION_MODEL_CATALOG,
@@ -19,11 +20,10 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { CLAUDE_SEAT_ACCOUNT, launchClaudeSeat, say } from "./claudeSeat";
 import { type LaunchedApp, launchApp } from "./launch";
+import { mockModelsJson } from "./mockModels";
 import {
-  CLASSIFIER_SYSTEM_MARKER,
   CLASSIFY_CHORE_MARKER,
   type MockProviderServer,
-  mockModelsJson,
   SPAWN_PROMPT_MARKER,
   startMockProvider,
 } from "./mockProvider";
@@ -591,7 +591,7 @@ for (const world of [
         .requestBodies()
         .filter(
           (body, index) =>
-            body.includes(CLASSIFIER_SYSTEM_MARKER) &&
+            body.includes(KIND_CLASSIFIER_OPENING) &&
             body.includes(CLASSIFY_CHORE_MARKER) &&
             headers[index]?.["user-agent"]?.startsWith("claude-cli/") === true,
         )
@@ -620,7 +620,7 @@ test("a chosen model answers decisions in use or not, and a chosen model that is
   const askedModels = () =>
     mockProvider
       .requestBodies()
-      .filter((body) => body.includes(CLASSIFIER_SYSTEM_MARKER))
+      .filter((body) => body.includes(KIND_CLASSIFIER_OPENING))
       .map((body) => (JSON.parse(body) as { model?: string }).model);
   const spawn = async (title: string) => {
     await say(page, `${SPAWN_PROMPT_MARKER} ${title}`);

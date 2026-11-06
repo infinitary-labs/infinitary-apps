@@ -4,7 +4,8 @@ import {
   SKIP_RULES_MERGED_WAKE,
   SKIP_RULES_PULL,
 } from "../apiWriteCases";
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * FI3-1571 piece 2: the crewmate prepares the adopted release pull request

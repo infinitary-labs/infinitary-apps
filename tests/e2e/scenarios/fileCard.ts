@@ -1,4 +1,5 @@
-import { answering, calledTool, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { answering, calledTool } from "../providerRequest";
 
 export const FILE_CARD_PROMPT_MARKER = "show a file-backed card";
 export const FILE_CARD_REVISE_MARKER = "show the edited card file";

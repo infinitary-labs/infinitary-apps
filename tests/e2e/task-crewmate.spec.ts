@@ -24,13 +24,13 @@ import {
   sentBy,
   sentWords,
 } from "./crewmateTab";
-import { launchApp } from "./launch";
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_STEER_MARKER,
   MOCK_CLAUDE_CARD_TITLE,
   MOCK_CLAUDE_STEERED_REPORT,
-} from "./mockProvider";
+} from "./crewScripts";
+import { launchApp } from "./launch";
 import { encodePng } from "./pictureFixtures";
 import { heroShot, regionShot } from "./pictures";
 import { expandDock, openGroup, pressRow, recordCard, recordFrame, taskKey } from "./rails";

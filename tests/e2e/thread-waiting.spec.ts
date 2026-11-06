@@ -1,7 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchClaudeCrew, signedInAs } from "./claudeCrew";
-import type { LaunchedApp } from "./launch";
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_HELD_CARD_MARKER,
@@ -9,9 +8,9 @@ import {
   CLAUDE_REFUSED_PROMPT_MARKER,
   MOCK_CLAUDE_HELD_ANSWER,
   MOCK_CLAUDE_HELD_CARD_TITLE,
-  type MockProviderServer,
-  startMockProvider,
-} from "./mockProvider";
+} from "./crewScripts";
+import type { LaunchedApp } from "./launch";
+import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { cardReply, showCard } from "./stack";
 
 /**

@@ -1,14 +1,9 @@
 import { GIF_LOOP_WORDS } from "../../../src/core/gifFormat";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { demoCardCall, pictureFile, writeChangePicturesCalls, writeFilesCalls } from "../crewCards";
 import { DEMO_POSTER, GIF_DEMO_RECORDING, LOOPING_GIF_DEMO } from "../demoFixtures";
-import {
-  calledTool,
-  demoCardCall,
-  pictureFile,
-  type Scenario,
-  writeChangePicturesCalls,
-  writeFilesCalls,
-} from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { calledTool } from "../providerRequest";
 
 /**
  * Marker prompt (GIF demos, `tests/e2e/card-demo-gif.spec.ts`): the mock

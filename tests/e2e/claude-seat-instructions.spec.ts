@@ -15,9 +15,9 @@ import {
   ANSWER_PROMPT_MARKER,
   MOCK_ANSWER_TITLE,
   type MockProviderServer,
-  servedInstructions,
   startMockProvider,
 } from "./mockProvider";
+import { servedInstructions } from "./providerRequest";
 import { feedLine } from "./rails";
 import { settingRow } from "./settings";
 import { shownCard } from "./stack";

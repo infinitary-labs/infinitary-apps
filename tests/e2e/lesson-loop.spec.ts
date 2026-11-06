@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -25,8 +26,8 @@ import {
   LESSON_ROUND_TWO_TITLE,
   LESSON_WELCOME_TITLE,
 } from "./lessonFixtures";
-import { FM_SYSTEM_MARKER, servedInstructions } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
+import { servedInstructions } from "./providerRequest";
 import { readSavedData } from "./savedData";
 import { lessons } from "./scenarios/lessons";
 import { cardReply, clickInBody, expectNoCard, showCard, shownCard, shownEntry } from "./stack";
@@ -97,7 +98,7 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
   const teacherRequests = () =>
     (launched.mockProvider?.requestBodies() ?? []).filter(
       (body) =>
-        body.includes(LESSON_CHESS_ASK) && !servedInstructions(body).includes(FM_SYSTEM_MARKER),
+        body.includes(LESSON_CHESS_ASK) && !servedInstructions(body).includes(FIRSTMATE_PERSONA),
     );
   try {
     await test.step("a teach request starts one teacher, which asks the goal first", async () => {

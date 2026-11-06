@@ -10,7 +10,7 @@ import { waitForFirstmateIdle } from "./crew";
 import { cardBody } from "./frames";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
-import { mockProviderOverrideModelsJson } from "./mockProvider";
+import { mockProviderOverrideModelsJson } from "./mockModels";
 import { cardLeave, expectNoCard, shownCard } from "./stack";
 
 test("selecting a base Ollama model creates a hidden alias and serves a visible card", async () => {

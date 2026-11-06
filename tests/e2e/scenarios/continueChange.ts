@@ -1,10 +1,6 @@
-import {
-  browserShellMessages,
-  calledTool,
-  type Scenario,
-  type ScenarioAnswer,
-} from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { browserShellMessages } from "../browserScript";
+import type { Scenario, ScenarioAnswer } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeStory";
 
 /**

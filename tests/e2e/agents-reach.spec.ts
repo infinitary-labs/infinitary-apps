@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { hostEnv } from "../../src/core/hostEnv";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import automationManifest from "../../src/panels/automation/manifest.json" with { type: "json" };
@@ -23,7 +24,7 @@ import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./
 import { askFirstmate, bubbleWords, mateBubble } from "./lastTurn";
 import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
-import { FM_SYSTEM_MARKER, REVIEWED_TIER_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { REVIEWED_TIER_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
@@ -213,7 +214,7 @@ function servedTexts(): string[] {
   for (const body of launched.mockProvider?.requestBodies() ?? []) {
     for (const message of providerMessages(body))
       if (message.role === "tool") texts.add(message.text);
-    if (body.includes(FM_SYSTEM_MARKER))
+    if (body.includes(FIRSTMATE_PERSONA))
       for (const segment of latestServedTurn(body)?.segments ?? [])
         if (segment.kind !== "context" && segment.kind !== "user") texts.add(segment.body);
   }

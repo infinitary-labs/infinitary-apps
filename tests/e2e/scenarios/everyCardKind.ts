@@ -1,4 +1,5 @@
-import type { Scenario, ScriptedCall } from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import type { Scenario } from "../mockProvider";
 
 /** Marker prompt: the mock crewmate answers with emit_card tool calls first. */
 export const EMIT_CARDS_PROMPT_MARKER = "show every card kind";

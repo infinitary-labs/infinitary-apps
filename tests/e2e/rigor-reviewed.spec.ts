@@ -6,6 +6,7 @@ import {
   REVIEW_PASSED_NEXT,
   reviewFindingsNext,
 } from "../../src/core/orchestrator/wakes";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
@@ -19,7 +20,7 @@ import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { FM_SYSTEM_MARKER, REVIEWED_TIER_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { REVIEWED_TIER_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
@@ -158,7 +159,7 @@ async function boardRow(
  */
 function servedToFirstmate(): string[] {
   return (launched.mockProvider?.requestBodies() ?? [])
-    .filter((body) => body.includes(FM_SYSTEM_MARKER))
+    .filter((body) => body.includes(FIRSTMATE_PERSONA))
     .flatMap((body) => latestServedTurn(body)?.segments ?? [])
     .map((segment) => segment.body);
 }
@@ -448,7 +449,7 @@ test("a reviewed task's review passes before its completion card, which merges w
   // and wakes.test.ts's.
   const builderBodies = (mockProvider?.requestBodies() ?? []).filter(
     (body) =>
-      !body.includes(FM_SYSTEM_MARKER) &&
+      !body.includes(FIRSTMATE_PERSONA) &&
       !body.includes(REVIEW_BRIEF_MARKER) &&
       body.includes(REVIEWED_TIER_PROMPT_MARKER),
   );

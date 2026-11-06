@@ -1,8 +1,9 @@
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { launchClaudeCrew } from "./claudeCrew";
+import { CLAUDE_CREW_PROMPT_MARKER } from "./crewScripts";
 import type { LaunchedApp } from "./launch";
-import { CLAUDE_CREW_PROMPT_MARKER, FM_SYSTEM_MARKER } from "./mockProvider";
 import {
   CLAUDE_RELAY_APPROVAL,
   CLAUDE_RELAY_MARKER,
@@ -66,7 +67,7 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
   const { page, mockProvider } = launched;
   const firstmateHeard = (text: string) =>
     (mockProvider?.requestBodies() ?? []).some(
-      (body) => body.includes(FM_SYSTEM_MARKER) && body.includes(text),
+      (body) => body.includes(FIRSTMATE_PERSONA) && body.includes(text),
     );
   const input = page.getByRole("textbox", { name: "Task prompt" });
   await expect(input).toBeEnabled({ timeout: 30_000 });
@@ -113,7 +114,7 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
     .toBe(true);
   expect(firstmateHeard(CLAUDE_RELAY_APPROVAL)).toBe(true);
   const served = (mockProvider?.requestBodies() ?? [])
-    .filter((body) => body.includes(FM_SYSTEM_MARKER))
+    .filter((body) => body.includes(FIRSTMATE_PERSONA))
     .flatMap((body) => servedTexts(body, "It asks the first mate to act"));
   writeFileSync(test.info().outputPath("firstmate-wake.txt"), `${served.at(-1) ?? ""}\n`);
 

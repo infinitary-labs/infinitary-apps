@@ -1,4 +1,5 @@
-import { findCrewTaskId, type Scenario, settleNeedle, sinceLastUser } from "../mockProvider";
+import { type Scenario, settleNeedle } from "../mockProvider";
+import { findCrewTaskId, sinceLastUser } from "../providerRequest";
 import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeStory";
 
 /**

@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -9,7 +10,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
-import { FM_SYSTEM_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { expandDock } from "./rails";
@@ -25,7 +26,7 @@ import { completionAction, factsStrip } from "./stack";
 /** The message texts each request to the Firstmate carried, decoded from the provider bodies. */
 function firstmateTexts(bodies: string[]): string[] {
   return bodies
-    .filter((body) => body.includes(FM_SYSTEM_MARKER))
+    .filter((body) => body.includes(FIRSTMATE_PERSONA))
     .flatMap((body) =>
       (JSON.parse(body) as { messages: { content: unknown }[] }).messages.flatMap(({ content }) =>
         typeof content === "string"

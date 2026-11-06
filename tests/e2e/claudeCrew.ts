@@ -14,7 +14,7 @@ import { launchSignedInClaude } from "./claudeAccount";
 import { NO_CLAUDE_LOGIN_USER } from "./claudeSeat";
 import type { LaunchedApp, LaunchOptions } from "./launch";
 import { mainProcessSettled } from "./mainProcess";
-import { MOCK_KEY_PROVIDER_ID, mockProviderOverrideModelsJson } from "./mockProvider";
+import { MOCK_KEY_PROVIDER_ID, mockProviderOverrideModelsJson } from "./mockModels";
 
 /**
  * An app whose crew runs on Claude (W1 S5): two accounts - Claude for the

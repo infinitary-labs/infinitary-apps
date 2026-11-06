@@ -1,7 +1,8 @@
 import { INTEGRATIONS_COMMAND } from "../../../src/core/integrations";
 import { INTEGRATION_KIND_NAMES } from "../../../src/shared/integrations";
-import { browserShellMessages, calledTool, type Scenario } from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { browserShellMessages } from "../browserScript";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 
 /** INF-882: a crew read by each distinct name must reach its original connection. */
 export const GITHUB_NAMES_PROMPT = "read my GitHub account and my renamed server";

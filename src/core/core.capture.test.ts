@@ -4,6 +4,7 @@ import type { FmEvent } from "@shared/events";
 import { SETUP_CARD_WORDS } from "@shared/projectSetup";
 import type { TaskBoard } from "@shared/tasks";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { mockModelsJson } from "../../tests/e2e/mockModels";
 import {
   ANSWER_PROMPT_MARKER,
   FINISH_PROMPT_MARKER,
@@ -11,7 +12,6 @@ import {
   MOCK_ANSWER_TITLE,
   MOCK_FM_CHAT_TEXT,
   type MockProviderServer,
-  mockModelsJson,
   SPAWN_PROMPT_MARKER,
   STEER_PROMPT_MARKER,
   startMockProvider,

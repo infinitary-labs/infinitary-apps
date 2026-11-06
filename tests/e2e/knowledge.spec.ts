@@ -4,16 +4,12 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import Database from "better-sqlite3";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
-import {
-  FM_SYSTEM_MARKER,
-  type MockProviderServer,
-  SPAWN_PROMPT_MARKER,
-  startMockProvider,
-} from "./mockProvider";
+import { type MockProviderServer, SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { providerMessages, served } from "./providerRequest";
 import { reportLine, taskKey } from "./rails";
@@ -88,7 +84,7 @@ function readKnowledge<T>(userDataDir: string, read: (db: Database.Database) => 
 /** Every message the scripted crewmates were sent whose words carry `marker`. */
 function crewmateMessages(bodies: readonly string[], marker: string): string[] {
   return bodies
-    .filter((body) => !body.includes(FM_SYSTEM_MARKER) && body.includes(marker))
+    .filter((body) => !body.includes(FIRSTMATE_PERSONA) && body.includes(marker))
     .flatMap((body) => providerMessages(body).map((message) => message.text));
 }
 

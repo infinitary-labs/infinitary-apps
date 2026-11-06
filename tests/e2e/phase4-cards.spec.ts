@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { CARE_WORDS, DEFAULT_WORKSPACE_WORD, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { MOCK_MODEL_ID } from "./mockProvider";
+import { MOCK_MODEL_ID } from "./mockModels";
 import { promptInput } from "./prompt";
 import {
   ESCAPED_CARD_PROMPT_MARKER,

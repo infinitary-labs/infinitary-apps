@@ -23,15 +23,16 @@ import { CONTRACT_CHANGES } from "../../src/core/connection/contractChanges";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
 import { contributorWords, THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
 import {
-  ANSWER_PROMPT_MARKER,
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_STEER_MARKER,
+  MOCK_CLAUDE_STEERED_REPORT,
+} from "../e2e/crewScripts";
+import { MOCK_PROVIDER_ID, mockModelsJson } from "../e2e/mockModels";
+import {
+  ANSWER_PROMPT_MARKER,
   FM_SEAT_HOLD_MARKER,
   FM_SEAT_STEER_WORD,
-  MOCK_CLAUDE_STEERED_REPORT,
   MOCK_FM_CHAT_TEXT,
-  MOCK_PROVIDER_ID,
-  mockModelsJson,
   startMockProvider,
 } from "../e2e/mockProvider";
 import { encodePng } from "../e2e/pictureFixtures";

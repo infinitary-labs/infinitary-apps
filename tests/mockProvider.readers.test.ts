@@ -16,22 +16,26 @@ import { backgroundJobReceipt } from "../src/core/pi/bashWords";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../src/core/storage/sessionReader";
 import {
   browser,
-  calledTool,
   firstSentence,
-  indexTaskId,
   knownRefOf,
-  lookUpTask,
+  refOf,
+  shellJobsRunning,
+  toolAnswers,
+} from "./e2e/browserScript";
+import {
   MOCK_MODEL_ID,
   MOCK_PROVIDER_ID,
   mockModelsJson,
   mockProviderOverrideModelsJson,
-  refOf,
+} from "./e2e/mockModels";
+import {
+  calledTool,
+  indexTaskId,
+  lookUpTask,
+  providerMessages,
   servedInstructions,
-  shellJobsRunning,
   sinceLastUser,
-  toolAnswers,
-} from "./e2e/mockProvider";
-import { providerMessages } from "./e2e/providerRequest";
+} from "./e2e/providerRequest";
 
 /** A chat-completions tool loop's two legs, as Pi sends them. */
 const chatCall = (name: string, args: unknown, id = "call_1") => ({

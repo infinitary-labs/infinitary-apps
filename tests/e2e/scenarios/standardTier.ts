@@ -4,11 +4,13 @@ import {
   MOCK_STANDARD_DRAWN_BODY,
   MOCK_STANDARD_MERGE_ONLY_ACTIONS,
   MOCK_STANDARD_REPORT,
+} from "../crewCards";
+import {
   type Scenario,
   STANDARD_TIER_HOST_BUTTONS_MARKER,
   STANDARD_TIER_PROMPT_MARKER,
-  sinceLastUser,
 } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 export const STANDARD_TIER_MISSING_HEADING_MARKER = "ship at the standard tier missing a heading";
 

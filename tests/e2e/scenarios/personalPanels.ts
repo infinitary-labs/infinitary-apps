@@ -1,5 +1,6 @@
 import { CREATE_PANEL_DRAFT } from "../../../src/shared/createPanelSlot";
-import { MOCK_PANEL_REPORT, MOCK_PANEL_REVISED_REPORT, type Scenario } from "../mockProvider";
+import { MOCK_PANEL_REPORT, MOCK_PANEL_REVISED_REPORT } from "../crewScripts";
+import type { Scenario } from "../mockProvider";
 
 /**
  * The talk-to-personalize build loop (Step 4). "make me a panel: <title>",

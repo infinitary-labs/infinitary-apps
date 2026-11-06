@@ -15,7 +15,7 @@ import { timelineActorWords } from "../../src/shared/timelineWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import { sinceLastUser } from "./mockProvider";
+import { sinceLastUser } from "./providerRequest";
 import { expandDock, openGroup, pressRow, recordFrame, recordTab } from "./rails";
 import { readSavedData } from "./savedData";
 import { UPGRADED_TIMELINE_PROMPT, upgradedTimelineRead } from "./scenarios/upgradedTimelineRead";

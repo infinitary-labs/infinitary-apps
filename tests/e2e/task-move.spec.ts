@@ -23,7 +23,7 @@ import { waitForFirstmateIdle } from "./crew";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
-import { MOCK_PROVIDER_ID, mockModelsJson } from "./mockProvider";
+import { MOCK_PROVIDER_ID, mockModelsJson } from "./mockModels";
 import { promptInput } from "./prompt";
 import { served } from "./providerRequest";
 import { seedQuotaFixture } from "./quotaFixtures";

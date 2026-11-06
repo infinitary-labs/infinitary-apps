@@ -20,7 +20,7 @@ import {
 } from "../../src/renderer/src/character/crew/constellation";
 import { CROWDED_PLANES } from "../../src/renderer/src/character/crew/orbitalPlanes";
 import { partsCountWords } from "../../src/renderer/src/character/crew/programWords";
-import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "../e2e/mockProvider";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "../e2e/mockModels";
 import { seedDelivery } from "./taskDelivery";
 
 /** INF-1066: actual task, routing, graph and pairing readings for the native scene.

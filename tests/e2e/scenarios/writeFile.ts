@@ -1,4 +1,5 @@
-import { calledTool, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { calledTool } from "../providerRequest";
 
 /**
  * A crewmate that makes one real change: a brief carrying "write the file

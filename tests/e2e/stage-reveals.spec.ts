@@ -5,14 +5,11 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
+import { FM_THREAD_CARD_TITLE } from "./crewCards";
+import { THREAD_PROSE_REPLY } from "./crewScripts";
 import { cardBody, cardBodyElement, frameIn, warmBody, warmElement } from "./frames";
 import { launchApp } from "./launch";
-import {
-  ANSWER_PROMPT_MARKER,
-  FM_THREAD_CARD_TITLE,
-  MOCK_ANSWER_TITLE,
-  THREAD_PROSE_REPLY,
-} from "./mockProvider";
+import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { expandDock, hideRecord, nowFrame, pressRow, recordCard } from "./rails";
 import {

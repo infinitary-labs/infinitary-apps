@@ -8,16 +8,15 @@ import {
   otherSeatRequests,
   say,
 } from "./claudeSeat";
+import { CLAUDE_CREW_PROMPT_MARKER, MOCK_CLAUDE_CARD_TITLE } from "./crewScripts";
 import type { LaunchedApp } from "./launch";
 import { MOCK_CLAUDE_OAUTH_TOKEN } from "./mockClaudeClient";
 import {
   ANSWER_PROMPT_MARKER,
-  CLAUDE_CREW_PROMPT_MARKER,
   FM_SEAT_HOLD_MARKER,
   FM_SEAT_STEER_WORD,
   FM_SEAT_STEERED_TITLE,
   MOCK_ANSWER_TITLE,
-  MOCK_CLAUDE_CARD_TITLE,
   type MockProviderServer,
   startMockProvider,
 } from "./mockProvider";

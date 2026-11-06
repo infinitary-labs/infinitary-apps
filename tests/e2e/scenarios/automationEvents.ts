@@ -1,4 +1,5 @@
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * Hermetic replay for INF-775 piece 3, not a claim that a live model obeys:

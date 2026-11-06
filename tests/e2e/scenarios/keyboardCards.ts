@@ -1,4 +1,5 @@
-import type { Scenario, ScriptedCall } from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import type { Scenario } from "../mockProvider";
 
 /**
  * Marker prompt: the mock crewmate emits two notes that each hold a text

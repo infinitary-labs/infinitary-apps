@@ -1,3 +1,5 @@
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { toolAnswers } from "../browserScript";
 import {
   chessItems,
   LESSON_CHESS_ASK,
@@ -22,14 +24,8 @@ import {
   LESSON_WELCOME_TITLE,
   lessonRoundBody,
 } from "../lessonFixtures";
-import {
-  answering,
-  calledTool,
-  type Scenario,
-  type ScriptedCall,
-  toolAnswers,
-} from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import type { Scenario } from "../mockProvider";
+import { answering, calledTool, providerMessages } from "../providerRequest";
 
 const LESSONS_STOPPED_REPORT = "Lessons stopped; records kept.";
 

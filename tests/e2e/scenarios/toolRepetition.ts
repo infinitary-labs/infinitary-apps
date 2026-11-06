@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { POSSIBLE_REPETITION_OPENING } from "../../../src/core/orchestrator/wakes";
-import { type Scenario, writeFilesCalls } from "../mockProvider";
+import { writeFilesCalls } from "../crewCards";
+import type { Scenario } from "../mockProvider";
 
 export const REPETITION_MARKER = "compare this picture with four prescribed reads";
 export const REPETITION_TITLE = "Prescribed picture rereads";

@@ -1,9 +1,10 @@
 import { writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { renderWake } from "../../src/core/orchestrator/wakes";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { launchClaudeCrew } from "./claudeCrew";
 import type { LaunchedApp } from "./launch";
-import { CLAUDE_CREWMATE_MARKER, FM_SYSTEM_MARKER, MOCK_COMPLETION_TEXT } from "./mockProvider";
+import { CLAUDE_CREWMATE_MARKER, MOCK_COMPLETION_TEXT } from "./mockProvider";
 import { reportLine, taskKey } from "./rails";
 
 /**
@@ -73,7 +74,7 @@ test("a Claude crewmate that stops with no card up wakes the Firstmate with its 
   });
   const served = () =>
     (mockProvider?.requestBodies() ?? [])
-      .filter((body) => body.includes(FM_SYSTEM_MARKER))
+      .filter((body) => body.includes(FIRSTMATE_PERSONA))
       .flatMap((body) => servedTexts(body, wake));
   await expect.poll(() => served().length, { timeout: 45_000 }).toBeGreaterThan(0);
   expect(await page.evaluate(() => window.infinitary.cards.list())).toEqual([]);

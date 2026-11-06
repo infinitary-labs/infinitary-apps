@@ -1,5 +1,6 @@
 import { SETUP_CARD_FAILED_WORDS } from "../../../src/core/orchestrator/wakes";
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * The agent-operated fleet: "manage my folder at <path>" (app_change

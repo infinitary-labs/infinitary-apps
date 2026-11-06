@@ -1,5 +1,6 @@
-import { browserShellMessages, calledTool, type Scenario } from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { browserShellMessages } from "../browserScript";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 
 /** INF-1870: leave disposable evidence beside a basis and read it from a continuation. */
 export const BASIS_PROBE = "basis locality probe";

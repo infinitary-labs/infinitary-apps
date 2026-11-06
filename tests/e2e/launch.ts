@@ -18,12 +18,8 @@ import { seedMockModelCatalog } from "./accountFixtures";
 import { launchDiagnostics } from "./launchDiagnostics";
 import { readInMain } from "./mainProcess";
 import { type MockClaudeTurns, writeMockClaudeClient } from "./mockClaudeClient";
-import {
-  type MockProviderServer,
-  mockModelsJson,
-  type Scenario,
-  startMockProvider,
-} from "./mockProvider";
+import { mockModelsJson } from "./mockModels";
+import { type MockProviderServer, type Scenario, startMockProvider } from "./mockProvider";
 import { virtualMacSwitches } from "./virtualMac";
 import { writeVoiceHelperStandIn } from "./voiceHelperStandIn";
 import { untilWindowCommands } from "./windowKeys";

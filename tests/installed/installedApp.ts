@@ -2,7 +2,8 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Browser, chromium, expect, type Page } from "@playwright/test";
-import { type MockProviderServer, mockModelsJson, startMockProvider } from "../e2e/mockProvider";
+import { mockModelsJson } from "../e2e/mockModels";
+import { type MockProviderServer, startMockProvider } from "../e2e/mockProvider";
 import { withoutRunnerSession } from "../helpers/runnerSession";
 import { scratchDir } from "../helpers/scratchDirs";
 

@@ -1,6 +1,7 @@
 import type { ScriptedArgs, ScriptedCall } from "../../helpers/scriptedCalls";
 import { GITLAB_STUB_OTHER_PROJECT, GITLAB_STUB_PROJECT } from "../gitlabStub";
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * A project on GitLab (gitlab-evidence e2e): a brief carrying this marker

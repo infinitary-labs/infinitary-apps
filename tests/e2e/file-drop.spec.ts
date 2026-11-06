@@ -2,8 +2,8 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
+import { FM_THREAD_CARD_TITLE } from "./crewCards";
 import { type LaunchedApp, launchApp } from "./launch";
-import { FM_THREAD_CARD_TITLE } from "./mockProvider";
 import { encodePng } from "./pictureFixtures";
 import { dropFiles, promptInput } from "./prompt";
 import { FM_THREAD_PROMPT_MARKER, firstmateThread } from "./scenarios/firstmateThread";

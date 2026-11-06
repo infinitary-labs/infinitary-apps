@@ -1,4 +1,5 @@
-import { answering, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { answering } from "../providerRequest";
 import { MOCK_QUOTA_NOTE_TITLE } from "./everyCardKind";
 
 export const MOCK_REVISED_NOTE_TEXT = "Codex weekly is now at 58% - still routing on pace.";

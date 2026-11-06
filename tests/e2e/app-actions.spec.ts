@@ -8,13 +8,8 @@ import { THIS_DESKTOP } from "./desktop";
 import { catalogProjectsHome } from "./homeFixtures";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
-import {
-  APP_CATALOG_PROMPT_MARKER,
-  MOCK_MODEL_ID,
-  MOCK_PROVIDER_ID,
-  mockModelsJson,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID, mockModelsJson } from "./mockModels";
+import { APP_CATALOG_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { windowShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { feedLine, feedLineOf } from "./rails";

@@ -1,4 +1,5 @@
-import { answering, calledTool, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { answering, calledTool } from "../providerRequest";
 
 /**
  * A crewmate working on a captain reply that takes a while (INF-990

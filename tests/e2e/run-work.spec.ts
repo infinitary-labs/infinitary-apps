@@ -48,17 +48,16 @@ import { type PlacedHome, startPlacedHome } from "../helpers/placedHome";
 import { scratchDir, socketScratchDir } from "../helpers/scratchDirs";
 import { forwardSocket, type SocketForward } from "../helpers/socketForward";
 import { SSH_SERVER_AVAILABLE, type SshServer, startSshServer } from "../helpers/sshServer";
-import { builtAppDir, packagedEntry } from "./launch";
-import { signedInClaudeHome, writeMockClaudeClient } from "./mockClaudeClient";
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_STEER_MARKER,
   MOCK_CLAUDE_CARD_TITLE,
   MOCK_CLAUDE_HELD_PROGRESS,
   MOCK_CLAUDE_STEERED_REPORT,
-  type MockProviderServer,
-  startMockProvider,
-} from "./mockProvider";
+} from "./crewScripts";
+import { builtAppDir, packagedEntry } from "./launch";
+import { signedInClaudeHome, writeMockClaudeClient } from "./mockClaudeClient";
+import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
 import { MAC_ONLY_TAG } from "./tags";
 import {

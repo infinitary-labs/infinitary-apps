@@ -5,7 +5,8 @@ import { SYNC_CAP_MS } from "../../../src/core/jobs/jobManager";
 import { renderWake } from "../../../src/core/orchestrator/wakes";
 import { backgroundJobReceipt } from "../../../src/core/pi/bashWords";
 import { frameServedInput } from "../../../src/shared/servedFrame";
-import { browser, type ScenarioAnswer } from "../mockProvider";
+import { browser } from "../browserScript";
+import type { ScenarioAnswer } from "../mockProvider";
 import { SAVED_SITE_VISIT, savedSiteVisit } from "./savedSiteVisit";
 
 /**

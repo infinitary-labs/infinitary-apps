@@ -150,6 +150,9 @@ export const PROBES = [
       "scripts/evals/",
       "tests/e2e/mockClaudeClient.ts",
       "tests/e2e/mockProvider.ts",
+      "tests/e2e/crewScripts.ts",
+      "tests/e2e/mockModels.ts",
+      "tests/e2e/providerRequest.ts",
     ],
   },
   {

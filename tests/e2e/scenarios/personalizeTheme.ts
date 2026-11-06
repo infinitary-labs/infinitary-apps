@@ -1,4 +1,5 @@
-import { FIRST_RUN_WAKE_MARKER, type Scenario } from "../mockProvider";
+import { WELCOME_WAKE_WORDS } from "../../../src/core/orchestrator/wakes";
+import type { Scenario } from "../mockProvider";
 
 /**
  * Talk-to-personalize Step 1 (Tier A): the mock Firstmate answers "switch to
@@ -11,7 +12,7 @@ export const personalizeTheme: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
     if (!isFirstmate || !wantsStream || hasToolResults) return undefined;
-    if (latestUserTail.includes(FIRST_RUN_WAKE_MARKER)) return undefined;
+    if (latestUserTail.includes(WELCOME_WAKE_WORDS)) return undefined;
     if (!latestUserTail.includes(PERSONALIZE_THEME_PROMPT_MARKER)) return undefined;
     return {
       calls: [

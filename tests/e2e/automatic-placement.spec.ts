@@ -18,7 +18,8 @@ import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accoun
 import { waitForFirstmateIdle } from "./crew";
 import { seedRepo } from "./githubStub";
 import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./launch";
-import { MOCK_PROVIDER_ID, mockModelsJson, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { MOCK_PROVIDER_ID, mockModelsJson } from "./mockModels";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { holdCpuBusy, homeReading, replayedCpu } from "./placementCpu";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";

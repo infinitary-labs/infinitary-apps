@@ -203,6 +203,9 @@ describe("the native gate on an affected request", () => {
     "tests/helpers/phoneProxyLaunches.ts",
     // INF-2625: the test home's crewmates and first mate are the journey stand-in's.
     "tests/e2e/mockProvider.ts",
+    "tests/e2e/crewScripts.ts",
+    "tests/e2e/mockModels.ts",
+    "tests/e2e/providerRequest.ts",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
   });

@@ -6,22 +6,23 @@ import type { KeptValidationInput } from "../../../src/shared/liveValidation";
 import { type ReviewFinding, renderFinding } from "../../../src/shared/rigor";
 import { CHECK_WORDS } from "../../../src/shared/vocabulary";
 import { noSurfaceProof } from "../../helpers/liveValidation";
-import type { ScriptedCardAction } from "../../helpers/scriptedCalls";
+import type { ScriptedCall, ScriptedCardAction } from "../../helpers/scriptedCalls";
+import { shellJobsRunning } from "../browserScript";
+import { MOCK_STANDARD_CARD_BODY, MOCK_STANDARD_REPORT } from "../crewCards";
 import {
-  calledTool,
-  contextRepos,
-  findCrewTaskId,
-  MOCK_STANDARD_CARD_BODY,
-  MOCK_STANDARD_REPORT,
   REVIEWED_TIER_PROMPT_MARKER,
   type Scenario,
   type ScenarioAnswer,
   type ScenarioRequest,
-  type ScriptedCall,
-  shellJobsRunning,
-  sinceLastUser,
 } from "../mockProvider";
-import { checkFactsSnapshot, providerMessages } from "../providerRequest";
+import {
+  calledTool,
+  checkFactsSnapshot,
+  contextRepos,
+  findCrewTaskId,
+  providerMessages,
+  sinceLastUser,
+} from "../providerRequest";
 
 /**
  * The reviewed tier (delivery rigor phases 2 and 3, rigor-reviewed e2e): a

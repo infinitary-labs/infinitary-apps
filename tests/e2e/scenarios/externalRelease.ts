@@ -1,9 +1,5 @@
-import {
-  findCrewTaskId,
-  MOCK_CLOSING_SENTENCES,
-  type Scenario,
-  settleNeedle,
-} from "../mockProvider";
+import { MOCK_CLOSING_SENTENCES, type Scenario, settleNeedle } from "../mockProvider";
+import { findCrewTaskId } from "../providerRequest";
 
 /** Test-only explicit release verification through the Firstmate's typed settle tool. */
 export const RELEASE_PROMPT_MARKER = "verified external release for the task ";

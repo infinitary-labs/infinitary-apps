@@ -4,8 +4,9 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { CREATE_PANEL_DRAFT, CREATE_PANEL_SLOT_ID } from "../../src/shared/createPanelSlot";
 import { scratchDir } from "../helpers/scratchDirs";
+import { MOCK_PANEL_ID, MOCK_PANEL_TITLE } from "./crewScripts";
 import { type LaunchedApp, launchApp } from "./launch";
-import { MOCK_PANEL_ID, MOCK_PANEL_TITLE, startMockProvider } from "./mockProvider";
+import { startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   ANSWER_TASK_PROMPT_MARKER,

@@ -1,5 +1,6 @@
 import { PERSONAL_WORKSPACE_NAME } from "../../../src/core/paths";
-import { contextRepos, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { contextRepos } from "../providerRequest";
 
 export const PERSONALIZE_HIDE_PROMPT_MARKER = "hide tasks";
 

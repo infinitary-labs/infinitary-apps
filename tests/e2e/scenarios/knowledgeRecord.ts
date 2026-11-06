@@ -1,4 +1,5 @@
-import { calledTool, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { calledTool } from "../providerRequest";
 
 /**
  * Knowledge (docs/knowledge.md, knowledge.spec.ts). A crewmate whose task

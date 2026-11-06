@@ -33,6 +33,7 @@ function shellQuote(path: string): string {
 }
 
 type MockModule = typeof import("../../tests/e2e/mockProvider.ts");
+type MockModelsModule = typeof import("../../tests/e2e/mockModels.ts");
 type WriteFileModule = typeof import("../../tests/e2e/scenarios/writeFile.ts");
 
 function fail(message: string): never {
@@ -144,6 +145,9 @@ async function main(): Promise<void> {
       const mockModule = await runner.import<MockModule>(
         join(REPO_ROOT, "tests/e2e/mockProvider.ts"),
       );
+      const { mockModelsJson } = await runner.import<MockModelsModule>(
+        join(REPO_ROOT, "tests/e2e/mockModels.ts"),
+      );
       const { writeFile } = await runner.import<WriteFileModule>(
         join(REPO_ROOT, "tests/e2e/scenarios/writeFile.ts"),
       );
@@ -151,7 +155,7 @@ async function main(): Promise<void> {
       provider = {
         kind: "mock",
         port: mockServer.port,
-        modelsJson: mockModule.mockModelsJson(mockServer.port),
+        modelsJson: mockModelsJson(mockServer.port),
       };
     }
     const { runAttempt } = await runner.import<typeof import("./attempt.ts")>(

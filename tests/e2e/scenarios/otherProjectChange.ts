@@ -1,6 +1,7 @@
 import { completionCardBody } from "../../helpers/completionCard";
 import type { ScriptedArgs } from "../../helpers/scriptedCalls";
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * INF-2510, the captain's INF-1868 answer 2: "Only repositories the app

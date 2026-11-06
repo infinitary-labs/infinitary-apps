@@ -1,13 +1,7 @@
 import { completionCardBody } from "../../helpers/completionCard";
-import {
-  contextRepos,
-  findCrewTaskId,
-  indexTaskId,
-  type Scenario,
-  type ScriptedCall,
-  SPAWN_PROMPT_MARKER,
-  sinceLastUser,
-} from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { type Scenario, SPAWN_PROMPT_MARKER } from "../mockProvider";
+import { contextRepos, findCrewTaskId, indexTaskId, sinceLastUser } from "../providerRequest";
 
 /** Hermetic instruction/host replay for FI3-237, not a claim that a live model obeys. */
 export const CI_REPAIR_MARKER = "exercise diagnosed check failures";

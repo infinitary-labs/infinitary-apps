@@ -1,4 +1,5 @@
-import { answering, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { answering } from "../providerRequest";
 
 /** The first mate's seeded harbour note a reply waits under (stage-reveals.spec.ts). */
 export const REPLYING_NOTE = "Reply under this harbour note";

@@ -1,4 +1,5 @@
-import { findCrewTaskId, type Scenario, settleNeedle } from "../mockProvider";
+import { type Scenario, settleNeedle } from "../mockProvider";
+import { findCrewTaskId } from "../providerRequest";
 
 /**
  * Escalation (intelligence-bucket routing S4). "not good enough, escalate

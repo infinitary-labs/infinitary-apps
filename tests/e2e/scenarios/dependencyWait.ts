@@ -1,4 +1,6 @@
-import { type Scenario, type ScriptedCall, sinceLastUser } from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * FI3-250's hermetic replay, not a claim that a live model obeys: the

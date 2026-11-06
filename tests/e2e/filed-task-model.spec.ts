@@ -5,7 +5,7 @@ import Database from "better-sqlite3";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { crewSummary, pointAtCrewmate } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
-import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockProvider";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import { promptInput } from "./prompt";
 import { expandDock, pressRow, recordCard, taskFact } from "./rails";
 import {

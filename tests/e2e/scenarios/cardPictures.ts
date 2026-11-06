@@ -1,5 +1,7 @@
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
-import { calledTool, type Scenario, shellJobsRunning, writeFilesCalls } from "../mockProvider";
+import { shellJobsRunning } from "../browserScript";
+import { writeFilesCalls } from "../crewCards";
+import type { Scenario } from "../mockProvider";
 import {
   bytesOf,
   dataUrl,
@@ -11,6 +13,7 @@ import {
   WIDE_PICTURE,
   WORKING_COPY_PICTURES,
 } from "../pictureFixtures";
+import { calledTool } from "../providerRequest";
 
 /**
  * Marker prompt: the mock crewmate writes real picture files into its

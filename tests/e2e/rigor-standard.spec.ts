@@ -2,7 +2,11 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { buildCrewmateSystemPrompt, crewmateProcedureFor } from "../../src/core/pi/piResources";
+import {
+  buildCrewmateSystemPrompt,
+  crewmateProcedureFor,
+  FIRSTMATE_PERSONA,
+} from "../../src/core/pi/piResources";
 import { crewRunbookText, Runbooks } from "../../src/core/runbooks/runbooks";
 import { openDatabase } from "../../src/core/storage/db";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
@@ -18,15 +22,16 @@ import {
 } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
-import { cardBody } from "./frames";
-import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
-import { type LaunchedApp, launchApp } from "./launch";
 import {
-  FM_SYSTEM_MARKER,
   MOCK_STANDARD_AFTER,
   MOCK_STANDARD_CARD_BODY,
   MOCK_STANDARD_INVENTED_LABEL,
   MOCK_STANDARD_REPORT,
+} from "./crewCards";
+import { cardBody } from "./frames";
+import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
+import { type LaunchedApp, launchApp } from "./launch";
+import {
   SPAWN_PROMPT_MARKER,
   STANDARD_TIER_HOST_BUTTONS_MARKER,
   STANDARD_TIER_PROMPT_MARKER,
@@ -193,7 +198,7 @@ test("a standard-tier crewmate's completion card renders the completion outline 
   );
   const bodies = mockProvider?.requestBodies() ?? [];
   const crewmate = bodies.filter(
-    (body) => !body.includes(FM_SYSTEM_MARKER) && body.includes("You are a crewmate"),
+    (body) => !body.includes(FIRSTMATE_PERSONA) && body.includes("You are a crewmate"),
   );
   expect(crewmate.length).toBeGreaterThan(0);
   for (const body of crewmate) {

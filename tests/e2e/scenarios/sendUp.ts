@@ -1,10 +1,7 @@
-import {
-  browserShellMessages,
-  calledTool,
-  MOCK_STANDARD_CARD_BODY,
-  type Scenario,
-} from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { browserShellMessages } from "../browserScript";
+import { MOCK_STANDARD_CARD_BODY } from "../crewCards";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 
 /**
  * A project on a plain Git host (git integration PR 1.1, forge-seam e2e): a

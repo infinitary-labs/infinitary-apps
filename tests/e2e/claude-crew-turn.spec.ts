@@ -4,6 +4,13 @@ import { expect, test } from "@playwright/test";
 import { reportSummary } from "@shared/feed";
 import { launchClaudeCrew } from "./claudeCrew";
 import { claudeQueued } from "./claudeSeat";
+import {
+  CLAUDE_CREW_PROMPT_MARKER,
+  CLAUDE_STEER_MARKER,
+  MOCK_CLAUDE_CARD_TEXT,
+  MOCK_CLAUDE_CARD_TITLE,
+  MOCK_CLAUDE_STEERED_REPORT,
+} from "./crewScripts";
 import { cardBody, observeBody } from "./frames";
 import type { LaunchedApp } from "./launch";
 import {
@@ -11,13 +18,6 @@ import {
   MOCK_CLAUDE_API_KEY,
   mockClaudeKeychainLookups,
 } from "./mockClaudeClient";
-import {
-  CLAUDE_CREW_PROMPT_MARKER,
-  CLAUDE_STEER_MARKER,
-  MOCK_CLAUDE_CARD_TEXT,
-  MOCK_CLAUDE_CARD_TITLE,
-  MOCK_CLAUDE_STEERED_REPORT,
-} from "./mockProvider";
 import { reportLine, taskKey } from "./rails";
 import { shownCard } from "./stack";
 import { claudeStarter } from "./starters";

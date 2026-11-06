@@ -16,7 +16,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { crewFormation } from "./crew";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockProvider";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import {
   expandDock,
   expectRecordBody,

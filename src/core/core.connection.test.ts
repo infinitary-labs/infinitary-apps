@@ -12,10 +12,10 @@ import {
   VIEW_INVOKE_CHANNELS,
 } from "@shared/ipc";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { mockModelsJson } from "../../tests/e2e/mockModels";
 import {
   APP_CATALOG_PROMPT_MARKER,
   type MockProviderServer,
-  mockModelsJson,
   startMockProvider,
 } from "../../tests/e2e/mockProvider";
 import { projectSetup } from "../../tests/e2e/scenarios/projectSetup";

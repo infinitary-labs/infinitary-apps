@@ -2,9 +2,10 @@ import { expect, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
+import { FM_THREAD_CARD_TITLE } from "./crewCards";
+import { THREAD_PROSE_REPLY } from "./crewScripts";
 import { emitContinuityCard } from "./holdsPlace";
 import { launchApp } from "./launch";
-import { FM_THREAD_CARD_TITLE, THREAD_PROSE_REPLY } from "./mockProvider";
 import {
   FM_THREAD_PROMPT_MARKER,
   FM_THREAD_PROSE_ANSWER,

@@ -1,5 +1,6 @@
 import { HELD_WORK_WORDS } from "../../../src/core/orchestrator/wakes";
-import { calledTool, type Scenario, type ScenarioAnswer, sinceLastUser } from "../mockProvider";
+import type { Scenario, ScenarioAnswer } from "../mockProvider";
+import { calledTool, sinceLastUser } from "../providerRequest";
 
 /**
  * A hold on a task's finding ends when that task reports it (INF-735, from

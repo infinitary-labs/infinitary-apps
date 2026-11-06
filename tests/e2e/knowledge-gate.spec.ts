@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { GOOGLE_DATA_KEPT } from "@shared/integrations";
 import { GOOGLE_DATA_FENCE } from "../../src/core/integrations";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -13,7 +14,7 @@ import { waitForFirstmateIdle } from "./crew";
 import { knowledgePanel, linkedReferences, OPEN_KNOWLEDGE } from "./knowledgeBrowser";
 import { mateBubble } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import { FM_SYSTEM_MARKER, type MockProviderServer, startMockProvider } from "./mockProvider";
+import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { latestContext, requestToolNames } from "./providerRequest";
 import { linkedTaskKeys, recordCard, recordFrame } from "./rails";
@@ -62,7 +63,7 @@ async function say(app: LaunchedApp, words: string): Promise<string[]> {
   await waitForFirstmateIdle(app.page);
   return (app.mockProvider?.requestBodies() ?? [])
     .slice(before)
-    .filter((body) => body.includes(FM_SYSTEM_MARKER));
+    .filter((body) => body.includes(FIRSTMATE_PERSONA));
 }
 
 function purgeScope(page: Page) {

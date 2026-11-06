@@ -1,5 +1,6 @@
-import { browserShellMessages, calledTool, type Scenario } from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { browserShellMessages } from "../browserScript";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 
 /**
  * A crewmate on a Mac opened from the Dock (host-env e2e): a brief carrying

@@ -1,16 +1,10 @@
 import { DEMO_UNPLAYED_WORDS } from "../../../src/core/pi/cardImages";
 import { mp4 } from "../../helpers/mp4Fixture";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { demoCardCall, pictureFile, writeChangePicturesCalls, writeFilesCalls } from "../crewCards";
 import { DEMO_POSTER, DEMO_RECORDING } from "../demoFixtures";
-import {
-  calledTool,
-  demoCardCall,
-  pictureFile,
-  type Scenario,
-  writeChangePicturesCalls,
-  writeFilesCalls,
-} from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 
 /**
  * Marker prompt (demo recordings, `tests/e2e/card-demo.spec.ts`): the mock

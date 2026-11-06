@@ -1,4 +1,5 @@
-import { CLAUDE_CREW_MODEL, CLAUDE_CREW_PROMPT_MARKER, type Scenario } from "../mockProvider";
+import { CLAUDE_CREW_PROMPT_MARKER } from "../crewScripts";
+import { CLAUDE_CREW_MODEL, type Scenario } from "../mockProvider";
 
 /**
  * INF-721 friction 1: the captain chooses on an answer task's card while

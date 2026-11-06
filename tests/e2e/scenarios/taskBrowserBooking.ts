@@ -1,17 +1,13 @@
 import { HIDDEN_VALUE_WORDS } from "../../../src/core/browser/outline";
-import { BROWSER_GONE_OPENING } from "../../../src/core/orchestrator/wakes";
-import { BROWSER_PAY_STEP, BROWSER_SIGN_IN_STEP } from "../../../src/core/pi/cardTool";
 import {
-  answersAfter,
-  browser,
-  CARD_CLOSED_STEER_NEEDLE,
-  firstSentence,
-  HANDOFF_WAKE,
-  lookingAgain,
-  refOf,
-  type Scenario,
-  type ScriptedCall,
-} from "../mockProvider";
+  BROWSER_GONE_OPENING,
+  BROWSER_RETURNED_OPENING,
+  CARD_CLOSED_STEER_PREFIX,
+} from "../../../src/core/orchestrator/wakes";
+import { BROWSER_PAY_STEP, BROWSER_SIGN_IN_STEP } from "../../../src/core/pi/cardTool";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { browser, firstSentence, lookingAgain, refOf, toolAnswers } from "../browserScript";
+import type { Scenario } from "../mockProvider";
 import { providerMessages } from "../providerRequest";
 
 /**
@@ -64,8 +60,8 @@ function bookingSteers(messages: ReturnType<typeof providerMessages>): BookingSt
   return messages.flatMap((message, at): BookingSteer[] => {
     if (message.role !== "user") return [];
     if (message.text.includes(`chose "${MOCK_FARES_CHOICE}"`)) return [{ kind: "choice", at }];
-    if (message.text.includes(CARD_CLOSED_STEER_NEEDLE)) return [{ kind: "closed", at }];
-    if (message.text.includes(HANDOFF_WAKE)) return [{ kind: "returned", at }];
+    if (message.text.includes(CARD_CLOSED_STEER_PREFIX.trim())) return [{ kind: "closed", at }];
+    if (message.text.includes(BROWSER_RETURNED_OPENING)) return [{ kind: "returned", at }];
     return [];
   });
 }
@@ -134,13 +130,13 @@ function taskBrowserBookingStep(body: string): ScriptedCall[] | undefined {
   const messages = providerMessages(body);
   const steers = bookingSteers(messages);
   const last = steers.at(-1);
-  const answers = answersAfter(messages, last?.at ?? 0);
+  const answers = toolAnswers(messages, last?.at ?? 0);
   // Its report's own answer: this turn has said what it found.
   if (answers.some((text) => text.startsWith("Reported."))) return undefined;
   const report = (text: string): ScriptedCall[] => [{ name: "report", args: { text } }];
   const refused = (answer: string | undefined): string =>
     answer?.startsWith("Card refused") ? ` ${answer}` : "";
-  const search = answersAfter(messages, 0)[0];
+  const search = toolAnswers(messages, 0)[0];
   const searched = search?.match(/text "07:40 to 10:25 · nonstop · (€\d+)/)?.[1];
   if (!last) {
     switch (answers.length) {
@@ -352,7 +348,7 @@ function taskBrowserLostStep(body: string): ScriptedCall[] | undefined {
     (message) => message.role === "user" && message.text.includes(BROWSER_GONE_OPENING),
   );
   if (told !== -1) {
-    const again = answersAfter(messages, told);
+    const again = toolAnswers(messages, told);
     if (again.some((text) => text.startsWith("Reported."))) return undefined;
     switch (again.length) {
       case 0:
@@ -375,7 +371,7 @@ function taskBrowserLostStep(body: string): ScriptedCall[] | undefined {
   }
   const steers = bookingSteers(messages).filter((steer) => steer.kind === "returned");
   const last = steers.at(-1);
-  const answers = answersAfter(messages, last?.at ?? 0);
+  const answers = toolAnswers(messages, last?.at ?? 0);
   if (answers.some((text) => text.startsWith("Reported."))) return undefined;
   if (!last) {
     switch (answers.length) {
@@ -416,7 +412,7 @@ function taskBrowserLostStep(body: string): ScriptedCall[] | undefined {
         ),
       ];
     case 3: {
-      const all = answersAfter(messages, 0);
+      const all = toolAnswers(messages, 0);
       const reload = all
         .flatMap((text) => text.split("\n"))
         .map((line) => line.replace(/^did: /, ""))
@@ -459,7 +455,7 @@ function taskBrowserUnpaidStep(body: string): ScriptedCall[] | undefined {
   const last = bookingSteers(messages)
     .filter((steer) => steer.kind === "returned")
     .at(-1);
-  const answers = answersAfter(messages, last?.at ?? 0);
+  const answers = toolAnswers(messages, last?.at ?? 0);
   if (answers.some((text) => text.startsWith("Reported."))) return undefined;
   const report = (text: string): ScriptedCall[] => [{ name: "report", args: { text } }];
   if (!last) {

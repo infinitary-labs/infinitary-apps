@@ -27,7 +27,8 @@ import {
   launchApp,
 } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
-import { type MockProviderServer, mockModelsJson, startMockProvider } from "./mockProvider";
+import { mockModelsJson } from "./mockModels";
+import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { readSavedData } from "./savedData";
 import { settingRow, settingsSection } from "./settings";
 import { showCard, shownCard } from "./stack";

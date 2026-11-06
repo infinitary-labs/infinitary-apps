@@ -5,17 +5,16 @@ import { closingNoteTitle } from "../../src/core/orchestrator/settleWords";
 import type { Card } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchClaudeCrew } from "./claudeCrew";
-import { type LaunchedApp, launchApp } from "./launch";
-import { sdkBundledClaudeClient } from "./mockClaudeClient";
 import {
-  CANCEL_PROMPT_MARKER,
   CLAUDE_CARD_RETIRE_MARKER,
   CLAUDE_CREW_PROMPT_MARKER,
   MOCK_CLAUDE_CARD_TITLE,
-  SPAWN_PROMPT_MARKER,
   THREAD_CARD_TITLE,
   THREAD_PROMPT_MARKER,
-} from "./mockProvider";
+} from "./crewScripts";
+import { type LaunchedApp, launchApp } from "./launch";
+import { sdkBundledClaudeClient } from "./mockClaudeClient";
+import { CANCEL_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { expandDock, taskLine } from "./rails";
 import { readSavedData } from "./savedData";

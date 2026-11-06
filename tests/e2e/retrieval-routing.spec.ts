@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { RETRIEVAL_BOUNDARY_WORDS } from "../../src/core/orchestrator/intentBrief";
+import { KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
@@ -12,13 +13,8 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { seedRepo } from "./githubStub";
 import { launchApp } from "./launch";
-import {
-  CLASSIFIER_SYSTEM_MARKER,
-  MOCK_MODEL_ID,
-  MOCK_PROVIDER_ID,
-  mockModelsJson,
-  RETRIEVAL_TASK_ASK,
-} from "./mockProvider";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID, mockModelsJson } from "./mockModels";
+import { RETRIEVAL_TASK_ASK } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
@@ -154,12 +150,12 @@ test("a bounded explanation requests low, reads its source and stays an answer a
     // The classifier is offered only the answer's kinds (INF-1430), and the brief draws its boundary.
     const answerOffer = `(one of: ${[...KINDS_BY_DELIVERABLE.answer, "unclear"].join(", ")})`;
     expect(
-      bodies.some((body) => body.includes(CLASSIFIER_SYSTEM_MARKER) && body.includes(answerOffer)),
+      bodies.some((body) => body.includes(KIND_CLASSIFIER_OPENING) && body.includes(answerOffer)),
     ).toBe(true);
     expect(
       bodies.some(
         (body) =>
-          !body.includes(CLASSIFIER_SYSTEM_MARKER) && body.includes(RETRIEVAL_BOUNDARY_WORDS),
+          !body.includes(KIND_CLASSIFIER_OPENING) && body.includes(RETRIEVAL_BOUNDARY_WORDS),
       ),
     ).toBe(true);
     if (evidence) {
@@ -199,7 +195,7 @@ test("a bounded explanation requests low, reads its source and stays an answer a
     expect(decisions.routing({ taskIds: [task.id] })).toEqual(savedRouting);
     expect(
       (launched.mockProvider?.requestBodies() ?? []).some((body) =>
-        body.includes(CLASSIFIER_SYSTEM_MARKER),
+        body.includes(KIND_CLASSIFIER_OPENING),
       ),
     ).toBe(false);
 

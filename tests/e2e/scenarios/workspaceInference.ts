@@ -1,5 +1,6 @@
 import { PERSONAL_WORKSPACE_NAME } from "../../../src/core/paths";
-import { contextRepos, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { contextRepos } from "../providerRequest";
 
 export const CONFIGURE_REPO_PROMPT_MARKER = "make the repository ";
 

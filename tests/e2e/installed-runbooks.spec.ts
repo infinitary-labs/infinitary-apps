@@ -12,8 +12,8 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
-import { servedInstructions } from "./mockProvider";
 import { promptInput } from "./prompt";
+import { servedInstructions } from "./providerRequest";
 import { feedLine } from "./rails";
 import {
   ADD_RUNBOOK_PROMPT_MARKER,

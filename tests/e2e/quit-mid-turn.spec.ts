@@ -2,11 +2,12 @@ import { writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
 import { RESTART_REPLAY_NOTE } from "../../src/core/orchestrator/wakes";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { RESTART_RESUMED_WORDS } from "../../src/core/tasks/recordActivity";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
-import { FM_SYSTEM_MARKER, SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { latestContext, providerMessages, requestToolNames } from "./providerRequest";
 import { expandDock } from "./rails";
@@ -48,7 +49,7 @@ test("a crewmate's turn the app closes under three times picks up again at the n
       .filter(
         (body) =>
           body.includes(RESTART_REPLAY_PROMPT_MARKER) &&
-          !body.includes(FM_SYSTEM_MARKER) &&
+          !body.includes(FIRSTMATE_PERSONA) &&
           requestToolNames(body).includes("report") &&
           providerMessages(body).at(-1)?.role === "user",
       );
@@ -81,7 +82,7 @@ test("a crewmate's turn the app closes under three times picks up again at the n
     for (let quit = 1; quit <= RESTART_REPLAY_QUITS; quit += 1) {
       await test.step(`the app closes mid-turn (${quit} of ${RESTART_REPLAY_QUITS}) and the next launch delivers the message again, saying so`, async () => {
         const firstmateRequests = () =>
-          mockProvider.requestBodies().filter((body) => body.includes(FM_SYSTEM_MARKER)).length;
+          mockProvider.requestBodies().filter((body) => body.includes(FIRSTMATE_PERSONA)).length;
         const before = firstmateRequests();
         const { userDataDir, homeDir } = app;
         await app.close();
@@ -124,7 +125,7 @@ test("a crewmate's turn the app closes under three times picks up again at the n
     const context = latestContext(
       mockProvider
         .requestBodies()
-        .filter((body) => body.includes(FM_SYSTEM_MARKER))
+        .filter((body) => body.includes(FIRSTMATE_PERSONA))
         .at(-1) ?? "",
     );
     expect(context?.crew).toEqual(

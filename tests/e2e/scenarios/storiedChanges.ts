@@ -1,5 +1,6 @@
 import type { ScriptedArgs } from "../../helpers/scriptedCalls";
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeStory";
 
 /**

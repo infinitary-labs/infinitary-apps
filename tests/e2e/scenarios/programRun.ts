@@ -1,5 +1,5 @@
-import { calledTool, type Scenario, type ScenarioAnswer, sinceLastUser } from "../mockProvider";
-import { latestServedTurn } from "../providerRequest";
+import type { Scenario, ScenarioAnswer } from "../mockProvider";
+import { calledTool, latestServedTurn, sinceLastUser } from "../providerRequest";
 
 /**
  * A program run to its result in the launched app (INF-799 piece 2, the

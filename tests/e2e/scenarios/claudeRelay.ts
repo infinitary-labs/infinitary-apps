@@ -1,4 +1,6 @@
-import { answering, CLAUDE_CREW_PROMPT_MARKER, type Scenario } from "../mockProvider";
+import { CLAUDE_CREW_PROMPT_MARKER } from "../crewScripts";
+import type { Scenario } from "../mockProvider";
+import { answering } from "../providerRequest";
 
 /**
  * A Claude crewmate that relays a captain decision only the Firstmate can

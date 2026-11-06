@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { presentationCommitMessage } from "../../src/core/forge/presentation";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { MERGE_CLOSES_WORDS } from "../../src/shared/cards";
@@ -11,16 +12,15 @@ import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
 import {
-  FM_SYSTEM_MARKER,
   MERGE_PROMPT_MARKER,
   type Scenario,
   SPAWN_PROMPT_MARKER,
   STEER_PROMPT_MARKER,
-  sinceLastUser,
 } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
+import { sinceLastUser } from "./providerRequest";
 import { expectRecordBody, hideRecord, recordCard, recordDrawings, taskKeyLinks } from "./rails";
 import { readSavedData } from "./savedData";
 import {
@@ -158,7 +158,7 @@ const mergedNumbers = (github: { merges: () => { number: number }[] }) =>
  */
 const settleAnswers = (bodies: string[]) =>
   bodies.filter((body) => {
-    if (!body.includes(FM_SYSTEM_MARKER)) return false;
+    if (!body.includes(FIRSTMATE_PERSONA)) return false;
     const { user, results } = sinceLastUser(body);
     return user.includes(MERGE_PROMPT) && results.length > 0;
   }).length;

@@ -1,4 +1,5 @@
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 export const UPGRADED_TIMELINE_PROMPT = "Read the upgraded task's unified timeline:";
 

@@ -1,6 +1,7 @@
 import { API_WRITE_GUARD_MARKER, mergeWriteCases } from "../apiWriteCases";
 import { GITLAB_STUB_PROJECT } from "../gitlabStub";
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * The merge API guard: the crewmate tries each merge and default-branch

@@ -1,7 +1,8 @@
 import { INTEGRATIONS_COMMAND } from "../../../src/core/integrations";
 import { WRITE_ANSWERED_LEAD } from "../../../src/core/orchestrator/wakes";
-import { browserShellMessages, calledTool, type Scenario, sinceLastUser } from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { browserShellMessages } from "../browserScript";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages, sinceLastUser } from "../providerRequest";
 
 /**
  * A crewmate reads the captain's notes through an MCP server he added

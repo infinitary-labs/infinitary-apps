@@ -1,4 +1,5 @@
-import { browserShellMessages, type ScriptedCall } from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { browserShellMessages } from "../browserScript";
 import { providerMessages, requestToolNames } from "../providerRequest";
 
 /**

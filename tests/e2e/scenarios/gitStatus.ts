@@ -1,5 +1,6 @@
-import { browserShellMessages, calledTool, type Scenario } from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { browserShellMessages } from "../browserScript";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 
 /**
  * A crewmate on a Mac with no git of its own on the search path (git

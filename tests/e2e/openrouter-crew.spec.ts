@@ -1,15 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { WELCOME_TITLE } from "@shared/welcome";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { scratchDir } from "../helpers/scratchDirs";
 import { gitIdentityHome } from "./homeFixtures";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { writeMockClaudeClient } from "./mockClaudeClient";
-import {
-  FM_SYSTEM_MARKER,
-  mockProviderOverrideModelsJson,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { mockProviderOverrideModelsJson } from "./mockModels";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { windowShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { startedLine, taskKey } from "./rails";
@@ -122,7 +120,7 @@ test("a crewmate on an install signed in only to OpenRouter runs on an OpenRoute
       const keyOf = (index: number) =>
         headers[index]?.["x-api-key"] ?? headers[index]?.authorization?.replace(/^Bearer /, "");
       const crewTurns = bodies.flatMap((body, index) =>
-        body.includes(FM_SYSTEM_MARKER)
+        body.includes(FIRSTMATE_PERSONA)
           ? []
           : [{ model: JSON.parse(body).model, key: keyOf(index) }],
       );

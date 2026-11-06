@@ -13,7 +13,7 @@ import { seedDelivery } from "../helpers/taskDelivery";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { atRest, holdPointer } from "./layout";
-import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockProvider";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import { promptInput } from "./prompt";
 import { factsStrip, showCard } from "./stack";
 import { focusOn } from "./windowKeys";

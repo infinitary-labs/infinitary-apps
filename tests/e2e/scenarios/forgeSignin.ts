@@ -1,6 +1,6 @@
 import type { ScriptedArgs, ScriptedCall } from "../../helpers/scriptedCalls";
-import { type Scenario, sinceLastUser } from "../mockProvider";
-import { latestContext } from "../providerRequest";
+import type { Scenario } from "../mockProvider";
+import { latestContext, sinceLastUser } from "../providerRequest";
 
 export const WORKFLOW_DISPATCH_MARKER = "request the project verification workflow";
 

@@ -1,11 +1,7 @@
-import {
-  lookUpTask,
-  MOCK_MODEL_ID,
-  MOCK_PROVIDER_ID,
-  type Scenario,
-  type ScriptedCall,
-  sinceLastUser,
-} from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "../mockModels";
+import type { Scenario } from "../mockProvider";
+import { lookUpTask, sinceLastUser } from "../providerRequest";
 
 /**
  * A task filed earlier starts on the model the captain names (FI3-436): the

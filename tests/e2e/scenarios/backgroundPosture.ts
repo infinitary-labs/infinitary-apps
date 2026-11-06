@@ -1,4 +1,5 @@
-import type { Scenario, ScriptedCall } from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import type { Scenario } from "../mockProvider";
 
 /** Presentation regression: a real host job continues alongside a question. */
 export const WORK_POSTURE_MARKER = "verify background posture";

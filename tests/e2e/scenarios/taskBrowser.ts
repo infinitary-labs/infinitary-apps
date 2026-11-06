@@ -1,15 +1,8 @@
 import { HERE } from "../../../src/shared/deviceNames";
-import {
-  browser,
-  calledTool,
-  knownRefOf,
-  lookingAgain,
-  refOf,
-  type Scenario,
-  type ScriptedCall,
-  toolAnswers,
-} from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { browser, knownRefOf, lookingAgain, refOf, toolAnswers } from "../browserScript";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 
 /**
  * The task browser (docs/task-browser.md, task-browser e2e). A brief

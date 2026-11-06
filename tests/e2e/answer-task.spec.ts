@@ -7,7 +7,6 @@ import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchClaudeCrew } from "./claudeCrew";
 import { type LaunchedApp, launchApp } from "./launch";
-import { CARD_CLOSED_STEER_NEEDLE } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";

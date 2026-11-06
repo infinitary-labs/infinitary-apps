@@ -1,8 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { launchClaudeCrew } from "./claudeCrew";
 import type { LaunchedApp } from "./launch";
-import { FM_SYSTEM_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   SEQ_BUG_YES,
@@ -53,16 +53,16 @@ test("a cardless reproduction on Claude starts its fix without a captain turn", 
   const fixBriefReceived = () =>
     (mockProvider?.requestBodies() ?? []).find(
       (body) =>
-        !body.includes(FM_SYSTEM_MARKER) && body.includes("Fix the meter reset at its root"),
+        !body.includes(FIRSTMATE_PERSONA) && body.includes("Fix the meter reset at its root"),
     );
   await expect.poll(fixBriefReceived, { timeout: 30_000 }).toBeDefined();
   const bodies = mockProvider?.requestBodies() ?? [];
   const crewBrief = bodies.find(
-    (body) => !body.includes(FM_SYSTEM_MARKER) && body.includes("Reproduce the meter reset"),
+    (body) => !body.includes(FIRSTMATE_PERSONA) && body.includes("Reproduce the meter reset"),
   );
   expect(crewBrief).toMatch(/"model"\s*:\s*"claude-/);
   expect(
-    bodies.some((body) => body.includes(FM_SYSTEM_MARKER) && body.includes(SEQ_REPRODUCED_YES)),
+    bodies.some((body) => body.includes(FIRSTMATE_PERSONA) && body.includes(SEQ_REPRODUCED_YES)),
   ).toBe(true);
   const fixBrief = fixBriefReceived();
   expect(fixBrief).toContain(SEQ_REPRODUCED_YES);

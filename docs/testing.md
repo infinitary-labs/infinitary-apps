@@ -862,9 +862,12 @@ Their Pi commands request background execution even on a quiet host, so `settle-
 A relaunch with `reuseMockProvider` keeps the scenarios that stand-in started with, and `launchApp` refuses `scenarios` when it does not start the stand-in itself.
 The stand-in asks the named scenarios in the order named, after the first mate's answer-missing retry and a spec's scripted turns (`scriptFirstmateTurn`) and before every shared answer; the first answer wins.
 Words a journey and its scenario share, such as a marker or a card title, live in the scenario file, and the journey imports them from there.
-A shared helper the scenarios read, such as `calledTool` or `sinceLastUser`, stays in the stand-in, which exports it.
-A behavior that answers before the scenarios are asked, or that the spec releases through the stand-in's own controls (`releaseThreadAnswer`, `releaseHeldFirstmate`, `refuseClaude`), stays in the stand-in.
-So do the answers to the app's own words, such as the first-run welcome, a report that declares its work finished and a crewmate's build-in-place brief, and the captain's words nearly every journey's first mate needs: commission a crewmate, settle, steer or cancel a task, an answer card and a catalog change.
+A shared helper the scenarios read lives in the file that owns it, and a journey, a scenario or the stand-in imports it from there, never through another file.
+The request readers, such as `calledTool` or `sinceLastUser`, are `tests/e2e/providerRequest.ts`; a crewmate's browser commands and the reading of their answers are `tests/e2e/browserScript.ts`; the card fixtures and card words several crewmates share are `tests/e2e/crewCards.ts`; and the models.json files that point the app at the stand-in are `tests/e2e/mockModels.ts`.
+A behavior that answers before the scenarios are asked, or that the spec releases through the first mate's held turn (`releaseHeldFirstmate`), stays in the stand-in.
+So do the answers to the app's own words, such as the first-run welcome and a report that declares its work finished, and the captain's words nearly every journey's first mate needs: commission a crewmate, settle, steer or cancel a task, an answer card and a catalog change.
+The built-in crew scripts are `tests/e2e/crewScripts.ts`: the crewmate on a build-in-place brief, the crewmate that keeps a card's thread, and the Claude crewmate on a working or a refused login.
+The stand-in asks them after the scenarios and its first mate's own answers, and keeps the controls a spec releases them through (`releaseThreadAnswer`, `releaseHeldCrew`, `refuseClaude`).
 Every other scripted behavior, whether one journey or several use it, is a scenario.
 Only a journey or another scenario imports a scenario file.
 `tests/lint/e2e-scenario-imports.grit` refuses the import anywhere else in `tests/e2e`, in `pnpm check`, because one import in a shared helper puts the scenario under every journey again.
@@ -1360,7 +1363,7 @@ A step whose subject only a Mac has - the window wash, Show in dock, the app men
 A journey whose whole subject is the Mac's skips on Linux, says why and carries `MAC_ONLY_TAG` ("Tests that need a Mac"): the shell keys' default keys (`multiline-composer`, `card-threads`; `docs/composer.md`, "Shell keys"), the window wash (`window-wash`, `activity-runs`), macOS's microphone permission (`mic-access`), macOS's question about other apps' data (`macos-privacy`), the app's own git (`app-git`, `run-work`; `docs/forge.md`, "The app's own git"), the Mac app another Mac downloads with its zip tools (`devices`, `run-work`), `CFFIXED_USER_HOME` (`user-data-folder`) and the real voice model (`voice-freeze.check`).
 The SSH journeys run on Linux too, against the runner's own OpenSSH (`tests/helpers/sshServer.ts`).
 The demo encoder is the release's static FFmpeg 7 there ("Recording a demo" above).
-A mock crewmate writes its fixture files one bash call each, since Linux refuses a command argument over 128 KiB (`writeFilesCalls` in `tests/e2e/mockProvider.ts`).
+A mock crewmate writes its fixture files one bash call each, since Linux refuses a command argument over 128 KiB (`writeFilesCalls` in `tests/e2e/crewCards.ts`).
 
 The disposable Linux runner, a hosted machine or the PC's fresh virtual machine, installs the downloaded Electron sandbox helper root-owned with mode 4755 at a space-free temporary path, named by `CHROME_DEVEL_SANDBOX`.
 It removes the unpacked adjacent helper after installing it because Chromium prefers an adjacent helper to the development fallback.

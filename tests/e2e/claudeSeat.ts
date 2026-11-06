@@ -8,12 +8,14 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
 import type { AccountRecord } from "../../src/core/pi/accountVault";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { launchSignedInClaude } from "./claudeAccount";
 import type { LaunchedApp, LaunchOptions } from "./launch";
 import { claudeDefaultStore } from "./mockClaudeClient";
-import { FM_SYSTEM_MARKER, MOCK_KEY_PROVIDER_ID, type MockProviderServer } from "./mockProvider";
+import { MOCK_KEY_PROVIDER_ID } from "./mockModels";
+import type { MockProviderServer } from "./mockProvider";
 import { starterFor } from "./starters";
 
 /**
@@ -234,7 +236,7 @@ export function claudeSeatRequests(mockProvider: MockProviderServer): string[] {
     .requestBodies()
     .filter(
       (body, index) =>
-        body.includes(FM_SYSTEM_MARKER) &&
+        body.includes(FIRSTMATE_PERSONA) &&
         headers[index]?.["user-agent"]?.startsWith("claude-cli/") === true,
     );
 }
@@ -246,7 +248,7 @@ export function otherSeatRequests(mockProvider: MockProviderServer): string[] {
     .requestBodies()
     .filter(
       (body, index) =>
-        body.includes(FM_SYSTEM_MARKER) &&
+        body.includes(FIRSTMATE_PERSONA) &&
         headers[index]?.["user-agent"]?.startsWith("claude-cli/") !== true,
     );
 }

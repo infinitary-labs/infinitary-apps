@@ -1,5 +1,7 @@
 import type { LiveValidationInput } from "../../../src/shared/liveValidation";
-import { type Scenario, type ScriptedCall, sinceLastUser } from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * INF-1824: a version's gaps reach the captain on one checklist card. FIRS-3

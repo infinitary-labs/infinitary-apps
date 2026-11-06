@@ -9,13 +9,12 @@ import {
   renderWake,
 } from "../src/core/orchestrator/wakes";
 import { createEventBashTool } from "../src/core/pi/bashTool";
+import { FIRSTMATE_PERSONA } from "../src/core/pi/piResources";
 import {
-  FM_SYSTEM_MARKER,
   MOCK_FM_CHAT_TEXT,
   MOCK_FM_DONE_TEXT,
   type MockProviderServer,
   type Scenario,
-  type ScriptedCall,
   startMockProvider,
 } from "./e2e/mockProvider";
 import {
@@ -33,6 +32,7 @@ import {
   taskBrowserJourneys,
 } from "./e2e/scenarios/taskBrowserJourneys";
 import { workspaceInference } from "./e2e/scenarios/workspaceInference";
+import type { ScriptedCall } from "./helpers/scriptedCalls";
 
 let server: MockProviderServer | undefined;
 afterEach(async () => server?.close());
@@ -54,7 +54,7 @@ async function calls(messages: unknown[], scenarios: readonly Scenario[] = []) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       stream: true,
-      messages: [{ role: "system", content: FM_SYSTEM_MARKER }, ...messages],
+      messages: [{ role: "system", content: FIRSTMATE_PERSONA }, ...messages],
     }),
   });
   expect(response.ok).toBe(true);
@@ -260,7 +260,7 @@ function cardChoice(
 }
 
 /** One Firstmate request in the chat-completions dialect: the calls it answered with, or its text. */
-async function firstmateAnswer(messages: unknown[], system = FM_SYSTEM_MARKER) {
+async function firstmateAnswer(messages: unknown[], system = FIRSTMATE_PERSONA) {
   if (!server) throw new Error("start the mock provider first");
   const response = await fetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, {
     method: "POST",
@@ -591,7 +591,7 @@ describe("the served turn reads the same in every dialect the mock serves", () =
   it("chat completions: a tool result is its own message", () => {
     const body = JSON.stringify({
       messages: [
-        { role: "system", content: FM_SYSTEM_MARKER },
+        { role: "system", content: FIRSTMATE_PERSONA },
         { role: "user", content: older },
         { role: "assistant", content: MOCK_FM_CHAT_TEXT },
         { role: "user", content: [{ type: "text", text: input }] },
@@ -603,7 +603,7 @@ describe("the served turn reads the same in every dialect the mock serves", () =
 
   it("Anthropic messages: a tool result rides a user message", () => {
     const body = JSON.stringify({
-      system: [{ type: "text", text: FM_SYSTEM_MARKER }],
+      system: [{ type: "text", text: FIRSTMATE_PERSONA }],
       messages: [
         { role: "user", content: [{ type: "text", text: older }] },
         { role: "assistant", content: [{ type: "text", text: MOCK_FM_CHAT_TEXT }] },
@@ -629,7 +629,7 @@ describe("the served turn reads the same in every dialect the mock serves", () =
 
   it("Responses input: a tool result is a function_call_output item", () => {
     const body = JSON.stringify({
-      instructions: FM_SYSTEM_MARKER,
+      instructions: FIRSTMATE_PERSONA,
       input: [
         { role: "user", content: [{ type: "input_text", text: older }] },
         {
@@ -750,7 +750,7 @@ async function captainSays(provider: MockProviderServer, ask: string) {
     body: JSON.stringify({
       stream: true,
       messages: [
-        { role: "system", content: FM_SYSTEM_MARKER },
+        { role: "system", content: FIRSTMATE_PERSONA },
         { role: "user", content: turn([alpha], ask) },
       ],
     }),

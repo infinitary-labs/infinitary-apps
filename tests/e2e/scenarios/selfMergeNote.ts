@@ -1,10 +1,5 @@
-import {
-  type ChatRequest,
-  calledTool,
-  messageText,
-  type Scenario,
-  toolResults,
-} from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { type ChatRequest, calledTool, messageText, toolResults } from "../providerRequest";
 import { preparedRevision, prepareMockStory } from "./changeStory";
 
 /**

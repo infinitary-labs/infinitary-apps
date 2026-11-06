@@ -20,13 +20,8 @@ import {
   within,
 } from "./layout";
 import { signedInClaudeHome, writeMockClaudeClient } from "./mockClaudeClient";
-import {
-  ANSWER_PROMPT_MARKER,
-  MOCK_ANSWER_TITLE,
-  MOCK_KEY_PROVIDER_ID,
-  mockProviderOverrideModelsJson,
-  startMockProvider,
-} from "./mockProvider";
+import { MOCK_KEY_PROVIDER_ID, mockProviderOverrideModelsJson } from "./mockModels";
+import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE, startMockProvider } from "./mockProvider";
 import { movePanelTo } from "./panelLayout";
 import { promptInput } from "./prompt";
 import { cardLeave, cardReply, cardScroller, showCard, shownCard, shownCardFrame } from "./stack";

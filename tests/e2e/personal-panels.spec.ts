@@ -15,17 +15,16 @@ import { PANEL_STOPPED_LINE } from "../../src/renderer/src/personal/panelBoundar
 import { DEFAULT_PERSONAL_PLACEMENT } from "../../src/shared/personal/manifest";
 import { AUTONOMY_SWITCH_NAME, AUTONOMY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
-import { panelBody, readFrameNow } from "./frames";
-import { type LaunchedApp, launchApp } from "./launch";
 import {
   MOCK_PANEL_ID,
   MOCK_PANEL_NOTE_TITLE,
   MOCK_PANEL_REPORT,
   MOCK_PANEL_REVISED_REPORT,
   MOCK_PANEL_TITLE,
-  type MockProviderServer,
-  startMockProvider,
-} from "./mockProvider";
+} from "./crewScripts";
+import { panelBody, readFrameNow } from "./frames";
+import { type LaunchedApp, launchApp } from "./launch";
+import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { projectRow } from "./projects";
 import { promptInput } from "./prompt";
 import { expandDock, feedLine, reportLine, statusLine, taskKey } from "./rails";

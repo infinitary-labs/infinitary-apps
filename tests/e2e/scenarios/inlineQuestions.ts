@@ -1,4 +1,5 @@
-import { answering, calledTool, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { answering, calledTool } from "../providerRequest";
 
 /**
  * Inline decisions (contract 4.22; tests/e2e/card-questions.spec.ts): a

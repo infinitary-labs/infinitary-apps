@@ -31,7 +31,7 @@ import { startCustomApiFixture } from "./customApiFixture";
 import { STUB_LOGIN, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import { SPAWN_PROMPT_MARKER, sinceLastUser, startMockProvider } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import {
   closeModelPanel,
   levelLane,
@@ -42,6 +42,7 @@ import {
 import { asSavedByOlderRelease, seedLegacyGithubServer } from "./olderProfile";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
+import { sinceLastUser } from "./providerRequest";
 import { openGroup, pressRow, recordCard, recordFrame } from "./rails";
 import { readSavedData } from "./savedData";
 import {

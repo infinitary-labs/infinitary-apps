@@ -1,16 +1,13 @@
 import { REVIEW_CAREFULLY_WORDS } from "../../../src/shared/vocabulary";
 import { noSurfaceProof } from "../../helpers/liveValidation";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import {
-  calledTool,
   MOCK_STANDARD_DRAWN_BODY,
   MOCK_STANDARD_MERGE_ONLY_ACTIONS,
   MOCK_STANDARD_REPORT,
-  REVIEW_CAREFULLY_MARKER,
-  type Scenario,
-  type ScriptedCall,
-  sinceLastUser,
-} from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+} from "../crewCards";
+import { REVIEW_CAREFULLY_MARKER, type Scenario } from "../mockProvider";
+import { calledTool, providerMessages, sinceLastUser } from "../providerRequest";
 import {
   liveReviewAnswer,
   MOCK_REVIEW_PASSED_STEER,

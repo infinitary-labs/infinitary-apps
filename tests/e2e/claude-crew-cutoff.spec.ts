@@ -2,18 +2,17 @@ import { expect, type Page, test } from "@playwright/test";
 import { reportSummary } from "@shared/feed";
 import { cutOffOpening, providerBackOpening } from "../../src/core/orchestrator/wakes";
 import { heldSteerText } from "../../src/core/pi/crewTools";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchClaudeCrew, signedInAs } from "./claudeCrew";
-import type { LaunchedApp } from "./launch";
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_REFUSAL_OVER_MARKER,
   CLAUDE_REFUSED_PROMPT_MARKER,
-  FM_SYSTEM_MARKER,
   MOCK_CLAUDE_REFUSAL_OVER_REPORT,
-  type MockProviderServer,
-  startMockProvider,
-} from "./mockProvider";
+} from "./crewScripts";
+import type { LaunchedApp } from "./launch";
+import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { reportLine, taskKey } from "./rails";
 
 /**
@@ -59,7 +58,7 @@ test("a crewmate its organisation refuses waits without a turn, is told once, an
   const homeDir = scratchDir("infinitary-home-");
   const mockProvider: MockProviderServer = await startMockProvider();
   const firstmateBodies = () =>
-    mockProvider.requestBodies().filter((body) => body.includes(FM_SYSTEM_MARKER));
+    mockProvider.requestBodies().filter((body) => body.includes(FIRSTMATE_PERSONA));
   const heard = (text: string) => firstmateBodies().some((body) => body.includes(text));
   /** The model turns the refused crewmate's client asked for. */
   const crewTurns = () => {

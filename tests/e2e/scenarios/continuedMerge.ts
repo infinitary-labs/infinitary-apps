@@ -1,5 +1,6 @@
 import type { ScriptedArgs } from "../../helpers/scriptedCalls";
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 export const CONTINUED_MERGE_MARKER = "continue the earlier pull request";
 export const CONTINUED_MERGE_TITLE = "Merge the continued work";

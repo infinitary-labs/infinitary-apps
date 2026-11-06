@@ -1,4 +1,5 @@
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 export const SESSION_REPEAT_MARKER = "Repeat the saved session observation check.";
 export const SESSION_REPEAT_REPORT = "The second status note is ready.";

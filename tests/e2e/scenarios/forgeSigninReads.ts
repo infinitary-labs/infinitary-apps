@@ -6,7 +6,8 @@ import {
   WRITE_ASK_SENT_WAKE,
   writeAskCall,
 } from "../apiWriteCases";
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * The crewmate's reads and kept writes through the project's sign-in

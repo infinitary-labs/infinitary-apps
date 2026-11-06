@@ -263,7 +263,8 @@ describe("a program's bound", () => {
 // with completion signals, not a delay or a retry; both sessions are real Pi.
 it("INF-2373: a delayed captain request uses the replacement after a pending model drain", async () => {
   vi.useRealTimers();
-  const { mockModelsJson, startMockProvider } = await import("../../../tests/e2e/mockProvider");
+  const { startMockProvider } = await import("../../../tests/e2e/mockProvider");
+  const { mockModelsJson } = await import("../../../tests/e2e/mockModels");
   const { createModelRuntime } = await import("../pi/modelRuntime");
   const { createPiSessionFactory } = await import("../pi/session");
   const provider = await startMockProvider();

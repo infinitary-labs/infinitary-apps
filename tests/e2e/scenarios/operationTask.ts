@@ -1,5 +1,6 @@
-import { calledTool, contextRepos, type Scenario, toolAnswers } from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { toolAnswers } from "../browserScript";
+import type { Scenario } from "../mockProvider";
+import { calledTool, contextRepos, providerMessages } from "../providerRequest";
 export const OPERATION_ASK = "Set the chosen local service state to ready and verify it.";
 export const OPERATION_TITLE = "Set the local service state";
 export const OPERATION_EVIDENCE = "Read service.status after setting the chosen state: ready.";

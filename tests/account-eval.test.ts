@@ -61,7 +61,8 @@ import type { SessionBinding, SessionSpec } from "../src/core/session/session.ts
 import { InboxStore } from "../src/core/storage/inboxStore.ts";
 import { taskResolutionBody } from "../src/core/tasks/taskQuery.ts";
 import { MOCK_CLAUDE_OAUTH_TOKEN, writeMockClaudeClient } from "./e2e/mockClaudeClient.ts";
-import { mockModelsJson, startMockProvider } from "./e2e/mockProvider.ts";
+import { mockModelsJson } from "./e2e/mockModels.ts";
+import { startMockProvider } from "./e2e/mockProvider.ts";
 import {
   finishAnthropicStream,
   startStubApi,

@@ -1,4 +1,5 @@
-import { MOCK_STANDARD_CARD_BODY, type Scenario } from "../mockProvider";
+import { MOCK_STANDARD_CARD_BODY } from "../crewCards";
+import type { Scenario } from "../mockProvider";
 
 /**
  * The autonomy hold (contract v3.9). Briefed with this marker, the mock

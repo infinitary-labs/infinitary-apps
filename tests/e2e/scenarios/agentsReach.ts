@@ -2,25 +2,25 @@ import { captainTurn, renderWake } from "../../../src/core/orchestrator/wakes";
 import { checkSnapshotSummary } from "../../../src/shared/checkSnapshot";
 import { fixedHoldWords, type OverridableHold } from "../../../src/shared/holds";
 import { noSurfaceProof } from "../../helpers/liveValidation";
+import { browserShellMessages } from "../browserScript";
+import { MOCK_STANDARD_CARD_BODY } from "../crewCards";
 import {
-  answering,
-  browserShellMessages,
-  contextRepos,
-  findCrewTaskId,
   MOCK_CLOSING_SENTENCES,
-  MOCK_STANDARD_CARD_BODY,
   REVIEWED_TIER_PROMPT_MARKER,
   type Scenario,
   type ScenarioAnswer,
   type ScenarioRequest,
-  sinceLastUser,
 } from "../mockProvider";
 import {
+  answering,
   checkFactsSnapshot,
+  contextRepos,
+  findCrewTaskId,
   holdsSegment,
   latestServedTurn,
   providerMessages,
   served,
+  sinceLastUser,
 } from "../providerRequest";
 
 /**

@@ -14,7 +14,7 @@ import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { MOCK_PROVIDER_ID, mockModelsJson } from "./mockProvider";
+import { MOCK_PROVIDER_ID, mockModelsJson } from "./mockModels";
 import { regionShot } from "./pictures";
 import {
   computerReading,

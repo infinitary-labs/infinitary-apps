@@ -1,4 +1,5 @@
-import type { Scenario, ScriptedCall } from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import type { Scenario } from "../mockProvider";
 
 /**
  * Marker prompt (card width, the captain's Q5 to Q7 A of 2026-09-28): the

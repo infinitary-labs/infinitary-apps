@@ -1,4 +1,5 @@
-import { calledTool, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { calledTool } from "../providerRequest";
 
 /**
  * Card evidence (docs/card-evidence.md, "The stage"): a crewmate that puts

@@ -32,10 +32,11 @@ import {
 } from "../../src/shared/taskBrowser";
 import { customApiCaFixture } from "../helpers/customApiCaFixture";
 import { scratchDir } from "../helpers/scratchDirs";
+import { browserShellMessages } from "./browserScript";
 import { crewmateView } from "./crewmateTab";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { browserShellMessages, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { providerMessages, providerToolCalls } from "./providerRequest";

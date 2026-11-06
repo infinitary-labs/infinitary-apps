@@ -1,5 +1,6 @@
 import type { ChangePresentationDraft } from "@shared/changePresentation";
-import { MOCK_RISK, type ScriptedCall } from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { MOCK_RISK } from "../mockProvider";
 
 /**
  * INF-132: a scripted github.com or gitlab.com author prepares the same typed

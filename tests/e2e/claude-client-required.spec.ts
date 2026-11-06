@@ -16,11 +16,8 @@ import { claudeSeatRequests, launchClaudeSeat, say } from "./claudeSeat";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { signedInClaudeHome, writeMockClaudeClient } from "./mockClaudeClient";
-import {
-  ANSWER_PROMPT_MARKER,
-  mockProviderOverrideModelsJson,
-  startMockProvider,
-} from "./mockProvider";
+import { mockProviderOverrideModelsJson } from "./mockModels";
+import { ANSWER_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { expectNoCard, shownCard } from "./stack";
 
 /**

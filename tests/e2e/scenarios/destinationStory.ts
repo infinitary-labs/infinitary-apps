@@ -1,5 +1,6 @@
-import { browserShellMessages, calledTool, type Scenario } from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { browserShellMessages } from "../browserScript";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 import { preparedRevision, prepareMockStory } from "./changeStory";
 
 /** INF-1965: one saved-story author, with no forge calls for local-only work. */

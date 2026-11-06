@@ -2,11 +2,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
-import {
-  MOCK_FM_CHAT_TEXT,
-  mockModelsJson,
-  startMockProvider,
-} from "../../../tests/e2e/mockProvider";
+import { mockModelsJson } from "../../../tests/e2e/mockModels";
+import { MOCK_FM_CHAT_TEXT, startMockProvider } from "../../../tests/e2e/mockProvider";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type SeatTestSpec, seatSpec } from "../../../tests/helpers/seatSession";
 import { createPiSessionFactory } from "./session";

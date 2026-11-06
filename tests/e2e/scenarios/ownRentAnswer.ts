@@ -1,4 +1,6 @@
-import { calledTool, FINISHED_WAKE_NEEDLE, type Scenario } from "../mockProvider";
+import { FINISHED_REPORT_WORDS } from "../../../src/core/orchestrator/wakes";
+import type { Scenario } from "../mockProvider";
+import { calledTool } from "../providerRequest";
 
 /** FI3-1581: a finished wake whose task title contains this puts a note up, then settles. */
 export const OWN_RENT_TITLE = "own vs rent";
@@ -19,7 +21,7 @@ export const ownRentAnswer: Scenario =
     // FI3-1581: woken by a finished report, Firstmate puts the answer on
     // a card of its own and, in the same turn, closes the task answered.
     // The gap is the reproduction's: the note is on the stack before the close.
-    if (latestUserTail.includes(FINISHED_WAKE_NEEDLE) && latestUserTail.includes(OWN_RENT_TITLE)) {
+    if (latestUserTail.includes(FINISHED_REPORT_WORDS) && latestUserTail.includes(OWN_RENT_TITLE)) {
       const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
       if (!hasToolResults) {
         return {

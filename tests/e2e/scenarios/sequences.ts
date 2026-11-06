@@ -4,16 +4,14 @@ import { APPROVE_AND_BUILD, SAVE_AND_DEFER } from "../../../src/core/prompts/car
 import { runbookManifestSchema } from "../../../src/shared/runbooks";
 import { completionCardBody } from "../../helpers/completionCard";
 import type { ScriptedArgs, ScriptedCall } from "../../helpers/scriptedCalls";
+import { CLAUDE_CREW_MODEL, type Scenario, SEQ_REPRODUCE_GOAL } from "../mockProvider";
 import {
   answering,
-  CLAUDE_CREW_MODEL,
   calledTool,
   lookUpTask,
-  type Scenario,
-  SEQ_REPRODUCE_GOAL,
   servedInstructions,
   sinceLastUser,
-} from "../mockProvider";
+} from "../providerRequest";
 
 /**
  * Sequences (docs/sequences.md, contracts v4.6 and v4.19): the mock Firstmate

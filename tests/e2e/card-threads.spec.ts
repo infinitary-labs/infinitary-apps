@@ -13,24 +13,25 @@ import { applyTaskBoardDelta, type TaskBoard, type TaskBoardDelta } from "../../
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
-import { hintOf } from "./desktop";
-import { cardBody, cardBodyElement } from "./frames";
-import { type LaunchedApp, launchApp } from "./launch";
+import { FM_THREAD_CARD_TITLE, THREAD_IMAGE_PNG } from "./crewCards";
 import {
-  FM_THREAD_CARD_TITLE,
-  SPAWN_PROMPT_MARKER,
   THREAD_ACK_ANSWER,
   THREAD_ACK_REPLY,
   THREAD_ACK_REVISED_TITLE,
   THREAD_ACK_TEXT,
   THREAD_CARD_REVISED_TITLE,
   THREAD_CARD_TITLE,
-  THREAD_IMAGE_PNG,
   THREAD_PROMPT_MARKER,
   THREAD_PROSE_ANSWER,
   THREAD_PROSE_REPLY,
   THREAD_REVISE_ANSWER,
   THREAD_REVISE_REPLY,
+} from "./crewScripts";
+import { hintOf } from "./desktop";
+import { cardBody, cardBodyElement } from "./frames";
+import { type LaunchedApp, launchApp } from "./launch";
+import {
+  SPAWN_PROMPT_MARKER,
   THREAD_TREE_PARENT_KEY,
   THREAD_TREE_PROMPT_MARKER,
   THREAD_WORKING_SIBLING_MARKER,

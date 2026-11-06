@@ -1,15 +1,10 @@
 import { TYPEFACE_UNREAD_WORDS } from "../../../src/core/pi/cardImages";
 import { damagedFontBytes, projectFontBytes } from "../../helpers/fontFixture";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
-import {
-  CARD_FETCH_PROBE_PATH,
-  calledTool,
-  INLINE_PNG,
-  type Scenario,
-  shellJobsRunning,
-  writeFilesCalls,
-} from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { shellJobsRunning } from "../browserScript";
+import { INLINE_PNG, writeFilesCalls } from "../crewCards";
+import { CARD_FETCH_PROBE_PATH, type Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 
 /**
  * Marker prompt: the mock crewmate emits the containment corpus - every

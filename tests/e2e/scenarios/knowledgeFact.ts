@@ -1,9 +1,6 @@
-import {
-  calledTool,
-  FIRST_RUN_WAKE_MARKER,
-  MOCK_FM_DONE_TEXT,
-  type Scenario,
-} from "../mockProvider";
+import { WELCOME_WAKE_WORDS } from "../../../src/core/orchestrator/wakes";
+import { MOCK_FM_DONE_TEXT, type Scenario } from "../mockProvider";
+import { calledTool } from "../providerRequest";
 
 /**
  * The mock Firstmate asked to remember a fact where knowledge is on: it
@@ -16,7 +13,7 @@ export const knowledgeFact: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
     if (!isFirstmate || !wantsStream) return undefined;
-    if (!hasToolResults && latestUserTail.includes(FIRST_RUN_WAKE_MARKER)) return undefined;
+    if (!hasToolResults && latestUserTail.includes(WELCOME_WAKE_WORDS)) return undefined;
     if (!latestUserTail.includes(KNOWLEDGE_FACT_PROMPT_MARKER)) return undefined;
     if (calledTool(latestUserTail, "record_knowledge")) return { text: MOCK_FM_DONE_TEXT };
     return {

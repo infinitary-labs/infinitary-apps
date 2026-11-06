@@ -1,10 +1,10 @@
+import { MOCK_STANDARD_CARD_BODY } from "../crewCards";
 import {
-  calledTool,
   MOCK_CLOSING_SENTENCES,
-  MOCK_STANDARD_CARD_BODY,
   type Scenario,
   THREAD_WORKING_SIBLING_MARKER,
 } from "../mockProvider";
+import { calledTool } from "../providerRequest";
 
 export const THREAD_SETTLE_PROMPT_MARKER = "hand the settle over";
 

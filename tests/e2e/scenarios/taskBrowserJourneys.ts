@@ -1,20 +1,17 @@
 import { BROWSER_RETURNED_OPENING } from "../../../src/core/orchestrator/wakes";
 import { BROWSER_SIGN_IN_STEP } from "../../../src/core/pi/cardTool";
 import { HERE } from "../../../src/shared/deviceNames";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import {
-  answersAfter,
   browser,
-  calledTool,
   firstSentence,
-  HANDOFF_WAKE,
   knownRefOf,
   lookingAgain,
   refOf,
-  type Scenario,
-  type ScriptedCall,
   toolAnswers,
-} from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+} from "../browserScript";
+import type { Scenario } from "../mockProvider";
+import { calledTool, providerMessages } from "../providerRequest";
 
 /**
  * A page that opens a release without a full load, a long passage, a time,
@@ -343,7 +340,7 @@ function taskBrowserHandoffStep(body: string): ScriptedCall[] | undefined {
   const url = ask[1] as string;
   const messages = providerMessages(body);
   const wake = messages.findIndex(
-    (message) => message.role === "user" && message.text.includes(HANDOFF_WAKE),
+    (message) => message.role === "user" && message.text.includes(BROWSER_RETURNED_OPENING),
   );
   const answers = (from: number) => toolAnswers(messages, from);
   if (wake === -1) {
@@ -617,9 +614,9 @@ function taskBrowserTakeStep(body: string): ScriptedCall[] | undefined {
   const url = ask[1] as string;
   const messages = providerMessages(body);
   const wake = messages.findLastIndex(
-    (message) => message.role === "user" && message.text.includes(HANDOFF_WAKE),
+    (message) => message.role === "user" && message.text.includes(BROWSER_RETURNED_OPENING),
   );
-  const answers = answersAfter(messages, wake === -1 ? 0 : wake);
+  const answers = toolAnswers(messages, wake === -1 ? 0 : wake);
   if (answers.some((text) => text.startsWith("Reported."))) return undefined;
   const report = (text: string): ScriptedCall[] => [{ name: "report", args: { text } }];
   if (wake === -1) {
@@ -665,7 +662,7 @@ function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
   if (!ask) return undefined;
   const [, own, , other] = ask as unknown as [string, string, string, string | undefined];
   const messages = providerMessages(body);
-  const answers = answersAfter(messages, 0);
+  const answers = toolAnswers(messages, 0);
   if (answers.some((text) => text.startsWith("Reported."))) return undefined;
   const report = (text: string): ScriptedCall[] => [{ name: "report", args: { text } }];
   const visits = (text: string | undefined) => text?.match(/text "(Visited [^"]+)"/)?.[1];

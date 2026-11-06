@@ -1,4 +1,5 @@
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * The first mate reads an upgraded task's relationships by key (INF-1296

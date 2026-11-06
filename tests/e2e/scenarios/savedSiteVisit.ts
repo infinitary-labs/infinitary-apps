@@ -1,13 +1,6 @@
-import {
-  browser,
-  lookingAgain,
-  type Scenario,
-  SPAWN_PROMPT_MARKER,
-  shellJobsRunning,
-  sinceLastUser,
-  toolAnswers,
-} from "../mockProvider";
-import { latestServedTurn, providerMessages } from "../providerRequest";
+import { browser, lookingAgain, shellJobsRunning, toolAnswers } from "../browserScript";
+import { type Scenario, SPAWN_PROMPT_MARKER } from "../mockProvider";
+import { latestServedTurn, providerMessages, sinceLastUser } from "../providerRequest";
 
 /** Approved direction C: the model reads the actual page without asking to sign in again. */
 export const SAVED_SITE_VISIT = "read the saved club at ";

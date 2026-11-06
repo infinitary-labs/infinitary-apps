@@ -1,12 +1,6 @@
-import {
-  calledTool,
-  contextRepos,
-  RETRIEVAL_TASK_ASK,
-  RETRIEVAL_TASK_GOAL,
-  type Scenario,
-  toolAnswers,
-} from "../mockProvider";
-import { providerMessages } from "../providerRequest";
+import { toolAnswers } from "../browserScript";
+import { RETRIEVAL_TASK_ASK, RETRIEVAL_TASK_GOAL, type Scenario } from "../mockProvider";
+import { calledTool, contextRepos, providerMessages } from "../providerRequest";
 
 export const RETRIEVAL_TASK_TITLE = "Read meterlab release facts";
 

@@ -1,8 +1,9 @@
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import Database from "better-sqlite3";
+import { NOTHING_SPAWNED } from "../../src/core/pi/crewTools";
 import { type LaunchedApp, launchApp } from "./launch";
-import { ESCALATION_REFUSAL_PHRASE, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { feedLine, reportLine, startedLine, taskKey, taskLine } from "./rails";
 import {
@@ -204,10 +205,7 @@ test("an escalate_from on an [fm-op] wake is refused and creates nothing", async
   });
   await expect
     .poll(
-      () =>
-        (mockProvider?.requestBodies() ?? []).some((body) =>
-          body.includes(ESCALATION_REFUSAL_PHRASE),
-        ),
+      () => (mockProvider?.requestBodies() ?? []).some((body) => body.includes(NOTHING_SPAWNED)),
       { timeout: 30_000 },
     )
     .toBe(true);

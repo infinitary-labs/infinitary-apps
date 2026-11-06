@@ -20,12 +20,11 @@ import { committedWelcome } from "./firstLaunch";
 import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
 import { minimumWindowSize, resizeWindow, within } from "./layout";
 import { writeMockClaudeClient } from "./mockClaudeClient";
+import { MOCK_KEY_PROVIDER_ID, mockProviderOverrideModelsJson } from "./mockModels";
 import {
   ANSWER_PROMPT_MARKER,
   FAIL_PROVIDER_PROMPT_MARKER,
   FINISH_PROMPT_MARKER,
-  MOCK_KEY_PROVIDER_ID,
-  mockProviderOverrideModelsJson,
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
 import { assertReadableSettingsFeedback, REFUSAL, refuseNext, releaseSave } from "./settings";

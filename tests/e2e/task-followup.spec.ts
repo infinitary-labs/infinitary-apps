@@ -5,16 +5,12 @@ import {
   FOLLOWUP_PROVENANCE_OPENING,
   renderAnswerShapeSection,
 } from "../../src/core/orchestrator/intentBrief";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { taskReadTable } from "../../src/core/storage/taskRecordFields";
 import { waitForFirstmateIdle } from "./crew";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  FM_SYSTEM_MARKER,
-  MOCK_COMPLETION_TEXT,
-  MOCK_FOLLOWUP_TITLE,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { MOCK_COMPLETION_TEXT, MOCK_FOLLOWUP_TITLE, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { latestContext, providerMessages, requestToolNames } from "./providerRequest";
 import {
@@ -191,7 +187,7 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
       () =>
         (mockProvider?.requestBodies() ?? []).some(
           (body) =>
-            body.includes(FM_SYSTEM_MARKER) &&
+            body.includes(FIRSTMATE_PERSONA) &&
             body.includes("reported on task") &&
             body.includes(`Filed this turn: SCR-2 \\"${MOCK_FOLLOWUP_TITLE}\\" (not blocking)`),
         ),
@@ -210,7 +206,7 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
     .poll(
       () =>
         (mockProvider?.requestBodies() ?? [])
-          .filter((body) => body.includes(FM_SYSTEM_MARKER))
+          .filter((body) => body.includes(FIRSTMATE_PERSONA))
           .at(-1)
           ?.includes("what is on the board?"),
       { timeout: 20_000 },
@@ -218,7 +214,7 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
     .toBe(true);
   const latest =
     (mockProvider?.requestBodies() ?? [])
-      .filter((body) => body.includes(FM_SYSTEM_MARKER))
+      .filter((body) => body.includes(FIRSTMATE_PERSONA))
       .at(-1) ?? "";
   expect(latestContext(latest)?.backlog?.projects).toEqual(
     expect.arrayContaining([expect.objectContaining({ project: "SCR", on_request: 1 })]),

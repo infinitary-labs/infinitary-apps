@@ -1,13 +1,9 @@
 import { resolveFirstmateCardId } from "../../../src/core/pi/cardTool";
 import type { ScriptedArgs } from "../../helpers/scriptedCalls";
-import {
-  answering,
-  FM_THREAD_CARD_TITLE,
-  type Scenario,
-  THREAD_PROSE_REPLY,
-  THREAD_REVISE_REPLY,
-} from "../mockProvider";
-import { providerToolCalls } from "../providerRequest";
+import { FM_THREAD_CARD_TITLE } from "../crewCards";
+import { THREAD_PROSE_REPLY, THREAD_REVISE_REPLY } from "../crewScripts";
+import type { Scenario } from "../mockProvider";
+import { answering, providerToolCalls } from "../providerRequest";
 
 /**
  * Cards as threads, phase 2: a Firstmate-authored card. The captain's

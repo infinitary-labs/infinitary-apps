@@ -1,7 +1,8 @@
 import { MERGE_CONTINUED_LEAD } from "../../../src/core/orchestrator/wakes";
 import { completionCardBody } from "../../helpers/completionCard";
 import type { ScriptedArgs } from "../../helpers/scriptedCalls";
-import { type Scenario, sinceLastUser } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { sinceLastUser } from "../providerRequest";
 
 /**
  * INF-2490, the declared close: a crewmate names pull requests as its task's

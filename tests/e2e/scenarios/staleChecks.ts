@@ -1,14 +1,8 @@
 import { CHECK_OBSERVATIONS_LEAD } from "../../../src/core/orchestrator/wakes";
 import { completionCardBody } from "../../helpers/completionCard";
-import {
-  contextRepos,
-  findCrewTaskId,
-  indexTaskId,
-  type Scenario,
-  type ScriptedCall,
-  SPAWN_PROMPT_MARKER,
-  sinceLastUser,
-} from "../mockProvider";
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
+import { type Scenario, SPAWN_PROMPT_MARKER } from "../mockProvider";
+import { contextRepos, findCrewTaskId, indexTaskId, sinceLastUser } from "../providerRequest";
 
 /** A completion card whose checks change on GitHub after it went up. */
 export const STALE_CHECKS_MARKER = "exercise stale check strip";

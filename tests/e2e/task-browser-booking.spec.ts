@@ -12,6 +12,7 @@ import {
   RETURN_CONTROL_LABEL,
   TAKE_CONTROL_LABEL,
 } from "../../src/shared/taskBrowser";
+import { browserShellMessages } from "./browserScript";
 import { launchClaudeCrew } from "./claudeCrew";
 import {
   BOOKING_REFERENCE,
@@ -27,7 +28,6 @@ import {
 import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
 import {
-  browserShellMessages,
   CLAUDE_CREWMATE_MARKER,
   type MockProviderServer,
   SPAWN_PROMPT_MARKER,

@@ -1,14 +1,11 @@
+import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import {
   CLAUDE_CREW_MODEL,
-  contextRepos,
-  findCrewTaskId,
-  indexTaskId,
   type Scenario,
   type ScenarioAnswer,
-  type ScriptedCall,
   SPAWN_PROMPT_MARKER,
-  sinceLastUser,
 } from "../mockProvider";
+import { contextRepos, findCrewTaskId, indexTaskId, sinceLastUser } from "../providerRequest";
 import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeStory";
 import { mergeShellCall, mergeShellTurn } from "./mergeShell";
 

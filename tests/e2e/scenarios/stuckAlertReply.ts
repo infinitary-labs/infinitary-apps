@@ -1,4 +1,5 @@
-import { answering, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { answering } from "../providerRequest";
 
 /** The captain's question under the stuck alert, in their own words (INF-1670). */
 export const STUCK_ALERT_QUESTION = "is it stuck because the secret PR hasn't landed yet?";

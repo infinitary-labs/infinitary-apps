@@ -5,11 +5,8 @@ import { join } from "node:path";
 import type { FeedLine } from "@shared/feed";
 import { providerLabel } from "@shared/modelSlots";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import {
-  type MockProviderServer,
-  mockModelsJson,
-  startMockProvider,
-} from "../../tests/e2e/mockProvider";
+import { mockModelsJson } from "../../tests/e2e/mockModels";
+import { type MockProviderServer, startMockProvider } from "../../tests/e2e/mockProvider";
 import { latestContext } from "../../tests/e2e/providerRequest";
 import { fakeHost, quotaFixture, waitFor } from "../../tests/helpers/bootedCore";
 import { scratchDir } from "../../tests/helpers/scratchDirs";

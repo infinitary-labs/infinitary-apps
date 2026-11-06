@@ -5,15 +5,11 @@ import {
   LOCAL_ORCHESTRATOR_OFF_LINE,
   localOrchestratorLine,
 } from "../../src/core/orchestrator/localOrchestrator";
+import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { firstRunHintOnThisComputer, hintOnThisComputer } from "./dictation";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  FM_SYSTEM_MARKER,
-  MOCK_MODEL_ID,
-  type MockProviderServer,
-  mockProviderOverrideModelsJson,
-  startMockProvider,
-} from "./mockProvider";
+import { MOCK_MODEL_ID, mockProviderOverrideModelsJson } from "./mockModels";
+import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { feedLine } from "./rails";
 
 /** The line the seat writes once it runs on the mock's model at `url`, the endpoint the spec gave. */
@@ -84,7 +80,7 @@ test("a captain turn is served by the local endpoint as the named model", async 
           .requestBodies()
           .some(
             (body) =>
-              body.includes(FM_SYSTEM_MARKER) &&
+              body.includes(FIRSTMATE_PERSONA) &&
               body.includes("hello from the local seat") &&
               /"model":\s*"mock-1"/.test(body),
           ),
@@ -159,7 +155,7 @@ test.describe
                 .requestBodies()
                 .some(
                   (body) =>
-                    body.includes(FM_SYSTEM_MARKER) &&
+                    body.includes(FIRSTMATE_PERSONA) &&
                     body.includes("hello from the settings seat") &&
                     /"model":\s*"mock-1"/.test(body),
                 ),

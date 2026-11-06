@@ -1,4 +1,5 @@
-import { findCrewTaskId, type Scenario, settleNeedle } from "../mockProvider";
+import { type Scenario, settleNeedle } from "../mockProvider";
+import { findCrewTaskId } from "../providerRequest";
 
 export const FINISH_FOLDER_PROMPT = "record the verified folder check for ";
 export const MISSING_FOLDER_PROOF_PROMPT = "try closing without folder proof for ";

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-intake-and-programs",
+      "reason": "Internal: the crew supervisor's intake - commissions, plans, reviews, escalations and the task graph's links, drops and carry-ons - moves into an owner of its own, and its program code moves beside the program runner, with callers reaching them directly and guardrail tests renamed beside them; nothing a person sees changes."
+    }
+  ]
+}

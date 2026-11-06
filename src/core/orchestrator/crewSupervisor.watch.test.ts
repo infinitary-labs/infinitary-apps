@@ -20,7 +20,7 @@ describe("the crew's watch between turns, before it moves out of the crew superv
   it("resumes a crewmate whose conversation was let go to hand it a background job's result", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Count presses",
       intent: intentOf("make the meter count every press"),
     });
@@ -42,7 +42,7 @@ describe("the crew's watch between turns, before it moves out of the crew superv
   it("keeps a live task's working copy and one whose work could not be saved, and says which at boot", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Count presses",
       intent: intentOf("make the meter count every press"),
     });

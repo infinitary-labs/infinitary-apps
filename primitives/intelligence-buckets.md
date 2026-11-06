@@ -30,7 +30,7 @@ Do not use buckets to choose a computer: Automatic placement compares computers'
 
 ## Operations and lifecycle
 
-- Routing is computed from the work's shape, never judged (captain-approved 2026-09-18): `CrewSupervisor.commission` builds the shape (kind, basis, `premium_ask`, `override_model_id`, `escalate_from`, escalation) and stores it on `tasks.shape_json`, so a queued row dispatches from what it was commissioned with.
+- Routing is computed from the work's shape, never judged (captain-approved 2026-09-18): `TaskIntake.commission` builds the shape (kind, basis, `premium_ask`, `override_model_id`, `escalate_from`, escalation) and stores it on `tasks.shape_json`, so a queued row dispatches from what it was commissioned with.
 - A program may declare `program_part.intelligence`; R11 reads low, medium or high before kind rules, after captain overrides and escalation; premium still needs `premium_ask`.
 - An operation skips the classifier and requests medium through R12 after named models, premium, escalation and program intelligence.
 - `tierFor` maps the shape to a rule and a requested tier; an `unclear` kind routes high.

@@ -46,7 +46,7 @@ describe("the deliverable axis (Task B)", () => {
 
   async function investigation(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     const harness = setup(crewmate, { classifier: research, ...extras });
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Why is the meter idle",
       intent: { ...intentOf("why is nothing running?"), constraints: [{ kind: "read-only" }] },
     });
@@ -219,7 +219,7 @@ describe("the deliverable axis (Task B)", () => {
       },
     });
     const { supervisor, tasks, specs, cards } = harness;
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Build the agreed iOS app card, Activity and tab fixes",
       intent: {
         goal: "Build the approved INF-944 plan for the Infinitary iOS app as one change. Before deciding the action buttons, first show the captain a playable preview comparing the Mac's row buttons with glass buttons on its own card, and build the buttons only after he picks.",
@@ -609,7 +609,7 @@ describe("the deliverable axis (Task B)", () => {
   it("keeps a queued row a change when the classifier calls it research (INF-990 friction 7)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate, { classifier: research });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Look into it later",
       intent: intentOf("when the gate clears, find out why the meter idles"),
       startAfter: { at: Date.now() - 1000 },
@@ -654,7 +654,7 @@ describe("the deliverable axis (Task B)", () => {
     });
     const { repo } = await harness.repos.setup({ kind: "init", name: "checks" });
     harness.repos.configure(repo.id, { delivery: "direct-pr" });
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Fix the merge check",
       intent: intentOf("fix the merge check"),
       repoId: repo.id,
@@ -720,7 +720,7 @@ describe("the deliverable axis (Task B)", () => {
             : ({ kind: "implement", source: "classifier:test", version: "kc1" } as const),
       },
     });
-    const answer = await supervisor.commission({
+    const answer = await supervisor.intake.commission({
       title: "Why is the meter idle",
       intent: intentOf("why is nothing running?"),
     });
@@ -761,7 +761,7 @@ describe("the deliverable axis (Task B)", () => {
       });
     cardStore.appendMessage({ cardId: card.id, who: "host", text: "   ", at: 20 });
 
-    const built = await supervisor.commission({
+    const built = await supervisor.intake.commission({
       title: "Fix the claim query",
       intent: intentOf("fix it then"),
       shape: { basis: key },
@@ -821,7 +821,7 @@ describe("the deliverable axis (Task B)", () => {
     });
     const prototypeBody =
       "<p>Layout B puts each label in a side column.</p><p>At 360 px every status line fits the top row.</p>";
-    const mock = await supervisor.commission({
+    const mock = await supervisor.intake.commission({
       title: "Mock a roomier hover card",
       intent: intentOf("i'd like to see some mocks and decide"),
     });
@@ -885,7 +885,7 @@ describe("the deliverable axis (Task B)", () => {
     tasks.close(mock.taskId, { status: "done", reason: "merged", actor: "captain" });
     const key = tasks.get(mock.taskId)?.key ?? mock.taskId;
 
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Show the model and reasoning in the hover card",
       intent: intentOf("build on the hover card"),
       shape: { basis: key },
@@ -950,7 +950,7 @@ describe("the deliverable axis (Task B)", () => {
     await tick();
     const key = tasks.get("proto7")?.key ?? "proto7";
 
-    const built = await supervisor.commission({
+    const built = await supervisor.intake.commission({
       title: "Build the tilted meter",
       intent: intentOf("build it"),
       shape: { basis: key },
@@ -977,7 +977,7 @@ describe("the deliverable axis (Task B)", () => {
     const finder = fakeCrewmate();
     const fixer = fakeCrewmate();
     const { supervisor, tasks, specs, cards, paths } = setup(finder, { crewmates: [fixer] });
-    const found = await supervisor.commission({
+    const found = await supervisor.intake.commission({
       title: "Fix the keychain prompt",
       intent: intentOf("fix the keychain thing"),
     });
@@ -1009,7 +1009,7 @@ describe("the deliverable axis (Task B)", () => {
     const finder = fakeCrewmate();
     const fixer = fakeCrewmate();
     const { supervisor, tasks, specs } = setup(finder, { crewmates: [fixer] });
-    const found = await supervisor.commission({
+    const found = await supervisor.intake.commission({
       title: "Find the meter race",
       intent: intentOf("why does the meter test flake?"),
     });
@@ -1056,7 +1056,7 @@ describe("the deliverable axis (Task B)", () => {
       status: "ready",
       createdAt: Date.now(),
     });
-    const planned = supervisor.plan({
+    const planned = supervisor.intake.plan({
       title: "Fix the claim query",
       intent: intentOf("fix it"),
       shape: { basis: tasks.get("ans9")?.key ?? "ans9" },

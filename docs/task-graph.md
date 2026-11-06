@@ -123,7 +123,7 @@ Discard, cancel and `update_task drop` keep their own closes.
 
 A **container completes with its children**.
 A parent that never started - on request, no crewmate, no working copy, no card of its own open - has nothing of its own to settle, so the ready sweep closes it.
-Once every child is closed, the ready sweep (`CrewSupervisor.completeContainers`, which runs after any close) closes it through `TaskService` as the host: `done/finished` when at least one child is done, else `dropped/cancelled`, with one feed line ("KEY done: everything under it is finished", or "stopped: nothing under it went ahead").
+Once every child is closed, the ready sweep (`TaskIntake.completeContainers`, which runs after any close) closes it through `TaskService` as the host: `done/finished` when at least one child is done, else `dropped/cancelled`, with one feed line ("KEY done: everything under it is finished", or "stopped: nothing under it went ahead").
 A parent that carries a crewmate, ever started, or still has an open child is never touched, and `closeRefusal` is unchanged.
 
 `settle_task` in every mode and every settle through `SettleService.settleTask` check these first.

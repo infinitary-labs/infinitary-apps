@@ -451,7 +451,7 @@ describe("FirstmateAgent", () => {
         return pending;
       },
     });
-    const commissioning = f.supervisor.commission({
+    const commissioning = f.supervisor.intake.commission({
       title: "Plan the Tasks refresh check",
       intent: {
         goal: "Plan how to verify Tasks refreshes",
@@ -1033,7 +1033,7 @@ describe("FirstmateAgent", () => {
         crewCard("card-t2-1", "t2", "Old plan", "<p>b</p>"),
       ],
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Preview the layout",
       intent: { goal: "preview the layout", userWords: "preview the layout" },
     });

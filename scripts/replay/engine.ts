@@ -1235,7 +1235,7 @@ class Replay {
           /verbatim[^\n]*\n(.*)$/m.exec(brief)?.[1] ?? goal;
         this.pendingSpawnAlias = event.alias;
         try {
-          await this.supervisor.commission({
+          await this.supervisor.intake.commission({
             title: goal.slice(0, 64),
             intent: { goal, userWords: words },
           });

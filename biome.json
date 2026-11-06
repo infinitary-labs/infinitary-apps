@@ -337,7 +337,7 @@
         "!src/core/placed/processResources.integration.test.ts",
         "!src/core/placed/loadLine.integration.test.ts",
         "!src/core/orchestrator/crewSupervisor.test.ts",
-        "!src/core/orchestrator/crewSupervisor.programs.test.ts",
+        "!src/core/program/programRunner.crew.test.ts",
         "!src/core/orchestrator/reviews.test.ts",
         "!src/core/orchestrator/crewBrief.test.ts",
         "!src/core/orchestrator/firstmateAgent.actions.test.ts",

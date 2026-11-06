@@ -22,7 +22,7 @@ import { seedTask } from "../tasks/seedTask";
 async function startedTask() {
   const crewmate = fakeCrewmate();
   const h = setup(crewmate);
-  const { taskId } = await h.supervisor.commission({
+  const { taskId } = await h.supervisor.intake.commission({
     title: "Fix the meter",
     intent: intentOf("fix the meter's unit"),
   });

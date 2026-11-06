@@ -695,7 +695,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     await agent.converse("fix the meter");
     const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
     const create = tools.find((entry) => entry.name === "create_task") as GraphTool;
-    const filing = vi.spyOn(supervisor, "plan");
+    const filing = vi.spyOn(supervisor.intake, "plan");
     const planned = await create.execute(
       "c",
       {

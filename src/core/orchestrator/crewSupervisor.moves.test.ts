@@ -346,7 +346,10 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
       model: copilot,
       deviceId: MINI,
     });
-    const { taskId } = await h.supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "t",
+      intent: intentOf("work"),
+    });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     const record = h.tasks.get(taskId);
 
@@ -390,7 +393,10 @@ describe("a started task's move, before it moves out of the crew supervisor", ()
       routedModel: copilot,
       movePick: () => ({ provider: "openai-codex", id: "gpt-6.1-sol" }),
     });
-    const { taskId } = await h.supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "t",
+      intent: intentOf("work"),
+    });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     crewmate.finishPrompt();
     await tick();

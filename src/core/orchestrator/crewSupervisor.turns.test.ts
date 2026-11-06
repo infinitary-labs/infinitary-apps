@@ -31,7 +31,7 @@ describe("a crewmate's turn, before it moves out of the crew supervisor", () => 
   it("names a report's handed files by kept name and size once they arrived whole, and refuses one that did not", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Find the screenshot",
       intent: intentOf("find the screenshot of the clipped card"),
     });
@@ -68,7 +68,7 @@ describe("a crewmate's turn, before it moves out of the crew supervisor", () => 
   it("serves guidance a backend could not take mid-turn as the next turn, which reports nothing of the last one's", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const h = setup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Count presses",
       intent: intentOf("make the meter count every press"),
     });

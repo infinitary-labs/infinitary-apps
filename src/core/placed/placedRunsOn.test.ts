@@ -159,7 +159,7 @@ describe("a project that runs on a computer that runs work", () => {
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
 
-    const { taskId, crewmate } = await home.supervisor.commission({
+    const { taskId, crewmate } = await home.supervisor.intake.commission({
       title: "footer",
       intent: { goal: "Make the footer blue.", userWords: "make the footer blue" },
       repoId: repo.id,
@@ -251,7 +251,7 @@ describe("a task's own Runs on", () => {
       },
       { text: "Started on the named computer." },
     ]);
-    const { taskId, crewmate } = await home.supervisor.commission({
+    const { taskId, crewmate } = await home.supervisor.intake.commission({
       title: "named footer",
       intent: { goal: "Make the footer blue.", userWords: "make the footer blue on Mac mini" },
       repoId: repo.id,
@@ -288,7 +288,7 @@ describe("a task's own Runs on", () => {
       { tools: [{ name: "emit_card", args: { title: "Footer started", body: "<p>On it.</p>" } }] },
       { text: "Started on the footer." },
     ]);
-    const { taskId, crewmate } = await home.supervisor.commission({
+    const { taskId, crewmate } = await home.supervisor.intake.commission({
       title: "footer",
       intent: { goal: "Make the footer blue.", userWords: "make the footer blue on the mini" },
       repoId: repo.id,
@@ -497,7 +497,7 @@ describe("a task's own Runs on", () => {
     // A part commissioned under it later waits for the same computer.
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
-    const { taskId, crewmate } = await home.supervisor.commission({
+    const { taskId, crewmate } = await home.supervisor.intake.commission({
       title: "nav",
       intent: { goal: "Fix the nav.", userWords: "fix the nav" },
       repoId: repo.id,
@@ -557,7 +557,7 @@ describe("a task's own Runs on", () => {
       repoId: repo.id,
       shape: own,
     });
-    const retry = await home.supervisor.commission({
+    const retry = await home.supervisor.intake.commission({
       title: "header",
       intent: { goal: "Make the header blue.", userWords: "not good enough, try a stronger one" },
       shape: { escalate_from: "t-tried" },
@@ -621,7 +621,7 @@ describe("a task's own Runs on", () => {
     // Asked at the spawn, a refusal starts nothing.
     const before = home.tasks.list().length;
     await expect(
-      home.supervisor.commission({
+      home.supervisor.intake.commission({
         title: "notes",
         intent: { goal: "Tidy the notes.", userWords: "tidy the notes on the mini" },
         repoId: notes.id,
@@ -631,7 +631,7 @@ describe("a task's own Runs on", () => {
       'Nothing was spawned. "notes" is in notes. Kept on this computer only, so its tasks run here.',
     );
     await expect(
-      home.supervisor.commission({
+      home.supervisor.intake.commission({
         title: "review",
         intent: { goal: "Review the footer.", userWords: "review the footer on the mini" },
         repoId: repo.id,

@@ -46,7 +46,7 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
   it("holds a live crewmate's conversation, and lets go of it only between turns", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Count presses",
       intent: intentOf("make the meter count every press"),
     });
@@ -91,12 +91,12 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
         labelOf: (accountId) => accountId,
       },
     });
-    const work = await h.supervisor.commission({
+    const work = await h.supervisor.intake.commission({
       title: "Count presses",
       intent: intentOf("make the meter count every press"),
     });
     await tick();
-    const home = await h.supervisor.commission({
+    const home = await h.supervisor.intake.commission({
       title: "Water the plants",
       intent: intentOf("remind me to water the plants"),
     });
@@ -144,7 +144,7 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
     expect(h.tasks.get("t-idle")?.status).toBe("active");
 
     // A cancel whose abort the session refuses leaves the task running, and says so.
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Count presses",
       intent: intentOf("make the meter count every press"),
     });
@@ -170,7 +170,7 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
     const crewmate = fakeCrewmate();
     const confirm = vi.fn(async () => false);
     const h = setup(crewmate, { machines: computer({ ready: true, confirm }) });
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Count presses",
       intent: intentOf("make the meter count every press"),
     });
@@ -204,7 +204,7 @@ describe("a crewmate's session, before it moves out of the crew supervisor", () 
       status: "queued",
     });
     // A live crewmate whose computer is out of reach is stopped here.
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Count presses",
       intent: intentOf("make the meter count every press"),
     });

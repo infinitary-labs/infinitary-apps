@@ -820,7 +820,7 @@ The home still coordinates the task record and merge; it does not execute the re
 This placement applies in every build, without a development gate.
 
 - **The computer is the builder's.**
-  `CrewSupervisor.commissionReview` copies the builder's recorded placement, not the project's current setting.
+  `TaskIntake.commissionReview` copies the builder's recorded placement, not the project's current setting.
   Routing prefers another provider among that computer's subscriptions, never among the home's when the builder is elsewhere.
   With no suitable subscription there, the review cannot start; it never borrows a home subscription.
   A separate placement request for a review is refused because its builder owns the choice.

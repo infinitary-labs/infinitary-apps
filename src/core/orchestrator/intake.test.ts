@@ -1,13 +1,12 @@
 /**
- * How the crew supervisor takes in new work (docs/task-record.md,
- * docs/programs.md "Filing a program"): a commission's refusals before a row
- * exists, a start_after's waits, an escalation that queues, the task graph's
- * drop and carry-on, a parent that closes when everything under it has, and
- * a program declared on a plan. INF-2625's plan, the crew supervisor's
- * seventh step, moves this intake out of the supervisor into an owner of its
- * own; these cases pin, before it moves, the behaviour no other test
- * reaches. Each drives a public door of the supervisor and reads the
- * refusal, the receipt, the feed line and the record.
+ * How the crew takes in new work (docs/task-record.md, docs/programs.md
+ * "Filing a program"; `TaskIntake`). These cases pin the behaviour no other
+ * test reaches: a commission's refusals before a row exists, a
+ * start_after's waits, an escalation that queues, the task graph's drop
+ * and carry-on, a parent that closes when everything under it has, and a
+ * program declared on a plan. Each drives a public door of the supervisor or
+ * its intake and reads the refusal, the receipt, the feed line and the
+ * record.
  */
 
 import type { HostChildSpawner } from "@core/host";
@@ -37,13 +36,13 @@ async function withProject(extras: Parameters<typeof setup>[1] = {}) {
   return { ...h, repo };
 }
 
-describe("new work, before its intake moves out of the crew supervisor", () => {
+describe("new work", () => {
   it("refuses a commission whose shape cannot be met before any row exists", async () => {
     const h = await withProject();
     const personal = h.repos.ensurePersonal(scratchDir("infinitary-personal-"));
     seedTask(h.tasks, { id: "builder1", title: "Correct the meter", status: "running" });
     const commission = (repoId: string | undefined, shape: Record<string, unknown>) =>
-      h.supervisor.commission({
+      h.supervisor.intake.commission({
         title: "Read the meter",
         intent: intentOf("read what the meter shows"),
         ...(repoId ? { repoId } : {}),
@@ -74,7 +73,7 @@ describe("new work, before its intake moves out of the crew supervisor", () => {
   it("refuses a start_after that names no task, no known allowance or nothing at all", async () => {
     const h = await withProject({ quotaGateRefValid: (ref) => ref === "bucket:high" });
     const queue = (startAfter: { afterTask?: string; whenQuotaResets?: string; at?: number }) =>
-      h.supervisor.commission({
+      h.supervisor.intake.commission({
         title: "Read the meter",
         intent: intentOf("read what the meter shows"),
         repoId: h.repo.id,
@@ -98,7 +97,7 @@ describe("new work, before its intake moves out of the crew supervisor", () => {
     const first = seedTask(h.tasks, { id: "first001", title: "Measure", status: "queued" });
     const second = seedTask(h.tasks, { id: "second01", title: "Calibrate", status: "queued" });
 
-    const quota = await h.supervisor.commission({
+    const quota = await h.supervisor.intake.commission({
       title: "Read the meter",
       intent: intentOf("read what the meter shows"),
       repoId: h.repo.id,
@@ -116,7 +115,7 @@ describe("new work, before its intake moves out of the crew supervisor", () => {
     );
 
     const until = Date.UTC(2031, 0, 2, 3, 4);
-    const timed = await h.supervisor.commission({
+    const timed = await h.supervisor.intake.commission({
       title: "Read it later",
       intent: intentOf("read what the meter shows later"),
       repoId: h.repo.id,
@@ -139,7 +138,7 @@ describe("new work, before its intake moves out of the crew supervisor", () => {
       worktreeDir: "/w/attempt1",
     });
 
-    const fresh = await h.supervisor.commission({
+    const fresh = await h.supervisor.intake.commission({
       title: "Correct the meter again",
       intent: intentOf("correct the meter with a stronger model"),
       shape: { escalate_from: previous.key },
@@ -164,11 +163,11 @@ describe("new work, before its intake moves out of the crew supervisor", () => {
   it("refuses to drop a closed task or a parent whose child has started, and drops a carried-on open task done", async () => {
     const h = await withProject();
     const closed = seedTask(h.tasks, { id: "closed01", title: "Old meter", status: "cancelled" });
-    expect(h.supervisor.dropTask(closed.key, { reason: "gone" })).toBe(
+    expect(h.supervisor.intake.dropTask(closed.key, { reason: "gone" })).toBe(
       `${closed.key} "Old meter" is already cancelled.`,
     );
 
-    const parent = h.supervisor.plan({
+    const parent = h.supervisor.intake.plan({
       title: "Rework the meter",
       intent: intentOf("rework the meter"),
       repoId: h.repo.id,
@@ -179,22 +178,24 @@ describe("new work, before its intake moves out of the crew supervisor", () => {
       status: "running",
       parentId: parent.id,
     });
-    expect(h.supervisor.dropTask(parent.key, { reason: "changed course", confirm: true })).toBe(
+    expect(
+      h.supervisor.intake.dropTask(parent.key, { reason: "changed course", confirm: true }),
+    ).toBe(
       `Cannot drop ${parent.key} "Rework the meter": its child has started (${child.key} "Rewire the gauge"). Settle them first.`,
     );
     expect(h.tasks.get(parent.id)?.status).toBe("open");
 
-    const planned = h.supervisor.plan({
+    const planned = h.supervisor.intake.plan({
       title: "Label the meter",
       intent: intentOf("label the meter"),
       repoId: h.repo.id,
     });
-    const carrier = h.supervisor.plan({
+    const carrier = h.supervisor.intake.plan({
       title: "Label every gauge",
       intent: intentOf("label every gauge"),
       repoId: h.repo.id,
     });
-    expect(await h.supervisor.carryOnTask(planned.key, carrier.key)).toBe(
+    expect(await h.supervisor.intake.carryOnTask(planned.key, carrier.key)).toBe(
       `Closed ${planned.key} "Label the meter" as done: ${carrier.key} carries on its work.`,
     );
     expect(h.tasks.get(planned.id)).toMatchObject({ status: "done" });
@@ -205,12 +206,12 @@ describe("new work, before its intake moves out of the crew supervisor", () => {
 
   it("leaves a parent whose children have all closed open while it has a card of its own, and closes it once the card goes", async () => {
     const h = await withProject();
-    const carded = h.supervisor.plan({
+    const carded = h.supervisor.intake.plan({
       title: "Carded parent",
       intent: intentOf("hold a card"),
       repoId: h.repo.id,
     });
-    const kid = h.supervisor.plan({
+    const kid = h.supervisor.intake.plan({
       title: "Its child",
       intent: intentOf("do the child's work"),
       repoId: h.repo.id,
@@ -238,7 +239,7 @@ describe("new work, before its intake moves out of the crew supervisor", () => {
     const without = await withProject();
     const plan =
       (h: Awaited<ReturnType<typeof withProject>>, shape: Record<string, unknown>) => () =>
-        h.supervisor.plan({
+        h.supervisor.intake.plan({
           title: "Cap results",
           intent: intentOf("cap what the meter renders"),
           repoId: h.repo.id,
@@ -259,7 +260,7 @@ describe("new work, before its intake moves out of the crew supervisor", () => {
       worktreeDir: "/w/source01",
     });
     expect(() =>
-      h.supervisor.plan({
+      h.supervisor.intake.plan({
         title: "Cap results",
         intent: intentOf("cap what the meter renders"),
         repoId: personal.id,

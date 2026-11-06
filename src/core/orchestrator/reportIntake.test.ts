@@ -44,7 +44,7 @@ async function builder(delivery: "direct-pr" | "local-only" = "direct-pr") {
       "https://github.com/octo/meter.git",
       delivery,
     );
-  const { taskId } = await h.supervisor.commission({
+  const { taskId } = await h.supervisor.intake.commission({
     title: "Correct the meter",
     intent: intentOf("make the meter count every press"),
     repoId: "meter",

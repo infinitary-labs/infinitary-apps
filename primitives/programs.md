@@ -19,8 +19,8 @@ Task relation semantics (parent, `blocks`, basis, `branch_from`, typed results) 
 
 ## Owner and entry points
 
-`ProgramRunner` ([`../src/core/program/programRunner.ts`](../src/core/program/programRunner.ts)) runs each program and answers its host-function messages through a `ProgramHost`, which `CrewSupervisor` supplies.
-Filing checks: `programRefusal` and `callDigest` in [`../src/core/program/programScript.ts`](../src/core/program/programScript.ts), and `CrewSupervisor`'s private `programShape`.
+`ProgramRunner` ([`../src/core/program/programRunner.ts`](../src/core/program/programRunner.ts)) runs each program and answers its host-function messages through a `ProgramHost`, which the crew's `CrewPrograms`, in the same file, supplies; the crew supervisor composes both.
+Filing checks: `programRefusal` and `callDigest` in [`../src/core/program/programScript.ts`](../src/core/program/programScript.ts), and `programShape` in [`../src/core/program/programRunner.ts`](../src/core/program/programRunner.ts).
 `ask()`: `askJson` and `parseAnswer` in [`../src/core/program/programAsk.ts`](../src/core/program/programAsk.ts), over `DecisionModels.answerJson`.
 The process: [`../src/core/program/programProcess.ts`](../src/core/program/programProcess.ts) (an Electron utility process from [`../src/main/host/programProcess.ts`](../src/main/host/programProcess.ts) in the app, a plain fork in tests), with messages in [`../src/core/program/programProtocol.ts`](../src/core/program/programProtocol.ts).
 The fact on the task: `shape.program` (`{script, args?, bound}`) in [`../src/shared/routingPolicy.ts`](../src/shared/routingPolicy.ts); the rule's one home is the served guide's preamble in [`../src/core/personal/sequencesSkill.ts`](../src/core/personal/sequencesSkill.ts).

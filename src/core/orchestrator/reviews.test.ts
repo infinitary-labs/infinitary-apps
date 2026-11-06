@@ -88,7 +88,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -116,14 +116,14 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
         shape: { rigor_ask: "reviewed" },
       });
       await tick();
-      const quick = await supervisor.commission({
+      const quick = await supervisor.intake.commission({
         title: "Scratch",
         intent: intentOf("poke"),
         repoId: view.id,
@@ -131,7 +131,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       const review = (of: string) =>
-        supervisor.commission({
+        supervisor.intake.commission({
           title: "Review",
           intent: intentOf("fix it"),
           shape: { review_of: of },
@@ -186,7 +186,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -205,7 +205,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       vi.mocked(workspace.branchHead).mockResolvedValue(repaired);
 
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("fix it"),
         shape: { review_of: builderId },
@@ -268,7 +268,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -280,7 +280,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const updated = "fbc93601d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7";
       const fixed = "2d0fa6b9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3";
       const review = () =>
-        supervisor.commission({
+        supervisor.intake.commission({
           title: "Review",
           intent: intentOf("fix it"),
           shape: { review_of: builderId },
@@ -361,7 +361,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -371,7 +371,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await reportTurn(builder, taskId, BUILDER_REPORT);
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
 
-      const review = await supervisor.commission({
+      const review = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("review it on fable"),
         shape: { review_of: taskId, override_model_id: "claude-fable-5-1" },
@@ -401,7 +401,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("make the meter test stop flaking"),
         repoId: view.id,
@@ -442,7 +442,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         });
 
       // The reviewer: host-briefed, read-only by brief, kind review by the host.
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "whatever the Firstmate called it",
         intent: intentOf("make the meter test stop flaking"),
         repoId: view.id,
@@ -689,7 +689,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const { supervisor, tasks, repos, specs, cards } = setup(builder, { realWorkspace: true });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Explain the meter fixture",
         intent: intentOf("Document the meter fixture."),
         repoId: view.id,
@@ -771,7 +771,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -780,7 +780,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       await reportTurn(builder, builderId, BUILDER_REPORT);
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("fix it"),
         shape: { review_of: builderId },
@@ -839,7 +839,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const { supervisor, tasks, repos, ops, workspace, specs } = env;
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -848,7 +848,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       await reportTurn(builder, builderId, BUILDER_REPORT);
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("fix it"),
         shape: { review_of: builderId },
@@ -901,7 +901,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict blocked: no access to the branch\n${renderReviewHistory([{ kind: "round", at: 0, review: reviewKey ?? "", verdict: "findings", head: HEAD, findings: ["F1 error src/meter.test.ts:12 racy - auto-fix"] }])}\n Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext()}`,
         `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); review task ${reviewKey} is closed. crewmate 2's report: A note only. ${REVIEW_PASSED_NEXT}`,
       ]);
-      const { taskId: r2 } = await supervisor.commission({
+      const { taskId: r2 } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("fix it"),
         shape: { review_of: builderId },
@@ -949,7 +949,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -965,7 +965,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         ciAt: Date.now(),
       });
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("fix it"),
         shape: { review_of: builderId },
@@ -991,7 +991,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -1007,7 +1007,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         ciAt: Date.now(),
       });
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("fix it"),
         shape: { review_of: builderId },
@@ -1099,7 +1099,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -1108,7 +1108,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       await reportTurn(builder, builderId, BUILDER_REPORT);
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("fix it"),
         shape: { review_of: builderId },
@@ -1200,7 +1200,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const { supervisor, tasks, repos, paths } = setup(builder, { machines });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -1234,7 +1234,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         },
       });
       const review = () =>
-        supervisor.commission({
+        supervisor.intake.commission({
           title: "Review",
           intent: intentOf("fix it"),
           shape: { review_of: builderId },
@@ -1277,7 +1277,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.commission({
+      const { taskId: builderId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -1290,7 +1290,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       tasks.updateFields(builderId, { policies: { rigor: "reviewed" } }, "firstmate");
       supervisor.policiesChanged(builderId, { rigor: "reviewed" });
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("fix it"),
         shape: { review_of: builderId },

@@ -54,7 +54,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     plan: (input) => {
       let record: TaskRecord;
       try {
-        record = supervisor.plan(input);
+        record = supervisor.intake.plan(input);
       } catch (caught) {
         // A refused hand-off (INF-799) files nothing and reads as words.
         if (caught instanceof TaskGraphRefusal)
@@ -252,7 +252,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             // An edit its crewmate never hears still sparks to it: its task
             // changed (INF-759). A policy notice sparks as it lands.
             supervisor.announceReach(record.id);
-            supervisor.graphChanged();
+            supervisor.intake.graphChanged();
           }
           const now = tasks.get(record.id);
           return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}${move ? ` ${move.text}` : ""}${backlog ? ` ${backlog.text}` : ""}`;
@@ -267,7 +267,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       asText(() => {
         const record = resolve(input.task);
         host.asks.attach(record.id, "update_task");
-        const text = supervisor.dropTask(record.id, {
+        const text = supervisor.intake.dropTask(record.id, {
           reason: input.reason,
           ...(input.confirm ? { confirm: true } : {}),
           ...(input.replacedBy ? { replacedBy: input.replacedBy } : {}),
@@ -378,8 +378,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           .some((link) => link.fromId === from.id && link.type === input.type);
       const before = linked();
       const text = input.remove
-        ? supervisor.unlinkTasks(from.id, to.id, input.type)
-        : supervisor.linkTasks(from.id, to.id, input.type);
+        ? supervisor.intake.unlinkTasks(from.id, to.id, input.type)
+        : supervisor.intake.linkTasks(from.id, to.id, input.type);
       // A refusal comes back as text; only an edge that now differs took effect.
       if (linked() !== before) {
         host.turn.replyFacts.app = `${input.remove ? "Unlinked" : "Linked"} ${from.key} and ${to.key}`;

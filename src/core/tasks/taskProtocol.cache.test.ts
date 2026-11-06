@@ -335,7 +335,7 @@ describe("the task protocol (task-system P3)", () => {
       for (const id of ["carried", "rejected", "dropped"])
         for (let i = 0; i < history; i++) f.tasks.noteProgress(id, `Checked part ${i}.`);
       // Another task carries one on; a stronger model takes over another, as
-      // CrewSupervisor.applyEscalation writes it; the third is just dropped.
+      // TaskIntake.applyEscalation writes it; the third is just dropped.
       f.tasks.dropWithChildren("carried", {
         reason: "moved to its carrier",
         actor: "firstmate",

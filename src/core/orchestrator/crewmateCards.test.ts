@@ -74,7 +74,7 @@ async function crewmateOn(
   const crewmate = fakeCrewmate();
   const h = setup(crewmate, extras);
   const repo = options.project ? h.repos.ensurePersonal(options.project) : undefined;
-  const { taskId } = await h.supervisor.commission({
+  const { taskId } = await h.supervisor.intake.commission({
     title: "Build a small game",
     intent: intentOf("build a small game I can play"),
     ...(repo ? { repoId: repo.id } : {}),
@@ -450,7 +450,7 @@ describe("a crewmate's merge cards and refusals", () => {
     });
 
     const answer = await crewmateOn();
-    const answerTask = await answer.supervisor.commission({
+    const answerTask = await answer.supervisor.intake.commission({
       title: "Check the game's licence",
       intent: {
         ...intentOf("tell me whether the font's licence lets me ship it"),

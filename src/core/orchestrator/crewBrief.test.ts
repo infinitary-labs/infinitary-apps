@@ -50,7 +50,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // The captain's revised derivation (2026-09-19): standard by
       // default, whatever the routed bucket says - the tier moves models,
       // never ceremony.
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter test",
         intent: intentOf("make the meter test stop flaking"),
         repoId: view.id,
@@ -68,7 +68,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(supervisor.crewStatus(taskId)[0]).toMatchObject({ rigor: "standard" });
       // Reviewed is only ever asked for - the user's words or the repo's
       // configured rigor - and its brief orders review before the PR.
-      const askedFor = await supervisor.commission({
+      const askedFor = await supervisor.intake.commission({
         title: "Careful fix",
         intent: intentOf("review this carefully before it lands"),
         repoId: view.id,
@@ -98,7 +98,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       repos.configure(view.id, { delivery: "direct-pr" });
 
       // The captain's word beats the repository's default.
-      const asked = await supervisor.commission({
+      const asked = await supervisor.intake.commission({
         title: "Quick fix",
         intent: intentOf("just do it quickly"),
         repoId: view.id,
@@ -112,7 +112,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // The repository's standing rigor - the column set by talking (phase
       // 3) - beats the default.
       repos.configure(view.id, { rigor: "reviewed" });
-      const fromRepo = await supervisor.commission({
+      const fromRepo = await supervisor.intake.commission({
         title: "Noted fix",
         intent: intentOf("fix it"),
         repoId: view.id,
@@ -127,7 +127,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
 
       // Every repository defaults to standard - the local-only default
       // workspace too (captain ruling, 2026-09-19).
-      const scratch = await supervisor.commission({ title: "Scratch", intent: intentOf("poke") });
+      const scratch = await supervisor.intake.commission({
+        title: "Scratch",
+        intent: intentOf("poke"),
+      });
       await tick();
       expect(tasks.get(scratch.taskId)?.shape?.rigor).toBe("standard");
       expect(local.promptCalls[0]).toContain(renderRigorSection("standard"));
@@ -150,7 +153,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Investigate the keychain prompt",
         intent: intentOf("find out why the keychain asks"),
         repoId: view.id,
@@ -234,7 +237,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     const crewmate = fakeCrewmate();
     const { supervisor, inbox, tasks } = setup(crewmate);
     const attachments = keepImages(randomUUID(), [{ ...pngImage, name: "dialog.png" }]);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the dialog",
       intent: intentOf("fix the dialog in this picture"),
       attachments,
@@ -290,7 +293,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     const content = "Crewmate,Ring\r\n3a9542a5,orphan\r\n".repeat(100);
     withPastedFiles("Read this", [{ name: "ring.csv", text: content }], messageFiles);
 
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Identify the orphan on the ring",
       intent: intentOf("which crewmate is the orange one at the bottom of this ring?"),
       repoId: repo.id,
@@ -325,7 +328,10 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     initOverflowDir(scratchDir("infinitary-task-text-"));
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const build = supervisor.plan({ title: "Read the notes", intent: intentOf("Read the notes") });
+    const build = supervisor.intake.plan({
+      title: "Read the notes",
+      intent: intentOf("Read the notes"),
+    });
     const messageFiles: MessageFile[] = [];
     const content = "Date,Observation\r\n2026-10-25,Dialog cannot open\r\n".repeat(100);
     const text = withPastedFiles("Read this", [{ name: "notes.csv", text: content }], messageFiles);
@@ -355,7 +361,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     );
     writeFileSync(messageFiles[0]?.path ?? "", "Changed after acceptance.");
     await expect(
-      supervisor.commission({
+      supervisor.intake.commission({
         title: "Read the notes",
         intent: intentOf("Read the notes"),
         messageFiles,
@@ -368,8 +374,8 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     vi.useRealTimers();
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const plan = supervisor.plan({ title: "Plan the panel", intent: intentOf("plan it") });
-    const build = supervisor.plan({
+    const plan = supervisor.intake.plan({ title: "Plan the panel", intent: intentOf("plan it") });
+    const build = supervisor.intake.plan({
       title: "Build the panel",
       intent: intentOf("build it"),
       shape: { basis: plan.key },

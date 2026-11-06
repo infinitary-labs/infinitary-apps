@@ -8,7 +8,7 @@ The host learns no workflow's name; it runs what the first mate wrote and checks
 
 `create_task` takes `program`, `{script, args?, bound}`, as a fact of the task's shape (`shape.program`, `src/shared/routingPolicy.ts`).
 The rule for it has one home, the Programs runbook (`resources/runbooks/programs/guide.md`); the parameter is served bare to keep the first mate's fixed context inside its boundary.
-The host refuses, as tool text with nothing filed (`programRefusal`, `src/core/program/programScript.ts`, and `programShape` in the supervisor):
+The host refuses, as tool text with nothing filed (`programRefusal`, `src/core/program/programScript.ts`, and `programShape`, `src/core/program/programRunner.ts`):
 
 - a script that is not a non-empty string, that does not compile as the body of an async function, or that imports code;
 - `args` that are not JSON;

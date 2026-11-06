@@ -463,7 +463,7 @@ describe("FirstmateAgent capture", () => {
         { id: "t1", title: "Add pagination", status: "idle", sessionFile: "/tmp/t1.jsonl" },
       ],
     });
-    const commission = vi.spyOn(supervisor, "commission");
+    const commission = vi.spyOn(supervisor.intake, "commission");
     const steer = vi.spyOn(supervisor, "steerCrewmate").mockResolvedValue("mid-turn");
     // INF-1389 friction 3 also carries complete text files before ask capture attaches the spawn.
     initOverflowDir(scratchDir("infinitary-firstmate-files-"));

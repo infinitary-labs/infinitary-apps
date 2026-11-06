@@ -99,7 +99,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       // The message's pictures ride the brief, which goes out before the
       // message attaches to the new task below.
       const attachments = host.asks.currentPictures();
-      const handle = await supervisor.commission({
+      const handle = await supervisor.intake.commission({
         ...input,
         messageFiles: host.asks.current()?.messageFiles ?? [],
         ...(attachments.length > 0 ? { attachments } : {}),
@@ -182,7 +182,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     isCaptainTurn: () => host.turn.origin === "captain-turn",
     carryOnTask: async (taskId, carriedBy, closingSentence) => {
       host.asks.attach(taskId, "settle_task");
-      const close = () => supervisor.carryOnTask(taskId, carriedBy);
+      const close = () => supervisor.intake.carryOnTask(taskId, carriedBy);
       const text = closingSentence
         ? await supervisor.settling.closing.withClosingSentence(
             host.options.tasks.resolve(taskId)?.id ?? taskId,

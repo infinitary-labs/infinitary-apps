@@ -1,11 +1,9 @@
 /**
- * A program as the crew supervisor runs it (docs/programs.md): its ask()
- * answered through the one-question session, a part the host refuses to
- * file, and a drop while a part is underway. INF-2625's plan, the crew
- * supervisor's seventh step, moves the program code out of the supervisor
- * into the program runner; these cases pin, before it moves, the behaviour
- * no other test reaches. Each runs the script in the real program process
- * and reads the record, the first mate's wake and the answer.
+ * A program as the crew runs it (docs/programs.md; `CrewPrograms`). These
+ * cases pin the behaviour no other test reaches: its ask() answered through
+ * the one-question session, a part the host refuses to file, and a drop
+ * while a part is underway. Each runs the script in the real program
+ * process and reads the record, the first mate's wake and the answer.
  */
 
 import { execFileSync } from "node:child_process";
@@ -33,18 +31,18 @@ async function running(script: string, extras: SetupExtras = {}) {
   const dir = scratchDir("infinitary-program-");
   execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
   const { repo } = await h.repos.setup({ kind: "adopt", path: dir, name: "meterlab" });
-  const program = h.supervisor.plan({
+  const program = h.supervisor.intake.plan({
     title: "Cap the meter's rendered results",
     intent: intentOf("Cap what the meter renders."),
     repoId: repo.id,
     startPolicy: "when-ready",
     shape: { program: { script, bound: 2 } },
   });
-  h.supervisor.graphChanged();
+  h.supervisor.intake.graphChanged();
   return { ...h, crewmate, program };
 }
 
-describe("a program, before its code moves out of the crew supervisor", () => {
+describe("a program the crew runs", () => {
   it("answers ask() through the one-question session, checked against its schema, and with null when the app has none", async () => {
     const FILE = {
       type: "object",
@@ -99,7 +97,7 @@ describe("a program, before its code moves out of the crew supervisor", () => {
       return found;
     }, PROGRAM_WAIT);
 
-    expect(h.supervisor.dropTask(h.program.key, { reason: "changed course" })).toBe(
+    expect(h.supervisor.intake.dropTask(h.program.key, { reason: "changed course" })).toBe(
       `Dropping ${h.program.key} "Cap the meter's rendered results": its program stopped, and its started part ${part.key} close first, their work saved.`,
     );
     await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("dropped"), PROGRAM_WAIT);

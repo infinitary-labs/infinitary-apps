@@ -158,7 +158,7 @@ describe("where a task runs", () => {
     reach.now = true;
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate, { machines });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the meter",
       intent: intentOf("Fix the meter's unit."),
     });

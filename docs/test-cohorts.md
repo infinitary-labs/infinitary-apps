@@ -180,7 +180,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/generate-self-source.test.ts` | node, git archive | 60 s |
 | `src/core/sql/sqlService.test.ts` | a forked SQL process, bundled with vite | 5 s default (60 s on the bundling `beforeAll`, kept) |
 | `src/core/program/programRunner.test.ts` | a forked program process per program, the entry as it stands | 5 s default |
-| `src/core/orchestrator/crewSupervisor.programs.test.ts` | a forked program process per program under a crew supervisor, real git for its project | 5 s default (Mac slowest case 0.9 s) |
+| `src/core/program/programRunner.crew.test.ts` | a forked program process per program under a crew supervisor, real git for its project | 5 s default (Mac slowest case 0.9 s) |
 | `src/core/claude/claudeToolSurface.test.ts` | the Claude client, through the SDK, and boxed on the seat's harness against a local stub API | 180 s on each client run |
 | `src/core/claude/claudeFirstmateSession.integration.test.ts` | the SDK's own client, boxed, against a per-case local stub API | 15 s |
 | `tests/replay-claude-session.test.ts` | the SDK's own client, boxed, against a local stub API, under the real first mate agent | 15 s |

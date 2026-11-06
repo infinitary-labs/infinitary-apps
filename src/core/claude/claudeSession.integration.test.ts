@@ -402,7 +402,7 @@ describe("a crewmate's turn a close cuts, on the real client", () => {
     });
     const crew = crewOn(b);
     crews.push({ crew, configDir: b.configDir });
-    const { taskId } = await crew.supervisor.commission({
+    const { taskId } = await crew.supervisor.intake.commission({
       title: "Count the rivets",
       intent: { goal: "Count the rivets on the hatch.", userWords: "count the rivets" },
     });

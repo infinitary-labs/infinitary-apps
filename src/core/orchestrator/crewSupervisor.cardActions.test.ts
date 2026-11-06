@@ -49,7 +49,7 @@ const ASK: WriteAsk = {
 async function askedWrite(extras: SetupExtras = {}) {
   const crewmate: FakeCrewmate = fakeCrewmate();
   const h = setup(crewmate, extras);
-  const { taskId } = await h.supervisor.commission({
+  const { taskId } = await h.supervisor.intake.commission({
     title: "File the meter bug",
     intent: intentOf("file the meter bug upstream"),
   });

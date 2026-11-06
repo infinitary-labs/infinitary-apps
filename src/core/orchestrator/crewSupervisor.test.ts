@@ -247,7 +247,7 @@ describe("CrewSupervisor", () => {
     vi.useRealTimers();
     const crewmate = fakeCrewmate();
     const { supervisor, events, cards, ops, tasks } = setup(crewmate);
-    const { taskId, crewmate: name } = await supervisor.commission({
+    const { taskId, crewmate: name } = await supervisor.intake.commission({
       title: "Refactor auth",
       intent: intentOf("refactor the auth middleware; acceptance: tests green"),
     });
@@ -306,7 +306,7 @@ describe("CrewSupervisor", () => {
       new ForgeAuthRequiredError("could not read Username for GitHub"),
     );
 
-    const { taskId, crewmate: state } = await supervisor.commission({
+    const { taskId, crewmate: state } = await supervisor.intake.commission({
       title: "Update the GitHub project",
       intent: intentOf("update the project"),
     });
@@ -333,7 +333,7 @@ describe("CrewSupervisor", () => {
   it("persists and routes a provider-initiated report exactly once without a captain nudge", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, events, ops, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Finish background checks",
       intent: intentOf("finish the background checks"),
     });
@@ -388,7 +388,7 @@ describe("CrewSupervisor", () => {
     async (trigger) => {
       const crewmate = fakeCrewmate();
       const { supervisor, tasks } = setup(crewmate);
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Finish background checks",
         intent: intentOf("finish the background checks"),
       });
@@ -416,7 +416,7 @@ describe("CrewSupervisor", () => {
   it("leaves a carried-on turn its live session still runs (INF-2332)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Finish background checks",
       intent: intentOf("finish the background checks"),
     });
@@ -446,7 +446,7 @@ describe("CrewSupervisor", () => {
     const { supervisor, tasks, repos, sessionSpecs, ops } = setup(crewmate, { githubRead });
     const { repo } = await repos.setup({ kind: "init", name: "shop" });
     repos.configure(repo.id, { delivery: "direct-pr" });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Find the failed phone runs",
       intent: intentOf("find the failed phone runs"),
       repoId: repo.id,
@@ -489,7 +489,7 @@ describe("CrewSupervisor", () => {
   it("names a crewmate's own open call and unread steer, and wakes once for a steer two checks find unread (INF-2603)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Run the phone tests",
       intent: intentOf("run the phone tests"),
     });
@@ -531,7 +531,7 @@ describe("CrewSupervisor", () => {
       hasRunningJobs: () => true,
       oldestRunningJob: () => ({ jobId: "j1", command: "pnpm test:phone", startedAt: jobStart }),
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Run the phone tests",
       intent: intentOf("run the phone tests"),
     });
@@ -556,7 +556,7 @@ describe("CrewSupervisor", () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);
     await expect(
-      supervisor.commission({ title: "x", intent: intentOf("do x"), repoId: "nope" }),
+      supervisor.intake.commission({ title: "x", intent: intentOf("do x"), repoId: "nope" }),
     ).rejects.toThrow(/Unknown repo_id/);
   });
 
@@ -566,7 +566,7 @@ describe("CrewSupervisor", () => {
   it("raises a decision card and notifies the agent when a task fails auth-shaped", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, ops, tasks, workspace } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Promote the latest alpha",
       intent: intentOf("do something"),
     });
@@ -624,7 +624,7 @@ describe("CrewSupervisor", () => {
       },
       modelName: (model) => (model.id === codex.id ? "GPT-6.1 Sol" : model.id),
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Promote the latest alpha",
       intent: intentOf("do something"),
     });
@@ -688,7 +688,7 @@ describe("CrewSupervisor", () => {
       routedModel: copilot,
       movePick: () => ({ provider: "openai-codex", id: "gpt-6.1-sol" }),
     });
-    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     crewmate.finishPrompt();
     await tick();
@@ -708,7 +708,7 @@ describe("CrewSupervisor", () => {
       movePick: () => ({ provider: "openai-codex", id: "gpt-6.1-sol" }),
       modelName: (model) => (model.id === "gpt-6.1-sol" ? "GPT-6.1 Sol" : model.id),
     });
-    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     crewmate.finishPrompt();
     await tick();
@@ -742,7 +742,7 @@ describe("CrewSupervisor", () => {
       crewmates: [moved],
       movePick: (shape) => (shape.override_model_id === "openai-codex/gpt-6.1-sol" ? codex : undefined),
     });
-    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     const asked = supervisor.requestMove(taskId, {
       by: "firstmate",
@@ -779,7 +779,7 @@ describe("CrewSupervisor", () => {
   it("never mints the sign-in card for a failure that only sounds auth-shaped", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, ops } = setup(crewmate);
-    await supervisor.commission({ title: "t", intent: intentOf("do something") });
+    await supervisor.intake.commission({ title: "t", intent: intentOf("do something") });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     crewmate.failPrompt("Error Code null: Internal error during token generation");
     await vi.waitFor(() => expect(ops.at(-1)).toContain("failed"));
@@ -791,7 +791,7 @@ describe("CrewSupervisor", () => {
   it("reports a provider-failed turn instead of '(no report)' and keeps the crewmate steerable", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, cards, ops, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Refactor auth",
       intent: intentOf("do the work"),
     });
@@ -869,7 +869,7 @@ describe("CrewSupervisor", () => {
     const { supervisor, events, ops, tasks, inbox } = setup(crewmate, {
       recordUsage: (input) => recorded.push(input.usage),
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Lid close",
       intent: intentOf("do the work"),
     });
@@ -941,7 +941,7 @@ describe("CrewSupervisor", () => {
     const { supervisor } = setup(crewmate, {
       recordUsage: (input) => recorded.push(input.usage),
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Lid close",
       intent: intentOf("do the work"),
     });
@@ -983,7 +983,7 @@ describe("CrewSupervisor", () => {
     const { supervisor, events, ops, inbox } = setup(crewmate, {
       recordUsage: (input) => recorded.push(input.usage),
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Lid close",
       intent: intentOf("do the work"),
     });
@@ -1033,7 +1033,7 @@ describe("CrewSupervisor", () => {
     // success false and does not start another attempt.
     const crewmate = fakeCrewmate();
     const { supervisor, ops, inbox } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Lid close",
       intent: intentOf("do the work"),
     });
@@ -1155,7 +1155,7 @@ describe("CrewSupervisor", () => {
     crewmate.subscribe = (listener) => opened.subscribe(listener);
     const { supervisor, events, ops, tasks, inbox } = setup(crewmate);
     try {
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Lid close",
         intent: intentOf("do the work"),
       });
@@ -1194,7 +1194,7 @@ describe("CrewSupervisor", () => {
         wakes.push({ text: served(wake), origin, ...(ref ? { ref } : {}) }),
       retryConverse: vi.fn(),
     });
-    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await tick();
     crewmate.emit({
       type: "turn_failed",
@@ -1226,7 +1226,7 @@ describe("CrewSupervisor", () => {
       },
       routedModel: custom,
     });
-    await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     // A connection whose model lost its check has no runtime: Pi's session no
     // longer knows the provider, and its preflight throws its own sign-in help.
@@ -1260,7 +1260,7 @@ describe("CrewSupervisor", () => {
       notifyOp: (_wake, origin, ref) => wakes.push({ origin, ...(ref ? { ref } : {}) }),
       retryConverse: vi.fn(),
     });
-    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await tick();
     const signedOut = () => {
       // Words no prose classifier would read as a sign-in: the class decides.
@@ -1315,7 +1315,7 @@ describe("CrewSupervisor", () => {
         .at(-1);
       return taskFeedLine(tasks.get(taskId) as TaskRecord, failed as TaskEvent)?.text;
     };
-    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await tick();
     // Words that say 401, with no typed class: an ordinary failed turn.
     crewmate.emit({ type: "turn_failed", taskId, error: "401: invalid_api_key" });
@@ -1353,7 +1353,7 @@ describe("CrewSupervisor", () => {
       controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client", failureSignals: "typed" },
     } satisfies FakeCrewmate;
     const { supervisor, cards, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await tick();
     // The client exited, in words a prose classifier would read as a sign-in.
     crewmate.failPrompt("Claude Code process exited with code 1: 401 Unauthorized");
@@ -1376,7 +1376,7 @@ describe("CrewSupervisor", () => {
     async (reason) => {
       const crewmate = fakeCrewmate();
       const { supervisor, cards, specs, tasks, cardStore, repos, workspace } = setup(crewmate);
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Retire the choices",
         intent: intentOf("do the work"),
       });
@@ -1464,7 +1464,7 @@ describe("CrewSupervisor", () => {
     async (boundary) => {
       const crewmate = fakeCrewmate();
       const { supervisor, specs, tasks, cardStore } = setup(crewmate);
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Inspect",
         intent: intentOf("inspect"),
       });
@@ -1500,7 +1500,7 @@ describe("CrewSupervisor", () => {
   it("cancels through the lifecycle plane", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "long",
       intent: intentOf("long running work"),
     });
@@ -1526,7 +1526,7 @@ describe("CrewSupervisor", () => {
   ])("ends a cancelled task when its %s never ends", async (_name, autonomous) => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "long",
       intent: intentOf("long running work"),
     });
@@ -1563,7 +1563,7 @@ describe("CrewSupervisor", () => {
   it("cancels an idle reported task that stayed active until settled", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("open the pr"),
     });
@@ -1675,7 +1675,7 @@ describe("CrewSupervisor", () => {
   it("keeps the task steerable after an interrupt", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "long",
       intent: intentOf("long running work"),
     });
@@ -1695,7 +1695,7 @@ describe("CrewSupervisor", () => {
     const crewmate = fakeCrewmate();
     crewmate.abort = vi.fn(async () => {});
     const { supervisor, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "long",
       intent: intentOf("long running work"),
     });
@@ -1720,7 +1720,7 @@ describe("CrewSupervisor", () => {
       throw new Error("password=hunter2");
     });
     const { supervisor, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "long",
       intent: intentOf("long running work"),
     });
@@ -1737,7 +1737,7 @@ describe("CrewSupervisor", () => {
   it("gives an interrupt the Firstmate asked for a feed-line receipt, never a wake", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, ops, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "long",
       intent: intentOf("long running work"),
     });
@@ -1760,7 +1760,7 @@ describe("CrewSupervisor", () => {
     // Pi and Claude alike settle the turn an interrupt cut short; neither throws.
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "long",
       intent: intentOf("long running work"),
     });
@@ -1793,7 +1793,7 @@ describe("CrewSupervisor", () => {
   it("reads a continuation that ends after an interrupt as the interrupt it asked for", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "long",
       intent: intentOf("long running work"),
     });
@@ -1818,7 +1818,7 @@ describe("CrewSupervisor", () => {
   it("reports fresh crew status from the store, not memory", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Status check",
       intent: intentOf("do stuff"),
     });
@@ -1835,7 +1835,7 @@ describe("CrewSupervisor", () => {
   it("counts a live idle runtime as one idle crewmate on both surfaces", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Live idle",
       intent: intentOf("do stuff"),
     });
@@ -1853,7 +1853,7 @@ describe("CrewSupervisor", () => {
   it("carries the app's recorded CI reading in crew_status once one exists, and none before", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("do stuff"),
     });
@@ -1872,7 +1872,7 @@ describe("CrewSupervisor", () => {
   it("keeps strip idle aligned with crew_status when a runtime sits beside a store orphan", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Still here",
       intent: intentOf("do stuff"),
     });
@@ -1902,7 +1902,7 @@ describe("CrewSupervisor", () => {
   it("discarding closes the record, retires its cards, and drops only the worktree (D2)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, workspace, tasks, cardStore } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "c",
       intent: intentOf("clean up later"),
     });
@@ -1959,7 +1959,7 @@ describe("CrewSupervisor", () => {
     async function idleTask() {
       const crewmate = fakeCrewmate();
       const harness = setup(crewmate);
-      const { taskId } = await harness.supervisor.commission({
+      const { taskId } = await harness.supervisor.intake.commission({
         title: "Rename the notice",
         intent: intentOf("rename the notice"),
       });
@@ -1995,7 +1995,7 @@ describe("CrewSupervisor", () => {
       const crewmate = fakeCrewmate();
       const h = setup(crewmate);
       const step = async (title: string) => {
-        const { taskId } = await h.supervisor.commission({
+        const { taskId } = await h.supervisor.intake.commission({
           title,
           intent: intentOf(title.toLowerCase()),
           shape: { internal_step: true },
@@ -2034,7 +2034,7 @@ describe("CrewSupervisor", () => {
       for (const internalStep of [true, false]) {
         const crewmate = fakeCrewmate();
         const h = setup(crewmate);
-        await h.supervisor.commission({
+        await h.supervisor.intake.commission({
           title: "Bring the branch up to date",
           intent: intentOf("bring the branch up to date"),
           ...(internalStep ? { shape: { internal_step: true } } : {}),
@@ -2071,7 +2071,7 @@ describe("CrewSupervisor", () => {
     it("adds nothing when the captain already closed the crewmate's outcome card and it reported finished (INF-1137)", async () => {
       const crewmate = fakeCrewmate();
       const h = setup(crewmate);
-      const { taskId } = await h.supervisor.commission({
+      const { taskId } = await h.supervisor.intake.commission({
         title: "Rebuild the runner image",
         intent: intentOf("rebuild the runner image"),
       });
@@ -2193,7 +2193,7 @@ describe("CrewSupervisor", () => {
     it("carries a running crewmate's cancel to the close its stopped turn brings", async () => {
       const crewmate = fakeCrewmate();
       const { supervisor, cards, tasks } = setup(crewmate);
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "long",
         intent: intentOf("long running work"),
       });
@@ -2242,7 +2242,7 @@ describe("CrewSupervisor", () => {
     async function carriedWork(extras: SetupExtras = {}) {
       const crewmate = fakeCrewmate();
       const harness = setup(crewmate, extras);
-      const { taskId } = await harness.supervisor.commission({
+      const { taskId } = await harness.supervisor.intake.commission({
         title: "Fix the notice",
         intent: intentOf("fix the notice"),
       });
@@ -2270,7 +2270,7 @@ describe("CrewSupervisor", () => {
       h.tasks.graph.link(h.taskId, waiter.id, "blocks", "firstmate");
 
       const text = await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
-        h.supervisor.carryOnTask(h.taskId, h.carrier.key),
+        h.supervisor.intake.carryOnTask(h.taskId, h.carrier.key),
       );
       await tick();
 
@@ -2300,7 +2300,7 @@ describe("CrewSupervisor", () => {
       seedDelivery(h.tasks, h.taskId, { prNumber: 9, prUrl });
       seedDelivery(h.tasks, h.carrier.id, { prNumber: 9, prUrl });
 
-      await h.supervisor.carryOnTask(h.taskId, h.carrier.key);
+      await h.supervisor.intake.carryOnTask(h.taskId, h.carrier.key);
       await tick();
 
       expect(h.tasks.get(h.taskId)?.status).toBe("done");
@@ -2319,11 +2319,11 @@ describe("CrewSupervisor", () => {
       h.tasks.close("part", { status: "dropped", reason: "cancelled", actor: "firstmate" });
       const gone = seedTask(h.tasks, { id: "gone", title: "Gone", status: "cancelled" });
       const key = h.tasks.get(h.taskId)?.key ?? "";
-      expect(await h.supervisor.carryOnTask(h.taskId, h.taskId)).toBe(
+      expect(await h.supervisor.intake.carryOnTask(h.taskId, h.taskId)).toBe(
         `Refused: ${key} cannot be replaced by itself.`,
       );
-      expect(await h.supervisor.carryOnTask(h.taskId, "part")).toContain("is under");
-      expect(await h.supervisor.carryOnTask(h.taskId, gone.key)).toBe(
+      expect(await h.supervisor.intake.carryOnTask(h.taskId, "part")).toContain("is under");
+      expect(await h.supervisor.intake.carryOnTask(h.taskId, gone.key)).toBe(
         `Refused: ${gone.key} is dropped itself, so it does not do ${key}'s work.`,
       );
       h.specs[0]?.onCard?.({
@@ -2335,7 +2335,7 @@ describe("CrewSupervisor", () => {
         ],
       });
       await tick();
-      expect(await h.supervisor.carryOnTask(h.taskId, h.carrier.key)).toContain(
+      expect(await h.supervisor.intake.carryOnTask(h.taskId, h.carrier.key)).toContain(
         'its card "Which notice wording?" still waits on the captain',
       );
       expect(h.tasks.get(h.taskId)?.status).toBe("active");
@@ -2357,7 +2357,7 @@ describe("CrewSupervisor", () => {
       await tick();
       expect(left(h.cards(), h.carrier.id)).toEqual([]);
 
-      await h.supervisor.carryOnTask(h.taskId, h.carrier.key);
+      await h.supervisor.intake.carryOnTask(h.taskId, h.carrier.key);
       await tick();
 
       expect(left(h.cards(), h.taskId)).toEqual([]);
@@ -2371,12 +2371,12 @@ describe("CrewSupervisor", () => {
       tasks.create({ id: "planned", title: "Planned fix", prompt: "p", repoId: null });
       const carrier = seedTask(tasks, { id: "carrier", title: "Carrier", status: "running" });
       expect(
-        supervisor.dropTask("planned", { reason: "moved to its carrier", replacedBy: carrier.key }),
+        supervisor.intake.dropTask("planned", { reason: "moved to its carrier", replacedBy: carrier.key }),
       ).toContain(`${carrier.key} carries on its work.`);
       expect(tasks.get("planned")).toMatchObject({ status: "done", closedReason: "superseded" });
       // A drop that names no replacement stays dropped.
       tasks.create({ id: "stopped", title: "Stopped fix", prompt: "p", repoId: null });
-      supervisor.dropTask("stopped", { reason: "not needed" });
+      supervisor.intake.dropTask("stopped", { reason: "not needed" });
       expect(tasks.get("stopped")).toMatchObject({ status: "dropped", closedReason: "cancelled" });
     });
   });
@@ -2391,7 +2391,7 @@ describe("CrewSupervisor", () => {
         rule: "R8",
       },
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Big refactor",
       intent: intentOf("redesign the auth layer"),
     });
@@ -2413,7 +2413,7 @@ describe("CrewSupervisor", () => {
         rule: "R8",
       },
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Big refactor",
       intent: intentOf("redesign the auth layer"),
     });
@@ -2435,7 +2435,7 @@ describe("CrewSupervisor", () => {
         rule: "R3",
       },
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Build the approved change",
       intent: intentOf("build from this plan"),
       shape: { rigor_ask: "quick" },
@@ -2457,12 +2457,12 @@ describe("CrewSupervisor", () => {
         rule: "R4",
       },
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Build the approved change",
       intent: intentOf("build from this plan at extra high reasoning"),
       shape: { rigor_ask: "quick", override_reasoning: "xhigh" },
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Build the next change",
       intent: intentOf("build the next part"),
       shape: { rigor_ask: "quick" },
@@ -2502,7 +2502,7 @@ describe("CrewSupervisor", () => {
         repoDir: paths.defaultWorkspaceDir,
       };
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Build the approved change",
       intent: intentOf("build from this plan"),
     });
@@ -2524,7 +2524,7 @@ describe("CrewSupervisor", () => {
         rule: "R3",
       },
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Add a shortcut",
       intent: intentOf("add a shortcut that opens the Tasks panel"),
     });
@@ -2550,7 +2550,7 @@ describe("CrewSupervisor", () => {
         rule: "R7",
       },
     });
-    await supervisor.commission({ title: "Tiny fix", intent: intentOf("fix a typo") });
+    await supervisor.intake.commission({ title: "Tiny fix", intent: intentOf("fix a typo") });
     await tick();
     expect(events.find((event) => event.type === "firstmate_note")).toBeUndefined();
   });
@@ -2562,7 +2562,7 @@ describe("CrewSupervisor", () => {
       text: "Closed PR #9 on GitHub. https://github.com/x/y/pull/9",
     }));
     const { supervisor, workspace, tasks } = setup(crewmate, { closePullRequest });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Shipped elsewhere",
       intent: intentOf("open a PR"),
     });
@@ -2601,7 +2601,7 @@ describe("CrewSupervisor", () => {
       delivery = createChangeDelivery({ tasks, repos, forgeFor: () => forge });
       const { repo } = await repos.setup({ kind: "init", name: "abandoned" });
       repos.configure(repo.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Abandoned attempt",
         intent: intentOf("fix the meter"),
         repoId: repo.id,
@@ -2613,7 +2613,7 @@ describe("CrewSupervisor", () => {
         await tick();
       }
       if (path === "rework") {
-        await supervisor.commission({
+        await supervisor.intake.commission({
           title: "Fresh attempt",
           intent: intentOf("try a stronger model"),
           shape: { escalate_from: tasks.get(taskId)?.key },
@@ -2656,7 +2656,7 @@ describe("CrewSupervisor", () => {
       worktreeDir: "/w/closed-attempt",
     });
     seedDelivery(tasks, previous.id, { prNumber: 9 });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fresh attempt",
       intent: intentOf("try a stronger model"),
       shape: { escalate_from: previous.key },
@@ -2675,7 +2675,7 @@ describe("CrewSupervisor", () => {
       });
       const { supervisor, tasks, workspace } = setup(crewmate, { closePullRequest });
       vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Abandoned",
         intent: intentOf("fix it"),
       });
@@ -2687,7 +2687,7 @@ describe("CrewSupervisor", () => {
         await tick();
         if (path === "cancel") await supervisor.interruptCrewmate(taskId, "cancel");
         else
-          await supervisor.commission({
+          await supervisor.intake.commission({
             title: "Fresh attempt",
             intent: intentOf("try a stronger model"),
             shape: { escalate_from: tasks.get(taskId)?.key },
@@ -2712,7 +2712,7 @@ describe("CrewSupervisor", () => {
     const crewmate = fakeCrewmate();
     const closePullRequest = vi.fn(async () => ({ ok: true, text: "" }));
     const { supervisor } = setup(crewmate, { closePullRequest });
-    const { taskId } = await supervisor.commission({ title: "Local", intent: intentOf("fix it") });
+    const { taskId } = await supervisor.intake.commission({ title: "Local", intent: intentOf("fix it") });
     await tick();
     if (path === "failed") crewmate.failPrompt("The client exited.");
     else {
@@ -2728,7 +2728,7 @@ describe("CrewSupervisor", () => {
     const crewmate = fakeCrewmate();
     const closePullRequest = vi.fn(async () => ({ ok: true, text: "" }));
     const { supervisor, tasks } = setup(crewmate, { closePullRequest });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Local only",
       intent: intentOf("no PR here"),
     });
@@ -2749,7 +2749,7 @@ describe("CrewSupervisor", () => {
       dirty: true,
       unlandedCommits: 2,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Precious",
       intent: intentOf("real work"),
     });
@@ -2777,7 +2777,7 @@ describe("CrewSupervisor", () => {
       dirty: false,
       unlandedCommits: 1,
     });
-    const { taskId } = await supervisor.commission({ title: "Land it", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "Land it", intent: intentOf("work") });
     await tick();
     crewmate.finishPrompt();
     await tick();
@@ -2799,7 +2799,7 @@ describe("CrewSupervisor", () => {
   it("tells a crewmate how its revision of a seen card compares, and never refuses a rewrite", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, specs } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "cards",
       intent: intentOf("revise a card"),
     });
@@ -2824,7 +2824,7 @@ describe("CrewSupervisor", () => {
   it("turns crewmate-emitted cards into the card stack with uniform chrome", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, specs, cardStore } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "cards",
       intent: intentOf("show every card kind"),
     });
@@ -2887,7 +2887,7 @@ describe("CrewSupervisor", () => {
   it("reports when a resolved crewmate card choice cannot be delivered", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, specs } = setup(crewmate);
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "cards",
       intent: intentOf("ask for a choice"),
     });
@@ -2944,12 +2944,12 @@ describe("CrewSupervisor", () => {
   it("close_card refuses a card the crewmate did not emit", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, specs } = setup(crewmate);
-    const { taskId: ownerId } = await supervisor.commission({
+    const { taskId: ownerId } = await supervisor.intake.commission({
       title: "Owner",
       intent: intentOf("emit a note"),
     });
     await tick();
-    const { taskId: otherId } = await supervisor.commission({
+    const { taskId: otherId } = await supervisor.intake.commission({
       title: "Other",
       intent: intentOf("do not touch that card"),
     });
@@ -2992,7 +2992,7 @@ describe("CrewSupervisor", () => {
   it("close_card refuses Firstmate a crewmate's card and names the door", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, cardStore, specs } = setup(crewmate);
-    const { taskId: ownerId } = await supervisor.commission({
+    const { taskId: ownerId } = await supervisor.intake.commission({
       title: "Owner",
       intent: intentOf("emit a note"),
     });
@@ -3104,7 +3104,7 @@ describe("CrewSupervisor", () => {
   it("keeps only the crewmate's declared risk on the completion card and the task", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs, cardStore } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the meter",
       intent: intentOf("fix the meter"),
       shape: { rigor_ask: "quick" },
@@ -3133,7 +3133,7 @@ describe("CrewSupervisor", () => {
     const crewmate = fakeCrewmate();
     const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Change #42 is in on GitHub." }));
     const { supervisor, tasks, specs, cards, events } = setup(crewmate, { mergePullRequest });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship while reporting",
       intent: intentOf("finish the PR"),
       shape: { rigor_ask: "quick" },
@@ -3176,7 +3176,7 @@ describe("CrewSupervisor", () => {
   it("recovers a committed policy edit after a quit without resuming waiting work, and later serves it with the next turn", async () => {
     const original = fakeCrewmate();
     const { db, paths, workspace, tasks, supervisor } = setup(original);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Waiting work",
       intent: intentOf("Keep working"),
     });
@@ -4138,7 +4138,7 @@ describe("CrewSupervisor", () => {
       ]);
       const { repo } = await harness.repos.setup({ kind: "adopt", path: dir, name: "meter" });
       harness.repos.configure(repo.id, { delivery: "direct-pr", rigor: "quick" });
-      const { taskId } = await harness.supervisor.commission({
+      const { taskId } = await harness.supervisor.intake.commission({
         title: "Ship the meter",
         intent: intentOf("Ship the meter fix"),
         repoId: repo.id,
@@ -4776,7 +4776,7 @@ describe("CrewSupervisor", () => {
       ).toBe(true);
       // The first mate's own spawn for the same review finds it open.
       await expect(
-        h.supervisor.commission({
+        h.supervisor.intake.commission({
           title: "Review",
           intent: intentOf("Ship the meter fix"),
           shape: { review_of: h.taskId },
@@ -5752,7 +5752,7 @@ describe("CrewSupervisor", () => {
       expect(merge.text).toContain("closed without merging");
       expect(h.tasks.get(h.taskId)?.status).toBe("active");
 
-      const text = await h.supervisor.carryOnTask(h.taskId, carrier.key);
+      const text = await h.supervisor.intake.carryOnTask(h.taskId, carrier.key);
       await tick();
       expect(text).toContain(`${carrier.key} carries on its work.`);
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "superseded" });
@@ -6651,7 +6651,7 @@ describe("CrewSupervisor", () => {
       dirty: false,
       unlandedCommits: 1,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -6692,7 +6692,7 @@ describe("CrewSupervisor", () => {
     const { supervisor, workspace, tasks, specs, cards, ops } = setup(crewmate, {
       mergePullRequest,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship the PR",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -6741,7 +6741,7 @@ describe("CrewSupervisor", () => {
     // dispatch, so the click degraded to a steer and the PR stayed open.
     const crewmate = fakeCrewmate();
     const { supervisor, specs } = setup(crewmate);
-    await supervisor.commission({ title: "Ship the PR", intent: intentOf("done work") });
+    await supervisor.intake.commission({ title: "Ship the PR", intent: intentOf("done work") });
     await tick();
     vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
 
@@ -6780,7 +6780,7 @@ describe("CrewSupervisor", () => {
     const { supervisor, tasks, specs, cards, events } = setup(crewmate, {
       mergePullRequest,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship the PR",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -6820,7 +6820,7 @@ describe("CrewSupervisor", () => {
       .mockResolvedValueOnce({ ok: false, text: "PR merge blocked: CI is not fully green." })
       .mockResolvedValueOnce({ ok: true, text: "Merged #23 on GitHub." });
     const { supervisor, tasks, specs, cards, ops } = setup(crewmate, { mergePullRequest });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship the PR",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -6932,7 +6932,7 @@ describe("CrewSupervisor", () => {
   it("discards from a crewmate settle card without steering", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, workspace, tasks, specs, cards, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Drop it",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -6967,7 +6967,7 @@ describe("CrewSupervisor", () => {
   it("closing a settle card reaches its crewmate, lands nothing, and wakes no Firstmate", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, workspace, tasks, specs, cards, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Stay",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -7020,7 +7020,7 @@ describe("CrewSupervisor", () => {
     // 8. So the crewmate declares the merge and the host writes the pair.
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cards } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -7062,7 +7062,7 @@ describe("CrewSupervisor", () => {
   it("words a merge its crewmate declared without a label, as the crewmate is told (FI3-249)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cards } = setup(crewmate);
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -7088,7 +7088,7 @@ describe("CrewSupervisor", () => {
   it("refuses a card with an action of the crewmate's own that has no words (FI3-249)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cards } = setup(crewmate);
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -7133,7 +7133,7 @@ describe("CrewSupervisor", () => {
     // gets, so a completion decision that declares only its merge gives two.
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cards } = setup(crewmate);
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -7182,7 +7182,7 @@ describe("CrewSupervisor", () => {
   it("holds the merge decision for the crewmate until it has emitted one (4.4b row 9)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -7207,7 +7207,7 @@ describe("CrewSupervisor", () => {
   it("a deferral a crewmate declares itself is an ordinary reply, never a park (P0, WI-1)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs, cards } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Wait",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -7250,7 +7250,7 @@ describe("CrewSupervisor", () => {
   it("lands an idle task through the workspace and cleans up (Q5)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, workspace, tasks, events, cards } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Land me",
       intent: intentOf("do and land"),
     });
@@ -7278,7 +7278,7 @@ describe("CrewSupervisor", () => {
   it("queues a streaming task's land intent instead of refusing it", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, workspace, tasks, cards } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Busy",
       intent: intentOf("still going"),
     });
@@ -7300,7 +7300,7 @@ describe("CrewSupervisor", () => {
     (workspace.landTaskWork as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("The repository has uncommitted changes; commit or stash them first."),
     );
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Refused",
       intent: intentOf("land later"),
     });
@@ -7361,7 +7361,7 @@ describe("CrewSupervisor", () => {
   it("INF-1879: putting a decision away preserves it and sends no turn", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, ops, cardStore, specs, tasks, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "cards",
       intent: intentOf("show a decision"),
     });
@@ -7405,7 +7405,7 @@ describe("CrewSupervisor", () => {
           labelOf: () => "Personal",
         },
       });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Read the project",
         intent: intentOf("read the project without changing it"),
         shape: { override_model_id: `${provider}/${model.id}` },
@@ -7435,7 +7435,7 @@ describe("CrewSupervisor", () => {
         },
       });
       await expect(
-        supervisor.commission({
+        supervisor.intake.commission({
           title: "Read the project",
           intent: intentOf("read the project"),
         }),
@@ -7464,7 +7464,7 @@ describe("CrewSupervisor", () => {
         labelOf: () => "OpenRouter key",
       },
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Read the project",
       intent: intentOf("read the project without changing it"),
     });
@@ -7484,7 +7484,7 @@ describe("CrewSupervisor", () => {
       accountlessServes: () => false,
     });
     await expect(
-      supervisor.commission({ title: "Read the project", intent: intentOf("read the project") }),
+      supervisor.intake.commission({ title: "Read the project", intent: intentOf("read the project") }),
     ).rejects.toThrow(
       "No signed-in model can take this task now. Check your accounts and their allowance in Settings → Intelligence.",
     );
@@ -7497,7 +7497,7 @@ describe("CrewSupervisor", () => {
       realRouter: (db) => catalogLessRouter(db, []),
       accountlessServes: () => true,
     });
-    await supervisor.commission({ title: "Read the project", intent: intentOf("read the project") });
+    await supervisor.intake.commission({ title: "Read the project", intent: intentOf("read the project") });
     await tick();
     expect(sessionSpecs).toHaveLength(1);
     expect(sessionSpecs[0]?.model).toBeUndefined();
@@ -7518,7 +7518,7 @@ describe("CrewSupervisor", () => {
       routedModel: { provider: "openai-codex", id: "gpt-5.5" },
       recordUsage,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "acct",
       intent: intentOf("do the work"),
     });
@@ -7550,7 +7550,7 @@ describe("CrewSupervisor", () => {
       routedModel: { provider: "anthropic-claude", id: "claude-opus" },
       noteCutOff,
     });
-    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await tick();
     const fail = (event: FmEvent) => {
       crewmate.emit(event);
@@ -7577,7 +7577,7 @@ describe("CrewSupervisor", () => {
       routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
       onRouteDecide: (args) => decideCalls.push(args),
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Redesign the dock",
       intent: intentOf("use gpt-6-astra for this"),
       shape: { override_model_id: "gpt-6-astra" },
@@ -7590,7 +7590,7 @@ describe("CrewSupervisor", () => {
     const fable = { provider: "anthropic-claude", id: "claude-fable-5-1" };
     const spawn = async (crewmate: FakeCrewmate, named?: string) => {
       const { supervisor, tasks } = setup(crewmate, { routedModel: fable });
-      const handle = await supervisor.commission({
+      const handle = await supervisor.intake.commission({
         title: "Teach the colors",
         intent: intentOf("start it with a fable crewmate"),
         ...(named ? { shape: { override_model_id: named } } : {}),
@@ -7618,7 +7618,7 @@ describe("CrewSupervisor", () => {
   it("hands spawn_crewmate no model when none is recorded, never the named one (FI3-444)", async () => {
     const crewmate = fakeCrewmate({ model: undefined });
     const { supervisor, tasks } = setup(crewmate);
-    const handle = await supervisor.commission({
+    const handle = await supervisor.intake.commission({
       title: "Teach the colors",
       intent: intentOf("start it with a fable crewmate"),
       shape: { override_model_id: "claude-fable-5-1" },
@@ -7707,7 +7707,7 @@ describe("CrewSupervisor", () => {
         routeResult: { choice: fable, bucket: "premium", rule: "R0" },
         reasoningChoice: () => "medium",
       });
-      const { taskId } = await h.supervisor.commission({
+      const { taskId } = await h.supervisor.intake.commission({
         title: "Project scopes",
         intent: intentOf("build it on fable at extra high reasoning"),
         shape: { override_model_id: "claude-fable-5-1", override_reasoning: "xhigh" },
@@ -7746,7 +7746,7 @@ describe("CrewSupervisor", () => {
         movePick: (shape) => (shape.override_model_id === "openai-codex/gpt-6.1-sol" ? codex : undefined),
         reasoningChoice: (ref) => (ref.provider === "openai-codex" ? "low" : undefined),
       });
-      const { taskId } = await h.supervisor.commission({ title: "t", intent: intentOf("work") });
+      const { taskId } = await h.supervisor.intake.commission({ title: "t", intent: intentOf("work") });
       await tick();
       crewmate.finishPrompt();
       await tick();
@@ -7795,7 +7795,7 @@ describe("CrewSupervisor", () => {
         notifyOp: (wake, origin, ref) => h.inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref),
         retryConverse: vi.fn(),
       });
-      const { taskId } = await h.supervisor.commission({
+      const { taskId } = await h.supervisor.intake.commission({
         title: "Orbit prototype",
         intent: intentOf("build it on fable"),
         shape: { override_model_id: "claude-fable-5-1" },
@@ -7826,7 +7826,7 @@ describe("CrewSupervisor", () => {
       const opus55 = { provider: "anthropic-claude", id: "claude-opus-5-5" };
       const crewmate = fakeCrewmate({ model: opus55 });
       const h = setup(crewmate, { routedModel: opus55 });
-      const { taskId } = await h.supervisor.commission({ title: "Read logs", intent: intentOf("go") });
+      const { taskId } = await h.supervisor.intake.commission({ title: "Read logs", intent: intentOf("go") });
       await tick();
       crewmate.emit({
         type: "model_served",
@@ -7846,11 +7846,11 @@ describe("CrewSupervisor", () => {
         routeResult: { choice: fable, bucket: "premium", rule: "R0" },
         crewmates: [finished],
       });
-      const { taskId } = await h.supervisor.commission({
+      const { taskId } = await h.supervisor.intake.commission({
         title: "Project scopes",
         intent: intentOf("build it"),
       });
-      await h.supervisor.commission({ title: "Skill packs", intent: intentOf("build it too") });
+      await h.supervisor.intake.commission({ title: "Skill packs", intent: intentOf("build it too") });
       await tick();
       // The second task's turn ended; the first is mid-turn when the app quits.
       finished.finishPrompt();
@@ -7886,7 +7886,7 @@ describe("CrewSupervisor", () => {
     it("records restart recovery without a wake while an update pauses its turn", async () => {
       const crewmate = fakeCrewmate();
       const h = setup(crewmate);
-      const { taskId } = await h.supervisor.commission({ title: "Update observation", intent: intentOf("keep working") });
+      const { taskId } = await h.supervisor.intake.commission({ title: "Update observation", intent: intentOf("keep working") });
       await tick();
       h.tasks.placement.setDevice(taskId, "mac-mini");
       const wakesBefore = h.ops.length;
@@ -7942,7 +7942,7 @@ describe("CrewSupervisor", () => {
         let now = 1000;
         const crewmate = safelyStoppingCrewmate();
         const h = setup(crewmate, { now: () => now });
-        const { taskId } = await h.supervisor.commission({
+        const { taskId } = await h.supervisor.intake.commission({
           title: "Release notes",
           intent: intentOf("write the notes"),
         });
@@ -8004,7 +8004,7 @@ describe("CrewSupervisor", () => {
       it("lets the turn go on with Update later and steers in what waited", async () => {
         const crewmate = safelyStoppingCrewmate();
         const h = setup(crewmate);
-        const { taskId } = await h.supervisor.commission({
+        const { taskId } = await h.supervisor.intake.commission({
           title: "Release notes",
           intent: intentOf("write the notes"),
         });
@@ -8027,7 +8027,7 @@ describe("CrewSupervisor", () => {
       it("leaves an idle task as it was and starts nothing until the update is let go", async () => {
         const crewmate = safelyStoppingCrewmate();
         const h = setup(crewmate);
-        const { taskId } = await h.supervisor.commission({
+        const { taskId } = await h.supervisor.intake.commission({
           title: "Release notes",
           intent: intentOf("write the notes"),
         });
@@ -8052,7 +8052,7 @@ describe("CrewSupervisor", () => {
       it("sends a turn's words again when the update holds it before its model takes it", async () => {
         const crewmate = safelyStoppingCrewmate();
         const h = setup(crewmate);
-        const { taskId } = await h.supervisor.commission({
+        const { taskId } = await h.supervisor.intake.commission({
           title: "Release notes",
           intent: intentOf("write the notes"),
         });
@@ -8090,7 +8090,7 @@ describe("CrewSupervisor", () => {
     it("records restart recovery without a wake when the work computer reopens", async () => {
       const crewmate = fakeCrewmate();
       const h = setup(crewmate);
-      const { taskId } = await h.supervisor.commission({
+      const { taskId } = await h.supervisor.intake.commission({
         title: "Work computer recovery",
         intent: intentOf("keep working"),
       });
@@ -8115,7 +8115,7 @@ describe("CrewSupervisor", () => {
         let now = 1000;
         const original = fakeCrewmate();
         const h = setup(original, { now: () => now });
-        const { taskId } = await h.supervisor.commission({
+        const { taskId } = await h.supervisor.intake.commission({
           title: "Restart observation",
           intent: intentOf("keep working"),
         });
@@ -8231,7 +8231,7 @@ describe("CrewSupervisor", () => {
         routeResult: { choice: fable, bucket: "premium", rule: "R0" },
         reasoningChoice: () => "xhigh",
       });
-      const { taskId } = await h.supervisor.commission({
+      const { taskId } = await h.supervisor.intake.commission({
         title: "Skill packs",
         intent: intentOf("build it on fable"),
       });
@@ -8477,7 +8477,7 @@ describe("CrewSupervisor", () => {
       bind: async (accountId) => ({ backend: "claude", accountId: accountId ?? "" }),
     });
     await expect(
-      supervisor.commission({ title: "Job", intent: intentOf("Start") }),
+      supervisor.intake.commission({ title: "Job", intent: intentOf("Start") }),
     ).rejects.toThrow('No backend is registered to serve account "acct_claude".');
     expect(sessions.open).not.toHaveBeenCalled();
   });
@@ -8485,7 +8485,7 @@ describe("CrewSupervisor", () => {
   it("keeps a session's own bookkeeping off the feed, and its turns on it", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     crewmate.emit({ type: "request_started" });
     crewmate.emit({ type: "assistant_delta", taskId, text: "On it." });
@@ -8540,7 +8540,7 @@ describe("CrewSupervisor", () => {
   it("restores unresolved cards across restarts", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, db, paths } = setup(crewmate);
-    await supervisor.commission({ title: "persist", intent: intentOf("show every card kind") });
+    await supervisor.intake.commission({ title: "persist", intent: intentOf("show every card kind") });
     await tick();
     specs[0]?.onCard?.({
       title: "Persisted note",
@@ -8577,7 +8577,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       const { supervisor, specs, cards, cardStore } = setup(crewmate, {
         checkCi: () => check.promise,
       });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Ship the fix",
         intent: intentOf("finish the PR"),
         shape: { rigor_ask: "quick" },
@@ -8609,7 +8609,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     let overall: "green" | "pending" = "pending";
     const checkCi = vi.fn(async () => overall);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Ship the fix",
       intent: intentOf("finish the PR"),
       shape: { rigor_ask: "quick" },
@@ -8653,7 +8653,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const crewmate = fakeCrewmate();
     let overall: "green" | "no-pr" = "green";
     const { supervisor, specs, cards } = setup(crewmate, { checkCi: async () => overall });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Ship the fix",
       intent: intentOf("finish the PR"),
       shape: { rigor_ask: "quick" },
@@ -8697,7 +8697,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const crewmate = fakeCrewmate();
     const checkCi = vi.fn(async () => "red" as const);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Ship the fix",
       intent: intentOf("finish the PR"),
       shape: { rigor_ask: "quick" },
@@ -8752,7 +8752,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         completionPresentation,
         checkCi: async () => ({ overall: "pending", recorded: false, problem: "The proposed change could not be read" }),
       });
-      ({ taskId } = await supervisor.commission({
+      ({ taskId } = await supervisor.intake.commission({
         title: "Share the story",
         intent: intentOf("share the same story"),
         shape: { rigor_ask: "quick" },
@@ -8809,7 +8809,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       completionPresentation,
       mergePullRequest,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Share the completed change",
       intent: intentOf("share the same story"),
       shape: { rigor_ask: "quick" },
@@ -8913,7 +8913,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       completionPresentation,
       mergePullRequest,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Share the completed change",
       intent: intentOf("share the same story"),
       shape: { rigor_ask: "quick" },
@@ -9000,7 +9000,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       checkCi: async () => "green",
       completionPresentation,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Share the completed change",
       intent: intentOf("share the same story"),
       shape: { rigor_ask: "quick" },
@@ -9162,7 +9162,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       completionPresentation,
       mergePullRequest,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Share the completed change",
       intent: intentOf("share the same story"),
       shape: { rigor_ask: "quick" },
@@ -9241,7 +9241,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
     const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Merged #1 on GitHub." }));
     const { supervisor, tasks } = setup(crewmate, { checkCi: async () => "green", mergePullRequest });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Share the completed change",
       intent: intentOf("share the same story"),
       shape: { rigor_ask: "quick" },
@@ -9336,7 +9336,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const crewmate = fakeCrewmate();
     const checkCi = vi.fn(async () => "green" as const);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Ship the fix",
       intent: intentOf("finish the PR"),
       shape: { rigor_ask: "quick" },
@@ -9370,7 +9370,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const crewmate = fakeCrewmate();
     const checkCi = vi.fn(async () => "pending" as const);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
-    await supervisor.commission({ title: "Investigate", intent: intentOf("look into it") });
+    await supervisor.intake.commission({ title: "Investigate", intent: intentOf("look into it") });
     await tick();
     vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
 
@@ -9390,7 +9390,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const crewmate = fakeCrewmate();
     const checkCi = vi.fn(async () => "pending" as const);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fix locally",
       intent: intentOf("fix it"),
       shape: { rigor_ask: "quick" },
@@ -9431,7 +9431,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
   async function shipping(checks: { overall: import("./changeChecks").PrCiOverall }) {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate, { checkCi: async () => checks.overall });
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Ship the fix",
       intent: intentOf("finish the PR"),
       shape: { rigor_ask: "quick" },
@@ -9545,7 +9545,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     // An answer task has no completion card, and its refusal says so.
     const reader = fakeCrewmate();
     const answer = setup(reader);
-    const { taskId: answerId } = await answer.supervisor.commission({
+    const { taskId: answerId } = await answer.supervisor.intake.commission({
       title: "Read the router",
       intent: {
         goal: "explain the ladder",
@@ -9571,7 +9571,7 @@ describe("the task record (task-system P0)", () => {
   it("keeps the last report on the record so crew_status answers after a restart", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, db, paths, workspace } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Stabilize the flaky test",
       intent: intentOf("make the flaky test green"),
     });
@@ -9637,7 +9637,7 @@ describe("the task record (task-system P0)", () => {
   it("a confirmed discard of a streaming crewmate closes the record once, as discarded", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, workspace } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Mid-flight", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Mid-flight", intent: intentOf("go") });
     await tick();
     const result = await supervisor.settling.settle.settleTask(taskId, "discard", true);
     expect(result).toBe('Discarded.');
@@ -9662,7 +9662,7 @@ describe("the task record (task-system P0)", () => {
       routedModel: { provider: "openai-codex", id: "gpt-5.5" },
     });
     const intent = intentOf("carefully");
-    const { taskId } = await supervisor.commission({ title: "Careful work", intent });
+    const { taskId } = await supervisor.intake.commission({ title: "Careful work", intent });
     await tick();
     expect(tasks.get(taskId)).toMatchObject({
       kind: "work",
@@ -9688,9 +9688,9 @@ describe("the task record (task-system P0)", () => {
   it("a queued row waits on a blocks edge and starts when the blocker delivers", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, events } = setup(crewmate);
-    const first = await supervisor.commission({ title: "First", intent: intentOf("one") });
+    const first = await supervisor.intake.commission({ title: "First", intent: intentOf("one") });
     await tick();
-    const second = await supervisor.commission({
+    const second = await supervisor.intake.commission({
       title: "Second",
       intent: intentOf("two"),
       startAfter: { afterTask: first.taskId },
@@ -9725,7 +9725,7 @@ describe("the task graph (R1)", () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, tasks, sessions, cards } = setup(crewmate);
     const at = Date.now() + 60 * 60 * 1000;
-    const { taskId, crewmate: name } = await supervisor.commission({
+    const { taskId, crewmate: name } = await supervisor.intake.commission({
       title: "Nightly sweep",
       intent: intentOf("run the sweep"),
       startAfter: { at },
@@ -9767,7 +9767,7 @@ describe("the task graph (R1)", () => {
   it("overlapping dispatches of a queued task start it only once", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, sessions, workspace, paths } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Queued",
       intent: intentOf("do the thing"),
       startAfter: { at: Date.now() - 1 },
@@ -9795,7 +9795,7 @@ describe("the task graph (R1)", () => {
   it("a failed queued start requeues without leaving a runtime, and a retry can start", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, sessions, workspace } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Queued",
       intent: intentOf("do the thing"),
       startAfter: { at: Date.now() - 1 },
@@ -9821,7 +9821,7 @@ describe("the task graph (R1)", () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);
     await expect(
-      supervisor.commission({
+      supervisor.intake.commission({
         title: "x",
         intent: intentOf("y"),
         startAfter: { afterTask: "nope" },
@@ -9841,9 +9841,9 @@ describe("the task graph (R1)", () => {
     });
     const wakes = () =>
       inbox.allFor(FIRSTMATE_RECIPIENT).filter((row) => renderWake(row).includes("can never end"));
-    const first = await supervisor.commission({ title: "Doomed", intent: intentOf("will fail") });
+    const first = await supervisor.intake.commission({ title: "Doomed", intent: intentOf("will fail") });
     await tick();
-    const second = await supervisor.commission({
+    const second = await supervisor.intake.commission({
       title: "Dependent",
       intent: intentOf("needs doomed"),
       startAfter: { afterTask: first.taskId },
@@ -9878,7 +9878,7 @@ describe("the task graph (R1)", () => {
     );
     expect(refusal).toContain(`remove the dead edge blocks ${doomed} -> ${dependent?.key}`);
     // Removing the edge is the way out the wake named; the sweep starts it.
-    expect(supervisor.unlinkTasks(first.taskId, second.taskId, "blocks")).toMatch(/^Removed/);
+    expect(supervisor.intake.unlinkTasks(first.taskId, second.taskId, "blocks")).toMatch(/^Removed/);
     await tick();
     expect(legacyStateOf(tasks.get(second.taskId))).toBe("running");
     expect((sessions.open as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
@@ -9887,7 +9887,7 @@ describe("the task graph (R1)", () => {
   it("standalone goal edits update saved intent and the actual served dispatch", async () => {
     const crew = fakeCrewmate();
     const { supervisor, tasks } = setup(crew);
-    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
     tasks.updateFields(
       planned.id,
       { goal: "Replacement-only shell-height interpolation" },
@@ -9914,7 +9914,7 @@ describe("the task graph (R1)", () => {
       },
     );
     const { supervisor, tasks } = setup(crew, { classifier: { classify: async () => classified } });
-    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
     const starting = supervisor.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { goal: "Responsive width and reduced motion" }, "firstmate");
     release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
@@ -9942,7 +9942,7 @@ describe("the task graph (R1)", () => {
         rule: "R3",
       },
     });
-    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
     const starting = supervisor.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { reasoning: "xhigh" }, "firstmate");
     release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
@@ -9970,7 +9970,7 @@ describe("the task graph (R1)", () => {
       routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
       onRouteDecide: ({ shape }) => routed.push(shape),
     });
-    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
     const starting = supervisor.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { model: "gpt-6-astra" }, "firstmate");
     release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
@@ -9994,7 +9994,7 @@ describe("the task graph (R1)", () => {
       },
       routedModel: { provider: "fm-mock", id: "mock-1" },
     });
-    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
     tasks.updateFields(planned.id, { model: "gpt-6-astra" }, "firstmate");
     const starting = supervisor.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { model: "" }, "firstmate");
@@ -10159,7 +10159,7 @@ describe("the task graph (R1)", () => {
       startPolicy: "on-request",
     });
     tasks.turns.recordReport(spec.id, { text: "Replacement-only shell-height interpolation." });
-    const planned = supervisor.plan({ title: "Transitions", intent: intentOf("Original scope") });
+    const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
     const starting = supervisor.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { basis: spec.key }, "firstmate");
     release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
@@ -10188,7 +10188,7 @@ describe("the task graph (R1)", () => {
     tasks.turns.recordReport(source.id, { text: specification });
     tasks.turns.recordReport(source.id, { text: "Complete; no investigation remains." });
     // The source is verified by its report, not by an invented approval.
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Build transitions",
       intent: intentOf("build it"),
       shape: { basis: source.key },
@@ -10239,7 +10239,7 @@ describe("the task graph (R1)", () => {
     const crew = fakeCrewmate();
     const { supervisor, tasks, specs, repos, paths } = setup(crew);
     const personal = repos.ensurePersonal(paths.defaultWorkspaceDir);
-    await supervisor.commission({ title: "Find the retained archive", intent: intentOf("find it") });
+    await supervisor.intake.commission({ title: "Find the retained archive", intent: intentOf("find it") });
     await tick();
     const ran = tasks.list().find((row) => row.title === "Find the retained archive");
     if (!ran) throw new Error("The commissioned task is missing");
@@ -10319,7 +10319,7 @@ describe("the task graph (R1)", () => {
   it("update_task start_now starts a gated row now and refuses what is not queued work", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, sessions } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Tonight",
       intent: intentOf("later"),
       startAfter: { at: Date.now() + 60 * 60 * 1000 },
@@ -10338,17 +10338,17 @@ describe("the task graph (R1)", () => {
     // Not queued work any more: a plain refusal, nothing thrown.
     expect(await supervisor.startQueuedNow(taskId)).toContain("not queued work");
     // A live blocker is a real wait; the refusal names it.
-    const a = supervisor.plan({ title: "A", intent: intentOf("a"), startPolicy: "when-ready" });
-    const b = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
+    const a = supervisor.intake.plan({ title: "A", intent: intentOf("a"), startPolicy: "when-ready" });
+    const b = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
     expect(await supervisor.startQueuedNow(b.key)).toContain(`it waits on ${a.key} "A"`);
     expect(tasks.get(b.id)?.status).toBe("open");
   });
 
   it("a start refusal names the edge to remove, never dropping the blocker (FI3-244)", async () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
-    const a = supervisor.plan({ title: "A", intent: intentOf("a") });
-    const c = supervisor.plan({ title: "C", intent: intentOf("c") });
-    const b = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id, c.id] });
+    const a = supervisor.intake.plan({ title: "A", intent: intentOf("a") });
+    const c = supervisor.intake.plan({ title: "C", intent: intentOf("c") });
+    const b = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id, c.id] });
 
     // Live blockers: the wait ends when their work is done, or with the edge gone.
     const live = await supervisor.startQueuedNow(b.key);
@@ -10359,7 +10359,7 @@ describe("the task graph (R1)", () => {
 
     // Dropping a blocker leaves its edge dead, still in the way: the refusal
     // names that edge, and the live one still waits for its work.
-    expect(supervisor.dropTask(a.key, { reason: "not wanted" })).toMatch(/^Dropped/);
+    expect(supervisor.intake.dropTask(a.key, { reason: "not wanted" })).toMatch(/^Dropped/);
     const dead = await supervisor.startQueuedNow(b.key);
     expect(dead).toContain(`${a.key} "A" (dropped)`);
     expect(dead).toContain(
@@ -10376,7 +10376,7 @@ describe("the task graph (R1)", () => {
     expect(dead.startsWith(captain)).toBe(true);
 
     // With only dead edges left, removing them is the whole way out.
-    expect(supervisor.dropTask(c.key, { reason: "not wanted either" })).toMatch(/^Dropped/);
+    expect(supervisor.intake.dropTask(c.key, { reason: "not wanted either" })).toMatch(/^Dropped/);
     const deadOnly = await supervisor.startQueuedNow(b.key);
     expect(deadOnly).toContain("Dropped work never clears a wait: remove the dead edges");
     expect(deadOnly).toContain(`blocks ${a.key} -> ${b.key}`);
@@ -10384,8 +10384,8 @@ describe("the task graph (R1)", () => {
     expect(deadOnly).toMatch(/with link_tasks remove\.$/);
 
     // The way out it names works: with the edges gone, the start goes through.
-    expect(supervisor.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^Removed/);
-    expect(supervisor.unlinkTasks(c.key, b.key, "blocks")).toMatch(/^Removed/);
+    expect(supervisor.intake.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^Removed/);
+    expect(supervisor.intake.unlinkTasks(c.key, b.key, "blocks")).toMatch(/^Removed/);
     expect(await supervisor.startQueuedNow(b.key)).toBe(`Started ${b.key} "B".`);
     await tick();
     expect(tasks.get(b.id)?.status).toBe("active");
@@ -10398,15 +10398,15 @@ describe("the task graph (R1)", () => {
       routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
       onRouteDecide: (args) => decideCalls.push(args),
     });
-    const parent = supervisor.plan({ title: "Gauge work", intent: intentOf("gauge work") });
-    const spec = supervisor.plan({ title: "Gauge spec", intent: intentOf("spec it") });
-    const filed = supervisor.plan({
+    const parent = supervisor.intake.plan({ title: "Gauge work", intent: intentOf("gauge work") });
+    const spec = supervisor.intake.plan({ title: "Gauge spec", intent: intentOf("spec it") });
+    const filed = supervisor.intake.plan({
       title: "Calibrate the gauge",
       intent: intentOf("calibrate the gauge"),
       parent: parent.key,
       shape: { basis: spec.key },
     });
-    supervisor.linkTasks(spec.key, filed.key, "related");
+    supervisor.intake.linkTasks(spec.key, filed.key, "related");
     const before = tasks.list().length;
 
     // The model the captain named is an edit to the filed row, then the start.
@@ -10453,7 +10453,7 @@ describe("the task graph (R1)", () => {
         rule: "R3",
       },
     });
-    const filed = supervisor.plan({ title: "Trim the log", intent: intentOf("trim it") });
+    const filed = supervisor.intake.plan({ title: "Trim the log", intent: intentOf("trim it") });
     expect(tasks.updateFields(filed.id, { reasoning: "medium" }, "firstmate")).toEqual([
       "reasoning medium",
     ]);
@@ -10480,14 +10480,14 @@ describe("the task graph (R1)", () => {
     const { supervisor, tasks } = setup(crewmate, {
       routedModel: { provider: "fm-mock", id: "mock-1" },
     });
-    const filed = supervisor.plan({ title: "Trim the log", intent: intentOf("trim it") });
+    const filed = supervisor.intake.plan({ title: "Trim the log", intent: intentOf("trim it") });
     tasks.updateFields(filed.id, { model: "anthropic-claude/claude-fable-5-1" }, "firstmate");
 
     expect(await supervisor.startQueuedNow(filed.key)).toBe(
       `Started ${filed.key} "Trim the log" on fm-mock/mock-1: anthropic-claude/claude-fable-5-1 was not available.`,
     );
     // The captain's own Start in the record keeps its plain words.
-    const other = supervisor.plan({ title: "Trim the cache", intent: intentOf("trim it") });
+    const other = supervisor.intake.plan({ title: "Trim the cache", intent: intentOf("trim it") });
     tasks.updateFields(other.id, { model: "claude-fable-5-1" }, "firstmate");
     expect(await supervisor.startQueuedNow(other.key, "captain")).toBe(
       `Started ${other.key} "Trim the cache".`,
@@ -10497,7 +10497,7 @@ describe("the task graph (R1)", () => {
   it("never confirms the named model on a start with no model recorded (FI3-444)", async () => {
     const crewmate = fakeCrewmate({ model: undefined });
     const { supervisor, tasks } = setup(crewmate);
-    const filed = supervisor.plan({ title: "Trim the log", intent: intentOf("trim it") });
+    const filed = supervisor.intake.plan({ title: "Trim the log", intent: intentOf("trim it") });
     tasks.updateFields(filed.id, { model: "claude-fable-5-1" }, "firstmate");
     expect(await supervisor.startQueuedNow(filed.key)).toBe(
       `Started ${filed.key} "Trim the log" with no model recorded, so claude-fable-5-1 is not confirmed.`,
@@ -10512,7 +10512,7 @@ describe("the task graph (R1)", () => {
       onRouteDecide: (args) => routes.push(args),
     });
     const parent = seedTask(tasks, { id: "live-chart", title: "Chart", status: "idle" });
-    const basis = supervisor.plan({ title: "Spec", intent: intentOf("describe it") });
+    const basis = supervisor.intake.plan({ title: "Spec", intent: intentOf("describe it") });
     tasks.close(basis.id, { status: "done", reason: "answered", actor: "host" });
     const intent = {
       ...intentOf("finish the chart"),
@@ -10623,7 +10623,7 @@ describe("the task graph (R1)", () => {
 
   it("start again refuses closed successes, live work, replacements, stronger retries and parents without writes", () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
-    const open = supervisor.plan({ title: "Open", intent: intentOf("do it") });
+    const open = supervisor.intake.plan({ title: "Open", intent: intentOf("do it") });
     const done = seedTask(tasks, { id: "done-again", title: "Done", status: "idle" });
     tasks.close(done.id, { status: "done", reason: "merged", actor: "host" });
     const parent = seedTask(tasks, { id: "parent-again", title: "Parent", status: "cancelled" });
@@ -10674,7 +10674,7 @@ describe("the task graph (R1)", () => {
         firstmateCannotAnswer: () => cannot,
         retryConverse: vi.fn(),
       });
-      const task = ctx.supervisor.plan({ title: "Fix the test", intent: intentOf("fix it") });
+      const task = ctx.supervisor.intake.plan({ title: "Fix the test", intent: intentOf("fix it") });
       const notes = () => ctx.tasks.timeline(task.id).map((event) => event.text);
       return { ...ctx, task, notes };
     };
@@ -10719,7 +10719,7 @@ describe("the task graph (R1)", () => {
         "started without applying your standing directions: your first mate's turn failed",
       );
 
-      const lost = supervisor.plan({ title: "Fix another test", intent: intentOf("fix it") });
+      const lost = supervisor.intake.plan({ title: "Fix another test", intent: intentOf("fix it") });
       supervisor.runTaskOp(lost.id, "start-task");
       const pending = inbox.allFor(FIRSTMATE_RECIPIENT).find((entry) => entry.ref === lost.id);
       inbox.ack([pending?.id ?? 0]);
@@ -10756,8 +10756,8 @@ describe("the task graph (R1)", () => {
 
   it("a Start the host refuses at once comes back as text as well as the feed line", () => {
     const { supervisor, tasks, events } = setup(fakeCrewmate());
-    const a = supervisor.plan({ title: "A", intent: intentOf("a") });
-    const b = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
+    const a = supervisor.intake.plan({ title: "A", intent: intentOf("a") });
+    const b = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
     const refusal = `Cannot start ${b.key} "B" now: it waits on ${a.key} "A".`;
     expect(supervisor.runTaskOp(b.id, "start-task")).toBe(refusal);
     expect(events.findLast((event) => event.type === "firstmate_note")).toMatchObject({
@@ -10769,10 +10769,10 @@ describe("the task graph (R1)", () => {
   it("the task board's queue starts never-started work that nothing holds, and unqueue puts it back", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, sessions, ops } = setup(crewmate);
-    const later = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    const later = supervisor.intake.plan({ title: "Write the ADR", intent: intentOf("write it") });
     expect(later).toMatchObject({ status: "open", startPolicy: "on-request" });
-    const blocker = supervisor.plan({ title: "A", intent: intentOf("a") });
-    const waits = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [blocker.id] });
+    const blocker = supervisor.intake.plan({ title: "A", intent: intentOf("a") });
+    const waits = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [blocker.id] });
 
     // A blocked task queues at once and keeps waiting on its blocker.
     expect(supervisor.runTaskOp(waits.id, "queue-task")).toBeUndefined();
@@ -10814,7 +10814,7 @@ describe("the task graph (R1)", () => {
   it("the record's started-work Drop task and Continue run the stall card's host ops on the task", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const planned = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    const planned = supervisor.intake.plan({ title: "Write the ADR", intent: intentOf("write it") });
     supervisor.runTaskOp(planned.id, "start-task");
     await tick();
     crewmate.emit({ type: "turn_end", taskId: planned.id });
@@ -10842,7 +10842,7 @@ describe("the task graph (R1)", () => {
   it("writes every task card click on the history as the captain's, once each, and wakes nobody (FI3-695)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, ops } = setup(crewmate);
-    const planned = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    const planned = supervisor.intake.plan({ title: "Write the ADR", intent: intentOf("write it") });
     supervisor.runTaskOp(planned.id, "start-task");
     await tick();
     // Start: the history says the captain started it, from the task card.
@@ -10872,7 +10872,7 @@ describe("the task graph (R1)", () => {
         .filter((event) => event.kind === "interrupted")
         .map((event) => event.data?.effect),
     ).toEqual(["requested", "aborted-turn"]);
-    const unstarted = supervisor.plan({ title: "Never mind", intent: intentOf("nope") });
+    const unstarted = supervisor.intake.plan({ title: "Never mind", intent: intentOf("nope") });
     expect(
       supervisor.runTaskOp(unstarted.id, "drop-task", { parts: [], waiting: [], underway: [] }),
     ).toBeUndefined();
@@ -10904,7 +10904,7 @@ describe("the task graph (R1)", () => {
       outcome: "The dock layout is settled: three rails, the stage between them.",
     });
     const spec = tasks.get("spec1");
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Build the dock",
       intent: intentOf("build what the design says"),
       shape: { basis: spec?.key ?? "spec1" },
@@ -10932,7 +10932,7 @@ describe("the task graph (R1)", () => {
       onRouteDecide: (args) => decideCalls.push(args),
     });
     seedTask(tasks, { id: "wip1", title: "Still going", status: "running", worktreeDir: "/w" });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Build on nothing",
       intent: intentOf("build it"),
       shape: { basis: "wip1" },
@@ -10942,7 +10942,7 @@ describe("the task graph (R1)", () => {
     // cheaper tier by itself.
     expect(decideCalls.at(-1)?.shape).toMatchObject({ basis: "wip1", basis_verified: false });
 
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Build on a ghost",
       intent: intentOf("build it"),
       shape: { basis: "FM3K-404" },
@@ -10960,7 +10960,7 @@ describe("the task graph (R1)", () => {
       .fn()
       .mockResolvedValue({ ok: false, text: "PR merge blocked: CI is not fully green." });
     const { supervisor, tasks, specs, cards } = setup(crewmate, { mergePullRequest });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship the PR",
       intent: intentOf("done work"),
       shape: { rigor_ask: "quick" },
@@ -10982,7 +10982,7 @@ describe("the task graph (R1)", () => {
     await tick();
     expect(cards().map((card) => card.id)).toContain(mergePendingCardId(taskId));
 
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Ship the PR",
       intent: intentOf("that is not it, try again"),
       shape: { escalate_from: tasks.get(taskId)?.key },
@@ -10999,7 +10999,7 @@ describe("the task graph (R1)", () => {
       routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
       onRouteDecide: (args) => decideCalls.push(args),
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Later, on Astra",
       intent: intentOf("use gpt-6-astra when the gate clears"),
       shape: { override_model_id: "gpt-6-astra" },
@@ -11037,7 +11037,7 @@ describe("the task graph (R1)", () => {
       outcome: "I disabled the assertion; the test passes now.",
     });
 
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the flaky meter test",
       intent: intentOf("that is not a fix, try again with something smarter"),
       shape: { escalate_from: previous.key },
@@ -11109,7 +11109,7 @@ describe("the task graph (R1)", () => {
         shape: { kind: "fix" },
         outcome: "The meter still fails.",
       });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter",
         intent: intentOf("Try a premium model"),
         shape: { escalate_from: previous.key, premium_ask: true },
@@ -11151,7 +11151,7 @@ describe("the task graph (R1)", () => {
       outcome: "still wrong",
     });
     await expect(
-      supervisor.commission({
+      supervisor.intake.commission({
         title: "Fourth go",
         intent: intentOf("still not right"),
         shape: { escalate_from: spent.key },
@@ -11167,7 +11167,7 @@ describe("the task graph (R1)", () => {
       outcome: "not good enough",
     });
     await expect(
-      supervisor.commission({
+      supervisor.intake.commission({
         title: "Above premium",
         intent: intentOf("do better"),
         shape: { escalate_from: top.key },
@@ -11185,7 +11185,7 @@ describe("the task graph (R1)", () => {
     });
     const planned = seedTask(tasks, { id: "planned1", title: "Not started", status: "queued" });
     await expect(
-      supervisor.commission({
+      supervisor.intake.commission({
         title: "Escalate a plan",
         intent: intentOf("make it better"),
         shape: { escalate_from: planned.key },
@@ -11212,7 +11212,7 @@ describe("the task graph (R1)", () => {
       worktreeDir: "/w/attempt9",
       outcome: "wrong answer",
     });
-    const { taskId, crewmate: name } = await supervisor.commission({
+    const { taskId, crewmate: name } = await supervisor.intake.commission({
       title: "Nine again",
       intent: intentOf("no, smarter please"),
       shape: { escalate_from: previous.key },
@@ -11244,7 +11244,7 @@ describe("the task graph (R1)", () => {
         },
       },
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Bump the linter",
       intent: intentOf("bump the linter please"),
     });
@@ -11278,7 +11278,7 @@ describe("the task graph (R1)", () => {
         classifier: { classify },
         onRouteDecide: (args) => routes.push(args),
       });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Read the retry limit",
         intent: {
           ...intentOf("Quote the retry limit from the config"),
@@ -11328,7 +11328,7 @@ describe("the task graph (R1)", () => {
         },
       },
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "On Astra",
       intent: intentOf("use gpt-6-astra"),
       shape: { override_model_id: "gpt-6-astra" },
@@ -11353,7 +11353,7 @@ describe("the task graph (R1)", () => {
         },
       },
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Plan safe recovery",
       intent: {
         goal: "Plan a safe recovery.",
@@ -11388,7 +11388,7 @@ describe("the task graph (R1)", () => {
         }),
       },
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Something",
       intent: intentOf("do the thing"),
     });
@@ -11414,7 +11414,7 @@ describe("the task graph (R1)", () => {
     });
     // Premium is the one class Firstmate may only relay, never judge, so a
     // downgrade of it is the captain's to answer.
-    const { taskId, crewmate: name } = await supervisor.commission({
+    const { taskId, crewmate: name } = await supervisor.intake.commission({
       title: "Deep design",
       intent: intentOf("design it properly"),
       shape: { premium_ask: true },
@@ -11451,7 +11451,7 @@ describe("the task graph (R1)", () => {
     });
     // High is what the table computed, not something the captain asked
     // for: its downgrade is a feed line, as it was under the heuristic.
-    const { taskId, crewmate: name } = await supervisor.commission({
+    const { taskId, crewmate: name } = await supervisor.intake.commission({
       title: "Ambiguous design",
       intent: intentOf("work out how the dock should behave"),
     });
@@ -11508,7 +11508,7 @@ describe("the task graph (R1)", () => {
     const { supervisor, tasks, cards, sessions, ops } = setup(crewmate, {
       routeResult: { bucket: "premium", unserveable: true, rule: "R1a" },
     });
-    const { taskId, crewmate: name } = await supervisor.commission({
+    const { taskId, crewmate: name } = await supervisor.intake.commission({
       title: "Deep design",
       intent: intentOf("design it properly"),
       shape: { premium_ask: true },
@@ -11544,7 +11544,7 @@ describe("the task graph (R1)", () => {
       // gate clear on each watchdog sweep.
       quotaGateCleared: () => true,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Later big one",
       intent: intentOf("the big refactor"),
       shape: { premium_ask: true },
@@ -11580,20 +11580,20 @@ describe("the task graph (R1)", () => {
       quotaGateRefValid: (ref) => ref === "codex" || ref === "bucket:high",
     });
     await expect(
-      supervisor.commission({
+      supervisor.intake.commission({
         title: "x",
         intent: intentOf("y"),
         startAfter: { whenQuotaResets: "bucket:huge" },
       }),
     ).rejects.toThrow(/Unknown quota scope/);
     await expect(
-      supervisor.commission({
+      supervisor.intake.commission({
         title: "x",
         intent: intentOf("y"),
         startAfter: { whenQuotaResets: "grok-quota" },
       }),
     ).rejects.toThrow(/Unknown quota scope/);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "x",
       intent: intentOf("y"),
       startAfter: { whenQuotaResets: "bucket:high" },
@@ -11607,7 +11607,7 @@ describe("the task graph (R1)", () => {
     const { supervisor, tasks } = setup(crewmate, {
       quotaGateCleared: () => headroom,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Big one",
       intent: intentOf("the big refactor"),
       startAfter: { whenQuotaResets: "codex" },
@@ -11651,7 +11651,7 @@ describe("the task graph (R1)", () => {
 
   it("sends a blocked task's premium choice to Firstmate as the captain's words without escalating on the report", async () => {
     const { supervisor, tasks, cards, ops, specs } = setup(fakeCrewmate());
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Finish the build",
       intent: intentOf("finish the build"),
     });
@@ -11827,7 +11827,7 @@ describe("background job results (R2)", () => {
       oldestRunningJob: () => ({ jobId: "j", command: "build", startedAt: 0 }),
       now: () => JOB_BOUND_MS + 1,
     });
-    const { taskId } = await supervisor.commission({ title: "Build", intent: intentOf("build") });
+    const { taskId } = await supervisor.intake.commission({ title: "Build", intent: intentOf("build") });
     await tick();
     crewmate.finishPrompt();
     await tick();
@@ -11865,7 +11865,7 @@ describe("background job results (R2)", () => {
   it("re-reads an idle crewmate's posture without compiling its reads again", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, db } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Inspect",
       intent: intentOf("inspect the code and report findings"),
     });
@@ -11892,7 +11892,7 @@ describe("background job results (R2)", () => {
   it("tells the crewmate once, as its next turn, of each background task its Claude client still ran when the client ended (INF-405)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);
-    await supervisor.commission({ title: "Suite", intent: intentOf("run the suite") });
+    await supervisor.intake.commission({ title: "Suite", intent: intentOf("run the suite") });
     await tick();
     crewmate.finishPrompt();
     await tick();
@@ -11922,7 +11922,7 @@ describe("background job results (R2)", () => {
   it("delivers a job result as the idle crewmate's next turn", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Build",
       intent: intentOf("start the build"),
     });
@@ -11938,7 +11938,7 @@ describe("background job results (R2)", () => {
   it("queues a job result behind a streaming turn instead of interrupting it", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Busy",
       intent: intentOf("long turn"),
     });
@@ -11971,7 +11971,7 @@ describe("background job results (R2)", () => {
     const { supervisor, cards, events, ops } = setup(crewmate, {
       hasRunningJobs: () => jobRunning,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Building",
       intent: intentOf("long build"),
     });
@@ -11994,7 +11994,7 @@ describe("background job results (R2)", () => {
     const crewmate = fakeCrewmate();
     const killed: string[] = [];
     const { supervisor } = setup(crewmate, { killJobs: (taskId) => killed.push(taskId) });
-    const { taskId } = await supervisor.commission({ title: "Doomed", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "Doomed", intent: intentOf("work") });
     await tick();
     await supervisor.interruptCrewmate(taskId, "cancel");
     crewmate.failPrompt("aborted");
@@ -12009,7 +12009,7 @@ describe("the quiet-crewmate watchdog (P4)", () => {
   it("escalates a quiet streaming turn: feed line at 10 minutes, one wake at 20, never a card", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, cards, ops, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Slow build",
       intent: intentOf("build it"),
     });
@@ -12045,7 +12045,7 @@ describe("the quiet-crewmate watchdog (P4)", () => {
   it("treats any session event as activity, so a fresh silence wakes again", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Chatty", intent: intentOf("work") });
+    const { taskId } = await supervisor.intake.commission({ title: "Chatty", intent: intentOf("work") });
     await tick();
     const start = Date.now();
     supervisor.checkQuietTasks(start + 21 * MIN);
@@ -12068,7 +12068,7 @@ describe("the quiet-crewmate watchdog (P4)", () => {
   it("never escalates an idle task", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, cards, ops } = setup(crewmate);
-    await supervisor.commission({ title: "Done", intent: intentOf("quick") });
+    await supervisor.intake.commission({ title: "Done", intent: intentOf("quick") });
     await tick();
     crewmate.finishPrompt();
     await tick();
@@ -12081,7 +12081,7 @@ describe("the quiet-crewmate watchdog (P4)", () => {
   it("escalates the wall-clock bound once, as a wake, after the quiet wake", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Marathon",
       intent: intentOf("long work"),
     });
@@ -12111,7 +12111,7 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
   it("queues the guidance for the next turn, says so, and delivers it", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const { supervisor, ops, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Job",
       intent: intentOf("Do the thing"),
     });
@@ -12141,7 +12141,7 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
   it("delivers everything that queued during one turn, in order", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const { supervisor } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     expect(await supervisor.steerCrewmate(taskId, "first")).toBe("queued-next-turn");
@@ -12155,7 +12155,7 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
   it("delivers the queued guidance after an interrupt, not instead of it", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const { supervisor } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     await supervisor.steerCrewmate(taskId, "stop and do this instead");
@@ -12173,7 +12173,7 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
   it("says so when a task ends before its queued guidance could be delivered", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const { supervisor, ops, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     await supervisor.steerCrewmate(taskId, "one more thing");
@@ -12193,7 +12193,7 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
   it("still steers a native backend into the running turn", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     // The fallback is for backends that need it, and for nobody else.
@@ -12210,7 +12210,7 @@ describe("a steer that lands after the run's last look at its queue", () => {
   it("goes back on the lane, its attempt unspent, and is the crewmate's next turn", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, inbox, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     // The run has made its last check of the queue: the session accepts the
@@ -12239,7 +12239,7 @@ describe("a steer that lands after the run's last look at its queue", () => {
   it("takes back only the steers the turn never read, the newest", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, inbox } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     // The first steer reaches the running turn; the second lands in its tail.
@@ -12258,7 +12258,7 @@ describe("a steer that lands after the run's last look at its queue", () => {
   it("says a steer no turn read was never delivered when the task ends first", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     crewmate.holdSteers();
@@ -12289,7 +12289,7 @@ describe("a backend that mints its resume token only when the first turn starts"
       },
     };
     const { supervisor, tasks } = setup(late);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     expect(tasks.get(taskId)?.sessionFile).toBeNull();
 
@@ -12392,7 +12392,7 @@ describe("emit_card stable id revision", () => {
 
   it("revises an open crewmate card in place without stacking", async () => {
     const { supervisor, cards, specs } = setup(fakeCrewmate());
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "proto",
       intent: intentOf("show a preview"),
     });
@@ -12433,7 +12433,7 @@ describe("emit_card stable id revision", () => {
   it("does not let a crewmate clobber an app-raised singleton", async () => {
     const { supervisor, cards, specs } = setup(fakeCrewmate());
     supervisor.cards.addAuthDecisionCard("card-fm-auth", "firstmate", "Sign in needed.");
-    await supervisor.commission({ title: "proto", intent: intentOf("work") });
+    await supervisor.intake.commission({ title: "proto", intent: intentOf("work") });
     await tick();
     const result = await specs[0]?.onCard?.({
       id: "card-fm-auth",
@@ -12583,7 +12583,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
   it("the crewmate's sign-in card gates its task, and its departure releases it", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     crewmate.emit({ type: "turn_failed", taskId, error: "401 unauthorized: sign in again" });
     crewmate.emit({ type: "turn_end", taskId });
@@ -12600,7 +12600,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
   it("with two cards up the gate keeps the one it names, and moves to the other when it goes", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     specs[0]?.onCard?.({
       title: "Pick a course",
@@ -12711,7 +12711,7 @@ describe("the sign-in where a project lives", () => {
       readWorkflow,
       downloadArtifact,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix it",
       intent: intentOf("fix the thing"),
     });
@@ -12735,7 +12735,7 @@ describe("the sign-in where a project lives", () => {
       readWorkflow: vi.fn(async () => "workflow log"),
       downloadArtifact: vi.fn(async () => "downloaded ZIP"),
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Read the router",
       intent: {
         goal: "explain the ladder",
@@ -12760,7 +12760,7 @@ describe("the sign-in where a project lives", () => {
       checkChange,
       readWorkflow: vi.fn(async () => "workflow log"),
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Rerun the nightly full check's failed Linux journeys",
       intent: {
         goal: "rerun the failed journeys of run 40862271620",
@@ -12804,7 +12804,7 @@ describe("crew report answer ownership", () => {
   it("tells Firstmate in the report wake that the crewmate already carded the answer", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, ops, specs } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Check if PR 58 merged",
       intent: intentOf("check if pr 58 merged"),
     });
@@ -12835,7 +12835,7 @@ describe("crew report answer ownership", () => {
       },
       retryConverse: vi.fn(),
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Check if PR 58 merged",
       intent: intentOf("check if pr 58 merged"),
     });
@@ -12924,7 +12924,7 @@ describe("the durable inbox (design A)", () => {
   it("re-delivers guidance a quit stranded once the next boot sweeps", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const { supervisor, db, paths, workspace, cardStore } = clockedSetup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     // Mid-turn guidance on a followup-queue backend: durably recorded.
@@ -12964,7 +12964,7 @@ describe("the durable inbox (design A)", () => {
   it("tells a crewmate once, at the next boot, of each background task its Claude client still ran when the quit let go of it (INF-405)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, db, paths, workspace, cardStore } = clockedSetup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Suite", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Suite", intent: intentOf("Start") });
     await tick();
     crewmate.finishPrompt();
     await tick();
@@ -13014,7 +13014,7 @@ describe("the durable inbox (design A)", () => {
   it("carries on, at the next launch, a turn the quit cut that no message was serving (INF-721 friction 9)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, db, paths, workspace, cardStore } = clockedSetup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Suite", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Suite", intent: intentOf("Start") });
     await tick();
     crewmate.finishPrompt();
     await tick();
@@ -13056,7 +13056,7 @@ describe("the durable inbox (design A)", () => {
   it("replays a turn the app closed under at every launch, saying so, and never sets it aside", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, db, paths, workspace, cardStore } = clockedSetup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Publish",
       intent: intentOf("Dispatch the release workflow"),
     });
@@ -13126,7 +13126,7 @@ describe("the durable inbox (design A)", () => {
   it("records a failed native steer, retries it, and delivers on recovery", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, inbox } = clockedSetup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     (crewmate.steer as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("busy"));
@@ -13161,7 +13161,7 @@ describe("the durable inbox (design A)", () => {
       },
       retryConverse: vi.fn(),
     });
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
     (crewmate.steer as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("always busy"));
@@ -13195,7 +13195,7 @@ describe("the durable inbox (design A)", () => {
   it("retries the brief when the first turn fails at the provider", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = clockedSetup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Job",
       intent: intentOf("Start the work"),
     });
@@ -13233,7 +13233,7 @@ describe("the durable inbox (design A)", () => {
 describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
   async function reportedTask(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     const harness = setup(crewmate, extras);
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Job",
       intent: intentOf("Start"),
     });
@@ -13350,9 +13350,9 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       status: "queued",
       startPolicy: "on-request",
     });
-    supervisor.linkTasks(taskId, planned.id, "blocks");
+    supervisor.intake.linkTasks(taskId, planned.id, "blocks");
     // The captain chose to wait for this task's findings: the first mate's link.
-    supervisor.linkTasks(taskId, held.id, "blocks");
+    supervisor.intake.linkTasks(taskId, held.id, "blocks");
     // INF-621's report at 2:54 PM (event 91322), its closing sentence.
     const finding =
       "PR #184's verdict remains the captured native readiness race and a controlled rerun, not an Escape-code rewrite.";
@@ -13368,7 +13368,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
 
     // The first mate passes the finding on and ends the wait: the next
     // report from the still-running task holds nobody and stays quiet.
-    supervisor.unlinkTasks(taskId, held.id, "blocks");
+    supervisor.intake.unlinkTasks(taskId, held.id, "blocks");
     await supervisor.steerCrewmate(taskId, "go on");
     await tick();
     await report(crewmate, taskId, "Second clean phone run passed.");
@@ -13582,8 +13582,8 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       };
       const { supervisor, ops, sorts, tasks, taskId } = await reportedTask(clientSide);
       const { secrets, storage } = inf785(tasks);
-      supervisor.linkTasks(storage.id, taskId, "blocks");
-      supervisor.linkTasks(secrets.id, taskId, "blocks");
+      supervisor.intake.linkTasks(storage.id, taskId, "blocks");
+      supervisor.intake.linkTasks(secrets.id, taskId, "blocks");
       await report(clientSide, taskId, "Blocked on INF-1659 and INF-1109; nothing to do until #496 merges.");
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
       expect(reportWakes(ops)).toHaveLength(0);
@@ -13607,7 +13607,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       };
       const { supervisor, ops, sorts, tasks, taskId } = await reportedTask(clientSide);
       const { secrets, storage } = inf785(tasks);
-      supervisor.linkTasks(storage.id, taskId, "blocks");
+      supervisor.intake.linkTasks(storage.id, taskId, "blocks");
       // The blocker at the chain's end goes back to waiting on a start.
       const parked = seedTask(tasks, {
         id: "parked-1109",
@@ -13624,7 +13624,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       );
 
       // With the dropped blocker gone from its waits, the parked one is what needs a start.
-      supervisor.unlinkTasks(secrets.id, storage.id, "blocks");
+      supervisor.intake.unlinkTasks(secrets.id, storage.id, "blocks");
       await supervisor.steerCrewmate(taskId, "go on");
       await tick();
       await report(clientSide, taskId, "Still blocked on INF-1659.");
@@ -13769,7 +13769,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     const { supervisor, repos, ops, sorts } = setup(crewmate, { crewmates: [reviewer] });
     const { repo } = await repos.setup({ kind: "init", name: "reviewed" });
     repos.configure(repo.id, { rigor: "reviewed", delivery: "direct-pr" });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("Start"),
       repoId: repo.id,
@@ -14061,7 +14061,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
           }
         : {}),
     });
-    const { taskId } = await h.supervisor.commission(
+    const { taskId } = await h.supervisor.intake.commission(
       answers.readOnly
         ? {
             title: "Check Microsoft account readiness for Windows signing",
@@ -14714,7 +14714,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     intent: SpawnIntent = intentOf("Start"),
   ) {
     const harness = wakesThroughInbox(clockedSetup(crewmate, extras));
-    const { taskId } = await harness.supervisor.commission({ title: "Job", intent });
+    const { taskId } = await harness.supervisor.intake.commission({ title: "Job", intent });
     await tick();
     await endTurn(crewmate, taskId, "Done with step one.");
     // A job running at that end earns its one check-back ask (INF-1244),
@@ -14746,7 +14746,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
   it("still says the last plan stands after compaction folds the note that carried it (INF-866 K2)", async () => {
     const h = clockedSetup(fakeCrewmate());
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Long check",
       intent: intentOf("Check every fixture library"),
     });
@@ -14769,7 +14769,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
   it("keeps the last plan when a note omits it, through provider failure recovery", async () => {
     const crewmate = fakeCrewmate();
     const h = clockedSetup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Progress recovery",
       intent: intentOf("Check fixture libraries, prepare image, test"),
     });
@@ -15665,7 +15665,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         }),
       );
       const { repo } = await harness.repos.setup({ kind: "init", name: "watched" });
-      const { taskId } = await harness.supervisor.commission({
+      const { taskId } = await harness.supervisor.intake.commission({
         title: "Ship it",
         intent: intentOf("Ship the fix"),
         repoId: repo.id,
@@ -15836,7 +15836,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(resumes(tasks, taskId)).toHaveLength(1);
       expect(supervisor.crewStatus(taskId)[0]?.stalled).toBeUndefined();
       const before = tasks.get(taskId)?.delivery?.ciRepair;
-      expect(supervisor.unlinkTasks(owner.key, tasks.get(taskId)?.key ?? "", "blocks")).toMatch(
+      expect(supervisor.intake.unlinkTasks(owner.key, tasks.get(taskId)?.key ?? "", "blocks")).toMatch(
         /^Removed:/,
       );
       const after = tasks.get(taskId)?.delivery?.ciRepair;
@@ -15858,8 +15858,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         const key = tasks.get(taskId)?.key;
         if (!key) throw new Error("missing waiting task");
         tasks.close(owner.id, { status: "dropped", reason: "cancelled", actor: "captain" });
-        expect(supervisor.unlinkTasks(owner.key, key, "related")).toMatch(/^No such link/);
-        expect(supervisor.unlinkTasks(owner.key, key, "blocks")).toMatch(/^Removed:/);
+        expect(supervisor.intake.unlinkTasks(owner.key, key, "related")).toMatch(/^No such link/);
+        expect(supervisor.intake.unlinkTasks(owner.key, key, "blocks")).toMatch(/^Removed:/);
         const after = tasks.get(taskId)?.delivery;
         expect(tasks.graph.linksTo(taskId).filter((link) => link.type === "blocks")).toEqual([]);
         expect(after?.ci).toBe("red");
@@ -15869,7 +15869,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         expect(tasks.timeline(taskId).filter((event) => event.kind === "unlinked")).toMatchObject([
           { actor: "firstmate", data: { fromId: owner.id, type: "blocks" } },
         ]);
-        expect(supervisor.unlinkTasks(owner.key, key, "blocks")).toMatch(/^No such link/);
+        expect(supervisor.intake.unlinkTasks(owner.key, key, "blocks")).toMatch(/^No such link/);
       },
     );
 
@@ -16055,7 +16055,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const { supervisor, tasks } = harness;
       const origin = seedTask(tasks, { id: "origin", title: "Land the API", status: "running" });
       // A Continue filing: blocked by its origin, started by the ready query.
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Continue: show it in Settings",
         intent: intentOf("Show it"),
         blockedBy: [origin.id],
@@ -16312,7 +16312,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     async function withOutcomeNote() {
       const crewmate = fakeCrewmate();
       const harness = wakesThroughInbox(clockedSetup(crewmate));
-      const { taskId } = await harness.supervisor.commission({
+      const { taskId } = await harness.supervisor.intake.commission({
         title: "Release",
         intent: intentOf("cut the release"),
       });
@@ -16635,7 +16635,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       status: "queued",
       startPolicy: "on-request",
     });
-    supervisor.linkTasks(next.id, taskId, "related");
+    supervisor.intake.linkTasks(next.id, taskId, "related");
     for (const idle of [61, 120, 240]) {
       hostNow = finishedAt + minutes(idle);
       supervisor.reconcileIdle(hostNow);
@@ -16698,7 +16698,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const crewmate = fakeCrewmate();
     const harness = wakesThroughInbox(clockedSetup(crewmate));
     const { supervisor, ops, inbox, tasks } = harness;
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     const brief = crewmate.promptCalls[0];
     await failTurn(crewmate, taskId);
@@ -17331,7 +17331,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const harness = await stopped({ ...login.extras, crewmates: [other] }, claudeCrewmate());
       const { supervisor, crewmate, taskId, inbox, ops } = harness;
       // A second crewmate on the same login, idle before the allowance runs out.
-      const { taskId: otherId } = await supervisor.commission({
+      const { taskId: otherId } = await supervisor.intake.commission({
         title: "Other",
         intent: intentOf("Start"),
       });
@@ -18090,7 +18090,7 @@ describe("CrewSupervisor direction context", () => {
         text: "Check package smoke before publishing.",
         reason: "captain said so",
       });
-      await supervisor.commission({
+      await supervisor.intake.commission({
         title: "Fix smoke",
         intent: intentOf("Fix the flaky package-smoke."),
         repoId: repo.id,
@@ -18153,7 +18153,7 @@ describe("CrewSupervisor direction context", () => {
       },
     );
     const conceptId = recorded?.ids[0] as string;
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fix the packaging check",
       intent: intentOf("Make the packaging check pass on first launch."),
       repoId: repo.id,
@@ -18201,7 +18201,7 @@ describe("CrewSupervisor direction context", () => {
         }),
     });
     const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Save the retries article",
       intent: intentOf("Save the article about inbox retries as a reference."),
       repoId: repo.id,
@@ -18224,7 +18224,7 @@ describe("CrewSupervisor direction context", () => {
           projects: { get: (id) => registry.get(id), list: () => registry.list() },
         }),
     });
-    await supervisor.commission({ title: "Scratch work", intent: intentOf("Explain an article.") });
+    await supervisor.intake.commission({ title: "Scratch work", intent: intentOf("Explain an article.") });
     await tick();
     expect(crewmate.promptCalls[0]).toContain("knowledge for this task");
     expect(crewmate.promptCalls[0]).toContain(renderReferenceImport());
@@ -18284,7 +18284,7 @@ describe("the task graph (task-system P2)", () => {
   it("plans work without starting it; when-ready dispatches on the sweep, on-request never does", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, events, sessions } = setup(crewmate);
-    const planned = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    const planned = supervisor.intake.plan({ title: "Write the ADR", intent: intentOf("write it") });
     expect(planned).toMatchObject({ status: "open", startPolicy: "on-request", key: "SCR-1" });
     expect(events.at(-2)).toMatchObject({
       type: "firstmate_note",
@@ -18299,7 +18299,7 @@ describe("the task graph (task-system P2)", () => {
     expect(sessions.open).not.toHaveBeenCalled();
 
     // Behind a blocker (by key) and when-ready: waits, then starts when it lands.
-    const step = supervisor.plan({
+    const step = supervisor.intake.plan({
       title: "Implement the ADR",
       intent: intentOf("implement it"),
       blockedBy: ["scr-1"],
@@ -18323,13 +18323,13 @@ describe("the task graph (task-system P2)", () => {
     const { supervisor, tasks, sessions } = setup(fakeCrewmate(), {
       classifier: { classify: () => classified.promise },
     });
-    const first = supervisor.plan({
+    const first = supervisor.intake.plan({
       title: "Correct the queue guidance",
       intent: intentOf("correct the queue guidance"),
       startPolicy: "when-ready",
       priority: 1,
     });
-    const second = supervisor.plan({
+    const second = supervisor.intake.plan({
       title: "Restore the authorization limit",
       intent: intentOf("restore the authorization limit"),
       startPolicy: "when-ready",
@@ -18352,15 +18352,15 @@ describe("the task graph (task-system P2)", () => {
   it("spawns under a parent and behind blockers, resolving keys", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, sessions } = setup(crewmate);
-    const parent = supervisor.plan({ title: "Epic", intent: intentOf("the whole thing") });
-    const first = await supervisor.commission({
+    const parent = supervisor.intake.plan({ title: "Epic", intent: intentOf("the whole thing") });
+    const first = await supervisor.intake.commission({
       title: "Step one",
       intent: intentOf("one"),
       parent: parent.key,
     });
     await tick();
     expect(tasks.get(first.taskId)).toMatchObject({ parentId: parent.id, status: "active" });
-    const second = await supervisor.commission({
+    const second = await supervisor.intake.commission({
       title: "Step two",
       intent: intentOf("two"),
       parent: parent.id,
@@ -18376,21 +18376,21 @@ describe("the task graph (task-system P2)", () => {
     });
     expect(sessions.open).toHaveBeenCalledTimes(1);
     await expect(
-      supervisor.commission({ title: "x", intent: intentOf("y"), parent: "NOPE-9" }),
+      supervisor.intake.commission({ title: "x", intent: intentOf("y"), parent: "NOPE-9" }),
     ).rejects.toThrow(/Unknown task "NOPE-9" in parent/);
   });
 
   it("refuses a cycle as tool text and lifts a dead wait when its edge is removed", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, cards, ops } = setup(crewmate);
-    const a = supervisor.plan({ title: "A", intent: intentOf("a") });
-    const b = supervisor.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
-    expect(supervisor.linkTasks(b.key, a.key, "blocks")).toMatch(/would close a cycle/);
+    const a = supervisor.intake.plan({ title: "A", intent: intentOf("a") });
+    const b = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
+    expect(supervisor.intake.linkTasks(b.key, a.key, "blocks")).toMatch(/would close a cycle/);
     expect(tasks.graph.blockers(a.id)).toEqual([]);
-    expect(supervisor.linkTasks(a.key, b.key, "blocks")).toBe(
+    expect(supervisor.intake.linkTasks(a.key, b.key, "blocks")).toBe(
       "SCR-1 blocks SCR-2 (SCR-2 waits until SCR-1 closes) was already recorded.",
     );
-    expect(supervisor.linkTasks(a.key, b.key, "related")).toBe(
+    expect(supervisor.intake.linkTasks(a.key, b.key, "related")).toBe(
       "Recorded: SCR-1 is related to SCR-2.",
     );
 
@@ -18402,25 +18402,25 @@ describe("the task graph (task-system P2)", () => {
     expect(ops.filter((line) => line.includes("can never end"))).toHaveLength(1);
     expect(tasks.get(b.id)?.gate).toBeNull();
     // Removing the dead edge is the way out the wake named.
-    expect(supervisor.unlinkTasks(a.key, b.key, "blocks")).toBe(
+    expect(supervisor.intake.unlinkTasks(a.key, b.key, "blocks")).toBe(
       "Removed: SCR-1 blocks SCR-2 (SCR-2 waits until SCR-1 closes).",
     );
     await tick();
     expect(tasks.get(b.id)?.gate).toBeNull();
     expect(tasks.graph.blockers(b.id)).toEqual([]);
-    expect(supervisor.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^No such link/);
+    expect(supervisor.intake.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^No such link/);
   });
 
   it("drops a parent only with confirm, cascading its open children as superseded", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, events } = setup(crewmate);
-    const parent = supervisor.plan({ title: "Epic", intent: intentOf("all") });
-    const child = supervisor.plan({ title: "Part", intent: intentOf("part"), parent: parent.id });
-    expect(supervisor.dropTask(parent.key, { reason: "changed course" })).toBe(
+    const parent = supervisor.intake.plan({ title: "Epic", intent: intentOf("all") });
+    const child = supervisor.intake.plan({ title: "Part", intent: intentOf("part"), parent: parent.id });
+    expect(supervisor.intake.dropTask(parent.key, { reason: "changed course" })).toBe(
       'Cannot close SCR-1 while its child is still open: SCR-2 "Part". Start it so it can close, drop it as superseded, or settle SCR-1 keeping it planned.',
     );
     expect(tasks.get(parent.id)?.status).toBe("open");
-    expect(supervisor.dropTask(parent.key, { reason: "changed course", confirm: true })).toBe(
+    expect(supervisor.intake.dropTask(parent.key, { reason: "changed course", confirm: true })).toBe(
       'Dropped SCR-1 "Epic" and SCR-2 as superseded.',
     );
     expect(tasks.get(child.id)).toMatchObject({ status: "dropped", closedReason: "superseded" });
@@ -18430,14 +18430,14 @@ describe("the task graph (task-system P2)", () => {
       text: 'Dropped "Epic" (SCR-1) and 1 child under it - changed course.',
     });
     // Started work is settle_task's business.
-    const running = await supervisor.commission({ title: "Live", intent: intentOf("live") });
+    const running = await supervisor.intake.commission({ title: "Live", intent: intentOf("live") });
     await tick();
-    expect(supervisor.dropTask(running.taskId, { reason: "nah" })).toMatch(
+    expect(supervisor.intake.dropTask(running.taskId, { reason: "nah" })).toMatch(
       /a crewmate holds it. Use settle_task/,
     );
-    const container = supervisor.plan({ title: "Holder", intent: intentOf("hold") });
+    const container = supervisor.intake.plan({ title: "Holder", intent: intentOf("hold") });
     tasks.setParent(running.taskId, container.id, "firstmate");
-    expect(supervisor.dropTask(container.id, { reason: "nah", confirm: true })).toMatch(
+    expect(supervisor.intake.dropTask(container.id, { reason: "nah", confirm: true })).toMatch(
       /its child has started .*Settle them first/,
     );
   });
@@ -18445,9 +18445,9 @@ describe("the task graph (task-system P2)", () => {
   it("drops never-started charted work for the captain, and refuses a start or open parts", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, cards, cardStore, ops } = setup(crewmate);
-    const planned = supervisor.plan({ title: "Write the ADR", intent: intentOf("write it") });
-    const waiter = supervisor.plan({ title: "Follow on", intent: intentOf("after") });
-    supervisor.linkTasks(planned.key, waiter.key, "blocks");
+    const planned = supervisor.intake.plan({ title: "Write the ADR", intent: intentOf("write it") });
+    const waiter = supervisor.intake.plan({ title: "Follow on", intent: intentOf("after") });
+    supervisor.intake.linkTasks(planned.key, waiter.key, "blocks");
     const cardId = supervisor.addFirstmateCard({
       title: "Still open",
       body: "<p>Which way?</p>",
@@ -18485,8 +18485,8 @@ describe("the task graph (task-system P2)", () => {
     await tick();
     expect(ops.some((line) => line.includes("can never end"))).toBe(true);
 
-    const parent = supervisor.plan({ title: "Epic", intent: intentOf("all") });
-    const part = supervisor.plan({ title: "Part", intent: intentOf("part"), parent: parent.id });
+    const parent = supervisor.intake.plan({ title: "Epic", intent: intentOf("all") });
+    const part = supervisor.intake.plan({ title: "Part", intent: intentOf("part"), parent: parent.id });
     const refused = supervisor.runTaskOp(
       parent.id,
       "drop-task",
@@ -18496,7 +18496,7 @@ describe("the task graph (task-system P2)", () => {
     expect(tasks.get(parent.id)?.status).toBe("open");
     expect(tasks.get(part.id)?.status).toBe("open");
 
-    const racing = supervisor.plan({ title: "Race", intent: intentOf("race") });
+    const racing = supervisor.intake.plan({ title: "Race", intent: intentOf("race") });
     supervisor.runTaskOp(racing.id, "start-task");
     expect(
       supervisor.runTaskOp(racing.id, "drop-task", dropReviewKeys(tasks.dropEffects(racing.id))),
@@ -18507,9 +18507,9 @@ describe("the task graph (task-system P2)", () => {
   it("a parent cannot be settled while a child is open", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const parent = await supervisor.commission({ title: "Parent", intent: intentOf("p") });
+    const parent = await supervisor.intake.commission({ title: "Parent", intent: intentOf("p") });
     await tick();
-    supervisor.plan({ title: "Child", intent: intentOf("c"), parent: parent.taskId });
+    supervisor.intake.plan({ title: "Child", intent: intentOf("c"), parent: parent.taskId });
     crewmate.finishPrompt();
     await tick();
     expect(await supervisor.settling.settle.settleTask(parent.taskId, "discard")).toMatch(
@@ -18526,7 +18526,7 @@ describe("the task graph (task-system P2)", () => {
     // from landing." Filing is not choosing; only blocks_me holds a merge.
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the keychain prompt",
       intent: intentOf("fix the keychain thing"),
     });
@@ -18556,18 +18556,18 @@ describe("the task graph (task-system P2)", () => {
     // merges past it. blocks_me is the promise that still refuses.
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the keychain prompt",
       intent: intentOf("fix the keychain thing"),
     });
     await tick();
-    const waiter = supervisor.plan({
+    const waiter = supervisor.intake.plan({
       title: "Wait for the fixture",
       intent: intentOf("the fixture"),
       startPolicy: "on-request",
     });
     expect(
-      supervisor.linkTasks(waiter.key ?? waiter.id, tasks.get(taskId)?.key ?? taskId, "blocks"),
+      supervisor.intake.linkTasks(waiter.key ?? waiter.id, tasks.get(taskId)?.key ?? taskId, "blocks"),
     ).toMatch(/^Recorded:/);
     expect(tasks.graph.blockers(taskId).map((row) => row.id)).toEqual([waiter.id]);
     expect(tasks.graph.linksTo(taskId).find((link) => link.type === "blocks")?.holdsMerge).toBe(false);
@@ -18582,7 +18582,7 @@ describe("the task graph (task-system P2)", () => {
   it("a blocks_me follow-up does hold the merge, and says which task and how to clear it", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the keychain prompt",
       intent: intentOf("fix the keychain thing"),
     });
@@ -18598,7 +18598,7 @@ describe("the task graph (task-system P2)", () => {
     // Dropping the blocker is one of the ways out the refusal names: work
     // that is not happening cannot hold a merge hostage. The crewmate that
     // waited on it hears so (FI3-250), and its turn ends before the merge.
-    expect(supervisor.dropTask("SCR-2", { reason: "handled upstream" })).toMatch(/^Dropped/);
+    expect(supervisor.intake.dropTask("SCR-2", { reason: "handled upstream" })).toMatch(/^Dropped/);
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe(
       'SCR-2 "Rotate the signing key", which your task could not merge before, was dropped and no longer holds it. Carry on from where you stopped.',
@@ -18611,7 +18611,7 @@ describe("the task graph (task-system P2)", () => {
   it("a wait never forbids a discard - only containment does", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the keychain prompt",
       intent: intentOf("fix the keychain thing"),
     });
@@ -18633,7 +18633,7 @@ describe("the task graph (task-system P2)", () => {
   it("a settle card names the follow-ups filed under its task", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cards, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the keychain prompt",
       intent: intentOf("fix the keychain thing"),
     });
@@ -18691,7 +18691,7 @@ describe("the task graph (task-system P2)", () => {
     // the task record, so the body cannot contradict them.
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cards } = setup(crewmate);
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fix the keychain prompt",
       intent: intentOf("fix the keychain thing"),
       shape: { rigor_ask: "quick" },
@@ -18762,7 +18762,7 @@ describe("the task graph (task-system P2)", () => {
       // The captain asked for standard care on a quick-care project: the
       // completion strip must read the tier stamped on the task, not the
       // project's standing setting.
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix smoke",
         intent: intentOf("Fix the flaky package-smoke."),
         repoId: repo.id,
@@ -18868,7 +18868,7 @@ describe("the task graph (task-system P2)", () => {
     repos.configure(keptHere.repo.id, { delivery: "local-only" });
     const local = await repos.setup({ kind: "init", name: "sketch" });
     const commission = (repoId: string, title: string) =>
-      supervisor.commission({
+      supervisor.intake.commission({
         title,
         intent: intentOf(title),
         repoId,
@@ -18931,7 +18931,7 @@ describe("the task graph (task-system P2)", () => {
       const { supervisor, specs, cards, tasks, repos } = setup(crewmate);
       const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "meter" });
       expect(repo.delivery).toBe("direct-pr");
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter",
         intent: intentOf("Fix the meter."),
         repoId: repo.id,
@@ -19012,7 +19012,7 @@ describe("the task graph (task-system P2)", () => {
             ? { base, added: 1204, deleted: 7 }
             : null,
       );
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter",
         intent: intentOf("Fix the meter."),
         shape: { rigor_ask: "quick" },
@@ -19120,7 +19120,7 @@ describe("the task graph (task-system P2)", () => {
     });
     // The captain's word on care keeps this at the quick tier, so the
     // completion card publishes bare and the strip is what is under test.
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the keychain prompt",
       intent: intentOf("fix the keychain thing"),
       shape: { rigor_ask: "quick" },
@@ -19156,7 +19156,7 @@ describe("the task graph (task-system P2)", () => {
     const opus48 = { provider: "anthropic-claude", id: "claude-opus-4-8" };
     const crewmate = fakeCrewmate({ model: opus55, modelLabel: "Claude Opus 5.5" });
     const { supervisor, specs, cards, tasks, events } = setup(crewmate, { routedModel: opus55 });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Read the Mac mini's network logs",
       intent: intentOf("find why adding the computer by address fails"),
       shape: { rigor_ask: "quick" },
@@ -19232,7 +19232,7 @@ describe("the task graph (task-system P2)", () => {
   it("turns a merge card back while a wait would refuse the click, and takes it once the wait is gone", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs, cards } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the meter",
       intent: intentOf("fix it"),
       shape: { rigor_ask: "quick" },
@@ -19264,7 +19264,7 @@ describe("the task graph (task-system P2)", () => {
   it("a crewmate's follow-up is its own task, not a child, and notes progress on its timeline", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs, ops, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the meter",
       intent: intentOf("fix it"),
     });
@@ -19378,7 +19378,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
   it("an empty-text turn end emits no wake and never re-sends the previous report", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, tasks, wakes } = withSupervision(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Find it", intent: intentOf("find") });
+    const { taskId } = await supervisor.intake.commission({ title: "Find it", intent: intentOf("find") });
     await tick();
     await endTurn(crewmate, taskId, "Found the cause: a stale cache key.");
     expect(wakes(taskId)).toHaveLength(1);
@@ -19399,7 +19399,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
   it("text streamed ahead of the turn's tool calls is not its report", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, wakes } = withSupervision(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Plan", intent: intentOf("plan") });
+    const { taskId } = await supervisor.intake.commission({ title: "Plan", intent: intentOf("plan") });
     await tick();
     // Pi ends one turn per assistant message: a self-brief with a tool call,
     // then an empty final message.
@@ -19415,7 +19415,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
   it("an explicit report wakes exactly once and wins over the turn's final text", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, tasks, wakes, events } = withSupervision(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Ship", intent: intentOf("ship") });
+    const { taskId } = await supervisor.intake.commission({ title: "Ship", intent: intentOf("ship") });
     await tick();
     const spec = specs[0] as CrewmateSpec;
     // The receipt promises only what the sort will do (FI3-710): here the
@@ -19457,7 +19457,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
   it("an implausible report is a failed turn, never an outcome, and the crewmate stays steerable", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, tasks, inbox, wakes } = withSupervision(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Meter", intent: intentOf("fix") });
+    const { taskId } = await supervisor.intake.commission({ title: "Meter", intent: intentOf("fix") });
     await tick();
     await endTurn(crewmate, taskId, "RGCTXDataിക്ഷassistant to=functions.bash 新天天彩票?");
 
@@ -19484,7 +19484,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
   it("the quiet watchdog still fires for a crewmate that never reports", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, wakes } = withSupervision(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Quiet", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Quiet", intent: intentOf("go") });
     await tick();
     await endTurn(crewmate, taskId);
     expect(wakes(taskId)).toHaveLength(0);
@@ -19504,7 +19504,7 @@ describe("the cancel purge (interaction P0, WI-2)", () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const killJobs = vi.fn();
     const { supervisor, inbox, tasks } = setup(crewmate, { killJobs });
-    const { taskId } = await supervisor.commission({ title: "Doomed", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Doomed", intent: intentOf("go") });
     await tick();
 
     expect(await supervisor.steerCrewmate(taskId, "one more thing")).toBe("queued-next-turn");
@@ -19533,7 +19533,7 @@ describe("the cancel purge (interaction P0, WI-2)", () => {
   it("an idle cancel purges a wake still queued about the task", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, inbox } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Idle", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Idle", intent: intentOf("go") });
     await tick();
     crewmate.emit({ type: "assistant_delta", taskId, text: "Found it; the PR is open." });
     crewmate.emit({ type: "turn_end", taskId });
@@ -19549,7 +19549,7 @@ describe("the cancel purge (interaction P0, WI-2)", () => {
   it("purges in the close's own transaction: a close that fails keeps every row", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, inbox, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Keep", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Keep", intent: intentOf("go") });
     await tick();
     crewmate.finishPrompt();
     await tick();
@@ -19570,7 +19570,7 @@ describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
   it("queued guidance going out as the next turn is a feed line, not a Firstmate wake", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const { supervisor, ops, events, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Tidy the meter test",
       intent: intentOf("Start"),
     });
@@ -19591,7 +19591,7 @@ describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
   it("guidance a cancel leaves undelivered stays on the task's timeline and wakes nobody", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const { supervisor, ops, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Tidy the meter test",
       intent: intentOf("Start"),
     });
@@ -19613,7 +19613,7 @@ describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
   it("a background job that outlives its task is a feed line, not a Firstmate wake", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, ops, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Tidy the meter test",
       intent: intentOf("Start"),
     });
@@ -19637,7 +19637,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
     prepare?.(harness);
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Tidy the meter test",
       intent: intentOf("go"),
     });
@@ -19652,7 +19652,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
     const { supervisor, workspace, tasks, paths } = setup(crewmate);
     const install = deferred<{ outcome: "offline"; ms: number }>();
     vi.mocked(workspace.installDependencies).mockReturnValue(install.promise);
-    const { taskId } = await supervisor.commission({ title: "Build", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Build", intent: intentOf("go") });
     await tick();
 
     expect(workspace.installDependencies).toHaveBeenCalledWith(join(paths.worktreesDir, taskId));
@@ -19676,7 +19676,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
       ms: 900,
       error: "ERR_PNPM_FETCH_404 not found",
     });
-    const { taskId } = await supervisor.commission({ title: "Build", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Build", intent: intentOf("go") });
     await tick();
     expect(crewmate.promptCalls).toHaveLength(1);
     expect(tasks.get(taskId)?.status).toBe("active");
@@ -19690,7 +19690,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
     const { supervisor, workspace, tasks } = setup(crewmate);
     const install = deferred<{ outcome: "skipped" }>();
     vi.mocked(workspace.installDependencies).mockReturnValue(install.promise);
-    const { taskId } = await supervisor.commission({ title: "Build", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Build", intent: intentOf("go") });
     await tick();
 
     await supervisor.interruptCrewmate(taskId, "cancel");
@@ -19921,7 +19921,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
   async function commissionReal(extras: Pick<SetupExtras, "readPull"> = {}) {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate, { realWorkspace: true, ...extras });
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Tidy the meter test",
       intent: intentOf("go"),
     });
@@ -20292,7 +20292,7 @@ describe("crewmate session replays (Sep 14)", () => {
       const { message } = line;
       if (message.role === "user") {
         if (!taskId) {
-          ({ taskId } = await supervisor.commission({
+          ({ taskId } = await supervisor.intake.commission({
             title: "Replay",
             intent: intentOf(message.content),
           }));
@@ -20389,7 +20389,7 @@ describe("crewmate session replays (Sep 14)", () => {
     const ids = new Map<string, string>();
     for (const line of lines) {
       if (line.type !== "task") continue;
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: line.title,
         intent: intentOf(line.title),
       });
@@ -20453,7 +20453,7 @@ describe("crewmate session replays (Sep 14)", () => {
       );
     const crewmate = fakeQueuedSteerCrewmate();
     const { supervisor, ops, tasks, db } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Replay", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Replay", intent: intentOf("go") });
     await tick();
     for (const message of steers) {
       expect(await supervisor.steerCrewmate(taskId, message)).toBe("queued-next-turn");
@@ -20487,7 +20487,7 @@ describe("decision actions", () => {
 
   async function decisionOnScreen(crewmate: FakeCrewmate) {
     const harness = setup(crewmate);
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Fix the flaky test",
       intent: intentOf("fix the flaky test"),
     });
@@ -20596,7 +20596,7 @@ describe("decision actions", () => {
   it("closes a flagged duplicate with resolution duplicate and one feed line (WI-14)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cards, cardStore, events } = setup(crewmate);
-    await supervisor.commission({ title: "Explain", intent: intentOf("explain delivered") });
+    await supervisor.intake.commission({ title: "Explain", intent: intentOf("explain delivered") });
     await tick();
     const first = syncCardId(
       specs[0]?.onCard?.({
@@ -20729,7 +20729,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
   it("binds a personal-ui commission to the personal workspace with no worktree, the checks, and a brief that names no delivery", async () => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Tokyo clock",
       intent: {
         goal: "A Tokyo clock panel",
@@ -20812,7 +20812,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
       text: "Always use compact rows in my panels.",
       reason: "captain said so",
     });
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Tokyo clock",
       intent: { goal: "g", userWords: "w", kind: "personal-ui" },
     });
@@ -20837,7 +20837,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
   it("commits the turn with the report, routes it, and closes done when the first mate declares it finished", async () => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Tokyo clock",
       intent: { goal: "g", userWords: "w", kind: "personal-ui" },
     });
@@ -20887,7 +20887,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
   it("keeps the task open and tells the Firstmate when the commit fails, and routes the report once a later one commits", async () => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Tokyo clock",
       intent: { goal: "g", userWords: "w", kind: "personal-ui" },
     });
@@ -20928,7 +20928,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
   it("routes a report beside its note, and the finished close keeps the note", async () => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Tokyo clock",
       intent: { goal: "g", userWords: "w", kind: "personal-ui" },
     });
@@ -20964,7 +20964,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
   it.each([false, true])("keeps a declared captain wait open (note: %s)", async (note) => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Tokyo clock",
       intent: { goal: "g", userWords: "w", kind: "personal-ui" },
     });
@@ -21007,7 +21007,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
   it("keeps the task open when the report sits beside the crewmate's own decision card, and refuses a settle-effect card", async () => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Tokyo clock",
       intent: { goal: "g", userWords: "w", kind: "personal-ui" },
     });
@@ -21053,7 +21053,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
     await expect(
-      supervisor.commission({
+      supervisor.intake.commission({
         title: "Clock",
         intent: { goal: "g", userWords: "w", kind: "personal-ui" },
       }),
@@ -21079,7 +21079,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter",
         intent: intentOf("Make the meter count every press."),
         repoId: view.id,
@@ -21150,7 +21150,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Check the shared service",
         intent: intentOf("Demonstrate creating a shared record without affecting real data."),
         repoId: view.id,
@@ -21233,7 +21233,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         taskId,
         "The scenario is ready for review before the effect is requested.",
       );
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("Inspect the shared-write scenario."),
         shape: { review_of: taskId },
@@ -21372,7 +21372,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Verify target-device input",
         intent: intentOf("Verify the keyboard action on the target device."),
         repoId: view.id,
@@ -21506,7 +21506,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // the typed code judgment as the verdict (INF-1876): clear is a pass,
       // and the inconclusive live proof is a fact the record keeps and the
       // reviewer reads, never a hold the host turns the pass into.
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("Review device proof."),
         shape: { review_of: taskId },
@@ -21546,7 +21546,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // A re-review of the granted exception is a new review at the same
       // head and evidence revision, assigned the current validation state.
       const priorState = tasks.get(reviewId)?.delivery?.validationAssignment?.stateRevision;
-      const { taskId: reReviewId } = await supervisor.commission({
+      const { taskId: reReviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("Re-review the captain-granted gap exception."),
         shape: { review_of: taskId },
@@ -21593,7 +21593,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const { supervisor, tasks, repos, workspace, specs, cards } = setup(builder);
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Prove the workflow triggers",
         intent: intentOf("Prove which workflows each pull request starts."),
         repoId: view.id,
@@ -21726,7 +21726,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const { supervisor, tasks, repos, workspace, specs, events } = setup(builder);
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Reproduce the shared fixture",
         intent: intentOf("Reproduce the shared fixture before editing."),
         repoId: view.id,
@@ -21898,7 +21898,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Explain the empty fixture",
         intent: intentOf("Explain this fixture; it has no running surface."),
         repoId: view.id,
@@ -21929,7 +21929,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         validation: run,
       });
       await reportTurn(builder, taskId, "The empty fixture has no running surface to exercise.");
-      const { taskId: reviewId } = await supervisor.commission({
+      const { taskId: reviewId } = await supervisor.intake.commission({
         title: "Review",
         intent: intentOf("Review the empty fixture and its proof."),
         shape: { review_of: taskId },
@@ -21989,7 +21989,7 @@ describe("task-level delivery override", () => {
       const { supervisor, repos } = setup(crewmate);
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter",
         intent: intentOf("fix the meter"),
         repoId: view.id,
@@ -22010,7 +22010,7 @@ describe("task-level delivery override", () => {
       const { supervisor, tasks, repos } = setup(crewmate);
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter",
         intent: intentOf("fix it but don't open a PR"),
         repoId: view.id,
@@ -22043,7 +22043,7 @@ describe("task-level delivery override", () => {
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "local-only" });
       expect(repos.get(view.id)?.origin).toBeTruthy();
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter",
         intent: intentOf("open a PR for this one"),
         repoId: view.id,
@@ -22065,7 +22065,7 @@ describe("task-level delivery override", () => {
       const crewmate = fakeCrewmate();
       const { supervisor, repos } = setup(crewmate);
       await expect(
-        supervisor.commission({
+        supervisor.intake.commission({
           title: "Scratch PR",
           intent: intentOf("open a PR"),
           shape: { delivery_ask: "direct-pr" },
@@ -22074,7 +22074,7 @@ describe("task-level delivery override", () => {
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       expect(repos.get(view.id)?.origin).toBeNull();
       await expect(
-        supervisor.commission({
+        supervisor.intake.commission({
           title: "Local PR",
           intent: intentOf("open a PR"),
           repoId: view.id,
@@ -22091,7 +22091,7 @@ describe("task-level delivery override", () => {
         env: hostEnv(),
       });
       repos.configure(view.id, { delivery: "direct-pr", origin });
-      const restated = await supervisor.commission({
+      const restated = await supervisor.intake.commission({
         title: "Same posture",
         intent: intentOf("open a PR"),
         repoId: view.id,
@@ -22128,7 +22128,7 @@ describe("task-level delivery override", () => {
         },
         outcome: "I disabled the assertion.",
       });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Fix the meter",
         intent: intentOf("that is not a fix, try again"),
         repoId: view.id,
@@ -22161,7 +22161,7 @@ describe("task-level delivery override", () => {
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "local-only" });
 
-      const asked_ = await supervisor.commission({
+      const asked_ = await supervisor.intake.commission({
         title: "PR this",
         intent: { goal: "g", userWords: "ship a PR" },
         repoId: view.id,
@@ -22174,7 +22174,7 @@ describe("task-level delivery override", () => {
 
       // A note that happens to read like a posture is still only a note:
       // the posture-token convention went with `deliveryAskFromNote`.
-      const refined = await supervisor.commission({
+      const refined = await supervisor.intake.commission({
         title: "Stack it",
         intent: {
           goal: "g",
@@ -22214,7 +22214,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
     const { supervisor, tasks, repos, specs, cards } = setup(crewmate, { mergePullRequest });
     const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
     repos.configure(view.id, { delivery: "direct-pr", autonomy });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the meter",
       intent: intentOf("fix the meter"),
       repoId: view.id,
@@ -22261,7 +22261,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       // Ask-first, so the autonomy hold WOULD fire on a change here.
       repos.configure(view.id, { delivery: "direct-pr", autonomy: false });
-      const { taskId } = await supervisor.commission({
+      const { taskId } = await supervisor.intake.commission({
         title: "Why is the meter idle",
         intent: { ...intentOf("why is nothing running?"), constraints: [{ kind: "read-only" }] },
         repoId: view.id,
@@ -22523,7 +22523,7 @@ describe("CrewSupervisor: the card thread", () => {
     const remover = "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd";
     h.supervisor.replyToCard(card.id, "Where is the remover? I cannot find it on the PC.");
     expect(converse).toHaveBeenCalledTimes(1);
-    const { taskId: helper } = await h.supervisor.commission({
+    const { taskId: helper } = await h.supervisor.intake.commission({
       title: "Find the remover",
       intent: intentOf("find the remover path"),
     });
@@ -22587,7 +22587,7 @@ describe("CrewSupervisor: the card thread", () => {
     harness: ReturnType<typeof setup>,
     input: { title: string; body?: string; actions?: Card["actions"] } = { title: "Owner note" },
   ) {
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Owner",
       intent: intentOf("emit a card"),
     });
@@ -22678,7 +22678,7 @@ describe("CrewSupervisor: the card thread", () => {
     crew.emit({ type: "turn_end", taskId });
     crew.finishPrompt();
     await tick();
-    await harness.supervisor.commission({
+    await harness.supervisor.intake.commission({
       title: "Build the dial",
       intent: intentOf("build it"),
       shape: { basis: harness.tasks.get(taskId)?.key ?? taskId },
@@ -23139,7 +23139,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     crewmate: FakeCrewmate,
     card: { title: string; body: string; actions: Card["actions"] },
   ) {
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: card.title,
       intent: intentOf("investigate and ask"),
     });
@@ -23684,7 +23684,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
   it("puts a new card up at the close-out, never at the emit, and a revision before it arrives settled", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Flaky test",
       intent: intentOf("fix the flaky test"),
     });
@@ -23770,11 +23770,11 @@ describe("parent tasks with planned children", () => {
       },
     });
     const { supervisor, tasks, specs, cards } = harness;
-    const parent = supervisor.plan({
+    const parent = supervisor.intake.plan({
       title: "Declutter the settings page",
       intent: intentOf("the settings page feels cluttered"),
     });
-    const plan = await supervisor.commission({
+    const plan = await supervisor.intake.commission({
       title: "Plan: ways to declutter settings",
       intent: {
         goal: "propose two or three directions as one card",
@@ -23785,7 +23785,7 @@ describe("parent tasks with planned children", () => {
     });
     await tick();
     const planKey = tasks.get(plan.taskId)?.key ?? plan.taskId;
-    const implement = supervisor.plan({
+    const implement = supervisor.intake.plan({
       title: "Implement the accepted direction",
       intent: intentOf("implement the accepted direction"),
       parent: parent.key,
@@ -24012,7 +24012,7 @@ describe("parent tasks with planned children", () => {
   it("closes a parent no crewmate holds once every child is closed", async () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
     const planOf = (title: string, parent?: string) =>
-      supervisor.plan({ title, intent: intentOf(title), ...(parent ? { parent } : {}) });
+      supervisor.intake.plan({ title, intent: intentOf(title), ...(parent ? { parent } : {}) });
     const closeAs = (id: string, status: "done" | "dropped") =>
       tasks.close(id, {
         status,
@@ -24087,7 +24087,7 @@ describe("parent tasks with planned children", () => {
       branch: "fm/task-rep1",
       outcome: "reproduced: yes - the failing check is saved on the working copy.",
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fix the meter",
       intent: intentOf("fix it"),
       shape: { basis: tasks.get("rep1")?.key ?? "rep1" },
@@ -24111,7 +24111,7 @@ describe("parent tasks with planned children", () => {
       shape: { kind: "reproduce", kind_source: "classifier:test", deliverable: "answer" },
       outcome: "reproduced: yes - the clock drifts a second a minute.",
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fix the clock drift",
       intent: intentOf("fix it"),
       shape: { basis: tasks.get("rep0")?.key ?? "rep0" },
@@ -24138,7 +24138,7 @@ describe("parent tasks with planned children", () => {
         saved: { ref: "refs/infinitary/kept/rep2", sha: "abc", dirty: false, unlandedCommits: 1 },
       },
     });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fix the dock",
       intent: intentOf("fix it"),
       shape: { basis: tasks.get("rep2")?.key ?? "rep2" },
@@ -24169,7 +24169,7 @@ describe("parent tasks with planned children", () => {
     });
     supervisor.cards.addMessage("card-ans1-1", "captain", "and the dock too?");
     supervisor.cards.addMessage("card-ans1-1", "crewmate", "Yes,\n the dock reads the same query.");
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fix the claim query",
       intent: intentOf("fix it"),
       shape: { basis: tasks.get("ans1")?.key ?? "ans1" },
@@ -24225,7 +24225,7 @@ describe("closing an answer task another task builds on", () => {
     internalStep: boolean,
   ) {
     const { supervisor, tasks } = harness;
-    const spawned = await supervisor.commission({
+    const spawned = await supervisor.intake.commission({
       title,
       intent: /^(Plan|Reproduce)/.test(title)
         ? stepIntent(title.toLowerCase())
@@ -24235,7 +24235,7 @@ describe("closing an answer task another task builds on", () => {
     await tick();
     await reportAndIdle(crew, spawned.taskId, `${title}: done.`);
     const key = tasks.get(spawned.taskId)?.key ?? spawned.taskId;
-    const next = supervisor.plan({
+    const next = supervisor.intake.plan({
       title: `Build on ${title}`,
       intent: intentOf("build on it"),
       shape: { basis: key },
@@ -24246,7 +24246,7 @@ describe("closing an answer task another task builds on", () => {
   it("stores a direct-build skip declaration on the task without judging its text", async () => {
     const harness = setup(fakeCrewmate(), { classifier: byTitle });
     const reason = "One label; no rule changes; inspect the screen";
-    const built = await harness.supervisor.commission({
+    const built = await harness.supervisor.intake.commission({
       title: "Rename a label",
       intent: intentOf("rename the label"),
       shape: { skipped_plan_because: reason },
@@ -24298,13 +24298,13 @@ describe("closing an answer task another task builds on", () => {
     const { supervisor, tasks } = harness;
     // FI3-417's shape: a check run for a build already under way, which
     // names no basis of the check, linked as a recorded wait.
-    const check = await supervisor.commission({
+    const check = await supervisor.intake.commission({
       title: "Reproduce the live cases on the meter",
       intent: stepIntent("run the live cases"),
       shape: { internal_step: true },
     });
     await tick();
-    const build = await supervisor.commission({
+    const build = await supervisor.intake.commission({
       title: "Implement the meter",
       intent: intentOf("build the meter"),
     });
@@ -24336,13 +24336,13 @@ describe("closing an answer task another task builds on", () => {
 
     // A link to work that already closed carries the answer nowhere: the
     // step closes on its own report, never into the dropped task.
-    const late = await supervisor.commission({
+    const late = await supervisor.intake.commission({
       title: "Reproduce the live cases on the dock",
       intent: stepIntent("run the dock's live cases"),
       shape: { internal_step: true },
     });
     await tick();
-    const gone = supervisor.plan({ title: "Fix the dock", intent: intentOf("fix the dock") });
+    const gone = supervisor.intake.plan({ title: "Fix the dock", intent: intentOf("fix the dock") });
     tasks.graph.link(late.taskId, gone.id, "blocks", "firstmate");
     tasks.close(gone.id, { status: "dropped", reason: "cancelled", actor: "host" });
     await reportAndIdle(lateChecker, late.taskId, "checks: pass - eight of eight.");
@@ -24360,7 +24360,7 @@ describe("closing an answer task another task builds on", () => {
     const checker = fakeCrewmate();
     const harness = setup(checker, { classifier: byTitle });
     const { supervisor, tasks, cards } = harness;
-    const check = await supervisor.commission({
+    const check = await supervisor.intake.commission({
       title: "Check the card-maximize journey on main",
       intent: stepIntent("run the card-maximize journey on untouched main"),
       shape: { internal_step: true },
@@ -24426,20 +24426,20 @@ describe("closing an answer task another task builds on", () => {
     const { supervisor, tasks, specs } = harness;
     const step = { shape: { internal_step: true } };
 
-    const busy = await supervisor.commission({
+    const busy = await supervisor.intake.commission({
       title: "Reproduce the drift",
       intent: stepIntent("reproduce the drift"),
       ...step,
     });
     await tick();
     const busyKey = tasks.get(busy.taskId)?.key ?? busy.taskId;
-    supervisor.plan({ title: "Fix the drift", intent: intentOf("fix"), shape: { basis: busyKey } });
+    supervisor.intake.plan({ title: "Fix the drift", intent: intentOf("fix"), shape: { basis: busyKey } });
     const stillWorking = await supervisor.settling.declared.closeAnswerUsedAsBasis(busyKey);
     expect(stillWorking).toMatchObject({ ok: false });
     expect(stillWorking.text).toContain("its crewmate is still working");
 
     // A step that went idle without a report has no answer to close on.
-    const lone = await supervisor.commission({
+    const lone = await supervisor.intake.commission({
       title: "Plan the rename",
       intent: stepIntent("plan the rename"),
       ...step,
@@ -24460,7 +24460,7 @@ describe("closing an answer task another task builds on", () => {
     expect(notAnswer).toMatchObject({ ok: false });
     expect(notAnswer.text).toContain("delivers a change, not an answer");
 
-    const shown = await supervisor.commission({
+    const shown = await supervisor.intake.commission({
       title: "Reproduce the flash",
       intent: stepIntent("reproduce the flash"),
       ...step,
@@ -24476,7 +24476,7 @@ describe("closing an answer task another task builds on", () => {
     });
     await reportAndIdle(carded, shown.taskId, "reproduced: yes");
     const shownKey = tasks.get(shown.taskId)?.key ?? shown.taskId;
-    supervisor.plan({
+    supervisor.intake.plan({
       title: "Fix the flash",
       intent: intentOf("fix"),
       shape: { basis: shownKey },
@@ -24515,7 +24515,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("a failed turn with nothing to retry, and a sign-in failure", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Checks", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Checks", intent: intentOf("go") });
     await tick();
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
@@ -24532,7 +24532,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
 
     const auth = fakeCrewmate();
     const signIn = setup(auth);
-    const failed = await signIn.supervisor.commission({ title: "t", intent: intentOf("work") });
+    const failed = await signIn.supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await tick();
     auth.emit({
       type: "turn_failed",
@@ -24550,7 +24550,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("a report, with what it filed and its cards on screen, and without", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Fix the meter",
       intent: intentOf("fix it"),
     });
@@ -24568,7 +24568,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
 
     const plain = fakeCrewmate();
     const bare = setup(plain);
-    const job = await bare.supervisor.commission({ title: "Job", intent: intentOf("go") });
+    const job = await bare.supervisor.intake.commission({ title: "Job", intent: intentOf("go") });
     await tick();
     await reportTurn(plain, job.taskId, "All of it is done now.");
     expect(bare.ops).toEqual([
@@ -24579,9 +24579,9 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("a task that failed, and the queued task whose wait it ended", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, ops, tasks } = setup(crewmate);
-    const first = await supervisor.commission({ title: "Doomed", intent: intentOf("will fail") });
+    const first = await supervisor.intake.commission({ title: "Doomed", intent: intentOf("will fail") });
     await tick();
-    const second = await supervisor.commission({
+    const second = await supervisor.intake.commission({
       title: "Dependent",
       intent: intentOf("needs"),
       startAfter: { afterTask: first.taskId },
@@ -24622,7 +24622,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("guidance set aside after its attempts", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, db, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     vi.mocked(crewmate.steer).mockRejectedValue(new Error("always busy"));
     await supervisor.steerCrewmate(taskId, "urgent fix");
@@ -24638,7 +24638,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("the quiet watchdog and the wall-clock bound", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Marathon", intent: intentOf("long") });
+    const { taskId } = await supervisor.intake.commission({ title: "Marathon", intent: intentOf("long") });
     await tick();
     const start = Date.now();
     supervisor.checkQuietTasks(start + 21 * MIN);
@@ -24653,7 +24653,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("a queued start that failed, and the one that started", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, workspace, ops } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Queued",
       intent: intentOf("do"),
       startAfter: { at: Date.now() - 1 },
@@ -24673,7 +24673,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("a queued start of work the captain named a model for says which model took it (FI3-444)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, ops } = setup(crewmate);
-    const { taskId, crewmate: handle } = await supervisor.commission({
+    const { taskId, crewmate: handle } = await supervisor.intake.commission({
       title: "Queued on Fable",
       intent: intentOf("after the audit, on fable"),
       shape: { override_model_id: "claude-fable-5-1" },
@@ -24691,13 +24691,13 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     const crewmate = fakeCrewmate();
     const { supervisor, workspace, ops, tasks } = setup(crewmate);
     // The Firstmate's own start_now: the tool's answer is its receipt.
-    const own = supervisor.plan({ title: "Own", intent: intentOf("do") });
+    const own = supervisor.intake.plan({ title: "Own", intent: intentOf("do") });
     expect(await supervisor.startQueuedNow(own.key)).toBe(`Started ${own.key} "Own".`);
     await tick();
     expect(tasks.get(own.id)?.status).toBe("active");
 
     // The captain's Start on the task card that could not start still wakes, in his words.
-    const planned = supervisor.plan({ title: "Planned", intent: intentOf("do") });
+    const planned = supervisor.intake.plan({ title: "Planned", intent: intentOf("do") });
     vi.mocked(workspace.createTaskWorktree).mockRejectedValueOnce(
       new Error("a branch named 'fm/task-x' already exists"),
     );
@@ -24723,7 +24723,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
       },
       quotaGateCleared: () => true,
     });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Later big one",
       intent: intentOf("big"),
       shape: { premium_ask: true },
@@ -24760,7 +24760,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("choices on a crewmate's cards, as its steers", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs } = setup(crewmate);
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fix the flaky test",
       intent: intentOf("fix"),
     });
@@ -24806,7 +24806,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("the captain's thread replies, with and without pictures", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cards } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Owner", intent: intentOf("emit") });
+    const { taskId } = await supervisor.intake.commission({ title: "Owner", intent: intentOf("emit") });
     await tick();
     const card = syncCardId(
       specs[0]?.onCard?.({ title: "Owner note", body: "<p>The body.</p>", actions: [] }),
@@ -24834,7 +24834,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("the end of a timed wait, with and without its reason", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("go") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("go") });
     await tick();
     crewmate.finishPrompt();
     await tick();
@@ -24864,16 +24864,16 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
       },
       retryConverse: vi.fn(),
     });
-    const first = await supervisor.commission({ title: "Doomed", intent: intentOf("will fail") });
+    const first = await supervisor.intake.commission({ title: "Doomed", intent: intentOf("will fail") });
     await tick();
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Dependent",
       intent: intentOf("needs"),
       startAfter: { afterTask: first.taskId },
     });
     crewmate.failPrompt("crashed hard");
     await tick();
-    await supervisor.commission({ title: "Marathon", intent: intentOf("long") });
+    await supervisor.intake.commission({ title: "Marathon", intent: intentOf("long") });
     await tick();
     const start = Date.now();
     supervisor.checkQuietTasks(start + 21 * MIN);
@@ -24899,8 +24899,8 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     const crewmate = fakeQueuedSteerCrewmate();
     const waiting = fakeQueuedSteerCrewmate();
     const { supervisor, specs, inbox, tasks } = setup(crewmate, { crewmates: [waiting] });
-    const { taskId } = await supervisor.commission({ title: "Owner", intent: intentOf("emit") });
-    const timed = await supervisor.commission({ title: "Waits", intent: intentOf("wait") });
+    const { taskId } = await supervisor.intake.commission({ title: "Owner", intent: intentOf("emit") });
+    const timed = await supervisor.intake.commission({ title: "Waits", intent: intentOf("wait") });
     await tick();
     const card = syncCardId(
       specs[0]?.onCard?.({
@@ -25028,7 +25028,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     });
     const { repo } = await harness.repos.setup({ kind: "init", name: "watched" });
     harness.repos.configure(repo.id, { delivery: "direct-pr" });
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Ship it",
       intent: intentOf("Ship the fix"),
       repoId: repo.id,
@@ -25409,7 +25409,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
     const crewmate = settlingCrewmate();
     const recordUsage = vi.fn();
     const { supervisor, tasks, events } = setup(crewmate, { recordUsage });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Answer the rivet question",
       intent: intentOf("how many rivets hold the hatch?"),
     });
@@ -25444,7 +25444,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
     const crewmate = settlingCrewmate();
     const recordUsage = vi.fn();
     const { supervisor } = setup(crewmate, { recordUsage });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Shorten before answering",
       intent: intentOf("answer the question"),
     });
@@ -25469,7 +25469,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
     const crewmate = fakeCrewmate();
     const recordUsage = vi.fn();
     const { supervisor } = setup(crewmate, { recordUsage });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Answer the hatch question",
       intent: intentOf("which hatch leaks?"),
     });
@@ -25497,7 +25497,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
       recordUsage,
       crewmates: [fakeCrewmate()],
     });
-    const { taskId: previousId } = await supervisor.commission({
+    const { taskId: previousId } = await supervisor.intake.commission({
       title: "Fix the flaky meter test",
       intent: intentOf("fix the flaky meter test"),
     });
@@ -25505,7 +25505,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
     const previous = tasks.get(previousId);
     if (!previous) throw new Error("the attempt has no record");
 
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Fix the flaky meter test",
       intent: intentOf("that is not a fix, try again"),
       shape: { escalate_from: previous.key },
@@ -25526,7 +25526,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
     const crewmate = settlingCrewmate();
     const recordUsage = vi.fn();
     const { supervisor, tasks } = setup(crewmate, { recordUsage });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Count the rivets",
       intent: intentOf("count the rivets"),
     });
@@ -25544,7 +25544,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
     const crewmate = settlingCrewmate();
     const recordUsage = vi.fn();
     const { supervisor, tasks, ops } = setup(crewmate, { recordUsage });
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Count the rivets",
       intent: intentOf("count the rivets"),
     });
@@ -25570,7 +25570,7 @@ describe("a turn cut by a close still reaches the usage ledger", () => {
   it("never holds the quit past its bound for a client that does not answer", async () => {
     const crewmate = settlingCrewmate();
     const { supervisor } = setup(crewmate);
-    await supervisor.commission({ title: "Count", intent: intentOf("count the rivets") });
+    await supervisor.intake.commission({ title: "Count", intent: intentOf("count the rivets") });
     await tick();
     vi.useFakeTimers();
 
@@ -25593,7 +25593,7 @@ describe("ready-card choice admission", () => {
       it(`refuses an undeclared ${source} choice without changing its ${deliverable} task or running an effect`, async () => {
         const crewmate = fakeCrewmate();
         const { supervisor, specs, tasks, cardStore, workspace, ops } = setup(crewmate);
-        const { taskId } = await supervisor.commission({
+        const { taskId } = await supervisor.intake.commission({
           title: "Validate the choice",
           intent: {
             ...intentOf("Validate the choice"),
@@ -25650,7 +25650,7 @@ describe("ready-card choice admission", () => {
   it("refuses hidden choices before resolution, steer or an effect, then uses the shown revision", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, specs, cardStore, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Choice safety",
       intent: intentOf("choose"),
     });
@@ -25805,11 +25805,11 @@ describe("a cardless internal step's report", () => {
     // The sequence as the Firstmate opens it (docs/sequences.md): a parent
     // on request, the reproduce step running as a declared internal step,
     // and the fix step planned on request with the step as its basis.
-    const parent = supervisor.plan({
+    const parent = supervisor.intake.plan({
       title: "Check results stay stale",
       intent: intentOf("it seems this is not updated when the external status changes"),
     });
-    const step = await supervisor.commission({
+    const step = await supervisor.intake.commission({
       title: "Reproduce: check results stay stale after GitHub changes",
       intent: {
         goal: "Reproduce a shown check result staying unchanged",
@@ -25821,7 +25821,7 @@ describe("a cardless internal step's report", () => {
     });
     await tick();
     const stepKey = tasks.get(step.taskId)?.key ?? step.taskId;
-    const fix = supervisor.plan({
+    const fix = supervisor.intake.plan({
       title: "Fix: refresh check results everywhere from one source",
       intent: intentOf("fix it"),
       parent: parent.key,
@@ -25964,7 +25964,7 @@ describe("a task's own browser (docs/task-browser.md)", () => {
         takeControl: async () => ({ ok: false, text: "no browser" }),
       },
     });
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Check the sign-up page",
       intent: intentOf("check the sign-up page the project serves"),
     });
@@ -25983,7 +25983,7 @@ describe("a task's own browser (docs/task-browser.md)", () => {
     );
 
     const bare = setup(fakeCrewmate());
-    await bare.supervisor.commission({
+    await bare.supervisor.intake.commission({
       title: "Check the sign-up page",
       intent: intentOf("check the sign-up page the project serves"),
     });
@@ -26018,7 +26018,7 @@ describe("a task's own browser (docs/task-browser.md)", () => {
           takeControl: async () => ({ ok: false, text: "no browser" }),
         },
       });
-      const { taskId } = await h.supervisor.commission({
+      const { taskId } = await h.supervisor.intake.commission({
         title: "Check the sign-up page",
         intent: intentOf("check the sign-up page the project serves"),
       });
@@ -26109,7 +26109,7 @@ it("completed context shortening reaches the task ledger and every Usage groupin
     recordUsage: (input) => ledger.record({ ...input, at: now }),
   });
   ledger = new UsageStore(db);
-  const { taskId } = await supervisor.commission({
+  const { taskId } = await supervisor.intake.commission({
     title: "Shorten context",
     intent: intentOf("do the work"),
   });
@@ -26168,7 +26168,7 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
   it("steers the crewmate with the captain's words, recorded with its origin, and says so once in the feed", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Count the rivets",
       intent: intentOf("count the rivets"),
     });
@@ -26218,7 +26218,7 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
   it("interrupts the running turn as the captain and keeps the task steerable; with no turn running it refuses", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
-    const { taskId } = await supervisor.commission({
+    const { taskId } = await supervisor.intake.commission({
       title: "Count the hatches",
       intent: intentOf("count the hatches"),
     });
@@ -26953,7 +26953,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
       userWords: "bring the shop folder up to date",
       constraints: [],
     };
-    const queued = h.supervisor.plan({
+    const queued = h.supervisor.intake.plan({
       title: "Tidy the shop folder",
       intent,
       repoId: h.repo.id,
@@ -26962,7 +26962,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     rmSync(h.folder, { recursive: true, force: true });
 
     await expect(
-      h.supervisor.commission({
+      h.supervisor.intake.commission({
         title: "Update the shop folder",
         intent,
         repoId: h.repo.id,
@@ -27236,7 +27236,7 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
     delivery = createChangeDelivery({ tasks: harness.tasks, repos: harness.repos, forgeFor: () => forge });
     const { repo } = await harness.repos.setup({ kind: "init", name: "shop" });
     harness.repos.configure(repo.id, { delivery: "direct-pr" });
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "An idea the captain dropped",
       intent: intentOf("try the new meter"),
       repoId: repo.id,
@@ -27398,7 +27398,7 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
     const h = await runsOnTheMini();
 
     // An ordinary task follows the project's Runs on and waits for that computer.
-    const ordinary = await h.supervisor.commission({
+    const ordinary = await h.supervisor.intake.commission({
       title: "Edit the one-pager",
       intent: intent("Edit the one-pager."),
       repoId: h.repo.id,
@@ -27407,7 +27407,7 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
     expect(h.tasks.get(ordinary.taskId)?.deviceId).toBe(MINI);
 
     // Folder work starts here, in the folder itself.
-    const folder = await h.supervisor.commission({
+    const folder = await h.supervisor.intake.commission({
       title: "Bring the business folder up to date",
       intent: intent("Bring the business folder up to date with main."),
       repoId: h.repo.id,
@@ -27447,7 +27447,7 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
 
   it("plans folder work with the same shape and brief, and refuses a Runs on beside it", async () => {
     const h = await runsOnTheMini();
-    const planned = h.supervisor.plan({
+    const planned = h.supervisor.intake.plan({
       title: "Bring the business folder up to date",
       intent: intent("Bring the business folder up to date with main."),
       repoId: h.repo.id,
@@ -27457,7 +27457,7 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
     expect(planned.prompt).toContain("You work in place");
     expect(planned.prompt).not.toContain("Delivery:");
     await expect(
-      h.supervisor.commission({
+      h.supervisor.intake.commission({
         title: "Folder work on the mini",
         intent: intent("Bring the business folder up to date with main."),
         repoId: h.repo.id,
@@ -27481,7 +27481,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
 
   async function idleCrewmate(crewmate = fakeCrewmate()) {
     const harness = setup(crewmate);
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Job",
       intent: intentOf("Start"),
     });
@@ -27495,7 +27495,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
   it("sparks a message steered into the running turn once, as it goes in", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     expect(sparks(events, taskId)).toBe(0);
     expect(await supervisor.steerCrewmate(taskId, "also make it blue")).toBe("mid-turn");
@@ -27506,7 +27506,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
   it("sparks a message queued behind the turn when the next turn takes it, not when it is sent", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
     const { supervisor, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     expect(await supervisor.steerCrewmate(taskId, "use the other library")).toBe(
       "queued-next-turn",
@@ -27546,7 +27546,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
   it("sparks the first mate's interrupt and the captain's Stop, each once", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events } = setup(crewmate);
-    const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
+    const { taskId } = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
     await supervisor.interruptCrewmate(taskId, "interrupt");
     expect(sparks(events, taskId)).toBe(1);
@@ -27596,7 +27596,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
   it("sparks a new wait on a crewed task, which its crewmate never hears", async () => {
     const { supervisor, events, tasks, taskId } = await idleCrewmate();
     const planned = seedTask(tasks, { id: "t-later", title: "Later", status: "queued" });
-    expect(supervisor.linkTasks(planned.id, taskId, "blocks")).toMatch(/^Recorded/);
+    expect(supervisor.intake.linkTasks(planned.id, taskId, "blocks")).toMatch(/^Recorded/);
     expect(sparks(events, taskId)).toBe(1);
     // Only a crewmate on the ring has a place for a spark.
     expect(sparks(events, planned.id)).toBe(0);
@@ -27626,7 +27626,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
   async function finder() {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
-    const { taskId } = await harness.supervisor.commission({
+    const { taskId } = await harness.supervisor.intake.commission({
       title: "Find where results are rendered",
       intent: intentOf("Find where a typed result is rendered."),
       shape: { result_schema: FINDINGS },
@@ -27691,7 +27691,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
     crewmate.finishPrompt();
     await tick();
     tasks.close(taskId, { status: "done", reason: "answered", actor: "host" });
-    await supervisor.commission({
+    await supervisor.intake.commission({
       title: "Cap the rendered result",
       intent: intentOf("Cap what the brief renders."),
       shape: { basis: tasks.get(taskId)!.key },
@@ -27705,7 +27705,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
   it("refuses a result shape without an object at its root, filing nothing", async () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
     expect(() =>
-      supervisor.plan({
+      supervisor.intake.plan({
         title: "Count findings",
         intent: intentOf("Count them."),
         shape: { result_schema: { type: "array", items: { type: "string" } } },
@@ -27739,7 +27739,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
         path: projectRepo(),
         name: "meterlab",
       });
-      const { taskId } = await harness.supervisor.commission({
+      const { taskId } = await harness.supervisor.intake.commission({
         title: "Migrate the meter module",
         intent: intentOf("Migrate the meter module."),
         repoId: repo.id,
@@ -27760,7 +27760,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
     }
 
     async function startSecond(harness: Awaited<ReturnType<typeof firstStage>>, from: string) {
-      const second = harness.supervisor.plan({
+      const second = harness.supervisor.intake.plan({
         title: "Migrate the meter's callers",
         intent: intentOf("Migrate the callers."),
         repoId: harness.repoId,
@@ -27796,7 +27796,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
         text: "The running host record blocks this task; use branch_from instead of waiting for an alpha.",
       });
       const original = h.tasks.get(h.first.id);
-      const { taskId } = await h.supervisor.commission({
+      const { taskId } = await h.supervisor.intake.commission({
         title: "Take over the blocked branch",
         intent: original?.intent ?? intentOf("Migrate the meter module."),
         repoId: h.repoId,
@@ -27950,7 +27950,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
       const harness = await firstStage();
       const { supervisor, tasks, repos, repoId, first } = harness;
       const plan = (branch_from: string, project = repoId) => () =>
-        supervisor.plan({
+        supervisor.intake.plan({
           title: "Migrate the callers",
           intent: intentOf("Migrate the callers."),
           repoId: project,
@@ -27963,7 +27963,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
         name: "otherlab",
       });
       expect(plan(first.key, other.id)).toThrow(`branch_from ${first.key} is in another project`);
-      const answered = supervisor.plan({
+      const answered = supervisor.intake.plan({
         title: "Decide the callers' order",
         intent: intentOf("Decide it."),
         repoId,
@@ -27976,7 +27976,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
       expect(tasks.list()).toHaveLength(count);
       // A spawn reads the same refusal, and spawns nothing.
       await expect(
-        supervisor.commission({
+        supervisor.intake.commission({
           title: "Migrate the callers now",
           intent: intentOf("Migrate the callers."),
           repoId,
@@ -28030,14 +28030,14 @@ describe("programs (INF-799 piece 2)", () => {
     const dir = scratchDir("infinitary-program-");
     execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
     const { repo } = await harness.repos.setup({ kind: "adopt", path: dir, name: "meterlab" });
-    const program = harness.supervisor.plan({
+    const program = harness.supervisor.intake.plan({
       title: "Cap the meter's rendered results",
       intent: intentOf("Cap what the meter renders."),
       repoId: repo.id,
       startPolicy: options.startPolicy ?? "when-ready",
       shape: { program: { script, bound }, ...(options.premium ? { premium_ask: true } : {}) },
     });
-    harness.supervisor.graphChanged();
+    harness.supervisor.intake.graphChanged();
     /** The part a task() call filed, once its crewmate is working on it. */
     const part = (call: number) =>
       vi.waitFor(() => {
@@ -28225,7 +28225,7 @@ describe("programs (INF-799 piece 2)", () => {
   it("drops only its own parts at its end, leaving a task filed under it running", async () => {
     const h = await programHarness(`return await task("Cap the meter.");`, 1);
     const part = await h.part(0);
-    const { taskId: other } = await h.supervisor.commission({
+    const { taskId: other } = await h.supervisor.intake.commission({
       title: "Write the gauge's docs",
       intent: intentOf("Document the gauge."),
       parent: h.program.key,
@@ -28298,7 +28298,7 @@ describe("programs (INF-799 piece 2)", () => {
 
   it("keeps running when its drop is refused for a part that has not started (F8)", async () => {
     const { h, part } = await unstartedPart();
-    expect(h.supervisor.dropTask(h.program.key, { reason: "changed course" })).toMatch(
+    expect(h.supervisor.intake.dropTask(h.program.key, { reason: "changed course" })).toMatch(
       /^Cannot close/,
     );
     expect(h.tasks.get(h.program.id)?.status).toBe("open");
@@ -28317,7 +28317,7 @@ describe("programs (INF-799 piece 2)", () => {
   it("stops on a confirmed drop of a part that has not started (F8)", async () => {
     const { h, part } = await unstartedPart();
     expect(
-      h.supervisor.dropTask(h.program.key, { reason: "changed course", confirm: true }),
+      h.supervisor.intake.dropTask(h.program.key, { reason: "changed course", confirm: true }),
     ).toMatch(/^Dropped/);
     expect(h.tasks.get(h.program.id)?.status).toBe("dropped");
     expect(h.tasks.get(part.id)?.status).toBe("dropped");
@@ -28356,7 +28356,7 @@ describe("programs (INF-799 piece 2)", () => {
     });
     restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
     try {
-      restarted.graphChanged();
+      restarted.intake.graphChanged();
       await vi.waitFor(
         () => expect(restartedTasks.get(h.program.id)?.status).toBe("done"),
         PROGRAM_WAIT,
@@ -28373,7 +28373,7 @@ describe("programs (INF-799 piece 2)", () => {
   it("refuses a program outside a project, filing nothing", () => {
     const { supervisor, tasks } = setup(fakeCrewmate(), { programProcess });
     const plan = (shape: WorkShapeAsk) => () =>
-      supervisor.plan({ title: "Cap results", intent: intentOf("Cap them."), shape });
+      supervisor.intake.plan({ title: "Cap results", intent: intentOf("Cap them."), shape });
     expect(plan({ program: { script: "return 1;", bound: 1 } })).toThrow(
       "A program runs its parts in a project",
     );
@@ -28717,7 +28717,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       reach,
       taskId: "",
     };
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Fix the meter",
       intent: intentOf("Fix the meter's unit."),
       repoId: repo.id,
@@ -29663,7 +29663,7 @@ describe("INF-2214 reliable requested answers", () => {
   it("queues the full path immediately while background work and the answering turn continue", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate, { hasRunningJobs: () => true });
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Find remover",
       intent: intentOf("Find the full path on SHELL-PC"),
     });
@@ -29710,7 +29710,7 @@ describe("INF-2214 reliable requested answers", () => {
   it("reports a consumed clean turn's missing answer but not guidance-only or unread tail steers", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Find remover",
       intent: intentOf("Find the full path"),
     });
@@ -29751,7 +29751,7 @@ describe("INF-2214 reliable requested answers", () => {
   it("keeps card references factual, refuses stale lifecycles, and sends explicit cancellation without new expectations", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Find remover",
       intent: intentOf("Find the full path"),
     });
@@ -29821,7 +29821,7 @@ describe("INF-2214 reliable requested answers", () => {
   it.each(["provider", "interrupt"] as const)("does not call a %s-cut turn a missing response", async (cut) => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
-    const { taskId } = await h.supervisor.commission({
+    const { taskId } = await h.supervisor.intake.commission({
       title: "Find remover",
       intent: intentOf("Find the full path"),
     });

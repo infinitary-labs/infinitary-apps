@@ -73,7 +73,7 @@ describe("leftovers on a computer that runs work", () => {
     // That computer made the working copy, then refused the conversation:
     // the start failed, and this Mac kept no record of it.
     await expect(
-      home.supervisor.commission({
+      home.supervisor.intake.commission({
         title: "footer",
         intent: { goal: "Make the footer blue.", userWords: "make the footer blue" },
         repoId: repo.id,

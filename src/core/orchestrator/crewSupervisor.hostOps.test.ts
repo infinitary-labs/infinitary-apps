@@ -45,7 +45,7 @@ function hostCard(h: Harness, id: string, effect: HostEffect): string {
 
 /** A started task whose crewmate finished its first turn and waits idle. */
 async function startedTask(h: Harness, crewmate: FakeCrewmate): Promise<string> {
-  const { taskId } = await h.supervisor.commission({
+  const { taskId } = await h.supervisor.intake.commission({
     title: "Count presses",
     intent: intentOf("make the meter count every press"),
   });

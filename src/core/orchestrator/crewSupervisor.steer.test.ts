@@ -35,7 +35,7 @@ const MINI = "mini-device";
 async function running(fields: Parameters<typeof workComputer>[2] = {}) {
   const crewmate = fakeCrewmate();
   const h = setup(crewmate, { machines: workComputer(MINI, "Studio Mac mini", fields) });
-  const { taskId } = await h.supervisor.commission({
+  const { taskId } = await h.supervisor.intake.commission({
     title: "Count presses",
     intent: intentOf("make the meter count every press"),
   });

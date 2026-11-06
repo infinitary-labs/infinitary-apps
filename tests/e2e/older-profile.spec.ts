@@ -612,9 +612,11 @@ test("a task's history an older release saved reads the same after the upgrade",
         .filter((event) => event.kind === "report")
         .map((event) => ({ event_id: event.id, text: event.text })),
       result,
+      // INF-2828: the read names who ended each card, from the saved choice's actor.
       decisions: decisions.map((event) => ({
         event_id: event.id,
         text: event.text,
+        by: event.actor,
         data: event.data,
       })),
       brief: briefWords,

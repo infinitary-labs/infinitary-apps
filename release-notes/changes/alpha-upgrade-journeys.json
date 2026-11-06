@@ -1,0 +1,13 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "timeline-migration-lent-card-columns",
+      "reason": "The timeline upgrade journey's older saved profile now takes every card column added since that profile's format from today's schema, so the merge card's after-merge column is there when today's card writer saves; a test repair with no app change."
+    },
+    {
+      "id": "older-profile-decision-by",
+      "reason": "The older-profile history journey now expects the first mate's task read to name who ended each saved card, read from the saved choice, since the read has said so on purpose; a test repair with no app change."
+    }
+  ]
+}

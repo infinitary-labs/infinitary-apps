@@ -3,7 +3,12 @@ import { expect, test } from "@playwright/test";
 import { CardService } from "../../src/core/orchestrator/cardService";
 import { appPathsFor, crewmateSessionsDir } from "../../src/core/paths";
 import { CardStore } from "../../src/core/storage/cardStore";
-import { openDatabase, TASK_RECORD_RETIREMENT_VERSION } from "../../src/core/storage/db";
+import {
+  type AppDatabase,
+  openDatabase,
+  openInMemoryDatabase,
+  TASK_RECORD_RETIREMENT_VERSION,
+} from "../../src/core/storage/db";
 import { RETIRED_TASK_COLUMNS } from "../../src/core/storage/taskRecordProjection";
 import { CrewActions } from "../../src/core/tasks/crewActions";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -30,6 +35,41 @@ const LATER_MODEL = starterFor("openai-codex", "premium");
 const REVISED = "Only the queue flush passes the Windows check.";
 
 /**
+ * Today's card and thread writers name every column `cards` and
+ * `card_messages` have now, so each one a migration after the older schema
+ * added is lent to it here. The columns are read from today's schema rather
+ * than listed, so a new card column, as INF-2796's `after_merge_json` was,
+ * reaches this fixture with no edit. Each of those migrations adds its column
+ * through `addColumn`, which leaves a lent one in place.
+ */
+function lendTodaysCardColumns(db: AppDatabase): void {
+  const today = openInMemoryDatabase();
+  try {
+    for (const table of ["cards", "card_messages"]) {
+      const older = new Set(columnsOf(db, table).map(({ name }) => name));
+      for (const { name, type, notnull, dflt_value } of columnsOf(today, table)) {
+        if (older.has(name)) continue;
+        const fallback = dflt_value === null ? "" : ` DEFAULT ${dflt_value}`;
+        db.exec(
+          `ALTER TABLE ${table} ADD COLUMN ${name} ${type}${notnull ? " NOT NULL" : ""}${fallback}`,
+        );
+      }
+    }
+  } finally {
+    today.close();
+  }
+}
+
+function columnsOf(db: AppDatabase, table: string) {
+  return db.prepare(`PRAGMA table_info(${table})`).all() as {
+    name: string;
+    type: string;
+    notnull: number;
+    dflt_value: string | null;
+  }[];
+}
+
+/**
  * INF-1296 B piece 5, captain: good e2e coverage so existing users do not regress.
  * Promise: upgrade, keyboard reading and restart preserve exact historical sources,
  * legacy overlap and unknown times; Activity and the real agent tool read the same
@@ -42,16 +82,7 @@ const REVISED = "Only the queue flush passes the Windows check.";
 function olderProfile() {
   const userDataDir = scratchDir("timeline-upgrade-");
   const db = openDatabase(userDataDir, TASK_RECORD_RETIREMENT_VERSION - 1);
-  // Today's card writer names INF-1610's later `answering` and INF-1670's
-  // `answered_by` columns, and its thread writer INF-2225's shared-card
-  // columns, lent to the older schema here; their own migrations leave a
-  // column already there.
-  db.exec("ALTER TABLE cards ADD COLUMN answering INTEGER");
-  db.exec("ALTER TABLE cards ADD COLUMN answered_by TEXT");
-  db.exec("ALTER TABLE card_messages ADD COLUMN contributor_json TEXT");
-  db.exec("ALTER TABLE card_messages ADD COLUMN answers_message INTEGER");
-  db.exec("ALTER TABLE card_messages ADD COLUMN clarification INTEGER");
-  db.exec("ALTER TABLE card_messages ADD COLUMN response_id TEXT");
+  lendTodaysCardColumns(db);
   const at = Date.now() - 3600000;
   const now = () => at;
   const tasks = new TaskService({ db, strict: true, now });

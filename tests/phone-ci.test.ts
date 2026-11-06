@@ -485,14 +485,16 @@ describe("the phone check's Swift packages", () => {
 
 // INF-1343 (the captain's "Stop a failing pull request check at its first failed part" and
 // "Upload the 530 MB phone results only when a check fails"); since INF-2139 the early stop
-// belongs to a complete branch selection and its edited-part passes.
+// belongs to a complete branch selection and its edited-part passes, and since INF-2811 to any
+// request with edited-part passes, whose failed pass stops the later ones.
 describe("a failing phone check", () => {
-  it("stops at its first failed part only for a complete selection, its edited-part passes included", () => {
+  it("stops at its first failed part for a complete selection or edited-part passes, and only then", () => {
     const gate = stepsThatRun(OFF).find(isGate) as Step;
     const stopEarly = gate.env?.INFINITARY_PHONE_STOP_EARLY?.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
     for (const [full, repeat, value] of [
       ["true", "", "1"],
       ["true", "join-read", "1"],
+      ["false", "talk-drafts", "1"],
       ["false", "", "0"],
       ["", "", "0"],
     ] as const)

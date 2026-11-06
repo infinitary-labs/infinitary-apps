@@ -54,7 +54,7 @@ Record the version, selection reasons, files or parts, required platforms or dev
   `scripts/mac-unit-tests.ts` identifies native prerequisites, not an exclusion of portable files from local rounds.
   A developer without a Mac cannot count skipped native cases as proof.
 - Edited phone parts retain three runs on the iPhone and one on the iPad (INF-2732, the captain: "run each edited phone part three times on the iPhone and once on the iPad").
-  Complete affected selections get ordinary coverage once and only distance-zero parts twice more, on the iPhone alone, in the same CI gate; proper subsets retain the selected local repeats, which also satisfy ordinary proof for those parts.
+  An affected request gives ordinary coverage once and only its distance-zero parts twice more, on the iPhone alone, in the same CI gate, whether it selects every part or a proper subset (INF-2811: a computer in CI mode cannot run a local phone check), so no local phone repeat or second request is needed.
   Other affected parts run once, on the iPhone alone, and unreadable test changes keep conservative all-parts repetitions on the iPhone and one run of every part on the iPad.
   See "The phone check on request" for its exact route and isolation.
 - Replay runs once in Linux CI when relevant; pictures and demos remain local.
@@ -580,7 +580,7 @@ When the job fails, or a run on request records, it keeps native result bundles,
 The same command logs also live in the smaller `phone-logs` artifact, independently of the result bundles.
 Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-logs`, which keeps `phone-logs` within the app's 64 MiB artifact download.
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
-A failure on either device fails the job, and a complete branch selection stops at the first failed part ("The phone check on request").
+A failure on either device fails the job, and a complete branch selection or a request with edited-part passes stops at the first failed part ("The phone check on request").
 That gate checks and builds once, starts one simulator per device, and runs the phone journey's parts on each, one after the other on their device's simulator, the parts that choose a photo last, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
 The placed vBoxx guest runs the devices sequentially, one simulator at a time.
 
@@ -628,16 +628,17 @@ Explicit `parts` still overrides automatic selection for diagnostic runs.
 The chooser compares ordinary coverage with the complete live part table, independent of order, and keeps `coverage`, `iphoneOnly` and `repeats` in `phone-placement`.
 INF-2582 direction A (the captain's choices "A: wait once and trim the soak" and "iPhone only; iPad waits for the release check") shapes the gate of an affected request in three ways.
 A part the change only reaches runs on the iPhone alone (the chooser's `iphone_parts`), and the iPad runs it in the next phone release; a part whose test code changed, or every part of a change the chooser could not read, runs on both devices.
-A complete selection runs once, then distance-zero edited-test parts run twice more on the iPhone alone in the same gate step (the iPad runs each once, INF-2732), on the build and simulators it started, so the request waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
+Its selection runs once, then its distance-zero edited-test parts run twice more on the iPhone alone in the same gate step (the iPad runs each once, INF-2732), on the build and simulators it started, so the request waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
+This holds for a proper subset as for a complete selection (INF-2811), so a branch that edits one part's test code gets all three of that part's iPhone runs from its one affected request.
 A request on a branch runs one of each relaunch part's ten dark and light relaunch pairs (INF-1735), so 2 of the 20, through the gate's `--relaunch-pairs`; a request on `main` and the phone release run all 20.
 Named `parts` and every-part requests run their parts on both devices.
 Unreadable test changes retain all-parts repeats; a product-only shared input does not invent edited tests.
-The iPhone runs a later pass only after its own ordinary pass, each pass of a part starts from a fresh test home and app, and a complete selection's first failure stops every later part and pass, with no retries.
+The iPhone runs a later pass only after its own ordinary pass, each pass of a part starts from a fresh test home and app, and in a complete selection or a request with edited-part passes the first failure stops every later part and pass, with no retries.
 Each pass keeps 90 minutes of the gate step's limit.
 A later pass writes its part's folder beside the ordinary one, named `<part>-round-<n>`, so its logs, pictures and failure results ride the ordinary artifacts.
 An unavailable CI route leaves missing proof, never an automatic complete local fallback.
 Neither route starts a release, TestFlight or App Store step.
-Complete branch selections stop at the first failed part; proper-subset requests and main keep full discovery.
+Complete branch selections and requests with edited-part passes stop at the first failed part; other proper-subset requests and main keep full discovery.
 Inside the gate a failed Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`; no `mac_runner` input, `PHONE_VIRTUAL_MAC` switch or generic-Mac variable can redirect it.
 Do not use local mini borrows for phone proof.

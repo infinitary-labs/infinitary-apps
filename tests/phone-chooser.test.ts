@@ -158,9 +158,10 @@ describe("affected phone requests", () => {
   });
 });
 
-// INF-2259's accepted complete-selection route: ordinary proof plus two edited-test
-// passes on each device, using the existing real change fixtures and the live table.
-describe("complete phone selection repeat accounting", () => {
+// INF-2259's accepted route: ordinary proof plus two edited-test passes on the iPhone (INF-2732),
+// using the existing real change fixtures and the live table. INF-2811: a proper subset takes them
+// in the same request too, since a computer in CI mode cannot run a local phone check.
+describe("phone selection repeat accounting", () => {
   const all = PHONE_PARTS.map(({ name }) => name);
   const reached = (commit: string, unreadable = false) => {
     const { paths, testDiff, testFiles } = change(commit);
@@ -188,14 +189,16 @@ describe("complete phone selection repeat accounting", () => {
     }
   });
 
-  it("keeps proper subsets on their existing local repeat route", () => {
+  it("repeats a proper subset's edited parts, and only them, in the same request", () => {
     const reach = reached("2dbbedc52");
-    expect(
-      phoneRepeatPlan(
-        reach.filter(({ distance }) => distance === 0).map(({ part }) => part),
-        reach,
-      ),
-    ).toEqual({ full: false, repeatParts: [] });
+    const edited = reach.filter(({ distance }) => distance === 0).map(({ part }) => part);
+    const reachedOnly = reach.find(({ distance }) => distance === 1)!.part;
+    expect(edited.length).toBeGreaterThan(0);
+    expect(phoneRepeatPlan([reachedOnly, ...edited], reach)).toEqual({
+      full: false,
+      repeatParts: edited,
+    });
+    expect(phoneRepeatPlan([reachedOnly], reach)).toEqual({ full: false, repeatParts: [] });
   });
 
   it("retains every-part repetition for unreadable UI changes", () => {
@@ -267,6 +270,26 @@ describe("the short phone parts", () => {
       PHONE_BUDGET_MS,
     );
     expect(requestedParts(reasons, reach).map((part) => part.part)).toEqual(["talk-drafts"]);
+  });
+  // INF-2811: the affected request for that edit runs the part three times on the iPhone and once
+  // on the iPad in its one gate, so no local phone check or second request is needed.
+  it("runs the edited short part three times on the iPhone and once on the iPad in one request", () => {
+    const parts = requestedParts(reasons, reach).map(({ part }) => part);
+    const plan = phoneRepeatPlan(parts, reach);
+    expect(plan).toEqual({ full: false, repeatParts: ["talk-drafts"] });
+    const iphoneOnly = iphoneOnlyParts(parts, reach);
+    expect(iphoneOnly).toEqual([]);
+    const jobs = phonePasses(["iphone", "ipad"], {
+      parts: parts.filter((part) => !iphoneOnly.includes(part)),
+      iphoneOnly,
+      repeats: plan.repeatParts,
+    });
+    expect(jobs.map(({ device, part, round }) => `${device} ${part} ${round}`)).toEqual([
+      "ipad talk-drafts 1",
+      "iphone talk-drafts 1",
+      "iphone talk-drafts 2",
+      "iphone talk-drafts 3",
+    ]);
   });
 });
 

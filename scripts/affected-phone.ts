@@ -471,13 +471,14 @@ export function requestedParts(reasons: readonly string[], reach: PartReach[]): 
   return unknown ? reach : reach.filter((each) => each.distance < 2);
 }
 
-/** INF-2259: ordinary proof is round one. Only a complete live selection moves its
- * edited-test repeats to CI; proper subsets keep their existing local placement. */
+/** INF-2259: ordinary proof is round one, and each kept part whose test code changed takes two more
+ * passes on the iPhone in the same request. INF-2811: a proper subset repeats its edited parts too, since a
+ * computer in CI mode cannot run a local phone check; `full` still says the selection covers every live part. */
 export function phoneRepeatPlan(parts: readonly string[], reach: readonly PartReach[]): {
   full: boolean; repeatParts: string[];
 } {
   const full = EVERY.every((part) => parts.includes(part));
-  return { full, repeatParts: full ? EVERY.filter((part) => reach.some((each) => each.part === part && each.distance === 0)) : [] };
+  return { full, repeatParts: EVERY.filter((part) => parts.includes(part) && reach.some((each) => each.part === part && each.distance === 0)) };
 }
 
 /** INF-2582 (the captain's "iPhone only; iPad waits for the release check"): on an affected request, a kept

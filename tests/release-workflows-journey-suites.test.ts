@@ -223,7 +223,8 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
 // INF-2582 direction A (the captain's "A: wait once and trim the soak" and "iPhone only; iPad
 // waits for the release check"): the chooser's reached parts go to the iPhone alone, and its
 // edited parts' two further passes ride the same gate. The selections are real chooser outputs'
-// shapes: a complete selection, one with edited tests, and one that leaves reached parts to the iPhone.
+// shapes: a complete selection, one with edited tests, one that leaves reached parts to the iPhone,
+// a proper subset, and a proper subset whose one edited part repeats (INF-2811).
 it.each([
   { mode: "in-turn", parts: "cards-form", full: "true", iphone: "", repeat: "", selected: [] },
   {
@@ -258,6 +259,14 @@ it.each([
     iphone: "",
     repeat: "",
     selected: ["--part", "join-read", "--part", "talk-tasks"],
+  },
+  {
+    mode: "",
+    parts: "talk-drafts",
+    full: "false",
+    iphone: "",
+    repeat: "talk-drafts",
+    selected: ["--part", "talk-drafts", "--repeat-part", "talk-drafts"],
   },
 ])(
   "runs both devices directly for $mode/$full/$iphone/$repeat without a local clone",

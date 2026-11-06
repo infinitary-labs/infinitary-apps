@@ -209,11 +209,13 @@ jobs:
       # reached parts.
       # INF-2582 direction A: on an affected request a part the change only reaches runs on
       # the iPhone alone, and a part whose test code changed runs on both devices, then twice
-      # more in this same step, on the build and simulators it started, so the request waits
-      # for a phone Mac once. Each pass keeps the 90 minutes INF-2052 gave the gate. A request
+      # more on the iPhone in this same step (INF-2732), on the build and simulators it started,
+      # so the request waits for a phone Mac once, however few parts it selects (INF-2811). Each pass keeps the 90 minutes INF-2052 gave the gate. A request
       # on a branch runs 1 of each relaunch part's 10 pairs; main and the release run all 20.
       # INF-1343: a complete branch selection stops at its first failed part, so a failing check
-      # frees its Mac at once; a proper-subset request and the phone release keep full discovery.
+      # frees its Mac at once, and so does any request with edited-part passes, whose failed pass
+      # stops the later ones (INF-2811); other proper-subset requests and the phone release keep
+      # full discovery.
       # INF-2052 (the captain's choice "Raise the limit for running the parts from 60 to 90 minutes"):
       # a full check with the Mac mini to itself passed in 59 minutes before INF-2052's other changes;
       # two full checks at once, one per virtual Mac, starved each other past their parts' 20-minute
@@ -253,7 +255,7 @@ jobs:
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
           PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}
           INFINITARY_PHONE_GUEST_OBSERVER: ${{ inputs.guest_observer && '1' || '0' }}
-          INFINITARY_PHONE_STOP_EARLY: ${{ steps.request-select.outputs.full == 'true' && '1' || '0' }}
+          INFINITARY_PHONE_STOP_EARLY: ${{ (steps.request-select.outputs.full == 'true' || steps.request-select.outputs.repeat_parts != '') && '1' || '0' }}
           INFINITARY_PHONE_PACKAGE_CACHE: ${{ runner.temp }}/swift-packages
       - name: Save the Swift packages from main
         # The gate fetched them once it started, passing or failing; a save that fails never fails main's check.

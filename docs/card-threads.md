@@ -377,7 +377,7 @@ A reply is saved as its author reads it - the captain's words, then "Current set
 The author's wake, the first mate's own turn about its card and a basis brief's thread still read words and settings together; the first mate's thread-activity line quotes the captain's words.
 Changing how `cardAnswerLines` words an answer leaves replies saved before the change shown whole.
 Words written under a question's Something else row ride a reply like any pick: `written in: "…"` in the author's settings lines, and in curly quotes after the picks in the thread's settings rows (FI3-1002); a written answer is never sent as a reply on its own.
-Control changes alone start no turn and remain unsaved renderer-memory drafts, lost on restart.
+Control changes alone start no turn and send nothing; they stay a draft on that computer, kept across a restart until the card closes (INF-2710).
 What a reply's words or settings authorize is the handoff's (`HANDOFF`, `docs/card-authoring.md` "The handoff").
 
 ## Links on a revision

@@ -29,6 +29,7 @@ import { isPreparing } from "../attachments/intake";
 import type { ImageAttachment } from "../design";
 import { changesOff, changesOffWords, doneThereWords, isView } from "../devices/viewWords";
 import { takePictures } from "./composer";
+import { savedCardAnswers } from "./savedCardAnswers";
 import { withoutKey } from "./stack";
 import { readCardsAgain } from "./stackActions";
 import type { ShellGet, ShellSet } from "./store";
@@ -41,9 +42,9 @@ export type CardSlice = {
   /**
    * The latest reading of each card body's own form (inline decisions,
    * contract 4.22): the count the footer shows and the answers, which are
-   * the draft a revised body gets back by name. Renderer memory, like the
-   * reply draft: a restart loses it and the card's proposals return (the
-   * captain's Q4 A).
+   * the draft a revised body gets back by name. Unlike the reply draft, a
+   * card's picks outlive a restart until it closes (./savedCardAnswers.ts,
+   * INF-2710).
    */
   cardAnswers: Record<string, FrameAnswers>;
   /**
@@ -139,7 +140,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
   return {
     pendingCardActions: {},
     cardActionErrors: {},
-    cardAnswers: {},
+    cardAnswers: savedCardAnswers(),
     threads: {},
     threadsLoaded: {},
     replyDrafts: {},

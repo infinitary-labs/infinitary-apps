@@ -24,6 +24,7 @@ import { type AppearanceSlice, appearanceSlice } from "./appearance";
 import { type CardSlice, cardSlice } from "./cardActions";
 import { type ComposerSlice, composerSlice, mainInputHeld } from "./composer";
 import { projectFocus } from "./projectFocus";
+import { mirrorCardAnswers } from "./savedCardAnswers";
 import { shownEntry, withoutKey } from "./stack";
 import { readCardsAgain, type StackSlice, stackSlice } from "./stackActions";
 import { type VoiceSlice, voiceSlice } from "./voice";
@@ -485,3 +486,9 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     }
   },
 }));
+
+// A card's picks outlive a restart: the saved copy follows every reading and
+// every retirement the shell makes (./savedCardAnswers.ts, INF-2710).
+useShellStore.subscribe((state, previous) =>
+  mirrorCardAnswers(state.cardAnswers, previous.cardAnswers),
+);

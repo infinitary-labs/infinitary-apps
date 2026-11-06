@@ -1,9 +1,10 @@
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { answersLine as answersWords } from "../../src/renderer/src/cards/answersLine";
 import {
   MAXIMIZE_LABEL,
   PUT_ASIDE_LABEL,
@@ -19,6 +20,7 @@ import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { expandDock, nowFrame, pressRow, recordCard, recordFrame, showRecordTab } from "./rails";
 import {
+  cardAnswersLine,
   cardLeave,
   cardReply,
   clickInBody,
@@ -407,6 +409,86 @@ test("INF-1879: one minus keeps an unanswered reply open without a warning", asy
         )?.minimized,
       ).toBe(true);
     });
+  } finally {
+    await launched.close();
+  }
+});
+
+const PLAN = "Plan: split the large files";
+
+/** A plan card shaped like the one INF-2710 was found on: required questions, each with a recommendation and a Something else row. */
+const PLAN_BODY = `<p>Thirty files are over 2,000 lines. I would split each one along the jobs it already does.</p>
+<fieldset><legend>Which direction?</legend>
+<label><input type="radio" name="direction" value="owners" required data-inf-recommended> Split along owners and delete as it goes</label>
+<label><input type="radio" name="direction" value="mechanical" required> Split mechanically by size</label>
+<label><input type="radio" name="direction" value="other" required data-inf-write-in> Something else</label></fieldset>
+<fieldset><legend>Do the tests split too?</legend>
+<label><input type="radio" name="scope" value="all" required data-inf-recommended> Yes: tests, journeys and stand-ins split too</label>
+<label><input type="radio" name="scope" value="source" required> Only the product code</label>
+<label><input type="radio" name="scope" value="other" required data-inf-write-in> Something else</label></fieldset>
+<fieldset><legend>Should a size check hold the line?</legend>
+<label><input type="radio" name="size_check" value="yes" required data-inf-recommended> Yes: it refuses a file over 2,000 lines</label>
+<label><input type="radio" name="size_check" value="no" required> No check</label>
+<label><input type="radio" name="size_check" value="other" required data-inf-write-in> Something else</label></fieldset>`;
+
+/** INF-2710 (the captain: "Keep picks across restarts"): a card put aside keeps its picks when the app starts again. */
+test("INF-2710: a put-aside decision keeps its picks across a restart", async () => {
+  test.setTimeout(150_000);
+  const userDataDir = scratchDir("infinitary-minimize-restart-");
+  const db = openDatabase(userDataDir);
+  let key = "";
+  try {
+    key = seedTask(new TaskService({ db, strict: true }), {
+      id: "restart-plan",
+      title: "Split the large files",
+      status: "idle",
+    }).key;
+    new CardStore(db).upsert({
+      id: "restart-plan-card",
+      taskId: "restart-plan",
+      author: "crewmate",
+      meta: "crewmate 1",
+      title: PLAN,
+      priority: 20,
+      status: "ready",
+      createdAt: Date.now(),
+      body: PLAN_BODY,
+      actions: [
+        { id: "save-defer", label: "Save and defer" },
+        { id: "abandon", label: "Abandon" },
+        { id: "approve-build", label: "Approve and build", default: true },
+      ],
+    });
+  } finally {
+    db.close();
+  }
+  // Two of the three take the recommendation, which reads as unchanged; the third changes it.
+  const picks = [
+    ["direction", "owners"],
+    ["scope", "source"],
+    ["size_check", "yes"],
+  ] as const;
+  const picked = answersWords({ answered: 3, of: 3, changed: 1 }, false);
+  const choice = (page: Page, name: string, value: string) =>
+    cardBody(page, PLAN).locator(`input[name="${name}"][value="${value}"]`);
+  let launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    let { page } = launched;
+    await showCard(page, PLAN);
+    for (const [name, value] of picks) await clickInBody(choice(page, name, value));
+    await expect(cardAnswersLine(page)).toHaveText(picked);
+    if (evidence) await regionShot(shownEntry(page), join(evidence, "restart-picked-after.png"));
+    await cardLeave(page).click();
+    await expect(shownCard(page, PLAN)).toBeHidden();
+
+    await launched.close();
+    launched = await launchApp({ userDataDir, withMockProvider: true });
+    page = launched.page;
+    await pressRow(page, key);
+    await expect(shownCard(page, PLAN)).toBeVisible();
+    for (const [name, value] of picks) await expect(choice(page, name, value)).toBeChecked();
+    await expect(cardAnswersLine(page)).toHaveText(picked);
+    if (evidence) await regionShot(shownEntry(page), join(evidence, "restart-restored-after.png"));
   } finally {
     await launched.close();
   }

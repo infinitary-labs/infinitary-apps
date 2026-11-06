@@ -84,7 +84,7 @@ Picking it opens a text field under it, focused: one line growing to three, `--t
 Picking another option hides the field and keeps its words, which are sent only with the row; an empty field is no answer, so a required question's default still waits and its click focuses the field.
 What the captain writes there counts as picked and changed, and reaches the author as the captain's own answer.
 A question whose options are the only possible answers carries `data-inf-options-only` instead, a mark for the card check that the app does not draw.
-Putting a decision away preserves its in-session picks and unsent words without a popover.
+Putting a decision away preserves its picks and unsent words without a popover; its picks also come back after a restart.
 The frame stylesheet dresses a plain `fieldset` as a hairline `--line-1` box at `--radius-m` with its `legend` in `--fg-1` weight 500, each radio or checkbox label a row with `--space-2` between control and text (`accent-color: --accent`, a checked row's text `--fg-1`), and a `textarea` full width under its label.
 Every ready card body is semantic HTML in a sandboxed iframe.
 The host owns the chip, title, size control, minimize corner, pager, and footer actions.

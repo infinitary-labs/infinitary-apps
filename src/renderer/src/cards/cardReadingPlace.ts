@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-/** In-session reading places, like answer and reply drafts; never saved across a restart. */
+/** In-session reading places, like reply drafts; never saved across a restart. */
 const places = new Map<string, number>();
 
 /**

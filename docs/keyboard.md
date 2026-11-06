@@ -550,7 +550,7 @@ The release omits Reload, Force Reload and Toggle Developer Tools, and its main 
 This follows `packagedFlavor`, not `app.isPackaged` alone: unpackaged development runs and packages stamped `infinitaryBuildFlavor: "dev"` (or the older `fm3000BuildFlavor`) keep all three items and developer tools.
 In every build, `followRendererRecovery` reloads a crashed main page (crash, out-of-memory or abnormal exit) at most once per minute, measured with a monotonic clock.
 A second crash within that minute stays stopped rather than looping; deliberate exits and failed launches do not trigger recovery.
-Recovery restarts the page and loses unsent drafts, but keeps the core and saved state running.
+Recovery restarts the page and loses unsent reply drafts, but keeps a card's picks, the core and saved state running.
 
 ## Key hints
 

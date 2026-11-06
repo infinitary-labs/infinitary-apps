@@ -618,7 +618,9 @@ The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `StackedCard` 
 - A revision keeps the captain's picks by name: every new document of the card gets the shell's draft back with the `form` message, and the bridge reapplies each choice answer, including recommended picks, whose name the new body still has (an option that no longer exists is left at the new proposal).
   A renamed question starts fresh; a revised proposal never overrides a pick.
 - The same `collect` reply carries the question definitions the fresh reading saw - each name's prompt, kind, options with their labels and the authored proposal - which the core records beside the choice and never words into the wake (`docs/card-evidence.md`).
-- Picks are shell draft state, like a reply draft: a restart loses them and the card returns as written - unpicked, its recommendations tagged (the captain's Q4 A).
+- Picks are shell draft state, saved in the window's own storage on that computer until the card closes, so a restart or a reopened window gives them back (INF-2710: the captain chose "Keep picks across restarts", reversing their Q4 A).
+  `savedCardAnswers.ts` mirrors the shell's readings and the stack's retirement of a closed card; storage that is missing, full or unreadable returns the card as written - unpicked, its recommendations tagged.
+  The reply draft in the card's field stays in renderer memory, and a restart loses it.
 - Minus puts a decision, permission request or pending note aside without sending, discarding picks or answering its question.
   The same card returns with its current draft; no close-confirmation popover appears.
   Preview settings and written replies stay drafts until an explicit send or choice.
@@ -656,7 +658,7 @@ The captain's Approve and build chose the author's own row with the app checking
   It is the author's mark for the check alone: the app draws nothing for it, because a tag saying so gave the captain nothing to act on (the captain, 2026-10-09: "this is not useful / actionable to the user at all").
 - **Revisions and past cards.**
   A revision gets the written words back by name under its own Something else row, and a body that no longer has one leaves the question at its proposal.
-  A past card shows the field with the words that were sent; a restart loses an unsent draft like any pick.
+  A past card shows the field with the words that were sent; unsent words written there outlive a restart like any pick.
 
 ### The card's one field
 
@@ -817,7 +819,7 @@ Those two sentences are the only places the word prototype reaches the first mat
 A playable preview is a decision body that draws the thing being chosen with its own controls ("The preview is the decision" above).
 Its settings ride a hidden named field or `inf.stage(name, value)` as a compact JSON snapshot with stable names and units.
 The 4,096 UTF-8 bytes named in the authoring instructions are an authoring budget for that snapshot, not a limit shared with the other answers.
-Controls update the preview and the renderer's draft only: no author turn and no durable submission, and an unsent draft disappears on restart.
+Controls update the preview and the renderer's draft only: no author turn and no durable submission, and an unsent draft outlives a restart on that computer like any pick.
 The footer choices and author-directed replies submit the current settings.
 A preview ships nothing: its author's scratch stays private in its working copy, and the author revises the same card as feedback arrives.
 It closes like every plan card, with **Approve and build**, **Save and defer** and **Abandon** ("The handoff" below).
@@ -1045,11 +1047,11 @@ While the captain’s question waits, a line or revision that names no answered 
 The typechecked table, core and rendered-corner tests, `scripts/card-leave.ts` in `pnpm check`, and `card-leave.spec.ts` hold the rule.
 The journey has one section per table row and runs whenever the cards change.
 
-The renderer keeps answers and reply drafts in their existing in-session stores while a card is minimized.
+The renderer keeps answers and reply drafts in their existing stores while a card is minimized.
 `useCardReadingPlace` keeps its body’s reading place across remounts for the same run, for live cards, task records (`record:<task>`) and past cards (`past:<card>`); the stack's retirement leaves the last two alone, and closing a record or past card forgets its place.
 A person's own wheel, touch or key before a saved place is reachable ends the pending restore.
 Only the shown copy of a live card saves its place or ends its restore: the copy the stage prepares unseen is bare, so its body has less room to scroll, and whatever its scroller does there, such as a restore its final height cuts short, saves nothing, and the restore runs again once the copy is shown (INF-2043).
 A record also keeps the sections the captain opened, per task, and hands them to its frame at birth (`openSections` view state), until the record is closed, which reopens compact; a live card's own `<details>` still reload closed.
-Bringing it back focuses the card at the default size; a restart drops unsent drafts as before.
+Bringing it back focuses the card at the default size; after a restart it returns with its picks and without an unsent reply.
 The first mate’s asked `show-card` action uses `inf:cards:show`: an open card returns, and a closed card opens read-only.
 The first mate has no action that puts a card aside.

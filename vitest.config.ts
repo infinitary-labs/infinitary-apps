@@ -87,6 +87,7 @@ const isolatedUnit = [
   "src/renderer/src/app/cardActions.test.ts",
   "src/renderer/src/app/commandRefusals.test.ts",
   "src/renderer/src/app/composer.test.ts",
+  "src/renderer/src/app/savedCardAnswers.test.ts",
   "src/renderer/src/app/stack.test.ts",
   "src/renderer/src/app/stackActions.test.ts",
   "src/renderer/src/app/store.minimize.test.ts",

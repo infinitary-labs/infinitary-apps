@@ -63,6 +63,9 @@ jobs:
     runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     outputs:
       version: ${{ steps.version.outputs.version }}
+      # The list every check job compares its downloaded copy with, carried
+      # here so that comparison never trusts a list from the same download.
+      sums: ${{ steps.files.outputs.sums }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -131,7 +134,9 @@ jobs:
           VERSION: ${{ inputs.version }}
           SOURCE_COMMIT: ${{ inputs.ref }}
         run: node scripts/release-notes.ts verify-package --catalog dist/linux-unpacked/resources/release-notes.json --version "$VERSION" --source "$SOURCE_COMMIT"
+      # SHA256SUMS lists every file a check job installs or builds from.
       - name: Render the Arch recipe and the Nix package from the Ubuntu package
+        id: files
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -139,7 +144,8 @@ jobs:
           cp dist/*.deb dist/*.rpm dist/*.AppImage linux-packages/
           node scripts/linux-recipes.ts render --version "$VERSION" \
             --deb "$(ls linux-packages/*.deb)" --out linux-packages
-          (cd linux-packages && sha256sum *.deb *.rpm *.AppImage > SHA256SUMS && cat SHA256SUMS)
+          (cd linux-packages && sha256sum *.deb *.rpm *.AppImage aur/PKGBUILD nix/package.nix > SHA256SUMS && cat SHA256SUMS)
+          { echo 'sums<<SUMS'; cat linux-packages/SHA256SUMS; echo SUMS; } >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
           name: linux-packages
@@ -183,9 +189,12 @@ jobs:
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
-      - uses: actions/download-artifact@v4
+      # The packages, checked against the build's own SHA256SUMS before
+      # anything installs them; a damaged copy is fetched once more
+      # (.github/actions/linux-packages).
+      - uses: ./.github/actions/linux-packages
         with:
-          name: linux-packages
+          sums: ${{ needs.build.outputs.sums }}
           path: ${{ runner.temp }}/linux-packages
       # Without apt's recommended packages: ImageMagick's, Ghostscript and its
       # fonts, are 25 MB the AppImage check's one screenshot never uses, and a

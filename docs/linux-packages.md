@@ -107,8 +107,11 @@ A Mac and a run from source never ask, and the app started by a command says the
 There it builds with the notes job's verified catalog and the release's diagnostics settings, and verifies the packaged catalog, as the Mac build does.
 No pull request starts it, so the package checks run once for a change rather than on each push (INF-2834).
 A task whose change edits how the packages are made requests it once, at its final version, as it requests its edited journeys (`docs/testing.md`, "What a task branch requests").
-These files make the packages: `electron-builder.yml`, `electron-builder.linux.yml`, `packaging/linux/`, `scripts/check-linux-package.sh`, `scripts/linux-recipes.ts`, `src/main/linuxStartup.ts`, `tests/installed/`, `playwright.installed.config.ts` and the workflow itself.
+These files make the packages: `electron-builder.yml`, `electron-builder.linux.yml`, `packaging/linux/`, `scripts/check-linux-package.sh`, `scripts/linux-package-sums.ts`, `.github/actions/linux-packages/`, `scripts/linux-recipes.ts`, `src/main/linuxStartup.ts`, `tests/installed/`, `playwright.installed.config.ts` and the workflow itself.
 It keeps the packages, the two rendered recipes and `SHA256SUMS` as the run's `linux-packages` artifact, for one day on request and three days in a release; the workflow itself uploads them nowhere else, and only a release's upload job, once every check passed, uploads the files it checked, which its publication job fetches back and checks before switching anything.
+`SHA256SUMS` lists the packages and both recipes, and the build job also passes that list on as its `sums` output.
+Each check job fetches the artifact through `.github/actions/linux-packages`, which compares its copy with the build's own list before anything is installed (`scripts/linux-package-sums.ts`).
+A copy with a missing or differing file is fetched once more, and a second damaged copy fails the job, naming each file and whether the download step stopped before it finished, rather than leaving apt or dnf to fail on a cut-short package.
 `scripts/check-linux-package.sh` then installs each one the way a person would, one job a system:
 
 - the Ubuntu package with apt on Ubuntu 24.04 and 26.04 machines themselves, AppArmor's restriction on user namespaces left on;

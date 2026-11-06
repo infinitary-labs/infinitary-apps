@@ -1,0 +1,52 @@
+name: Linux packages, checked
+description: >-
+  Fetch the run's linux-packages artifact and check the copy against the
+  build's own SHA256SUMS before anything installs it; a damaged copy is
+  fetched once more, and a second damaged copy fails here, naming each file
+  (docs/linux-packages.md, "The checks"; scripts/linux-package-sums.ts).
+inputs:
+  sums:
+    description: The build job's SHA256SUMS, as its sums output carries it
+    required: true
+  path:
+    description: The folder the packages go in
+    required: true
+runs:
+  using: composite
+  steps:
+    # actions/download-artifact can stop partway and still report success,
+    # as run 42292187705's Ubuntu 24.04 container job did; it sets its
+    # download-path output only once every file arrived. A download that
+    # fails outright is fetched again too.
+    - id: first
+      name: Fetch the Linux packages
+      continue-on-error: true
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-packages
+        path: ${{ inputs.path }}
+    - id: check
+      name: Check them against the build's SHA256SUMS
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.path }}
+        SUMS: ${{ inputs.sums }}
+        ATTEMPT: first
+        FINISHED: ${{ steps.first.outputs.download-path }}
+      run: node scripts/linux-package-sums.ts check
+    - id: again
+      name: Fetch the Linux packages again
+      if: steps.check.outputs.whole != 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-packages
+        path: ${{ inputs.path }}
+    - name: Check the second copy against the build's SHA256SUMS
+      if: steps.check.outputs.whole != 'true'
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.path }}
+        SUMS: ${{ inputs.sums }}
+        ATTEMPT: again
+        FINISHED: ${{ steps.again.outputs.download-path }}
+      run: node scripts/linux-package-sums.ts check

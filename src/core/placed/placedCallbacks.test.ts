@@ -327,7 +327,7 @@ describe("a task that runs on a computer that runs work", () => {
       { text: "Opened the picture and the complete text file from my hand-over folder." },
     ]);
     const requests = api.requests.length;
-    await home.supervisor.dispatchQueuedTask(task);
+    await home.supervisor.starts.dispatchQueuedTask(task);
     expect(home.tasks.get(task)?.gate, JSON.stringify(home.tasks.timeline(task))).toBeNull();
     expect(home.tasks.get(task)?.status).toBe("active");
     await expect.poll(() => home.tasks.get(task)?.activity).toBe("idle");
@@ -425,7 +425,7 @@ describe("a task that runs on a computer that runs work", () => {
       shape: { kind: "fix", kind_source: "host:test", deliverable: "change", rigor_ask: "quick" },
     });
     const requests = api.requests.length;
-    await home.supervisor.dispatchQueuedTask("t-old-check-tool");
+    await home.supervisor.starts.dispatchQueuedTask("t-old-check-tool");
     expect(home.tasks.get("t-old-check-tool")).toMatchObject({ status: "open", activity: null });
     expect(home.placed.ready(at.deviceId, "t-old-check-tool")).toBe(false);
     expect(api.requests).toHaveLength(requests);
@@ -454,7 +454,7 @@ describe("a task that runs on a computer that runs work", () => {
       home.tasks.capture.openAsk({ id: "old-attachments", text, messageFiles });
       home.tasks.capture.attachAsk("old-attachments", "t-old-attachments", "tool:create_task");
       const requests = api.requests.length;
-      await home.supervisor.dispatchQueuedTask("t-old-attachments");
+      await home.supervisor.starts.dispatchQueuedTask("t-old-attachments");
       expect(home.tasks.get("t-old-attachments")).toMatchObject({ status: "open", activity: null });
       expect(home.devices.version(at.deviceId)?.contract).toBe(protocolVersion);
       expect(home.placed.ready(at.deviceId, "t-old-attachments")).toBe(false);
@@ -464,7 +464,7 @@ describe("a task that runs on a computer that runs work", () => {
       await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
       await at.inReach("t-old-attachments");
       model([{ text: "Read the attached file." }]);
-      await home.supervisor.dispatchQueuedTask("t-old-attachments");
+      await home.supervisor.starts.dispatchQueuedTask("t-old-attachments");
       await expect
         .poll(() => home.tasks.get("t-old-attachments")?.outcome)
         .toBe("Read the attached file.");

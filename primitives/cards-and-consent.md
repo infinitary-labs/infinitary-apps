@@ -34,7 +34,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - A required action's words: the first mate's `update_task revise_required_action` and the crewmate's `revise_required_action`, through `CardService.reviseRequiredAction` to `TaskService.delivery.reviseRequiredAction` (`docs/required-actions.md`, "Correcting the words").
 - The shape lint at both emit boundaries: [`src/core/pi/cardLint.ts`](../src/core/pi/cardLint.ts).
 - Card pictures: `verifyCardImages` in [`src/core/pi/cardImages.ts`](../src/core/pi/cardImages.ts).
-- A click: `CrewSupervisor.act` in [`src/core/orchestrator/crewSupervisor.ts`](../src/core/orchestrator/crewSupervisor.ts) dispatches on the action's `effect`, never on its id.
+- A click: `CardActions.act` in [`src/core/orchestrator/cardActions.ts`](../src/core/orchestrator/cardActions.ts) dispatches on the action's `effect`, never on its id.
 - The card contract has one home per kind in [`src/core/prompts/cardContract.ts`](../src/core/prompts/cardContract.ts) (`CARD_AUTHORING`, `CARD_MECHANICS`, `CARD_REPLY`, and `HANDOFF` for what a choice authorizes); no persona prompt repeats it.
 
 ## Operations and lifecycle

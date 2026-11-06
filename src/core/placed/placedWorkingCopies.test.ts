@@ -740,7 +740,7 @@ describe("a task that runs on a computer that runs work", () => {
       raiseCard: () => {},
       tell: () => {},
     });
-    home.supervisor.setProjectChange({
+    home.supervisor.hostOps.setProjectChange({
       apply: () => {},
       decline: () => {},
       inspect: (repoId) => changes.inspect(repoId),
@@ -847,7 +847,7 @@ describe("a task that runs on a computer that runs work", () => {
 
     // The run ends; the home's next minute reads it and wakes the crewmate there once.
     finished = true;
-    await home.supervisor.pollCheckWatches(now() + 61_000);
+    await home.supervisor.watch.pollCheckWatches(now() + 61_000);
     await expect.poll(() => api.requests.length - requests).toBe(3);
     expect(said(api.requests.at(-1))).toContain("release (run 38849548350, attempt 1) passed.");
     await expect.poll(() => home.tasks.get("t-run")?.activity).toBe("idle");

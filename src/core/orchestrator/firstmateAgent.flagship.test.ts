@@ -421,7 +421,7 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     expect(parked.n).toBe(1);
 
     // The user says move: model + account settings change, rebind, drain.
-    t.supervisor.act(card.id, "move-flagship");
+    t.supervisor.cardActions.act(card.id, "move-flagship");
     await tick();
     expect(t.settings.getFirstmateModel()).toEqual({
       provider: "xai",

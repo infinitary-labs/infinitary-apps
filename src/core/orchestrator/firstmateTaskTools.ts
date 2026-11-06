@@ -72,7 +72,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       // A when-ready row nothing waits on is dispatched by this very sweep:
       // the answer says a crewmate starts, the fact the feed line states.
       const waiting =
-        supervisor.crewStatus(record.id)[0]?.gate ??
+        supervisor.facts.crewStatus(record.id)[0]?.gate ??
         (record.startPolicy === "when-ready" ? "a crewmate starts on it now" : undefined);
       return {
         taskId: record.id,
@@ -213,7 +213,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             ? supervisor.moves.requestMove(record.id, { by: "firstmate", model: moveTo })
             : undefined;
           const backlog = toBacklog
-            ? supervisor.moveToBacklog(
+            ? supervisor.hostOps.moveToBacklog(
                 record.id,
                 { actor: "firstmate", via: "tool", decision: null },
                 input.reason,
@@ -347,7 +347,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       }),
     startAgain: async (input) => {
       const record = resolve(input.task);
-      const result = supervisor.startAgain(record.id);
+      const result = supervisor.starts.startAgain(record.id);
       if (!result.ok) return result.text;
       host.asks.attach(record.id, "update_task");
       host.asks.attach(result.task.id, "update_task");
@@ -360,7 +360,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     startNow: async (input) => {
       const record = resolve(input.task);
       host.asks.attach(record.id, "update_task", true);
-      const text = await supervisor.startQueuedNow(record.id);
+      const text = await supervisor.starts.startQueuedNow(record.id);
       // A refusal comes back as text; only a task a crewmate now holds took effect.
       if (record.status !== "active" && tasks.get(record.id)?.status === "active") {
         tookEffect(record.id, startedReply(record.title));
@@ -401,7 +401,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         (taskId) => host.options.supervisor.cards.newestBody(taskId),
         (taskId) => host.options.supervisor.cards.newestResolutionForTask(taskId),
         (record) => host.options.supervisor.postures.workPosture(record),
-        host.options.supervisor.taskQueryReach(),
+        host.options.supervisor.toolHooks.taskQueryReach(),
       ),
   };
 }

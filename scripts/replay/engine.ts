@@ -36,10 +36,8 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  CrewSupervisor,
-  CardChoiceUnavailableError,
-} from "../../src/core/orchestrator/crewSupervisor.ts";
+import { CardChoiceUnavailableError } from "../../src/core/orchestrator/cardActions.ts";
+import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor.ts";
 import { crewmateSessionSpec } from "../../src/core/orchestrator/crewSession.ts";
 import {
   actionTookEffect,
@@ -531,7 +529,7 @@ class Replay {
     try {
       this.wire();
       await this.seedBefore(Math.min(startAt, this.recorded.begins));
-      await this.supervisor.reconcileFleetHygiene();
+      await this.supervisor.watch.reconcileFleetHygiene();
       await this.settle();
       let lastTick = startAt;
       for (const event of timeline) {
@@ -1210,7 +1208,7 @@ class Replay {
 
   private applyChoice(card: Card, action: string, source: "chrome" | "frame" = "chrome"): void {
     try {
-      this.supervisor.act(card.id, action, source);
+      this.supervisor.cardActions.act(card.id, action, source);
     } catch (error) {
       if (!(error instanceof CardChoiceUnavailableError)) throw error;
       // The recording is an input, not permission to bypass current admission.
@@ -1251,7 +1249,7 @@ class Replay {
         if (!taskId) return;
         if (event.input.kind === "job") {
           this.crewPlayback.jobFinished(taskId, event.input.text);
-          this.supervisor.deliverJobResult(taskId, event.input.text);
+          this.supervisor.watch.deliverJobResult(taskId, event.input.text);
         } else if (event.input.kind === "choice") {
           const title = event.input.title;
           const card = this.supervisor
@@ -1292,7 +1290,7 @@ class Replay {
         try {
           // The host's own reply path: a steer to the crewmate that wrote
           // the card, or a captain turn about the Firstmate's own.
-          this.supervisor.replyToCard(card.id, event.text);
+          this.supervisor.cardActions.replyToCard(card.id, event.text);
         } catch {
           // The recording is an input, not permission to bypass a refusal.
           this.fidelity.skipped_thread_replies += 1;
@@ -1342,8 +1340,8 @@ class Replay {
   /** The supervisor's shared tick, on recorded time. */
   private async tick(): Promise<void> {
     const now = Date.now();
-    await this.supervisor.sweepInbox(now).catch(() => {});
-    await this.supervisor.sweepGates(now).catch(() => {});
+    await this.supervisor.watch.sweepInbox(now).catch(() => {});
+    await this.supervisor.watch.sweepGates(now).catch(() => {});
     this.firstmate.pokeInbox();
   }
 

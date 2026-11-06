@@ -221,7 +221,7 @@ describe("a task that runs on a computer that runs work", () => {
       deviceId: at.deviceId,
     });
     model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
-    await home.supervisor.dispatchQueuedTask("t-served");
+    await home.supervisor.starts.dispatchQueuedTask("t-served");
     const [routed] = home.decisions.routing({ taskIds: ["t-served"], chosen: true });
     expect(routed).toMatchObject({ provider: "openai-codex", model: "gpt-6-sol" });
     const who = home.placed.placeOf(at.deviceId).who;
@@ -287,7 +287,7 @@ describe("a task that runs on a computer that runs work", () => {
     queued("t-model");
     const named = holdServed();
     model([{ tools: [{ name: "report", args: { text: "The footer is fixed." } }] }]);
-    const starting = home.supervisor.dispatchQueuedTask("t-model");
+    const starting = home.supervisor.starts.dispatchQueuedTask("t-model");
     await named.reached;
     home.tasks.updateFields("t-model", { model: "gpt-6-sol" }, "firstmate");
     named.release();
@@ -307,7 +307,7 @@ describe("a task that runs on a computer that runs work", () => {
     queued("t-basis");
     const grounded = holdServed();
     model([{ tools: [{ name: "report", args: { text: "The footer is grounded." } }] }]);
-    const basisStart = home.supervisor.dispatchQueuedTask("t-basis");
+    const basisStart = home.supervisor.starts.dispatchQueuedTask("t-basis");
     await grounded.reached;
     home.tasks.updateFields("t-basis", { basis: spec.key }, "firstmate");
     grounded.release();
@@ -414,7 +414,7 @@ describe("a task that runs on a computer that runs work", () => {
       status: "queued",
       deviceId: at.deviceId,
     });
-    await home.supervisor.dispatchQueuedTask("t-bare");
+    await home.supervisor.starts.dispatchQueuedTask("t-bare");
     const who = home.placed.placeOf(at.deviceId).who;
     expect(home.tasks.get("t-bare")).toMatchObject({
       status: "open",
@@ -447,7 +447,7 @@ describe("a task that runs on a computer that runs work", () => {
       deviceId: at.deviceId,
     });
     const { label } = home.placed.placeOf(at.deviceId);
-    await home.supervisor.dispatchQueuedTask("t-none");
+    await home.supervisor.starts.dispatchQueuedTask("t-none");
     // Queued work with no gate: nothing to press, nothing tried there.
     expect(home.tasks.get("t-none")).toMatchObject({ status: "open", gate: null });
     expect(at.bound).toEqual([]);
@@ -456,10 +456,10 @@ describe("a task that runs on a computer that runs work", () => {
       feed(home).filter((line) => line === noSignInsWaitLine(label, "website's next task"));
     expect(waits()).toHaveLength(1);
     // Tried again at the next sweep, it still waits, and the feed says nothing twice.
-    await home.supervisor.sweepGates(now());
+    await home.supervisor.watch.sweepGates(now());
     expect(home.tasks.get("t-none")?.status).toBe("open");
     expect(waits()).toHaveLength(1);
-    expect(await home.supervisor.startQueuedNow("t-none", "captain")).toContain(
+    expect(await home.supervisor.starts.startQueuedNow("t-none", "captain")).toContain(
       "has no sign-ins yet",
     );
 
@@ -497,7 +497,7 @@ describe("a task that runs on a computer that runs work", () => {
       status: "queued",
       repoId: repo.id,
     });
-    await home.supervisor.dispatchQueuedTask("t-github");
+    await home.supervisor.starts.dispatchQueuedTask("t-github");
     const place = home.placed.placeOf(at.deviceId);
     const ref = deviceForgeGateRef("github.com", at.deviceId);
     expect(home.tasks.get("t-github")).toMatchObject({
@@ -567,7 +567,7 @@ describe("a task that runs on a computer that runs work", () => {
       status: "queued",
       repoId: repo.id,
     });
-    await home.supervisor.dispatchQueuedTask("t-refused");
+    await home.supervisor.starts.dispatchQueuedTask("t-refused");
     const place = home.placed.placeOf(at.deviceId);
     expect(home.tasks.get("t-refused")).toMatchObject({
       status: "open",
@@ -599,7 +599,7 @@ describe("a task that runs on a computer that runs work", () => {
       status: "queued",
       deviceId: "a-mac-on-another-version",
     });
-    await home.supervisor.dispatchQueuedTask("t-waits");
+    await home.supervisor.starts.dispatchQueuedTask("t-waits");
     expect(home.tasks.get("t-waits")?.status).toBe("open");
     expect(home.placed.ready("a-mac-on-another-version", "t-waits")).toBe(false);
   });

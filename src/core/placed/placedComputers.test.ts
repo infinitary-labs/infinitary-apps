@@ -166,7 +166,7 @@ describe("leftovers on a computer that runs work", () => {
     // A queued start there fails after the copy was made: the record waits
     // for the captain, still placed there, and its copy stays for its next start.
     seedTask(home.tasks, { id: "t-moved", title: "footer", status: "queued", repoId: repo.id });
-    await home.supervisor.dispatchQueuedTask("t-moved");
+    await home.supervisor.starts.dispatchQueuedTask("t-moved");
     expect(home.tasks.get("t-moved")).toMatchObject({ status: "open", deviceId: at.deviceId });
     expect(at.holds().workingCopies).toEqual(["t-moved"]);
 

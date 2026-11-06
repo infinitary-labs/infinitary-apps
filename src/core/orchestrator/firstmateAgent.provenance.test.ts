@@ -197,9 +197,9 @@ describe("FirstmateAgent provenance (R2)", () => {
     const now = Date.now() + 60 * 60_000;
     agent.checkQuiet(now);
     agent.pokeInbox();
-    supervisor.checkQuietTasks(now);
-    await supervisor.sweepGates(now);
-    await supervisor.sweepInbox(now);
+    supervisor.watch.checkQuietTasks(now);
+    await supervisor.watch.sweepGates(now);
+    await supervisor.watch.sweepInbox(now);
     await tick();
     expect(session.prompts).toEqual([]);
     expect(allDecided(tasks)).toEqual([]);
@@ -330,7 +330,7 @@ describe("FirstmateAgent provenance (R2)", () => {
         },
       ],
     });
-    supervisor.act("card-t1-1", "users");
+    supervisor.cardActions.act("card-t1-1", "users");
     await tick();
     const steered = tasks.timeline("t1").find((event) => event.kind === "steered");
     expect(steered).toMatchObject({ actor: "captain", ref: null, feed: false });

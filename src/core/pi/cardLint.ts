@@ -601,7 +601,7 @@ export const NOTE_NEEDS_TASK_REFUSAL =
 
 /**
  * A typed fact: the closed-task choice refusal - the click refuses every
- * choice on a card whose task is closed (`CrewSupervisor.act`), so the emit
+ * choice on a card whose task is closed (`CardActions.act`), so the emit
  * names the ways out instead of putting up buttons that cannot work.
  */
 export function closedTaskChoiceRefusal(taskId: string): string {

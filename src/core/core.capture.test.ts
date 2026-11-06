@@ -119,7 +119,7 @@ describe("capture: every captain ask lands in a task", () => {
   async function crewIdle(title: string): Promise<string> {
     let taskId = "";
     await waitFor(() => {
-      const entry = core.services.supervisor
+      const entry = core.services.supervisor.facts
         .crewStatus()
         .find((row) => row.title === title && row.status === "idle");
       taskId = entry?.taskId ?? "";

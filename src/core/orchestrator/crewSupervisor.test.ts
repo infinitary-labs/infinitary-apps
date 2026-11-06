@@ -201,12 +201,10 @@ import { ciFactOf } from "./ciFact";
 import { COMPLETION_REVISED_WHILE_RUNNING } from "./crewmateCards";
 import { QUIT_SETTLE_MS } from "./crewRuntime";
 import { type CrewmateSpec, crewmateRenewedNote, crewmateRestartText } from "./crewSession";
-import {
-  backlogLeftLine,
-  CardChoiceUnavailableError,
-  CrewSupervisor,
-  QUIET_CARD_MS,
-} from "./crewSupervisor";
+import { CardChoiceUnavailableError } from "./cardActions";
+import { CrewSupervisor } from "./crewSupervisor";
+import { QUIET_CARD_MS } from "./crewWatch";
+import { backlogLeftLine } from "./hostOps";
 import type { AccountAttachment, CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { BACKLOG_STEER_LINE, QUEUED_GUIDANCE_LINE, UNHEARD_END_NOTE } from "./crewTurns";
 import { type AccountServeability, JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } from "./idleLadder";
@@ -253,7 +251,7 @@ describe("CrewSupervisor", () => {
     await tick();
 
     expect(events.some((e) => e.type === "task_started")).toBe(true);
-    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 1, idle: 0 });
     expect(cards()).toEqual([]);
 
     crewmate.emit({ type: "assistant_delta", taskId, text: "Refactor " });
@@ -265,7 +263,7 @@ describe("CrewSupervisor", () => {
     crewmate.finishPrompt();
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
-    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 1 });
     expect(crewmate.dispose).not.toHaveBeenCalled();
     const report = events.find((e) => e.type === "task_report");
     expect(report).toMatchObject({
@@ -279,7 +277,7 @@ describe("CrewSupervisor", () => {
     await supervisor.steer.steerCrewmate(taskId, "also make it blue");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe("also make it blue");
-    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 1, idle: 0 });
     crewmate.finishPrompt();
     await tick();
 
@@ -293,8 +291,8 @@ describe("CrewSupervisor", () => {
       type: "task_landed",
       title: "Refactor auth",
     });
-    expect(supervisor.crewStatus().find((entry) => entry.taskId === taskId)).toBeUndefined();
-    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 0 });
+    expect(supervisor.facts.crewStatus().find((entry) => entry.taskId === taskId)).toBeUndefined();
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 0 });
   });
 
   it("pauses dispatch on typed GitHub askpass auth and resumes after Projects sign-in", async () => {
@@ -400,7 +398,7 @@ describe("CrewSupervisor", () => {
       expect(legacyStateOf(tasks.get(taskId))).toBe("running");
       expect(crewmate.isStreaming()).toBe(false);
 
-      if (trigger === "quiet") supervisor.checkQuietTasks(Date.now() + QUIET_CARD_MS);
+      if (trigger === "quiet") supervisor.watch.checkQuietTasks(Date.now() + QUIET_CARD_MS);
       else await supervisor.sessions.interruptCrewmate(taskId, "interrupt");
       await tick();
 
@@ -425,7 +423,7 @@ describe("CrewSupervisor", () => {
     crewmate.emit({ type: "continuation_started" });
     crewmate.isStreaming = () => true;
 
-    supervisor.checkQuietTasks(Date.now() + QUIET_CARD_MS);
+    supervisor.watch.checkQuietTasks(Date.now() + QUIET_CARD_MS);
     await tick();
 
     // Still running, and the quiet watchdog's own step goes on as before.
@@ -461,7 +459,7 @@ describe("CrewSupervisor", () => {
     await supervisor.steer.steerCrewmate(taskId, "Also say which of them failed on the phone.");
     expect(crewmate.steer).toHaveBeenCalledTimes(1);
 
-    supervisor.checkQuietTasks(start + QUIET_CARD_MS + 60_000);
+    supervisor.watch.checkQuietTasks(start + QUIET_CARD_MS + 60_000);
 
     await expect(reading).rejects.toThrow("Infinitary answered this github_read call for you");
     expect(
@@ -477,7 +475,7 @@ describe("CrewSupervisor", () => {
       type: "input_read",
       textSha256: createHash("sha256").update(steered).digest("hex"),
     });
-    expect(supervisor.crewStatus(taskId)[0]?.waiting).toBeUndefined();
+    expect(supervisor.facts.crewStatus(taskId)[0]?.waiting).toBeUndefined();
   });
 
   // INF-2603, the captain's answers "Any open call, including the
@@ -496,7 +494,7 @@ describe("CrewSupervisor", () => {
     crewmate.emit({ type: "tool_start", taskId, callId: "call-1", toolName: "bash" });
     await supervisor.steer.steerCrewmate(taskId, "Stop after the first failure.");
 
-    supervisor.checkQuietTasks(start + QUIET_CARD_MS + 60_000);
+    supervisor.watch.checkQuietTasks(start + QUIET_CARD_MS + 60_000);
     await tick();
 
     const quiet = ops.find((line) => line.includes("may be stuck"));
@@ -507,15 +505,15 @@ describe("CrewSupervisor", () => {
         (event) => event.text?.includes("may be stuck; inside bash for") && event.text.includes("1 steer unread"),
       ),
     ).toBe(true);
-    expect(supervisor.crewStatus(taskId)[0]?.waiting).toMatch(/^inside bash .*; 1 steer unread /);
+    expect(supervisor.facts.crewStatus(taskId)[0]?.waiting).toMatch(/^inside bash .*; 1 steer unread /);
     // The first check found it unread; the next one wakes the first mate once.
     expect(ops.some((line) => line.includes("still unread"))).toBe(false);
-    supervisor.checkQuietTasks(start + 2 * QUIET_CARD_MS + 120_000);
+    supervisor.watch.checkQuietTasks(start + 2 * QUIET_CARD_MS + 120_000);
     await tick();
     const unread = ops.filter((line) => line.includes("still unread after two quiet checks"));
     expect(unread).toHaveLength(1);
     expect(unread[0]).toContain("It waits behind bash since");
-    supervisor.checkQuietTasks(start + 3 * QUIET_CARD_MS + 180_000);
+    supervisor.watch.checkQuietTasks(start + 3 * QUIET_CARD_MS + 180_000);
     await tick();
     expect(ops.filter((line) => line.includes("still unread after two quiet checks"))).toHaveLength(1);
   });
@@ -536,11 +534,11 @@ describe("CrewSupervisor", () => {
     await tick();
     crewmate.emit({ type: "tool_start", taskId, callId: "call-1", toolName: "Agent" });
 
-    supervisor.checkQuietTasks(jobStart + QUIET_CARD_MS + 60_000);
+    supervisor.watch.checkQuietTasks(jobStart + QUIET_CARD_MS + 60_000);
     await tick();
     expect(ops.some((line) => line.includes("may be stuck"))).toBe(false);
 
-    supervisor.checkQuietTasks(jobStart + 125 * 60_000);
+    supervisor.watch.checkQuietTasks(jobStart + 125 * 60_000);
     await tick();
     const long = ops.find((line) => line.includes("has been on one turn for"));
     expect(long).toContain(
@@ -590,7 +588,7 @@ describe("CrewSupervisor", () => {
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
     expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
-    const result = supervisor.act(decision?.id ?? "", "open-settings");
+    const result = supervisor.cardActions.act(decision?.id ?? "", "open-settings");
     // Sign-in is on the Intelligence tab: the way out lands there, not on General.
     expect(result.effect).toEqual({ kind: "open", target: "subscriptions" });
     await tick();
@@ -644,7 +642,7 @@ describe("CrewSupervisor", () => {
     // click waits for that turn to end: a turn is never cut short.
     await supervisor.steer.steerCrewmate(taskId, "the release run finished");
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(2));
-    supervisor.act(card?.id ?? "", "move-task");
+    supervisor.cardActions.act(card?.id ?? "", "move-task");
     await tick();
     expect(specs).toHaveLength(1);
     crewmate.failPrompt("No API key found for github-copilot");
@@ -1394,7 +1392,7 @@ describe("CrewSupervisor", () => {
       specs[0]?.onReport?.("The choices are ready; the inspection continues.");
       await tick();
       const ids = ["ready", "answer", "note"].map((id) => `card-${taskId}-${id}`);
-      await supervisor.replyToCard(ids[1] as string, "Check the hinge first.");
+      await supervisor.cardActions.replyToCard(ids[1] as string, "Check the hinge first.");
       // An unreleased revision keeps the previous offer on the stage.
       await emit("ready", {
         body: "<p>Inspect the port hatch first.</p><p>Its hinge needs checking.</p>",
@@ -1443,7 +1441,7 @@ describe("CrewSupervisor", () => {
           expect(cardStore.observations(id).filter((entry) => entry.kind === "exit")).toMatchObject(
             [{ actor: "host", payload: { reason: "task-retired", note: reason } }],
           );
-          expect(supervisor.act(id, "port")).toEqual({});
+          expect(supervisor.cardActions.act(id, "port")).toEqual({});
         }
         expect(cardStore.history(ids[0] as string)).toHaveLength(1);
         expect(cardStore.messages(ids[1] as string).at(-1)?.text).toBe("Check the hinge first.");
@@ -1542,7 +1540,7 @@ describe("CrewSupervisor", () => {
 
     expect(crewmate.aborts).toHaveLength(1);
     expect(legacyStateOf(tasks.get(taskId))).toBe("cancelled");
-    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 0 });
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 0 });
     const finished = () => events.filter((event) => event.type === "task_finished");
     expect(finished()).toEqual([expect.objectContaining({ status: "cancelled", title: "long" })]);
 
@@ -1729,7 +1727,7 @@ describe("CrewSupervisor", () => {
     const events = tasks.timeline(taskId).filter((event) => event.kind === "interrupted");
     expect(events.map((event) => event.data?.effect)).toEqual(["requested", "abort-failed"]);
     expect(events.at(-1)?.data?.error).not.toContain("hunter2");
-    expect(supervisor.crewStatus(taskId)[0]?.status).toBe("running");
+    expect(supervisor.facts.crewStatus(taskId)[0]?.status).toBe("running");
   });
 
   it("gives an interrupt the Firstmate asked for a feed-line receipt, never a wake", async () => {
@@ -1821,13 +1819,13 @@ describe("CrewSupervisor", () => {
       intent: intentOf("do stuff"),
     });
     await tick();
-    const running = supervisor.crewStatus();
+    const running = supervisor.facts.crewStatus();
     expect(running).toHaveLength(1);
     expect(running[0]).toMatchObject({ taskId, title: "Status check", status: "running" });
     crewmate.finishPrompt();
     await tick();
-    expect(supervisor.crewStatus()[0]?.status).toBe("idle");
-    expect(supervisor.crewStatus("missing")).toEqual([]);
+    expect(supervisor.facts.crewStatus()[0]?.status).toBe("idle");
+    expect(supervisor.facts.crewStatus("missing")).toEqual([]);
   });
 
   it("counts a live idle runtime as one idle crewmate on both surfaces", async () => {
@@ -1841,8 +1839,8 @@ describe("CrewSupervisor", () => {
     crewmate.finishPrompt();
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("idle");
-    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 1 });
-    const live = supervisor.crewStatus().filter((entry) => entry.status === "idle");
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+    const live = supervisor.facts.crewStatus().filter((entry) => entry.status === "idle");
     expect(live).toHaveLength(1);
     expect(live[0]).toMatchObject({ taskId, status: "idle" });
     expect(live[0]?.crewmate).toBeDefined();
@@ -1856,10 +1854,10 @@ describe("CrewSupervisor", () => {
       intent: intentOf("do stuff"),
     });
     await tick();
-    expect(supervisor.crewStatus(taskId)[0]?.ci).toBeUndefined();
+    expect(supervisor.facts.crewStatus(taskId)[0]?.ci).toBeUndefined();
     const at = Date.now() - 4 * 60_000;
     seedDelivery(tasks, taskId, { ci: "red", ciAt: at, headSha: "feedbeef00" }, { kind: "ci", text: "CI red", feed: false });
-    expect(supervisor.crewStatus(taskId)[0]?.ci).toEqual({
+    expect(supervisor.facts.crewStatus(taskId)[0]?.ci).toEqual({
       overall: "red",
       readAt: new Date(at).toISOString(),
       ageMinutes: 4,
@@ -1892,8 +1890,8 @@ describe("CrewSupervisor", () => {
     });
     // Strip idle and crew_status idle agree: the live runtime plus the
     // resumable record a previous process left.
-    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 2 });
-    const idle = supervisor.crewStatus().filter((entry) => entry.status === "idle");
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 2 });
+    const idle = supervisor.facts.crewStatus().filter((entry) => entry.status === "idle");
     expect(idle.map((entry) => entry.taskId).sort()).toEqual([taskId, "edccc9a2"].sort());
   });
 
@@ -2119,7 +2117,7 @@ describe("CrewSupervisor", () => {
       h.crewmate.finishPrompt();
       await tick();
       const answer = h.cards().find((card) => card.taskId === h.taskId) as Card;
-      h.supervisor.act(answer.id, "read");
+      h.supervisor.cardActions.act(answer.id, "read");
       await tick();
       // The explicit choice reaches the crewmate, whose turn ends idle.
       h.crewmate.finishPrompt();
@@ -2262,7 +2260,7 @@ describe("CrewSupervisor", () => {
     it("closes started work as done through the task carrying it: waits move, its own pull request closes, and no note goes up", async () => {
       const closePullRequest = vi.fn(async () => ({ ok: true, text: "Closed PR #9." }));
       const h = await carriedWork({ closePullRequest });
-      vi.spyOn(h.supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      vi.spyOn(h.supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
       seedDelivery(h.tasks, h.taskId, { prNumber: 9 });
       const waiter = seedTask(h.tasks, { id: "waiter", title: "Ship the notice", status: "idle" });
       h.tasks.graph.link(h.taskId, waiter.id, "blocks", "firstmate");
@@ -2293,7 +2291,7 @@ describe("CrewSupervisor", () => {
     it("keeps the pull request open when the task carrying the work carries that same pull request", async () => {
       const closePullRequest = vi.fn(async () => ({ ok: true, text: "Closed PR #9." }));
       const h = await carriedWork({ closePullRequest });
-      vi.spyOn(h.supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      vi.spyOn(h.supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
       const prUrl = "https://github.com/acme/app/pull/9";
       seedDelivery(h.tasks, h.taskId, { prNumber: 9, prUrl });
       seedDelivery(h.tasks, h.carrier.id, { prNumber: 9, prUrl });
@@ -2567,7 +2565,7 @@ describe("CrewSupervisor", () => {
     await tick();
     crewmate.finishPrompt();
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
 
     const result = await supervisor.settling.settle.settleTask(taskId, "discard");
     expect(closePullRequest).toHaveBeenCalledWith(taskId);
@@ -2644,7 +2642,7 @@ describe("CrewSupervisor", () => {
     const crewmate = fakeCrewmate();
     const closePullRequest = vi.fn(async () => ({ ok: true, text: "Closed PR #9." }));
     const { supervisor, tasks } = setup(crewmate, { closePullRequest });
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const previous = seedTask(tasks, {
       id: "closed-attempt",
       title: "Already cancelled",
@@ -2672,7 +2670,7 @@ describe("CrewSupervisor", () => {
         throw new Error("GitHub unavailable");
       });
       const { supervisor, tasks, workspace } = setup(crewmate, { closePullRequest });
-      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
       const { taskId } = await supervisor.intake.commission({
         title: "Abandoned",
         intent: intentOf("fix it"),
@@ -2788,7 +2786,7 @@ describe("CrewSupervisor", () => {
       workspaceState: "removed",
     });
     // Settled work is history: it leaves crew_status, and a second land refuses.
-    expect(supervisor.crewStatus().find((entry) => entry.taskId === taskId)).toBeUndefined();
+    expect(supervisor.facts.crewStatus().find((entry) => entry.taskId === taskId)).toBeUndefined();
     expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toContain(
       "already landed",
     );
@@ -2872,7 +2870,7 @@ describe("CrewSupervisor", () => {
 
     // The action round-trip: a declared choice steers the idle session as a
     // new turn and the resolution is recorded.
-    supervisor.act(decision.id, "change");
+    supervisor.cardActions.act(decision.id, "change");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe(
       'Card "Pick a course": the user chose "Plot new course" (change).',
@@ -2902,7 +2900,7 @@ describe("CrewSupervisor", () => {
     const card = supervisor.cards.snapshot().find((entry) => entry.title === "Pick a course");
     vi.spyOn(supervisor.steer, "steerCrewmate").mockRejectedValue(new Error("session unreachable"));
     specs[0]?.onReport?.("The decision is ready.");
-    supervisor.act(card?.id ?? "", "change");
+    supervisor.cardActions.act(card?.id ?? "", "change");
     await vi.waitFor(() =>
       expect(events).toContainEqual({
         type: "firstmate_note",
@@ -2977,7 +2975,7 @@ describe("CrewSupervisor", () => {
     supervisor.closeCard(owned.id, { kind: "crewmate", taskId: ownerId });
     await tick();
     expect(cards().find((card) => card.id === owned.id)).toBeUndefined();
-    expect(supervisor.crewStatus(ownerId)[0]?.status).not.toBe("completed");
+    expect(supervisor.facts.crewStatus(ownerId)[0]?.status).not.toBe("completed");
   });
 
   /**
@@ -3007,7 +3005,7 @@ describe("CrewSupervisor", () => {
     // The card is untouched: still on the stack, still unresolved.
     expect(cards().find((card) => card.id === owned.id)).toBeDefined();
     expect(cardStore.chosenAction(owned.id)).toBeUndefined();
-    expect(supervisor.crewStatus(ownerId)[0]?.status).not.toBe("completed");
+    expect(supervisor.facts.crewStatus(ownerId)[0]?.status).not.toBe("completed");
   });
 
   it.each(["land", "merge-pr", "discard"] as const)(
@@ -3022,7 +3020,7 @@ describe("CrewSupervisor", () => {
         mergePullRequest,
       });
       seedTask(tasks, { id: "receipt", title: "Ship it", status: "idle", worktreeDir: "/work" });
-      vi.spyOn(supervisor, "taskDelivery").mockReturnValue(
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue(
         action === "merge-pr" ? "direct-pr" : "local-only",
       );
       vi.mocked(workspace.landTaskWork).mockImplementation(() =>
@@ -3050,7 +3048,7 @@ describe("CrewSupervisor", () => {
         });
       const first = offer();
       const second = offer();
-      supervisor.act(first, action);
+      supervisor.cardActions.act(first, action);
       // INF-1845: one keyed line on the task's record, which its outcome replaces.
       expect(settleLines(tasks, "receipt")).toEqual([
         action === "discard" ? "Discarding" : "Merging",
@@ -3063,8 +3061,8 @@ describe("CrewSupervisor", () => {
         kind: "card_resolved",
         actor: "captain",
       });
-      supervisor.act(first, action); // Same-card double click is a no-op.
-      supervisor.act(second, action); // Another card cannot race this task.
+      supervisor.cardActions.act(first, action); // Same-card double click is a no-op.
+      supervisor.cardActions.act(second, action); // Another card cannot race this task.
       expect(await supervisor.settling.settle.settleTask("receipt", "merge-pr")).toContain("already in progress");
       await tick();
       // Coalesced push is independent of the operation. A merge click stays
@@ -3137,7 +3135,7 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "Ready before the turn ends",
@@ -3148,7 +3146,7 @@ describe("CrewSupervisor", () => {
     const settle = cards().find((card) => card.title === "Ready before the turn ends") as Card;
 
     specs[0]?.onReport?.("The decision is ready.");
-    supervisor.act(settle.id, "merge");
+    supervisor.cardActions.act(settle.id, "merge");
     await tick();
 
     expect(mergePullRequest).not.toHaveBeenCalled();
@@ -3203,7 +3201,7 @@ describe("CrewSupervisor", () => {
     });
     restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
     await tick();
-    await restarted.sweepInbox(Date.now());
+    await restarted.watch.sweepInbox(Date.now());
     expect(openSession).not.toHaveBeenCalled();
     expect(restartedTasks.get(task.id)).toMatchObject({ status: "active", activity: "idle" });
     expect(inbox.allFor(task.id).map((row) => row.facts)).toEqual([
@@ -3253,7 +3251,7 @@ describe("CrewSupervisor", () => {
       broadcastEvent: () => {},
       broadcastCards: () => {},
     });
-    vi.spyOn(restarted, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(restarted.facts, "taskDelivery").mockReturnValue("direct-pr");
     restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
 
     await vi.waitFor(() => expect(mergePullRequest).toHaveBeenCalledTimes(1));
@@ -3290,14 +3288,14 @@ describe("CrewSupervisor", () => {
       actions: [{ id: "land", label: "Land", default: true, effect: SETTLE_MERGE }],
     });
 
-    expect(() => supervisor.act(cardId, "land", "frame", { tiltDeg: 42 })).toThrow(
+    expect(() => supervisor.cardActions.act(cardId, "land", "frame", { tiltDeg: 42 })).toThrow(
       "available only from the card controls",
     );
     expect(supervisor.cards.snapshot().some((card) => card.id === cardId)).toBe(true);
     expect(workspace.landTaskWork).not.toHaveBeenCalled();
     expect(tasks.get("revision")?.status).toBe("active");
 
-    supervisor.act(cardId, "land", "chrome");
+    supervisor.cardActions.act(cardId, "land", "chrome");
     await vi.waitFor(() => expect(workspace.landTaskWork).toHaveBeenCalledTimes(1));
     await vi.waitFor(() => expect(tasks.get("revision")?.status).toBe("done"));
   });
@@ -3315,7 +3313,7 @@ describe("CrewSupervisor", () => {
     });
     const shown = supervisor.cards.snapshot().find((card) => card.id === cardId) as Card;
 
-    supervisor.act(cardId, "land", "chrome", undefined, {
+    supervisor.cardActions.act(cardId, "land", "chrome", undefined, {
       id: "gesture-0100",
       lifecycleId: shown.lifecycleId,
       offerId: shown.offerId,
@@ -3349,7 +3347,7 @@ describe("CrewSupervisor", () => {
       body: "<p>Tune it.</p>",
       actions: [{ id: "use", label: "Use this", default: true }],
     });
-    supervisor.act(scripted, "use", "frame", { tiltDeg: 42 });
+    supervisor.cardActions.act(scripted, "use", "frame", { tiltDeg: 42 });
     const stray = supervisor.addFirstmateCard({
       id: "stray",
       taskId: "look",
@@ -3358,7 +3356,7 @@ describe("CrewSupervisor", () => {
       actions: [{ id: "go", label: "Go", default: true }],
     });
     const before = tasks.timeline("look");
-    expect(() => supervisor.act(stray, "not-offered", "chrome")).toThrow(
+    expect(() => supervisor.cardActions.act(stray, "not-offered", "chrome")).toThrow(
       "This choice is not offered on this card",
     );
     expect(supervisor.cards.snapshot().some((card) => card.id === stray)).toBe(true);
@@ -3473,7 +3471,7 @@ describe("CrewSupervisor", () => {
       body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
       actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
     });
-    supervisor.act(id, "discard");
+    supervisor.cardActions.act(id, "discard");
     expect(supervisor.cards.snapshot()).toEqual([]);
     await vi.waitFor(() =>
       expect(settleLines(tasks, "dirty").some((line) => line.includes("never merged"))).toBe(true),
@@ -3496,7 +3494,7 @@ describe("CrewSupervisor", () => {
       body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
       actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
     });
-    supervisor.act(id, "discard");
+    supervisor.cardActions.act(id, "discard");
 
     await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(1));
     // The refusal is a structured outcome (WI-12): its prose leads the wake,
@@ -3529,8 +3527,8 @@ describe("CrewSupervisor", () => {
     const first = offer();
     const second = offer();
 
-    supervisor.act(first, "discard");
-    supervisor.act(second, "discard"); // Refused: the first settle owns the task.
+    supervisor.cardActions.act(first, "discard");
+    supervisor.cardActions.act(second, "discard"); // Refused: the first settle owns the task.
     operation.resolve({ dirty: false, unlandedCommits: 0 });
 
     // One wake for the settle that ran, none for the one that was turned
@@ -3550,7 +3548,7 @@ describe("CrewSupervisor", () => {
       seedTask(tasks, { id, title: `Task ${id}`, status: "idle", worktreeDir: `/${id}` });
     }
     vi.mocked(workspace.landTaskWork).mockRejectedValue(new Error("The main worktree is dirty."));
-    vi.spyOn(supervisor, "taskDelivery").mockImplementation((taskId) =>
+    vi.spyOn(supervisor.facts, "taskDelivery").mockImplementation((taskId) =>
       taskId === "merge" ? "direct-pr" : "local-only",
     );
     const offer = (taskId: string, action: string) =>
@@ -3569,9 +3567,9 @@ describe("CrewSupervisor", () => {
         ],
       });
 
-    supervisor.act(offer("clean", "discard"), "discard");
-    supervisor.act(offer("land", "land"), "land");
-    supervisor.act(offer("merge", "merge-pr"), "merge-pr");
+    supervisor.cardActions.act(offer("clean", "discard"), "discard");
+    supervisor.cardActions.act(offer("land", "land"), "land");
+    supervisor.cardActions.act(offer("merge", "merge-pr"), "merge-pr");
 
     await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(3));
     const wake = (taskId: string) =>
@@ -3592,11 +3590,11 @@ describe("CrewSupervisor", () => {
       const { supervisor, tasks, events, ops } = setup(fakeCrewmate(), {
         mergePullRequest: async () => ({ ok: true, text: "Merged #9 on GitHub." }),
       });
-      vi.spyOn(supervisor, "taskDelivery").mockReturnValue(
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue(
         mode === "merge-pr" ? "direct-pr" : "local-only",
       );
       const merge = (taskId: string) =>
-        supervisor.act(
+        supervisor.cardActions.act(
           supervisor.addFirstmateCard({
             requiredActions: [],
             taskId,
@@ -3668,7 +3666,7 @@ describe("CrewSupervisor", () => {
       const { supervisor, tasks, workspace, sessions, specs, cardStore } = setup(fakeCrewmate(), {
         mergePullRequest: async () => ({ ok: true, text: "Change #9 is in on GitHub." }),
       });
-      vi.spyOn(supervisor, "taskDelivery").mockReturnValue(
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue(
         outcome === "merge-pr" ? "direct-pr" : "local-only",
       );
       const wakes: WakeFacts[] = [];
@@ -3781,7 +3779,7 @@ describe("CrewSupervisor", () => {
       let text: string;
       let wake: Extract<WakeFacts, { kind: "settled" }> | undefined;
       if (via === "card") {
-        supervisor.act(card, "settle");
+        supervisor.cardActions.act(card, "settle");
         await vi.waitFor(() => expect(wakes.some((wake) => wake.kind === "settled")).toBe(true));
         wake = wakes.find((wake) => wake.kind === "settled");
         text = renderWake({ facts: wake! });
@@ -3876,7 +3874,7 @@ describe("CrewSupervisor", () => {
     const { supervisor, tasks } = setup(fakeCrewmate(), { mergePullRequest });
     seedTask(tasks, { id: "merge", title: "PR", status: "idle", worktreeDir: "/pr" });
     seedTask(tasks, { id: "other", title: "Other", status: "idle", worktreeDir: "/other" });
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const id = supervisor.addFirstmateCard({
       requiredActions: [],
       taskId: "merge",
@@ -3884,7 +3882,7 @@ describe("CrewSupervisor", () => {
       body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
       actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
     });
-    supervisor.act(id, "merge-pr");
+    supervisor.cardActions.act(id, "merge-pr");
     expect(await supervisor.settling.settle.settleTask("merge", "land", undefined, "captain")).toContain("already in progress");
     expect(await supervisor.settling.settle.settleTask("merge", "merge-pr", undefined, "captain")).toContain("already in progress");
     expect(await supervisor.settling.settle.settleTask("other", "discard")).toBe('Discarded.');
@@ -3916,7 +3914,7 @@ describe("CrewSupervisor", () => {
       body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
       actions: [{ id: "land", label: "Land", default: true, effect: SETTLE_MERGE }],
     });
-    supervisor.act(id, "land");
+    supervisor.cardActions.act(id, "land");
     await vi.waitFor(() =>
       expect(settleLines(tasks, "land")).toContain("Cannot merge: something went wrong - try again"),
     );
@@ -4185,7 +4183,7 @@ describe("CrewSupervisor", () => {
       expect(h.authorization()).toBeUndefined();
       expect(h.forge.merges).toEqual([]);
       h.forge.readiness = "conflict";
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("conflict"));
       expect(h.authorization()?.guidance).toBeUndefined();
       h.forge.readiness = "clean";
@@ -4285,7 +4283,7 @@ describe("CrewSupervisor", () => {
     it("INF-1246 keeps an unknown requested-merge outcome distinct from a refusal", async () => {
       const h = await approved({ referenced: true });
       h.forge.refuse = new ForgeError("transient", "The merge response was lost");
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
       await tick();
       expect(h.authorization()?.attempt?.head).toBe(APPROVED);
@@ -4317,7 +4315,7 @@ describe("CrewSupervisor", () => {
           ? "GitLab answered 422 to PUT /projects/group%2Fsub%2Fr/merge_requests/7/merge: Branch cannot be merged"
           : conflict,
       );
-      harness.supervisor.act(harness.card.id, "merge");
+      harness.supervisor.cardActions.act(harness.card.id, "merge");
       await vi.waitFor(() =>
         expect(harness.authorization()?.waiting).toMatchObject({ on: "conflict" }),
       );
@@ -4376,7 +4374,7 @@ describe("CrewSupervisor", () => {
       }
 
       // The click on failed checks merges nothing now, keeps the approval and says it waits for a fix.
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
       expect(h.forge.merges).toEqual([]);
       expect(settleLines(h.tasks, h.taskId)).toContain(keptFeedLine("checks", "GitHub", "red"));
@@ -4394,7 +4392,7 @@ describe("CrewSupervisor", () => {
       const pending = () => h.cards().find((card) => card.id === mergePendingCardId(h.taskId));
       h.forge.states = ["failure"];
       await h.declare({});
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
       const title = h.tasks.get(h.taskId)?.title ?? "";
       expect(pending()).toMatchObject({
@@ -4423,7 +4421,7 @@ describe("CrewSupervisor", () => {
       const h = await approved({ referenced: true });
       const pending = () => h.cards().find((card) => card.id === mergePendingCardId(h.taskId));
       h.forge.readiness = "conflict";
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("conflict"));
       expect(pending()).toMatchObject({ title: MERGE_PENDING_TITLE, author: "host", actions: [] });
       expect(h.forge.merges).toEqual([]);
@@ -4459,7 +4457,7 @@ describe("CrewSupervisor", () => {
           ...(reply ? { reply, answersMessage: askedOn(h.supervisor, id) } : {}),
         });
       // The captain asks for a smaller change; the rebuilt version's checks run.
-      h.supervisor.replyToCard(h.card.id, "this is over-engineering a bit");
+      h.supervisor.cardActions.replyToCard(h.card.id, "this is over-engineering a bit");
       await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(2));
       h.forge.headSha = REVISED;
       h.forge.states = ["success", "pending"];
@@ -4481,7 +4479,7 @@ describe("CrewSupervisor", () => {
       );
       expect(merge()?.label).toBe(MERGE_WHEN_CHECKS_PASS_WORDS);
       // His click merges nothing while they run and keeps his approval for the revised version.
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
       expect(h.authorization()?.approvedHead).toBe(REVISED);
       expect(h.forge.merges).toEqual([]);
@@ -4677,7 +4675,7 @@ describe("CrewSupervisor", () => {
 
       it("adds nothing when the captain's click merges it", async () => {
         const h = await approved();
-        h.supervisor.act(h.card.id, "merge");
+        h.supervisor.cardActions.act(h.card.id, "merge");
         await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
         await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.status).toBe("done"));
         await tick();
@@ -4725,13 +4723,13 @@ describe("CrewSupervisor", () => {
         MERGE_WORDS["merge-pr"],
       ]);
       // A body's script cannot press it.
-      expect(() => h.supervisor.act(h.card.id, careful?.id ?? "", "frame")).toThrow(
+      expect(() => h.supervisor.cardActions.act(h.card.id, careful?.id ?? "", "frame")).toThrow(
         "only from the card controls",
       );
       expect(h.tasks.get(h.taskId)?.shape?.policies?.rigor).toBeUndefined();
       const turns = h.crewmate.promptCalls.length;
 
-      h.supervisor.act(h.card.id, careful?.id ?? "");
+      h.supervisor.cardActions.act(h.card.id, careful?.id ?? "");
       await tick();
       expect(h.cards().find((card) => card.id === h.card.id)).toBeUndefined();
       expect(h.tasks.get(h.taskId)?.shape?.policies?.rigor).toBe("reviewed");
@@ -4787,7 +4785,7 @@ describe("CrewSupervisor", () => {
       const careful = h.card.actions.find((action) => action.care);
       // No commits to read on the branch: nothing to review yet.
       vi.mocked(h.workspace.branchHead).mockResolvedValue(null);
-      h.supervisor.act(h.card.id, careful?.id ?? "");
+      h.supervisor.cardActions.act(h.card.id, careful?.id ?? "");
       await tick();
       expect(h.tasks.get(h.taskId)?.shape?.policies?.rigor).toBe("reviewed");
       await vi.waitFor(() =>
@@ -4868,7 +4866,7 @@ describe("CrewSupervisor", () => {
 
     it("a repeated ask-first request cancels a retained approval being checked, and later explicit self-merging remains possible", async () => {
       const h = await kept();
-      expect(h.supervisor.taskAutonomy(h.taskId)).toBe(false);
+      expect(h.supervisor.facts.taskAutonomy(h.taskId)).toBe(false);
       h.forge.duringChecks = () => {
         h.forge.duringChecks = () => {};
         editPolicies(h, { autonomy: false });
@@ -4899,7 +4897,7 @@ describe("CrewSupervisor", () => {
         reviewRounds: 2,
         prNumber: 7,
       });
-      expect(h.supervisor.crewStatus(h.taskId)[0]?.review).toBe("review passed");
+      expect(h.supervisor.facts.crewStatus(h.taskId)[0]?.review).toBe("review passed");
       await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(h.forge.merges).toEqual([APPROVED]);
     });
@@ -4972,13 +4970,13 @@ describe("CrewSupervisor", () => {
         expect(notices()).toEqual([
           standingOverrideWords({ words, holds: ["checks"], until: "task" }),
         ]);
-        expect(h.supervisor.crewStatus(h.taskId)[0]?.override).toEqual({
+        expect(h.supervisor.facts.crewStatus(h.taskId)[0]?.override).toEqual({
           passes: "the checks for the rest of this task",
           words,
         });
         h.supervisor.overrides.withdrawOverride(h.taskId);
         expect(notices().at(-1)).toBe(overrideTakenBackWords({ holds: ["checks"] }));
-        expect(h.supervisor.crewStatus(h.taskId)[0]?.override).toBeUndefined();
+        expect(h.supervisor.facts.crewStatus(h.taskId)[0]?.override).toBeUndefined();
       });
 
       it("passes them at every later version when his words cover the task's life, until he takes them back", async () => {
@@ -5005,7 +5003,7 @@ describe("CrewSupervisor", () => {
       it("merges his kept click held on failed checks once his words pass the checks, and his feed carries no hold sentence", async () => {
         const h = await approved();
         h.forge.states = ["failure"];
-        h.supervisor.act(h.card.id, "merge");
+        h.supervisor.cardActions.act(h.card.id, "merge");
         await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
         expect(h.forge.merges).toEqual([]);
         h.supervisor.overrides.declareOverride(h.taskId, {
@@ -5066,7 +5064,7 @@ describe("CrewSupervisor", () => {
         expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("red");
         expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]);
 
-        h.supervisor.act(h.card.id, "merge");
+        h.supervisor.cardActions.act(h.card.id, "merge");
         await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
         expect(h.authorization()?.waiting).toBeUndefined();
       });
@@ -5110,9 +5108,9 @@ describe("CrewSupervisor", () => {
           h.cards().find((card) => card.id === h.card.id)?.actions.map((action) => action.label),
         ).toEqual(["Discard", REVIEW_CAREFULLY_WORDS, MERGE_ANYWAY_WORDS, MERGE_AFTER_FIXING_WORDS]);
         // A body's script cannot press it.
-        expect(() => h.supervisor.act(h.card.id, MERGE_ANYWAY_ACTION, "frame")).toThrow();
+        expect(() => h.supervisor.cardActions.act(h.card.id, MERGE_ANYWAY_ACTION, "frame")).toThrow();
 
-        h.supervisor.act(h.card.id, MERGE_ANYWAY_ACTION);
+        h.supervisor.cardActions.act(h.card.id, MERGE_ANYWAY_ACTION);
         await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
         expect(h.tasks.get(h.taskId)?.delivery?.override).toMatchObject({
           holds: ["checks"],
@@ -5201,7 +5199,7 @@ describe("CrewSupervisor", () => {
         expect(card?.actions.find((action) => action.passes === "checks")?.label).toBe(
           MERGE_ANYWAY_WORDS,
         );
-        h.supervisor.act(card?.id ?? "", MERGE_ANYWAY_ACTION);
+        h.supervisor.cardActions.act(card?.id ?? "", MERGE_ANYWAY_ACTION);
         await vi.waitFor(() => expect(h.forge.merges).toEqual(["fixed0004"]));
       });
 
@@ -5247,7 +5245,7 @@ describe("CrewSupervisor", () => {
         // own under this rule. Merge now is the captain's one click, Merge anyway.
         expect(h.authorization()).toBeUndefined();
         expect(h.forge.merges).toEqual([]);
-        h.supervisor.act(card()?.id ?? "", MERGE_ANYWAY_ACTION);
+        h.supervisor.cardActions.act(card()?.id ?? "", MERGE_ANYWAY_ACTION);
         await vi.waitFor(() => expect(h.forge.merges).toEqual(["fixed0004"]));
       });
 
@@ -5332,7 +5330,7 @@ describe("CrewSupervisor", () => {
         expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)?.headSha).toBe(NO_CI);
         expect(mergeLabelOf(h)).toBe(MERGE_WHEN_CHECKS_PASS_WORDS);
         // The captain's conditional click waits on the checks and sends nothing.
-        h.supervisor.act(h.card.id, "merge");
+        h.supervisor.cardActions.act(h.card.id, "merge");
         await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
         expect(h.authorization()?.approvedHead).toBe(NO_CI);
         expect(h.forge.sends).toBe(0);
@@ -5361,7 +5359,7 @@ describe("CrewSupervisor", () => {
         await h.declare({});
         expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ ci: "pending", checks: { items: [] } });
         await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WHEN_CHECKS_PASS_WORDS));
-        h.supervisor.act(h.card.id, "merge");
+        h.supervisor.cardActions.act(h.card.id, "merge");
         await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
         // What the first mate cites from the card is his click on its merge.
         const clicked = choiceWords(MERGE_WHEN_CHECKS_PASS_WORDS, "Ready to merge");
@@ -5493,7 +5491,7 @@ describe("CrewSupervisor", () => {
       const merging = h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       await sent.promise;
       expect(editPolicies(h, { autonomy: false })).toContain("merge already sent");
-      expect(h.supervisor.taskAutonomy(h.taskId)).toBe(false);
+      expect(h.supervisor.facts.taskAutonomy(h.taskId)).toBe(false);
       answer.resolve();
       await merging;
       expect(h.forge.merges).toEqual([APPROVED]);
@@ -5504,7 +5502,7 @@ describe("CrewSupervisor", () => {
       const harness = await approved();
       const { supervisor, tasks, taskId, forge } = harness;
       // The project asks before merging: while #7 is open, the merge is the captain's.
-      expect(supervisor.taskAutonomy(taskId)).toBe(false);
+      expect(supervisor.facts.taskAutonomy(taskId)).toBe(false);
       expect((await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr")).refusal?.refused).toBe(
         "autonomy-off",
       );
@@ -5522,7 +5520,7 @@ describe("CrewSupervisor", () => {
     it("closes it as merged on the captain's click too, sending nothing to GitHub (FI3-213)", async () => {
       const harness = await approved();
       harness.forge.merged = true;
-      harness.supervisor.act(harness.card.id, "merge");
+      harness.supervisor.cardActions.act(harness.card.id, "merge");
       await vi.waitFor(() =>
         expect(harness.tasks.get(harness.taskId)).toMatchObject({
           status: "done",
@@ -5544,7 +5542,7 @@ describe("CrewSupervisor", () => {
       const harness = await approved({ referenced: true });
       const { supervisor, tasks, taskId, forge } = harness;
       if (autonomy) editPolicies(harness, { autonomy: true });
-      expect(supervisor.taskAutonomy(taskId)).toBe(autonomy);
+      expect(supervisor.facts.taskAutonomy(taskId)).toBe(autonomy);
       forge.merged = true;
       expect(await harness.declare({})).toContain("overall: merged");
       const next: MergeReview = {
@@ -5665,7 +5663,7 @@ describe("CrewSupervisor", () => {
       await tick();
       const merge = () => h.supervisor.cards.snapshot().find((card) => card.id === h.card.id);
       expect(splitSettleFacts(merge()?.body ?? "")?.facts).toContain(MERGE_CLOSES_WORDS.continues);
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
       await vi.waitFor(() =>
         expect(h.crewmate.promptCalls.join("\n")).toContain(
@@ -5715,7 +5713,7 @@ describe("CrewSupervisor", () => {
       };
       seedDelivery(h.tasks, h.taskId, { mergeReviews: [next] });
       h.forge.openNumbers.add(8);
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
       await vi.waitFor(() =>
         expect(h.crewmate.promptCalls.join("\n")).toContain("because #8 on this task is still open"),
@@ -5824,7 +5822,7 @@ describe("CrewSupervisor", () => {
         [h.card.id, "merge"],
         [firstmateCard, "merge"],
       ] as const)
-        expect(() => h.supervisor.act(card, action)).toThrow(CardChoiceUnavailableError);
+        expect(() => h.supervisor.cardActions.act(card, action)).toThrow(CardChoiceUnavailableError);
       await tick();
       expect(h.forge.merges).toEqual([]);
       expect(h.forge.sends).toBe(0);
@@ -5832,7 +5830,7 @@ describe("CrewSupervisor", () => {
       expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
       // With its own pull request current again, the crewmate's card merges it and closes the task.
       seedDelivery(h.tasks, h.taskId, { checkTarget: undefined });
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
       await vi.waitFor(() =>
         expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" }),
@@ -5903,7 +5901,7 @@ describe("CrewSupervisor", () => {
       };
       seedDelivery(h.tasks, h.taskId, { mergeReviews: [next], checkTarget: next });
       for (const card of [again.id, h.card.id])
-        expect(() => h.supervisor.act(card, "merge")).toThrow(/This action changed/);
+        expect(() => h.supervisor.cardActions.act(card, "merge")).toThrow(/This action changed/);
       await tick();
       expect(h.forge.merges).toEqual([]);
       expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
@@ -5934,7 +5932,7 @@ describe("CrewSupervisor", () => {
         });
       });
       const card = h.cards().find((entry) => entry.title === "Merge the meter fix and keep going") as Card;
-      h.supervisor.act(card.id, "merge");
+      h.supervisor.cardActions.act(card.id, "merge");
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
       expect(h.authorization()?.status).toBe("consumed");
       expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ prNumber: 7 });
@@ -6032,7 +6030,7 @@ describe("CrewSupervisor", () => {
       const said = await harness.declare(repair("changed-work"));
       expect(said).toContain("put up a new completion card");
       expect(harness.authorization()).toMatchObject({ status: "invalidated", holds: true });
-      vi.spyOn(harness.supervisor, "taskAutonomy").mockReturnValue(true);
+      vi.spyOn(harness.supervisor.facts, "taskAutonomy").mockReturnValue(true);
       expect(await harness.supervisor.settling.settle.settleTask(harness.taskId, "merge-pr")).toContain(
         "the captain's merge approval ended because its crewmate declared that its repair changed the approved work",
       );
@@ -6177,7 +6175,7 @@ describe("CrewSupervisor", () => {
         now: () => Date.now(),
         timers: { repeat: () => 0, cancel: () => {} },
       });
-      harness.supervisor.startWatchdog(ticker);
+      harness.supervisor.watch.startWatchdog(ticker);
       harness.forge.readiness = "blocked";
       await repairTurn(harness, async () => {
         harness.forge.headSha = REPAIRED;
@@ -6210,7 +6208,7 @@ describe("CrewSupervisor", () => {
         now: () => Date.now(),
         timers: { repeat: () => 0, cancel: () => {} },
       });
-      harness.supervisor.startWatchdog(ticker);
+      harness.supervisor.watch.startWatchdog(ticker);
       harness.forge.readiness = "blocked";
       await repairTurn(harness, async () => {
         harness.forge.headSha = REPAIRED;
@@ -6341,7 +6339,7 @@ describe("CrewSupervisor", () => {
     it("a move back to the backlog revokes it with a hold", async () => {
       const harness = await kept();
       await harness.supervisor.steer.steerCrewmate(harness.taskId, "bring it up to date");
-      expect(harness.supervisor.runTaskOp(harness.taskId, "unqueue-task")).toBeUndefined();
+      expect(harness.supervisor.hostOps.runTaskOp(harness.taskId, "unqueue-task")).toBeUndefined();
       await vi.waitFor(() =>
         expect(harness.authorization()).toMatchObject({ status: "revoked", holds: true }),
       );
@@ -6354,7 +6352,7 @@ describe("CrewSupervisor", () => {
       expect(harness.supervisor.withdrawMergeApproval(harness.taskId)).toMatchObject({ ok: true });
       expect(harness.authorization()).toMatchObject({ status: "revoked", holds: true });
       expect(harness.supervisor.withdrawMergeApproval(harness.taskId)).toMatchObject({ ok: false });
-      vi.spyOn(harness.supervisor, "taskAutonomy").mockReturnValue(true);
+      vi.spyOn(harness.supervisor.facts, "taskAutonomy").mockReturnValue(true);
       expect(await harness.supervisor.settling.settle.settleTask(harness.taskId, "merge-pr")).toContain(
         "is not yours to do: the captain's merge approval ended because the captain withdrew it",
       );
@@ -6426,7 +6424,7 @@ describe("CrewSupervisor", () => {
       });
       await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
       const question = h.cards().find((card) => card.title === "Rename the meter?") as Card;
-      h.supervisor.replyToCard(question.id, "Rename it to gauge.");
+      h.supervisor.cardActions.replyToCard(question.id, "Rename it to gauge.");
       await vi.waitFor(() =>
         expect(h.crewmate.promptCalls.at(-1)).toContain("Rename it to gauge."),
       );
@@ -6446,7 +6444,7 @@ describe("CrewSupervisor", () => {
       await tick();
       expect(h.authorization()).toMatchObject({ status: "invalidated", holds: true });
       expect(h.forge.merges).toEqual([]);
-      vi.spyOn(h.supervisor, "taskAutonomy").mockReturnValue(true);
+      vi.spyOn(h.supervisor.facts, "taskAutonomy").mockReturnValue(true);
       expect(await h.supervisor.settling.settle.settleTask(h.taskId, "merge-pr")).toContain(
         "its crewmate declared that the captain's newer guidance changes the approved work",
       );
@@ -6473,7 +6471,7 @@ describe("CrewSupervisor", () => {
       const h = await approved();
       await h.supervisor.steer.steerCrewmate(h.taskId, "polish the docs");
       // He clicks while the crewmate works, then gives it new guidance.
-      h.supervisor.act(h.card.id, "merge");
+      h.supervisor.cardActions.act(h.card.id, "merge");
       await tick();
       expect(h.authorization()?.status).toBe("standing");
       await h.supervisor.steer.steerCrewmate(h.taskId, "Hold on, rename it first.", "firstmate", {
@@ -6522,7 +6520,7 @@ describe("CrewSupervisor", () => {
       // There a click on such checks is refused and nothing waits (INF-23).
       const { supervisor, tasks, cards } = setup(fakeCrewmate());
       seedTask(tasks, { id: "merge", title: "Ship it", status: "idle", worktreeDir: "/pr" });
-      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
       const id = supervisor.addFirstmateCard({
         requiredActions: [],
         taskId: "merge",
@@ -6543,7 +6541,7 @@ describe("CrewSupervisor", () => {
         ),
       });
       seedTask(tasks, { id: "merge", title: "Ship it", status: "idle", worktreeDir: "/pr" });
-      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
       const id = supervisor.addFirstmateCard({
         requiredActions: [],
         taskId: "merge",
@@ -6551,7 +6549,7 @@ describe("CrewSupervisor", () => {
         body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
         actions: [{ id: "merge-pr", label: "Put it in", default: true, effect: SETTLE_MERGE }],
       });
-      supervisor.act(id, "merge-pr");
+      supervisor.cardActions.act(id, "merge-pr");
       await vi.waitFor(() =>
         expect(settleLines(tasks, "merge")).toContain(
           "Cannot merge: it conflicts with newer work in the project - its crewmate needs to bring it up to date",
@@ -6592,7 +6590,7 @@ describe("CrewSupervisor", () => {
     });
     seedTask(tasks, { id: "merge", title: "Ship the fix", status: "idle", worktreeDir: "/pr" });
     seedTask(tasks, { id: "gone", title: "Old idea", status: "idle", worktreeDir: "/old" });
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const id = supervisor.addFirstmateCard({
       requiredActions: [],
       taskId: "merge",
@@ -6600,7 +6598,7 @@ describe("CrewSupervisor", () => {
       body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
       actions: [{ id: "merge-pr", label: "Put it in", default: true, effect: SETTLE_MERGE }],
     });
-    supervisor.act(id, "merge-pr");
+    supervisor.cardActions.act(id, "merge-pr");
     await vi.waitFor(() =>
       expect(settleLines(tasks, "merge")).toContain(
         "Cannot merge: the project's host did not accept the sign-in on this computer",
@@ -6634,7 +6632,7 @@ describe("CrewSupervisor", () => {
       body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
       actions: [{ id: "merge-pr", label: "Put it in", default: true, effect: SETTLE_MERGE }],
     });
-    supervisor.act(again, "merge-pr");
+    supervisor.cardActions.act(again, "merge-pr");
     await vi.waitFor(() =>
       expect(settleLines(tasks, "merge")).toContain("Cannot merge: the checks failed"),
     );
@@ -6671,7 +6669,7 @@ describe("CrewSupervisor", () => {
     const settle = cards().find((card) => card.title.includes("is done")) as Card;
     expect(settle.taskId).toBe(taskId);
 
-    supervisor.act(settle.id, "merge");
+    supervisor.cardActions.act(settle.id, "merge");
     await tick();
 
     expect(workspace.landTaskWork).toHaveBeenCalled();
@@ -6696,7 +6694,7 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "The PR is ready",
@@ -6712,7 +6710,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const settle = cards().find((card) => card.title === "The PR is ready") as Card;
 
-    supervisor.act(settle.id, "merge");
+    supervisor.cardActions.act(settle.id, "merge");
     await tick();
 
     expect(mergePullRequest).toHaveBeenCalledWith(
@@ -6741,7 +6739,7 @@ describe("CrewSupervisor", () => {
     const { supervisor, specs } = setup(crewmate);
     await supervisor.intake.commission({ title: "Ship the PR", intent: intentOf("done work") });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
 
     expect(() =>
       specs[0]?.onCard?.({
@@ -6784,7 +6782,7 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "The PR is ready",
@@ -6797,7 +6795,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const settle = cards().find((card) => card.title === "The PR is ready") as Card;
 
-    supervisor.act(settle.id, "merge");
+    supervisor.cardActions.act(settle.id, "merge");
     expect(supervisor.cards.snapshot().some((card) => card.id === settle.id)).toBe(false);
     await tick();
 
@@ -6824,7 +6822,7 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "The PR is ready",
@@ -6837,7 +6835,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const settle = cards().find((card) => card.title === "The PR is ready") as Card;
 
-    supervisor.act(settle.id, "merge");
+    supervisor.cardActions.act(settle.id, "merge");
     await tick();
 
     // The host raises no retry card (cards/tasks/agents P0, WI-3): the refusal is
@@ -6876,7 +6874,7 @@ describe("CrewSupervisor", () => {
     }));
     const { supervisor, tasks, cards } = setup(fakeCrewmate(), { mergePullRequest });
     seedTask(tasks, { id: "signin", title: "Ship the fix", status: "idle", worktreeDir: "/signin" });
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const offer = supervisor.addFirstmateCard({
       requiredActions: [],
       taskId: "signin",
@@ -6884,7 +6882,7 @@ describe("CrewSupervisor", () => {
       body: "Choose.",
       actions: [{ id: "merge-pr", label: "Merge PR", effect: SETTLE_MERGE }],
     });
-    supervisor.act(offer, "merge-pr");
+    supervisor.cardActions.act(offer, "merge-pr");
     await vi.waitFor(() => expect(mergePullRequest).toHaveBeenCalledTimes(1));
     await tick();
     expect(cards().find((card) => card.id === mergePendingCardId("signin"))).toBeUndefined();
@@ -6896,7 +6894,7 @@ describe("CrewSupervisor", () => {
     const mergePullRequest = vi.fn(() => operation.promise);
     const { supervisor, tasks, cards, ops } = setup(fakeCrewmate(), { mergePullRequest });
     seedTask(tasks, { id: "merge", title: "PR", status: "idle", worktreeDir: "/pr" });
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const first = supervisor.addFirstmateCard({
       requiredActions: [],
       taskId: "merge",
@@ -6911,8 +6909,8 @@ describe("CrewSupervisor", () => {
       body: "Choose.",
       actions: [{ id: "merge-pr", label: "Merge PR", effect: SETTLE_MERGE }],
     });
-    supervisor.act(first, "merge-pr");
-    supervisor.act(second, "merge-pr"); // races the first; refused as contention.
+    supervisor.cardActions.act(first, "merge-pr");
+    supervisor.cardActions.act(second, "merge-pr"); // races the first; refused as contention.
     await tick();
 
     expect(settleWakes(ops)).toEqual([]);
@@ -6951,7 +6949,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const settle = cards().find((card) => card.title.includes("is done")) as Card;
 
-    supervisor.act(settle.id, "discard");
+    supervisor.cardActions.act(settle.id, "discard");
     await tick();
 
     expect(workspace.removeTaskWorktree).toHaveBeenCalled();
@@ -7231,7 +7229,7 @@ describe("CrewSupervisor", () => {
     // completion pair (cards/tasks/agents P0).
     expect(settle.actions.map((action) => action.id)).toEqual(["later", "discard", "merge"]);
 
-    supervisor.act(settle.id, "later");
+    supervisor.cardActions.act(settle.id, "later");
     await tick();
 
     // The click returns to its author like any declared choice; nothing
@@ -7325,7 +7323,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const card = cards().find((entry) => entry.meta === "firstmate") as Card;
     expect(cardPresentation(card)).toBe("decision");
-    supervisor.act(card.id, "quota-axi");
+    supervisor.cardActions.act(card.id, "quota-axi");
     await tick();
     expect(ops.at(-1)).toContain('[user]\nquota-axi\nChoice on card "Which project?"');
   });
@@ -7867,7 +7865,7 @@ describe("CrewSupervisor", () => {
         broadcastEvent: (event) => events.push(event),
         broadcastCards: () => {},
       });
-      fresh.announceCarryOn();
+      fresh.watch.announceCarryOn();
       // Only the task whose turn the quit cut; the one that had finished waits.
       expect(events).toEqual([
         {
@@ -7889,11 +7887,11 @@ describe("CrewSupervisor", () => {
       h.tasks.placement.setDevice(taskId, "mac-mini");
       const wakesBefore = h.ops.length;
       await h.supervisor.updates.pauseForUpdate("mac-mini");
-      const paused = h.supervisor.crewStatus(taskId)[0]?.restart;
+      const paused = h.supervisor.facts.crewStatus(taskId)[0]?.restart;
       expect(paused?.text).toContain("is being updated");
       crewmate.emit({ type: "turn_failed", taskId, error: "The turn was aborted for the update." });
       crewmate.emit({ type: "request_started" });
-      expect(h.supervisor.crewStatus(taskId)[0]?.restart).toEqual(paused);
+      expect(h.supervisor.facts.crewStatus(taskId)[0]?.restart).toEqual(paused);
       expect(h.ops).toHaveLength(wakesBefore);
       await h.supervisor.disposeAll();
     });
@@ -7986,7 +7984,7 @@ describe("CrewSupervisor", () => {
           broadcastCards: () => {},
         });
         now += 100_000;
-        await fresh.sweepInbox(now);
+        await fresh.watch.sweepInbox(now);
         await tick();
         // One turn carries it on, with why it stopped before the words that waited.
         expect(resumed.promptCalls).toHaveLength(1);
@@ -8096,11 +8094,11 @@ describe("CrewSupervisor", () => {
       h.tasks.placement.setDevice(taskId, "mac-mini");
       const wakesBefore = h.ops.length;
       h.supervisor.placedReopened(taskId);
-      expect(h.supervisor.crewStatus(taskId)[0]?.restart?.text).toContain(
+      expect(h.supervisor.facts.crewStatus(taskId)[0]?.restart?.text).toContain(
         "has not confirmed a new request",
       );
       crewmate.emit({ type: "request_started" });
-      expect(h.supervisor.crewStatus(taskId)[0]?.restart?.text).toBe(RESTART_RESUMED_WORDS);
+      expect(h.supervisor.facts.crewStatus(taskId)[0]?.restart?.text).toBe(RESTART_RESUMED_WORDS);
       expect(h.ops).toHaveLength(wakesBefore);
       expect(crewmate.steer).not.toHaveBeenCalled();
       await h.supervisor.disposeAll();
@@ -8160,21 +8158,21 @@ describe("CrewSupervisor", () => {
         });
         fresh.setFirstmateHooks({ notifyOp: wake, retryConverse: vi.fn() });
         // Before the sweep there is no evidence of an automatic continuation.
-        fresh.announceCarryOn();
-        expect(fresh.crewStatus(taskId)[0]?.restart?.text).toContain(
+        fresh.watch.announceCarryOn();
+        expect(fresh.facts.crewStatus(taskId)[0]?.restart?.text).toContain(
           "has not started a request yet",
         );
         if (outcome === "held") h.tasks.placement.setAccountId(taskId, "test-account");
         now += 100_000;
         if (outcome === "guided")
           await fresh.steer.steerCrewmate(taskId, "Please check the restart", "captain");
-        else await fresh.sweepInbox(now);
+        else await fresh.watch.sweepInbox(now);
         if (outcome === "resumed") {
           await tick();
           expect(resumed.promptCalls).toHaveLength(1);
           resumed.emit({ type: "input_read", textSha256: createHash("sha256").update(resumed.promptCalls[0]!).digest("hex") });
           resumed.emit({ type: "request_started" });
-          expect(fresh.crewStatus(taskId)[0]?.restart).toEqual({
+          expect(fresh.facts.crewStatus(taskId)[0]?.restart).toEqual({
             at: new Date(now).toISOString(),
             text: RESTART_RESUMED_WORDS,
           });
@@ -8198,11 +8196,11 @@ describe("CrewSupervisor", () => {
                   : outcome === "guided"
                     ? "new guidance arrived"
                     : "could not be opened";
-          expect(fresh.crewStatus(taskId)[0]?.restart?.text).toContain(expected);
+          expect(fresh.facts.crewStatus(taskId)[0]?.restart?.text).toContain(expected);
         }
         expect(wake).not.toHaveBeenCalled();
         expect(resumed.steer).not.toHaveBeenCalled();
-        const recorded = fresh.crewStatus(taskId)[0]?.restart;
+        const recorded = fresh.facts.crewStatus(taskId)[0]?.restart;
         await fresh.disposeAll();
         const readOnly = new CrewSupervisor({
           ...crewSessions(
@@ -8218,7 +8216,7 @@ describe("CrewSupervisor", () => {
           broadcastEvent: () => {},
           broadcastCards: () => {},
         });
-        expect(readOnly.crewStatus(taskId)[0]?.restart).toEqual(recorded);
+        expect(readOnly.facts.crewStatus(taskId)[0]?.restart).toEqual(recorded);
         await readOnly.disposeAll();
       },
     );
@@ -8443,7 +8441,7 @@ describe("CrewSupervisor", () => {
     fresh.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
     expect(new InboxStore(db, { now: clock }).resetInFlight()).toBe(2);
     now += 120_000;
-    await fresh.sweepInbox(now);
+    await fresh.watch.sweepInbox(now);
     await tick();
 
     const served = bootCrewmate.promptCalls[0] ?? "";
@@ -8525,7 +8523,7 @@ describe("CrewSupervisor", () => {
     // Guidance a previous process left on its lane is kept on the record,
     // never retried into a transport that cannot hold it.
     inbox.enqueue("t-cursor", "also fix the links");
-    await supervisor.sweepInbox(Date.now());
+    await supervisor.watch.sweepInbox(Date.now());
     await tick();
     expect(specs).toEqual([]);
     expect(inbox.allFor("t-cursor")).toEqual([]);
@@ -8581,7 +8579,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         shape: { rigor_ask: "quick" },
       });
       await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
-      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
       const result = specs[0]?.onCard?.({
         requiredActions: [],
         title: "Ready to merge",
@@ -8613,7 +8611,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const completion = (after: string) => ({
       requiredActions: [],
       id: "ready",
@@ -8657,7 +8655,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const completion = (body: string, id = "ready") => ({
       requiredActions: [],
       id,
@@ -8669,7 +8667,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     await tick();
     const card = cards().find((entry) => entry.title === "Ready to merge") as Card;
     // The captain asks for a change, which restarts the checks.
-    supervisor.replyToCard(card.id, "rename the flag first");
+    supervisor.cardActions.replyToCard(card.id, "rename the flag first");
     overall = "no-pr";
     // A revision of that card goes up while they run (INF-834 friction 4);
     // a new completion card still waits for them.
@@ -8701,7 +8699,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
 
     const result = specs[0]?.onCard?.({
       requiredActions: [],
@@ -8756,7 +8754,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         shape: { rigor_ask: "quick" },
       }));
       await tick();
-      vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
       dir = join(paths.crewmatesDir, taskId, "cards");
       mkdirSync(dir, { recursive: true });
       // An earlier card's independent copy must survive this later refusal.
@@ -8813,7 +8811,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue(destination === "local" ? "local-only" : "direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue(destination === "local" ? "local-only" : "direct-pr");
     story = {
       version: 1,
       taskId,
@@ -8886,7 +8884,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       return { ...record, revisions: [...record.revisions, { ...story, revision: 2 }] };
     });
     if (!card) throw new Error("Missing completion card");
-    expect(() => supervisor.act(card.id, "merge")).toThrow();
+    expect(() => supervisor.cardActions.act(card.id, "merge")).toThrow();
     expect(mergePullRequest).not.toHaveBeenCalled();
   });
 
@@ -8917,7 +8915,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     story = {
       version: 1,
       taskId,
@@ -8977,7 +8975,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(card.title).toBe(story.title);
     crewmate.finishPrompt();
     await tick();
-    supervisor.act(card.id, "merge");
+    supervisor.cardActions.act(card.id, "merge");
     await vi.waitFor(() => expect(mergePullRequest).toHaveBeenCalledTimes(1));
   });
 
@@ -9004,7 +9002,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     story = {
       version: 1,
       taskId,
@@ -9112,7 +9110,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const emitCard = bindTool(EMIT_CARD_TOOL, specs[0] as CrewmateSpec);
     const note = { title: "Ignored", presentation: 1, actions: [] };
     // A task that asks first gets the story only as its merge offer.
-    const autonomy = vi.spyOn(supervisor, "taskAutonomy").mockReturnValue(false);
+    const autonomy = vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     await expect(emitCard.run(note)).rejects.toThrow(
       /or its note when the task merges on its own/,
     );
@@ -9166,8 +9164,8 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
-    vi.spyOn(supervisor, "taskAutonomy").mockReturnValue(true);
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(true);
     story = {
       version: 1,
       taskId,
@@ -9247,7 +9245,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     await tick();
     crewmate.finishPrompt();
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const story: ChangePresentation = {
       version: 1,
       taskId,
@@ -9305,7 +9303,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       if (!record) throw new Error("Missing story");
       return { ...record, revisions: [...record.revisions, second] };
     });
-    expect(() => supervisor.act(cardId, "merge")).toThrow();
+    expect(() => supervisor.cardActions.act(cardId, "merge")).toThrow();
     expect(mergePullRequest).not.toHaveBeenCalled();
     expect(tasks.get(taskId)?.status).not.toBe("done");
     // Published, the revised offer binds the newer story and its click merges.
@@ -9319,7 +9317,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       headSha: head,
       presentationRevision: 2,
     });
-    supervisor.act(cardId, "merge");
+    supervisor.cardActions.act(cardId, "merge");
     await vi.waitFor(() =>
       expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" }),
     );
@@ -9340,7 +9338,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
 
     const result = specs[0]?.onCard?.({
       requiredActions: [],
@@ -9370,7 +9368,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
     await supervisor.intake.commission({ title: "Investigate", intent: intentOf("look into it") });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
 
     const result = specs[0]?.onCard?.({
       title: "Here is what I found",
@@ -9394,7 +9392,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("local-only");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("local-only");
 
     const result = specs[0]?.onCard?.({
       requiredActions: [],
@@ -9435,7 +9433,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(harness.supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(harness.supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const emitCard = bindTool(EMIT_CARD_TOOL, harness.specs[0] as CrewmateSpec);
     return { ...harness, crewmate, taskId, emitCard };
   }
@@ -9485,7 +9483,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
       cards: [],
       refused: { title: "Ready to merge", reason: "checks", at: refusal?.at },
     });
-    expect(supervisor.crewStatus(taskId)[0]?.cardRefused).toEqual({
+    expect(supervisor.facts.crewStatus(taskId)[0]?.cardRefused).toEqual({
       title: "Ready to merge",
       at,
       reason: "checks",
@@ -9505,7 +9503,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     });
     expect(shown.text).toMatch(/^Card shown: Ready to merge/);
     expect(tasks.get(taskId)?.delivery?.cardRefusal).toBeUndefined();
-    expect(supervisor.crewStatus(taskId)[0]?.cardRefused).toBeUndefined();
+    expect(supervisor.facts.crewStatus(taskId)[0]?.cardRefused).toBeUndefined();
     await reportTurn(crewmate, taskId, "Completion card emitted.");
     expect(ledger.at(-1)).not.toContain("refused");
     expect(ledger.at(-1)).toContain("Its card on the captain's screen:");
@@ -9538,7 +9536,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
       emitCard.run({ id: "Not Kebab", title: "A note", body: "<p>Found it.</p>", actions: [] }),
     ).rejects.toThrow(/Card id must be kebab-case/);
     expect(tasks.get(taskId)?.delivery?.cardRefusal).toBeUndefined();
-    expect(supervisor.crewStatus(taskId)[0]).not.toHaveProperty("cardRefused");
+    expect(supervisor.facts.crewStatus(taskId)[0]).not.toHaveProperty("cardRefused");
 
     // An answer task has no completion card, and its refusal says so.
     const reader = fakeCrewmate();
@@ -9579,7 +9577,7 @@ describe("the task record (task-system P0)", () => {
     crewmate.emit({ type: "turn_end", taskId, usage: { input: 10, output: 2 } });
     crewmate.finishPrompt();
     await tick();
-    expect(supervisor.crewStatus()[0]).toMatchObject({
+    expect(supervisor.facts.crewStatus()[0]).toMatchObject({
       taskId,
       key: "SCR-1",
       status: "idle",
@@ -9605,7 +9603,7 @@ describe("the task record (task-system P0)", () => {
       broadcastEvent: () => {},
       broadcastCards: () => {},
     });
-    expect(fresh.crewStatus()).toEqual([
+    expect(fresh.facts.crewStatus()).toEqual([
       expect.objectContaining({
         taskId,
         key: "SCR-1",
@@ -9614,8 +9612,8 @@ describe("the task record (task-system P0)", () => {
         lastReport: "Green now. Two files changed.",
       }),
     ]);
-    expect(fresh.crewStatus()[0]?.crewmate).toBeUndefined();
-    expect(fresh.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+    expect(fresh.facts.crewStatus()[0]?.crewmate).toBeUndefined();
+    expect(fresh.facts.crewCounts()).toMatchObject({ working: 0, idle: 1 });
     expect(rebooted.get(taskId)).toMatchObject({
       status: "active",
       activity: "idle",
@@ -9696,14 +9694,14 @@ describe("the task record (task-system P0)", () => {
     expect(tasks.get(second.taskId)).toMatchObject({ status: "open", gate: null });
     expect(tasks.graph.blockers(second.taskId).map((record) => record.id)).toEqual([first.taskId]);
     // INF-1605: the crew line reads the same dated wait as the task query.
-    expect(supervisor.crewStatus().find((entry) => entry.taskId === second.taskId)?.gate).toBe(
+    expect(supervisor.facts.crewStatus().find((entry) => entry.taskId === second.taskId)?.gate).toBe(
       queryTasks(tasks, { key: second.taskId }, () => undefined).rows[0]?.waiting,
     );
     expect(events.at(-2)).toMatchObject({
       type: "firstmate_note",
       text: `Queued "Second" - starts when ${tasks.get(first.taskId)?.key} finishes.`,
     });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(second.taskId)?.status).toBe("open");
 
     crewmate.finishPrompt();
@@ -9740,22 +9738,22 @@ describe("the task graph (R1)", () => {
     expect(note && "text" in note ? note.text : "").toContain('Queued "Nightly sweep"');
     expect(events.find((e) => e.type === "crew_counts")).toMatchObject({ queued: 1 });
     // The strip and status see it.
-    expect(supervisor.crewStatus().find((entry) => entry.taskId === taskId)).toMatchObject({
+    expect(supervisor.facts.crewStatus().find((entry) => entry.taskId === taskId)).toMatchObject({
       status: "queued",
     });
 
     // Before its time: nothing.
-    await supervisor.sweepGates(at - 1000);
+    await supervisor.watch.sweepGates(at - 1000);
     expect(sessions.open).not.toHaveBeenCalled();
 
     // Its time arrives: the sweep dispatches through the normal start path.
-    await supervisor.sweepGates(at + 1000);
+    await supervisor.watch.sweepGates(at + 1000);
     await tick();
     expect(sessions.open).toHaveBeenCalledTimes(1);
     expect(legacyStateOf(tasks.get(taskId))).toBe("running");
     expect(crewmate.promptCalls).toHaveLength(1);
     expect(crewmate.promptCalls[0]).toContain("run the sweep");
-    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 1, idle: 0 });
     expect(cards()).toEqual([]);
     expect(events.some((e) => e.type === "firstmate_note" && e.text.includes("Starting"))).toBe(
       true,
@@ -9780,8 +9778,8 @@ describe("the task graph (R1)", () => {
         repoDir: paths.defaultWorkspaceDir,
       };
     });
-    const first = supervisor.dispatchQueuedTask(taskId);
-    const second = supervisor.dispatchQueuedTask(taskId);
+    const first = supervisor.starts.dispatchQueuedTask(taskId);
+    const second = supervisor.starts.dispatchQueuedTask(taskId);
     held.resolve();
     await Promise.all([first, second]);
     await tick();
@@ -9801,15 +9799,15 @@ describe("the task graph (R1)", () => {
     vi.mocked(workspace.createTaskWorktree).mockRejectedValueOnce(
       new Error("a branch named 'fm/task-x' already exists"),
     );
-    await supervisor.dispatchQueuedTask(taskId);
+    await supervisor.starts.dispatchQueuedTask(taskId);
     expect(tasks.get(taskId)).toMatchObject({
       status: "open",
       gate: { kind: "captain", ref: "dispatch-failed" },
     });
-    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 0 });
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 0 });
     expect(sessions.open).not.toHaveBeenCalled();
 
-    await supervisor.dispatchQueuedTask(taskId);
+    await supervisor.starts.dispatchQueuedTask(taskId);
     await tick();
     expect(sessions.open).toHaveBeenCalledTimes(1);
     expect(tasks.get(taskId)?.status).toBe("active");
@@ -9861,8 +9859,8 @@ describe("the task graph (R1)", () => {
     expect(wakes()[0]?.ref).toBe(second.taskId);
     // No hold: the row stays plain queued work, and the tick does not nag.
     expect(tasks.get(second.taskId)).toMatchObject({ status: "open", gate: null });
-    await supervisor.sweepGates(Date.now());
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(wakes()).toHaveLength(1);
     expect(legacyStateOf(tasks.get(second.taskId))).toBe("queued");
 
@@ -9870,7 +9868,7 @@ describe("the task graph (R1)", () => {
     // and the refusal names the same edge the wake did.
     const dependent = tasks.get(second.taskId);
     const doomed = tasks.get(first.taskId)?.key;
-    const refusal = await supervisor.startQueuedNow(second.taskId);
+    const refusal = await supervisor.starts.startQueuedNow(second.taskId);
     expect(refusal).toContain(
       `Cannot start ${dependent?.key} "Dependent" now: it waits on ${doomed} "Doomed"`,
     );
@@ -9891,7 +9889,7 @@ describe("the task graph (R1)", () => {
       { goal: "Replacement-only shell-height interpolation" },
       "firstmate",
     );
-    await supervisor.startQueuedNow(planned.key);
+    await supervisor.starts.startQueuedNow(planned.key);
     await tick();
     expect(crew.promptCalls[0]).toContain("Goal: Replacement-only shell-height interpolation");
     expect(crew.promptCalls[0]).toContain("Original scope"); // verbatim user words remain unchanged
@@ -9913,7 +9911,7 @@ describe("the task graph (R1)", () => {
     );
     const { supervisor, tasks } = setup(crew, { classifier: { classify: async () => classified } });
     const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
-    const starting = supervisor.startQueuedNow(planned.key);
+    const starting = supervisor.starts.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { goal: "Responsive width and reduced motion" }, "firstmate");
     release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
     await starting;
@@ -9941,7 +9939,7 @@ describe("the task graph (R1)", () => {
       },
     });
     const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
-    const starting = supervisor.startQueuedNow(planned.key);
+    const starting = supervisor.starts.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { reasoning: "xhigh" }, "firstmate");
     release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
     await starting;
@@ -9969,7 +9967,7 @@ describe("the task graph (R1)", () => {
       onRouteDecide: ({ shape }) => routed.push(shape),
     });
     const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
-    const starting = supervisor.startQueuedNow(planned.key);
+    const starting = supervisor.starts.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { model: "gpt-6-astra" }, "firstmate");
     release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
     await starting;
@@ -9994,7 +9992,7 @@ describe("the task graph (R1)", () => {
     });
     const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
     tasks.updateFields(planned.id, { model: "gpt-6-astra" }, "firstmate");
-    const starting = supervisor.startQueuedNow(planned.key);
+    const starting = supervisor.starts.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { model: "" }, "firstmate");
     await starting;
     // A named model skips the classifier; once cleared there is nothing to
@@ -10047,7 +10045,7 @@ describe("the task graph (R1)", () => {
       status: "queued",
       startPolicy: "on-request",
     });
-    const starting = supervisor.startQueuedNow(task.id);
+    const starting = supervisor.starts.startQueuedNow(task.id);
     await comparing;
     tasks.updateFields(task.id, { model: "mock-2" }, "firstmate");
     release();
@@ -10104,7 +10102,7 @@ describe("the task graph (R1)", () => {
       status: "queued",
       startPolicy: "on-request",
     });
-    const starting = supervisor.startQueuedNow(task.id);
+    const starting = supervisor.starts.startQueuedNow(task.id);
     await comparing;
     // As update_task does with runs_on this-mac, which a task not yet claimed accepts.
     expect(supervisor.placement.runsOnRefusal(task.id, RUNS_ON_THIS_MAC)).toBeUndefined();
@@ -10158,7 +10156,7 @@ describe("the task graph (R1)", () => {
     });
     tasks.turns.recordReport(spec.id, { text: "Replacement-only shell-height interpolation." });
     const planned = supervisor.intake.plan({ title: "Transitions", intent: intentOf("Original scope") });
-    const starting = supervisor.startQueuedNow(planned.key);
+    const starting = supervisor.starts.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { basis: spec.key }, "firstmate");
     release?.({ kind: "implement", source: "classifier:test", version: "kc1" });
     await starting;
@@ -10277,7 +10275,7 @@ describe("the task graph (R1)", () => {
       why: "Queued rows missing",
       prompt: "Goal: Include queued rows",
     }).record;
-    await supervisor.startQueuedNow(filing.key);
+    await supervisor.starts.startQueuedNow(filing.key);
     await tick();
     expect(crew.promptCalls[0]).toContain(origin.key);
     expect(crew.promptCalls[0]).toContain("Recorded finding: claim query omits queued rows.");
@@ -10307,7 +10305,7 @@ describe("the task graph (R1)", () => {
       why: "Seen while fixing the meter",
       prompt: "Goal: Explain why the meter skips a tick",
     }).record;
-    await supervisor.startQueuedNow(filing.key);
+    await supervisor.starts.startQueuedNow(filing.key);
     await tick();
     expect(asked).toHaveLength(1);
     expect(asked[0]?.deliverable).toBeUndefined();
@@ -10325,7 +10323,7 @@ describe("the task graph (R1)", () => {
     expect(legacyStateOf(tasks.get(taskId))).toBe("queued");
     const key = tasks.get(taskId)?.key;
 
-    expect(await supervisor.startQueuedNow(key ?? "")).toBe(`Started ${key} "Tonight".`);
+    expect(await supervisor.starts.startQueuedNow(key ?? "")).toBe(`Started ${key} "Tonight".`);
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "active", gate: null });
     expect(tasks.timeline(taskId).some((event) => event.text.includes("started on request"))).toBe(
@@ -10334,11 +10332,11 @@ describe("the task graph (R1)", () => {
     expect(sessions.open).toHaveBeenCalledTimes(1);
 
     // Not queued work any more: a plain refusal, nothing thrown.
-    expect(await supervisor.startQueuedNow(taskId)).toContain("not queued work");
+    expect(await supervisor.starts.startQueuedNow(taskId)).toContain("not queued work");
     // A live blocker is a real wait; the refusal names it.
     const a = supervisor.intake.plan({ title: "A", intent: intentOf("a"), startPolicy: "when-ready" });
     const b = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
-    expect(await supervisor.startQueuedNow(b.key)).toContain(`it waits on ${a.key} "A"`);
+    expect(await supervisor.starts.startQueuedNow(b.key)).toContain(`it waits on ${a.key} "A"`);
     expect(tasks.get(b.id)?.status).toBe("open");
   });
 
@@ -10349,7 +10347,7 @@ describe("the task graph (R1)", () => {
     const b = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id, c.id] });
 
     // Live blockers: the wait ends when their work is done, or with the edge gone.
-    const live = await supervisor.startQueuedNow(b.key);
+    const live = await supervisor.starts.startQueuedNow(b.key);
     expect(live).toContain(`${a.key} "A"`);
     expect(live).toContain(`${c.key} "C"`);
     expect(live).toContain("remove the blocks edges with link_tasks remove");
@@ -10358,7 +10356,7 @@ describe("the task graph (R1)", () => {
     // Dropping a blocker leaves its edge dead, still in the way: the refusal
     // names that edge, and the live one still waits for its work.
     expect(supervisor.intake.dropTask(a.key, { reason: "not wanted" })).toMatch(/^Dropped/);
-    const dead = await supervisor.startQueuedNow(b.key);
+    const dead = await supervisor.starts.startQueuedNow(b.key);
     expect(dead).toContain(`${a.key} "A" (dropped)`);
     expect(dead).toContain(
       `remove the dead edge blocks ${a.key} -> ${b.key} with link_tasks remove; it can start once the rest is done.`,
@@ -10367,7 +10365,7 @@ describe("the task graph (R1)", () => {
     expect(dead).not.toMatch(/drop the blocker/i);
     expect(tasks.get(b.id)?.status).toBe("open");
     // The captain's refusal says what is in the way, without the tool's way out.
-    const captain = await supervisor.startQueuedNow(b.key, "captain");
+    const captain = await supervisor.starts.startQueuedNow(b.key, "captain");
     expect(captain).toMatch(new RegExp(`^Cannot start ${b.key} "B" now: it waits on .*\\.$`));
     expect(captain).toContain(`${a.key} "A" (dropped)`);
     expect(captain).not.toContain("link_tasks");
@@ -10375,7 +10373,7 @@ describe("the task graph (R1)", () => {
 
     // With only dead edges left, removing them is the whole way out.
     expect(supervisor.intake.dropTask(c.key, { reason: "not wanted either" })).toMatch(/^Dropped/);
-    const deadOnly = await supervisor.startQueuedNow(b.key);
+    const deadOnly = await supervisor.starts.startQueuedNow(b.key);
     expect(deadOnly).toContain("Dropped work never clears a wait: remove the dead edges");
     expect(deadOnly).toContain(`blocks ${a.key} -> ${b.key}`);
     expect(deadOnly).toContain(`blocks ${c.key} -> ${b.key}`);
@@ -10384,7 +10382,7 @@ describe("the task graph (R1)", () => {
     // The way out it names works: with the edges gone, the start goes through.
     expect(supervisor.intake.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^Removed/);
     expect(supervisor.intake.unlinkTasks(c.key, b.key, "blocks")).toMatch(/^Removed/);
-    expect(await supervisor.startQueuedNow(b.key)).toBe(`Started ${b.key} "B".`);
+    expect(await supervisor.starts.startQueuedNow(b.key)).toBe(`Started ${b.key} "B".`);
     await tick();
     expect(tasks.get(b.id)?.status).toBe("active");
   });
@@ -10411,7 +10409,7 @@ describe("the task graph (R1)", () => {
     expect(tasks.updateFields(filed.id, { model: "gpt-6-astra" }, "firstmate")).toEqual([
       "model gpt-6-astra",
     ]);
-    expect(await supervisor.startQueuedNow(filed.key)).toBe(
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toBe(
       `Started ${filed.key} "Calibrate the gauge" on openai-codex/gpt-6-astra.`,
     );
     await tick();
@@ -10462,7 +10460,7 @@ describe("the task graph (R1)", () => {
     expect(tasks.updateFields(filed.id, { reasoning: "xhigh" }, "firstmate")).toEqual([
       "reasoning extra high",
     ]);
-    expect(await supervisor.startQueuedNow(filed.key)).toBe(`Started ${filed.key} "Trim the log".`);
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toBe(`Started ${filed.key} "Trim the log".`);
     await tick();
     expect(sessionSpecs[0]?.thinking).toEqual({ level: "xhigh" });
     expect(tasks.get(filed.id)?.shape).toMatchObject({ override_reasoning: "xhigh" });
@@ -10481,13 +10479,13 @@ describe("the task graph (R1)", () => {
     const filed = supervisor.intake.plan({ title: "Trim the log", intent: intentOf("trim it") });
     tasks.updateFields(filed.id, { model: "anthropic-claude/claude-fable-5-1" }, "firstmate");
 
-    expect(await supervisor.startQueuedNow(filed.key)).toBe(
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toBe(
       `Started ${filed.key} "Trim the log" on fm-mock/mock-1: anthropic-claude/claude-fable-5-1 was not available.`,
     );
     // The captain's own Start in the record keeps its plain words.
     const other = supervisor.intake.plan({ title: "Trim the cache", intent: intentOf("trim it") });
     tasks.updateFields(other.id, { model: "claude-fable-5-1" }, "firstmate");
-    expect(await supervisor.startQueuedNow(other.key, "captain")).toBe(
+    expect(await supervisor.starts.startQueuedNow(other.key, "captain")).toBe(
       `Started ${other.key} "Trim the cache".`,
     );
   });
@@ -10497,7 +10495,7 @@ describe("the task graph (R1)", () => {
     const { supervisor, tasks } = setup(crewmate);
     const filed = supervisor.intake.plan({ title: "Trim the log", intent: intentOf("trim it") });
     tasks.updateFields(filed.id, { model: "claude-fable-5-1" }, "firstmate");
-    expect(await supervisor.startQueuedNow(filed.key)).toBe(
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toBe(
       `Started ${filed.key} "Trim the log" with no model recorded, so claude-fable-5-1 is not confirmed.`,
     );
   });
@@ -10565,7 +10563,7 @@ describe("the task graph (R1)", () => {
     });
     tasks.graph.link(old.id, closed.id, "blocks", "host");
     tasks.close(closed.id, { status: "dropped", reason: "cancelled", actor: "host" });
-    const result = supervisor.startAgain(old.key, "captain");
+    const result = supervisor.starts.startAgain(old.key, "captain");
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.text);
     expect(await result.started).toContain(result.task.key);
@@ -10612,7 +10610,7 @@ describe("the task graph (R1)", () => {
       expect.objectContaining({ taskId: old.id, op: "start-again" }),
     ]);
     const seq = tasks.boardSeq();
-    expect(supervisor.startAgain(old.key)).toEqual({
+    expect(supervisor.starts.startAgain(old.key)).toEqual({
       ok: false,
       text: `${fresh?.key} already replaces ${old.key}. Open that task instead.`,
     });
@@ -10635,8 +10633,8 @@ describe("the task graph (R1)", () => {
     });
     const seq = tasks.boardSeq();
     for (const id of [open.id, done.id, parent.id, retry.id]) {
-      expect(supervisor.startAgain(id).ok).toBe(false);
-      expect(supervisor.runTaskOp(id, "start-again")).toBeTruthy();
+      expect(supervisor.starts.startAgain(id).ok).toBe(false);
+      expect(supervisor.hostOps.runTaskOp(id, "start-again")).toBeTruthy();
       expect(tasks.boardSeq()).toBe(seq);
     }
   });
@@ -10653,9 +10651,9 @@ describe("the task graph (R1)", () => {
       outcome: "The draft is written; tests remain.",
     });
     tasks.placement.markWorkspaceRemoved(old.id);
-    expect(await supervisor.startQueuedNow(old.key)).toContain("start_again");
+    expect(await supervisor.starts.startQueuedNow(old.key)).toContain("start_again");
     await expect(supervisor.steer.steerCrewmate(old.id, "continue")).rejects.toThrow("start_again");
-    const result = supervisor.startAgain(old.id);
+    const result = supervisor.starts.startAgain(old.id);
     if (!result.ok) throw new Error(result.text);
     await result.started;
     await tick();
@@ -10679,7 +10677,7 @@ describe("the task graph (R1)", () => {
 
     it("holds Starting and sends one wake, then lets the Firstmate's start_now finish it", async () => {
       const { supervisor, tasks, inbox, task } = hooked();
-      expect(supervisor.runTaskOp(task.id, "start-task")).toBeUndefined();
+      expect(supervisor.hostOps.runTaskOp(task.id, "start-task")).toBeUndefined();
       await tick();
       expect(tasks.starts.startAttemptOf(task.id)?.phase).toBe("preparing");
       expect(tasks.get(task.id)?.status).toBe("open");
@@ -10687,17 +10685,17 @@ describe("the task graph (R1)", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.facts).toMatchObject({ kind: "captain-start", move: "start" });
       // The sweep leaves a held Start alone; a second press is refused.
-      await supervisor.sweepGates(Date.now());
+      await supervisor.watch.sweepGates(Date.now());
       expect(tasks.get(task.id)?.status).toBe("open");
-      expect(supervisor.runTaskOp(task.id, "start-task")).toContain("already starting");
-      await supervisor.startQueuedNow(task.id);
+      expect(supervisor.hostOps.runTaskOp(task.id, "start-task")).toContain("already starting");
+      await supervisor.starts.startQueuedNow(task.id);
       expect(tasks.get(task.id)?.status).toBe("active");
       expect(tasks.taskCardClicksSince(0).map(({ op }) => op)).toEqual(["start-task"]);
     });
 
     it("starts at once, and says why, when the Firstmate's seat cannot answer", async () => {
       const { supervisor, tasks, task, notes, inbox } = hooked("your first mate is paused");
-      expect(supervisor.runTaskOp(task.id, "start-task")).toBeUndefined();
+      expect(supervisor.hostOps.runTaskOp(task.id, "start-task")).toBeUndefined();
       await tick();
       expect(tasks.get(task.id)?.status).toBe("active");
       expect(notes()).toContain(
@@ -10708,9 +10706,9 @@ describe("the task graph (R1)", () => {
 
     it("starts as it is when the turn that read the Start failed, and when its wake is gone", async () => {
       const { supervisor, tasks, inbox, task, notes } = hooked();
-      supervisor.runTaskOp(task.id, "start-task");
+      supervisor.hostOps.runTaskOp(task.id, "start-task");
       const [row] = inbox.allFor(FIRSTMATE_RECIPIENT);
-      expect(supervisor.firstmateTurnEnded([row?.id ?? 0], "failed")).toEqual([row?.id]);
+      expect(supervisor.hostOps.firstmateTurnEnded([row?.id ?? 0], "failed")).toEqual([row?.id]);
       await tick();
       expect(tasks.get(task.id)?.status).toBe("active");
       expect(notes()).toContain(
@@ -10718,7 +10716,7 @@ describe("the task graph (R1)", () => {
       );
 
       const lost = supervisor.intake.plan({ title: "Fix another test", intent: intentOf("fix it") });
-      supervisor.runTaskOp(lost.id, "start-task");
+      supervisor.hostOps.runTaskOp(lost.id, "start-task");
       const pending = inbox.allFor(FIRSTMATE_RECIPIENT).find((entry) => entry.ref === lost.id);
       inbox.ack([pending?.id ?? 0]);
       supervisor.reconcileCutOffs();
@@ -10745,7 +10743,7 @@ describe("the task graph (R1)", () => {
       supervisor.reconcileCutOffs();
       expect(tasks.starts.startAttemptOf(task.id)?.phase).toBe("preparing");
       expect(tasks.get(task.id)?.status).toBe("open");
-      supervisor.firstmateTurnEnded([id ?? 0], "clean");
+      supervisor.hostOps.firstmateTurnEnded([id ?? 0], "clean");
       await tick();
       expect(tasks.get(task.id)?.status).toBe("active");
       expect(tasks.taskCardClicksSince(0).map(({ op }) => op)).toEqual(["start-task"]);
@@ -10757,7 +10755,7 @@ describe("the task graph (R1)", () => {
     const a = supervisor.intake.plan({ title: "A", intent: intentOf("a") });
     const b = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [a.id] });
     const refusal = `Cannot start ${b.key} "B" now: it waits on ${a.key} "A".`;
-    expect(supervisor.runTaskOp(b.id, "start-task")).toBe(refusal);
+    expect(supervisor.hostOps.runTaskOp(b.id, "start-task")).toBe(refusal);
     expect(events.findLast((event) => event.type === "firstmate_note")).toMatchObject({
       text: refusal,
     });
@@ -10773,29 +10771,29 @@ describe("the task graph (R1)", () => {
     const waits = supervisor.intake.plan({ title: "B", intent: intentOf("b"), blockedBy: [blocker.id] });
 
     // A blocked task queues at once and keeps waiting on its blocker.
-    expect(supervisor.runTaskOp(waits.id, "queue-task")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp(waits.id, "queue-task")).toBeUndefined();
     await tick();
     expect(tasks.get(waits.id)).toMatchObject({ status: "open", startPolicy: "when-ready" });
     expect(tasks.graph.blockers(waits.id).map((row) => row.id)).toEqual([blocker.id]);
     // Back to the backlog at once. Only the queue told the Firstmate, so his
     // standing directions apply to it before its wait ends.
-    expect(supervisor.runTaskOp(waits.id, "unqueue-task")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp(waits.id, "unqueue-task")).toBeUndefined();
     expect(tasks.get(waits.id)?.startPolicy).toBe("on-request");
     expect(ops).toHaveLength(1);
     expect(ops[0]).toContain(`the captain queued task ${waits.id}`);
 
     // Work nothing holds starts on the sweep the queue runs.
-    expect(supervisor.runTaskOp(later.id, "queue-task")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp(later.id, "queue-task")).toBeUndefined();
     await tick();
     expect(tasks.get(later.id)?.status).toBe("active");
     expect(sessions.open).toHaveBeenCalledTimes(1);
     // Once started, Queue it is refused and writes nothing; Back to backlog
     // keeps it started with its work and parks it (INF-2062).
-    expect(supervisor.runTaskOp(later.id, "queue-task")).toBe(
+    expect(supervisor.hostOps.runTaskOp(later.id, "queue-task")).toBe(
       queueStartedBacklogRefusal(later.key),
     );
     expect(tasks.get(later.id)?.startPolicy).toBe("when-ready");
-    expect(supervisor.runTaskOp(later.id, "unqueue-task")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp(later.id, "unqueue-task")).toBeUndefined();
     expect(tasks.get(later.id)).toMatchObject({ status: "active", backlogSince: expect.any(Number) });
     // The clicks are the captain's on the history. Queueing work nothing
     // holds is a Start, so it records one and needs no ready-sweep note.
@@ -10813,14 +10811,14 @@ describe("the task graph (R1)", () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
     const planned = supervisor.intake.plan({ title: "Write the ADR", intent: intentOf("write it") });
-    supervisor.runTaskOp(planned.id, "start-task");
+    supervisor.hostOps.runTaskOp(planned.id, "start-task");
     await tick();
     crewmate.emit({ type: "turn_end", taskId: planned.id });
     crewmate.finishPrompt();
     await tick();
     expect(tasks.get(planned.id)).toMatchObject({ status: "active", activity: "idle" });
     // Continue is the ladder's nudge with the captain's authority.
-    supervisor.runTaskOp(planned.id, "continue-task");
+    supervisor.hostOps.runTaskOp(planned.id, "continue-task");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
     expect(
@@ -10831,7 +10829,7 @@ describe("the task graph (R1)", () => {
     ).toMatchObject({ actor: "captain" });
 
     // Drop task on started work, mid-turn: the turn is aborted and the task ends, cancelled.
-    supervisor.runTaskOp(planned.id, "stop-task");
+    supervisor.hostOps.runTaskOp(planned.id, "stop-task");
     crewmate.failPrompt("aborted");
     await tick();
     expect(tasks.get(planned.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
@@ -10841,7 +10839,7 @@ describe("the task graph (R1)", () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, ops } = setup(crewmate);
     const planned = supervisor.intake.plan({ title: "Write the ADR", intent: intentOf("write it") });
-    supervisor.runTaskOp(planned.id, "start-task");
+    supervisor.hostOps.runTaskOp(planned.id, "start-task");
     await tick();
     // Start: the history says the captain started it, from the task card.
     expect(tasks.timeline(planned.id).find((event) => event.text === "starting")).toMatchObject({
@@ -10852,7 +10850,7 @@ describe("the task graph (R1)", () => {
     crewmate.finishPrompt();
     await tick();
     // Continue names the task card, not the stall card it shares a nudge with.
-    supervisor.runTaskOp(planned.id, "continue-task");
+    supervisor.hostOps.runTaskOp(planned.id, "continue-task");
     await tick();
     expect(
       tasks
@@ -10861,7 +10859,7 @@ describe("the task graph (R1)", () => {
         .at(-1),
     ).toMatchObject({ actor: "captain", data: { via: "task-card", cardId: null } });
     // Drop task mid-turn writes the request and its outcome: one click.
-    supervisor.runTaskOp(planned.id, "stop-task");
+    supervisor.hostOps.runTaskOp(planned.id, "stop-task");
     crewmate.failPrompt("aborted");
     await tick();
     expect(
@@ -10872,7 +10870,7 @@ describe("the task graph (R1)", () => {
     ).toEqual(["requested", "aborted-turn"]);
     const unstarted = supervisor.intake.plan({ title: "Never mind", intent: intentOf("nope") });
     expect(
-      supervisor.runTaskOp(unstarted.id, "drop-task", { parts: [], waiting: [], underway: [] }),
+      supervisor.hostOps.runTaskOp(unstarted.id, "drop-task", { parts: [], waiting: [], underway: [] }),
     ).toBeUndefined();
     expect(tasks.get(unstarted.id)?.status).toBe("dropped");
 
@@ -10964,7 +10962,7 @@ describe("the task graph (R1)", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "The PR is ready",
@@ -10976,7 +10974,7 @@ describe("the task graph (R1)", () => {
     crewmate.finishPrompt();
     await tick();
     const settle = cards().find((card) => card.title === "The PR is ready") as Card;
-    supervisor.act(settle.id, "merge");
+    supervisor.cardActions.act(settle.id, "merge");
     await tick();
     expect(cards().map((card) => card.id)).toContain(mergePendingCardId(taskId));
 
@@ -11006,7 +11004,7 @@ describe("the task graph (R1)", () => {
     // Queued: nothing routed yet, but the row remembers what to route from.
     expect(decideCalls).toHaveLength(0);
     expect(tasks.get(taskId)?.shape).toMatchObject({ override_model_id: "gpt-6-astra" });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     expect(decideCalls.at(-1)?.shape.override_model_id).toBe("gpt-6-astra");
   });
@@ -11286,7 +11284,7 @@ describe("the task graph (R1)", () => {
       });
       if (queued) {
         expect(classify).not.toHaveBeenCalled();
-        await supervisor.sweepGates(Date.now());
+        await supervisor.watch.sweepGates(Date.now());
       }
       await tick();
       expect(classify).toHaveBeenCalledTimes(1);
@@ -11307,7 +11305,7 @@ describe("the task graph (R1)", () => {
       // It stops at what is on this computer, with Look deeper the way on.
       expect(crew.promptCalls[0]).toContain("Stop at that boundary rather than reaching past it");
       expect(crew.promptCalls[0]).toContain("makes Look deeper its default action");
-      await supervisor.dispatchQueuedTask(taskId);
+      await supervisor.starts.dispatchQueuedTask(taskId);
       expect(classify).toHaveBeenCalledTimes(1);
     },
   );
@@ -11495,7 +11493,7 @@ describe("the task graph (R1)", () => {
     // Interrupted tasks resume after a restart; their repo is still in use.
     // A finished crewmate is idle and resumable too (WI-11 - no `delivered`),
     // so its repo is in use as well; both count.
-    expect(supervisor.activeTasksOnRepo("repo-1")).toEqual([
+    expect(supervisor.facts.activeTasksOnRepo("repo-1")).toEqual([
       { key: expect.any(String), title: "cut mid-turn", status: "working" },
       { key: expect.any(String), title: "finished", status: "working" },
     ]);
@@ -11523,7 +11521,7 @@ describe("the task graph (R1)", () => {
     expect(wake).toContain("the default model could serve it now");
 
     // The explicit go-ahead starts it despite the shortage.
-    expect(await supervisor.startQueuedNow(taskId)).toMatch(/^Started /);
+    expect(await supervisor.starts.startQueuedNow(taskId)).toMatch(/^Started /);
     await tick();
     expect(sessions.open).toHaveBeenCalled();
     expect(tasks.get(taskId)?.status).toBe("active");
@@ -11548,8 +11546,8 @@ describe("the task graph (R1)", () => {
       shape: { premium_ask: true },
       startAfter: { at: Date.now() - 1000 },
     });
-    await supervisor.sweepGates(Date.now());
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     // The gate cleared but the ask still cannot be served: the row waits on
     // the premium reset instead, the Firstmate hears, nothing started. A
@@ -11567,7 +11565,7 @@ describe("the task graph (R1)", () => {
     expect(cards()).toEqual([]);
     expect(ops.filter((line) => line.includes("needs a premium model"))).toHaveLength(1);
 
-    expect(await supervisor.startQueuedNow(taskId)).toMatch(/^Started /);
+    expect(await supervisor.starts.startQueuedNow(taskId)).toMatch(/^Started /);
     await tick();
     expect(sessions.open).toHaveBeenCalled();
   });
@@ -11610,10 +11608,10 @@ describe("the task graph (R1)", () => {
       intent: intentOf("the big refactor"),
       startAfter: { whenQuotaResets: "codex" },
     });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(legacyStateOf(tasks.get(taskId))).toBe("queued");
     headroom = true;
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("running");
   });
@@ -11635,13 +11633,13 @@ describe("the task graph (R1)", () => {
 
     // Every click returns to its author: the card leaves the stack, no row
     // parks, no wake says "deferred", and the strip counts no one waiting.
-    supervisor.act(card.id, "a");
+    supervisor.cardActions.act(card.id, "a");
     await tick();
     expect(cards().find((entry) => entry.id === card.id)).toBeUndefined();
     expect(tasks.list().filter((record) => record.kind === "decision")).toEqual([]);
     expect(tasks.list().filter((record) => record.id.startsWith("park-"))).toEqual([]);
     expect(ops.some((line) => line.includes("deferred your card"))).toBe(false);
-    expect(supervisor.crewCounts()).toEqual({ working: 0, idle: 0, queued: 0 });
+    expect(supervisor.facts.crewCounts()).toEqual({ working: 0, idle: 0, queued: 0 });
     expect(events.filter((e) => e.type === "crew_counts").every((e) => !("waiting" in e))).toBe(
       true,
     );
@@ -11694,7 +11692,7 @@ describe("the task graph (R1)", () => {
       retryConverse: vi.fn(),
     });
     const before = ops.length;
-    expect(supervisor.act(id, "premium")).toEqual({});
+    expect(supervisor.cardActions.act(id, "premium")).toEqual({});
     await tick();
     expect(cards().find((card) => card.id === id)).toBeUndefined();
     expect(ops.slice(before)).toEqual([
@@ -11710,7 +11708,7 @@ describe("the task graph (R1)", () => {
       taskId,
       actions: [{ id: "premium", label: "Try a premium model", default: true }],
     });
-    supervisor.act(scripted, "premium", "frame");
+    supervisor.cardActions.act(scripted, "premium", "frame");
     await tick();
     expect(clicks.at(-1)).toEqual({ origin: "agent", ref: taskId });
     expect(ops.at(-1)).toContain('[fm-op] a script chose "Try a premium model"');
@@ -11732,7 +11730,7 @@ describe("the task graph (R1)", () => {
       status: "open",
       actor: "host",
     });
-    await supervisor.sweepGates(Date.now() + 25 * 60 * 60 * 1000);
+    await supervisor.watch.sweepGates(Date.now() + 25 * 60 * 60 * 1000);
     await tick();
 
     expect(tasks.get("park-card-fm-old")).toMatchObject({
@@ -11784,7 +11782,7 @@ describe("the task graph (R1)", () => {
     const clicks = decisions.map((card) => {
       const action = card.actions.find((candidate) => candidate.id === "go") ?? card.actions[0];
       if (!action) throw new Error(`${card.id} has no action`);
-      const effect = supervisor.act(card.id, action.id).effect;
+      const effect = supervisor.cardActions.act(card.id, action.id).effect;
       return {
         named: opensSettings(action),
         opened: effect?.kind === "open" && effect.target !== "browser",
@@ -11806,7 +11804,7 @@ describe("the task graph (R1)", () => {
     const benched = cards().find((entry) => entry.id === "card-fm-no-headroom") as Card;
     expect(benched.actions.map((action) => action.id)).toEqual(["open-settings"]);
 
-    expect(supervisor.act("card-fm-no-headroom", "open-settings").effect).toEqual({
+    expect(supervisor.cardActions.act("card-fm-no-headroom", "open-settings").effect).toEqual({
       kind: "open",
       target: "settings",
     });
@@ -11836,7 +11834,7 @@ describe("background job results (R2)", () => {
     if (!record) throw new Error("missing task");
     expect(record.activity).toBe("idle");
     expect(supervisor.postures.workPosture(record)).toEqual({ state: "active", reason: "job" });
-    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 1, idle: 0 });
     running = false;
     tasks.placement.setGate(taskId, { kind: "captain" });
     expect(supervisor.postures.workPosture(tasks.get(taskId) ?? record)).toEqual({
@@ -11844,7 +11842,7 @@ describe("background job results (R2)", () => {
       reason: "captain",
     });
     const row = inbox.enqueue(taskId, "Reply already captured");
-    expect(supervisor.crewCounts()).toMatchObject({ working: 1, idle: 0 });
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 1, idle: 0 });
     inbox.ack([row]);
     tasks.placement.setGate(taskId, null);
     crewmate.emit({ type: "background_work_changed", count: 1 });
@@ -11853,7 +11851,7 @@ describe("background job results (R2)", () => {
       reason: "job",
     });
     crewmate.emit({ type: "background_work_changed", count: 0 });
-    expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+    expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 1 });
     expect(tasks.get(taskId)?.activity).toBe("idle");
   });
 
@@ -11928,7 +11926,7 @@ describe("background job results (R2)", () => {
     crewmate.finishPrompt();
     await tick();
 
-    supervisor.deliverJobResult(taskId, '[job] background job j1 finished: "make" exited 0');
+    supervisor.watch.deliverJobResult(taskId, '[job] background job j1 finished: "make" exited 0');
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain("exited 0");
   });
@@ -11942,7 +11940,7 @@ describe("background job results (R2)", () => {
     });
     await tick();
 
-    supervisor.deliverJobResult(taskId, "[job] finished early");
+    supervisor.watch.deliverJobResult(taskId, "[job] finished early");
     expect(crewmate.promptCalls).toHaveLength(1);
     expect(crewmate.promptCalls[0]).toContain("long turn");
     crewmate.finishPrompt();
@@ -11953,7 +11951,7 @@ describe("background job results (R2)", () => {
   it("turns a job that outlived its task into one feed line, never a wake (WI-2)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, ops, events, inbox } = setup(crewmate);
-    supervisor.deliverJobResult("gone-task", "[job] result of a ghost");
+    supervisor.watch.deliverJobResult("gone-task", "[job] result of a ghost");
     expect(ops).toHaveLength(0);
     expect(inbox.recipientsWithRows()).toEqual([]);
     expect(events.at(-1)).toEqual({
@@ -11975,13 +11973,13 @@ describe("background job results (R2)", () => {
     });
     await tick();
     // Twenty-one quiet minutes, but its build is running: no escalation.
-    supervisor.checkQuietTasks(Date.now() + 21 * 60_000);
+    supervisor.watch.checkQuietTasks(Date.now() + 21 * 60_000);
     await tick();
     expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
     expect(ops.some((line) => line.includes("may be stuck"))).toBe(false);
     // The job ended and the turn stays quiet: now it escalates, as a wake.
     jobRunning = false;
-    supervisor.checkQuietTasks(Date.now() + 22 * 60_000);
+    supervisor.watch.checkQuietTasks(Date.now() + 22 * 60_000);
     await tick();
     expect(ops.filter((line) => line.includes("may be stuck"))).toHaveLength(1);
     expect(ops.at(-1)).toContain(`on task ${taskId} "Building"`);
@@ -12015,12 +12013,12 @@ describe("the quiet-crewmate watchdog (P4)", () => {
     const start = Date.now();
 
     // Nine quiet minutes: nothing.
-    supervisor.checkQuietTasks(start + 9 * MIN);
+    supervisor.watch.checkQuietTasks(start + 9 * MIN);
     expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
 
     // Eleven: one feed line, once - the next tick does not repeat it.
-    supervisor.checkQuietTasks(start + 11 * MIN);
-    supervisor.checkQuietTasks(start + 12 * MIN);
+    supervisor.watch.checkQuietTasks(start + 11 * MIN);
+    supervisor.watch.checkQuietTasks(start + 12 * MIN);
     const notes = events.filter((e) => e.type === "firstmate_note");
     expect(notes).toHaveLength(1);
     expect(notes[0] && "text" in notes[0] ? notes[0].text : "").toContain(
@@ -12029,8 +12027,8 @@ describe("the quiet-crewmate watchdog (P4)", () => {
 
     // Twenty-one: one [fm-op] naming the tools, a timeline note, no card
     // (cards/tasks/agents P0, WI-3) - and the next tick does not repeat it.
-    supervisor.checkQuietTasks(start + 21 * MIN);
-    supervisor.checkQuietTasks(start + 22 * MIN);
+    supervisor.watch.checkQuietTasks(start + 21 * MIN);
+    supervisor.watch.checkQuietTasks(start + 22 * MIN);
     await tick();
     expect(cards()).toEqual([]);
     const stuck = ops.filter((line) => line.includes("may be stuck"));
@@ -12046,7 +12044,7 @@ describe("the quiet-crewmate watchdog (P4)", () => {
     const { taskId } = await supervisor.intake.commission({ title: "Chatty", intent: intentOf("work") });
     await tick();
     const start = Date.now();
-    supervisor.checkQuietTasks(start + 21 * MIN);
+    supervisor.watch.checkQuietTasks(start + 21 * MIN);
     await tick();
     expect(ops.filter((line) => line.includes("may be stuck"))).toHaveLength(1);
     expect(cards()).toEqual([]);
@@ -12056,9 +12054,9 @@ describe("the quiet-crewmate watchdog (P4)", () => {
     // fresh twenty quiet minutes is a fresh wake.
     crewmate.emit({ type: "assistant_delta", taskId, text: "still here" });
     await tick();
-    supervisor.checkQuietTasks(start + 15 * MIN);
+    supervisor.watch.checkQuietTasks(start + 15 * MIN);
     expect(ops.filter((line) => line.includes("may be stuck"))).toHaveLength(1);
-    supervisor.checkQuietTasks(start + 45 * MIN);
+    supervisor.watch.checkQuietTasks(start + 45 * MIN);
     expect(ops.filter((line) => line.includes("may be stuck"))).toHaveLength(2);
     expect(cards()).toEqual([]);
   });
@@ -12070,7 +12068,7 @@ describe("the quiet-crewmate watchdog (P4)", () => {
     await tick();
     crewmate.finishPrompt();
     await tick();
-    supervisor.checkQuietTasks(Date.now() + 60 * MIN);
+    supervisor.watch.checkQuietTasks(Date.now() + 60 * MIN);
     expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
     expect(cards()).toEqual([]);
     expect(ops.some((line) => line.includes("may be stuck"))).toBe(false);
@@ -12085,11 +12083,11 @@ describe("the quiet-crewmate watchdog (P4)", () => {
     });
     await tick();
     const start = Date.now();
-    supervisor.checkQuietTasks(start + 21 * MIN);
+    supervisor.watch.checkQuietTasks(start + 21 * MIN);
     await tick();
     // Two hours in, the turn is still running: one more escalation.
-    supervisor.checkQuietTasks(start + 121 * MIN);
-    supervisor.checkQuietTasks(start + 122 * MIN);
+    supervisor.watch.checkQuietTasks(start + 121 * MIN);
+    supervisor.watch.checkQuietTasks(start + 122 * MIN);
     await tick();
     expect(cards()).toEqual([]);
     const hours = ops.filter((line) => line.includes("hours"));
@@ -12462,7 +12460,7 @@ describe("needs_reauth card (CD-3=A)", () => {
     expect(card?.title).toBe("Claude (Personal) needs you to sign in again.");
     expect(card?.body).toBe(NEEDS_REAUTH_CONSEQUENCE);
     expect(card?.actions.map((action) => action.id)).toEqual(["sign-in"]);
-    expect(supervisor.act(card?.id ?? "", "sign-in").effect).toEqual({
+    expect(supervisor.cardActions.act(card?.id ?? "", "sign-in").effect).toEqual({
       kind: "open",
       target: "subscriptions",
       restoreAccountId: "acct_cl1",
@@ -12521,9 +12519,9 @@ describe("a card places the captain gate (cards as tasks)", () => {
     });
     expect(hostRows(tasks, "card-fm-flagship-move")).toHaveLength(1);
     // The row is its card, not crew work.
-    expect(supervisor.crewStatus()).toEqual([]);
+    expect(supervisor.facts.crewStatus()).toEqual([]);
 
-    supervisor.act("card-fm-flagship-move", "move-flagship");
+    supervisor.cardActions.act("card-fm-flagship-move", "move-flagship");
     expect(tasks.get(row?.id ?? "")).toMatchObject({ status: "done", closedReason: "answered" });
     // The host's bookkeeping is not news: no feed line for its close.
     expect(tasks.timeline(row?.id ?? "").at(-1)).toMatchObject({ feed: false });
@@ -12565,12 +12563,12 @@ describe("a card places the captain gate (cards as tasks)", () => {
     });
     const [filed] = hostRows(tasks, "card-fm-no-headroom");
     tasks.close(filed?.id ?? "", { status: "dropped", reason: "superseded", actor: "host" });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     const open = hostRows(tasks, "card-fm-no-headroom").filter((row) => row.status === "open");
     expect(open).toHaveLength(1);
     // And the other way: a row whose card never made it to the stack.
     const orphan = tasks.capture.fileHostCardTask({ id: "orphan-1", title: "Gone", cardId: "card-gone" });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(orphan.id)).toMatchObject({ status: "dropped", closedReason: "superseded" });
     expect(tasks.timeline(orphan.id).at(-1)).toMatchObject({
       text: "its card is gone",
@@ -12618,10 +12616,10 @@ describe("a card places the captain gate (cards as tasks)", () => {
     });
     expect(tasks.get(taskId)?.gate?.ref).toBe(first);
     specs[0]?.onReport?.("The decision is ready.");
-    supervisor.act(first, "change");
+    supervisor.cardActions.act(first, "change");
     await tick();
     expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: second });
-    supervisor.act(second, "north");
+    supervisor.cardActions.act(second, "north");
     expect(tasks.get(taskId)?.gate).toBeNull();
   });
 });
@@ -12643,7 +12641,7 @@ describe("the sign-in where a project lives", () => {
     expect(card.title).toBe("Sign in to GitHub again");
     expect(card.body).toContain("2 pull requests are waiting on it.");
     expect(card.body).toContain("Projects kept on this computer are not affected.");
-    expect(supervisor.act(card.id, "sign-in").effect).toEqual({
+    expect(supervisor.cardActions.act(card.id, "sign-in").effect).toEqual({
       kind: "open",
       target: "projects",
       signIn: "github.com",
@@ -12664,7 +12662,7 @@ describe("the sign-in where a project lives", () => {
       status: "idle",
       worktreeDir: "/work/signin-merge",
     });
-    vi.spyOn(supervisor, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
     const result = await supervisor.settling.settle.settleTaskDetailed(
       "signin-merge",
       "merge-pr",
@@ -12868,8 +12866,8 @@ describe("crew report answer ownership", () => {
       actions: [{ id: "review", label: "Review it", default: true }],
     });
 
-    supervisor.act(choice, "choose");
-    supervisor.act(review, "review");
+    supervisor.cardActions.act(choice, "choose");
+    supervisor.cardActions.act(review, "review");
 
     expect(inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.ref)).toEqual(["work", "work"]);
   });
@@ -12889,7 +12887,7 @@ describe("crew report answer ownership", () => {
     });
     tasks.capture.fileDecision({ id: "decision-task", title: "Choose", cardId });
 
-    supervisor.act(cardId, "choose");
+    supervisor.cardActions.act(cardId, "choose");
 
     expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual([
       expect.objectContaining({ ref: "decision-task" }),
@@ -12950,7 +12948,7 @@ describe("the durable inbox (design A)", () => {
       broadcastCards: () => {},
     });
     new InboxStore(db, { now: hostClock }).resetInFlight();
-    await fresh.sweepInbox(hostNow);
+    await fresh.watch.sweepInbox(hostNow);
     await tick();
 
     // The stranded guidance became the resumed crewmate's next turn.
@@ -12992,7 +12990,7 @@ describe("the durable inbox (design A)", () => {
       broadcastCards: () => {},
     });
     inbox.resetInFlight();
-    await fresh.sweepInbox(hostNow);
+    await fresh.watch.sweepInbox(hostNow);
     await tick();
 
     expect(bootCrewmate.promptCalls).toEqual([
@@ -13039,7 +13037,7 @@ describe("the durable inbox (design A)", () => {
       broadcastCards: () => {},
     });
     inbox.resetInFlight();
-    await fresh.sweepInbox(hostNow);
+    await fresh.watch.sweepInbox(hostNow);
     await tick();
 
     expect(bootCrewmate.promptCalls).toEqual([
@@ -13098,7 +13096,7 @@ describe("the durable inbox (design A)", () => {
       // The boot: the quit left the brief in flight.
       expect(new InboxStore(db, { now: hostClock }).resetInFlight()).toBe(1);
       passGrace();
-      await fresh.sweepInbox(hostNow);
+      await fresh.watch.sweepInbox(hostNow);
       await tick();
 
       // The same message again, opened by the note that it is a replay.
@@ -13133,7 +13131,7 @@ describe("the durable inbox (design A)", () => {
 
     // The tick sweep retries once the grace passes; the steer now lands.
     passGrace();
-    await supervisor.sweepInbox(hostNow);
+    await supervisor.watch.sweepInbox(hostNow);
     expect(crewmate.steer).toHaveBeenCalledTimes(2);
     expect(crewmate.steer).toHaveBeenLastCalledWith(
       "make it blue",
@@ -13166,7 +13164,7 @@ describe("the durable inbox (design A)", () => {
     expect(await supervisor.steer.steerCrewmate(taskId, "urgent fix")).toBe("recorded-retrying");
     for (let round = 0; round < 3; round += 1) {
       passGrace();
-      await supervisor.sweepInbox(hostNow);
+      await supervisor.watch.sweepInbox(hostNow);
     }
 
     const escalated = inbox.allFor(taskId);
@@ -13186,7 +13184,7 @@ describe("the durable inbox (design A)", () => {
     // The budget is spent: no further delivery attempts.
     const attempts = (crewmate.steer as ReturnType<typeof vi.fn>).mock.calls.length;
     passGrace();
-    await supervisor.sweepInbox(hostNow);
+    await supervisor.watch.sweepInbox(hostNow);
     expect((crewmate.steer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(attempts);
   });
 
@@ -13207,7 +13205,7 @@ describe("the durable inbox (design A)", () => {
     await tick();
 
     passGrace();
-    await supervisor.sweepInbox(hostNow);
+    await supervisor.watch.sweepInbox(hostNow);
     await tick();
     expect(crewmate.promptCalls).toHaveLength(2);
     expect(crewmate.promptCalls[0]).toContain("Start the work");
@@ -13218,7 +13216,7 @@ describe("the durable inbox (design A)", () => {
     const crewmate = fakeCrewmate();
     const { supervisor, inbox, ops, events } = clockedSetup(crewmate);
     inbox.enqueue("ghost-task", "hello out there");
-    await supervisor.sweepInbox(hostNow);
+    await supervisor.watch.sweepInbox(hostNow);
     expect(events).toContainEqual({
       type: "firstmate_note",
       text: "Guidance for a task that no longer exists was never delivered - the task is gone: hello out there",
@@ -13293,7 +13291,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     // The captain answers it; the card leaves the stack and the next report
     // falls through the rule as if none had ever been up.
     const card = supervisor.cards.snapshot().find((entry) => entry.title === "Pick a course");
-    supervisor.act(card?.id ?? "", "change");
+    supervisor.cardActions.act(card?.id ?? "", "change");
     await tick();
     await report(crewmate, taskId, "Course plotted.");
     expect(sorts.at(-1)?.rule).toBe("stopped");
@@ -13820,7 +13818,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
           await plannerWithCard(backgroundWork);
 
         // Ordinary feedback stays quiet: the card still holds the turn.
-        supervisor.replyToCard(card.id, "say which decision moves");
+        supervisor.cardActions.replyToCard(card.id, "say which decision moves");
         await tick();
         specs[0]?.onReply?.({
           cardId: card.id,
@@ -13834,7 +13832,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
 
         // The approval by reply: one thread line, the card unchanged, the
         // relay declared.
-        supervisor.replyToCard(card.id, APPROVAL);
+        supervisor.cardActions.replyToCard(card.id, APPROVAL);
         await tick();
         specs[0]?.onReply?.({
           cardId: card.id,
@@ -13874,7 +13872,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     it("wakes the Firstmate for the same relay after the planner withdrew its card, and names the ask only when declared", async () => {
       const { supervisor, crewmate, card, ops, sorts, specs, taskId } =
         await plannerWithCard("client");
-      supervisor.replyToCard(card.id, APPROVAL);
+      supervisor.cardActions.replyToCard(card.id, APPROVAL);
       await tick();
       // FI3-696's turn: the card withdrawn and the approval reported, with
       // nothing that says the Firstmate must act.
@@ -13899,7 +13897,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     it("answers the captain's reply first: a request beside an unanswered reply says so and wakes nobody", async () => {
       const { supervisor, crewmate, card, ops, sorts, specs, taskId } =
         await plannerWithCard("client");
-      supervisor.replyToCard(card.id, APPROVAL);
+      supervisor.cardActions.replyToCard(card.id, APPROVAL);
       await tick();
       expect(specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK })).toContain(
         "only if the captain's reply under your card has your answer by then",
@@ -13918,7 +13916,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
           queued.push(inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref)),
         retryConverse: vi.fn(),
       });
-      supervisor.replyToCard(card.id, APPROVAL);
+      supervisor.cardActions.replyToCard(card.id, APPROVAL);
       await tick();
       specs[0]?.onReply?.({
           cardId: card.id,
@@ -14103,7 +14101,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     const card = h.saved() as Card;
     expect(card.attachment).toMatchObject({ kind: "browser", handoff: true });
 
-    const result = h.supervisor.act(card.id, "sign-in");
+    const result = h.supervisor.cardActions.act(card.id, "sign-in");
     await tick();
     expect(result.effect).toMatchObject({ kind: "open", target: "browser" });
     expect(h.browsers.takeControl).toHaveBeenCalledWith(h.taskId, {
@@ -14117,7 +14115,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     h.specs.at(-1)?.onReport?.("The sign-in card is up again.");
     await h.endTurn();
     const again = h.saved() as Card;
-    h.supervisor.act(again.id, "leave");
+    h.supervisor.cardActions.act(again.id, "leave");
     await tick();
     expect(h.tasks.get(h.taskId)).toMatchObject({ status: "active", closedReason: null });
     expect(h.crewmate.steer).toHaveBeenCalledTimes(1);
@@ -14153,13 +14151,13 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await h.endTurn();
     const prompts = h.crewmate.promptCalls.length;
     // A script in the body can never press it.
-    expect(() => h.supervisor.act(card?.id ?? "", "sign-in", "frame")).toThrow(
+    expect(() => h.supervisor.cardActions.act(card?.id ?? "", "sign-in", "frame")).toThrow(
       "This action is available only from the card controls.",
     );
     expect(h.browsers.takeControl).not.toHaveBeenCalled();
 
     // The captain's click takes the card's own browser and opens its view.
-    expect(h.supervisor.act(card?.id ?? "", "sign-in")).toEqual({
+    expect(h.supervisor.cardActions.act(card?.id ?? "", "sign-in")).toEqual({
       effect: {
         kind: "open",
         target: "browser",
@@ -14180,7 +14178,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       reason: "captain",
     });
     hostNow += minutes(45);
-    h.supervisor.reconcileIdle(hostNow);
+    h.supervisor.watch.reconcileIdle(hostNow);
     await tick();
     expect(h.crewmate.promptCalls).toHaveLength(prompts);
   });
@@ -14199,7 +14197,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       text: "This browser is no longer running, so there is nothing to take.",
     });
     // The click still answers the card and opens the view, which says the card's browser stopped.
-    expect(h.supervisor.act(card?.id ?? "", "sign-in")).toEqual({
+    expect(h.supervisor.cardActions.act(card?.id ?? "", "sign-in")).toEqual({
       effect: {
         kind: "open",
         target: "browser",
@@ -14248,7 +14246,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       ok: false,
       text: "This browser is no longer running, so there is nothing to take.",
     });
-    h.supervisor.act(card?.id ?? "", "sign-in");
+    h.supervisor.cardActions.act(card?.id ?? "", "sign-in");
     await tick();
     await tick();
     expect(h.crewmate.promptCalls.at(-1)).toBe(
@@ -14293,7 +14291,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       generation: 2,
     };
     h.held.current = false;
-    h.supervisor.act(card?.id ?? "", "use-saved-sign-in");
+    h.supervisor.cardActions.act(card?.id ?? "", "use-saved-sign-in");
     await tick();
     await tick();
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
@@ -14382,12 +14380,12 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     ]);
     await h.endTurn();
     // A script in the body can never press it.
-    expect(() => h.supervisor.act(card?.id ?? "", "use-saved-sign-in", "frame")).toThrow(
+    expect(() => h.supervisor.cardActions.act(card?.id ?? "", "use-saved-sign-in", "frame")).toThrow(
       "This action is available only from the card controls.",
     );
     // The captain's click gives the card's own browser the saved sign-in and opens its view;
     // the captain never takes control.
-    expect(h.supervisor.act(card?.id ?? "", "use-saved-sign-in")).toEqual({
+    expect(h.supervisor.cardActions.act(card?.id ?? "", "use-saved-sign-in")).toEqual({
       effect: {
         kind: "open",
         target: "browser",
@@ -14514,7 +14512,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await h.emitCard.run(REQUEST);
     const card = h.saved();
     await h.endTurn();
-    h.supervisor.act(card?.id ?? "", "use-saved-sign-in");
+    h.supervisor.cardActions.act(card?.id ?? "", "use-saved-sign-in");
     await tick();
     expect(h.events).toContainEqual({
       type: "firstmate_note",
@@ -14528,7 +14526,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     const h = await crewmateWithBrowser();
     await h.endTurn();
     const prompts = h.crewmate.promptCalls.length;
-    h.supervisor.browserReturned(h.taskId, {
+    h.supervisor.cardActions.browserReturned(h.taskId, {
       site: "aurora.example",
       after: "fill in the passenger details",
       saved: true,
@@ -14558,7 +14556,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       after: "fill in the passenger details",
       once: "browser-returned:run-1:2:1",
     };
-    h.supervisor.browserReturned(h.taskId, returned);
+    h.supervisor.cardActions.browserReturned(h.taskId, returned);
     await tick();
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
     // Its words are the wake's own (wakes.test.ts holds them).
@@ -14579,7 +14577,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     ).toEqual(["supervisor"]);
     // The same return again is not new: the inbox queued it once.
     await h.endTurn();
-    h.supervisor.browserReturned(h.taskId, returned);
+    h.supervisor.cardActions.browserReturned(h.taskId, returned);
     await tick();
     expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
   });
@@ -14605,7 +14603,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     // He took the browser from the record, never pressing the card's action.
     h.shown.fact = { ...OPEN, control: "captain" };
     const prompts = h.crewmate.promptCalls.length;
-    h.supervisor.browserReturned(h.taskId, {
+    h.supervisor.cardActions.browserReturned(h.taskId, {
       site: "aurora.example",
       after: HANDOFF.after,
       once: "browser-returned:run-1:2:1",
@@ -14629,7 +14627,7 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     await h.endTurn();
     // That browser stopped and a newer one took its place, which he took and returns.
     h.shown.fact = { ...OPEN, generation: 3, control: "captain" };
-    h.supervisor.browserReturned(h.taskId, {
+    h.supervisor.cardActions.browserReturned(h.taskId, {
       site: "aurora.example",
       once: "browser-returned:run-1:3:1",
     });
@@ -14724,7 +14722,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     /** The tick at `ms` idle minutes past the clock's start. */
     const at = async (ms: number) => {
       hostNow = idleSince + ms;
-      harness.supervisor.reconcileIdle(hostNow);
+      harness.supervisor.watch.reconcileIdle(hostNow);
       await tick();
     };
     return { ...harness, crewmate, taskId, idleSince, at };
@@ -14737,8 +14735,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       ...harness.inbox.allFor(taskId).map((row) => row.nextAttemptAt ?? 0),
     );
     hostNow = due;
-    harness.supervisor.reconcileIdle(hostNow);
-    await harness.supervisor.sweepInbox(hostNow);
+    harness.supervisor.watch.reconcileIdle(hostNow);
+    await harness.supervisor.watch.sweepInbox(hostNow);
     await tick();
   }
 
@@ -15093,7 +15091,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         const prompts = h.crewmate.promptCalls.length;
         const timer = h.tasks.get(h.taskId)?.gate;
         await h.at(base + minutes(step));
-        await h.supervisor.sweepGates(hostNow);
+        await h.supervisor.watch.sweepGates(hostNow);
         await tick();
         if (timer?.kind === "at-time" && h.tasks.get(h.taskId)?.gate === null) timerEnds.push(step);
         if (h.crewmate.promptCalls.length > prompts) await lookLater();
@@ -15198,7 +15196,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(idleWakes(ops)[0]).toContain('"tool": "interrupt_crewmate"');
     expect(idleWakes(ops)[0]).toContain("Its last report: Done with step one.");
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-wake" });
-    expect(supervisor.crewStatus(taskId)[0]?.stalled).toBe("stalled 20m · 1 wake");
+    expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBe("stalled 20m · 1 wake");
 
     await at(minutes(50) - 1);
     expect(idleWakes(ops)).toHaveLength(1);
@@ -15242,7 +15240,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await at(minutes(600));
     expect(ops).toHaveLength(opsBefore);
     expect(sorts).toHaveLength(sortsBefore);
-    expect(supervisor.crewStatus(taskId)[0]?.stalled).toBe("stalled 10h · 2 wakes");
+    expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBe("stalled 10h · 2 wakes");
   });
 
   it("a wake the paused Firstmate never took is not ignored: no stall card while the seat waits, and the clock runs from delivery (W1 S9)", async () => {
@@ -15259,7 +15257,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     for (const idle of [50, 80, 200, 600]) await at(minutes(idle));
     expect(idleWakes(ops)).toHaveLength(1);
     expect(cards()).toEqual([]);
-    expect(supervisor.crewStatus(taskId)[0]?.stalled).toBe("stalled 10h · 1 wake");
+    expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBe("stalled 10h · 1 wake");
 
     // The seat serves again at the 600-minute tick and its drain takes the wake.
     const waiting = inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.id);
@@ -15309,7 +15307,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await endTurn(crewmate, taskId, "Step two done.");
     // A fresh clock, from this idle boundary.
     expect(tasks.get(taskId)?.idleSince).toBe(idleSince + minutes(85));
-    expect(supervisor.crewStatus(taskId)[0]?.stalled).toBeUndefined();
+    expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBeUndefined();
   });
 
   it("the card's Nudge nudges with the captain's authority, and Keep waiting keeps the task quietly", async () => {
@@ -15317,7 +15315,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await first.at(minutes(10));
     await endTurn(first.crewmate, first.taskId);
     for (const step of [20, 50, 80]) await first.at(minutes(step));
-    first.supervisor.act(`card-stall-${first.taskId}`, "nudge");
+    first.supervisor.cardActions.act(`card-stall-${first.taskId}`, "nudge");
     await tick();
     expect(first.crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
     const steered = first.tasks
@@ -15336,7 +15334,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // INF-1670, the captain's written-in answer: Keep waiting closes the
     // alert like the captain's close, steering nobody and ending nothing.
     const prompts = second.crewmate.promptCalls.length;
-    second.supervisor.act(`card-stall-${second.taskId}`, "keep-waiting");
+    second.supervisor.cardActions.act(`card-stall-${second.taskId}`, "keep-waiting");
     await tick();
     expect(second.cards()).toEqual([]);
     expect(second.crewmate.promptCalls).toHaveLength(prompts);
@@ -15363,7 +15361,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     for (const step of [20, 50, 80]) await at(minutes(step));
     const stall = `card-stall-${taskId}`;
     const question = "is it stuck because the secret PR hasn't landed yet?";
-    supervisor.replyToCard(stall, question);
+    supervisor.cardActions.replyToCard(stall, question);
     expect(converseAboutCard).toHaveBeenCalledWith(stall, question, undefined);
     expect(crewmate.promptCalls.some((call) => call.includes(question))).toBe(false);
     expect(
@@ -15414,7 +15412,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await first.at(minutes(10));
     await endTurn(first.crewmate, first.taskId);
     for (const step of [20, 50, 80]) await first.at(minutes(step));
-    first.supervisor.act(`card-stall-${first.taskId}`, "discard");
+    first.supervisor.cardActions.act(`card-stall-${first.taskId}`, "discard");
     await tick();
     expect(first.tasks.get(first.taskId)).toMatchObject({ closedReason: "discarded" });
 
@@ -15429,7 +15427,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // The keep: no more wakes or cards this episode, the context line stays.
     expect(second.ops).toHaveLength(opsBefore);
     expect(second.cards()).toEqual([expect.objectContaining({ minimized: true })]);
-    expect(second.supervisor.crewStatus(second.taskId)[0]?.stalled).toBe(
+    expect(second.supervisor.facts.crewStatus(second.taskId)[0]?.stalled).toBe(
       "stalled 6h 40m · 2 wakes",
     );
   });
@@ -15551,7 +15549,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     // The stall card's Nudge is the same nudge, naming the same note.
     for (const step of [50, 80]) await at(minutes(step));
-    supervisor.act(`card-stall-${taskId}`, "nudge");
+    supervisor.cardActions.act(`card-stall-${taskId}`, "nudge");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe(idleNoteNudgeText(note));
   });
@@ -15642,7 +15640,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         expect(sorts.filter((row) => row.taskId === taskId).map((row) => row.rule)).toEqual([
           "stopped",
         ]);
-        expect(supervisor.crewStatus(taskId)[0]?.stalled).toBeUndefined();
+        expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBeUndefined();
         const record = tasks.get(taskId);
         expect(record && supervisor.postures.workPosture(record)).toEqual({
           state: "idle",
@@ -15704,14 +15702,14 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ).text,
       ).toContain("Diagnosis recorded");
       const prompts = crewmate.promptCalls.length;
-      await harness.supervisor.pollCheckWatches(hostNow);
+      await harness.supervisor.watch.pollCheckWatches(hostNow);
       await tick();
       expect(crewmate.promptCalls).toHaveLength(prompts + 1);
       await endTurn(crewmate, taskId, "Still waiting for the named baseline work.");
       // Captain F5: a final reading wakes once per commit; the baseline fix is a new commit.
       main = "b".repeat(40);
       items = [{ name: "linux-checks", state: "success" }];
-      await harness.supervisor.pollCheckWatches(hostNow);
+      await harness.supervisor.watch.pollCheckWatches(hostNow);
       await tick();
       expect(crewmate.promptCalls.at(-1)).toContain(
         "The default branch reports finished checks",
@@ -15721,7 +15719,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       );
       expect(crewmate.promptCalls.at(-1)).toContain(JSON.stringify(items));
       expect(harness.tasks.get(taskId)?.idleSince).toBeNull();
-      await harness.supervisor.pollCheckWatches(hostNow);
+      await harness.supervisor.watch.pollCheckWatches(hostNow);
       await tick();
       expect(crewmate.promptCalls).toHaveLength(prompts + 2);
     });
@@ -15769,7 +15767,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
             ? { status: "done", reason: "merged", actor: "captain" }
             : { status: "dropped", reason: "cancelled", actor: "captain" },
         );
-        await supervisor.sweepGates(hostNow);
+        await supervisor.watch.sweepGates(hostNow);
         await tick();
         expect(crewmate.promptCalls.at(-1)).toBe(words);
         expect(resumes(tasks, taskId)).toHaveLength(1);
@@ -15777,7 +15775,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         // task's own, and its report is sorted like any other.
         await endTurn(crewmate, taskId, "Carried on from the wait.");
         expect(sorts.at(-1)?.rule).toBe("stopped");
-        await supervisor.sweepGates(hostNow);
+        await supervisor.watch.sweepGates(hostNow);
         await tick();
         expect(resumes(tasks, taskId)).toHaveLength(1);
       },
@@ -15822,7 +15820,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ).text,
       ).toContain("Diagnosis recorded");
       tasks.close(owner.id, { status: "dropped", reason: "cancelled", actor: "captain" });
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       await endTurn(crewmate, taskId, "Still waiting on the remaining fix.");
       expect(sorts.at(-1)?.rule).toBe("still-moving");
@@ -15832,7 +15830,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(ops).toHaveLength(wakes);
       expect(resumes(tasks, taskId)).toHaveLength(1);
-      expect(supervisor.crewStatus(taskId)[0]?.stalled).toBeUndefined();
+      expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBeUndefined();
       const before = tasks.get(taskId)?.delivery?.ciRepair;
       expect(supervisor.intake.unlinkTasks(owner.key, tasks.get(taskId)?.key ?? "", "blocks")).toMatch(
         /^Removed:/,
@@ -15894,7 +15892,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const loader = seedTask(tasks, { id: "inf-1479", title: "Runbook loader", status: "running" });
       tasks.graph.link(loader.id, carrier.id, "related", "firstmate");
       tasks.graph.link(old.id, waiting.id, "blocks", "crewmate");
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       hostNow += minutes(30);
       const before = crewmate.promptCalls.length;
       tasks.dropWithChildren(old.id, {
@@ -15902,7 +15900,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         actor: "firstmate",
         replacedBy: carrier.id,
       });
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       // No premature "dropped, carry on": the wait is on the carrier now.
       expect(crewmate.promptCalls).toHaveLength(before);
@@ -15911,13 +15909,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       hostNow += minutes(60);
       seedDelivery(tasks, carrier.id, { prNumber: 412 });
       tasks.close(carrier.id, { status: "done", reason: "merged", actor: "captain" });
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       expect(crewmate.promptCalls.slice(before)).toHaveLength(1);
       expect(crewmate.promptCalls.at(-1)).toContain(
         `${carrier.key} "Publish Runbooks piece 0" (PR #412), which took over the work of ${old.key} that your task could not merge before, is done.`,
       );
-      await supervisor.sweepGates(hostNow + minutes(5));
+      await supervisor.watch.sweepGates(hostNow + minutes(5));
       await tick();
       expect(crewmate.promptCalls.slice(before)).toHaveLength(1);
     });
@@ -15941,10 +15939,10 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         status: "running",
       });
       tasks.graph.link(old.id, waiting.id, "blocks", "crewmate");
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       hostNow += minutes(30);
       tasks.close(old.id, { status: "dropped", reason: "cancelled", actor: "firstmate" });
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       expect(crewmate.promptCalls.at(-1)).toContain("was dropped and no longer holds it");
       await endTurn(crewmate, waiting.id, "Carrying on.");
@@ -15952,7 +15950,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
       hostNow += minutes(10);
       tasks.graph.link(old.id, carrier.id, "replaced-by", "firstmate");
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       expect(crewmate.promptCalls.slice(told)).toEqual([
         expect.stringContaining(
@@ -15960,13 +15958,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ),
       ]);
       await endTurn(crewmate, waiting.id, "Waiting on the carrier.");
-      await supervisor.sweepGates(hostNow + minutes(5));
+      await supervisor.watch.sweepGates(hostNow + minutes(5));
       await tick();
       expect(crewmate.promptCalls.slice(told)).toHaveLength(1);
 
       hostNow += minutes(60);
       tasks.close(carrier.id, { status: "done", reason: "merged", actor: "captain" });
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       expect(crewmate.promptCalls.slice(told)).toHaveLength(2);
       expect(crewmate.promptCalls.at(-1)).toContain(
@@ -15991,10 +15989,10 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         status: "running",
       });
       tasks.graph.link(owner.id, waiting.id, "blocks", "firstmate");
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       hostNow += minutes(30);
       tasks.close(owner.id, { status: "done", reason: "merged", actor: "captain" });
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       expect(crewmate.promptCalls.at(-1)).toContain('"Fix the shared fixture", which your task');
       // Queued or in flight: every row the lane holds for the task.
@@ -16022,7 +16020,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
       restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
       expect(resumeRows(inbox)).toHaveLength(1);
-      await restarted.sweepGates(hostNow);
+      await restarted.watch.sweepGates(hostNow);
       await tick();
       expect(resumeRows(inbox)).toHaveLength(1);
     });
@@ -16030,17 +16028,17 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("after the resume the ladder reads the task on its own clock again", async () => {
       const { supervisor, crewmate, tasks, taskId, owner, at } = await waitingOn("blocks");
       tasks.close(owner.id, { status: "done", reason: "merged", actor: "captain" });
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       await endTurn(crewmate, taskId, "Nothing left but the merge.");
       const resumedIdle = tasks.get(taskId)?.idleSince ?? 0;
       hostNow = resumedIdle + minutes(10);
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
       expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
       // The sweep never resumes it twice, however long it then sits.
       await at(minutes(600));
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       expect(
         resumes(tasks, taskId).filter((event) => event.text.includes("Fix the shared fixture")),
@@ -16062,12 +16060,12 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       hostNow += minutes(5);
       tasks.close(origin.id, { status: "done", reason: "merged", actor: "captain" });
       hostNow += 1;
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       expect(tasks.get(taskId)?.status).toBe("active");
       await endTurn(crewmate, taskId, "Shown in Settings.");
       const prompts = crewmate.promptCalls.length;
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(resumes(tasks, taskId)).toEqual([]);
@@ -16096,7 +16094,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         hostNow,
       );
       expect(declared.text).toContain("is already done: bring your change up to date");
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(resumes(tasks, taskId)).toEqual([]);
@@ -16141,7 +16139,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // No card and no cap holds it, so the tick's sweep clears it, and the
       // clear restarts the clock: the nudge is ten minutes out, not now.
       const healedAt = hostNow;
-      await supervisor.sweepGates(healedAt);
+      await supervisor.watch.sweepGates(healedAt);
       expect(tasks.get(taskId)?.gate).toBeNull();
       expect(tasks.get(taskId)?.idleSince).toBe(healedAt);
       expect(crewmate.promptCalls).toHaveLength(prompts);
@@ -16161,11 +16159,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const prompts = crewmate.promptCalls.length;
       await at(minutes(29));
       expect(crewmate.promptCalls).toHaveLength(prompts);
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "at-time", until });
 
       hostNow = until + minutes(1);
-      await supervisor.sweepGates(hostNow);
+      await supervisor.watch.sweepGates(hostNow);
       await tick();
       const steeredAt = hostNow;
       // One steer on the task's own lane, the supervisor's, never a dispatch.
@@ -16237,18 +16235,18 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         });
         // The crew line reads the durations it would otherwise guess.
         hostNow = reportedAt + minutes(5);
-        expect(supervisor.crewStatus(taskId)[0]).toMatchObject({
+        expect(supervisor.facts.crewStatus(taskId)[0]).toMatchObject({
           job: `running ${formatDurationShort(hostNow - idleSince)}: ${TEST_RUN}`,
           reported: "5m ago",
           checkBack: "in 15m: the unit tests, then the native gate",
         });
         const prompts = crewmate.promptCalls.length;
         await at(reportedAt - idleSince + minutes(19));
-        await supervisor.sweepGates(hostNow);
+        await supervisor.watch.sweepGates(hostNow);
         expect(crewmate.promptCalls).toHaveLength(prompts);
 
         hostNow = reportedAt + minutes(20);
-        await supervisor.sweepGates(hostNow);
+        await supervisor.watch.sweepGates(hostNow);
         await tick();
         expect(crewmate.promptCalls).toHaveLength(prompts + 1);
         const wake = crewmate.promptCalls.at(-1);
@@ -16334,7 +16332,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const since = harness.tasks.get(taskId)?.idleSince ?? hostNow;
       for (const ms of at) {
         hostNow = since + ms;
-        harness.supervisor.reconcileIdle(hostNow);
+        harness.supervisor.watch.reconcileIdle(hostNow);
         await tick();
       }
     }
@@ -16413,7 +16411,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ["add the date", "I added October 20 to the note."],
         ["make the version bold", "The version is bold now."],
       ]) {
-        supervisor.replyToCard(note.id, question as string);
+        supervisor.cardActions.replyToCard(note.id, question as string);
         await tick();
         specs[0]?.onReply?.({
           cardId: note.id,
@@ -16565,7 +16563,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(ops.find((line) => line.includes(`It asks the first mate to act: ${ASK}`))).toContain(built);
 
       hostNow = askedAt + minutes(31);
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
       const [reminder] = askedWakes(ops);
       expect(reminder).toContain(`no task built on it or under it was created or started.${built}`);
@@ -16580,7 +16578,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         mergedBuilder(harness, `builder-${by}`, by === "id" ? taskId : (tasks.get(taskId)?.key ?? ""));
         for (const idle of [31, 62]) {
           hostNow = askedAt + minutes(idle);
-          supervisor.reconcileIdle(hostNow);
+          supervisor.watch.reconcileIdle(hostNow);
           await tick();
         }
         expect(askedWakes(ops), by).toEqual([]);
@@ -16609,14 +16607,14 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     for (const idle of [10, 20, 29]) {
       hostNow = finishedAt + minutes(idle);
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
     }
     expect(crewmate.promptCalls).toHaveLength(promptsBefore);
     expect(reminders()).toEqual([]);
 
     hostNow = finishedAt + minutes(30);
-    supervisor.reconcileIdle(hostNow);
+    supervisor.watch.reconcileIdle(hostNow);
     await tick();
     expect(crewmate.promptCalls).toHaveLength(promptsBefore);
     expect(ledgerFacts.at(-1)).toMatchObject({ kind: "idle-asked", finished: true, wakes: 2 });
@@ -16636,7 +16634,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     supervisor.intake.linkTasks(next.id, taskId, "related");
     for (const idle of [61, 120, 240]) {
       hostNow = finishedAt + minutes(idle);
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
     }
     expect(crewmate.promptCalls).toHaveLength(promptsBefore);
@@ -16659,7 +16657,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     });
     await tick();
     const card = cards().find((entry) => entry.title === "Pick a course") as Card;
-    supervisor.replyToCard(card.id, "take the northern route");
+    supervisor.cardActions.replyToCard(card.id, "take the northern route");
     await tick();
     const reply = crewmate.promptCalls.at(-1) ?? "";
     expect(reply).toContain("take the northern route");
@@ -16813,17 +16811,17 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     const harness = await stopped();
     const { supervisor, crewmate, idleSince } = harness;
     const ticker = new Ticker({ now: hostClock, timers: { repeat: () => 0, cancel: () => {} } });
-    const reconcile = vi.spyOn(supervisor, "reconcileIdle");
-    const gates = vi.spyOn(supervisor, "sweepGates");
-    const lanes = vi.spyOn(supervisor, "sweepInbox");
+    const reconcile = vi.spyOn(supervisor.watch, "reconcileIdle");
+    const gates = vi.spyOn(supervisor.watch, "sweepGates");
+    const lanes = vi.spyOn(supervisor.watch, "sweepInbox");
     const riders: number[] = [];
     supervisor.setFirstmateHooks({
       notifyOp: () => {},
       retryConverse: vi.fn(),
       checkQuiet: (now) => riders.push(now),
     });
-    supervisor.startWatchdog(ticker);
-    supervisor.startWatchdog(ticker);
+    supervisor.watch.startWatchdog(ticker);
+    supervisor.watch.startWatchdog(ticker);
 
     hostNow = idleSince + minutes(10);
     ticker.tick();
@@ -16874,10 +16872,10 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(quiet.outcome).toBeNull();
     const boot = hostNow;
     // The first reconcile after boot starts the clock of records older than it.
-    supervisor.reconcileIdle(boot);
+    supervisor.watch.reconcileIdle(boot);
     expect(tasks.get(quiet.id)?.idleSince).toBe(boot);
     hostNow = boot + STALL_WAKE_MS;
-    supervisor.reconcileIdle(hostNow);
+    supervisor.watch.reconcileIdle(hostNow);
     await tick();
     // Both are nudged by resuming their conversations - outcome or none.
     expect(crewmate.promptCalls).toEqual([IDLE_NUDGE_TEXT, IDLE_NUDGE_TEXT]);
@@ -16894,8 +16892,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     async function threeHours(harness: Awaited<ReturnType<typeof stopped>>) {
       for (let pass = 1; pass <= 9; pass += 1) {
         hostNow += minutes(20);
-        harness.supervisor.reconcileIdle(hostNow);
-        await harness.supervisor.sweepInbox(hostNow);
+        harness.supervisor.watch.reconcileIdle(hostNow);
+        await harness.supervisor.watch.sweepInbox(hostNow);
         await tick();
       }
     }
@@ -16907,7 +16905,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(h.tasks.get(h.taskId)?.activity).toBe("running");
       const work = h.tasks.get(h.taskId);
       // The board's Back to backlog: the turn stops, the task stays started.
-      expect(h.supervisor.runTaskOp(h.taskId, "unqueue-task")).toBeUndefined();
+      expect(h.supervisor.hostOps.runTaskOp(h.taskId, "unqueue-task")).toBeUndefined();
       await tick();
       h.crewmate.failPrompt("aborted");
       await tick();
@@ -16925,7 +16923,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
           .filter((event) => event.kind === "interrupted")
           .map((event) => event.actor),
       ).toContain("captain");
-      expect(h.supervisor.crewStatus(h.taskId)[0]).toMatchObject({
+      expect(h.supervisor.facts.crewStatus(h.taskId)[0]).toMatchObject({
         status: "backlog",
         gate: expect.stringContaining("started, in the backlog"),
       });
@@ -16939,13 +16937,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(h.crewmate.promptCalls).toHaveLength(prompts);
 
       // A job that ends while it waits stays on its lane.
-      h.supervisor.deliverJobResult(h.taskId, '[job] background job j1 finished: "make" exited 0');
+      h.supervisor.watch.deliverJobResult(h.taskId, '[job] background job j1 finished: "make" exited 0');
       await threeHours(h);
       expect(h.crewmate.promptCalls).toHaveLength(prompts);
       expect(h.ops).toEqual([]);
 
       // The captain's Start carries it on in the same conversation, the job result after one line.
-      expect(h.supervisor.runTaskOp(h.taskId, "start-task")).toBeUndefined();
+      expect(h.supervisor.hostOps.runTaskOp(h.taskId, "start-task")).toBeUndefined();
       await tick();
       expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
       const resumed = h.crewmate.promptCalls.at(-1) ?? "";
@@ -16963,7 +16961,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     it("answers a steer the first mate sends, with the backlog line, and stays in the backlog", async () => {
       const h = await stopped();
-      const moved = h.supervisor.moveToBacklog(
+      const moved = h.supervisor.hostOps.moveToBacklog(
         h.taskId,
         { actor: "firstmate", via: "tool", decision: null },
         "The captain asked to pause it.",
@@ -16986,10 +16984,10 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
     it("is not carried on after a restart, and its held job result waits", async () => {
       const h = await stopped();
-      h.supervisor.moveToBacklog(h.taskId, { actor: "captain", via: "task-card", decision: null });
+      h.supervisor.hostOps.moveToBacklog(h.taskId, { actor: "captain", via: "task-card", decision: null });
       await tick();
       // A job result that waits on its lane is not a reason to carry it on at boot.
-      h.supervisor.deliverJobResult(h.taskId, '[job] background job j1 finished: "make" exited 0');
+      h.supervisor.watch.deliverJobResult(h.taskId, '[job] background job j1 finished: "make" exited 0');
       await tick();
       await h.supervisor.disposeAll();
       const ops: string[] = [];
@@ -17009,11 +17007,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
       wakesThroughInbox({ supervisor: fresh, inbox: h.inbox, ops });
       const prompts = h.crewmate.promptCalls.length;
-      fresh.announceCarryOn();
+      fresh.watch.announceCarryOn();
       for (let pass = 1; pass <= 9; pass += 1) {
         hostNow += minutes(20);
-        fresh.reconcileIdle(hostNow);
-        await fresh.sweepInbox(hostNow);
+        fresh.watch.reconcileIdle(hostNow);
+        await fresh.watch.sweepInbox(hostNow);
         await tick();
       }
       expect(createCrewmate).not.toHaveBeenCalled();
@@ -17104,8 +17102,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     async function tenTicks(supervisor: CrewSupervisor) {
       for (let pass = 1; pass <= 10; pass += 1) {
         hostNow += minutes(20);
-        supervisor.reconcileIdle(hostNow);
-        await supervisor.sweepInbox(hostNow);
+        supervisor.watch.reconcileIdle(hostNow);
+        await supervisor.watch.sweepInbox(hostNow);
         await tick();
       }
     }
@@ -17114,8 +17112,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     async function tenTicksUntil(supervisor: CrewSupervisor, until: number) {
       for (let pass = 1; pass <= 10; pass += 1) {
         hostNow = Math.min(hostNow + minutes(20), until);
-        supervisor.reconcileIdle(hostNow);
-        await supervisor.sweepInbox(hostNow);
+        supervisor.watch.reconcileIdle(hostNow);
+        await supervisor.watch.sweepInbox(hostNow);
         await tick();
       }
     }
@@ -17264,7 +17262,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(wait()).toBeUndefined();
 
       hostNow += minutes(1);
-      supervisor.replyToCard(card.id, "what about the northern route?");
+      supervisor.cardActions.replyToCard(card.id, "what about the northern route?");
       await tick();
       // Saved, with no attempt spent: the wait names the hold's class,
       // provider and reset, and no turn claims to be working on it.
@@ -17277,7 +17275,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
       // The reset: the kept reply goes out, and a running turn is work, not a wait.
       hostNow = resetsAt;
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
       expect(crewmate.promptCalls.slice(prompts).join("\n")).toContain(
         "what about the northern route?",
@@ -17361,15 +17359,15 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(turnWakes(ops)).toEqual([]);
 
       hostNow = resetsAt - 1;
-      supervisor.reconcileIdle(hostNow);
-      await supervisor.sweepInbox(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
+      await supervisor.watch.sweepInbox(hostNow);
       await tick();
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(other.promptCalls).toHaveLength(otherPrompts);
       expect(ops.filter((line) => line.includes("still failing"))).toEqual([]);
 
       hostNow = resetsAt;
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
       expect(backWakes(ops)).toHaveLength(1);
       expect(crewmate.promptCalls.slice(prompts)).toEqual([
@@ -17430,7 +17428,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       login.extras.noteCutOff(CLAUDE_ACCOUNT, { class: "refused" });
       supervisor.reconcileCutOffs();
       seedDelivery(tasks, taskId,{captainWait:{at:idleSince,reason:"choose the output format"}});
-      await supervisor.sweepGates(idleSince);
+      await supervisor.watch.sweepGates(idleSince);
       await at(minutes(20));
       await at(minutes(50));
       const owed=ops.filter(line=>line.includes("is held for the captain"));
@@ -17568,7 +17566,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(cutOffWakes(ops)).toHaveLength(1);
 
       hostNow = resetsAt;
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
       expect(backWakes(ops)).toHaveLength(1);
       expect(crewmate.promptCalls.slice(prompts)).toEqual(["use the other library"]);
@@ -17682,7 +17680,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       });
       await tick();
       const card = cards().find((entry) => entry.title === "Pick a course") as Card;
-      supervisor.replyToCard(card.id, "what about the northern route?");
+      supervisor.cardActions.replyToCard(card.id, "what about the northern route?");
       await tick();
       await endTurn(crewmate, taskId);
       await at(minutes(11));
@@ -17814,7 +17812,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const harness = await failing(2);
       const fresh = restart(harness);
       hostNow = hostNow + STILL_DOWN_MS;
-      fresh.supervisor.reconcileIdle(hostNow);
+      fresh.supervisor.watch.reconcileIdle(hostNow);
       await tick();
       expect(fresh.ops).toEqual([
         `[fm-op] the crewmate on SCR-1 on task ${harness.taskId} "Job" is still failing at the provider after 17 minutes and 2 tries. Its guidance is kept and retried every 15 minutes until the provider answers; nothing is lost. You can steer or interrupt it, or wait.`,
@@ -17888,7 +17886,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     async function ticks(supervisor: CrewSupervisor, count = 3) {
       for (let n = 0; n < count; n += 1) {
         hostNow = hostNow + minutes(1);
-        supervisor.reconcileIdle(hostNow);
+        supervisor.watch.reconcileIdle(hostNow);
         await tick();
       }
     }
@@ -17906,13 +17904,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const { supervisor, inbox, ops, taskId } = harness;
       const since = inbox.outage(taskId).since ?? 0;
       hostNow = since + STILL_DOWN_MS;
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
       expect(stillDownWakes(ops)).toHaveLength(1);
 
       const after = disturb(harness, how);
       hostNow = hostNow + minutes(1);
-      after.supervisor.reconcileIdle(hostNow);
+      after.supervisor.watch.reconcileIdle(hostNow);
       await tick();
       await ticks(after.supervisor);
       expect(inbox.outage(taskId).since).toBe(since);
@@ -17921,7 +17919,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // A new outage on the same task is its own, and is woken for.
       newOutage(inbox, taskId);
       hostNow = hostNow + STILL_DOWN_MS;
-      after.supervisor.reconcileIdle(hostNow);
+      after.supervisor.watch.reconcileIdle(hostNow);
       await tick();
       expect(stillDownWakes(after.ops.slice(after.before))).toHaveLength(1);
     });
@@ -17993,12 +17991,12 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await sweepWhenDue(harness, taskId);
       await failTurn(crewmate, taskId);
       hostNow = since + STILL_DOWN_MS;
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
       await sweepWhenDue(harness, taskId);
       await endTurn(crewmate, taskId);
       hostNow = idleSince + JOB_BOUND_MS;
-      supervisor.reconcileIdle(hostNow);
+      supervisor.watch.reconcileIdle(hostNow);
       await tick();
 
       const KINDS = ["outage-failed", "outage-still-down", "outage-recovered", "job-bound"];
@@ -18239,7 +18237,7 @@ describe("CrewSupervisor direction context", () => {
     const card = supervisor
       .cards.snapshot()
       .find((entry) => entry.title === "Article explained") as Card;
-    supervisor.replyToCard(card.id, "Save its concepts and findings with the source.");
+    supervisor.cardActions.replyToCard(card.id, "Save its concepts and findings with the source.");
     await tick();
     expect(crewmate.steer.mock.calls.at(-1)?.[0]).toContain(
       "Save its concepts and findings with the source.",
@@ -18288,11 +18286,11 @@ describe("the task graph (task-system P2)", () => {
       type: "firstmate_note",
       text: 'Planned "Write the ADR" (SCR-1) - starts on request.',
     });
-    expect(supervisor.crewStatus().find((entry) => entry.taskId === planned.id)).toMatchObject({
+    expect(supervisor.facts.crewStatus().find((entry) => entry.taskId === planned.id)).toMatchObject({
       status: "queued",
       gate: queryTasks(tasks, { key: planned.id }, () => undefined).rows[0]?.waiting,
     });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     expect(sessions.open).not.toHaveBeenCalled();
 
@@ -18305,10 +18303,10 @@ describe("the task graph (task-system P2)", () => {
       priority: 1,
     });
     expect(tasks.graph.blockers(step.id).map((r) => r.id)).toEqual([planned.id]);
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(sessions.open).not.toHaveBeenCalled();
     tasks.close(planned.id, { status: "done", reason: "landed", actor: "host" });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     expect(sessions.open).toHaveBeenCalledTimes(1);
     expect(legacyStateOf(tasks.get(step.id))).toBe("running");
@@ -18334,14 +18332,14 @@ describe("the task graph (task-system P2)", () => {
     });
     const ended: string[] = [];
     // Waits on the first row's classification.
-    const sweeping = supervisor.sweepGates(Date.now()).then(() => ended.push("sweep"));
+    const sweeping = supervisor.watch.sweepGates(Date.now()).then(() => ended.push("sweep"));
     const quitting = supervisor.disposeAll().then(() => ended.push("quit"));
     await tick();
     expect(ended).toEqual([]);
     classified.resolve({ kind: "implement", source: "classifier:test", version: "kc1" });
     await Promise.all([sweeping, quitting]);
     expect(ended).toEqual(["sweep", "quit"]);
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(sessions.open).not.toHaveBeenCalled();
     expect(tasks.get(first.id)?.status).toBe("open");
     expect(tasks.get(second.id)?.status).toBe("open");
@@ -18394,7 +18392,7 @@ describe("the task graph (task-system P2)", () => {
 
     // A drops: B's wait is dead, so one wake, no card and no hold.
     tasks.close(a.id, { status: "dropped", reason: "cancelled", actor: "host" });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     expect(cards()).toEqual([]);
     expect(ops.filter((line) => line.includes("can never end"))).toHaveLength(1);
@@ -18456,13 +18454,13 @@ describe("the task graph (task-system P2)", () => {
     const review = dropReviewKeys(tasks.dropEffects(planned.id));
     expect(review.waiting).toEqual([waiter.key]);
 
-    expect(supervisor.runTaskOp(planned.id, "drop-task", { ...review, waiting: [] })).toBe(
+    expect(supervisor.hostOps.runTaskOp(planned.id, "drop-task", { ...review, waiting: [] })).toBe(
       DROP_REVIEW_STALE,
     );
     expect(tasks.get(planned.id)?.status).toBe("open");
     expect(cards().some((card) => card.id === cardId)).toBe(true);
 
-    expect(supervisor.runTaskOp(planned.id, "drop-task", review)).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp(planned.id, "drop-task", review)).toBeUndefined();
     await tick();
     expect(tasks.get(planned.id)).toMatchObject({
       status: "dropped",
@@ -18477,15 +18475,15 @@ describe("the task graph (task-system P2)", () => {
     expect(cards().some((card) => card.id === cardId)).toBe(false);
     expect(cardStore.chosenAction(cardId)).toBe("obsolete");
     expect(tasks.timeline(planned.id).some((event) => event.kind === "card_resolved")).toBe(false);
-    expect(supervisor.runTaskOp(planned.id, "drop-task", review)).toMatch(/not unstarted work/);
+    expect(supervisor.hostOps.runTaskOp(planned.id, "drop-task", review)).toMatch(/not unstarted work/);
 
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     expect(ops.some((line) => line.includes("can never end"))).toBe(true);
 
     const parent = supervisor.intake.plan({ title: "Epic", intent: intentOf("all") });
     const part = supervisor.intake.plan({ title: "Part", intent: intentOf("part"), parent: parent.id });
-    const refused = supervisor.runTaskOp(
+    const refused = supervisor.hostOps.runTaskOp(
       parent.id,
       "drop-task",
       dropReviewKeys(tasks.dropEffects(parent.id)),
@@ -18495,9 +18493,9 @@ describe("the task graph (task-system P2)", () => {
     expect(tasks.get(part.id)?.status).toBe("open");
 
     const racing = supervisor.intake.plan({ title: "Race", intent: intentOf("race") });
-    supervisor.runTaskOp(racing.id, "start-task");
+    supervisor.hostOps.runTaskOp(racing.id, "start-task");
     expect(
-      supervisor.runTaskOp(racing.id, "drop-task", dropReviewKeys(tasks.dropEffects(racing.id))),
+      supervisor.hostOps.runTaskOp(racing.id, "drop-task", dropReviewKeys(tasks.dropEffects(racing.id))),
     ).toMatch(/just started/);
     expect(tasks.get(racing.id)?.status).toBe("open");
   });
@@ -18879,7 +18877,7 @@ describe("the task graph (task-system P2)", () => {
       local: (await commission(local.repo.id, "Draw the sketch")).taskId,
     };
     await tick();
-    const entry = (taskId: string) => supervisor.crewStatus(taskId)[0];
+    const entry = (taskId: string) => supervisor.facts.crewStatus(taskId)[0];
     expect(entry(ids.github)).toMatchObject({ delivery: "direct-pr", goesIn: "GitHub" });
     expect(entry(ids.plain)).toMatchObject({ delivery: "direct-pr", goesIn: "git.example.com" });
     // A project on GitHub the captain keeps on this Mac never names it.
@@ -19382,14 +19380,14 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
     expect(wakes(taskId)).toHaveLength(1);
 
     // A background job result becomes a turn the crewmate ends silently.
-    supervisor.deliverJobResult(taskId, '[job] background job j1 finished: "make" exited 0');
+    supervisor.watch.deliverJobResult(taskId, '[job] background job j1 finished: "make" exited 0');
     await tick();
     await endTurn(crewmate, taskId);
 
     expect(wakes(taskId)).toHaveLength(1);
     expect(events.filter((event) => event.type === "task_report")).toHaveLength(1);
     expect(tasks.get(taskId)?.outcome).toBe("Found the cause: a stale cache key.");
-    expect(supervisor.crewStatus(taskId)[0]?.lastReport).toBe(
+    expect(supervisor.facts.crewStatus(taskId)[0]?.lastReport).toBe(
       "Found the cause: a stale cache key.",
     );
   });
@@ -19407,7 +19405,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
 
     expect(wakes(taskId)).toHaveLength(0);
     expect(events.some((event) => event.type === "task_report")).toBe(false);
-    expect(supervisor.crewStatus(taskId)[0]?.lastReport).toBeUndefined();
+    expect(supervisor.facts.crewStatus(taskId)[0]?.lastReport).toBeUndefined();
   });
 
   it("an explicit report wakes exactly once and wins over the turn's final text", async () => {
@@ -19489,7 +19487,7 @@ describe("the truthful report channel (interaction P0, WI-1)", () => {
 
     await supervisor.steer.steerCrewmate(taskId, "keep going");
     await tick();
-    supervisor.checkQuietTasks(Date.now() + QUIET_CARD_MS);
+    supervisor.watch.checkQuietTasks(Date.now() + QUIET_CARD_MS);
     expect(supervisor.cards.snapshot()).toEqual([]);
     expect(wakes(taskId).map((row) => row.payload)).toEqual([
       expect.stringContaining("has produced no events"),
@@ -19620,7 +19618,7 @@ describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
     crewmate.failPrompt("aborted");
     await tick();
 
-    supervisor.deliverJobResult(taskId, '[job] background job j1 finished: "pnpm test" exited 0');
+    supervisor.watch.deliverJobResult(taskId, '[job] background job j1 finished: "pnpm test" exited 0');
     expect(fmOps(ops)).toEqual([]);
     expect(events).toContainEqual({
       type: "firstmate_note",
@@ -19805,7 +19803,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
       { branch: "fm/task-ghost", taskId: "ghost" },
     ]);
 
-    await supervisor.reconcileFleetHygiene();
+    await supervisor.watch.reconcileFleetHygiene();
 
     const notes = events.filter((event) => event.type === "firstmate_note");
     expect(notes).toHaveLength(1);
@@ -19833,7 +19831,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
       return { outcome: "removed", kept: null };
     });
 
-    await supervisor.reconcileFleetHygiene();
+    await supervisor.watch.reconcileFleetHygiene();
 
     expect(tasks.get("old")?.workspaceState).toBe("removed");
     expect(tasks.get("unlanded")?.workspaceState).toBe("removed");
@@ -19868,7 +19866,7 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
         : null,
     );
 
-    await supervisor.reconcileFleetHygiene();
+    await supervisor.watch.reconcileFleetHygiene();
 
     expect(workspace.workspaceAt).toHaveBeenCalledTimes(2);
     expect(workspace.retireTaskWorktree).toHaveBeenCalledTimes(1);
@@ -20096,7 +20094,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
     // Click immediately after cancellation: restart must join retirement,
     // not race its save and deliver a branch that is about to disappear.
     await supervisor.sessions.interruptCrewmate(taskId, "cancel");
-    const result = supervisor.startAgain(taskId, "captain");
+    const result = supervisor.starts.startAgain(taskId, "captain");
     if (!result.ok) throw new Error(result.text);
     await result.started;
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(2), REAL_GIT_WAIT);
@@ -20150,7 +20148,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
     );
     expect(await git(repoDir, ["tag", "--list"])).toBe("");
     expect(await realWorkspace?.listTaskBranches(repoDir)).toEqual([]);
-    await supervisor.reconcileFleetHygiene();
+    await supervisor.watch.reconcileFleetHygiene();
     expect(events.filter((event) => event.type === "firstmate_note")).toEqual([]);
   });
 
@@ -20186,7 +20184,7 @@ describe("closed task worktrees always go, work saved first (real git)", {
       repoDir: live.repoDir,
     });
 
-    await supervisor.reconcileFleetHygiene();
+    await supervisor.watch.reconcileFleetHygiene();
     await workspace.deletionsSettled();
 
     const repoDir = paths.defaultWorkspaceDir;
@@ -20295,10 +20293,10 @@ describe("crewmate session replays (Sep 14)", () => {
             intent: intentOf(message.content),
           }));
         } else if (message.content.startsWith("[job]")) {
-          supervisor.deliverJobResult(taskId, message.content);
+          supervisor.watch.deliverJobResult(taskId, message.content);
         } else {
           const chosen = /\((\S+)\)\.$/.exec(message.content)?.[1] ?? "";
-          supervisor.act(cardIds.at(-1) ?? "", chosen);
+          supervisor.cardActions.act(cardIds.at(-1) ?? "", chosen);
         }
         await tick();
         continue;
@@ -20521,9 +20519,9 @@ describe("decision actions", () => {
     const { supervisor, cardStore, cardId, tasks, taskId } = await decisionOnScreen(crewmate);
     const value = { planes: [{ name: "inner", speed: 0.5, tiltDeg: 42 }], paused: false };
     const json = JSON.stringify(value);
-    supervisor.act(cardId, "mock-clock", "frame", value);
+    supervisor.cardActions.act(cardId, "mock-clock", "frame", value);
     // The choice closed the card: a second dispatch finds nothing to choose.
-    expect(supervisor.act(cardId, "mock-clock", "frame", value)).toEqual({});
+    expect(supervisor.cardActions.act(cardId, "mock-clock", "frame", value)).toEqual({});
     await tick();
     expect(crewmate.promptCalls.filter((text) => text.includes(json))).toHaveLength(1);
     expect(
@@ -20538,7 +20536,7 @@ describe("decision actions", () => {
   it.each([null, false, 0, ""])("preserves a falsy frame value %j", async (value) => {
     const crewmate = fakeCrewmate();
     const { supervisor, cardId } = await decisionOnScreen(crewmate);
-    supervisor.act(cardId, "mock-clock", "frame", value);
+    supervisor.cardActions.act(cardId, "mock-clock", "frame", value);
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain(
       `Card action value (JSON): ${JSON.stringify(value)}`,
@@ -20548,11 +20546,11 @@ describe("decision actions", () => {
   it("rejects oversized frame values before changing the card and ignores chrome values", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, cardId } = await decisionOnScreen(crewmate);
-    expect(() => supervisor.act(cardId, "mock-clock", "frame", "界".repeat(1400))).toThrow(
+    expect(() => supervisor.cardActions.act(cardId, "mock-clock", "frame", "界".repeat(1400))).toThrow(
       "4,096 bytes",
     );
     expect(cards().find((card) => card.id === cardId)?.status).toBe("ready");
-    supervisor.act(cardId, "mock-clock", "chrome", { ignored: true });
+    supervisor.cardActions.act(cardId, "mock-clock", "chrome", { ignored: true });
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain('the user chose "Mock the clock"');
     expect(crewmate.promptCalls.at(-1)).not.toContain("Card action value");
@@ -20566,7 +20564,7 @@ describe("decision actions", () => {
       { name: "notes", values: [], changed: false },
     ];
 
-    supervisor.act(cardId, "mock-clock", "chrome", { answers });
+    supervisor.cardActions.act(cardId, "mock-clock", "chrome", { answers });
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain(
       `Card "Two ways to fix the flaky test": the user chose "Mock the clock" (mock-clock).\nThe user's answers to the card's questions:\n- runner: "On the checks only" (ci), changed\n- notes: no answer, as proposed`,
@@ -20581,10 +20579,10 @@ describe("decision actions", () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, cardId } = await decisionOnScreen(crewmate);
     expect(() =>
-      supervisor.act(cardId, "mock-clock", "chrome", { answers: [{ name: "x" }] }),
+      supervisor.cardActions.act(cardId, "mock-clock", "chrome", { answers: [{ name: "x" }] }),
     ).toThrow("could not be read");
     expect(() =>
-      supervisor.act(cardId, "mock-clock", "chrome", {
+      supervisor.cardActions.act(cardId, "mock-clock", "chrome", {
         answers: answersPastBound(),
       }),
     ).toThrow(CARD_ANSWERS_BOUND_REFUSAL);
@@ -21305,9 +21303,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       const cardId = String(await offer());
       await reportTurn(builder, taskId, "The scoped validation question waits for the captain.");
-      expect(() => supervisor.act(cardId, "approve", "frame")).toThrow();
+      expect(() => supervisor.cardActions.act(cardId, "approve", "frame")).toThrow();
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");
-      supervisor.act(cardId, "approve");
+      supervisor.cardActions.act(cardId, "approve");
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("approved");
       for (const changed of [
         { host: "other.example" },
@@ -21498,7 +21496,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         "Press the keyboard control on the target device",
       );
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");
-      expect(() => supervisor.act(cardId, "accept", "frame")).toThrow(CardChoiceUnavailableError);
+      expect(() => supervisor.cardActions.act(cardId, "accept", "frame")).toThrow(CardChoiceUnavailableError);
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");
       // The gap waits for the captain's answer; the review beside it records
       // the typed code judgment as the verdict (INF-1876): clear is a pass,
@@ -21530,7 +21528,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(passed?.text).toContain("review passed at");
       expect(passed?.data).not.toHaveProperty("validationReason");
       expect(ops.some((text) => text.includes("with verdict blocked"))).toBe(false);
-      supervisor.act(cardId, "accept", "chrome");
+      supervisor.cardActions.act(cardId, "accept", "chrome");
       const validation = tasks.get(taskId)?.delivery?.liveValidation;
       expect(validation?.permissions[0]?.state).toBe("approved");
       expect(validation?.runs[0]?.observations[0]?.result).toBe("untested");
@@ -21706,7 +21704,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         DomUtils.findOne((node) => "data-inf-check-all" in node.attribs, body.children),
       ).toBeTruthy();
       expect(DomUtils.textContent(body)).toContain("Main runs only the newest merge");
-      supervisor.act(cardId, "accept", "chrome", {
+      supervisor.cardActions.act(cardId, "accept", "chrome", {
         answers: [{ name: VALIDATION_GAPS_FIELD, values: [ids[0]!, ids[2]!], changed: true }],
       });
       expect(
@@ -21802,7 +21800,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       seedDelivery(tasks, taskId, { validationHead: "b".repeat(40) });
       const before = supervisor.cards.snapshot().find((card) => card.id === cardId);
-      expect(() => supervisor.act(cardId, "approve", "chrome")).toThrow(CardChoiceUnavailableError);
+      expect(() => supervisor.cardActions.act(cardId, "approve", "chrome")).toThrow(CardChoiceUnavailableError);
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("expired");
       expect(supervisor.cards.snapshot().find((card) => card.id === cardId)?.actions).toEqual([]);
       expect(
@@ -21993,7 +21991,7 @@ describe("task-level delivery override", () => {
         repoId: view.id,
       });
       await tick();
-      expect(supervisor.taskDelivery(taskId)).toBe("direct-pr");
+      expect(supervisor.facts.taskDelivery(taskId)).toBe("direct-pr");
       expect(repos.get(view.id)?.delivery).toBe("direct-pr");
       expect(crewmate.promptCalls[0]).toContain("Delivery: direct-pr");
     } finally {
@@ -22016,7 +22014,7 @@ describe("task-level delivery override", () => {
       });
       await tick();
       expect(tasks.get(taskId)?.shape).toMatchObject({ delivery_ask: "local-only" });
-      expect(supervisor.taskDelivery(taskId)).toBe("local-only");
+      expect(supervisor.facts.taskDelivery(taskId)).toBe("local-only");
       expect(repos.get(view.id)?.delivery).toBe("direct-pr");
       expect(crewmate.promptCalls[0]).toContain("Delivery: local-only");
       expect(crewmate.promptCalls[0]).not.toContain("Delivery: direct-pr");
@@ -22048,8 +22046,8 @@ describe("task-level delivery override", () => {
         shape: { delivery_ask: "direct-pr" },
       });
       await tick();
-      expect(supervisor.taskDelivery(taskId)).toBe("direct-pr");
-      expect(supervisor.crewStatus(taskId)[0]?.delivery).toBe("direct-pr");
+      expect(supervisor.facts.taskDelivery(taskId)).toBe("direct-pr");
+      expect(supervisor.facts.crewStatus(taskId)[0]?.delivery).toBe("direct-pr");
       expect(repos.get(view.id)?.delivery).toBe("local-only");
       expect(crewmate.promptCalls[0]).toContain("Delivery: direct-pr");
     } finally {
@@ -22096,7 +22094,7 @@ describe("task-level delivery override", () => {
         shape: { delivery_ask: "direct-pr" },
       });
       await tick();
-      expect(supervisor.taskDelivery(restated.taskId)).toBe("direct-pr");
+      expect(supervisor.facts.taskDelivery(restated.taskId)).toBe("direct-pr");
     } finally {
       repo.dispose();
     }
@@ -22134,7 +22132,7 @@ describe("task-level delivery override", () => {
       });
       await tick();
       expect(tasks.get(taskId)?.shape?.delivery_ask).toBe("local-only");
-      expect(supervisor.taskDelivery(taskId)).toBe("local-only");
+      expect(supervisor.facts.taskDelivery(taskId)).toBe("local-only");
       expect(crewmate.promptCalls[0]).toContain("Delivery: local-only");
       expect(crewmate.promptCalls[0]).not.toContain("Delivery: direct-pr");
     } finally {
@@ -22167,7 +22165,7 @@ describe("task-level delivery override", () => {
       });
       await tick();
       expect(tasks.get(asked_.taskId)?.shape).toMatchObject({ delivery_ask: "direct-pr" });
-      expect(supervisor.taskDelivery(asked_.taskId)).toBe("direct-pr");
+      expect(supervisor.facts.taskDelivery(asked_.taskId)).toBe("direct-pr");
       expect(asked.promptCalls[0]).toContain("Delivery: direct-pr");
 
       // A note that happens to read like a posture is still only a note:
@@ -22183,7 +22181,7 @@ describe("task-level delivery override", () => {
       });
       await tick();
       expect(tasks.get(refined.taskId)?.shape?.delivery_ask).toBeUndefined();
-      expect(supervisor.taskDelivery(refined.taskId)).toBe("local-only");
+      expect(supervisor.facts.taskDelivery(refined.taskId)).toBe("local-only");
       expect(noted.promptCalls[0]).toContain("Delivery: local-only");
       expect(noted.promptCalls[0]).toContain("Delivery note: direct-pr");
     } finally {
@@ -22272,7 +22270,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       // merge, so there is nobody to say who merges it.
       expect(tasks.get(taskId)?.shape?.autonomy).toBeUndefined();
       expect(
-        supervisor.crewStatus().find((row) => row.taskId === taskId)?.autonomy,
+        supervisor.facts.crewStatus().find((row) => row.taskId === taskId)?.autonomy,
       ).toBeUndefined();
       // The refusal the Firstmate reads is the deliverable's, not autonomy's.
       const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
@@ -22287,9 +22285,9 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
   it("inherits the repository and stamps what it was commissioned under without showing autonomy on the card", async () => {
     const h = await onRepo(false);
     try {
-      expect(h.supervisor.taskAutonomy(h.taskId)).toBe(false);
+      expect(h.supervisor.facts.taskAutonomy(h.taskId)).toBe(false);
       expect(h.tasks.get(h.taskId)?.shape).toMatchObject({ autonomy: false });
-      expect(h.supervisor.crewStatus(h.taskId)[0]?.autonomy).toBe(false);
+      expect(h.supervisor.facts.crewStatus(h.taskId)[0]?.autonomy).toBe(false);
       completionCard(h.specs);
       await tick();
       const card = h.cards().find((entry) => entry.taskId === h.taskId);
@@ -22357,7 +22355,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
   it("lets one task merge itself on an ask-first repository, and holds one on an autonomous one", async () => {
     const asked = await onRepo(false, { autonomy_ask: true });
     try {
-      expect(asked.supervisor.taskAutonomy(asked.taskId)).toBe(true);
+      expect(asked.supervisor.facts.taskAutonomy(asked.taskId)).toBe(true);
       expect(asked.tasks.get(asked.taskId)?.shape).toMatchObject({
         autonomy_ask: true,
         autonomy: true,
@@ -22372,7 +22370,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
 
     const held = await onRepo(true, { autonomy_ask: false });
     try {
-      expect(held.supervisor.taskAutonomy(held.taskId)).toBe(false);
+      expect(held.supervisor.facts.taskAutonomy(held.taskId)).toBe(false);
       expect(
         (await held.supervisor.settling.settle.settleTaskDetailed(held.taskId, "merge-pr")).refusal,
       ).toMatchObject({ refused: "autonomy-off", ways: [] });
@@ -22435,12 +22433,12 @@ describe("CrewSupervisor: the card thread", () => {
       converseAboutCard: converse,
     });
     const output = "It failed. Output: error: Cannot build fm-placer-0.1.0.drv";
-    h.supervisor.replyToCard(card.id, output);
+    h.supervisor.cardActions.replyToCard(card.id, output);
     expect(converse).toHaveBeenCalledWith(card.id, output, undefined);
-    expect(() => h.supervisor.act(card.id, "confirm")).toThrow();
+    expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
     // Reopening and repeating a refused confirmation must not erase the pending reply.
     h.supervisor.cards.presentRequiredAction(taskId);
-    expect(() => h.supervisor.act(card.id, "confirm")).toThrow();
+    expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
     expect(h.tasks.get(taskId)?.status).toBe("open");
     expect(h.supervisor.cards.thread(card.id).messages).toMatchObject([
       { who: "captain", text: output },
@@ -22470,7 +22468,7 @@ describe("CrewSupervisor: the card thread", () => {
     });
     expect(h.tasks.get(taskId)?.status).toBe("open");
     // Only the captain's explicit success confirmation completes the operation.
-    h.supervisor.act(card.id, "confirm");
+    h.supervisor.cardActions.act(card.id, "confirm");
     expect(h.tasks.get(taskId)?.delivery?.captainAction?.state).toBe("confirmed");
     await tick();
   });
@@ -22487,7 +22485,7 @@ describe("CrewSupervisor: the card thread", () => {
     expect(card.actions.find((action) => action.id === "failed")).toMatchObject({
       label: "It failed",
     });
-    h.supervisor.act(card.id, "failed", "chrome", { answers });
+    h.supervisor.cardActions.act(card.id, "failed", "chrome", { answers });
     const reopened = h.supervisor.cards.snapshot().find((entry) => entry.id === card.id) as Card;
     expect(reopened.offerId).not.toBe(card.offerId);
     expect(reopened).toMatchObject({
@@ -22502,7 +22500,7 @@ describe("CrewSupervisor: the card thread", () => {
       text: `It failed\n\n${output}`,
     });
     expect(converse).toHaveBeenCalledWith(card.id, `It failed\n\n${output}`, undefined);
-    expect(() => h.supervisor.act(card.id, "confirm")).toThrow();
+    expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
     await tick();
   });
   // INF-2225, carrying out INF-2214's approved shared cards: the DOP-217
@@ -22519,7 +22517,7 @@ describe("CrewSupervisor: the card thread", () => {
       converseAboutCard: converse,
     });
     const remover = "C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd";
-    h.supervisor.replyToCard(card.id, "Where is the remover? I cannot find it on the PC.");
+    h.supervisor.cardActions.replyToCard(card.id, "Where is the remover? I cannot find it on the PC.");
     expect(converse).toHaveBeenCalledTimes(1);
     const { taskId: helper } = await h.supervisor.intake.commission({
       title: "Find the remover",
@@ -22605,7 +22603,7 @@ describe("CrewSupervisor: the card thread", () => {
     const harness = setup(crewmate);
     const { taskId, card } = await withCard(harness);
 
-    const thread = harness.supervisor.replyToCard(card.id, "  the checks failed on windows  ");
+    const thread = harness.supervisor.cardActions.replyToCard(card.id, "  the checks failed on windows  ");
     await tick();
 
     // On the record the moment it was typed, trimmed but not reworded.
@@ -22634,7 +22632,7 @@ describe("CrewSupervisor: the card thread", () => {
     const answers = [
       { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
     ];
-    const thread = harness.supervisor.replyToCard(
+    const thread = harness.supervisor.cardActions.replyToCard(
       card.id,
       "revise this",
       undefined,
@@ -22659,7 +22657,7 @@ describe("CrewSupervisor: the card thread", () => {
     expect(harness.tasks.get(taskId)?.status).toBe("active");
     expect(harness.workspace.landTaskWork).not.toHaveBeenCalled();
     expect(() =>
-      harness.supervisor.replyToCard(card.id, "build it", undefined, undefined, answersPastBound()),
+      harness.supervisor.cardActions.replyToCard(card.id, "build it", undefined, undefined, answersPastBound()),
     ).toThrow(CARD_ANSWERS_TOO_LONG);
   });
 
@@ -22670,7 +22668,7 @@ describe("CrewSupervisor: the card thread", () => {
     const answers = [
       { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
     ];
-    harness.supervisor.replyToCard(card.id, "tilt it more", undefined, undefined, answers);
+    harness.supervisor.cardActions.replyToCard(card.id, "tilt it more", undefined, undefined, answers);
     await tick();
     harness.specs[0]?.onReport?.("Two dials, the second tilted.");
     crew.emit({ type: "turn_end", taskId });
@@ -22701,7 +22699,7 @@ describe("CrewSupervisor: the card thread", () => {
       ],
     });
 
-    harness.supervisor.replyToCard(card.id, "what about the other one?");
+    harness.supervisor.cardActions.replyToCard(card.id, "what about the other one?");
     await tick();
 
     const still = harness.cards().find((entry) => entry.id === card.id);
@@ -22718,11 +22716,11 @@ describe("CrewSupervisor: the card thread", () => {
     // The host's own agent-down cards answer to nobody.
     harness.supervisor.cards.addSystemNoteCard("card-host-1", "Host note", "nothing to reply to");
     await tick();
-    expect(() => harness.supervisor.replyToCard("card-host-1", "hello")).toThrow(
+    expect(() => harness.supervisor.cardActions.replyToCard("card-host-1", "hello")).toThrow(
       /no author to reply to/,
     );
-    expect(() => harness.supervisor.replyToCard("ghost", "hello")).toThrow(/Unknown card/);
-    expect(() => harness.supervisor.replyToCard(card.id, "   ")).toThrow(/needs some words/);
+    expect(() => harness.supervisor.cardActions.replyToCard("ghost", "hello")).toThrow(/Unknown card/);
+    expect(() => harness.supervisor.cardActions.replyToCard(card.id, "   ")).toThrow(/needs some words/);
 
     // Read a completed ordinary note, not one still awaiting its author's turn (INF-1879).
     crewmate.emit({ type: "turn_end", taskId });
@@ -22730,14 +22728,14 @@ describe("CrewSupervisor: the card thread", () => {
     await tick();
     harness.supervisor.close(card.id);
     await tick();
-    expect(() => harness.supervisor.replyToCard(card.id, "too late")).toThrow(/is closed/);
+    expect(() => harness.supervisor.cardActions.replyToCard(card.id, "too late")).toThrow(/is closed/);
   });
 
   it("puts the revised line and then the author's answer in the thread when it revises with a reply", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
     const { card } = await withCard(harness, { title: "Pick one" });
-    harness.supervisor.replyToCard(card.id, "the second option is wrong");
+    harness.supervisor.cardActions.replyToCard(card.id, "the second option is wrong");
     await tick();
 
     const id = card.id.replace(/^card-[^-]+-/, "");
@@ -22781,7 +22779,7 @@ describe("CrewSupervisor: the card thread", () => {
     const harness = setup(crewmate);
     const { taskId, card } = await withCard(harness, { title: "Owner note" });
 
-    harness.supervisor.replyToCard(card.id, "and the flaky retry - keep it?");
+    harness.supervisor.cardActions.replyToCard(card.id, "and the flaky retry - keep it?");
     await tick();
     crewmate.emit({ type: "assistant_delta", taskId, text: "Unrelated progress landed." });
     crewmate.emit({ type: "turn_end", taskId });
@@ -22801,7 +22799,7 @@ describe("CrewSupervisor: the card thread", () => {
     const harness = setup(crewmate);
     const { taskId, card } = await withCard(harness, { title: "Owner note" });
 
-    harness.supervisor.replyToCard(card.id, "and the flaky retry - keep it?");
+    harness.supervisor.cardActions.replyToCard(card.id, "and the flaky retry - keep it?");
     await tick();
     harness.specs[0]?.onReply?.({
       cardId: card.id,
@@ -22827,7 +22825,7 @@ describe("CrewSupervisor: the card thread", () => {
     const awaiting = () =>
       harness.supervisor.cards.snapshot().find((shown) => shown.id === card.id)?.awaiting;
 
-    harness.supervisor.replyToCard(card.id, "rename review to audit and rerun the evaluations");
+    harness.supervisor.cardActions.replyToCard(card.id, "rename review to audit and rerun the evaluations");
     await tick();
     const interim = "Renaming review to audit now; the evaluations take about twenty minutes.";
     expect(
@@ -22867,11 +22865,11 @@ describe("CrewSupervisor: the card thread", () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
     const { taskId, card } = await withCard(harness);
-    expect(harness.supervisor.crewStatus(taskId)[0]?.thread).toBeUndefined();
+    expect(harness.supervisor.facts.crewStatus(taskId)[0]?.thread).toBeUndefined();
 
-    harness.supervisor.replyToCard(card.id, "what about X?");
+    harness.supervisor.cardActions.replyToCard(card.id, "what about X?");
     await tick();
-    expect(harness.supervisor.crewStatus(taskId)[0]?.thread).toBe(
+    expect(harness.supervisor.facts.crewStatus(taskId)[0]?.thread).toBe(
       "thread: 1 message, last from captain",
     );
     expect(harness.supervisor.cards.threadActivitySince(0)).toMatchObject([
@@ -22911,7 +22909,7 @@ describe("CrewSupervisor: the card thread", () => {
     expect(harness.cards().map((entry) => entry.id)).toContain(note.id);
 
     // Its author is gone, so the Firstmate takes the captain's reply.
-    harness.supervisor.replyToCard(note.id, "which build is it?");
+    harness.supervisor.cardActions.replyToCard(note.id, "which build is it?");
     expect(converseAboutCard).toHaveBeenCalledWith(note.id, "which build is it?", undefined);
     expect(crewmate.promptCalls.some((call) => call.includes("which build is it?"))).toBe(false);
   });
@@ -22931,13 +22929,13 @@ describe("CrewSupervisor: the card thread", () => {
       actions: [{ id: "a", label: "A", default: true }],
     });
     await tick();
-    const thread = harness.supervisor.replyToCard(cardId, "the second option is wrong");
+    const thread = harness.supervisor.cardActions.replyToCard(cardId, "the second option is wrong");
     expect(thread.messages).toMatchObject([{ who: "captain", text: "the second option is wrong" }]);
     expect(converseAboutCard).toHaveBeenCalledWith(cardId, "the second option is wrong", undefined);
     const answers = [
       { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
     ];
-    harness.supervisor.replyToCard(cardId, "revise this", undefined, undefined, answers);
+    harness.supervisor.cardActions.replyToCard(cardId, "revise this", undefined, undefined, answers);
     expect(converseAboutCard).toHaveBeenLastCalledWith(
       cardId,
       expect.stringContaining('"tiltDeg":57'),
@@ -22969,7 +22967,7 @@ describe("CrewSupervisor: the card thread", () => {
       actions: [{ id: "a", label: "A", default: true }],
     });
     await tick();
-    harness.supervisor.replyToCard(cardId, "the second option is wrong");
+    harness.supervisor.cardActions.replyToCard(cardId, "the second option is wrong");
     expect(harness.supervisor.cards.recordFirstmateThreadAnswer(cardId, "You are right; B is wrong.")).toBe(
       true,
     );
@@ -23001,7 +22999,7 @@ describe("CrewSupervisor: the card thread", () => {
     const harness = setup(crewmate);
     const { card } = await withCard(harness);
     const image = pngImage;
-    harness.supervisor.replyToCard(card.id, "see this", [image]);
+    harness.supervisor.cardActions.replyToCard(card.id, "see this", [image]);
     await tick();
     expect(crewmate.steer).toHaveBeenCalledWith(
       expect.stringContaining("see this"),
@@ -23016,7 +23014,7 @@ describe("CrewSupervisor: the card thread", () => {
     const harness = setup(crewmate);
     const { card } = await withCard(harness);
     const text = "a\r\nb\r\n".repeat(900);
-    const thread = harness.supervisor.replyToCard(card.id, "see", undefined, undefined, undefined, [
+    const thread = harness.supervisor.cardActions.replyToCard(card.id, "see", undefined, undefined, undefined, [
       { text, name: "log.txt" },
     ]);
     await tick();
@@ -23037,7 +23035,7 @@ describe("CrewSupervisor: the card thread", () => {
     const harness = setup(crewmate);
     const { taskId, card } = await withCard(harness);
     // This backend takes guidance between turns: the reply waits on the lane.
-    const thread = harness.supervisor.replyToCard(card.id, "see this", [
+    const thread = harness.supervisor.cardActions.replyToCard(card.id, "see this", [
       { ...pngImage, name: "shot.png" },
     ]);
     await tick();
@@ -23062,7 +23060,7 @@ describe("CrewSupervisor: the card thread", () => {
     ).toHaveLength(1);
     // The copy back, the same message is delivered with its picture.
     writeFileSync(file, bytes);
-    await harness.supervisor.sweepInbox(Date.now() + 60_000);
+    await harness.supervisor.watch.sweepInbox(Date.now() + 60_000);
     await tick();
     expect(crewmate.promptCalls.at(-1)).toContain("see this\n\n[attached: 1 picture: shot.png]");
     expect(crewmate.promptImageCalls.at(-1)).toEqual([expect.objectContaining(pngImage)]);
@@ -23172,7 +23170,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     });
 
     const replied = Date.now();
-    harness.supervisor.replyToCard(
+    harness.supervisor.cardActions.replyToCard(
       cardId,
       "one general catch-all for every idle crewmate - what about a heartbeat?",
     );
@@ -23254,7 +23252,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
         { id: "right", label: "Right" },
       ],
     });
-    harness.supervisor.replyToCard(cardId, "why not left?");
+    harness.supervisor.cardActions.replyToCard(cardId, "why not left?");
     await tick();
     // The author revised it meanwhile: the stage still shows the old offer.
     harness.specs[0]?.onCard?.({
@@ -23268,9 +23266,9 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       ],
     });
     await tick();
-    expect(() => harness.supervisor.act(cardId, "middle")).toThrow();
+    expect(() => harness.supervisor.cardActions.act(cardId, "middle")).toThrow();
     // The chosen offer is the shown one's: "right" resolves the card.
-    expect(() => harness.supervisor.act(cardId, "right")).not.toThrow();
+    expect(() => harness.supervisor.cardActions.act(cardId, "right")).not.toThrow();
     await tick();
     expect(harness.cards().some((card) => card.id === cardId)).toBe(false);
   });
@@ -23288,7 +23286,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     });
 
     const replied = Date.now();
-    harness.supervisor.replyToCard(
+    harness.supervisor.cardActions.replyToCard(
       cardId,
       "do you have the ability to give me choices per question i can just click in the card",
     );
@@ -23343,7 +23341,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     });
 
     const replied = Date.now();
-    harness.supervisor.replyToCard(
+    harness.supervisor.cardActions.replyToCard(
       cardId,
       "but i don't want you to fix it one-off. i need fm3000 to 'just work' for all users. what's the gap?",
     );
@@ -23439,7 +23437,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       body,
       actions: [],
     });
-    harness.supervisor.replyToCard(
+    harness.supervisor.cardActions.replyToCard(
       cardId,
       "wait - do you mean worktrees? aren't we supposed to keep warm worktrees?",
     );
@@ -23489,7 +23487,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       body: "<h2>What changed</h2><p>A closed task's copy is deleted.</p>",
       actions: [],
     });
-    harness.supervisor.replyToCard(cardId, "do you mean worktrees?");
+    harness.supervisor.cardActions.replyToCard(cardId, "do you mean worktrees?");
     await tick();
     const spec = harness.specs[0];
     spec?.onReply?.({
@@ -23536,7 +23534,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       actions: [],
     });
     const aside = () => harness.cards().find((card) => card.id === cardId)?.minimized;
-    harness.supervisor.replyToCard(cardId, "do you mean worktrees?");
+    harness.supervisor.cardActions.replyToCard(cardId, "do you mean worktrees?");
     await tick();
     harness.supervisor.cards.setMinimized(cardId, true);
     const spec = harness.specs[0];
@@ -23584,7 +23582,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       actions: [],
     });
     const shown = () => harness.cards().find((card) => card.id === cardId);
-    harness.supervisor.replyToCard(cardId, "do you mean worktrees?");
+    harness.supervisor.cardActions.replyToCard(cardId, "do you mean worktrees?");
     await tick();
     harness.supervisor.cards.setMinimized(cardId, true);
     const spec = harness.specs[0];
@@ -23632,7 +23630,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       actions,
     });
     const aside = () => harness.cards().find((card) => card.id === cardId)?.minimized;
-    harness.supervisor.replyToCard(cardId, "what about the windows build?");
+    harness.supervisor.cardActions.replyToCard(cardId, "what about the windows build?");
     await tick();
     harness.supervisor.cards.setMinimized(cardId, true);
     expect(aside()).toBe(true);
@@ -23843,11 +23841,11 @@ describe("parent tasks with planned children", () => {
     planner.emit({ type: "turn_end", taskId: plan.taskId });
     planner.finishPrompt();
     await tick();
-    supervisor.act(card.id, "b");
+    supervisor.cardActions.act(card.id, "b");
     await tick();
     expect(tasks.get(plan.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
 
-    expect(await supervisor.startQueuedNow(implement.key)).toBe(
+    expect(await supervisor.starts.startQueuedNow(implement.key)).toBe(
       `Started ${implement.key} "Implement the accepted direction".`,
     );
     await tick();
@@ -23915,7 +23913,7 @@ describe("parent tasks with planned children", () => {
     const answers = [
       { name: "q2_count", values: ["many"], labels: ["One per task"], changed: true },
     ];
-    supervisor.act(card.id, "agree", "chrome", { answers });
+    supervisor.cardActions.act(card.id, "agree", "chrome", { answers });
     await tick();
     const saved = supervisor.cards.newestResolutionForTask(plan.taskId);
     expect(saved).toMatchObject({ action: "agree", answers });
@@ -23944,7 +23942,7 @@ describe("parent tasks with planned children", () => {
     cardStore.resolve(`${card.id}-merge`, "merge");
 
     // The Firstmate decides to start on acceptance; the generic host never parses "Agree".
-    expect(await supervisor.startQueuedNow(implement.key)).toContain("Started");
+    expect(await supervisor.starts.startQueuedNow(implement.key)).toContain("Started");
     await tick();
     expect(builder.promptCalls[0]).toContain(`grounded in ${planKey}`);
     expect(builder.promptCalls[0]).toContain('q2_count: "One per task" (many), changed');
@@ -23953,8 +23951,8 @@ describe("parent tasks with planned children", () => {
     expect(builder.promptCalls[0]).not.toContain("Completion card body.");
     expect(builder.promptCalls[0]).toContain("The captain's latest submitted settings/answers");
     const starts = sessions.open.mock.calls.length;
-    supervisor.act(card.id, "agree", "chrome", { answers });
-    expect(await supervisor.startQueuedNow(implement.key)).toContain("not queued work");
+    supervisor.cardActions.act(card.id, "agree", "chrome", { answers });
+    expect(await supervisor.starts.startQueuedNow(implement.key)).toContain("not queued work");
     await tick();
     expect(sessions.open.mock.calls).toHaveLength(starts);
     expect(
@@ -23987,7 +23985,7 @@ describe("parent tasks with planned children", () => {
       });
       planner.finishPrompt();
       await tick();
-      supervisor.act(card.id, "select");
+      supervisor.cardActions.act(card.id, "select");
       await tick();
       expect(tasks.get(plan.taskId)?.status).toBe("done");
       expect(tasks.get(implement.id)).toMatchObject({ status: "open", startPolicy: "on-request" });
@@ -23997,7 +23995,7 @@ describe("parent tasks with planned children", () => {
   it("starts a planned child ungrounded when its basis never answered", async () => {
     const { supervisor, tasks, builder, decideCalls, planKey, implement } =
       await plannedBehindAPlan();
-    await supervisor.startQueuedNow(implement.key);
+    await supervisor.starts.startQueuedNow(implement.key);
     await tick();
     const shape = decideCalls.at(-1)?.shape as WorkShape;
     expect(shape).toMatchObject({ kind: "implement", basis: planKey, basis_verified: false });
@@ -24028,10 +24026,10 @@ describe("parent tasks with planned children", () => {
     const a = planOf("Plan it", both.id);
     const b = planOf("Build it", both.id);
     closeAs(a.id, "done");
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(both.id)?.status).toBe("open");
     closeAs(b.id, "done");
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(both.id)).toMatchObject({ status: "done", closedReason: "finished" });
     expect(lineFor(both.id)).toBe("Done: everything under it is finished");
 
@@ -24039,13 +24037,13 @@ describe("parent tasks with planned children", () => {
     const mixed = planOf("Fix the meter");
     closeAs(planOf("Reproduce it", mixed.id).id, "dropped");
     closeAs(planOf("Fix it", mixed.id).id, "done");
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(mixed.id)).toMatchObject({ status: "done", closedReason: "finished" });
 
     // Every child dropped: dropped.
     const none = planOf("Rename the dock");
     closeAs(planOf("Plan the rename", none.id).id, "dropped");
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(none.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
     expect(lineFor(none.id)).toBe("Stopped: nothing under it went ahead");
 
@@ -24053,7 +24051,7 @@ describe("parent tasks with planned children", () => {
     const waiting = planOf("Tidy the feed");
     closeAs(planOf("Plan the tidy", waiting.id).id, "done");
     planOf("Do the tidy", waiting.id);
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(waiting.id)?.status).toBe("open");
 
     // A parent that carries a crewmate is its crewmate's to settle.
@@ -24064,12 +24062,12 @@ describe("parent tasks with planned children", () => {
       worktreeDir: "/w/held1",
     });
     closeAs(planOf("A part of it", held.id).id, "done");
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(held.id)?.status).toBe("active");
 
     // A parent with no children is just a planned row.
     const alone = planOf("Someday");
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(tasks.get(alone.id)?.status).toBe("open");
   });
 
@@ -24410,7 +24408,7 @@ describe("closing an answer task another task builds on", () => {
     await tick();
     const card = cards().find((entry) => entry.taskId === reproduce.taskId) as Card;
     specs[0]?.onReport?.("The decision is ready.");
-    supervisor.act(card.id, "fix");
+    supervisor.cardActions.act(card.id, "fix");
     await tick();
     expect(tasks.get(reproduce.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
   });
@@ -24606,7 +24604,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
         body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
         actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
       });
-      supervisor.act(id, "discard");
+      supervisor.cardActions.act(id, "discard");
       await vi.waitFor(() =>
         expect(settleWakes(ops).some((line) => line.includes(`task ${taskId} `))).toBe(true),
       );
@@ -24626,7 +24624,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     await supervisor.steer.steerCrewmate(taskId, "urgent fix");
     for (let round = 0; round < 3; round += 1) {
       ageRows(db);
-      await supervisor.sweepInbox(Date.now());
+      await supervisor.watch.sweepInbox(Date.now());
     }
     expect(ops).toEqual([
       `[fm-op] guidance for task ${taskId} "Job" could not be delivered after 3 attempts and was set aside: urgent fix. You can interrupt the task or spawn a follow-up.`,
@@ -24639,8 +24637,8 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     const { taskId } = await supervisor.intake.commission({ title: "Marathon", intent: intentOf("long") });
     await tick();
     const start = Date.now();
-    supervisor.checkQuietTasks(start + 21 * MIN);
-    supervisor.checkQuietTasks(start + 125 * MIN);
+    supervisor.watch.checkQuietTasks(start + 21 * MIN);
+    supervisor.watch.checkQuietTasks(start + 125 * MIN);
     await tick();
     expect(ops).toEqual([
       `[fm-op] crewmate 1 on task ${taskId} "Marathon" has produced no events for 21 minutes; it may be stuck. You can steer or interrupt it.`,
@@ -24659,8 +24657,8 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     vi.mocked(workspace.createTaskWorktree).mockRejectedValueOnce(
       new Error("a branch named 'fm/task-x' already exists"),
     );
-    await supervisor.dispatchQueuedTask(taskId);
-    await supervisor.dispatchQueuedTask(taskId);
+    await supervisor.starts.dispatchQueuedTask(taskId);
+    await supervisor.starts.dispatchQueuedTask(taskId);
     await tick();
     expect(ops).toEqual([
       `[fm-op] queued task ${taskId} "Queued" could not start: Could not commission a crewmate: a branch named 'fm/task-x' already exists`,
@@ -24678,7 +24676,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
       startAfter: { at: Date.now() - 1 },
     });
     expect(handle).toBe("queued");
-    await supervisor.dispatchQueuedTask(taskId);
+    await supervisor.starts.dispatchQueuedTask(taskId);
     await tick();
     expect(ops).toEqual([
       `[fm-op] queued task ${taskId} "Queued on Fable" started - its wait ended. A crewmate is working on it now, on fm-mock/mock-1: claude-fable-5-1 was not available.`,
@@ -24690,7 +24688,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     const { supervisor, workspace, ops, tasks } = setup(crewmate);
     // The Firstmate's own start_now: the tool's answer is its receipt.
     const own = supervisor.intake.plan({ title: "Own", intent: intentOf("do") });
-    expect(await supervisor.startQueuedNow(own.key)).toBe(`Started ${own.key} "Own".`);
+    expect(await supervisor.starts.startQueuedNow(own.key)).toBe(`Started ${own.key} "Own".`);
     await tick();
     expect(tasks.get(own.id)?.status).toBe("active");
 
@@ -24699,11 +24697,11 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     vi.mocked(workspace.createTaskWorktree).mockRejectedValueOnce(
       new Error("a branch named 'fm/task-x' already exists"),
     );
-    supervisor.runTaskOp(planned.id, "start-task");
+    supervisor.hostOps.runTaskOp(planned.id, "start-task");
     await tick();
     expect(tasks.get(planned.id)?.status).toBe("open");
     // His Start that took raises nothing: his next context block lists it.
-    supervisor.runTaskOp(planned.id, "start-task");
+    supervisor.hostOps.runTaskOp(planned.id, "start-task");
     await tick();
     expect(tasks.get(planned.id)?.status).toBe("active");
     expect(ops).toEqual([
@@ -24727,7 +24725,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
       shape: { premium_ask: true },
       startAfter: { at: Date.now() - 1000 },
     });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     expect(ops).toEqual([
       `[fm-op] task ${taskId} "Later big one" needs a premium model and none has quota right now; it waits on the premium quota reset unless you say otherwise, and a high model could serve it now.`,
@@ -24741,13 +24739,13 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
       body: "Two match.",
       actions: [{ id: "one", label: "One" }],
     });
-    supervisor.act(one, "one", "frame", { pick: 1 });
+    supervisor.cardActions.act(one, "one", "frame", { pick: 1 });
     const again = supervisor.addFirstmateCard({
       title: "Which again?",
       body: "Two match.",
       actions: [{ id: "two", label: "Two" }],
     });
-    supervisor.act(again, "two");
+    supervisor.cardActions.act(again, "two");
     await tick();
     expect(ops).toEqual([
       `[fm-op] a script chose "One" (one) on card "Which one?" (${one}).\nCard action value (JSON): {"pick":1}`,
@@ -24776,7 +24774,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     crewmate.finishPrompt();
     await tick();
     const before = crewmate.promptCalls.length;
-    supervisor.act(ways ?? "", "await-queue");
+    supervisor.cardActions.act(ways ?? "", "await-queue");
     await tick();
     const pick = syncCardId(
       specs[0]?.onCard?.({
@@ -24790,7 +24788,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     );
     crewmate.finishPrompt();
     await tick();
-    supervisor.act(pick ?? "", "x", "frame", [1]);
+    supervisor.cardActions.act(pick ?? "", "x", "frame", [1]);
     await tick();
     expect(crewmate.promptCalls.slice(before)).toEqual([
       `Card "Two ways": the user chose "Await the queue" (await-queue).`,
@@ -24814,11 +24812,11 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     const lifecycle = cards().find((shown) => shown.id === card)?.lifecycleId;
     expect(lifecycle).toBeTruthy();
     const before = crewmate.promptCalls.length;
-    const first = supervisor.replyToCard(card ?? "", "  the checks failed on windows  ");
+    const first = supervisor.cardActions.replyToCard(card ?? "", "  the checks failed on windows  ");
     await tick();
     crewmate.finishPrompt();
     await tick();
-    const second = supervisor.replyToCard(card ?? "", "see this", [pngImage]);
+    const second = supervisor.cardActions.replyToCard(card ?? "", "see this", [pngImage]);
     await tick();
     const asked = (thread: { messages: { id: number }[] }) =>
       ` This is the captain's message ${thread.messages.at(-1)?.id} in lifecycle ${lifecycle}; a line on this card answers it only when it names it in answers_message.`;
@@ -24838,12 +24836,12 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     await tick();
     const before = crewmate.promptCalls.length;
     tasks.placement.setGate(taskId, { kind: "at-time", until: Date.now() - 1, reason: "checks settle" });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     crewmate.finishPrompt();
     await tick();
     tasks.placement.setGate(taskId, { kind: "at-time", until: Date.now() - 1 });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     expect(crewmate.promptCalls.slice(before)).toEqual([
       "The time this task was waiting for has come (checks settle). Carry on from where you stopped.",
@@ -24874,8 +24872,8 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     await supervisor.intake.commission({ title: "Marathon", intent: intentOf("long") });
     await tick();
     const start = Date.now();
-    supervisor.checkQuietTasks(start + 21 * MIN);
-    supervisor.checkQuietTasks(start + 125 * MIN);
+    supervisor.watch.checkQuietTasks(start + 21 * MIN);
+    supervisor.watch.checkQuietTasks(start + 125 * MIN);
     const payloads = (
       db
         .prepare("SELECT payload FROM inbox WHERE recipient = ? ORDER BY id")
@@ -24889,7 +24887,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     ]);
     expect(payloads.every((payload) => !("text" in payload))).toBe(true);
     // The dead wait built again, as the tick builds it, is not new information.
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toHaveLength(4);
   });
 
@@ -24913,9 +24911,9 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     await tick();
     // Streaming on a backend that cannot take a steer mid-turn: the rows wait.
     specs[0]?.onReport?.("The decision is ready.");
-    supervisor.replyToCard(card ?? "", "see this", [pngImage]);
+    supervisor.cardActions.replyToCard(card ?? "", "see this", [pngImage]);
     tasks.placement.setGate(timed.taskId, { kind: "at-time", until: Date.now() - 1 });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     expect(inbox.allFor(taskId).map((row) => [row.facts?.kind, row.text])).toEqual([
       ["attachments-kept", undefined],
@@ -25045,9 +25043,9 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     /** The shared tick at `ms` past the wait's start: the ladder, the sweeps, the watch. */
     const at = async (ms: number) => {
       hostNow = start + ms;
-      harness.supervisor.reconcileIdle(hostNow);
-      await harness.supervisor.sweepGates(hostNow);
-      await harness.supervisor.pollCheckWatches(hostNow);
+      harness.supervisor.watch.reconcileIdle(hostNow);
+      await harness.supervisor.watch.sweepGates(hostNow);
+      await harness.supervisor.watch.pollCheckWatches(hostNow);
       await tick();
     };
     return { ...harness, crewmate, forge, delivery, taskId, said, start, at };
@@ -25347,7 +25345,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     forge.states = ["success", "success"];
     for (let minute = 3; minute <= 12; minute++) {
       hostNow = start + minutes(minute);
-      await second.supervisor.pollCheckWatches(hostNow);
+      await second.supervisor.watch.pollCheckWatches(hostNow);
       await tick();
     }
     // The resumed crewmate hears it once.
@@ -25363,7 +25361,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
     const third = boot();
     for (let minute = 13; minute <= 20; minute++) {
       hostNow = start + minutes(minute);
-      await third.supervisor.pollCheckWatches(hostNow);
+      await third.supervisor.watch.pollCheckWatches(hostNow);
       await tick();
     }
     expect(third.crewmate.promptCalls).toEqual([]);
@@ -25623,7 +25621,7 @@ describe("ready-card choice admission", () => {
         const wakes = [...ops];
         expect(record?.shape?.deliverable).toBe(deliverable);
         for (const action of ["not-offered", "", "Open settings"])
-          expect(() => supervisor.act(id, action, source)).toThrow(
+          expect(() => supervisor.cardActions.act(id, action, source)).toThrow(
             "This choice is not offered on this card",
           );
         await tick();
@@ -25637,7 +25635,7 @@ describe("ready-card choice admission", () => {
         expect(workspace.retireTaskWorktree).not.toHaveBeenCalled();
         expect(ops).toEqual(wakes);
         // Refusal must not consume the offer: the captain can still choose it.
-        expect(supervisor.act(id, "open")).toEqual({
+        expect(supervisor.cardActions.act(id, "open")).toEqual({
           effect: { kind: "open", target: "settings" },
         });
         expect(cardStore.chosenAction(id)).toBe("open");
@@ -25671,7 +25669,7 @@ describe("ready-card choice admission", () => {
         }),
       ) ?? "";
     const before = tasks.timeline(taskId);
-    expect(() => supervisor.act(id, "open")).toThrow("This choice is not ready");
+    expect(() => supervisor.cardActions.act(id, "open")).toThrow("This choice is not ready");
     expect(cardStore.chosenAction(id)).toBeUndefined();
     expect(tasks.timeline(taskId)).toEqual(before);
     expect(crewmate.steer).not.toHaveBeenCalled();
@@ -25708,7 +25706,7 @@ describe("ready-card choice admission", () => {
       ],
     });
     specs[0]?.onReport?.("The answer is ready.");
-    expect(() => supervisor.act(id, "subscriptions")).toThrow(
+    expect(() => supervisor.cardActions.act(id, "subscriptions")).toThrow(
       "This choice is not offered on this card",
     );
     expect(cardStore.chosenAction(id)).toBeUndefined();
@@ -25723,10 +25721,10 @@ describe("ready-card choice admission", () => {
     // Advance logical time on each clock read so equality cannot hide that ordering.
     let time = Date.now();
     const clock = vi.spyOn(Date, "now").mockImplementation(() => ++time);
-    let result: ReturnType<CrewSupervisor["act"]>;
+    let result: ReturnType<CrewSupervisor["cardActions"]["act"]>;
     let saved: ReturnType<CardService["newestResolutionForTask"]>;
     try {
-      result = supervisor.act(id, "open");
+      result = supervisor.cardActions.act(id, "open");
       saved = supervisor.cards.newestResolutionForTask(taskId);
     } finally {
       clock.mockRestore();
@@ -25759,7 +25757,7 @@ describe("ready-card choice admission", () => {
       else seedTask(tasks, { id: "closed", title: "Route", status: "idle" });
       tasks.close("closed", { status: "done", reason: "answered", actor: "captain" });
       const timeline = tasks.timeline("closed");
-      expect(() => supervisor.act(id, "open")).toThrow("Its task is no longer open");
+      expect(() => supervisor.cardActions.act(id, "open")).toThrow("Its task is no longer open");
       expect(supervisor.cards.snapshot().some((card) => card.id === id)).toBe(true);
       expect(cardStore.chosenAction(id)).toBeUndefined();
       expect(tasks.timeline("closed")).toEqual(timeline);
@@ -25885,7 +25883,7 @@ describe("a cardless internal step's report", () => {
       expect(tasks.get(fix.id)?.status).toBe("open");
 
       const before = crewmate.promptCalls.length;
-      supervisor.replyToCard(card.id, "What does logging cost?");
+      supervisor.cardActions.replyToCard(card.id, "What does logging cost?");
       await tick();
       expect(crewmate.promptCalls.slice(before).join("\n")).toContain("What does logging cost?");
       expect(ops).toEqual([]);
@@ -25901,7 +25899,7 @@ describe("a cardless internal step's report", () => {
       expect(sorts.at(-1)?.rule).toBe("captain-card");
       expect(ops).toEqual([]);
 
-      supervisor.act(card.id, "log");
+      supervisor.cardActions.act(card.id, "log");
       await tick();
       expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
       expect(
@@ -26192,7 +26190,7 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
     );
     expect(told).toHaveLength(1);
     expect(told[0]).not.toHaveProperty("taskId");
-    expect(supervisor.turnStartedAt(taskId)).toEqual(expect.any(Number));
+    expect(supervisor.facts.turnStartedAt(taskId)).toEqual(expect.any(Number));
     await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     await tick();
   });
@@ -26230,7 +26228,7 @@ describe("the Crewmate tab's composer (docs/task-card-tabs.md, Typing)", () => {
     crewmate.failPrompt("aborted");
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
-    expect(supervisor.turnStartedAt(taskId)).toBeNull();
+    expect(supervisor.facts.turnStartedAt(taskId)).toBeNull();
     expect(await supervisor.steer.interruptFromCrewmateTab(taskId)).toMatchObject({ ok: false });
     await supervisor.sessions.interruptCrewmate(taskId, "cancel");
     await tick();
@@ -26299,26 +26297,26 @@ describe("an Automatic wait in Activity", () => {
     ]);
     expect(new Set(waits.map((wait) => wait.words)).size).toBe(4);
 
-    await supervisor.dispatchQueuedTask(task.id);
+    await supervisor.starts.dispatchQueuedTask(task.id);
     expect(lines()).toEqual([`"Fix the ledger footer": ${stale.words}`]);
     expect(details()).toBe(stale.words);
 
-    await supervisor.dispatchQueuedTask(task.id);
+    await supervisor.starts.dispatchQueuedTask(task.id);
     expect(lines()).toHaveLength(1);
     expect(details()).toBe(unknown.words);
 
-    await supervisor.dispatchQueuedTask(task.id);
+    await supervisor.starts.dispatchQueuedTask(task.id);
     expect(lines()).toEqual([
       `"Fix the ledger footer": ${stale.words}`,
       `"Fix the ledger footer": ${busy.words}`,
     ]);
     expect(details()).toBe(busy.words);
 
-    await supervisor.dispatchQueuedTask(task.id);
+    await supervisor.starts.dispatchQueuedTask(task.id);
     expect(lines()).toHaveLength(2);
     expect(details()).toBe(held.words);
     // Start now answers with the latest words too, and says nothing new in Activity.
-    expect(await supervisor.startQueuedNow(task.id)).toContain(`: ${held.words}`);
+    expect(await supervisor.starts.startQueuedNow(task.id)).toContain(`: ${held.words}`);
     expect(lines()).toHaveLength(2);
   });
 
@@ -26363,7 +26361,7 @@ describe("an Automatic wait in Activity", () => {
     // Three sets of words across four sweeps, each naming its own check.
     expect(new Set(waits.map((wait) => wait.words)).size).toBe(3);
     for (const wait of waits) {
-      await supervisor.dispatchQueuedTask(task.id);
+      await supervisor.starts.dispatchQueuedTask(task.id);
       expect(details()).toBe(wait.words);
     }
     expect(lines()).toEqual([`"Fix the ledger totals": ${waits[0]?.words}`]);
@@ -26395,7 +26393,7 @@ describe("an Automatic wait in Activity", () => {
       events.flatMap((event) =>
         event.type === "firstmate_note" && event.taskId === task.id ? [event.text] : [],
       );
-    await supervisor.dispatchQueuedTask(task.id);
+    await supervisor.starts.dispatchQueuedTask(task.id);
     expect(lines()).toEqual([`"Fix the ledger header": ${wait.words}`]);
     expect(tasks.get(task.id)?.startNotice ?? null).toBeNull();
     const savedWait = tasks.get(task.id)?.shape?.placement_wait;
@@ -26425,7 +26423,7 @@ describe("an Automatic wait in Activity", () => {
     expect(restartedRecord.shape?.placement_wait).toEqual(savedWait);
     expect(restartedRecord.startNotice ?? null).toBeNull();
     expect(restarted.placement.runsOnFact(restartedRecord)?.reason).toBe(wait.words);
-    await restarted.dispatchQueuedTask(task.id);
+    await restarted.starts.dispatchQueuedTask(task.id);
     expect(
       restartedEvents.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : [])),
     ).toEqual([]);
@@ -26481,7 +26479,7 @@ describe("an Automatic wait in Activity", () => {
     const key = task.key || task.id;
     const heard = () => inbox.allFor(FIRSTMATE_RECIPIENT);
 
-    await supervisor.dispatchQueuedTask(task.id);
+    await supervisor.starts.dispatchQueuedTask(task.id);
     expect(heard().map((row) => [row.ref, row.facts])).toEqual([
       [
         task.id,
@@ -26498,9 +26496,9 @@ describe("an Automatic wait in Activity", () => {
     // computers again, a minute at a time, long after a repeat would be new.
     inbox.ack(heard().map((row) => row.id));
     hostNow += INBOX_DEDUPE_WINDOW_MS + 60_000;
-    await supervisor.dispatchQueuedTask(task.id);
+    await supervisor.starts.dispatchQueuedTask(task.id);
     hostNow += 60_000;
-    await supervisor.dispatchQueuedTask(task.id);
+    await supervisor.starts.dispatchQueuedTask(task.id);
     expect(heard()).toEqual([]);
     expect(tasks.get(task.id)?.status).toBe("open");
   });
@@ -26542,7 +26540,7 @@ describe("an Automatic wait in Activity", () => {
     const heard = () =>
       inbox.allFor(FIRSTMATE_RECIPIENT).filter((row) => row.facts?.kind === "computer-left-out");
 
-    await supervisor.dispatchQueuedTask(rotate.id);
+    await supervisor.starts.dispatchQueuedTask(rotate.id);
     expect(heard().map((row) => row.facts)).toEqual([
       {
         kind: "computer-left-out",
@@ -26563,7 +26561,7 @@ describe("an Automatic wait in Activity", () => {
 
     inbox.ack(heard().map((row) => row.id));
     const digest = queued("digest", "Send the weekly scheduler digest");
-    await supervisor.dispatchQueuedTask(digest.id);
+    await supervisor.starts.dispatchQueuedTask(digest.id);
     expect(heard()).toEqual([]);
   });
 });
@@ -26716,7 +26714,7 @@ describe("a merge that leaves the project's folder behind (INF-549, real git)", 
       body: "Merge the shop change.",
       actions: [{ id: "merge", label: "Merge", effect: SETTLE_MERGE }],
     });
-    h.supervisor.act(card, "merge");
+    h.supervisor.cardActions.act(card, "merge");
 
     // The merge closes the task first; the folder is read after it.
     await vi.waitFor(() => expect(repairOf(h.tasks, h.repo.id)).toHaveLength(1), REAL_GIT_WAIT);
@@ -26910,7 +26908,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     });
     rmSync(h.folder, { recursive: true, force: true });
 
-    await h.supervisor.dispatchQueuedTask("header01");
+    await h.supervisor.starts.dispatchQueuedTask("header01");
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     const header = h.tasks.get("header01");
@@ -26930,7 +26928,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     );
 
     // A second task finds the same repair standing, and nothing new is filed.
-    await h.supervisor.dispatchQueuedTask("footer01");
+    await h.supervisor.starts.dispatchQueuedTask("footer01");
     expect(h.tasks.get("footer01")?.gate?.reason).toContain(
       `${repair.key} "Bring the folder up to date" is already bringing it back.`,
     );
@@ -26982,7 +26980,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     );
 
     // Queued folder work waits behind the same words, naming the standing repair.
-    await h.supervisor.dispatchQueuedTask(queued.id);
+    await h.supervisor.starts.dispatchQueuedTask(queued.id);
     const waiting = h.tasks.get(queued.id);
     expect(waiting?.status).toBe("open");
     expect(waiting?.gate).toMatchObject({ kind: "captain", ref: "dispatch-failed" });
@@ -27018,7 +27016,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     h.sessions.open.mockRejectedValueOnce(unchecked);
 
     // The first start: the repair opens in the folder above, and its crewmate cannot open.
-    await h.supervisor.dispatchQueuedTask("header01");
+    await h.supervisor.starts.dispatchQueuedTask("header01");
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     await vi.waitFor(
@@ -27035,7 +27033,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     // The captain names the folder's new place and presses Start; it fails again.
     h.repos.configure(h.repo.id, { path: moved });
     h.sessions.open.mockRejectedValueOnce(unchecked);
-    await h.supervisor.dispatchQueuedTask(repair.id, { requested: { by: "captain" } });
+    await h.supervisor.starts.dispatchQueuedTask(repair.id, { requested: { by: "captain" } });
     expect(h.sessions.open).toHaveBeenCalledTimes(2);
     expect(h.tasks.get(repair.id)?.gate?.reason).toContain(unchecked.message);
     untouched();
@@ -27063,7 +27061,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     );
 
     // The first start opens in the folder above the missing one, and fails.
-    await h.supervisor.dispatchQueuedTask("header01");
+    await h.supervisor.starts.dispatchQueuedTask("header01");
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     await vi.waitFor(
@@ -27078,7 +27076,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
 
     // The captain names the folder's new place and presses Start.
     const named = h.repos.configure(h.repo.id, { path: moved }).path;
-    await h.supervisor.dispatchQueuedTask(repair.id, { requested: { by: "captain" } });
+    await h.supervisor.starts.dispatchQueuedTask(repair.id, { requested: { by: "captain" } });
     await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     expect(h.sessions.open.mock.calls[1]?.[0].cwd).toBe(named);
     const brief = h.crewmate.promptCalls[0] ?? "";
@@ -27434,8 +27432,8 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
     );
     // The first mate reads each task's computer (INF-992), the one the
     // queued task waits for and this one for the folder work.
-    expect(h.supervisor.crewStatus(ordinary.taskId)[0]?.computer).toBe("Kun's Mac mini");
-    expect(h.supervisor.crewStatus(folder.taskId)[0]?.computer).toBe("this computer");
+    expect(h.supervisor.facts.crewStatus(ordinary.taskId)[0]?.computer).toBe("Kun's Mac mini");
+    expect(h.supervisor.facts.crewStatus(folder.taskId)[0]?.computer).toBe("this computer");
 
     // The host's folder-repair closing never reads this task.
     await h.supervisor.inPlaceWork.closeCurrentFolders();
@@ -27526,7 +27524,7 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
 
   it("draws nothing for the crewmate's own job result", async () => {
     const { supervisor, events, crewmate, taskId } = await idleCrewmate();
-    supervisor.deliverJobResult(taskId, {
+    supervisor.watch.deliverJobResult(taskId, {
       facts: {
         kind: "job-exit",
         to: "crewmate",
@@ -27764,7 +27762,7 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
         repoId: harness.repoId,
         shape: { branch_from: from },
       });
-      await harness.supervisor.startQueuedNow(second.key);
+      await harness.supervisor.starts.startQueuedNow(second.key);
       return vi.waitFor(() => {
         const current = harness.tasks.get(second.id);
         if (!current?.worktreeDir || !existsSync(current.worktreeDir)) throw new Error("not yet");
@@ -28301,7 +28299,7 @@ describe("programs (INF-799 piece 2)", () => {
     );
     expect(h.tasks.get(h.program.id)?.status).toBe("open");
     // Still running: the captain starts the held part, and its answer ends the script.
-    expect(await h.supervisor.startQueuedNow(part.key)).toBe(`Started ${part.key} "Cap the meter.".`);
+    expect(await h.supervisor.starts.startQueuedNow(part.key)).toBe(`Started ${part.key} "Cap the meter.".`);
     // The failed open took the first crewmate spec; the started crewmate's is the last.
     await h.specs.at(-1)?.onReport?.("Capped the meter.");
     h.sessions[0]?.emit({ type: "turn_end", taskId: part.id });
@@ -28327,7 +28325,7 @@ describe("programs (INF-799 piece 2)", () => {
     });
     await tick();
     expect(h.tasks.graph.children(h.program.id)).toHaveLength(0);
-    expect(await h.supervisor.startQueuedNow(h.program.key)).toBe(
+    expect(await h.supervisor.starts.startQueuedNow(h.program.key)).toBe(
       `Started ${h.program.key} "Cap the meter's rendered results".`,
     );
     expect(h.tasks.get(h.program.id)).toMatchObject({ status: "open" });
@@ -28463,7 +28461,7 @@ describe("the first mate's integration approval card (INF-1108)", () => {
     const row = tasks.capture.openCardTaskFor(cardId);
     expect(row?.delivery?.writeAsks).toEqual([expect.objectContaining({ id: ask.id })]);
 
-    supervisor.act(cardId, "once");
+    supervisor.cardActions.act(cardId, "once");
     await tick();
     expect(sent).toEqual([{ rowId: row?.id, askId: ask.id, choice: "once" }]);
     expect(tasks.get(row?.id ?? "")?.delivery?.writeAsks?.[0]?.sentAt).toEqual(expect.any(Number));
@@ -28474,7 +28472,7 @@ describe("the first mate's integration approval card (INF-1108)", () => {
     expect(wakes()[0]).toContain("1. Return the library books by Friday");
 
     // The card is answered: a second click or a close runs nothing and wakes nobody.
-    supervisor.act(cardId, "once");
+    supervisor.cardActions.act(cardId, "once");
     supervisor.close(cardId);
     await tick();
     expect(sent).toHaveLength(1);
@@ -28491,11 +28489,11 @@ describe("the first mate's integration approval card (INF-1108)", () => {
     expect(sent).toEqual([]);
     expect(wakes()).toEqual([]);
     expect(tasks.get(row!.id)?.status).toBe("open");
-    supervisor.act(cardId, "deny");
+    supervisor.cardActions.act(cardId, "deny");
     await tick();
     expect(sent).toEqual([{ rowId: row?.id, askId: ask.id, choice: "deny" }]);
     expect(wakes()).toHaveLength(1);
-    supervisor.act(cardId, "once");
+    supervisor.cardActions.act(cardId, "once");
     expect(sent).toHaveLength(1);
   });
 });
@@ -28756,7 +28754,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe(
       "recorded-held",
     );
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
     expect(h.supervisor.moves.computerMoveFacts(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
       computerMove: {
         from: HERE.this,
@@ -28767,7 +28765,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     });
     expect(h.moveIn).not.toHaveBeenCalled();
     h.reach.mini = true;
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
 
     await vi.waitFor(() => {
       expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
@@ -28870,7 +28868,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
     }, REAL_GIT_WAIT);
     expect((await h.supervisor.moves.requestComputerMove(h.taskId, AIR, "firstmate")).ok).toBe(true);
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
     await vi.waitFor(() => {
       expect(h.tasks.get(h.taskId)?.deviceId).toBe(AIR);
       expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
@@ -28940,13 +28938,13 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
     const { fresh } = relaunched(h);
     expect(await fresh.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe("recorded-held");
-    await fresh.sweepGates(Date.now());
+    await fresh.watch.sweepGates(Date.now());
     await vi.waitFor(() => expect(h.opened).toHaveLength(1), REAL_GIT_WAIT);
     expect(h.opened[0]).toMatchObject({ machine: MINI });
     expect(JSON.stringify(h.opened[0])).not.toContain("s1.jsonl");
     await vi.waitFor(() => expect(h.install).toHaveBeenCalledWith(MINI, h.taskId), REAL_GIT_WAIT);
     // Nothing on its lane starts a turn while its dependencies install.
-    await fresh.sweepGates(Date.now());
+    await fresh.watch.sweepGates(Date.now());
     expect(h.boot.promptCalls).toHaveLength(0);
     installing.resolve({ outcome: "online", ms: 900 });
     await vi.waitFor(() => expect(h.boot.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
@@ -28981,9 +28979,9 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
     const { fresh } = relaunched(h);
     expect(await fresh.steer.steerCrewmate(h.taskId, "Check the header too.")).toBe("recorded-held");
-    await fresh.sweepGates(Date.now());
+    await fresh.watch.sweepGates(Date.now());
     await vi.waitFor(() => expect(h.install).toHaveBeenCalledTimes(2), REAL_GIT_WAIT);
-    await fresh.sweepGates(Date.now());
+    await fresh.watch.sweepGates(Date.now());
     expect(h.boots.flatMap((boot) => boot.promptCalls)).toHaveLength(0);
     installs[1]?.resolve({ outcome: "online", ms: 900 });
     await vi.waitFor(() => expect(h.boots[1]?.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
@@ -29004,7 +29002,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.tasks.get(h.taskId)?.shape?.computer_move).toMatchObject({ to: MINI, phase: "waiting" });
 
     const { fresh, reopened } = relaunched(h);
-    await fresh.sweepGates(Date.now());
+    await fresh.watch.sweepGates(Date.now());
     await vi.waitFor(() => {
       expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
       expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
@@ -29053,7 +29051,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     // launch's move can never go on to commit after it.
     await h.supervisor.disposeAll();
     const { fresh } = relaunched(h);
-    await fresh.sweepGates(Date.now());
+    await fresh.watch.sweepGates(Date.now());
     await vi.waitFor(
       () => expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined(),
       REAL_GIT_WAIT,
@@ -29074,7 +29072,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.moveIn).toHaveBeenCalled(), REAL_GIT_WAIT);
     expect(await h.supervisor.steer.steerCrewmate(h.taskId, "Use watt-hours.")).toBe("recorded-held");
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
     expect(h.crewmate.promptCalls).toHaveLength(1);
     h.arrive.resolve();
     await vi.waitFor(() => expect(h.boot.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
@@ -29119,8 +29117,8 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       cardId: card.id,
     });
     // The captain replies meanwhile: the reply waits for the conversation there.
-    h.supervisor.replyToCard(card.id, "Use watt-hours for the small screen.");
-    await h.supervisor.sweepGates(Date.now());
+    h.supervisor.cardActions.replyToCard(card.id, "Use watt-hours for the small screen.");
+    await h.supervisor.watch.sweepGates(Date.now());
     expect(h.boot.promptCalls).toHaveLength(0);
     installing.resolve({ outcome: "online", ms: 900 });
     await vi.waitFor(() => expect(h.boot.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
@@ -29129,7 +29127,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.cardStore.get(card.id)).toMatchObject({ status: "ready", taskId: h.taskId });
     h.boot.finishPrompt();
     await vi.waitFor(() => expect(h.supervisor.sessions.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
-    h.supervisor.act(card.id, "wh");
+    h.supervisor.cardActions.act(card.id, "wh");
     await vi.waitFor(() => expect(h.boot.promptCalls).toHaveLength(2), REAL_GIT_WAIT);
     expect(h.boot.promptCalls[1]).toContain("Watt-hours");
     expect(h.crewmate.promptCalls).toHaveLength(1);
@@ -29143,8 +29141,8 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.retireMoved).toHaveBeenCalledTimes(1), REAL_GIT_WAIT);
-    await h.supervisor.sweepGates(Date.now());
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
     expect(h.retireMoved).toHaveBeenCalledTimes(1);
     expect(h.tasks.get(h.taskId)?.shape?.computer_move?.phase).toBe("undoing");
     removing.resolve();
@@ -29166,7 +29164,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect((await h.supervisor.moves.requestComputerMove(h.taskId, MINI, "captain")).ok).toBe(true);
     h.crewmate.finishPrompt();
     await vi.waitFor(() => expect(h.supervisor.sessions.conversationBusy(h.taskId)).toBe(false), REAL_GIT_WAIT);
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
     expect(h.supervisor.moves.computerMoveFacts(h.tasks.get(h.taskId) as TaskRecord)).toEqual({
       computerMove: {
         from: HERE.this,
@@ -29179,10 +29177,10 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     // Stopped, but handed to the captain for a sign-in: still waiting.
     browser.current = undefined;
     browser.withCaptain = true;
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
     expect(h.moveIn).not.toHaveBeenCalled();
     browser.withCaptain = false;
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
     await vi.waitFor(() => {
       expect(h.tasks.get(h.taskId)?.deviceId).toBe(MINI);
       expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
@@ -29340,7 +29338,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
 
       const { fresh } = relaunched(h);
       try {
-        await fresh.sweepGates(Date.now());
+        await fresh.watch.sweepGates(Date.now());
         await vi.waitFor(() => {
           expect(h.tasks.get(h.taskId)?.shape?.computer_move).toBeUndefined();
           expect(existsSync(h.cwd)).toBe(false);
@@ -29565,7 +29563,7 @@ describe("finding context is not starting code (INF-1964)", () => {
     capture();
     const detach = tasks.onChange(capture);
     try {
-      const reply = await supervisor.startQueuedNow(
+      const reply = await supervisor.starts.startQueuedNow(
         filing.id,
         "captain",
         "task-card",
@@ -29763,7 +29761,7 @@ describe("INF-2214 reliable requested answers", () => {
       }),
     );
     expect(cardId).toBeDefined();
-    const thread = h.supervisor.replyToCard(cardId!, "What is the full path?");
+    const thread = h.supervisor.cardActions.replyToCard(cardId!, "What is the full path?");
     const card = h.cardStore.get(cardId!)!;
     const reference = {
       id: cardId!,

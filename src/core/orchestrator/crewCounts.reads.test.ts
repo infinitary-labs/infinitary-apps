@@ -71,11 +71,11 @@ it("reads a finished blocker's edge once and never its record when it counts the
     };
     finishBlockers(4);
     const before = rowsRead(db, () => {
-      expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+      expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 1 });
     });
     finishBlockers(12);
     const after = rowsRead(db, () => {
-      expect(supervisor.crewCounts()).toMatchObject({ working: 0, idle: 1 });
+      expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 1 });
     });
     expect(after - before, "each finished blocker cost the count more than its edge").toBe(12);
   } finally {

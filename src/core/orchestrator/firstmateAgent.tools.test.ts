@@ -200,7 +200,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(tasks.get(build.id)?.startPolicy).toBe("on-request");
     const question = cards().find((card) => card.title === "Choose reduced-motion reveal");
     if (!question) throw new Error("missing question");
-    supervisor.act(question.id, "instant");
+    supervisor.cardActions.act(question.id, "instant");
     supervisor.cards.flushBroadcast();
     expect(cards().find((card) => card.id === question.id)).toBeUndefined();
     // This test explicitly removes its test hold before authorized recovery;
@@ -553,7 +553,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(readTaskQueryText(await text("tasks", { key: "SCR-2" }))[0]).toMatchObject({
       blocked_by: [expect.stringContaining("SCR-1")],
     });
-    expect(supervisor.crewStatus().map((entry) => entry.gate)).toEqual(
+    expect(supervisor.facts.crewStatus().map((entry) => entry.gate)).toEqual(
       [adr, impl].map(
         (record) => queryTasks(tasks, { key: record?.id }, () => undefined).rows[0]?.waiting,
       ),
@@ -665,7 +665,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     );
     const started = tasks.byKey("SCR-1");
     if (started?.status !== "active") throw new Error("The task did not start");
-    const moving = vi.spyOn(supervisor, "moveToBacklog");
+    const moving = vi.spyOn(supervisor.hostOps, "moveToBacklog");
 
     const answer = await text("update_task", {
       task: "SCR-1",

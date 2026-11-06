@@ -189,7 +189,7 @@ describe("the integrations command on a computer that runs work", () => {
 
     if (!approval) throw new Error("The host approval card is missing");
     model([{ text: "The issue request was refused." }]);
-    home.supervisor.act(approval.id, "once");
+    home.supervisor.cardActions.act(approval.id, "once");
     await expect
       .poll(() => home.tasks.get("t-reach")?.outcome)
       .toBe("The issue request was refused.");
@@ -198,7 +198,7 @@ describe("the integrations command on a computer that runs work", () => {
       kind: "refused",
     });
     // Repeating the already-resolved choice never repeats the request.
-    home.supervisor.act(approval.id, "once");
+    home.supervisor.cardActions.act(approval.id, "once");
     expect(github.seen.filter((request) => request.method === "POST")).toHaveLength(1);
 
     // Nothing of the sign-in is on that computer, while the answer it read is in its record there.
@@ -238,7 +238,7 @@ describe("the integrations command on a computer that runs work", () => {
       status: "queued",
       deviceId: at.deviceId,
     });
-    await home.supervisor.dispatchQueuedTask("t-older");
+    await home.supervisor.starts.dispatchQueuedTask("t-older");
     expect(home.tasks.get("t-older")?.status).toBe("open");
     expect(home.placed.takesIntegrations(at.deviceId)).toBe(false);
     expect(api.requests.length).toBe(requests);
@@ -246,7 +246,7 @@ describe("the integrations command on a computer that runs work", () => {
     await at.restartComputer({ protocolVersion: PROTOCOL_VERSION });
     await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
     await at.inReach("t-older");
-    await home.supervisor.dispatchQueuedTask("t-older");
+    await home.supervisor.starts.dispatchQueuedTask("t-older");
     await expect.poll(() => home.tasks.get("t-older")?.outcome).toBe("No integrations here.");
     expect(systemOf(api.requests[requests])).toContain(CREWMATE_INTEGRATIONS_LINE);
     expect(shellAnswer(api.requests[requests + 1]).exit).toBe(0);

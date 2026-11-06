@@ -44,7 +44,8 @@ import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { DeliveryNote } from "./answerDelivery";
 import { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { AskCapture, type TurnOrigin } from "./askCapture";
-import { type CrewSupervisor, QUIET_CARD_MS, QUIET_FEED_MS } from "./crewSupervisor";
+import type { CrewSupervisor } from "./crewSupervisor";
+import { QUIET_CARD_MS, QUIET_FEED_MS } from "./crewWatch";
 import { DecisionCapture, type ServedInput } from "./decisionCapture";
 import { FirstmateContext } from "./firstmateContext";
 import { premiumCanServe } from "./firstmateModelPick";
@@ -1368,7 +1369,7 @@ export class FirstmateAgent {
     // A Start this turn read and did not start begins as it is, and its wake
     // is then served.
     if (inboxRows && inboxRows.length > 0) {
-      const began = this.options.supervisor.firstmateTurnEnded(
+      const began = this.options.supervisor.hostOps.firstmateTurnEnded(
         inboxRows.map((row) => row.id),
         threw ? "broke" : this.turn.failed ? "failed" : "clean",
       );

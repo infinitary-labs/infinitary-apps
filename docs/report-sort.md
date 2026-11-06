@@ -221,7 +221,7 @@ A new turn starts a new episode and resets all of it - except the turn the ladde
 A report, a chat message, a restart or a wall-clock jump does not reset it.
 
 **One reconciler, one order.**
-The tick, every idle boundary and the boot sweep call `CrewSupervisor.reconcileIdle` over every live idle record, with or without a runtime.
+The tick, every idle boundary and the boot sweep call `CrewWatch.reconcileIdle` over every live idle record, with or without a runtime.
 The order is the rule's own:
 
 1. Closed: nothing.
@@ -325,7 +325,7 @@ The account speaks for its lanes: one `provider-cut-off` wake when a typed cut-o
 The still-down wake stays quiet while a cut-off stands.
 
 **Nor is a computer out of reach.**
-A task whose crewmate runs on a computer that runs work, while that computer is out of reach or back and not yet caught up, is its own witness (`outOfReach`, `CrewSupervisor.outOfReach`), read where `accountHeld` is: its turn goes on there unseen, so nothing climbs and the quiet watchdog skips it, while a card the first mate owes is still owed.
+A task whose crewmate runs on a computer that runs work, while that computer is out of reach or back and not yet caught up, is its own witness (`outOfReach`, `CrewFacts.outOfReach`), read where `accountHeld` is: its turn goes on there unseen, so nothing climbs and the quiet watchdog skips it, while a card the first mate owes is still owed.
 The feed says once that the computer is out of reach and once that its work caught up (`docs/helper.md`, "The home's side").
 
 No model is in the loop (Q5): every step is code over typed state, and the ledger rows are the evaluation set any later model question is measured against, in its own captain call.
@@ -352,7 +352,7 @@ Its ledger rows live in `decisions`; Observe does not open the retired session, 
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
-- The whose-turn rule (S7c, captain call C7 A "heuristics only", 2026-09-20; `docs/report-sort.md` is the one home; `src/core/orchestrator/reportSort.ts` + `CrewTurns.sortReport` and `CrewSupervisor.reconcileIdle`).
+- The whose-turn rule (S7c, captain call C7 A "heuristics only", 2026-09-20; `docs/report-sort.md` is the one home; `src/core/orchestrator/reportSort.ts` + `CrewTurns.sortReport` and `CrewWatch.reconcileIdle`).
   A crewmate's report is sorted in CODE from typed state at its call site, never by reading its prose: (0) the captain wrote the newest message in one of the task's card threads - the crewmate's turn, above the card branch because the captain has spoken since that card went up - no wake; (1) an open DECISION card for the task is the captain's turn - a note never holds it, since `cardWord` derives the word from the actions alone - no wake; (2) filings this turn wake; (3) a running job, rows pending on the task's lane or a `pendingSettle` is the crewmate's turn - no wake; (4) none of those and the host can see ALL of this backend's work: nobody's turn, wake NOW with the report's own words; (5) it cannot: wake now too (INF-11), the rule's name keeping that the host could not tell.
   Observability is DECLARED, not guessed - `ControlProfile.backgroundWork` is `host` for Pi (its crewmate's bash is the host's own tool, so a job is in the registry and its exit is a lane row) and `client` for Claude, as it is for a task whose transport is gone.
   The stall check it once armed was replaced by the idle ladder (2026-09-26, "The idle ladder" above): one reconciler over every idle record, on a durable clock.

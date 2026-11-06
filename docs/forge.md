@@ -657,7 +657,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
 - **Durable**: the watch is a delivery fact on the task, `ciWatch { head, since, nextAt, tries, failureSeen }`, so it outlives a restart and ends with the task.
   A reading at the head already watched keeps its start.
   `failureSeen` means the early wake for that head already went, or the crewmate already read a red check, so that wake is not sent again.
-- **Read** on the shared 60 s tick (`CrewSupervisor.pollCheckWatches`, through `ChangeChecks.readWatched`): every minute for 10 minutes, then every 2, up to the two-hour bound.
+- **Read** on the shared 60 s tick (`CrewWatch.pollCheckWatches`, through `ChangeChecks.readWatched`): every minute for 10 minutes, then every 2, up to the two-hour bound.
   Every successful reading updates the saved reading time, even when running checks keep the same status and head, so the reading time shown on rest stays current.
   A reading - the watch's, the quiet refresh's or `check_change`'s - records a `ci` event only when it changes the check state: the status, the head, or the repair ledger (a failure first seen there or a crew declaration).
   A reading that changes none of them adds no CI event; it advances the reading time and retains observation-forwarding bookkeeping (`changesCheckState`).

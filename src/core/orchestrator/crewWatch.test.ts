@@ -1,14 +1,12 @@
 /**
- * What the crew supervisor's watch does between turns (docs/inbox.md for a
- * job's result on a task's lane; docs/workspace.md for working copies no
+ * What the crew's watch (`CrewWatch`) does between turns (docs/inbox.md for
+ * a job's result on a task's lane; docs/workspace.md for working copies no
  * record explains): a background job's result reaching a crewmate whose
  * conversation was let go, and the boot sweep of working copies no task
  * owns, keeping a live task's and saying which ones it could not save
- * first. INF-2625's plan, the crew supervisor's tenth step, moves this code
- * out of the supervisor into an owner of its own (the crew watch); these
- * cases pin, before it moves, the behaviour no other test reaches. Each
- * drives a public door of the supervisor and reads what the crewmate
- * heard, what the working copies saw and the feed.
+ * first. These cases pin the behaviour no other test reaches. Each drives a
+ * public door of the watch and reads what the crewmate heard, what the
+ * working copies saw and the feed.
  */
 
 import { join } from "node:path";
@@ -16,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { endTurn, fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
 import type { TaskWorkspace } from "../workspace/workspaceService";
 
-describe("the crew's watch between turns, before it moves out of the crew supervisor", () => {
+describe("the crew's watch between turns, as CrewWatch keeps it", () => {
   it("resumes a crewmate whose conversation was let go to hand it a background job's result", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate);
@@ -30,7 +28,10 @@ describe("the crew's watch between turns, before it moves out of the crew superv
     const opened = h.sessions.open.mock.calls.length;
     const prompts = crewmate.promptCalls.length;
 
-    h.supervisor.deliverJobResult(taskId, '[job] background job j1 finished: "pnpm test" exited 0');
+    h.supervisor.watch.deliverJobResult(
+      taskId,
+      '[job] background job j1 finished: "pnpm test" exited 0',
+    );
     await tick();
 
     expect(h.sessions.open.mock.calls.length).toBe(opened + 1);
@@ -63,7 +64,7 @@ describe("the crew's watch between turns, before it moves out of the crew superv
       return { outcome: "removed" as const, kept: null };
     }) as never;
 
-    await h.supervisor.reconcileFleetHygiene();
+    await h.supervisor.watch.reconcileFleetHygiene();
 
     // The live task's tree is never touched; the other two are retired, and one is kept.
     expect(retired).toEqual(["stuck", "saved"]);

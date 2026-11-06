@@ -125,7 +125,7 @@ async function harness() {
     ],
     panelsOn: () => personal.isEnabled,
   });
-  supervisor.setPluginConsent({
+  supervisor.hostOps.setPluginConsent({
     add: (id) => void installer.add(id),
     decline: (id) => void installer.decline(id),
   });
@@ -220,13 +220,13 @@ describe("PluginInstaller", () => {
       expect(h.feed()).toEqual([]);
 
       // A card body cannot click it: an effect runs only from the card's own controls.
-      expect(() => h.supervisor.act(consentCardId("token-watch"), "add", "frame")).toThrow(
-        "only from the card controls",
-      );
+      expect(() =>
+        h.supervisor.cardActions.act(consentCardId("token-watch"), "add", "frame"),
+      ).toThrow("only from the card controls");
       expect(h.records.installed()).toEqual([]);
 
       // The captain's click adds it: files, record, one feed line, the panel.
-      h.supervisor.act(consentCardId("token-watch"), "add");
+      h.supervisor.cardActions.act(consentCardId("token-watch"), "add");
       await h.settled();
       const [record] = h.records.installed();
       expect(record).toMatchObject({
@@ -275,7 +275,7 @@ describe("PluginInstaller", () => {
       await h.installer.install({ source: "path", spec: second });
       expect(h.records.pending().map((record) => record.id)).toEqual(["clock-one", "clock-two"]);
 
-      h.supervisor.act(consentCardId("clock-one"), "decline");
+      h.supervisor.cardActions.act(consentCardId("clock-one"), "decline");
       // INF-1879: minimizing never grants or declines consent.
       h.supervisor.close(consentCardId("clock-two"));
       await h.settled();
@@ -284,7 +284,7 @@ describe("PluginInstaller", () => {
         true,
       );
       expect(h.installed()).toEqual([]);
-      h.supervisor.act(consentCardId("clock-two"), "decline");
+      h.supervisor.cardActions.act(consentCardId("clock-two"), "decline");
       await h.settled();
 
       expect(h.records.pending()).toEqual([]);
@@ -389,7 +389,7 @@ describe("PluginInstaller", () => {
     const source = h.plugin("token-watch", { "manifest.json": manifest(), "panel.tsx": PANEL });
     try {
       await h.installer.install({ source: "path", spec: source });
-      h.supervisor.act(consentCardId("token-watch"), "add");
+      h.supervisor.cardActions.act(consentCardId("token-watch"), "add");
       await h.settled();
       const first = h.records.get("token-watch");
 
@@ -421,7 +421,7 @@ describe("PluginInstaller", () => {
       expect(ask?.title).toBe("Update the Token watch panel?");
       expect(ask?.actions.map((action) => action.label)).toEqual(["Update it", "Keep the old one"]);
       expect(ask?.body).toContain("your tasks (<code>v_tasks_v1</code>)");
-      h.supervisor.act(consentCardId("token-watch"), "decline");
+      h.supervisor.cardActions.act(consentCardId("token-watch"), "decline");
       await h.settled();
       expect(h.records.get("token-watch")).toMatchObject({
         version: "1.1.0",
@@ -431,7 +431,7 @@ describe("PluginInstaller", () => {
       expect(h.installed()[0]?.sql).toEqual(["v_usage_v1"]);
 
       await h.installer.install({ source: "path", spec: source });
-      h.supervisor.act(consentCardId("token-watch"), "add");
+      h.supervisor.cardActions.act(consentCardId("token-watch"), "add");
       await h.settled();
       expect(h.records.get("token-watch")).toMatchObject({
         version: "1.2.0",
@@ -463,7 +463,7 @@ describe("PluginInstaller", () => {
     const source = h.plugin("token-watch", { "manifest.json": manifest(), "panel.tsx": PANEL });
     try {
       await h.installer.install({ source: "path", spec: source });
-      h.supervisor.act(consentCardId("token-watch"), "add");
+      h.supervisor.cardActions.act(consentCardId("token-watch"), "add");
       await h.settled();
       const dir = join(h.paths.pluginsDir, "token-watch");
 
@@ -511,7 +511,7 @@ describe("PluginInstaller", () => {
     });
     try {
       await h.installer.install({ source: "path", spec: source });
-      h.supervisor.act(consentCardId("token-watch"), "add");
+      h.supervisor.cardActions.act(consentCardId("token-watch"), "add");
       await h.settled();
       const version = h.installed()[0]?.frame?.version ?? "";
       expect(version).toMatch(/^[0-9a-f]{16}$/);
@@ -561,7 +561,7 @@ describe("PluginInstaller", () => {
     });
     try {
       await h.installer.install({ source: "path", spec: source });
-      h.supervisor.act(consentCardId("notes"), "add");
+      h.supervisor.cardActions.act(consentCardId("notes"), "add");
       await h.settled();
       const [view] = h.installed();
       expect(view).toMatchObject({
@@ -585,7 +585,7 @@ describe("PluginInstaller", () => {
     try {
       await h.installer.install({ source: "path", spec: source });
       expect(h.cards()[0]?.body).toContain("keeps up to 64 bytes of data of its own");
-      h.supervisor.act(consentCardId("tiny"), "add");
+      h.supervisor.cardActions.act(consentCardId("tiny"), "add");
       await h.settled();
       h.store.set("tiny", "small", "ok");
       expect(() => h.store.set("tiny", "big", "x".repeat(100))).toThrow("past 64 bytes");
@@ -599,7 +599,7 @@ describe("PluginInstaller", () => {
     const source = h.plugin("token-watch", { "manifest.json": manifest(), "panel.tsx": PANEL });
     try {
       await h.installer.install({ source: "path", spec: source });
-      h.supervisor.act(consentCardId("token-watch"), "add");
+      h.supervisor.cardActions.act(consentCardId("token-watch"), "add");
       await h.settled();
       h.store.set("token-watch", "seen", 3);
       expect(await h.installer.uninstall("token-watch")).toEqual({
@@ -625,7 +625,7 @@ describe("PluginInstaller", () => {
     const source = h.plugin("token-watch", { "manifest.json": manifest(), "panel.tsx": PANEL });
     try {
       await h.installer.install({ source: "path", spec: source });
-      h.supervisor.act(consentCardId("token-watch"), "add");
+      h.supervisor.cardActions.act(consentCardId("token-watch"), "add");
       await h.settled();
       const both = () =>
         h.personal.snapshot().extensions.map((view) => `${view.source}:${view.id}`);
@@ -638,7 +638,7 @@ describe("PluginInstaller", () => {
         "panel.tsx": PANEL,
       });
       await h.installer.install({ source: "path", spec: later });
-      h.supervisor.act(consentCardId("later"), "add");
+      h.supervisor.cardActions.act(consentCardId("later"), "add");
       await h.settled();
       expect(both()).toEqual([]);
       expect(h.feed().at(-1)).toBe(
@@ -685,7 +685,7 @@ describe("PluginInstaller", () => {
         pinned: tagged,
         version: "1.0.0",
       });
-      h.supervisor.act(consentCardId("git-watch"), "add");
+      h.supervisor.cardActions.act(consentCardId("git-watch"), "add");
       await h.settled();
       expect(existsSync(join(h.paths.pluginsDir, "git-watch", "panel.tsx"))).toBe(true);
       expect(existsSync(join(h.paths.pluginsDir, "git-watch", ".git"))).toBe(false);
@@ -732,7 +732,7 @@ describe("PluginInstaller", () => {
       const staged = h.records.get("token-meter")?.pending;
       expect(staged?.pinned).toMatch(/^@acme\/token-meter@2\.0\.0 sha512-/);
       expect(existsSync(sentinel)).toBe(false);
-      h.supervisor.act(consentCardId("token-meter"), "add");
+      h.supervisor.cardActions.act(consentCardId("token-meter"), "add");
       await h.settled();
       expect(existsSync(join(h.paths.pluginsDir, "token-meter", "panel.tsx"))).toBe(true);
       expect(existsSync(sentinel)).toBe(false);
@@ -764,7 +764,7 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
       expect(card?.body).toContain("It can queue, start and drop your tasks");
       expect(card?.body).toContain("It can never merge or discard.");
       expect(h.installed()).toEqual([]);
-      h.supervisor.act(consentCardId("task-desk"), "add");
+      h.supervisor.cardActions.act(consentCardId("task-desk"), "add");
       await h.settled();
       expect(h.records.installed()[0]?.capabilities).toEqual({
         reads: ["tasks.board"],
@@ -797,7 +797,7 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
       expect(card?.body).toContain("<b>github</b>: action <code>read</code>.");
       expect(card?.body).toContain(github.why);
       expect(card?.body).toContain(SENDS_ONLY_THROUGH_WORDS);
-      h.supervisor.act(consentCardId("pr-checks"), "add");
+      h.supervisor.cardActions.act(consentCardId("pr-checks"), "add");
       await h.settled();
       expect(h.records.get("pr-checks")?.capabilities).toMatchObject({ integrations: [github] });
 
@@ -811,7 +811,7 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
       const ask = h.cards().find((entry) => entry.id === consentCardId("pr-checks"));
       expect(ask?.title).toBe("Update the PR checks panel?");
       expect(ask?.body).toContain("<b>github</b>: actions <code>read</code>, <code>write</code>.");
-      h.supervisor.act(consentCardId("pr-checks"), "decline");
+      h.supervisor.cardActions.act(consentCardId("pr-checks"), "decline");
       await h.settled();
       expect(h.records.get("pr-checks")).toMatchObject({
         version: "1.0.0",
@@ -910,11 +910,11 @@ describe("adding runbooks through the panel installer's consent", () => {
         const card = h.cards().find((card) => card.id === consentCardId(id));
         expect(card?.body).toContain("Common workflows off");
         expect(card?.body).toContain("runs nothing");
-        expect(() => h.supervisor.act(consentCardId(id), "add", "frame")).toThrow(
+        expect(() => h.supervisor.cardActions.act(consentCardId(id), "add", "frame")).toThrow(
           "only from the card controls",
         );
         // INF-1879: explicit refusal, not the minimize corner, ends consent.
-        h.supervisor.act(consentCardId(id), "decline");
+        h.supervisor.cardActions.act(consentCardId(id), "decline");
         await h.settled();
         expect(h.records.pending()).toEqual([]);
         expect(h.books.firstmate().text).not.toContain("# Studio workflows");
@@ -923,7 +923,7 @@ describe("adding runbooks through the panel installer's consent", () => {
         if (source === "path") expect(pin).toMatch(/^sha256:[0-9a-f]{64}$/);
         else if (source === "git") expect(pin).toBe(gitRun("rev-parse", "HEAD"));
         else expect(pin).toMatch(/^studio-workflows@1.0.0/);
-        h.supervisor.act(consentCardId(id), "add");
+        h.supervisor.cardActions.act(consentCardId(id), "add");
         await h.settled();
         expect(h.records.get(id)).toMatchObject({ kind: "runbook", pending: null, pinned: pin });
         expect(h.books.list().find((book) => book.id === "sequences")?.enabled).toBe(false);
@@ -963,7 +963,7 @@ describe("adding runbooks through the panel installer's consent", () => {
           spec: join(h.paths.pluginsDir, id, "panels/token-watch"),
         });
         expect(h.installed()).toEqual([]);
-        h.supervisor.act(consentCardId("token-watch"), "add");
+        h.supervisor.cardActions.act(consentCardId("token-watch"), "add");
         await h.settled();
         expect(h.installed().map((panel) => panel.id)).toEqual(["token-watch"]);
         expect(await h.installer.install({ source: "path", spec: id, action: "remove" })).toContain(

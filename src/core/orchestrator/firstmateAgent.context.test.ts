@@ -554,7 +554,13 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
     });
     // The captain's reply sent its card's settings beside the words (INF-1746 R3).
     const settings = [{ name: "speed", values: ["slow"], changed: true }];
-    supervisor.replyToCard("card-t1-1", "what about the slow one?", undefined, undefined, settings);
+    supervisor.cardActions.replyToCard(
+      "card-t1-1",
+      "what about the slow one?",
+      undefined,
+      undefined,
+      settings,
+    );
     const replied = replyWithSettings("what about the slow one?", settings);
     await agent.converse({ text: "what is open?", images: [pngImage] });
     const read = toolsOf(specs).get("open_work");

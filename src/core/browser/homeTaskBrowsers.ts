@@ -27,7 +27,7 @@ export function startTaskBrowsers(options: {
   workDevices: PlacedBrowsersOptions["devices"];
   devices: Pick<DevicePairing, "list">;
   /** The card stack, which hears the captain's Return control; absent until the supervisor holds it. */
-  cardStack: () => Pick<CrewSupervisor, "browserReturned"> | undefined;
+  cardStack: () => Pick<CrewSupervisor, "cardActions"> | undefined;
   broadcastEvent: (event: FmEvent) => void;
 }): HomeBrowsers | undefined {
   const { host, paths, tasks, broadcastEvent, cardStack } = options;
@@ -45,7 +45,7 @@ export function startTaskBrowsers(options: {
     onChange: (taskId) => broadcastEvent({ type: "task_browser", taskId }),
     // The captain's Return control is its crewmate's one wake, through
     // the task's durable lane (docs/task-browser.md, "Taking control").
-    onReturned: (taskId, returned) => cardStack()?.browserReturned(taskId, returned),
+    onReturned: (taskId, returned) => cardStack()?.cardActions.browserReturned(taskId, returned),
     // Website sign-ins the captain saves on this Mac (docs/task-browser.md, "Saved sign-ins").
     signIns: webSignIns,
   });
@@ -59,7 +59,7 @@ export function startTaskBrowsers(options: {
       signIns: webSignIns,
       note: (taskId, text) => tasks.note(taskId, text, { news: true }),
       onChange: (taskId) => broadcastEvent({ type: "task_browser", taskId }),
-      onReturned: (taskId, returned) => cardStack()?.browserReturned(taskId, returned),
+      onReturned: (taskId, returned) => cardStack()?.cardActions.browserReturned(taskId, returned),
     }),
   );
 }

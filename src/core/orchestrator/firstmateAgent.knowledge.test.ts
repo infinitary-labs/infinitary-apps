@@ -255,8 +255,8 @@ describe("the captain's override, cited from his message on the task", () => {
         });
     const reply = "I accept the current failed checks on this task.";
     const tabLine = "Keep that exception for the rest of this task.";
-    f.supervisor.replyToCard("card-ab12", reply);
-    f.supervisor.replyToCard("card-cd34", "merge it");
+    f.supervisor.cardActions.replyToCard("card-ab12", reply);
+    f.supervisor.cardActions.replyToCard("card-cd34", "merge it");
     await tick();
     // The crewmate relays the reply: the first mate's turn is its report.
     notifyProse(
@@ -363,7 +363,7 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
       ]),
     ]);
     // A script in the card's body chooses: its author's choice, never his.
-    f.supervisor.act("card-fm-timeline", "show", "frame");
+    f.supervisor.cardActions.act("card-fm-timeline", "show", "frame");
     await drained(f.session, 1);
     expect(
       await f.declare({ holds: ["checks"], until: "task", from: "card-fm-timeline" }),
@@ -371,7 +371,7 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
     expect(f.recorded()).toBeUndefined();
     await f.finish();
     // His click, as on Oct 26: its own turn cites the card it was on.
-    f.supervisor.act("card-fm-rerun", "rerun");
+    f.supervisor.cardActions.act("card-fm-rerun", "rerun");
     await drained(f.session, 2);
     expect(await f.declare({ holds: ["checks"], until: "task", from: "card-fm-rerun" })).toContain(
       "Recorded the captain's override",
@@ -397,7 +397,7 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
         { id: "skip", label: "Skip it", default: true },
       ]),
     ]);
-    f.supervisor.act("card-ab12", "accept");
+    f.supervisor.cardActions.act("card-ab12", "accept");
     await tick();
     f.report(`the captain clicked "Accept the failed checks" on card card-ab12`);
     await drained(f.session, 1);
@@ -408,7 +408,7 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
     await f.finish();
     // His reply under the first mate's card is its own turn; a report later cites it.
     const reply = "Skip the review this once; the diff is one line.";
-    f.supervisor.replyToCard("card-fm-review", reply);
+    f.supervisor.cardActions.replyToCard("card-fm-review", reply);
     await drained(f.session, 2);
     await f.finish();
     f.report("the review is the one hold left.");
@@ -485,7 +485,7 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
         ],
       },
     ]);
-    f.supervisor.act("card-ab12", "merge-pr");
+    f.supervisor.cardActions.act("card-ab12", "merge-pr");
     await tick();
     f.report(`the captain clicked "${MERGE_WHEN_CHECKS_PASS_WORDS}" on card card-ab12`);
     await drained(f.session, 1);

@@ -543,7 +543,7 @@ describe("FirstmateAgent", () => {
     await tick();
     expect(session.prompts).toHaveLength(2);
 
-    supervisor.act(card.id, "retry-firstmate");
+    supervisor.cardActions.act(card.id, "retry-firstmate");
     await tick();
     expect(session.prompts).toHaveLength(3);
   });

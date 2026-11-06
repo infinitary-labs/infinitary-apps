@@ -421,7 +421,7 @@ describe("CardService evidence", () => {
     clock += 10;
     const open = cards.addFirstmateCard({ ...decision, id: "fm-o", taskId: "t1" });
     clock += 10;
-    // INF-500: what CrewSupervisor.act hands over when the body's own script chose.
+    // INF-500: what CardActions.act hands over when the body's own script chose.
     const scripted = cards.addFirstmateCard({ ...decision, id: "fm-s", taskId: "t1" });
     cards.resolve(cards.shown(chosen) as Card, "right", "right");
     cards.dismiss(cards.shown(dismissed) as Card);

@@ -61,9 +61,11 @@ function boot(options: { enteredSafeMode: boolean; interrupted: InterruptedJob[]
         tasks: { get: (id) => (titles[id] ? ({ title: titles[id] } as never) : undefined) },
         supervisor: {
           reconcileCutOffs: () => void happened.push("cut-offs"),
-          announceCarryOn: () => void happened.push("carry-on"),
-          sweepInbox: async (now) => void happened.push(`inbox sweep at ${now}`),
-          reconcileIdle: (now) => void happened.push(`idle sweep at ${now}`),
+          watch: {
+            announceCarryOn: () => void happened.push("carry-on"),
+            sweepInbox: async (now) => void happened.push(`inbox sweep at ${now}`),
+            reconcileIdle: (now) => void happened.push(`idle sweep at ${now}`),
+          },
         },
         inbox,
         now: () => 5_000,

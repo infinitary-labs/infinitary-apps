@@ -516,7 +516,7 @@ describe("integration calls held for the captain", () => {
       h.supervisor.cards.snapshot().find((card) => card.id === cardId)?.taskId,
     ).toBeUndefined();
 
-    h.supervisor.act(cardId, "once");
+    h.supervisor.cardActions.act(cardId, "once");
     await tick();
     expect(sendTakenIntegrationAsk).toHaveBeenCalledTimes(1);
     expect(panelAskAnswered.mock.calls).toEqual([[ask.id, "once"]]);
@@ -531,7 +531,7 @@ describe("integration calls held for the captain", () => {
     const ask = heldCall("ia000000000030", "firstmate");
     const cardId = h.supervisor.integrationAsks.askIntegrationForFirstmate(ask);
     const row = h.tasks.capture.openCardTaskFor(cardId);
-    h.supervisor.act(cardId, "once");
+    h.supervisor.cardActions.act(cardId, "once");
     await tick();
     expect(sendTakenIntegrationAsk).toHaveBeenCalledTimes(1);
     expect(h.tasks.get(row?.id ?? "")?.delivery?.writeAsks?.[0]?.outcome).toEqual({

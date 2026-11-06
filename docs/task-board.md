@@ -127,7 +127,7 @@ A queued task that nothing holds starts on the ready sweep the move runs.
 
 ### A started task in the backlog
 
-Back to backlog on started work (INF-2062), from the board or the first mate's `update_task` `start_policy` on-request with a reason, runs `CrewSupervisor.moveToBacklog`.
+Back to backlog on started work (INF-2062), from the board or the first mate's `update_task` `start_policy` on-request with a reason, runs `HostOps.moveToBacklog`.
 The task stays active: `TaskService.starts.setQueued` records when it went (`backlogSince`, on its running work's row) and who moved it with one sentence why, and its idle ladder starts over.
 Its running turn stops and a kept merge approval ends, as an interrupt does; its working copy, branch, conversation, pull request and background jobs stay.
 While it waits there, the host's own rows - a job's end, a check's result, a timed wait's end, a closed dependency - wait on its lane, the idle ladder never nudges, wakes or raises a card for it, a report wakes the first mate only to act on it, to close it or to triage what it filed, and a reopen does not carry its turn on.

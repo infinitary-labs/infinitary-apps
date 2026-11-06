@@ -10,7 +10,7 @@ A crewmate's search of the whole disk or the home folder is what walks into thos
 A crewmate names a folder instead of searching for it:
 
 - A crewmate's `tasks` with `projects` true lists every project's key, name and folder on the computer where the first mate lives (`TaskQueryReach.projectFolder`, `src/core/tasks/taskQuery.ts`).
-- A by-key `tasks` read names `computer`, the computer the task's crewmate ran on, and `evidence_folder`, its evidence folder there (`CrewSupervisor.taskQueryReach`), so a file on another computer is a gap to report rather than a search.
+- A by-key `tasks` read names `computer`, the computer the task's crewmate ran on, and `evidence_folder`, its evidence folder there (`CrewToolHooks.taskQueryReach`), so a file on another computer is a gap to report rather than a search.
 - The crewmate's evidence note says to search only folders it can name, never the whole disk or the home folder (`crewmateEvidenceNote`, `src/core/pi/piResources.ts`).
   It sits in the per-task note, outside the crewmate's fixed context (`tests/crewmate-fixed-context.test.ts`).
 

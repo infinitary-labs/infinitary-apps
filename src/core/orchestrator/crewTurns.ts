@@ -133,7 +133,7 @@ export class CrewTurns {
     images?: TurnImage[],
   ): Promise<void> {
     const cwd = task.workspace?.cwd;
-    const machine = this.core.machineOf(task.id);
+    const machine = this.core.facts.machineOf(task.id);
     // On a computer that runs work, that computer installs its own copy's.
     const installing =
       machine !== LOCAL_MACHINE_ID
@@ -309,7 +309,7 @@ export class CrewTurns {
     if (this.core.options.tasks.turns.clearDeclaration(task.id)) {
       this.core.ladder.syncCaptainGate(task.id, this.core.now());
     }
-    this.core.broadcastCrewCounts();
+    this.core.facts.broadcastCrewCounts();
     this.core.options.tasks.turns.setActivity(task.id, "running");
   }
 
@@ -467,7 +467,7 @@ export class CrewTurns {
    */
   confirmTurn(task: TaskRuntime, answered?: (ended: boolean) => void): void {
     if (task.state !== "streaming" && task.state !== "starting") return;
-    if (this.core.machineOf(task.id) === LOCAL_MACHINE_ID) {
+    if (this.core.facts.machineOf(task.id) === LOCAL_MACHINE_ID) {
       if (task.autonomousTurn && task.session && !task.session.isStreaming())
         this.endAutonomousTurn(task, undefined, undefined, true);
       return;
@@ -524,12 +524,12 @@ export class CrewTurns {
     // another computer met it on that computer's own sign-in, which records
     // it there (docs/helper.md, "Its own sign-ins"): never on this Mac's
     // account, whose Firstmate and crew keep serving.
-    if (cutOff && task.accountId && this.core.machineOf(task.id) === LOCAL_MACHINE_ID)
+    if (cutOff && task.accountId && this.core.facts.machineOf(task.id) === LOCAL_MACHINE_ID)
       this.core.options.noteCutOff?.(task.accountId, cutOff);
     // A spent allowance that named no reset (xAI's 402) was held against the
     // sign-in's own reading when it was recorded: the retry waits for that.
     if (cutOff?.class === "no_headroom" && cutOff.resetsAt === undefined && task.accountId) {
-      const standing = this.core.serveability()?.cutOff(task.accountId);
+      const standing = this.core.facts.serveability()?.cutOff(task.accountId);
       if (standing?.class === "no_headroom" && standing.resetsAt !== undefined) {
         cutOff = { ...cutOff, resetsAt: standing.resetsAt };
       }
@@ -680,7 +680,7 @@ export class CrewTurns {
         ...(summary ? { summary } : {}),
       });
     }
-    this.core.broadcastCrewCounts();
+    this.core.facts.broadcastCrewCounts();
     // A backend that mints its conversation id when the first turn starts
     // only becomes resumable here. Re-reading the token every turn
     // is a no-op for backends whose token was known at creation - and a
@@ -700,7 +700,7 @@ export class CrewTurns {
       !turnError &&
       !options.interrupted &&
       personal &&
-      this.core.isPersonalTask(task.id) &&
+      this.core.facts.isPersonalTask(task.id) &&
       this.core.options.tasks.get(task.id)?.shape?.ongoing === true &&
       !declared?.needsFirstmate &&
       declared?.finished !== true
@@ -709,7 +709,11 @@ export class CrewTurns {
       return;
     }
     const saved =
-      report && !turnError && !options.interrupted && personal && this.core.isPersonalTask(task.id)
+      report &&
+      !turnError &&
+      !options.interrupted &&
+      personal &&
+      this.core.facts.isPersonalTask(task.id)
         ? this.commitLiveTurn(task, report, personal)
         : undefined;
     if (turnError) {
@@ -836,8 +840,8 @@ export class CrewTurns {
     if (this.core.bypassesSupervision(task.id)) return;
     const running =
       this.core.options.hasRunningJobs?.(task.id) === true ||
-      this.core.clientJobStart(task.id) !== undefined;
-    const job = running ? this.core.oldestJob(task.id) : undefined;
+      this.core.starts.clientJobStart(task.id) !== undefined;
+    const job = running ? this.core.starts.oldestJob(task.id) : undefined;
     if (!job || this.core.options.inbox.woken(task.id, checkBackAskOnce(job))) return;
     const ask = checkBackAsk(
       { ...job, command: capWithOverflow(job.command, "check-back-command") },
@@ -1102,14 +1106,14 @@ export class CrewTurns {
     options: { announce?: boolean; sent?: boolean } = {},
   ): void {
     if (task.cancelled || !task.session || task.state !== "idle") return;
-    if (this.core.laneHeld(task.id)) return;
+    if (this.core.facts.laneHeld(task.id)) return;
     // A started task in the backlog (INF-2062) takes a turn only for words
     // the captain or the first mate sent, told it stays there.
-    const backlog = this.core.inBacklog(task.id);
+    const backlog = this.core.facts.inBacklog(task.id);
     if (backlog && !options.sent) return;
-    const rows = this.core.deliverableRows(task.id, this.core.now());
+    const rows = this.core.facts.deliverableRows(task.id, this.core.now());
     if (rows.length === 0) return;
-    const pictures = this.core.rowPictures(task.id, rows);
+    const pictures = this.core.facts.rowPictures(task.id, rows);
     if (pictures.blocked) return;
     if (options.announce && rows.some((row) => !OWN_LANE_KINDS.has(row.facts?.kind ?? ""))) {
       this.core.options.tasks.note(task.id, QUEUED_GUIDANCE_LINE, {
@@ -1259,7 +1263,7 @@ export class CrewTurns {
    * (docs/helper.md, "Its own sign-ins").
    */
   private servingAccount(task: TaskRuntime): string | undefined {
-    if (this.core.machineOf(task.id) === LOCAL_MACHINE_ID) return task.accountId;
+    if (this.core.facts.machineOf(task.id) === LOCAL_MACHINE_ID) return task.accountId;
     return task.session ? this.core.options.machines?.servingAccount(task.session) : undefined;
   }
 

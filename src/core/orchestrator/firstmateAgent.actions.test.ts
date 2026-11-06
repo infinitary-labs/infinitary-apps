@@ -79,7 +79,7 @@ describe("FirstmateAgent", () => {
 
     // The captain's click opens Devices with what to do there.
     const open = connect.actions.find((action) => action.default);
-    expect(supervisor.act(connect.id, open?.id ?? "")).toEqual({
+    expect(supervisor.cardActions.act(connect.id, open?.id ?? "")).toEqual({
       effect: { kind: "open", target: "devices", make: "link" },
     });
     session.emitTurnEnd("Offered.");
@@ -275,7 +275,7 @@ describe("FirstmateAgent", () => {
 
     // The captain's click opens Devices with what to do there.
     const open = add.actions.find((action) => action.default);
-    expect(supervisor.act(add.id, open?.id ?? "")).toEqual({
+    expect(supervisor.cardActions.act(add.id, open?.id ?? "")).toEqual({
       effect: { kind: "open", target: "devices", add: "sam@mini.local" },
     });
     session.emitTurnEnd("Offered.");
@@ -349,7 +349,7 @@ describe("FirstmateAgent", () => {
 
     // The captain's click opens Intelligence with that sign-in to start.
     const open = card.actions.find((action) => action.default);
-    expect(supervisor.act(card.id, open?.id ?? "")).toEqual({
+    expect(supervisor.cardActions.act(card.id, open?.id ?? "")).toEqual({
       effect: {
         kind: "open",
         target: "subscriptions",
@@ -602,7 +602,7 @@ describe("FirstmateAgent", () => {
       seedCards: [crewCard("card-t58-1", "t58", "Release shipped", "It is out.")],
     });
     tasks.close("t58", { status: "done", reason: "merged", actor: "host" });
-    supervisor.replyToCard("card-t58-1", "which version?");
+    supervisor.cardActions.replyToCard("card-t58-1", "which version?");
     await drained(session, 1);
     expect(decodeContext(session.prompts[0] as string).about).toContain("card-t58-1");
     // The crewmate is gone, so the refusal that sends the Firstmate to steer it does not apply.
@@ -666,7 +666,7 @@ describe("FirstmateAgent", () => {
     session.emitTurnEnd("Shown.");
     session.resolveNextPrompt();
     await tick();
-    expect(() => supervisor.act(cardId, "build-now")).not.toThrow();
+    expect(() => supervisor.cardActions.act(cardId, "build-now")).not.toThrow();
     expect(supervisor.cards.snapshot().some((shownCard) => shownCard.id === cardId)).toBe(false);
   });
 
@@ -808,7 +808,7 @@ describe("FirstmateAgent", () => {
         { id: "change", label: "Plot new course", default: true },
       ],
     });
-    supervisor.act(courseId, "change");
+    supervisor.cardActions.act(courseId, "change");
     await tick();
     // The choice still wakes the Firstmate; its turn carries both resolutions.
     expect(session.prompts).toHaveLength(1);
@@ -849,12 +849,12 @@ describe("FirstmateAgent", () => {
     });
     const key = (id: string) => tasks.get(id)?.key;
     const desk = { panel: "Task desk" };
-    supervisor.runTaskOp("t1", "start-task", undefined, desk);
+    supervisor.hostOps.runTaskOp("t1", "start-task", undefined, desk);
     await endStartTurn(session);
     vi.setSystemTime(start + 60_000);
-    supervisor.runTaskOp("t4", "drop-task", { parts: [], waiting: [], underway: [] }, desk);
+    supervisor.hostOps.runTaskOp("t4", "drop-task", { parts: [], waiting: [], underway: [] }, desk);
     vi.setSystemTime(start + 2 * 60_000);
-    expect(supervisor.runTaskOp("t5", "queue-task", undefined, desk)).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp("t5", "queue-task", undefined, desk)).toBeUndefined();
     expect(
       tasks.taskCardClicksSince(0).map(({ taskId, op, panel }) => [taskId, op, panel]),
     ).toEqual([
@@ -868,7 +868,7 @@ describe("FirstmateAgent", () => {
       body: "<p>Plot the new course.</p>",
       actions: [{ id: "change", label: "Plot new course", default: true }],
     });
-    supervisor.act(courseId, "change");
+    supervisor.cardActions.act(courseId, "change");
     await tick();
     const lines = decodeContext(session.prompts[1] as string).captain_resolutions as string[];
     expect(lines.slice(2)).toEqual([
@@ -890,7 +890,7 @@ describe("FirstmateAgent", () => {
         { id: "t1", title: "Fix the flaky test", status: "queued", startPolicy: "on-request" },
       ],
     });
-    expect(supervisor.runTaskOp("t1", "start-task")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp("t1", "start-task")).toBeUndefined();
     // Starting at once, and no crewmate yet.
     expect(tasks.starts.startAttemptOf("t1")?.phase).toBe("preparing");
     expect(tasks.get("t1")?.status).toBe("open");
@@ -918,12 +918,12 @@ describe("FirstmateAgent", () => {
         { id: "t1", title: "Fix the flaky test", status: "queued", startPolicy: "on-request" },
       ],
     });
-    supervisor.runTaskOp("t1", "start-task");
+    supervisor.hostOps.runTaskOp("t1", "start-task");
     await tick();
     expect(tasks.get("t1")?.status).toBe("open");
     expect(session.prompts).toHaveLength(1);
     // update_task start_now inside the turn.
-    await supervisor.startQueuedNow("t1");
+    await supervisor.starts.startQueuedNow("t1");
     expect(tasks.get("t1")?.status).toBe("active");
     session.emitTurnEnd("Started.");
     session.resolveNextPrompt();
@@ -946,7 +946,7 @@ describe("FirstmateAgent", () => {
       ],
     });
     tasks.graph.link("fix", "check", "blocks", "host");
-    expect(supervisor.runTaskOp("check", "queue-task")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp("check", "queue-task")).toBeUndefined();
     await tick();
     expect(session.prompts).toHaveLength(0);
     expect(tasks.starts.startAttemptOf("check")).toBeUndefined();
@@ -962,7 +962,7 @@ describe("FirstmateAgent", () => {
     const { agent, session, supervisor, tasks } = setup({
       seedTasks: [{ id: "dropped-restart", title: "Finish the draft", status: "cancelled" }],
     });
-    expect(supervisor.runTaskOp("dropped-restart", "start-again")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp("dropped-restart", "start-again")).toBeUndefined();
     await endStartTurn(session);
     const replacement = tasks.graph.replacementOf("dropped-restart");
     expect(replacement).toBeTruthy();
@@ -988,7 +988,7 @@ describe("FirstmateAgent", () => {
     });
     const key = (id: string) => tasks.get(id)?.key;
     // Start: the Firstmate reads it first, and a crewmate takes it once its turn ends.
-    supervisor.runTaskOp("t1", "start-task");
+    supervisor.hostOps.runTaskOp("t1", "start-task");
     await endStartTurn(session);
     expect(tasks.get("t1")?.status).toBe("active");
     // Continue and Drop task on started work, as the supervisor writes them.
@@ -1012,7 +1012,7 @@ describe("FirstmateAgent", () => {
     });
     // Drop task before it started.
     vi.setSystemTime(start + 3 * 60_000);
-    supervisor.runTaskOp("t4", "drop-task", { parts: [], waiting: [], underway: [] });
+    supervisor.hostOps.runTaskOp("t4", "drop-task", { parts: [], waiting: [], underway: [] });
     expect(tasks.get("t4")?.status).toBe("dropped");
     // The task board's queue and unqueue, as the supervisor writes them.
     vi.setSystemTime(start + 3 * 60_000 + 10_000);
@@ -1032,7 +1032,7 @@ describe("FirstmateAgent", () => {
         { id: "change", label: "Plot new course", default: true },
       ],
     });
-    supervisor.act(courseId, "change");
+    supervisor.cardActions.act(courseId, "change");
     await tick();
     expect(session.prompts).toHaveLength(2);
     const lines = decodeContext(session.prompts[1] as string).captain_resolutions as string[];
@@ -1085,7 +1085,7 @@ describe("FirstmateAgent", () => {
       body: "<p>Plot the new course.</p>",
       actions: [{ id: "change", label: "Plot new course", default: true }],
     });
-    supervisor.act(courseId, "change");
+    supervisor.cardActions.act(courseId, "change");
     await tick();
     const lines = decodeContext(session.prompts[0] as string).captain_resolutions as string[];
     // The heading, the card choice and 31 clicks, then the 3 older clicks counted.
@@ -1110,7 +1110,7 @@ describe("FirstmateAgent", () => {
         { id: "change", label: "Plot new course", default: true },
       ],
     });
-    supervisor.act(courseId, "change", "chrome", {
+    supervisor.cardActions.act(courseId, "change", "chrome", {
       answers: [{ name: "speed", values: ["fast"], labels: ["Fast"], changed: true }],
     });
     await tick();
@@ -1150,7 +1150,7 @@ describe("FirstmateAgent", () => {
       { facts: { kind: "scheduled", prompt: "review the queue", catchUp: false } },
       "scheduled",
     );
-    supervisor.act(id, "premium");
+    supervisor.cardActions.act(id, "premium");
     await tick();
     expect(session.thinkingLevels).toContain("medium");
     expect(session.prompts).toHaveLength(1);
@@ -1217,23 +1217,25 @@ describe("FirstmateAgent", () => {
         availableModels,
         slotsOf,
         quotaModels: () => catalog(0),
-      }).supervisor.premiumCanServe(),
+      }).supervisor.facts.premiumCanServe(),
     ).toBe(false);
     expect(
       setup({
         availableModels,
         slotsOf,
         quotaModels: () => catalog(25),
-      }).supervisor.premiumCanServe(),
+      }).supervisor.facts.premiumCanServe(),
     ).toBe(true);
     expect(
       setup({
         availableModels,
         slotsOf,
         quotaModels: () => catalog(),
-      }).supervisor.premiumCanServe(),
+      }).supervisor.facts.premiumCanServe(),
     ).toBe(true);
-    expect(setup({ availableModels: () => [], slotsOf }).supervisor.premiumCanServe()).toBe(false);
+    expect(setup({ availableModels: () => [], slotsOf }).supervisor.facts.premiumCanServe()).toBe(
+      false,
+    );
   });
 
   it("serves two successive premium card clicks separately rather than deduplicating them", async () => {
@@ -1245,10 +1247,10 @@ describe("FirstmateAgent", () => {
         actions: [{ id: "premium", label: "Try a premium model", default: true }],
       });
     const first = card();
-    supervisor.act(first, "premium");
+    supervisor.cardActions.act(first, "premium");
     await tick();
     const second = card();
-    supervisor.act(second, "premium");
+    supervisor.cardActions.act(second, "premium");
     await tick();
     const inbox = new InboxStore(db);
     expect(
@@ -1293,7 +1295,7 @@ describe("FirstmateAgent", () => {
         { id: "premium", label: "Try a premium model" },
       ],
     });
-    supervisor.act(id, "premium");
+    supervisor.cardActions.act(id, "premium");
     await tick();
     const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as Array<{
       name: string;
@@ -1338,14 +1340,14 @@ describe("FirstmateAgent", () => {
         },
       ],
     });
-    expect(supervisor.premiumCanServe()).toBe(false);
+    expect(supervisor.facts.premiumCanServe()).toBe(false);
     const id = supervisor.addFirstmateCard({
       title: "Meter is blocked",
       body: "<p>Try a stronger model?</p>",
       taskId: "attempt",
       actions: [{ id: "stronger", label: "Try a stronger model", default: true }],
     });
-    supervisor.act(id, "stronger");
+    supervisor.cardActions.act(id, "stronger");
     await tick();
     const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as Array<{
       name: string;
@@ -1390,8 +1392,8 @@ describe("FirstmateAgent", () => {
       taskId: "attempt",
       actions: [{ id: "premium", label: "Try a premium model", default: true }],
     });
-    expect(supervisor.crewStatus("attempt")[0]?.premiumRetryEligible).toBe(true);
-    supervisor.act(id, "premium", "frame");
+    expect(supervisor.facts.crewStatus("attempt")[0]?.premiumRetryEligible).toBe(true);
+    supervisor.cardActions.act(id, "premium", "frame");
     await tick();
     expect(session.thinkingLevels.at(-1)).toBe("low");
     expect(session.prompts[0]).toContain('[fm-op] a script chose "Try a premium model"');

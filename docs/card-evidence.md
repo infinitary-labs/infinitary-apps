@@ -125,7 +125,7 @@ The draft the shell keeps while the captain picks is never recorded: closing a c
 
 ### The task slice
 
-Before a choice changes anything, `CrewSupervisor.act` reads a frozen slice of the task through `TaskService.capture.decisionContext`: its key, kind, status, activity, parent, gate, delivery posture with the change's head, checks and review state as last observed, whether a settle is pending, its blockers and its asks.
+Before a choice changes anything, `CardActions.act` reads a frozen slice of the task through `TaskService.capture.decisionContext`: its key, kind, status, activity, parent, gate, delivery posture with the change's head, checks and review state as last observed, whether a settle is pending, its blockers and its asks.
 A card with no task records `contextGap: "no-task"`, one whose task is gone `task-missing`.
 Nothing later is ever written into it.
 

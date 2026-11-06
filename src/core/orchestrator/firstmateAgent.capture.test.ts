@@ -316,7 +316,7 @@ describe("FirstmateAgent capture", () => {
     expect(decision?.gate).toEqual({ kind: "captain", ref: cardId });
     expect(tasks.capture.listAsks()[0]?.taskId).toBe(decision?.id);
     // On screen, it is waiting on the captain - not a strip count.
-    expect(supervisor.crewCounts()).toEqual({ working: 0, idle: 0, queued: 0 });
+    expect(supervisor.facts.crewCounts()).toEqual({ working: 0, idle: 0, queued: 0 });
     session.emitTurnEnd("Asked.");
     session.resolveNextPrompt();
     await tick();
@@ -327,7 +327,7 @@ describe("FirstmateAgent capture", () => {
     expect(shownCard?.actions.map((action) => action.id)).toEqual(["wait", "ship-now"]);
     expect(tasks.list().filter((record) => record.id.startsWith("park-"))).toHaveLength(0);
 
-    supervisor.act(cardId, "ship-now");
+    supervisor.cardActions.act(cardId, "ship-now");
     const closed = tasks.get(decision?.id ?? "");
     expect(closed?.status).toBe("done");
     expect(closed?.closedReason).toBe("answered");
@@ -370,7 +370,7 @@ describe("FirstmateAgent capture", () => {
     expect(supervisor.cards.snapshot().find((card) => card.id === firstId)).toMatchObject({
       minimized: true,
     });
-    expect(supervisor.runTaskOp(firstQuestion.id, "dismiss-question")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp(firstQuestion.id, "dismiss-question")).toBeUndefined();
     await close?.execute("c3", { card_id: secondId, reason: "moot" });
     const rows = tasks.list().filter((record) => record.kind === "decision");
     expect(rows.map((row) => [row.status, row.closedReason])).toEqual([
@@ -588,7 +588,7 @@ describe("FirstmateAgent capture", () => {
     const [ask] = tasks.capture.listAsks();
     expect(ask).toMatchObject({ turnState: "open", taskId: null });
     expect(tasks.list().filter((record) => record.kind === "question")).toEqual([]);
-    supervisor.act("card-fm-turn-failure", "retry-firstmate");
+    supervisor.cardActions.act("card-fm-turn-failure", "retry-firstmate");
     await drained(session, 2);
     expect(session.prompts[1]).toContain("[user]\ncount the fenders");
     await toolsOf(specs).get("emit_card")?.execute("c1", {

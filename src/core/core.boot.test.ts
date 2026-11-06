@@ -278,7 +278,7 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
         status: "queued",
         deviceId: "mini",
       });
-      await booted.services.supervisor.dispatchQueuedTask("t-placed");
+      await booted.services.supervisor.starts.dispatchQueuedTask("t-placed");
       expect(booted.services.tasks.get("t-placed")?.status).toBe("open");
       expect(booted.services.workDevices.inReach("mini")).toBe(false);
       expect(booted.services.workDevices.controlling("mini")).toBe(false);
@@ -771,7 +771,7 @@ describe("the idle ladder across a restart", () => {
     });
     expect(booted.services.tasks.get("stuck-task")).toMatchObject({ recoveryRung: 3 });
     // The next tick changes nothing: the card holds the turn.
-    booted.services.supervisor.reconcileIdle(Date.now());
+    booted.services.supervisor.watch.reconcileIdle(Date.now());
     expect(await stallCards()).toHaveLength(1);
 
     await booted.dispatch("inf:cards:act", ["card-stall-stuck-task", "discard", "chrome"]);

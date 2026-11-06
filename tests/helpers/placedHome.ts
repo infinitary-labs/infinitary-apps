@@ -548,7 +548,8 @@ export function startPlacedHome(options: {
   placed.serve({
     adopt: (taskId) => supervisor.adoptPlaced(taskId),
     caughtUp: (taskIds) => supervisor.placedCaughtUp(taskIds),
-    jobExit: (taskId, exit) => supervisor.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
+    jobExit: (taskId, exit) =>
+      supervisor.watch.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
     reopened: (taskId) => supervisor.placedReopened(taskId),
     toolsNow: (taskId) => supervisor.toolsNow(taskId),
   });

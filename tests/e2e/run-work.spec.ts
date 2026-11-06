@@ -1636,7 +1636,7 @@ test("a crewmate's turn runs on the app as a computer that runs work: the home h
       status: "queued",
       deviceId,
     });
-    await home.supervisor.dispatchQueuedTask("t-rivets");
+    await home.supervisor.starts.dispatchQueuedTask("t-rivets");
     expect(home.tasks.get("t-rivets")).toMatchObject({ status: "active", deviceId });
     // The model's next step is held open there: the turn is mid-way.
     await expect.poll(() => model.heldRequests(), { timeout: 30_000 }).toBe(1);
@@ -1765,7 +1765,7 @@ test("a closed task with unreadable work history stays present and brings its wo
       repoId: repo.id,
       deviceId,
     });
-    await home.supervisor.dispatchQueuedTask("t-tidy");
+    await home.supervisor.starts.dispatchQueuedTask("t-tidy");
     expect(home.tasks.get("t-tidy")).toMatchObject({
       status: "active",
       branch: "fm/task-t-tidy",
@@ -1857,7 +1857,7 @@ test("a task in a project works in a working copy the app that runs work cloned,
       repoId: repo.id,
       deviceId,
     });
-    await home.supervisor.dispatchQueuedTask("t-tidy");
+    await home.supervisor.starts.dispatchQueuedTask("t-tidy");
     expect(home.tasks.get("t-tidy")).toMatchObject({
       status: "active",
       branch: "fm/task-t-tidy",
@@ -1962,7 +1962,7 @@ test("a Mac with no git of its own runs a project's work with the app's own git,
       repoId: repo.id,
       deviceId,
     });
-    await home.supervisor.dispatchQueuedTask("t-git");
+    await home.supervisor.starts.dispatchQueuedTask("t-git");
     expect(home.tasks.get("t-git")).toMatchObject({ status: "active", branch: "fm/task-t-git" });
     const copy = join(me.dataDir, "worktrees", "t-git");
     expect(await git(copy, ["rev-parse", "HEAD"])).toBe(main);

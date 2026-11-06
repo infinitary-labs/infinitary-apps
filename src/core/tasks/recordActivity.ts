@@ -487,7 +487,7 @@ export const RESTART_RESUMED_WORDS = "Carried on by itself after the app reopene
 
 /**
  * The launch's feed line naming the tasks a quit, restart or update paused,
- * which carry on by themselves (`CrewSupervisor.announceCarryOn`, INF-1272).
+ * which carry on by themselves (`CrewWatch.announceCarryOn`, INF-1272).
  */
 export function carryOnWords(tasks: readonly { key: string; title: string }[]): string {
   const named = tasks.map((task) => `${task.key} “${task.title}”`).join(", ");

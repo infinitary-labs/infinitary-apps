@@ -422,9 +422,9 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   A rule-skipping review remains a one-shot click and mints no kept approval.
   Frames and agents cannot mint one - a settle effect runs only from the chrome.
 - **Its words (INF-23).**
-  The completion card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CrewSupervisor.mergeLabel`): Merge when checks pass while checks are pending or unreadable, Merge after fixing errors when checks fail (captain INF-1555 F20), and Merge the pull request once the checks pass.
+  The completion card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CardActions.mergeLabel`): Merge when checks pass while checks are pending or unreadable, Merge after fixing errors when checks fail (captain INF-1555 F20), and Merge the pull request once the checks pass.
   While the captain's override passes the checks at the card's version and the pull request is still at it, a click merges at once, so it reads Merge the pull request whatever the checks read (INF-756).
-  While the checks fail at the card's version and no checks override passes them, the host draws Merge anyway beside the merge (`CrewSupervisor.mergeAnyway`, INF-1137 friction 6).
+  While the checks fail at the card's version and no checks override passes them, the host draws Merge anyway beside the merge (`CardActions.mergeAnyway`, INF-1137 friction 6).
   Under the Checks cell, a failed check whose newest run on the default branch failed too reads Fails on main too, with the host's sentence naming that run and when it was read, so the captain sees what failed and why it is outside the change before choosing (`checkVerdicts`, INF-1915 fix 1).
   Its click is the captain's own word: it records the override on the checks for that version in his name, with the button's words and the card's title as its reason (`choiceWords`), and the merge runs at once; GitHub's own rules still decide whether it merges.
   It goes once the checks no longer fail, the pull request moves past the card's version, or an override already passes it.

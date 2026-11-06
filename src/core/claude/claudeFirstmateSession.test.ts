@@ -14,7 +14,7 @@ import {
   scriptedClaudeQuery,
 } from "../../../tests/helpers/scriptedClaudeQuery";
 import { type SeatTestSpec, seatSpec } from "../../../tests/helpers/seatSession";
-import { QUIET_FEED_MS } from "../orchestrator/crewSupervisor";
+import { QUIET_FEED_MS } from "../orchestrator/crewWatch";
 import {
   FIRSTMATE_MAX_MODEL_TURNS,
   FIRSTMATE_MAX_OUTPUT_TOKENS,

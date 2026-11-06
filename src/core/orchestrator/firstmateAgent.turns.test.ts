@@ -236,7 +236,7 @@ describe("FirstmateAgent", () => {
     try {
       f.tasks.readProjection(() => {
         for (let reader = 0; reader < 20; reader += 1)
-          expect(f.supervisor.crewStatus("checked")[0]?.ci?.overall).toBe("red");
+          expect(f.supervisor.facts.crewStatus("checked")[0]?.ci?.overall).toBe("red");
         console.info(
           JSON.stringify({
             intent: "INF-2186 crew check summaries",
@@ -248,10 +248,10 @@ describe("FirstmateAgent", () => {
           ci: "green",
           checks: { ...checks, items: [{ name: "unit-tests", state: "success" }] },
         });
-        expect(f.supervisor.crewStatus("checked")[0]?.ci?.overall).toBe("green");
+        expect(f.supervisor.facts.crewStatus("checked")[0]?.ci?.overall).toBe("green");
         expect(summary).toHaveBeenCalledTimes(2);
       });
-      expect(f.supervisor.crewStatus("checked")[0]?.ci?.overall).toBe("green");
+      expect(f.supervisor.facts.crewStatus("checked")[0]?.ci?.overall).toBe("green");
       expect(summary).toHaveBeenCalledTimes(3);
     } finally {
       summary.mockRestore();
@@ -330,10 +330,10 @@ describe("FirstmateAgent", () => {
         who: "captain",
         text: "What did the checks cover?",
       });
-      const afterReply = f.supervisor.crewStatus(started[0])[0]?.thread;
+      const afterReply = f.supervisor.facts.crewStatus(started[0])[0]?.thread;
       expect(afterReply).toBe("thread: 2 messages, last from captain");
       console.info(JSON.stringify({ intent: "INF-2255 roster reply freshness", afterReply }));
-      const queued = f.supervisor.crewStatus("queued-parent")[0];
+      const queued = f.supervisor.facts.crewStatus("queued-parent")[0];
       expect(children).toHaveBeenCalledWith("queued-parent");
       const expected = queueWaitOf(
         f.tasks.get("queued-parent")!,
@@ -343,7 +343,7 @@ describe("FirstmateAgent", () => {
       );
       expect(queued?.gate).toBe(expected?.line);
       f.tasks.close("queued-part", { status: "done", reason: "settled", actor: "host" });
-      expect(f.supervisor.crewStatus("queued-parent")[0]?.gate).not.toBe(queued?.gate);
+      expect(f.supervisor.facts.crewStatus("queued-parent")[0]?.gate).not.toBe(queued?.gate);
     } finally {
       recentThreads.mockRestore();
       messages.mockRestore();
@@ -801,7 +801,7 @@ describe("FirstmateAgent", () => {
     f.session.emitTurnEnd("Ready.");
     f.session.resolveNextPrompt();
     await vi.waitFor(() => expect(f.agent.isBusy()).toBe(false));
-    f.supervisor.replyToCard(id, "Where should I begin?");
+    f.supervisor.cardActions.replyToCard(id, "Where should I begin?");
     expect(accepted).toHaveBeenCalledTimes(2);
     await drained(f.session, 2);
     expect(decodeContext(f.session.prompts[1] as string).about).toContain(id);
@@ -823,7 +823,9 @@ describe("FirstmateAgent", () => {
       { replies: false },
     );
     expect(f.supervisor.cards.snapshot().find((card) => card.id === id)?.replies).toBe(false);
-    expect(() => f.supervisor.replyToCard(id, "Where should I begin?")).toThrow("takes no reply");
+    expect(() => f.supervisor.cardActions.replyToCard(id, "Where should I begin?")).toThrow(
+      "takes no reply",
+    );
     expect(accepted).not.toHaveBeenCalled();
     expect(f.supervisor.cards.thread(id).messages).toEqual([]);
     expect(f.tasks.capture.listAsks()).toEqual([]);
@@ -889,7 +891,7 @@ describe("FirstmateAgent", () => {
     });
     const card = supervisor.cards.snapshot()[0];
     expect(card).toBeDefined();
-    supervisor.replyToCard(card?.id ?? "", "the second option is wrong");
+    supervisor.cardActions.replyToCard(card?.id ?? "", "the second option is wrong");
     await drained(session, 1);
     const turn = session.prompts[0] as string;
     const asked = supervisor.cards.thread(card?.id ?? "").messages[0]?.id;
@@ -942,7 +944,7 @@ describe("FirstmateAgent", () => {
         .find((card) => card.id === cardId && onStage(card) && !card.awaiting);
     expect(shown()).toBeDefined();
 
-    supervisor.replyToCard(cardId, "what are the rules?");
+    supervisor.cardActions.replyToCard(cardId, "what are the rules?");
     await drained(session, 1);
     expect(shown()).toBeUndefined();
     const waiting = supervisor.cards.snapshot().find((card) => card.id === cardId);
@@ -1009,7 +1011,7 @@ describe("FirstmateAgent", () => {
       actions: [{ id: "a", label: "A", default: true }],
     });
     await agent.converse("status?");
-    supervisor.replyToCard(cardId, "why A?");
+    supervisor.cardActions.replyToCard(cardId, "why A?");
     await vi.waitFor(() => expect(session.steers).toHaveLength(1));
     expect(supervisor.cards.snapshot().find((card) => card.id === cardId)?.awaiting).toBe("answer");
 
@@ -1047,12 +1049,12 @@ describe("FirstmateAgent", () => {
     const cardId = supervisor.cards.openCardsFor(taskId)[0]?.id ?? "";
     // FI3-347's path: the captain's words, then the card withdrawn and raised
     // again under its id - a new lifecycle that owes them nothing.
-    supervisor.replyToCard(cardId, "build it");
+    supervisor.cardActions.replyToCard(cardId, "build it");
     supervisor.closeCard(cardId, { kind: "crewmate", taskId }, "recover the settings");
     await crewSpecs[0]?.callbacks?.onCard?.({ ...preview, id: cardId, title: "Settings kept" });
     // The newest line on each of these threads is the captain's too.
-    supervisor.replyToCard("card-t1-1", "what about X?");
-    supervisor.replyToCard("card-t2-1", "never mind");
+    supervisor.cardActions.replyToCard("card-t1-1", "what about X?");
+    supervisor.cardActions.replyToCard("card-t2-1", "never mind");
     // INF-1879: a pending note stays owed when put away; its author explicitly withdraws this closed-history fixture.
     supervisor.closeCard(
       "card-t2-1",
@@ -1083,7 +1085,7 @@ describe("FirstmateAgent", () => {
         entry.startsWith(`- card ${id} `),
       );
     tasks.close("t58", { status: "done", reason: "merged", actor: "host" });
-    supervisor.replyToCard("card-t58-1", "which version?");
+    supervisor.cardActions.replyToCard("card-t58-1", "which version?");
     await drained(session, 1);
     expect(line(0, "card-t58-1")).toMatch(/"which version\?" \(awaiting your answer\)$/);
     session.emitTurnEnd("It shipped as 0.2.");
@@ -1094,7 +1096,7 @@ describe("FirstmateAgent", () => {
       body: "<p>A or B.</p>",
       actions: [{ id: "a", label: "A", default: true }],
     });
-    supervisor.replyToCard(own, "why A?");
+    supervisor.cardActions.replyToCard(own, "why A?");
     await drained(session, 2);
     expect(line(1, own)).toMatch(/"why A\?" \(awaiting your answer\)$/);
     // Its closing words name no message: the note's question is still its own to answer.
@@ -1120,7 +1122,7 @@ describe("FirstmateAgent", () => {
       status: "queued",
       gate: { kind: "captain", reason: "Choose the plan", ref: card!.id },
     });
-    expect(supervisor.runTaskOp(question.id, "dismiss-question")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp(question.id, "dismiss-question")).toBeUndefined();
     expect(supervisor.cards.snapshot()).toHaveLength(0);
     await agent.converse({ text: "build this plan again", pastCardId: card?.id });
     const turn = session.prompts[0] as string;
@@ -1138,7 +1140,7 @@ describe("FirstmateAgent", () => {
       body: "<p>The survey is ready.</p>",
       actions: [{ id: "keep", label: "Keep this chart", default: true }],
     });
-    supervisor.act(id, "keep", "frame");
+    supervisor.cardActions.act(id, "keep", "frame");
     await drained(session, 1);
     session.emitTurnEnd("Kept the chart.");
     session.resolveNextPrompt();

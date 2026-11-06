@@ -201,7 +201,7 @@ describe("the first mate reads and changes cards through its tools", () => {
       true,
     );
     // The ready sweep puts the required action's card up.
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     const shown = cardStore.listOpen();
     expect(shown).toHaveLength(1);
     const cardId = shown[0]?.id ?? "";
@@ -313,7 +313,7 @@ describe("the host's own steer", () => {
       until: Date.now() - 1_000,
       reason: "checks settle",
     });
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     const steeredOf = () =>
       tasks.timeline("checks-wait").filter((event) => event.kind === "steered");
     // The steer rides the inbox, which delivers after the sweep returns.

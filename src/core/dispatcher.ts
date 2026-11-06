@@ -68,7 +68,7 @@ import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
 import type { HostCapabilities } from "./host";
 import { isAllowedOpenExternalUrl } from "./openExternal";
-import { CardChoiceUnavailableError } from "./orchestrator/crewSupervisor";
+import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
 import { type MessageFile, withPastedFiles } from "./overflow";
 import { crewmateCardPicturesDir } from "./paths";
 import { actionValue } from "./pi/appTools";
@@ -290,7 +290,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:task:interrupt": (taskId) => services.supervisor.steer.interruptFromCrewmateTab(taskId),
 
     "inf:task:run": (taskId, op, review, from) => {
-      const refusal = services.supervisor.runTaskOp(taskId, op, review, from);
+      const refusal = services.supervisor.hostOps.runTaskOp(taskId, op, review, from);
       return refusal ? { ok: false as const, text: refusal } : { ok: true as const };
     },
 
@@ -341,18 +341,20 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         throw caught;
       }
     },
-    "inf:repos:removal": (repoId) => ({ tasks: services.supervisor.activeTasksOnRepo(repoId) }),
+    "inf:repos:removal": (repoId) => ({
+      tasks: services.supervisor.facts.activeTasksOnRepo(repoId),
+    }),
 
     "inf:repos:remove": (repoId) => {
       const repo = services.repos.get(repoId);
       if (!repo) throw new Error("That project is not here. It may already be removed.");
-      const tasks = services.supervisor.activeTasksOnRepo(repo.id);
+      const tasks = services.supervisor.facts.activeTasksOnRepo(repo.id);
       if (tasks.length > 0) throw new Error(repoRemovalRefusal(repo.name, tasks));
       services.repos.unregister(repo.id);
       return { id: repo.id, name: repo.name };
     },
     "inf:repos:configure": async (repoId, changes) => {
-      if (changes.path !== undefined && services.supervisor.activeTasksOnRepo(repoId).length)
+      if (changes.path !== undefined && services.supervisor.facts.activeTasksOnRepo(repoId).length)
         throw new Error(
           "Finish or drop the project’s planned and working tasks before changing its folder.",
         );
@@ -486,7 +488,13 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // never waits out the stack's coalescing window.
     "inf:cards:act": (cardId, actionId, source, value, submission) => {
       try {
-        const result = services.supervisor.act(cardId, actionId, source, value, submission);
+        const result = services.supervisor.cardActions.act(
+          cardId,
+          actionId,
+          source,
+          value,
+          submission,
+        );
         services.supervisor.cards.flushBroadcast();
         return result;
       } catch (error) {
@@ -650,9 +658,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // fourth argument, whether the card was leaving, is read no more.
     "inf:cards:reply": (cardId, payload, submission) => {
       if (typeof payload === "string") {
-        return services.supervisor.replyToCard(cardId, payload, undefined, submission);
+        return services.supervisor.cardActions.replyToCard(cardId, payload, undefined, submission);
       }
-      return services.supervisor.replyToCard(
+      return services.supervisor.cardActions.replyToCard(
         cardId,
         payload.text ?? "",
         payload.images,
@@ -758,7 +766,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // timeline events merged with the few task-less activity lines.
     "inf:feed:recent": () => recentFeed(services.tasks, services.activity, 200),
 
-    "inf:crew:counts": () => services.supervisor.crewCounts(),
+    "inf:crew:counts": () => services.supervisor.facts.crewCounts(),
 
     "inf:tasks:board": () => services.taskProtocol.board(),
 
@@ -768,7 +776,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:tasks:crewmate": (taskId) => services.taskProtocol.crewmate(taskId),
 
     "inf:tasks:crewmate:live": (taskId) =>
-      services.crewLive.read(taskId, services.supervisor.turnStartedAt(taskId)),
+      services.crewLive.read(taskId, services.supervisor.facts.turnStartedAt(taskId)),
 
     "inf:tasks:crewmate:result": (taskId, ref) => services.taskProtocol.crewmateResult(taskId, ref),
 

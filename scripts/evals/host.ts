@@ -344,7 +344,7 @@ export async function approvalHost(
   try {
     if (pendingChoices.length) {
       for (const { cardId, resolution } of pendingChoices)
-        host.supervisor.act(cardId, resolution.action, "chrome", { answers: resolution.answers });
+        host.supervisor.cardActions.act(cardId, resolution.action, "chrome", { answers: resolution.answers });
       let timeout: ReturnType<typeof setTimeout> | undefined;
       try {
         await Promise.race([
@@ -378,7 +378,7 @@ export async function approvalHost(
   if (test.role === "builder") {
     // Dispatch opens only the inert crew factory, preserving the production callbacks/preset.
     const build = tasks.get(ids.BUILD!)!;
-    await host.supervisor.startQueuedNow(build.id);
+    await host.supervisor.starts.startQueuedNow(build.id);
     if (!reviewSpec) throw new Error("Production builder preset did not open");
     spec = reviewSpec;
     const plan = test.tasks.PLAN!;
@@ -392,7 +392,7 @@ export async function approvalHost(
     })}\nTask autonomy: false. No captain merge authorization.`;
   }
   for (const [alias, task] of Object.entries(test.tasks)) {
-    if (task.availableOwner) await host.supervisor.startQueuedNow(ids[alias]!);
+    if (task.availableOwner) await host.supervisor.starts.startQueuedNow(ids[alias]!);
   }
   // Setup is not an evaluation effect.
   if (Object.values(test.tasks).some((task) => task.availableOwner)) starts.length = 0;

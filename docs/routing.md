@@ -112,7 +112,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - Serveability (`docs/quota.md` "The cut-off on the account"): an account withheld by a fact beside its credential - no client to run it, or a standing `refused` / `signed_out` cut-off - leaves the routing pool (`AccountVault.availableModelsByAccount`), is never the flagship, and is skipped by account selection with `withheld (<reason>)` in the spawn's `account` row, which also names a withheld account of another provider that routing never reached.
   One predicate, `servesModels`, answers for every reader.
   A spent allowance is not withheld: its pushed `rejected` reading is a zero window until the reset, read like any other headroom.
-  A task served from a weaker slot than it asked for says so in the feed (`downgradeLine` in `src/core/orchestrator/crewSupervisor.ts`), and the line names the cause from typed facts.
+  A task served from a weaker slot than it asked for says so in the feed (`downgradeLine` in `src/core/orchestrator/starts.ts`), and the line names the cause from typed facts.
   `Router.preview` reruns the same ladder with the withheld accounts' models back in the pool (`AccountVault.withheldModels`); when that run serves the slot asked for from one of them, the route carries its provider and the account's reason (`RouteResult.withheld`, also a line in the routing reasons).
   The line then says that provider's models in the slot are paused until you sign in again, while it refuses your sign-in, or because it cannot run on this computer.
   Otherwise, including when the withheld model's own allowance is spent, the line says that slot's models have used up their allowance; a computer's own pool carries no withheld cause.

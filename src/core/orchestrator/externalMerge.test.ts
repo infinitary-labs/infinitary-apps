@@ -145,7 +145,7 @@ function fixture() {
         broadcastEvent: () => {},
         broadcastCards: () => {},
       });
-      await supervisor.sweepInbox(now);
+      await supervisor.watch.sweepInbox(now);
       await supervisor.disposeAll();
     },
     now: () => now,

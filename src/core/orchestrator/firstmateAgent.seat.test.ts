@@ -235,7 +235,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
 
     // The click closes the card; it comes back saying it checks, with no
     // second recheck, and another ask shares the one running.
-    t.supervisor.act("card-fm-no-headroom", "recheck-allowance");
+    t.supervisor.cardActions.act("card-fm-no-headroom", "recheck-allowance");
     await tick();
     expect(card()?.body).toContain(ALLOWANCE_CHECKING_WORDS);
     expect(actions()?.map(([id]) => id)).toEqual(["open-settings"]);
@@ -255,7 +255,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     onRead = () => {
       t.account(CLAUDE_ACCOUNT).cutOff = undefined;
     };
-    t.supervisor.act("card-fm-no-headroom", "recheck-allowance");
+    t.supervisor.cardActions.act("card-fm-no-headroom", "recheck-allowance");
     await tick();
     read();
     await tick();
@@ -294,7 +294,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(t.tryAgains).toEqual([]);
 
     // The captain's word clears it, and the one drain is the attempt.
-    t.supervisor.act("card-fm-refused", "try-again");
+    t.supervisor.cardActions.act("card-fm-refused", "try-again");
     await tick();
     expect(t.tryAgains).toEqual([CLAUDE_ACCOUNT]);
     expect(t.account(CLAUDE_ACCOUNT).cutOff).toBeUndefined();
@@ -335,7 +335,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(t.specs).toHaveLength(1);
     expect(t.settings.getFirstmateModel()).toEqual(CLAUDE_MODEL);
 
-    t.supervisor.act("card-fm-flagship-move", "move-flagship");
+    t.supervisor.cardActions.act("card-fm-flagship-move", "move-flagship");
     await tick();
     expect(t.specs[1]?.binding).toMatchObject({ backend: "pi", accountId: "acct_codex" });
     expect(t.settings.getFirstmateMovedFrom()).toEqual({
@@ -377,7 +377,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(t.cards().filter((entry) => entry.id === "card-fm-move-back")).toHaveLength(1);
     expect(t.ledger.filter((row) => row.reasons[0] === "seat move-back-offered")).toHaveLength(1);
 
-    t.supervisor.act("card-fm-move-back", "move-flagship");
+    t.supervisor.cardActions.act("card-fm-move-back", "move-flagship");
     await tick();
     expect(t.specs[2]?.binding).toEqual({ backend: "claude", accountId: CLAUDE_ACCOUNT });
     expect(t.settings.getFirstmateMovedFrom()).toBeNull();
@@ -550,7 +550,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     await tick();
     expect(t.cards().map((card) => card.id)).toEqual(["card-fm-turn-failure"]);
 
-    t.supervisor.act("card-fm-turn-failure", "retry-firstmate");
+    t.supervisor.cardActions.act("card-fm-turn-failure", "retry-firstmate");
     await tick();
     expect(seat.prompts).toHaveLength(3);
     expect(seat.prompts[2]?.split("[user]\nhello")).toHaveLength(2);
@@ -584,7 +584,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     await tick();
     expect(seat.prompts).toHaveLength(1);
     // Retry on the card makes them due now: the one attempt it asks for.
-    t.supervisor.act("card-fm-turn-failure", "retry-firstmate");
+    t.supervisor.cardActions.act("card-fm-turn-failure", "retry-firstmate");
     await tick();
     expect(seat.prompts).toHaveLength(2);
     expect(seat.prompts[1]).toContain("hello");
@@ -675,7 +675,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     );
     await tick();
     await cutOffTurn(seat, { class: "no_headroom", resetsAt: Date.now() + 5 * 60 * 60_000 });
-    t.supervisor.act("card-fm-flagship-move", "move-flagship");
+    t.supervisor.cardActions.act("card-fm-flagship-move", "move-flagship");
     await tick();
     const codex = t.sessions[1] as FakeSession;
     expect(codex.prompts[0]).toContain("Your seat moved on the captain's word");
@@ -939,7 +939,7 @@ describe("the seat's other ways: Settings, the way back, holds and moves (INF-26
     const codex = t.sessions[0] as FakeSession;
     expect(t.specs).toHaveLength(1);
 
-    t.supervisor.act("card-fm-move-back", "move-flagship");
+    t.supervisor.cardActions.act("card-fm-move-back", "move-flagship");
     await tick();
     expect(t.settings.getFirstmateModel()).toEqual(CLAUDE_MODEL);
     expect(t.settings.getFirstmateMovedFrom()).toBeNull();
@@ -980,7 +980,7 @@ describe("the seat's other ways: Settings, the way back, holds and moves (INF-26
     expect(t.cards().map((card) => card.id)).toEqual(["card-fm-flagship-move"]);
 
     availableModels.splice(availableModels.indexOf(CODEX_MODEL), 1);
-    t.supervisor.act("card-fm-flagship-move", "move-flagship");
+    t.supervisor.cardActions.act("card-fm-flagship-move", "move-flagship");
     await tick();
     expect(t.specs).toHaveLength(1);
     expect(t.settings.getFirstmateModel()).toEqual(CLAUDE_MODEL);
@@ -1222,7 +1222,7 @@ describe("Retry on the Firstmate failure card (W1 S9 re-review R1)", () => {
     const card = cards().find((entry) => entry.id === "card-fm-turn-failure") as Card;
     expect(card).toBeDefined();
 
-    supervisor.act(card.id, "retry-firstmate");
+    supervisor.cardActions.act(card.id, "retry-firstmate");
     await tick();
     expect(session.prompts).toHaveLength(3);
     expect(session.prompts[2]).toContain("check the build");

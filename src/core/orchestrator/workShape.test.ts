@@ -110,7 +110,7 @@ describe("the deliverable axis (Task B)", () => {
     await tick();
     const card = cards().find((entry) => entry.taskId === taskId) as Card;
     specs[0]?.onReport?.("The decision is ready.");
-    supervisor.act(card.id, "noted");
+    supervisor.cardActions.act(card.id, "noted");
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
     expect(tasks.timeline(taskId).some((event) => event.text.includes('chose "Got it"'))).toBe(
@@ -161,7 +161,7 @@ describe("the deliverable axis (Task B)", () => {
     crewmate.finishPrompt();
     await tick();
 
-    supervisor.act(asked.id, "allow-mac-mini-signing");
+    supervisor.cardActions.act(asked.id, "allow-mac-mini-signing");
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "active" });
     expect(crewmate.promptCalls.at(-1)).toBe(
@@ -189,7 +189,7 @@ describe("the deliverable axis (Task B)", () => {
     await tick();
     const answer = cards().find((entry) => entry.taskId === taskId) as Card;
     specs[0]?.onReport?.("The Mac mini signed the Secrets test app.");
-    supervisor.act(answer.id, "noted");
+    supervisor.cardActions.act(answer.id, "noted");
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
     expect(answerClosedWakes(inbox)).toEqual([
@@ -250,7 +250,7 @@ describe("the deliverable axis (Task B)", () => {
     await tick();
     const card = cards().find((entry) => entry.taskId === taskId) as Card;
     specs[0]?.onReport?.("The preview is up; I build the rest of the approved plan meanwhile.");
-    supervisor.act(card.id, "build-with-pick");
+    supervisor.cardActions.act(card.id, "build-with-pick");
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(crewmate.aborts).toHaveLength(0);
@@ -314,7 +314,7 @@ describe("the deliverable axis (Task B)", () => {
           crewmate.finishPrompt();
         };
       }
-      supervisor.act(card.id, "free-and-restart");
+      supervisor.cardActions.act(card.id, "free-and-restart");
       await tick();
       if (!endsWithAbort) {
         crewmate.finishPrompt();
@@ -338,9 +338,9 @@ describe("the deliverable axis (Task B)", () => {
       let cancelled: Promise<void>;
       if (first === "cancel") {
         cancelled = supervisor.sessions.interruptCrewmate(taskId, "cancel");
-        supervisor.act(card.id, "free-and-restart");
+        supervisor.cardActions.act(card.id, "free-and-restart");
       } else {
-        supervisor.act(card.id, "free-and-restart");
+        supervisor.cardActions.act(card.id, "free-and-restart");
         cancelled = supervisor.sessions.interruptCrewmate(taskId, "cancel");
       }
       await cancelled;
@@ -373,7 +373,7 @@ describe("the deliverable axis (Task B)", () => {
     await tick();
     const card = cards().find((entry) => entry.taskId === taskId) as Card;
     specs[0]?.onReport?.("The decision is ready.");
-    supervisor.act(card.id, "noted");
+    supervisor.cardActions.act(card.id, "noted");
     await tick();
     const key = tasks.get(taskId)?.key;
     expect(inbox.pending(FIRSTMATE_RECIPIENT).map(renderWake)).toEqual([
@@ -400,7 +400,7 @@ describe("the deliverable axis (Task B)", () => {
     await tick();
     const card = cards().find((entry) => entry.taskId === taskId) as Card;
     specs[0]?.onReport?.("The decision is ready.");
-    expect(supervisor.act(card.id, "open")).toEqual({
+    expect(supervisor.cardActions.act(card.id, "open")).toEqual({
       effect: { kind: "open", target: "settings" },
     });
     await tick();
@@ -441,7 +441,7 @@ describe("the deliverable axis (Task B)", () => {
     );
     expect(tasks.get(taskId)?.gate).toBeNull();
     expect(ops.slice(opsBefore)).toEqual([]);
-    expect(supervisor.runTaskOp(taskId, "answer-done")).toContain("no answer ready");
+    expect(supervisor.hostOps.runTaskOp(taskId, "answer-done")).toContain("no answer ready");
     expect(tasks.get(taskId)?.status).toBe("active");
   });
 
@@ -471,11 +471,11 @@ describe("the deliverable axis (Task B)", () => {
     supervisor.close(card.id);
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
-    supervisor.reconcileIdle(card.createdAt + 30 * 24 * 60 * 60 * 1000);
+    supervisor.watch.reconcileIdle(card.createdAt + 30 * 24 * 60 * 60 * 1000);
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(crewmate.promptCalls).toHaveLength(prompts);
-    expect(supervisor.runTaskOp(taskId, "answer-done")).toBeUndefined();
+    expect(supervisor.hostOps.runTaskOp(taskId, "answer-done")).toBeUndefined();
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
     // The task is closed: its crewmate has no close left to judge.
@@ -497,7 +497,7 @@ describe("the deliverable axis (Task B)", () => {
       { id: "answer-done", label: "Accept this answer", default: true },
       { id: "more", label: "Investigate further" },
     ]);
-    supervisor.act(card.id, "answer-done");
+    supervisor.cardActions.act(card.id, "answer-done");
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
   });
@@ -517,13 +517,13 @@ describe("the deliverable axis (Task B)", () => {
   it("keeps the answer task open when the captain closes a marked answer note whose reply waits on its crewmate (INF-1732)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, taskId, card } = await answerCardUp(crewmate);
-    await supervisor.replyToCard(card.id, "but why did the flag not get set?");
+    await supervisor.cardActions.replyToCard(card.id, "but why did the flag not get set?");
     await tick();
     supervisor.close(card.id);
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(supervisor.cards.snapshot().find((entry) => entry.id === card.id)?.minimized).toBe(true);
-    expect(supervisor.runTaskOp(taskId, "answer-done")).toContain("no answer ready");
+    expect(supervisor.hostOps.runTaskOp(taskId, "answer-done")).toContain("no answer ready");
   });
 
   /**
@@ -619,7 +619,7 @@ describe("the deliverable axis (Task B)", () => {
     expect(tasks.get(taskId)?.shape?.deliverable).toBe("change");
     expect(tasks.get(taskId)?.prompt).toContain("Delivery: ");
 
-    await supervisor.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
     await tick();
     // The gate-open classification routes it, and never makes undeclared
     // work an answer: the brief the crewmate ran from keeps its posture.
@@ -668,7 +668,7 @@ describe("the deliverable axis (Task B)", () => {
     const filed = harness.tasks.graph.discoveredFrom(taskId)[0] as TaskRecord;
     expect(filed.intent).toBeNull();
     expect(filed.prompt).toContain("Delivery: direct-pr");
-    await harness.supervisor.startQueuedNow(filed.key);
+    await harness.supervisor.starts.startQueuedNow(filed.key);
     await tick();
     return {
       shape: harness.tasks.get(filed.id)?.shape,
@@ -744,7 +744,13 @@ describe("the deliverable axis (Task B)", () => {
     const answers = [
       { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
     ];
-    supervisor.replyToCard(card.id, "build it as adjusted", undefined, undefined, answers);
+    supervisor.cardActions.replyToCard(
+      card.id,
+      "build it as adjusted",
+      undefined,
+      undefined,
+      answers,
+    );
     await tick();
     supervisor.close(card.id);
     await tick();
@@ -842,7 +848,7 @@ describe("the deliverable axis (Task B)", () => {
     const settings = [
       { name: "settings", values: ['{"layout":"B","maxWidthPx":360}'], changed: true, json: true },
     ] as const;
-    supervisor.act(prototype.id, "build-it", "chrome", { answers: settings });
+    supervisor.cardActions.act(prototype.id, "build-it", "chrome", { answers: settings });
     await tick();
     // The build goes on, and other cards land on the same task: a Firstmate
     // note the captain closes, a Firstmate decision the captain answers, and the
@@ -855,7 +861,7 @@ describe("the deliverable axis (Task B)", () => {
         actions: [],
       }),
     );
-    supervisor.act(
+    supervisor.cardActions.act(
       supervisor.addFirstmateCard({
         taskId: mock.taskId,
         title: "Keep the build going?",
@@ -944,7 +950,7 @@ describe("the deliverable axis (Task B)", () => {
       outcome: "Two meters; the captain picked the tilted one.",
     });
     supervisor.cards.addMessage("card-proto7-1", "captain", "tilt it a little less");
-    supervisor.act("card-proto7-1", "build-it", "chrome", {
+    supervisor.cardActions.act("card-proto7-1", "build-it", "chrome", {
       answers: [{ name: "tilt", values: ["57"], changed: true }],
     });
     await tick();
@@ -992,7 +998,7 @@ describe("the deliverable axis (Task B)", () => {
     const filed = tasks.graph.discoveredFrom(found.taskId)[0];
     if (!filed) throw new Error("no follow-up was filed");
 
-    expect(await supervisor.startQueuedNow(filed.key)).toContain("Started");
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toContain("Started");
     await tick();
     const brief = fixer.promptCalls.at(-1) ?? "";
     const originKey = tasks.get(found.taskId)?.key ?? found.taskId;
@@ -1025,7 +1031,7 @@ describe("the deliverable axis (Task B)", () => {
     // no longer accepts a basis, so the edit goes through the field writer.
     tasks.updateFields(filed.id, { basis: originKey }, "firstmate");
 
-    await supervisor.startQueuedNow(filed.key);
+    await supervisor.starts.startQueuedNow(filed.key);
     await tick();
     const brief = fixer.promptCalls.at(-1) ?? "";
     expect(brief).toContain(`grounded in ${originKey}`);
@@ -1064,7 +1070,7 @@ describe("the deliverable axis (Task B)", () => {
     // A file where the folder belongs: the save fails, nothing is lost.
     mkdirSync(join(paths.crewmatesDir, planned.id), { recursive: true });
     writeFileSync(join(paths.crewmatesDir, planned.id, "source-cards"), "in the way");
-    expect(await supervisor.startQueuedNow(planned.key)).toContain("Started");
+    expect(await supervisor.starts.startQueuedNow(planned.key)).toContain("Started");
     await tick();
     const brief = builder.promptCalls.at(-1) ?? "";
     expect(brief).toContain(`Its card, as the captain read it:\n${body}`);

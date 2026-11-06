@@ -50,14 +50,14 @@ describe("the captain's override", () => {
   it("cites the captain's reply or his click on a card of the task, whichever came last", async () => {
     const h = await startedTask();
     const replied = question(h, h.taskId, "fm-replied");
-    h.supervisor.replyToCard(replied, "  Do the volts first; skip the review.  ");
+    h.supervisor.cardActions.replyToCard(replied, "  Do the volts first; skip the review.  ");
     expect(h.supervisor.overrides.citedCaptainWords(h.taskId, ` ${replied} `)).toEqual({
       ok: true,
       words: "Do the volts first; skip the review.",
     });
     const clicked = question(h, h.taskId, "fm-clicked");
-    h.supervisor.replyToCard(clicked, "Either is fine.");
-    h.supervisor.act(clicked, "volts");
+    h.supervisor.cardActions.replyToCard(clicked, "Either is fine.");
+    h.supervisor.cardActions.act(clicked, "volts");
     await tick();
     // His click came after his reply, and a plain answer approves no merge.
     expect(h.supervisor.overrides.citedCaptainWords(h.taskId, clicked)).toEqual({
@@ -74,7 +74,7 @@ describe("the captain's override", () => {
       ok: false,
       text: `Override refused: nothing was recorded. There is no card "fm-nope"; pass from as the id of the card the captain replied under or clicked, ${CREWMATE_TAB_VIA}, or ${STANDING_WORDS_FROM}.`,
     });
-    h.supervisor.replyToCard(elsewhere, "Skip the checks.");
+    h.supervisor.cardActions.replyToCard(elsewhere, "Skip the checks.");
     expect(h.supervisor.overrides.citedCaptainWords(h.taskId, elsewhere)).toEqual({
       ok: false,
       text: `Override refused: nothing was recorded. Card "Which unit first?" is not on ${h.key}, so the captain's words there pass nothing on it.`,

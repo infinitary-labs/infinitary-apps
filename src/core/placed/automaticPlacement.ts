@@ -280,7 +280,7 @@ export class AutomaticPlacement {
           ?.reading ?? { status: "unknown", reason: "missing" },
         model,
         // The home starts a task with no routed model on its runtime default;
-        // a computer that runs work refuses one (`CrewSupervisor.startTask`).
+        // a computer that runs work refuses one (`CrewStarts.startTask`).
         runtimeDefault: computer.computerId === null,
       };
     });

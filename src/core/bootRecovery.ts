@@ -1,6 +1,7 @@
 import type { FmEvent } from "@shared/events";
 import type { JobManager } from "./jobs/jobManager";
 import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
+import type { CrewWatch } from "./orchestrator/crewWatch";
 import { PANELS_SAFE_MODE_NOTE } from "./personal/panelLines";
 import { FIRSTMATE_RECIPIENT, type InboxStore, SUPERVISION_RECIPIENT } from "./storage/inboxStore";
 import type { InterruptedJob } from "./storage/jobStore";
@@ -44,10 +45,9 @@ export function recoverAtBoot(options: {
   enteredSafeMode: boolean;
   jobs: Pick<JobManager, "reportInterrupted">;
   tasks: Pick<TaskService, "get">;
-  supervisor: Pick<
-    CrewSupervisor,
-    "reconcileCutOffs" | "announceCarryOn" | "sweepInbox" | "reconcileIdle"
-  >;
+  supervisor: Pick<CrewSupervisor, "reconcileCutOffs"> & {
+    watch: Pick<CrewWatch, "announceCarryOn" | "sweepInbox" | "reconcileIdle">;
+  };
   inbox: Pick<InboxStore, "allFor" | "reassign">;
   now: () => number;
   broadcastEvent: (event: FmEvent) => void;
@@ -72,13 +72,13 @@ export function recoverAtBoot(options: {
   // re-delivered (resuming their idle tasks) or reported as orphaned, and
   // the firstmate and supervision lanes each get one explicit drain instead
   // of waiting for an incidental trigger.
-  supervisor.announceCarryOn();
-  void supervisor.sweepInbox(now());
+  supervisor.watch.announceCarryOn();
+  void supervisor.watch.sweepInbox(now());
   // The idle reconciler's boot sweep (docs/report-sort.md): a record the
   // ladder should already have acted on while the app was closed acts now,
   // from its saved clock and rung - once, never a storm, and its wakes
   // coalesce into one Firstmate turn.
-  supervisor.reconcileIdle(now());
+  supervisor.watch.reconcileIdle(now());
   // Wakes a previous version parked on the retired supervision lane still
   // name real work: hand them to the Firstmate rather than leaving them to
   // rot on a lane with no reader (S7c).

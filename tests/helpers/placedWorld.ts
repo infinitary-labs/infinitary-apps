@@ -485,7 +485,7 @@ export async function world(
         deviceId,
         ...(repoId ? { repoId } : {}),
       });
-      await home.supervisor.dispatchQueuedTask(id);
+      await home.supervisor.starts.dispatchQueuedTask(id);
       expect(home.tasks.get(id)?.status).toBe("active");
     },
     /**

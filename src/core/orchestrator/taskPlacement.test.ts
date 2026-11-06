@@ -67,8 +67,8 @@ describe("where a task runs", () => {
       shape: { kind: "unclear", runs_on_ask: MINI },
     });
 
-    await supervisor.dispatchQueuedTask("t-older");
-    await supervisor.dispatchQueuedTask("t-older");
+    await supervisor.starts.dispatchQueuedTask("t-older");
+    await supervisor.starts.dispatchQueuedTask("t-older");
     expect(tasks.get("t-older")).toMatchObject({ status: "open", deviceId: MINI });
     expect(feed(events)).toEqual([noNewWorkWaitLine('"Footer"', MINI_NAME)]);
     expect(recallUpdateCard.mock.calls).toEqual([[MINI]]);
@@ -82,8 +82,8 @@ describe("where a task runs", () => {
 
     // A day on, the feed says it once more, with the way to run it here.
     at += PLACED_WAIT_DAY_MS;
-    await supervisor.dispatchQueuedTask("t-older");
-    await supervisor.dispatchQueuedTask("t-older");
+    await supervisor.starts.dispatchQueuedTask("t-older");
+    await supervisor.starts.dispatchQueuedTask("t-older");
     expect(feed(events).slice(1)).toEqual([
       noNewWorkDayLine(MINI_NAME, '"Footer"'),
       `To run it here instead, ask your first mate to run "Footer" on ${HERE.this}.`,
@@ -104,8 +104,8 @@ describe("where a task runs", () => {
       shape: { kind: "unclear", runs_on_ask: MINI },
     });
 
-    await supervisor.dispatchQueuedTask("t-repoless");
-    await supervisor.dispatchQueuedTask("t-repoless");
+    await supervisor.starts.dispatchQueuedTask("t-repoless");
+    await supervisor.starts.dispatchQueuedTask("t-repoless");
     expect(tasks.get("t-repoless")).toMatchObject({ status: "open", deviceId: MINI });
     expect(feed(events)).toEqual([updateWaitLine(MINI_NAME, '"Notes"')]);
     expect(crewmate.promptCalls).toHaveLength(0);

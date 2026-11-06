@@ -1,13 +1,11 @@
 /**
- * A click on a card as the crew supervisor takes it (docs/cards.md; FI3-1571
+ * A click on a card as `CardActions` takes it (docs/cards.md; FI3-1571
  * piece 4 for a crewmate's kept write): the choices it refuses before any
  * bookkeeping, a settle or merge button that names no task, and a
  * crewmate's kept write sent once on the captain's click, with the
- * crewmate hearing what came of it. INF-2625's plan, the crew supervisor's
- * tenth step, moves this code out of the supervisor into an owner of its
- * own (card actions); these cases pin, before it moves, the behaviour no
- * other test reaches. Each case clicks a card through the supervisor's
- * public door and reads its answer, the record and what the crewmate heard.
+ * crewmate hearing what came of it. These cases pin the behaviour no other
+ * test reaches. Each case clicks a card through the card actions' public
+ * door and reads its answer, the record and what the crewmate heard.
  */
 
 import type { HostEffect } from "@shared/cards";
@@ -22,7 +20,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
-import { CardChoiceUnavailableError } from "./crewSupervisor";
+import { CardChoiceUnavailableError } from "./cardActions";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { writeSentLine } from "./integrationAsks";
 
@@ -98,13 +96,13 @@ function taskless(
   return id;
 }
 
-describe("a click on a card, before it moves out of the crew supervisor", () => {
+describe("a click on a card, as CardActions takes it", () => {
   it("sends a crewmate's kept write once on the captain's click, notes it, and tells the crewmate what came of it", async () => {
     const sendWriteAsk = vi.fn(async () => sent());
     const h = await askedWrite({ sendWriteAsk });
     const prompts = h.crewmate.promptCalls.length;
 
-    expect(h.supervisor.act(h.cardId, "send")).toEqual({});
+    expect(h.supervisor.cardActions.act(h.cardId, "send")).toEqual({});
     await tick();
 
     expect(sendWriteAsk).toHaveBeenCalledTimes(1);
@@ -124,7 +122,7 @@ describe("a click on a card, before it moves out of the crew supervisor", () => 
   it("sends nothing when the app cannot send a kept write, and tells a closed task nothing", async () => {
     const none = await askedWrite();
     const prompts = none.crewmate.promptCalls.length;
-    expect(none.supervisor.act(none.cardId, "send")).toEqual({});
+    expect(none.supervisor.cardActions.act(none.cardId, "send")).toEqual({});
     await tick();
     expect(none.crewmate.promptCalls).toHaveLength(prompts);
 
@@ -138,7 +136,7 @@ describe("a click on a card, before it moves out of the crew supervisor", () => 
     );
     const closing = await askedWrite({ sendWriteAsk });
     const before = closing.crewmate.promptCalls.length;
-    closing.supervisor.act(closing.cardId, "send");
+    closing.supervisor.cardActions.act(closing.cardId, "send");
     closing.tasks.close(closing.taskId, {
       status: "dropped",
       reason: "cancelled",
@@ -160,11 +158,13 @@ describe("a click on a card, before it moves out of the crew supervisor", () => 
     const sendWriteAsk = vi.fn(async () => sent());
     const h = await askedWrite({ sendWriteAsk });
 
-    expect(() => h.supervisor.act(h.cardId, "delete-repo")).toThrow(CardChoiceUnavailableError);
+    expect(() => h.supervisor.cardActions.act(h.cardId, "delete-repo")).toThrow(
+      CardChoiceUnavailableError,
+    );
     expect(() =>
-      h.supervisor.act(h.cardId, "not-now", "frame", { note: "x".repeat(5000) }),
+      h.supervisor.cardActions.act(h.cardId, "not-now", "frame", { note: "x".repeat(5000) }),
     ).toThrow("Card settings must be JSON no larger than 4,096 bytes.");
-    expect(() => h.supervisor.act(h.cardId, "send", "frame")).toThrow(
+    expect(() => h.supervisor.cardActions.act(h.cardId, "send", "frame")).toThrow(
       "This action is available only from the card controls.",
     );
     // Nothing was sent and the card is still up for the captain's own click.
@@ -178,13 +178,22 @@ describe("a click on a card, before it moves out of the crew supervisor", () => 
     const merge = vi.spyOn(h.supervisor.settling.kept, "requestMerge");
 
     expect(
-      h.supervisor.act(taskless(h, "c-settle", { kind: "settle", mode: "discard" }), "go"),
+      h.supervisor.cardActions.act(
+        taskless(h, "c-settle", { kind: "settle", mode: "discard" }),
+        "go",
+      ),
     ).toEqual({});
     expect(
-      h.supervisor.act(taskless(h, "c-merge", { kind: "request_merge", review: "r-1" }), "go"),
+      h.supervisor.cardActions.act(
+        taskless(h, "c-merge", { kind: "request_merge", review: "r-1" }),
+        "go",
+      ),
     ).toEqual({});
     expect(
-      h.supervisor.act(taskless(h, "c-write", { kind: "request_write", ask: "ask-1" }), "go"),
+      h.supervisor.cardActions.act(
+        taskless(h, "c-write", { kind: "request_write", ask: "ask-1" }),
+        "go",
+      ),
     ).toEqual({});
     expect(settle).not.toHaveBeenCalled();
     expect(merge).not.toHaveBeenCalled();

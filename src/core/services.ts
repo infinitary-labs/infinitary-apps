@@ -403,7 +403,7 @@ export async function createServices(
   // Dev/e2e may lower the delta trigger (P5) to drive the delta carrier on
   // a small fleet; a packaged build always measures against the design's.
   // Task readers can run during async boot, before the supervisor restores the stack.
-  let cardStack: Pick<CrewSupervisor, "cards" | "browserReturned"> | undefined;
+  let cardStack: Pick<CrewSupervisor, "cards" | "cardActions"> | undefined;
   const taskProtocol = new TaskProtocol({
     tasks,
     timeline: { history: (id) => timeline.history(id) },
@@ -1084,7 +1084,7 @@ export async function createServices(
     panelsOn: () => preferences.get().panels.enabled,
     log: (message) => console.warn(`[infinitary] ${message}`),
   });
-  supervisor.setPluginConsent({
+  supervisor.hostOps.setPluginConsent({
     add: (id) => {
       void pluginInstaller.add(id).catch((error: unknown) => {
         broadcastEvent({
@@ -1107,7 +1107,7 @@ export async function createServices(
     tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
     broadcast: (event) => broadcastEvent(event),
   });
-  supervisor.setProjectSetup({
+  supervisor.hostOps.setProjectSetup({
     add: (offer, answers) => {
       void projectSetups.add(offer, answers).catch((error: unknown) => {
         broadcastEvent({
@@ -1124,7 +1124,7 @@ export async function createServices(
     raiseCard: (card) => supervisor.cards.raiseHostCard(card),
     tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
   });
-  supervisor.setProjectChange({
+  supervisor.hostOps.setProjectChange({
     apply: (arg) => {
       void projectChanges.apply(arg);
     },
@@ -1136,11 +1136,12 @@ export async function createServices(
   forges.attachCrew({ supervisor, tasks, broadcastEvent });
   // The quiet-crewmate watchdog (P4): a stalled turn surfaces instead of
   // spinning forever; escalation only, never an automatic interrupt.
-  supervisor.startWatchdog(ticker);
+  supervisor.watch.startWatchdog(ticker);
   placed.serve({
     adopt: (taskId) => supervisor.adoptPlaced(taskId),
     caughtUp: (taskIds) => supervisor.placedCaughtUp(taskIds),
-    jobExit: (taskId, exit) => supervisor.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
+    jobExit: (taskId, exit) =>
+      supervisor.watch.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
     reopened: (taskId) => supervisor.placedReopened(taskId),
     toolsNow: (taskId) => supervisor.toolsNow(taskId),
   });
@@ -1156,12 +1157,12 @@ export async function createServices(
   });
   // The boot sweep (R1): overdue parked decisions return, and time gates
   // that passed while the app was closed dispatch once, now.
-  void supervisor.sweepGates(ticker.now());
+  void supervisor.watch.sweepGates(ticker.now());
   // Fleet hygiene (interaction P0, WI-7): closed rows still holding a
   // worktree, and worktree directories no record explains, retire it with
   // their unlanded work saved first; leftover task branches are reported
   // as one feed line - never deleted.
-  void supervisor.reconcileFleetHygiene().catch((caught) => {
+  void supervisor.watch.reconcileFleetHygiene().catch((caught) => {
     console.warn("[fleet] reconciliation failed:", caught);
   });
   // Warm pool: returns a quit interrupted finish, and idle trees past the
@@ -1480,7 +1481,7 @@ export async function createServices(
       // is the `agent` stamp, never the label.
       firstmate.notifyOp(jobExitWake(exit, "firstmate"), "agent");
     } else {
-      supervisor.deliverJobResult(exit.ownerId, jobExitWake(exit, "crewmate"));
+      supervisor.watch.deliverJobResult(exit.ownerId, jobExitWake(exit, "crewmate"));
     }
   };
   // Boot recovery (bootRecovery.ts): safe mode and the jobs the last quit
@@ -1563,7 +1564,7 @@ export async function createServices(
     if (snapshot) homeQuota.syncNeedsReauthCards(snapshot, supervisor.cards);
     firstmate.onQuotaRefreshed();
     // A refresh may clear a quota-reset gate (R1).
-    void supervisor.sweepGates(ticker.now());
+    void supervisor.watch.sweepGates(ticker.now());
     reconcileActivation();
   };
   // The low-frequency liveness sweep (broker refresh posture): a

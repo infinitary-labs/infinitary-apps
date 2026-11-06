@@ -234,7 +234,7 @@ export type Witnesses = {
    * The task runs on a computer that runs work which is out of reach, or
    * back and not yet caught up (docs/helper.md, "Holding a conversation"):
    * its turn goes on there unseen, and its lane goes on once it is back
-   * (`CrewSupervisor.outOfReach`). Read like `accountHeld`.
+   * (`CrewFacts.outOfReach`). Read like `accountHeld`.
    */
   outOfReach?: boolean;
   /**

@@ -332,7 +332,7 @@ describe("a Claude-served Firstmate session, recorded and replayed (W1 S11)", ()
     await app.turnsSettled(3);
     const card = app.supervisor.cards.snapshot().find((open) => open.title === CARD.title);
     if (!card) throw new Error("the card never showed");
-    app.supervisor.act(card.id, "wait-for-fix");
+    app.supervisor.cardActions.act(card.id, "wait-for-fix");
     await app.turnsSettled(4);
     await app.closed();
     // The last turn's served stamp is in the sidecar before anything reads it.

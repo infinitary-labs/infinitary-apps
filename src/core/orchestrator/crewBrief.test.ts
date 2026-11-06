@@ -65,7 +65,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(asked).toHaveLength(1);
       expect(JSON.stringify(asked[0])).not.toContain("Care:");
       expect(tasks.get(taskId)?.prompt).not.toContain("Care:");
-      expect(supervisor.crewStatus(taskId)[0]).toMatchObject({ rigor: "standard" });
+      expect(supervisor.facts.crewStatus(taskId)[0]).toMatchObject({ rigor: "standard" });
       // Reviewed is only ever asked for - the user's words or the repo's
       // configured rigor - and its brief orders review before the PR.
       const askedFor = await supervisor.intake.commission({
@@ -77,8 +77,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       expect(tasks.get(askedFor.taskId)?.shape?.rigor).toBe("reviewed");
       expect(crewmate.promptCalls[1]).toContain(renderRigorSection("reviewed"));
-      expect(supervisor.crewStatus(askedFor.taskId)[0]).toMatchObject({ rigor: "reviewed" });
-      expect(supervisor.crewStatus(askedFor.taskId)[0]?.review).toBeUndefined();
+      expect(supervisor.facts.crewStatus(askedFor.taskId)[0]).toMatchObject({ rigor: "reviewed" });
+      expect(supervisor.facts.crewStatus(askedFor.taskId)[0]?.review).toBeUndefined();
     } finally {
       repo.dispose();
     }
@@ -168,7 +168,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const followup = tasks.graph.discoveredFrom(taskId)[0];
       expect(followup?.status).toBe("open");
-      expect(await supervisor.startQueuedNow(followup?.key ?? "")).toContain("Started");
+      expect(await supervisor.starts.startQueuedNow(followup?.key ?? "")).toContain("Started");
       await tick();
       expect(tasks.get(followup?.id ?? "")?.shape).toMatchObject({
         kind: "fix",
@@ -184,7 +184,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         why: "nobody knew",
       });
       const second = tasks.graph.discoveredFrom(taskId).find((row) => row.id !== followup?.id);
-      await supervisor.startQueuedNow(second?.key ?? "");
+      await supervisor.starts.startQueuedNow(second?.key ?? "");
       await tick();
       expect(tasks.get(second?.id ?? "")?.shape?.rigor).toBe("reviewed");
     } finally {
@@ -217,14 +217,14 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       prompt: "Goal: unflake the meter test",
       status: "queued",
     });
-    await supervisor.startQueuedNow("t-legacy");
+    await supervisor.starts.startQueuedNow("t-legacy");
     await tick();
     expect(tasks.get("t-legacy")?.shape).toMatchObject({
       kind_source: "legacy-judgment",
       rigor: "quick",
     });
     expect(legacyCrewmate.promptCalls[0]).toContain(renderRigorSection("quick"));
-    await supervisor.startQueuedNow("t-followup");
+    await supervisor.starts.startQueuedNow("t-followup");
     await tick();
     expect(tasks.get("t-followup")?.shape?.rigor).toBe("standard");
     expect(followupCrewmate.promptCalls[0]).toContain(renderRigorSection("standard"));
@@ -337,7 +337,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     const text = withPastedFiles("Read this", [{ name: "notes.csv", text: content }], messageFiles);
     tasks.capture.openAsk({ id: "text-message", text, messageFiles });
     tasks.capture.attachAsk("text-message", build.id, "tool:create_task");
-    await supervisor.startQueuedNow(build.key);
+    await supervisor.starts.startQueuedNow(build.key);
     await tick();
     const brief = crewmate.promptCalls[0] ?? "";
     const delivered = /Attached file notes.csv: (.+) \(the full copy/.exec(brief)?.[1] ?? "";
@@ -401,7 +401,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     tasks.capture.attachAsk("gone", build.id, "tool:update_task");
     rmSync(attachmentPath(tasks.capture.getAsk("gone")?.attachments[0] as AttachmentRef));
 
-    await supervisor.startQueuedNow(build.key);
+    await supervisor.starts.startQueuedNow(build.key);
     await tick();
     const brief = crewmate.promptCalls[0] ?? "";
     // Its own messages first, then its plan's; the same picture sent twice rides once.

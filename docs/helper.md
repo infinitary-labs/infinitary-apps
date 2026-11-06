@@ -605,7 +605,7 @@ Its parts sit beside it in `src/core/placed/`: what the crew reads of the comput
   A card picture's bytes are kept where this Mac's cards show their pictures from, and so is a project font's, only under the task's own id; a demo recording's pieces are written into a partial file there that becomes the recording only with its last piece, and a job's end reaches the task's lane as a local job's does.
   The events are taken once each and in order; the newest kept for good is saved at every model turn's end in `crewmates/<task>/placed/state.json`, so a restart here never counts a turn's usage twice.
 - **Out of reach.**
-  A task whose computer is out of reach, or back and not yet caught up, is held (`CrewSupervisor.outOfReach`): its lane is held as a cut-off holds one, a steer answers `recorded-held`, the quiet and two-hour checks skip it, and the idle ladder and the whose-turn sort read it as moving (`outOfReach`, `docs/report-sort.md`).
+  A task whose computer is out of reach, or back and not yet caught up, is held (`CrewFacts.outOfReach`): its lane is held as a cut-off holds one, a steer answers `recorded-held`, the quiet and two-hour checks skip it, and the idle ladder and the whose-turn sort read it as moving (`outOfReach`, `docs/report-sort.md`).
   A start waits for it too, and never runs here instead.
   After a minute without a computer that has work the feed says "Mac mini is out of reach.
   Its work on website catches up here when it is back.", and once every task there caught up, "Mac mini is back.
@@ -919,7 +919,7 @@ Before the computers have been compared, it waits for a compatible computer with
 The latest wait is stored on the record (`placement_wait`), so a restart keeps those words for Details and Start now, and Activity does not say the line again.
 A comparison never chooses for a task that changed while the computers were compared (`stillCurrent`); one whose model or basis changed is compared again at once on its record as it now stands, never told to wait for room (INF-83).
 One set to run elsewhere meanwhile starts where it now runs, also never told to wait for room (INF-409).
-A premium ask or escalation rung that no computer serves at its tier is held as a This computer task is: `AutomaticPlacement.choose` returns the held route (`floorHold`), and the supervisor gates the task on that tier's quota reset and wakes the first mate once (`holdForReasoning`), which may start it lower with `update_task start_now`.
+A premium ask or escalation rung that no computer serves at its tier is held as a This computer task is: `AutomaticPlacement.choose` returns the held route (`floorHold`), and the crew's starts gate the task on that tier's quota reset and wake the first mate once (`CrewStarts.holdForReasoning`), which may start it lower with `update_task start_now`.
 That gate's own check reads the home's quota only, while another computer may serve the tier first, so the gate sweep asks such a task's choice again on every pass (`heldOnItsLevel`); it starts wherever a computer serves its tier, and a repeated hold wakes nobody.
 A wait for a system no computer runs is told to the first mate at once (INF-720).
 When every computer's system is known and none runs a system the task requires, `AutomaticPlacement.choose` carries that on its wait as `unserved` (`unservedSystems`): this computer's, and each paired computer's that runs work, by a fresh reading, or by what it last said it runs while out of reach.

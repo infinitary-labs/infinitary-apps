@@ -155,7 +155,7 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
       "the session is gone",
     );
     expect(interrupts(h.tasks, taskId)).toEqual(["requested", "abort-failed"]);
-    expect(h.supervisor.crewStatus(taskId)[0]?.status).toBe("running");
+    expect(h.supervisor.facts.crewStatus(taskId)[0]?.status).toBe("running");
     expect(h.tasks.get(taskId)?.status).toBe("active");
     // Its turn ends as any turn does, never as the cancel that failed.
     crewmate.emit({ type: "turn_end", taskId });
@@ -182,7 +182,7 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     });
 
     // The quit's cut background job and a steer both reach it at once.
-    h.supervisor.deliverJobResult("t-left", "[job] the background wait ended");
+    h.supervisor.watch.deliverJobResult("t-left", "[job] the background wait ended");
     expect(await h.supervisor.steer.steerCrewmate("t-left", "carry on")).toBe("mid-turn");
     await vi.waitFor(() => expect(crewmate.promptCalls.length).toBeGreaterThan(0));
     // A second open of the task, now that it has its crewmate, is that crewmate.
@@ -319,7 +319,7 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     expect(confirm.mock.calls).toEqual([[taskId]]);
     // The computer says it still runs: nothing here ends the turn.
     await tick();
-    expect(h.supervisor.crewStatus(taskId)[0]?.status).toBe("running");
+    expect(h.supervisor.facts.crewStatus(taskId)[0]?.status).toBe("running");
   });
 
   it("stops every started task on a computer being removed, and leaves the rest", async () => {

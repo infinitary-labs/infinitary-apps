@@ -831,7 +831,7 @@ export class FirstmateContext {
   private rosterRows(): { id: string; value: Record<string, unknown> }[] {
     const tasks = this.options.tasks;
     const crew = new Map(
-      this.options.supervisor
+      this.options.supervisor.facts
         .crewStatus(undefined, { startedOnly: true })
         .map((entry) => [entry.taskId, entry]),
     );

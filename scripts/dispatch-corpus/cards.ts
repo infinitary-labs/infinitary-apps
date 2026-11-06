@@ -146,7 +146,7 @@ export function resolutionOf(
 
 /**
  * The effect the chosen action declared, and what the click therefore did.
- * A `settle` effect is host-owned teardown (`CrewSupervisor.act`): the
+ * A `settle` effect is host-owned teardown (`CardActions.act`): the
  * crewmate is never steered by it, so recording one as a steer invents
  * captain contact that never happened.
  */

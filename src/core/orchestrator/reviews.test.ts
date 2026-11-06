@@ -170,7 +170,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       expect(quickReviewer.promptCalls[0]).not.toContain("Care:");
       // The two builders and their two reviewers: four crewmates in all.
-      expect(supervisor.crewStatus()).toHaveLength(4);
+      expect(supervisor.facts.crewStatus()).toHaveLength(4);
     } finally {
       repo.dispose();
     }
@@ -490,8 +490,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const opened = tasks.get(builderId);
       expect(opened?.delivery).not.toHaveProperty("reviewTaskId");
       expect(opened && tasks.graph.verdictReviewOf(opened)).toBeUndefined();
-      expect(supervisor.crewStatus(builderId)[0]?.review).toBe(`review open (${review?.key})`);
-      expect(supervisor.crewStatus(reviewId)[0]?.review).toBe(
+      expect(supervisor.facts.crewStatus(builderId)[0]?.review).toBe(
+        `review open (${review?.key})`,
+      );
+      expect(supervisor.facts.crewStatus(reviewId)[0]?.review).toBe(
         `reviews ${tasks.get(builderId)?.key}`,
       );
       // No refusal of the host's: the review is a delivery child, never
@@ -503,7 +505,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // review takes, no nudge reaches the builder and no idle wake the
       // Firstmate - the verdict is what moves it.
       const promptsBeforeReview = builder.promptCalls.length;
-      supervisor.reconcileIdle(Date.now() + 200 * 60_000);
+      supervisor.watch.reconcileIdle(Date.now() + 200 * 60_000);
       await tick();
       expect(builder.promptCalls).toHaveLength(promptsBeforeReview);
       expect(sorts.filter((sort) => sort.rule.startsWith("idle"))).toEqual([]);
@@ -552,7 +554,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(findingsWake?.endsWith(` ${reviewFindingsNext()}`)).toBe(true);
       expect(builder.promptCalls[0]).toContain(renderRigorSection("reviewed"));
       expect(inbox.allFor("supervision")).toHaveLength(0);
-      expect(supervisor.crewStatus(builderId)[0]?.review).toBe(`review open (${review?.key})`);
+      expect(supervisor.facts.crewStatus(builderId)[0]?.review).toBe(
+        `review open (${review?.key})`,
+      );
       expect(tasks.graph.blockerRefusal(builderId)).toBeUndefined();
 
       // The builder's fix report names its open review, the verdict and
@@ -593,7 +597,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       ]);
       // The click returns to the builder as a message, and that turn ends
       // quietly: the builder is idle again while the reviewer re-reads.
-      supervisor.act(findingCard?.id ?? "", "keep");
+      supervisor.cardActions.act(findingCard?.id ?? "", "keep");
       await tick();
       expect(builder.promptCalls.at(-1)).toBe(
         'Card "Keep the Later copy?": the user chose "Keep the copy" (keep).',
@@ -652,7 +656,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       expect(passWake).toContain(`review task ${tasks.get(reviewId)?.key} is closed`);
       expect(passWake?.endsWith(` ${REVIEW_PASSED_NEXT}`)).toBe(true);
-      expect(supervisor.crewStatus(builderId)[0]?.review).toBe("review passed");
+      expect(supervisor.facts.crewStatus(builderId)[0]?.review).toBe("review passed");
       expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);
 
       // After the pass the builder pushes and opens the PR (the new
@@ -821,7 +825,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           .mock.calls.some(([args]) => args.taskId === reviewId),
       ).toBe(true);
       // Nothing lingers: the closed review is no longer a crew row.
-      expect(supervisor.crewStatus(reviewId)).toEqual([]);
+      expect(supervisor.facts.crewStatus(reviewId)).toEqual([]);
     } finally {
       repo.dispose();
     }
@@ -1098,7 +1102,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // Nothing to hold: failing toward the human costs no round, and the
       // review stays open.
       expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);
-      expect(supervisor.crewStatus(builderId)[0]?.review).toBe(
+      expect(supervisor.facts.crewStatus(builderId)[0]?.review).toBe(
         `review open (${tasks.get(reviewId)?.key})`,
       );
 

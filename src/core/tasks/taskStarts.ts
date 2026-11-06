@@ -183,7 +183,7 @@ export class TaskStarts {
    * work records when (`backlogSince`) and its idle ladder starts over, so
    * nothing the host sends wakes it until Start (`leaveBacklog`). Its
    * working copy, conversation, change and jobs stay. Stopping its turn is
-   * the caller's (`CrewSupervisor.moveToBacklog`). Queue it on started work
+   * the caller's (`HostOps.moveToBacklog`). Queue it on started work
    * is refused: only Start picks it up again.
    */
   setQueued(

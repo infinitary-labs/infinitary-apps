@@ -242,7 +242,7 @@ describe("FirstmateAgent answer delivery", () => {
     const first = f.tasks.capture.listAsks()[0];
     const prompts = f.session.prompts.length;
 
-    f.supervisor.act(`card-ask-${first?.id}`, "leave-it");
+    f.supervisor.cardActions.act(`card-ask-${first?.id}`, "leave-it");
     await tick();
     expect(f.session.prompts).toHaveLength(prompts);
     expect(noticeOf(f)).toBeUndefined();
@@ -262,7 +262,7 @@ describe("FirstmateAgent answer delivery", () => {
     await finish(g);
     await vi.waitFor(() => expect(noticeOf(g)).toBeDefined());
     const original = g.tasks.capture.listAsks()[0];
-    g.supervisor.act(`card-ask-${original?.id}`, "ask-again");
+    g.supervisor.cardActions.act(`card-ask-${original?.id}`, "ask-again");
     await vi.waitFor(() => expect(g.session.prompts).toHaveLength(3));
     expect(g.session.prompts[2]).toContain("[user]\nis PR 58 merged?");
     const again = g.tasks.capture.listAsks().at(-1);
@@ -298,7 +298,7 @@ describe("FirstmateAgent answer delivery", () => {
       });
     const cardId = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
     // The captain's choice lands while the reply that showed the card still runs.
-    f.supervisor.act(cardId, "find");
+    f.supervisor.cardActions.act(cardId, "find");
     expect(f.tasks.capture.getAsk(ask?.id ?? "")?.answerCardId).toBe(cardId);
     await finish(f, "Here is what I found.");
     await drained(f.session, 2);
@@ -333,7 +333,7 @@ describe("FirstmateAgent answer delivery", () => {
       ?.find((tool) => tool.name === "report")
       ?.run({ text: "The indexer holds the memory.", summary: "Found the indexer." });
     const answer = f.supervisor.cards.openCardsFor(work?.id ?? "")[0]?.id ?? "";
-    f.supervisor.act(answer, "pause");
+    f.supervisor.cardActions.act(answer, "pause");
     expect(f.tasks.capture.getAsk(ask?.id ?? "")?.answerCardId).toBe(answer);
     expect(retries(f)).toEqual([]);
     expect(noticeOf(f)).toBeUndefined();
@@ -416,7 +416,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(retries(f)).toHaveLength(1);
 
     // Leave it ends the message: naming it again is refused as ended.
-    f.supervisor.act(notice, "leave-it");
+    f.supervisor.cardActions.act(notice, "leave-it");
     notifyProse(f.db, f.agent, "[fm-op] another report on PR 58", "agent");
     await drained(f.session, 4);
     await expect(
@@ -589,7 +589,7 @@ describe("FirstmateAgent answer delivery", () => {
       const original = f.tasks.capture.listAsks()[0];
       expect(original?.attachments).toHaveLength(2);
 
-      f.supervisor.act(`card-ask-${original?.id}`, "ask-again");
+      f.supervisor.cardActions.act(`card-ask-${original?.id}`, "ask-again");
       await vi.waitFor(() => expect(f.session.prompts).toHaveLength(3));
       expect(f.session.promptImages[2]).toEqual(images);
       const again = f.tasks.capture.listAsks().at(-1);
@@ -639,7 +639,7 @@ describe("FirstmateAgent answer delivery", () => {
       if (condition === "missing") rmSync(attachmentPath(attachment));
       else writeFileSync(attachmentPath(attachment), Buffer.from(pngImage.data, "base64"));
 
-      f.supervisor.act(`card-ask-${original?.id}`, "ask-again");
+      f.supervisor.cardActions.act(`card-ask-${original?.id}`, "ask-again");
       await tick();
       expect(f.session.prompts).toHaveLength(2);
       expect(f.tasks.capture.listAsks()).toHaveLength(1);
@@ -737,7 +737,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(states(f)).toEqual(["held"]);
     expect(f.supervisor.cards.snapshot().map((card) => card.id)).toEqual(["card-fm-turn-failure"]);
     expect(retries(f)).toEqual([]);
-    f.supervisor.act("card-fm-turn-failure", "retry-firstmate");
+    f.supervisor.cardActions.act("card-fm-turn-failure", "retry-firstmate");
     await tick();
     expect(f.session.prompts).toHaveLength(2);
     expect(f.session.prompts[1]).toContain("[user]\nhello");
@@ -754,7 +754,7 @@ describe("FirstmateAgent answer delivery", () => {
       body: "<p>A or B.</p>",
       actions: [{ id: "a", label: "A", default: true }],
     });
-    f.supervisor.replyToCard(cardId, "why A?");
+    f.supervisor.cardActions.replyToCard(cardId, "why A?");
     await drained(f.session, 1);
     await finish(f, "A keeps the queue in order.");
     expect(f.supervisor.cards.thread(cardId).messages.map((message) => message.who)).toContain(
@@ -764,7 +764,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.session.prompts).toHaveLength(1);
 
     // A reply the turn answered with nothing is retried, under the same card.
-    f.supervisor.replyToCard(cardId, "and why not B?");
+    f.supervisor.cardActions.replyToCard(cardId, "and why not B?");
     await drained(f.session, 2);
     await finish(f, "");
     await drained(f.session, 3);
@@ -856,7 +856,7 @@ it("recovers the complete accepted plan through the answer-close wake's task rea
     seedCards: [card],
   });
   try {
-    supervisor.act(cardId, "start-next", "chrome", { answers: fixture.answers });
+    supervisor.cardActions.act(cardId, "start-next", "chrome", { answers: fixture.answers });
     await tick();
     expect(session.prompts).toHaveLength(1);
     const served = session.prompts[0]!;
@@ -887,9 +887,9 @@ it("recovers the complete accepted plan through the answer-close wake's task rea
     session.resolveNextPrompt();
     await tick();
     // A second click cannot redeliver approval or start a second builder.
-    expect(supervisor.act(cardId, "start-next", "chrome", { answers: fixture.answers })).toEqual(
-      {},
-    );
+    expect(
+      supervisor.cardActions.act(cardId, "start-next", "chrome", { answers: fixture.answers }),
+    ).toEqual({});
     await tick();
     expect(session.prompts).toHaveLength(1);
   } finally {

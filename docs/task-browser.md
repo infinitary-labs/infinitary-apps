@@ -350,7 +350,7 @@ While the captain has control, the view shows `Returning control lets the crewma
 Command search's `Take or return browser control` runs the same control on the shown browser.
 An unsaved site offers an unticked `Remember my <site> sign-in on this computer`; a saved site shows `Sign-in saved on this computer · updates on return` and Manage, which opens Settings → General → Website sign-ins.
 `TaskBrowsers.returnControl` waits, at most ten seconds, for a load the captain started to finish, so a return during a reload hands back the loaded page; then every page starts a new book, so every older ref is refused, nothing from the captain's time is kept, the crewmate's next answer leads with a line saying control came back, and its fact carries `returned`, which the view's caption reads as `temporary · keeps what you signed in to until it stops`.
-The crewmate is woken once through its task's durable lane: `CrewSupervisor.browserReturned` steers the typed `browser-returned` wake (`docs/inbox.md`), named by the run, the browser and its count of returns, so the inbox queues each return once.
+The crewmate is woken once through its task's durable lane: `CardActions.browserReturned` steers the typed `browser-returned` wake (`docs/inbox.md`), named by the run, the browser and its count of returns, so the inbox queues each return once.
 The wake names the site, says the old refs are gone and to take a fresh look with `infinitary-browser-axi`, the command's home view, repeats what the crewmate said it would do next, and says returning gives the task the signed-in site, never permission to buy, pay or submit anything that matters.
 It carries none of the page itself, so nothing the captain signed in to is written to the inbox or the timeline; the crewmate reads the page in its own turn.
 Until its first command after the return, and through its first read, the view's row reads `fresh look at the page`.
@@ -374,7 +374,7 @@ Its open-browser action is the card's one way into the browser, since a door bes
 The record's Browser line reads `paused for your help`, and the view's row tints ember with the crewmate's reason and Take control.
 Waiting on the captain, the browser never stops for being unused, and the crewmate may withdraw the request with `infinitary-browser-axi stop`, which stops the browser.
 
-The open-browser action is the captain's own click on the card's chrome: `CrewSupervisor.act` refuses it from a body's frame, takes control of the browser the card's attachment names - a newer or older one is never taken - and hands the shell an effect that opens the view, where the row reads `finishing the crewmate's current action…` and then the captain's control.
+The open-browser action is the captain's own click on the card's chrome: `CardActions.act` refuses it from a body's frame, takes control of the browser the card's attachment names - a newer or older one is never taken - and hands the shell an effect that opens the view, where the row reads `finishing the crewmate's current action…` and then the captain's control.
 The card is answered by that click, as every action answers its card, and its crewmate is told nothing until the captain returns control.
 An app controlling this Mac from another never sends that click: the card stays on both Macs and says to do it on this Mac (`docs/view.md`, "A task's browser on a view").
 When the browser the card names is gone - it stopped, a newer one followed it, or it ended when the app quit - the click still answers the card and opens the view, whose line says so over whatever the task's browser is now ("From a card").
@@ -384,7 +384,7 @@ The steer never names the action, so a saved sign-in the host offered stays unna
 Leave waiting is an ordinary reply to the crewmate; it, a close and Hide leave the browser paused.
 
 The captain may take the browser from the record's Browser line instead, with Take control in the view, while the request card is still up.
-The captain's Return control then takes that card down (`CrewSupervisor.browserReturned`), so the captain comes back to no card: it asked for what the captain has done.
+The captain's Return control then takes that card down (`CardActions.browserReturned`), so the captain comes back to no card: it asked for what the captain has done.
 Only a request card naming the browser the captain returned goes, read off the task's browser fact (`attachmentStanding`); one naming an older browser stays, since its click tells its crewmate that browser is gone.
 Its crewmate hears only the return's one wake, never a choice the captain did not make.
 

@@ -23,9 +23,11 @@ import {
   run,
 } from "../scripts/replay-captain-session.ts";
 import type { CoreDispatch } from "../src/core/dispatcher.ts";
+import { CardActions } from "../src/core/orchestrator/cardActions.ts";
 import { CardService } from "../src/core/orchestrator/cardService.ts";
 import { CrewSupervisor } from "../src/core/orchestrator/crewSupervisor.ts";
 import { FirstmateAgent } from "../src/core/orchestrator/firstmateAgent.ts";
+import { CrewStarts } from "../src/core/orchestrator/starts.ts";
 import { createAppTools } from "../src/core/pi/appTools.ts";
 import { FIRSTMATE_TOOLS } from "../src/core/session/tools.ts";
 import { SessionRecordStore } from "../src/core/storage/sessionRecordStore.ts";
@@ -308,7 +310,7 @@ describe("the plan-to-build handoff, on the real FI3-309 to FI3-310 recording", 
       recorded_thread_replies: 1,
       skipped_thread_replies: 0,
     });
-    const replies = vi.spyOn(CrewSupervisor.prototype, "replyToCard");
+    const replies = vi.spyOn(CardActions.prototype, "replyToCard");
     const lines = vi.spyOn(CardService.prototype, "addMessage");
     const reports = vi.spyOn(TaskTurns.prototype, "recordReport");
     try {
@@ -423,7 +425,7 @@ describe("the plan-to-build handoff, on the real FI3-309 to FI3-310 recording", 
 
   it("fails the gate when the host stops starting planned work on request", async () => {
     const refuse = vi
-      .spyOn(CrewSupervisor.prototype, "startQueuedNow")
+      .spyOn(CrewStarts.prototype, "startQueuedNow")
       .mockImplementation(async () => "Cannot start this task now.");
     try {
       const report = await replaySession(fixture("oct01-handoff-start"));
@@ -596,7 +598,7 @@ describe("recorded task card retirements", () => {
         ...options,
         card: { resolved_at: CLOSED + options.offset },
       });
-      const choices = vi.spyOn(CrewSupervisor.prototype, "act");
+      const choices = vi.spyOn(CardActions.prototype, "act");
       try {
         const report = await replaySession(discoverSources({ name: "retirement", root }));
         expect(choices).not.toHaveBeenCalled();
@@ -623,7 +625,7 @@ describe("recorded task card retirements", () => {
     { name: "another task's close", card: { task_id: "another-task" } },
   ])("keeps $name on the admission path", async ({ name: _name, ...options }) => {
     const root = retirementRecording(options);
-    const choices = vi.spyOn(CrewSupervisor.prototype, "act");
+    const choices = vi.spyOn(CardActions.prototype, "act");
     try {
       const report = await replaySession(discoverSources({ name: "choice", root }));
       // This is the admission safeguard's own witness, not sep14-real's

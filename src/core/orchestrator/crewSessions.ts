@@ -174,7 +174,7 @@ export class CrewSessions {
     task: TaskRuntime,
     session: ModelSession,
     began: string,
-    machine = this.core.machineOf(task.id),
+    machine = this.core.facts.machineOf(task.id),
   ): void {
     task.conversationBegan = began;
     const token = crewmateResumeToken(session.resume());
@@ -313,7 +313,7 @@ export class CrewSessions {
       await this.core.options.workspace.removeTaskWorktree(task.workspace).catch(() => {});
     }
     this.core.cards.scheduleBroadcast();
-    this.core.broadcastCrewCounts();
+    this.core.facts.broadcastCrewCounts();
   }
 
   /**
@@ -341,7 +341,7 @@ export class CrewSessions {
     sha256: string,
   ): Promise<{ file: string; path: string }> {
     const file = handoverFileName(name, sha256);
-    const machine = this.core.machineOf(taskId);
+    const machine = this.core.facts.machineOf(taskId);
     if (machine === LOCAL_MACHINE_ID)
       return {
         file,
@@ -366,7 +366,7 @@ export class CrewSessions {
     const record = this.core.options.tasks.get(taskId);
     if (!record || record.status !== "active")
       return "this task is not running, so it has no hand-over folder to save into.";
-    const machine = this.core.machineOf(taskId);
+    const machine = this.core.facts.machineOf(taskId);
     if (machine === LOCAL_MACHINE_ID) return undefined;
     const machines = this.core.options.machines;
     if (machines?.sourceFile && machines.takesOutsideFiles?.(machine)) return undefined;
@@ -526,7 +526,7 @@ export class CrewSessions {
     // move to a sibling (transcript intact) if it died or was removed.
     const previousProvider = this.core.options.router?.servedProvider(taskId);
     const custom = previousProvider && isCustomApiProvider(previousProvider);
-    const machine = this.core.machineOf(record.id);
+    const machine = this.core.facts.machineOf(record.id);
     if (
       machine === LOCAL_MACHINE_ID &&
       custom &&
@@ -604,7 +604,7 @@ export class CrewSessions {
       unreadSteers: [],
       openReads: new OpenReads(this.core.now),
     };
-    const livePersonal = this.core.isPersonalTask(record.id)
+    const livePersonal = this.core.facts.isPersonalTask(record.id)
       ? this.core.options.personal
       : undefined;
     // Register before opening the session: a resumed provider can carry on
@@ -622,7 +622,7 @@ export class CrewSessions {
           ...(move
             ? { model: move.model, thinkingLevel: move.thinkingLevel }
             : this.reopenedOn(record)),
-          ...this.core.crewmateHooks(task, livePersonal),
+          ...this.core.toolHooks.crewmateHooks(task, livePersonal),
         },
         attachment.accountId,
         record.model ?? undefined,
@@ -634,7 +634,7 @@ export class CrewSessions {
     }
     task.session = session;
     this.endIfLetGo(task);
-    task.unsubscribe = await this.core.follow(task, session);
+    task.unsubscribe = await this.core.toolHooks.follow(task, session);
     this.endIfLetGo(task);
     // A moved task's record names the conversation it opened now, so a quit
     // before its first turn ends reopens this one.
@@ -659,7 +659,7 @@ export class CrewSessions {
       // starts one now.
       this.core.options.tasks.turns.markIdle(record.id);
     }
-    this.core.broadcastCrewCounts();
+    this.core.facts.broadcastCrewCounts();
     return task;
   }
 
@@ -751,10 +751,10 @@ export class CrewSessions {
             status: "cancelled",
             title: record.title,
           });
-          this.core.broadcastCrewCounts();
+          this.core.facts.broadcastCrewCounts();
           // As `finish` does: the record may be what a queued row, or an
           // active task's wait (FI3-250), is waiting on.
-          void this.core.sweepGates(this.core.now());
+          void this.core.watch.sweepGates(this.core.now());
         } else {
           this.recordInterrupt(taskId, mode, source, "no-turn");
         }
@@ -880,7 +880,7 @@ export class CrewSessions {
       // Saying so is the whole point of recording it visibly - on the task's
       // own timeline, which keeps the guidance, and as one feed line; never
       // a Firstmate wake about a task that is closing (WI-5).
-      this.core.recordUndeliveredGuidance(
+      this.core.watch.recordUndeliveredGuidance(
         task.id,
         task.title,
         `the task ${status} first`,
@@ -927,9 +927,9 @@ export class CrewSessions {
       title: task.title,
       ...(error ? { error } : {}),
     });
-    this.core.broadcastCrewCounts();
+    this.core.facts.broadcastCrewCounts();
     // A finished task may be the gate a queued row waits on (R1).
-    void this.core.sweepGates(this.core.now());
+    void this.core.watch.sweepGates(this.core.now());
   }
 
   /** Stop a task's live crewmate: its turn aborted, its runtime gone. */
@@ -1066,7 +1066,7 @@ export class CrewSessions {
       via,
       decision: null,
       ...(panel ? { panel } : {}),
-    }).catch((caught: unknown) => this.core.reportCardEffectFailure(taskId, caught));
+    }).catch((caught: unknown) => this.core.hostOps.reportCardEffectFailure(taskId, caught));
   }
 
   /**
@@ -1107,7 +1107,7 @@ export class CrewSessions {
       this.finish(task, "cancelled");
     };
     for (const taskId of started) {
-      if (this.core.tasks.has(taskId) && this.core.outOfReach(taskId)) {
+      if (this.core.tasks.has(taskId) && this.core.facts.outOfReach(taskId)) {
         stopHere(taskId);
         continue;
       }

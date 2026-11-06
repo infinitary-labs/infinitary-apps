@@ -109,10 +109,10 @@ describe("a task that runs on a computer that runs work", () => {
       const ask = await endTurnWithJob(at, "t-job-named");
       const home = at.home();
       expect(ask).toContain(quoted("sleep 600"));
-      expect(home.supervisor.crewStatus("t-job-named")[0]?.job).toMatch(/: sleep 600$/);
+      expect(home.supervisor.facts.crewStatus("t-job-named")[0]?.job).toMatch(/: sleep 600$/);
       // Past the bound, the first mate hears of the same job.
       const wakes = home.wakes.length;
-      home.supervisor.reconcileIdle(now() + JOB_BOUND_MS);
+      home.supervisor.watch.reconcileIdle(now() + JOB_BOUND_MS);
       expect(
         home.wakes.slice(wakes).find((wake) => wake.facts?.kind === "job-bound")?.facts,
       ).toMatchObject({ kind: "job-bound", command: "sleep 600" });

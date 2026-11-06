@@ -164,7 +164,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         ref: taskId,
       });
     },
-    crewStatus: (taskId) => supervisor.crewStatus(taskId),
+    crewStatus: (taskId) => supervisor.facts.crewStatus(taskId),
     moveTask: async (taskId, computer, keep) => {
       const done =
         computer === null

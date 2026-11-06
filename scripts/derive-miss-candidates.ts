@@ -314,7 +314,7 @@ function wakeIncludes(wake: string, needle: string, also: string): boolean {
 
 /**
  * The spec's "captain steer/interrupt" vs "captain-resolved card", grounded
- * in `CrewSupervisor.act` and read off the card's OWN declared actions.
+ * in `CardActions.act` and read off the card's OWN declared actions.
  *
  * Only one branch of act() ever reaches the crewmate as a steering message:
  * a chosen action with NO effect on a card that has a task. An action

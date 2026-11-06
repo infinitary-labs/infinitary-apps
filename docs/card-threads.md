@@ -189,7 +189,7 @@ The first mate's tool count is unchanged at 24
 ## First mate card threads (phase 2)
 
 A captain reply on the first mate's own card is a captain TURN about that card, not a steer.
-`cardTakesReplies` is true for a first mate author; `CrewSupervisor.replyToCard` files the captain's message and calls `converseAboutCard` (`FirstmateAgent.converse` with `aboutCardId`).
+`cardTakesReplies` is true for a first mate author; `CardActions.replyToCard` files the captain's message and calls `converseAboutCard` (`FirstmateAgent.converse` with `aboutCardId`).
 The about line replaces the maybe-hint:
 
 `about: card <id> (<presentation>) "<title>" - the captain replied in its thread as message <n>; answer it with an emit_card reply on this id naming answers_message <n>, since your closing words alone leave it open`
@@ -204,14 +204,14 @@ Contract v4.2 is unchanged; the wire bump is protocol 1.19.0 for images on `inf:
 
 One first mate card takes no reply: the welcome (FI3-1164, the captain's word: "for this particular card, let's disable "reply to this card" input box at the bottom. otherwise it's overwhelming"), so it draws neither the field nor Chat.
 The host marks it when it presents the note (`Card.replies` false, the `cards.replies` column; `addRecordedFirstmateNote(..., { replies: false })`), and `cardTakesReplies` reads it as no, whoever the author is.
-The window draws no field on it and refuses the Reply commands with "This card takes no reply"; `CrewSupervisor.replyToCard` refuses one with "takes no reply".
+The window draws no field on it and refuses the Reply commands with "This card takes no reply"; `CardActions.replyToCard` refuses one with "takes no reply".
 Its words send the captain to the message box under the card, so the first-run hint ends on a message sent from there (`docs/first-launch.md` "The welcome").
 Every other card keeps its row as its author allows.
 
 ### The stuck alert's reply row
 
 One host card takes a reply: the idle ladder's stuck alert (`card-stall-<task>`, INF-1670, the captain's word: "i would remove the "drop task" option and leave nuanced operations to the reply").
-The host names its answerer when it raises the card (`Card.answeredBy` "firstmate", the `cards.answered_by` column), and `cardTakesReplies`, the phone's `takesReplies` and `CrewSupervisor.replyToCard` read that field, never the id.
+The host names its answerer when it raises the card (`Card.answeredBy` "firstmate", the `cards.answered_by` column), and `cardTakesReplies`, the phone's `takesReplies` and `CardActions.replyToCard` read that field, never the id.
 A reply there is a captain turn about the card, the same as a reply on a first mate card, and the first mate answers it with an `emit_card` reply naming the message (`CardThreads.firstmateAnswers`, `cardThreads.ts`).
 It is never a thread the task's crewmate owes (`CardService.threadsAwaitingAuthor` leaves it out), so no nudge or reminder names it.
 While the answer is owed the alert stays up even if the task moves (`IdleLadder.withdrawStallCard`); once it lands, the next move takes the alert down as before.

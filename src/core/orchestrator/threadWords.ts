@@ -1,5 +1,5 @@
 /**
- * The feed's words around a card's thread (`crewSupervisor.ts`), in a plain
+ * The feed's words around a card's thread (`cardActions.ts`), in a plain
  * module so an e2e spec reads them from their owner (docs/e2e-contracts.md,
  * "Words come from their owner").
  */

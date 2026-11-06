@@ -506,7 +506,7 @@ describe("FirstmateAgent reply line", () => {
       body: "<p>A or B.</p>",
       actions: [{ id: "a", label: "A", default: true }],
     });
-    f.supervisor.replyToCard(cardId, "why A?");
+    f.supervisor.cardActions.replyToCard(cardId, "why A?");
     await drained(f.session, 1);
     await finish(f, "A keeps the queue in order.");
     expect(f.tasks.capture.lastTurn()?.reply).toEqual({

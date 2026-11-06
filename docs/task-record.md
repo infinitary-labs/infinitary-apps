@@ -69,7 +69,7 @@ A record export carries the binding's `conversation` on the task's line; an expo
 
 Four columns of the execution record (migration 45 added them to the task row, and migration 97 moved them) hold the idle ladder's durable state, written only through `TaskService` like every other column: `idle_since` (`markIdle` at every idle boundary, `endIdle` when a turn the ladder did not start begins), `recovery_rung`, `recovery_count` and `recovery_at` (`recordRecovery`).
 They are machinery, not a state change: no timeline event and no `updated_at`.
-What reads them is `CrewSupervisor.reconcileIdle` and the crew line's `stalled` fact (`docs/report-sort.md`, "The idle ladder").
+What reads them is `CrewWatch.reconcileIdle` and the crew line's `stalled` fact (`docs/report-sort.md`, "The idle ladder").
 
 ## Where a task runs
 

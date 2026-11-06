@@ -227,11 +227,11 @@ describe("new work", () => {
       ],
     });
     h.tasks.close(kid.id, { status: "done", reason: "finished", actor: "host" });
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
     expect(h.tasks.get(carded.id)?.status).toBe("open");
 
     h.supervisor.closeCard(cardId, { kind: "firstmate" });
-    await h.supervisor.sweepGates(Date.now());
+    await h.supervisor.watch.sweepGates(Date.now());
     expect(h.tasks.get(carded.id)).toMatchObject({ status: "done", closedReason: "finished" });
   });
 

@@ -367,7 +367,8 @@ function startHome(options: {
   placed.serve({
     adopt: (taskId) => supervisor.adoptPlaced(taskId),
     caughtUp: (taskIds) => supervisor.placedCaughtUp(taskIds),
-    jobExit: (taskId, exit) => supervisor.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
+    jobExit: (taskId, exit) =>
+      supervisor.watch.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
     reopened: (taskId) => supervisor.placedReopened(taskId),
     toolsNow: (taskId) => supervisor.toolsNow(taskId),
   });
@@ -577,10 +578,10 @@ async function world() {
   const tick = async (ms: number) => {
     clock.advance(ms);
     const now = clock.now();
-    home.supervisor.checkQuietTasks(now);
-    home.supervisor.reconcileIdle(now);
-    await home.supervisor.sweepGates(now);
-    await home.supervisor.sweepInbox(now);
+    home.supervisor.watch.checkQuietTasks(now);
+    home.supervisor.watch.reconcileIdle(now);
+    await home.supervisor.watch.sweepGates(now);
+    await home.supervisor.watch.sweepInbox(now);
     await settle();
     home.drainFirstmate();
   };
@@ -616,7 +617,7 @@ async function world() {
     /** A queued task for the Mac mini, dispatched now. */
     dispatch: async (id: string, title: string, prompt: string) => {
       seedTask(home.tasks, { id, title, prompt, status: "queued", deviceId });
-      await home.supervisor.dispatchQueuedTask(id);
+      await home.supervisor.starts.dispatchQueuedTask(id);
       await settle();
     },
     /** Holds back what the Mac mini tells unasked of its sign-ins until the returned call. */
@@ -716,7 +717,7 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     expect(feed(at)).toContain(
       "website header's next task waits for Mac mini's own Claude sign-in.",
     );
-    expect(await home.supervisor.startQueuedNow("t2")).toContain(
+    expect(await home.supervisor.starts.startQueuedNow("t2")).toContain(
       "waits for Mac mini's own Claude sign-in",
     );
 
@@ -824,7 +825,7 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     expect(home.tasks.get("t2")?.status).toBe("open");
     expect(feed(at).join("\n")).toContain("Mac mini's Claude plan's allowance");
     expect(feed(at).join("\n")).not.toContain("own Claude sign-in");
-    expect(await home.supervisor.startQueuedNow("t2")).toContain("plan's allowance");
+    expect(await home.supervisor.starts.startQueuedNow("t2")).toContain("plan's allowance");
 
     // Nothing goes there before the reset; at it, both go on by themselves.
     await at.ticks(55 * MINUTE, 5 * MINUTE);

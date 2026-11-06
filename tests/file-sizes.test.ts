@@ -15,7 +15,7 @@ import {
  * files.
  */
 describe("the size check", () => {
-  const SUPERVISOR = "src/core/orchestrator/crewSupervisor.ts";
+  const LISTED = "src/core/browser/taskBrowsers.ts";
   const WAKES = "src/core/orchestrator/wakes.ts";
   const WAITS = "scripts/main-thread-waits.ts";
 
@@ -26,7 +26,7 @@ describe("the size check", () => {
   });
 
   it("reads code and skips data, generated, vendored and fixture files", () => {
-    expect(isCodeFile(SUPERVISOR)).toBe(true);
+    expect(isCodeFile(LISTED)).toBe(true);
     expect(isCodeFile("ios/Infinitary/InfinitaryUITests/PhoneJourney.swift")).toBe(true);
     expect(isCodeFile("tests/e2e/mockProvider.ts")).toBe(true);
     for (const path of [
@@ -43,21 +43,21 @@ describe("the size check", () => {
   });
 
   it("passes a listed file over the ceiling and an unlisted one under it", () => {
-    expect(OVER_CEILING).toContain(SUPERVISOR);
+    expect(OVER_CEILING).toContain(LISTED);
     expect(OVER_CEILING).not.toContain(WAITS);
-    const sizes = { [SUPERVISOR]: 17380, [WAITS]: lineCount(readFileSync(WAITS, "utf8")) };
-    expect(sizeProblems(sizes, [SUPERVISOR])).toEqual([]);
+    const sizes = { [LISTED]: 17380, [WAITS]: lineCount(readFileSync(WAITS, "utf8")) };
+    expect(sizeProblems(sizes, [LISTED])).toEqual([]);
   });
 
   it("refuses an unlisted file that grows over the ceiling", () => {
-    const problems = sizeProblems({ [SUPERVISOR]: 17380, [WAITS]: SIZE_CEILING + 1 }, [SUPERVISOR]);
+    const problems = sizeProblems({ [LISTED]: 17380, [WAITS]: SIZE_CEILING + 1 }, [LISTED]);
     expect(problems).toHaveLength(1);
     expect(problems[0]).toMatch(new RegExp(`^${WAITS}: ${SIZE_CEILING + 1} lines`));
   });
 
   it("refuses an entry whose file came under the ceiling or left, so the list shrinks", () => {
-    const problems = sizeProblems({ [SUPERVISOR]: 17380, [WAKES]: SIZE_CEILING }, [
-      SUPERVISOR,
+    const problems = sizeProblems({ [LISTED]: 17380, [WAKES]: SIZE_CEILING }, [
+      LISTED,
       WAKES,
       "src/core/orchestrator/gone.ts",
     ]);

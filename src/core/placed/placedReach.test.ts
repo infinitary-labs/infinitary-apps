@@ -22,8 +22,8 @@ import {
 } from "../../../tests/helpers/scriptedClaudeContract";
 import { PlacedTasks } from "../helper/placedTasks";
 import { crewmateRenewedNote } from "../orchestrator/crewSession";
-import { QUIET_CARD_MS } from "../orchestrator/crewSupervisor";
 import { UNHEARD_END_NOTE } from "../orchestrator/crewTurns";
+import { QUIET_CARD_MS } from "../orchestrator/crewWatch";
 import { renderWake } from "../orchestrator/wakes";
 import { crewmatePlacedDir } from "../paths";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
@@ -107,7 +107,7 @@ describe("a task that runs on a computer that runs work", () => {
       { text: "Checking." },
     ]);
     const requests = api.requests.length;
-    home.supervisor.replyToCard(
+    home.supervisor.cardActions.replyToCard(
       card.id,
       "wait - do you mean worktrees? aren't we supposed to keep warm worktrees?",
     );
@@ -150,7 +150,7 @@ describe("a task that runs on a computer that runs work", () => {
       "recorded-held",
     );
     const before = kinds(home, "t-drop").length;
-    home.supervisor.checkQuietTasks(now() + 3 * 60 * 60 * 1000);
+    home.supervisor.watch.checkQuietTasks(now() + 3 * 60 * 60 * 1000);
     expect(kinds(home, "t-drop").slice(before)).not.toContain("note");
     const lines = () =>
       home.events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
@@ -211,7 +211,8 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
     const wakes = home.wakes.length;
     // Hours of its idle clock pass while that computer is gone.
-    for (const hours of [1, 2, 3]) home.supervisor.reconcileIdle(now() + hours * 60 * 60 * 1000);
+    for (const hours of [1, 2, 3])
+      home.supervisor.watch.reconcileIdle(now() + hours * 60 * 60 * 1000);
     expect(home.inbox.allFor("t-idle")).toEqual([]);
     expect(home.wakes.slice(wakes)).toEqual([]);
     expect(home.tasks.get("t-idle")?.recoveryRung ?? 0).toBe(0);
@@ -578,7 +579,7 @@ describe("a task that runs on a computer that runs work", () => {
           await at.restartComputer();
           await at.inReach(taskId);
         } else if (trigger === "quiet") {
-          home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
+          home.supervisor.watch.checkQuietTasks(now() + QUIET_CARD_MS);
         } else {
           await home.supervisor.sessions.interruptCrewmate(taskId, "interrupt");
         }
@@ -649,7 +650,7 @@ describe("a task that runs on a computer that runs work", () => {
             if (answer === "no answer") throw new Error("The computer did not answer.");
             return ask(device, channel, args);
           });
-        home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
+        home.supervisor.watch.checkQuietTasks(now() + QUIET_CARD_MS);
         await expect
           .poll(() => asked.mock.calls.some(([, channel]) => channel === "inf:session:roster"))
           .toBe(true);
@@ -699,7 +700,7 @@ describe("a task that runs on a computer that runs work", () => {
       // INF-2558: a steer reaches the turn the crewmate carries on by itself.
       await home.supervisor.steer.steerCrewmate(taskId, "Check the header too.");
       const asked = claude.served().length;
-      home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
+      home.supervisor.watch.checkQuietTasks(now() + QUIET_CARD_MS);
       await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Done reading.");
       // The turn goes on with the answer, and reads the steer in that same request.
       const answered = answeredReadText("tasks", QUIET_CARD_MS).split(":")[0] ?? "";
@@ -771,7 +772,7 @@ describe("a task that runs on a computer that runs work", () => {
       expect(home.tasks.get(taskId)?.activity).toBe("running");
       const wakes = home.wakes.length;
       const asked = vi.spyOn(home.devices, "ask");
-      home.supervisor.checkQuietTasks(now() + QUIET_CARD_MS);
+      home.supervisor.watch.checkQuietTasks(now() + QUIET_CARD_MS);
       await expect
         .poll(() => asked.mock.calls.some(([, channel]) => channel === "inf:session:roster"))
         .toBe(true);
@@ -848,7 +849,7 @@ describe("a task that runs on a computer that runs work", () => {
     // The lane runs it again there, in the conversation reopened from its record.
     never.open();
     ahead = 10 * 60_000;
-    await home.supervisor.sweepInbox(now());
+    await home.supervisor.watch.sweepInbox(now());
     await expect
       .poll(() => home.tasks.get("t-computer")?.outcome)
       .toBe("Picked the footer up again.");

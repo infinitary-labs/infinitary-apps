@@ -33,7 +33,6 @@ export const OVER_CEILING: readonly string[] = [
   "src/core/browser/taskBrowsers.test.ts",
   "src/core/browser/taskBrowsers.ts",
   "src/core/orchestrator/crewSupervisor.test.ts",
-  "src/core/orchestrator/crewSupervisor.ts",
   "tests/e2e/task-browser.spec.ts",
   "tests/helpers/phoneHome.ts",
 ];

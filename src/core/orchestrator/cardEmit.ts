@@ -26,7 +26,7 @@ import { emittedSettleFacts } from "./settleCardFacts";
  * card is written through `CardThreads.contribute`, never here.
  */
 
-/** Firstmate-agent cards are id-prefixed so `CrewSupervisor.act` can route their answers. */
+/** Firstmate-agent cards are id-prefixed so `CardActions.act` can route their answers. */
 export const FIRSTMATE_CARD_PREFIX = "card-fm-";
 
 /** A decision (a card with actions) shows before a note; the host's own cards sit above both. */
@@ -103,7 +103,7 @@ export class CardEmits {
   /**
    * A card emitted by the Firstmate agent - its only user-facing output
    * channel (report section 4a). Decision answers route back to the agent
-   * as [fm-op] messages through `CrewSupervisor.act`.
+   * as [fm-op] messages through `CardActions.act`.
    */
   addFirstmateCard(input: EmittedCardInput): string {
     return this.upsertEmitted(input, {
@@ -213,7 +213,7 @@ export class CardEmits {
       );
     }
     // The click refuses every choice on a closed task's card
-    // (`CrewSupervisor.act`), so a card with actions on one never goes up.
+    // (`CardActions.act`), so a card with actions on one never goes up.
     const task = context.taskId ? this.host.tasks.get(context.taskId) : undefined;
     if (task && input.actions.length > 0 && TaskService.isClosed(task)) {
       throw new Error(

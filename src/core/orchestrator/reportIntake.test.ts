@@ -127,7 +127,7 @@ describe("what a crewmate reports", () => {
       }) as string,
     );
     if (!cardId) throw new Error("the card did not go up");
-    h.supervisor.replyToCard(cardId, "Why 8?");
+    h.supervisor.cardActions.replyToCard(cardId, "Why 8?");
     await tick();
     const captainLine = askedOn(h.supervisor, cardId);
     if (captainLine === undefined) throw new Error("the captain's line is missing");

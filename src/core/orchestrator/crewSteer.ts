@@ -196,7 +196,7 @@ export class CrewSteer {
         // Its computer is out of reach, or this one is being updated: kept
         // on the lane, and steered into the turn once it is back and caught
         // up, or served by the turn that carries it on.
-        if (this.core.outOfReach(taskId) || this.core.updates.heldForUpdate(taskId)) {
+        if (this.core.facts.outOfReach(taskId) || this.core.updates.heldForUpdate(taskId)) {
           const held = enqueue();
           this.recordSteer(taskId, message, source, "recorded-held", held);
           return "recorded-held";
@@ -221,7 +221,7 @@ export class CrewSteer {
         }
       }
       const pending = enqueue();
-      if (this.core.laneHeld(taskId) || (sentByHost && this.core.inBacklog(taskId))) {
+      if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
         // Kept on the lane until the account serves again, or the task leaves the backlog.
         this.recordSteer(taskId, message, source, "recorded-held", pending);
         return "recorded-held";
@@ -244,7 +244,7 @@ export class CrewSteer {
     }
     if (this.core.sessions.retiredProviderOf(taskId)) throw new Error(retiredResumeText(taskId));
     const resumeId = enqueue();
-    if (this.core.laneHeld(taskId) || (sentByHost && this.core.inBacklog(taskId))) {
+    if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
       this.recordSteer(taskId, message, source, "recorded-held", resumeId);
       return "recorded-held";
     }

@@ -309,7 +309,8 @@ function startHome(options: {
   placed.serve({
     adopt: (taskId) => supervisor.adoptPlaced(taskId),
     caughtUp: (taskIds) => supervisor.placedCaughtUp(taskIds),
-    jobExit: (taskId, exit) => supervisor.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
+    jobExit: (taskId, exit) =>
+      supervisor.watch.deliverJobResult(taskId, jobExitWake(exit, "crewmate")),
     reopened: (taskId) => supervisor.placedReopened(taskId),
     toolsNow: (taskId) => supervisor.toolsNow(taskId),
   });
@@ -460,7 +461,7 @@ async function world(options: {
         status: "queued",
         deviceId,
       });
-      await home.supervisor.dispatchQueuedTask(id);
+      await home.supervisor.starts.dispatchQueuedTask(id);
       expect(home.tasks.get(id)?.status).toBe("active");
     },
   };

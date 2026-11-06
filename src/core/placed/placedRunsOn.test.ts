@@ -87,8 +87,8 @@ describe("a project that runs on a computer that runs work", () => {
     // Out of reach: the task waits as queued work, placed there, and the
     // feed says so once however often the sweep looks.
     seedTask(home.tasks, { id: "t-next", title: "footer", status: "queued", repoId: repo.id });
-    await home.supervisor.dispatchQueuedTask("t-next");
-    await home.supervisor.dispatchQueuedTask("t-next");
+    await home.supervisor.starts.dispatchQueuedTask("t-next");
+    await home.supervisor.starts.dispatchQueuedTask("t-next");
     expect(home.tasks.get("t-next")).toMatchObject({
       status: "open",
       deviceId: at.deviceId,
@@ -98,15 +98,15 @@ describe("a project that runs on a computer that runs work", () => {
     expect(waits()).toEqual([
       "home's next task waits for Builder. It never runs on this computer instead.",
     ]);
-    expect(await home.supervisor.startQueuedNow("t-next")).toBe(
+    expect(await home.supervisor.starts.startQueuedNow("t-next")).toBe(
       `${home.tasks.get("t-next")?.key} "footer" waits for Builder, which is out of reach. It never runs on this computer instead.`,
     );
     expect(home.tasks.get("t-next")?.status).toBe("open");
 
     // A day later the feed says it once more, with the way to run it here.
     ahead += 24 * 60 * 60 * 1000;
-    await home.supervisor.dispatchQueuedTask("t-next");
-    await home.supervisor.dispatchQueuedTask("t-next");
+    await home.supervisor.starts.dispatchQueuedTask("t-next");
+    await home.supervisor.starts.dispatchQueuedTask("t-next");
     expect(waits().slice(1)).toEqual([
       "Running as Builder has been out of reach for a day. home's next task still waits.",
     ]);
@@ -121,7 +121,7 @@ describe("a project that runs on a computer that runs work", () => {
     await home.listen();
     await at.inReach("t-next");
     // Its coming back runs the ready sweep, which starts the task.
-    await home.supervisor.dispatchQueuedTask("t-next");
+    await home.supervisor.starts.dispatchQueuedTask("t-next");
     await expect.poll(() => home.tasks.get("t-next")?.branch).toBe("fm/task-t-next");
     expect(home.tasks.get("t-next")).toMatchObject({
       status: "active",
@@ -142,7 +142,7 @@ describe("a project that runs on a computer that runs work", () => {
     // Moved back here: the started task stays there, and the next one starts here.
     home.repos.setRunsOn(repo.id, null);
     seedTask(home.tasks, { id: "t-after", title: "header", status: "queued", repoId: repo.id });
-    await home.supervisor.dispatchQueuedTask("t-after");
+    await home.supervisor.starts.dispatchQueuedTask("t-after");
     expect(home.tasks.get("t-next")?.deviceId).toBe(at.deviceId);
     expect(home.tasks.get("t-after")?.deviceId ?? null).toBeNull();
     expect(home.tasks.get("t-after")?.gate?.reason).toBe(
@@ -172,7 +172,7 @@ describe("a project that runs on a computer that runs work", () => {
 
     // The captain sets it to run here before it starts: it starts here.
     home.repos.setRunsOn(repo.id, null);
-    await home.supervisor.dispatchQueuedTask(taskId);
+    await home.supervisor.starts.dispatchQueuedTask(taskId);
     expect(home.tasks.get(taskId)?.deviceId ?? null).toBeNull();
     // This test's home keeps no working copies, so the start here is refused there.
     expect(home.tasks.get(taskId)?.gate?.reason).toBe(
@@ -188,7 +188,7 @@ describe("a project that runs on a computer that runs work", () => {
       "notes: Kept on this computer only, so its tasks run here.",
     );
     seedTask(home.tasks, { id: "t-notes", title: "notes", status: "queued", repoId: repo.id });
-    await home.supervisor.dispatchQueuedTask("t-notes");
+    await home.supervisor.starts.dispatchQueuedTask("t-notes");
     // It started here: this test's home keeps no working copies of its own,
     // so this Mac's workspace refusing to make one is the start here.
     expect(home.tasks.get("t-notes")?.deviceId ?? null).toBeNull();
@@ -319,7 +319,7 @@ describe("a task's own Runs on", () => {
       label: "This computer",
       source: "project",
     });
-    await home.supervisor.dispatchQueuedTask("t-here");
+    await home.supervisor.starts.dispatchQueuedTask("t-here");
     expect(home.tasks.get("t-here")?.deviceId ?? null).toBeNull();
     expect(home.tasks.get("t-here")?.gate?.reason).toBe(STARTED_HERE);
   });
@@ -343,19 +343,19 @@ describe("a task's own Runs on", () => {
     });
 
     // Out of reach, it waits as queued work, and the feed names the task.
-    await home.supervisor.dispatchQueuedTask("t-own");
-    await home.supervisor.dispatchQueuedTask("t-own");
+    await home.supervisor.starts.dispatchQueuedTask("t-own");
+    await home.supervisor.starts.dispatchQueuedTask("t-own");
     expect(home.tasks.get("t-own")).toMatchObject({ status: "open", deviceId: at.deviceId });
     const waits = () => feed(home).filter((line) => line.includes('"footer"'));
     expect(waits()).toEqual([
       '"footer" waits for Builder. It never runs on this computer instead.',
     ]);
-    expect(await home.supervisor.startQueuedNow("t-own")).toBe(
+    expect(await home.supervisor.starts.startQueuedNow("t-own")).toBe(
       `${recordOf(home, "t-own").key} "footer" waits for Builder, which is out of reach. It never runs on this computer instead.`,
     );
     ahead += 24 * 60 * 60 * 1000;
-    await home.supervisor.dispatchQueuedTask("t-own");
-    await home.supervisor.dispatchQueuedTask("t-own");
+    await home.supervisor.starts.dispatchQueuedTask("t-own");
+    await home.supervisor.starts.dispatchQueuedTask("t-own");
     expect(waits().slice(1)).toEqual([
       'Running as Builder has been out of reach for a day. "footer" still waits.',
       'To run it here instead, ask your first mate to run "footer" on this computer.',
@@ -372,7 +372,7 @@ describe("a task's own Runs on", () => {
     // project: it follows its project again, which runs here, and starts here.
     expect(askRunsOn(home, "t-own", null)).toBe("Runs on: This computer (Project setting)");
     expect(home.tasks.get("t-own")?.shape?.runs_on_ask).toBeUndefined();
-    await home.supervisor.dispatchQueuedTask("t-own");
+    await home.supervisor.starts.dispatchQueuedTask("t-own");
     expect(home.tasks.get("t-own")?.deviceId ?? null).toBeNull();
     expect(home.tasks.get("t-own")?.gate?.reason).toBe(STARTED_HERE);
   });
@@ -389,7 +389,7 @@ describe("a task's own Runs on", () => {
       source: "project",
     });
     expect(askRunsOn(home, "t-stays", "this-mac")).toBe("Runs on: This computer (This task)");
-    await home.supervisor.dispatchQueuedTask("t-stays");
+    await home.supervisor.starts.dispatchQueuedTask("t-stays");
     expect(home.tasks.get("t-stays")?.deviceId ?? null).toBeNull();
     expect(home.tasks.get("t-stays")?.gate?.reason).toBe(STARTED_HERE);
   });
@@ -419,7 +419,7 @@ describe("a task's own Runs on", () => {
       deviceId: at.deviceId,
     });
     const held = holdNext(home.placed, "served");
-    const starting = home.supervisor.dispatchQueuedTask("t-moved");
+    const starting = home.supervisor.starts.dispatchQueuedTask("t-moved");
     await held.reached;
     expect(askRunsOn(home, "t-moved", "this-mac")).toBe("Runs on: This computer (This task)");
     held.release();
@@ -457,7 +457,7 @@ describe("a task's own Runs on", () => {
       repoId: repo.id,
     });
     const held = holdNext(home.placed, "signInsOf");
-    const starting = home.supervisor.dispatchQueuedTask("t-github");
+    const starting = home.supervisor.starts.dispatchQueuedTask("t-github");
     await held.reached;
     expect(askRunsOn(home, "t-github", "this-mac")).toBe("Runs on: This computer (This task)");
     held.release();
@@ -543,7 +543,7 @@ describe("a task's own Runs on", () => {
       repoId: repo.id,
       shape: own,
     });
-    const again = home.supervisor.startAgain("t-dropped");
+    const again = home.supervisor.starts.startAgain("t-dropped");
     if (!again.ok) throw new Error(again.text);
     expect(again.task.shape?.runs_on_ask).toBe(at.deviceId);
     expect(await again.started).toContain("waits for Builder, which is out of reach");

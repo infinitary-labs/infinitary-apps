@@ -73,7 +73,7 @@ It stays due one grace after its cut attempt began, so the next launch's sweep d
   An update of this computer's own copy writes one before it stops the turn, naming no computer, and leaves the turn's input where it was: the words the turn read are in its conversation, and words its model never took go back on the lane (`docs/alpha.md`, "Saving work before an update").
   It is a turn of its own, served after a renewed conversation's reason and before the rest (`laneTurnText`), and never steered into a running turn (`deliverableRows`).
 - **The launch names the interrupted crew, without claiming recovery before observing it.**
-  Before the boot sweep, one feed line names each unfinished task whose lane holds a cut row or a `turn-resumed` row, and a turn still running on another computer (`CrewSupervisor.announceCarryOn`); a launch with none says nothing.
+  Before the boot sweep, one feed line names each unfinished task whose lane holds a cut row or a `turn-resumed` row, and a turn still running on another computer (`CrewWatch.announceCarryOn`); a launch with none says nothing.
   Each task keeps timestamped recovery observations as host notes on its existing timeline, protected from compaction by `journal`.
   The model taking in its input, a reply beginning or an observed continuation records that the crewmate carried on by itself; a withheld account, an unreachable computer, an unavailable conversation or a failed reopen records why it has not.
   Repeated observations of the same state write nothing, while a later automatic continuation records the changed outcome.
@@ -85,7 +85,7 @@ It stays due one grace after its cut attempt began, so the next launch's sweep d
 
 ## A lane of a started task in the backlog
 
-A started task that went back to the backlog (INF-2062; `docs/task-board.md`, "A started task in the backlog") keeps its lane until Start (`CrewSupervisor.inBacklog`).
+A started task that went back to the backlog (INF-2062; `docs/task-board.md`, "A started task in the backlog") keeps its lane until Start (`CrewFacts.inBacklog`).
 The host's own rows - a job's result, a check's, a timed wait's end, a closed dependency, a cut turn's carry-on - wait there: a host steer answers `recorded-held`, the sweep skips the lane, and the reopen does not announce or carry its turn on.
 A steer the captain or the first mate sends still goes out, as a turn that opens with a line that the task waits in the backlog, and carries what waited with it.
 Start delivers what waited, with one line that the task left the backlog, in the same conversation.
@@ -103,7 +103,7 @@ The cut-off contract on crew lanes (W1 S8; `docs/quota.md`, "Typed cut-offs"): a
   The hold is a witness (`accountHeld`) of the crewmate's own turn only: the idle ladder neither nudges it nor wakes about it, but a card the first mate owes (a captain gate with no card up) is still owed, and its reminders still come.
   No new gate kind: the `quota-reset` gate clears only queued rows, and the lane predicate needs no sweep branch.
 - **A computer out of reach holds its lanes the same way.**
-  A task whose crewmate runs on a computer that runs work is held while that computer is out of reach or back and not yet caught up (`CrewSupervisor.outOfReach`, read inside the same `laneHeld`), on every path above; a steer to its running turn answers `recorded-held` too, and goes into that turn once it is back (`docs/helper.md`, "The home's side").
+  A task whose crewmate runs on a computer that runs work is held while that computer is out of reach or back and not yet caught up (`CrewFacts.outOfReach`, read inside the same `laneHeld`), on every path above; a steer to its running turn answers `recorded-held` too, and goes into that turn once it is back (`docs/helper.md`, "The home's side").
   The boot's `resetInFlight` leaves such a task's in-flight rows in flight, because its turn went on there; once that computer is back and caught up, a row no turn there took goes back on the lane.
 - **A task on another computer is held by that computer's own account.**
   Its crewmate runs on that computer's own sign-in (`docs/helper.md`, "Its own sign-ins"), so no cut-off on this Mac's accounts holds it.
@@ -208,7 +208,7 @@ The inbox row is the envelope `{v, origin, ref, facts, ways?, text?}`: `origin` 
   Reversible: dropping the table undoes migration 49.
   A host steer on a task lane can name one too (the check watch's, and a browser return's, by its run, browser and count of returns): `enqueueSteerOnce` records it with the row, about the task, and the emitter reads `woken` before it steers.
 - **A captain's Start is a wake (`captain-start`).**
-  Start, a drag to Working, Start again and a host card's start-task press hold the task as Starting (`CrewSupervisor.askFirstmateFirst`) and queue `captain-start {move: "start"}` on the first mate's lane with the press's `via` and `panel`.
+  Start, a drag to Working, Start again and a host card's start-task press hold the task as Starting (`HostOps.askFirstmateFirst`) and queue `captain-start {move: "start"}` on the first mate's lane with the press's `via` and `panel`.
   A held Start bypasses the operational wake-coalescing window, so an idle first mate reads it without the three-second batching delay.
   The first mate applies the standing directions that bear on the task with `update_task` (`direction` names each one on the history line), then `start_now`, which finishes the held Start as the captain's own.
   The inbox row is the saved copy: after a quit the next shared tick (`resumePendingStarts`) shows the task Starting again, and the row is redelivered as every in-flight row is.

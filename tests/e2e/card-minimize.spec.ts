@@ -10,14 +10,13 @@ import {
   PUT_ASIDE_REST,
 } from "../../src/renderer/src/design/cards/cardSizeWords";
 import { scratchDir } from "../helpers/scratchDirs";
-import { waitForFirstmateIdle } from "./crew";
 import { startDemo } from "./demo";
 import { hintOf } from "./desktop";
 import { cardBody } from "./frames";
+import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
-import { promptInput } from "./prompt";
 import { expandDock, nowFrame, pressRow, recordCard, recordFrame, showRecordTab } from "./rails";
 import {
   cardLeave,
@@ -216,13 +215,14 @@ test("legacy note-minimize requests keep the task or title row and retain visibi
         (card) => card.id === "week-note",
       )?.minimized,
     ).toBe(true);
-    await promptInput(page).fill(
+    // The ask ends on the first mate's answer, never on the character looking idle,
+    // which a relaunched first mate does before its turn starts.
+    await askFirstmate(
+      page,
       APP_CATALOG_PROMPT_MARKER +
         JSON.stringify({ action: "show-card", value: { cardId: "week-note" } }),
     );
-    await promptInput(page).press("Enter");
     await expect(shownCard(page, "Your weekly overview")).toBeVisible();
-    await waitForFirstmateIdle(page);
     // The current corner reads the note; no legacy minimized row remains.
     await shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
     await expect(nowFrame(page).getByRole("button", { name: /Your weekly overview/ })).toHaveCount(

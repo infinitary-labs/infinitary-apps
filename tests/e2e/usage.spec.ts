@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { USAGE_TASK_PAGE, usageCategoryValue } from "../../src/shared/usage";
 import { scratchDir } from "../helpers/scratchDirs";
-import { waitForFirstmateIdle } from "./crew";
+import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { promptInput } from "./prompt";
 import {
@@ -30,11 +30,8 @@ test("Usage shows the recorded model usage and keeps the chosen unit, all from t
     const usage = usageTab(page);
 
     await test.step("a Firstmate turn lands in the usage ledger", async () => {
-      const input = promptInput(page);
-      await input.click();
-      await input.fill("how much have we used");
-      await input.press("Enter");
-      await waitForFirstmateIdle(page);
+      // The turn's answer, never the character looking idle, which it does before the turn starts.
+      await askFirstmate(page, "how much have we used");
       await expect
         .poll(
           async () =>

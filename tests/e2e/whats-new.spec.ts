@@ -9,8 +9,8 @@ import { SettingsStore } from "../../src/core/storage/settingsStore";
 import type { Card } from "../../src/shared/cards";
 import type { ReleaseDelivery } from "../../src/shared/releaseTracking";
 import { scratchDir } from "../helpers/scratchDirs";
-import { waitForFirstmateIdle } from "./crew";
 import { HAS_APP_MENU } from "./desktop";
+import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -206,12 +206,13 @@ test("What's new brings the release note back from the Help menu, command search
     });
 
     await test.step("asking Firstmate brings the same note forward", async () => {
-      await promptInput(page).fill(
+      // The ask ends on the first mate's answer, never on the character looking idle,
+      // which it does before the turn starts.
+      await askFirstmate(
+        page,
         `${APP_CATALOG_PROMPT_MARKER}${JSON.stringify({ action: "show-whats-new", value: {} })}`,
       );
-      await promptInput(page).press("Enter");
       await expect(pastNote).toBeVisible();
-      await waitForFirstmateIdle(page);
       await page.keyboard.press("Escape");
       await expect(pastNote).toHaveCount(0);
     });

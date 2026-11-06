@@ -5,10 +5,9 @@ import { ACTIONS } from "../../src/shared/actions";
 import { runbookManifestSchema } from "../../src/shared/runbooks";
 import { RUNBOOK_VIEW_NOTE } from "../../src/shared/runbookWords";
 import { scratchDir } from "../helpers/scratchDirs";
-import { waitForFirstmateIdle } from "./crew";
+import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
-import { promptInput } from "./prompt";
 import { servedInstructions } from "./providerRequest";
 import { feedLine } from "./rails";
 import { settingRow } from "./settings";
@@ -49,27 +48,25 @@ test("runbook switches persist and the first mate uses the same named switch", a
     at = await launchApp({ withMockProvider: true, userDataDir, homeDir });
     const persisted = await at.page.evaluate(() => window.infinitary.settings.getRunbooks());
     expect(persisted.find((book) => book.id === workflows.id)?.enabled).toBe(false);
-    const input = promptInput(at.page);
-    await input.fill(
-      APP_CATALOG_PROMPT_MARKER +
-        JSON.stringify({ action: "runbook", value: { id: workflows.id, enabled: true } }),
-    );
-    await input.press("Enter");
+    // Each ask ends on the first mate's answer, never on the character looking idle:
+    // after a relaunch the character settles back to idle while the turn still waits
+    // for its session, before any served request this spec reads exists.
+    const ask = () =>
+      askFirstmate(
+        at.page,
+        APP_CATALOG_PROMPT_MARKER +
+          JSON.stringify({ action: "runbook", value: { id: workflows.id, enabled: true } }),
+      );
+    await ask();
     await expect(
       feedLine(at.page, ACTIONS.runbook.done({ name: workflows.name, enabled: true })),
     ).toBeVisible();
-    await waitForFirstmateIdle(at.page);
     const offPrompt = (at.mockProvider?.requestBodies() ?? [])
       .map(servedInstructions)
       .find((text) => text.includes("# Programs"));
     expect(offPrompt).toBeDefined();
     expect(offPrompt).not.toContain("# Common workflows");
-    await input.fill(
-      APP_CATALOG_PROMPT_MARKER +
-        JSON.stringify({ action: "runbook", value: { id: workflows.id, enabled: true } }),
-    );
-    await input.press("Enter");
-    await waitForFirstmateIdle(at.page);
+    await ask();
     expect(
       (at.mockProvider?.requestBodies() ?? []).some((body) =>
         servedInstructions(body).includes("# Common workflows"),

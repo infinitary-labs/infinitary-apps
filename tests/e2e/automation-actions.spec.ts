@@ -4,10 +4,9 @@ import { automationWords, Scheduler } from "../../src/core/orchestrator/schedule
 import { openDatabase } from "../../src/core/storage/db";
 import { ScheduleStore } from "../../src/core/storage/scheduleStore";
 import { scratchDir } from "../helpers/scratchDirs";
-import { waitForFirstmateIdle } from "./crew";
+import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
-import { promptInput } from "./prompt";
 import { feedLineOf } from "./rails";
 import { settingsSection } from "./settings";
 
@@ -71,12 +70,10 @@ test("Settings → Automation's changes and the first mate's take one path and n
         const list = await window.infinitary.automation.list();
         return Object.fromEntries(list.rules.map((rule) => [rule.id, rule.state]));
       });
-    const ask = async (action: string, value: unknown) => {
-      const input = promptInput(page);
-      await input.fill(APP_CATALOG_PROMPT_MARKER + JSON.stringify({ action, value }));
-      await input.press("Enter");
-      await waitForFirstmateIdle(page);
-    };
+    // Each ask ends on the first mate's answer, never on the character looking idle,
+    // which it does before the turn starts.
+    const ask = (action: string, value: unknown) =>
+      askFirstmate(page, APP_CATALOG_PROMPT_MARKER + JSON.stringify({ action, value }));
     const openAutomation = async () => {
       await page.getByRole("button", { name: "Settings", exact: true }).click();
       await page.getByRole("tab", { name: "Automation", exact: true }).click();

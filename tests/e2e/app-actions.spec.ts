@@ -274,11 +274,10 @@ test("presence requests reach Settings while sharing and purge stay yours and a 
   await boxLoginItems(app.app);
   try {
     const { page } = app;
-    const ask = async (action: string, value: unknown) => {
-      await promptInput(page).fill(APP_CATALOG_PROMPT_MARKER + JSON.stringify({ action, value }));
-      await promptInput(page).press("Enter");
-      await waitForFirstmateIdle(page);
-    };
+    // Each ask ends on the first mate's answer, never on the character looking idle,
+    // which it does before the turn starts: the board read after purge needs the turn done.
+    const ask = (action: string, value: unknown) =>
+      askFirstmate(page, APP_CATALOG_PROMPT_MARKER + JSON.stringify({ action, value }));
     await ask("start-at-login", { enabled: true });
     await expect
       .poll(() => page.evaluate(() => window.infinitary.presence.get()))

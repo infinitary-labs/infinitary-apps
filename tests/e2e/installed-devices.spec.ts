@@ -1,8 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { waitForFirstmateIdle } from "./crew";
+import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
-import { promptInput } from "./prompt";
 import { commandSearch, pressWindowKey } from "./windowKeys";
 
 /**
@@ -43,14 +42,14 @@ test("asking an installed Firstmate to connect a Mac offers its card", async () 
   const app = await launchApp({ packaged: true, withMockProvider: true });
   try {
     const { page } = app;
-    const input = promptInput(page);
-    await input.fill(
+    // The ask ends on the first mate's answer, never on the character looking idle,
+    // which it does before the turn starts.
+    await askFirstmate(
+      page,
       APP_CATALOG_PROMPT_MARKER +
         JSON.stringify({ action: "device-invite", value: { name: "MacBook Air" } }),
     );
-    await input.press("Enter");
     await expect(page.getByRole("button", { name: "Make a link", exact: true })).toBeVisible();
-    await waitForFirstmateIdle(page);
   } finally {
     await app.close();
   }

@@ -412,6 +412,7 @@ export async function startPhoneHome(
           [
             "inf:cards:act",
             "inf:cards:close",
+            "inf:cards:note-done",
             "inf:cards:reply",
             "inf:cards:seen",
             "inf:cards:seen-update",
@@ -754,8 +755,14 @@ export async function startPhoneHome(
         // INF-1558: the held/released wire states observed in INF-1557, through the real
         // card store, dispatcher and pinned connection. No crewmate timing or account is needed.
         case "POST held-card-fixture": {
+          // A note leaves through its own Got it; the corner only puts a card aside (INF-2794).
           for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch("inf:cards:close", [card.id]);
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
           core.services.supervisor.cards.raiseHostCard({
             id: "card-phone-readiness",
             title: "Keep the harbour entrance clear",
@@ -921,8 +928,14 @@ export async function startPhoneHome(
         }
         case "POST cards-fixture": {
           // INF-64 piece 4: actual stored cards, published requests and the existing view journey's promises.
+          // A note leaves through its own Got it; the corner only puts a card aside (INF-2794).
           for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch("inf:cards:close", [card.id]);
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
           const directory = join(userData, "crewmates", task.id, "cards");
           mkdirSync(directory, { recursive: true });
           const picture = `${task.id}-${"a".repeat(32)}.png`;
@@ -1165,8 +1178,14 @@ export async function startPhoneHome(
         }
         // INF-2565: a first mate card whose thread the captain is reading when the card is revised.
         case "POST flip-card": {
+          // A note leaves through its own Got it; the corner only puts a card aside (INF-2794).
           for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch("inf:cards:close", [card.id]);
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
           cardIDs.flip = core.services.supervisor.addFirstmateCard({
             id: "phone-flip",
             title: "Yes, crewmates on the Mac mini are waiting in its test line",
@@ -1437,8 +1456,14 @@ export async function startPhoneHome(
           break;
         // INF-2022: real owner, native sightings, exact same-offer answers and legacy fallback.
         case "POST shared-seen-fixture": {
+          // A note leaves through its own Got it; the corner only puts a card aside (INF-2794).
           for (const card of core.services.supervisor.cards.snapshot())
-            await core.dispatch("inf:cards:close", [card.id]);
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
           const cards = core.services.supervisor;
           cards.addFirstmateCard({
             id: "shared-leader",
@@ -1762,8 +1787,14 @@ export async function startPhoneHome(
           result = { ok: true };
           break;
         case "POST empty-cards":
+          // A note leaves through its own Got it; the corner only puts a card aside (INF-2794).
           for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch("inf:cards:close", [card.id]);
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
           result = { ok: true };
           break;
         case "POST stream-reset":
@@ -1902,8 +1933,14 @@ export async function startPhoneHome(
           await core.dispatch("inf:converse", [FM_SEAT_STEER_WORD]);
           provider.releaseHeldFirstmate();
           await until(() => !firstmateBusy);
+          // A note leaves through its own Got it; the corner only puts a card aside (INF-2794).
           for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch("inf:cards:close", [card.id]);
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
           result = { busy: firstmateBusy, held: provider.heldFirstmate() };
           observations.push({ check: "character-finished", result });
           break;

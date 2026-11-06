@@ -204,7 +204,7 @@ describe("an upgrade", () => {
     expect(f.releaseNotes().map((card) => card.id)).toEqual([id]);
 
     const note = f.cards().get(id ?? "");
-    if (note) f.cards().dismiss(note);
+    if (note) f.cards().pressNote(note);
     f.restart();
     expect(f.launch("0.1.27")).toBe("unchanged");
     expect(f.releaseNotes()).toEqual([]);
@@ -246,7 +246,7 @@ describe("a downgrade", () => {
     f.seed("0.1.25");
     f.launch("0.1.27");
     const first = f.top();
-    if (first) f.cards().dismiss(first);
+    if (first) f.cards().pressNote(first);
 
     expect(f.launch("0.1.26")).toBe("downgraded");
     expect(f.tracking().baseline?.version).toBe("0.1.26");
@@ -366,7 +366,7 @@ describe("a first installation", () => {
     expect(f.releaseNotes()).toEqual([]);
 
     const shown = f.cards().get(welcome);
-    if (shown) f.cards().dismiss(shown);
+    if (shown) f.cards().pressNote(shown);
     // The welcome was the only card: this version is the baseline, and no note follows it.
     expect(service.reconcile()).toBe("seeded");
     expect(service.awaitingWelcome).toBe(false);

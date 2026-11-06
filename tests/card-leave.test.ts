@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { cornerProblems } from "../scripts/card-leave";
+import { CARD_LEAVE } from "../src/shared/cardLeave";
 
 const docs = readFileSync("docs/card-authoring.md", "utf8");
 
@@ -40,7 +41,10 @@ it("rejects a second close caller and out-of-order documentation through the lin
   ]);
   expect(
     cornerProblems({
-      "docs/card-authoring.md": docs.replace("| `note` | Put aside | read |\n", ""),
+      "docs/card-authoring.md": docs.replace(
+        `| \`note\` | ${CARD_LEAVE.note.label} | ${CARD_LEAVE.note.operation} |\n`,
+        "",
+      ),
     }),
   ).toEqual([expect.stringContaining("corner rows must match")]);
 });

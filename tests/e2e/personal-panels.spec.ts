@@ -263,7 +263,7 @@ async function acceptNote(page: Page, mockProvider: MockProviderServer): Promise
       { id: expect.any(String), title: MOCK_PANEL_NOTE_TITLE, actions: [], answering: true },
     ]);
   const [note] = await notes();
-  await page.evaluate((id) => window.infinitary.cards.close(id), note?.id ?? "");
+  await page.evaluate((id) => window.infinitary.cards.noteDone(id), note?.id ?? "");
   await expect.poll(notes).toEqual([]);
   const answerRetrySent = mockProvider
     .requestBodies()

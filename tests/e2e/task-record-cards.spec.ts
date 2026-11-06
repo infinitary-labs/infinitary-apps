@@ -3,6 +3,7 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
 import { pastEndingWords } from "../../src/shared/pastCard";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
@@ -16,7 +17,7 @@ import {
   recordFrame,
   showRecordTab,
 } from "./rails";
-import { cardLeave, expectNoCard, shownCard } from "./stack";
+import { expectNoCard, noteDone, shownCard } from "./stack";
 
 /**
  * The Cards row (FI3-579 piece 1): a closed task's record lists every card it
@@ -166,7 +167,7 @@ test("a card still on the stage reads On the stage and its link focuses the live
   }
 });
 
-test("INF-1879: reading a note is quiet and its record keeps a focusable link", async () => {
+test("INF-2794: a note's Got it reads it quietly and its record keeps a focusable link", async () => {
   const userDataDir = scratchDir("infinitary-record-cards-cross-");
   const db = openDatabase(userDataDir);
   const tasks = new TaskService({ db, strict: true });
@@ -193,9 +194,9 @@ test("INF-1879: reading a note is quiet and its record keeps a focusable link", 
   try {
     const { page } = launched;
     await expect(shownCard(page, QUAY_TITLE)).toBeVisible();
-    await cardLeave(page).click();
+    await noteDone(page).click();
     await expectNoCard(page, QUAY_TITLE);
-    // The minimize corner reads the note without a close announcement or a task ending.
+    // Got it reads the note without a close announcement or a task ending.
     const said = noteLines(page, task.key).filter({ hasText: QUAY_TITLE });
     await expect(said).toHaveCount(0);
 
@@ -204,7 +205,9 @@ test("INF-1879: reading a note is quiet and its record keeps a focusable link", 
     await pressRow(page, task.key);
     await showRecordTab(page, "cards");
     const line = recordFrame(page).locator('[data-record-card="quay-note"]');
-    await expect(line).toContainText(pastEndingWords({ how: "dismissed", at: 0 }));
+    await expect(line).toContainText(
+      pastEndingWords({ how: "chose", label: NOTE_GOT_IT_LABEL, at: 0 }),
+    );
     // The title is a real, enabled button in the tab order, so Enter or Space presses it
     // (the hidden test window drops native focus, so focus itself is not asserted).
     await expect(line.locator("button")).toBeEnabled();

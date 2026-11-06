@@ -1146,7 +1146,7 @@ describe("CrewSupervisor: the card thread", () => {
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
     await tick();
-    harness.supervisor.close(card.id);
+    harness.supervisor.pressNote(card.id);
     await tick();
     expect(() => harness.supervisor.cardActions.replyToCard(card.id, "too late")).toThrow(
       /is closed/,

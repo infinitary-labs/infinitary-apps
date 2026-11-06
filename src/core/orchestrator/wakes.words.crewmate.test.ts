@@ -340,7 +340,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         'The captain closed your card "Guardrails ready" (card-b) as a duplicate of "Guardrails are ready" (card-a), without choosing.',
     },
     {
-      name: "a note read",
+      name: "a note's Got it",
       wake: {
         facts: {
           kind: "card-closed",
@@ -349,7 +349,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        'The captain closed your card "Coverage measured" (card-n) without choosing. Reading an ordinary note acknowledges it, not task completion. After that read, report finished if nothing remains. Aside and marked saved-answer reads are not acknowledgement; saved answers wait for Done.',
+        'The captain pressed Got it on your note "Coverage measured" (card-n). Got it on an ordinary note acknowledges it, not task completion. After Got it, report finished if nothing remains. Aside is not acknowledgement; a marked saved answer waits for Done.',
     },
     {
       name: "put aside",

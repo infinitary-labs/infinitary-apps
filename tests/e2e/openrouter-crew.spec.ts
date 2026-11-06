@@ -16,7 +16,7 @@ import {
   DESTINATION_STORY_TITLE,
   destinationStory,
 } from "./scenarios/destinationStory";
-import { cardLeave, expectNoCard, shownCard, stageAtRest } from "./stack";
+import { expectNoCard, noteDone, shownCard, stageAtRest } from "./stack";
 
 /**
  * A crewmate on an install signed in only to OpenRouter (INF-2523). Nothing
@@ -71,8 +71,8 @@ test("a crewmate on an install signed in only to OpenRouter runs on an OpenRoute
       await expect(input).toBeEnabled();
       const welcome = shownCard(page, WELCOME_TITLE);
       await expect(welcome).toBeVisible();
-      // INF-1879: put the welcome note away through its shared chrome owner.
-      await cardLeave(page, welcome).click();
+      // INF-2794: the welcome note leaves through its own Got it.
+      await noteDone(page, welcome).click();
       await expectNoCard(page, WELCOME_TITLE);
       const accounts = await page.evaluate(() => window.infinitary.accounts.list());
       expect(accounts.map((account) => account.providerId)).toEqual(["openrouter"]);

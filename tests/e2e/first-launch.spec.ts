@@ -152,7 +152,7 @@ test("first-launch cards stay reachable with collapsed, expanded or one-sided pa
   // welcome takes no reply, so the thread opens under an answer to a message
   // sent from the box.
   const welcomeId = (await page.evaluate(() => window.infinitary.app.firstRun())).welcomeCardId;
-  await page.evaluate((id) => window.infinitary.cards.close(id ?? ""), welcomeId);
+  await page.evaluate((id) => window.infinitary.cards.noteDone(id ?? ""), welcomeId);
   await promptInput(page).fill(`Where should I begin? ${ANSWER_PROMPT_MARKER}`);
   await promptInput(page).press("Enter");
   await showCard(page, MOCK_ANSWER_TITLE);
@@ -296,7 +296,7 @@ test("fresh key setup commits the welcome before ready without inference, restor
   await expect.poll(() => mockProvider.requestBodies().length).toBeGreaterThan(0);
   expect(mockProvider.requestBodies()[0]).toContain(initial.id);
   await expect(shownCard(launched.page, WELCOME_TITLE)).toBeVisible();
-  await launched.page.evaluate((id) => window.infinitary.cards.close(id), initial.id);
+  await launched.page.evaluate((id) => window.infinitary.cards.noteDone(id), initial.id);
   const afterReply = await launched.page.evaluate(() => window.infinitary.app.firstRun());
   expect(afterReply.firstTurnAt).not.toBeNull();
   await launched.close();

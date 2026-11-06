@@ -905,7 +905,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
       // Reading the note itself reaches its author and releases
       // the declared wait; no injected steer repairs the production path.
-      supervisor.close(note.id);
+      supervisor.pressNote(note.id);
       await tick();
       expect(crewmate.promptCalls).toHaveLength(prompts + 1);
       expect(crewmate.promptCalls.at(-1)).toContain(
@@ -981,7 +981,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
 
       // Reading the note starts its author's next turn; only that
       // turn's finished report wakes the first mate, once, without a manual steer.
-      supervisor.close(note.id);
+      supervisor.pressNote(note.id);
       await tick();
       expect(finishedWakes()).toHaveLength(0);
       expect(crewmate.promptCalls).toHaveLength(prompts + 1);
@@ -1010,7 +1010,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // Once complete, reading it itself gives its author the next turn.
       await endTurn(crewmate, taskId);
       const promptsBeforeRead = crewmate.promptCalls.length;
-      supervisor.close(note.id);
+      supervisor.pressNote(note.id);
       await tick();
       expect(crewmate.promptCalls).toHaveLength(promptsBeforeRead + 1);
       const words = "The release is out; the captain may still want the old build.";

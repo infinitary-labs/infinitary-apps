@@ -281,7 +281,7 @@ describe("CrewSupervisor", () => {
     });
 
     // Keep both acknowledgement routes covered: the decision case above and
-    // an ordinary note read through the actual corner before its later drop.
+    // an ordinary note read through its Got it (INF-2794) before its later drop.
     it("revises the same read note on a later drop without completing work on read", async () => {
       const h = await idleTask();
       await h.supervisor.steer.steerCrewmate(h.taskId, "Show the final outcome for me to read.");
@@ -298,7 +298,7 @@ describe("CrewSupervisor", () => {
       await tick();
       const answer = h.cards().find((card) => card.taskId === h.taskId) as Card;
       const prompts = h.crewmate.promptCalls.length;
-      h.supervisor.close(answer.id);
+      h.supervisor.pressNote(answer.id);
       await tick();
       expect(h.crewmate.promptCalls).toHaveLength(prompts + 1);
       expect(h.tasks.get(h.taskId)?.status).toBe("active");

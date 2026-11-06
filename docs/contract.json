@@ -7441,6 +7441,25 @@
                 "restWords"
               ]
             },
+            "noteDone": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "restWords": {
+                  "type": "string"
+                },
+                "closesTask": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "label",
+                "restWords",
+                "closesTask"
+              ]
+            },
             "requiredActions": {
               "maxItems": 20,
               "type": "array",
@@ -8586,6 +8605,25 @@
                   "taskId",
                   "label",
                   "restWords"
+                ]
+              },
+              "noteDone": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "restWords": {
+                    "type": "string"
+                  },
+                  "closesTask": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "label",
+                  "restWords",
+                  "closesTask"
                 ]
               },
               "requiredActions": {
@@ -10187,6 +10225,33 @@
       }
     },
     "inf:cards:close": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {}
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:cards:note-done": {
       "effect": "change",
       "reach": "views",
       "request": {
@@ -55325,6 +55390,25 @@
                 "taskId",
                 "label",
                 "restWords"
+              ]
+            },
+            "noteDone": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "restWords": {
+                  "type": "string"
+                },
+                "closesTask": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "label",
+                "restWords",
+                "closesTask"
               ]
             },
             "requiredActions": {

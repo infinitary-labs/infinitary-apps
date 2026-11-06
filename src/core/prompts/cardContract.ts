@@ -2,9 +2,9 @@ import { RISK_DIMENSIONS, RISK_WHY_MAX, RISK_WORDS } from "@shared/risk";
 
 /** The acknowledgement clause shared by the report fields and card guidance. */
 export const ORDINARY_NOTE_READ_ACK =
-  "Reading an ordinary note acknowledges it, not task completion.";
+  "Got it on an ordinary note acknowledges it, not task completion.";
 /** The full distinction lives in card guidance; report fields reuse its acknowledgement clause. */
-export const ORDINARY_NOTE_READ_GUIDANCE = `${ORDINARY_NOTE_READ_ACK} After that read, report finished if nothing remains. Aside and marked saved-answer reads are not acknowledgement; saved answers wait for Done.`;
+export const ORDINARY_NOTE_READ_GUIDANCE = `${ORDINARY_NOTE_READ_ACK} After Got it, report finished if nothing remains. Aside is not acknowledgement; a marked saved answer waits for Done.`;
 
 /**
  * The card contract, re-homed BY KIND (orchestrator contract v3.6, captain
@@ -253,7 +253,7 @@ export const CARD_MECHANICS = [
  * words for fixed buttons the model no longer writes.
  */
 export const CREWMATE_CARD_ADDENDUM = [
-  "For finished change work (not a plan's preview, review or internal step), show the outcome on a card before reporting. With a PR or branch to merge, emit one completion decision with one settle merge action, risk and required_actions ([] when none); the host attaches buttons, so declare no others or labels. Without one, emit a factual note with no settle action. A task that merges on its own or builds in place shows its story on a note with no actions instead, which stays until the captain closes it.",
+  "For finished change work (not a plan's preview, review or internal step), show the outcome on a card before reporting. With a PR or branch to merge, emit one completion decision with one settle merge action, risk and required_actions ([] when none); the host attaches buttons, so declare no others or labels. Without one, emit a factual note with no settle action. A task that merges on its own or builds in place shows its story on a note with no actions instead, which stays until the captain presses its Got it.",
   "For a continuation, name it in the body by what it does, never by its task key, and say it starts once it is merged.",
   "No settle effects on intermediate questions; reuse an open outcome card's id. Settle questions before a merge card or close unneeded ones. A click on a settle action never comes back to you as a steer; the host reports the outcome to the first mate.",
 ].join(" ");

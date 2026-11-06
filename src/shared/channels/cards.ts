@@ -63,6 +63,16 @@ export const cardChannels = {
     request: z.tuple([z.string(), z.unknown().optional()]),
     response: okSchema,
   },
+  // A live note's own button (INF-2794, `Card.noteDone`): Done closes its
+  // answer task as answered, Got it reads the note. The last argument is the
+  // shell's submission metadata, as on close.
+  "inf:cards:note-done": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string(), z.unknown().optional()]),
+    response: okSchema,
+  },
   // The stage showed the captain this version of the card - shown, the
   // window visible and focused (1.48.0). The core records it once and
   // compares the card's next revision with it (`Card.changes`); a version

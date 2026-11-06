@@ -534,7 +534,11 @@ extension PhoneJourney {
     private func verifyPastMessageContext() async throws {
         let fixture = try await home("context-fixture")
         showCard(try XCTUnwrap(fixture["title"] as? String))
-        tapOnPhone(app.buttons["put-aside-card"])
+        // INF-2794: the note's own Got it reads it into the past; the corner would only put it aside.
+        let gotIt = app.buttons["note-done"]
+        XCTAssertTrue(gotIt.waitForPresence(timeout: 10), app.debugDescription)
+        reveal(gotIt)
+        tapOnPhone(gotIt)
         _ = try await home("show-context-past")
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         let input = app.textFields["message-box"]

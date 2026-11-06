@@ -564,7 +564,7 @@ describe("CrewSupervisor", () => {
         });
         const story = h.cards().find((card) => card.title === "The meter reads on time") as Card;
         // Reading this ordinary story note starts its author's next turn.
-        h.supervisor.close(story.id);
+        h.supervisor.pressNote(story.id);
         await tick();
         h.crewmate.finishPrompt();
         await tick();
@@ -592,7 +592,7 @@ describe("CrewSupervisor", () => {
         const finding = h
           .cards()
           .find((card) => card.title === "The meter's old reading was a day late") as Card;
-        h.supervisor.close(finding.id);
+        h.supervisor.pressNote(finding.id);
         await tick();
         h.crewmate.finishPrompt();
         await tick();

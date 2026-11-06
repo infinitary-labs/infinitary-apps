@@ -5,6 +5,7 @@ import { CardStore } from "@core/storage/cardStore";
 import { type AppDatabase, openDatabase } from "@core/storage/db";
 import { seedTask } from "@core/tasks/seedTask";
 import { TaskService } from "@core/tasks/taskService";
+import { NOTE_GOT_IT_LABEL } from "@shared/cardLeave";
 import { cardMediaFileName, cardPictureFileName } from "@shared/cardPictures";
 import type { Card, CardQuestion } from "@shared/cards";
 import { describe, expect, it, vi } from "vitest";
@@ -155,13 +156,13 @@ function buildUserData(dir: string): { first: Card; revisedTitle: string } {
       context: tasks.capture.decisionContext("t1"),
     },
   );
-  // A Firstmate card the captain closed without a choice.
+  // A Firstmate note the captain closed on its Got it (INF-2794).
   const dismissed = cards.addFirstmateCard({
     title: "A side note",
     body: "<p>FYI.</p>",
     actions: [],
   });
-  cards.dismiss(cards.shown(dismissed) as Card, { id: "gesture-close" });
+  cards.pressNote(cards.shown(dismissed) as Card, { id: "gesture-close" });
   db.close();
 
   // The first picture's verified copy, where the app keeps it; the second is gone.
@@ -255,9 +256,11 @@ describe("corpus export - the human-supervision view", () => {
     expect(choice.missing).toEqual(["outcome:unknown", "pictures:missing"]);
     expect(choice.rights).toEqual({ scope: "owner-local", external_use: "not-authorized" });
 
-    const dismissal = episodes[1] as Episode;
-    expect(dismissal.interactions).toEqual([]);
-    expect(dismissal.end).toMatchObject({ kind: "exit", reason: "dismissed", actor: "captain" });
+    const gotIt = episodes[1] as Episode;
+    expect(gotIt.interactions).toMatchObject([
+      { interaction_id: "gesture-close", actor: "captain", label: NOTE_GOT_IT_LABEL, closes: true },
+    ]);
+    expect(gotIt.end).toMatchObject({ kind: "action", interaction_id: "gesture-close" });
   });
 
   it("reconstructs a card from before the capture without inventing a click or a shown version", () => {
@@ -324,10 +327,11 @@ describe("corpus export - the human-supervision view", () => {
     ]);
     expect(readFileSync(join(out, "human-supervision-labels.jsonl"), "utf8")).toBe("");
     // The choice card's first offer and the side note's; the revision never
-    // reached the stage.
+    // reached the stage. The choice and the side note's Got it are both the
+    // captain's clicks on host controls.
     expect(section?.funnel).toEqual({
       offers_available: 2,
-      host_control_interactions: 1,
+      host_control_interactions: 2,
       matched_offers: 1,
       question_and_context_complete: 1,
       labels: 0,

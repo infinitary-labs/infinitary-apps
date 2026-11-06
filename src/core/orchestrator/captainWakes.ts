@@ -8,6 +8,7 @@
  * kind's words, are in `wakes.ts`.
  */
 
+import { NOTE_GOT_IT_LABEL } from "@shared/cardLeave";
 import {
   type CardAnswer,
   type CardEffect,
@@ -51,12 +52,13 @@ export type CaptainFacts =
     }
   | {
       /**
-       * An ordinary read or a legacy/duplicate card closure without choosing.
-       * The host marks an actual read; only that fact carries acknowledgement.
+       * The captain's Got it on an ordinary note, or a legacy/duplicate card
+       * closure without choosing. The host marks Got it as `read`; only that
+       * fact carries acknowledgement.
        */
       kind: "card-closed";
       card: { id: string; title: string };
-      /** The host actually read an ordinary note, rather than putting a card aside. */
+      /** The captain pressed Got it on an ordinary note, rather than putting a card aside. */
       read?: true;
       /** The earlier card it repeats, when the captain closed it as a duplicate (INF-759). */
       duplicateOf?: { id: string; title: string };
@@ -148,9 +150,12 @@ export type CaptainFacts =
 /** How the steer telling a crewmate the captain closed its card begins (FI3-435). */
 export const CARD_CLOSED_STEER_PREFIX = "The captain closed your card ";
 
+/** How the steer telling a crewmate the captain pressed Got it on its note begins (INF-2794). */
+export const NOTE_GOT_IT_STEER_PREFIX = `The captain pressed ${NOTE_GOT_IT_LABEL} on your note `;
+
 /** Whether a crewmate's served guidance is that steer: the replay finds it no recorded answer. */
 export function isCardClosedSteer(text: string): boolean {
-  return text.startsWith(CARD_CLOSED_STEER_PREFIX);
+  return text.startsWith(CARD_CLOSED_STEER_PREFIX) || text.startsWith(NOTE_GOT_IT_STEER_PREFIX);
 }
 
 /**
@@ -361,7 +366,9 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
   "card-closed": (facts) =>
     facts.duplicateOf
       ? `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) as a duplicate of "${facts.duplicateOf.title}" (${facts.duplicateOf.id}), without choosing.`
-      : `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) without choosing.${facts.read ? ` ${ORDINARY_NOTE_READ_GUIDANCE}` : ""}`,
+      : facts.read
+        ? `${NOTE_GOT_IT_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}). ${ORDINARY_NOTE_READ_GUIDANCE}`
+        : `${CARD_CLOSED_STEER_PREFIX}"${facts.card.title}" (${facts.card.id}) without choosing.`,
   "project-change": (facts) =>
     `The captain answered the app’s project change card “${facts.title}”: ${facts.outcome}.${facts.reason ? ` ${facts.reason}` : ""} Read the current project values before starting work. This is an outcome, not permission for another change.`,
   "project-setup": (facts) => renderProjectSetup(facts),

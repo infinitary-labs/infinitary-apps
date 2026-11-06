@@ -1109,7 +1109,7 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
       );
       expect(tool).toContain("Without one, emit a factual note with no settle action");
       expect(tool).toContain(
-        "A task that merges on its own or builds in place shows its story on a note with no actions instead, which stays until the captain closes it.",
+        "A task that merges on its own or builds in place shows its story on a note with no actions instead, which stays until the captain presses its Got it.",
       );
       // The prompt already says when to report waiting_on_captain and finished.
       expect(tool).not.toContain("waiting_on_captain");

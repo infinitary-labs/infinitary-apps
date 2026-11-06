@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cardCornerSchema } from "./cardLeave.ts";
+import { cardCornerSchema, noteDoneSchema } from "./cardLeave.ts";
 import { SPELLINGS } from "./codeNames.ts";
 import { requiredActionsSchema } from "./requiredActions.ts";
 import { rigorSchema } from "./rigor.ts";
@@ -1090,6 +1090,8 @@ export const cardSchema = z.strictObject({
   /** Core-owned presentation and explicit answer receipt (INF-1879). */
   corner: cardCornerSchema.optional(),
   answerDone: z.object({ taskId: z.string(), label: z.string(), restWords: z.string() }).optional(),
+  /** Every live note's one button, Done or Got it (INF-2794). */
+  noteDone: noteDoneSchema.optional(),
   requiredActions: requiredActionsSchema.optional(),
   actions: z.array(cardActionSchema),
   status: z.enum(["streaming", "ready"]),

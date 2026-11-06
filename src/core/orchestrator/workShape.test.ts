@@ -414,7 +414,8 @@ describe("the deliverable axis (Task B)", () => {
     expect(crewmate.steer).not.toHaveBeenCalled();
   });
 
-  it("INF-1879: reading an unmarked note neither finishes nor creates a Done receipt", async () => {
+  // INF-2794: the minus reaches nobody; only Got it gives the note's author its turn.
+  it("INF-1879: Got it on an unmarked note neither finishes nor creates a Done receipt", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, specs, cards, inbox, ops, taskId } = await investigation(crewmate);
     specs[0]?.onCard?.({ title: "The answer", body: "<p>Found it.</p>", actions: [] });
@@ -431,6 +432,9 @@ describe("the deliverable axis (Task B)", () => {
     // An unmarked note gives its author a turn, not a task receipt or ending.
     const promptsBeforeRead = crewmate.promptCalls.length;
     supervisor.close(card.id);
+    await tick();
+    expect(crewmate.promptCalls).toHaveLength(promptsBeforeRead);
+    supervisor.pressNote(card.id);
     await tick();
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(crewmate.promptCalls).toHaveLength(promptsBeforeRead + 1);
@@ -482,11 +486,11 @@ describe("the deliverable axis (Task B)", () => {
     expect(crewmate.promptCalls.slice(prompts).filter(isCardClosedSteer)).toEqual([]);
   });
 
-  it("INF-1879: a finished report's receipt still leaves a read answer waiting for explicit Done", async () => {
+  it("INF-1879: a finished report's receipt still leaves an answer put aside waiting for explicit Done", async () => {
     const { supervisor, tasks, specs, taskId, card } = await answerCardUp(fakeCrewmate());
     supervisor.close(card.id);
     await tick();
-    expect(supervisor.cards.snapshot().some((entry) => entry.id === card.id)).toBe(false);
+    expect(supervisor.cards.snapshot().find((entry) => entry.id === card.id)?.minimized).toBe(true);
     const receipt = specs[0]?.onReport?.("The answer is complete.", undefined, { finished: true });
     expect(receipt).toContain(ANSWER_DONE_LABEL);
     expect(tasks.get(taskId)?.status).toBe("active");
@@ -541,7 +545,7 @@ describe("the deliverable axis (Task B)", () => {
     });
     crewmate.finishPrompt();
     await tick();
-    supervisor.close(card.id);
+    supervisor.pressNote(card.id);
     await supervisor.steer.steerCrewmate(taskId, "I read the answer; report what remains.");
     await tick();
     specs[0]?.onReport?.("Own vs rent: owning wins for sustained work.", undefined, {

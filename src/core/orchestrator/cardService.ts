@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import {
   ANSWER_DONE_LABEL,
-  answerDoneRest,
   cardCornerOf,
-  cardLeaveOperation,
+  NOTE_DONE_ACTION_ID,
+  NOTE_GOT_IT_LABEL,
+  noteDoneOf,
 } from "@shared/cardLeave";
 import type { CardRevisionLinks } from "@shared/cards";
 import {
@@ -37,7 +38,7 @@ import type { CardResolution, CardStore, DuplicateResult } from "../storage/card
 import type { TaskOriginLine } from "../tasks/taskOrigin";
 import type { TaskService } from "../tasks/taskService";
 import { CardEmits, cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
-import { CardEvidence, type CardInteractionEvidence, submissionDisplay } from "./cardEvidence";
+import { CardEvidence, type CardInteractionEvidence } from "./cardEvidence";
 import {
   authorKey,
   type CardCaller,
@@ -527,40 +528,54 @@ export class CardService {
   }
 
   /**
-   * The shared corner puts decisions, attention and pending notes aside;
-   * an ordinary note leaves the stack as read. Neither path chooses an
-   * action, receipts a pending answer task or ends work. An ordinary read
-   * acknowledges its message and returns true so its author can hear it;
-   * the marked saved answer keeps its receipt and ending for explicit Done.
+   * The shared corner only ever puts a card aside (INF-2794): it chooses no
+   * action, reads no note, receipts no answer and ends no work.
    */
-  dismiss(card: Card, submission?: unknown): boolean {
-    if (cardLeaveOperation(cardPresentation(card), Boolean(card.awaiting)) === "aside") {
-      this.setMinimized(card.id, true);
-      return false;
+  dismiss(card: Card): void {
+    this.setMinimized(card.id, true);
+  }
+
+  /**
+   * A live note's own button (INF-2794): Done on the marked answer note of
+   * an active answer task closes that task as answered; Got it on any other
+   * note reads it. Returns which it was, or undefined for a card that is not
+   * a live note. Only Got it acknowledges the note to its author.
+   */
+  pressNote(card: Card, submission?: unknown): "done" | "got-it" | undefined {
+    if (!this.cards.has(card.id) || cardPresentation(card) !== "note") return undefined;
+    if (card.taskId && this.answerNoteForTask(card.taskId)?.id === card.id) {
+      this.finishAnswer(card.taskId, submission);
+      return "done";
     }
-    const savedAnswer = card.taskId && this.answerNoteForTask(card.taskId)?.id === card.id;
+    this.readNote(card, NOTE_GOT_IT_LABEL, submission, true);
+    return "got-it";
+  }
+
+  /**
+   * The note leaves the stack as read, its past card naming the button the
+   * captain pressed. Only an ordinary read acknowledges its message; a marked
+   * saved answer's acknowledgement belongs to its Done.
+   */
+  private readNote(card: Card, label: string, submission: unknown, acknowledge: boolean): void {
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(card.id, "close");
-      this.evidence.noteExit(card, "captain", "close-control", {
-        reason: "dismissed",
-        display: submissionDisplay(submission, card),
-      });
-      // Message acknowledgement does not end work. A marked saved answer
-      // alone reserves its acknowledgement for explicit Done.
-      if (!savedAnswer) this.host.captainResponded?.(card, "close");
+      this.evidence.noteAction(
+        { ...card, actions: [{ id: NOTE_DONE_ACTION_ID, label }] },
+        NOTE_DONE_ACTION_ID,
+        { closes: true, by: "captain", evidence: { source: "chrome", submission } },
+      );
+      if (acknowledge) this.host.captainResponded?.(card, "close");
     });
     this.cards.delete(card.id);
     this.staged.delete(card.id);
-    // Reading an ordinary note may progress its author, never end its task.
     this.scheduleBroadcast();
-    return !savedAnswer;
   }
 
   /** The captain explicitly receipts a saved answer, not a presentation change. */
-  finishAnswer(taskId: string): boolean {
+  finishAnswer(taskId: string, submission?: unknown): boolean {
     const card = this.answerNoteForTask(taskId);
     if (!card) return false;
-    if (this.cards.has(card.id)) this.dismiss(card);
+    if (this.cards.has(card.id)) this.readNote(card, ANSWER_DONE_LABEL, submission, false);
     this.host.captainResponded?.(card, "close");
     return this.recordResolution(card, "answer-done", "captain");
   }
@@ -763,13 +778,17 @@ export class CardService {
     const answer = record && this.answerNoteForTask(record.id);
     return {
       ...shown,
-      corner: cardCornerOf(cardPresentation(shown), record?.key, Boolean(shown.awaiting)),
+      corner: cardCornerOf(cardPresentation(shown)),
+      ...(cardPresentation(shown) === "note"
+        ? { noteDone: noteDoneOf(record?.key, answer?.id === shown.id) }
+        : {}),
+      // A phone from before every note had its button still draws Done here.
       ...(answer?.id === shown.id && record
         ? {
             answerDone: {
               taskId: record.id,
               label: ANSWER_DONE_LABEL,
-              restWords: answerDoneRest(record.key),
+              restWords: noteDoneOf(record.key, true).restWords,
             },
           }
         : {}),

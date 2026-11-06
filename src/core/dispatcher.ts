@@ -517,8 +517,13 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.broadcastEvent({ type: "past_card_shown", cardId });
       return past;
     },
-    "inf:cards:close": (cardId, submission) => {
-      services.supervisor.close(cardId, submission);
+    "inf:cards:close": (cardId) => {
+      services.supervisor.close(cardId);
+      services.supervisor.cards.flushBroadcast();
+      return { ok: true as const };
+    },
+    "inf:cards:note-done": (cardId, submission) => {
+      services.supervisor.pressNote(cardId, submission);
       services.supervisor.cards.flushBroadcast();
       return { ok: true as const };
     },

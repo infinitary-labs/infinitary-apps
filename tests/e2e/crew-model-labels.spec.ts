@@ -212,7 +212,7 @@ test("names switched off stay off while the crew grows past eight and back", asy
       .poll(async () => (await notes()).map((card) => card.author))
       .toEqual(["firstmate"]);
     const [note] = await notes();
-    await app.page.evaluate((id) => window.infinitary.cards.close(id), note?.id ?? "");
+    await app.page.evaluate((id) => window.infinitary.cards.noteDone(id), note?.id ?? "");
     await expect.poll(notes).toEqual([]);
     // The captain's off survived both changes.
     await expect(crewModelNames(page)).toHaveCount(0);

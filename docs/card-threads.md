@@ -27,7 +27,7 @@ While the captain's kept merge approval stands on the task, the captain's reply,
 A reply resolves nothing.
 The buttons stay pinned; explicit choices, task endings and author withdrawals retire cards, while minus puts them away.
 
-The captain’s minimize corner is presentation only (INF-1879): a decision stays open, and a note is read without ending work.
+The captain’s minimize corner is presentation only (INF-1879): a decision or a note stays open, and a note is read only by its own Done or Got it (INF-2794).
 A minimized decision or pending note sends no close steer, and consent waits rather than becoming a refusal.
 Reading an ordinary completed note still notifies its live crewmate author through the existing durable turn path; that acknowledgement never completes its task.
 A marked saved answer keeps its receipt and ending for explicit Done.

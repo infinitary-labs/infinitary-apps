@@ -1019,7 +1019,11 @@ Every card has one leaving control, the minimize minus, after Maximize (INF-1879
 `src/shared/cardLeave.ts` owns its icon, label, rest words and operation; the core puts that corner on every live card, and the window reads the table for its own panels.
 The phone draws the received corner and uses generated fallback words with an older core; a client without the corner uses the older safe minimize request instead of its destructive close.
 A decision or attention card stays open under Waiting on you and comes back when its author changes it.
-A note is read and stays on its record, but no task ends until an explicit choice or Done.
+A note stays open too, and its task stays under Waiting on you until the captain presses the note's own footer button (INF-2794).
+That button is Done when the click will close the task, on the answer note of an active answer task, and Got it otherwise; `noteDoneOf` in the same file owns the label and rest words, and the core puts it on every live note as `noteDone`.
+Got it reads the note: the record keeps it, its past card says the captain chose Got it, and an open task's crewmate gets the read wake.
+The footer button is the note's first choice, so ⌘1 presses it, and `cards.done` presses it by name.
+The phone sends `inf:cards:note-done`; an older phone still reads `answerDone` and its corner request now only puts the note aside.
 A note whose author still owes an answer stays open and put away until that answer arrives.
 The task record and the window's own panels only hide.
 The task-less first mate question's record offers Dismiss as an explicit ending, never in the corner.
@@ -1031,7 +1035,7 @@ While the captain’s question waits, a line or revision that names no answered 
 | Kind | Label | Operation |
 | --- | --- | --- |
 | `decision` | Put aside | aside |
-| `note` | Put aside | read |
+| `note` | Put aside | aside |
 | `attention` | Put aside | aside |
 | `record` | Hide | hide |
 | `window-panel` | Hide | hide |

@@ -741,7 +741,8 @@ private struct PhoneCardPane: View {
             if card.value["attachment"] != .null {
                 PhoneBrowserStrip(attachment: card.value["attachment"], session: session) { host.notice = "Do this on \(session.mac.name)." }
             }
-            if !card.isPast, let taskID = card.value["answerDone"]["taskId"].text {
+            // A computer from before every note had its button still sends only an answer's Done here.
+            if !card.isPast, card.value["noteDone"] == .null, let taskID = card.value["answerDone"]["taskId"].text {
                 Button(card.value["answerDone"]["label"].text ?? PhoneCardWords.done) {
                     perform {
                         do {
@@ -806,6 +807,21 @@ private struct PhoneCardPane: View {
     }
 
     @ViewBuilder private var choiceRow: some View {
+            // INF-2794: every live note's one button, Done or Got it, where a decision's default sits.
+            if card.actions.isEmpty, !card.isPast, let label = card.value["noteDone"]["label"].text {
+                PhoneChoiceRow {
+                    Button { pressNote() } label: {
+                        HStack(spacing: 6) {
+                            Text(label)
+                            if pending == Self.noteDoneID { ProgressView().controlSize(.mini).accessibilityLabel("Sending") }
+                        }
+                    }
+                    .buttonStyle(PhoneChoiceStyle(.primary))
+                    .disabled(host.changing || !session.canChange)
+                    .accessibilityHint(rest(card.value["noteDone"]["restWords"].text ?? ""))
+                    .accessibilityIdentifier("note-done")
+                }
+            }
             if !card.actions.isEmpty {
                 PhoneChoiceRow {
                     if asking, let count = host.reading["of"].numeric {
@@ -953,7 +969,20 @@ private struct PhoneCardPane: View {
         }
     }
 
-    /// The shared minus only puts away; a note is read, never an answer receipt.
+    private static let noteDoneID = "note-done"
+
+    /// A live note's own button (INF-2794): the computer decides whether it closes the task (Done) or reads the note (Got it).
+    private func pressNote() {
+        perform {
+            pending = Self.noteDoneID
+            defer { pending = nil }
+            let sent = await send(.close(card: card.id, lifecycle: card.lifecycleID, offer: card.offerID), .noteDone,
+                                  [.string(card.id), card.submission()])
+            if sent { host.chosen = true; onSent() }
+        }
+    }
+
+    /// The shared minus only puts away (INF-2794); a computer from before that still reads a note it marks "read".
     /// The session shows it at the tap and restores its place if the computer refuses it.
     private func putAside() {
         if card.isPast { onHide(); return }

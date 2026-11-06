@@ -315,6 +315,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         ),
       minimize: (cardId, minimized) => invoke("inf:cards:minimize", cardId, minimized),
       close: (cardId, submission) => invoke("inf:cards:close", cardId, submission),
+      noteDone: (cardId, submission) => invoke("inf:cards:note-done", cardId, submission),
       onCards: (listener) => subscribe("inf:cards", listener),
       seen: (cardId, offerId) => invoke("inf:cards:seen", cardId, offerId),
       seenUpdate: (cardId, lifecycleId, updateId) =>

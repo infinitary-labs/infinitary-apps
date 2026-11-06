@@ -1265,12 +1265,17 @@ export class CrewSupervisor {
     return records.length;
   }
 
-  /** The corner never ends work; a read note still gives its author the next turn. */
-  close(cardId: string, submission?: unknown): void {
+  /** The corner only puts a card aside (INF-2794); it never reaches the card's author. */
+  close(cardId: string): void {
     const card = this.cards.shown(cardId);
-    // CardService distinguishes an ordinary read from putting aside a card
-    // or reading a marked saved answer. Only that read notifies its author.
-    if (card && this.cards.dismiss(card, submission)) this.cardActions.tellCardClosed(card);
+    if (card) this.cards.dismiss(card);
+  }
+
+  /** A live note's own button (INF-2794): only Got it tells the note's author. */
+  pressNote(cardId: string, submission?: unknown): void {
+    const card = this.cards.shown(cardId);
+    if (card && this.cards.pressNote(card, submission) === "got-it")
+      this.cardActions.tellCardClosed(card);
   }
 
   /**

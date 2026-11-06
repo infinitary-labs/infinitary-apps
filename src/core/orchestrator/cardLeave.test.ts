@@ -1,4 +1,4 @@
-import { CARD_LEAVE, cardCornerOf } from "@shared/cardLeave";
+import { cardCornerOf, NOTE_GOT_IT_LABEL, noteDoneOf } from "@shared/cardLeave";
 import { CARD_PRESENTATIONS, type Card, cardPresentation } from "@shared/cards";
 import { expect, it, vi } from "vitest";
 import { freshDatabase as openInMemoryDatabase } from "../../../tests/helpers/database";
@@ -7,7 +7,8 @@ import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { CardService } from "./cardService";
 
-// Intent: INF-1879, the captain's approved one-minus rule. The saved card is the real fixture.
+// Intent: INF-1879's one minus, narrowed by INF-2794's approved plan: the minus
+// only ever puts a card aside. The saved card is the real fixture.
 for (const kind of CARD_PRESENTATIONS) {
   for (const awaiting of [undefined, "answer"] as const) {
     it(`${kind}${awaiting ? " awaiting its author" : ""}: putting away preserves work and sends the table's corner`, () => {
@@ -52,22 +53,17 @@ for (const kind of CARD_PRESENTATIONS) {
       try {
         const shown = service.shown(card.id)!;
         expect(cardPresentation(shown)).toBe(kind);
-        expect(shown.corner).toEqual(cardCornerOf(kind, task.key, Boolean(awaiting)));
-        const operation = awaiting ? "aside" : CARD_LEAVE[kind].operation;
-        expect(shown.corner?.operation).toBe(operation);
-        expect(service.dismiss(shown)).toBe(operation === "read");
+        expect(shown.corner).toEqual(cardCornerOf(kind));
+        expect(shown.corner?.operation).toBe("aside");
+        // INF-2794: every live note carries its one button; nothing else does.
+        expect(shown.noteDone).toEqual(kind === "note" ? noteDoneOf(task.key, false) : undefined);
+        service.dismiss(shown);
         expect(tasks.get(task.id)).toEqual(task);
         expect(closed).not.toHaveBeenCalled();
-        // A read acknowledges an ordinary note's message, not its task.
-        if (operation === "read") expect(responded).toHaveBeenCalledWith(shown, "close");
-        else expect(responded).not.toHaveBeenCalled();
-        if (operation === "aside") {
-          expect(service.shown(card.id)).toMatchObject({ minimized: true, actions: card.actions });
-          expect(store.listOpen().map((card) => card.id)).toContain(card.id);
-        } else {
-          expect(service.shown(card.id)).toBeUndefined();
-          expect(store.past(card.id)?.title).toBe(card.title);
-        }
+        // Putting a card aside reads nothing and reaches nobody.
+        expect(responded).not.toHaveBeenCalled();
+        expect(service.shown(card.id)).toMatchObject({ minimized: true, actions: card.actions });
+        expect(store.listOpen().map((card) => card.id)).toContain(card.id);
       } finally {
         service.dispose();
         db.close();
@@ -76,10 +72,10 @@ for (const kind of CARD_PRESENTATIONS) {
   }
 }
 
-it("a read answer remains eligible for Done after restarting its owner", () => {
+it("an answer put aside remains eligible for Done after restarting its owner", () => {
   const db = openInMemoryDatabase();
   const tasks = new TaskService({ db, strict: true });
-  seedTask(tasks, {
+  const task = seedTask(tasks, {
     id: "launch",
     title: "Explain the launch window",
     status: "idle",
@@ -118,7 +114,9 @@ it("a read answer remains eligible for Done after restarting its owner", () => {
   const first = make();
   try {
     expect(first.shown("card-launch-answer")?.answerDone?.taskId).toBe("launch");
-    expect(first.dismiss(first.shown("card-launch-answer")!)).toBe(false);
+    // INF-2794: the answer note's button says Done, because its click closes the task.
+    expect(first.shown("card-launch-answer")?.noteDone).toEqual(noteDoneOf(task.key, true));
+    first.dismiss(first.shown("card-launch-answer")!);
     expect(responded).not.toHaveBeenCalled();
     expect(tasks.get("launch")?.status).toBe("active");
   } finally {
@@ -138,11 +136,68 @@ it("a read answer remains eligible for Done after restarting its owner", () => {
   });
   const restarted = make();
   try {
-    expect(restarted.snapshot().map((card) => card.id)).toEqual(["card-fm-launch-followup"]);
+    expect(restarted.shown("card-launch-answer")).toMatchObject({ minimized: true });
     expect(restarted.answerNoteForTask("launch")?.id).toBe("card-launch-answer");
     expect(tasks.get("launch")?.status).toBe("active");
   } finally {
     restarted.dispose();
+    db.close();
+  }
+});
+
+// Intent: INF-2794 point 4: Got it closes the note, its record keeps it, and its
+// past card names the button the captain pressed.
+it("a note's Got it reads it and its past card says the captain pressed Got it", () => {
+  const db = openInMemoryDatabase();
+  const tasks = new TaskService({ db, strict: true });
+  const task = seedTask(tasks, { id: "launch", title: "Review the launch window", status: "idle" });
+  const store = new CardStore(db);
+  store.upsert({
+    id: "card-launch-note",
+    taskId: task.id,
+    author: "crewmate",
+    title: "The launch window is measured",
+    body: "<p>The window opens at dawn.</p>",
+    // A written card carries its lifecycle and offer, which its evidence names.
+    lifecycleId: "lifecycle-launch-note",
+    offerId: "offer-launch-note",
+    meta: "crew",
+    status: "ready",
+    priority: 10,
+    createdAt: Date.now(),
+    actions: [],
+  });
+  const responded = vi.fn();
+  const closed = vi.fn(() => false);
+  const service = new CardService({
+    now: Date.now,
+    tasks,
+    cardStore: store,
+    syncCaptainGate: () => {},
+    closeAnsweredTask: closed,
+    captainResponded: responded,
+    settleFacts: () => undefined,
+    followupNotice: () => undefined,
+    broadcastCrewCounts: () => {},
+    broadcastEvent: () => {},
+    broadcastCards: () => {},
+    broadcastThread: () => {},
+  });
+  try {
+    const shown = service.shown("card-launch-note")!;
+    expect(shown.noteDone?.label).toBe(NOTE_GOT_IT_LABEL);
+    expect(service.pressNote(shown)).toBe("got-it");
+    expect(responded).toHaveBeenCalledWith(shown, "close");
+    expect(closed).not.toHaveBeenCalled();
+    expect(tasks.get(task.id)).toEqual(task);
+    expect(service.shown("card-launch-note")).toBeUndefined();
+    expect(store.past("card-launch-note")?.ending).toMatchObject({
+      how: "chose",
+      label: NOTE_GOT_IT_LABEL,
+      by: "captain",
+    });
+  } finally {
+    service.dispose();
     db.close();
   }
 });

@@ -287,8 +287,8 @@ export const KEYBOARD_COMMANDS = {
     keys: [{ key: "m", meta: true, shift: true }],
   },
   "cards.done": {
-    label: "Mark the answer Done",
-    searchWords: ["card"],
+    label: "Press the note's Done or Got it",
+    searchWords: ["card", "note", "answer", "done", "got it"],
     scope: "window",
     runs: "shell",
     repeat: false,

@@ -468,7 +468,7 @@ export function renderOperationShapeSection(): string {
   return [
     "Operation shape: the effect is the deliverable. Make the effect named in the goal and check that it took. Commit nothing, push nothing, open no pull request, and stop and report if code must change.",
     "The captain's words authorize only the effects the goal names. Keychain and signing access, writes outside this task's own project, payments and browser handoffs still ask under their existing consent rules; anything beyond the named effects asks too.",
-    "Your own project's writes go at once. You have no pull request tools and no completion decision; check_change records the diagnosis of a workflow run you read and reserves its rerun. Show what took effect on a factual note with no settle action, then report the result and its evidence; the first mate closes it done and finished from that evidence. A note stays until the captain closes it, but its dismissal is not proof of success.",
+    "Your own project's writes go at once. You have no pull request tools and no completion decision; check_change records the diagnosis of a workflow run you read and reserves its rerun. Show what took effect on a factual note with no settle action, then report the result and its evidence; the first mate closes it done and finished from that evidence. A note stays until the captain presses its Got it, but that press is not proof of success.",
     "Care: none - this task delivers an effect, not code through a gate.",
   ].join("\n");
 }

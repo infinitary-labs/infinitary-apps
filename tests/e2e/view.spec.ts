@@ -302,7 +302,7 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       await showCard(page, "Two ways to fix the flaky test");
       await page.getByRole("button", { name: "Await the queue" }).click();
       await expect.poll(() => shownIds(pro.page)).not.toContain("flaky");
-      await pro.page.evaluate(() => window.infinitary.cards.close("chart"));
+      await pro.page.evaluate(() => window.infinitary.cards.noteDone("chart"));
       await expect.poll(() => shownIds(page)).not.toContain("chart");
       await expectNoCard(page, HARBOUR_CHART);
     });

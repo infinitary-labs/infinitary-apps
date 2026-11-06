@@ -1020,7 +1020,7 @@ describe("the core, driven with no Electron in the process", () => {
     try {
       supervisor.cards.addSystemNoteCard("card-show-open", "Still open", "On the stage.");
       supervisor.cards.addSystemNoteCard("card-show-past", "An earlier plan", "What it said.");
-      supervisor.close("card-show-past");
+      supervisor.pressNote("card-show-past");
       const stack = async () => (await core.dispatch("inf:cards:list", [])).map((c) => c.id);
       const stackBefore = await stack();
       const pastBefore = await core.dispatch("inf:cards:past", ["card-show-past"]);
@@ -1081,7 +1081,7 @@ describe("the core, driven with no Electron in the process", () => {
       ).rejects.toThrow(/outside its action catalog|named/);
     } finally {
       detach();
-      supervisor.close("card-show-open");
+      supervisor.pressNote("card-show-open");
     }
   });
 
@@ -1129,7 +1129,7 @@ describe("the core, driven with no Electron in the process", () => {
         "What’s new in stable 0.0.2",
         "Changes.",
       );
-      supervisor.close("card-note-listed");
+      supervisor.pressNote("card-note-listed");
       supervisor.cards.addSystemNoteCard(
         "card-note-quiet",
         "Your alpha is now stable",
@@ -1193,7 +1193,7 @@ describe("the core, driven with no Electron in the process", () => {
     } finally {
       detach();
       settings.setReleaseTracking(saved);
-      supervisor.close("card-note-quiet");
+      supervisor.pressNote("card-note-quiet");
     }
   });
 

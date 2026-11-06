@@ -156,7 +156,8 @@ describe("renderWake", () => {
   });
 
   // Ordinary-read acknowledgement is distinct from saved-answer completion.
-  it("serves acknowledgement only for an actual ordinary note read, not a duplicate", () => {
+  // INF-2794: the acknowledgement is the captain's Got it on the note.
+  it("serves acknowledgement only for an ordinary note's Got it, not a duplicate", () => {
     const card = { id: "card-t1-note", title: "The measurements" };
     const legacy = renderWake({ facts: { kind: "card-closed", card } });
     const read = renderWake({ facts: { kind: "card-closed", card, read: true } });
@@ -167,7 +168,10 @@ describe("renderWake", () => {
         duplicateOf: { id: "card-t1-first", title: "Measurements" },
       },
     });
-    expect(read).toBe(`${legacy} ${ORDINARY_NOTE_READ_GUIDANCE}`);
+    expect(read).toBe(
+      `The captain pressed Got it on your note "${card.title}" (${card.id}). ${ORDINARY_NOTE_READ_GUIDANCE}`,
+    );
+    expect(legacy).not.toContain(ORDINARY_NOTE_READ_GUIDANCE);
     expect(isCardClosedSteer(read)).toBe(true);
     expect(duplicate).not.toContain(ORDINARY_NOTE_READ_GUIDANCE);
     expect(isCardClosedSteer(duplicate)).toBe(true);

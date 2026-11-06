@@ -1,3 +1,4 @@
+import { NOTE_DONE_ACTION_ID } from "@shared/cardLeave";
 import type {
   Card,
   CardActionSource,
@@ -92,6 +93,8 @@ export type CardSlice = {
   setCardAnswers: (cardId: string, answers: FrameAnswers) => void;
   /** The close control; `mounted` is the card it was clicked on. */
   closeCard: (cardId: string, mounted?: CardMount) => void;
+  /** A live note's own button, Done or Got it (INF-2794); `mounted` as on close. */
+  pressNote: (cardId: string, mounted?: CardMount) => Promise<void>;
   /** Read one card's thread from the core; idempotent, and safe to call on every show. */
   loadThread: (cardId: string) => void;
   /** Adopt a pushed thread (`inf:cards:thread`). */
@@ -295,6 +298,29 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         ? window.infinitary.cards.close(cardId, submissionFor(mounted))
         : window.infinitary.cards.minimize(cardId, true);
       void request.catch(() => {});
+    },
+    pressNote: async (cardId, mounted) => {
+      const thisMac = get().thisMac;
+      if (isView(thisMac) && changesOff(thisMac)) {
+        set((s) => ({
+          cardActionErrors: { ...s.cardActionErrors, [cardId]: changesOffWords(thisMac) },
+        }));
+        return;
+      }
+      const request = { actionId: NOTE_DONE_ACTION_ID };
+      set((s) => ({
+        pendingCardActions: { ...s.pendingCardActions, [cardId]: request },
+        cardActionErrors: withoutKey(s.cardActionErrors, cardId),
+      }));
+      try {
+        await window.infinitary.cards.noteDone(cardId, submissionFor(mounted));
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : String(caught);
+        set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: message } }));
+      } finally {
+        if (get().pendingCardActions[cardId] === request)
+          set((s) => ({ pendingCardActions: withoutKey(s.pendingCardActions, cardId) }));
+      }
     },
     loadThread: (cardId) => {
       if (get().threads[cardId]) return;

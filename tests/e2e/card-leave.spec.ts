@@ -6,16 +6,25 @@ import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { CARD_LEAVE, type CardLeaveKind } from "../../src/shared/cardLeave";
+import { CARD_LEAVE, type CardLeaveKind, NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
+import { pastEndingWords } from "../../src/shared/pastCard";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedRepo } from "./githubStub";
 import { launchApp } from "./launch";
-import { expandDock, expectRecordBody, nowFrame, pressRow, recordCard } from "./rails";
+import {
+  expandDock,
+  expectRecordBody,
+  nowFrame,
+  pressRow,
+  recordCard,
+  recordFrame,
+  showRecordTab,
+} from "./rails";
 import { readSavedData } from "./savedData";
-import { clickInBody, showCard, shownCard, shownEntry } from "./stack";
+import { clickInBody, expectNoCard, noteDone, showCard, shownCard, shownEntry } from "./stack";
 import { boardCard } from "./taskBoard";
-import { pressKey, runFromSearch } from "./windowKeys";
+import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
 
 /** INF-1879 approved plan: the corner never answers, refuses consent, or ends a task.
  * Data: realistic launch plan, marked answer, host consent, record and task board in a private home.
@@ -77,6 +86,33 @@ test("each registered corner puts away without ending work; only Done receipts t
                   : {}),
               },
             ],
+    });
+  }
+  // INF-2794: a plain note on an open task that is not its answer takes Got it.
+  {
+    const worktreeDir = join(home, "work-plain");
+    execFileSync("git", ["-C", repoDir, "worktree", "add", "-b", "fm/task-plain", worktreeDir], {
+      stdio: "pipe",
+    });
+    keys.plain = seedTask(tasks, {
+      id: "plain",
+      title: "Check the launch checklist",
+      status: "idle",
+      repoDir,
+      worktreeDir,
+      branch: "fm/task-plain",
+    }).key;
+    store.upsert({
+      id: "card-plain-launch",
+      taskId: "plain",
+      author: "crewmate",
+      title: "Launch checklist read",
+      body: "<p>The checklist has three open items; I am fixing the first.</p>",
+      meta: "crew",
+      status: "ready",
+      priority: 10,
+      createdAt: Date.now(),
+      actions: [],
     });
   }
   keys.question = tasks.capture.fileDecision({
@@ -160,12 +196,16 @@ test("each registered corner puts away without ending work; only Done receipts t
         await expect(shownCard(page, "Launch note")).toBeHidden();
         await expandDock(page, "now");
         await expect(nowFrame(page).locator(`[data-now-key="${keys.note}"]`)).toBeVisible();
+        // INF-2794: the minus only put the answer aside, so its row brings the same note
+        // back with its Done still in the footer.
         await pressRow(page, keys.note!);
-        await recordAppeared();
+        // The reopened card stays inert until its body draws; showCard waits for that.
+        await showCard(page, "Launch note");
         await expect(
           shownEntry(page).getByRole("button", { name: "Done", exact: true }),
         ).toBeVisible();
         await pressKey(leave(), "Enter");
+        await expect(shownCard(page, "Launch note")).toBeHidden();
       },
       attention: async () => {
         await showCard(page, "Launch attention");
@@ -194,9 +234,39 @@ test("each registered corner puts away without ending work; only Done receipts t
       await test.step(kind, rows[kind]);
       for (const id of ["decision", "note", "attention"]) expect(status(id)).toBe("active");
     }
+    /** INF-2794 approved plan: the minus puts a plain note aside and its task waits on the
+     * captain; Command-1 presses the note's Got it, which reads it and leaves the task open.
+     */
+    await test.step("a plain note's Got it reads it; the minus only puts it aside", async () => {
+      await showCard(page, "Launch checklist read");
+      const gotIt = noteDone(page);
+      await expect(gotIt).toHaveText(new RegExp(NOTE_GOT_IT_LABEL));
+      await expect(gotIt).toHaveAttribute("data-note-done", "got-it");
+      await pressKey(leave(), "Enter");
+      await expect(shownCard(page, "Launch checklist read")).toBeHidden();
+      await expandDock(page, "now");
+      const waiting = nowFrame(page).locator(
+        `[data-now-group="waiting"] [data-now-key="${keys.plain}"]`,
+      );
+      await expect(waiting).toHaveCount(1);
+      await pressRow(page, keys.plain!);
+      await showCard(page, "Launch checklist read");
+      await pressWindowKey(app.app, "1", ["meta"]);
+      await expectNoCard(page, "Launch checklist read");
+      expect(status("plain")).toBe("active");
+      await expect(waiting).toHaveCount(0);
+      await pressRow(page, keys.plain!);
+      await recordAppeared();
+      await showRecordTab(page, "cards");
+      await expect(
+        recordFrame(page).locator('[data-record-card="card-plain-launch"]'),
+      ).toContainText(pastEndingWords({ how: "chose", label: NOTE_GOT_IT_LABEL, at: 0 }));
+      await pressKey(leave(), "Enter");
+    });
     await test.step("Done is an explicit host receipt, even after the answer was put away", async () => {
       await expandDock(page, "now");
       await pressRow(page, keys.note!);
+      await showCard(page, "Launch note");
       await runFromSearch(app.app, page, "cards.done");
       await expect.poll(() => status("note")).toBe("done");
       expect(readSavedData(home, (db) => new TaskStore(db).get("note")?.closedReason)).toBe(

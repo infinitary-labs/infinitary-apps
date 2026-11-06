@@ -94,7 +94,7 @@ describe("CardService", () => {
 
   // INF-1879 sweep regression / INF-1677: reading a completed workspace
   // build's answer still acknowledges its message, without ending any task.
-  it("acknowledges a completed panel build's read note without changing its task", () => {
+  it("acknowledges a completed panel build's note on its Got it without changing its task", () => {
     const { db, tasks, make } = setup();
     seedTask(tasks, {
       id: "panel",
@@ -124,7 +124,8 @@ describe("CardService", () => {
       tasks.close("panel", { status: "done", reason: "finished", actor: "host" });
       const completed = tasks.get("panel");
       expect(tasks.capture.getAsk("panel-ask")?.acceptedAt).toBeNull();
-      cards.dismiss(cards.get(id) as Card);
+      // INF-2794: Got it acknowledges the note; the minus would only put it aside.
+      expect(cards.pressNote(cards.get(id) as Card)).toBe("got-it");
       expect(tasks.capture.getAsk("panel-ask")?.answerCardId).toBe(id);
       expect(tasks.get("panel")).toEqual(completed);
     } finally {

@@ -29,6 +29,7 @@ import {
   closeQuestion,
   expectNoCard,
   expectUpdateSeen,
+  noteDone,
   pagerAt,
   putAwayAndRestore,
   showCard,
@@ -295,7 +296,7 @@ test("after the last card closes, the stage empties and the next card arrives wi
   try {
     const { page } = app;
     await expect(shownCard(page, LAST_CARD)).toBeVisible();
-    await cardLeave(page, shownEntry(page)).click();
+    await noteDone(page, shownEntry(page)).click();
     // The closed card leaves the stack at once; its drawing may still be on
     // its way out, but no card is up.
     await expectNoCard(page, LAST_CARD);

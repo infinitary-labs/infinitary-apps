@@ -14,7 +14,6 @@ export const cardCornerSchema = z.object({
 export type CardCornerWords = z.infer<typeof cardCornerSchema>;
 type LeaveRow = CardCornerWords & {
   operation: "aside" | "read" | "hide";
-  restOnTask?: (key: string) => string;
 };
 const aside = {
   icon: "minus",
@@ -30,43 +29,54 @@ const hide = {
 } as const;
 export const CARD_LEAVE = {
   decision: aside,
-  note: {
-    icon: "minus",
-    label: "Put aside",
-    restWords: "Put aside · the note stays saved",
-    restOnTask: (key: string) => `Put aside · the note stays on ${key}'s record`,
-    operation: "read",
-  },
+  // INF-2794: the minus only ever puts a card aside; a note ends on its own button.
+  note: aside,
   attention: aside,
   record: hide,
   "window-panel": { ...hide, restWords: "Hide · the view stays available" },
 } as const satisfies Record<CardLeaveKind, LeaveRow>;
 
-/** A reply awaiting its author stays aside, including when its card is a note. */
-export function cardLeaveOperation(
-  kind: CardLeaveKind,
-  pendingReply = false,
-): LeaveRow["operation"] {
-  return pendingReply ? "aside" : CARD_LEAVE[kind].operation;
+/** The corner's operation for a card of this kind. */
+export function cardLeaveOperation(kind: CardLeaveKind): LeaveRow["operation"] {
+  return CARD_LEAVE[kind].operation;
 }
 
 /** Only the core supplies live words; the window's own panels read their row directly. */
-export function cardCornerOf(
-  kind: CardLeaveKind,
-  key?: string,
-  pendingReply = false,
-): CardCornerWords {
+export function cardCornerOf(kind: CardLeaveKind): CardCornerWords {
   const row: LeaveRow = CARD_LEAVE[kind];
-  return {
-    icon: row.icon,
-    label: row.label,
-    restWords: key && row.restOnTask ? row.restOnTask(key) : row.restWords,
-    operation: cardLeaveOperation(kind, pendingReply),
-  };
+  return { icon: row.icon, label: row.label, restWords: row.restWords, operation: row.operation };
 }
 export const ANSWER_DONE_LABEL = "Done";
 export function answerDoneRest(key: string): string {
   return `${ANSWER_DONE_LABEL} · closes ${key} as answered; the answer stays on its record`;
+}
+
+/**
+ * Every live note's one button (INF-2794): "Done" when the click closes its
+ * task (the marked answer note of an active answer task), "Got it" otherwise.
+ * The core decides and sends it, so the Mac and the phone draw the same thing.
+ */
+export const noteDoneSchema = z.object({
+  label: z.string(),
+  restWords: z.string(),
+  /** The click closes the note's task as answered. */
+  closesTask: z.boolean(),
+});
+export type NoteDone = z.infer<typeof noteDoneSchema>;
+export const NOTE_GOT_IT_LABEL = "Got it";
+/** The id the note's button is recorded under, so its past card reads the label. */
+export const NOTE_DONE_ACTION_ID = "note-done";
+
+export function noteDoneOf(key: string | undefined, closesTask: boolean): NoteDone {
+  if (closesTask && key)
+    return { label: ANSWER_DONE_LABEL, restWords: answerDoneRest(key), closesTask };
+  return {
+    label: NOTE_GOT_IT_LABEL,
+    restWords: key
+      ? `${NOTE_GOT_IT_LABEL} · the note stays on ${key}'s record`
+      : `${NOTE_GOT_IT_LABEL} · the note stays saved`,
+    closesTask: false,
+  };
 }
 
 /** A recorded wait age is information, never a deadline. */

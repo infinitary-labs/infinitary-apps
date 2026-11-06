@@ -1,3 +1,4 @@
+import { NOTE_DONE_ACTION_ID } from "@shared/cardLeave";
 import {
   CARD_FILES_FIRST,
   type Card,
@@ -212,8 +213,12 @@ export function StackedCard({
   // task's record (INF-358); a card about no task draws no key.
   const task = useCardTask(card);
   const groups = footerGroups(card.actions);
+  // Every live note's one button sits where a decision's default does, on ⌘1
+  // (INF-2794); a core from before it still sends only an answer's Done.
+  const noteDone = !bare && card.actions.length === 0 ? card.noteDone : undefined;
+  const pressNote = useShellStore((s) => s.pressNote);
   const footer =
-    card.actions.length > 0 || reply !== undefined ? (
+    card.actions.length > 0 || reply !== undefined || noteDone ? (
       <>
         {asking && (
           <span
@@ -325,6 +330,28 @@ export function StackedCard({
                   </Button>
                 );
               })}
+              {noteDone && (
+                <Button
+                  variant="primary"
+                  data-card-action-default=""
+                  data-card-choice={0}
+                  // `cards.done` presses it, whichever word it carries.
+                  data-answer-done-control=""
+                  data-note-done={noteDone.closesTask ? "done" : "got-it"}
+                  aria-keyshortcuts={
+                    choiceKeys[0]?.keys ? choiceKeys[0]["aria-keyshortcuts"] : undefined
+                  }
+                  keys={choiceKeys[0]?.keys}
+                  pending={pending?.actionId === NOTE_DONE_ACTION_ID}
+                  disabled={Boolean(pending)}
+                  off={offWords !== null}
+                  note={noticeCovers ? undefined : (offWords ?? noteDone.restWords)}
+                  aria-description={offWords ?? undefined}
+                  onClick={() => void pressNote(card.id, card)}
+                >
+                  {noteDone.label}
+                </Button>
+              )}
               {/* Chat after the choices, at the right edge (INF-924). */}
               {index === all.length - 1 && reply !== undefined && (
                 <ChatButton cardId={card.id} collect={collect} />
@@ -385,9 +412,12 @@ export function StackedCard({
             : undefined
         }
         attachment={
-          !bare && (card.answerDone || card.attachment || card.requiredActions?.length) ? (
+          !bare &&
+          ((card.answerDone && !card.noteDone) ||
+            card.attachment ||
+            card.requiredActions?.length) ? (
             <>
-              {card.answerDone && <AnswerDone done={card.answerDone} />}
+              {card.answerDone && !card.noteDone && <AnswerDone done={card.answerDone} />}
               {card.attachment && <CardAttachment cardId={card.id} attachment={card.attachment} />}
               {card.requiredActions && <RequiredActions actions={card.requiredActions} />}
             </>

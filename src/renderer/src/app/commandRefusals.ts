@@ -156,8 +156,10 @@ function choiceRefusal(s: RefusalState, index: number): string | null {
   if (s.recording) return RECORDING;
   const entry = shownEntry(s);
   if (!entry) return NO_CARD;
-  if (isHeldEntry(entry) || entry.actions.length === 0) return "This card has no buttons";
-  if (index >= entry.actions.length) return "This card has no such choice";
+  // A live note's one button counts as its only choice (INF-2794).
+  const choices = entry.actions.length || ("noteDone" in entry && entry.noteDone ? 1 : 0);
+  if (isHeldEntry(entry) || choices === 0) return "This card has no buttons";
+  if (index >= choices) return "This card has no such choice";
   if (s.pendingCardActions[entry.id]) return "This card is working";
   if (changesOff(s.thisMac) && isView(s.thisMac)) return changesOffWords(s.thisMac);
   return null;
@@ -237,7 +239,7 @@ const REFUSALS: Readonly<
   "cards.next": (s) => pageRefusal(s, 1),
   "cards.minimize": cardRefusal,
   "cards.done": (s, facts) =>
-    cardRefusal(s) ?? (facts.answerDoneReady ? null : "No answer is ready to mark Done"),
+    cardRefusal(s) ?? (facts.answerDoneReady ? null : "This card has no Done or Got it"),
   "cards.maximize": cardRefusal,
   // A thread exists once its first message is sent; a recording keeps focus
   // where its words will go.

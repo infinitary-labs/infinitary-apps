@@ -174,7 +174,7 @@ describe("immediate welcome", () => {
     const id = f.service().view().welcomeCardId as string;
     const card = f.cards().get(id);
     if (!card) throw new Error("no welcome");
-    f.cards().dismiss(card);
+    f.cards().pressNote(card);
     f.restart();
     f.service().reconcile();
     expect(f.cards().snapshot()).toEqual([]);

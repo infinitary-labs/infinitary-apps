@@ -704,7 +704,8 @@ describe("FirstmateAgent", () => {
     expect(row()?.graph).toBeUndefined();
   });
 
-  it("INF-1879: keeps a read answer's Done witness on the stable crew context row", () => {
+  // INF-2794: putting the answer aside keeps it open; its Done witness stays.
+  it("INF-1879: keeps an answer's Done witness on the stable crew context row once it is put aside", () => {
     const card: Card = {
       ...crewCard(
         "card-launch-answer",
@@ -730,7 +731,7 @@ describe("FirstmateAgent", () => {
     supervisor.close(card.id);
     const context = () => decodeContext(agent.buildContextBlock());
     const before = context();
-    expect(before.open_cards?.some((entry) => entry.card_id === card.id) ?? false).toBe(false);
+    expect(supervisor.cards.shown(card.id)?.minimized).toBe(true);
     const answer = before.crew.find((entry) => entry.task_id === card.taskId)?.answer_waiting;
     expect(answer).toEqual({
       since: new Date(card.createdAt).toISOString(),
@@ -796,7 +797,8 @@ describe("FirstmateAgent", () => {
       seedTasks: [{ id: "t1", title: "Explain delivered", status: "idle" }],
       seedCards: [crewCard("card-t1-1", "t1", "Delivered means stopped", "<p>a</p>")],
     });
-    supervisor.close("card-t1-1");
+    // INF-2794: the note's Got it is what closes it; it wakes nobody either.
+    supervisor.pressNote("card-t1-1");
     await tick();
     expect(session.prompts).toHaveLength(0);
 

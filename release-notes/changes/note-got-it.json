@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "note-got-it",
+      "kind": "improvement",
+      "title": "Every note has its own Done or Got it",
+      "body": "The minus at the top of a card now only puts it aside, for every card, and a note put aside keeps its task under Waiting on you. Each note has one button at the bottom right instead, pressed with Command-1: Done when the click finishes the task with that answer, and Got it otherwise. Got it closes the note, keeps it on its task's record and lets the crewmate know you read it.",
+      "area": "cards",
+      "picture": {
+        "dark": "note-got-it-dark.webp",
+        "light": "note-got-it-light.webp",
+        "alt": "A note from a crewmate saying the launch checklist has three open items, with a Got it button and its Command-1 hint at the bottom right"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

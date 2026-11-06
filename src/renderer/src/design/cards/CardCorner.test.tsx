@@ -7,7 +7,7 @@ import { CardCorner, CardSizeContext } from "./CardSize";
 // INF-1879: every registered view has one leaving control, always a minus, with its owner's words.
 for (const kind of Object.keys(CARD_LEAVE) as CardLeaveKind[]) {
   it(`${kind}: renders exactly one leaving control with the table's words`, () => {
-    const words = cardCornerOf(kind, "INF-42");
+    const words = cardCornerOf(kind);
     const root = parseDocument(
       renderToStaticMarkup(
         <CardSizeContext.Provider value={{ maximized: false, toggle: () => {}, corner: words }}>

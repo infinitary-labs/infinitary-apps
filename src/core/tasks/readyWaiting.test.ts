@@ -203,7 +203,8 @@ describe("ready decisions and saved answers are the waiting facts", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("INF-1879: a saved answer stays in waiting rows and project counts after reading and restart", async () => {
+  // INF-2794: putting the answer aside keeps it open; only its Done ends it.
+  it("INF-1879: a saved answer stays in waiting rows and project counts after it is put aside and restart", async () => {
     const h = setup(true);
     try {
       h.tasks.create({
@@ -248,7 +249,7 @@ describe("ready decisions and saved answers are the waiting facts", () => {
       expect(h.protocol.projects()[0]?.counts.waitingOnYou).toBe(1);
       expect(h.boards.at(-1)?.projects[0]?.counts.waitingOnYou).toBe(1);
       expect(h.details.at(-1)?.answerNoteId).toBe(id);
-      expect(h.cards.snapshot()).toEqual([]);
+      expect(h.cards.snapshot().map((card) => [card.id, card.minimized])).toEqual([[id, true]]);
     } finally {
       h.dispose();
     }

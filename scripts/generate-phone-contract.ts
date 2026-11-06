@@ -35,6 +35,8 @@ const cardRequests = {
   picture: "inf:cards:picture", typeface: "inf:cards:typeface", media: "inf:cards:media",
   // INF-944 item 3: opening a minimized card on the phone brings it back on the Mac too.
   minimize: "inf:cards:minimize",
+  // INF-2794: every live note's one button, Done or Got it.
+  noteDone: "inf:cards:note-done",
 };
 for (const channel of Object.values(cardRequests)) {
   if (contract.requests[channel]?.reach !== "views") throw new Error(`The phone cannot ask ${channel}`);

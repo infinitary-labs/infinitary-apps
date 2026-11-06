@@ -505,7 +505,8 @@ describe("CrewSupervisor", () => {
     expect(ops.at(-1)).toContain('[user]\nquota-axi\nChoice on card "Which project?"');
   });
 
-  it("INF-1879: reads a note without ending work, a feed line or a wake", async () => {
+  // INF-2794: the minus only puts the note aside; its Got it reads it.
+  it("INF-1879: reads a note on its Got it without ending work, a feed line or a wake", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, cards, ops, cardStore, specs, events } = setup(crewmate);
     supervisor.addFirstmateCard({
@@ -519,6 +520,10 @@ describe("CrewSupervisor", () => {
 
     const opsBefore = ops.length;
     supervisor.close(note.id);
+    await tick();
+    expect(cards().find((entry) => entry.id === note.id)).toMatchObject({ minimized: true });
+    expect(cardStore.chosenAction(note.id)).toBeUndefined();
+    supervisor.pressNote(note.id);
     await tick();
     expect(cards().find((entry) => entry.id === note.id)).toBeUndefined();
     expect(cardStore.chosenAction(note.id)).toBe("close");

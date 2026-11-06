@@ -283,10 +283,16 @@ describe("the window's card channels reach the card stack", () => {
     ).toEqual([["captain", "Which meters show watts?"]]);
   });
 
-  it("closes a card and shows it again closed", async () => {
+  // INF-2794: the close request only puts the note aside; its own button closes it.
+  it("puts a note aside, closes it on its button and shows it again closed", async () => {
     const { dispatch } = crew([savedNote("card-fm-meter", "The meter reads kWh")]);
     expect(await dispatch("inf:cards:past", ["card-fm-meter"])).toBeNull();
     await dispatch("inf:cards:close", ["card-fm-meter"]);
+    expect(
+      (await dispatch("inf:cards:list", [])).find((card) => card.id === "card-fm-meter"),
+    ).toMatchObject({ minimized: true });
+    expect(await dispatch("inf:cards:past", ["card-fm-meter"])).toBeNull();
+    await dispatch("inf:cards:note-done", ["card-fm-meter"]);
     expect((await dispatch("inf:cards:list", [])).map((card) => card.id)).not.toContain(
       "card-fm-meter",
     );

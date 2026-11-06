@@ -13,7 +13,7 @@ import {
 } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { activityFrame, feedLineOf } from "./rails";
-import { cardLeave, cardMeta, shownCard } from "./stack";
+import { cardMeta, noteDone, shownCard } from "./stack";
 
 /**
  * The orchestrator loop, phase A acceptance (the loop inversion): every
@@ -80,7 +80,7 @@ test("a question yields one answer card from Firstmate", async () => {
   await expect(cardMeta(page, MOCK_ANSWER_TITLE)).toHaveText(cardMetaWords(FIRSTMATE_CARD_META));
   expect(worktreeCount(userDataDir)).toBe(0);
 
-  await cardLeave(page).click();
+  await noteDone(page).click();
   // The stack empties.
   await expect(page.locator("[data-card-layer]")).toHaveCount(0, { timeout: 10_000 });
 });

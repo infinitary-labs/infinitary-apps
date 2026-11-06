@@ -1,3 +1,4 @@
+import { NOTE_DONE_ACTION_ID, NOTE_GOT_IT_LABEL } from "@shared/cardLeave";
 import { type Card, type CardObservation, withMergeClosesLine } from "@shared/cards";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "../../../tests/helpers/cardServiceHarness";
@@ -366,7 +367,8 @@ describe("CardService evidence", () => {
     });
   });
 
-  it("tells a dismissal, a withdrawal, a take-down, a retirement and a duplicate apart", () => {
+  // INF-2794: a note leaves on the captain's Got it, a recorded choice, never an exit.
+  it("tells a Got it, a withdrawal, a take-down, a retirement and a duplicate apart", () => {
     const { tasks, cardStore, make } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
     seedTask(tasks, { id: "t2", title: "Other", status: "idle" });
@@ -382,7 +384,7 @@ describe("CardService evidence", () => {
     cards.addAuthDecisionCard("card-auth-x", "Codex", "Sign in again.");
     const retired = cards.emitCrewmateCard("t2", decision, "m");
 
-    cards.dismiss(cards.shown(dismissed) as Card, { id: "gesture-0007" });
+    cards.pressNote(cards.shown(dismissed) as Card, { id: "gesture-0007" });
     cards.close(withdrawn, { kind: "firstmate" }, "obsolete now");
     cards.clearAuthDecisionCard("card-auth-x");
     cards.flagDuplicate({ cardId: duplicate, duplicateOf: dismissed, note: "same ask" });
@@ -392,13 +394,19 @@ describe("CardService evidence", () => {
       const [only_] = only(cardStore, id, "exit");
       return [only_?.actor, only_?.source, only_?.payload.reason, only_?.payload.note ?? null];
     };
-    expect(exit(dismissed)).toEqual(["captain", "close-control", "dismissed", null]);
+    expect(only(cardStore, dismissed, "exit")).toEqual([]);
+    expect(only(cardStore, dismissed, "action")[0]).toMatchObject({
+      actor: "captain",
+      source: "chrome",
+      interactionId: "gesture-0007",
+      payload: { actionId: NOTE_DONE_ACTION_ID, label: NOTE_GOT_IT_LABEL, closes: true },
+    });
     expect(exit(withdrawn)).toEqual(["firstmate", "tool", "author-withdrawal", "obsolete now"]);
     expect(exit("card-auth-x")).toEqual(["host", "host", "host-withdrawal", "recovered"]);
     expect(exit(duplicate)).toEqual(["firstmate", "tool", "duplicate", "same ask"]);
     expect(exit(retired)).toEqual(["host", "host", "task-retired", "merged"]);
     // None of them is a choice.
-    for (const id of [dismissed, withdrawn, "card-auth-x", duplicate, retired]) {
+    for (const id of [withdrawn, "card-auth-x", duplicate, retired]) {
       expect(kinds(cardStore, id)).not.toContain("action");
     }
   });
@@ -424,7 +432,7 @@ describe("CardService evidence", () => {
     // INF-500: what CardActions.act hands over when the body's own script chose.
     const scripted = cards.addFirstmateCard({ ...decision, id: "fm-s", taskId: "t1" });
     cards.resolve(cards.shown(chosen) as Card, "right", "right");
-    cards.dismiss(cards.shown(dismissed) as Card);
+    cards.pressNote(cards.shown(dismissed) as Card);
     cards.close(withdrawn, { kind: "firstmate" }, "obsolete now");
     cards.resolve(cards.shown(scripted) as Card, "left", "left", undefined, "firstmate", {
       source: "frame",
@@ -438,7 +446,7 @@ describe("CardService evidence", () => {
       [scripted, "closed", "decision", "Your first mate chose Left"],
       [open, "open", "decision", null],
       [withdrawn, "closed", "decision", "Withdrawn by its author"],
-      [dismissed, "closed", "note", "Closed without choosing"],
+      [dismissed, "closed", "note", "You chose Got it"],
       [chosen, "closed", "decision", "You chose Right"],
     ]);
   });
@@ -560,7 +568,7 @@ describe("CardService evidence", () => {
     expect(cardStore.observations(id).length).toBeGreaterThan(0);
 
     const taskless = cards.addFirstmateCard({ ...decision, actions: [], id: "fm-free" });
-    cards.dismiss(cards.shown(taskless) as Card);
+    cards.pressNote(cards.shown(taskless) as Card);
     const open = cards.addFirstmateCard({ ...decision, id: "fm-open" });
     cards.purgeTask("t1");
     cards.purgeEvidence([taskless, open]);
@@ -694,7 +702,7 @@ describe("CardService what changed since the captain looked", () => {
     expect(changes).toBeDefined();
     expect(shown(make(), id).changes).toEqual(changes);
 
-    cards.dismiss(cards.shown(id) as Card);
+    cards.pressNote(cards.shown(id) as Card);
     // The same id up again is a new card: nothing seen on it yet.
     const again = cards.addFirstmateCard(note(v3));
     expect(again).toBe(id);
@@ -922,8 +930,12 @@ describe("CardService past cards", () => {
     );
     cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     expect(cards.past(dismissed)).toBeUndefined();
-    cards.dismiss(cards.shown(dismissed) as Card);
-    expect(cards.past(dismissed)?.ending).toMatchObject({ how: "dismissed", by: "captain" });
+    cards.pressNote(cards.shown(dismissed) as Card);
+    expect(cards.past(dismissed)?.ending).toMatchObject({
+      how: "chose",
+      label: NOTE_GOT_IT_LABEL,
+      by: "captain",
+    });
 
     const withdrawn = emit("withdrawn");
     cards.close(withdrawn, { kind: "crewmate", taskId: "t1" }, "superseded");

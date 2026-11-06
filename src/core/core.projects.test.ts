@@ -1094,7 +1094,7 @@ describe("the core, driven with no Electron in the process", () => {
 
     detach();
     const before = cardPushes.length;
-    core.services.supervisor.close("card-core-test");
+    core.services.supervisor.pressNote("card-core-test");
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(cardPushes.length).toBe(before);
     expect(events).toEqual([]);

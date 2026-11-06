@@ -82,7 +82,7 @@ import {
 } from "./scenarios/githubChange";
 import { mergeWriteGuard } from "./scenarios/mergeWriteGuard";
 import { assertSettingsFits } from "./settings";
-import { cardLeave, clickInBody, expectNoCard, factsStrip, shownCard } from "./stack";
+import { clickInBody, expectNoCard, factsStrip, noteDone, shownCard } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
 
 /**
@@ -551,7 +551,7 @@ test("the Firstmate lists the projects there with the app's own sign-in", async 
   const card = cardBody(page, MOCK_LOCATED_CARD_TITLE);
   await expect(card.locator("li")).toHaveText(["octo/website"], { timeout: 30_000 });
   expect(github.requests()).toContain("GET /user/repos");
-  await cardLeave(page).click();
+  await noteDone(page).click();
 });
 
 /** The context's `lives` fact for each project, as the Firstmate was served it (PR 1.3). */
@@ -563,7 +563,7 @@ async function servedLives(page: Page): Promise<string[]> {
   const lives = (await card.locator("li").allTextContents()).filter(
     (line) => !line.startsWith(`${PERSONAL_WORKSPACE_NAME}:`),
   );
-  await cardLeave(page).click();
+  await noteDone(page).click();
   // Gone from the stack, read off the cards the app holds: the feed's
   // latest-activity line still names the card it just dismissed.
   await expect
@@ -1428,7 +1428,7 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   const listing = cardBody(page, MOCK_LOCATED_CARD_TITLE);
   await expect(listing.locator("li")).toHaveText(["octo/website"], { timeout: 30_000 });
   expect(github.requests()).toContain("GET /api/v3/user/repos");
-  await cardLeave(page).click();
+  await noteDone(page).click();
 
   // A crewmate sends its branch up and opens its change there with its own
   // tools; the completion card reads its checks there, and the captain's

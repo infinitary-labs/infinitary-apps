@@ -831,7 +831,7 @@ test("ready waiting follows reachable choices through a reply, reload and return
     await pressRow(page, key);
     await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
     // Retire only the unrelated note so the reply screenshots are unambiguous.
-    await page.evaluate(() => window.infinitary.cards.close("other-ready-note"));
+    await page.evaluate(() => window.infinitary.cards.noteDone("other-ready-note"));
     await page.screenshot({ path: test.info().outputPath("ready-waiting-tree.png") });
     const states: unknown[] = [];
     const capture = async (name: string) => {

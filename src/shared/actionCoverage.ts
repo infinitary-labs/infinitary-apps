@@ -10,6 +10,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:converse": "Conversation, not an app setting",
   "inf:cards:act": "Captain card clicks",
   "inf:cards:close": "Captain card clicks",
+  "inf:cards:note-done": "Captain card clicks",
   "inf:cards:minimize":
     "Captain-only saved card presentation; the first mate may restore through show-card, never minimize",
   "inf:cards:show-past":

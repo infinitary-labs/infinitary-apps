@@ -161,6 +161,7 @@ The body's web view never scrolls, zooms or adds insets of its own; it takes its
 Until the body reports drawn, its web view is a 48-point placeholder that clips the body, so native code keeps the web view one closed accessibility element that takes no taps until it has laid the view out at the body's height.
 The page itself never hides the body: on iOS 27.0, a frame hidden from accessibility inside the page stays hidden after it is shown (INF-1651).
 Native code reveals the body from the web view's own layout once its bounds hold the drawn height, never from the SwiftUI update that reads it, which runs before that layout; the footer choices enable at the same moment (INF-1574).
+A body built behind another tab loads its page only once its web view reaches a window: WebKit suspends a hidden view's process, and a page that began loading there reported drawn about half a minute after its tab showed again.
 The page tells the body's bridge that its pictures can arrive late (`latePictures` on `initialize`), so the body reports drawn once the fonts its layout asked for are in.
 WebKit's `document.fonts.ready`, which the bridge waits for otherwise, resolves only after the page's load event, and that waits for every picture; a picture waiting for its computer to come back in reach would keep the body's words clipped and out of accessibility (INF-1562).
 On a short stage, such as an iPhone on its side, where the pinned head and choices would take more room than the body keeps, the whole card scrolls in that one scroller instead.
@@ -422,7 +423,8 @@ A reply joins the card's thread marked Sending… where its time will be, and th
 A message clears the box and stands as the last turn, marked Sending… until the computer has it.
 Start and Continue read Starting on the record and its row, Interrupt reads Stopping, and a steer shows in the transcript marked Sending… as its draft clears.
 An explicit Done or Dismiss shows its selected ending on the record and row at the tap, and settles only when the home's task reading carries the matching status and reason.
-Putting a decision aside predicts its minimized state, while putting a note away predicts its acknowledgement; neither predicts a task ending.
+Putting any card aside predicts its minimized state, and a note's own Got it, in its pinned row under the hairline, predicts its acknowledgement (INF-2794); neither predicts a task ending.
+With an older computer whose note corner still reads, the minus predicts that acknowledgement as before.
 A snapshot that holds the change retires its intent with nothing moving.
 A reply or a steer is held once the thread or transcript has more of the captain's messages than it showed at the tap, and a message once the last turn follows the one shown at the tap, since the computer writes the words its own way (trimmed, with a line for each picture).
 A snapshot whose card or task changed under the intent, such as a revised offer or a closed task, voids it quietly.

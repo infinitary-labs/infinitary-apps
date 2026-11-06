@@ -51,8 +51,10 @@ On desktop it is a Tab stop with the focus ring, and Enter or Space activates it
 The line keeps clear of the risk chart as the title does, and a card about no message of the captain's draws none.
 Every card has one top-right leaving control, a neutral Lucide minus after Maximize, that only puts the card away and never ends a task (INF-1879).
 The shared `src/shared/cardLeave.ts` table owns each kind’s icon, label, rest words and operation; live cards carry the core’s corner and the window’s own panels read their table row.
-An answer note carries the host’s Done row between body and field; Done closes its task as answered, and the task record offers the same Done after the note is put away.
-Other notes have no Done button.
+Every live note carries one host footer button at the bottom right, the card's only primary, pressed by ⌘1 (INF-2794).
+It reads Done when the click will close the task, on the answer note of an active answer task: Done closes its task as answered, and the task record offers the same Done after the note is put away.
+It reads Got it otherwise, on a note on an open or finished task, a note with no task and an app notice with no buttons: Got it closes the note, its record keeps it, and an open task's crewmate hears it was read.
+The phone draws the same button in the pinned row under the hairline.
 Card actions acknowledge before the next paint: while the host accepts a request, the selected Button is pending and the entire action row is disabled.
 Embedded body actions use the same request guard.
 Acceptance closes the card before background work settles; the durable feed carries the outcome, including refusal reasons.
@@ -312,8 +314,8 @@ Deferred obligations remain under Waiting on you in Tasks with Show the card; ma
 
 Every card has one leaving control, the neutral Lucide minus after Maximize, with its installed key hint (default ⇧⌘M).
 `src/shared/cardLeave.ts` owns its label and rest words, and `docs/card-authoring.md` carries the checked table.
-Decisions and attention cards stay open under Waiting on you, notes are read, and the window’s own panels hide.
-The minus never decides, refuses consent or ends a task; ending is a named button.
-The host draws Done on an answer note and in its record, and never completes it by time.
+Decisions, attention cards and notes stay open under Waiting on you, and the window’s own panels hide.
+The minus never decides, reads a note, refuses consent or ends a task; ending is a named button.
+A note leaves through its own footer button, Done or Got it; the host never completes an answer by time.
 The separate Close command retires; unsent picks and words stay on a put-away decision without a warning question.
 The body primitive accepts an owner-supplied bodyRef for keeping an in-session reading place.

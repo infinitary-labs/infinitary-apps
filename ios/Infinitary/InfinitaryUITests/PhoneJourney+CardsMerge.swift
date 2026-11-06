@@ -214,25 +214,35 @@ extension PhoneJourney {
         picture("shared-seen-relaunched")
     }
 
-    /// INF-1879: reading an answer never completes it; Done remains available on its record.
+    /// INF-1879: putting an answer aside never completes it; Done remains available on its record.
     private func verifyAnswerDone() async throws {
         let fixture = try await home("answer-note-fixture")
         let title = try XCTUnwrap(fixture["title"] as? String)
         let taskID = try XCTUnwrap(fixture["taskId"] as? String)
         showCard(title)
-        XCTAssertTrue(app.buttons["answer-done"].waitForPresence(timeout: 10), app.debugDescription)
+        // INF-2794: the answer note's one Done sits in its pinned row; the minus only puts it aside.
+        let noteDone = app.buttons["note-done"]
+        XCTAssertTrue(noteDone.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(noteDone.label, "Done")
         XCTAssertTrue(app.webViews.staticTexts[try XCTUnwrap(fixture["answerText"] as? String)].waitForPresence(timeout: 10), app.debugDescription)
-        reveal(app.buttons["answer-done"])
+        reveal(noteDone)
         try await appearances("answer-note-done", showing: cardHeading(title))
         tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
-        let read = try await home("answer-note-state", body: "{\"taskId\":\"\(taskID)\",\"expectedCardOpen\":false}")
+        // INF-2794: the minus only puts the answer aside; the card stays open and its task waits on the captain.
+        let read = try await home("answer-note-state", body: "{\"taskId\":\"\(taskID)\"}")
         XCTAssertEqual(read["status"] as? String, "active")
-        XCTAssertEqual(read["cardOpen"] as? Bool, false)
+        XCTAssertEqual(read["cardOpen"] as? Bool, true)
         XCTAssertEqual(read["ready"] as? Bool, true)
         tab("Tasks")
         let row = app.buttons.matching(identifier: "task-\(taskID)").firstMatch
         tapOnPhone(row)
+        // The row brings the put-aside note back with its Done; its task key opens the record.
+        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(noteDone.waitForPresence(timeout: 10), app.debugDescription)
+        let taskKey = app.buttons["card-task-key"]
+        XCTAssertTrue(taskKey.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(taskKey)
         let done = app.buttons["record-answer-done"]
         XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
         try await appearances("answer-record-done", showing: app.staticTexts["task-record-title"])
@@ -244,6 +254,7 @@ extension PhoneJourney {
         let hidden = try await home("answer-note-state", body: "{\"taskId\":\"\(taskID)\"}")
         XCTAssertEqual(hidden["status"] as? String, "active", "Hiding the record never answers its task")
         XCTAssertEqual(hidden["ready"] as? Bool, true)
+        tab("Tasks")
         try await appearances("saved-answer-in-tasks", showing: row)
         tapOnPhone(row)
         XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
@@ -257,15 +268,17 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["close-record"])
         XCTAssertTrue(app.buttons["close-record"].waitForAbsence(timeout: 10), app.debugDescription)
         tab("Home")
-        // The note's own Done uses the same explicit operation, even before the computer answers.
+        // The note's own Done, the button in its pinned row (INF-2794), closes the task as answered, even before
+        // the computer answers.
         let next = try await home("answer-note-fixture")
         let nextTaskID = try XCTUnwrap(next["taskId"] as? String)
         let nextTitle = try XCTUnwrap(next["title"] as? String)
         showCard(nextTitle)
-        let noteDone = app.buttons["answer-done"]
         XCTAssertTrue(noteDone.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(noteDone.label, "Done")
+        XCTAssertFalse(app.buttons["answer-done"].exists, "The note draws one Done, in its pinned row")
         reveal(noteDone)
-        _ = try await home("hold-card-action", body: #"{"channel":"inf:task:run"}"#)
+        _ = try await home("hold-card-action", body: #"{"channel":"inf:cards:note-done"}"#)
         tapOnPhone(noteDone)
         _ = try await home("card-action-held")
         XCTAssertTrue(cardHeading(nextTitle).waitForAbsence(timeout: 10), "Done puts the answer away at the tap")

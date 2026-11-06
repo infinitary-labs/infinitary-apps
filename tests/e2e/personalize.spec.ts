@@ -135,7 +135,11 @@ test("hide tasks removes the panel without losing its tasks, and show brings it 
   // next test's no-card check is about what its own ask did.
   await expect.poll(() => buildingInWorkspace(page), { timeout: 30_000 }).toEqual([]);
   for (const card of await page.evaluate(() => window.infinitary.cards.list()))
-    await page.evaluate((id) => window.infinitary.cards.close(id), card.id);
+    await page.evaluate(
+      ({ id, note }) =>
+        note ? window.infinitary.cards.noteDone(id) : window.infinitary.cards.close(id),
+      { id: card.id, note: Boolean(card.noteDone) },
+    );
   await expect(page.locator("[data-card-layer]")).toHaveCount(0);
 });
 
@@ -210,7 +214,11 @@ test("a panel instruction is a standing direction for the personal workspace", a
   // That task's close leaves its note for the captain (INF-1677); closing it
   // here keeps the check below about what the direction itself shows.
   for (const card of await page.evaluate(() => window.infinitary.cards.list()))
-    await page.evaluate((id) => window.infinitary.cards.close(id), card.id);
+    await page.evaluate(
+      ({ id, note }) =>
+        note ? window.infinitary.cards.noteDone(id) : window.infinitary.cards.close(id),
+      { id: card.id, note: Boolean(card.noteDone) },
+    );
   const before = savePointCount(workspace);
   await say(page, PERSONALIZE_INSTRUCTION_PROMPT_MARKER);
   await expect(

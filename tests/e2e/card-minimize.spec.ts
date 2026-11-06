@@ -24,6 +24,7 @@ import {
   clickInBody,
   closeQuestion,
   minimizeForLegacyView,
+  noteDone,
   showCard,
   shownCard,
   shownEntry,
@@ -223,8 +224,8 @@ test("legacy note-minimize requests keep the task or title row and retain visibi
         JSON.stringify({ action: "show-card", value: { cardId: "week-note" } }),
     );
     await expect(shownCard(page, "Your weekly overview")).toBeVisible();
-    // The current corner reads the note; no legacy minimized row remains.
-    await shownEntry(page).getByRole("button", { name: PUT_ASIDE_LABEL, exact: true }).click();
+    // The note's Got it reads it; no legacy minimized row remains (INF-2794).
+    await noteDone(page).click();
     await expect(nowFrame(page).getByRole("button", { name: /Your weekly overview/ })).toHaveCount(
       0,
     );

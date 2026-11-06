@@ -395,7 +395,8 @@ describe("shared cards", () => {
     const f = setup();
     const id = noteOnT1(f.cards);
     const read = f.cards.cardRead(id);
-    f.cards.dismiss(f.cards.get(id) as Card);
+    // INF-2794: the captain's Got it closes the note.
+    f.cards.pressNote(f.cards.get(id) as Card);
     const closed = f.cardStore.get(id) as Card;
 
     const revision = f.cards.contribute(

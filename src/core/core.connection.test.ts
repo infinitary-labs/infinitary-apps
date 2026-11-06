@@ -114,7 +114,7 @@ describe("the connection serves the core to paired devices", () => {
     expect(fromA).toEqual(fromB);
 
     // One device answers; the other sees the card go.
-    await a.invoke("inf:cards:close", ["card-connection-1"]);
+    await a.invoke("inf:cards:note-done", ["card-connection-1"]);
     await b.push(
       (push) =>
         push.seq > fromB.seq && push.channel === "inf:cards" && !shows("card-connection-1")(push),
@@ -150,6 +150,7 @@ describe("the connection serves the core to paired devices", () => {
   // INF-2553 (the captain: "closing a card on the ios would not immediately take effect, but seems to rely on server
   // response"): a view shows a close at the tap and settles it on the next cards snapshot, so the home sends the
   // snapshot without the card before it answers the close, never a coalescing window after it.
+  // INF-2794: a note closes on its own button; the corner only puts it aside.
   it("sends a view the cards without a closed card before it answers the close", async () => {
     const { grant } = await pairDevice("view", "Phone");
     const view = await connectClient(grant);
@@ -162,7 +163,7 @@ describe("the connection serves the core to paired devices", () => {
     );
     const shown = await view.push(holds("card-close-first"));
 
-    await view.invoke("inf:cards:close", ["card-close-first"]);
+    await view.invoke("inf:cards:note-done", ["card-close-first"]);
     const after = view.pushes.filter(
       (push) => push.seq > shown.seq && push.channel === "inf:cards",
     );

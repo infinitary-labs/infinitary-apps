@@ -386,6 +386,10 @@ export function riskChart(page: Page): RiskChartReader {
 export const cardLeave = (page: Page, scope: Locator = shownEntry(page)) =>
   scope.locator("[data-card-leave]").and(shownEntry(page).locator("[data-card-leave]"));
 
+/** A live note's one footer button, Done or Got it (INF-2794); the minus only puts it aside. */
+export const noteDone = (page: Page, scope: Locator = shownEntry(page)) =>
+  scope.locator("[data-note-done]").and(shownEntry(page).locator("[data-note-done]"));
+
 /** The shown card's answer summary, never a retained or outgoing card's copy. */
 export const cardAnswersLine = (page: Page) => shownEntry(page).locator("[data-card-answers]");
 
@@ -409,7 +413,7 @@ export async function putAwayAndRestore(page: Page, title: string): Promise<void
   await showCard(page, title);
 }
 
-/** The safe saved-visibility request retained for older views; the current note corner reads instead. */
+/** The safe saved-visibility request retained for older views; the current note corner puts aside too. */
 export async function minimizeForLegacyView(page: Page, title: string): Promise<void> {
   const card = (await page.evaluate(() => window.infinitary.cards.list())).find(
     (card) => card.title === title,
@@ -424,8 +428,8 @@ export const closeQuestion = (page: Page) => page.getByRole("dialog");
 
 /**
  * Read notes and put choices away before an unrelated journey; hide records
- * first. The core's presentation-only corner request reads notes and puts
- * decisions aside, and the stage is waited on until it agrees.
+ * first. A note's Got it or Done reads it and the corner request puts every
+ * other card aside, and the stage is waited on until it agrees.
  * The window's drawing of the stack lags
  * the core's state by a push, so a cleanup that reads the drawing and
  * presses × on it fails whenever the card leaves between the read and the
@@ -440,7 +444,13 @@ export async function closeOpenCards(page: Page): Promise<void> {
       async () =>
         page.evaluate(async () => {
           const open = await window.infinitary.cards.list();
-          await Promise.all(open.map((card) => window.infinitary.cards.close(card.id)));
+          await Promise.all(
+            open.map((card) =>
+              card.noteDone && !card.noteDone.closesTask
+                ? window.infinitary.cards.noteDone(card.id)
+                : window.infinitary.cards.close(card.id),
+            ),
+          );
           return open.filter((card) => !card.minimized).length;
         }),
       { message: "the core holds no card on the stage" },

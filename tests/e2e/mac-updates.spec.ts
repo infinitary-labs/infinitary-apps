@@ -421,7 +421,11 @@ test("Check for updates finds a release published within the same four hours, by
     );
     await untilFocused(button);
     expect(await button.evaluate((element) => element.matches(":focus-visible"))).toBe(true);
-    // Tab reaches it: away and back again.
+    // Tab reaches it: away and back again, once the stops before it hold still. The local
+    // model section right above the row, which every source checkout draws, draws only when
+    // its own read answers, after the button already took focus; drawn between the two keys,
+    // its switch took the Tab (INF-2840, alpha run 42224755343).
+    await expect(page.locator("[data-local-seat]")).toBeVisible();
     await page.keyboard.press("Shift+Tab");
     await expect(button).not.toBeFocused();
     await page.keyboard.press("Tab");

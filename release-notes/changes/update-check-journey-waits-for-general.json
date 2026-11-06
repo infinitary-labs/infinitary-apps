@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "update-check-journey-waits-for-general",
+      "reason": "The Check for updates journey now presses Shift+Tab and Tab on the Version row only after the local model section above it has drawn, so a section drawn between the two keys no longer takes the Tab; nothing a person sees changes."
+    }
+  ]
+}

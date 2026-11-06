@@ -125,8 +125,27 @@ This lets a connected view hear `closing` before the app exits or its SSH connec
 A repeated `close()` waits behind the same drain, including one already underway for a changed address or the last pairing leaving.
 HTTP requests do not extend this grace.
 
-The home pings every device every 30 seconds and drops one that has not answered the previous ping.
+The home pings every device every 30 seconds and drops one that has answered no ping since the previous one (see "Pacing and liveness").
 A frame may be up to `CONNECTION_MAX_FRAME_BYTES` (64 MiB), room for the largest turn the contract admits.
+
+## Pacing and liveness
+
+What the home writes to a device goes through that device's outbox (`src/core/connection/outbox.ts`), never straight to its socket.
+The outbox writes each frame in pieces, as one WebSocket message in several fragments, and follows each piece with a ping whose payload names it.
+A device's pong echoes that payload, so it says how much has arrived; a pong answers for its ping and every one before it, and one naming no ping answers for the oldest.
+Only a window goes ahead of the newest answer, and the rest waits in the outbox.
+The window starts at one piece (`pieceBytes`, 4 KiB) and follows the rate the answers measure: two seconds of it (`aheadMs`), growing by at most what was answered, as a TCP connection's start does.
+A piece is a quarter of the window, never smaller than `pieceBytes`.
+The heartbeat's own ping is a mark too, and any pong counts as an answer for the heartbeat.
+
+So a device on a slow link answers every piece while a long catch-up arrives, instead of only once all of it has, and is not cut while it is still receiving.
+Before the outbox, the home's ping waited behind everything it was sending: at 1 KB/s a catch-up over about 30 to 60 KB was cut 60 seconds in and started over.
+The window bounds the other direction too: a ping a device sends, and the home's pong to it, wait behind about one window rather than the whole catch-up, so a Mac's link (`src/core/devices/homeLink.ts`, a ping every 10 seconds) and the phone's own ping are answered while it arrives.
+At 1 KB/s that is about 8 seconds.
+A device that stops reading still answers nothing, and is cut within two heartbeats.
+
+The kernel's send buffer and anything between the home and the device read eagerly, so the socket's own `bufferedAmount` says nothing about what a device has received; only its answers do.
+`behind` counts what waits in the outbox and in the socket together.
 
 ## Where a device dials
 
@@ -161,6 +180,7 @@ The names are open strings: a client ignores one it does not know, and a newer h
 
 - `src/core/connection/connection.test.ts`: each rule above against a stand-in core, the real event bus and the real pairing, the work requests and the home's own requests to a computer that runs work included, a view heard coming and going, and where it listens said only when that changes.
 - `src/core/connection/journal.test.ts` and `addresses.test.ts`: the numbering and the listening rule on their own.
+- `src/core/connection/outbox.test.ts`: the outbox's pieces, window and marks on their own; `connection.test.ts`, "pacing and liveness": a device receiving a long push through a slow link kept on one connection, and one that stops reading still cut.
 - `src/core/core.connection.test.ts`, "the connection serves the core to paired devices": the real core, two devices, a dropped one caught up exactly, and every no-argument read a view may ask parsed against its own schema after the wire.
 - `src/core/core.contract.test.ts`, "a client that knows only the published contract": `scripts/contract-client.ts`, which reads only `docs/contract.json`, answers a card and reads the feed over the connection, and the version rule's window from both sides (`docs/contract.md`).
 - `src/core/devices/homeLink.test.ts`: the device's own side as the app as a view runs it (`docs/view.md`): catching up, refusing while out of reach, Remove and Leave; and a home and a device on two sides of the Infinitary rename, read on the wire.

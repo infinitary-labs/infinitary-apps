@@ -4,8 +4,9 @@ import XCTest
 
 /// INF-2668, the captain: "i feel the ios app’s connection to the home has been flaky sometimes. it would flip between
 /// out of reach and reaching a few times. this is especially prominent when the network condition is not strong like
-/// when i’m out on mobile." Each test is one of the seven checks of INF-2666's direction B, run against the disposable
-/// real-core home through its relay, which shapes the path as a weak cell does. Every connection dials the relay only.
+/// when i’m out on mobile." Each test is one of the seven checks of INF-2666's direction B, or INF-2669's large catch-up,
+/// run against the disposable real-core home through its relay, which shapes the path as a weak cell does. Every
+/// connection dials the relay only.
 @MainActor final class PhoneWeakLinkTests: XCTestCase {
     private func home(_ command: String, _ body: [String: Any]? = nil, method: String = "POST") async throws -> [String: Any] {
         let control = try XCTUnwrap(ProcessInfo.processInfo.environment["PHONE_TEST_HOME"])
@@ -115,9 +116,10 @@ import XCTest
     }
 
     /// INF-2666 measured a 1 KB/s link with 300 ms delay flipping between Out of reach and Reaching every 8 to 10 s,
-    /// never in reach, since its catch-up could not finish inside a fixed 10 s. The computer itself pings every 30 s and
-    /// cuts a phone whose answer has not come by the next ping, and its ping waits behind the catch-up on the same link,
-    /// so the link carries this home's whole catch-up in about 40 s: 1 KB/s for a small record, faster for a grown one.
+    /// never in reach, since its catch-up could not finish inside a fixed 10 s. The phone cannot see an answer still
+    /// arriving and gives each one `ReadOnlySession.answerWait`, so the link carries this home's whole catch-up in about
+    /// 40 s: 1 KB/s for a small record, faster for a grown one. A catch-up of several answers that outlasts the
+    /// computer's own ping window is `testALargeCatchUpOnASlowLinkArrivesOnOneConnection`.
     func testASlowLinkReachesInReachAndStays() async throws {
         let measuring = try await joined()
         let sizing = Watch(measuring)
@@ -138,6 +140,51 @@ import XCTest
         XCTAssertEqual(watch.said("lost"), 0, "Out of reach never shows while the slow path stays up")
         let dials = try await readings().dials
         XCTAssertEqual(dials.count, 1, "One dial carried the whole catch-up of \(size) bytes")
+        try await finish(session)
+    }
+
+    /// INF-2669: the computer pings every 30 s and cut a phone whose answer had not come by the next ping, and its ping
+    /// waited behind the catch-up on the same link, so at 1 KB/s a catch-up over about a minute was cut 60 s in and
+    /// started over. It now writes in pieces, each followed by a ping a phone still receiving answers, and lets only a
+    /// few seconds' worth go ahead of the answers, so the phone's own pings are answered during the catch-up too. Away
+    /// from a computer whose card list grows by about 20 KB, the phone misses four card lists and the task board pushed
+    /// with each, both as large as the home's record has grown. The phone cannot see one still arriving and gives it
+    /// `ReadOnlySession.answerWait`, so the link carries the largest in about 20 s at most and the whole catch-up in 80 to
+    /// 90 s: 1 KB/s for a small record, faster for a grown one.
+    func testALargeCatchUpOnASlowLinkArrivesOnOneConnection() async throws {
+        let session = try await joined()
+        // The heavy cards and this connection leave the home shared with the other checks, even when this one fails.
+        addTeardownBlock {
+            await session.stop()
+            guard let control = ProcessInfo.processInfo.environment["PHONE_TEST_HOME"],
+                  let url = URL(string: control + "/away-cleanup") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            _ = try? await URLSession.shared.data(for: request)
+        }
+        session.start()
+        try await inReach(session, Watch(session), within: 30)
+        // The harmless read waits for every first read, so the next welcome replays rather than reading again.
+        _ = try await session.read(.past, [.string("no-such-catch-up-card")])
+        session.stop()
+        let away = try await home("heavy-away")
+        let cards = try XCTUnwrap(away["cards"] as? [String])
+        let largest = try XCTUnwrap(away["largestBytes"] as? Int)
+        let replay = try XCTUnwrap(away["replayBytes"] as? Int)
+        try await shape(bytesPerSec: max(1_000, largest / 20, replay / 90), delayMs: 300)
+        let before = try await readings().dials.count
+        let watch = Watch(session)
+        session.start()
+        // A replaying welcome is in reach at once; the cards show once the whole replay is read.
+        try await watch.until(180, "the cards from while away") { cards.allSatisfy(Set(session.cards.map(\.id)).contains) }
+        let took = watch.now
+        let dials = try await readings().dials
+        XCTAssertEqual(dials.count, before + 1, "One connection carried the whole catch-up")
+        let down = try XCTUnwrap(dials.last?["down"] as? Int)
+        XCTAssertGreaterThan(took, 60, "The catch-up outlasted two of the computer's pings: \(down) bytes in \(Int(took)) s")
+        XCTAssertEqual(session.contact, "in-reach")
+        XCTAssertEqual(watch.said("lost"), 0, "Out of reach never shows while the catch-up arrives")
+        _ = try await home("away-cleanup")
         try await finish(session)
     }
 

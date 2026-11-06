@@ -1707,6 +1707,51 @@ export async function startPhoneHome(
           result = { ids, cards };
           break;
         }
+        case "POST heavy-away": {
+          // INF-2669: what a phone misses while away from a long-running computer whose card list grows by about
+          // 20 KB: four card lists, each pushed whole, and the task board pushed whole with each. Each list waits for
+          // its own push, as `away-traffic`'s do, so none is coalesced; `away-cleanup` closes the cards. Both grow
+          // with what the journeys sharing this home left, so a check sizes its link from `largestBytes`, the largest
+          // push or board, and `replayBytes`, every push while away.
+          const cardsPushed = new Set<string>();
+          let largestBytes = 0;
+          let replayBytes = 0;
+          const stopWatching = core.events.subscribe((channel, payload) => {
+            const bytes = Buffer.byteLength(JSON.stringify(payload));
+            largestBytes = Math.max(largestBytes, bytes);
+            replayBytes += bytes;
+            if (channel === "inf:cards")
+              for (const card of payload as { id: string }[]) cardsPushed.add(card.id);
+          });
+          const line =
+            "<p>The harbour log kept every tide, mooring and pilot boat of the season.</p>";
+          const cards: string[] = [];
+          try {
+            for (const [n, title] of [
+              "The season's harbour log",
+              "The pilot boat came in",
+              "The tide turned",
+              "The lamps were lit",
+            ].entries()) {
+              const card = core.services.supervisor.addFirstmateCard({
+                id: `phone-heavy-${n}`,
+                title,
+                body: n === 0 ? line.repeat(Math.ceil(20_000 / line.length)) : `<p>${title}.</p>`,
+                actions: [],
+              });
+              cards.push(card);
+              awayCards.push(card);
+              await until(() => cardsPushed.has(card));
+            }
+          } finally {
+            stopWatching();
+          }
+          // A board push still coalescing after the last list is as large as the board read now.
+          const board = await core.dispatch("inf:tasks:board", []);
+          largestBytes = Math.max(largestBytes, Buffer.byteLength(JSON.stringify(board)));
+          result = { cards, largestBytes, replayBytes };
+          break;
+        }
         case "POST emote":
           core.events.emit("inf:event", { type: "firstmate_emote", emote: "ponder" });
           result = { ok: true };

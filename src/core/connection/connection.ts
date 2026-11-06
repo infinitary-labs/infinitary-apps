@@ -68,6 +68,7 @@ import {
   type JournalEntry,
   type JournalLimits,
 } from "./journal";
+import { Outbox } from "./outbox";
 import { SHARED_CARDS } from "./sharedCards";
 
 /**
@@ -238,8 +239,25 @@ export type ConnectionOptions = {
    */
   speaks?: Spelling;
   journal?: JournalLimits;
-  /** A connected device that misses one ping in this long is cut. */
+  /**
+   * A connected device that answers no ping in this long is cut. Every piece
+   * the home writes is followed by a ping, so a device still receiving a
+   * long catch-up answers within it however slow its link (docs/connection.md,
+   * "Pacing and liveness").
+   */
   heartbeatMs?: number;
+  /**
+   * The smallest piece the home writes a frame in, and the least it sends
+   * ahead of a device's answer. Defaults to 4 KiB: at 1 KB/s a ping or pong
+   * then waits behind about 8 s of data, inside the 10 s a Mac's link and
+   * the phone's ping give an answer.
+   */
+  pieceBytes?: number;
+  /**
+   * On a faster link, how much of the rate a device's answers measure the
+   * home sends ahead of its answer. Defaults to two seconds' worth.
+   */
+  aheadMs?: number;
   /** A device with more than this waiting to be sent is cut, and catches up when it returns. */
   maxBufferedBytes?: number;
   /** Where the connection says it could not listen. */
@@ -352,6 +370,9 @@ type Client = {
   sharedCards: boolean;
   access: ContractAccess;
   closing: boolean;
+  /** What the home writes to it, paced by its answers. */
+  readonly out: Outbox;
+  /** It answered a ping since the last heartbeat: a piece's or the heartbeat's own. */
   answeredPing: boolean;
   waitedForHello: boolean;
   /** For a computer that runs work: its welcome said it takes work, so the home may ask it. */
@@ -499,6 +520,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   const { dispatch, events, devices } = options;
   const heartbeatMs = options.heartbeatMs ?? 30_000;
   const maxBufferedBytes = options.maxBufferedBytes ?? 32 * 1024 * 1024;
+  const pacing = { pieceBytes: options.pieceBytes ?? 4 * 1024, aheadMs: options.aheadMs ?? 2_000 };
   const onProblem = options.onProblem ?? ((text) => console.warn(`[connection] ${text}`));
   const homeVersion = options.protocolVersion ?? PROTOCOL_VERSION;
   const viewFloor = options.viewFloor ?? VIEW_FLOOR;
@@ -657,11 +679,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     });
     const send = (client: Client, frame: string) => {
       if (client.closing || client.ws.readyState !== WebSocket.OPEN) return;
-      if (client.ws.bufferedAmount > maxBufferedBytes) {
+      if (behind(client)) {
         cut(client, CONNECTION_CLOSE.behind, "behind");
         return;
       }
-      client.ws.send(frame);
+      client.out.send(frame);
     };
     // Never throws into the core's emit. A push that cannot be written would
     // leave every device with a hole it cannot see, so they all start over.
@@ -857,6 +879,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         sharedCards: false,
         access: "read",
         closing: false,
+        out: new Outbox(ws, pacing),
         answeredPing: true,
         waitedForHello: false,
         takesWork: false,
@@ -1156,13 +1179,18 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         } else {
           client.waitedForHello = true;
           client.answeredPing = false;
-          client.ws.ping();
+          client.out.mark();
         }
       }
     }, heartbeatMs);
     heartbeat.unref();
 
     return { servers, chosen, addresses: bound, clients, detach, heartbeat };
+  }
+
+  /** More than `maxBufferedBytes` waits to reach it, here and in the socket. */
+  function behind(client: Client): boolean {
+    return client.ws.bufferedAmount + client.out.waiting > maxBufferedBytes;
   }
 
   function cut(client: Client, code: number, reason: string) {
@@ -1232,13 +1260,13 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       }
       return new Promise((resolve, reject) => {
         client.asked.set(id, { resolve, reject });
-        if (client.ws.bufferedAmount > maxBufferedBytes) {
+        if (behind(client)) {
           client.asked.delete(id);
           reject(new DeviceOutOfReachError());
           cut(client, CONNECTION_CLOSE.behind, "behind");
           return;
         }
-        client.ws.send(text, (error) => {
+        client.out.send(text, (error) => {
           if (!error || !client.asked.has(id)) return;
           client.asked.delete(id);
           reject(new DeviceOutOfReachError());

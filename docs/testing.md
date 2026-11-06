@@ -306,7 +306,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 The captain's principle of 2026-10-28 (`docs/principles.md`): a test runs on the Mac only when it needs a Mac, and Linux runs every test it can.
 A journey needs a Mac when it skips on Linux, or when it has a step only a Mac runs; it then carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`) in its own details, `test("…", { tag: MAC_ONLY_TAG }, …)`, or a describe's around it, beside its own `test.skip` and reason.
 A unit test that needs a Mac is a file of the reviewed list in `scripts/mac-unit-tests.ts` instead (`docs/test-cohorts.md`).
-`tests/mac-unit-gates.test.ts` holds the list to that: a case behind a `runIf` or `skipIf` that runs it on macOS and not on Linux sits in a listed file, or Linux skips it and the Mac lane never runs it; the test's own shrinking list names each file still missing, with its task.
+`tests/mac-unit-gates.test.ts` holds the list to that: a case behind a `runIf` or `skipIf` that runs it on macOS and not on Linux sits in a listed file, or Linux skips it and the Mac lane never runs it.
 The captain's INF-2273 local-round exception covers every edited unit file, including portable files; the native list still governs the full-check Mac lane.
 
 Where each journey runs:
@@ -429,7 +429,8 @@ Inside a run its caller already declared, the run rides that hold, and the line 
 Where the shell has no line, the run says so and starts at once, asking nothing else (INF-2137, the captain's "completely remove fm-placer and any fallback logic now").
 The shell has no line when the command is not on its PATH, the shell has no task channel, or the app gives the task no line, as an app older than the line does.
 
-`tests/heavy-run-place.test.ts` drives a journey run, the phone gate, a run killed while it holds its place, nested runs, and each way a shell has no line starting at once, through the real task channel and line (`tests/helpers/noLoadLine.ts`).
+`tests/heavy-run-place.test.ts` drives a journey run, a run killed while it holds its place, nested runs, and each way a shell has no line starting at once, through the real task channel and line (`tests/helpers/heavyRunLine.ts`, `tests/helpers/noLoadLine.ts`).
+`tests/heavy-run-place-phone.test.ts` drives the phone gate the same way; the gate needs a Mac, so that file is on the Mac lane's list ("Tests that need a Mac").
 
 ## A main repair's priority label
 

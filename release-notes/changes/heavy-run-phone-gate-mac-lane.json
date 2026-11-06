@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "heavy-run-phone-gate-mac-lane",
+      "reason": "Tests only: the check that a local phone gate waits in its computer's load line moves to a file of its own that the full check's Mac lane runs, so CI now runs it, and the app shows nothing new."
+    }
+  ]
+}

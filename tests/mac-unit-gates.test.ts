@@ -13,16 +13,6 @@ import { macOnlyFiles, macOnlyGates } from "./lint/macUnitGates";
  * `remoteLogin.test.ts`'s macOS-only download cases into a file of their own.
  */
 
-/**
- * Files with a macOS-only case that the Mac lane does not run yet, each with
- * the task that brings it there. The list only shrinks: an entry whose file
- * joins the Mac list, or loses its last macOS-only case, fails until it goes.
- */
-const NOT_RUN_ON_THE_MAC_YET: Readonly<Record<string, string>> = {
-  // INF-2728: its local phone gate case.
-  "tests/heavy-run-place.test.ts": "INF-2728",
-};
-
 /** Every file Vitest's Node projects and browser project collect, as `vitest.config.ts` includes them. */
 function testFiles(): string[] {
   return globSync(["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"], {
@@ -31,10 +21,10 @@ function testFiles(): string[] {
 }
 
 describe("Mac-only cases", () => {
-  it("sit in files the Mac lane runs, apart from the shrinking list", () => {
+  it("sit in files the Mac lane runs", () => {
     const listed = new Set<string>(MAC_UNIT_FILES);
     const unlisted = [...macOnlyFiles(testFiles()).keys()].filter((file) => !listed.has(file));
-    expect(unlisted).toEqual(Object.keys(NOT_RUN_ON_THE_MAC_YET).sort());
+    expect(unlisted).toEqual([]);
   });
 
   it("read each gate as Linux and macOS see it", () => {

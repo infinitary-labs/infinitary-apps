@@ -26,6 +26,9 @@ const releaseNeeds = {
     ["notes", "verify", "linux", "phone", "release", "update"].map((id) => [id, pass]),
   ),
 };
+// A main check that waited for the alpha cut from main run 204, as run
+// 42232009514 did, so the wait's own jobs are named too (alpha-wait.yml).
+const waitedForAlpha = { outputs: { alphas: "[204]", waited: "true" } };
 const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
   { file: "ci.yml", trigger: "Pull request", scenario: { github: { event_name: "pull_request" } } },
   {
@@ -38,7 +41,7 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Main push",
     scenario: {
       github: { event_name: "push", sha: "a".repeat(40) },
-      needs: { sort: { outputs: { kind: "full" } } },
+      needs: { find: waitedForAlpha, sort: { outputs: { kind: "full" } } },
     },
   },
   {
@@ -46,7 +49,7 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Main push",
     scenario: {
       github: { event_name: "push", sha: "a".repeat(40) },
-      needs: { sort: { outputs: { kind: "covered", batch: "41700000001" } } },
+      needs: { find: waitedForAlpha, sort: { outputs: { kind: "covered", batch: "41700000001" } } },
     },
   },
   {
@@ -54,7 +57,7 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     trigger: "Manual request",
     scenario: {
       github: { event_name: "workflow_dispatch" },
-      needs: { sort: { outputs: { kind: "full" } } },
+      needs: { find: waitedForAlpha, sort: { outputs: { kind: "full" } } },
     },
   },
   {

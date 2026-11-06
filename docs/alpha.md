@@ -377,6 +377,7 @@ Manual alpha requests, recoveries, rehearsals and stable promotions never skip.
 
 Main's next check waits while an alpha is cut, so merges made meanwhile queue and are checked together once the cut ends (`docs/testing.md`, "Main's desktop release check").
 Each rolling alpha run is named "Alpha from main run N" after the main run it cuts from, which is how that wait finds it.
+It runs in the concurrency group `rolling-alpha-from-main-run-N`, where that wait sits on no machine until the run ends; no other release run shares the group.
 
 ### Pausing the rolling pipeline
 

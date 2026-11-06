@@ -564,7 +564,11 @@ describe("the signed channel workflow", () => {
     const skippedVerify = String((jobOf(release, "verify") as { name?: string }).name);
     const renamedMain = runJobNames("main.yml", {
       github: { event_name: "push", sha: source },
-      needs: { sort: { outputs: { kind: "full" } } },
+      // A check that waited for an alpha cut, so the wait's jobs are named too.
+      needs: {
+        find: { outputs: { alphas: "[204]", waited: "true" } },
+        sort: { outputs: { kind: "full" } },
+      },
     });
     for (const scenario of [
       "alpha",

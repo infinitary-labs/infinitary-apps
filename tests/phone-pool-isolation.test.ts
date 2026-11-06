@@ -75,10 +75,15 @@ function inspect(all: Record<string, Workflow>) {
       if (!job["runs-on"]) continue; // Reusable calls have no runner of their own.
       for (const dryRun of ["true", "false"]) {
         // Both publishing paths matter: release-only queues must not join phone.
+        // The alpha wait's matrix is the alpha cuts its find job listed, here
+        // the one from main run 204 that a main check waited for (alpha-wait.yml).
         const contexts = {
           vars,
           inputs: {},
-          needs: { resolve: { outputs: { dry_run: dryRun } } },
+          needs: {
+            resolve: { outputs: { dry_run: dryRun } },
+            find: { outputs: { alphas: "[204]" } },
+          },
           matrix: {},
         };
         const evaluate = (value: unknown): unknown =>

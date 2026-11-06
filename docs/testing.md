@@ -469,7 +469,11 @@ The workflow's concurrency group never cancels a run in progress, so GitHub keep
 No check starts while the previous check's alpha is being cut (INF-2465, the captain: "i want to make it so that the next main check keeps queueing all merges until the alpha is actually cut successfully, not while the alpha cut is still happening").
 The run's wait, `alpha-wait.yml`, lists the rolling alpha runs by the name `release.yml` gives them ("Alpha from main run N") and waits while any is still running, including one re-run after it ended.
 It also waits for the alpha cut from the newest earlier main run that passed or failed, which GitHub starts moments after that run ends.
-A failed cut ends the wait too, so it never holds main's fixes; an alpha run that never started holds nothing after ten minutes, and the wait ends before GitHub's six-hour job limit.
+The wait holds no machine while an alpha is cut, and nobody waits longer for it (INF-2834, the captain's pick: "Make main's wait for an alpha cut hold no machine").
+Each rolling alpha run holds the concurrency group `rolling-alpha-from-main-run-N` (`release.yml`), and the wait's `wait` job joins the group of each alpha still running, so GitHub keeps it pending, on no machine, until that run ends.
+Only its `find` job, for the moments GitHub takes to start an alpha and put it in its group, and its `ended` job, which confirms every alpha ended, take a machine, about a minute each.
+An alpha run that holds no group, such as one started before the groups, is still waited for by polling in the `ended` job.
+A failed cut ends the wait too, so it never holds main's fixes; an alpha run that never started holds nothing after ten minutes, and that polling ends before GitHub's six-hour job limit.
 While it waits, merges keep queueing in the one waiting run; when main moved meanwhile, the run cancels itself, so the waiting run checks every merge at once.
 While the captain has paused the rolling pipeline, a run a push started cancels itself in that first job, and the next merge after Resume starts the run that covers the pause (`docs/alpha.md`, "Pausing the rolling pipeline").
 The newest passing run of `main.yml` is main's green mark: its commit is the newest version main's full check passed, and no other record names it.
@@ -562,7 +566,7 @@ The cost is GitHub's per-minute bill for those jobs.
 - `verify.yml`, whose `request` job, `linux-checks` lane, every Linux test group and every `linux-e2e` journey job (`source-journeys.yml`, through the same input) take it;
 - `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`.
 
-`linux-startup.yml`'s job and `alpha-wait.yml`'s `wait` name `ubuntu-24.04`, since `main.yml` is their only caller; the wait bills its minutes while an alpha is cut.
+`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` is their only caller; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
 `batch.yml` passes `hosted: true` to its sweep, and its own jobs and `main.yml`'s `sort` and `covered` jobs name `ubuntu-24.04` ("The swept batch").
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.

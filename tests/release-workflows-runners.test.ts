@@ -263,13 +263,17 @@ describe("each Mac job's kind", () => {
       for (const [id, job] of Object.entries(jobs(file))) {
         if (!job["runs-on"]) continue;
         // Each value of a one-key matrix, such as verify's lanes or the installer's chips.
+        // One read from an earlier job's outputs, such as the alpha wait's
+        // runs, is known only when the run makes it, so its runner is read
+        // without a matrix value.
         const [key, values] = Object.entries(job.strategy?.matrix ?? {})[0] ?? [];
+        const known = typeof values !== "string" || !values.includes("needs.");
         const listed =
-          typeof values === "string" && values.includes("${{")
+          known && typeof values === "string" && values.includes("${{")
             ? workflowValue(values, { inputs: {} })
             : values;
         const entries =
-          key && Array.isArray(listed) ? listed.map((value) => ({ [key]: value })) : [{}];
+          key && known && Array.isArray(listed) ? listed.map((value) => ({ [key]: value })) : [{}];
         for (const matrix of entries) {
           const runner = (vars: Record<string, string>) =>
             workflowString(job["runs-on"] ?? "", {
@@ -359,8 +363,11 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "ios-release.yml:availability",
     // main.yml is its only caller (INF-2441).
     "linux-startup.yml:runtime-facts",
-    // INF-2465: main's wait for the alpha cut, which main.yml alone calls.
+    // INF-2465: main's wait for the alpha cut, which main.yml alone calls;
+    // its wait job is pending on no machine while a cut runs (INF-2834).
+    "alpha-wait.yml:find",
     "alpha-wait.yml:wait",
+    "alpha-wait.yml:ended",
     // The swept batch and main's sort of each push (INF-2430's plan, piece 3).
     "main.yml:sort",
     "main.yml:covered",

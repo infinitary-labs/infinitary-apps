@@ -115,13 +115,14 @@ describe("every workflow", () => {
     ]);
     expect(permissionGaps({ contents: "read", actions: "read" }, phone)).toEqual([]);
     // Write is more than read; read-all grants no write.
+    // Its wait job asks for no token, so only the two that cancel the run do.
     const alphaWait = load("alpha-wait.yml");
-    expect(permissionGaps({ contents: "read", actions: "read" }, alphaWait)).toEqual([
-      "wait asks actions: write, granted read",
-    ]);
-    expect(permissionGaps("read-all", alphaWait)).toEqual([
-      "wait asks actions: write, granted read",
-    ]);
+    const writes = [
+      "find asks actions: write, granted read",
+      "ended asks actions: write, granted read",
+    ];
+    expect(permissionGaps({ contents: "read", actions: "read" }, alphaWait)).toEqual(writes);
+    expect(permissionGaps("read-all", alphaWait)).toEqual(writes);
     expect(permissionGaps("write-all", alphaWait)).toEqual([]);
     // A job's own block replaces its workflow's, and no block at all asks for nothing.
     const callee: Workflow = {

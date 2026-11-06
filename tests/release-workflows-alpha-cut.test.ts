@@ -455,22 +455,52 @@ describe("an alpha with nothing new to build", () => {
  * queueing all merges until the alpha is actually cut successfully, not while
  * the alpha cut is still happening". main.yml's first job waits for the alpha
  * cut from the previous main check, found by the name release.yml gives it.
+ * INF-2834, the captain's pick: "Make main's wait for an alpha cut hold no
+ * machine. 590 hosted minutes a day, with no change to anyone's wait." The
+ * wait sits in the concurrency group each rolling alpha run holds.
  */
 describe("the next main check waits for the alpha cut", () => {
   type Job = { uses?: string; needs?: string | string[] };
-  const main = loadYamlFile(".github/workflows/main.yml") as { jobs: Record<string, Job> };
-  const release = loadYamlFile(".github/workflows/release.yml") as { "run-name": string };
-  const wait = loadYamlFile(".github/workflows/alpha-wait.yml") as {
-    jobs: { wait: { steps: { name: string; if?: string; with?: { script?: string } }[] } };
+  type Step = { name: string; if?: string; with?: { script?: string } };
+  type WaitJob = {
+    if?: string;
+    strategy?: { matrix: { run: string } };
+    concurrency?: { group: string; "cancel-in-progress": boolean };
+    steps: Step[];
   };
-  const [pauseStep, waitStep] = wait.jobs.wait.steps;
-  const script = waitStep?.with?.script ?? "";
+  const main = loadYamlFile(".github/workflows/main.yml") as { jobs: Record<string, Job> };
+  const release = loadYamlFile(".github/workflows/release.yml") as {
+    "run-name": string;
+    concurrency: { group: string; "cancel-in-progress": string };
+  };
+  const wait = loadYamlFile(".github/workflows/alpha-wait.yml") as {
+    jobs: { find: WaitJob; wait: WaitJob; ended: WaitJob };
+  };
+  const [pauseStep, findStep] = wait.jobs.find.steps;
   const minute = 60_000;
   /** The name release.yml gives the rolling alpha cut from a main run. */
   const alphaName = (run_number: number) =>
     workflowString(release["run-name"], {
       github: { event_name: "workflow_run", event: { workflow_run: { run_number } } },
     });
+  /** The concurrency group release.yml's rolling alpha cut from a main run holds. */
+  const alphaGroup = (run_number: number) =>
+    workflowString(release.concurrency.group, {
+      github: {
+        event_name: "workflow_run",
+        event: { workflow_run: { run_number } },
+        run_id: 41685700000,
+        ref_name: "main",
+      },
+      inputs: {},
+    });
+  /** The groups the wait job joins, one job each, for the alphas the find job names. */
+  const joined = (alphas: string) =>
+    (
+      workflowValue(wait.jobs.wait.strategy?.matrix.run ?? "", {
+        needs: { find: { outputs: { alphas } } },
+      }) as number[]
+    ).map((run) => workflowString(wait.jobs.wait.concurrency?.group ?? "", { matrix: { run } }));
 
   it("holds every check of a main run behind the wait, and names a requested release plainly", () => {
     expect(main.jobs["alpha-wait"]?.uses).toBe("./.github/workflows/alpha-wait.yml");
@@ -485,6 +515,29 @@ describe("the next main check waits for the alpha cut", () => {
     ).toBe("release");
   });
 
+  it("gives each rolling alpha a group of its own, the one main's wait joins", () => {
+    expect(alphaGroup(73)).not.toBe(alphaGroup(74));
+    // A requested release keeps its own run's group
+    // (tests/release-workflows-rehearsal.test.ts holds those).
+    const requested = workflowString(release.concurrency.group, {
+      github: { event_name: "workflow_dispatch", run_id: 41685700000, ref_name: "main" },
+      inputs: { channel: "alpha", dry_run: false },
+    });
+    expect(requested).not.toBe(alphaGroup(73));
+    // A rolling alpha is never cancelled for whatever joins its group.
+    expect(workflowValue(release.concurrency["cancel-in-progress"], { inputs: {} })).toBe(false);
+    expect(wait.jobs.wait.concurrency?.["cancel-in-progress"]).toBe(false);
+    expect(joined("[73,70]")).toEqual([alphaGroup(73), alphaGroup(70)]);
+    // With nothing being cut, no wait job starts at all.
+    for (const [alphas, runs] of [
+      ["[]", false],
+      ["[73]", true],
+    ] as const)
+      expect(
+        workflowValue(wait.jobs.wait.if ?? "", { needs: { find: { outputs: { alphas } } } }),
+      ).toBe(runs);
+  });
+
   /**
    * PERS-51, the captain: "add a "pause/resume" button on the rolling alpha
    * panel for me to pause/resume the rolling pipeline manually", answered
@@ -497,13 +550,13 @@ describe("the next main check waits for the alpha cut", () => {
         github: { event_name },
         vars: { ROLLING_ALPHA_PAUSED: paused },
       }),
-      wait: workflowValue(waitStep?.if ?? "", {
+      find: workflowValue(findStep?.if ?? "", {
         github: { event_name },
         vars: { ROLLING_ALPHA_PAUSED: paused },
       }),
     });
     expect(pauseStep?.name).toBe("Stop while the captain has paused the rolling pipeline");
-    expect(decide("push", "true")).toEqual({ pause: true, wait: false });
+    expect(decide("push", "true")).toEqual({ pause: true, find: false });
     // Not paused, or a check started by hand: the wait runs as before.
     for (const [event_name, paused] of [
       ["push", ""],
@@ -512,7 +565,7 @@ describe("the next main check waits for the alpha cut", () => {
     ] as const)
       expect(decide(event_name, paused), `${event_name} ${paused}`).toEqual({
         pause: false,
-        wait: true,
+        find: true,
       });
 
     // The step's own script: it cancels its own run, then never lets the job succeed.
@@ -570,13 +623,22 @@ describe("the next main check waits for the alpha cut", () => {
     updated_at?: string;
     display_title?: string;
     html_url?: string;
+    /** A rolling alpha's main run, and false when its run holds no group, as one from before the groups. */
+    main?: number;
+    grouped?: boolean;
   };
   /**
-   * Runs the job's own script against GitHub's answers on a clock that moves
-   * only when the script pauses. `alpha(minutes)` is the alpha run as GitHub
-   * lists it that many minutes after the previous main check ended, and
-   * `head(minutes)` main's newest commit then, and `others(minutes)` the
-   * other rolling alpha runs GitHub lists then.
+   * Runs the wait as GitHub runs it, against GitHub's answers on a clock that
+   * moves only when a script pauses or GitHub holds a job. The find and ended
+   * jobs run their own scripts on a machine; each wait job is held, on no
+   * machine, while a run in progress holds its group, as GitHub holds "the
+   * queued job or workflow" while "another job or workflow using the same
+   * concurrency group in the repository is in progress" (GitHub's workflow
+   * syntax, `concurrency`). `alpha(minutes)` is the alpha run as GitHub lists
+   * it that many minutes after the previous main check ended, `head(minutes)`
+   * main's newest commit then, and `others(minutes)` the other rolling alpha
+   * runs GitHub lists then. `minutes` is when main's checks start, and
+   * `machine` the minutes the wait held a machine.
    */
   const runWait = async (options: {
     mains: Run[];
@@ -586,8 +648,20 @@ describe("the next main check waits for the alpha cut", () => {
   }) => {
     const ended = Date.parse("2026-11-03T17:35:00Z");
     let now = ended + 5_000;
+    let machine = 0;
     const clock = { now: () => now, parse: (text: string) => Date.parse(text) };
-    const elapsed = () => Math.floor((now - ended) / minute);
+    const elapsed = () => (now - ended) / minute;
+    const older: Run = {
+      id: 41685039944,
+      run_number: 85,
+      status: "completed",
+      conclusion: "skipped",
+      display_title: "release",
+    };
+    const listed = () => {
+      const alpha = options.alpha(elapsed());
+      return [...(alpha ? [alpha] : []), ...(options.others?.(elapsed()) ?? []), older];
+    };
     const cancelled: number[] = [];
     const summaries: string[] = [];
     const summary = {
@@ -597,6 +671,13 @@ describe("the next main check waits for the alpha cut", () => {
         return summary;
       },
       write: async () => {},
+    };
+    const outputs: Record<string, string> = {};
+    const core = {
+      summary,
+      setOutput: (key: string, value: string) => {
+        outputs[key] = value;
+      },
     };
     const github = {
       rest: {
@@ -613,16 +694,7 @@ describe("the next main check waits for the alpha cut", () => {
               workflow_id: "release.yml",
               event: "workflow_run",
             });
-            const alpha = options.alpha(elapsed());
-            const older = {
-              id: 41685039944,
-              run_number: 85,
-              status: "completed",
-              conclusion: "skipped",
-              display_title: "release",
-            };
-            const others = options.others?.(elapsed()) ?? [];
-            return { data: { workflow_runs: [...(alpha ? [alpha] : []), ...others, older] } };
+            return { data: { workflow_runs: listed() } };
           },
           cancelWorkflowRun: async ({ run_id }: { run_id: number }) => {
             cancelled.push(run_id);
@@ -647,19 +719,49 @@ describe("the next main check waits for the alpha cut", () => {
       done();
     };
     const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-    await new AsyncFunction("core", "github", "context", "setTimeout", "Date", script)(
-      { summary },
-      github,
-      context,
-      fakeTimeout,
-      clock,
-    );
+    const onMachine = async (script: string | undefined, env: Record<string, string> = {}) => {
+      const start = now;
+      await new AsyncFunction("core", "github", "context", "setTimeout", "Date", "process", script)(
+        core,
+        github,
+        context,
+        fakeTimeout,
+        clock,
+        { env },
+      );
+      machine += now - start;
+    };
+    await onMachine(findStep?.with?.script);
+    const needs: Record<string, { result: string; outputs?: Record<string, string> }> = {
+      find: { result: "success", outputs },
+      wait: { result: "skipped" },
+    };
+    const legs = workflowValue(wait.jobs.wait.if ?? "", { needs })
+      ? joined(outputs.alphas ?? "")
+      : [];
+    if (legs.length) {
+      // GitHub holds the wait jobs while a run in progress holds a group they
+      // join; a run still waiting to be put in its group holds none.
+      const holding = () =>
+        listed().some(
+          (run) =>
+            run.main !== undefined &&
+            run.grouped !== false &&
+            ["queued", "in_progress", "waiting"].includes(run.status) &&
+            legs.includes(alphaGroup(run.main)),
+        );
+      while (holding() && elapsed() < 2_000) now += 10_000;
+      needs.wait = { result: "success" };
+    }
+    if (workflowValue(wait.jobs.ended.if ?? "", { needs }))
+      await onMachine(wait.jobs.ended.steps[0]?.with?.script, { WAITED: outputs.alphas ?? "" });
     return {
       minutes: elapsed(),
+      machine: machine / minute,
+      legs,
       cancelled,
       summary: summaries.join("\n"),
       runId: context.runId,
-      sha: context.sha,
     };
   };
   const previous = (conclusion: string, run_number = 73): Run => ({
@@ -669,24 +771,37 @@ describe("the next main check waits for the alpha cut", () => {
     conclusion,
     updated_at: "2026-11-03T17:35:00Z",
   });
-  const alphaRun = (status: string, conclusion: string | null = null): Run => ({
+  const alphaRun = (status: string, conclusion: string | null = null, grouped = true): Run => ({
     id: 41685700000,
     run_number: 88,
     status,
     conclusion,
     display_title: alphaName(73),
     html_url: "https://github.com/example/project/actions/runs/41685700000",
+    main: 73,
+    grouped,
   });
-  const cut = (minutes: number) => (at: number) =>
-    at < 1 ? undefined : at < minutes ? alphaRun("in_progress") : alphaRun("completed", "success");
+  /** The alpha GitHub starts six seconds after the main check ended, cut for `minutes`. */
+  const cut =
+    (minutes: number, conclusion = "success") =>
+    (at: number) =>
+      at < 0.1
+        ? undefined
+        : at < minutes
+          ? alphaRun("in_progress")
+          : alphaRun("completed", conclusion);
 
-  it("waits while the alpha is cut, then gives way to the newer merges queued behind it", async () => {
+  it("waits while the alpha is cut, on no machine, then gives way to the newer merges queued behind it", async () => {
     const result = await runWait({
       mains: [previous("cancelled", 74), previous("success")],
       alpha: cut(120),
       head: () => "b2c0ffee00000000000000000000000000000000",
     });
+    expect(result.legs).toEqual([alphaGroup(73)]);
+    // Main's checks start when the cut ends, as the minute's poll let them before.
     expect(result.minutes).toBeGreaterThanOrEqual(120);
+    expect(result.minutes).toBeLessThan(121);
+    expect(result.machine).toBeLessThan(1);
     expect(result.cancelled).toEqual([result.runId]);
     expect(result.summary).toContain("ended success");
   });
@@ -695,15 +810,12 @@ describe("the next main check waits for the alpha cut", () => {
     for (const conclusion of ["success", "failure"]) {
       const result = await runWait({
         mains: [previous("success")],
-        alpha: (at) =>
-          at < 1
-            ? undefined
-            : at < 30
-              ? alphaRun("in_progress")
-              : alphaRun("completed", conclusion),
+        alpha: cut(30, conclusion),
         head: () => "9d6f4a248f3b1c1e1c2b8c4a6f1d0e2a3b4c5d6e",
       });
       expect(result.minutes).toBeGreaterThanOrEqual(30);
+      expect(result.minutes).toBeLessThan(31);
+      expect(result.machine).toBeLessThan(1);
       expect(result.cancelled).toEqual([]);
       expect(result.summary).toContain(`ended ${conclusion}`);
     }
@@ -715,14 +827,16 @@ describe("the next main check waits for the alpha cut", () => {
       alpha: () => alphaRun("completed", "success"),
       head: () => "b2c0ffee00000000000000000000000000000000",
     });
-    expect(ended.minutes).toBe(0);
+    expect(ended.legs).toEqual([]);
+    expect(ended.minutes).toBeLessThan(0.5);
     expect(ended.cancelled).toEqual([]);
     const first = await runWait({
       mains: [previous("cancelled")],
       alpha: () => undefined,
       head: () => "b2c0ffee00000000000000000000000000000000",
     });
-    expect(first.minutes).toBe(0);
+    expect(first.legs).toEqual([]);
+    expect(first.minutes).toBeLessThan(0.5);
   });
 
   /**
@@ -740,6 +854,7 @@ describe("the next main check waits for the alpha cut", () => {
       conclusion,
       display_title: alphaName(70),
       html_url: "https://github.com/example/project/actions/runs/42130788825",
+      main: 70,
     });
     const result = await runWait({
       mains: [previous("success")],
@@ -748,7 +863,9 @@ describe("the next main check waits for the alpha cut", () => {
       others: (at) => [at < 45 ? older("in_progress") : older("completed", "success")],
       head: () => "9d6f4a248f3b1c1e1c2b8c4a6f1d0e2a3b4c5d6e",
     });
+    expect(result.legs).toEqual([alphaGroup(70)]);
     expect(result.minutes).toBeGreaterThanOrEqual(45);
+    expect(result.machine).toBeLessThan(1);
     expect(result.cancelled).toEqual([]);
     // With no earlier main check that ran, an alpha in flight still holds it.
     const first = await runWait({
@@ -758,24 +875,59 @@ describe("the next main check waits for the alpha cut", () => {
       head: () => "b2c0ffee00000000000000000000000000000000",
     });
     expect(first.minutes).toBeGreaterThanOrEqual(20);
+    expect(first.machine).toBeLessThan(1);
     expect(first.cancelled).toEqual([first.runId]);
   });
 
-  it("stops waiting for an alpha run GitHub never started, and for one that outlasts a job", async () => {
+  it("joins an alpha's group only once GitHub has put the alpha in it", async () => {
+    const result = await runWait({
+      mains: [previous("success")],
+      // Listed at once, but waiting half a minute for its group.
+      alpha: (at) =>
+        at < 0.5
+          ? alphaRun("pending")
+          : at < 60
+            ? alphaRun("in_progress")
+            : alphaRun("completed", "success"),
+      head: () => "9d6f4a248f3b1c1e1c2b8c4a6f1d0e2a3b4c5d6e",
+    });
+    expect(result.legs).toEqual([alphaGroup(73)]);
+    expect(result.minutes).toBeGreaterThanOrEqual(60);
+    expect(result.machine).toBeGreaterThanOrEqual(0.4);
+    expect(result.machine).toBeLessThan(1);
+  });
+
+  it("waits on no machine for as long as a cut runs, past a job's own limit", async () => {
+    const result = await runWait({
+      mains: [previous("success")],
+      alpha: cut(400),
+      head: () => "9d6f4a248f3b1c1e1c2b8c4a6f1d0e2a3b4c5d6e",
+    });
+    expect(result.minutes).toBeGreaterThanOrEqual(400);
+    expect(result.machine).toBeLessThan(1);
+    expect(result.summary).toContain("ended success");
+  });
+
+  it("stops waiting for an alpha run GitHub never started, and polls as before for one outside its group", async () => {
     const never = await runWait({
       mains: [previous("success")],
       alpha: () => undefined,
       head: () => "9d6f4a248f3b1c1e1c2b8c4a6f1d0e2a3b4c5d6e",
     });
+    expect(never.legs).toEqual([]);
     expect(never.minutes).toBeGreaterThanOrEqual(10);
-    expect(never.minutes).toBeLessThan(15);
+    expect(never.minutes).toBeLessThan(11);
     expect(never.cancelled).toEqual([]);
-    const stuck = await runWait({
+    // A run from before the groups holds none: the ended job polls for it,
+    // and starts the check before a job's own limit.
+    const ungrouped = await runWait({
       mains: [previous("success")],
-      alpha: () => alphaRun("queued"),
+      alpha: (at) => (at < 0.1 ? undefined : alphaRun("queued", null, false)),
       head: () => "9d6f4a248f3b1c1e1c2b8c4a6f1d0e2a3b4c5d6e",
     });
-    expect(stuck.minutes).toBeLessThan(360);
-    expect(stuck.summary).toContain("had not ended");
+    expect(ungrouped.legs).toEqual([alphaGroup(73)]);
+    expect(ungrouped.minutes).toBeGreaterThan(340);
+    expect(ungrouped.minutes).toBeLessThan(360);
+    expect(ungrouped.summary).toContain("had not ended");
   });
 });

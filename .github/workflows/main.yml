@@ -22,8 +22,9 @@ name: main
 # GitHub keeps the running run, holds at most one waiting run, and drops an
 # older waiting run when a newer push arrives, so a burst of merges is checked
 # once at its newest version. Its first job waits while the previous run's
-# alpha is cut (alpha-wait.yml), so merges keep queueing until the cut ends,
-# and a run that waited while main moved cancels itself for the waiting one.
+# alpha is cut, in the alpha run's concurrency group on no machine
+# (alpha-wait.yml), so merges keep queueing until the cut ends, and a run
+# that waited while main moved cancels itself for the waiting one.
 # The newest passing run of this workflow is main's green mark
 # (docs/testing.md, "Main's desktop release check"); nothing else records it.
 

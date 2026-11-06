@@ -70,7 +70,7 @@ name: release
 #   gh workflow run release.yml --ref main -f channel=stable -f dry_run=true -f promote=<alpha version> [-f highlights=<id>,<id>,<id>]
 
 # A rolling alpha is named after its main run, so that run's next check can
-# find it and wait while it is cut (alpha-wait.yml).
+# find it and wait in its concurrency group while it is cut (alpha-wait.yml).
 run-name: ${{ github.event_name == 'workflow_run' && format('Alpha from main run {0}', github.event.workflow_run.run_number) || 'release' }}
 
 on:
@@ -119,9 +119,11 @@ permissions:
 # it. A real release is never cancelled to start another: each run is its
 # own group, and publications serialize where they meet - at the upload job,
 # one run of a version at a time, at each release's immutable assets and at
-# the tap's push (scripts/publish-tap.sh).
+# the tap's push (scripts/publish-tap.sh). A rolling alpha's group is named
+# after its main run, as its run is, and main's next check waits in it with
+# no machine until the cut ends (alpha-wait.yml; INF-2834).
 concurrency:
-  group: ${{ inputs.dry_run && format('release-dry-run-{0}-{1}', inputs.channel || 'stable', inputs.promote || inputs.candidate || github.ref_name) || format('release-{0}', github.run_id) }}
+  group: ${{ inputs.dry_run && format('release-dry-run-{0}-{1}', inputs.channel || 'stable', inputs.promote || inputs.candidate || github.ref_name) || github.event_name == 'workflow_run' && format('rolling-alpha-from-main-run-{0}', github.event.workflow_run.run_number) || format('release-{0}', github.run_id) }}
   cancel-in-progress: ${{ inputs.dry_run == true }}
 
 env:

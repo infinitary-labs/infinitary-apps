@@ -110,6 +110,14 @@ import { withMergeLine } from "./settleWords";
 type CardActor = "captain" | "firstmate" | "crewmate";
 
 /**
+ * What close_card tells an author who withdrew a decision (INF-2828): every
+ * action closes its card, so an open one the author withdraws holds no
+ * action the captain chose. A reply in its thread is not on that record.
+ */
+export const WITHDRAWN_UNCHOSEN =
+  "The captain chose none of its actions: its record ends as your withdrawal.";
+
+/**
  * The author whose close-out releases its cards to the stage: a crewmate by
  * its task, or the Firstmate.
  */
@@ -1124,7 +1132,8 @@ export class CardService {
     this.staged.delete(id);
     this.recordResolution(card, "closed", actor.kind, undefined, observation);
     this.scheduleBroadcast();
-    return `Closed card "${card.title}" (${id}).`;
+    const decision = card.actions.length > 0 ? ` ${WITHDRAWN_UNCHOSEN}` : "";
+    return `Closed card "${card.title}" (${id}).${decision}`;
   }
 
   /** A closed card as the captain last saw it, read-only (FI3-579); never changes anything. */

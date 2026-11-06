@@ -593,6 +593,7 @@ export class CrewSessions {
       cancelled: false,
       interruptRequested: false,
       filedThisTurn: [],
+      withdrawnThisTurn: [],
       lastEventAt: this.core.now(),
       turnStartedAt: this.core.now(),
       quietLevel: 0,

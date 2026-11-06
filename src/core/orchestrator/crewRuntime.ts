@@ -7,6 +7,7 @@ import type { TaskRecord } from "../storage/taskStore";
 import type { ReportDeclaration } from "../tasks/taskTurns";
 import type { TaskWorkspace } from "../workspace/workspaceService";
 import type { CrewmateSpec } from "./crewSession";
+import type { WakeWithdrawn } from "./reportWakes";
 
 /**
  * How a steer actually reached the crewmate. A backend whose ControlProfile
@@ -166,6 +167,12 @@ export type TaskRuntime = {
    * wake that ends the turn names them, and the list clears with it.
    */
   filedThisTurn: { key: string; title: string; blocks: boolean }[];
+  /**
+   * The decisions its crewmate withdrew itself this turn (INF-2828): the
+   * captain chose none of their actions, and the report wake that ends
+   * the turn names them beside the report; the list clears with it.
+   */
+  withdrawnThisTurn: WakeWithdrawn[];
   /** Watchdog signals (P4): any session event counts as activity. */
   lastEventAt: number;
   turnStartedAt: number;

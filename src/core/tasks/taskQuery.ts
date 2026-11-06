@@ -6,6 +6,7 @@ import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import type { WorkPosture } from "@shared/workPosture";
 import { attachmentPath } from "../attachments";
 import type { CardResolution } from "../storage/cardStore";
+import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskStore";
 import { queueWaitOf } from "./queueWait";
 import { TaskService } from "./taskService";
@@ -157,8 +158,17 @@ export type TaskQueryRow = {
   response_requests?: import("@shared/crewResponses").ResponseRequest[];
   /** The exact pinned dispatch content, independent of later reports. By-key only. */
   brief?: string;
-  /** Saved closing choices/answers from the timeline, not inferred from prose. */
-  decisions?: { event_id: number; text: string; data: Record<string, unknown> | null }[];
+  /**
+   * Saved closing choices/answers from the timeline, not inferred from prose,
+   * each with who ended the card: the captain's choice, or its author's
+   * withdrawal, which holds no action the captain chose (INF-2828).
+   */
+  decisions?: {
+    event_id: number;
+    text: string;
+    by: TaskEventActor;
+    data: Record<string, unknown> | null;
+  }[];
   /** Explicitly named source, never guessed from the prose. */
   basis?: string;
   /**
@@ -379,7 +389,12 @@ function toRow(
   const brief = briefed ? tasks.servedBrief(briefed) : undefined;
   const decisions = history
     .filter((event) => event.kind === "card_resolved")
-    .map((event) => ({ event_id: event.id, text: event.text, data: decisionData(event.data) }));
+    .map((event) => ({
+      event_id: event.id,
+      text: event.text,
+      by: event.actor,
+      data: decisionData(event.data),
+    }));
   const flags = tasks.graph.flagsOf(record);
   const parent = record.parentId ? tasks.get(record.parentId) : undefined;
   // An active row names what holds it now, by the board's own rule

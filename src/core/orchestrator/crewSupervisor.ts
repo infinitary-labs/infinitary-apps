@@ -774,7 +774,14 @@ export class CrewSupervisor {
     actor: { kind: "firstmate" } | { kind: "crewmate"; taskId: string },
     reason?: string,
   ): string {
+    // A decision its crewmate withdraws ends with none of its actions
+    // chosen; the turn's report wake names it (INF-2828). close throws on
+    // every refusal, so a returned close withdrew this card.
+    const author = actor.kind === "crewmate" ? actor.taskId : undefined;
+    const card = author ? this.cards.get(cardId.trim()) : undefined;
     const result = this.cards.close(cardId, actor, reason);
+    if (author && card && card.actions.length > 0)
+      this.tasks.get(author)?.withdrawnThisTurn.push({ id: card.id, title: card.title });
     // Withdrawal can leave a message without its answering offer. Re-read
     // coverage through the existing sweep, never a captain acknowledgement.
     this.hooks.asksMoved?.();

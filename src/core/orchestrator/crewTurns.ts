@@ -73,6 +73,12 @@ export const BACKLOG_STEER_LINE =
 
 const QUEUED_GUIDANCE_FOLD = "queued-guidance";
 
+/** What a turn did that its report wake names beside the report. */
+type TurnActs = {
+  filed: TaskRuntime["filedThisTurn"];
+  withdrawn: TaskRuntime["withdrawnThisTurn"];
+};
+
 /** The idle ladder's rule ids: its wakes are the host's own, never a report's. */
 const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
   "idle-nudge",
@@ -555,6 +561,8 @@ export class CrewTurns {
     task.currentTurnText = "";
     const filed = task.filedThisTurn;
     task.filedThisTurn = [];
+    const withdrawn = task.withdrawnThisTurn;
+    task.withdrawnThisTurn = [];
     const implausible =
       candidate && !options.interrupted ? implausibleReport(candidate) : undefined;
     const turnError =
@@ -797,10 +805,10 @@ export class CrewTurns {
       void saved.then((committed) => {
         const record = this.core.options.tasks.get(task.id);
         if (committed && record && !TaskService.isClosed(record))
-          this.sortReport(task, report, filed, declared);
+          this.sortReport(task, report, { filed, withdrawn }, declared);
       });
     } else if (report) {
-      this.sortReport(task, report, filed, declared);
+      this.sortReport(task, report, { filed, withdrawn }, declared);
     }
     if (!turnError && !options.interrupted && !paused) this.askForCheckBack(task, declared);
     // A captured settle owns this idle boundary. Do not start another queued
@@ -872,18 +880,18 @@ export class CrewTurns {
   private sortReport(
     task: TaskRuntime,
     report: string,
-    filed: TaskRuntime["filedThisTurn"],
+    turn: TurnActs,
     declared: ReportDeclaration | undefined,
   ): void {
     this.core.options.tasks.readProjection(() =>
-      this.sortReportInProjection(task, report, filed, declared),
+      this.sortReportInProjection(task, report, turn, declared),
     );
   }
 
   private sortReportInProjection(
     task: TaskRuntime,
     report: string,
-    filed: TaskRuntime["filedThisTurn"],
+    { filed, withdrawn }: TurnActs,
     declared: ReportDeclaration | undefined,
   ): void {
     const finished = declared?.finished === true;
@@ -936,6 +944,7 @@ export class CrewTurns {
         ...(waiting.length > 0 ? { waiting } : {}),
         cards: this.core.cards.shownCards(task.id),
         ...(refused ? { refused } : {}),
+        ...(withdrawn.length > 0 ? { withdrawn } : {}),
         ...(unseenWait ? { captainWait: unseenWait.reason } : {}),
         ...(finished ? { finished: true } : {}),
         ...(needsFirstmate ? { needsFirstmate } : {}),

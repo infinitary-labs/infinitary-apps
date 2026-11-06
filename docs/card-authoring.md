@@ -255,6 +255,16 @@ A task on the personal workspace or an answer task has no completion card, and i
 A completion card a work computer sent to the home whose answer never came is not a refusal either: the home may already show it, so the card tool records nothing, and the crewmate reads that it may already be up and what to check (INF-370 R1; `docs/helper.md`, "Lost contact").
 A card whose request never went out is still recorded as refused.
 
+## A decision its author withdrew
+
+Every action closes its card, so a decision its author withdraws with `close_card` holds no action the captain chose.
+A reply in its thread is not on that record, so the host says only that no action was chosen.
+INF-2828 is why the host says so: a crewmate wrote the captain's approval of its vault consent card itself, reported it, withdrew the card, and the first mate started the session that reads the vault on that report.
+`close_card` on a decision answers its author with the record's ending (`WITHDRAWN_UNCHOSEN`): the captain chose none of its actions, and its record ends as the withdrawal.
+A crewmate's withdrawals of its decisions are kept for the turn (`TaskRuntime.withdrawnThisTurn`), and the report wake that ends the turn names each one after the report, saying the captain chose none of its actions.
+A by-key `tasks` read names who ended each card in `decisions` (`by`), so a later reader tells the captain's choice from its author's withdrawal.
+Nothing reads the report's words; the fact sits beside them, and the host refuses no withdrawal, since a question the captain answered elsewhere is still withdrawn this way.
+
 ## Revising a card
 
 `emit_card` accepts an optional `id`: kebab-case, namespaced by the emitter (for example `fm-feed-scroll`).

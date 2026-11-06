@@ -38,7 +38,7 @@ import {
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { contractChange, listsChange } from "../connection/contractChanges";
 import { CONVERSATION_FOLDS } from "../connection/conversationFolds";
-import { SHARED_CARDS } from "../connection/sharedCards";
+import { SHARED_CARDS, THREAD_SIGN_OFF } from "../connection/sharedCards";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { filesAskedOfHome, type TaskFiles } from "../files/taskFiles";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
@@ -1470,6 +1470,12 @@ export class SessionHost {
           return Promise.reject(
             new Error(
               `Reply refused: ${HOME.the} runs an older Infinitary that cannot name the captain message a line answers. Nothing was sent; reply without it or report the gap to the first mate.`,
+            ),
+          );
+        if (input.signsOff === true && !listsChange(this.options.homeChanges?.(), THREAD_SIGN_OFF))
+          return Promise.reject(
+            new Error(
+              `Reply refused: ${HOME.the} runs an older Infinitary that cannot end an answer from its thread. Nothing was sent; reply without signs_off.`,
             ),
           );
         return ask("inf:work:reply", input, signal);

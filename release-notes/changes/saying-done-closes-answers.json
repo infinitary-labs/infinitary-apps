@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "saying-done-closes-answers",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Saying you are done under an answer closes it",
+      "body": "When you write under a crewmate's answer that you need nothing more from it, in your own words, the crewmate closes the answer for you and its task ends as answered. An answer you already saw is no longer asked for again when its task ends, so no card comes back and your first mate adds no note of its own.",
+      "noPicture": "This changes when an answer and its task end, not how any card or view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

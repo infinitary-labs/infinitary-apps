@@ -3,7 +3,7 @@
 The local record of every card decision, kept so a later reader can tell exactly what the captain was shown, what the captain chose from it, what each question asked, and what the task looked like when the captain chose.
 It is part of the card's own persistence: no switch, no collector, no network and no new question for the captain.
 Nothing leaves the Mac.
-Its readers are the opt-in export below and, since FI3-472's change marks, the stage's revised line, which reads the `seen` and `offer` observations back ("What the captain saw").
+Its readers are the opt-in export below; since FI3-472's change marks, the stage's revised line, which reads the `seen` and `offer` observations back ("What the captain saw"); and how a message ends (INF-2845, `CardStore.seenCards`), which reads a task's `seen` and `exit` observations to count an answer the captain saw, only when the sighting is of the card's current version and its own author did not withdraw it (`docs/task-capture.md`, "How a message ends").
 
 Design record: `fm-homes/mini-default/data/fm3000-decision-dataset-s1/report.md` (P1-P9, captain authorization 2026-09-29: "alright - pass back to firstmate and authorize an opus crewmate to implement").
 This is its first release, D0-D3.

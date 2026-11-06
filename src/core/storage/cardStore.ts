@@ -1297,6 +1297,62 @@ export class CardStore {
     return row?.offer_id ?? undefined;
   }
 
+  /**
+   * The cards of a task whose current version the captain saw, each with
+   * when they last saw it (INF-2845): what "an answer you saw" reads once a
+   * message's work has ended. Only a sighting of the card's current offer
+   * counts, and of its current update once one was released, since an older
+   * sighting cannot prove the latest answer was read (docs/card-evidence.md);
+   * a lifecycle its own author withdrew never counts.
+   */
+  seenCards(taskId: string): { cardId: string; at: number }[] {
+    const rows = this.db
+      .prepare(
+        `SELECT card_id, lifecycle_id, offer_id, kind, recorded_at,
+                json_extract(payload_json, '$.reason') AS reason,
+                json_extract(payload_json, '$.updateId') AS update_id
+           FROM card_observations
+          WHERE task_id = ? AND kind IN ('seen', 'exit')`,
+      )
+      .all(taskId) as {
+      card_id: string;
+      lifecycle_id: string;
+      offer_id: string | null;
+      kind: "seen" | "exit";
+      recorded_at: number;
+      reason: string | null;
+      update_id: string | null;
+    }[];
+    const withdrawn = new Set<string>();
+    for (const row of rows) {
+      if (row.kind === "exit" && row.reason === "author-withdrawal") {
+        withdrawn.add(`${row.card_id}\u0000${row.lifecycle_id}`);
+      }
+    }
+    const current = new Map<string, { lifecycleId?: string; offerId?: string; update?: string }>();
+    const seen = new Map<string, number>();
+    for (const row of rows) {
+      if (row.kind !== "seen" || withdrawn.has(`${row.card_id}\u0000${row.lifecycle_id}`)) continue;
+      let version = current.get(row.card_id);
+      if (!version) {
+        const card = this.get(row.card_id);
+        version = {
+          ...(card?.lifecycleId ? { lifecycleId: card.lifecycleId } : {}),
+          ...(card?.offerId ? { offerId: card.offerId } : {}),
+        };
+        if (version.lifecycleId && version.offerId) {
+          const update = this.currentUpdate(row.card_id, version.lifecycleId, version.offerId);
+          if (update) version.update = update;
+        }
+        current.set(row.card_id, version);
+      }
+      if (row.lifecycle_id !== version.lifecycleId || row.offer_id !== version.offerId) continue;
+      if (version.update && row.update_id !== version.update) continue;
+      seen.set(row.card_id, Math.max(seen.get(row.card_id) ?? 0, row.recorded_at));
+    }
+    return [...seen].map(([cardId, at]) => ({ cardId, at }));
+  }
+
   /** One offer as the host put it up, and when. */
   offer(
     cardId: string,

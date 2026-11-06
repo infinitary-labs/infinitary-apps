@@ -28,6 +28,11 @@ export type AskEndingHost = {
   storedCard: (id: string) => Card | undefined;
   /** When the captain was last offered the card as it stands. */
   shownAt: (card: Card) => number;
+  /**
+   * A task's cards the captain saw, with when they last saw each, passing
+   * over every lifecycle its own author withdrew (`CardStore.seenCards`).
+   */
+  seenCards: (taskId: string) => readonly { cardId: string; at: number }[];
 };
 
 /** A root message with every message that joined its work. */
@@ -90,6 +95,7 @@ export function askEndingOf(
     values(): Iterable<Card>;
     stored(id: string): Card | undefined;
     shownAt(card: Card): number;
+    seenCards(taskId: string): readonly { cardId: string; at: number }[];
   },
 ): AskEnding {
   return new AskEnding({
@@ -97,6 +103,7 @@ export function askEndingOf(
     openCards: () => cards.values(),
     storedCard: (id) => cards.stored(id),
     shownAt: (card) => cards.shownAt(card),
+    seenCards: (taskId) => cards.seenCards(taskId),
   });
 }
 
@@ -234,6 +241,27 @@ export class AskEnding {
   }
 
   /**
+   * An answer the captain saw (INF-2845, direction A): the newest answering
+   * crewmate card of the chain's work they saw since its newest message,
+   * never a merge offer and never one its own author withdrew. Once the
+   * chain's work has ended it is the answer: the crewmate is not asked
+   * again, the first mate is not asked, and no closing note goes up.
+   */
+  seenAnswer(chain: AskChain): Card | undefined {
+    let newest: { card: Card; at: number } | undefined;
+    for (const task of chain.work) {
+      for (const seen of this.host.seenCards(task.id)) {
+        if (seen.at < chain.newestAt || (newest && newest.at >= seen.at)) continue;
+        const card = this.host.storedCard(seen.cardId);
+        if (card?.author !== "crewmate" || card.answering !== true) continue;
+        if (card.actions.some((action) => settleEffectOf(action)?.mode === "merge")) continue;
+        newest = { card, at: seen.at };
+      }
+    }
+    return newest?.card;
+  }
+
+  /**
    * The captain's accepted answer, when they accepted it since the newest
    * message. Work their choice started keeps the message working until it
    * ends; then the accepted card still answers it, revised with the outcome.
@@ -272,6 +300,8 @@ export class AskEnding {
     if (live) return { kind: "working" };
     const waiting = this.waitingCard(chain);
     if (waiting) return { kind: "waiting", cardId: waiting.id };
+    const seen = this.seenAnswer(chain);
+    if (seen) return { kind: "accepted", cardId: seen.id };
     const entries = chain.members.flatMap((member) => member.deliveryFacts.entries);
     // The first mate's answer in the thread of the card the message replied under.
     const reply = entries.findLast(
@@ -299,9 +329,12 @@ export class AskEnding {
    * of a note shaped as its answer. Aside and saved-answer reads never call
    * this acknowledgement path. A decision put aside answers nothing.
    * A chain whose reply is still running counts too: a quick choice lands
-   * before the turn that showed the card ends.
+   * before the turn that showed the card ends. `signed-off` is the captain's
+   * line under the card that its crewmate marked as saying they are done
+   * (INF-2845, `CardThreads.signOff`): it answers each chain the card is
+   * about, as a choice does.
    */
-  captainResponded(card: Card, response: "choice" | "close", action?: string): void {
+  captainResponded(card: Card, response: "choice" | "close" | "signed-off", action?: string): void {
     if (card.awaiting === "answer") return;
     if (response === "close" && card.actions.length > 0) return;
     const terminalAnswer =
@@ -312,7 +345,8 @@ export class AskEnding {
     for (const chain of this.openChains(true)) {
       // A choice on a decision about its work answers it; an acknowledged
       // note answers it only when shaped as its answer, not a note along the way.
-      const answers = response === "choice" ? this.about(chain, card) : this.candidate(chain, card);
+      // A line its crewmate signed off (INF-2845) answers it like a choice.
+      const answers = response === "close" ? this.candidate(chain, card) : this.about(chain, card);
       if (!answers || this.host.shownAt(card) < chain.newestAt) continue;
       this.host.tasks.capture.acceptAnswer(chain.ids, card.id);
     }
@@ -331,6 +365,7 @@ export class AskEnding {
       if (root.crewmateAskedAt !== null) continue;
       const others = chain.work.some((task) => task.id !== taskId && !TaskService.isClosed(task));
       if (others || this.acceptance(chain) || this.waitingCard(chain)) continue;
+      if (this.seenAnswer(chain)) continue;
       this.host.tasks.capture.markCrewmateAsked(root.id);
       return chain;
     }
@@ -365,6 +400,8 @@ export class AskEnding {
     // later message about it, which the revision shows again as the answer.
     const waiting = this.waitingCard(chain) ?? own;
     if (waiting) return { kind: "revise", card: waiting, open: true };
+    // An answer the captain saw already answers it: nothing comes back.
+    if (this.seenAnswer(chain)) return { kind: "quiet" };
     return { kind: "note" };
   }
 }

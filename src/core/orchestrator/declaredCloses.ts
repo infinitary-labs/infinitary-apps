@@ -7,6 +7,7 @@ import { carriedOnClose, TaskService } from "../tasks/taskService";
 import { taskResultResponse } from "./answerTaskResponse";
 import type { AnswerTaskClosedPayload } from "./captainWakes";
 import { cardEmitter } from "./cardEmit";
+import { SIGNED_OFF_ACTION_ID } from "./cardSignOff";
 import type { SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { describeStatus, type SettleService } from "./settleService";
@@ -75,7 +76,11 @@ export class DeclaredCloses {
     if (choice && !choice.effect)
       this.host.tasks.capture.recordResultHandoff(record.id, { cardId: card.id, action });
     if (this.host.deliverableOf(record) !== "answer") return false;
-    const text = !choice ? "marked answer Done" : `chose "${choice.label}"`;
+    const text = choice
+      ? `chose "${choice.label}"`
+      : action === SIGNED_OFF_ACTION_ID
+        ? "signed off under the answer"
+        : "marked answer Done";
     // An invalid action never produces a closure-choice wake.
     const handoff = choice ? this.answerTaskClosedPayload(record, card, choice) : undefined;
     void this.closing

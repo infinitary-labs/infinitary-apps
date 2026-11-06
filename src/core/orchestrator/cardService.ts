@@ -37,6 +37,7 @@ import type { EmittedCardInput } from "../session/tools";
 import type { CardResolution, CardStore, DuplicateResult } from "../storage/cardStore";
 import type { TaskOriginLine } from "../tasks/taskOrigin";
 import type { TaskService } from "../tasks/taskService";
+import type { AskEnding } from "./askEnding";
 import { CardEmits, cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { CardEvidence, type CardInteractionEvidence } from "./cardEvidence";
 import {
@@ -108,6 +109,7 @@ import { withMergeLine } from "./settleWords";
  */
 
 type CardActor = "captain" | "firstmate" | "crewmate";
+type CardResponse = Parameters<AskEnding["captainResponded"]>[1];
 
 /**
  * What close_card tells an author who withdrew a decision (INF-2828): every
@@ -179,7 +181,7 @@ export type CardServiceHost = {
    * The captain chose an action on a card or closed it: the message it may
    * answer hears it (INF-1610, `AskEnding.captainResponded`).
    */
-  captainResponded?: (card: Card, response: "choice" | "close", action?: string) => void;
+  captainResponded?: (card: Card, response: CardResponse, action?: string) => void;
   /**
    * A card was placed, revised or released onto the stage from its
    * close-out hold: a notice it answers may be taken back.
@@ -227,6 +229,7 @@ export type CardStack = {
   broadcastSnapshot(): void;
   topPriority(floor: number): number;
   othersOpen(taskId: string, except: string | undefined): boolean;
+  resolve: CardService["resolve"];
 };
 
 export class CardService {
@@ -296,6 +299,7 @@ export class CardService {
       broadcastSnapshot: () => this.broadcastSnapshot(),
       topPriority: (floor) => this.topPriority(floor),
       othersOpen: (taskId, except) => this.othersOpen(taskId, except),
+      resolve: (...args) => this.resolve(...args),
     };
     this.threads = new CardThreads(host, stack);
     this.emits = new CardEmits(host, stack, this.threads);
@@ -471,6 +475,11 @@ export class CardService {
       (card.offerId ? this.host.cardStore.offer(card.id, card.offerId)?.at : undefined) ??
       card.createdAt
     );
+  }
+
+  /** A task's cards the captain saw, passing over lifecycles their author withdrew. */
+  seenCards(taskId: string): { cardId: string; at: number }[] {
+    return this.host.cardStore.seenCards(taskId);
   }
 
   /** A card's thread messages, oldest first. */

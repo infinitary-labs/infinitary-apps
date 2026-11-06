@@ -55,6 +55,7 @@ it.each(["close", "choice"] as const)(
       values: () => [],
       stored: () => undefined,
       shownAt: (card) => card.createdAt,
+      seenCards: () => [],
     });
     try {
       const groups: string[][] = [];

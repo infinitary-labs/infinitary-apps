@@ -8,3 +8,10 @@ import { contractChange } from "./contractChanges";
  * write as if they were absent, so it is refused instead.
  */
 export const SHARED_CARDS = contractChange("shared-cards");
+
+/**
+ * A home that ends an answer on a crewmate's `signs_off` line (INF-2845,
+ * `thread-sign-off.md`). An older home would drop the mark and keep the
+ * line as an ordinary answer, so a mark sent there is refused instead.
+ */
+export const THREAD_SIGN_OFF = contractChange("thread-sign-off");

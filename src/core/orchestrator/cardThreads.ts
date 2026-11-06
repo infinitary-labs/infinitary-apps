@@ -1,3 +1,4 @@
+import { ANSWER_DONE_LABEL } from "@shared/cardLeave";
 import {
   CARD_REPLY_MAX_CHARS,
   type Card,
@@ -22,6 +23,7 @@ import { buildEmittedCard, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { cardMutationText } from "./cardMutationText";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
 import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardService";
+import { SIGNED_OFF_ACTION_ID, signOffRefusal } from "./cardSignOff";
 import { waitingCardWords } from "./idleWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 
@@ -92,6 +94,8 @@ type ReplyInput = {
   text: string;
   interim?: boolean;
   answersMessage?: number;
+  /** The crewmate judged the captain's message says they are done (INF-2845). */
+  signsOff?: boolean;
   operationId?: string;
   response?: CrewResponse;
 };
@@ -211,6 +215,20 @@ export class CardThreads {
       return `Unknown card "${id}". Read the card's id again; a reply names a card on the record.`;
     }
     const caller: CardCaller = { actor: "crewmate", taskId };
+    const signsOff = input.signsOff === true;
+    if (signsOff) {
+      const refusal = signOffRefusal({
+        taskId,
+        card: this.stack.cards.get(id),
+        record: this.host.tasks.get(taskId),
+        answersMessage: input.answersMessage,
+        interim: input.interim === true,
+        waitingOn: this.host.cardStore.awaitingAuthor(id)
+          ? this.host.cardStore.newestCaptainMessage(id)?.id
+          : undefined,
+      });
+      if (refusal) return `Nothing was written: ${refusal}`;
+    }
     const own =
       this.stack.cards.has(id) && answersFor(card, caller, (other) => this.firstmateAnswers(other));
     const mutation = this.replyAs(caller, input);
@@ -224,6 +242,13 @@ export class CardThreads {
       return `Posted in the thread on "${card.title}" (${id}); the captain's message ${question.id} still waits for your answer when the work is done, in a line naming it in answers_message.`;
     }
     const replied = `Replied in the thread on "${card.title}" (${id}).`;
+    if (signsOff && mutation.answered === input.answersMessage) {
+      const closed = this.signOff(id);
+      const signed = `${replied} It answers the captain's message ${mutation.answered} and signs the answer off: the card left the stack as read`;
+      return closed
+        ? `${signed} and your task closes as answered, so nothing more is owed. End your turn.`
+        : `${signed}, but your task stays open; report when your work is done.`;
+    }
     const answered =
       mutation.answered !== undefined
         ? ` It answers the captain's message ${mutation.answered}.`
@@ -236,6 +261,28 @@ export class CardThreads {
     return still.length > 0
       ? `${replied}${answered} ${stillWaitingWords(still)}`
       : `${replied}${answered}`;
+  }
+
+  /**
+   * The captain's line under an answer said they are done, and the crewmate
+   * that answered it marked it so (INF-2845, direction A): the card resolves
+   * through the one resolution path as read, the message it answers takes
+   * it as its answer, and the task closes as answered - the same ending as
+   * Done on a saved answer. The past card names its crewmate, never a click
+   * of the captain's. Returns whether the task closed.
+   */
+  private signOff(id: string): boolean {
+    const card = this.stack.cards.get(id);
+    if (!card) return false;
+    return this.stack.resolve(
+      { ...card, actions: [{ id: SIGNED_OFF_ACTION_ID, label: ANSWER_DONE_LABEL }] },
+      SIGNED_OFF_ACTION_ID,
+      SIGNED_OFF_ACTION_ID,
+      undefined,
+      "crewmate",
+      undefined,
+      () => this.host.captainResponded?.(card, "signed-off"),
+    );
   }
 
   /** Whether a captain reply on this open card still waits for its answer. */

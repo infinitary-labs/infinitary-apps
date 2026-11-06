@@ -148,7 +148,7 @@ export async function answerCall(
       return { text: await (callbacks?.onReport ?? missing())(text, summary, declared) };
     }
     case "inf:work:reply": {
-      const { cardId, text, interim, answersMessage, operationId, response } =
+      const { cardId, text, interim, answersMessage, signsOff, operationId, response } =
         request as InvokeRequest<"inf:work:reply">[0];
       return {
         text: await (callbacks?.onReply ?? missing())({
@@ -156,6 +156,7 @@ export async function answerCall(
           text,
           ...(interim !== undefined ? { interim } : {}),
           ...(answersMessage !== undefined ? { answersMessage } : {}),
+          ...(signsOff === true ? { signsOff } : {}),
           ...(operationId ? { operationId } : {}),
           ...(response ? { response } : {}),
         }),

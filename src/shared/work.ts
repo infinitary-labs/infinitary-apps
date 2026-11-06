@@ -661,6 +661,8 @@ export const workRequests = {
       interim: z.boolean().optional(),
       /** `shared-cards.md`: the captain message it answers, its operation and response. */
       answersMessage: z.number().int().optional(),
+      /** `thread-sign-off.md`: the captain's message says they are done with the answer. */
+      signsOff: z.boolean().optional(),
       operationId: z.string().optional(),
       response: crewResponseSchema.optional(),
     }),

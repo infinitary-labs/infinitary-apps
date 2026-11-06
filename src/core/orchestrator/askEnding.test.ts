@@ -25,6 +25,7 @@ function fixture() {
     openCards: () => open.values(),
     storedCard: (id) => stored.get(id),
     shownAt: (card) => shown.get(card.id) ?? 0,
+    seenCards: () => [],
   });
   const later = () => {
     clock.t += 1_000;

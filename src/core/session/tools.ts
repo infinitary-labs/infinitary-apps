@@ -360,6 +360,8 @@ export type CrewmateToolDelegate = {
       interim?: boolean;
       /** The captain message this line answers (docs/card-threads.md, "Shared cards"). */
       answersMessage?: number;
+      /** The crewmate judged the captain's message says they are done (INF-2845). */
+      signsOff?: boolean;
       operationId?: string;
       /** The correlated response this line carries (INF-2222's one writer). */
       response?: CrewResponse;

@@ -23,6 +23,7 @@ function fixture() {
     values: () => cards,
     stored: (id) => cards.find((card) => card.id === id),
     shownAt: (card) => card.createdAt,
+    seenCards: () => [],
   });
   const check = new AnswerDeliveryCheck({
     tasks,

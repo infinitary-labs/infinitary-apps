@@ -67,8 +67,20 @@ export const REPLY_TOOL_DESCRIPTION = [
   // clarification and a line on a question someone already answered are said
   // by the host's own refusal and result (docs/orchestrator-contract.md, "The
   // fixed-context budget").
-  "Never a card and never actions - to change what your card says, call emit_card again with the same id, passing your answer as its reply so one call does both.",
+  // Revising the card with the answer as its reply is CARD_REPLY's, which
+  // every persona's prompt carries, so this says only what a line is not
+  // (INF-2845 paid for signs_off this way).
+  "Never a card and never actions.",
 ].join(" ");
+
+/**
+ * What a crewmate's signed-off line does (INF-2845, the captain's direction
+ * A: "the crewmate marks a reply that says you are done, in any words, as
+ * closing"). When to mark one is the thread steer's to say
+ * (`THREAD_STEER_PREAMBLE`), so the crewmate's fixed context grows only by
+ * this; the host checks only the typed conditions (`signOffRefusal`).
+ */
+export const SIGNS_OFF_DESCRIPTION = "Closes your answer as Done does.";
 
 /**
  * Correct a required action's words (docs/required-actions.md, "Correcting
@@ -457,6 +469,12 @@ export const REPLY_TOOL = crewmateTool({
     ),
     // The description says a line ends a captain question only when answers_message names it.
     answers_message: Type.Optional(Type.Integer({ minimum: 1 })),
+    // Top-level, so the rule reaches a Claude crewmate (INF-2845, direction A).
+    signs_off: Type.Optional(
+      Type.Boolean({
+        description: SIGNS_OFF_DESCRIPTION,
+      }),
+    ),
     // A resent operation_id answers with its first result, which says so.
     operation_id: Type.Optional(Type.String()),
     response: Type.Optional(
@@ -483,6 +501,7 @@ export const REPLY_TOOL = crewmateTool({
             ...(params.answers_message !== undefined
               ? { answersMessage: params.answers_message }
               : {}),
+            ...(params.signs_off === true ? { signsOff: true } : {}),
             ...(params.operation_id?.trim() ? { operationId: params.operation_id.trim() } : {}),
             ...(params.response
               ? {

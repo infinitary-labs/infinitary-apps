@@ -49,6 +49,7 @@ function fixture(observe = false) {
         values: () => up,
         stored: (id) => up.find((card) => card.id === id),
         shownAt: (card) => card.createdAt,
+        seenCards: () => [],
       }),
       observe,
     });

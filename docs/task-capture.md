@@ -138,16 +138,27 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
   The normal `answer_task_closed` handoff remains pending until the first mate recovers and handles the choice; acceptance alone neither authorizes nor proves later work.
   A choice counts whether it lands before or after the reply that showed the card finishes: `captainResponded` also reads the chains whose reply is still running.
   A decision closed without a choice answers nothing; a reply, a question or a new message keeps the message open.
+  One reply is the exception (INF-2845, the captain's direction A): a line its crewmate signs off.
+  When the captain's line under a crewmate's answering card says, in any words, that they need nothing more from it, the crewmate answers it with `reply`, naming the message in `answers_message` and setting `signs_off` (`CardThreads.signOff`).
+  The crewmate judges the words; the host checks only typed facts (`signOffRefusal`): its own open answering card of an active answer task, the message the card waits on, no merge, write or browser hand-off for the captain, not `asking`, not `continues` and not an interim line, refusing anything else with its reason and writing nothing.
+  An accepted mark resolves the card as read (its past card names the crewmate, never a click of the captain's), accepts it as the answer through `captainResponded` (`signed-off`), and closes the answer task `done/answered` through `taskResultResponse`, the same ending as Done.
   Work the choice started keeps the message working until it ends; then the accepted card still answers it.
   The step that handles the click joins that work to the message only when the first mate names the message on it (`ask_id`).
   Closing the first mate's own card is never an acceptance; when `close_card` closes the card a message a step has read was waiting on, and leaves it with no answering card up and no work running, its answer says so, as a fact and never a refusal.
   The first mate's answer in the thread of the card the message was typed under is accepted; so is a reaction to a message that asks nothing, the first mate's own judgment.
+- **Seen.**
+  Once all of a message's work has ended, an answering crewmate card the captain saw since its newest message is its answer (`AskEnding.seenAnswer`), from the card's `seen` observations (`CardStore.seenCards`).
+  Only a sighting of the card's current version counts - its current offer, and its current released update once there is one - so a revision the captain never saw is still asked for.
+  A merge offer never counts, and neither does a lifecycle its own author withdrew.
+  An answering card still up keeps the message waiting on it as before; a seen answer counts only when none is up.
 - **Answered.**
   An accepted answer becomes `answered_at` once the first mate has nothing queued that could start more work for it.
 
 Who writes a missing answer, in the captain's order:
 
-1. The crewmate whose task is the message's last running work: when it reports finished with no answer accepted or up, its report is refused once (`CREWMATE_ANSWER_ASK`), saved as `crewmate_asked_at`; its second finished report stands.
+An answer the captain saw (**Seen** above) skips all three: the finished report stands, the first mate is not asked and no notice goes up.
+
+1. The crewmate whose task is the message's last running work: when it reports finished with no answer accepted, up or seen, its report is refused once (`CREWMATE_ANSWER_ASK`), saved as `crewmate_asked_at`; its second finished report stands.
 2. The first mate, through the retry above, once all of the message's work has ended with no answer: the wake names the work that ended (`workEnded`), and the first mate shows the answer or links the task that took the work over with `link_tasks`.
 3. The app's one notice.
 
@@ -157,6 +168,7 @@ At most one closing note: when work closes without the captain's click, `TaskClo
 - Other running work of the message, or a handover, puts up nothing.
 - Work another task carries on closes done with no outcome of its own, so it puts up nothing; when the task carrying it closed first, that task's held-back outcome is placed once (`docs/task-record.md`, "Work carried on by another task").
 - An answering card that is up is revised, and so is the task's own card shaped as an answer that is still up, even when a later message asked about it.
+- An answer the captain saw puts up nothing.
 - Otherwise the app's one closing note goes up, marked as the answer.
 - Work no message of the captain's covers, such as work the fleet started, puts up a note only when it merged or released and nothing of the task is on the stack.
 

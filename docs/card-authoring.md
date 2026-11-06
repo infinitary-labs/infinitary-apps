@@ -732,7 +732,7 @@ So the card carries the answer itself rather than a pointer to it: a builder spa
 ## Replying to a card
 
 Every card is the head of a thread with its AUTHOR (`docs/card-threads.md`).
-`CARD_REPLY` is the third constant in `cardContract.ts` and the third thing every persona includes exactly once: revise the card when the captain's words change what it should say (same id), answer in prose when nothing on it changes, and a reply is prose only and resolves nothing.
+`CARD_REPLY` is the third constant in `cardContract.ts` and the third thing every persona includes exactly once: revise the card when the captain's words change what it should say (same id), answer in prose when nothing on it changes, and a reply is prose only and resolves nothing but a crewmate's signed-off line (`docs/card-threads.md`, "Signing off").
 A crewmate's `reply(card_id, text)` is the prose half; `emit_card` under the same id is the other, and the host puts one "revised: …" line in the thread when it lands.
 Any first mate or crewmate may also write on a card it did not author, as itself (`docs/card-threads.md`, "Shared cards"): it reads the card with `tasks card`, revises it with `emit_card` and `expected_revision` or writes a reply alone, and its line ends a captain question only when `answers_message` names it, as the answerer's own line does.
 

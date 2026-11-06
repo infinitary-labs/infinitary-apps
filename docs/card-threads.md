@@ -24,7 +24,7 @@ Delivery is not awaited, exactly as a card click's round-trip is not: the messag
 A line the captain types in a task's Crewmate tab rides the same lane as the captain's own steer, stamped `via: "crewmate-tab"`, with no card and no thread (`docs/task-card-tabs.md`, "Typing").
 While the captain's kept merge approval stands on the task, the captain's reply, like the captain's line in the Crewmate tab, is guidance that holds that merge until the crewmate declares its impact (`docs/delivery-rigor.md`, "A kept merge approval").
 
-A reply resolves nothing.
+A reply resolves nothing, except a line its crewmate signs off ("Signing off" below).
 The buttons stay pinned; explicit choices, task endings and author withdrawals retire cards, while minus puts them away.
 
 The captain’s minimize corner is presentation only (INF-1879): a decision or a note stays open, and a note is read only by its own Done or Got it (INF-2794).
@@ -131,6 +131,14 @@ The mark crosses from a computer that runs work too: `inf:work:reply` carries `i
 An interim line never brings back a card the captain put aside, and neither does a handoff or a revision whose `reply` names no message: the card comes back with the final answer (`addMessage`, the revision's `aside`).
 The rule lives in the steer preamble and the tool's `interim` parameter, both crewmate-only, so the first mate's contract is unchanged.
 Putting a card aside never asks to discard an unanswered reply; its hold and draft remain until its author answers.
+
+**Signing off** (INF-2845, the captain's direction A): a reply resolves nothing, except a crewmate's line marked `signs_off`.
+When the captain's line under its answer says they need nothing more from it, in whatever words, the crewmate answers it naming the message in `answers_message` with `signs_off` true.
+The card leaves the stack as read, the message takes it as its answer, and the answer task closes as answered (`docs/task-capture.md`, "How a message ends").
+The crewmate judges the words; the rule's one home is the thread steer's preamble (`THREAD_STEER_PREAMBLE`), which reaches a Claude crewmate with the captain's line, and the tool's top-level `signs_off` parameter says only what the mark does.
+No code, test or instruction keeps a list of phrases.
+The host refuses the mark with its reason and writes nothing on a card with a merge, a write or a browser hand-off for the captain, on one still `asking` or `continues`, on an interim line, and anywhere but the crewmate's own answering card of an active answer task.
+The mark crosses from a computer that runs work in `inf:work:reply`'s `signsOff`, only to a home that lists `thread-sign-off`.
 
 ## The waiting line
 
@@ -355,7 +363,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 - Cards as threads (phase 1, captain-approved 2026-09-20 "cards-as-threads over a decision model - ship it"; the decided design is R4 of `fm3000-card-close-decision-model-s1/report.md`, `docs/card-threads.md` is the one home).
   Every card is the head of a thread between the captain and the card's AUTHOR: what the captain types under a card goes to that author, and the author always answers in the thread; a revision under the same id carries that answer as `reply`, after the host's one `revised: …` line.
-  A reply resolves nothing; the buttons stay pinned and explicit choices, task endings or author withdrawals retire cards.
+  A reply resolves nothing but a crewmate's signed-off line; the buttons stay pinned and explicit choices, task endings or author withdrawals retire cards.
   A reply keeps the card shown while its author answers; a revision is released at its writer's close-out, held in the core as `Card.awaiting` ("When a card reaches the stage").
   The record is `card_messages` (migration 38, owned by `CardStore` beside `card_revisions`, dying with its card in `deleteForTask`'s transaction) and `CardService.addMessage` is its ONE writer, so no row lands without the `inf:cards:thread` push that paints it; a captain reply on a crewmate's card is a captain STEER to that crewmate - the path a card click already takes - stamped `via: "thread"` with `THREAD_STEER_PREAMBLE` and the captain's words verbatim, delivered fire-and-forget the way a click's round-trip is.
   `CARD_REPLY` (contract v4.2) is the shared contract, stated ONCE the way `CARD_AUTHORING` is and included by every persona (`piResources.test.ts` pins both directions); the crewmate's `reply(card_id, text)` is its prose half on Pi and Claude, and the first mate's tool count stays 24.

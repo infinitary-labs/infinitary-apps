@@ -5,7 +5,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { classicScrollbars, expectFrameSettles } from "./frameSizing";
 import { panelBody, panelElement } from "./frames";
 import { launchApp } from "./launch";
-import { within } from "./layout";
+import { atRest, within } from "./layout";
 
 import { promptInput } from "./prompt";
 import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
@@ -30,6 +30,12 @@ async function addDrawing(page: Page, source: string): Promise<void> {
   await page.getByRole("button", { name: "Add it", exact: true }).click({ timeout: 30_000 });
   const frame = panelBody(page, PANEL_ID);
   await expect(frame.locator("[data-fractional-drawing]")).toBeVisible({ timeout: 30_000 });
+  // A panel landing on an empty rail (on a busy run, the Tasks panel can
+  // leave the rail first) rides the rail's width and padding as they ease
+  // open, and the page may draw before that ends. Read nothing until the
+  // frame is at rest: a scroll taken mid-ease misses the frame's last shrink,
+  // which left the fill panel's endpoint 1.1px past its frame on an alpha.
+  await atRest(panelElement(page, PANEL_ID));
   await frame.locator("body").evaluate(() => document.fonts.ready);
   // Only the environment's scrollbar width is forced, inside and outside.
   // Do not suppress overflow or replace the production resize bridge/setter.

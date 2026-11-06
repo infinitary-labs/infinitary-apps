@@ -106,6 +106,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:work:download-artifact": WORK_REQUEST,
   "inf:work:record-knowledge": WORK_REQUEST,
   "inf:work:use-integration": WORK_REQUEST,
+  "inf:work:copy-file": WORK_REQUEST,
   "inf:work:picture": WORK_REQUEST,
   "inf:work:media": WORK_REQUEST,
   "inf:work:handover-file": WORK_REQUEST,

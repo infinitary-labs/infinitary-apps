@@ -15,6 +15,7 @@ import {
 import { crewResponseSchema } from "./crewResponses";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
 import { cutOffSchema, fmEventSchema } from "./events";
+import { filesAnswerSchema, filesReadInputSchema } from "./files";
 import { keptValidationInputSchema } from "./liveValidation";
 import {
   PLACEMENT_FACTS_ORDER,
@@ -223,6 +224,14 @@ export const placedSpecSchema = z.object({
    * browsers, whose task channel the command rides.
    */
   integrations: z.boolean().optional(),
+  /**
+   * The task's crewmate reads files on the captain's other computers through
+   * `infinitary-files-axi` in its shell there, each list and copy asked of
+   * the home (`inf:work:files`, `inf:work:copy-file`; docs/files.md). The
+   * home sends it only to a computer that keeps task browsers and lists
+   * `files-there`.
+   */
+  files: z.boolean().optional(),
   /** The home grants this computer's load command (docs/heavy-runs.md). */
   load: z.boolean().optional(),
 });
@@ -828,6 +837,27 @@ export const workRequests = {
       }),
     }),
     response: integrationAnswerSchema,
+  },
+  /**
+   * The files command's computers and one folder's listing on another of
+   * them (docs/files.md): the home answers as for a crewmate of its own.
+   */
+  "inf:work:files": {
+    effect: "read",
+    request: asked({ input: filesReadInputSchema }),
+    response: filesAnswerSchema,
+  },
+  /**
+   * The files command's copy: the home reads one file on another computer
+   * and delivers it into the task's hand-over folder here before it
+   * answers. Asked again, it copies the same file again, which lands under
+   * the same name.
+   */
+  "inf:work:copy-file": {
+    effect: "change",
+    repeats: "safe",
+    request: asked({ input: z.object({ target: z.string().min(1).max(4200) }) }),
+    response: filesAnswerSchema,
   },
   /** One card picture's verified copy, asked before the card that names it. */
   "inf:work:picture": {

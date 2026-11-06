@@ -7,6 +7,8 @@ import { DeviceSignIns } from "../../src/core/devices/deviceSignIns";
 import type { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
+import type { FileRouter } from "../../src/core/files/fileRouter";
+import { startHomeFiles } from "../../src/core/files/homeFiles";
 import type {
   DownloadArtifactInput,
   Forge,
@@ -99,6 +101,8 @@ export type PlacedHome = {
   inbox: InboxStore;
   supervisor: CrewSupervisor;
   integrations?: IntegrationsService;
+  /** The files command's router, given `files`. */
+  files?: FileRouter;
   placed: PlacedSessions;
   devices: WorkDevices;
   /** What each computer said of its own sign-ins. */
@@ -180,6 +184,12 @@ export function startPlacedHome(options: {
    * told (docs/knowledge.md). Absent, the crew has none.
    */
   knowledge?: boolean;
+  /**
+   * The files command, as `createServices` composes it (docs/files.md),
+   * with `home` the folder `~` names on this Mac and `name` this Mac's own.
+   * Absent, the crew has no files command.
+   */
+  files?: { home: string; name: string };
   /**
    * This Mac's own subscriptions, for a home that routes as `createServices`
    * composes it: the models its own sign-ins serve, their allowance as read
@@ -445,6 +455,19 @@ export function startPlacedHome(options: {
         projects: { get: (id) => repos.get(id), list: () => repos.list() },
       })
     : undefined;
+  // Typed here: its crew is the supervisor below, which takes it.
+  const files: FileRouter | undefined = options.files
+    ? startHomeFiles({
+        paths,
+        home: options.files.home,
+        homeName: options.files.name,
+        machines: placed,
+        onThisMac: (deviceId) => options.pairing().onThisMac(deviceId),
+        work: devices,
+        tasks,
+        crew: (): CrewSupervisor => supervisor,
+      })
+    : undefined;
   const supervisor = new CrewSupervisor({
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
     sessions: {
@@ -454,6 +477,7 @@ export function startPlacedHome(options: {
     machines: placed,
     ...(knowledge ? { knowledge } : {}),
     ...(options.reachOf ? { reachOf: options.reachOf } : {}),
+    ...(files ? { files } : {}),
     ...(composed
       ? {
           integrations: composed,
@@ -631,6 +655,7 @@ export function startPlacedHome(options: {
     wakes,
     cards: () => cards,
     ...(integrations ? { integrations } : {}),
+    ...(files ? { files } : {}),
     paths,
     quit,
     drop,

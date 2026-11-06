@@ -36,6 +36,7 @@ import { ownComputerName } from "./devices/computerName";
 import { startHomeDevices } from "./devices/homeDevices";
 import { createEventSeam } from "./eventSeam";
 import type { CoreEventSink } from "./events";
+import { startHomeFiles } from "./files/homeFiles";
 import { startFirstLaunch } from "./firstLaunch";
 import { startHomeForges } from "./forge/homeForges";
 import { FreezeRecorder, freezeWake, infinitaryProject } from "./freeze/freezeRecorder";
@@ -859,6 +860,16 @@ export async function createServices(
     browsers,
   });
   if (browsers) browserFactOf = (taskId) => browsers.fact(taskId);
+  // Files on the captain's other computers, for every crewmate (docs/files.md).
+  const files = startHomeFiles({
+    paths,
+    homeName: sourceComputer,
+    machines: placed,
+    onThisMac: (deviceId) => devices.onThisMac(deviceId),
+    work: workDevices,
+    tasks,
+    crew: () => supervisor,
+  });
   // A computer connected on an older Firstmate takes no new work: answered
   // by the devices list, which is made after the supervisor.
   const { takesNoWorkUntilUpdated } = homeDevices;
@@ -996,6 +1007,7 @@ export async function createServices(
         }
       : {}),
     integrations,
+    files,
     quotaGateRefValid,
     quotaGateCleared: (ref) =>
       quotaGateCleared(ref, { availableModels, slotsOf: (model) => slots.slotsOf(model), quota }),

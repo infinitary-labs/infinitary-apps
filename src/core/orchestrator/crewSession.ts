@@ -224,7 +224,12 @@ export function crewmateSessionSpec(
         (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
       spec.procedure,
       spec.tempDir,
-      spec.computers,
+      // Its files command rides the same channel, here or there (docs/files.md).
+      spec.computers &&
+        spec.files !== undefined &&
+        (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID)
+        ? { ...spec.computers, files: true }
+        : spec.computers,
       // Its integrations' command rides the same channel, here or there.
       spec.integrations !== undefined &&
         (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),

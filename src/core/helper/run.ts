@@ -1,8 +1,9 @@
 import { appendFileSync, existsSync, rmSync } from "node:fs";
-import type { NetworkInterfaceInfo } from "node:os";
-import { join } from "node:path";
+import { homedir, type NetworkInterfaceInfo } from "node:os";
+import { dirname, join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
 import type { DeviceGrant } from "@shared/devices";
+import { isFileOrderChannel } from "@shared/files";
 import type { WorkInvokeChannel } from "@shared/ipc";
 import { LOAD_ORDER, loadOrders } from "@shared/load";
 import { PLACEMENT_FACTS_ORDER, placementFactsRequestSchema } from "@shared/placement";
@@ -24,8 +25,10 @@ import type { WebSocket } from "ws";
 import { dialHome } from "../devices/dial";
 import { HomeLink, type HomeLinkState } from "../devices/homeLink";
 import { JoinedHome } from "../devices/joinedHome";
+import { FileReach, protectedPlaces } from "../files/fileReach";
 import type { MoveDeps } from "../folderMove/move";
 import type { HostKeychain } from "../host";
+import { hostEnv } from "../hostEnv";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { LoadLine } from "../placed/loadLine";
 import { readPlacementFacts } from "../placed/placementFacts";
@@ -254,6 +257,19 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       loadLine.observe(observation, processes, started, window, cpuWindow),
   });
   if (options.gitAskpass) configureComputerGit({ dataDir, askpass: options.gitAskpass, packaged });
+  // This computer's own files, as the home reads them for a crewmate on
+  // another computer (docs/files.md), with the app's sign-ins and keys
+  // refused here and in the app data folder this one sits in.
+  const filesHome = hostEnv().HOME ?? homedir();
+  const files = new FileReach({
+    home: filesHome,
+    protectedPlaces: protectedPlaces({
+      userData: dirname(dataDir),
+      home: filesHome,
+      workDir: dataDir,
+    }),
+    stagingDir: join(dataDir, "file-reach"),
+  });
   let name = joined.name;
   let onHomeMac = joined.grant.onHomeMac ?? null;
   let said: HomeLinkState | null = null;
@@ -367,6 +383,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       fetching,
       conversations?.then((held) => held.close()).catch(() => undefined),
       signIns?.then((held) => held.close()).catch(() => undefined),
+      files.close().catch(() => undefined),
     ]);
     ending = letGo
       .then(async () => {
@@ -554,6 +571,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
         return resources.read();
       }
       if (isSignInOrderChannel(channel)) return (await signingIn()).host.answer(channel, args);
+      if (isFileOrderChannel(channel)) return files.answer(channel, args);
       if (isBrowserOrderChannel(channel)) {
         const held = await holding();
         if (!held.browsers) throw new Error("This computer keeps no task browsers.");

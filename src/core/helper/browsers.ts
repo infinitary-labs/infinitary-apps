@@ -18,6 +18,7 @@ import {
   signInSite,
   storageOfSite,
 } from "../browser/webSignIns";
+import type { TaskFiles } from "../files/taskFiles";
 import type { HostBrowserFrame, HostChildSpawner, HostTaskBrowser } from "../host";
 import type { TaskIntegrations } from "../integrations";
 import type { LoadLine } from "../placed/loadLine";
@@ -243,13 +244,19 @@ export class ComputerBrowsers {
    */
   grant(
     task: string,
-    tools: { browser: boolean; integrations?: TaskIntegrations; load?: boolean },
+    tools: {
+      browser: boolean;
+      integrations?: TaskIntegrations;
+      load?: boolean;
+      files?: TaskFiles;
+    },
   ): { browser?: CrewmateBrowser; shell: TaskShell } {
     const browser = tools.browser ? this.browsers.forTask(task) : undefined;
     const shell = this.channel.grant(task, {
       ...(tools.load && this.options.load ? { load: this.options.load.forTask(task) } : {}),
       ...(browser ? { browser } : {}),
       ...(tools.integrations ? { integrations: tools.integrations } : {}),
+      ...(tools.files ? { files: tools.files } : {}),
     });
     return { ...(browser ? { browser } : {}), shell };
   }

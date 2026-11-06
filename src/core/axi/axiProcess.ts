@@ -1,5 +1,6 @@
 import { browserAxi } from "./browserCommands";
 import { runTaskAxiCli, type TaskAxiCli } from "./cli";
+import { type FilesOp, filesAxi } from "./fileCommands";
 import { inboxAxi } from "./inboxCommands";
 import { integrationsAxi } from "./integrationCommands";
 import { type LoadOp, loadAxi } from "./loadCommands";
@@ -64,7 +65,7 @@ function parentPort(): Port {
 type Connection = {
   call: (
     command: string,
-    op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp,
+    op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp | FilesOp,
     input: unknown,
   ) => Promise<never>;
 };
@@ -79,6 +80,7 @@ const TOOLS: Record<
   "infinitary-secrets-axi": secretsAxi as never,
   "infinitary-inbox-axi": inboxAxi as never,
   "infinitary-load-axi": loadAxi as never,
+  "infinitary-files-axi": filesAxi as never,
 };
 
 const port = parentPort();

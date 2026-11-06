@@ -1436,6 +1436,48 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt()).not.toContain("The captain's computers");
   });
 
+  it("names the files command in the computers paragraph once its shell has it (INF-2468)", () => {
+    // The captain on INF-2468: "isn't this fundamentally about a file
+    // transport protocol between infinitary connected machines?"
+    const prompt = (files: boolean) =>
+      buildCrewmateSystemPrompt(
+        "claude",
+        undefined,
+        undefined,
+        undefined,
+        false,
+        undefined,
+        undefined,
+        {
+          here: "Kun's Mac mini",
+          workers: [{ name: "Kun's Mac mini" }],
+          ...(files ? { files } : {}),
+        },
+      );
+    const reaching = prompt(true);
+    expect(reaching).toContain(
+      "To read a file on another of these computers, copy it with infinitary-files-axi in your shell: `ls <computer>:<folder>` lists a folder, `get <computer>:<path>` copies one file into your hand-over folder and prints its path, and the bare command names each computer.",
+    );
+    // Programs and actions there, and a file the command refuses, still go through the first mate.
+    expect(reaching).toContain(
+      "A program or action on another of these computers, or a file that command refuses, is out of your reach: report it with needs_firstmate",
+    );
+    expect(reaching).toContain(
+      "a picture the captain's words name by its path on another computer reaches you only once you copy it.",
+    );
+    expect(reaching).toContain(
+      "A handed or copied file may hold secrets: never print, quote or paste its content",
+    );
+    expect(reaching).not.toContain(
+      "A file, folder, program or action on another of these computers",
+    );
+    // Without the command, the paragraph stays as it was.
+    expect(prompt(false)).not.toContain("infinitary-files-axi");
+    expect(prompt(false)).toContain(
+      "A file, folder, program or action on another of these computers is out of your reach",
+    );
+  });
+
   it("briefs itself on the record, not in message text (ruling D5)", () => {
     const prompt = buildCrewmateSystemPrompt();
     expect(prompt).toContain("Your task arrives as a structured intent");

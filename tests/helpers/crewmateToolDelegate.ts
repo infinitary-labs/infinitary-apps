@@ -99,5 +99,10 @@ export function crewmateToolDelegate(): Required<
         text: answer("integrations.call", "integration called")({ name, action, input }),
       }),
     },
+    files: {
+      computers: async () => ({ text: answer("files.computers", "computers named")() }),
+      list: async (target) => ({ text: answer("files.list", "folder listed")(target) }),
+      copy: async (target) => ({ text: answer("files.copy", "file copied")(target) }),
+    },
   };
 }

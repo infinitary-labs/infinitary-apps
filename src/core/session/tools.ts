@@ -10,6 +10,7 @@ import type { RiskAssessment, RiskDeclaration } from "@shared/risk";
 import { type Static, type TObject, type TUnsafe, Type } from "typebox";
 import { z } from "zod";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import type { TaskFiles } from "../files/taskFiles";
 import type {
   DownloadArtifactInput,
   GithubReadInput,
@@ -434,6 +435,13 @@ export type CrewmateToolDelegate = {
    * computer's own, which asks the home each time.
    */
   integrations?: TaskIntegrations;
+  /**
+   * The files on the captain's other computers this task's crewmate reads
+   * through `infinitary-files-axi` (docs/files.md): on this Mac through its
+   * task channel; on a computer that runs work, through that computer's
+   * own, which asks the home each time.
+   */
+  files?: TaskFiles;
   /**
    * The captain's factual knowledge (docs/knowledge.md), handed to every crewmate, in every build: on a
    * computer that runs work, each call asks the home.

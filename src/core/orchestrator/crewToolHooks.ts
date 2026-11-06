@@ -126,12 +126,12 @@ export class CrewToolHooks {
   private taskCommandHooks(
     task: TaskRuntime,
     machine: string,
-  ): Pick<CrewmateSpec, "browser" | "shell" | "integrations" | "load"> {
-    const { browsers, taskCommands, integrations, machines, load } = this.core.options;
+  ): Pick<CrewmateSpec, "browser" | "shell" | "integrations" | "load" | "files"> {
+    const { browsers, taskCommands, integrations, machines, load, files } = this.core.options;
     const hasLoad = load?.available(machine) === true;
     if (machine !== LOCAL_MACHINE_ID) {
       // Its shell there is granted the commands; this Mac reads its browser
-      // for the captain and answers its integrations' calls.
+      // for the captain and answers its integrations' calls and its files'.
       return {
         ...(hasLoad ? { load: true } : {}),
         ...(browsers && machines?.keepsBrowsers?.(machine)
@@ -140,21 +140,26 @@ export class CrewToolHooks {
         ...(integrations && machines?.takesIntegrations?.(machine)
           ? { integrations: integrations.forTask(task.id) }
           : {}),
+        ...(files && machines?.takesFiles?.(machine) ? { files: files.forTask(task.id) } : {}),
       };
     }
     if (!taskCommands) return {};
     const browser = browsers?.forTask(task.id);
-    // Every crewmate here reaches the integrations (docs/integrations.md).
+    // Every crewmate here reaches the integrations (docs/integrations.md)
+    // and the files on the captain's other computers (docs/files.md).
     const reach = integrations?.forTask(task.id);
-    if (!browser && !reach && !hasLoad) return {};
+    const otherFiles = files?.forTask(task.id);
+    if (!browser && !reach && !hasLoad && !otherFiles) return {};
     return {
       ...(hasLoad ? { load: true } : {}),
       ...(browser ? { browser } : {}),
       ...(reach ? { integrations: reach } : {}),
+      ...(otherFiles ? { files: otherFiles } : {}),
       shell: taskCommands.grant(task.id, {
         ...(hasLoad && load ? { load: load.forTask(task.id) } : {}),
         ...(browser ? { browser } : {}),
         ...(reach ? { integrations: reach } : {}),
+        ...(otherFiles ? { files: otherFiles } : {}),
       }),
     };
   }

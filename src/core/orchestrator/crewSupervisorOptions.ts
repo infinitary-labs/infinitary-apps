@@ -14,6 +14,7 @@ import type {
   TaskBrowserRequest,
 } from "@shared/taskBrowser";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import type { TaskFiles } from "../files/taskFiles";
 import type {
   DownloadArtifactInput,
   ForgePull,
@@ -447,9 +448,16 @@ export type CrewSupervisorOptions = {
         browser?: CrewmateBrowser;
         integrations?: TaskIntegrations;
         load?: import("../placed/loadLine").TaskLoad;
+        files?: TaskFiles;
       },
     ) => TaskShell;
   };
+  /**
+   * The files on the captain's other computers (docs/files.md): every
+   * crewmate reads them through `infinitary-files-axi`, the home answering
+   * each list and copy. Absent, no crewmate has the command.
+   */
+  files?: { forTask: (taskId: string) => TaskFiles };
   /**
    * Integrations (docs/integrations.md): a crewmate on this Mac reaches them
    * through `infinitary-integrations-axi` on its task channel. Absent, it has none.

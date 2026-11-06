@@ -348,6 +348,11 @@ export class DevicePairing implements PairedDevices {
   private makingOwnKey: Promise<OwnKey> | null = null;
   /** Where each device last reached this Mac. */
   private reachedAt = new Map<string, string>();
+  /**
+   * Whether each device listed before the list kept where it joined from
+   * dials from this Mac itself, as its newest connection found it.
+   */
+  private dialsHere = new Map<string, boolean>();
   /** Network classification is a pure property of the literal address, not a per-row probe. */
   private reachedNetworks = new WeakMap<
     Entry,
@@ -791,6 +796,27 @@ export class DevicePairing implements PairedDevices {
   }
 
   /**
+   * Whether a computer on the list runs on this Mac itself: as it joined,
+   * or, for one listed before the list kept that, from where its newest
+   * connection dials, by the same look a join takes - never one that
+   * reaches this Mac only through this Mac's own SSH connection, whose dial
+   * arrives on loopback. False for one not connected since this started.
+   */
+  onThisMac(deviceId: string): boolean {
+    const entry = this.entries.find((candidate) => candidate.id === deviceId);
+    if (!entry) return false;
+    return entry.onThisMac ?? this.dialsHere.get(deviceId) ?? false;
+  }
+
+  /**
+   * Whether a socket dials from this Mac itself, as this Mac finds it from
+   * the address it came from, never while it stands in for another Mac.
+   */
+  private dialsFromThisMac(address: string | undefined): boolean {
+    return !this.joinsFromAnotherMac && isThisMachine(address, this.interfaces());
+  }
+
+  /**
    * Whether macOS on another Mac holds its work's dial to this Mac
    * (docs/devices.md, "Held on the local network"): a computer that runs
    * work, joined from another Mac, never in reach since it joined, that
@@ -1015,7 +1041,7 @@ export class DevicePairing implements PairedDevices {
       ? false
       : link.locality
         ? link.locality === "this-mac"
-        : isThisMachine(on.socket.remoteAddress, this.interfaces());
+        : this.dialsFromThisMac(on.socket.remoteAddress);
     const kind = joinedKind(link.kind, onThisMac, request.data.window === true, system);
     // Work run as the home's own user on this Mac could read and change
     // everything the captain can: it must run as another user here.
@@ -1166,6 +1192,12 @@ export class DevicePairing implements PairedDevices {
     const entry = this.entries.find((candidate) => candidate.keyPin === devicePin);
     if (entry) {
       this.noteReached(entry.id, reachedOn(request.socket));
+      if (entry.onThisMac === undefined)
+        this.dialsHere.set(
+          entry.id,
+          this.sshRecords.get(entry.id)?.connection !== "ssh" &&
+            this.dialsFromThisMac(request.socket.remoteAddress),
+        );
       return {
         id: entry.id,
         kind: entry.kind,

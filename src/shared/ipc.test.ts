@@ -379,7 +379,8 @@ describe("ipc contract", () => {
    * (src/shared/work.ts): one request per tool callback - the change and
    * artifact tools among them, which the home does with its own sign-in,
    * the knowledge pair, which reads and writes the home's knowledge, and
-   * the integrations pair, which the integrations command asks, and the
+   * the integrations pair, which the integrations command asks, the files
+   * pair, which the files command asks (docs/files.md), and the
    * shared-card pair that reads one card and corrects a required action's
    * words (INF-2214, docs/card-threads.md "Shared cards") - a card picture, a
    * job's end, the numbered events and what a task's browser there tells the
@@ -395,8 +396,10 @@ describe("ipc contract", () => {
       "inf:work:card-refused",
       "inf:work:check-change",
       "inf:work:close-card",
+      "inf:work:copy-file",
       "inf:work:download-artifact",
       "inf:work:events",
+      "inf:work:files",
       "inf:work:followup",
       "inf:work:github-read",
       "inf:work:github-write",

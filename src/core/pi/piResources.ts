@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { COMPLETION_CARD_HEADINGS } from "@shared/cardHeadings";
 import { HERE, HOME } from "@shared/deviceNames";
+import { FILES_COMMAND } from "@shared/files";
 import { opensPullRequest, type RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
@@ -91,6 +92,8 @@ export type CrewmateComputers = {
    * another user on the computer where the first mate lives.
    */
   workers: readonly { name: string; sameComputer?: boolean }[];
+  /** Its shell has `infinitary-files-axi`, which copies a file from another of them (docs/files.md). */
+  files?: boolean;
 };
 
 /** A crewmate's word for a computer that runs work, with its role. */
@@ -117,7 +120,10 @@ export function crewmateComputersNote(computers: CrewmateComputers): string {
   const here = computers.here
     ? `This task runs on ${computers.here}, so a project folder's path names nothing on ${computers.here}.`
     : `This task runs on ${HOME.the}.`;
-  return `The captain's computers: ${listed.join("; ")}. ${here} A file, folder, program or action on another of these computers is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. Until it reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer is such a file. The first mate coordinates it, and a file another task finds reaches you as a steer naming its verified copy in your hand-over folder. To hand files to another task, pass their paths in report files. A handed file may hold secrets: never print, quote or paste its content in a report, card, note, commit, command line or output, and read only what your work needs.`;
+  const reach = computers.files
+    ? `To read a file on another of these computers, copy it with ${FILES_COMMAND} in your shell: \`ls <computer>:<folder>\` lists a folder, \`get <computer>:<path>\` copies one file into your hand-over folder and prints its path, and the bare command names each computer. A program or action on another of these computers, or a file that command refuses, is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. Until a file reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer reaches you only once you copy it.`
+    : `A file, folder, program or action on another of these computers is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. Until it reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer is such a file.`;
+  return `The captain's computers: ${listed.join("; ")}. ${here} ${reach} The first mate coordinates it, and a file another task finds reaches you as a steer naming its verified copy in your hand-over folder. To hand files to another task, pass their paths in report files. A handed${computers.files ? " or copied" : ""} file may hold secrets: never print, quote or paste its content in a report, card, note, commit, command line or output, and read only what your work needs.`;
 }
 
 export function crewmateCardBodiesNote(cardBodiesDir: string): string {

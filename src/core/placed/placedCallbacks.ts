@@ -241,6 +241,16 @@ export async function answerCall(
         input.reason,
       );
     }
+    // The files command there, answered by this Mac as for a crewmate of its own (docs/files.md).
+    case "inf:work:files": {
+      const { input } = request as InvokeRequest<"inf:work:files">[0];
+      const files = callbacks?.files ?? missing();
+      return input.op === "computers" ? await files.computers() : await files.list(input.target);
+    }
+    case "inf:work:copy-file": {
+      const { input } = request as InvokeRequest<"inf:work:copy-file">[0];
+      return await (callbacks?.files ?? missing()).copy(input.target);
+    }
     default:
       throw new Error(`${channel} is not a request ${HERE.this} answers.`);
   }

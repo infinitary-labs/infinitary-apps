@@ -9,6 +9,7 @@ import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { BrowserAnswer } from "../browser/crewmateCommands";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import type { TaskFiles } from "../files/taskFiles";
 import { hostEnv } from "../hostEnv";
 import type { IntegrationAnswer, TaskIntegrations } from "../integrations";
 import { JobManager } from "../jobs/jobManager";
@@ -571,6 +572,127 @@ describe("the infinitary-integrations-axi command", () => {
     const browserOnly = channel.grant("task-b", { browser: standIn("Sign up") });
     expect((await run(browserOnly, [])).stdout).toContain("code: NO_TOOL");
     expect((await shell(granted, ["snapshot"])).stdout).toContain("code: NO_TOOL");
+  });
+});
+
+// The captain's choice for INF-2468: read any file on another of their
+// computers through one command, with no click, each copy one line on the record.
+describe("the infinitary-files-axi command", () => {
+  /** A task's files command as `FileRouter.forTask` answers it; every list and copy recorded. */
+  function filesStandIn(copy?: () => Promise<void>): TaskFiles & { calls: string[][] } {
+    const calls: string[][] = [];
+    return {
+      calls,
+      computers: async () => ({
+        data: {
+          computers: [
+            {
+              name: "home",
+              role: "the computer where your first mate lives",
+              reach: "in reach",
+              thisTask: false,
+            },
+            { name: "Kun's Mac mini", role: "runs work", reach: "in reach", thisTask: true },
+          ],
+        },
+      }),
+      list: async (target) => {
+        calls.push(["list", target]);
+        return {
+          data: {
+            computer: "home",
+            folder: "/Users/me/Documents",
+            entries: [{ name: "clips.csv", kind: "file", size: 12, modified: null }],
+          },
+        };
+      },
+      copy: async (target) => {
+        calls.push(["copy", target]);
+        await copy?.();
+        return target.endsWith("auth.json")
+          ? {
+              text: "~/auth.json holds the app's own sign-ins or keys, which the files command never copies.",
+              refused: "refused",
+            }
+          : {
+              data: {
+                copied: "/handover/0123456789abcdef-clips.csv",
+                from: "home:/Users/me/Documents/clips.csv",
+                size: 12,
+                sha256: "0123456789abcdef",
+              },
+            };
+      },
+    };
+  }
+  const run = (granted: TaskShell | undefined, args: string[], extra: NodeJS.ProcessEnv = {}) =>
+    shell(granted, args, extra, "infinitary-files-axi");
+
+  it("names the computers, lists a folder and copies one file for the task it was granted to", async () => {
+    const channel = await openChannel();
+    const files = filesStandIn();
+    const granted = channel.grant("task-a", { files });
+
+    const home = await run(granted, []);
+    expect(home.exitCode).toBe(0);
+    expect(decode(home.stdout.split("\nhelp")[0] ?? "")).toMatchObject({
+      computers: [{ name: "home" }, { name: "Kun's Mac mini", thisTask: true }],
+    });
+    const listed = await run(granted, ["ls", "home:~/Documents"]);
+    expect(listed.exitCode).toBe(0);
+    expect(decode(listed.stdout.split("\nhelp")[0] ?? "")).toMatchObject({
+      entries: [{ name: "clips.csv", kind: "file", size: 12 }],
+    });
+    const copied = await run(granted, ["get", "home:~/Documents/clips.csv"]);
+    expect(copied.exitCode).toBe(0);
+    expect(copied.stdout).toContain("copied: /handover/0123456789abcdef-clips.csv");
+    expect(copied.stdout).toContain("A copied file may hold secrets");
+
+    const refused = await run(granted, ["get", "home:~/auth.json"]);
+    expect(refused.exitCode).toBe(1);
+    expect(decode(refused.stdout)).toMatchObject({ code: "REFUSED" });
+    expect(refused.stdout).toContain("never copies");
+
+    // A command without a computer, or with two paths, never reaches the home.
+    expect((await run(granted, ["get", "~/Documents/clips.csv"])).exitCode).toBe(2);
+    expect((await run(granted, ["get", "home:~/a", "home:~/b"])).exitCode).toBe(2);
+    expect(files.calls).toEqual([
+      ["list", "home:~/Documents"],
+      ["copy", "home:~/Documents/clips.csv"],
+      ["copy", "home:~/auth.json"],
+    ]);
+
+    // A task granted only a browser has no files command.
+    const browserOnly = channel.grant("task-b", { browser: standIn("Sign up") });
+    expect((await run(browserOnly, [])).stdout).toContain("code: NO_TOOL");
+  });
+
+  it("keeps a copy that runs past the shell's limit for the next command, never copying it twice", async () => {
+    const channel = await openChannel();
+    let release: () => void = () => {};
+    const held = new Promise<void>((done) => {
+      release = done;
+    });
+    const files = filesStandIn(() => held);
+    const granted = channel.grant("task-a", { files });
+    const limit = { [SHELL_CAP_ENV]: "1500" };
+
+    const copy = await run(granted, ["get", "home:~/Documents/clips.csv"], limit);
+    expect(copy.exitCode).toBe(0);
+    expect(decode(copy.stdout)).toMatchObject({ running: "get" });
+
+    const busy = await run(granted, ["ls", "home:~/Documents"], limit);
+    expect(busy.exitCode).toBe(1);
+    expect(decode(busy.stdout)).toMatchObject({ code: "BUSY" });
+
+    release();
+    const look = await run(granted, [], limit);
+    expect(look.exitCode).toBe(0);
+    expect(look.stdout).toContain(
+      'earlier: "Your earlier get finished, so this command was not run',
+    );
+    expect(look.stdout).toContain("copied: /handover/0123456789abcdef-clips.csv");
+    expect(files.calls).toEqual([["copy", "home:~/Documents/clips.csv"]]);
   });
 });
 

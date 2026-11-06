@@ -3,11 +3,13 @@ import { chmodSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { FILES_COMMAND, type FilesAnswer } from "@shared/files";
 import { LOAD_COMMAND } from "@shared/load";
 import { RESOURCE_REFRESH_MS } from "@shared/resources";
 import { HERE } from "../../shared/deviceNames";
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import type { TaskFiles } from "../files/taskFiles";
 import type { HostChildProcess, HostChildSpawner } from "../host";
 import {
   INBOX_COMMAND,
@@ -18,6 +20,7 @@ import {
 } from "../integrations";
 import { type LoadClaim, type LoadReceipt, loadWaitWords, type TaskLoad } from "../placed/loadLine";
 import { type Injection, SECRETS_COMMAND, type SecretsCommand } from "../secrets/requests";
+import type { FilesOpInput } from "./fileCommands";
 import { ownTaskCommand } from "./names";
 import {
   AXI_KEY_HEADER,
@@ -75,12 +78,15 @@ import type { SecretsAnswer } from "./secretsCommands";
 export type { TaskShell } from "../session/session";
 
 /**
- * The tools a task was granted: its browser, and the integrations its
- * crewmate reaches (`infinitary-integrations-axi`, docs/integrations.md).
+ * The tools a task was granted: its browser, the integrations its crewmate
+ * reaches (`infinitary-integrations-axi`, docs/integrations.md), and the
+ * files on the captain's other computers (`infinitary-files-axi`,
+ * docs/files.md).
  */
 export type TaskTools = {
   browser?: CrewmateBrowser;
   integrations?: TaskIntegrations;
+  files?: TaskFiles;
   secrets?: SecretsCommand;
   load?: TaskLoad;
   /**
@@ -90,8 +96,8 @@ export type TaskTools = {
   inbox?: InboxDoor;
 };
 
-/** What one operation answers, for either tool. */
-type OpAnswer = ChannelAnswer | IntegrationChannelAnswer | SecretsAnswer;
+/** What one operation answers, for any tool. */
+type OpAnswer = ChannelAnswer | IntegrationChannelAnswer | SecretsAnswer | FilesAnswer;
 
 export type AxiChannelOptions = {
   /** Starts the process that runs one command: a utility process in the app, a fork in tests. */
@@ -385,6 +391,7 @@ export class AxiChannel {
       (tool === INTEGRATIONS_COMMAND && grant.tools.integrations !== undefined) ||
       (tool === SECRETS_COMMAND && grant.tools.secrets !== undefined) ||
       (tool === LOAD_COMMAND && grant.tools.load !== undefined) ||
+      (tool === FILES_COMMAND && grant.tools.files !== undefined) ||
       (tool === INBOX_COMMAND && grant.tools.inbox !== undefined);
     if (!has) {
       answer(
@@ -530,8 +537,17 @@ export class AxiChannel {
             ? this.secret(grant, message, command.cwd)
             : tool === INBOX_COMMAND
               ? this.inbox(grant, message)
-              : this.operate(grant, message);
-    const settled = await within(work, deadline);
+              : tool === FILES_COMMAND
+                ? this.files(grant, message)
+                : this.operate(grant, message);
+    // A copy may outlast the command's process: it is kept for the next
+    // command before the process is stopped, rather than lost with it.
+    const settled = await within(
+      work,
+      tool === FILES_COMMAND
+        ? Math.min(deadline ?? Number.POSITIVE_INFINITY, stopsAt - CAP_MARGIN_MS)
+        : deadline,
+    );
     if (settled === TIMEOUT) {
       grant.parked.set(parkedKey, { command: message.command, work });
       return { kind: "running", command: message.command };
@@ -606,6 +622,38 @@ export class AxiChannel {
       const reason = error instanceof Error ? error.message : String(error);
       return {
         text: `The integration could not do that: ${reason.replace(/\.$/, "")}.`,
+        refused: "refused",
+      };
+    }
+  }
+
+  /**
+   * One of the files command's operations, for this task alone
+   * (`TaskFiles`): the home decides every one, and a copy runs on past the
+   * shell's limit with its answer kept.
+   */
+  private async files(grant: Grant, message: AxiCallMessage): Promise<FilesAnswer> {
+    const files = grant.tools.files;
+    if (!files) return { text: "This task has no files command.", refused: "refused" };
+    try {
+      switch (message.op) {
+        case "files.computers":
+          return await files.computers();
+        case "files.list": {
+          const { target } = (message.input ?? {}) as FilesOpInput["files.list"];
+          return await files.list(String(target ?? ""));
+        }
+        case "files.copy": {
+          const { target } = (message.input ?? {}) as FilesOpInput["files.copy"];
+          return await files.copy(String(target ?? ""));
+        }
+        default:
+          return { text: "That is not a files operation.", refused: "invalid" };
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return {
+        text: `The files command could not do that: ${reason.replace(/\.$/, "")}.`,
         refused: "refused",
       };
     }

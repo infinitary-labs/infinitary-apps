@@ -9,6 +9,7 @@ import {
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import { awayWord, type ComputerReach } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
+import { FILES_THERE } from "@shared/files";
 import type { InvokeRequest, InvokeResponse, WorkInvokeChannel } from "@shared/ipc";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import {
@@ -231,6 +232,8 @@ type Placed = {
 const rosterSchema = workOrders["inf:session:roster"].response;
 /** The quiet watchdog's answer to a stuck read there (`answer-stuck-reads.md`). */
 const ANSWER_STUCK_READS = contractChange("answer-stuck-reads");
+/** The files command and the file orders (`files-there.md`). */
+const FILES_THERE_CHANGE = contractChange(FILES_THERE);
 
 const openAnswerSchema = workOrders["inf:session:open"].response;
 
@@ -354,6 +357,22 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    */
   takesIntegrations(machine: string): boolean {
     return this.keepsBrowsers(machine) && this.options.devices.takesCurrentWork(machine);
+  }
+
+  /**
+   * The files command rides the computer's task channel too, and its lists
+   * and copies ride the work requests `files-there` brings (docs/files.md).
+   */
+  takesFiles(machine: string): boolean {
+    return this.takesIntegrations(machine) && this.answersFiles(machine);
+  }
+
+  /** Whether the computer answers the file orders, so its files can be read from here. */
+  answersFiles(machine: string): boolean {
+    return (
+      this.options.devices.takesCurrentWork(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, FILES_THERE_CHANGE)
+    );
   }
 
   prepare(
@@ -702,6 +721,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ...(spec.callbacks?.integrations && this.takesIntegrations(deviceId)
         ? { integrations: true }
         : {}),
+      // Its files on the captain's other computers, asked of this Mac (docs/files.md).
+      ...(spec.callbacks?.files && this.takesFiles(deviceId) ? { files: true } : {}),
       ...(resume ? { resume } : {}),
       ...(spec.bounds?.request?.retries !== undefined
         ? { retries: spec.bounds.request.retries }

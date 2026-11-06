@@ -94,6 +94,11 @@ export const CHANGE_RECOVERY: Partial<
     "the action may already have happened",
     "Check the task's browser before asking for the action again.",
   ],
+  "inf:work:copy-file": [
+    "copying this file into your hand-over folder",
+    "the copy may already be there",
+    "Look in your hand-over folder before copying it again; a second copy of the same file lands under the same name.",
+  ],
   "inf:work:use-integration": [
     "running this integration's action",
     "it may already have run, or be kept as an ask",

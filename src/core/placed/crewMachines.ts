@@ -161,6 +161,12 @@ export type CrewMachines = {
    * computer that runs work"); false while the home cannot tell.
    */
   takesIntegrations?(machine: string): boolean;
+  /**
+   * Whether the computer gives its crewmates `infinitary-files-axi`, each
+   * list and copy asked of the home (docs/files.md); false while the home
+   * cannot tell.
+   */
+  takesFiles?(machine: string): boolean;
   takesChangePresentations?(machine: string): boolean;
   /** The working copy's dependencies, installed there; a failure is an outcome. */
   install(machine: string, taskId: string): Promise<DependencyInstall>;

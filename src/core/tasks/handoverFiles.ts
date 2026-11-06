@@ -18,7 +18,7 @@ export const HANDOVER_OUT_DIR_NAME = "handover-out";
 /** The folder inside a task's temporary folder that handed files arrive in. */
 export const HANDOVER_IN_DIR_NAME = "handover";
 /** The largest file a task hands on: the source-file order's own bound. */
-const HANDOVER_FILE_BYTES = 1024 * 1024 * 1024;
+export const HANDOVER_FILE_BYTES = 1024 * 1024 * 1024;
 
 /** The sha256 of a file, read in a stream so its content is never held whole. */
 export function sha256OfFile(file: string): Promise<string> {

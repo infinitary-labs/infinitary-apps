@@ -490,6 +490,76 @@ describe("device pairing", () => {
     expect(again.pairing.admit(shown(device))).toEqual({ id: "d1", kind: "view" });
   });
 
+  it("finds whether a computer listed before that runs on this Mac from where it dials now", () => {
+    const { dir } = pairingAt();
+    const [builder, mini, tunneled] = ["builder", "mini", "tunneled"].map((name) =>
+      createKeyIdentity(`Firstmate ${name}`),
+    );
+    const entry = (id: string, key: KeyIdentity | undefined) => ({
+      id,
+      kind: "work",
+      name: id,
+      pairedAt: 1,
+      keyPin: key?.pin,
+    });
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "devices.json"),
+      JSON.stringify({
+        version: 1,
+        devices: [entry("builder", builder), entry("mini", mini), entry("tunneled", tunneled)],
+      }),
+    );
+    // One reaches this Mac only through this Mac's own SSH connection to it, which arrives on loopback.
+    writeFileSync(
+      join(dir, "ssh.json"),
+      JSON.stringify({
+        version: 1,
+        devices: { tunneled: { address: "sam@studio.local", connection: "ssh" } },
+      }),
+    );
+    const { pairing } = pairingAt(dir, undefined, {
+      interfaces: () => ({ en0: [iface("192.168.1.10")] }),
+    });
+    expect(pairing.list().map((device) => device.onThisMac)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    // Not yet connected since this started, none is taken to be here.
+    expect(["builder", "mini", "tunneled"].map((id) => pairing.onThisMac(id))).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    pairing.admit(shown(builder ?? null, "192.168.1.10"));
+    pairing.admit(shown(mini ?? null, "192.168.1.30"));
+    pairing.admit(shown(tunneled ?? null, "127.0.0.1"));
+    expect(["builder", "mini", "tunneled"].map((id) => pairing.onThisMac(id))).toEqual([
+      true,
+      false,
+      false,
+    ]);
+    // Where it dials from now: the same computer dialing from another Mac's address is not here.
+    pairing.admit(shown(builder ?? null, "192.168.1.31"));
+    expect(pairing.onThisMac("builder")).toBe(false);
+    pairing.admit(shown(builder ?? null, "127.0.0.1"));
+    expect(pairing.onThisMac("builder")).toBe(true);
+    // Where a device joined from, once the list keeps it, is what counts.
+    const studio = createKeyIdentity("Firstmate studio");
+    const joined = claimWith(
+      pairing,
+      pairing.invite({ kind: "work" }).link,
+      "work",
+      "Studio",
+      studio,
+    );
+    if (!joined.ok) throw new Error(joined.reason);
+    pairing.admit(shown(studio, "127.0.0.1"));
+    expect(pairing.onThisMac(joined.grant.deviceId)).toBe(false);
+    expect(pairing.onThisMac("nobody")).toBe(false);
+  });
+
   it("admits a device by the key it showed when it joined, as the kind the home set", () => {
     const { pairing } = pairingAt();
     const mini = createKeyIdentity("Firstmate device");

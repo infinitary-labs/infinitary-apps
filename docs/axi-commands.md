@@ -1,6 +1,6 @@
 # Task AXI commands
 
-A crewmate reaches some of its task's tools as commands in its own shell rather than as tools in its model's tool list: its task's browser, as `infinitary-browser-axi`, and the integrations, as `infinitary-integrations-axi` (`docs/integrations.md`) (the captain's approved design on FI3-1429, after the captain's AXI principles and chrome-devtools-axi).
+A crewmate reaches some of its task's tools as commands in its own shell rather than as tools in its model's tool list: its task's browser, as `infinitary-browser-axi`, the integrations, as `infinitary-integrations-axi` (`docs/integrations.md`), and the files on the captain's other computers, as `infinitary-files-axi` (`docs/files.md`) (the captain's approved design on FI3-1429, after the captain's AXI principles and chrome-devtools-axi).
 A command costs a crewmate nothing until it runs one, so the tools it replaces leave every crewmate's standing context.
 Every command answers in its task alone, through the app, and every rule its tool keeps stays with that tool's owner: the browser's with `TaskBrowsers` (`docs/task-browser.md`).
 
@@ -9,6 +9,7 @@ Every command answers in its task alone, through the app, and every rule its too
 A crewmate gets a command where the tool it replaces would bind: `infinitary-browser-axi` where its task has a browser, which is a task on this Mac when the host has a browser engine and a command process (`HostCapabilities.axiProcess`), or a task on a computer that runs work that keeps task browsers (`docs/task-browser.md`, "On another computer").
 That computer runs its own channel and command process, the same way, for the tasks it holds: its keys live in its work folder's `task-channel/` (`docs/helper.md`), and its commands reach only the browsers there.
 `infinitary-integrations-axi` goes to every task on this Mac when the host has a command process, and to a task on a computer that runs work whose channel there carries it, where each call is asked of this Mac (`docs/integrations.md`, "On a computer that runs work").
+`infinitary-files-axi` goes the same way, to a task on a computer that runs work that also lists the `files-there` contract change (`docs/files.md`, "The command").
 The crewmate's instructions carry one line for it, `CREWMATE_BROWSER_LINE` (`src/core/pi/piResources.ts`), the captain's approved words: "This task has its own browser: run `infinitary-browser-axi` to see or use a web page.
 Never press the last step of a purchase or booking; ask the captain on a card."
 Its `emit_card` keeps `browser_button` and `browser_handoff`, which carry the sign-in and payment rules (`docs/task-browser.md`, "Asking for help").
@@ -141,6 +142,16 @@ A task on this Mac is granted it whenever the host has a command process, and a 
 Its kept answers follow the shell's limit as the browser's do.
 There, a call waits on this Mac at most until 750 milliseconds before the command process would be stopped, so the command always prints an answer, and a call not yet sent then is never sent.
 
+## The files command
+
+`infinitary-files-axi` (`src/core/axi/fileCommands.ts`) copies a file from another of the captain's computers into the task's hand-over folder (`docs/files.md`).
+The bare command names the computers, `ls <computer>:<folder>` lists a folder on one, and `get <computer>:<path>` copies one file and prints its path there.
+A missing or extra target, or one with no computer before its path, exits 2 before reaching the app.
+Every decision stays the home's `FileRouter`: a refused path, a computer out of reach and a task that is not running each print its words as an error with exit 1 (`REFUSED`).
+A copy's help tells the crewmate to read it where it is and never to print, quote or paste its content.
+Its kept answers follow the shell's limit as the browser's do, and a later command that finds an earlier copy finished says so before its answer, with the words "this command was not run".
+On a computer that runs work, a call waits on this Mac at most until 750 milliseconds before the command process would be stopped, as the integrations command's does.
+
 ## The inbox command
 
 `infinitary-inbox-axi` (`src/core/axi/inboxCommands.ts`) is the one command a person runs rather than a crewmate: their own program drops an event into the inbox (`docs/integrations.md`, "The inbox").
@@ -177,4 +188,5 @@ When the shell itself becomes a background job, the helper ends the turn until t
 `tests/mockProvider.test.ts` exercises those answers through the provider's request interface using the shell tool's receipt and the host's rendered exit wake, including a job whose output itself asks for the next look.
 `channel.test.ts` also runs `infinitary-integrations-axi`: list, show and call reach only the integrations the task was granted, a refusal exits 1, a malformed input exits 2 before reaching them, and a task without the command is answered `NO_TOOL`.
 `placedOutside.test.ts` runs it from a Pi crewmate's shell on a computer that runs work, across the connection to this Mac's integrations (`docs/integrations.md`, "Tests").
+`channel.test.ts` also runs `infinitary-files-axi`: the computers, a listing and a copy reach only the task's own files, and a copy past the shell's limit answers `running` and is read with the next look; `placedOutside.test.ts` runs it across the connection in both directions (`docs/files.md`, "Tests").
 `tests/release-contract.test.ts` holds the launcher and its identical copies shipped outside the archive.

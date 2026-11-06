@@ -40,6 +40,7 @@ import { contractChange, listsChange } from "../connection/contractChanges";
 import { CONVERSATION_FOLDS } from "../connection/conversationFolds";
 import { SHARED_CARDS } from "../connection/sharedCards";
 import { WorkRequestAbortedError } from "../devices/homeLink";
+import { filesAskedOfHome, type TaskFiles } from "../files/taskFiles";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import {
   ClaudeFiles,
@@ -184,7 +185,12 @@ export type SessionHostOptions = {
   commands?: {
     grant: (
       task: string,
-      tools: { browser: boolean; integrations?: TaskIntegrations; load?: boolean },
+      tools: {
+        browser: boolean;
+        integrations?: TaskIntegrations;
+        load?: boolean;
+        files?: TaskFiles;
+      },
     ) => { browser?: CrewmateBrowser; shell: TaskShell };
     close: (task: string) => void;
   };
@@ -280,6 +286,7 @@ type Held = {
         browser: boolean;
         integrations: boolean;
         load: boolean;
+        files: boolean;
       }
     | undefined;
   /** What the home opened the open conversation with, so a pass that rewrites its files opens it again. */
@@ -847,13 +854,15 @@ export class SessionHost {
           : spec.resume;
       const resume = crewmateResume(token, binding.backend);
       // Its own browser, here beside its shell, when the home says it has
-      // one, and its integrations, asked of the home, when it says it reaches them.
+      // one, and its integrations and the files on the captain's other
+      // computers, asked of the home, when it says it reaches them.
       const granted =
-        spec.browser || spec.integrations || spec.load
+        spec.browser || spec.integrations || spec.load || spec.files
           ? this.options.commands?.grant(held.task, {
               browser: spec.browser === true,
               ...(spec.load ? { load: true } : {}),
               ...(spec.integrations ? { integrations: this.integrationsOf(held) } : {}),
+              ...(spec.files ? { files: this.filesOf(held) } : {}),
             })
           : undefined;
       // An answer too long to read whole is saved here, beside its shell.
@@ -934,6 +943,7 @@ export class SessionHost {
         browser: spec.browser === true,
         integrations: spec.integrations === true,
         load: spec.load === true,
+        files: spec.files === true,
       };
       held.spec = spec;
       held.backend = binding.backend;
@@ -995,7 +1005,8 @@ export class SessionHost {
       opened.sourceContext !== sourceFacts ||
       opened.browser !== (spec.browser === true) ||
       opened.integrations !== (spec.integrations === true) ||
-      opened.load !== (spec.load === true)
+      opened.load !== (spec.load === true) ||
+      opened.files !== (spec.files === true)
     );
   }
 
@@ -1566,6 +1577,28 @@ export class SessionHost {
    * ends a wait it could no longer answer: one never sent then is not sent
    * when the home returns.
    */
+  /**
+   * The files command here (docs/files.md): each list and copy asked of the
+   * home, which reads the file on the computer it is on and delivers the
+   * copy into this task's hand-over folder here.
+   */
+  private filesOf(held: Held): TaskFiles {
+    const ask = (
+      channel: "inf:work:files" | "inf:work:copy-file",
+      input: object,
+      signal?: AbortSignal,
+    ): Promise<unknown> =>
+      this.withDeadline(
+        channel,
+        (deadline) => this.call(held, channel, { callId: randomUUID(), input }, deadline),
+        signal,
+      );
+    return filesAskedOfHome({
+      read: (input, signal) => ask("inf:work:files", input, signal),
+      copy: (target, signal) => ask("inf:work:copy-file", { target }, signal),
+    });
+  }
+
   private integrationsOf(held: Held): TaskIntegrations {
     const ask = async (
       channel: "inf:work:integrations" | "inf:work:use-integration",

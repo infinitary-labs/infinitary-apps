@@ -29,6 +29,7 @@ This compatibility projection changes neither permissions nor access.
 | `orders` | What a home asks a computer that runs work (`src/shared/work.ts`), from the version `since` names, and the seed order and a prepare that names a seed from `seedSince`: each order's `effect`, and the JSON Schema of its `request`, which the home sends and so is published open, and of the computer's answer |
 | `signInOrders` | What a home asks a computer that runs work about its own sign-ins (`src/shared/signIns.ts`, `docs/helper.md` "Its own sign-ins"), from the version `since` names, published the same way; its sign-in where projects live (`inf:sign-ins:forge`, `inf:sign-ins:forge-out`) and Claude's pasted code from the version `forgesSince` names |
 | `browserOrders` | What a home asks a computer that runs work about its tasks' own browsers there (`src/shared/work.ts`, `docs/task-browser.md` "On another computer"), from the version `since` names, published the same way |
+| `fileOrders` | What a home asks a computer that runs work for one of its files, for the files command (`src/shared/files.ts`, `docs/files.md`), from the named change `change` names, published the same way |
 | `resourceOrders` | Read-only computer and task-process observations from the version `since` names, independent of conversations and sign-ins (`src/shared/resources.ts`) |
 | `updateOrders` | The one order a home asks a computer that runs work whatever its version (`src/shared/work.ts`, `docs/devices.md` "Updating over the connection"), from the version `since` names, published the same way; its name and shape never change across majors |
 
@@ -282,6 +283,11 @@ A fresh reading may carry `memoryUsedBytes`, installed memory the home counts as
 The `computers.resources` panel read, the `inf:computers:resources` request and its push share these live observations (`docs/helper.md`, "Shared live readings").
 The request is read-only and open to paired views but not work connections, and a panel must declare the read to subscribe.
 The published reading keeps every raw count, and a panel is handed installed memory, the memory-used figure and Mac pressure, never the raw counts.
+
+### Files
+
+The `fileOrders` list a folder on a computer that runs work, set one file aside there, read it in pieces of at most 4 MB, and let it go, for the files command (`docs/files.md`).
+They come with the named change `files-there`, with the work requests `inf:work:files` and `inf:work:copy-file` and the placed spec's optional `files`; a home asks them only of a computer that lists the change, and a computer asks the requests only of a home that sent it `files`.
 
 ## The scripted client
 

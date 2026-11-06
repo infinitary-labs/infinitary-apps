@@ -448,6 +448,8 @@ describe("electron-builder configuration", () => {
       "infinitary-axi",
       "infinitary-browser-axi",
       "infinitary-integrations-axi",
+      // INF-2468's files command, which reads a file on another of the captain's computers.
+      "infinitary-files-axi",
       // INF-1214's inbox command, which a person's own script runs.
       "infinitary-inbox-axi",
       // INF-1085's command ships even while its production grant remains unavailable.

@@ -1,8 +1,10 @@
 import { randomBytes } from "node:crypto";
 import {
   existsSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   statSync,
   symlinkSync,
   writeFileSync,
@@ -10,9 +12,11 @@ import {
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname, join, relative } from "node:path";
+import { FILES_COMMAND } from "@shared/files";
 import { GOOGLE_DATA_KEPT, NOTICE_ACCEPTED } from "@shared/integrations";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { outsideDataDeletedNote } from "@shared/savedOutsideData";
+import Database from "better-sqlite3";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StubRequest } from "../../../tests/helpers/anthropicDialect";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
@@ -38,7 +42,8 @@ import { seedTask } from "../tasks/seedTask";
 
 /**
  * A task that runs on a computer that runs work (`tests/helpers/placedWorld.ts`):
- * the integrations command there, and Gmail and Calendar content kept there.
+ * the integrations command there, Gmail and Calendar content kept there, and
+ * the files command between this Mac and that computer.
  */
 
 // Integration budget (docs/test-cohorts.md): real git on the computer and
@@ -251,6 +256,165 @@ describe("the integrations command on a computer that runs work", () => {
     expect(systemOf(api.requests[requests])).toContain(CREWMATE_INTEGRATIONS_LINE);
     expect(shellAnswer(api.requests[requests + 1]).exit).toBe(0);
     expect(JSON.stringify(api.requests)).not.toContain("runner-installed command reached");
+  });
+});
+
+// INF-2468, the captain: "isn't this fundamentally about a file transport
+// protocol between infinitary connected machines?", then "Any file that
+// computer's user can read, except the app's own sign-ins and keys" with "No
+// click. Each copy adds one line to that task's record."
+describe("the files command between this Mac and a computer that runs work", () => {
+  let entry: string;
+  beforeAll(async () => {
+    entry = await bundleAxiProcess();
+  }, 60_000);
+
+  /**
+   * A computer that runs work as another macOS user on this Mac, as the world joins it, with this
+   * Mac's files command over a scratch home folder.
+   */
+  async function withFiles() {
+    const homeFolder = realpathSync(scratchDir("infinitary-files-home-folder-"));
+    mkdirSync(join(homeFolder, "Documents"));
+    mkdirSync(join(homeFolder, "Projects"));
+    const at = await world(undefined, {
+      jobs: true,
+      taskChannel: entry,
+      files: { home: homeFolder, name: "MacBook Pro" },
+    });
+    return { at, home: at.home(), homeFolder };
+  }
+
+  /**
+   * A crewmate on the computer runs each command from its shell there, one
+   * after another, and answers what each printed with its exit. A command
+   * kept past the shell's limit is collected as the product tells it to,
+   * by the bare command; a background job's receipt waits for its end.
+   */
+  async function runThere(
+    at: Awaited<ReturnType<typeof world>>,
+    taskId: string,
+    commands: string[],
+  ): Promise<string[]> {
+    const heard: string[] = [];
+    let job: string | undefined;
+    const waiting = { text: "Waiting for the answer." };
+    model((request, index) => {
+      if (index === 0) return { tools: [shellCommand(commands[0] ?? FILES_COMMAND)] };
+      const last = lastHeard(request);
+      if (job !== undefined) {
+        if (!last.includes(job)) return waiting;
+        job = undefined;
+      } else {
+        job = jobOf(last);
+        if (job !== undefined) return waiting;
+      }
+      if (last.includes("running: ") || last.includes("code: BUSY"))
+        return { tools: [shellCommand(FILES_COMMAND)] };
+      heard.push(last);
+      const next = commands[heard.length];
+      return next ? { tools: [shellCommand(next)] } : { text: "The files are here." };
+    });
+    await at.start(taskId, "Read the clips list on my laptop.");
+    await expect.poll(() => at.home().tasks.get(taskId)?.outcome).toBe("The files are here.");
+    return heard;
+  }
+
+  it("copies a file and a database in use from this Mac into the hand-over folder of a task there, read there as its own user and never from the captain's private folders", async () => {
+    const { at, home, homeFolder } = await withFiles();
+    const clips = Buffer.from("clip,length\nintro,12\n".repeat(300_000));
+    writeFileSync(join(homeFolder, "Projects", "clips.csv"), clips);
+    writeFileSync(join(homeFolder, "Documents", "letter.txt"), "dear");
+    const record = join(homeFolder, "Projects", "record.db");
+    const db = new Database(record);
+    stops.push(() => {
+      db.close();
+    });
+    db.pragma("journal_mode = WAL");
+    db.exec("create table tasks (key text); insert into tasks values ('INF-2468')");
+    const requests = api.requests.length;
+    const [computers, listed, copied, database, refused, closed] = await runThere(at, "t-files", [
+      FILES_COMMAND,
+      `${FILES_COMMAND} ls home:~/Projects`,
+      `${FILES_COMMAND} get home:~/Projects/clips.csv`,
+      `${FILES_COMMAND} get 'MacBook Pro:${record}'`,
+      `${FILES_COMMAND} get home:${join(home.paths.accountsDir, "registry.json")}`,
+      `${FILES_COMMAND} get home:~/Documents/letter.txt`,
+    ]);
+    // Its instructions there name the command beside the computers.
+    expect(systemOf(api.requests[requests])).toContain(
+      `To read a file on another of these computers, copy it with ${FILES_COMMAND} in your shell`,
+    );
+    expect(computers).toContain("MacBook Pro");
+    expect(computers).toContain("in reach");
+    expect(listed).toContain("clips.csv");
+    expect(listed).toContain("record.db");
+
+    // The file arrives whole in the task's hand-over folder there, private, and only its path is heard.
+    const handover = join(at.folders("t-files").temp, "handover");
+    const [kept] = readdirSync(handover).filter((name) => name.endsWith("clips.csv"));
+    const path = join(handover, kept ?? "missing");
+    expect(readFileSync(path).equals(clips)).toBe(true);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+    expect(copied).toContain(path);
+    expect(copied).not.toContain("intro,12");
+
+    // A database another program has open arrives complete, through its own backup.
+    expect(database).toContain("copied through its own backup");
+    const [keptDb] = readdirSync(handover).filter((name) => name.endsWith("record.db"));
+    const copy = new Database(join(handover, keptDb ?? "missing"), { readonly: true });
+    expect(copy.prepare("select key from tasks").all()).toEqual([{ key: "INF-2468" }]);
+    copy.close();
+
+    // The app's own sign-ins stay where they are, and so do the captain's private folders.
+    expect(refused).toMatch(/^exit 1/);
+    expect(refused).toContain("never copies");
+    expect(closed).toMatch(/^exit 1/);
+    expect(closed).toContain(
+      "~/Documents/letter.txt is in a private folder - Desktop, Documents, Library or ~/.ssh - which the files command never copies for another user on the same computer.",
+    );
+
+    // Each copy is one line on the task's record here, and nothing is kept on this Mac.
+    const notes = home.tasks
+      .timeline("t-files")
+      .filter((event) => event.kind === "note" && event.text.startsWith("copied "))
+      .map((event) => event.text);
+    expect(notes).toEqual([
+      `copied ${join(homeFolder, "Projects", "clips.csv")} from MacBook Pro into its hand-over folder (6.0 MB)`,
+      expect.stringMatching(/^copied .*record\.db from MacBook Pro into its hand-over folder/),
+    ]);
+    expect(existsSync(join(crewmateTempDir(home.paths, "t-files"), "handover"))).toBe(false);
+    // Each was read on that computer, as its own user, never by this Mac's own reader.
+    expect(existsSync(join(home.paths.userData, "file-reach", "set-aside"))).toBe(false);
+    expect(readdirSync(join(at.dataDir, "file-reach"))).toEqual([]);
+  });
+
+  it("copies a file from the computer that runs work for a task on this Mac, piece by piece over the connection", async () => {
+    const { at, home } = await withFiles();
+    const folder = realpathSync(scratchDir("infinitary-files-there-"));
+    const footage = randomBytes(9 * 1024 * 1024 + 17);
+    writeFileSync(join(folder, "footage.mov"), footage);
+    seedTask(home.tasks, { id: "t-here", title: "Edit the footage", status: "running" });
+    const files = home.files?.forTask("t-here");
+    if (!files) throw new Error("The home composes the files command here.");
+    const rows = (await files.computers()).data?.computers as { name: string; role: string }[];
+    const there = rows.find((row) => row.role === "runs work")?.name ?? "missing";
+
+    const listed = await files.list(`${there}:${folder}`);
+    expect(listed.data?.entries).toEqual([
+      expect.objectContaining({ name: "footage.mov", kind: "file", size: footage.length }),
+    ]);
+    const copied = await files.copy(`${there}:${join(folder, "footage.mov")}`);
+    const path = String(copied.data?.copied);
+    expect(path.startsWith(crewmateTempDir(home.paths, "t-here"))).toBe(true);
+    expect(readFileSync(path).equals(footage)).toBe(true);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+    // Neither computer keeps a copy once it is delivered.
+    expect(readdirSync(join(at.dataDir, "file-reach"))).toEqual([]);
+    expect(readdirSync(join(home.paths.userData, "file-reach", "fetched"))).toEqual([]);
+    // The other computer's own sign-ins stay there.
+    const refused = await files.copy(`${there}:${join(at.dataDir, "home.json")}`);
+    expect(refused.text).toContain("never copies");
   });
 });
 

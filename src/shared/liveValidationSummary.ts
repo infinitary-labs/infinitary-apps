@@ -56,7 +56,7 @@ export function liveValidationSummary(
         id: scenario.id,
         action: scenario.action,
         result:
-          observation && run?.head !== head
+          observation && run?.head !== head && !acceptance.ready
             ? "Another version"
             : exception
               ? "Your exception"

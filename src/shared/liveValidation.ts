@@ -400,22 +400,29 @@ export function checkValidationRun(
     return "Go requires completed live proof for every required scenario.";
   return undefined;
 }
+/**
+ * Proof accepted at a version (INF-2672): the latest run of the current
+ * scenarios, judged by an independent review at that version. The run may
+ * sit at an earlier version: a review at this version that judged it is
+ * the reviewer's typed word that the difference since reaches none of its
+ * scenarios, so a wording commit keeps the proof already run.
+ */
 export function acceptedValidation(
   state: LiveValidation | undefined,
   head: string | undefined,
 ): { ready: boolean; label?: string; reason: string } {
   const run = latestValidationRun(state);
-  if (
-    !state ||
-    !run ||
-    !head ||
-    run.head !== head ||
-    run.scenarioRevision !== state.scenarioRevision
-  )
+  if (!state || !run || !head || run.scenarioRevision !== state.scenarioRevision)
     return { ready: false, reason: "This version needs live validation of the current scenarios." };
   const review = state.reviews.findLast(
     (item) => item.head === head && item.revision === run.revision,
   );
+  if (!review && run.head !== head)
+    return {
+      ready: false,
+      reason:
+        "This version needs live validation of the current scenarios, or an independent review that the earlier run still reaches it.",
+    };
   if (
     !review ||
     review.code !== "clear" ||

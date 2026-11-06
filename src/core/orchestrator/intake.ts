@@ -573,11 +573,11 @@ export class TaskIntake {
       goal: `Review the change for "${builder.title}" and report findings.`,
     };
     // A review after an earlier pass reads only what changed since that
-    // pass (INF-401): the passed version rides the brief and this review's
-    // own record, so its later turns keep the same scope.
-    const passed =
+    // pass (INF-401), and only the live proof at the passed version itself
+    // (INF-2672): the passed version rides the brief and this review's own
+    // record, so its later turns keep the same scope.
+    const passedHead =
       builder.delivery?.reviewVerdict === "pass" ? builder.delivery.reviewSha : undefined;
-    const passedHead = passed && passed !== headSha ? passed : undefined;
     const brief = renderReviewBrief(
       intent,
       delivery,
@@ -644,7 +644,11 @@ export class TaskIntake {
       {
         kind: "review",
         text: `review opened - ${title} reads branch ${builder.branch} at ${headSha.slice(0, 7)}${
-          passedHead ? `, only what changed since the pass at ${passedHead.slice(0, 7)}` : ""
+          passedHead === headSha
+            ? ", only the live proof, its code passed there"
+            : passedHead
+              ? `, only what changed since the pass at ${passedHead.slice(0, 7)}`
+              : ""
         }${prUrl ? ` (pull request ${prUrl} is not the assigned head)` : ""}`,
         feed: false,
         data: { reviewTaskId: taskId },

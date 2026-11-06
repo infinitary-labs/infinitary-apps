@@ -73,7 +73,7 @@ The brief's `tests-required` constraint asks for tests of the task's stated inte
 |---|---|---|---|
 | **Quick** | `quick` | green checks; the five headings are welcome, nothing more is required (`resources/runbooks/care/quick.json`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `quick` |
 | **Default** | `standard` | the pre-PR procedure, evidence-first validation, the evidence contract and the test-quality rule (`resources/runbooks/care/default.json`) | every project, explicitly set as its standing value |
-| **Careful** | `reviewed` | Default, then the careful-change skill: an independent review of the committed version and live proof it accepted before the push, the pull request and the completion card, with the first mate saying when to push and when to emit the card (`resources/runbooks/care/careful.json` and its `skills/careful-change`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `reviewed` |
+| **Careful** | `reviewed` | Default, then the careful-change skill: an independent review of the committed code, then live proof run once and read by a reviewer, before the push, the pull request and the completion card, with the first mate saying when to push and when to emit the card (`resources/runbooks/care/careful.json` and its `skills/careful-change`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `reviewed` |
 
 The middle care is **Default** (stored `standard`), not "checked" (captain's call): it is what a careful engineer does by default, not an extra step layered on.
 The host knows the three names as a typed fact on the record: it selects guidance by them (`Runbooks.crewSections`), shows them on the fact strip, in `crew_status` and in the brief's one care line (`renderRigorSection`), and holds nothing by them - no review hold, no live-proof hold, no refusal of an early card (INF-1876).
@@ -294,6 +294,7 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
    A review commissioned after an earlier review of the same builder passed at another version names that passed version and reads only what changed since it, not the whole change again (INF-401, the captain's direction for an unavoidable update).
    Its brief gives the reviewer `git range-diff` between the two versions, keeps the complete checklist to compare path by path, and says a path whose change reads the same was reviewed at the pass.
    The review task records that version as `passedHead`, so each later turn of that review, a re-review after findings included, keeps the same scope.
+   A review commissioned at the very version an earlier review passed is the proof read (INF-2672): its brief says the code passed there and asks it to read only the live proof.
    The builder's committed head must be available on the builder's computer before the reviewer can start at that commit.
    A bounded follow-up coverage turn is not implied.
    It judges over-engineering by the code the change leaves, never the size of the diff (INF-2645): anything left that the user's goal could do without - unneeded code, state or options, a second copy of something the project has, code left without a use, a new subsystem existing primitives could support, a test likely to fail on intentional changes rather than regressions, or a symptom patch where removing code would fix the root cause - is a warning that blocks, and a small tidy-up stays info.
@@ -333,6 +334,7 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
 6. **A pass closes the review task** (done / finished, the host's actor), which releases the builder's close.
    The one feed line is the builder's own event - `review passed at <sha>, risk <level>: <note> - <builder title>` - and the review's close is silent.
    The wake to the first mate refs the builder, whose move is next, and names it: a steer to push, open the PR and drive CI green; then with autonomy on, `settle_task merge-pr`, otherwise the builder's completion card is the decision.
+   When the builder planned live-validation scenarios, the wake also names whether its proof is accepted at the passed head, its latest run and whether this review read it (`WakeProof`); while the proof is not accepted, its step is `REVIEW_PROOF_NEXT` instead: the builder proves once and reports the run without pushing, the first mate starts the proof read with `review_of`, a repair gets a review of its own difference, and proof that only runs on a pushed branch finishes beside the checks.
    The completion card carries the review beside CI in the host's facts strip (a Review cell: `passed
    <sha> · risk <level>` with the note on the cell's title; `open` while
    one is live).
@@ -638,6 +640,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 ## Careful live validation
 
 Careful change work uses the builder to gather proof, with first-mate coordination when needed, and its existing independent review as the judge of coverage and proof (captain's accepted INF-125 plan, implemented by INF-100).
+The code is reviewed first and the proof runs once, after the code passes, as no-mistakes runs its Test step after its review (captain's INF-2672 direction A): code rounds judge the code and the scenario list and record no proof, each fix runs one focused check of what it changed, and one proof read judges the run before the push.
 Quick, Default, answer-only and personal-workspace work, and the local-delivery fallback keep their existing rules.
 A change delivered through a pull request keeps its validation records and validation questions at every care, so a raise to Careful mid-task keeps them; the host holds nothing on them, and Careful's guidance is what reads them (captain's INF-994 direction A; INF-1876).
 The careful-change skill (`resources/runbooks/care/skills/careful-change/SKILL.md`) carries the contract to both model families, on this computer or a work computer, staged as a runbook skill.
@@ -695,7 +698,7 @@ The existing review assignment binds the commit, evidence revision, scenario rev
 A captain-granted gap exception or an effect request recorded after assignment permits re-review at the same commit and evidence revision; no duplicate run is needed.
 The state revision advances for changed validation facts and captain answers, not for reviewer judgments themselves.
 An old assignment cannot reuse its earlier typed judgment to accept changed facts.
-A new commit, including a check repair or an update from the default branch, needs a new run and a current review of that proof.
+A new commit, including a check repair or an update from the default branch, keeps the proof already run when a review at that commit judges the earlier run and confirms its difference reaches none of the scenarios (`acceptedValidation`); a difference that reaches a scenario reruns only the scenarios it reaches, carrying the others' earlier observations and kept evidence into the new run.
 The existing code-review carry still covers an unchanged change; an unavoidable update reviews only its code difference, not the whole change again.
 New evidence at the same commit also needs review, without a dummy commit.
 The findings allowance counts distinct version-and-evidence pairs; repeating a report spends no round, and a captain-authorized reset clears those counted pairs with the existing counter.
@@ -724,11 +727,11 @@ An uncertain result stays unknown and is reconciled, never repeated.
 Existing write-approval and browser-handoff boundaries still apply.
 The task's own pull request, ordinary checks and attachments are delivery rather than validation.
 An approved prerequisite publication additionally names this task's project and branch; the opening guard consumes its permission and opens a draft where supported, without granting final proof or merge.
-After fresh proof and independent review pass at the current head, the host marks that draft ready through the forge owner: GitHub's private GraphQL mutation or GitLab's removal of the `Draft: ` title prefix, never `github_write`.
-The prerequisite publication permission remains tied to the task's project and branch; later commits need fresh proof and review, not another publication permission.
+After proof a review accepted at the current head and a passed review cover it, the host marks that draft ready through the forge owner: GitHub's private GraphQL mutation or GitLab's removal of the `Draft: ` title prefix, never `github_write`.
+The prerequisite publication permission remains tied to the task's project and branch; later commits need their proof accepted at their own version, not another publication permission.
 A later ready reading settles an unknown readiness result as applied; a later still-draft reading settles it as not applied and permits a new idempotent readiness request.
 Overlapping readiness attempts do not send concurrently, and readiness failures never replace or prevent check readings.
-Readiness recorded as applied for a change number and head stops further readiness requests for that version, preserving a person's later return to draft; a newer commit still needs its own current proof and review.
+Readiness recorded as applied for a change number and head stops further readiness requests for that version, preserving a person's later return to draft; a newer commit still needs its own accepted proof and review.
 Unrelated drafts remain the captain's to change; this reconciliation rule does not permit repeating an unknown validation effect or publication.
 
 ### Required proof that cannot run

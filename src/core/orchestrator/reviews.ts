@@ -4,7 +4,11 @@ import { join } from "node:path";
 import { cardPictureFiles } from "@shared/cardPictures";
 import { isRepairAssessment, REPAIR_ASSESSMENT_SOURCE } from "@shared/checkRepair";
 import { standingOverride } from "@shared/holds";
-import type { KeptValidationInput } from "@shared/liveValidation";
+import {
+  acceptedValidation,
+  type KeptValidationInput,
+  latestValidationRun,
+} from "@shared/liveValidation";
 import { REVIEW_VERDICT_OF_CODE, renderFinding } from "@shared/rigor";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
 import { capWithOverflow } from "../overflow";
@@ -28,7 +32,7 @@ import {
   parseRepairAssessment,
   standingAuthorization,
 } from "./mergeAuthorization";
-import type { ReviewVerdictFacts } from "./reportWakes";
+import type { ReviewVerdictFacts, WakeProof } from "./reportWakes";
 import { earlierHistory, reviewHistory } from "./reviewHistory";
 import type { SettleOwners } from "./settleOwners";
 import type { TypedWake } from "./wakes";
@@ -500,6 +504,21 @@ export class Reviews {
       reviewedAt: at,
     };
     if (verdict === "pass") {
+      // INF-2672: whether the builder's live proof is accepted here decides
+      // the next step the wake names - prove once, read it, or push.
+      const validation = this.options.tasks.get(builder.id)?.delivery?.liveValidation;
+      const run = latestValidationRun(validation);
+      const acceptance = acceptedValidation(validation, sha);
+      const proof: WakeProof | undefined = validation?.scenarioRevision
+        ? {
+            accepted: acceptance.ready,
+            reason: acceptance.reason,
+            ...(run
+              ? { run: { head: run.head, revision: run.revision, verdict: run.verdict } }
+              : {}),
+            read: run !== undefined && typed.revision === run.revision,
+          }
+        : undefined;
       this.options.tasks.delivery.recordChangeEvidence(builder.id, facts, {
         kind: "review",
         text: `review passed at ${shortSha}, ${riskText}`,
@@ -537,6 +556,7 @@ export class Reviews {
             ...(risk ? { risk } : {}),
             ...(riskNote ? { riskNote } : {}),
             excerpt,
+            ...(proof ? { proof } : {}),
           },
         },
         "crewmate-report",

@@ -114,7 +114,20 @@ export type ReportFacts =
       risk?: string;
       riskNote?: string;
       excerpt: string;
+      /** The builder's live proof at that head, when it planned scenarios (INF-2672). */
+      proof?: WakeProof;
     };
+
+/** A Careful builder's live proof at a passed head, as typed facts (INF-2672). */
+export type WakeProof = {
+  accepted: boolean;
+  /** Why it is or is not accepted, as the acceptance rule says. */
+  reason: string;
+  /** The latest proof run, absent when none has run. */
+  run?: { head: string; revision: number; verdict: string };
+  /** Whether this review judged that run. */
+  read: boolean;
+};
 
 export const REQUESTED_RESPONSE_OPENING = "[fm-op] Requested crewmate response: ";
 export const RESPONSE_MISSING_OPENING = "[fm-op] Missing crewmate response: ";
@@ -186,6 +199,14 @@ export const REVIEW_NEW_HEAD_NEXT =
 export const REVIEW_PASSED_NEXT =
   "Steer the builder to push, open the PR and drive CI green; its PR report is then handled like any other.";
 
+/**
+ * What a code pass asks next while the builder's live proof is not accepted
+ * at that head (INF-2672): proof runs once after the code passes, and one
+ * proof read judges it before the push.
+ */
+export const REVIEW_PROOF_NEXT =
+  "The code passed; live proof runs once now, after it. When no proof run is recorded at or since this head, steer the builder to run its live proof once and report the run, without pushing. When the builder reports that run, start the proof read with spawn_crewmate review_of naming the builder and the user's words: that reviewer reads only the proof and anything changed since this pass. When this review already read the run and found it failed or short, steer the builder to repair: a repair gets a review of its own difference and reruns only the proof it reaches. When the only proof missing runs on a pushed branch, steer the builder to push, open the PR and finish that proof beside the checks before its completion card.";
+
 /** A builder's open review whose last verdict asks for a re-review at a new head. */
 export type WakeOpenReview = {
   evidenceRevision?: number;
@@ -213,6 +234,14 @@ export const FINISHED_REPORT_WORDS = "It declared its work finished";
  */
 export function renderReviewVerdict(facts: ReviewVerdictFacts, next = true): string {
   return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.findings?.length ? `\nFindings:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}${cardsText(facts.cards)}${next ? ` ${reviewFindingsNext()}` : ""}`;
+}
+
+/** A passed review's live-proof facts, worded (INF-2672). */
+function proofText(proof: WakeProof): string {
+  const run = proof.run
+    ? ` Latest proof run: revision ${proof.run.revision} at ${proof.run.head.slice(0, 7)}, verdict ${proof.run.verdict}, ${proof.read ? "read by this review" : "not read by this review"}.`
+    : " No proof run is recorded yet.";
+  return ` Live proof at this head: ${proof.accepted ? "accepted" : "not accepted"} - ${proof.reason}${run}`;
 }
 
 /** A builder report's open review, and the re-review it may ask for. */
@@ -339,6 +368,6 @@ export const REPORT_WORDS: KindWords<ReportFacts> = {
     const risk = facts.risk
       ? `risk ${facts.risk}${facts.riskNote ? `: ${facts.riskNote}` : ""}`
       : "risk unstated";
-    return `[fm-op] the review of task ${facts.task.id} "${facts.task.title}" passed at ${facts.head ? facts.head.slice(0, 7) : "an unrecorded head"} (${risk}); review task ${facts.reviewKey} is closed. ${facts.crewmate}'s report: ${facts.excerpt} ${REVIEW_PASSED_NEXT}`;
+    return `[fm-op] the review of task ${facts.task.id} "${facts.task.title}" passed at ${facts.head ? facts.head.slice(0, 7) : "an unrecorded head"} (${risk}); review task ${facts.reviewKey} is closed. ${facts.crewmate}'s report: ${facts.excerpt}${facts.proof ? proofText(facts.proof) : ""} ${facts.proof && !facts.proof.accepted ? REVIEW_PROOF_NEXT : REVIEW_PASSED_NEXT}`;
   },
 };

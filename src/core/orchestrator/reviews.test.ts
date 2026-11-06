@@ -32,6 +32,7 @@ import { REVIEW_FIX_RULES, renderRigorSection } from "./intentBrief";
 import {
   REVIEW_NEW_HEAD_NEXT,
   REVIEW_PASSED_NEXT,
+  REVIEW_PROOF_NEXT,
   REVIEWER_IDLE_NEXT,
   reviewFindingsNext,
 } from "./reportWakes";
@@ -899,7 +900,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with no typed review record, so no verdict was recorded: Standing by for the new head, nothing to say yet. ${REVIEWER_IDLE_NEXT}`,
         `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: The test is racy.\nFindings:\n- F1 error src/meter.test.ts:12 racy - auto-fix Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext()}`,
         `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict blocked: no access to the branch\n${renderReviewHistory([{ kind: "round", at: 0, review: reviewKey ?? "", verdict: "findings", head: HEAD, findings: ["F1 error src/meter.test.ts:12 racy - auto-fix"] }])}\n Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext()}`,
-        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); review task ${reviewKey} is closed. crewmate 2's report: A note only. ${REVIEW_PASSED_NEXT}`,
+        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); review task ${reviewKey} is closed. crewmate 2's report: A note only. Live proof at this head: accepted - The reviewer accepts the empty branch's no-surface reason, not a live pass. Latest proof run: revision 1 at 0123456, verdict no-surface, read by this review. ${REVIEW_PASSED_NEXT}`,
       ]);
       const { taskId: r2 } = await supervisor.intake.commission({
         title: "Review",
@@ -925,7 +926,79 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         risk: { level: "low", why: "small." },
       });
       expect(ops.slice(b2)).toEqual([
-        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low: small.); review task ${tasks.get(r2)?.key} is closed. crewmate 3's report: No findings. ${REVIEW_PASSED_NEXT}`,
+        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low: small.); review task ${tasks.get(r2)?.key} is closed. crewmate 3's report: No findings. Live proof at this head: accepted - The reviewer accepts the empty branch's no-surface reason, not a live pass. Latest proof run: revision 1 at 0123456, verdict no-surface, read by this review. ${REVIEW_PASSED_NEXT}`,
+      ]);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  // INF-2672, the captain's direction A: "review the code first, prove once,
+  // and the reviewer reads that proof once".
+  it("a code pass before any proof asks for one proof run, and the proof read at that version reads only the proof", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const reviewer2 = fakeCrewmate();
+      const env = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer, reviewer2],
+      });
+      const { supervisor, tasks, repos, ops, workspace, specs } = env;
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.intake.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, BUILDER_REPORT);
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      // The scenarios are planned before the first edit; nothing has run.
+      const planned = noSurfaceProof(HEAD);
+      seedDelivery(tasks, builderId, {
+        liveValidation: { ...planned, runs: [], reviews: [] },
+      });
+      const { taskId: reviewId } = await supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      expect(tasks.get(reviewId)?.delivery?.validationAssignment?.revision).toBe(0);
+      const before = ops.length;
+      await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "The code is clean.", {
+        code: "clear",
+        coverageReason: "The scenario set covers the captain's words.",
+        verdict: "inconclusive",
+        reason: "Proof runs after the code passes.",
+      });
+      expect(ops.slice(before)).toEqual([
+        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); review task ${tasks.get(reviewId)?.key} is closed. crewmate 2's report: The code is clean. Live proof at this head: not accepted - This version needs live validation of the current scenarios. No proof run is recorded yet. ${REVIEW_PROOF_NEXT}`,
+      ]);
+      // The builder proves once at the passed version; the proof read follows.
+      seedDelivery(tasks, builderId, {
+        liveValidation: { ...planned, reviews: [] },
+      });
+      const { taskId: proofRead } = await supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      expect(tasks.get(proofRead)?.delivery?.passedHead).toBe(HEAD);
+      expect(tasks.get(proofRead)?.prompt).toContain(
+        `An earlier review already passed the code at this exact version, ${HEAD}. Do not review the code again: this turn is the proof read.`,
+      );
+      const b2 = ops.length;
+      await reviewTurn({ tasks, specs }, reviewer2, 2, proofRead, "The proof holds.", {
+        code: "clear",
+      });
+      expect(ops.slice(b2)).toEqual([
+        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); review task ${tasks.get(proofRead)?.key} is closed. crewmate 3's report: The proof holds. Live proof at this head: accepted - The reviewer accepts the empty branch's no-surface reason, not a live pass. Latest proof run: revision 1 at 0123456, verdict no-surface, read by this review. ${REVIEW_PASSED_NEXT}`,
       ]);
     } finally {
       repo.dispose();

@@ -505,6 +505,59 @@ describe("Careful's accepted live-validation contract", () => {
     );
     expect(review(state, head, { code: "blocked" }).reviews.at(-1)?.code).toBe("blocked");
   });
+
+  // INF-2672, the captain's direction A: "review the code first, prove once, and the reviewer
+  // reads that proof once"; a wording-only commit "keeps the proof already run; the reviewer
+  // confirms it reaches no scenario".
+  it("INF-2672: a wording commit keeps the proof a review at its version judged, and a version no review judged does not", () => {
+    const proved = review(run(plan()));
+    expect(acceptedValidation(proved, later).ready).toBe(false);
+    const kept = review(proved, later);
+    expect(acceptedValidation(kept, later)).toMatchObject({
+      ready: true,
+      label: "Demonstrated for this version",
+    });
+    expect(kept.runs).toHaveLength(1);
+    expect(liveValidationSummary(kept, later, false)!.rows[0]!.result).toBe("Passed live");
+    // A difference that reaches the scenario leaves it for the builder to rerun.
+    const reached = review(proved, later, {
+      coverage: "missing",
+      omitted: ["The repair changes the Close button the scenario presses."],
+      verdict: "inconclusive",
+    });
+    expect(acceptedValidation(reached, later).ready).toBe(false);
+  });
+
+  it("INF-2672: INF-1892's seven review rounds record one proof run and one proof read, not seven of each", () => {
+    // INF-1892 took six findings rounds - two code fixes, then docs, comments, docs and
+    // design wording - before its pass; each made a new version.
+    const versions = ["1", "2", "3", "4", "5", "6", "7"].map((digit) => digit.repeat(40));
+    const blocking = {
+      id: "F1",
+      severity: "warning" as const,
+      text: "a stale sentence",
+      action: "auto-fix" as const,
+    };
+    let state = plan();
+    for (const version of versions.slice(0, 6))
+      state = review(state, version, {
+        code: "findings",
+        findings: [blocking],
+        coverage: "complete",
+        verdict: "inconclusive",
+        reason: "Proof runs after the code passes.",
+      });
+    const passed = versions[6]!;
+    state = review(state, passed, {
+      verdict: "inconclusive",
+      reason: "Proof runs after the code passes.",
+    });
+    expect(acceptedValidation(state, passed).ready).toBe(false);
+    state = review(run(state, passed), passed);
+    expect(acceptedValidation(state, passed).ready).toBe(true);
+    expect(state.runs).toHaveLength(1);
+    expect(state.reviews.filter((item) => item.revision > 0)).toHaveLength(1);
+  });
 });
 
 // INF-1824's accepted plan, built from the three records that drew it: one

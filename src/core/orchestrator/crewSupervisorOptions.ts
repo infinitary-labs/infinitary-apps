@@ -363,7 +363,7 @@ export type CrewSupervisorOptions = {
   ) => Promise<
     Pick<
       DeclaredCardInput,
-      "title" | "body" | "pictures" | "riskDeclaration" | "requiredActions"
+      "title" | "body" | "pictures" | "riskDeclaration" | "requiredActions" | "afterMerge"
     > & {
       /** The revision shown, when the host republished the named one at a later version (INF-2509). */
       revision?: number;

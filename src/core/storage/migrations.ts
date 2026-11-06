@@ -1,6 +1,7 @@
 import { forgeOf } from "@shared/forge";
 import { addColumn } from "./addColumn";
 import {
+  addCardAfterMerge,
   addCardAnswerer,
   addCardContributions,
   clearInterimAnswers,
@@ -1229,6 +1230,10 @@ export const MIGRATIONS: readonly Migration[] = [
   // `message_ref` observation; every other line keeps what it answers.
   // Nothing reverses it: the cleared value was never a real answer.
   clearInterimAnswers,
+  // INF-2796: the after-merge steps a merge card draws from its saved story.
+  // Null on every existing card, which declared none. CardStore is the only
+  // writer and no published view reads it. Dropping the column reverses it.
+  addCardAfterMerge,
 ];
 
 export function addPluginKind(db: AppDatabase): void {

@@ -310,6 +310,14 @@ In a short card it uses compact spacing and a focusable list scroller, leaving t
 After successful merging, each independent obligation gets a decision card with inert instructions, a specific confirmation and Not now.
 Deferred obligations remain under Waiting on you in Tasks with Show the card; manual results read Confirmed by you and observed results Checked by your first mate.
 
+A completion card whose story lists after-merge steps draws a second host notice in the same place and the same panel, below the required actions when both appear.
+It reads “After merging, the crew starts” and lists each step as its task title, “Continue: ” and the step's title, with the step's goal beneath in `--fg-2`.
+A step that names an existing task leads with its key in mono, then that task's own title and goal.
+A step that waits for other work adds a line beneath in the goal's style, “Starts once INF-2779 merges too”, naming each task it waits for.
+It names work the crew does, never the captain, so it carries no count, disclosure or confirmation; the list scrolls in a short card like the required actions' list and never truncates a step.
+A story with no steps draws no notice.
+When the merge goes through, each step becomes its task, or starts the task it names, and starts on its own once nothing it waits for holds it; no card follows for it.
+
 ## Put aside
 
 Every card has one leaving control, the neutral Lucide minus after Maximize, with its installed key hint (default ⇧⌘M).

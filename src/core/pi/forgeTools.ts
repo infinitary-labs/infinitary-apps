@@ -92,6 +92,13 @@ export const SKIP_RULES_DESCRIPTION = [
  * schema also declares and the item counts it leaves to the parse
  * (`zodParameter`).
  */
+/**
+ * INF-2796: the steps the merge card draws and the merge files, said where
+ * a crewmate writes them; the card draws them, so no prose repeats them.
+ */
+export const AFTER_MERGE_STORY_RULE =
+  "Optional afterMerge: work started once this merges, never repeated in prose; task: an unstarted task's key.";
+
 export const PREPARE_CHANGE_STORY_DESCRIPTION = [
   "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one short sentence each, checked 1 to 6 observed {check, result} facts.",
   "base, head and every captureHead are full 40-character commit ids from git rev-parse, never short; a later revision keeps the first base and each kept view's Before media.",
@@ -99,6 +106,7 @@ export const PREPARE_CHANGE_STORY_DESCRIPTION = [
   "layout adjacent needs exactly two media in each shown state.",
   "Everyone who can see the project reads the story, and anyone when it is public: write it for a stranger, naming the captain's setup only by its kind, with no computer, host, user or account names, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys or the captain's own words.",
   "publishable true is your declaration that you read the whole story once as that stranger and it holds nothing personal or local.",
+  AFTER_MERGE_STORY_RULE,
 ].join(" ");
 
 export const PREPARE_CHANGE_TOOL = crewmateTool({

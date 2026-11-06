@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 import { repairMovedTaskFolders } from "../folderMove/taskFolders";
-import { addCardAnswerer, addCardContributions, clearInterimAnswers } from "./cardMigrations";
+import {
+  addCardAfterMerge,
+  addCardAnswerer,
+  addCardContributions,
+  clearInterimAnswers,
+} from "./cardMigrations";
 import { addCrewResponses } from "./inboxMigrations";
 import { migrateChanges } from "./migrateChanges";
 import { addHousekeepingIndexes, addPluginKind, MIGRATIONS } from "./migrations";
@@ -64,6 +69,7 @@ export const REVIEW_EDGES_VERSION = MIGRATIONS.indexOf(retireReviewEdges) + 1;
 export const TOOL_REPETITION_VERSION = MIGRATIONS.indexOf(REPETITION_TABLES) + 1;
 
 export const CARD_ANSWERER_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardAnswerer) + 1;
+export const CARD_AFTER_MERGE_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardAfterMerge) + 1;
 export const PLUGIN_KIND_MIGRATION_VERSION = MIGRATIONS.indexOf(addPluginKind) + 1;
 
 /** Named boundaries keep upgrade fixtures tied to their migration, not the newest release. */

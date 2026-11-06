@@ -29,6 +29,7 @@ import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { createAppTools } from "../pi/appTools";
 import { EMIT_CARD_TOOL, EMIT_CARD_TOOL_DESCRIPTION } from "../pi/cardTool";
+import { FOLLOWUP_AFTER_MERGE_RULE } from "../pi/crewmateTaskTools";
 import { createTasksQueryTool, parseTasksFieldPage, parseTasksQueryText } from "../pi/taskTools";
 import { piToolOf } from "../pi/toolSpec";
 import { CLAUDE_TOOL_DESCRIPTION_CAP } from "../prompts/cardContract";
@@ -409,11 +410,11 @@ describe("what the Claude client serves equals the source", () => {
     // these; since v4.59 no nested parameter is described at all.
     const emitCard = ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}emit_card`);
     expect(emitCard?.description).toContain(
-      "name it in the body by what it does, never by its task key, and say it starts once it is merged",
+      "No settle effects on intermediate questions; reuse an open outcome card's id.",
     );
     expect(
       ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}file_followup`)?.description,
-    ).toContain("title beginning Continue:");
+    ).toContain(FOLLOWUP_AFTER_MERGE_RULE);
     const properties = emitCard?.input_schema?.properties ?? {};
     for (const name of ["title", "body", "body_file", "id", "actions"]) {
       expect(properties[name]?.description, `emit_card.${name} lost its description`).toBeTruthy();

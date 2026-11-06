@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "after-merge-steps",
+      "kind": "feature",
+      "title": "Work that waits for a merge starts once you merge",
+      "body": "When part of a task can only happen after its change merges, the merge card now lists it under After merging, the crew starts. Once you merge, Infinitary files each listed step as its own task, in whichever project it belongs to, and a crewmate starts on it with no reminder from you, as soon as any other work it waits for has merged too. A merge card with nothing after it works as before.",
+      "area": "cards",
+      "picture": {
+        "dark": "after-merge-steps-dark.webp",
+        "light": "after-merge-steps-light.webp",
+        "alt": "A merge card listing one step under After merging, the crew starts, above the Merge the branch button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

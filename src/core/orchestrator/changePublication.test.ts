@@ -730,7 +730,7 @@ describe("the change delivery and the sign-in where the project lives", () => {
       body: "## Intent",
     });
     expect(text).toBe(
-      "Opened pull request #42 https://github.com/x/y/pull/42 for fm/task-ab12cd34. Read its checks with check_change. If the rest of your work needs this merged first, file it as Continue: … and end this task with the completion decision after the checks pass.",
+      "Opened pull request #42 https://github.com/x/y/pull/42 for fm/task-ab12cd34. Read its checks with check_change. If the rest of your work needs this merged first, list it in the story's afterMerge and end this task with the completion decision after the checks pass.",
     );
     expect(forge.calls).toEqual([
       "changeFor fm/task-ab12cd34",
@@ -753,7 +753,7 @@ describe("the change delivery and the sign-in where the project lives", () => {
       body: "b",
     });
     expect(text).toContain("A pull request for fm/task-ab12cd34 is already open: pull request #23");
-    expect(text).toContain("file it as Continue: …");
+    expect(text).toContain("list it in the story's afterMerge");
     expect(forge.calls).not.toContain("openChange fm/task-ab12cd34 fix: correct it");
   });
 

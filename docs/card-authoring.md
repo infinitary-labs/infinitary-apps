@@ -902,9 +902,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `src/core/pi/cardImages.test.ts` binds the copy and the rewrite, and `tests/browser/card-picture-fit.test.tsx` a picture shown whole in its card.
   Phase 3, the viewer: the bridge's `image` message (any `<img>` click, or a group's `+N` tile) carries the clicked index and its group's pictures; `viewablePictures` admits only the host's minted copies and `data:` rasters; `design/cards/PictureViewer.tsx` (design skill `PictureViewer.prompt.md`) is window-wide host chrome whose keys are a window capture listener, so they never reach the stack or the shell's Escape; `tests/e2e/card-pictures.spec.ts` is its binding test.
 
-When a crewmate must put its own change in before the rest can proceed, an intermediate card cannot do that: it files the rest as `Continue: …`, names the filing in its report in a turn without a card, waits for the first mate's steer after triage, then names it in the completion-card body and says it starts once the change is in.
-A card in the report turn suppresses that report wake.
-Only the ordinary completion decision puts that change in.
+When a crewmate must put its own change in before the rest can proceed, an intermediate card cannot do that: it lists the rest as after-merge steps on its change's story, and the completion card draws them under "After merging, the crew starts", outside the body ("After-merge steps", `docs/task-graph.md`).
+The list is optional; a card with nothing to continue lists nothing.
+Only the ordinary completion decision puts that change in, and its merge files each step as a task that starts on its own.
 If a later landing belongs to no task, the continuation may ask once for that outside change with an effect-free plain-reply button.
 
 ## Editable card body files (contract v4.49)

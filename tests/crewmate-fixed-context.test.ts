@@ -138,9 +138,10 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   // INF-1876 trimmed the delivery judgment to what only it says: these two
   // rules it dropped are on the tools whose use they govern.
   {
-    rule: "work that needs this merge first is a Continue filing, linked before the completion decision",
+    // INF-2796: it is listed on the story's afterMerge, and the merge files it.
+    rule: "work that needs this merge first is an after-merge step on the story, not a filing",
     home: { tool: "file_followup" },
-    says: "For work needing your merge first, use a title beginning Continue:, say why, report it, end that turn without a card, and wait for the first mate to link it before your completion decision.",
+    says: "Work needing your merge first goes in your story's afterMerge instead.",
   },
   {
     rule: "no intermediate card of the crewmate's merges the pull request; only the completion decision can",

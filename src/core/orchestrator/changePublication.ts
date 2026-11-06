@@ -488,7 +488,7 @@ export class ChangePublication {
       if (!own) await this.selectOpened(record, forge, change, input.base);
       this.checks.noteChange(record.id, { change, forge });
       const next = [
-        "Read its checks with check_change. If the rest of your work needs this merged first, file it as Continue: … and end this task with the completion decision after the checks pass.",
+        "Read its checks with check_change. If the rest of your work needs this merged first, list it in the story's afterMerge and end this task with the completion decision after the checks pass.",
         this.readiness.readinessProblem(taskId, change),
       ]
         .filter(Boolean)

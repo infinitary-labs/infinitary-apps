@@ -21,11 +21,12 @@ it("upgrades existing saved data with card/feed seeks and keeps their results", 
   });
   tasks.note(task.id, "The release notes are ready for review.", { news: true, feed: true });
   tasks.note(task.id, "Compared the notes with the changes.", { news: false });
-  // Today's card writer names INF-1610's later `answering` and INF-1670's
-  // `answered_by` columns, lent to the older schema here; their own
-  // migrations leave a column already there.
+  // Today's card writer names INF-1610's later `answering`, INF-1670's
+  // `answered_by` and INF-2796's `after_merge_json` columns, lent to the
+  // older schema here; their own migrations leave a column already there.
   before.exec("ALTER TABLE cards ADD COLUMN answering INTEGER");
   before.exec("ALTER TABLE cards ADD COLUMN answered_by TEXT");
+  before.exec("ALTER TABLE cards ADD COLUMN after_merge_json TEXT");
   new CardStore(before).upsert({
     id: "review-card",
     taskId: task.id,

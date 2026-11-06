@@ -1,3 +1,4 @@
+import type { AfterMergeShown } from "@shared/afterMerge";
 import type { CardEffect, CardMutation, CardPicture, LiveAttachment } from "@shared/cards";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import type { CrewResponse } from "@shared/crewResponses";
@@ -74,6 +75,8 @@ export type EmittedCardInput = {
   /** Current published story revision, resolved by the home before any card lint. */
   presentationRevision?: number;
   requiredActions?: RequiredAction[];
+  /** The saved story's after-merge steps (INF-2796); the host's own, never a tool parameter. */
+  afterMerge?: AfterMergeShown[];
   actions: EmittedAction[];
   /** Stable kebab-case id; reuse to revise an open card in place. */
   id?: string;
@@ -153,7 +156,10 @@ export type DeclaredCardInput = Omit<EmittedCardInput, "actions"> & { actions: D
 type CarriedFields<T extends never> = T;
 export type PlacedToolFieldCoverage = CarriedFields<
   | Exclude<
-      keyof Omit<DeclaredCardInput, "taskId" | "reviewTaskId" | "attachment" | "risk">,
+      keyof Omit<
+        DeclaredCardInput,
+        "taskId" | "reviewTaskId" | "attachment" | "risk" | "afterMerge"
+      >,
       keyof InvokeRequest<"inf:work:card">[0]["card"]
     >
   | Exclude<keyof CheckChangeInput, keyof InvokeRequest<"inf:work:check-change">[0]["input"]>

@@ -5,6 +5,7 @@ import {
   ALL_VERSIONS,
   appliedVersions,
   columnNames,
+  REVERSE_AFTER_MERGE,
   REVERSE_ANSWERED_BY,
   REVERSE_MIGRATION_57,
   REVERSE_MIGRATION_59,
@@ -22,7 +23,11 @@ import {
 } from "../../../tests/helpers/migrations";
 import { CardStore } from "./cardStore";
 import type { AppDatabase } from "./db";
-import { CARD_ANSWERER_MIGRATION_VERSION, openDatabase } from "./db";
+import {
+  CARD_AFTER_MERGE_MIGRATION_VERSION,
+  CARD_ANSWERER_MIGRATION_VERSION,
+  openDatabase,
+} from "./db";
 import { dropViews } from "./views";
 
 // The migrations that add one column to a card, as one table: each upgrades a
@@ -402,6 +407,41 @@ const CARD_COLUMNS: CardColumnCase[] = [
       expect(store.get(consent.id)).not.toHaveProperty("continues");
     },
     reverse: REVERSE_MIGRATION_93,
+    rows: "older card",
+  },
+  // INF-2796: a merge card draws the after-merge steps its story listed, and
+  // a restart must keep drawing them until the captain merges.
+  {
+    it: "INF-2796 upgrades existing cards with no after-merge steps, keeps a merge card's across reopen and reverses without losing it",
+    from: CARD_AFTER_MERGE_MIGRATION_VERSION - 1,
+    added: "after_merge_json",
+    card: 'INSERT INTO cards (id, task_id, kind, author, priority, title, meta, body, actions_json, status, created_at) VALUES (\'card-dop29900-done\', \'dop29900\', \'card\', \'crewmate\', 30, \'feat(runners): place the split Mac jobs on the small Macs\', \'\', \'<p>The split Mac jobs now run on the small Macs.</p>\', \'[{"id":"merge","label":"Merge","default":true,"effect":{"kind":"settle","mode":"merge"}}]\', \'ready\', 1)',
+    id: "card-dop29900-done",
+    legacy: (offer) => expect(offer).not.toHaveProperty("afterMerge"),
+    write: (offer, store) =>
+      store.upsert({
+        ...offer,
+        afterMerge: [
+          {
+            title: "Continue: Pull the split setup onto the Mac mini, set MAC_QUEUES",
+            goal: "The Mac mini runs the split runner setup and MAC_QUEUES names split and release_split.",
+            waitsFor: ["INF-2779"],
+          },
+        ],
+      }),
+    readBack: (store, offer) => {
+      expect(store.get(offer.id)?.afterMerge).toEqual([
+        {
+          title: "Continue: Pull the split setup onto the Mac mini, set MAC_QUEUES",
+          goal: "The Mac mini runs the split runner setup and MAC_QUEUES names split and release_split.",
+          waitsFor: ["INF-2779"],
+        },
+      ]);
+      // A revision whose story lists none draws none.
+      store.upsert(offer);
+      expect(store.get(offer.id)).not.toHaveProperty("afterMerge");
+    },
+    reverse: REVERSE_AFTER_MERGE,
     rows: "older card",
   },
 ];

@@ -353,7 +353,8 @@ export class CardEmits {
         JSON.stringify(existing.actions) !== JSON.stringify(revised.actions) ||
         JSON.stringify(existing.attachment) !== JSON.stringify(revised.attachment) ||
         JSON.stringify(existing.risk) !== JSON.stringify(revised.risk) ||
-        JSON.stringify(existing.requiredActions) !== JSON.stringify(revised.requiredActions);
+        JSON.stringify(existing.requiredActions) !== JSON.stringify(revised.requiredActions) ||
+        JSON.stringify(existing.afterMerge) !== JSON.stringify(revised.afterMerge);
       // Every revision made while answering the captain carries its own
       // answer (INF-1623, the captain's "every"): one after the turn's
       // answer would otherwise follow it with no word on what it changed.
@@ -596,6 +597,7 @@ export function buildEmittedCard(
     // (docs/card-authoring.md "The risk chart"); a revision replaces it.
     ...(input.risk ? { risk: input.risk } : {}),
     ...(input.requiredActions !== undefined ? { requiredActions: input.requiredActions } : {}),
+    ...(input.afterMerge?.length ? { afterMerge: input.afterMerge } : {}),
     ...(input.asking ? { asking: true as const } : {}),
     ...(input.designOnly ? { designOnly: true as const } : {}),
     ...(input.continues ? { continues: true as const } : {}),

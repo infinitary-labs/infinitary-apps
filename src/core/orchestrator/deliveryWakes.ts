@@ -7,6 +7,7 @@
  * kind's words, are in `wakes.ts`.
  */
 
+import type { FiledAfterMergeStep } from "@shared/afterMerge";
 import { formatDurationShort } from "@shared/quotaSignals";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import type { KindWords, TypedWake, WakeFacts, WakeTask } from "./wakes";
@@ -21,6 +22,8 @@ export type DeliveryFacts =
       chose: string;
       outcome: string;
       refusal?: SettleRefusal;
+      /** The Continue tasks the merge filed from its story's after-merge steps (INF-2796). */
+      afterMerge?: FiledAfterMergeStep[];
     }
   | {
       /**
@@ -349,10 +352,31 @@ export const MERGE_CONTINUED_LEAD = "the captain merged";
 /** How a `write-answered` steer opens when the captain's click sent the write. */
 export const WRITE_ANSWERED_LEAD = "the captain sent ask";
 
+/**
+ * The after-merge steps a merge filed, as its settled wake names them: each
+ * starts on its own, so the first mate reads them only to drop a repeat.
+ */
+export function afterMergeWords(steps: readonly FiledAfterMergeStep[]): string {
+  const named = (list: readonly FiledAfterMergeStep[]) =>
+    list.map((step) => `${step.key} "${step.title}"`).join(", ");
+  const started = steps.filter((step) => !step.skipped);
+  const skipped = steps.filter((step) => step.skipped);
+  return [
+    started.length
+      ? `Its merge card's after-merge steps are filed and start on their own once nothing they wait for holds them: ${named(started)}. Drop one only if another task already does that work.`
+      : "",
+    skipped.length
+      ? `It started nothing for ${named(skipped)}, closed before the merge; decide whether its work still needs a task.`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /** A change's delivery wakes, worded. */
 export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
   settled: (facts) =>
-    `[fm-op] the captain chose ${facts.chose} for task ${facts.task.id} "${facts.task.title}"; the host settled it and the outcome was: ${facts.outcome}${facts.refusal ? `\n\`\`\`json\n${JSON.stringify(facts.refusal, null, 2)}\n\`\`\`` : ""}`,
+    `[fm-op] the captain chose ${facts.chose} for task ${facts.task.id} "${facts.task.title}"; the host settled it and the outcome was: ${facts.outcome}${facts.afterMerge?.length ? ` ${afterMergeWords(facts.afterMerge)}` : ""}${facts.refusal ? `\n\`\`\`json\n${JSON.stringify(facts.refusal, null, 2)}\n\`\`\`` : ""}`,
   "external-merge": (facts) =>
     `The project's host confirms ${facts.change} merged at ${facts.head}. This task remains open because ${facts.open ?? "completion was not declared or work still remains"}. Read its remaining work and instructions; continue them, or report merge_completes_task for this PR and version when the merge finishes all your work. Do not ask for another merge or discard.`,
   "merge-continued": (facts) =>

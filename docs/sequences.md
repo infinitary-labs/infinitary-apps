@@ -86,7 +86,7 @@ The C5 extractor carries the field through (`docs/dispatch-extractor.md`).
 One rule in `FIRSTMATE_PROMPT_CORE` replaced "spawn a plan as its own task and the build as a second one".
 The core gives the tool mapping: the parent is `create_task`, the current step is `spawn_crewmate` with `parent` (that spawn alone records it), and the next is `create_task` on request with `parent` and `basis`, started with `update_task start_now` when `HANDOFF` says its turn has come.
 The appended guide owns when an ask needs a parent and when an internal step closes, rather than the core saying both twice.
-The core’s Continue rule owns the mid-work merge and its plain-reply rule owns a merge with no task; the seed does not repeat them (FI3-566).
+The story's after-merge steps own the mid-work merge ("A landing in the middle of work" below) and the core's plain-reply rule owns a merge with no task; the seed does not repeat them (FI3-566).
 A parent stays on request - its children do its work - and completes when its last child lands.
 The seeded document supplies the objective skip test.
 A declared direct build is the whole ask and has no parent; the host prints its reason in the feed and stores it in the task shape without checking whether the reason is sound.
@@ -166,11 +166,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 ### A landing in the middle of work
 
-When the rest of a crewmate's work requires its own change to be put in first, it files "Continue: …" and reports it in a turn with no card.
-A completion card in the same turn suppresses the report wake, so the first mate could not triage the filing.
-On the report the first mate links the origin as its blocker before making the filing when-ready in that same turn, so the ready sweep cannot start it between the two calls.
-Then the first mate steers the crewmate to emit the ordinary completion decision.
-Once the origin closes after put-in, the ready sweep starts the rest from the freshly fetched main line.
+When the rest of a crewmate's work requires its own change to be put in first, it lists that rest as after-merge steps on its change's story and puts up the ordinary completion decision ("After-merge steps", `docs/task-graph.md`).
+The card shows the captain what the crew starts once the merge goes through, and no extra turn or triage comes between the report and the card.
+The merge files each step as a `Continue: …` task, and the ready sweep after the close starts it from the freshly fetched main line.
 The continuation's brief carries the origin's report, card and thread as its origin section.
 If a further landing belongs to no task, it asks once with a plain reply button naming what must be put in; this is the one permitted ask.
 

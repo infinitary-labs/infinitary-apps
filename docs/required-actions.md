@@ -2,7 +2,7 @@
 
 A code merge finishes the code task, not a captain-only contribution.
 Declare only a part the captain alone can give, following the fleet-work principle in `docs/principles.md`.
-Work the fleet can carry out after the merge is a `Continue: …` follow-up instead, not a required captain action.
+Work the fleet can carry out after the merge is an after-merge step on the change's story instead, not a required captain action ("After-merge steps", `docs/task-graph.md`).
 A newly authored completion offer declares `required_actions`, including `[]` when there are none.
 Old saved cards without the declaration remain historical unknowns.
 The declaration is display-only: it grants no execution permission.

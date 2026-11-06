@@ -84,7 +84,7 @@ Ask for exactly that, as one click where one exists; the fleet does everything b
 A step whose cost the captain should weigh is a yes they give, never work they do.
 
 The shared instruction lives in `src/core/prompts/fleetWork.ts`, served once after each persona core.
-A required action holds only a part the captain alone can give; work the fleet can do after a merge becomes a `Continue: …` filing instead (`docs/required-actions.md`).
+A required action holds only a part the captain alone can give; work the fleet can do after a merge is an after-merge step on the change's story instead, filed as a `Continue: …` task when the merge goes through (`docs/required-actions.md`).
 Consent gates, sign-in and signing boundaries remain unchanged.
 
 ## A test runs on the Mac only when it needs a Mac (captain, 2026-10-28)

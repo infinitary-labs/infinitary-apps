@@ -45,8 +45,8 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
     // migration 69 (a merge card's risk) `risk_json`, and migration 70 (a
     // card that takes no reply) `replies`, migration 77 `holds_place`,
     // migration 82 `required_actions_json`, migration 87 `review_task_id`,
-    // INF-476 `minimized`, INF-1226 `continues`, INF-1610 `answering` and
-    // INF-1670 `answered_by`.
+    // INF-476 `minimized`, INF-1226 `continues`, INF-1610 `answering`,
+    // INF-1670 `answered_by` and INF-2796 `after_merge_json`.
     expect(columnNames(upgraded, "cards")).toEqual([
       ...before,
       "duplicate_of",
@@ -72,6 +72,7 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
       "continues",
       "answering",
       "answered_by",
+      "after_merge_json",
     ]);
     expect(columnNames(upgraded, "card_revisions")).toEqual([
       "id",

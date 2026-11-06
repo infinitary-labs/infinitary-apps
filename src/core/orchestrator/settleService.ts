@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import type { FiledAfterMergeStep } from "@shared/afterMerge";
 import { isRoutineMergeCard, isStoryNote, keepsTaskOpen } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus } from "@shared/checkSnapshot";
@@ -15,6 +16,7 @@ import { SETTLE_FOLD } from "../tasks/taskFeed";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
 import { type MergeGuard, mergedReceipt, type PrOutcome } from "./changeMerge";
+import { afterMergeWords } from "./deliveryWakes";
 import type { KeptApproval } from "./keptApproval";
 import { candidateHead, keptFeedLine, keptNote, standingAuthorization } from "./mergeAuthorization";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
@@ -656,6 +658,7 @@ export class SettleService {
             { feed: true },
           );
         this.host.tasks.delivery.activateRequiredActions(taskId);
+        this.host.tasks.delivery.activateAfterMergeSteps(taskId);
         this.host.tasks.note(taskId, result.text, { news: true, feed: true, actor: "host" });
       },
       () => {},
@@ -701,8 +704,12 @@ export class SettleService {
       proceedWithOpen ?? false,
     );
     this.recordRefusal(taskId, mode, result);
+    // The first mate's own merge hears what it filed in its tool result, as
+    // the captain's click's wake says it (INF-2796).
+    const afterMerge =
+      result.ok && mode !== "discard" ? this.host.tasks.delivery.filedAfterMergeSteps(taskId) : [];
     return {
-      text: result.text,
+      text: afterMerge.length ? `${result.text} ${afterMergeWords(afterMerge)}` : result.text,
       ...(result.refusal ? { refusal: result.refusal } : {}),
     };
   }
@@ -1067,11 +1074,24 @@ export class SettleService {
     // A merge that went through is the feed line above and nothing more,
     // unless it freed work only a start begins (friction 7 of the
     // captain's Oct 22 audit: 45 of 62 merge wakes were idle turns).
-    if (result.ok && mode !== "discard" && !this.freesWorkAwaitingStart(taskId)) return;
-    this.wakeOnSettle(taskId, title, confirm ? `${mode} (confirmed)` : mode, {
-      ...result,
-      text: result.text,
-    });
+    // It also wakes once when the merge filed its story's after-merge steps
+    // (INF-2796), so the first mate can drop one another task already covers.
+    const afterMerge =
+      result.ok && mode !== "discard" ? this.host.tasks.delivery.filedAfterMergeSteps(taskId) : [];
+    if (
+      result.ok &&
+      mode !== "discard" &&
+      afterMerge.length === 0 &&
+      !this.freesWorkAwaitingStart(taskId)
+    )
+      return;
+    this.wakeOnSettle(
+      taskId,
+      title,
+      confirm ? `${mode} (confirmed)` : mode,
+      { ...result, text: result.text },
+      afterMerge,
+    );
   }
 
   /**
@@ -1124,7 +1144,13 @@ export class SettleService {
    * JSON block, so the Firstmate can answer with one card whose actions
    * carry the `ways` as effects. The feed line stays the prose alone.
    */
-  wakeOnSettle(taskId: string, title: string, chose: string, result: SettleOutcome): void {
+  wakeOnSettle(
+    taskId: string,
+    title: string,
+    chose: string,
+    result: SettleOutcome,
+    afterMerge: FiledAfterMergeStep[] = [],
+  ): void {
     if (result.contention) return;
     this.host.notifyOp(
       {
@@ -1134,6 +1160,7 @@ export class SettleService {
           chose,
           outcome: result.text,
           ...(result.refusal ? { refusal: result.refusal } : {}),
+          ...(afterMerge.length ? { afterMerge } : {}),
         },
       },
       "agent",

@@ -80,6 +80,7 @@ type Row = {
   answered_by: string | null;
   minimized: number | null;
   required_actions_json: string | null;
+  after_merge_json: string | null;
 };
 
 /** One superseded version of a card revised in place (WI-12). */
@@ -175,6 +176,7 @@ function fromRow(row: Row): Card | undefined {
     ...(row.required_actions_json
       ? { requiredActions: JSON.parse(row.required_actions_json) }
       : {}),
+    ...(row.after_merge_json ? { afterMerge: JSON.parse(row.after_merge_json) } : {}),
     ...(row.replies === 0 ? { replies: false } : {}),
     ...(row.holds_place === 1 ? { holdsPlace: true } : {}),
     ...(row.continues === 1 ? { continues: true } : {}),
@@ -340,8 +342,8 @@ export class CardStore {
   upsert(card: Card): void {
     this.db
       .prepare(
-        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id, minimized, continues, answering, answered_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id, minimized, continues, answering, answered_by, after_merge_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            kind = excluded.kind,
            author = excluded.author,
@@ -369,7 +371,8 @@ export class CardStore {
            minimized = excluded.minimized,
            continues = excluded.continues,
            answering = excluded.answering,
-           answered_by = excluded.answered_by`,
+           answered_by = excluded.answered_by,
+           after_merge_json = excluded.after_merge_json`,
       )
       .run(
         card.id,
@@ -401,6 +404,7 @@ export class CardStore {
         card.continues ? 1 : null,
         card.answering ? 1 : null,
         card.answeredBy ?? null,
+        card.afterMerge?.length ? JSON.stringify(card.afterMerge) : null,
       );
   }
 
@@ -759,6 +763,7 @@ export class CardStore {
     // none, and neither did its card.
     const risk = offer ? offer.risk : card.risk;
     const requiredActions = offer ? offer.requiredActions : card.requiredActions;
+    const afterMerge = offer ? offer.afterMerge : card.afterMerge;
     if (closing?.kind === "action") {
       how = "chose";
       actionId = closing.payload.actionId;
@@ -792,6 +797,7 @@ export class CardStore {
       ...((offer?.width ?? card.width) ? { width: offer?.width ?? card.width } : {}),
       ...(risk ? { risk } : {}),
       ...(requiredActions !== undefined ? { requiredActions } : {}),
+      ...(afterMerge?.length ? { afterMerge } : {}),
       ending: {
         how,
         at: closing?.recordedAt ?? row.resolved_at,

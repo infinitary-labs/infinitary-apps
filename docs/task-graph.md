@@ -186,7 +186,7 @@ What counts is a judgment, so it lives in the crewmate's and the first mate's in
   Its `why` gives the evidence, what the finding breaks and for whom, and what the crewmate is unsure of.
 - An optional improvement - a refactor, a test that would only add assurance, a nicer wording - stays in the crewmate's report, unfiled.
 - Work the crewmate's own change needs, and the documents it makes stale, stay with that change.
-  Only the rest of its own work that must wait for a merge is filed, as a `Continue: …` filing.
+  The rest of its own work that must wait for a merge is not filed: it is listed as after-merge steps on the change's story, below.
 - A finding that matches an existing task is not filed: the report names that key and what the finding adds to it.
 - A change that meets another open task's whole goal names that key and the evidence in its report.
 
@@ -245,9 +245,24 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   There is no automatic Later and no park (cards/tasks/agents P0, captain rulings D1-D8 of 2026-09-15): a card carries exactly the actions its author declared, every click returns to the author, `recall_decision` is gone, and migration 28 closed every open park row into `park_row_backfill`.
   Open rows have no worktree ("" columns) until dispatch; `closeTask` must keep skipping workspace removal for them.
 
-A `Continue: …` filing is the rest of the origin's work after its own change lands, not a dependency holding the origin.
-The first mate triages the report by setting the `blocks` edge **from origin to continuation** before setting the filing `when-ready` in the same turn: the sweep runs after each graph change, so reversing this order can start it too early.
-The existing ready sweep after close starts it when the origin is done; no special runner or new edge type is involved.
+### After-merge steps
+
+The rest of the origin's work after its own change merges is declared, never filed during the work: the change's saved story may list `afterMerge` steps (`src/shared/afterMerge.ts`), each a new task's title, goal and why, or the key of an existing open task that has not started (`task`).
+A new step may name the project it is filed in by key (`project`), the origin's when absent, and any step may name the tasks whose merge it also waits for (`blockedBy`).
+Preparing the story refuses a step whose shape is incomplete, a named task that is running, closed, unknown or the origin itself, a named task already set to start on its own unless it waits on the origin, an unknown or archived project, and a wait on an unknown task, on the origin, or one that would close a cycle (`TaskDeliveries.afterMergeRefusal`).
+The list is optional, and a story without one merges exactly as before (INF-2796, the captain's "a merge can totally end without anything to continue").
+The merge card draws the steps under "After merging, the crew starts", beside the captain's own required actions, from the story the card shows: an existing task by its key, title and goal, read when the card is shown, and a waiting step with a line naming what it waits for (`TaskDeliveries.afterMergeShown`).
+A merged or landed close files each new step in its own transaction (`TaskDeliveries.activateAfterMergeSteps`, beside `activateRequiredActions`) as a `when-ready` task titled `Continue: …`, discovered from the origin, and sets each named existing task `when-ready` with a note saying why.
+Each `blockedBy` key becomes a `blocks` link from that task into the step, so the step starts only once that work merges too; a wait that would close a cycle by the time of the merge is skipped with a note on the step, so the merge is still recorded.
+The card leaves out a wait on work already closed.
+A named task that started or closed between the card and the merge is left as it is, and the settled wake says it started nothing for a closed one, so the first mate decides whether its work still needs a task.
+Its id is derived from the story's change, revision and the step's place, so a restart or a second activation files nothing twice.
+The ready sweep after the close starts each step nothing else holds; the discovered-from link gives its brief the origin's report, card and thread.
+A discard, refusal or unknown merge closes nothing as merged, so it files nothing.
+The settled wake names the filed steps once, and so does the first mate's own `settle_task` result, so the first mate can drop a step another task already covers.
+
+A `Continue: …` filing made during the work, as older instructions asked, is still the rest of the origin's work, not a dependency holding the origin.
+The first mate sets the `blocks` edge **from origin to continuation** before setting the filing `when-ready` in the same turn: the sweep runs after each graph change, so reversing this order can start it too early.
 A missed triage leaves an ordinary visible on-request filing.
 
 ## Combining repairs after a circular-wait refusal

@@ -22,7 +22,7 @@ Infinitary is an Electron desktop app: your own AI studio, a calm first mate and
 
 - **Integrations reach every surface the same way (2026-11-02).** The first mate, a crewmate, Automation and every panel reach a service outside your projects through an integration, with the same connections, actions, rules and answers. A new kind reaches all of them with no code of its own for any surface, and no surface brings its own sign-in, key or approval (`docs/principles.md`, `docs/integrations.md` "How a panel reaches them").
 
-- **The captain decides and the fleet does the work (2026-10-22).** Never ask the captain to do what the fleet can do, including through a crewmate; check whether it is already done first. Ask only for the captain-only part, as one click where available; post-merge fleet work is a `Continue: …` filing (`docs/principles.md`, `docs/required-actions.md`).
+- **The captain decides and the fleet does the work (2026-10-22).** Never ask the captain to do what the fleet can do, including through a crewmate; check whether it is already done first. Ask only for the captain-only part, as one click where available; post-merge fleet work is an after-merge step on the change's story, filed as a `Continue: …` task when the merge goes through (`docs/principles.md`, `docs/required-actions.md`).
 
 ## Design system (mandatory)
 

@@ -51,7 +51,10 @@ import type { TaskService } from "../tasks/taskService";
 import { requireConventional } from "../workspace/conventional";
 
 export type PresentationLedger = Pick<TaskService, "get"> & {
-  delivery: Pick<TaskService["delivery"], "changePresentation" | "updateChangePresentation">;
+  delivery: Pick<
+    TaskService["delivery"],
+    "changePresentation" | "updateChangePresentation" | "afterMergeRefusal" | "afterMergeShown"
+  >;
 };
 const hash = (text: string | Uint8Array) => createHash("sha256").update(text).digest("hex");
 /** GitHub's body limit covers the rendered region and all surrounding project/human text. */
@@ -151,6 +154,10 @@ export class ChangePresentations {
             destination,
             revision,
           });
+          const steps =
+            story.afterMerge &&
+            this.options.tasks.delivery.afterMergeRefusal(taskId, story.afterMerge);
+          if (steps) throw new Error(steps);
           await this.checkRetained(story);
           // Before media for a surviving view stays the original comparison, never silently refreshed.
           for (const view of prior?.views ?? []) {
@@ -628,6 +635,9 @@ export class ChangePresentations {
           pictures: cardStory.pictures,
           riskDeclaration: story.risk,
           requiredActions: story.requiredActions,
+          ...(story.afterMerge?.length
+            ? { afterMerge: this.options.tasks.delivery.afterMergeShown(story.afterMerge) }
+            : {}),
         };
       } catch (error) {
         await this.cleanupMedia(taskId, copies);

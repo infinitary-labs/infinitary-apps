@@ -1664,8 +1664,10 @@ export class TaskService {
         pendingSettle: null,
         updatedAt: at,
       });
-      if (input.reason === "merged" || input.reason === "landed")
+      if (input.reason === "merged" || input.reason === "landed") {
         this.delivery.activateRequiredActions(id);
+        this.delivery.activateAfterMergeSteps(id);
+      }
       this.writer.addEvent({
         taskId: id,
         at,

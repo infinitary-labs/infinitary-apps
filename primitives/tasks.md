@@ -79,7 +79,7 @@ Overriding a soft hold needs the captain's words in that turn.
 
 - Guided ways of working (plan then build, reproduce then fix): a parent left on request with child steps, each grounded on the previous by `basis` ([sequences](../docs/sequences.md)).
 - A program is a task whose script files its parts as child tasks ([programs.md](programs.md)).
-- A `Continue: …` filing waits on its origin through a `blocks` edge set from origin to continuation before it is made `when-ready`.
+- A change's after-merge steps become `when-ready` `Continue: …` tasks, or start the unstarted tasks they name, inside the merged close's transaction, discovered from the origin and held by `blocks` links from the work each waits for ("After-merge steps", [task graph](../docs/task-graph.md)); a `Continue: …` filed during the work waits on its origin through a `blocks` edge set from origin to continuation before it is made `when-ready`.
 - Cards with actions hold their task through the `captain` gate ([cards-and-consent.md](cards-and-consent.md)).
 - Captain-owned required actions are durable operation records whose prerequisites are ordinary `blocks` links ([required actions](../docs/required-actions.md)).
   Their words change only through `TaskService.delivery.reviseRequiredAction`, which moves the requirement's generation and refuses a completed action ([required actions](../docs/required-actions.md), "Correcting the words").

@@ -1,6 +1,7 @@
 import { reviewerOverrideWords } from "@shared/holds";
 import { describe, expect, it } from "vitest";
 import {
+  AFTER_MERGE_DELIVERY_RULE,
   ANSWER_MARK_WORDS,
   amendBriefGoal,
   assertDeliverableConstraints,
@@ -187,7 +188,7 @@ describe("renderIntentBrief", () => {
     expect(followup).toContain("Workspace: /w");
     expect(followup).toContain("Read the origin's report and card with the tasks query (PE-1)");
     expect(renderIntentBrief({ goal: "continue", userWords: "build it" }, "direct-pr")).toContain(
-      "file it as Continue: …",
+      AFTER_MERGE_DELIVERY_RULE,
     );
     expect(followup).not.toContain("Delivery:");
   });

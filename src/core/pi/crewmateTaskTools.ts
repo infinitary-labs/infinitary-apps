@@ -97,6 +97,10 @@ export const REPORT_TOOL_DESCRIPTION = [
   "Autonomy on: at green, show the completion story as a note without actions, which the app shows once the merge has a result; report needs_firstmate to merge. A standing exception needs a completion decision and needs_firstmate to set ask-first, citing the direction.",
 ].join(" ");
 
+/** INF-2796: where work that needs a crewmate's own merge first goes now. */
+export const FOLLOWUP_AFTER_MERGE_RULE =
+  "Work needing your merge first goes in your story's afterMerge instead.";
+
 export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   "Record a defect or safety risk you discovered outside your task, instead of doing it:",
   "a bug you can show on the current main line, or a credible risk to the person's data, accounts, signing material or merges.",
@@ -106,7 +110,7 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   "It becomes a separate planned task, recorded as discovered from yours - not a part of it - and waits until the first mate decides; nothing starts on its own and you keep working.",
   "The first mate hears about it with your report, not as a message of its own, and triages it there.",
   "Filing it does NOT hold your own task up: your work still stands on its own merits.",
-  "For work needing your merge first, use a title beginning Continue:, say why, report it, end that turn without a card, and wait for the first mate to link it before your completion decision. It starts after your task closes.",
+  FOLLOWUP_AFTER_MERGE_RULE,
   "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
   "The one exception is blocks_me, which is a real dependency - pass it true only when your task genuinely cannot merge until that work does, because it will then stop your task from closing.",
   "Give a sentence-case title, a one-sentence goal saying what done looks like, and why - what you found, in plain words.",

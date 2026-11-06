@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { afterMergeStepsSchema } from "./afterMerge";
 import { cardPictureSchema, riskDeclarationSchema } from "./cards";
 import {
   type HostedPresentationDestination,
@@ -66,6 +67,8 @@ export const changePresentationDraftSchema = z
     verification: z.array(words).max(20),
     risk: riskDeclarationSchema,
     requiredActions: requiredActionsSchema,
+    /** Work the crew starts once the merge goes through (INF-2796); optional, never published. */
+    afterMerge: afterMergeStepsSchema.optional(),
     unfinished: z.array(words).max(20),
     /** Public project-required fields, issue references or template text, outside the owned region. */
     projectText: z.string().max(12000).optional(),
@@ -123,6 +126,7 @@ const savedPresentationShape = z.strictObject({
   verification: z.array(words).max(20),
   risk: riskDeclarationSchema,
   requiredActions: requiredActionsSchema,
+  afterMerge: afterMergeStepsSchema.optional(),
   unfinished: z.array(words),
   projectText: z.string(),
   assets: z.array(presentationAssetSchema),

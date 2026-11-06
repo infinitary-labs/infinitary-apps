@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { afterMergeShownListSchema } from "./afterMerge.ts";
 import { cardCornerSchema, noteDoneSchema } from "./cardLeave.ts";
 import { SPELLINGS } from "./codeNames.ts";
 import { requiredActionsSchema } from "./requiredActions.ts";
@@ -1093,6 +1094,8 @@ export const cardSchema = z.strictObject({
   /** Every live note's one button, Done or Got it (INF-2794). */
   noteDone: noteDoneSchema.optional(),
   requiredActions: requiredActionsSchema.optional(),
+  /** The crew's after-merge steps its saved story declared (INF-2796), drawn beside the merge. */
+  afterMerge: afterMergeShownListSchema.optional(),
   actions: z.array(cardActionSchema),
   status: z.enum(["streaming", "ready"]),
   createdAt: z.number(),
@@ -1400,6 +1403,8 @@ export const pastCardSchema = z.strictObject({
   actions: z.array(cardActionSchema.omit({ effect: true })),
   width: cardWidthSchema.optional(),
   requiredActions: requiredActionsSchema.optional(),
+  /** The crew's after-merge steps its saved story declared (INF-2796), drawn beside the merge. */
+  afterMerge: afterMergeShownListSchema.optional(),
   /** The risk assessment of the version shown, which a past card draws as its live one did. */
   risk: riskAssessmentSchema.optional(),
   ending: z.strictObject({
@@ -1758,6 +1763,8 @@ export const cardOfferPayloadSchema = z.strictObject({
   place: z.string().optional(),
   body: z.string(),
   requiredActions: requiredActionsSchema.optional(),
+  /** The crew's after-merge steps its saved story declared (INF-2796), drawn beside the merge. */
+  afterMerge: afterMergeShownListSchema.optional(),
   actions: z.array(cardActionSchema),
   pictures: z.array(cardPictureSchema).optional(),
   width: cardWidthSchema.optional(),

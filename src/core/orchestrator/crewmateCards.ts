@@ -221,6 +221,9 @@ export class CrewmateCards {
                 body: story.body,
                 pictures: story.pictures,
                 riskDeclaration: story.riskDeclaration,
+                // What the crew starts once the merge goes through shows on
+                // the note too: the first mate's merge files it (INF-2796).
+                ...(story.afterMerge ? { afterMerge: story.afterMerge } : {}),
               };
           return await this.addCrewmateCard(task, { ...rest, ...shown }, undefined, {
             revision: shownRevision ?? revision,
@@ -625,7 +628,7 @@ export class CrewmateCards {
       currentCheckStatus(record?.delivery) === "green" &&
       record?.delivery &&
       (record.delivery.changeLabel || record.delivery.prNumber !== undefined)
-        ? ` No button on this card can merge ${record.delivery.changeLabel ?? `#${record.delivery.prNumber}`}. If the rest needs that merged first, file it as Continue: … and emit the completion decision.`
+        ? ` No button on this card can merge ${record.delivery.changeLabel ?? `#${record.delivery.prNumber}`}. If the rest needs that merged first, list it in the story's afterMerge and emit the completion decision.`
         : "";
     const pausedWords = handoff
       ? " Your browser is paused for the captain: your browser commands refuse until the captain takes control and returns it, which wakes you once. End your turn when nothing else needs doing; report with waiting_on_captain naming this card."

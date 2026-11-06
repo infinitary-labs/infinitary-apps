@@ -65,6 +65,11 @@ export function addCardAnswerer(db: AppDatabase): void {
   addColumn(db, "cards", "answered_by", "TEXT");
 }
 
+/** The after-merge steps a merge card draws from its saved story (INF-2796). */
+export function addCardAfterMerge(db: AppDatabase): void {
+  addColumn(db, "cards", "after_merge_json", "TEXT");
+}
+
 /**
  * Shared cards (INF-2225, docs/card-threads.md "Shared cards"): who actually
  * wrote a thread line on a card that is not theirs, which captain message a

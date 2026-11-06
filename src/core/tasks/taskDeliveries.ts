@@ -1,4 +1,11 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import {
+  AFTER_MERGE_TITLE_PREFIX,
+  type AfterMergeShown,
+  type AfterMergeStep,
+  afterMergeShapeRefusal,
+  type FiledAfterMergeStep,
+} from "@shared/afterMerge";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
 import type { KeptValidationInput } from "@shared/liveValidation";
 import {
@@ -18,6 +25,7 @@ import {
   type WriteAsk,
   type WriteAskOutcome,
 } from "@shared/writeAsk";
+import { renderFollowupBrief } from "../orchestrator/intentBrief";
 import {
   currentChange,
   placeStories,
@@ -35,6 +43,7 @@ import { decideValidation, recordValidation } from "./liveValidation";
 import { TaskGraphRefusal } from "./taskGraph";
 import { TaskService } from "./taskService";
 import { type DeliveryObservation, keyOrId, type TaskWriter } from "./taskWriter";
+import { liveWaitCycle } from "./waitCycles";
 
 /** The editable fields (update_task); every one optional. */
 /** What a required-action correction did (`TaskService.delivery.reviseRequiredAction`). */
@@ -646,6 +655,220 @@ export class TaskDeliveries {
         feed: false,
       });
     }
+  }
+
+  /**
+   * Why a story's after-merge steps cannot stand (INF-2796), read when the
+   * story is prepared: a step's shape (`afterMergeShapeRefusal`), and each
+   * task and project it names. An existing task the merge would start must
+   * be open and not yet started: a running or closed task has nothing to
+   * start. A step may not wait on its own origin, whose merge it follows.
+   */
+  afterMergeRefusal(sourceId: string, steps: readonly AfterMergeStep[]): string | undefined {
+    for (const [index, step] of steps.entries()) {
+      const shape = afterMergeShapeRefusal(step, index);
+      if (shape) return shape;
+      const at = `afterMerge step ${index + 1}`;
+      if (step.task) {
+        const named = this.tasks.resolve(step.task);
+        if (!named) return `${at} names no task "${step.task}".`;
+        if (named.id === sourceId) return `${at} names this task itself.`;
+        if (named.status !== "open" || named.startedAt !== null)
+          return `${at} names ${keyOrId(named)}, which is ${named.status === "open" || named.status === "active" ? "already running" : "closed"}; only an unstarted open task can start at the merge.`;
+        // Already set to start on its own, it could start before this merges.
+        if (
+          named.startPolicy === "when-ready" &&
+          !this.tasks.graph.blockers(named.id).some((blocker) => blocker.id === sourceId)
+        )
+          return `${at} names ${keyOrId(named)}, which is already set to start on its own and could start before this merges.`;
+      }
+      if (step.project) {
+        const project =
+          this.tasks.projects.byKey(step.project) ?? this.tasks.projects.get(step.project);
+        if (!project || project.archivedAt !== null)
+          return `${at} names no project "${step.project}".`;
+      }
+      for (const ref of step.blockedBy ?? []) {
+        const blocker = this.tasks.resolve(ref);
+        if (!blocker) return `${at} waits for no task "${ref}".`;
+        if (blocker.id === sourceId) return `${at} waits for this task, which it already follows.`;
+        const named = step.task ? this.tasks.resolve(step.task) : undefined;
+        if (named && this.waitCycle(blocker.id, named.id))
+          return `${at} waits for ${keyOrId(blocker)}, which already waits for ${keyOrId(named)}; nothing could ever start.`;
+      }
+    }
+    return undefined;
+  }
+
+  /** Whether `waiter` waiting for `blocker` would close a cycle, the test `insertLink` refuses. */
+  private waitCycle(blocker: string, waiter: string): boolean {
+    return (
+      blocker === waiter ||
+      !!this.tasks.graph.blocksReaches(waiter, blocker) ||
+      !!liveWaitCycle(this.tasks, waiter, blocker, TaskService.blockerHoldsClose)
+    );
+  }
+
+  /** The steps as the merge card draws them, each existing task and wait read now. */
+  afterMergeShown(steps: readonly AfterMergeStep[]): AfterMergeShown[] {
+    return steps.map((step): AfterMergeShown => {
+      // A wait on work already closed holds nothing, so the card leaves it out.
+      const waitsFor = (step.blockedBy ?? []).flatMap((ref) => {
+        const blocker = this.tasks.resolve(ref);
+        return blocker && TaskService.isClosed(blocker)
+          ? []
+          : [keyOrId(blocker ?? { id: ref, key: ref })];
+      });
+      const waits = waitsFor.length ? { waitsFor } : {};
+      const named = step.task ? this.tasks.resolve(step.task) : undefined;
+      if (named)
+        return {
+          key: keyOrId(named),
+          title: named.title,
+          ...(named.goal ? { goal: named.goal } : {}),
+          ...waits,
+        };
+      return {
+        title: `${AFTER_MERGE_TITLE_PREFIX}${(step.title ?? step.task ?? "").trim()}`,
+        ...(step.goal ? { goal: step.goal } : {}),
+        ...waits,
+      };
+    });
+  }
+
+  /**
+   * The after-merge steps of the story the merge carried (INF-2796): called
+   * inside a merged close's transaction, beside the required actions. A new
+   * step is filed once as a Continue task of its own, in the project it
+   * names or the origin's; an existing task the step names is set to start
+   * on its own, unless it started or closed since the card was shown, which
+   * the answer says instead. Each step's `blockedBy` becomes `blocks` links
+   * into its task, so it starts only once those merge. A story that declared
+   * none does nothing, the same as before. A new step's id is derived from
+   * the story's change, revision and the step's place, so a restart or a
+   * second activation answers the task already filed.
+   */
+  activateAfterMergeSteps(sourceId: string): FiledAfterMergeStep[] {
+    const source = this.writer.mustGet(sourceId);
+    const at = this.writer.now();
+    const note = (taskId: string, text: string, why: string | undefined) =>
+      this.writer.addEvent({
+        taskId,
+        at,
+        actor: "host",
+        kind: "note",
+        text,
+        data: { ...(why ? { why } : {}), originId: sourceId, afterMerge: true, news: true },
+        ref: sourceId,
+        feed: false,
+      });
+    const waitOn = (taskId: string, step: AfterMergeStep) => {
+      for (const ref of step.blockedBy ?? []) {
+        const blocker = this.tasks.resolve(ref);
+        if (!blocker || blocker.id === taskId) continue;
+        // Inside the merged close's transaction: a wait that closes a cycle
+        // since the card was shown is skipped and noted, never thrown, so the
+        // merge is still recorded.
+        try {
+          this.tasks.graph.insertLink(blocker.id, taskId, "blocks", "host", at);
+        } catch (caught) {
+          if (!(caught instanceof TaskGraphRefusal)) throw caught;
+          note(
+            taskId,
+            `could not wait for "${blocker.title}" (${keyOrId(blocker)}) as its merge card listed: ${caught.message}`,
+            undefined,
+          );
+        }
+      }
+    };
+    return this.afterMergeSteps(sourceId).map(({ id, step }): FiledAfterMergeStep => {
+      const why = step.why?.trim();
+      if (step.task) {
+        const named = this.tasks.resolve(step.task);
+        if (!named) return { key: step.task, title: step.task };
+        const filed = { key: keyOrId(named), title: named.title };
+        // Started or closed since the card was shown, or on an earlier
+        // activation of this merge: there is nothing left to start.
+        if (named.status !== "open" || named.startedAt !== null) return filed;
+        waitOn(named.id, step);
+        if (named.startPolicy !== "when-ready") {
+          this.writer.patch(named.id, { startPolicy: "when-ready", updatedAt: at });
+          note(
+            named.id,
+            `set to start on its own when "${source.title}" (${keyOrId(source)}) merged, as its merge card listed${why ? `: ${why}` : ""}`,
+            why,
+          );
+        }
+        return filed;
+      }
+      const existing = this.tasks.get(id);
+      if (existing) return { key: keyOrId(existing), title: existing.title };
+      const goal = (step.goal ?? "").trim();
+      const project = step.project
+        ? (this.tasks.projects.byKey(step.project) ?? this.tasks.projects.get(step.project))
+        : undefined;
+      const elsewhere = project && project.archivedAt === null && project.id !== source.projectId;
+      const record = this.tasks.create({
+        id,
+        kind: "work",
+        title: `${AFTER_MERGE_TITLE_PREFIX}${(step.title ?? "").trim()}`,
+        goal,
+        // The posture is written at its start (`withDeliveryLine`), and the
+        // origin's report and card reach it through the discovered-from link.
+        prompt: renderFollowupBrief(
+          {
+            goal,
+            why: why ?? "",
+            filedBy: "its crewmate's merge card",
+            originTitle: source.title,
+            originKey: keyOrId(source),
+          },
+          undefined,
+        ),
+        repoId: elsewhere ? project.repoId : source.repoId,
+        projectId: elsewhere ? project.id : source.projectId,
+        startPolicy: "when-ready",
+        actor: "host",
+        createdAt: at,
+      });
+      this.tasks.graph.insertLink(record.id, sourceId, "discovered-from", "host", at);
+      waitOn(record.id, step);
+      note(
+        record.id,
+        `filed when "${source.title}" (${keyOrId(source)}) merged, as its merge card listed: ${why}`,
+        why,
+      );
+      return { key: keyOrId(record), title: record.title };
+    });
+  }
+
+  /** The tasks a merge filed from its story's after-merge steps, as the settled wake names them. */
+  filedAfterMergeSteps(sourceId: string): FiledAfterMergeStep[] {
+    return this.afterMergeSteps(sourceId).flatMap(({ id, step }) => {
+      const record = step.task ? this.tasks.resolve(step.task) : this.tasks.get(id);
+      if (!record) return [];
+      const closed = step.task && (record.status === "done" || record.status === "dropped");
+      return [
+        { key: keyOrId(record), title: record.title, ...(closed ? { skipped: "closed" } : {}) },
+      ];
+    });
+  }
+
+  /** The merged story's after-merge steps, each with the id its filing takes. */
+  private afterMergeSteps(sourceId: string): { id: string; step: AfterMergeStep }[] {
+    const ledger = this.tasks.get(sourceId)?.delivery?.presentation;
+    // The revision the merge card showed: published where the destination
+    // keeps a description, otherwise the completion this app keeps.
+    const shown = ledger?.published ?? ledger?.completion;
+    const story = shown && ledger?.revisions?.find((entry) => entry.revision === shown.revision);
+    if (!ledger || !story?.afterMerge?.length) return [];
+    return story.afterMerge.map((step, index) => ({
+      id: createHash("sha256")
+        .update(`${sourceId}:${ledger.branch ?? ""}:${story.revision}:${index}`)
+        .digest("hex")
+        .slice(0, 8),
+      step,
+    }));
   }
 
   /**

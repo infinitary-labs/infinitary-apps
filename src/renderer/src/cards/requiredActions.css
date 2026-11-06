@@ -21,6 +21,10 @@
 .required-actions li p {
   color: var(--fg-2);
 }
+/* An after-merge step's task key; the body frame's .inf-mono does not reach here. */
+.required-actions .inf-mono {
+  font-family: var(--font-mono);
+}
 .required-actions summary {
   margin-top: clamp(var(--space-1), calc(var(--required-action-room) - 420px), var(--space-2));
   cursor: pointer;
@@ -29,4 +33,7 @@
 .required-actions ul:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+}
+.required-actions + .required-actions {
+  margin-top: var(--space-2);
 }

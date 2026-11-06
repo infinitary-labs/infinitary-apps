@@ -16,6 +16,7 @@ import type { FrameAnswers } from "@shared/plugins/bridge";
 import type { Theme } from "@shared/preferences";
 import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { AfterMergeSteps } from "../../cards/AfterMergeSteps";
 import { AskedLine } from "../../cards/AskedLine";
 import { answersLine } from "../../cards/answersLine";
 import { bridgeActionIds } from "../../cards/bridgeActions";
@@ -415,11 +416,13 @@ export function StackedCard({
           !bare &&
           ((card.answerDone && !card.noteDone) ||
             card.attachment ||
-            card.requiredActions?.length) ? (
+            card.requiredActions?.length ||
+            card.afterMerge?.length) ? (
             <>
               {card.answerDone && !card.noteDone && <AnswerDone done={card.answerDone} />}
               {card.attachment && <CardAttachment cardId={card.id} attachment={card.attachment} />}
               {card.requiredActions && <RequiredActions actions={card.requiredActions} />}
+              {card.afterMerge && <AfterMergeSteps steps={card.afterMerge} />}
             </>
           ) : undefined
         }

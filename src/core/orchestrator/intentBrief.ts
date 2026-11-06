@@ -126,11 +126,16 @@ export function parseSpawnIntent(input: {
   };
 }
 
+/**
+ * INF-2796: work that needs the change merged first is an after-merge step
+ * on its story, which the merge card draws and the merge files.
+ */
+export const AFTER_MERGE_DELIVERY_RULE =
+  "Work needing this merged first goes in the story's afterMerge";
+
 const DELIVERY_TEXT: Record<RepoDelivery, string> = {
-  "direct-pr":
-    "direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change). If the rest needs this merged first, file it as Continue: …, name it in your report, and finish with the completion decision",
-  "queue-pr":
-    "queue-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change), as with direct-pr. The captain's merge click then waits for the project's queue to pass that version before the app merges it. If the rest needs this merged first, file it as Continue: …, name it in your report, and finish with the completion decision",
+  "direct-pr": `direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change). ${AFTER_MERGE_DELIVERY_RULE}`,
+  "queue-pr": `queue-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change), as with direct-pr. The captain's merge click then waits for the project's queue to pass that version before the app merges it. ${AFTER_MERGE_DELIVERY_RULE}`,
   "local-only": "local-only - work merges on a local branch and never leaves the machine",
 };
 

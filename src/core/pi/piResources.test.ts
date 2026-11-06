@@ -28,7 +28,11 @@ import { FLEET_WORK } from "../prompts/fleetWork";
 import { PUBLIC_WRITING } from "../prompts/publicWriting";
 import { CREWMATE_TOOLS } from "./crewmateTaskTools";
 import { createCrewTools, SHAPE_GROUP_DESCRIPTION } from "./crewTools";
-import { CHECK_CHANGE_TOOL_DESCRIPTION } from "./forgeTools";
+import {
+  AFTER_MERGE_STORY_RULE,
+  CHECK_CHANGE_TOOL_DESCRIPTION,
+  PREPARE_CHANGE_STORY_DESCRIPTION,
+} from "./forgeTools";
 import {
   buildCrewmateSystemPrompt,
   buildFirstmateSystemPrompt,
@@ -103,22 +107,26 @@ describe("continuation instructions served at the seven moments", () => {
   it("serves spawn, filing, completion, report triage and wrong-card steer in their existing channels", () => {
     // INF-1410 pointed delivery at the filing tool, which owns the full
     // continuation rule; INF-1876 dropped the pointer, so the tool alone says
-    // it, and emit_card alone says that no intermediate card merges.
+    // it, and emit_card alone says that no intermediate card merges. INF-2796
+    // moved the rest of the work onto the story's after-merge steps, which
+    // the merge files, so the filing tool points there instead.
     expect(buildCrewmateSystemPrompt()).not.toContain("follow file_followup's Continue rule");
     expect(CREWMATE_TOOLS.find((tool) => tool.name === "file_followup")?.description).toContain(
-      "end that turn without a card, and wait for the first mate to link it",
+      "Work needing your merge first goes in your story's afterMerge instead.",
     );
     expect(buildCrewmateSystemPrompt()).not.toContain("No intermediate card of yours");
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).toContain("No settle effects on intermediate questions");
-    const filing = CREWMATE_TOOLS.find((tool) => tool.name === "file_followup");
-    expect(filing?.description).toContain("title beginning Continue:");
-    expect(CREWMATE_EMIT_CARD_DESCRIPTION).toContain("name it in the body");
+    // The merge card draws the story's after-merge steps, so the card tool no
+    // longer asks the body to name them; the story tool says so instead.
+    expect(CREWMATE_EMIT_CARD_DESCRIPTION).not.toContain("name it in the body");
+    expect(PREPARE_CHANGE_STORY_DESCRIPTION).toContain(AFTER_MERGE_STORY_RULE);
     expect(FIRSTMATE_PROMPT_CORE).toContain(
       "first link_tasks blocks from origin to filing, then set update_task start_policy when-ready",
     );
-    expect(FIRSTMATE_PROMPT_CORE).toContain("steer the crewmate to emit its completion decision");
+    expect(FIRSTMATE_PROMPT_CORE).toContain(
+      'A merge\'s wake or settle_task result names the "Continue: …" tasks it filed, which start on their own; drop one only when another task does that work.',
+    );
     expect(FIRSTMATE_PROMPT_CORE).toContain("no button on it can");
-    expect(FIRSTMATE_PROMPT_CORE).toContain("It starts after origin closes.");
     expect(FIRSTMATE_PROMPT_CORE).toContain(
       "A practical wait, such as another's commit or fix, is link_tasks blocks from the work waited on to the waiter that turn, even when not a strict prerequisite, so Tasks draws it.",
     );
@@ -170,7 +178,7 @@ describe("selective filing reaches every agent that acts on it", () => {
       expect(filing?.description).toContain(
         "Not for work your own change needs to be finished, or documents it makes stale: those are yours",
       );
-      expect(filing?.description).toContain("title beginning Continue:");
+      expect(filing?.description).toContain("goes in your story's afterMerge instead");
       expect(prompt).toContain(
         "When your change meets another open task's whole goal, name its key and evidence",
       );
@@ -862,7 +870,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
   it("starts a takeover filing now from its origin's branch, unlike a Continue filing", () => {
     const takeover = core.slice(core.indexOf('For a "Take over: …" filing'));
     expect(takeover).toMatch(
-      /^For a "Take over: …" filing, reuse any existing takeover, set branch_from to the origin and start it now, hand files on with steer_crewmate files_from, and link related and blocks from successor to origin; never block the successor on the origin\. For a "Continue: …" filing, in this turn first link_tasks blocks from origin to filing/,
+      /^For a "Take over: …" filing, reuse any existing takeover, set branch_from to the origin and start it now, hand files on with steer_crewmate files_from, and link related and blocks from successor to origin; never block the successor on the origin\. A merge's wake or settle_task result names the "Continue: …" tasks it filed/,
     );
     // The crewmate's half rides file_followup, which both backends serve whole.
     const fileFollowup = CREWMATE_TOOLS.find((tool) => tool.name === "file_followup");

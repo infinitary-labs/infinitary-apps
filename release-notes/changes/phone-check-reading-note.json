@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-reading-note",
+      "reason": "The phone check's stand-in Mac shows its reading note as a new note after the captain read it, instead of raising the closed note again; test fixture only, no app behavior change."
+    }
+  ]
+}

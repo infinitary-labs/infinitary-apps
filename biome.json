@@ -465,6 +465,7 @@
         "!tests/control-connection.test.ts",
         "!tests/starve-check.test.ts",
         "!tests/phone-scene-projection.test.ts",
+        "!tests/phone-reading-note.test.ts",
         "!tests/virtual-mac-phone.test.ts",
         "!tests/phone-release-process.test.ts",
         "!tests/phone-certificates.test.ts",

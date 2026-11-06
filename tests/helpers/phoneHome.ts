@@ -490,12 +490,17 @@ export async function startPhoneHome(
   };
   let connection = connect();
   const cardTitle = "Your phone is reading your Mac";
-  core.services.supervisor.addFirstmateCard({
-    id: "phone-first",
-    title: cardTitle,
-    body: "<p>This card belongs to the disposable test home.</p>",
-    actions: [],
-  });
+  const cardBody = "<p>This card belongs to the disposable test home.</p>";
+  // The first mate's note that the phone reads this Mac, which `stream` revises and `stream-reset` brings back.
+  // A note the captain closed stays closed (INF-2718): once `empty-cards` reads it, it comes back as a new note.
+  let readingNote = "";
+  let readingNotes = 0;
+  const showReadingNote = (title: string, body: string): void => {
+    const open = core.services.supervisor.cards.get(readingNote) !== undefined;
+    const id = open ? readingNote : `phone-first-${++readingNotes}`;
+    readingNote = core.services.supervisor.addFirstmateCard({ id, title, body, actions: [] });
+  };
+  showReadingNote(cardTitle, cardBody);
   const task = seedTask(core.services.tasks, {
     id: "phone-fixture",
     title: "Check the phone connection",
@@ -1661,12 +1666,7 @@ export async function startPhoneHome(
               text: "Checking its connection. ",
             });
           }
-          core.services.supervisor.addFirstmateCard({
-            id: "phone-first",
-            title: "Streaming finished",
-            body: "<p>The test stream ended.</p>",
-            actions: [],
-          });
+          showReadingNote("Streaming finished", "<p>The test stream ended.</p>");
           result = { before, title: "Streaming finished" };
           observations.push({ check: "stream-start", result });
           break;
@@ -1799,12 +1799,7 @@ export async function startPhoneHome(
           break;
         case "POST stream-reset":
           observations.push({ check: "stream-end", readings: { ...readings } });
-          core.services.supervisor.addFirstmateCard({
-            id: "phone-first",
-            title: cardTitle,
-            body: "<p>This card belongs to the disposable test home.</p>",
-            actions: [],
-          });
+          showReadingNote(cardTitle, cardBody);
           result = { ok: true };
           break;
         case "POST change": {

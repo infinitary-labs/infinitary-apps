@@ -11,7 +11,7 @@ import { checkInstalledHomebrew } from "./check-installed-homebrew.mjs";
 import { runInstallerCommand } from "./installer-command.ts";
 import { installerHomebrewEnvironment, prepareInstallerHomebrew } from "./installer-homebrew.ts";
 import { installStageRecorder, keepShipItLogs } from "./installer-update-trace.ts";
-import { resolvesHere, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
+import { answeredHere, resolverAnswers, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
 import { virtualMacSwitches } from "../tests/e2e/virtualMac.ts";
 
 import { assertInstallerEnvironment, installerAppEnvironment, installerServerEnvironment } from "./installer-environment.ts";
@@ -242,7 +242,7 @@ try {
   assert(run("/usr/bin/security", ["dump-trust-settings", "-d"]).includes("Infinitary isolated installer verification"), "Chromium's admin trust listing must include the fixture root");
   const rerouted = ["downloads.getinfinitary.com", "github.com", "raw.githubusercontent.com"];
   routeHostsHere(rerouted, work, run, () => { hostsChanged = true; });
-  await expect.poll(() => resolvesHere(rerouted), { timeout: 60_000, message: "The system resolver must answer every rerouted address with this Mac before a feed is read" }).toBe(true);
+  await expect.poll(() => resolverAnswers(rerouted), { timeout: 60_000, message: "The system resolver must answer every rerouted address with this Mac before a feed is read" }).toEqual(answeredHere(rerouted));
   for (const [name, value] of Object.entries(launchValues)) {
     launchEnvironment.set(name, spawnSync("/bin/launchctl", ["getenv", name], { encoding: "utf8" }).stdout?.trim());
     run("/bin/launchctl", ["setenv", name, value]);

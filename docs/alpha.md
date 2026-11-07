@@ -540,7 +540,8 @@ Before redirecting GitHub, the probe prepares Homebrew's Ruby runtime and real `
 The API-disabled cask upgrade needs that core metadata even though Infinitary has no formula dependency; a missing tap is fetched while public GitHub is still reachable, never replaced with an empty tap, and its one-time clone has fifteen minutes.
 A temporary local HTTPS server supplies the normal production addresses inside those disposable machines; no production feed override or disabled signature check enters the app.
 A hosts entry sends those addresses to the server's loopback address (`scripts/installer-hosts.ts`, shared with the update check).
-The Mac's resolver takes in a changed hosts file on its own schedule and keeps the real answers it already gave, so the check empties both of its caches and waits until it answers every rerouted address with the loopback address before reading a feed.
+The Mac's resolver takes in a changed hosts file only when its watch on the file reports the write, and emptying its cache never rereads the file, so the check restarts the resolver, which reads the file as it starts.
+It then waits until the resolver answers every rerouted address with the loopback address before reading a feed, and a wait that runs out names what the resolver answered.
 The server uses the same isolation guard and inherits only the runner's actual `GITHUB_ACTIONS` and `RUNNER_ENVIRONMENT` facts alongside the restricted scratch environment, never a claimed hosted identity or the parent's signing credentials.
 Those admission facts go only to the verification server; the installed application's environment stays separate.
 The installed app uses the existing virtual-Mac drawing switches in a guest, avoiding the paravirtualized Metal stall described in `docs/testing.md`, "Drawing in software".

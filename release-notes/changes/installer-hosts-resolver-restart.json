@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "installer-hosts-resolver-restart",
+      "reason": "Internal: the release's update check and the signed installer check restart the Mac's resolver after rerouting the download address, so it reads the hosts entry, and a wait that runs out names what the resolver answered; nothing a person sees changes."
+    }
+  ]
+}

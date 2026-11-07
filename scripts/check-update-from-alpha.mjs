@@ -10,7 +10,7 @@ import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { userDataFolderOf } from "../src/shared/userDataFolders.ts";
 import { runInstallerCommand } from "./installer-command.ts";
 import { installStageRecorder, keepShipItLogs } from "./installer-update-trace.ts";
-import { resolvesHere, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
+import { answeredHere, resolverAnswers, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
 import { virtualMacSwitches } from "../tests/e2e/virtualMac.ts";
 import { assertInstallerEnvironment, installerAppEnvironment, installerServerEnvironment } from "./installer-environment.ts";
 
@@ -152,7 +152,7 @@ try {
   // The real feed and disk image were read from this name moments ago (scripts/installer-hosts.ts).
   const rerouted = [new URL(source.downloadBase).hostname];
   routeHostsHere(rerouted, work, run, () => { hostsChanged = true; });
-  await expect.poll(() => resolvesHere(rerouted), { timeout: 60_000, message: "The system resolver must answer the download address with this Mac before a feed is read" }).toBe(true);
+  await expect.poll(() => resolverAnswers(rerouted), { timeout: 60_000, message: "The system resolver must answer the download address with this Mac before a feed is read" }).toEqual(answeredHere(rerouted));
   for (const [name, value] of Object.entries(launchValues)) {
     launchEnvironment.set(name, spawnSync("/bin/launchctl", ["getenv", name], { encoding: "utf8" }).stdout?.trim());
     run("/bin/launchctl", ["setenv", name, value]);

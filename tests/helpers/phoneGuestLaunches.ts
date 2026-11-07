@@ -68,7 +68,8 @@ export function phoneGuestLaunches(manager: number) {
  * INF-2125 split the cards part into short ones; each launches its own app, so the observer watches whichever one runs.
  */
 export function phoneGuestJourneyFinished(line: string, part: string) {
-  const test = PHONE_PARTS.find((candidate) => candidate.name === part)?.test;
+  const found = PHONE_PARTS.find((candidate) => candidate.name === part);
+  const test = found && "test" in found ? found.test : undefined;
   if (!test) throw new Error(`No phone journey part is named ${part}`);
   const prefix = `Test Case '-[${PHONE_JOURNEY.replace("/", ".")} ${test}]' `;
   return (

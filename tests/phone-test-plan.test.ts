@@ -2,8 +2,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   devicePhotos,
-  PHONE_JOURNEY,
   PHONE_PARTS,
+  partIdentifier,
+  partRunsJourney,
   partSelection,
   partTestStarted,
   phoneAnimationWaits,
@@ -62,17 +63,27 @@ describe("the phone journey's parts", () => {
   it("run every test the build has exactly once, each journey test in its own part", () => {
     expect(everyTest.length).toBeGreaterThan(PHONE_PARTS.length);
     for (const test of everyTest) expect(partsRunning(test), test).toHaveLength(1);
-    for (const part of PHONE_PARTS)
-      expect(partsRunning(`InfinitaryUITests/PhoneJourney/${part.test}`)).toEqual([part.name]);
-    // The app-hosted tests ride with the shortest part.
+    for (const part of PHONE_PARTS) expect(partsRunning(partIdentifier(part))).toEqual([part.name]);
+    // INF-2989: the weak link checks run in their own part, every one of them and only there.
+    const weakLink = everyTest.filter((test) =>
+      test.startsWith("InfinitaryTests/PhoneWeakLinkTests/"),
+    );
+    expect(weakLink.length).toBeGreaterThan(0);
+    for (const test of weakLink) expect(partsRunning(test), test).toEqual(["weak-link"]);
+    // The other app-hosted tests ride with the rest part.
     expect(
       partsRunning("InfinitaryTests/RecoveryTests/testMissingCertificateReusesTheStoredKey"),
     ).toEqual(["rest"]);
   });
   // INF-2625's phone guard: a part names a test the build has, so no part selects nothing.
   it("name only tests the build has", () => {
-    for (const part of PHONE_PARTS)
-      expect(everyTest, part.name).toContain(`${PHONE_JOURNEY}/${part.test}`);
+    for (const part of PHONE_PARTS) {
+      const identifier = partIdentifier(part);
+      expect(
+        everyTest.filter((test) => test === identifier || test.startsWith(`${identifier}/`)),
+        part.name,
+      ).not.toHaveLength(0);
+    }
   });
   // INF-2625's phone guard: XCTest passes a selection that matched no test, so the gate reads that the
   // part's own test started. The log is the iPhone's join-read part in the 0.8.0 phone release check.
@@ -87,6 +98,19 @@ describe("the phone journey's parts", () => {
     expect(
       partTestStarted("join-read", joinRead.replaceAll("PhoneJourney", "PhoneJourneyParts")),
     ).toBe(false);
+    // INF-2989: a part that runs a whole class reads the class's own "Test Suite ... started" line. The log is the
+    // weak link class in the iPad's rest part of phone run 42391213188, before it had a part of its own.
+    const weakLink = readFileSync(
+      "tests/fixtures/phone-test-plan/rest-weak-link-xcodebuild.log",
+      "utf8",
+    );
+    expect(partTestStarted("weak-link", weakLink)).toBe(true);
+    expect(partTestStarted("weak-link", joinRead)).toBe(false);
+    expect(partTestStarted("join-read", weakLink)).toBe(false);
+    // It drives no UI, so the gate does not ask it for the journeys' animation-wait line.
+    expect(
+      PHONE_PARTS.filter((part) => !partRunsJourney(part.name)).map((part) => part.name),
+    ).toEqual(["weak-link"]);
     expect(() => partTestStarted("everything", joinRead)).toThrow(
       /No phone journey part is named everything/,
     );

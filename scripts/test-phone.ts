@@ -24,7 +24,7 @@ import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-le
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSharedCacheFolder, phoneSimulator, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
-import { devicePhotos, PHONE_PARTS, type PhoneDevice, type PhoneJob, partSelection, partTestStarted, phoneAnimationWaits, phoneExecutionArguments, phonePasses, phoneStopsEarly, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePhotos, PHONE_PARTS, type PhoneDevice, type PhoneJob, partRunsJourney, partSelection, partTestStarted, phoneAnimationWaits, phoneExecutionArguments, phonePasses, phoneStopsEarly, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -555,8 +555,9 @@ const onePart = async () => {
       throw error;
     })
     .finally(() => console.log(`XCTest animation waits that ran out: ${phoneAnimationWaits(output).missed}`));
-  // INF-1541 piece 1: the native wait-clock tests launch no app, so only a journey part must say it skipped the wait.
-  if (!values.waits && !phoneAnimationWaits(output).skipped)
+  // INF-1541 piece 1: the native wait-clock tests launch no app, so only a journey part must say it skipped the wait;
+  // a part that runs an app-hosted class alone (INF-2989's weak-link) drives no UI and has no such wait.
+  if (!values.waits && partRunsJourney(values.part![0]!) && !phoneAnimationWaits(output).skipped)
     throw new Error(`The ${values.part![0]} part ran with XCTest's animation wait: its journey never printed "Phone animation wait skipped", so the hook in PhoneAnimationWait.swift is missing`);
   // INF-2625: a test XCTest no longer finds passes silently; the part's own journey test must have started.
   if (!values.waits && !partTestStarted(values.part![0]!, output))

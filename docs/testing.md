@@ -672,6 +672,7 @@ Each part reaches its test and follows identifier references through bodies and 
 The reader keeps string contents for references, including interpolation, so a matching word in a literal can conservatively select extra consumers.
 A setup, teardown or XCTest observation callback reaches every part, as does a changed declaration referenced by code outside the supported declarations.
 The rest part also starts from every test no other part names, and a change to the app-hosted tests puts it at 0.
+A part that names an app-hosted class as its `suite` (`weak-link`, INF-2989) runs no UI test code: a change to that class's own file puts that part at 0 instead of the rest part, and a change to an app-hosted file that is not a test class, such as a shared helper, puts both at 0.
 A blank or comment-only line counts for nothing; an edited line outside a supported declaration, a duplicate declaration name, conditional compilation or a test file it cannot read or parse counts for every part.
 Unsupported declarations, including aliases, computed properties, attributed types and executable global initializers, keep full coverage rather than using a file exemption.
 An affected request keeps every part at 0 or 1, and every part when a shared input or an unreadable comparison leaves its reach unknown; a part at 2 is checked by the next phone release.

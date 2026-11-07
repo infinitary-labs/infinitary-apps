@@ -516,7 +516,9 @@ describe("declaration-aware phone selection", () => {
     );
     const live = (edits: Edit[]) => selection(edits, undefined, files, PHONE_PARTS);
     const named = (...tests: string[]) =>
-      PHONE_PARTS.filter((part) => tests.includes(part.test)).map((part) => part.name);
+      PHONE_PARTS.filter((part) => "test" in part && tests.includes(part.test)).map(
+        (part) => part.name,
+      );
     const pattern = files[waits]!.split("\n").find((line) =>
       line.startsWith("let phoneAnsweredFormPattern"),
     )!;
@@ -535,14 +537,81 @@ describe("declaration-aware phone selection", () => {
     )!;
     // Rest calls recoverPhonePhoto directly; only composing calls the picker helper.
     expect(live([{ path, old: picker, next: `${picker} ` }])).toEqual(named("testComposeAndSend"));
+    // A declaration every journey test reaches selects every part that runs UI test code; the weak-link part
+    // runs only its app-hosted class (INF-2989).
     expect(
       live([{ path: waits, old: "    let drawn: Data?", next: "    let drawn: Data? " }]),
-    ).toEqual(PHONE_PARTS.map((part) => part.name));
+    ).toEqual(PHONE_PARTS.filter((part) => "test" in part).map((part) => part.name));
   });
 
   it("keeps edited tests unconditional even when their names have no named part", () => {
     const path = "ios/Infinitary/InfinitaryUITests/PhoneWaitsTests.swift";
     const test = fixture.testFiles[path]!.split("\n").find((line) => line.includes("func test"))!;
     expect(selection([{ path, old: test, next: `${test} ` }])).toEqual(["rest"]);
+  });
+});
+
+// INF-2989 (the captain's "find what doubled the rest part and shorten it without weakening a test"): the weak
+// link checks run as a part of their own, so a change to one app-hosted test class repeats only the part that
+// runs it. Each path list is a real change merged to main, as git names its files.
+describe("app-hosted test changes", () => {
+  const distanceZero = (paths: string[]) =>
+    partReach(phoneDecision(paths).reasons, "", [], () => undefined)
+      .filter(({ distance }) => distance === 0)
+      .map(({ part }) => part);
+
+  it("repeats only the weak-link part for a change to the weak link checks", () => {
+    // 535182aab: keep a slow device connected while a long catch-up arrives.
+    const paths = [
+      "docs/connection.md",
+      "docs/ios.md",
+      "ios/Infinitary/InfinitaryTests/PhoneWeakLinkTests.swift",
+      "release-notes/changes/phone-slow-catch-up.json",
+      "src/core/connection/connection.test.ts",
+      "src/core/connection/connection.ts",
+      "src/core/connection/outbox.test.ts",
+      "src/core/connection/outbox.ts",
+      "tests/helpers/phoneHome.ts",
+    ];
+    expect(distanceZero(paths)).toEqual(["weak-link"]);
+  });
+
+  it("repeats only the rest part for a change to another app-hosted test class", () => {
+    // 9687d5ac4: catch up in one step when the app reopens.
+    const paths = [
+      "docs/ios.md",
+      "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneWork.swift",
+      "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/ReadOnlySession.swift",
+      "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/PhoneBoardTests.swift",
+      "ios/Infinitary/InfinitaryTests/PhoneCatchUpTests.swift",
+      "release-notes/changes/phone-reopen-one-step-catch-up.json",
+      "tests/helpers/phoneHome.ts",
+    ];
+    expect(distanceZero(paths)).toEqual(["rest"]);
+  });
+
+  it("repeats every part that runs app-hosted tests for a change to a shared app-hosted helper", () => {
+    // 0fb8df67c: draw the crew scene on its own render thread, which edited the shared SceneCanvas.swift.
+    const paths = [
+      "docs/ios.md",
+      "ios/Infinitary/InfinitaryApp/CharacterGarnish.swift",
+      "ios/Infinitary/InfinitaryApp/CharacterSky.swift",
+      "ios/Infinitary/InfinitaryApp/CharacterWarp.swift",
+      "ios/Infinitary/InfinitaryApp/PhoneCharacter.swift",
+      "ios/Infinitary/InfinitaryApp/PhoneCrewPainter.swift",
+      "ios/Infinitary/InfinitaryApp/PhoneCrewScene.swift",
+      "ios/Infinitary/InfinitaryApp/PhoneSceneRenderer.swift",
+      "ios/Infinitary/InfinitaryApp/PhoneSceneRoster.swift",
+      "ios/Infinitary/InfinitaryApp/PhoneSceneTouches.swift",
+      "ios/Infinitary/InfinitaryApp/ScenePen.swift",
+      "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneFrame.swift",
+      "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/ReadOnlySession.swift",
+      "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/PhoneFrameTests.swift",
+      "ios/Infinitary/InfinitaryTests/PhoneOrbitSeatsTests.swift",
+      "ios/Infinitary/InfinitaryTests/PhoneSceneRosterTests.swift",
+      "ios/Infinitary/InfinitaryTests/SceneCanvas.swift",
+      "release-notes/changes/phone-scene-own-thread.json",
+    ];
+    expect(distanceZero(paths).sort()).toEqual(["rest", "weak-link"]);
   });
 });

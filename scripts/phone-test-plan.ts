@@ -56,12 +56,21 @@ export const PHONE_PARTS = [
   // INF-2568: the message box and a card's reply with the keyboard up; each launches fresh and the merge fixture runs once a home.
   { name: "keyboard-pinned", test: "testKeyboardOverPinnedCard", photos: false },
   { name: "keyboard-scrolling", test: "testKeyboardOverScrollingCard", photos: false },
+  // INF-2989: the weak link checks (INF-2668, INF-2669) wait out real links and silences, about five minutes a
+  // device, which doubled the rest part they joined. An app-hosted class of their own, so a change to the other
+  // app-hosted tests repeats only the rest part and a change to these repeats only them.
+  { name: "weak-link", suite: "InfinitaryTests/PhoneWeakLinkTests", photos: false },
   { name: "talk-compose", test: "testComposeAndSend", photos: true },
   // The last part runs every test no other part names: the app-hosted tests and any new one that
   // needs no fresh app, since its simulator already holds the character journey's join.
   { name: "rest", test: "testCharacterAndPastChoices", photos: true },
 ] as const;
 export type PhonePart = (typeof PHONE_PARTS)[number]["name"];
+
+/** The XCTest identifier a part runs: its journey test, or the whole test class it names as its `suite`. */
+export function partIdentifier(part: { test: string } | { suite: string }): string {
+  return "suite" in part ? part.suite : `${PHONE_JOURNEY}/${part.test}`;
+}
 export type PhoneDevice = "iphone" | "ipad";
 
 /** INF-1083: ordinary XCTest must still stop a stuck test, not wait for the job limit.
@@ -100,15 +109,24 @@ export function partSelection(name: string, waitsOnly = false): string[] {
   }
   const index = PHONE_PARTS.findIndex((part) => part.name === name);
   if (index < 0) throw new Error(`No phone journey part is named ${name}`);
-  if (index < PHONE_PARTS.length - 1) return [`-only-testing:${PHONE_JOURNEY}/${PHONE_PARTS[index]!.test}`];
-  return PHONE_PARTS.slice(0, -1).map((part) => `-skip-testing:${PHONE_JOURNEY}/${part.test}`);
+  if (index < PHONE_PARTS.length - 1) return [`-only-testing:${partIdentifier(PHONE_PARTS[index]!)}`];
+  return PHONE_PARTS.slice(0, -1).map((part) => `-skip-testing:${partIdentifier(part)}`);
+}
+
+/** Whether a part drives the app through a UI journey test, rather than running an app-hosted class alone. */
+export function partRunsJourney(name: string): boolean {
+  const part = PHONE_PARTS.find((each) => each.name === name);
+  if (!part) throw new Error(`No phone journey part is named ${name}`);
+  return "test" in part;
 }
 
 /** INF-2625's phone guard: a part passes on xcodebuild's exit status, and a test XCTest never found fails nothing, so
- * the gate also asks that the part's own journey test started, read from XCTest's own "Test Case ... started" line. */
+ * the gate also asks that the part's own journey test started, read from XCTest's own "Test Case ... started" line,
+ * or, for a part that runs a whole class, its "Test Suite ... started" line. */
 export function partTestStarted(name: string, output: string): boolean {
   const part = PHONE_PARTS.find((each) => each.name === name);
   if (!part) throw new Error(`No phone journey part is named ${name}`);
+  if ("suite" in part) return output.includes(`Test Suite '${part.suite.split("/").at(-1)}' started at `);
   return output.includes(`Test Case '-[${PHONE_JOURNEY.replace("/", ".")} ${part.test}]' started.`);
 }
 

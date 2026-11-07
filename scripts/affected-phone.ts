@@ -65,7 +65,8 @@ export function phoneDecision(
 // reaches, and how close. 0: it edits test code the part runs; 1: a file the part owns;
 // 2: any other phone input, which reaches every part.
 export const UI_TESTS = "ios/Infinitary/InfinitaryUITests/";
-// The app-hosted tests run in the rest part, beside the tests no other part names.
+// The app-hosted tests run in the rest part, beside the tests no other part names, except a class a part
+// names as its `suite` (INF-2989's weak-link), which runs in that part alone.
 export const APP_TESTS = "ios/Infinitary/InfinitaryTests/";
 // INF-2125 direction C: a part's owned files are its family's, the part name before its first hyphen,
 // so each short part split from join, talk, cards or relaunch owns what that part owned.
@@ -280,9 +281,12 @@ export function before(after: string | undefined, hunks: Hunk[]): string {
 }
 
 export type PartReach = { part: string; distance: 0 | 1 | 2; why: string };
-/** A part table: each part's name and the test it runs, the last part running every test no other names.
- * The gate's own is PHONE_PARTS; a recorded change replays against the table of its own time. */
-export type PartTable = readonly { name: string; test: string }[];
+/** A part table: each part's name and the journey test it runs, or the whole test class it names as its
+ * `suite`, the last part running every test no other names. The gate's own is PHONE_PARTS; a recorded change
+ * replays against the table of its own time. */
+export type PartTable = readonly ({ name: string; test: string } | { name: string; suite: string })[];
+/** The test file a part's `suite` class is declared in, which Xcode names for the class. */
+const suiteFile = (part: PartTable[number]) => "suite" in part ? `ios/Infinitary/${part.suite}.swift` : undefined;
 const names = (parts: PartTable) => parts.map((part) => part.name);
 /** The gate's own parts, in order. */
 const EVERY = names(PHONE_PARTS);
@@ -301,9 +305,12 @@ export function partFunctions(functions: SwiftFunction[], parts: PartTable = PHO
       if (names.has(call[1]!)) called.add(call[1]!);
     calls.set(each.name, called);
   }
-  const named = new Set<string>(parts.slice(0, -1).map((part) => part.test));
+  const named = new Set<string>(parts.slice(0, -1).flatMap((part) => "test" in part ? [part.test] : []));
   const reached = new Map<string, Set<string>>();
   for (const part of parts) {
+    // A part that runs an app-hosted class of its own runs no UI test code; a UI test class of its own is
+    // read as running every UI test declaration, since this reader does not know which class a declaration is in.
+    if (!("test" in part)) { reached.set(part.name, new Set(suiteFile(part)!.startsWith(APP_TESTS) ? [] : names)); continue; }
     const setup = [...names].filter((name) => /^(?:setUp|tearDown|testCase)/.test(name));
     const roots = [...setup, ...(part === parts.at(-1)
       ? [part.test, ...[...names].filter((name) => /^test/.test(name) && !named.has(name))]
@@ -398,7 +405,14 @@ export function partReach(
     }
   }
   const appTests = reasons.filter((path) => path.startsWith(APP_TESTS));
-  if (appTests.length) edited.get(every.at(-1)!)!.add(`the app-hosted tests (${appTests.join(", ")})`);
+  // An app-hosted test file runs in the part whose class it declares, any other test class in the rest part,
+  // and anything else beside them, such as a shared helper, in every part that runs app-hosted tests.
+  const suites = parts.filter((part) => suiteFile(part)?.startsWith(APP_TESTS));
+  for (const path of appTests) {
+    const own = suites.filter((part) => suiteFile(part) === path).map((part) => part.name);
+    const runs = own.length ? own : /Tests\.swift$/.test(path) ? [every.at(-1)!] : [every.at(-1)!, ...suites.map((part) => part.name)];
+    for (const part of runs) edited.get(part)!.add(`the app-hosted tests (${path})`);
+  }
   return every.map((part): PartReach => {
     const own = [...edited.get(part)!];
     if (own.length) return { part, distance: 0, why: `edits test code it runs: ${own.join(", ")}` };

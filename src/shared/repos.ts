@@ -234,13 +234,14 @@ export type RepoHost = z.infer<typeof repoHostSchema>;
  * The deliveries a project may choose where it lives: a project kept only on
  * this Mac lands locally; one with a host also opens pull requests; and only
  * one on GitHub can merge through its own queue, since the app marks the
- * approved version with a GitHub commit status (`infinitary/queue`).
+ * approved version with a GitHub commit status (`infinitary/queue`). Settings
+ * lists them in this order, from the lightest choice to the most involved.
  */
 export function deliveryChoices(host: RepoHost | undefined): RepoDelivery[] {
   if (!host) return ["local-only"];
   return host.kind === "github"
-    ? ["direct-pr", "queue-pr", "local-only"]
-    : ["direct-pr", "local-only"];
+    ? ["local-only", "direct-pr", "queue-pr"]
+    : ["local-only", "direct-pr"];
 }
 
 /** A parsed origin (`forgeOf`) as a project's host, or null when it lives only on this Mac. */

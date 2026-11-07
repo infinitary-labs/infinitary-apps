@@ -18,7 +18,7 @@ const plus=<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="c
 const chevron=<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>;
 const GITHUB={id:"github.com",name:"GitHub",authTypes:["oauth"],tier:"subscription",servesFirstmate:true};
 const DEFAULT_FOLDER="~/Library/Application Support/infinitary/fleet";
-const DELIVERY=[{value:"direct-pr",label:"pull requests"},{value:"local-only",label:"local merge"}];
+const DELIVERY=[{value:"local-only",label:"local merge"},{value:"direct-pr",label:"pull requests"}];
 const CARE=[{value:"quick",label:"Quick"},{value:"standard",label:"Default"},{value:"reviewed",label:"Careful"}];
 const autonomyWords=(p)=>p.autonomy?"Merges on its own":"Asks first";
 const inFolder=(p,folder)=>p.path===folder||p.path.startsWith(`${folder}/`);

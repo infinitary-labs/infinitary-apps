@@ -71,16 +71,18 @@ describe("deliveryForRecord", () => {
 });
 
 // INF-2430 piece 2: a project on GitHub may merge its pull requests through its own queue.
+// The order is the one Settings shows, local merge first, from the lightest choice
+// to the most involved (the captain's ask to move local merge to the very left).
 describe("a project's delivery choices", () => {
   it("offers the queue only to a project on GitHub", () => {
     expect(deliveryChoices({ kind: "github", name: "github.com" })).toEqual([
+      "local-only",
       "direct-pr",
       "queue-pr",
-      "local-only",
     ]);
     expect(deliveryChoices({ kind: "gitlab", name: "gitlab.com" })).toEqual([
-      "direct-pr",
       "local-only",
+      "direct-pr",
     ]);
     expect(deliveryChoices(undefined)).toEqual(["local-only"]);
   });

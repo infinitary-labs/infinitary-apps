@@ -386,15 +386,21 @@ Photos uses the system library picker, converts selected images to orientation-c
 Selected photos appear as removable chips; a send clears the box and its photos at the tap, and a refusal puts them back in front of anything typed since.
 Command-Return sends from either message field; native controls retain hardware-keyboard focus, VoiceOver and Dynamic Type.
 
-The Tasks tab combines a filter of the live board with the Mac’s earlier-task search.
-An unstarted task shows the home’s dated `queueWait` line below its title and record heading, without rewording it or deciding readiness on the phone.
-Its five groups and their labels come from `src/shared/nowPanel.ts`, generated as a finite native lookup so the phone does not own another grouping rule.
-The phone keeps active parent trees together, hides dropped rows and closed ordinary operations from the groups, and keeps them searchable.
-Each group's header is a micro uppercase label with its count, as on the Mac.
-Waiting on you, Working and Queued start expanded; Backlog and Done start collapsed, with counts and keyboard-reachable disclosure buttons.
-Each row is one line: status mark, key, title and then the project, with the newest task first inside each group and dividers inset past the mark.
-A card put aside on the Mac lists its task under Waiting on you by the Mac's `presentTask` rule, which `PhoneBoard.presenting` follows, and the generated lookup takes the minimized fact as its sixth input; a card with no task gets its own row titled by the card.
-A tap on such a row brings its cards back on every Mac and shows them on Home; any other row opens the task's record.
+The Tasks tab is the Mac's Tasks panel in a phone's hands (INF-2928, the captain's direction A): its groups, order, rows, search and tap are the Mac's (`src/panels/now/rows.ts`), ported in `PhoneTaskList`.
+Its five groups come from `src/shared/nowPanel.ts`, generated as a finite native lookup with seven inputs, so the phone does not own another grouping rule.
+The phone keeps a working parent and its live parts together, hides dropped rows and closed ordinary operations from the groups, and keeps them searchable.
+Only the groups with tasks show.
+Waiting on you, Working and Queued always show their rows, under a micro uppercase label with no count; Backlog and Done fold, start folded and show their count, and Backlog adds "· N could not start" and "· N new".
+Rows follow the Mac's order: priority, then oldest first, with Done newest closed first and a part indented under its parent in the same group, up to three levels.
+Each row shows the Mac's status mark (`PhoneTaskMark`), the key, the title and the Mac's one dim word: starting, could not start, checks, waiting, blocked, held or found on another task.
+A title takes up to two lines on an iPhone, which has no pointer to show the rest, and one on an iPad, as on the Mac.
+After the title a row names its project only when more than one project with a repository could be meant, then where the task runs and, when that computer cannot take work, out of reach or connecting.
+Only a Queued row shows the home’s dated `queueWait` line below its title, without rewording it or deciding readiness on the phone.
+The row words come from `src/panels/now/words.ts` through the generated `PhoneTaskRowWords`, and `PhoneTaskListTests` replays the desktop panel's own reading of one board, recorded by `scripts/generate-phone-scene.ts`.
+A card put aside on the Mac lists its task under Waiting on you by the Mac's `presentTask` rule, which `PhoneBoard.presenting` follows; a card with no task gets its own row titled by the card.
+A tap makes the Mac's four checks in order (`openTask`): a row whose task has cards put aside brings them back on every Mac and shows them on Home; a task whose card is ready on the stack shows that card on Home; a required step put off shows its card again through the Mac's `show-card` move; any other row opens the task's record.
+A first mate question is the one exception: its card shows no task key and the phone's cards have no Info tab, so its row opens its record, where Dismiss is.
+A search keeps the groups, opens every one, matches the title or the key as the Mac's does, and adds Earlier with the Mac's older closed matches, newest closed first.
 The search waits above the list until the list is pulled down from its top, as the Mac's waits behind its icon.
 Find a task (Shift-Command-F, the Mac's key) opens it with the caret in the field; Close search, or Escape on an empty field, puts it away.
 VoiceOver cannot pull past the top of a list, so the search is always shown while it runs.

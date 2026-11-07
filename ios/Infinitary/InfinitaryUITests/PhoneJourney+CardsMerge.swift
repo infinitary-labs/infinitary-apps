@@ -12,6 +12,7 @@ extension PhoneJourney {
         try await verifyMergeCard()
         try await verifyAnswerDone()
         try await verifyQuestionDismiss()
+        try await verifyDeferredStep()
         try await verifyAskedLine()
         try await verifyCardReadiness()
         try await verifySharedSeen()
@@ -95,6 +96,17 @@ extension PhoneJourney {
         let fixture = try await home("merge-card")
         let title = try XCTUnwrap(fixture["title"] as? String)
         let words = try XCTUnwrap(fixture["words"] as? String)
+        // INF-2928 piece 1: a tap on a task whose card is ready shows that card on Home, as a click on the Mac's row does,
+        // instead of opening the task's record.
+        tab("Tasks")
+        let row = app.buttons["task-phone-merge"]
+        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertLessThan(app.staticTexts["group-waiting"].frame.minY, row.frame.minY, "Its task waits on you")
+        picture("tasks-ready-card")
+        tapOnPhone(row)
+        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["tab-home"].isSelected, "The ready card shows on Home")
+        XCTAssertFalse(app.staticTexts["task-record-title"].exists, "The row brings its card forward, not its record")
         showCard(title)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
         // The head: the task's key, the model and where it runs, the risk and the revised line.
@@ -302,6 +314,8 @@ extension PhoneJourney {
         tab("Tasks")
         let row = app.buttons.matching(identifier: "task-\(taskID)").firstMatch
         XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
+        // INF-2928 piece 1, the captain's pick: a first mate question's card shows no task key, so its row opens the
+        // record rather than showing the card on Home.
         tapOnPhone(row)
         let dismiss = app.buttons["dismiss-question"]
         XCTAssertTrue(dismiss.waitForPresence(timeout: 10), app.debugDescription)
@@ -338,5 +352,27 @@ extension PhoneJourney {
         tapOnPhone(hide)
         XCTAssertTrue(hide.waitForAbsence(timeout: 10), app.debugDescription)
         tab("Home")
+    }
+
+    /// INF-2928 piece 1, spec item 7's third check: a tap on the row of a required step put off with Not now shows its
+    /// card again on Home through the Mac's show-card move, as a click on the Mac's row does, rather than the record.
+    private func verifyDeferredStep() async throws {
+        let fixture = try await home("deferred-step-fixture")
+        let taskID = try XCTUnwrap(fixture["taskId"] as? String)
+        let title = try XCTUnwrap(fixture["title"] as? String)
+        tab("Tasks")
+        let row = app.buttons.matching(identifier: "task-\(taskID)").firstMatch
+        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(row)
+        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.buttons["tab-home"].isSelected, "The put-off step's card shows on Home")
+        XCTAssertFalse(app.staticTexts["task-record-title"].exists, "The row shows its card again, not its record")
+        picture("deferred-step-card")
+        let state = try await home("deferred-step-state", body: "{\"taskId\":\"\(taskID)\"}")
+        let runs = try XCTUnwrap(state["runs"] as? [[String: Any]])
+        XCTAssertEqual(runs.map { $0["move"] as? String }, ["show-card"], "One show-card move, the Mac's")
+        XCTAssertEqual((runs.first?["actor"] as? [String: Any])?["kind"] as? String, "captain")
+        tapOnPhone(app.buttons["put-aside-card"])
+        XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
     }
 }

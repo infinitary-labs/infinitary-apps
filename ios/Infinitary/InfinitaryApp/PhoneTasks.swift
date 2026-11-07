@@ -27,7 +27,8 @@ struct PhoneTasks: View {
     @State private var earlier: [PhoneTask] = []
     @State private var problem: String?
     @State private var selected: PhoneTask?
-    @State private var expanded: Set<PhoneTaskGroup> = [.waiting, .working, .queued]
+    /// The folding groups, Backlog and Done, the captain opened; the Mac's other groups always show their rows.
+    @State private var expanded: Set<PhoneTaskList.Section> = []
 
     /// INF-2764: whether this list is on screen. The tab controller keeps a tab that is away, so a hidden list keeps
     /// its last reading and reads nothing from the session: a board update while another tab shows rebuilds nothing.
@@ -48,6 +49,10 @@ struct PhoneTasks: View {
     // INF-589 item 9: search waits above the list until it is pulled down, as the Mac's sits behind its icon.
     // VoiceOver cannot pull past the top of a list, so it always finds the field.
     private var searchShown: Bool { searchOpen || !query.isEmpty || voiceOver }
+    private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    /// INF-2928, the captain's pick: a title may take two lines on an iPhone, which has no pointer to show the rest, and
+    /// one on an iPad, as on the Mac.
+    private var titleLines: Int { UIDevice.current.userInterfaceIdiom == .pad ? 1 : 2 }
 
     /// INF-2553: on an iPhone on its side, a card brought back and put aside again by its refusal says why on this
     /// list's line, as a refused bring-back did before.
@@ -64,27 +69,26 @@ struct PhoneTasks: View {
                 if searchShown { search }
                 if let problem = problem ?? reading.asideLine { Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("tasks-problem") }
                 LazyVStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                    if list.rows.isEmpty && list.aside.isEmpty { Text(query.isEmpty ? "No tasks yet." : "No matching tasks.").foregroundStyle(PhoneTheme.secondary) }
-                    if query.isEmpty {
-                        ForEach(PhoneTaskGroup.allCases, id: \.rawValue) { group in
-                            let members = list.members[group] ?? []
-                            // A card put aside with no task is a row of its own under Waiting on you.
-                            let aside = group == .waiting ? list.aside : []
-                            VStack(spacing: 0) {
-                                groupHeader(group, count: members.count + aside.count)
-                                if expanded.contains(group) {
-                                    ForEach(members) { task in taskRow(task, project: list.project(of: task), last: aside.isEmpty && task.id == members.last?.id) }
-                                    ForEach(aside) { card in asideRow(card, last: card.id == aside.last?.id) }
-                                }
-                            }
-                        }
-                    } else {
+                    if list.isEmpty { Text(query.isEmpty ? "No tasks yet." : "No matching tasks.").foregroundStyle(PhoneTheme.secondary) }
+                    // INF-2928 piece 1: only the groups with rows show, as on the Mac, and a search opens every one.
+                    ForEach(list.parts) { part in
+                        let open = !part.section.folds || searching || expanded.contains(part.section)
                         VStack(spacing: 0) {
-                            ForEach(list.rows) { task in taskRow(task, project: list.project(of: task), last: task.id == list.rows.last?.id) }
+                            groupHeader(part, open: open)
+                            if open {
+                                ForEach(part.rows) { row in
+                                    taskRow(row, in: part, list: list, last: part.aside.isEmpty && row.id == part.rows.last?.id)
+                                }
+                                // A card put aside with no task is a row of its own under Waiting on you.
+                                ForEach(part.aside) { card in asideRow(card, last: card.id == part.aside.last?.id) }
+                            }
                         }
                     }
                 }
-            }.padding(PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+                // The reading column the list sits in, for the journeys to find Tasks by when no group has rows.
+                .accessibilityElement(children: .contain).accessibilityIdentifier("tasks-column")
+                .padding(PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
         }
         .scrollBounceBehavior(.always, axes: .vertical)
         .onScrollGeometryChange(for: Bool.self) { geometry in
@@ -157,62 +161,121 @@ struct PhoneTasks: View {
         withAnimation(.snappy) { searchOpen = false }
     }
 
-    // The Mac's micro label: uppercase, tracked, tertiary, with the count in mono.
-    private func groupHeader(_ group: PhoneTaskGroup, count: Int) -> some View {
-        Button {
-            if !expanded.insert(group).inserted { expanded.remove(group) }
-        } label: {
-            HStack(spacing: PhoneTheme.space2) {
-                Text(group.title).font(Self.label).textCase(.uppercase).tracking(Self.labelTracking)
-                Text("\(count)").font(PhoneFont.micro)
-                Spacer()
-                Image(systemName: expanded.contains(group) ? "chevron.down" : "chevron.right")
-                    .font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary).accessibilityHidden(true)
-            }.foregroundStyle(PhoneTheme.muted).frame(minHeight: 44)
-                .contentShape(Rectangle())
-        }.buttonStyle(.plain).accessibilityIdentifier("group-\(group.rawValue)")
-            .accessibilityLabel("\(group.title), \(count)")
-            .accessibilityValue(expanded.contains(group) ? "Expanded" : "Collapsed")
-    }
-
-    // The title row stays as on the Mac; an unstarted task adds the home’s full dated wait below it.
-    private func taskRow(_ task: PhoneTask, project: String?, last: Bool) -> some View {
-        Button { open(task) } label: {
-            HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
-                Image(systemName: task.status == "open" && task.waitingCardId == nil && task.minimizedCardId == nil ? "circle" : "circle.fill")
-                    .font(.system(size: PhoneTheme.space2)).foregroundStyle(task.waitingCardId != nil || task.minimizedCardId != nil ? PhoneTheme.accent : task.activity == "running" ? PhoneTheme.warning : PhoneTheme.secondary)
-                    .frame(width: Self.markWidth).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                    HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
-                        Text(task.key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).fixedSize()
-                        Text(task.title).font(PhoneFont.body).foregroundStyle(PhoneTheme.text).lineLimit(1)
-                        Spacer(minLength: PhoneTheme.space2)
-                        if let project { Text(project).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).lineLimit(1) }
-                    }
-                    if let since = task.answerSince {
-                        HStack { Text("Answer waiting"); Text(Date(timeIntervalSince1970: since / 1000), style: .relative) }
-                            .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
-                    }
-                    if let wait = task.queueWait {
-                        Text(wait.line).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }.padding(.vertical, PhoneTheme.space3).frame(minHeight: 44)
-                .contentShape(Rectangle())
-        }.buttonStyle(.plain).accessibilityIdentifier("task-\(task.id)")
-            .accessibilityLabel([task.key, task.title, project, task.state].compactMap(\.self).joined(separator: ", "))
-        .overlay(alignment: .bottom) {
-            // Inset to the words, never under the mark, and none after a group's last row.
-            if !last { Rectangle().fill(PhoneTheme.line).frame(height: 1).padding(.leading, Self.markWidth + PhoneTheme.space3) }
+    // The Mac's micro label: uppercase, tracked, tertiary. Only a folding group is a button, and only it shows its count,
+    // with Backlog's new filings and failed starts after it (the Mac's `Group`).
+    @ViewBuilder private func groupHeader(_ part: PhoneTaskList.Part, open: Bool) -> some View {
+        let title = Text(part.section.title).font(Self.label).textCase(.uppercase).tracking(Self.labelTracking)
+        if part.section.folds {
+            Button {
+                if !expanded.insert(part.section).inserted { expanded.remove(part.section) }
+            } label: {
+                HStack(spacing: PhoneTheme.space2) {
+                    title
+                    Text("\(part.count)\(part.section == .group(.backlog) && part.failed > 0 ? PhoneTaskRowWords.failedCount(part.failed) : "")\(part.new > 0 ? PhoneTaskRowWords.newCount(part.new) : "")")
+                        .font(PhoneFont.micro).lineLimit(1)
+                    Spacer()
+                    Image(systemName: open ? "chevron.down" : "chevron.right")
+                        .font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary).accessibilityHidden(true)
+                }.foregroundStyle(PhoneTheme.muted).frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityIdentifier("group-\(part.id)")
+                .accessibilityLabel("\(part.section.title), \(part.count)")
+                .accessibilityValue(open ? "Expanded" : "Collapsed")
+        } else {
+            title.foregroundStyle(PhoneTheme.muted).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .accessibilityAddTraits(.isHeader).accessibilityIdentifier("group-\(part.id)")
         }
     }
 
-    /// INF-1517, the captain's pick: a row whose task has cards put aside brings them back and shows them on Home,
-    /// on the phone and every Mac, as a Mac Tasks row does (`openTask`); any other row opens the task's record.
+    /// The Mac's row: its status mark, the key and title with the one dim word after them, then the project's name where
+    /// more than one project could be meant, where the task runs and why that computer cannot take work now. A part sits
+    /// indented under its parent, and a Queued row adds the home's dated wait line below.
+    private func taskRow(_ row: PhoneTaskList.Row, in part: PhoneTaskList.Part, list: PhoneTaskList, last: Bool) -> some View {
+        let task = row.task
+        let status = PhoneTaskFacts.status(task)
+        let word = PhoneTaskList.word(task)
+        let trailing = list.trailing(of: task)
+        let wait = part.waitLine(of: task)
+        var title = Text("\(task.key) ").font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted)
+            + Text(task.title).font(PhoneFont.body)
+            .foregroundStyle(part.section == .group(.waiting) ? PhoneTheme.text : PhoneTheme.secondary)
+        if !word.isEmpty {
+            title = title + Text(" · \(word)").font(PhoneFont.body)
+                .foregroundStyle(word == PhoneTaskRowWords.couldNotStart ? PhoneTheme.warning : PhoneTheme.muted)
+        }
+        let ends = [trailing.name, trailing.place].filter { !$0.isEmpty }.joined(separator: " · ")
+        var end = Text(ends)
+        if trailing.outOfReach {
+            end = end + Text("\(ends.isEmpty ? "" : " · ")\(trailing.reach)")
+                .foregroundStyle(trailing.connecting ? PhoneTheme.muted : PhoneTheme.warning)
+        }
+        return Button { open(task) } label: {
+            HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
+                PhoneTaskMark(status: status).alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+                    .frame(width: Self.markWidth)
+                VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                    HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
+                        title.lineLimit(titleLines).layoutPriority(1)
+                        Spacer(minLength: PhoneTheme.space2)
+                        if !ends.isEmpty || trailing.outOfReach {
+                            end.font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).lineLimit(1)
+                        }
+                    }
+                    if let wait {
+                        Text(wait).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }.padding(.leading, CGFloat(row.depth) * Self.markWidth)
+                .padding(.vertical, PhoneTheme.space3).frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityIdentifier("task-\(task.id)")
+            .accessibilityLabel([task.key, task.title, word.isEmpty ? nil : word, ends.isEmpty ? nil : ends,
+                                 trailing.outOfReach ? trailing.reach : nil, status.label].compactMap(\.self).joined(separator: ", "))
+        .overlay(alignment: .bottom) {
+            // Inset to the words, never under the mark, and none after a group's last row.
+            if !last {
+                Rectangle().fill(PhoneTheme.line).frame(height: 1)
+                    .padding(.leading, Self.markWidth + PhoneTheme.space3 + CGFloat(row.depth) * Self.markWidth)
+            }
+        }
+    }
+
+    /// INF-2928 piece 1: a tap makes the Mac's four checks in order (`openTask`). A row whose task has cards put aside
+    /// brings them back and shows them on Home, on the phone and every Mac (INF-1517); a ready card on the stack shows on
+    /// Home, except a first mate question's, whose row opens its record; a required step the captain put off shows its
+    /// card again; any other row opens the task's record.
     private func open(_ task: PhoneTask) {
         let aside = PhoneBoard.minimized(of: task, in: session.cards)
-        if aside.isEmpty { messageContext.taskID = task.id; selected = task } else { restore(aside) }
+        if !aside.isEmpty { restore(aside); return }
+        if let card = task.waitingCardId, let shown = session.stack.first(where: { $0.id == card }) {
+            // The captain's pick: a first mate question's card shows no task key and the phone's cards have no Info
+            // tab, so its row opens the record, where Dismiss is, until the phone matches the Mac.
+            if task.kind == "decision" && shown.isFirstmateOwn { openRecord(task); return }
+            messageContext.restoring = card; return
+        }
+        if task.status == "open", let state = task.requiredAction?.state, state == "ready" || state == "deferred",
+           session.canChange {
+            showCard(task); return
+        }
+        openRecord(task)
+    }
+
+    private func openRecord(_ task: PhoneTask) { messageContext.taskID = task.id; selected = task }
+
+    /// The record's Show the card, through the one move the Mac runs it by: once the computer shows the card again, Home
+    /// shows it as soon as the stack holds it; a refusal or a lost answer opens the record instead, as on the Mac.
+    private func showCard(_ task: PhoneTask) {
+        problem = nil
+        Task {
+            do {
+                let answer: PhoneAnswer = try await session.request(.run, args: [task.id, "show-card"])
+                if answer.ok, let card = try await session.readDetail(task.id).waitingCardId {
+                    messageContext.restoring = card; return
+                }
+            } catch {}
+            openRecord(task)
+        }
     }
 
     /// INF-2553: the cards are back on Home at the tap, the first one up; one request per card, sent together, each

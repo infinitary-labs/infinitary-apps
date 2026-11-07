@@ -5,6 +5,22 @@ import type { TaskFactsInput } from "../src/shared/taskFacts.ts";
 import type { TaskPlanItem } from "../src/shared/taskPlan.ts";
 import type { TaskDetail, TaskView } from "../src/shared/tasks.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
+import type { PanelTaskBoard, PanelTaskRow } from "../src/shared/personal/contracts.ts";
+
+/** The parts of the Mac's Tasks panel (src/panels/now/rows.ts) this reads; that module builds with the renderer, not here. */
+type NowBoard = PanelTaskBoard;
+type NowRow = { task: PanelTaskRow; depth: number };
+type NowFilter = { query: string; projectId: string | null };
+type NowRows = {
+  NOW_GROUPS: readonly string[];
+  OPEN_BY_DEFAULT: ReadonlySet<string>;
+  rowsOf(board: NowBoard, filter: NowFilter): Map<string, NowRow[]>;
+  earlierRowsOf(tasks: NowBoard["tasks"], groups: Map<string, NowRow[]>, filter: NowFilter): NowRow[];
+  wordOf(task: PanelTaskRow): string;
+  trailingOf(board: NowBoard, task: PanelTaskRow): unknown;
+  newFilingCount(rows: readonly NowRow[]): number;
+  failedStartCount(tasks: readonly PanelTaskRow[]): number;
+};
 
 /** INF-1066: native drawing shares desktop geometry and tuning, not a web runtime.
  * The comparison traces are readings of the desktop's executable choreography. */
@@ -29,11 +45,13 @@ try {
   const { FIRSTMATE_SESSION_ID } = await runner.import<typeof import("../src/shared/observe.ts")>(join(REPO_ROOT, "src/shared/observe.ts"));
   const { DEPENDENCY_VISUAL } = await runner.import<typeof import("../src/shared/dependencyVisual.ts")>(join(REPO_ROOT, "src/shared/dependencyVisual.ts"));
   const { taskFactsOf } = await runner.import<typeof import("../src/shared/taskFacts.ts")>(join(REPO_ROOT, "src/shared/taskFacts.ts"));
-  const { taskStatusLabel } = await runner.import<typeof import("../src/shared/taskPresentation.ts")>(join(REPO_ROOT, "src/shared/taskPresentation.ts"));
+  const { taskStatusLabel, taskStatusOf } = await runner.import<typeof import("../src/shared/taskPresentation.ts")>(join(REPO_ROOT, "src/shared/taskPresentation.ts"));
   const { checksFinishedAgo, checksSpanWords } = await runner.import<typeof import("../src/shared/checksSpan.ts")>(join(REPO_ROOT, "src/shared/checksSpan.ts"));
   const { reasoningWord } = await runner.import<typeof import("../src/shared/reasoning.ts")>(join(REPO_ROOT, "src/shared/reasoning.ts"));
   const { feedRelativeAge } = await runner.import<typeof import("../src/shared/relativeAge.ts")>(join(REPO_ROOT, "src/shared/relativeAge.ts"));
   const { clipPlanLine, foldPlan, planCounts } = await runner.import<typeof import("../src/shared/taskPlan.ts")>(join(REPO_ROOT, "src/shared/taskPlan.ts"));
+  const { earlierRowsOf, failedStartCount, newFilingCount, NOW_GROUPS, OPEN_BY_DEFAULT, rowsOf, trailingOf, wordOf } = await runner.import<NowRows>(join(REPO_ROOT, "src/panels/now/rows.ts"));
+  const { failedCountWords, newCountWords } = await runner.import<typeof import("../src/panels/now/words.ts")>(join(REPO_ROOT, "src/panels/now/words.ts"));
   const { SCENE_REACH_PX, satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
   const outputs = {
     "ios/Infinitary/InfinitaryApp/PhoneSceneData.generated.json": {
@@ -51,6 +69,7 @@ try {
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskFacts.generated.json": taskFactReadings(),
+    "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskList.generated.json": taskListReadings(),
   };
   /** INF-1755: the warps' settings, schedule, travel and the very stars the desktop draws, only the ones it reads. */
   function warpData() {
@@ -180,6 +199,85 @@ try {
         checksStateWords: checks ? (checks.span ? checksSpanWords(checks.state, checks.span, now) : checks.state) : undefined,
         checksAgo: checks?.span?.finishedAt != null ? checksFinishedAgo(checks.span.finishedAt, now) : undefined } };
     }) };
+  }
+  /**
+   * INF-2928 piece 1: the desktop Tasks panel's own reading of one board - its groups, their order and depth, each row's
+   * word and trailing words, the wait line and the folding headers' counts - with and without a search, for the phone's
+   * list to replay.
+   */
+  function taskListReadings() {
+    const now = Date.UTC(2026, 10, 6, 17, 0);
+    const min = 60_000;
+    const project = (id: string, key: string, name: string, repo: string | null) => ({ id, key, name, archived: false,
+      repo: repo ? { name: repo, delivery: "direct-pr" as const, autonomy: false } : null,
+      counts: { needsYou: 0, waitingOnYou: 0, open: 0, active: 0, doneRecent: 0 } });
+    const row = (n: number, title: string, patch: Record<string, unknown> = {}): TaskView => ({
+      id: `t-${n}`, key: `INF-${n}`, projectId: "p-inf", parentId: null, kind: "work", title, goal: title, priority: 2,
+      status: "open", activity: null, closedReason: null, startPolicy: "when-ready",
+      flags: { blocked: false, held: false, needsYou: false, ready: false }, blockedBy: [], blocks: [], children: { total: 0, closed: 0 },
+      assignee: null, model: null, tier: null, repo: null, delivery: null, outcomeSummary: null, waitingCardId: null,
+      createdAt: now - (3000 - n) * min, updatedAt: now - min, startedAt: null, closedAt: null, ...patch }) as TaskView;
+    const started = (minutes: number) => ({ status: "active", startedAt: now - minutes * min, assignee: "crewmate" });
+    const idle = (reason: string) => ({ activity: "idle", workPosture: { state: "inactive", reason } });
+    const running = { activity: "running", workPosture: { state: "active", reason: "turn" } };
+    const flags = (blocked: boolean, held: boolean) => ({ flags: { blocked, held, needsYou: false, ready: false } });
+    const done = (closed: number) => ({ status: "done", closedReason: "landed", startedAt: now - 2 * closed * min, closedAt: now - closed * min });
+    const tasks: TaskView[] = [
+      row(2901, "Answer the harbour master's question", { ...started(50), ...idle("captain"), priority: 1, waitingCardId: "card-2901" }),
+      row(2902, "Move the phone's list to the desktop's order", { ...started(40), ...running,
+        place: { where: "on Mac mini", name: "Mac mini", reach: "out-of-reach" } }),
+      row(2903, "Wait for the lighthouse checks", { ...started(30), activity: "idle", priority: 0, projectId: "p-har",
+        workPosture: { state: "active", reason: "checks" } }),
+      row(2904, "Port the row's word", { ...started(20), ...idle("dependency"), parentId: "t-2902", blockedBy: ["INF-2905"] }),
+      row(2914, "Read the reach of each place", { ...started(10), ...running, parentId: "t-2904" }),
+      row(2915, "Name the computer", { ...started(5), ...running, parentId: "t-2914" }),
+      row(2916, "Spell the place", { ...started(4), ...running, parentId: "t-2915" }),
+      row(2905, "Chart the harbour entrance", { priority: 1,
+        queueWait: { line: "Waiting for a free crewmate · since Nov 6, 8:40 AM", since: now - 20 * min } }),
+      row(2906, "Count the buoys", { priority: 1, startAttempt: { phase: "preparing" } }),
+      row(2917, "Relight the lamp", { priority: 3, projectId: "p-har", place: { where: "on Studio", name: "Studio", reach: "connecting" } }),
+      row(2907, "Mend the harbour nets", { startPolicy: "on-request", foundOn: "INF-2901", filingNew: true }),
+      row(2908, "Paint the jetty", { startPolicy: "on-request", startNotice: { reason: "No crewmate could start" } }),
+      row(2909, "Clear the slipway", { startPolicy: "on-request", ...flags(false, true) }),
+      row(2910, "Dredge the channel", { startPolicy: "on-request", priority: 0, ...flags(true, false) }),
+      row(2918, "Repair the crane", { ...started(60), ...idle("inactive"), backlogSince: now - 15 * min, startPolicy: "on-request" }),
+      row(2920, "Answer the pilot's note", { ...started(70), ...idle("inactive"), answerNoteId: "note-2920", answerSince: now - 95 * min }),
+      row(2911, "Survey the harbour floor", done(60)),
+      row(2912, "Log the tides", done(10)),
+      row(2919, "Check the moorings", { ...done(30), parentId: "t-2912" }),
+      row(2913, "Mark the old wreck", { status: "dropped", closedReason: "dropped", closedAt: now - 5 * min }),
+    ];
+    const earlier = [
+      row(2801, "Paint the harbour wall", { ...done(8000), createdAt: now - 9000 * min }),
+      row(2802, "Rope the harbour bell", { status: "dropped", closedReason: "dropped", createdAt: now - 9500 * min, closedAt: now - 7000 * min }),
+      row(2911, "Survey the harbour floor", done(60)),
+    ];
+    const several = { tasks, projects: [project("p-inf", "INF", "Infinitary", "infinitary"), project("p-har", "HAR", "Harbour", "harbour")] };
+    const single = { tasks, projects: [project("p-inf", "INF", "Infinitary", "infinitary"), project("p-har", "HAR", "Harbour", null)] };
+    type Board = NowBoard;
+    const read = (name: string, board: typeof several, query: string, found: TaskView[]) => {
+      const panel = board as unknown as Board;
+      const filter = { query, projectId: null };
+      const groups = rowsOf(panel, filter);
+      const older = earlierRowsOf(found as unknown as Board["tasks"], groups, filter);
+      const sections = [...NOW_GROUPS.map((group) => [group, groups.get(group) ?? []] as const), ["earlier" as const, older] as const]
+        .filter(([, rows]) => rows.length > 0)
+        .map(([section, rows]) => {
+          const fresh = section === "queued" || section === "backlog" ? newFilingCount(rows) : 0;
+          const failed = failedStartCount(rows.map((r) => r.task));
+          return { section, folds: !OPEN_BY_DEFAULT.has(section), count: rows.length,
+            newWords: fresh > 0 ? newCountWords(fresh) : undefined,
+            failedWords: section === "backlog" && failed > 0 ? failedCountWords(failed) : undefined,
+            rows: rows.map(({ task, depth }) => ({ key: task.key, depth, word: wordOf(task), trailing: trailingOf(panel, task),
+              // The row's mark and the summary's reason beside it, at this reading's time.
+              mark: taskStatusOf(task, now).mark, reason: taskStatusOf(task, now).reason,
+              wait: section === "queued" && task.queueWait && task.status === "open" ? task.queueWait.line : undefined })) };
+        });
+      // The phone reads a board with its seq, which a panel reading has no use for.
+      return { name, query, now, board: { seq: 1, ...board }, earlier: found, sections };
+    };
+    return { readings: [read("several projects", several, "", []), read("one project", single, "", []),
+      read("a search", several, "HARBOUR", earlier)] };
   }
   /** INF-1325: the desktop's own seat choices through arrivals and departures, for the phone to replay. */
   function orbitSeats() {

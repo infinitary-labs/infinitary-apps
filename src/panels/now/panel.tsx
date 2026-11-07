@@ -46,6 +46,7 @@ import {
   summaryOf,
   wordOf,
 } from "./rows";
+import { failedCountWords, newCountWords } from "./words";
 
 /**
  * The Tasks panel (task-system design section 10, P4; the design skill's
@@ -827,12 +828,12 @@ export function Group({
             </span>
             {group === "backlog" && failedStartCount(rows.map((row) => row.task)) > 0 && (
               <span className="n" data-now-failed={group}>
-                {` · ${failedStartCount(rows.map((row) => row.task))} could not start`}
+                {failedCountWords(failedStartCount(rows.map((row) => row.task)))}
               </span>
             )}
             {newCount > 0 && (
               <span className="n" data-now-new={group}>
-                {` · ${newCount} new`}
+                {newCountWords(newCount)}
               </span>
             )}
             <span className="caret" data-now-caret="" aria-hidden="true">

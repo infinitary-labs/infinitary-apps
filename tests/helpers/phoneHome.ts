@@ -932,6 +932,64 @@ export async function startPhoneHome(
           observations.push({ check: "question-record-state", taskId, result });
           break;
         }
+        // INF-2928 piece 1: a required step the captain put off with Not now, filed by the task owner as on the Mac
+        // (tests/e2e/required-action-row.spec.ts), so its row has no open card.
+        case "POST deferred-step-fixture": {
+          const tasks = core.services.tasks;
+          const source = seedTask(tasks, {
+            id: `native-step-${randomBytes(8).toString("hex")}`,
+            title: "Add the harbour link to Settings",
+            status: "completed",
+          });
+          const title = "Install the harbour version on the Mac mini";
+          tasks.delivery.declareRequiredActions(
+            source.id,
+            {
+              cardId: `card-${source.id}-1`,
+              offerId: `offer-${source.id}`,
+              actions: [
+                {
+                  id: "install-harbour-version",
+                  target: "the Mac mini",
+                  title,
+                  consequence: "Until then the Mac mini keeps the old harbour link.",
+                  instructions: ["Open Infinitary on the Mac mini.", "Choose Update now."],
+                  criterion: "The Mac mini reports the new version.",
+                  prerequisites: [],
+                  completion: { kind: "manual", label: "I installed it" },
+                },
+              ],
+            },
+            true,
+          );
+          const step = tasks
+            .listOpen()
+            .find((record) =>
+              record.delivery?.captainAction?.requirements.some(
+                (requirement) => requirement.source === source.id,
+              ),
+            );
+          if (!step) throw new Error("The required step filed no row");
+          tasks.delivery.presentCaptainAction(step.id);
+          tasks.delivery.deferCaptainAction(step.id);
+          result = { taskId: step.id, title };
+          break;
+        }
+        case "POST deferred-step-state": {
+          const { taskId } = JSON.parse(await controlBody(request)) as { taskId: string };
+          result = {
+            runs: writes
+              .filter(
+                (write) =>
+                  write.channel === "inf:task:run" &&
+                  Array.isArray(write.args) &&
+                  write.args[0] === taskId,
+              )
+              .map((write) => ({ actor: write.actor, move: write.args[1] })),
+          };
+          observations.push({ check: "deferred-step-state", taskId, result });
+          break;
+        }
         case "POST cards-fixture": {
           // INF-64 piece 4: actual stored cards, published requests and the existing view journey's promises.
           // A note leaves through its own Got it; the corner only puts a card aside (INF-2794).

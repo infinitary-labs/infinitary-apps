@@ -37,6 +37,8 @@ export async function openModuleRunner(): Promise<ModuleRunner> {
       alias: {
         "@core": join(REPO_ROOT, "src", "core"),
         "@shared": join(REPO_ROOT, "src", "shared"),
+        // The panel library a Tasks panel module reads (src/panels/now/rows.ts), for the phone's recorded readings.
+        "@infinitary/ui": join(REPO_ROOT, "src", "renderer", "src", "design", "index.ts"),
       },
     },
   });

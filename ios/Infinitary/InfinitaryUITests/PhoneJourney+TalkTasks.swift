@@ -19,6 +19,10 @@ extension PhoneJourney {
         try await relaunchPairs(1, pictured: true)
         XCTAssertTrue(app.buttons["group-backlog"].waitForPresence(timeout: 10))
         picture("tasks")
+        // INF-2928 piece 1: as on the Mac, a group with no tasks does not show.
+        for empty in ["waiting", "working", "queued", "landed"] {
+            XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "group-\(empty)").firstMatch.exists, "\(empty) has no tasks")
+        }
         tapOnPhone(app.buttons["group-backlog"])
         XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10))
         picture("tasks-backlog")
@@ -33,6 +37,8 @@ extension PhoneJourney {
         XCTAssertTrue(search.waitForPresence(timeout: 10))
         search.typeText("harbour")
         XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10))
+        // A search keeps the groups and opens them, as the Mac's does.
+        XCTAssertTrue(app.buttons["group-backlog"].exists, app.debugDescription)
         picture("task-search")
         tapOnPhone(app.buttons["task-phone-work"])
         XCTAssertTrue(app.buttons["start-task"].waitForPresence(timeout: 10))

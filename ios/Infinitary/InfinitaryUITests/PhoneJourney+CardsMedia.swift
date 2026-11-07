@@ -271,7 +271,8 @@ extension PhoneJourney {
         tab("Tasks")
         let restore = app.buttons.matching(identifier: "minimized-card").matching(NSPredicate(format: "label == %@", heroTitle)).firstMatch
         XCTAssertTrue(restore.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertLessThan(app.buttons["group-waiting"].frame.minY, restore.frame.minY, "It is listed under Waiting on you")
+        // INF-2928 piece 1: Waiting on you always shows its rows, so its header is a label, not a button, as on the Mac.
+        XCTAssertLessThan(app.staticTexts["group-waiting"].frame.minY, restore.frame.minY, "It is listed under Waiting on you")
         picture("tasks-minimized")
         if UIDevice.current.userInterfaceIdiom == .phone {
             // INF-2553: on an iPhone on its side, a bring-back the computer refuses puts the card aside again and says

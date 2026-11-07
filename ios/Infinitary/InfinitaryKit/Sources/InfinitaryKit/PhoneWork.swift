@@ -86,12 +86,23 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     /// INF-1517: a card of this task put aside on the Mac, set only by `PhoneBoard.presenting`, as the Mac's own
     /// `presentTask` (src/shared/taskWaiting.ts) sets it for presentation alone.
     public internal(set) var minimizedCardId: String?
+    /// INF-2928 piece 1: what the Mac's Tasks rows read beyond the facts above (src/panels/now/rows.ts), each optional so
+    /// an older Mac's rows still decode: the order (`priority`, 0 urgent to 3 low, then `createdAt`; Done by `closedAt`),
+    /// the crew filing's origin and whether it is new, and started work sent back to the backlog.
+    public let priority: Double?
+    public let closedAt: Double?
+    public let foundOn: String?
+    public let filingNew: Bool?
+    public let backlogSince: Double?
     public var canSteer: Bool { status == "active" && startedAt != nil }
+    /// The Mac's `nowGroupOf` (src/shared/nowPanel.ts) through its generated table. A note's answer, like a card put
+    /// aside, lists under Waiting on you whatever the task's state, as the table's minimized input does.
     public var group: PhoneTaskGroup? {
         .reading(status: status, work: kind == "work", required: requiredAction != nil,
-                 waiting: waitingCardId != nil || answerNoteId != nil,
+                 waiting: waitingCardId != nil,
                  starting: startAttempt?.phase == "preparing" || startAttempt?.phase == "checking" || (status == "active" && activity == "starting"),
-                 onRequest: startPolicy == "on-request", minimized: minimizedCardId != nil)
+                 onRequest: startPolicy == "on-request", minimized: minimizedCardId != nil || answerNoteId != nil,
+                 backlog: backlogSince != nil)
     }
     public struct StartAttempt: Decodable, Sendable { public let phase: String }
     public struct RequiredAction: Decodable, Sendable { public let state: String?; public let result: String? }
@@ -184,7 +195,15 @@ public struct PhoneBoard: Decodable, Sendable {
     public let projects: [Project]
     public let links: [Link]?
     public struct Link: Decodable, Sendable { public let fromId: String; public let toId: String; public let type: String }
-    public struct Project: Decodable, Sendable { public let id: String; public let name: String }
+    public struct Project: Decodable, Sendable {
+        public let id: String
+        public let name: String
+        /// Whether a repository backs the project, and whether it is archived: a row leaves out the project's name where
+        /// only one such project could be meant (the Mac's `hasSingleRegisteredRepoProject`).
+        public let repo: Repo?
+        public let archived: Bool?
+        public struct Repo: Decodable, Sendable { public let name: String }
+    }
 
     /// The Mac's `applyTaskBoardDelta` (src/shared/tasks.ts): this board when the delta is older, the next board when
     /// the delta's base is this board's seq, and nil on a gap, which resyncs from a full read (INF-1854: re-reading
@@ -254,24 +273,23 @@ public struct PhoneBoard: Decodable, Sendable {
         cards.filter { $0.minimized && ($0.taskID == task.id || $0.id == task.waitingCardId || $0.id == task.minimizedCardId) }
     }
 
-    /// Keep an active parent and its parts together, as the Mac's Tasks panel does.
+    /// Keep a working parent and its live parts together, as the Mac's Tasks panel does (`nowGroupsOf`): the tree is live
+    /// work only, so a closed part keeps its own group and Working never lists finished work.
     public var groups: [String: PhoneTaskGroup] {
-        let byID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
+        let byID = Dictionary(tasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        func live(_ task: PhoneTask?) -> PhoneTask? { task.flatMap { $0.status == "done" || $0.status == "dropped" ? nil : $0 } }
+        func liveParent(_ task: PhoneTask) -> PhoneTask? { live(task.parentId.flatMap { byID[$0] }) }
         var working = Set<String>()
         for task in tasks where task.group == .working {
-            var member: PhoneTask? = task
+            var member = live(task)
+            while let next = member, working.insert(next.id).inserted { member = liveParent(next) }
+        }
+        for task in tasks where live(task) != nil {
+            var member = liveParent(task)
             var visited = Set<String>()
             while let next = member, visited.insert(next.id).inserted {
-                working.insert(next.id)
-                member = next.parentId.flatMap { byID[$0] }
-            }
-        }
-        for task in tasks {
-            var parent = task.parentId
-            var visited = Set<String>()
-            while let id = parent, visited.insert(id).inserted {
-                if working.contains(id) { working.insert(task.id); break }
-                parent = byID[id]?.parentId
+                if working.contains(next.id) { working.insert(task.id); break }
+                member = liveParent(next)
             }
         }
         return Dictionary(uniqueKeysWithValues: tasks.compactMap { task in

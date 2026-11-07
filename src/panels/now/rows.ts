@@ -8,7 +8,14 @@ import {
   nowGroupsOf,
   taskStatusOf,
 } from "@infinitary/ui";
-import { ROW_START_LABEL, ROW_TRY_AGAIN_LABEL } from "./words";
+import {
+  EARLIER_LABEL,
+  foundOnWords,
+  ROW_REACH_WORDS,
+  ROW_START_LABEL,
+  ROW_TRY_AGAIN_LABEL,
+  ROW_WORDS,
+} from "./words";
 
 /**
  * What the Tasks panel lists, and how each row reads (task-system design
@@ -28,7 +35,7 @@ export type PanelGroup = NowGroup | "earlier";
 
 export const PANEL_GROUP_LABELS: Record<PanelGroup, string> = {
   ...NOW_GROUP_LABELS,
-  earlier: "earlier",
+  earlier: EARLIER_LABEL,
 };
 
 /** Groups whose rows show without a click. */
@@ -66,19 +73,19 @@ export function wordOf(task: PanelTaskRow): string {
     marks.startAttempt?.phase === "checking" ||
     task.activity === "starting"
   ) {
-    return "starting";
+    return ROW_WORDS.starting;
   }
-  if (marks.startNotice) return "could not start";
+  if (marks.startNotice) return ROW_WORDS.couldNotStart;
   // The row shows no reason, so the checks watch says itself (INF-676), and
   // so does a started crewmate idle on the tasks it waits on (INF-38): the
   // row's margin arrow points at them and its summary names each one.
   const reading = task.status === "active" ? taskStatusOf(task) : null;
-  if (reading?.wait === "checks") return "checks";
-  if (reading?.waitsOn) return "waiting";
+  if (reading?.wait === "checks") return ROW_WORDS.checks;
+  if (reading?.waitsOn) return ROW_WORDS.waiting;
   if (task.status !== "open") return "";
-  if (task.flags.blocked) return "blocked";
-  if (task.flags.held) return "held";
-  if (task.foundOn) return `found on ${task.foundOn}`;
+  if (task.flags.blocked) return ROW_WORDS.blocked;
+  if (task.flags.held) return ROW_WORDS.held;
+  if (task.foundOn) return foundOnWords(task.foundOn);
   return "";
 }
 
@@ -146,7 +153,11 @@ export function rowTrailing(task: PanelTaskRow, name: string): RowTrailing {
     // The row says why its computer cannot take work now: out of reach, or connecting.
     outOfReach: task.place?.reach !== undefined && task.place.reach !== "in-reach",
     connecting,
-    reach: connecting ? "connecting" : task.place?.noNewWork ? "takes no new work" : "out of reach",
+    reach: connecting
+      ? ROW_REACH_WORDS.connecting
+      : task.place?.noNewWork
+        ? ROW_REACH_WORDS.noNewWork
+        : ROW_REACH_WORDS.away,
   };
 }
 

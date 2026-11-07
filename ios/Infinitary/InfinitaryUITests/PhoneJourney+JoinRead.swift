@@ -103,7 +103,7 @@ extension PhoneJourney {
             let tasksRail = phoneSidebarRail("Tasks", in: sidebar), activityRail = phoneSidebarRail("Activity", in: sidebar)
             XCTAssertLessThan(tasksRail.frame.midX, activityRail.frame.midX, "Tasks comes before Activity")
             XCTAssertTrue(tasksRail.isSelected)
-            let waiting = sidebar.buttons["group-waiting"]
+            let waiting = phoneTasksColumn(sidebar)
             XCTAssertTrue(waiting.waitForPresence(timeout: 10), "The sidebar opens on Tasks")
             XCTAssertTrue(waitForPhonePress(waiting))
             XCTAssertLessThanOrEqual(tasksRail.frame.maxY, waiting.frame.minY, "The pair sits at the sidebar's top")

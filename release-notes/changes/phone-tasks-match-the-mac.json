@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-tasks-match-the-mac",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Tasks on iPhone and iPad list your work like Tasks on your Mac",
+      "body": "On iPhone and iPad, Tasks now shows only the groups that have tasks, in the same order as your Mac: Waiting on you, Working and Queued stay open, and Backlog and Done fold with their counts. Each row shows the task's status mark, key, title and the Mac's short word, such as checks or could not start, then its project when you have more than one, and its computer. A search keeps the groups and adds older finished work under Earlier. Tapping a task whose card is ready shows that card on Home, as your Mac does; a first mate question and other tasks open their record.",
+      "noPicture": "The phone check's sample list holds two backlog tasks in light mode only, so no landscape pair in both themes shows the new groups and rows.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

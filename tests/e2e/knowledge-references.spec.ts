@@ -26,7 +26,14 @@ import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { promptInput } from "./prompt";
 import { openRecordMore, pressRow, recordCard, recordFrame } from "./rails";
-import { clickInBody, SHOWN_ENTRY, showCard, shownCard, shownCardFrame } from "./stack";
+import {
+  clickInBody,
+  SHOWN_ENTRY,
+  showCard,
+  shownCard,
+  shownCardFrame,
+  stagePrepared,
+} from "./stack";
 import { focusOn, typeInto, untilFocused } from "./windowKeys";
 
 /**
@@ -173,12 +180,17 @@ test("an answer's finding opens the inspector, a task's Knowledge used opens the
     });
 
     await test.step("Ask about this starts the captain's message about exactly that revision, and sends nothing", async () => {
-      // The browser's page was born while the keyboard was in the record's,
-      // so Chromium has not told it where focus is: the next time the window
-      // takes focus - on Linux a key's own press gives it - the window's page
-      // holds it for a frame and the key reaches nothing (docs/keyboard.md,
-      // "Cards and frames"). Focus comes into the browser from the window's
-      // own page, as the shell moves it, and Chromium tells every page then.
+      // A page born while the keyboard is in another page has not been told
+      // where focus is: the browser's, born while it was in the record's, and
+      // the card a Hide would bring up, which the stage prepares behind the
+      // browser once it has come forward. The next time the window takes
+      // focus - Playwright's keyboard focuses it with every key - such a page
+      // hands focus to the window's own page for a frame and the key can
+      // reach nothing (docs/keyboard.md, "Cards and frames"). Once the stage
+      // has prepared that card, focus comes into the browser from the
+      // window's own page, as the shell moves it, and Chromium tells every
+      // page then.
+      await stagePrepared(page);
       await focusOn(promptInput(page));
       await focusOn(frameIn(browserCard(page)));
       await focusOn(askAboutThis(page));

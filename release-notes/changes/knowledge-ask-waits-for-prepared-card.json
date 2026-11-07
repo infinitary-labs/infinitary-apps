@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "knowledge-ask-waits-for-prepared-card",
+      "reason": "Test-only repair: the knowledge references journey waits for the stage to prepare the card a Hide would bring up before it moves the keyboard into the Knowledge browser and presses Ask about this, so a page born after that move can no longer take the key; nothing in the app changes and no assertion is weakened."
+    }
+  ]
+}

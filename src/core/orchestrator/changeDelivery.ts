@@ -5,6 +5,7 @@ import { ChangePublication } from "./changePublication";
 import { CheckChangeTool } from "./checkChangeTool";
 import { DraftReadiness } from "./draftReadiness";
 import { MergeReviews } from "./mergeReviews";
+import { ProjectQueue } from "./projectQueue";
 
 /**
  * A task's change where the project lives, by owner: its checks read, its
@@ -18,13 +19,16 @@ export type ChangeDelivery = {
   reviews: MergeReviews;
   checkTool: CheckChangeTool;
   publication: ChangePublication;
+  /** A project's queue facts: its workflows read, and when its queue answered. */
+  queue: ProjectQueue;
 };
 
 export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDelivery {
   const context = new ChangeContext(options);
   const readiness = new DraftReadiness(context);
-  const checks = new ChangeChecks(context, readiness);
-  const merges = new ChangeMerge(context, checks);
+  const queue = new ProjectQueue(options);
+  const checks = new ChangeChecks(context, readiness, queue);
+  const merges = new ChangeMerge(context, checks, queue);
   const reviews = new MergeReviews(context, checks, merges);
   return {
     checks,
@@ -32,5 +36,6 @@ export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDeli
     reviews,
     checkTool: new CheckChangeTool(context, checks, reviews),
     publication: new ChangePublication(context, checks, readiness),
+    queue,
   };
 }

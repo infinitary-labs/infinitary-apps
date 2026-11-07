@@ -1427,6 +1427,7 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
         { name: "linux-checks", state: "success" },
         { name: QUEUE_STATUS, state: "pending" },
       ];
+      return {};
     };
     // The completion card's kept click, or the autonomous first mate's merge, of #94.
     const guard: MergeGuard = {

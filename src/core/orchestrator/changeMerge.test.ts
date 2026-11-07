@@ -18,11 +18,14 @@ import {
   type ForgePull,
   type ForgeReadiness,
   QUEUE_STATUS,
+  type QueueWorkflow,
 } from "../forge";
 import type { MergeAuthorization } from "../storage/taskStore";
 import type { TaskSeed } from "../tasks/seedTask";
 import type { MergeGuard } from "./changeMerge";
+import { CHECK_WATCH_BOUND_MS } from "./checkWatch";
 import { MERGE_CHECKS_HOLD_REASON } from "./mergeAuthorization";
+import { queueNoteFacts, queueWarningWords } from "./projectQueue";
 
 // Integration budget (docs/test-cohorts.md): real git plus the put-in's own
 // 300 + 900 ms retry backoff, the slowest test (a put-in retried after a
@@ -609,6 +612,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
         { name: "linux-checks", state: "success" },
         { name: QUEUE_STATUS, state: "pending" },
       ];
+      return {};
     };
     let refuse: string | undefined;
     const guard = (head: string): MergeGuard => ({
@@ -689,6 +693,114 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(putIns()).toEqual(["putIn fm/task-ab12cd34 repair01"]);
   });
 
+  it("reads the project's workflows at a queue merge click, keeps the mark's id, and records the queue's first answer (INF-2886)", async () => {
+    // The captain's approved plan: "check workflows at the choice and at each
+    // merge click, and warn in Settings and on the waiting note". The click
+    // reads which workflows mention infinitary/queue; the waiting note warns
+    // while nothing has answered; a status the project's batch writes is an
+    // answer, and the note goes back to its plain words.
+    const forge = new PinnedForge();
+    const harness = setup({ forge });
+    await insertDirectPrTask(harness.tasks, harness.repos, {
+      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+    });
+    const repoId = harness.tasks.get("ab12cd34")!.repoId!;
+    harness.repos.configure(repoId, { origin: "https://github.com/x/y.git" });
+    let workflows: QueueWorkflow[] = [];
+    forge.queueWorkflows = async () => workflows;
+    forge.markQueued = async (sha: string) => {
+      forge.atHead[sha] = [
+        { name: "linux-checks", state: "success" },
+        { name: QUEUE_STATUS, state: "pending", statusId: 41 },
+      ];
+      return { id: 41 };
+    };
+    const guard: MergeGuard = {
+      head: "feedbeef",
+      prNumber: 23,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    };
+    const note = () => queueWarningWords(harness.service.queue.noteFacts("ab12cd34"));
+
+    expect(await harness.service.merges.merge("ab12cd34", guard)).toMatchObject({
+      stop: "queue",
+    });
+    expect(harness.repos.get(repoId)).toMatchObject({ queueWorkflows: [] });
+    expect(harness.repos.get(repoId)?.queueAnsweredAt).toBeUndefined();
+    expect(harness.tasks.get("ab12cd34")?.delivery?.queueMark).toMatchObject({
+      head: "feedbeef",
+      id: 41,
+    });
+    expect(note()).toBe(
+      "Nothing in this project has answered the batch check yet, and no workflow mentions it. This merge waits until one does.",
+    );
+    // The check watch's reading carries the same fact for its two-hour wake.
+    expect(await harness.service.checks.readWatched("ab12cd34")).toMatchObject({
+      kind: "pending",
+      queue: `Nothing in this project has ever answered ${QUEUE_STATUS}, and no workflow on its default branch mentions it.`,
+    });
+
+    // The kept approval reads it again: still only the app's own mark.
+    workflows = [{ path: ".github/workflows/batch.yml", active: true }];
+    expect(await harness.service.merges.merge("ab12cd34", guard)).toMatchObject({
+      stop: "queue",
+    });
+    expect(harness.repos.get(repoId)?.queueAnsweredAt).toBeUndefined();
+
+    // The project's batch picks the version up: still waiting, with a status of its own.
+    forge.atHead.feedbeef = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "pending", statusId: 57 },
+    ];
+    expect(await harness.service.merges.merge("ab12cd34", guard)).toMatchObject({
+      stop: "queue",
+    });
+    expect(harness.repos.get(repoId)?.queueAnsweredAt).toEqual(expect.any(Number));
+    expect(harness.tasks.get("ab12cd34")?.delivery?.queueMark).toMatchObject({ answered: true });
+    expect(note()).toBeUndefined();
+  });
+
+  it("says on the waiting note what the workflow read found, and two quiet hours on a project whose batch answered before (INF-2886)", () => {
+    const at = 1_800_000_000_000;
+    const mark = { head: "feedbeef", id: 41, at };
+    expect(
+      queueWarningWords(
+        queueNoteFacts(
+          { queueWorkflows: [{ path: ".github/workflows/batch.yml", active: true }] },
+          mark,
+          at,
+        ),
+      ),
+    ).toBe(
+      "Nothing in this project has answered the batch check yet; .github/workflows/batch.yml mentions it. This merge waits until it answers.",
+    );
+    expect(
+      queueWarningWords(
+        queueNoteFacts(
+          { queueWorkflows: [{ path: ".github/workflows/batch.yml", active: false }] },
+          mark,
+          at,
+        ),
+      ),
+    ).toBe(
+      "Nothing in this project has answered the batch check yet, and the workflow that mentions it is turned off. This merge waits until one answers.",
+    );
+    // Answered before: the plain words hold until the check watch's bound passes untouched.
+    const answered = { queueWorkflows: [], queueAnsweredAt: at - 1 };
+    expect(queueWarningWords(queueNoteFacts(answered, mark, at + CHECK_WATCH_BOUND_MS - 1))).toBe(
+      undefined,
+    );
+    expect(queueWarningWords(queueNoteFacts(answered, mark, at + CHECK_WATCH_BOUND_MS))).toBe(
+      "Nothing has answered the batch check since you approved this 2 hours ago. Your approval is kept and runs once that check passes.",
+    );
+    expect(
+      queueWarningWords(
+        queueNoteFacts(answered, { ...mark, answered: true }, at + CHECK_WATCH_BOUND_MS),
+      ),
+    ).toBe(undefined);
+  });
+
   it("routes a request_merge review of another branch's pull request and a merge past the rules through a queue-pr project's queue (INF-2549)", async () => {
     // The captain chose "a swept batch before main": no route to a merge passes
     // the queue, and a required infinitary/queue status is what holds GitHub.
@@ -728,6 +840,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
         const held = forge.atHead[sha];
         if (Array.isArray(held))
           forge.atHead[sha] = [...held, { name: QUEUE_STATUS, state: "pending" }];
+        return {};
       },
     });
     const passQueue = (sha: string, number: number) => {

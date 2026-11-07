@@ -2,6 +2,7 @@ import type { ForgeCheckState } from "@shared/checkSnapshot";
 import type { ForgeKind } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
 import type { PresentationDestination } from "@shared/presentationDestination";
+import type { QueueWorkflow } from "@shared/repos";
 import type { ForgeApi } from "./api";
 import type { ForgeAttachments } from "./attachments";
 import type { ForgeWorkflows } from "./workflows";
@@ -111,7 +112,15 @@ export type ForgeCheck = {
   conclusion?: string | null;
   allowFailure?: boolean;
   ref?: string;
+  /** A commit status's own id, which tells the app's queue mark from a later write. */
+  statusId?: number;
 };
+
+/** The app's own queue mark on a version: the status id the host gave it back. */
+export type ForgeQueueMark = { id?: number };
+
+/** A workflow file that mentions the queue status, as read on the default branch. */
+export type { QueueWorkflow };
 
 /** A check's start and finish from the host's ISO times, leaving out any it lacks or garbles. */
 export function checkTimes(
@@ -396,7 +405,14 @@ export interface Forge {
    * which a project's own queue reads and answers on the same status. GitHub
    * only; absent where the host has no commit statuses.
    */
-  markQueued?(sha: string): Promise<void>;
+  markQueued?(sha: string): Promise<ForgeQueueMark>;
+  /**
+   * The workflow files on the default branch that mention the app's queue
+   * status (`QUEUE_STATUS`), each with whether it is turned on (docs/forge.md,
+   * "A project's queue"). A mention is what was read, not proof the file
+   * answers the status. GitHub only.
+   */
+  queueWorkflows?(): Promise<QueueWorkflow[]>;
   /** Close the change without putting it in. */
   close(change: ForgeChange): Promise<void>;
   /** How the change is named on a surface: `#N`, `!N`, or the branch where it has no number. */

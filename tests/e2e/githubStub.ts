@@ -95,6 +95,9 @@ export type StubRuleset = {
   rules: { type: string; parameters?: Record<string, unknown> }[];
 };
 
+/** A workflow file the stub serves: its path, GitHub's state for it, and its text. */
+export type StubWorkflowFile = { path: string; state: string; text: string };
+
 export type GitHubStub = {
   url: string;
   /** The environment that points the app here. */
@@ -171,6 +174,11 @@ export type GitHubStub = {
     sha: string,
     status: { context: string; state: string; description?: string },
   ) => void;
+  /**
+   * The project's workflow files on its default branch, as GitHub's list of
+   * workflows and its contents read answer them; none until set.
+   */
+  serveWorkflows: (files: StubWorkflowFile[]) => void;
   /** INF-1555 F14: refuse the version's workflow metadata list, not its sign-in or registered checks. */
   setWorkflowReadFailure: (failure: { status: number; message: string } | undefined) => void;
   /**
@@ -246,16 +254,22 @@ export async function startGitHubStub(
   const merges: StubMerge[] = [];
   const commitStatuses = new Map<
     string,
-    { context: string; state: string; description?: string }[]
+    { id: number; context: string; state: string; description?: string }[]
   >();
+  // GitHub gives every status it is sent an id of its own, newest highest.
+  let statusIds = 0;
   const putStatus = (
     sha: string,
     status: { context: string; state: string; description?: string },
-  ) =>
+  ): number => {
+    statusIds += 1;
     commitStatuses.set(sha, [
       ...(commitStatuses.get(sha) ?? []).filter((item) => item.context !== status.context),
-      status,
+      { id: statusIds, ...status },
     ]);
+    return statusIds;
+  };
+  let workflowFiles: StubWorkflowFile[] = [];
   const asyncMerges: StubAsyncMerge[] = [];
   const asyncResults = new Map<string, { status: string; details: Record<string, unknown> }>();
   let rulesets: StubRuleset[] = [];
@@ -845,18 +859,40 @@ export async function startGitHubStub(
           send(200, { total_count: runs.length, workflow_runs: runs });
           return;
         }
+        if (method === "GET" && rest === "/actions/workflows") {
+          send(200, {
+            total_count: workflowFiles.length,
+            workflows: workflowFiles.map((file, index) => ({
+              id: index + 1,
+              name: file.path,
+              path: file.path,
+              state: file.state,
+            })),
+          });
+          return;
+        }
+        const contents = method === "GET" ? /^\/contents\/(.+)$/.exec(rest) : null;
+        const workflowFile = contents?.[1]
+          ? workflowFiles.find((file) => file.path === decodeURIComponent(contents[1] ?? ""))
+          : undefined;
+        if (workflowFile) {
+          send(200, {
+            path: workflowFile.path,
+            encoding: "base64",
+            content: Buffer.from(workflowFile.text).toString("base64"),
+          });
+          return;
+        }
         const statusPost = method === "POST" ? /^\/statuses\/([^/]+)$/.exec(rest) : null;
         if (statusPost?.[1]) {
           const body = JSON.parse(raw) as { context: string; state: string; description?: string };
-          putStatus(decodeURIComponent(statusPost[1]), body);
-          send(201, { id: 1, ...body });
+          const id = putStatus(decodeURIComponent(statusPost[1]), body);
+          send(201, { id, ...body });
           return;
         }
         const statusRead = method === "GET" ? /^\/commits\/([^/]+)\/status$/.exec(rest) : null;
         if (statusRead?.[1]) {
-          const statuses = (commitStatuses.get(decodeURIComponent(statusRead[1])) ?? []).map(
-            (status, index) => ({ id: index + 1, ...status }),
-          );
+          const statuses = commitStatuses.get(decodeURIComponent(statusRead[1])) ?? [];
           const state = statuses.some(
             (status) => status.state === "failure" || status.state === "error",
           )
@@ -1080,7 +1116,12 @@ export async function startGitHubStub(
       checkRuns = runs;
     },
     statuses: (sha) => [...(commitStatuses.get(sha) ?? [])],
-    setStatus: putStatus,
+    setStatus: (sha, status) => {
+      putStatus(sha, status);
+    },
+    serveWorkflows: (files) => {
+      workflowFiles = files;
+    },
     setWorkflowReadFailure: (failure) => {
       workflowReadFailure = failure;
     },

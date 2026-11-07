@@ -62,7 +62,8 @@ export class FakeForge implements Forge {
   /** Fail `changeFor` only this many more times. */
   failChangeForTimes = 0;
   /** The checks GitHub holds at named versions, or its refusal there; other versions read `states`. */
-  atHead: Record<string, { name: string; state: ForgeCheckState }[] | Error> = {};
+  atHead: Record<string, { name: string; state: ForgeCheckState; statusId?: number }[] | Error> =
+    {};
   readonly calls: string[] = [];
 
   constructor(where: { kind?: Forge["kind"]; place?: string | null } = {}) {
@@ -135,6 +136,7 @@ export class FakeForge implements Forge {
   branchesAt?: Forge["branchesAt"];
   /** Marks a version for the project's queue, where a test gives the host it. */
   markQueued?: Forge["markQueued"];
+  queueWorkflows?: Forge["queueWorkflows"];
   /** The default branch's own checks, where a test gives the host them. */
   branchChecks?: Forge["branchChecks"];
   async checks(change: ForgeChange, movedPast?: string) {

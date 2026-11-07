@@ -1234,6 +1234,15 @@ export const MIGRATIONS: readonly Migration[] = [
   // Null on every existing card, which declared none. CardStore is the only
   // writer and no published view reads it. Dropping the column reverses it.
   addCardAfterMerge,
+  // INF-2886: a project's queue facts (docs/forge.md, "A project's queue"):
+  // the workflow files that mention its queue status as last read, and when
+  // anything but the app last answered that status. Null on every existing
+  // project, which nothing has read yet. `RepoRegistry.recordQueue` is the
+  // only writer; no published view reads them. Dropping the columns reverses it.
+  (db) => {
+    addColumn(db, "repos", "queue_workflows_json", "TEXT");
+    addColumn(db, "repos", "queue_answered_at", "INTEGER");
+  },
 ];
 
 export function addPluginKind(db: AppDatabase): void {

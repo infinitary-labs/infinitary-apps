@@ -199,6 +199,15 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     name: z.string(),
   }),
   /**
+   * A project's queue facts changed (docs/forge.md, "A project's queue"):
+   * the workflows that mention its queue status, or when the queue last
+   * answered. Settings reads the project again; no feed line.
+   */
+  z.object({
+    type: z.literal("repo_queue"),
+    repoId: z.string(),
+  }),
+  /**
    * A project's Runs on changed (docs/helper.md, "Runs on"): where its next
    * task starts, a computer that runs work by its id or null for this Mac.
    * `text` is the whole feed line, in the design skill's words.

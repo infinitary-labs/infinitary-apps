@@ -30,6 +30,7 @@ import {
   MERGE_CHECKS_HOLD_REASON,
   standingAuthorization,
 } from "./mergeAuthorization";
+import type { ProjectQueue } from "./projectQueue";
 import { carryPassedReview } from "./reviewCarry";
 
 /** A check state that lets a merge through: passed, or not run on purpose. */
@@ -146,6 +147,7 @@ export class ChangeMerge {
   constructor(
     private readonly context: ChangeContext,
     private readonly checks: ChangeChecks,
+    private readonly queue?: ProjectQueue,
   ) {
     this.options = context.options;
   }
@@ -571,7 +573,12 @@ export class ChangeMerge {
       };
     }
     if (state === undefined) {
-      await forge.markQueued(change.headSha);
+      // Each click that marks a version reads the project's workflows
+      // again, so its waiting note says what is there now.
+      const repoId = this.options.tasks.get(taskId)?.repoId;
+      if (repoId) await this.queue?.readWorkflows(repoId);
+      const mark = await forge.markQueued(change.headSha);
+      this.queue?.marked(taskId, change.headSha, mark.id);
       this.options.tasks.note(
         taskId,
         `Marked ${change.headSha} with ${QUEUE_STATUS}, waiting for the project's queue.`,

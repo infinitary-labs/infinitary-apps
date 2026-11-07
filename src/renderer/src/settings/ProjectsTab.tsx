@@ -1,4 +1,9 @@
-import { deliveryChoices, type RepoPolicyPatch, type RepoView } from "@shared/repos";
+import {
+  deliveryChoices,
+  queueSettingsWarning,
+  type RepoPolicyPatch,
+  type RepoView,
+} from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { DeviceSignIns } from "@shared/signIns";
 import {
@@ -107,7 +112,7 @@ export function ProjectsTab() {
     const off = window.infinitary.events.on((event) => {
       if (event.type === "repo_setup" || event.type === "repo_unregistered") refresh();
       if (event.type === "repo_configured" && !writing.current.has(event.repoId)) refresh();
-      if (event.type === "repo_runs_on") refresh();
+      if (event.type === "repo_runs_on" || event.type === "repo_queue") refresh();
     });
     return () => {
       off();
@@ -647,6 +652,7 @@ function ProjectRow({
               )
             }
           />
+          {!personal && <QueueWarning repo={repo} />}
           {!personal && repo.delivery === "queue-pr" && <QueueHowTo />}
           <PolicyRow
             title={AUTONOMY_SWITCH_NAME}
@@ -720,6 +726,31 @@ function ProjectRow({
           {!personal && <RemoveProject repo={repo} onRemoved={onRemoved} />}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The warning under "Where changes go" when the batched delivery is chosen
+ * and the app's read of the project's workflows finds none that mentions its
+ * batch check (docs/forge.md, "A project's queue"). It names what was read;
+ * it clears once a workflow mentions the check or the check answers.
+ */
+function QueueWarning({ repo }: { repo: RepoView }) {
+  const words = queueSettingsWarning(repo);
+  if (!words) return null;
+  return (
+    <div
+      role="status"
+      data-queue-warning={repo.id}
+      style={{
+        width: "fit-content",
+        fontSize: "var(--text-xs)",
+        color: "var(--warn)",
+        paddingBottom: "var(--space-2)",
+      }}
+    >
+      {words}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../../src/core/forge/forge";
+import { queueWarningWords } from "../../src/core/orchestrator/projectQueue";
 import { MERGE_PENDING_TITLE } from "../../src/core/orchestrator/settleWords";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
@@ -10,9 +11,11 @@ import { TaskStore } from "../../src/core/storage/taskStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { QUEUE_HOW_TO_WORDS } from "../../src/renderer/src/settings/projectsWords";
+import { queueSettingsWarning } from "../../src/shared/repos";
 import { PROJECT_DELIVERY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
+import { cardBody } from "./frames";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
 import { heroShot, regionShot } from "./pictures";
@@ -29,8 +32,11 @@ import { pressKey } from "./windowKeys";
  * passes", with INF-1275's pending merge shown on the card.
  *
  * Real git supplies the crewmate's commit; a disposable GitHub serves the
- * pull request, its passing check and the commit statuses, and records the
- * one squash. The captain chooses the queue under Where changes go in
+ * pull request, its passing check, the commit statuses and no workflow that
+ * mentions the queue status, and records the one squash. INF-2886's approved
+ * plan: the choice and the click read the project's workflows, so Settings
+ * warns under Where changes go and the waiting note warns until the queue
+ * first answers. The captain chooses the queue under Where changes go in
  * Settings -> Projects by keys while the completion card waits; the merge
  * click then marks the version and merges nothing; once the
  * project's queue sets the status to success, the kept click merges at that
@@ -145,6 +151,17 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
         ),
       )
       .toMatchObject({ delivery: "queue-pr" });
+    // INF-2886: the choice reads the project's workflows; none mentions its
+    // batch check, so Settings warns under Where changes go.
+    const warning = row.getByRole("status").filter({
+      hasText: queueSettingsWarning({ delivery: "queue-pr", queueWorkflows: [] }) ?? "",
+    });
+    await expect(warning).toBeVisible({ timeout: 20_000 });
+    await heroShot(launched.app, page, {
+      region: warning,
+      anchors: [choices],
+      name: "queue-workflow-warning",
+    });
     // The row says what the choice needs, and its how-to opens by keys.
     const howTo = row.locator("[data-queue-how-to]");
     await expect(howTo.getByText(QUEUE_HOW_TO_WORDS.needs)).toBeVisible();
@@ -173,6 +190,10 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
       .toEqual([expect.objectContaining({ context: QUEUE_STATUS, state: "pending" })]);
     const pending = shownCard(launched.page, QUEUE_WAITING_WORDS);
     await expect(pending).toBeVisible({ timeout: 20_000 });
+    // Nothing has answered the batch check and no workflow mentions it: the note warns.
+    await expect(cardBody(launched.page, QUEUE_WAITING_WORDS).locator("body")).toContainText(
+      queueWarningWords({ workflows: [], answeredBefore: false }) ?? "",
+    );
     await regionShot(cardSurface(launched.page), test.info().outputPath("queue-waiting.png"));
     await heroShot(launched.app, launched.page, {
       region: cardSurface(launched.page),
@@ -196,6 +217,14 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
     await expect.poll(saved).toMatchObject({
       delivery: { mergeAuthorization: { status: "consumed", receipt: { head: headSha } } },
     });
+    // The queue's answer is the project's first: Settings' warning has nothing left to say.
+    await expect
+      .poll(async () =>
+        (await launched.page.evaluate(() => window.infinitary.repos.list())).find(
+          (repo) => repo.id === "repo-meter",
+        ),
+      )
+      .toMatchObject({ queueAnsweredAt: expect.any(Number) });
   } finally {
     await launched.close();
     await github.close();

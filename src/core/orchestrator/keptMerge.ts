@@ -111,6 +111,8 @@ export class KeptMerge {
         }
         if (kept?.changed && unattended)
           this.noteWait(taskId, record.title, kept.head, result, kept.wait);
+        else if (kept?.wait === "queue" && unattended)
+          this.approvals.pendingWait(taskId, "queue", false);
         else if (kept?.changed) {
           this.settle.settleLine(
             taskId,
@@ -213,6 +215,9 @@ export class KeptMerge {
       return;
     }
     if (kept.changed) this.noteWait(taskId, title, kept.head, result, kept.wait);
+    // The same queue wait read again: its note follows what the app now
+    // knows of the queue, such as two quiet hours or a first answer.
+    else if (kept.wait === "queue") this.approvals.pendingWait(taskId, "queue", false);
   }
 
   /**

@@ -266,6 +266,17 @@ export const repoPolicyPatchSchema = z
   });
 export type RepoPolicyPatch = z.infer<typeof repoPolicyPatchSchema>;
 
+/**
+ * A workflow file on a project's default branch that mentions the app's
+ * queue status (`infinitary/queue`, docs/forge.md "A project's queue"), as
+ * last read where the project lives, and whether it is turned on there.
+ */
+export const queueWorkflowSchema = z.object({
+  path: z.string(),
+  active: z.boolean(),
+});
+export type QueueWorkflow = z.infer<typeof queueWorkflowSchema>;
+
 export const repoViewSchema = z.object({
   id: z.string(),
   /** The fleet name (unique; names the fleet-root entry), shown in surfaces. */
@@ -301,8 +312,37 @@ export const repoViewSchema = z.object({
    */
   runsOn: z.string().nullable(),
   placementRequirements: placementRequirementsSchema.optional(),
+  /**
+   * The workflow files that mention the queue status, read when the batched
+   * delivery is chosen and at each merge click that waits on it; absent
+   * until a read succeeded (docs/forge.md, "A project's queue").
+   */
+  queueWorkflows: z.array(queueWorkflowSchema).optional(),
+  /**
+   * When anything other than the app last wrote the queue status on one of
+   * this project's versions (epoch ms); absent while nothing has answered.
+   */
+  queueAnsweredAt: z.number().optional(),
 });
 export type RepoView = z.infer<typeof repoViewSchema>;
+
+/**
+ * Settings' warning under "Where changes go" for a project on the batched
+ * delivery whose queue the app's reads find nothing to answer (docs/forge.md,
+ * "A project's queue"); null when the queue answered before, a workflow that
+ * is on mentions its status, or the workflows were never read. It says only
+ * what was read: a mention is not proof a workflow answers.
+ */
+export function queueSettingsWarning(
+  repo: Pick<RepoView, "delivery" | "queueWorkflows" | "queueAnsweredAt">,
+): string | null {
+  if (repo.delivery !== "queue-pr" || repo.queueAnsweredAt !== undefined) return null;
+  const workflows = repo.queueWorkflows;
+  if (!workflows || workflows.some((workflow) => workflow.active)) return null;
+  return workflows.length > 0
+    ? "The workflow in this project that mentions its batch check is turned off, so approved merges would wait for one."
+    : "No workflow in this project mentions its batch check yet, so approved merges would wait for one.";
+}
 
 /**
  * Why a project's tasks can run only on this Mac, or null when its Runs on

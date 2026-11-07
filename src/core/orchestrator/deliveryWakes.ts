@@ -141,6 +141,8 @@ export type DeliveryFacts =
       checks?: { name: string; state: string }[];
       /** timed-out: how long the host watched. */
       waitedMs?: number;
+      /** timed-out on a version waiting for the project's queue: what the app read about that queue. */
+      queue?: string;
       /** failed at the CI cap: the rounds spent and the cap. */
       cap?: { rounds: number; cap: number };
       /** unreadable: why, in words the crewmate can act on. */
@@ -228,7 +230,7 @@ function renderChecksSettled(facts: ChecksSettledFacts): string {
     case "not-green":
       return `An earlier check-watch record reports ${JSON.stringify(facts)}. It is history, not a current readiness verdict. Repair counts are retired and place no hold. Read current check facts and follow your delivery guidance before offering a merge.`;
     case "timed-out":
-      return `The checks on ${change}${head} are still running after ${formatDurationShort(facts.waitedMs ?? 0)}${named ? `: ${named}` : ""}. The app stopped watching them: read them with check_change, and report a blocker if they never finish.`;
+      return `The checks on ${change}${head} are still running after ${formatDurationShort(facts.waitedMs ?? 0)}${named ? `: ${named}` : ""}.${facts.queue ? ` ${facts.queue}` : ""} The app stopped watching them: read them with check_change, and report a blocker if they never finish.`;
     case "gone":
       return `${change.charAt(0).toUpperCase()}${change.slice(1)} is no longer open where the project lives, so the app stopped watching its checks. Read it with check_change and carry on.`;
     case "unreadable":

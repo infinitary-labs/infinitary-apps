@@ -278,6 +278,13 @@ export type MergeAuthorization = {
   receipt?: { head: string; sha?: string; at: number };
 };
 
+/**
+ * The app's own mark on a waiting version: the version, the status id the
+ * host gave the mark back, when it was made, and whether anything has
+ * written the status since.
+ */
+export type QueueMark = { head: string; id?: number; at: number; answered?: boolean };
+
 /** Delivery facts, as they become known (check_pr_ci, land, merge-pr, review). */
 export type TaskDelivery = {
   /**
@@ -440,6 +447,12 @@ export type TaskDelivery = {
    * them for the crewmate, absent otherwise.
    */
   ciWatch?: CiWatch;
+  /**
+   * The app's own mark on the version waiting for the project's queue
+   * (docs/forge.md, "A project's queue"): the status id the host gave it back,
+   * so a later write by anything else reads as an answer.
+   */
+  queueMark?: QueueMark;
   /** Non-PR run watches, saved until their named terminal wake or a crewmate outcome read. */
   runWatches?: RunWatch[];
   /** Contract 4.66's unversioned kept click; retired at boot, never run. */

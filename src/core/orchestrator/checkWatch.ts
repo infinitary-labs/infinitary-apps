@@ -91,6 +91,11 @@ export type WatchedReading =
       pending: WatchedCheck[];
       /** Red checks seen while others still run. Absent when none are red. */
       failing?: WatchedCheck[];
+      /**
+       * The version still waits on the project's queue after the app's mark:
+       * what the app read about that queue, for the bound's wake.
+       */
+      queue?: string;
     }
   | {
       kind: "finished";
@@ -322,6 +327,7 @@ export class CheckWatcher {
               head: read.head,
               checks: read.pending,
               waitedMs: now - current.since,
+              ...(read.queue ? { queue: read.queue } : {}),
             },
             read.observationId,
           );

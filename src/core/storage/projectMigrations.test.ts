@@ -6,6 +6,7 @@ import {
   appliedVersions,
   columnNames,
   REVERSE_MIGRATION_64,
+  REVERSE_PROJECT_QUEUE,
   tmpUserData,
 } from "../../../tests/helpers/migrations";
 import { RepoRegistry } from "../workspace/repoRegistry";
@@ -34,7 +35,7 @@ it("INF-1117: upgrades existing projects with empty scope, saves it across reope
   const reopened = openDatabase(dir);
   expect(new RepoRegistry(reopened, join(dir, "fleet")).get("scope-project")?.scope).toBe(scope);
   dropViews(reopened);
-  reopened.exec("ALTER TABLE repos DROP COLUMN scope");
+  reopened.exec(`${REVERSE_PROJECT_QUEUE}ALTER TABLE repos DROP COLUMN scope`);
   expect(columnNames(reopened, "repos")).toEqual(columns);
   expect(reopened.prepare("SELECT id, name FROM repos").all()).toEqual([
     { id: "scope-project", name: "observatory" },

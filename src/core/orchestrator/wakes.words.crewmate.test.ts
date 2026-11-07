@@ -11,6 +11,7 @@ import {
   WAKE_TASK as TASK,
   type WordsCases,
 } from "../../../tests/helpers/wakeWords";
+import { queueWakeWords } from "./projectQueue";
 
 const CASES: WordsCases<CrewmateWakeKind> = {
   "responses-cancelled": [
@@ -904,6 +905,24 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       },
       words:
         "The checks on PR #1061 at 4be7c1d are still running after 3h: critical-path (in_progress). The app stopped watching them: read them with check_change, and report a blocker if they never finish.",
+    },
+    {
+      // INF-2886: the two-hour wake on a version waiting for its project's
+      // queue carries what the app read about that queue.
+      name: "timed out waiting on a queue nothing has answered",
+      wake: {
+        facts: {
+          kind: "checks-settled",
+          outcome: "timed-out",
+          change: "PR #1061",
+          head: "4be7c1d90a2f",
+          checks: [{ name: "infinitary/queue", state: "pending" }],
+          waitedMs: 7_200_000,
+          queue: queueWakeWords({ workflows: [], answeredBefore: false }),
+        },
+      },
+      words:
+        "The checks on PR #1061 at 4be7c1d are still running after 2h: infinitary/queue (pending). Nothing in this project has ever answered infinitary/queue, and no workflow on its default branch mentions it. The app stopped watching them: read them with check_change, and report a blocker if they never finish.",
     },
     {
       name: "timed out bare",

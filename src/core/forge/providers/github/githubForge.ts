@@ -26,6 +26,7 @@ import {
   type ForgeLocation,
   type ForgeProject,
   type ForgePull,
+  type ForgeQueueMark,
   type ForgeReadiness,
   type ForgeRuleset,
   type ForgeSkipMerge,
@@ -36,6 +37,7 @@ import {
   ownChecksOf,
   QUEUE_STATUS,
   QUEUE_WAITING_WORDS,
+  type QueueWorkflow,
 } from "../../forge";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import type { ArchiveRanges } from "../../workflows";
@@ -178,7 +180,14 @@ type CheckRunJson = {
 };
 
 /** A commit status: posted at `created_at`, last changed at `updated_at`. */
-type StatusJson = { context: string; state: string; created_at?: string; updated_at?: string };
+type StatusJson = {
+  id?: number;
+  context: string;
+  state: string;
+  created_at?: string;
+  updated_at?: string;
+};
+type WorkflowJson = { path?: string; state?: string };
 
 /** The workflow run a check suite belongs to, as far as superseding needs it. */
 type SuiteRunJson = {
@@ -485,6 +494,7 @@ export class GitHubForge implements Forge {
           name: status.context,
           state,
           ...checkTimes(status.created_at, state === "pending" ? null : status.updated_at),
+          ...(typeof status.id === "number" ? { statusId: status.id } : {}),
         };
       }),
     ];
@@ -825,12 +835,51 @@ export class GitHubForge implements Forge {
     };
   }
 
-  async markQueued(sha: string): Promise<void> {
-    await this.request("POST", `${this.repoPath()}/statuses/${encodeURIComponent(sha)}`, {
-      state: "pending",
-      context: QUEUE_STATUS,
-      description: QUEUE_WAITING_WORDS,
-    });
+  async markQueued(sha: string): Promise<ForgeQueueMark> {
+    const answer = (await this.request(
+      "POST",
+      `${this.repoPath()}/statuses/${encodeURIComponent(sha)}`,
+      {
+        state: "pending",
+        context: QUEUE_STATUS,
+        description: QUEUE_WAITING_WORDS,
+      },
+    )) as { id?: unknown } | null;
+    return typeof answer?.id === "number" ? { id: answer.id } : {};
+  }
+
+  /**
+   * The workflow files on the default branch whose text mentions the queue
+   * status: GitHub's list of the project's workflows, then each file read
+   * at the default branch. A listed file the default branch no longer has
+   * is left out; any other refusal is the read's failure.
+   */
+  async queueWorkflows(): Promise<QueueWorkflow[]> {
+    const listed = await this.pages<WorkflowJson>(
+      `${this.repoPath()}/actions/workflows`,
+      (page) => (page as { workflows?: WorkflowJson[] }).workflows ?? [],
+    );
+    const found: QueueWorkflow[] = [];
+    for (const workflow of listed.items) {
+      const path = workflow.path;
+      if (!path || workflow.state === "deleted") continue;
+      let file: { content?: string; encoding?: string } | null;
+      try {
+        file = (await this.request(
+          "GET",
+          `${this.repoPath()}/contents/${path.split("/").map(encodeURIComponent).join("/")}`,
+        )) as { content?: string; encoding?: string } | null;
+      } catch (caught) {
+        if (caught instanceof ForgeError && caught.failure === "not-found") continue;
+        throw caught;
+      }
+      const text =
+        file?.encoding === "base64" && file.content
+          ? Buffer.from(file.content, "base64").toString("utf8")
+          : (file?.content ?? "");
+      if (text.includes(QUEUE_STATUS)) found.push({ path, active: workflow.state === "active" });
+    }
+    return found;
   }
 
   async close(change: ForgeChange): Promise<void> {

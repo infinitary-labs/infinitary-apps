@@ -17,6 +17,7 @@ import {
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
+  QUEUE_STATUS,
 } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type { CiWatch, TaskDelivery, TaskRecord } from "../storage/taskStore";
@@ -35,6 +36,7 @@ import { observeCheckRepair } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
 import type { DraftReadiness } from "./draftReadiness";
 import type { MainBranchReading } from "./mainCheckWake";
+import { type ProjectQueue, queueWakeWords } from "./projectQueue";
 
 /**
  * `merged`: no open change for the branch, and the pull request the task
@@ -76,6 +78,7 @@ export class ChangeChecks {
   constructor(
     private readonly context: ChangeContext,
     private readonly readiness: DraftReadiness,
+    private readonly queue?: ProjectQueue,
   ) {
     this.options = context.options;
   }
@@ -145,6 +148,7 @@ export class ChangeChecks {
       const main = await this.mainEvidence(record, forge, change, checks);
       this.assertCheckTarget(record);
       const observationId = this.observeChecks(taskId, change.headSha, checks, false);
+      this.queue?.observe(taskId, change.headSha, checks.items);
       const words = changeWords(forge, change);
       // The watch's own reading leaves the watch as it is (`watchAfter`),
       // whether its checks still run or not.
@@ -163,6 +167,7 @@ export class ChangeChecks {
         return { kind: "failed", transient: false, problem: checks.problem, observationId };
       if (this.checksPending(record, { change, forge }, checks)) {
         const failing = named(checks.items.filter((check) => isRedCheckState(check.state)));
+        const queue = this.queueWake(taskId, change.headSha, checks.items);
         return {
           kind: "pending",
           observationId,
@@ -170,6 +175,7 @@ export class ChangeChecks {
           change: words,
           pending: named(checks.items.filter((check) => check.state === "pending")),
           ...(failing.length > 0 ? { failing } : {}),
+          ...(queue ? { queue } : {}),
         };
       }
       return {
@@ -353,6 +359,7 @@ export class ChangeChecks {
         change.number !== undefined && forge.pull ? await forge.pull(change.number) : undefined;
       this.assertCheckTarget(record);
       this.observeChecks(taskId, change.headSha, checks, audience === "crewmate");
+      this.queue?.observe(taskId, change.headSha, checks.items);
       const stillRunning = this.checksPending(record, { change, forge }, checks);
       this.record(
         record.id,
@@ -613,6 +620,23 @@ export class ChangeChecks {
   }
 
   /** An unread observation survives a restart until it reaches the crew's durable inbox. */
+  /**
+   * What the check watch's wake says about a version still waiting on the
+   * project's queue after the app marked it: undefined unless the queue
+   * status there is still waiting on the app's own mark.
+   */
+  private queueWake(
+    taskId: string,
+    head: string,
+    items: readonly { name: string; state: ForgeCheckState }[],
+  ): string | undefined {
+    if (!this.queue) return undefined;
+    const mark = this.options.tasks.get(taskId)?.delivery?.queueMark;
+    const waiting = items.some((item) => item.name === QUEUE_STATUS && item.state === "pending");
+    if (mark?.head !== head || !waiting) return undefined;
+    return queueWakeWords(this.queue.noteFacts(taskId));
+  }
+
   private observeChecks(
     taskId: string,
     head: string,

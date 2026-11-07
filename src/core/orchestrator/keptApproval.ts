@@ -17,6 +17,7 @@ import {
   retryAfter,
   standingAuthorization,
 } from "./mergeAuthorization";
+import { queueNoteFacts, queueWarningWords } from "./projectQueue";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import {
@@ -578,9 +579,17 @@ export class KeptApproval {
     const record = this.host.tasks.get(taskId);
     // Only a standing approval waits: one already spent or ended has no wait to show.
     if (!standingAuthorization(record?.delivery)) return;
+    // A wait on the project's queue warns when the app's reads say nothing
+    // has answered it (docs/forge.md, "A project's queue").
+    const repo =
+      wait === "queue" && record?.repoId ? this.host.repos.get(record.repoId) : undefined;
+    const warning = repo
+      ? queueWarningWords(queueNoteFacts(repo, record?.delivery?.queueMark, this.host.now()))
+      : undefined;
     this.pendingMerge(
       taskId,
-      keptFeedLine(wait, placeOf(this.host.repos, record), currentCheckStatus(record?.delivery)),
+      warning ??
+        keptFeedLine(wait, placeOf(this.host.repos, record), currentCheckStatus(record?.delivery)),
       { ...(wait === "queue" ? { title: QUEUE_WAITING_WORDS } : {}), raise },
     );
   }

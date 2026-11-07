@@ -300,6 +300,7 @@ export const readCatalog = {
         event.type === "repo_setup" ||
         event.type === "repo_configured" ||
         event.type === "repo_runs_on" ||
+        event.type === "repo_queue" ||
         event.type === "repo_unregistered",
     },
     description:
@@ -409,6 +410,7 @@ export const readCatalog = {
         event.type === "repo_setup" ||
         event.type === "repo_configured" ||
         event.type === "repo_runs_on" ||
+        event.type === "repo_queue" ||
         event.type === "repo_unregistered",
     },
     description: "Scratch plus one project per managed repo, with live counts.",

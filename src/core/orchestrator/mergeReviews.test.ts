@@ -931,6 +931,7 @@ describe("a review's click on a queue-pr project (docs/forge.md, \"A project's q
     const marked: string[] = [];
     forge.markQueued = async (sha) => {
       marked.push(sha);
+      return {};
     };
     forge.atHead[HEAD] = [
       { name: "linux-checks", state: "success" },

@@ -1598,6 +1598,27 @@
                   ]
                 }
               }
+            },
+            "queueWorkflows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "path",
+                  "active"
+                ]
+              }
+            },
+            "queueAnsweredAt": {
+              "type": "number"
             }
           },
           "required": [
@@ -1870,6 +1891,27 @@
                     ]
                   }
                 }
+              },
+              "queueWorkflows": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "active"
+                  ]
+                }
+              },
+              "queueAnsweredAt": {
+                "type": "number"
               }
             },
             "required": [
@@ -2274,6 +2316,27 @@
                 ]
               }
             }
+          },
+          "queueWorkflows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "active": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "path",
+                "active"
+              ]
+            }
+          },
+          "queueAnsweredAt": {
+            "type": "number"
           }
         },
         "required": [
@@ -4996,6 +5059,27 @@
                 ]
               }
             }
+          },
+          "queueWorkflows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "active": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "path",
+                "active"
+              ]
+            }
+          },
+          "queueAnsweredAt": {
+            "type": "number"
           }
         },
         "required": [
@@ -51197,6 +51281,22 @@
                               "properties": {
                                 "type": {
                                   "type": "string",
+                                  "const": "repo_queue"
+                                },
+                                "repoId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "repoId"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
                                   "const": "repo_runs_on"
                                 },
                                 "actor": {
@@ -54747,6 +54847,22 @@
               "type",
               "repoId",
               "name"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "repo_queue"
+              },
+              "repoId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "repoId"
             ]
           },
           {

@@ -141,9 +141,11 @@ export const REVERSE_MIGRATION_66 = `
 `;
 /** Migration 65's live attachment, undone: the `cards` column. */
 export const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
-/** Reversing Runs on also removes the later project requirements and scope columns. */
-export const REVERSE_MIGRATION_64 =
-  "ALTER TABLE repos DROP COLUMN scope; ALTER TABLE repos DROP COLUMN placement_requirements_json; ALTER TABLE repos DROP COLUMN runs_on;\n";
+/** INF-2886's project queue facts, undone: the two `repos` columns. */
+export const REVERSE_PROJECT_QUEUE =
+  "ALTER TABLE repos DROP COLUMN queue_workflows_json; ALTER TABLE repos DROP COLUMN queue_answered_at;\n";
+/** Reversing Runs on also removes the later project requirements, scope and queue columns. */
+export const REVERSE_MIGRATION_64 = `${REVERSE_PROJECT_QUEUE}ALTER TABLE repos DROP COLUMN scope; ALTER TABLE repos DROP COLUMN placement_requirements_json; ALTER TABLE repos DROP COLUMN runs_on;\n`;
 /** Reversing placed tasks also removes migration 84's commitment column and index. */
 export const REVERSE_MIGRATION_63 =
   "DROP INDEX tasks_pending_placement; ALTER TABLE tasks DROP COLUMN placement_json; ALTER TABLE tasks DROP COLUMN device_id;\n";

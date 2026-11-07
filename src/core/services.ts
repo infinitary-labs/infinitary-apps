@@ -744,6 +744,11 @@ export async function createServices(
       supervisor.reportIntake.verifyValidationEvidence(taskId),
     now: ticker.now,
   });
+  // A project's queue facts (docs/forge.md, "A project's queue"): choosing
+  // the batched delivery, whoever chooses it, reads the workflows that
+  // mention its status, and every change of those facts reaches Settings.
+  repos.onQueueChosen((repo) => void changeDelivery.queue.readWorkflows(repo.id));
+  repos.onQueue((repo) => broadcastEvent({ type: "repo_queue", repoId: repo.id }));
   const githubGateway = new GithubGatewayService({
     tasks,
     repos,

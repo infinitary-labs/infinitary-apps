@@ -372,6 +372,81 @@ describe("GitHubForge", () => {
     ]);
   });
 
+  // INF-2886: the captain's "warn when the queue choice finds no workflow
+  // that answers infinitary/queue". The files are this project's own batch
+  // workflow's opening and its check workflow's, as GitHub's contents read
+  // answers them; a workflow the default branch no longer has is left out.
+  it("reads the workflows that mention the queue status on the default branch, with each one's on or off state", async () => {
+    const batch = [
+      "name: batch",
+      "",
+      "# The swept batch before main. The captain's merge click marks the approved version with the",
+      "# commit status infinitary/queue, pending; this workflow gathers every",
+      "on:",
+      "  status:",
+      "jobs:",
+      "  sweep:",
+      "    if: github.event.context == 'infinitary/queue' && github.event.state == 'pending'",
+    ].join("\n");
+    const ci = ["name: ci", "on:", "  pull_request:", "jobs:", "  typecheck-lint-build:"].join(
+      "\n",
+    );
+    let batchState = "active";
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/actions/workflows": () => ({
+        json: {
+          total_count: 3,
+          workflows: [
+            { id: 1, name: "ci", path: ".github/workflows/ci.yml", state: "active" },
+            { id: 2, name: "batch", path: ".github/workflows/batch.yml", state: batchState },
+            { id: 3, name: "old", path: ".github/workflows/old.yml", state: "active" },
+          ],
+        },
+      }),
+      "GET /repos/octo/meter/contents/.github/workflows/ci.yml": () => ({
+        json: { encoding: "base64", content: Buffer.from(ci).toString("base64") },
+      }),
+      "GET /repos/octo/meter/contents/.github/workflows/batch.yml": () => ({
+        json: { encoding: "base64", content: Buffer.from(batch).toString("base64") },
+      }),
+    });
+    expect(await forge.queueWorkflows()).toEqual([
+      { path: ".github/workflows/batch.yml", active: true },
+    ]);
+    // Each file is read where it lives, through the project's own address.
+    expect(seen.map((request) => request.url.split("?")[0])).toContain(
+      "/repos/octo/meter/contents/.github/workflows/old.yml",
+    );
+    batchState = "disabled_manually";
+    expect(await forge.queueWorkflows()).toEqual([
+      { path: ".github/workflows/batch.yml", active: false },
+    ]);
+  });
+
+  it("keeps the queue mark's status id, so a later write by the project's queue reads as another status", async () => {
+    let statuses: { id: number; context: string; state: string }[] = [];
+    const { forge } = await stub({
+      "POST /repos/octo/meter/statuses/feedbeef": (request) => {
+        statuses = [{ id: 41, context: "infinitary/queue", state: "pending" }];
+        return { status: 201, json: { id: 41, ...(request.body as object) } };
+      },
+      "GET /repos/octo/meter/commits/feedbeef/check-runs": () => ({
+        json: { total_count: 0, check_runs: [] },
+      }),
+      "GET /repos/octo/meter/commits/feedbeef/status": () => ({ json: { statuses } }),
+    });
+    expect(await forge.markQueued("feedbeef")).toEqual({ id: 41 });
+    const change = { number: 23, url: null, branch: "b", headSha: "feedbeef", title: "fix: x" };
+    expect((await forge.checks(change)).items).toMatchObject([
+      { name: QUEUE_STATUS, state: "pending", statusId: 41 },
+    ]);
+    // The batch picked it up: still waiting, but a status of its own.
+    statuses = [{ id: 57, context: "infinitary/queue", state: "pending" }];
+    expect((await forge.checks(change)).items).toMatchObject([
+      { name: QUEUE_STATUS, state: "pending", statusId: 57 },
+    ]);
+  });
+
   it("relays check runs and commit statuses without a suite verdict", async () => {
     let runs: { name: string; status: string; conclusion: string | null }[] = [];
     let statuses: { context: string; state: string }[] = [];

@@ -17,6 +17,8 @@ import { AUTOMATIC_COMPUTER, placementRequirementsSchema } from "@shared/placeme
 import {
   deliveryChoices,
   type ProjectsFolderView,
+  type QueueWorkflow,
+  queueWorkflowSchema,
   type RepoDelivery,
   type RepoKind,
   type RepoPolicyPatch,
@@ -29,6 +31,7 @@ import {
   runsHereOnly,
 } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
+import { z } from "zod";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
 import type { AppDatabase } from "../storage/db";
 import { ensureRepoProject, ProjectStore } from "../storage/projectStore";
@@ -88,10 +91,12 @@ type Row = {
   scope: string | null;
   runs_on: string | null;
   placement_requirements_json?: string | null;
+  queue_workflows_json?: string | null;
+  queue_answered_at?: number | null;
 };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at";
 
 function fromRow(row: Row): RepoView {
   return {
@@ -118,7 +123,23 @@ function fromRow(row: Row): RepoView {
           ),
         }
       : {}),
+    ...(row.queue_workflows_json
+      ? { queueWorkflows: queueWorkflowsOf(row.queue_workflows_json) }
+      : {}),
+    ...(typeof row.queue_answered_at === "number"
+      ? { queueAnsweredAt: row.queue_answered_at }
+      : {}),
   };
+}
+
+/** The saved queue workflows; a garbled value reads as never read. */
+function queueWorkflowsOf(json: string): QueueWorkflow[] | undefined {
+  try {
+    const parsed = z.array(queueWorkflowSchema).safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** A new project's row as `saveNewRepo` saves it; each absent policy takes the registry's default. */
@@ -217,6 +238,10 @@ export class RepoRegistry {
   private readonly projects: ProjectStore;
   /** Who hears a project's Runs on change (`onRunsOn`). */
   private readonly runsOnListeners = new Set<(repo: RepoView) => void>();
+  /** Who hears a project's queue facts change (`onQueue`). */
+  private readonly queueListeners = new Set<(repo: RepoView) => void>();
+  /** Who hears a project's delivery become the batched one (`onQueueChosen`). */
+  private readonly queueChosenListeners = new Set<(repo: RepoView) => void>();
 
   constructor(
     private readonly db: AppDatabase,
@@ -532,7 +557,20 @@ export class RepoRegistry {
     const next = this.get(id) as RepoView;
     if (next.runsOn !== repo.runsOn)
       for (const listener of [...this.runsOnListeners]) listener(next);
+    if (changes.delivery === "queue-pr")
+      for (const listener of [...this.queueChosenListeners]) listener(next);
     return next;
+  }
+
+  /**
+   * Hears each choice of the batched delivery (`queue-pr`) on a project,
+   * after it is written, whoever made it; answers its own unsubscribe.
+   */
+  onQueueChosen(listener: (repo: RepoView) => void): () => void {
+    this.queueChosenListeners.add(listener);
+    return () => {
+      this.queueChosenListeners.delete(listener);
+    };
   }
 
   /** Read the checkout's address, never trusting it as the approved destination. */
@@ -642,6 +680,49 @@ export class RepoRegistry {
     const next = this.get(id) as RepoView;
     for (const listener of [...this.runsOnListeners]) listener(next);
     return next;
+  }
+
+  /**
+   * A project's queue facts (docs/forge.md, "A project's queue"): the
+   * workflow files that mention its queue status as just read, and when
+   * anything but the app answered that status, kept as the latest such
+   * time. Answers whether a fact changed; the listeners hear only a change.
+   */
+  recordQueue(
+    id: string,
+    facts: { workflows?: QueueWorkflow[]; answeredAt?: number },
+  ): RepoView | undefined {
+    const repo = this.get(id);
+    if (!repo) return undefined;
+    const workflows =
+      facts.workflows === undefined
+        ? undefined
+        : [...facts.workflows].sort((a, b) => a.path.localeCompare(b.path));
+    const workflowsChanged =
+      workflows !== undefined && JSON.stringify(workflows) !== JSON.stringify(repo.queueWorkflows);
+    const answeredChanged =
+      facts.answeredAt !== undefined && facts.answeredAt > (repo.queueAnsweredAt ?? -1);
+    if (!workflowsChanged && !answeredChanged) return repo;
+    if (workflowsChanged)
+      this.db
+        .prepare("UPDATE repos SET queue_workflows_json = ? WHERE id = ?")
+        .run(JSON.stringify(workflows), id);
+    if (answeredChanged)
+      this.db
+        .prepare("UPDATE repos SET queue_answered_at = ? WHERE id = ?")
+        .run(facts.answeredAt, id);
+    this.projection?.delete(id);
+    const next = this.get(id) as RepoView;
+    for (const listener of [...this.queueListeners]) listener(next);
+    return next;
+  }
+
+  /** Hears each change of a project's queue facts, after it is written; answers its own unsubscribe. */
+  onQueue(listener: (repo: RepoView) => void): () => void {
+    this.queueListeners.add(listener);
+    return () => {
+      this.queueListeners.delete(listener);
+    };
   }
 
   /** Hears each change of a project's Runs on, after it is written; answers its own unsubscribe. */

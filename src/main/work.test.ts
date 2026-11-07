@@ -12,6 +12,7 @@ vi.mock("./workContext", () => ({ workContext: vi.fn() }));
 vi.mock("./mediaProbe", () => ({ createMediaProbe: vi.fn() }));
 vi.mock("./host/taskBrowser", () => ({ createTaskBrowserHost: vi.fn() }));
 vi.mock("./host/axiProcess", () => ({ createAxiProcessSpawner: vi.fn() }));
+vi.mock("./host/setAsideProcess", () => ({ createSetAsideProcessSpawner: vi.fn() }));
 vi.mock("./host/resourceMemory", () => ({ readResourceMemory: vi.fn() }));
 vi.mock("./ownDisplay", () => ({ startOwnDisplay: vi.fn() }));
 

@@ -13,6 +13,7 @@ import { captureDockedPanel } from "./panelCapture";
 import { createPanelProcessSpawner } from "./panelProcess";
 import { createProgramProcessSpawner } from "./programProcess";
 import { memoryPressureStandIn, readResourceMemory } from "./resourceMemory";
+import { createSetAsideProcessSpawner } from "./setAsideProcess";
 import { createSqlProcessSpawner } from "./sqlProcess";
 import { createTaskBrowserHost } from "./taskBrowser";
 
@@ -41,6 +42,8 @@ export type ElectronHostOptions = {
   programProcessPath?: string | undefined;
   /** The built `panelProcess` entry: the process that runs one panel's background module. */
   panelProcessPath?: string | undefined;
+  /** The built `setAsideProcess` entry: the process one file the files command copies is set aside in. */
+  setAsideProcessPath?: string | undefined;
   /** The Linux autostart entry's name: this run's data folder's name (`startAtLoginFor`). */
   autostartName?: string | undefined;
   /**
@@ -120,6 +123,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     axiProcessPath,
     programProcessPath,
     panelProcessPath,
+    setAsideProcessPath,
     openWindow,
   } = options;
   const startAtLogin = startAtLoginFor(options.autostartName ?? ownAutostartName());
@@ -202,5 +206,8 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       ? { programProcess: createProgramProcessSpawner(programProcessPath) }
       : {}),
     ...(panelProcessPath ? { panelProcess: createPanelProcessSpawner(panelProcessPath) } : {}),
+    ...(setAsideProcessPath
+      ? { setAsideProcess: createSetAsideProcessSpawner(setAsideProcessPath) }
+      : {}),
   };
 }

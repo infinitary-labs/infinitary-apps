@@ -1,18 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { constants, createWriteStream, type Dirent, type Stats } from "node:fs";
-import {
-  chmod,
-  type FileHandle,
-  lstat,
-  mkdir,
-  open,
-  readdir,
-  realpath,
-  rm,
-  stat,
-} from "node:fs/promises";
+import type { Dirent, Stats } from "node:fs";
+import { chmod, lstat, mkdir, open, readdir, realpath, rm, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, normalize, sep } from "node:path";
-import { pipeline } from "node:stream/promises";
 import {
   FILE_PIECE_BYTES,
   type FileListing,
@@ -23,9 +12,23 @@ import {
 } from "@shared/files";
 import { PHONE_DOOR_FOLDER } from "@shared/phoneLink";
 import { USER_DATA_FOLDERS } from "@shared/userDataFolders";
-import Database from "better-sqlite3";
+import type { HostChildSpawner } from "../host";
 import { hostPlatform } from "../platform";
-import { HANDOVER_FILE_BYTES, sha256OfFile } from "../tasks/handoverFiles";
+import { sha256OfFile } from "../tasks/handoverFiles";
+import {
+  changedRefusal,
+  FileRefusal,
+  reasonOf,
+  type SetAsideAnswer,
+  type SetAsideChildMessage,
+  type SetAsideOrder,
+  type SetAsideParentMessage,
+  setAsideFile,
+  stillChecked,
+  unreadable,
+} from "./setAside";
+
+export { FileRefusal } from "./setAside";
 
 /**
  * One computer's own files, as the files command reads them (docs/files.md):
@@ -40,21 +43,11 @@ import { HANDOVER_FILE_BYTES, sha256OfFile } from "../tasks/handoverFiles";
  * from the handle opened to the very file that was checked, so a link
  * swapped in after the check is refused, and before it is read, so it
  * cannot change between pieces; a database is copied through its own
- * backup, so a database in use arrives complete. Nothing here reads a
+ * backup, so a database in use arrives complete. The file is opened and
+ * copied in a process of its own (./setAside.ts), so the app's own locks on
+ * it, SQLite's on its record among them, stay held. Nothing here reads a
  * file's content into words or a log.
  */
-
-/** The SQLite file header, which says a file is a database. */
-const SQLITE_HEADER = Buffer.from("SQLite format 3\0", "binary");
-
-/** The files SQLite opens by name beside a database: its log, its shared memory and its journal. */
-const DATABASE_SIDECARS = ["-wal", "-shm", "-journal"];
-
-/**
- * How a checked file is opened: to read, never through a link at its end,
- * and never waiting on a pipe swapped in for it.
- */
-const OPEN_CHECKED = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
 
 /**
  * A set-aside copy nobody read for this long is let go: the home that asked
@@ -160,13 +153,18 @@ export type FileReachOptions = {
   stagingDir: string;
   /** Whether names compare without case, as a Mac's own disk does. */
   caseInsensitive?: boolean;
+  /**
+   * Starts the process each file is set aside in (./setAsideProcess.ts).
+   * Absent, a file is set aside in this process, whose closing of its handle
+   * drops every lock this process holds on that file - SQLite's on a
+   * database it has open among them - so only a test whose process holds no
+   * lock on the files it copies leaves it out.
+   */
+  setAsideProcess?: HostChildSpawner;
   now?: () => number;
 };
 
 type SetAside = { file: string; size: number; touched: number };
-
-/** A refusal in words that say what to do, never an error code. */
-export class FileRefusal extends Error {}
 
 export class FileReach {
   private readonly copies = new Map<string, SetAside>();
@@ -222,7 +220,7 @@ export class FileReach {
       throw new FileRefusal(`${path} could not be read: ${reasonOf(error)}.`);
     }
     // Its names were read by its path, so it must still be the folder checked.
-    await this.stillChecked(path, folder, checked);
+    await stillChecked(path, folder, checked);
     const entries: FileListing["entries"] = [];
     for (const entry of names.sort((a, b) => a.name.localeCompare(b.name))) {
       const full = join(folder, entry.name);
@@ -257,32 +255,53 @@ export class FileReach {
     const { real: file, checked } = await this.resolve(path);
     if (checked.isDirectory()) throw new FileRefusal(`${path} is a folder: list it with ls.`);
     if (!checked.isFile()) throw new FileRefusal(`${path} is not a file the command can copy.`);
-    const { handle, info } = await this.openChecked(path, file, checked);
-    try {
-      if (info.size === 0) throw new FileRefusal(`${path} is empty, so there is nothing to copy.`);
-      if (info.size > HANDOVER_FILE_BYTES)
-        throw new FileRefusal(`${path} is larger than 1 GB, the most a hand-over folder takes.`);
-      await this.sweep();
-      const id = randomUUID();
-      const staged = join(await this.staging(), id);
-      let database = false;
-      try {
-        database = await isDatabase(handle);
-        if (database) await this.backUp(path, file, info, staged);
-        else await copyFrom(handle, staged);
-        await chmod(staged, 0o600);
-      } catch (error) {
-        await rm(staged, { force: true });
-        if (error instanceof FileRefusal) throw error;
-        throw new FileRefusal(`${path} could not be copied: ${reasonOf(error)}.`);
-      }
-      const size = (await stat(staged)).size;
-      const sha256 = await sha256OfFile(staged);
-      this.copies.set(id, { file: staged, size, touched: this.now() });
-      return { id, path: file, size, sha256, ...(database ? { database: true } : {}) };
-    } finally {
-      await handle.close();
-    }
+    await this.sweep();
+    const id = randomUUID();
+    const staged = join(await this.staging(), id);
+    const { database } = await this.setAside({
+      path,
+      file,
+      checked: { dev: checked.dev, ino: checked.ino },
+      to: staged,
+    }).catch(async (error: unknown) => {
+      await rm(staged, { force: true });
+      if (error instanceof FileRefusal) throw error;
+      throw new FileRefusal(`${path} could not be copied: ${reasonOf(error)}.`);
+    });
+    const size = (await stat(staged)).size;
+    const sha256 = await sha256OfFile(staged);
+    this.copies.set(id, { file: staged, size, touched: this.now() });
+    return { id, path: file, size, sha256, ...(database ? { database: true } : {}) };
+  }
+
+  /**
+   * Sets one checked file aside (`setAsideFile`): in a process of its own
+   * when this one has `setAsideProcess`, which is started for the one file
+   * and stopped once it answers.
+   */
+  private setAside(order: SetAsideOrder): Promise<SetAsideAnswer> {
+    const spawner = this.options.setAsideProcess;
+    if (!spawner) return setAsideFile(order);
+    return new Promise((resolve, reject) => {
+      const child = spawner.spawn();
+      let answered = false;
+      child.onMessage((raw) => {
+        if (answered) return;
+        answered = true;
+        child.kill();
+        const message = raw as SetAsideChildMessage;
+        if (message.type === "set") resolve({ database: message.database });
+        else if (message.type === "refused") reject(new FileRefusal(message.words));
+        else reject(new Error(message.message));
+      });
+      child.onExit(() => {
+        if (answered) return;
+        answered = true;
+        reject(new Error("the process copying it stopped before it finished"));
+      });
+      const message: SetAsideParentMessage = { type: "set-aside", order };
+      child.postMessage(message);
+    });
   }
 
   /** Where a set-aside copy is on this computer, for the home's own copies. */
@@ -361,7 +380,7 @@ export class FileReach {
    * A crewmate's path checked: links followed, and a place the app keeps its
    * sign-ins or keys in refused before anything is read. Answers the real
    * path and what it named when checked, which every read after must still
-   * find there (`openChecked`, `stillChecked`).
+   * find there (`stillChecked`).
    */
   private async resolve(path: string): Promise<{ real: string; checked: Stats }> {
     const named = this.named(path);
@@ -381,83 +400,6 @@ export class FileReach {
     }
     if (checked.isSymbolicLink()) throw changedRefusal(path);
     return { real, checked };
-  }
-
-  /**
-   * Opens the file a checked path named, never through a link at its end,
-   * and holds it only while that path still names it (`stillChecked`): a
-   * link swapped in after the check is refused before anything is read.
-   */
-  private async openChecked(
-    path: string,
-    real: string,
-    checked: Stats,
-  ): Promise<{ handle: FileHandle; info: Stats }> {
-    let handle: FileHandle;
-    try {
-      handle = await open(real, OPEN_CHECKED);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ELOOP") throw changedRefusal(path);
-      throw unreadable(path, error);
-    }
-    try {
-      const info = await handle.stat();
-      if (!sameFile(info, checked)) throw changedRefusal(path);
-      await this.stillChecked(path, real, info);
-      return { handle, info };
-    } catch (error) {
-      await handle.close();
-      throw error;
-    }
-  }
-
-  /**
-   * That a checked path still names the file it named: reached with no link
-   * along it, at the same device and inode. Asked after each read by name -
-   * the open, a folder's names, SQLite's own open and backup - so a link
-   * swapped in for the path or a folder on it is refused.
-   */
-  private async stillChecked(path: string, real: string, checked: Stats): Promise<void> {
-    const now = await realpath(real).catch(() => undefined);
-    const facts = now === real ? await lstat(real).catch(() => undefined) : undefined;
-    if (!facts || !sameFile(facts, checked)) throw changedRefusal(path);
-  }
-
-  /**
-   * A database copied through its own backup: read through SQLite, with what
-   * its write-ahead log holds, so a database another program writes arrives
-   * complete and consistent. It is opened to read only. SQLite opens it, and
-   * the files beside it, by name, so it must still be the file checked when
-   * SQLite has it open and once the copy is done, and none of those files
-   * beside it may be a link.
-   */
-  private async backUp(path: string, file: string, checked: Stats, to: string): Promise<void> {
-    await this.sidecarsPlain(path, file);
-    let db: Database.Database;
-    try {
-      db = new Database(file, { readonly: true, fileMustExist: true });
-    } catch (error) {
-      throw new FileRefusal(`${file} could not be opened as a database: ${reasonOf(error)}.`);
-    }
-    try {
-      await this.stillChecked(path, file, checked);
-      await db.backup(to);
-      await this.stillChecked(path, file, checked);
-      await this.sidecarsPlain(path, file);
-    } finally {
-      db.close();
-    }
-  }
-
-  /** That none of the files SQLite opens beside a database is a link. */
-  private async sidecarsPlain(path: string, file: string): Promise<void> {
-    for (const suffix of DATABASE_SIDECARS) {
-      const facts = await lstat(`${file}${suffix}`).catch(() => undefined);
-      if (facts?.isSymbolicLink())
-        throw new FileRefusal(
-          `${path} is a database whose ${basename(file)}${suffix} beside it is a link, which the files command does not follow.`,
-        );
-    }
   }
 
   /**
@@ -523,22 +465,6 @@ function privateRefusal(path: string): FileRefusal {
   );
 }
 
-function changedRefusal(path: string): FileRefusal {
-  return new FileRefusal(`${path} changed while it was being read; ask for it again.`);
-}
-
-function unreadable(path: string, error: unknown): FileRefusal {
-  return new FileRefusal(
-    (error as NodeJS.ErrnoException)?.code === "ENOENT"
-      ? `There is nothing at ${path}.`
-      : `${path} could not be read: ${reasonOf(error)}.`,
-  );
-}
-
-function sameFile(a: Stats, b: Stats): boolean {
-  return a.dev === b.dev && a.ino === b.ino;
-}
-
 /**
  * Whether a path, or a folder above it, is one of these places by device
  * and inode. A folder has more than one path - macOS reaches every one on
@@ -577,26 +503,4 @@ async function resolvedPlace(place: string): Promise<string> {
     rest.unshift(basename(at));
     at = up;
   }
-}
-
-function reasonOf(error: unknown): string {
-  const code = (error as NodeJS.ErrnoException)?.code;
-  if (code === "EACCES" || code === "EPERM") return "this computer's user may not read it";
-  const message = error instanceof Error ? error.message : String(error);
-  return message.replace(/\.$/, "");
-}
-
-/** Whether an open file begins with the SQLite header. */
-async function isDatabase(handle: FileHandle): Promise<boolean> {
-  const head = Buffer.alloc(SQLITE_HEADER.length);
-  const { bytesRead } = await handle.read(head, 0, head.length, 0);
-  return bytesRead === head.length && head.equals(SQLITE_HEADER);
-}
-
-/** A file copied from its open handle, whatever its path names by now. */
-async function copyFrom(handle: FileHandle, to: string): Promise<void> {
-  await pipeline(
-    handle.createReadStream({ start: 0, autoClose: false }),
-    createWriteStream(to, { flags: "wx", mode: 0o600 }),
-  );
 }

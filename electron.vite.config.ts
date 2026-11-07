@@ -79,6 +79,9 @@ export default defineConfig({
           programProcess: resolve(__dirname, "src/core/program/programProcess.ts"),
           // The process that runs one panel's background module (src/core/panels/).
           panelProcess: resolve(__dirname, "src/core/panels/panelProcess.ts"),
+          // The process one file the files command copies is set aside in, so
+          // its handle's close never drops the app's own locks (src/core/files/).
+          setAsideProcess: resolve(__dirname, "src/core/files/setAsideProcess.ts"),
         },
       },
     },

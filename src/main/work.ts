@@ -12,6 +12,7 @@ import { readSelfSourceAsync } from "../core/selfSource/resolve";
 import { registerFrameScheme } from "./frames/frameScheme";
 import { createAxiProcessSpawner } from "./host/axiProcess";
 import { memoryPressureStandIn, readResourceMemory } from "./host/resourceMemory";
+import { createSetAsideProcessSpawner } from "./host/setAsideProcess";
 import { createTaskBrowserHost } from "./host/taskBrowser";
 import { createMediaProbe, createTypefaceProbe } from "./mediaProbe";
 import { startOwnDisplay } from "./ownDisplay";
@@ -204,6 +205,9 @@ export function runWorkMode(args: readonly string[], mainDir: string): void {
         ? join(process.resourcesPath, "axi-bin")
         : join(app.getAppPath(), "resources", "axi-bin"),
     },
+    // A file the home copies from here is set aside in a process of its
+    // own, so the copy never drops this process's locks (docs/files.md).
+    setAsideProcess: createSetAsideProcessSpawner(join(mainDir, "setAsideProcess.js")),
     env: process.env,
     stdin: process.stdin,
     stdout: process.stdout,

@@ -76,6 +76,11 @@ export type CliContext = {
    * (docs/task-browser.md, "On another computer"). Absent, it keeps none.
    */
   browser?: { host: HostTaskBrowser; spawner: HostChildSpawner; binDir: string };
+  /**
+   * Starts the process each file the home copies from this computer is set
+   * aside in (`FileReachOptions.setAsideProcess`); absent, in this process.
+   */
+  setAsideProcess?: HostChildSpawner;
   /** How this app starts itself, which the background starts again at each login. */
   launcher: Launcher;
   /**
@@ -487,6 +492,7 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
         ...(context.browser
           ? { browser: { ...context.browser, ...browserLookup(place.packaged) } }
           : {}),
+        ...(context.setAsideProcess ? { setAsideProcess: context.setAsideProcess } : {}),
         signOutClaude,
         cleanUp: removing,
       });

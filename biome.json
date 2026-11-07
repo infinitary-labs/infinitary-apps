@@ -415,6 +415,7 @@
         "!src/core/pi/personalizeTool.test.ts",
         "!src/core/plugins/pluginInstaller.test.ts",
         "!src/core/sql/sqlService.test.ts",
+        "!src/core/files/fileReachLocks.integration.test.ts",
         "!src/core/program/programRunner.test.ts",
         "!src/core/axi/channel.test.ts",
         "!src/core/integrations/providers/inbox.test.ts",

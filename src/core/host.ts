@@ -521,6 +521,15 @@ export type HostCapabilities = {
    * same entry with Node. Absent, no panel's background work runs.
    */
   readonly panelProcess?: HostChildSpawner;
+  /**
+   * Starts the process one file the files command copies is set aside in
+   * (src/core/files/setAsideProcess.ts, docs/files.md "How a copy
+   * travels"): closing a handle to a file drops every lock its process holds
+   * on it, so the copy never runs in the process that holds the record open.
+   * Electron spawns a utility process; a test forks the same entry with
+   * Node. Absent, a file is set aside in the core's own process.
+   */
+  readonly setAsideProcess?: HostChildSpawner;
 };
 
 /** A child process the core talks to by messages and may kill at any moment. */

@@ -27,7 +27,7 @@ import { HomeLink, type HomeLinkState } from "../devices/homeLink";
 import { JoinedHome } from "../devices/joinedHome";
 import { FileReach, protectedPlaces } from "../files/fileReach";
 import type { MoveDeps } from "../folderMove/move";
-import type { HostKeychain } from "../host";
+import type { HostChildSpawner, HostKeychain } from "../host";
 import { hostEnv } from "../hostEnv";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { LoadLine } from "../placed/loadLine";
@@ -118,6 +118,12 @@ export type StartHelperOptions = {
    * absent, it keeps none and its tasks have no browser.
    */
   browser?: Omit<ComputerBrowserParts, "version">;
+  /**
+   * Starts the process each file the home copies from here is set aside in,
+   * so a copy never drops this process's own locks
+   * (`FileReachOptions.setAsideProcess`).
+   */
+  setAsideProcess?: HostChildSpawner;
   interfaces?: () => NodeJS.Dict<NetworkInterfaceInfo[]>;
   /** The contract version it speaks to the home; this build's own unless a test stands in another. */
   protocolVersion?: string;
@@ -269,6 +275,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       workDir: dataDir,
     }),
     stagingDir: join(dataDir, "file-reach"),
+    ...(options.setAsideProcess ? { setAsideProcess: options.setAsideProcess } : {}),
   });
   let name = joined.name;
   let onHomeMac = joined.grant.onHomeMac ?? null;

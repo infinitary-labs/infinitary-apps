@@ -199,6 +199,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/run-temp-root.test.ts` | a nested vitest run | 120 s |
 | `tests/generate-self-source.test.ts` | node, git archive | 60 s |
 | `src/core/sql/sqlService.test.ts` | a forked SQL process, bundled with vite | 5 s default (60 s on the bundling `beforeAll`, kept) |
+| `src/core/files/fileReachLocks.integration.test.ts` | the forked process a file is set aside in and a Node process holding a database open, both bundled with vite, and a fresh Node reader | 5 s default (Mac fastest per case 0.43 s; 60 s on the bundling `beforeAll`) |
 | `src/core/program/programRunner.test.ts` | a forked program process per program, the entry as it stands | 5 s default |
 | `src/core/program/programRunner.crew.test.ts` | a forked program process per program under a crew supervisor, real git for its project | 5 s default (Mac slowest case 0.9 s) |
 | `src/core/claude/claudeToolSurface.test.ts` | the Claude client, through the SDK, and boxed on the seat's harness against a local stub API | 180 s on each client run |

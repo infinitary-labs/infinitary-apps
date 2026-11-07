@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "files-copy-keeps-record-open",
+      "kind": "fix",
+      "title": "Copying the app's own record no longer leads to a crash",
+      "body": "When a crewmate copied the app's own record files from one of your computers, the app on that computer could later crash while reading its record. A copy now leaves the running app's hold on its record in place, so the app keeps working through it.",
+      "area": "crewmates",
+      "noPicture": "The fix is the app no longer crashing some time after such a copy; nothing on screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

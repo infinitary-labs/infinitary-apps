@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { HostChildSpawner } from "../host";
 import { hostEnv } from "../hostEnv";
 import type { AppPaths } from "../paths";
 import type { CrewMachines } from "../placed/crewMachines";
@@ -37,6 +38,11 @@ export function startHomeFiles(options: {
     get(id: string): { deviceId?: string | null } | undefined;
     note(id: string, text: string, options: { news: boolean }): void;
   };
+  /**
+   * Starts the process each file is set aside in, so a copy never drops the
+   * app's own locks (`FileReachOptions.setAsideProcess`).
+   */
+  setAsideProcess?: HostChildSpawner;
   /** The crew, set up after this. */
   crew: () => {
     sessions: {
@@ -57,6 +63,7 @@ export function startHomeFiles(options: {
     protectedPlaces: protectedPlaces({ userData: paths.userData, home }),
     privatePlaces: privateFolders(home),
     stagingDir: join(fileReachDir(paths), "set-aside"),
+    ...(options.setAsideProcess ? { setAsideProcess: options.setAsideProcess } : {}),
   });
   const computers = (): FileComputer[] =>
     machines.computers().map((id) => {

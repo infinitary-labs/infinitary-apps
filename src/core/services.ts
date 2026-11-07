@@ -877,6 +877,7 @@ export async function createServices(
     work: workDevices,
     tasks,
     crew: () => supervisor,
+    ...(host.setAsideProcess ? { setAsideProcess: host.setAsideProcess } : {}),
   });
   // A computer connected on an older Firstmate takes no new work: answered
   // by the devices list, which is made after the supervisor.

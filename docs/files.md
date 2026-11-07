@@ -37,6 +37,12 @@ SQLite opens a database, and its log, shared memory and journal beside it, by na
 A link swapped in just before SQLite's own open and swapped back before the check after it is not seen, since SQLite cannot be handed the file already opened and checked.
 A file over 1 GB, the most a hand-over folder takes (`HANDOVER_FILE_BYTES`), an empty file and a folder are refused.
 
+The file is opened, checked and copied in a process of its own, started for that one file and stopped once it answers (`setAsideFile` in `src/core/files/setAside.ts`, run by `src/core/files/setAsideProcess.ts`): an Electron utility process through `HostCapabilities.setAsideProcess` on the home, the same entry on a computer that runs work, and a plain `fork` in tests.
+Closing any handle to a file drops every lock its process holds on that file, SQLite's included, so a copy made in the app's own process would drop the app's locks on its own record (`firstmate.db`), its log or its shared memory.
+The next program to open the record, such as the query process starting again, would then take it over as its first opener and cut its shared memory to 3 bytes while the app still reads it, and the app's next read would crash.
+The path is resolved and checked in the app's own process, which opens nothing, and only a test leaves the separate process out (`FileReachOptions.setAsideProcess`).
+A refusal from that process reaches the crewmate in the same words, and a process that stops before it answers is refused as a copy that could not be made.
+
 The home keeps the one `FileRouter` (`src/core/files/fileRouter.ts`), composed by `startHomeFiles` (`src/core/files/homeFiles.ts`), which answers every task's list and copy, wherever the task runs and wherever the file is.
 
 - A file on the home is set aside there.
@@ -92,6 +98,7 @@ A copy cut off by a lost connection answers that the copy may already be in the 
 ## Tests
 
 - `src/core/files/fileReach.test.ts`: one computer's files - a listing with a protected entry, a file set aside and read in pieces that match its sha256 at 0600 and let go, a database in use copied through its backup with every row, the sign-ins refused in any case and through a link with nothing set aside, the sign-ins in an app data folder under the app's older name, and in one made after the first look, refused, a sign-in reached by a second name for the same file refused by its device and inode, and on a Mac the sign-ins and private folders reached under `/System/Volumes/Data` (so the Mac lane runs this file too, `scripts/mac-unit-tests.ts`), a link swapped in after the check refused for a file, a folder on its path, a database and a listing, a database with a link beside it refused, the refusal words, and the protected places of every name and flavor.
+- `src/core/files/fileReachLocks.integration.test.ts`: the app's own process, holding a record open as the app does, copies its database, log and shared memory through the real set-aside process, and keeps reading and writing after a fresh program opens the record while it writes; and a refusal and a file whole through that process.
 - `src/core/files/fileRouter.test.ts`: the home's side over real readers on scratch homes - the computers' rows, a copy from a computer that runs work into a home task's hand-over folder with its record line, the home's database copied for a task elsewhere, every refusal copying nothing, a copy that did not arrive whole delivering nothing, and a computer that runs as another user on this Mac refused a home file only the captain can read and the captain's private folders, while a task on another computer copies the same file.
 - `src/core/devices/pairing.test.ts`, "finds whether a computer listed before that runs on this Mac from where it dials now".
 - `src/core/axi/channel.test.ts`, "the infinitary-files-axi command": the real launcher and command process reaching only the granted task's files, and a copy kept past the shell's limit and read with the next look.

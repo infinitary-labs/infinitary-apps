@@ -1168,6 +1168,7 @@ describe("CrewSupervisor: the card thread", () => {
     harness.specs[0]?.onCard?.({
       ...revision,
       reply: "You are right; I corrected the second option.",
+      answersMessage: askedOn(harness.supervisor, card.id),
     });
     await tick();
 

@@ -128,8 +128,13 @@ An interim line records no answer either: one that names the captain's message k
 Migration `clearInterimAnswers` cleared the message an older build kept on such a line, found by the line's own `message_ref` observation, and left every other line as it was.
 Under a card nobody waits on, `interim` is an ordinary reply.
 The mark crosses from a computer that runs work too: `inf:work:reply` carries `interim`, so a crewmate there keeps the reply waiting the same way (INF-1623).
-An interim line never brings back a card the captain put aside, and neither does a handoff or a revision whose `reply` names no message: the card comes back with the final answer (`addMessage`, the revision's `aside`).
+An interim line never brings back a card the captain put aside, and neither does a handoff or a revision whose `reply` is a progress note: the card comes back with the final answer (`addMessage`, the revision's `aside`).
 The rule lives in the steer preamble and the tool's `interim` parameter, both crewmate-only, so the first mate's contract is unchanged.
+
+**A revision names the message it answers** (INF-2884, the captain's "refuse a revision whose answer neither names your message nor is marked as a progress note"): while the captain's reply waits, a crewmate's `emit_card` revision whose `reply` neither names that message in `answers_message` nor is marked `interim` is refused, and nothing is written (`CardEmits.upsertEmitted`).
+Without the refusal the unmarked answer showed in the thread while the stage kept the version the captain replied under, beside "has not answered yet", since only a named line ends the hold.
+The crewmate's `emit_card` has its own `interim` parameter, so a revision made while it works on is a progress note like an interim line, and `inf:work:card` carries it.
+The steer preamble's do-this sentence says the answer names the captain's message in `answers_message`, by the number its per-card line gives.
 Putting a card aside never asks to discard an unanswered reply; its hold and draft remain until its author answers.
 
 **Signing off** (INF-2845, the captain's direction A): a reply resolves nothing, except a crewmate's line marked `signs_off`.

@@ -341,6 +341,7 @@ export const CARD_PARAMS = {
   holds_place:
     "Leave unset unless the use case requires continuous attention on this card. True brings the card forward when it arrives. Choices close at once.",
   reply: "Your short answer in this card's thread, saying what changed where.",
+  interim: "True when reply is a progress note; the captain's reply still waits.",
   width:
     "Body: short text narrow; wide 800 px; full ≤1,040 px; pass it only to require more room; it can only widen, never narrow.",
   actions: `${ACTIONS_EFFECTS}${ACTIONS_OPEN}`,

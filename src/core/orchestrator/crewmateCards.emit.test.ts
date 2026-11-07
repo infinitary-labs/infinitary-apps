@@ -834,6 +834,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     harness.specs[0]?.onCard?.({
       id: stable,
       reply: "Middle is safer; I changed the offer.",
+      answersMessage: askedOn(harness.supervisor, cardId),
       title: "Pick one, revised",
       body: "<p>Middle is the safer way.</p><p>Left and right both cost a day.</p>",
       actions: [
@@ -1101,6 +1102,56 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     ).not.toThrow();
   });
 
+  // INF-2884, the captain's pick: "Keep the mark; name it in the steer's
+  // do-this sentence, and refuse a revision whose answer neither names your
+  // message nor is marked as a progress note". INF-2883's crewmate revised
+  // with a reply naming no message, so its card kept the old body beside
+  // "has not answered yet" after the crewmate had answered.
+  it("refuses a revision whose answer neither names the captain's message nor is marked a progress note, so the shown card never lags its answer", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const old = "<h2>Gaps</h2><p>Offer a small starter queue workflow.</p>";
+    const { taskId, cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "Merging through the swept batch",
+      body: old,
+      actions: [],
+    });
+    harness.supervisor.cardActions.replyToCard(cardId, "wake the first mate instead?");
+    await tick();
+    const asked = askedOn(harness.supervisor, cardId);
+    const spec = harness.specs[0];
+    const revision = {
+      id: stable,
+      title: "Merging through the swept batch",
+      body: "<h2>Gaps</h2><p>Wake the first mate to plan a queue workflow.</p>",
+      actions: [],
+      reply: "Under Gaps the starter workflow is now waking the first mate.",
+    };
+    const before = harness.supervisor.cards.thread(cardId).messages.map((m) => m.who);
+    expect(() => spec?.onCard?.(revision)).toThrow(`answers_message ${asked}`);
+    expect(harness.supervisor.cards.thread(cardId).messages.map((m) => m.who)).toEqual(before);
+    expect(harness.cardStore.get(cardId)?.body).toBe(old);
+
+    // A progress note is taken and keeps their question waiting.
+    syncCardId(
+      spec?.onCard?.({ ...revision, reply: "Checking the queue settings first.", interim: true }),
+    );
+    crewmate.finishPrompt();
+    await tick();
+    expect(harness.cards().find((card) => card.id === cardId)).toMatchObject({
+      body: old,
+      awaiting: "answer",
+    });
+
+    // The answer naming their message shows the revision at the turn's end.
+    await harness.supervisor.steer.steerCrewmate(taskId, "Go on.");
+    await tick();
+    syncCardId(spec?.onCard?.({ ...revision, answersMessage: asked }));
+    crewmate.finishPrompt();
+    await tick();
+    expect(staged(harness, cardId)?.body).toBe(revision.body);
+  });
+
   // INF-1623, the captain's "make sure if the card is hidden/minimized etc,
   // it only gets brought back after the final reply is in place".
   it("keeps a card put aside away through a still-working line and its turn's end, and brings it back with the final answer", async () => {
@@ -1149,9 +1200,9 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
 
   // The captain's "Only a line that says it answers it; a handoff stays
   // open", with INF-1623's "it only gets brought back after the final reply
-  // is in place": a handoff line, or a revision whose reply names no
-  // message, leaves their question waiting and the card aside.
-  it("keeps a card put aside away through a handoff line and an unnamed revision, and brings it back with the named answer", async () => {
+  // is in place": a handoff line, or a revision whose reply is marked a
+  // progress note (INF-2884), leaves their question waiting and the card aside.
+  it("keeps a card put aside away through a handoff line and a progress-note revision, and brings it back with the named answer", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
     const { taskId, cardId, stable } = await onTheStage(harness, crewmate, {
@@ -1169,6 +1220,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       spec?.onCard?.({
         id: stable,
         reply: "I added a note that the warm pool question is still open.",
+        interim: true,
         title: "Retire closed working copies",
         body: "<h2>What changed</h2><p>A closed task's copy is deleted.</p><p>Warm pool: open.</p>",
         actions: [],

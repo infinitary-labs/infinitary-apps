@@ -45601,6 +45601,9 @@
                   "reply": {
                     "type": "string"
                   },
+                  "interim": {
+                    "type": "boolean"
+                  },
                   "riskDeclaration": {
                     "type": "object",
                     "properties": {

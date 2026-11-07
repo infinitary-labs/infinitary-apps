@@ -848,7 +848,7 @@ describe("CardService", () => {
     // place until its author's turn ends (INF-926).
     restored.emitCrewmateCard(
       "t1",
-      { ...decision, id: asked, body: "<p>Revised.</p>", reply: "Revised." },
+      { ...decision, id: asked, body: "<p>Revised.</p>", reply: "Revised.", interim: true },
       "m",
     );
     expect(restored.get(asked)?.body).toBe("<p>Revised.</p>");
@@ -885,7 +885,13 @@ describe("CardService", () => {
     expect(cardStore.chosenAction(id)).toBeUndefined();
     cards.emitCrewmateCard(
       "t1",
-      { ...decision, id, body: "<p>Left races the queue.</p>", reply: "Left races the queue." },
+      {
+        ...decision,
+        id,
+        body: "<p>Left races the queue.</p>",
+        reply: "Checking the queue.",
+        interim: true,
+      },
       "m",
     );
     cards.replyFromCrewmate("t1", {

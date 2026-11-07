@@ -366,6 +366,8 @@ export const placedCardSchema = z.object({
   width: z.enum(["wide", "full"]).optional(),
   holdsPlace: z.boolean().optional(),
   reply: z.string().optional(),
+  /** Its reply is a progress note (`card-reply-interim.md`); an older home drops it. */
+  interim: z.boolean().optional(),
   riskDeclaration: riskDeclarationSchema.optional(),
   requiredActions: requiredActionsSchema.optional(),
   asking: z.boolean().optional(),

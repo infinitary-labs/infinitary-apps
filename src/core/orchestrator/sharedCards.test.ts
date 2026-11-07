@@ -262,10 +262,15 @@ describe("shared cards", () => {
       f.cards.replyFromCrewmate("t1", { cardId: id, text: "I asked the shell PC task to look." }),
     ).toContain(`The captain's message ${asked.id} still waits`);
     expect(f.cards.get(id)?.awaiting).toBe("answer");
-    // A revision whose reply names nothing leaves it open too.
+    // A revision whose reply names nothing is refused (INF-2884), and one
+    // marked a progress note leaves it open too.
     const title = (f.cards.get(id) as Card).title;
     const body = "<p>Looking for the remover.</p>";
-    f.cards.emitCrewmateCard("t1", { id, title, body, actions: [], reply: "Updated it." }, "m");
+    const revision = { id, title, body, actions: [], reply: "Updated it." };
+    expect(() => f.cards.emitCrewmateCard("t1", revision, "m")).toThrow(
+      `answers_message ${asked.id}`,
+    );
+    f.cards.emitCrewmateCard("t1", { ...revision, interim: true }, "m");
     expect(f.cards.get(id)?.awaiting).toBe("answer");
 
     expect(

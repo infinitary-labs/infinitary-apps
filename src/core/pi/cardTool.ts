@@ -433,6 +433,9 @@ export const SAVED_STORY_RULE = [
 
 const crewmateCardParams = Type.Object({
   ...sharedCardParams,
+  // INF-2884: a revision's reply that names no captain message is refused
+  // while one waits, unless it is marked a progress note.
+  interim: Type.Optional(Type.Boolean({ description: CARD_PARAMS.interim })),
   title: Type.String({
     description: CARD_PARAMS.title,
   }),
@@ -659,6 +662,7 @@ async function emitCard(
       actions: actions.map(emittedAction),
       ...(id ? { id } : {}),
       ...(params.reply?.trim() ? { reply: params.reply.trim() } : {}),
+      ...(params.reply?.trim() && params.interim === true ? { interim: true } : {}),
       ...(params.holds_place ? { holdsPlace: true } : {}),
       ...(params.answering ? { answering: true } : {}),
       ...(params.width ? { width: params.width } : {}),
@@ -734,6 +738,7 @@ async function emitCard(
     ...(params.width ? { width: params.width } : {}),
     ...(params.holds_place ? { holdsPlace: true } : {}),
     ...(params.reply?.trim() ? { reply: params.reply.trim() } : {}),
+    ...(params.reply?.trim() && params.interim === true ? { interim: true } : {}),
     // Only the schema of a crewmate whose task has a browser offers them.
     ...(options.browserButton && params.browser_button !== undefined
       ? { browserButton: params.browser_button }

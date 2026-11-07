@@ -346,6 +346,23 @@ export class CardEmits {
       if ("refusal" in named) {
         throw new Error(`Card refused: ${named.refusal} The card and its thread are unchanged.`);
       }
+      // A crewmate's answer that names no captain message leaves it
+      // waiting, and its revision with it, so the card would keep showing
+      // the old version after the answer (INF-2884, the captain's "refuse a
+      // revision whose answer neither names your message nor is marked as
+      // a progress note"). Writing nothing, the half-done state never shows.
+      const asked = waiting ? this.host.cardStore.newestCaptainMessage(resolved) : undefined;
+      if (
+        asked &&
+        answer &&
+        context.author === "crewmate" &&
+        input.interim !== true &&
+        named.facts.answersMessage !== asked.id
+      ) {
+        throw new Error(
+          `Card refused: the captain's message ${asked.id} under card "${resolved}" waits on your answer, and this reply does not name it, so the card would keep showing them the version they replied under. Call emit_card again with the same id and the same card plus answers_message ${asked.id} when the reply answers them, or interim true when it is a progress note and you answer later. The card and its thread are unchanged.`,
+        );
+      }
       const revised = buildEmittedCard(resolved, input, context, existing.createdAt);
       const changed =
         existing.title !== revised.title ||
@@ -432,7 +449,7 @@ export class CardEmits {
           undefined,
           undefined,
           undefined,
-          false,
+          context.author === "crewmate" && input.interim === true,
           named.facts,
         );
       }

@@ -92,6 +92,8 @@ export type EmittedCardInput = {
   holdsPlace?: boolean;
   /** The author's short answer to the captain's reply in this card's thread (`reply` on the tool). */
   reply?: string;
+  /** A crewmate's `reply` is a progress note: the captain's reply keeps waiting (INF-2884). */
+  interim?: boolean;
   /**
    * The label a crewmate gave its task's browser button (`browser_button`),
    * which the host turns into `attachment` from the browser it holds, or

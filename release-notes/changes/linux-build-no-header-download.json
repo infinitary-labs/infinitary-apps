@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-build-no-header-download",
+      "reason": "The Linux packages' build no longer rebuilds better-sqlite3 for Electron, a rebuild that compiled nothing and only downloaded Electron's headers, which failed the build on a slow connection; the packages ship the same Node-API build of better-sqlite3 as before, so nothing a person notices changes."
+    }
+  ]
+}

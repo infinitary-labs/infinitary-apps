@@ -18,6 +18,14 @@ artifactName: infinitary-${version}-linux-${arch}.${ext}
 extraMetadata:
   desktopName: infinitary.desktop
   homepage: https://getinfinitary.com/
+# No rebuild of native modules for Electron. The one the app ships with a
+# binding.gyp, better-sqlite3, carries a Node-API build for Linux x64 that
+# Electron loads as it is, and its binding.gyp builds nothing beside it, so
+# a rebuild would only download Electron's headers to build nothing, a
+# download that fails when the network stalls for half a second
+# (docs/linux-packages.md, "What is built"). tests/linux-native-modules.test.ts
+# holds every such module to a Node-API build.
+npmRebuild: false
 
 linux:
   target:

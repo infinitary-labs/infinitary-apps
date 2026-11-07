@@ -22,6 +22,11 @@ Each package names itself in the app's resources folder, `resources/package-type
 The install folder takes the package's name rather than the app's because Chromium splits a sandbox-helper path that holds a space; people read "Infinitary" in the desktop entry.
 Each package carries only Linux's own speech library and koffi's Linux addon, unpacked from the archive.
 The electron fuses are the Mac's (`docs/architecture.md` section 4).
+The build rebuilds no native module for Electron (`npmRebuild: false` in `electron-builder.linux.yml`).
+The one native module the app ships with a `binding.gyp`, better-sqlite3, carries a Node-API build for Linux x64 that Electron loads as it is, and its `binding.gyp` builds nothing beside that build.
+So a rebuild would only download Electron's headers to build nothing, and that download fails when the network stalls for half a second.
+Its client, node-gyp, gives each of the server's IPv4 addresses a quarter of a second (Node's address-family autoselection), the IPv6 addresses fail at once on a machine with no IPv6 route, such as the PC's virtual machines, and it does not try again after a connection times out.
+`tests/linux-native-modules.test.ts` holds every production dependency with a `binding.gyp` to a Node-API build of its own for Linux x64, since one built for a single Node's ABI would load in Node and fail in the packaged app.
 
 ## The old program path
 

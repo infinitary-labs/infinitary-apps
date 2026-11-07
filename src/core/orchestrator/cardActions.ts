@@ -40,6 +40,7 @@ import {
   MERGE_WORDS,
   REVIEW_CAREFULLY_WORDS,
 } from "@shared/vocabulary";
+import { allowanceCovers, type IntegrationAllowance, type IntegrationAsk } from "@shared/writeAsk";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { keepImages } from "../attachments";
 import type { BrowserReturned } from "../browser/taskBrowsers";
@@ -609,7 +610,7 @@ export class CardActions {
         const askId = effect.ask;
         // Integration asks can only be answered on the app's own card.
         if (effect.integration && card.author !== "host") return {};
-        this.answerWriteAsk(card, taskId, askId, effect.integration);
+        this.answerWriteAsk(card.id, taskId, askId, effect.integration);
         return {};
       }
       case "open":
@@ -1031,7 +1032,7 @@ export class CardActions {
   }
 
   private answerWriteAsk(
-    card: Card,
+    cardId: string,
     taskId: string,
     askId: string,
     choice?: IntegrationApprovalChoice,
@@ -1046,6 +1047,12 @@ export class CardActions {
           actor: "host",
         });
       }
+      if (sent.allowance && sent.ask?.kind === "integration")
+        this.core.options.tasks.note(
+          taskId,
+          `The captain allowed ${sent.ask.action} on ${sent.place} for the rest of this task, for ${sent.allowance.words}.`,
+          { news: false, feed: true, actor: "host" },
+        );
       void this.core.steer
         .steerCrewmate(
           taskId,
@@ -1061,16 +1068,38 @@ export class CardActions {
                 ? { why: sent.outcome.why }
                 : {}),
               ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
+              ...(sent.allowance ? { allowed: sent.allowance.words } : {}),
             },
             once: `write-answered:${askId}`,
           },
           "captain",
-          { via: "card", cardId: card.id },
+          { via: "card", cardId },
         )
         .catch((caught: unknown) => {
           console.warn("[crew] write outcome not delivered:", caught);
         });
+      if (sent.allowance) this.runAllowedAsks(taskId, askId, sent.allowance);
     });
+  }
+
+  /**
+   * The asks of the same task already waiting inside a new allowance run on
+   * the same click (INF-2993): each card comes down and each ask runs once,
+   * its crewmate hearing each outcome as it would from that card.
+   */
+  private runAllowedAsks(taskId: string, chosen: string, allowance: IntegrationAllowance): void {
+    const waiting = (this.core.options.tasks.get(taskId)?.delivery?.writeAsks ?? []).filter(
+      (ask): ask is IntegrationAsk =>
+        ask.kind === "integration" &&
+        ask.id !== chosen &&
+        ask.sentAt === undefined &&
+        allowanceCovers(allowance, ask),
+    );
+    for (const ask of waiting) {
+      const cardId = `integration-ask-${ask.id}`;
+      this.core.cards.takeDown(cardId, "allowed-for-task");
+      this.answerWriteAsk(cardId, taskId, ask.id, "once");
+    }
   }
 
   /**

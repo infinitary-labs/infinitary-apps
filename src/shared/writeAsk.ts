@@ -71,10 +71,59 @@ export type IntegrationAsk = {
   signature?: string;
   /** The action's input as JSON text, after its schema checked it. */
   input: string;
+  /**
+   * What Allow for the rest of this task would cover for a crewmate's ask
+   * (INF-2993), read from its input when it was asked; absent on the first
+   * mate's, a panel's and older kept asks, whose cards offer no such choice.
+   */
+  scope?: IntegrationScope;
   at: number;
   sentAt?: number;
   outcome?: WriteAskOutcome;
 };
+
+/**
+ * The calls one allowance covers (`IntegrationActionSpec.scope`): `key`
+ * compares two calls, and `words` say it to the captain and the crewmate,
+ * such as "POST requests to octo/repo".
+ */
+export type IntegrationScope = { key: string; words: string };
+
+/**
+ * The captain's Allow for the rest of this task (INF-2993), kept on the
+ * task: its crewmate's later calls of the same action, within the same
+ * scope, run without a card until the task closes. It binds what ends
+ * Always allow - the connection's reference, the action's signature and
+ * the action's rule mark, which every Settings change of that action's rule
+ * or switch renews - and `card` is the approval card it was chosen on.
+ */
+export type IntegrationAllowance = {
+  connection: string;
+  action: string;
+  signature: string;
+  scope: string;
+  words: string;
+  /** The action's rule mark when it was chosen (`IntegrationSettingsStore.ruleMarks`). */
+  mark: string;
+  at: number;
+  card: string;
+};
+
+/**
+ * Whether an allowance covers a task's waiting ask (INF-2993): the same
+ * connection, action, signature and scope. The ask's rule is checked again
+ * when it runs.
+ */
+export function allowanceCovers(allowance: IntegrationAllowance, ask: IntegrationAsk): boolean {
+  return (
+    ask.by === undefined &&
+    ask.scope !== undefined &&
+    ask.connection === allowance.connection &&
+    ask.action === allowance.action &&
+    ask.signature === allowance.signature &&
+    ask.scope.key === allowance.scope
+  );
+}
 
 export type WriteAskOutcome =
   | { kind: "answered"; status: number; requestId: string | null }

@@ -1,6 +1,7 @@
 import type { ForgeSignInState } from "@shared/forges";
 import type { IntegrationDoorView, IntegrationEffect, IntegrationKind } from "@shared/integrations";
 import type { PanelIntegrationUse } from "@shared/personal/contracts";
+import type { IntegrationScope } from "@shared/writeAsk";
 import type { z } from "zod";
 
 /**
@@ -58,6 +59,13 @@ export type IntegrationActionSpec = {
    * call it: the first mate has no folder to save into.
    */
   delivers?: "file";
+  /**
+   * What one Allow for the rest of this task covers, read from a checked
+   * input (INF-2993): calls whose keys are equal fall under one allowance.
+   * Without one, an allowance covers every call of the action on the
+   * connection.
+   */
+  scope?: (input: unknown) => IntegrationScope;
 };
 
 /**

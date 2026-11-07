@@ -170,6 +170,26 @@ export class IntegrationSettingsStore {
     this.writeFile("action-approvals.json", value);
   }
 
+  /**
+   * Each action's rule mark by connection reference (INF-2993): a fresh one
+   * whenever its rule or its switch changes, so an Allow for the rest of
+   * this task chosen under an older mark has ended. An unreadable file reads
+   * as none, which ends every allowance chosen under a mark.
+   */
+  ruleMarks(): Record<string, Record<string, string>> {
+    try {
+      return z
+        .record(z.string(), z.record(z.string(), z.string()))
+        .parse(JSON.parse(readFileSync(join(this.root, "rule-marks.json"), "utf8")));
+    } catch {
+      return {};
+    }
+  }
+
+  writeRuleMarks(value: Record<string, Record<string, string>>): void {
+    this.writeFile("rule-marks.json", value);
+  }
+
   /** Write whole, never readable by anyone else even mid-write. */
   private writeFile(name: string, value: unknown): void {
     mkdirSync(this.root, { recursive: true, mode: 0o700 });

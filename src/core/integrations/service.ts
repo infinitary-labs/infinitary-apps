@@ -19,7 +19,13 @@ import { type Fence, fenced, fencedAnswer } from "@shared/outsideData";
 import type { PanelIntegrationUse } from "@shared/personal/contracts";
 import { undeclaredIntegrationMessage } from "@shared/personal/manifest";
 import type { KeptOutsideData } from "@shared/savedOutsideData";
-import type { IntegrationAsk, WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
+import type {
+  IntegrationAllowance,
+  IntegrationAsk,
+  IntegrationScope,
+  WriteAsk,
+  WriteAskOutcome,
+} from "@shared/writeAsk";
 import type { LegacyCalls } from "../storage/outsideDataScrub";
 import {
   type IntegrationActionSpec,
@@ -33,6 +39,7 @@ import {
   type PanelCaller,
 } from "./binding";
 import { FIRSTMATE_READER } from "./outsideReads";
+import { WHOLE_ACTION } from "./scopes";
 import type { IntegrationSecrets } from "./secrets";
 import type { IntegrationSettings, IntegrationSettingsStore } from "./store";
 
@@ -144,6 +151,13 @@ export type IntegrationAskStore = {
   keepForPanel?: (ask: IntegrationAsk) => PanelAskKept;
   take: (taskId: string, askId: string) => IntegrationAskTaken;
   record: (taskId: string, askId: string, outcome: WriteAskOutcome) => void;
+  /**
+   * Keep the captain's Allow for the rest of this task on the asking task
+   * (INF-2993), and read a task's allowances, none once it closed. Absent,
+   * the choice runs the call once and keeps nothing.
+   */
+  allow?: (taskId: string, allowance: IntegrationAllowance) => void;
+  allowances?: (taskId: string) => readonly IntegrationAllowance[];
 };
 
 /** What keeping a panel's ask came to (`IntegrationAskStore.keepForPanel`). */
@@ -179,6 +193,8 @@ export type IntegrationAskSent = {
   place: string;
   outcome: WriteAskOutcome;
   answer?: string;
+  /** The captain's Allow for the rest of this task this click kept (INF-2993). */
+  allowance?: IntegrationAllowance;
 };
 
 /** Whether `show` answered a refusal's words rather than an integration's actions. */
@@ -408,7 +424,10 @@ export class IntegrationsService {
       };
     const noFile = this.fileRefusal(caller, view.name, spec);
     if (noFile) return { text: noFile, refused: "refused" };
-    if (!this.allowed(row, spec))
+    if (
+      !this.allowed(row, spec) &&
+      !(caller.kind === "task" && this.taskAllows(caller.taskId, row, spec, parsed.data))
+    )
       return this.keepAsk(
         caller,
         row,
@@ -516,11 +535,75 @@ export class IntegrationsService {
     const noFile = this.fileRefusal(caller, view.name, spec);
     if (noFile) return done({ kind: "refused", why: noFile });
     if (choice === "always") this.grant(row, spec, true);
+    // Allow for the rest of this task is kept before the call runs, as Always allow is.
+    const allowance =
+      choice === "task" && caller.kind === "task"
+        ? this.allowForTask(taskId, row, spec, ask)
+        : undefined;
     const { answer, unknown } = await this.run(row, view.name, spec.name, parsed.data, caller);
-    if (unknown) return done({ kind: "unknown", why: answer.text });
-    return answer.refused
-      ? done({ kind: "refused", why: answer.text })
-      : done({ kind: "ran" }, answer.text);
+    const sent = unknown
+      ? done({ kind: "unknown", why: answer.text })
+      : answer.refused
+        ? done({ kind: "refused", why: answer.text })
+        : done({ kind: "ran" }, answer.text);
+    return allowance ? { ...sent, allowance } : sent;
+  }
+
+  /**
+   * Keep the captain's Allow for the rest of this task for the ask's task
+   * (INF-2993), bound to what ends Always allow; undefined when the ask
+   * carries no scope or nothing keeps allowances here, so the click ran it
+   * once.
+   */
+  private allowForTask(
+    taskId: string,
+    row: Row,
+    spec: IntegrationActionSpec,
+    ask: IntegrationAsk,
+  ): IntegrationAllowance | undefined {
+    const allow = this.options.asks?.allow;
+    if (!allow || !ask.scope) return undefined;
+    const allowance: IntegrationAllowance = {
+      connection: row.ref,
+      action: spec.name,
+      signature: this.signature(spec),
+      scope: ask.scope.key,
+      words: ask.scope.words,
+      mark: this.ruleMark(row, spec),
+      at: (this.options.now ?? Date.now)(),
+      card: `integration-ask-${ask.id}`,
+    };
+    allow(taskId, allowance);
+    return allowance;
+  }
+
+  /**
+   * Whether the task's crewmate may run this call without a card: an
+   * allowance of the open task covers the same connection, action, scope and
+   * signature, chosen under the action's current rule mark (INF-2993).
+   */
+  private taskAllows(taskId: string, row: Row, spec: IntegrationActionSpec, input: unknown) {
+    const scope = this.scopeOf(spec, input);
+    const signature = this.signature(spec);
+    const mark = this.ruleMark(row, spec);
+    return (this.options.asks?.allowances?.(taskId) ?? []).some(
+      (allowance) =>
+        allowance.connection === row.ref &&
+        allowance.action === spec.name &&
+        allowance.signature === signature &&
+        allowance.mark === mark &&
+        allowance.scope === scope.key,
+    );
+  }
+
+  /** What one allowance would cover for this checked input. */
+  private scopeOf(spec: IntegrationActionSpec, input: unknown): IntegrationScope {
+    return spec.scope ? spec.scope(input) : WHOLE_ACTION;
+  }
+
+  /** The action's rule mark now; empty until its rule or switch first changes. */
+  private ruleMark(row: Row, spec: IntegrationActionSpec): string {
+    return this.options.store.ruleMarks()[row.ref]?.[spec.name] ?? "";
   }
 
   /** Keep a value the captain entered for a slot, or forget it with null. */
@@ -677,6 +760,7 @@ Do not repeat this call; read ${name} to check what happened first.`
       signature: this.signature(spec),
       reason,
       input: JSON.stringify(input),
+      ...(caller.kind === "task" ? { scope: this.scopeOf(spec, input) } : {}),
       at: (this.options.now ?? Date.now)(),
     };
     let card: string | undefined;
@@ -841,6 +925,10 @@ Do not repeat this call; read ${name} to check what happened first.`
     if (Object.keys(actions).length) all[row.ref] = actions;
     else delete all[row.ref];
     this.options.store.writeApprovals(all);
+    // Any change of the rule or the switch ends Allow for the rest of this task (INF-2993).
+    const marks = this.options.store.ruleMarks();
+    marks[row.ref] = { ...(marks[row.ref] ?? {}), [spec.name]: randomUUID() };
+    this.options.store.writeRuleMarks(marks);
     this.changed();
   }
 

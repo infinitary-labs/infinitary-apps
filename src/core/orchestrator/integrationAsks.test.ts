@@ -15,6 +15,7 @@ import {
 } from "../../../tests/helpers/crewHarness";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import { WRITE_ANSWERED_LEAD } from "./deliveryWakes";
+import { integrationApprovalCard } from "./integrationApprovalCard";
 import { renderWake } from "./wakes";
 
 fakeCrewTimersEachTest();
@@ -137,5 +138,66 @@ describe("the first mate's integration approval card (INF-1108)", () => {
     expect(wakes()).toHaveLength(1);
     supervisor.cardActions.act(cardId, "once");
     expect(sent).toHaveLength(1);
+  });
+});
+
+// INF-2993: Allow for the rest of this task is a crewmate's choice only; the
+// first mate's and a panel's cards keep their three buttons, and Only this
+// time stays the default for a change.
+describe("the approval card's Allow for the rest of this task (INF-2993)", () => {
+  const scope = {
+    key: "POST /repos/octo/queue-proof-4ca5",
+    words: "POST requests to octo/queue-proof-4ca5",
+  };
+  const ask: IntegrationAsk = {
+    id: "pulls",
+    kind: "integration",
+    integration: "github",
+    connection: "c-github",
+    place: "GitHub",
+    action: "write",
+    label: "Change something on GitHub",
+    description: "POST, PATCH, PUT or DELETE one path through the captain's GitHub sign-in.",
+    effect: "changes",
+    reason: "Open the proof pull request the task asks for.",
+    signature: '["POST, PATCH, PUT or DELETE one path","changes"]',
+    input: JSON.stringify({ method: "POST", path: "/repos/octo/queue-proof-4ca5/pulls" }),
+    scope,
+    at: 1,
+  };
+  const task = { id: "task-1", title: "Open the proof pull request" };
+  const labels = (card: ReturnType<typeof integrationApprovalCard>) =>
+    (card.actions ?? []).map((action) => `${action.label}${action.default ? " (default)" : ""}`);
+
+  it("offers it on a crewmate's card that names its place, with one line saying what it covers", () => {
+    const card = integrationApprovalCard(ask, task);
+    expect(labels(card)).toEqual([
+      INTEGRATION_APPROVAL_WORDS.deny,
+      `${INTEGRATION_APPROVAL_WORDS.once} (default)`,
+      INTEGRATION_APPROVAL_WORDS.always,
+      INTEGRATION_APPROVAL_WORDS.task,
+    ]);
+    // The footer draws its default last (`footerGroups`), so this order draws
+    // Not now, Always allow, this choice, then Only this time.
+    expect(card.body).toContain(
+      `${INTEGRATION_APPROVAL_WORDS.task} lets this crewmate run this action for POST requests to octo/queue-proof-4ca5 without asking, until the task closes.`,
+    );
+    expect(card.title).toBe("Allow Change something on GitHub?");
+  });
+
+  it("keeps three buttons for an ask with no place, the first mate's and a panel's", () => {
+    const { scope: _none, ...unscoped } = ask;
+    for (const card of [
+      integrationApprovalCard(unscoped, task),
+      integrationApprovalCard({ ...ask, by: "firstmate" }),
+      integrationApprovalCard({
+        ...ask,
+        by: "panel",
+        panel: { key: "workspace:board", title: "Board" },
+      }),
+    ]) {
+      expect(labels(card)).toHaveLength(3);
+      expect(card.body).not.toContain(INTEGRATION_APPROVAL_WORDS.task);
+    }
   });
 });

@@ -78,8 +78,12 @@ export type MergeEffect = z.infer<typeof mergeEffectSchema>;
 export const requestWriteEffectSchema = z.object({
   kind: z.literal("request_write"),
   ask: z.string().min(1).max(64),
-  /** Only the host's integration approval card declares the duration or refusal. */
-  integration: z.enum(["always", "once", "deny"]).optional(),
+  /**
+   * Only the host's integration approval card declares the duration or
+   * refusal; `task` allows it for the rest of the asking task, sent only to
+   * a view that lists `integration-task-allow` (INF-2993).
+   */
+  integration: z.enum(["always", "task", "once", "deny"]).optional(),
 });
 export type RequestWriteEffect = z.infer<typeof requestWriteEffectSchema>;
 

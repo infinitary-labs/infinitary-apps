@@ -2,7 +2,12 @@ import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, lstatSync } from "node:fs";
 import { Readable } from "node:stream";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
-import type { ForgeWriteAsk, WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
+import type {
+  ForgeWriteAsk,
+  IntegrationAllowance,
+  WriteAsk,
+  WriteAskOutcome,
+} from "@shared/writeAsk";
 import {
   API_CALLS_PER_TASK,
   API_RESPONSE_MAX_BYTES,
@@ -99,6 +104,8 @@ export type WriteAskSent = {
   outcome: WriteAskOutcome;
   /** The host's answer as github_write renders it, when it answered. */
   answer?: string;
+  /** The captain's Allow for the rest of this task the click kept (INF-2993). */
+  allowance?: IntegrationAllowance;
 };
 
 export class GithubGatewayService {

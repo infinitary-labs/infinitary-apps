@@ -525,15 +525,33 @@ export function integrationNoticeRefusal(name: string): string {
   return `Read what connecting ${name} shares and accept it in Settings → Integrations before you sign in.`;
 }
 
-/** The app's approval card buttons, shared with keyboard journeys. */
+/**
+ * The app's approval card buttons, shared with keyboard journeys. `task`
+ * is the allowance for the rest of the asking task (INF-2993), offered only
+ * on a crewmate's ask.
+ */
 export const INTEGRATION_APPROVAL_WORDS = {
   always: "Always allow",
+  task: "Allow for the rest of this task",
   once: "Only this time",
   deny: "Not now",
 } as const;
 export type IntegrationApprovalChoice = keyof typeof INTEGRATION_APPROVAL_WORDS;
 
-/** The host's title and journeys name the same approval card. */
+/**
+ * The approval card's one line on what Allow for the rest of this task
+ * covers (INF-2993), given the place's words, already escaped for HTML.
+ */
+export function integrationTaskAllowLine(covers: string): string {
+  return `${INTEGRATION_APPROVAL_WORDS.task} lets this crewmate run this action for ${covers} without asking, until the task closes.`;
+}
+
+/**
+ * The host's title and journeys name the same approval card. A label that
+ * already ends with its place ("Change something on GitHub") names it once.
+ */
 export function integrationApprovalTitle(label: string, place: string): string {
-  return `Allow ${label} on ${place}?`;
+  return label.toLowerCase().endsWith(` on ${place.toLowerCase()}`)
+    ? `Allow ${label}?`
+    : `Allow ${label} on ${place}?`;
 }

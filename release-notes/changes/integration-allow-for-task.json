@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "integration-allow-for-task",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Allow a crewmate's integration action for the rest of its task",
+      "body": "When a crewmate asks to use an integration, its approval card now offers Allow for the rest of this task. The card says what that covers: the same kind of request to the same place, such as POST requests to one GitHub repository, events in one calendar or messages to the same people. The crewmate's later calls inside it run without a card until the task closes, and any it already asked for run on the same click. Turning the action off or changing its rule in Settings ends it. A card about a GitHub action also names GitHub once in its title.",
+      "picture": {
+        "dark": "integration-allow-for-task-dark.webp",
+        "light": "integration-allow-for-task-light.webp",
+        "alt": "An integration approval card with Not now, Always allow, Allow for the rest of this task and Only this time buttons, and a line saying what the new choice covers."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

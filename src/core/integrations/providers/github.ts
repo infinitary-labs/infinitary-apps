@@ -3,6 +3,7 @@ import { INTEGRATION_KIND_NAMES, INTEGRATIONS_SIGN_IN_HOST } from "@shared/integ
 import { z } from "zod";
 import type { GithubReadInput, GithubWriteInput } from "../../forge";
 import type { IntegrationActionSpec, IntegrationBinding } from "../binding";
+import { forgeScope } from "../scopes";
 import { GITHUB_RUN_EVENTS, lookForRuns } from "./githubRuns";
 
 /**
@@ -90,8 +91,11 @@ export function githubIntegration(
   },
 ): IntegrationBinding {
   const { host, id, name, label } = target;
+  // Allow for the rest of this task covers one kind of request to one repository or project.
+  const scope = forgeScope(label === "GitLab" ? "gitlab" : "github");
   const actions = ACTIONS.map((action) => ({
     ...action,
+    scope,
     label: action.label.replaceAll("GitHub", label),
     description:
       label === "GitLab"

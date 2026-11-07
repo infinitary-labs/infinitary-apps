@@ -72,6 +72,17 @@ The service keeps its exact checked input as an `IntegrationAsk` on the crewmate
 The first mate's calls follow the same rule (INF-1108): it has no task, so its card is a host card with no task, the host files that card's own row (`TaskService.capture.fileHostCardTask`), and the ask, marked `by: "firstmate"`, waits on it with the reason marked as the first mate's words.
 The buttons are Always allow, Only this time and Not now; reads highlight Always allow, while changes and sends highlight Only this time.
 Always allow runs the call and saves its action's grant; Only this time runs it once and leaves Asks you; Not now refuses the call without running it.
+A crewmate's ask also offers Allow for the rest of this task, between Only this time and Always allow, with one line saying what it covers (INF-2993).
+It covers the same action, the same kind of request and the same place, which the kind reads from the call's checked input (`IntegrationActionSpec.scope`, `src/core/integrations/scopes.ts`).
+GitHub and GitHub Enterprise use the method and the repository (`/repos/{owner}/{repo}`, in lower case), and GitLab the method and the project (`/projects/{id}`); a path outside one, or one with a dot segment or an escaped slash that could leave it, is its own place, exactly as written without its query.
+Calendar's `create_event` and `update_event` use the calendar, primary when omitted, and whom `send_updates` notifies; Gmail's `send_message` uses its recipients, to and cc together in any order.
+Every other action, and every MCP server's, is covered whole on its connection.
+The choice runs the call and keeps an `IntegrationAllowance` on the task (`delivery.integrationAllowances`), bound to the connection reference, the action's signature and the action's rule mark (`rule-marks.json`, renewed by every change of the action's rule or switch, Always allow's click included).
+The crewmate's later call that one covers runs at once, after the Off, input and key checks, and every ask of that task already waiting inside it runs on the same click, its card taken down.
+The task's timeline keeps one line naming the allowance, and `write-answered` tells the crewmate what it covers.
+A close drops the task's allowances; turning the action off, changing its rule, replacing the connection or changing the action ends them too.
+The first mate's and a panel's asks belong to no task and keep three buttons.
+A view that does not list the `integration-task-allow` contract change reads the choices strictly, so the home leaves this button out of the cards it sends that view.
 The minus only puts the card aside: the ask and its row remain pending, with no grant, refusal or outcome notification.
 The click takes the ask before running it, and the existing `write-answered` steer delivers the outcome once, including refusals.
 The first mate's explicit button choice closes the card's row and takes its ask in the same transaction; its outcome is a `write-answered` wake on the durable inbox, named once by the ask, and an approved call runs as the first mate's own.

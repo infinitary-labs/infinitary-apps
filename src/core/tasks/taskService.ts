@@ -1637,14 +1637,17 @@ export class TaskService {
       // only the ones its captain's click took stay, as the record of it.
       const asks = record.delivery?.writeAsks;
       const unsent = asks?.some((ask) => ask.sentAt === undefined) ?? false;
+      // Allow for the rest of this task ends with the task (INF-2993).
+      const allowed = (record.delivery?.integrationAllowances?.length ?? 0) > 0;
       // Closing a record must never manufacture routing provenance. Keep
       // the snapshot with the closed outcome, preserving published facts.
       const delivery =
-        input.delivery || closedPolicies || unsent
+        input.delivery || closedPolicies || unsent || allowed
           ? this.writer.mergeDelivery(record, {
               ...input.delivery,
               ...(closedPolicies ? { closedPolicies } : {}),
               ...(unsent ? { writeAsks: asks?.filter((ask) => ask.sentAt !== undefined) } : {}),
+              ...(allowed ? { integrationAllowances: undefined } : {}),
             })
           : record.delivery;
       if (input.status === "dropped" && delivery?.captainAction) {

@@ -170,6 +170,9 @@ export function startHomeIntegrations(options: {
       take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
       record: (taskId, askId, outcome) =>
         tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
+      // Allow for the rest of this task lives on the task's record (INF-2993).
+      allow: (taskId, allowance) => tasks.delivery.allowIntegration(taskId, allowance),
+      allowances: (taskId) => tasks.delivery.integrationAllowances(taskId),
     },
     reads: outsideReads,
     // A panel holds words from outside no longer than their kind does.

@@ -6,6 +6,7 @@ import type {
   IntegrationEventSpec,
   IntegrationLook,
 } from "../../binding";
+import { recipientsScope } from "../../scopes";
 
 /**
  * Gmail on the Google row (docs/integrations.md, "Google"): its actions and
@@ -125,6 +126,7 @@ export const GMAIL_ACTIONS: readonly IntegrationActionSpec[] = [
     name: "send_message",
     label: "Send a message",
     effect: "sends",
+    scope: recipientsScope,
     description:
       "Send a message from the captain's Gmail, with the same input as draft_message. Its approval state controls whether the host asks before sending.",
     input: outgoingSchema,

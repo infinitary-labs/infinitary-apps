@@ -71,6 +71,7 @@ import {
   type JournalLimits,
 } from "./journal";
 import { Outbox } from "./outbox";
+import { frameWithoutTaskAllow, INTEGRATION_TASK_ALLOW, withoutTaskAllow } from "./taskAllow";
 
 /**
  * A device the pairing seam vouches for (docs/devices.md): a `mac` both
@@ -369,6 +370,8 @@ type Client = {
   cardUpdates: boolean;
   /** Whether it reads a thread line's contributor fields (`SHARED_CARDS_SINCE`). */
   sharedCards: boolean;
+  /** Whether it reads Allow for the rest of this task (`INTEGRATION_TASK_ALLOW`). */
+  taskAllow: boolean;
   access: ContractAccess;
   closing: boolean;
   /** What the home writes to it, paced by its answers. */
@@ -469,8 +472,11 @@ function cardPushFor(
   spelling: Spelling,
   currentUpdates: boolean,
   sharedCards = true,
+  taskAllow = true,
 ): string {
-  const text = pushFrameIn(entry, spelling);
+  const spelled = pushFrameIn(entry, spelling);
+  const text =
+    taskAllow || !entry.channel.startsWith("inf:cards") ? spelled : frameWithoutTaskAllow(spelled);
   if (!sharedCards && THREAD_CHANNELS.has(entry.channel)) {
     const frame = JSON.parse(text);
     return JSON.stringify({ ...frame, payload: legacyThreadLines(frame.payload) });
@@ -698,7 +704,13 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           if (client.welcomed && client.role === "view")
             send(
               client,
-              cardPushFor(entry, client.spelling, client.cardUpdates, client.sharedCards),
+              cardPushFor(
+                entry,
+                client.spelling,
+                client.cardUpdates,
+                client.sharedCards,
+                client.taskAllow,
+              ),
             );
       } catch (error) {
         onProblem(`could not send ${channel}: ${(error as Error).message}`);
@@ -725,6 +737,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes);
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
+      client.taskAllow = listsChange(hello.changes, INTEGRATION_TASK_ALLOW);
       // From the welcome on, a long frame goes as parts to a device that reads them.
       client.out.parts = listsChange(hello.changes, FRAME_PARTS);
       // A view changes things across majors its floor allows; work only on this home's own.
@@ -769,7 +782,16 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         }),
       );
       for (const entry of missed ?? [])
-        send(client, cardPushFor(entry, client.spelling, client.cardUpdates, client.sharedCards));
+        send(
+          client,
+          cardPushFor(
+            entry,
+            client.spelling,
+            client.cardUpdates,
+            client.sharedCards,
+            client.taskAllow,
+          ),
+        );
       client.welcomed = true;
       if (hello.system || hello.chip || hello.automaticStartup)
         devices.noteSystem?.(client.device.id, {
@@ -843,7 +865,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         // desktop adapter stamps, with the contract's reach as the limit, so
         // the words it types are his own words (the captain's pick, FI3-709).
         // A computer that runs work asks as itself, by the pairing it proved.
-        const value = await dispatch(channel, frame.args, actor);
+        const answered = await dispatch(channel, frame.args, actor);
+        const value =
+          client.taskAllow || !channel.startsWith("inf:cards")
+            ? answered
+            : withoutTaskAllow(answered);
         reply({
           ok: true,
           value:
@@ -880,6 +906,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         appVersion: undefined,
         cardUpdates: false,
         sharedCards: false,
+        taskAllow: false,
         access: "read",
         closing: false,
         out: new Outbox(ws, pacing),

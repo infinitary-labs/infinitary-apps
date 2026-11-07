@@ -1,5 +1,9 @@
 import type { Card } from "@shared/cards";
-import { INTEGRATION_APPROVAL_WORDS, integrationApprovalTitle } from "@shared/integrations";
+import {
+  INTEGRATION_APPROVAL_WORDS,
+  integrationApprovalTitle,
+  integrationTaskAllowLine,
+} from "@shared/integrations";
 import type { IntegrationAsk } from "@shared/writeAsk";
 import { escapeCardText } from "./cardText";
 import { HOST_CARD_PRIORITY } from "./hostCards";
@@ -28,6 +32,13 @@ export function integrationApprovalCard(
     : panel
       ? `Your panel “${text(panel.title)}”`
       : "Your first mate";
+  // Only a crewmate's ask that names its scope offers the rest of its task
+  // (INF-2993). The footer draws the default last, so listing it after
+  // Always allow draws it between Only this time and Always allow.
+  const scope = task && ask.by === undefined ? ask.scope : undefined;
+  const choices = scope
+    ? (["deny", "once", "always", "task"] as const)
+    : (["deny", "once", "always"] as const);
   const words = task
     ? "the crewmate's words"
     : panel
@@ -44,10 +55,11 @@ export function integrationApprovalCard(
       `<p>${asker} wants to use this action. ${effect}</p>`,
       `<p>${text(ask.description ?? "")}</p>`,
       `<h3>Why, in ${words}</h3><blockquote>${text(ask.reason ?? "")}</blockquote>`,
+      ...(scope ? [`<p>${integrationTaskAllowLine(text(scope.words))}</p>`] : []),
       `<p>Always allow lasts until you change it in Settings, replace the connection, or the action changes.</p>`,
       writeAskStrip(ask),
     ].join(""),
-    actions: (["deny", "once", "always"] as const).map((choice) => ({
+    actions: choices.map((choice) => ({
       id: choice,
       label: INTEGRATION_APPROVAL_WORDS[choice],
       variant: choice === preferred ? "primary" : "secondary",

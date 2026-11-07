@@ -15,7 +15,7 @@ import type { WorkShape } from "@shared/routingPolicy";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import type { FirstRelease } from "@shared/taskRelease";
 import type { RunChecks, TaskDeliveryMode } from "@shared/tasks";
-import type { WriteAsk } from "@shared/writeAsk";
+import type { IntegrationAllowance, WriteAsk } from "@shared/writeAsk";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
 import { ChangeStore } from "./changeStore";
 import type { AppDatabase } from "./db";
@@ -502,6 +502,12 @@ export type TaskDelivery = {
    * never sent.
    */
   writeAsks?: WriteAsk[];
+  /**
+   * The captain's Allow for the rest of this task choices (INF-2993): an
+   * integration call of this task's crewmate that one covers runs without a
+   * card. `TaskService` is their one writer, and a close drops them.
+   */
+  integrationAllowances?: IntegrationAllowance[];
   /** The newest completion offers the host published, with the head each one's checks read. */
   completionOffers?: CompletionOffer[];
   /**

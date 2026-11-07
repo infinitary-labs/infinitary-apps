@@ -127,3 +127,35 @@ describe("a task's delivery write (INF-2220)", () => {
     expect(tasks.timeline("t1").at(-1)).toMatchObject({ kind: "ci", text: "Checks still running" });
   });
 });
+
+// INF-2993: Allow for the rest of this task is kept on the task and ends
+// with it; choosing it again for the same place replaces the older one.
+describe("a task's Allow for the rest of this task (INF-2993)", () => {
+  const allowance = {
+    connection: "c-github",
+    action: "write",
+    signature: '["POST, PATCH, PUT or DELETE one path","changes"]',
+    scope: "POST /repos/octo/queue-proof-4ca5",
+    words: "POST requests to octo/queue-proof-4ca5",
+    mark: "",
+    at: 46_000,
+    card: "integration-ask-pulls",
+  };
+
+  it("keeps one per place while the task is open, and none once it closes", () => {
+    const { tasks } = setup();
+    tasks.delivery.allowIntegration("t1", allowance);
+    tasks.delivery.allowIntegration("t1", { ...allowance, mark: "renewed", at: 47_000 });
+    tasks.delivery.allowIntegration("t1", { ...allowance, scope: "POST /repos/octo/meter" });
+    expect(tasks.delivery.integrationAllowances("t1").map((kept) => kept.mark)).toEqual([
+      "renewed",
+      "",
+    ]);
+
+    tasks.close("t1", { status: "done", reason: "settled", actor: "host" });
+
+    expect(tasks.delivery.integrationAllowances("t1")).toEqual([]);
+    expect(tasks.get("t1")?.delivery?.integrationAllowances).toBeUndefined();
+    expect(() => tasks.delivery.allowIntegration("t1", allowance)).toThrow("is closed");
+  });
+});

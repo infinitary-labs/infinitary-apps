@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { WHOLE_ACTION } from "../../src/core/integrations/scopes";
 import { WRITE_ANSWERED_LEAD } from "../../src/core/orchestrator/deliveryWakes";
 import { ACTIONS } from "../../src/shared/actions";
 import {
@@ -9,6 +10,7 @@ import {
   INTEGRATIONS_MCP_WORDS,
   INTEGRATIONS_WORDS,
   integrationApprovalTitle,
+  integrationTaskAllowLine,
 } from "../../src/shared/integrations";
 import { SAMPLE_NOTES } from "../helpers/mcpStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -30,9 +32,12 @@ import {
   MCP_NOTES_REASON,
   MCP_NOTES_REMINDER,
   MCP_NOTES_REPORT_PREFIX,
+  MCP_NOTES_SECOND_REMINDER,
+  MCP_NOTES_TWICE_MARKER,
   type McpNotesFirstmateSeen,
   mcpNotes,
   mcpNotesFirstmate,
+  mcpNotesTwice,
 } from "./scenarios/mcpNotes";
 import { settingsSection } from "./settings";
 import { showCard, shownCard } from "./stack";
@@ -53,12 +58,16 @@ import { pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
  *   In the second test, the first mate's own reasoned change raises the same
  *   host card with no task of its own, Only this time highlighted; that
  *   click adds its reminder once and the first mate hears it (INF-1108).
+ *   In the third, a crewmate's change card offers Allow for the rest of this
+ *   task; that choice by keys runs its call, and the crewmate's next call of
+ *   the same action runs with no card while the rule stays Ask (INF-2993).
  * - Data: the stand-in notes server (`tests/helpers/mcpStandIn.ts`) in the
  *   2026-07-28 protocol era, run as a program on this computer over stdio,
  *   reading a notes file in this test's folder.
  * - Completion signal: the task's report carries the notes the server
  *   listed, and `window.infinitary.integrations.list()` holds the row; the
- *   first mate's `write-answered` wake reaches its scripted model.
+ *   first mate's `write-answered` wake reaches its scripted model; the third
+ *   task's report carries the server's answer to its second call.
  * - Platform prerequisites: Node running the stand-in from its TypeScript
  *   source, as the unit test does; nothing leaves this computer.
  * - Shared resources: none; the app, its folder and the server are this
@@ -312,6 +321,80 @@ test("the first mate's own change on an MCP server waits for the app's card, the
   expect(firstmateSeen.wakes[0]).toContain(WRITE_ANSWERED_LEAD);
   // The stand-in's own answer to the call, carried back to the first mate.
   expect(firstmateSeen.wakes[0]).toContain(`Added note ${kept.length}.`);
+  expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
+    "ask",
+  );
+});
+
+// INF-2993, the captain's picks: Allow for the rest of this task covers "The
+// same action, kind of request and place" for that task's crewmate, so its
+// later call of the same action runs without another card. Same data as
+// above; the completion signal is both reminders in the notes file and the
+// task's report carrying the server's answer to the second call.
+test("a crewmate's change allowed for the rest of its task runs its next call without another card", async () => {
+  const { notes, runs } = notesServer("infinitary-mcp-task-allow-");
+  launched = await launchApp({ withMockProvider: true, scenarios: [mcpNotesTwice] });
+  const { app, page } = launched;
+  const view = () => page.evaluate(() => window.infinitary.integrations.list());
+  await page.evaluate((server) => window.infinitary.integrations.addMcp(server), {
+    name: MCP_NOTES_NAME,
+    runs,
+  });
+
+  const input = promptInput(page);
+  await input.click();
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${MCP_NOTES_TWICE_MARKER}`);
+  await input.press("Enter");
+  const title = integrationApprovalTitle("add_note", MCP_NOTES_NAME);
+  const card = await approval(page, title);
+  // An MCP server's action is covered whole (src/core/integrations/scopes.ts).
+  await expect(cardBody(page, title).locator("body")).toContainText(
+    integrationTaskAllowLine(WHOLE_ACTION.words),
+  );
+  const held = (await page.evaluate(() => window.infinitary.cards.list())).find(
+    (shown) => shown.title === title,
+  );
+  expect(held?.actions.map((action) => action.label)).toEqual([
+    INTEGRATION_APPROVAL_WORDS.deny,
+    INTEGRATION_APPROVAL_WORDS.once,
+    INTEGRATION_APPROVAL_WORDS.always,
+    INTEGRATION_APPROVAL_WORDS.task,
+  ]);
+  expect(held?.actions.find((action) => action.default)?.label).toBe(
+    INTEGRATION_APPROVAL_WORDS.once,
+  );
+  const evidenceDir = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+  if (evidenceDir) {
+    await resizeWindow(app, page, { width: 1280, height: 760 });
+    const maximize = card.locator('[data-card-size-toggle="maximize"]');
+    if (await maximize.count()) await pressKey(maximize, "Enter");
+    await regionShot(card, join(evidenceDir, "task-allow-approval-after.png"));
+    await heroShot(app, page, { region: card, name: "integration-allow-for-task" });
+  }
+  await pressKey(
+    card.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.task, exact: true }),
+    "Enter",
+  );
+
+  await expect
+    .poll(async () => JSON.parse(readFileSync(notes, "utf8")).notes, { timeout: 60_000 })
+    .toEqual([...SAMPLE_NOTES, MCP_NOTES_REMINDER, MCP_NOTES_SECOND_REMINDER]);
+  const outcome = async (): Promise<string> =>
+    page.evaluate(async (wanted) => {
+      const row = (await window.infinitary.tasks.board()).tasks.find(
+        (task) => task.title === wanted,
+      );
+      return row ? ((await window.infinitary.tasks.detail(row.id))?.outcome ?? "") : "";
+    }, MCP_NOTES_TWICE_MARKER);
+  await expect.poll(outcome, { timeout: 60_000 }).toContain(MCP_NOTES_REPORT_PREFIX);
+  // The stand-in's own answer to the second call, which raised no card.
+  expect(await outcome()).toContain(`Added note ${SAMPLE_NOTES.length + 2}.`);
+  expect(
+    (await page.evaluate(() => window.infinitary.cards.list())).filter(
+      (shown) => shown.title === title,
+    ),
+  ).toEqual([]);
+  // The choice kept nothing in Settings: the action still asks.
   expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
     "ask",
   );

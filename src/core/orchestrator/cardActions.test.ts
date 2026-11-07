@@ -9,7 +9,8 @@
  */
 
 import type { HostEffect } from "@shared/cards";
-import type { WriteAsk } from "@shared/writeAsk";
+import { INTEGRATION_APPROVAL_WORDS } from "@shared/integrations";
+import type { IntegrationAllowance, IntegrationAsk, WriteAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import {
   endTurn,
@@ -201,5 +202,108 @@ describe("a click on a card, as CardActions takes it", () => {
     ).toEqual({});
     expect(settle).not.toHaveBeenCalled();
     expect(merge).not.toHaveBeenCalled();
+  });
+});
+
+// INF-2993, the captain's picks: Allow for the rest of this task covers "The
+// same action, kind of request and place", and "Every ask that arrives while
+// the card waits" inside that place runs on the same click.
+describe("Allow for the rest of this task on a crewmate's integration card (INF-2993)", () => {
+  const SCOPE = {
+    key: "POST /repos/octo/queue-proof-4ca5",
+    words: "POST requests to octo/queue-proof-4ca5",
+  };
+  function integrationAsk(id: string, path: string, scope = SCOPE): IntegrationAsk {
+    return {
+      id,
+      kind: "integration",
+      integration: "github",
+      connection: "c-github",
+      place: "GitHub",
+      action: "write",
+      label: "Change something on GitHub",
+      description: "POST, PATCH, PUT or DELETE one path through the captain's GitHub sign-in.",
+      effect: "changes",
+      reason: "Open the proof pull request the task asks for.",
+      signature: '["POST, PATCH, PUT or DELETE one path","changes"]',
+      input: JSON.stringify({ method: "POST", path, body: "{}" }),
+      scope,
+      at: 1,
+    };
+  }
+
+  it("runs the chosen call, then the task's waiting calls in the same place, and leaves any other waiting", async () => {
+    const allowance: IntegrationAllowance = {
+      connection: "c-github",
+      action: "write",
+      signature: '["POST, PATCH, PUT or DELETE one path","changes"]',
+      scope: SCOPE.key,
+      words: SCOPE.words,
+      mark: "",
+      at: 2,
+      card: "integration-ask-pulls",
+    };
+    const sendWriteAsk = vi.fn(
+      async (taskId: string, askId: string, choice?: string): Promise<WriteAskSent> => {
+        const ask = h.tasks.get(taskId)?.delivery?.writeAsks?.find((entry) => entry.id === askId);
+        return {
+          ok: true,
+          ...(ask ? { ask: { ...ask, sentAt: 3 } } : {}),
+          call: "write",
+          place: "GitHub",
+          outcome: { kind: "ran" },
+          answer: '{"number":7}',
+          ...(choice === "task" ? { allowance } : {}),
+        };
+      },
+    );
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate, { sendWriteAsk });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Open the proof pull request",
+      intent: intentOf("open the proof pull request"),
+    });
+    await tick();
+    const asks = [
+      integrationAsk("pulls", "/repos/octo/queue-proof-4ca5/pulls"),
+      integrationAsk("statuses", "/repos/octo/queue-proof-4ca5/statuses/0be4f05"),
+      integrationAsk("meter", "/repos/octo/meter/pulls", {
+        key: "POST /repos/octo/meter",
+        words: "POST requests to octo/meter",
+      }),
+    ];
+    for (const ask of asks) {
+      h.tasks.delivery.keepWriteAsk(taskId, ask);
+      h.supervisor.integrationAsks.askIntegration(taskId, ask);
+    }
+    await endTurn(crewmate, taskId, "The proof pull request waits on the captain's click.");
+    const prompts = crewmate.promptCalls.length;
+
+    expect(h.supervisor.cardActions.act("integration-ask-pulls", "task")).toEqual({});
+    await tick();
+    await tick();
+
+    expect(sendWriteAsk.mock.calls.map(([, id, choice]) => `${id} ${choice}`)).toEqual([
+      "pulls task",
+      "statuses once",
+    ]);
+    const up = h.supervisor.cards
+      .snapshot()
+      .filter((card) => card.taskId === taskId)
+      .map((card) => card.id);
+    expect(up).toContain("integration-ask-meter");
+    expect(up).not.toContain("integration-ask-statuses");
+    expect(
+      h.tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "note")
+        .map((event) => event.text),
+    ).toContain(
+      "The captain allowed write on GitHub for the rest of this task, for POST requests to octo/queue-proof-4ca5.",
+    );
+    const heard = crewmate.promptCalls.slice(prompts).join("\n");
+    expect(heard).toContain(
+      `${INTEGRATION_APPROVAL_WORDS.task}: your later calls of write on GitHub for POST requests to octo/queue-proof-4ca5 run at once`,
+    );
   });
 });

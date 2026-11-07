@@ -1,7 +1,7 @@
 import { INTEGRATIONS_COMMAND } from "../../../src/core/integrations";
 import { WRITE_ANSWERED_LEAD } from "../../../src/core/orchestrator/deliveryWakes";
 import { browserShellMessages } from "../browserScript";
-import type { Scenario } from "../mockProvider";
+import type { Scenario, ScenarioAnswer } from "../mockProvider";
 import { calledTool, providerMessages, sinceLastUser } from "../providerRequest";
 
 /**
@@ -118,3 +118,59 @@ export function mcpNotesFirstmate(seen: McpNotesFirstmateSeen): Scenario {
       };
     };
 }
+
+/**
+ * A crewmate adds two reminders through the Notes server (INF-2993): a brief
+ * carrying this marker calls `add_note` for the first, waits on the approval
+ * card like the change above, and once it hears the captain's answer calls
+ * `add_note` again for the second, then reports what the server answered.
+ * The second call runs without a card only when the captain chose Allow for
+ * the rest of this task; otherwise the crewmate reports the second card.
+ */
+export const MCP_NOTES_TWICE_MARKER = "add both my reminders through the Notes server";
+export const MCP_NOTES_SECOND_REMINDER = "Renew the parking permit before the 15th";
+
+export const mcpNotesTwice: Scenario =
+  () =>
+  ({ body, isFirstmate, wantsStream }) => {
+    if (isFirstmate || !wantsStream || !body.includes(MCP_NOTES_TWICE_MARKER)) return undefined;
+    const current = sinceLastUser(body);
+    if (calledTool(current.tail, "report")) return { text: "Waiting for the captain." };
+    const addNote = (text: string): ScenarioAnswer => ({
+      calls: [
+        {
+          name: "bash",
+          args: {
+            command: `${INTEGRATIONS_COMMAND} call ${MCP_NOTES_NAME} add_note '${JSON.stringify({ text })}' --reason '${MCP_NOTES_REASON}'`,
+          },
+        },
+      ],
+    });
+    if (current.user.includes(WRITE_ANSWERED_LEAD) && !calledTool(current.tail, "bash"))
+      return addNote(MCP_NOTES_SECOND_REMINDER);
+    if (!calledTool(body, "bash")) return addNote(MCP_NOTES_REMINDER);
+    // The same reading of the shell as the change above, for whichever call came last.
+    const shell = browserShellMessages(providerMessages(body));
+    if (shell.pending) return { text: "The integrations command is still running." };
+    const answer = shell.readings.findLast((message) => message.role === "tool")?.text ?? "";
+    if (/^running: /m.test(answer) || /^code: BUSY$/m.test(answer))
+      return { calls: [{ name: "bash", args: { command: INTEGRATIONS_COMMAND } }] };
+    const ask = /approval card for ask (ia[a-f0-9]+)/.exec(answer)?.[1];
+    if (ask)
+      return {
+        calls: [
+          {
+            name: "report",
+            args: {
+              text: "The app is asking for this action.",
+              summary: "The app is asking for this action.",
+              waiting_on_captain: {
+                reason: "Choose whether the action may run",
+                card_id: `integration-ask-${ask}`,
+              },
+            },
+          },
+        ],
+      };
+    return { calls: [{ name: "report", args: { text: `${MCP_NOTES_REPORT_PREFIX}${answer}` } }] };
+  };

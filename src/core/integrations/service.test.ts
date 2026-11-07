@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ForgeSignInState } from "@shared/forges";
 import { undeclaredIntegrationMessage } from "@shared/personal/manifest";
-import type { IntegrationAsk } from "@shared/writeAsk";
+import type { IntegrationAllowance, IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -732,6 +732,157 @@ describe("per-action approval (INF-950)", () => {
     service.setRule("mcp-notes", "list_notes", true);
     await service.remove("mcp-notes");
     expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");
+  });
+});
+
+// INF-2993, the captain's picks: Allow for the rest of this task covers "The
+// same action, kind of request and place", for that task's crewmate only, and
+// ends with the task or with anything that ends Always allow. The calls are
+// finding 3's run, which wrote into one throwaway repository.
+describe("Allow for the rest of this task (INF-2993)", () => {
+  function fixture() {
+    const dir = scratchDir("infinitary-task-allow-");
+    const store = new IntegrationSettingsStore(dir);
+    const signIns = new Map([["github.com", { state: "ok" as const, login: "octo" }]]);
+    const writes: { by: string; method: string; path: string }[] = [];
+    const binding = githubIntegration({
+      signIns: {
+        stateOf: (host) => signIns.get(host)?.state,
+        loginOf: (host) => signIns.get(host)?.login ?? null,
+        checkNow: async () => {},
+        signOut: (host) => {
+          signIns.delete(host);
+        },
+      },
+      gateway: {
+        read: async () => "[]",
+        readAsSeat: async () => "[]",
+        write: async (taskId, input) => {
+          writes.push({ by: taskId, method: input.method, path: input.path });
+          return '{"number":7}';
+        },
+        writeAsSeat: async (input) => {
+          writes.push({ by: "firstmate", method: input.method, path: input.path });
+          return '{"number":8}';
+        },
+      },
+    });
+    const kept = new Map<string, IntegrationAsk>();
+    const allowances = new Map<string, IntegrationAllowance[]>();
+    const service = new IntegrationsService({
+      bindings: [binding],
+      store,
+      secrets: new FileIntegrationSecrets(join(dir, "secrets")),
+      asks: {
+        keep: (_taskId, ask) => {
+          kept.set(ask.id, ask);
+        },
+        keepForFirstmate: (ask) => {
+          kept.set(ask.id, ask);
+          return `integration-ask-${ask.id}`;
+        },
+        present: () => {},
+        take: (_taskId, id) => {
+          const ask = kept.get(id);
+          if (!ask || ask.sentAt !== undefined) return { refused: "already taken or absent" };
+          ask.sentAt = Date.now();
+          return { ask };
+        },
+        record: () => {},
+        allow: (taskId, allowance) => {
+          allowances.set(taskId, [...(allowances.get(taskId) ?? []), allowance]);
+        },
+        allowances: (taskId) => allowances.get(taskId) ?? [],
+      },
+    });
+    const reason = "Open the proof pull request the task asks for.";
+    const write = (taskId: string, method: string, path: string) =>
+      service
+        .forTask(taskId)
+        .call("GitHub", "write", { method, path, body: "{}" }, undefined, reason);
+    /** Ask once, and answer that ask with Allow for the rest of this task. */
+    const allow = async (taskId: string, method: string, path: string) => {
+      const asked = await write(taskId, method, path);
+      expect(asked.refused).toBe("refused");
+      const ask = [...kept.values()].at(-1)!;
+      return service.sendAsk(taskId, ask.id, "task");
+    };
+    return { service, signIns, writes, kept, allowances, write, allow, reason };
+  }
+
+  it("runs the task's later calls of the same kind to the same repository without a card, and asks for any other", async () => {
+    const f = fixture();
+    const sent = await f.allow("task-1", "POST", "/repos/Octo/Queue-Proof-4ca5/pulls");
+    expect(sent).toMatchObject({ ok: true, outcome: { kind: "ran" } });
+    expect(sent.allowance).toMatchObject({
+      action: "write",
+      scope: "POST /repos/octo/queue-proof-4ca5",
+      words: "POST requests to octo/queue-proof-4ca5",
+    });
+    const asksBefore = f.kept.size;
+    expect(
+      await f.write("task-1", "POST", "/repos/octo/queue-proof-4ca5/statuses/0be4f05"),
+    ).not.toHaveProperty("refused");
+    expect(f.kept.size).toBe(asksBefore);
+    // Another kind of request, another repository, a path that could leave
+    // the repository, another task and the first mate each still ask.
+    for (const [taskId, method, path] of [
+      ["task-1", "DELETE", "/repos/octo/queue-proof-4ca5"],
+      ["task-1", "POST", "/repos/octo/meter/pulls"],
+      ["task-1", "POST", "/repos/octo/queue-proof-4ca5/../../meter/pulls"],
+      ["task-2", "POST", "/repos/octo/queue-proof-4ca5/pulls"],
+    ] as const)
+      expect((await f.write(taskId, method, path)).refused).toBe("refused");
+    const firstmate = await f.service.call(
+      { kind: "firstmate" },
+      "GitHub",
+      "write",
+      { method: "POST", path: "/repos/octo/queue-proof-4ca5/pulls", body: "{}" },
+      f.reason,
+    );
+    expect(firstmate.refused).toBe("refused");
+    expect(f.kept.size).toBe(asksBefore + 5);
+    expect(f.writes.map((w) => `${w.by} ${w.method} ${w.path}`)).toEqual([
+      "task-1 POST /repos/Octo/Queue-Proof-4ca5/pulls",
+      "task-1 POST /repos/octo/queue-proof-4ca5/statuses/0be4f05",
+    ]);
+    // The rule in Settings stays Ask: the choice kept nothing there.
+    expect(f.service.view().integrations[0]?.actions.map((a) => a.rule)).toEqual(["ask", "ask"]);
+  });
+
+  it("ends when the action is turned off and on, its rule changes, or the account changes", async () => {
+    const f = fixture();
+    const later = () => f.write("task-1", "POST", "/repos/octo/queue-proof-4ca5/issues");
+    const ends = async (change: () => void) => {
+      await f.allow("task-1", "POST", "/repos/octo/queue-proof-4ca5/pulls");
+      expect((await later()).refused).toBeUndefined();
+      change();
+      expect((await later()).refused).toBe("refused");
+    };
+    await ends(() => {
+      f.service.configure("github", { actions: { write: false } });
+      f.service.configure("github", { actions: { write: true } });
+    });
+    await ends(() => {
+      f.service.setRule("github", "write", true);
+      f.service.setRule("github", "write", false);
+    });
+    await ends(() => {
+      f.signIns.set("github.com", { state: "ok", login: "another-login" });
+    });
+  });
+
+  it("ends when the action's own description changes", async () => {
+    const f = fixture();
+    await f.allow("task-1", "POST", "/repos/octo/queue-proof-4ca5/pulls");
+    const [allowance] = f.allowances.get("task-1")!;
+    // An allowance chosen for another description of the action.
+    f.allowances.set("task-1", [
+      { ...allowance!, signature: '["an older description","changes"]' },
+    ]);
+    expect(
+      (await f.write("task-1", "POST", "/repos/octo/queue-proof-4ca5/issues")).ran,
+    ).toBeUndefined();
   });
 });
 

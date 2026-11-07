@@ -8061,6 +8061,7 @@
                             "type": "string",
                             "enum": [
                               "always",
+                              "task",
                               "once",
                               "deny"
                             ]
@@ -9278,6 +9279,7 @@
                               "type": "string",
                               "enum": [
                                 "always",
+                                "task",
                                 "once",
                                 "deny"
                               ]
@@ -45738,6 +45740,7 @@
                                   "type": "string",
                                   "enum": [
                                     "always",
+                                    "task",
                                     "once",
                                     "deny"
                                   ]
@@ -56454,6 +56457,7 @@
                             "type": "string",
                             "enum": [
                               "always",
+                              "task",
                               "once",
                               "deny"
                             ]

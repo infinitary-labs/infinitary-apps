@@ -20,6 +20,7 @@ import {
 } from "@shared/requiredActions";
 import { type FirstReleaseReport, firstReleaseReportSchema } from "@shared/taskRelease";
 import {
+  type IntegrationAllowance,
   NEVER_SENT_AGAIN,
   WRITE_ASK_CAP,
   type WriteAsk,
@@ -417,6 +418,41 @@ export class TaskDeliveries {
     });
     run();
     return result;
+  }
+
+  /**
+   * Keep the captain's Allow for the rest of this task (INF-2993) on an open
+   * task; one for the same connection, action and scope replaces the older.
+   * A closed task keeps none.
+   */
+  allowIntegration(id: string, allowance: IntegrationAllowance): void {
+    const run = this.writer.write(() => {
+      const record = this.writer.mustGet(id);
+      if (TaskService.isClosed(record)) {
+        throw new TaskGraphRefusal(`Refused: ${keyOrId(record)} is closed.`);
+      }
+      const integrationAllowances = [
+        ...(record.delivery?.integrationAllowances ?? []).filter(
+          (kept) =>
+            kept.connection !== allowance.connection ||
+            kept.action !== allowance.action ||
+            kept.scope !== allowance.scope,
+        ),
+        allowance,
+      ];
+      this.writer.patch(id, {
+        delivery: this.writer.mergeDelivery(record, { integrationAllowances }),
+        updatedAt: allowance.at,
+      });
+    });
+    run();
+  }
+
+  /** The task's allowances while it is open; a closed or unknown task has none. */
+  integrationAllowances(id: string): readonly IntegrationAllowance[] {
+    const record = this.writer.store.get(id);
+    if (!record || TaskService.isClosed(record)) return [];
+    return record.delivery?.integrationAllowances ?? [];
   }
 
   /** What came of a taken write: the host's answer, unknown, or nothing sent. */

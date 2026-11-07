@@ -34,6 +34,7 @@ export function SettingRow({
   description,
   detail,
   control,
+  controlOnTitle = false,
   error,
 }: {
   /** A stable hook for the row, so a control with no visible label is findable. */
@@ -43,8 +44,19 @@ export function SettingRow({
   /** What the setting holds, when the words alone do not show it (a folder's path). */
   detail?: React.ReactNode;
   control: React.ReactNode;
+  /**
+   * Put the control at the top right, on the title's line, and give the text
+   * the row's full width: for a row whose detail runs tall (Version's release
+   * notes), where a control centred beside it would float mid-row (INF-2917).
+   */
+  controlOnTitle?: boolean;
   error?: string | null;
 }) {
+  const titleText = (
+    <div style={{ fontSize: "var(--text-base)", color: "var(--fg-1)", fontWeight: 500 }}>
+      {title}
+    </div>
+  );
   return (
     <div
       data-setting={id}
@@ -60,14 +72,29 @@ export function SettingRow({
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "var(--text-base)", color: "var(--fg-1)", fontWeight: 500 }}>
-          {title}
-        </div>
+        {controlOnTitle ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "var(--space-4)",
+              fontSize: "var(--text-base)",
+            }}
+          >
+            {titleText}
+            {/* As tall as the title's line, so a taller control overhangs it evenly
+                and the description below stays where it was. */}
+            <div style={{ display: "flex", alignItems: "center", height: "1lh" }}>{control}</div>
+          </div>
+        ) : (
+          titleText
+        )}
         <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>{description}</div>
         {detail}
         {error && <SettingError error={error} />}
       </div>
-      {control}
+      {!controlOnTitle && control}
     </div>
   );
 }

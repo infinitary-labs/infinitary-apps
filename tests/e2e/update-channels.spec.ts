@@ -18,6 +18,7 @@ import {
 } from "../../src/shared/updateWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
+import { within } from "./layout";
 import { writeInstallerMarker } from "./savedDataFixtures";
 import { pressKey, runFromSearch } from "./windowKeys";
 
@@ -250,6 +251,13 @@ test("Check for updates reads the targets file again within four hours, and says
     `${UPDATE_NOTICES.latest("stable")} ${UPDATE_STEP_WORDS.checked("now")}`,
   );
   await expect(button).toBeFocused();
+  // INF-2917, the captain: the button "being vertically centered looks really odd", so it sits
+  // at the section's top right, above the update line, which runs to the same right edge.
+  const [buttonBox, lineBox] = await Promise.all([button.boundingBox(), line.boundingBox()]);
+  if (!buttonBox || !lineBox) throw new Error("the Version row is not drawn");
+  expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(lineBox.y);
+  // The line spans the button's columns too: the text runs the row's full width.
+  expect(within({ ...lineBox, x: buttonBox.x, width: buttonBox.width }, lineBox)).toEqual([]);
   // Published since: the saved answer holds, and a press reads the file now.
   tap.reply.targets = published({ stable: target("0.1.31") });
   expect(await updateStatus(page)).toMatchObject({ updateAvailable: false });

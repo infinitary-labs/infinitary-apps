@@ -167,6 +167,7 @@ export function VersionRowView({
         </>
       }
       control={update?.control ?? null}
+      controlOnTitle
     />
   );
 }

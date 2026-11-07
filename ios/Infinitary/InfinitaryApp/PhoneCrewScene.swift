@@ -96,7 +96,7 @@ struct PhoneCrewScene: View {
         .sheet(item: sheet, onDismiss: { if record == nil { messageContext.taskID = nil } }) { shown in
             switch shown {
             case .summary(let task):
-                PhoneCrewSummary(session: session, task: task, roster: roster,
+                PhoneCrewSummary(session: session, task: task, tasks: roster.allTasks,
                                  show: { task in preview = task; previewComputer = PhoneSceneRoster.computerID(task) },
                                  open: { task in record = task; preview = nil; messageContext.taskID = task.id },
                                  close: { preview = nil; previewComputer = nil })

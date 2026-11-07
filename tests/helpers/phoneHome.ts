@@ -46,6 +46,7 @@ import type {
   PhonePickerPreview,
   PhoneTouchOutcome,
 } from "./phoneKeyboard";
+import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { seedReplyReading } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
@@ -2103,6 +2104,15 @@ export async function startPhoneHome(
           };
           break;
         }
+        case "POST row-moves-fixture":
+          result = await seedRowMoves(core.services.tasks, "phone-work", () =>
+            core.dispatch("inf:tasks:board", []),
+          );
+          break;
+        case "POST row-moves-dropped":
+          await until(() => core.services.tasks.get("row-moves")?.status === "dropped");
+          result = { writes };
+          break;
         case "GET talk-state":
           result = {
             writes,

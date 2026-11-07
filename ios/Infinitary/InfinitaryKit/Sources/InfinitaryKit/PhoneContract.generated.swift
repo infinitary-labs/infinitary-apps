@@ -176,9 +176,19 @@ public enum PhoneTaskRowWords {
     public static let reachNoNewWork = "takes no new work"
     public static let reachAway = "out of reach"
     public static let earlier = "Earlier"
+    public static let start = "Start"
+    public static let tryAgain = "Try again"
     public static func foundOn(_ key: String) -> String { "found on \(key)" }
     public static func newCount(_ count: Int) -> String { " · \(count) new" }
     public static func failedCount(_ count: Int) -> String { " · \(count) could not start" }
+}
+
+public enum PhoneRowMoveWords {
+    public static let queue = "Queue it"
+    public static let unqueue = "Back to backlog"
+    public static let start = "Start"
+    public static let startNow = "Start now"
+    public static let startedBacklog = "Its turn stops and its work stays. It waits for your Start."
 }
 
 public enum PhoneRecordWords {

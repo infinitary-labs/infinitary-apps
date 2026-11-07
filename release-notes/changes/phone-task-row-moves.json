@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-task-row-moves",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Move tasks from the Tasks list on iPhone and iPad",
+      "body": "On iPhone and iPad, a long press on a task in Tasks shows its crew summary with the moves your Mac's task board offers for it: Open record, Show the card, Continue, Queue it, Back to backlog, Start now and Drop task. A move that cannot run stays dim and says why, and Start now and Drop task ask once first. Swipe a Backlog task to the left for the Start your Mac shows on that row, which starts it in one press or says why it cannot.",
+      "noPicture": "The phone check pictures the Tasks list on iPhone and iPad upright, while a hero picture is a landscape pair cropped from the desktop app's window.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -405,6 +405,18 @@ A search keeps the groups, opens every one, matches the title or the key as the 
 The search waits above the list until the list is pulled down from its top, as the Mac's waits behind its icon.
 Find a task (Shift-Command-F, the Mac's key) opens it with the caret in the field; Close search, or Escape on an empty field, puts it away.
 VoiceOver cannot pull past the top of a list, so the search is always shown while it runs.
+A long press on a row stands in for resting the pointer on the Mac's row (INF-2928 piece 3, the captain's pick): it shows the task's crew summary with the row's moves under it.
+The summary keeps the width the Mac gives it there (`CREW_HOVER.maxWidthPx`), never wider than the list, and shrinks whole when an iPad gives it less room beside the menu.
+The moves are the Mac's task board menu for that row (`boardMenuOf`, `src/panels/now/boardMoves.ts`): Open record, Show the card while a decision waits, Continue on interrupted work, Queue it or Back to backlog and Start now on open work, Back to backlog on started work, then Drop task last.
+Each move names what it does, or stays dim with the Mac's reason it cannot run, and the computer checks it again when it runs.
+As on the Mac's board, Back to backlog runs at once, Queue it runs at once or asks once when the task could start at once, and Start now and Drop task ask once.
+A never-started task's Drop task asks in the record's words, from the effects its record lists when it is pressed; Start now and Continue show the task starting at the tap, as the record's Start does.
+A row the Mac's board has no menu for, Done and Dropped among them, offers Open record alone, so its summary is still a long press away.
+A refused move says why in the change notice, or on the list's own line on an iPhone on its side.
+A swipe toward the leading edge on a Backlog row shows the Mac's row Start (`rowStartOf`) at the trailing edge: Start, or Try again after a start that failed.
+One press starts the task with no ask, as on the Mac, and the row shows Starting at the tap; a Start that cannot run stays dim and the Mac's reason shows under the row.
+A tap on a row held open closes its Start instead of opening the task.
+`PhoneRowMoves` in the shared package ports these rules, their words come from their Mac owners through the generated `PhoneRowMoveWords`, and `PhoneRowMovesTests` replays the Mac board's own readings, recorded by `scripts/generate-phone-scene.ts`.
 The task record follows the Mac's record card (INF-2928 piece 2, the captain's direction A) and opens as a sheet, as before.
 Its top row is the Mac's status pill, with the Tasks list's mark and word, then the pill's reason in its tone and the key; the title sits under it.
 While a start is in flight the record says Starting with no wait line under it, as the Mac's host leaves the start wait out.

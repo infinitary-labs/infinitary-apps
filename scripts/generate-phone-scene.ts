@@ -21,6 +21,14 @@ type NowRows = {
   newFilingCount(rows: readonly NowRow[]): number;
   failedStartCount(tasks: readonly PanelTaskRow[]): number;
 };
+/** The parts of the Mac's task board (src/panels/now/boardMoves.ts and boardTiles.ts) this reads; they build with the renderer too. */
+type BoardMoves = {
+  moveContextOf(task: PanelTaskRow): unknown;
+  boardMenuOf(task: PanelTaskRow, lane: string, context: unknown): unknown[];
+  boardMoveOf(task: PanelTaskRow, from: string, target: string, context: unknown): unknown;
+  dropAskOf(key: string, effects: unknown): unknown;
+};
+type BoardTiles = { boardLaneOf(task: PanelTaskRow): string | null };
 
 /** INF-1066: native drawing shares desktop geometry and tuning, not a web runtime.
  * The comparison traces are readings of the desktop's executable choreography. */
@@ -55,6 +63,10 @@ try {
   const { recordBarOf } = await runner.import<typeof import("../src/shared/recordBar.ts")>(join(REPO_ROOT, "src/shared/recordBar.ts"));
   const { recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
   const { taskWaitStatus } = await runner.import<typeof import("../src/shared/taskWaits.ts")>(join(REPO_ROOT, "src/shared/taskWaits.ts"));
+  const { boardMenuOf, boardMoveOf, dropAskOf, moveContextOf } = await runner.import<BoardMoves>(join(REPO_ROOT, "src/panels/now/boardMoves.ts"));
+  const { boardLaneOf } = await runner.import<BoardTiles>(join(REPO_ROOT, "src/panels/now/boardTiles.ts"));
+  const { taskMovesOf } = await runner.import<typeof import("../src/shared/taskMoves.ts")>(join(REPO_ROOT, "src/shared/taskMoves.ts"));
+  const { rowStartOf } = await runner.import<{ rowStartOf: (task: PanelTaskRow) => { label: string; reason: string | null } | null }>(join(REPO_ROOT, "src/panels/now/rows.ts"));
   const { DROP_REVIEW_STALE, dropConfirmLead, dropPartsRefusal, dropUnderwayLine, dropWaitingLine } = await runner.import<typeof import("../src/shared/recordDrop.ts")>(join(REPO_ROOT, "src/shared/recordDrop.ts"));
   const { recordPillToneOf } = await runner.import<typeof import("../src/renderer/src/cards/recordFooter.ts")>(join(REPO_ROOT, "src/renderer/src/cards/recordFooter.ts"));
   // The record's tabs and head are renderer modules the scripts' project does not compile (a store behind the tabs,
@@ -87,6 +99,7 @@ try {
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskFacts.generated.json": taskFactReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskList.generated.json": taskListReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskRecord.generated.json": taskRecordReadings(),
+    "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneRowMoves.generated.json": taskMoveReadings(),
   };
   /** INF-1755: the warps' settings, schedule, travel and the very stars the desktop draws, only the ones it reads. */
   function warpData() {
@@ -406,6 +419,81 @@ try {
         fold: recordWordsFoldName(row), asks: recordAsksOf(row).map((entry) => entry.id),
         drop: end ? { refusal, question } : null };
     }) };
+  }
+  /**
+   * INF-2928 piece 3: the desktop's moves on one row in each state they read - the task board's menu with each entry's
+   * reason, what moving the row to each lane or the Drop task tray does, a backlog row's Start, and Drop task's question
+   * from the effects its record lists - for the phone's long press and swipe to replay. Each row carries the moves its
+   * board row carries (`taskMovesOf`).
+   */
+  function taskMoveReadings() {
+    const now = Date.UTC(2026, 10, 7, 17, 0);
+    const min = 60_000;
+    const row = (n: number, title: string, patch: Record<string, unknown> = {}) => {
+      const task = { id: `t-${n}`, key: `INF-${n}`, projectId: "p-har", parentId: null, kind: "work", title, goal: title, priority: 2,
+        status: "open", activity: null, closedReason: null, startPolicy: "on-request",
+        flags: { blocked: false, held: false, needsYou: false, ready: false }, blockedBy: [], blocks: [], children: { total: 0, closed: 0 },
+        assignee: null, model: null, tier: null, repo: null, delivery: null, outcomeSummary: null, waitingCardId: null,
+        createdAt: now - (4000 - n) * min, updatedAt: now - min, startedAt: null, closedAt: null, ...patch } as unknown as TaskView;
+      return { ...task, moves: taskMovesOf(task) } as unknown as PanelTaskRow;
+    };
+    const started = (minutes: number) => ({ status: "active", startedAt: now - minutes * min, assignee: "crewmate" });
+    const flags = (blocked: boolean, held: boolean) => ({ flags: { blocked, held, needsYou: false, ready: false } });
+    const rows: Array<[string, PanelTaskRow, "earlier"?]> = [
+      ["backlog, free to start", row(3101, "Chart the outer harbour")],
+      ["backlog, waiting on one task", row(3102, "Sound the channel", { ...flags(true, false), blockedBy: ["INF-3101"] })],
+      ["backlog, waiting on three tasks", row(3103, "Mark the reef", { ...flags(true, false), blockedBy: ["INF-3101", "INF-3102", "INF-3110"] })],
+      ["backlog, held", row(3104, "Clear the slipway", flags(false, true))],
+      ["backlog, a parent with open parts", row(3105, "Rebuild the pier", { children: { total: 2, closed: 1 } })],
+      ["backlog, a parent whose parts closed", row(3106, "Paint the pier", { children: { total: 2, closed: 2 } })],
+      ["backlog, could not start", row(3107, "Paint the jetty", { startNotice: { reason: "No crewmate could start." } })],
+      ["backlog, started and put back", row(3108, "Repair the crane", { ...started(60), activity: "idle",
+        workPosture: { state: "idle", reason: "inactive" }, backlogSince: now - 15 * min })],
+      ["backlog, started and waiting on a task", row(3109, "Repair the winch", { ...started(50), activity: "idle",
+        workPosture: { state: "idle", reason: "dependency" }, backlogSince: now - 15 * min, blockedBy: ["INF-3101"] })],
+      ["queued", row(3110, "Count the buoys", { startPolicy: "when-ready" })],
+      ["queued, waiting on a task", row(3111, "Light the buoys", { startPolicy: "when-ready", ...flags(true, false), blockedBy: ["INF-3110"] })],
+      ["queued, starting", row(3112, "Ring the bell", { startPolicy: "when-ready", startAttempt: { phase: "preparing", since: now - 5_000 } })],
+      ["working", row(3113, "Survey the floor", { ...started(30), activity: "running", workPosture: { state: "active", reason: "turn" } })],
+      ["working, interrupted", row(3114, "Haul the nets", { ...started(40), activity: "interrupted", problem: "The model stopped answering." })],
+      ["working, a part of a working parent", row(3115, "Mend the nets", { ...started(20), activity: "running",
+        workPosture: { state: "active", reason: "turn" }, parentId: "t-3114" })],
+      ["waiting on its decision", row(3116, "Pick the channel", { ...started(70), activity: "idle",
+        workPosture: { state: "idle", reason: "captain" }, waitingCardId: "card-3116" })],
+      ["waiting on its completion card", row(3117, "Merge the charts", { ...started(80), activity: "idle",
+        workPosture: { state: "idle", reason: "captain" }, waitingCardId: "card-3117", waitingCardMerges: true })],
+      ["waiting with its card put aside", row(3118, "Answer the pilot", { ...started(90), activity: "idle",
+        workPosture: { state: "idle", reason: "captain" }, waitingCardId: "card-3118", minimizedCardId: "card-3118" })],
+      ["an answer ready for Done", row(3119, "Read the tide table", { ...started(95), activity: "idle",
+        workPosture: { state: "idle", reason: "inactive" }, answerNoteId: "note-3119", answerSince: now - 20 * min })],
+      ["the first mate's question", row(3120, "Which harbour first?", { kind: "decision", waitingCardId: "card-3120" })],
+      ["a required step ready", row(3121, "Sign the harbour permit", { requiredAction: { cardId: "card-3121", state: "ready" } })],
+      ["done", row(3122, "Log the tides", { status: "done", closedReason: "landed", startedAt: now - 60 * min, closedAt: now - 10 * min })],
+      ["dropped", row(3123, "Mark the old wreck", { status: "dropped", closedReason: "cancelled", closedAt: now - 5 * min })],
+      ["an earlier search match", row(3124, "Paint the harbour wall", { status: "done", closedReason: "landed",
+        startedAt: now - 9000 * min, closedAt: now - 8000 * min }), "earlier"],
+    ];
+    const targets = ["waiting", "backlog", "queued", "working", "landed", "drop"] as const;
+    const readings = rows.map(([name, task, earlier]) => {
+      const lane = earlier ?? boardLaneOf(task);
+      if (lane === null) throw new Error(`${name} has no lane`);
+      const context = moveContextOf(task);
+      return { name, row: task, lane, menu: boardMenuOf(task, lane, context),
+        moves: Object.fromEntries(targets.map((target) => [target, boardMoveOf(task, lane, target, context)])),
+        rowStart: rowStartOf(task) };
+    });
+    const part = (key: string, title: string, started: boolean) => ({ key, title, started });
+    const named = (keys: string[]) => keys.map((key) => ({ key, title: `Work on ${key}` }));
+    const effects: Array<[string, { parts: ReturnType<typeof part>[]; waiting: ReturnType<typeof named>; underway: ReturnType<typeof named> } | null]> = [
+      ["no effects read", null],
+      ["nothing else affected", { parts: [], waiting: [], underway: [] }],
+      ["one task waiting, two working", { parts: [], waiting: named(["INF-3202"]), underway: named(["INF-3204", "INF-3203"]) }],
+      ["two tasks waiting", { parts: [], waiting: named(["INF-3206", "INF-3205"]), underway: [] }],
+      ["a part still open", { parts: [part("INF-3207", "Sound the channel", false)], waiting: [], underway: [] }],
+      ["a part started", { parts: [part("INF-3207", "Sound the channel", false), part("INF-3208", "Mark the reef", true)], waiting: [], underway: [] }],
+    ];
+    const drops = effects.map(([name, read]) => ({ name, key: "INF-3201", effects: read, ask: dropAskOf("INF-3201", read) }));
+    return { readings, drops };
   }
   /** INF-1325: the desktop's own seat choices through arrivals and departures, for the phone to replay. */
   function orbitSeats() {

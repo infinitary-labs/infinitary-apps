@@ -114,7 +114,11 @@ try {
     if (literal.split(value).length !== 2) throw new Error(`The sample ${value} is not once in ${words}`);
     return literal.replace(value, `\\(${swift})`);
   };
-  const rowWordsEnum = `\npublic enum PhoneTaskRowWords {\n${Object.entries(rowWords.ROW_WORDS).map(([name, words]) => `    public static let ${name} = ${JSON.stringify(words)}`).join("\n")}\n${Object.entries(rowWords.ROW_REACH_WORDS).map(([name, words]) => `    public static let reach${name.charAt(0).toUpperCase() + name.slice(1)} = ${JSON.stringify(words)}`).join("\n")}\n    public static let earlier = ${JSON.stringify(rowWords.EARLIER_LABEL.charAt(0).toUpperCase() + rowWords.EARLIER_LABEL.slice(1))}\n    public static func foundOn(_ key: String) -> String { ${sample(rowWords.foundOnWords("INF-7"), "INF-7", "key")} }\n    public static func newCount(_ count: Int) -> String { ${sample(rowWords.newCountWords(7), "7", "count")} }\n    public static func failedCount(_ count: Int) -> String { ${sample(rowWords.failedCountWords(7), "7", "count")} }\n}\n`;
+  const rowWordsEnum = `\npublic enum PhoneTaskRowWords {\n${Object.entries(rowWords.ROW_WORDS).map(([name, words]) => `    public static let ${name} = ${JSON.stringify(words)}`).join("\n")}\n${Object.entries(rowWords.ROW_REACH_WORDS).map(([name, words]) => `    public static let reach${name.charAt(0).toUpperCase() + name.slice(1)} = ${JSON.stringify(words)}`).join("\n")}\n    public static let earlier = ${JSON.stringify(rowWords.EARLIER_LABEL.charAt(0).toUpperCase() + rowWords.EARLIER_LABEL.slice(1))}\n    public static let start = ${JSON.stringify(rowWords.ROW_START_LABEL)}\n    public static let tryAgain = ${JSON.stringify(rowWords.ROW_TRY_AGAIN_LABEL)}\n    public static func foundOn(_ key: String) -> String { ${sample(rowWords.foundOnWords("INF-7"), "INF-7", "key")} }\n    public static func newCount(_ count: Int) -> String { ${sample(rowWords.newCountWords(7), "7", "count")} }\n    public static func failedCount(_ count: Int) -> String { ${sample(rowWords.failedCountWords(7), "7", "count")} }\n}\n`;
+  // INF-2928 piece 3: the task board's menu and its asks name their moves in these words (src/panels/now/boardMoves.ts).
+  const boardMoves = await runner.import<{ QUEUE_LABEL: string; UNQUEUE_LABEL: string; START_LABEL: string; START_NOW_LABEL: string;
+    STARTED_BACKLOG_TEXT: string }>(join(REPO_ROOT, "src/panels/now/boardMoves.ts"));
+  const rowMoveWordsEnum = `\npublic enum PhoneRowMoveWords {\n    public static let queue = ${JSON.stringify(boardMoves.QUEUE_LABEL)}\n    public static let unqueue = ${JSON.stringify(boardMoves.UNQUEUE_LABEL)}\n    public static let start = ${JSON.stringify(boardMoves.START_LABEL)}\n    public static let startNow = ${JSON.stringify(boardMoves.START_NOW_LABEL)}\n    public static let startedBacklog = ${JSON.stringify(boardMoves.STARTED_BACKLOG_TEXT)}\n}\n`;
   // INF-2935 (INF-2928 piece 2): the task record's own words on the Mac - its tabs, its bar's buttons, Drop task's
   // question, the Crewmate tab's status line and the More row's policies - from their owners.
   const bar = await runner.import<typeof import("../src/shared/recordBar.ts")>(join(REPO_ROOT, "src/shared/recordBar.ts"));
@@ -134,8 +138,8 @@ try {
   } else writeFileSync(wordsPath, cardWords);
   const path = join(REPO_ROOT, "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneContract.generated.swift");
   if (process.argv.includes("--check")) {
-    if (readFileSync(path, "utf8") !== text + cardEnum + requestEnum + limits + groupEnum + rowWordsEnum + recordWordsEnum + pastWords + sshCommands + diagnosticsEnum) throw new Error("Run node scripts/generate-phone-contract.ts");
-  } else writeFileSync(path, text + cardEnum + requestEnum + limits + groupEnum + rowWordsEnum + recordWordsEnum + pastWords + sshCommands + diagnosticsEnum);
+    if (readFileSync(path, "utf8") !== text + cardEnum + requestEnum + limits + groupEnum + rowWordsEnum + rowMoveWordsEnum + recordWordsEnum + pastWords + sshCommands + diagnosticsEnum) throw new Error("Run node scripts/generate-phone-contract.ts");
+  } else writeFileSync(path, text + cardEnum + requestEnum + limits + groupEnum + rowWordsEnum + rowMoveWordsEnum + recordWordsEnum + pastWords + sshCommands + diagnosticsEnum);
 } finally { await runner.close(); }
 
 /**

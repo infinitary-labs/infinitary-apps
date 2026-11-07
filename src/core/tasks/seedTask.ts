@@ -34,6 +34,8 @@ export type TaskSeed = {
   repoId?: string | null;
   /** The parent edge - on a review row, the builder it reads. */
   parentId?: string;
+  /** Tasks that must close before this one is ready (`blocks` edges). */
+  blockedBy?: string[];
   repoDir?: string;
   worktreeDir?: string;
   branch?: string;
@@ -67,6 +69,7 @@ export function seedTask(tasks: TaskService, seed: TaskSeed): TaskRecord {
     prompt: seed.prompt ?? "",
     repoId: seed.repoId ?? null,
     ...(seed.parentId ? { parentId: seed.parentId } : {}),
+    ...(seed.blockedBy ? { blockedBy: seed.blockedBy } : {}),
     difficulty: seed.difficulty ?? null,
     shape: seed.shape ?? null,
     intent: seed.intent ?? null,

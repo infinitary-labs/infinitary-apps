@@ -14,6 +14,78 @@ extension PhoneJourney {
         app.staticTexts.matching(NSPredicate(format: "identifier == %@ AND label == %@", "task-record-status", word)).firstMatch
     }
 
+    /// One entry of a row's long press menu, by the name it starts with; its line under the name, what it does or why it
+    /// cannot run, may follow in the same label.
+    private func moveEntry(_ name: String) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+    }
+
+    /// INF-2928 piece 3, the captain's "Every move the Mac allows on that row": a swipe on a Backlog row shows the Mac's
+    /// row Start, dim with the Mac's reason when it cannot start; a long press shows the row's moves under its summary,
+    /// a move that cannot run stays dim, and Drop task asks in the record's words before the Mac drops it. One press on
+    /// a Start that can run sends the Mac's start, and a refusal says why.
+    private func rowMoves() async throws {
+        let seeded = try await home("row-moves-fixture")
+        let id = try XCTUnwrap(seeded["id"] as? String)
+        let row = app.buttons["task-\(id)"]
+        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
+        waitForSteadyTarget(row)
+        row.swipeLeft()
+        let waiting = app.buttons["row-start-\(id)"]
+        XCTAssertTrue(waiting.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(waiting.isEnabled, "A Start that cannot run stays dim")
+        let reason = app.staticTexts["row-start-reason"]
+        XCTAssertTrue(reason.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(reason.label, seeded["startReason"] as? String, "The row says the Mac's reason it cannot start")
+        picture("task-row-start-reason")
+        tapOnPhone(row)
+        XCTAssertTrue(waiting.waitForAbsence(timeout: 10), "A tap on the row closes its Start instead of opening it")
+        XCTAssertFalse(app.buttons["close-record"].exists, "The tap opened no record")
+        // The long press: the Mac's menu for a Backlog row that waits on another task.
+        waitForSteadyTarget(row)
+        row.press(forDuration: 1.2)
+        let drop = moveEntry("Drop task")
+        XCTAssertTrue(drop.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(moveEntry("Open record").exists, app.debugDescription)
+        XCTAssertTrue(moveEntry("Queue it").isEnabled, "Queue it runs at once, as on the Mac")
+        XCTAssertFalse(moveEntry("Start now").isEnabled, "Start now cannot run while the task it waits on is open")
+        picture("task-moves")
+        tapOnPhone(drop)
+        let ask = app.alerts.firstMatch
+        XCTAssertTrue(ask.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(ask.label, seeded["drop"] as? String, "Drop task asks in the record's words")
+        picture("task-drop-ask")
+        tapOnPhone(ask.buttons["Drop task"])
+        let dropped = try await home("row-moves-dropped")
+        let writes = try XCTUnwrap(dropped["writes"] as? [[String: Any]])
+        XCTAssertTrue(writes.contains { write in
+            let args = write["args"] as? [Any] ?? []
+            return write["channel"] as? String == "inf:task:run" && args.first as? String == id
+                && args.dropFirst().first as? String == "drop-task" && args.count == 3
+        }, "Drop task sends the Mac's drop with what it asked about: \(writes)")
+        // A Start that can run: one press sends the Mac's start, with no ask, and its refusal says why.
+        let work = app.buttons["task-phone-work"]
+        XCTAssertTrue(work.waitForPresence(timeout: 10))
+        waitForSteadyTarget(work)
+        work.swipeLeft()
+        let start = app.buttons["row-start-phone-work"]
+        XCTAssertTrue(start.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(start.isEnabled)
+        picture("task-row-start")
+        let refusal = "This task changed on your computer. Look at it again."
+        _ = try await home("refuse-next-change", body: #"{"channel":"inf:task:run","words":"\#(refusal)"}"#)
+        tapOnPhone(start)
+        let notice = app.buttons["change-notice"]
+        XCTAssertTrue(notice.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(notice.label, refusal)
+        XCTAssertTrue(start.waitForAbsence(timeout: 10), "Start closes the row once pressed")
+        let state = try await home("talk-state", method: "GET")
+        let sent = try XCTUnwrap(state["writes"] as? [[String: Any]])
+        XCTAssertTrue(sent.contains { ($0["args"] as? [String]) == ["phone-work", "start-task"] }, "The row's Start is the Mac's start: \(sent)")
+        tapOnPhone(notice)
+        XCTAssertTrue(notice.waitForAbsence(timeout: 10))
+    }
+
     private func tasksAndSteer(_ fixture: [String: Any]) async throws {
         // One pair here for the hero pictures; the relaunch parts run INF-1735's 20.
         try await relaunchPairs(1, pictured: true)
@@ -26,6 +98,7 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["group-backlog"])
         XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10))
         picture("tasks-backlog")
+        try await rowMoves()
         // INF-589 item 9: search waits above the list until it is pulled down, and Find a task opens it by key, as on the Mac.
         let search = app.textFields["task-search"]
         XCTAssertFalse(search.exists)

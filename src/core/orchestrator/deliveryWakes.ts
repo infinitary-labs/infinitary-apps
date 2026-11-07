@@ -21,6 +21,8 @@ export type DeliveryFacts =
       /** What the captain chose: merge, land, discard. */
       chose: string;
       outcome: string;
+      /** A merge that did not go through: the captain saw no card after the click (INF-2913). */
+      unseen?: true;
       refusal?: SettleRefusal;
       /** The Continue tasks the merge filed from its story's after-merge steps (INF-2796). */
       afterMerge?: FiledAfterMergeStep[];
@@ -359,6 +361,13 @@ export const MERGE_CONTINUED_LEAD = "the captain merged";
 export const WRITE_ANSWERED_LEAD = "the captain sent ask";
 
 /**
+ * What the Firstmate is told when a clicked merge did not go through: the
+ * host shows the captain no card of its own (INF-2913).
+ */
+export const UNSEEN_STOP_WORDS =
+  "The captain saw no card after their click, only its line in Activity: put up a card only when the next step is theirs.";
+
+/**
  * The after-merge steps a merge filed, as its settled wake names them: each
  * starts on its own, so the first mate reads them only to drop a repeat.
  */
@@ -382,7 +391,7 @@ export function afterMergeWords(steps: readonly FiledAfterMergeStep[]): string {
 /** A change's delivery wakes, worded. */
 export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
   settled: (facts) =>
-    `[fm-op] the captain chose ${facts.chose} for task ${facts.task.id} "${facts.task.title}"; the host settled it and the outcome was: ${facts.outcome}${facts.afterMerge?.length ? ` ${afterMergeWords(facts.afterMerge)}` : ""}${facts.refusal ? `\n\`\`\`json\n${JSON.stringify(facts.refusal, null, 2)}\n\`\`\`` : ""}`,
+    `[fm-op] the captain chose ${facts.chose} for task ${facts.task.id} "${facts.task.title}"; the host settled it and the outcome was: ${facts.outcome}${facts.unseen ? ` ${UNSEEN_STOP_WORDS}` : ""}${facts.afterMerge?.length ? ` ${afterMergeWords(facts.afterMerge)}` : ""}${facts.refusal ? `\n\`\`\`json\n${JSON.stringify(facts.refusal, null, 2)}\n\`\`\`` : ""}`,
   "external-merge": (facts) =>
     `The project's host confirms ${facts.change} merged at ${facts.head}. This task remains open because ${facts.open ?? "completion was not declared or work still remains"}. Read its remaining work and instructions; continue them, or report merge_completes_task for this PR and version when the merge finishes all your work. Do not ask for another merge or discard.`,
   "merge-continued": (facts) =>

@@ -37,9 +37,9 @@ import { isCardClosedSteer } from "./captainWakes";
 import type { CardService } from "./cardService";
 import type { PrOutcome } from "./changeMerge";
 import type { CrewSupervisor } from "./crewSupervisor";
+import { UNSEEN_STOP_WORDS } from "./deliveryWakes";
 import { PROVIDER_SIGN_IN_TITLE } from "./hostCards";
 import { MERGE_CHECKS_HOLD_REASON } from "./mergeAuthorization";
-import { MERGE_STOPPED_TITLE, mergePendingCardId } from "./settleWords";
 
 fakeCrewTimersEachTest();
 
@@ -313,19 +313,14 @@ describe("CrewSupervisor", () => {
     supervisor.cardActions.act(settle.id, "merge");
     await tick();
 
-    // The host raises no retry card (cards/tasks/agents P0, WI-3): the refusal is
-    // one feed line and one wake carrying it, and the task stays live. The
-    // click's pending note says why it did not merge, with nothing to press (INF-1275).
-    expect(cards()).toEqual([
-      expect.objectContaining({
-        id: mergePendingCardId(taskId),
-        title: MERGE_STOPPED_TITLE,
-        actions: [],
-        body: expect.stringContaining("not fully green"),
-      }),
-    ]);
+    // The host raises no retry card (cards/tasks/agents P0, WI-3) and no note
+    // of its own (INF-2913, the captain: "only show a card if the merge went
+    // wrong and needs the user's decision"): the refusal is one feed line and
+    // one wake carrying it, which tells the Firstmate the captain saw no card.
+    expect(cards()).toEqual([]);
     expect(settleWakes(ops)).toHaveLength(1);
     expect(settleWakes(ops)[0]).toContain("not fully green");
+    expect(settleWakes(ops)[0]).toContain(UNSEEN_STOP_WORDS);
     expect(tasks.get(taskId)?.status).toBe("active");
 
     // A retry is the Firstmate settling again.
@@ -338,9 +333,9 @@ describe("CrewSupervisor", () => {
     await vi.waitFor(() => expect(cards()).toEqual([]));
   });
 
-  // INF-1275 beside the host's sign-in card: a click refused because the
+  // INF-2913 beside the host's sign-in card: a click refused because the
   // sign-in no longer works leaves that card as the one thing to do.
-  it("takes a clicked merge's pending note down when the merge is refused for the sign-in", async () => {
+  it("raises no card of its own beside the sign-in when a clicked merge is refused for it", async () => {
     const mergePullRequest = vi.fn(async () => ({
       ok: false,
       text: "Cannot merge yet - the checks could not be read.",
@@ -365,7 +360,7 @@ describe("CrewSupervisor", () => {
     supervisor.cardActions.act(offer, "merge-pr");
     await vi.waitFor(() => expect(mergePullRequest).toHaveBeenCalledTimes(1));
     await tick();
-    expect(cards().find((card) => card.id === mergePendingCardId("signin"))).toBeUndefined();
+    expect(cards().filter((card) => card.author === "host")).toEqual([]);
     expect(tasks.get("signin")?.status).not.toBe("done");
   });
 
@@ -397,12 +392,10 @@ describe("CrewSupervisor", () => {
     operation.resolve({ ok: false, text: "PR merge blocked: CI is not fully green." });
     await tick();
     // Only the real (first) attempt's refusal reaches the Firstmate, and no
-    // card does but the click's own pending note, which says why (INF-1275).
+    // card reaches the captain (INF-2913).
     expect(settleWakes(ops)).toHaveLength(1);
     expect(settleWakes(ops)[0]).toContain("not fully green");
-    expect(cards()).toEqual([
-      expect.objectContaining({ id: mergePendingCardId("merge"), title: MERGE_STOPPED_TITLE }),
-    ]);
+    expect(cards()).toEqual([]);
   });
 
   it("discards from a crewmate settle card without steering", async () => {

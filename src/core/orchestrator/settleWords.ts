@@ -254,18 +254,13 @@ export function withMergeLine(body: string, line: string): string {
 }
 
 /**
- * The note that holds the captain's merge click in view (INF-1275): the
- * completion card leaves on the click, and this note stays until the merge
- * goes through or says why it could not. A queue-pr wait reads as the
- * queue's own words (`QUEUE_WAITING_WORDS`).
+ * The id of the note an earlier version put up after a merge click
+ * (INF-1275). INF-2913 retired the note: a merge click raises no card of the
+ * host's own, and only a task's close still takes one down that a running
+ * app put up before it updated.
  */
 export function mergePendingCardId(taskId: string): string {
   return `card-merge-pending-${taskId}`;
-}
-export const MERGE_PENDING_TITLE = "Merge pending";
-export const MERGE_STOPPED_TITLE = "Merge did not go through";
-export function mergePendingBody(words: string, taskTitle: string): string {
-  return `<p>${escapeCardText(words)}</p><p class="inf-muted">${escapeCardText(taskTitle)}</p>`;
 }
 
 /**

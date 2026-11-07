@@ -644,7 +644,7 @@ The project's queue finds the versions marked `pending`, tests them, and sets th
 The status is read as one more check (`GitHubForge.checks`), so the check watch follows it, and the kept approval merges only once it reads `success` at that exact version, through the same version guard and with no new click (`ChangeMerge.mergeOnce`).
 A failed status wakes the crewmate through the failed-check wake like any failed check; the crewmate reads the batch's reason and link off the status with `github_read`, and its repair declarations decide whether the click carries to the fixed version.
 No checks override passes the queue.
-While the queue runs, the kept approval waits on `queue`, the pending note reads "Waiting for the batch check", and the tick reads it again every ten minutes past the watch's bound, revising the note's words from what the app now knows of the queue.
+While the queue runs, the kept approval waits on `queue` with no card for the captain, Activity's line reads "Waiting for the batch check", and the tick reads it again every ten minutes past the watch's bound.
 A first mate merge on project autonomy marks the version the same way and stops; it keeps no approval, so the first mate merges again once the queue passes.
 Evidence: `changeMerge.test.ts` ("merges a queue-pr change only once its queue passes ...") and `githubForge.test.ts` ("marks a version waiting for the project's queue ...").
 
@@ -657,9 +657,9 @@ The second is when anything other than the app last wrote the status on one of t
 The third is whether a waiting version still holds only the app's own mark: the mark keeps the status id GitHub gave it back (`queueMark` on the task's delivery), and any reading of the version's checks whose status is no longer waiting, or carries another id, is an answer.
 `RepoRegistry.recordQueue` is the one writer of the first two, on the project's row, and every change reaches Settings as a `repo_queue` event.
 Settings → Projects shows a warning under "Where changes go" while the project is batched, its queue has never answered, and no workflow that is on mentions the status (`queueSettingsWarning`, `src/shared/repos.ts`); it clears once one does or the queue answers.
-The waiting note warns from the click while the project's queue has never answered, naming what the workflow read found.
-On a project whose queue answered before, a version nothing has written for the check watch's two hours says so on the note, and the watch's two-hour wake to the crewmate carries the same fact; the app adds no timer of its own.
-Evidence: `githubForge.test.ts` ("reads the workflows that mention the queue status ..."), `changeMerge.test.ts` ("warns on the waiting note ...") and the Settings section of `tests/e2e/queue-merge.spec.ts`.
+What the first mate is told beside the click's queue wait (`keptNote`) names what the workflow read found while the project's queue has never answered (`queueWakeWords`, INF-2913).
+On a project whose queue answered before, a version nothing has written for the check watch's two hours is said in the watch's two-hour wake to the crewmate; the app adds no timer of its own.
+Evidence: `githubForge.test.ts` ("reads the workflows that mention the queue status ..."), `changeMerge.test.ts` ("says what the workflow read found ..."), `settleService.keptMerge.test.ts` ("tells the Firstmate, not the captain, ...") and the Settings section of `tests/e2e/queue-merge.spec.ts`.
 
 ## The check watch
 

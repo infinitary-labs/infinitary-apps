@@ -468,10 +468,11 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   Timed waits (`retryAt`, backing off to 30 minutes) are read again by the tick, never in a hot loop.
 - **A project's queue (INF-2430 piece 2).**
   On a project that merges through its queue, the attempt that passed every gate above and the last look below, which then records no attempt, writes `infinitary/queue` as waiting on its version instead of merging, and waits on `queue`; it merges only once that status reads `success` at that version ([the forge seam](forge.md), "A project's queue").
-- **The pending note (INF-1275).**
-  A captain's merge click on any project, on a completion card or a `request_merge` review, puts up one host note under the task's key (`mergePendingCardId`), so the click never vanishes without a word.
-  It reads Merge pending with the click's words, is revised in place with each new wait's words (`keptFeedLine`; Waiting for the batch check on a queue), reads Merge did not go through with the reason when the merge is refused and nothing is kept or the approval ends, and goes once the merge goes through, a new completion card supersedes the approval, or the task closes any way (`TaskClosing.closeAndPurge`).
-  It has no actions and carries no task, so it holds no one's turn.
+- **No card after the click (INF-2913).**
+  A captain's merge click on any project, on a completion card or a `request_merge` review, takes the card away and the host puts up no card of its own while the merge waits, goes through or stops; the captain's words: "only show a card if the merge went wrong and needs the user's decision".
+  Activity's one folding line says what became of the click (`settleLine`, `keptFeedLine`), and the host's sign-in card stays the one card for a refused sign-in.
+  A merge that did not go through wakes the first mate with the outcome, marked `unseen` (`UNSEEN_STOP_WORDS`): it puts up a card only when the next step is the captain's, and a crewmate whose work changed asks again on a new merge card.
+  A note an earlier version put up after a click (`mergePendingCardId`) still leaves when its task closes (`TaskClosing.closeAndPurge`).
 - **Restart safety.**
   Right before the merge request goes out the guard's `beforeDispatch` re-reads the approval (same id, generation and head, the crewmate idle, no new card) and persists an `attempt` token.
   Its answer clears it; a 200 merges only when GitHub says `merged`.

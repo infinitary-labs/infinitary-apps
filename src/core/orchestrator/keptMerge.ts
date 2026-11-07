@@ -14,8 +14,8 @@ import {
 } from "./mergeAuthorization";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
-import { describeStatus, type SettleService, settleFeedLine } from "./settleService";
-import { changeName, MERGE_STOPPED_TITLE, placeOf, settlingText } from "./settleWords";
+import { describeStatus, type SettleService } from "./settleService";
+import { changeName, placeOf } from "./settleWords";
 import type { TaskClosing } from "./taskClose";
 
 /**
@@ -80,12 +80,6 @@ export class KeptMerge {
       approved?.review ?? record.delivery?.mergeReviews?.find((item) => item.id === reviewId);
     if (unattended && !approved)
       return { ok: false, stop: "withdrawn", text: "The kept merge approval no longer stands." };
-    // The captain's click stays in view like a completion card's (INF-1275).
-    if (!unattended && review)
-      this.approvals.pendingMerge(
-        taskId,
-        `${settlingText("merge-pr", changeName(record, review.number), false)}.`,
-      );
     this.locks.settlingTasks.set(taskId, "merge-pr");
     try {
       const result = await this.host.mergeReview(
@@ -98,21 +92,11 @@ export class KeptMerge {
         const outcome = kept
           ? {
               ...result,
-              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery))}`,
+              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.queueWarning(taskId, kept.wait))}`,
             }
           : result;
-        if (!unattended) {
-          if (kept) this.approvals.pendingWait(taskId, kept.wait);
-          else
-            this.approvals.pendingMerge(taskId, settleFeedLine("merge-pr", result), {
-              title: MERGE_STOPPED_TITLE,
-              raise: false,
-            });
-        }
         if (kept?.changed && unattended)
           this.noteWait(taskId, record.title, kept.head, result, kept.wait);
-        else if (kept?.wait === "queue" && unattended)
-          this.approvals.pendingWait(taskId, "queue", false);
         else if (kept?.changed) {
           this.settle.settleLine(
             taskId,
@@ -215,9 +199,6 @@ export class KeptMerge {
       return;
     }
     if (kept.changed) this.noteWait(taskId, title, kept.head, result, kept.wait);
-    // The same queue wait read again: its note follows what the app now
-    // knows of the queue, such as two quiet hours or a first answer.
-    else if (kept.wait === "queue") this.approvals.pendingWait(taskId, "queue", false);
   }
 
   /**
@@ -238,14 +219,13 @@ export class KeptMerge {
         ? { data: { problem: result.problem ?? result.plain } }
         : {}),
     });
-    this.approvals.pendingWait(taskId, wait, false);
     if (!wakesFirstmate(wait)) return;
     const record = this.host.tasks.get(taskId);
     const place = placeOf(this.host.repos, record);
     this.settle.settleLine(taskId, keptFeedLine(wait, place, currentCheckStatus(record?.delivery)));
     this.settle.wakeOnSettle(taskId, title, "merge-pr (kept)", {
       ...result,
-      text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery))}`,
+      text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery), this.approvals.queueWarning(taskId, wait))}`,
     });
   }
 
@@ -257,13 +237,6 @@ export class KeptMerge {
     const ended = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
     if (ended?.status === "superseded") return;
     const reason = ended?.reason;
-    this.approvals.pendingMerge(
-      taskId,
-      result && (result.problem || result.plain)
-        ? settleFeedLine("merge-pr", result)
-        : `Your merge will not run: ${reason ?? "your approval no longer stands"}.`,
-      { title: MERGE_STOPPED_TITLE, raise: false },
-    );
     const text = `The captain's kept merge approval for "${title}" ended: ${reason ?? "it no longer stands"}. A new completion card is the way to merge it.`;
     this.settle.wakeOnSettle(taskId, title, "merge-pr (kept)", {
       ok: false,

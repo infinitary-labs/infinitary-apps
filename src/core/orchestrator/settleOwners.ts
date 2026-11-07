@@ -13,7 +13,7 @@ import { TaskClosing } from "./taskClose";
  *
  * - `locks`: one settle owns a task at a time, and a settle asked for
  *   mid-turn waits for the turn's boundary (`./settleLocks.ts`).
- * - `approvals`: the captain's kept merge approval and its pending note
+ * - `approvals`: the captain's kept merge approval
  *   (`./keptApproval.ts`).
  * - `closing`: how a task closes, its cards, worktree and delivery children
  *   (`./taskClose.ts`).
@@ -35,7 +35,7 @@ export type SettleOwners = {
 export function createSettleOwners(host: SettleServiceHost): SettleOwners {
   const locks = new SettleLocks(host);
   const approvals = new KeptApproval(host, locks);
-  const closing = new TaskClosing(host, locks, approvals);
+  const closing = new TaskClosing(host, locks);
   const settle = new SettleService(host, locks, approvals, closing);
   const kept = new KeptMerge(host, locks, approvals, closing, settle);
   const declared = new DeclaredCloses(host, locks, closing, settle);

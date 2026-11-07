@@ -46,7 +46,7 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
       retireTaskCards: (...args: unknown[]) => cardCloses.push(["retire", ...args]),
       // A close shows a note still waiting on its crewmate (INF-2533).
       releaseNotes: (taskId: string) => cardCloses.push(["release", taskId]),
-      // Every close takes down a clicked merge's pending note (INF-1275).
+      // Every close takes down a merge note an earlier version put up (INF-2913).
       withdrawHostCard: () => {},
       scheduleBroadcast: () => {},
     },

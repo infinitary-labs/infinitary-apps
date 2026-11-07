@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { currentCheckStatus } from "@shared/checkSnapshot";
 import { hasChangeRequests } from "@shared/forge";
 import { opensPullRequest } from "@shared/repos";
-import { forgeLocationOf, QUEUE_WAITING_WORDS } from "../forge";
+import { forgeLocationOf } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type { MergeAuthorization, MergeWait, TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
@@ -12,22 +11,14 @@ import {
   approvableOffer,
   candidateHead,
   endedAuthorization,
-  keptFeedLine,
   outstandingGuidance,
   retryAfter,
   standingAuthorization,
 } from "./mergeAuthorization";
-import { queueNoteFacts, queueWarningWords } from "./projectQueue";
+import { queueNoteFacts, queueWakeWords } from "./projectQueue";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
-import {
-  changeName,
-  MERGE_PENDING_TITLE,
-  MERGE_STOPPED_TITLE,
-  mergePendingBody,
-  mergePendingCardId,
-  placeOf,
-} from "./settleWords";
+import { changeName } from "./settleWords";
 
 /**
  * The captain's click on a completion offer, as the click handler read it
@@ -254,12 +245,6 @@ export class KeptApproval {
         ...(options.holds ? { holds: true } : {}),
       }),
     });
-    if (status === "superseded") this.clearPendingMerge(taskId, "superseded");
-    else
-      this.pendingMerge(taskId, `Your merge will not run: ${why}.`, {
-        title: MERGE_STOPPED_TITLE,
-        raise: false,
-      });
     if (!TaskService.isClosed(record)) {
       this.host.tasks.note(taskId, `The captain's kept merge approval ended: ${why}.`, {
         news: true,
@@ -541,56 +526,16 @@ export class KeptApproval {
   }
 
   /**
-   * The captain's merge click stays in view (INF-1275): a note under the
-   * task's key, raised at the click and revised in place on each new wait,
-   * until the merge goes through (`clearPendingMerge`) or says why not.
-   * `raise` false revises only a note already up.
+   * What the app's reads say of the project's queue, for the Firstmate's
+   * words beside a queue wait (docs/forge.md, "A project's queue"); undefined
+   * when nothing is amiss or the wait is not on the queue.
    */
-  pendingMerge(
-    taskId: string,
-    words: string,
-    options: { title?: string; raise?: boolean } = {},
-  ): void {
+  queueWarning(taskId: string, wait: MergeWait): string | undefined {
+    if (wait !== "queue") return undefined;
     const record = this.host.tasks.get(taskId);
-    const id = mergePendingCardId(taskId);
-    // A closed task's merge already went through or ended: a report that
-    // arrives after the close never puts its note back up.
-    if (!record || TaskService.isClosed(record)) return;
-    if (options.raise === false && !this.host.cards.get(id)) return;
-    this.host.cards.raiseHostCard(
-      {
-        id,
-        title: options.title ?? MERGE_PENDING_TITLE,
-        meta: record.key,
-        body: mergePendingBody(words, record.title),
-        actions: [],
-      },
-      { note: true },
-    );
-  }
-
-  /** The merge went through or a new card took its place: the pending note goes. */
-  clearPendingMerge(taskId: string, reason: string): void {
-    this.host.cards.withdrawHostCard(mergePendingCardId(taskId), reason);
-  }
-
-  /** A kept approval's wait, in the pending note's words. */
-  pendingWait(taskId: string, wait: MergeWait, raise = true): void {
-    const record = this.host.tasks.get(taskId);
-    // Only a standing approval waits: one already spent or ended has no wait to show.
-    if (!standingAuthorization(record?.delivery)) return;
-    // A wait on the project's queue warns when the app's reads say nothing
-    // has answered it (docs/forge.md, "A project's queue").
-    const repo =
-      wait === "queue" && record?.repoId ? this.host.repos.get(record.repoId) : undefined;
-    const warning = repo
-      ? queueWarningWords(queueNoteFacts(repo, record?.delivery?.queueMark, this.host.now()))
+    const repo = record?.repoId ? this.host.repos.get(record.repoId) : undefined;
+    return repo
+      ? queueWakeWords(queueNoteFacts(repo, record?.delivery?.queueMark, this.host.now()))
       : undefined;
-    this.pendingMerge(
-      taskId,
-      warning ??
-        keptFeedLine(wait, placeOf(this.host.repos, record), currentCheckStatus(record?.delivery)),
-      { ...(wait === "queue" ? { title: QUEUE_WAITING_WORDS } : {}), raise },
-    );
   }
 }

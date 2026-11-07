@@ -18,7 +18,7 @@ import {
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { MergeAuthorization } from "../storage/taskStore";
 import type { MergeGuard, MergeStop } from "./changeMerge";
-import { MERGE_PENDING_TITLE, mergePendingCardId } from "./settleWords";
+import { queueWakeWords } from "./projectQueue";
 
 const OTHER_HEAD = "b".repeat(40);
 
@@ -256,13 +256,24 @@ describe("the wait a stopped merge leaves the approval on", () => {
     expect(approvalOf(world)?.waiting?.on).toBe("evidence");
   });
 
-  it("shows a queue wait under the queue's own words on the pending note", async () => {
+  // INF-2913: the batch check's warning (INF-2897) moved off the retired
+  // note into what the Firstmate is told at the click.
+  it("tells the Firstmate, not the captain, when nothing answers the project's queue", async () => {
     const world = approved();
+    world.repos.recordQueue("project", { workflows: [] });
     world.merge = async () => ({ ok: false, text: "In the merge queue.", stop: "queue" });
     await world.settle.reportCardSettle(TASK, "merge-pr");
-    const note = world.cards.get(mergePendingCardId(TASK));
-    expect(note?.title).not.toBe(MERGE_PENDING_TITLE);
-    expect(note?.actions).toEqual([]);
+    expect(approvalOf(world)?.waiting?.on).toBe("queue");
+    expect([...world.cards.values()]).toEqual([]);
+    const warning = queueWakeWords({ workflows: [], answeredBefore: false });
+    expect(warning).toBeDefined();
+    expect(world.wakes).toEqual([
+      expect.objectContaining({
+        kind: "settled",
+        unseen: true,
+        outcome: expect.stringContaining(warning ?? ""),
+      }),
+    ]);
   });
 
   it.each<[MergeStop, string]>([
@@ -404,25 +415,29 @@ describe("a merge request's refusals", () => {
   });
 });
 
-// The approval's own pending note is raised by the click and kept while it waits.
-describe("the pending note of a kept merge", () => {
-  it("stays up while the approval waits and goes when the merge goes through", async () => {
+// INF-2913, the captain: "only show a card if the merge went wrong and needs
+// the user's decision". A kept merge's wait raises no card; the Firstmate
+// hears the click's outcome with the words that the captain saw none.
+describe("what a kept merge's wait shows", () => {
+  it("raises no card while the approval waits, and merges when the gates pass", async () => {
     const world = approved();
     world.merge = async () => ({ ok: false, text: "Checks are running.", stop: "checks" });
     await world.settle.reportCardSettle(TASK, "merge-pr");
-    expect(world.cards.get(mergePendingCardId(TASK))).toMatchObject({
-      id: mergePendingCardId(TASK),
-      author: "host",
-      title: MERGE_PENDING_TITLE,
-      actions: [],
-    });
+    expect(approvalOf(world)?.waiting?.on).toBe("checks");
+    expect([...world.cards.values()]).toEqual([]);
+    expect(world.wakes).toEqual([
+      expect.objectContaining({
+        kind: "settled",
+        unseen: true,
+        outcome: expect.stringContaining("Checks are running."),
+      }),
+    ]);
     world.merge = async () => ({
       ok: true,
       text: `Merged #${PR} on GitHub.`,
       receipt: { head: HEAD },
     });
     await world.kept.runMergeAuthorization(TASK);
-    expect(world.cards.get(mergePendingCardId(TASK))).toBeUndefined();
     expect(world.tasks.get(TASK)?.closedReason).toBe("merged");
   });
 });

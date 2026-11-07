@@ -2,7 +2,7 @@
  * Guardrails for the settle service before it splits along its owners
  * (INF-2625's plan, the settle piece): how a task closes. The order a close
  * takes - the crewmate stops, the record and its approval close in one
- * transaction, the merge's pending note goes, then the working copy - and
+ * transaction, then the working copy - and
  * the rechecks the first mate's declared closes make after reading the
  * working copy.
  */
@@ -17,7 +17,6 @@ import {
 } from "../../../tests/helpers/settleHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
-import { mergePendingCardId } from "./settleWords";
 
 function approved(): SettleWorld {
   const world = settleWorld();
@@ -28,13 +27,12 @@ function approved(): SettleWorld {
 describe("the order a close takes", () => {
   it("spends the approval as the merge answers, then stops the crewmate and closes the record before the working copy goes", async () => {
     const world = approved();
-    let noteWhileOut = false;
-    world.merge = async () => {
-      noteWhileOut = world.cards.get(mergePendingCardId(TASK)) !== undefined;
-      return { ok: true, text: `Merged #${PR} on GitHub.`, receipt: { head: HEAD } };
-    };
+    world.merge = async () => ({
+      ok: true,
+      text: `Merged #${PR} on GitHub.`,
+      receipt: { head: HEAD },
+    });
     await world.settle.reportCardSettle(TASK, "merge-pr");
-    expect(noteWhileOut).toBe(true);
     expect(world.log).toEqual([
       "merge: active/standing",
       "stop runtime: active/consumed",
@@ -46,7 +44,6 @@ describe("the order a close takes", () => {
       generation: 1,
       receipt: { head: HEAD, at: 1_000 },
     });
-    expect(world.cards.get(mergePendingCardId(TASK))).toBeUndefined();
   });
 
   it("revokes a standing approval in the close's own transaction when the task closes any other way", async () => {

@@ -33,7 +33,6 @@ import {
   changeName,
   discardedText,
   folderNotUpdatedText,
-  MERGE_STOPPED_TITLE,
   placeOf,
   settlingText,
 } from "./settleWords";
@@ -638,7 +637,6 @@ export class SettleService {
   }
 
   finishContinued(taskId: string, review: MergeReview | undefined, result: SettleOutcome): void {
-    this.approvals.clearPendingMerge(taskId, "merged");
     // A story note held for the merge shows once the settle ends: the
     // card stack draws its merged line from the change's receipt (INF-2678).
     this.host.tasks.atomic(
@@ -964,8 +962,6 @@ export class SettleService {
       const change =
         mode === "merge-pr" && number !== undefined ? changeName(record, number) : undefined;
       this.settleLine(taskId, settlingText(mode, change, waitsForTurn));
-      if (mode !== "discard")
-        this.approvals.pendingMerge(taskId, `${settlingText(mode, change, waitsForTurn)}.`);
     }
     // The click's own approval, minted with its card resolution (FI3-304):
     // this attempt merges only the head that approval covers.
@@ -1002,7 +998,7 @@ export class SettleService {
       const place = placeOf(this.host.repos, this.host.tasks.get(taskId));
       result = {
         ...result,
-        text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery))}`,
+        text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.queueWarning(taskId, kept.wait))}`,
       };
     }
     this.reportOutcome(taskId, title, mode, confirm, result, kept?.wait);
@@ -1051,19 +1047,6 @@ export class SettleService {
         record &&
         TaskService.isClosed(record) &&
         (mode !== "discard" || (!result.problem && !result.plain)));
-    if (mode !== "discard" && !result.contention) {
-      if (result.ok) this.approvals.clearPendingMerge(taskId, "merged");
-      // A refused sign-in raises the host's own sign-in card, the one thing
-      // to do: the pending note leaves rather than compete with it.
-      else if (result.refusal?.refused === "not-signed-in")
-        this.approvals.clearPendingMerge(taskId, "sign-in");
-      else if (kept) this.approvals.pendingWait(taskId, kept);
-      else
-        this.approvals.pendingMerge(taskId, settleFeedLine(mode, result), {
-          title: MERGE_STOPPED_TITLE,
-          raise: false,
-        });
-    }
     if (kept)
       this.settleLine(
         taskId,
@@ -1143,6 +1126,11 @@ export class SettleService {
    * A structured refusal (WI-12) rides the wake as its prose plus a fenced
    * JSON block, so the Firstmate can answer with one card whose actions
    * carry the `ways` as effects. The feed line stays the prose alone.
+   *
+   * A merge that did not go through raises no card of the host's own
+   * (INF-2913): the captain sees only its Activity line, so the wake marks
+   * it `unseen` and the Firstmate raises a card only when the next step is
+   * the captain's.
    */
   wakeOnSettle(
     taskId: string,
@@ -1159,6 +1147,9 @@ export class SettleService {
           task: { id: taskId, title },
           chose,
           outcome: result.text,
+          // A clicked merge that did not go through shows the captain no
+          // card of the host's own (INF-2913): the wake says so.
+          ...(!result.ok && !chose.startsWith("discard") ? { unseen: true as const } : {}),
           ...(result.refusal ? { refusal: result.refusal } : {}),
           ...(afterMerge.length ? { afterMerge } : {}),
         },

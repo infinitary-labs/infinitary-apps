@@ -44,7 +44,6 @@ import {
   repair,
   repairTurn,
 } from "../../../tests/helpers/crewHarnessGit";
-import { deferred } from "../../../tests/helpers/deferred";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { type Forge, type ForgeChange, type ForgeCheckState, ForgeError } from "../forge";
 import { TaskService } from "../tasks/taskService";
@@ -54,12 +53,7 @@ import type { CrewmateSpec } from "./crewSession";
 import type { CrewSupervisor } from "./crewSupervisor";
 import { keptFeedLine } from "./mergeAuthorization";
 import { POLICY_GUIDANCE_HEADING } from "./noticeWakes";
-import {
-  closingNoteTitle,
-  MERGE_PENDING_TITLE,
-  mergePendingBody,
-  mergePendingCardId,
-} from "./settleWords";
+import { closingNoteTitle } from "./settleWords";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -343,52 +337,39 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
     });
 
-    // INF-1275, the captain's ask: a merge click shows a visible pending
-    // state until the merge happens or says why it could not.
-    it("keeps a clicked merge in view as pending, says what it waits for, and takes the note down once it merges", async () => {
+    // INF-2913, the captain's ask: "only show a card if the merge went wrong
+    // and needs the user's decision. otherwise it should just do its thing
+    // and not bother the user with an FYI". A click that waits shows no card;
+    // Activity's one line says what it waits for.
+    it("shows no card while a clicked merge waits, and merges with no second click", async () => {
       const h = await approved();
-      const pending = () => h.cards().find((card) => card.id === mergePendingCardId(h.taskId));
       h.forge.states = ["failure"];
       await h.declare({});
       h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting).toMatchObject({ on: "checks" }));
-      const title = h.tasks.get(h.taskId)?.title ?? "";
-      expect(pending()).toMatchObject({
-        title: MERGE_PENDING_TITLE,
-        author: "host",
-        actions: [],
-        body: mergePendingBody(keptFeedLine("checks", "GitHub", "red"), title),
-      });
-      // The merged task's working copy is still being removed when its close is recorded.
-      const cleanup = deferred<void>();
-      vi.mocked(h.workspace.removeTaskWorktree).mockReturnValue(cleanup.promise);
+      expect(h.cards()).toEqual([]);
+      expect(settleLines(h.tasks, h.taskId)).toContain(keptFeedLine("checks", "GitHub", "red"));
       await repairTurn(h, async () => {
         h.forge.states = ["success"];
       });
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
-      // The note leaves with the close itself: no reader sees the task
-      // merged while it still says pending.
       await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.closedReason).toBe("merged"));
-      expect(pending()).toBeUndefined();
-      cleanup.resolve();
     });
 
-    // INF-1275 (review INF-2549): a request_merge click stays in view as a
-    // completion card's does, and the note leaves once that merge goes through.
-    it("keeps a clicked request_merge review in view as pending and takes the note down once it merges", async () => {
+    // INF-2913 (the request_merge twin): a clicked review that waits on a
+    // conflict shows no card either, and merges once the gates pass.
+    it("shows no card while a clicked request_merge review waits, and merges it once the gates pass", async () => {
       const h = await approved({ referenced: true });
-      const pending = () => h.cards().find((card) => card.id === mergePendingCardId(h.taskId));
       h.forge.readiness = "conflict";
       h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("conflict"));
-      expect(pending()).toMatchObject({ title: MERGE_PENDING_TITLE, author: "host", actions: [] });
+      expect(h.cards()).toEqual([]);
       expect(h.forge.merges).toEqual([]);
       h.forge.readiness = "clean";
       await repairTurn(h, async () => {});
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
-      // A referenced merge keeps its task open; the note still goes.
+      // A referenced merge keeps its task open.
       expect(h.tasks.get(h.taskId)?.status).toBe("active");
-      expect(pending()).toBeUndefined();
     });
 
     // INF-834 friction 4, the captain's ask: "A crewmate can revise a

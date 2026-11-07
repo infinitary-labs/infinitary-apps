@@ -81,7 +81,7 @@ export class ProjectQueue {
     });
   }
 
-  /** The facts the waiting note and the check watch's wake say, for a task waiting on its project's queue. */
+  /** The facts the Firstmate's words at a queue wait and the check watch's wake say, for a task waiting on its project's queue. */
   noteFacts(taskId: string): QueueNoteFacts | undefined {
     const record = this.options.tasks.get(taskId);
     const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
@@ -105,11 +105,6 @@ export function queueNoteFacts(
   };
 }
 
-function hoursOf(ms: number): string {
-  const hours = Math.floor(ms / (60 * 60 * 1000));
-  return hours === 1 ? "an hour" : `${hours} hours`;
-}
-
 /** Workflow paths in a sentence: "a.yml", "a.yml and b.yml", "a.yml, b.yml and c.yml". */
 function pathsWords(paths: readonly string[]): string {
   if (paths.length <= 1) return paths[0] ?? "";
@@ -117,33 +112,10 @@ function pathsWords(paths: readonly string[]): string {
 }
 
 /**
- * The waiting note's warning, or undefined when the plain waiting words
- * hold: a project whose batch check never answered, said with what the
- * workflow read found; or a version nothing has written since the click for
- * the check watch's whole bound, on a project whose check answered before.
- */
-export function queueWarningWords(facts: QueueNoteFacts | undefined): string | undefined {
-  if (!facts) return undefined;
-  if (!facts.answeredBefore) {
-    const lead = "Nothing in this project has answered the batch check yet";
-    const workflows = facts.workflows;
-    if (!workflows) return `${lead}. This merge waits until something does.`;
-    const on = workflows.filter((workflow) => workflow.active).map((workflow) => workflow.path);
-    if (on.length > 0)
-      return `${lead}; ${pathsWords(on)} ${on.length === 1 ? "mentions" : "mention"} it. This merge waits until it answers.`;
-    if (workflows.length > 0)
-      return `${lead}, and the workflow that mentions it is turned off. This merge waits until one answers.`;
-    return `${lead}, and no workflow mentions it. This merge waits until one does.`;
-  }
-  if (facts.quietMs !== undefined)
-    return `Nothing has answered the batch check since you approved this ${hoursOf(facts.quietMs)} ago. Your approval is kept and runs once that check passes.`;
-  return undefined;
-}
-
-/**
  * The fact the check watch's two-hour wake adds for a version waiting on
- * its project's queue, in the crewmate's words; undefined when the queue
- * answered this version or the task waits on no queue.
+ * its project's queue, and what the Firstmate is told beside a merge click's
+ * queue wait (`keptNote`, INF-2913), in the agents' words; undefined when
+ * the queue answered this version or the task waits on no queue.
  */
 export function queueWakeWords(facts: QueueNoteFacts | undefined): string | undefined {
   if (!facts) return undefined;

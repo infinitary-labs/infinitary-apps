@@ -1570,9 +1570,8 @@ export class CardService {
    * same id) by a core service that owns the question, such as the plugin
    * consent card (Phase A, A2a). The host stamps the author and the
    * priority; the caller's actions carry host effects only the captain's
-   * click can run. A note (no choice to make, such as a clicked merge's
-   * pending note) sits below every decision, so a question it accompanies -
-   * signing in again - stays in front.
+   * click can run. A note (no choice to make) sits below every decision,
+   * so a question it accompanies - signing in again - stays in front.
    */
   raiseHostCard(
     card: Omit<Card, "author" | "priority" | "status" | "createdAt">,

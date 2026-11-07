@@ -16,7 +16,6 @@ import { answersByShape, type ClosingPlace } from "./askEnding";
 import type { AnswerTaskClosedPayload } from "./captainWakes";
 import { escapeCardText } from "./cardText";
 import type { PrOutcome } from "./changeMerge";
-import type { KeptApproval } from "./keptApproval";
 import { endedAuthorization, standingAuthorization } from "./mergeAuthorization";
 import type { SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
@@ -27,6 +26,7 @@ import {
   closedWithoutClick,
   closingNoteTitle,
   mergedLine,
+  mergePendingCardId,
   pullLeftOpenText,
   withCloseLine,
   withMergeLine,
@@ -94,7 +94,6 @@ export class TaskClosing {
   constructor(
     private readonly host: SettleServiceHost,
     private readonly locks: SettleLocks,
-    private readonly approvals: KeptApproval,
   ) {}
 
   private readonly retirements = new Map<string, Promise<"removed" | "kept" | "none">>();
@@ -629,10 +628,11 @@ export class TaskClosing {
    */
   closeAndPurge<T>(taskIds: string[], close: () => T): T {
     for (const id of taskIds) this.host.killJobs?.(id);
-    // A clicked merge's pending note carries no task, so the card retire
-    // leaves it: it ends with its task here, the one seam every close takes,
-    // so no reader sees the task closed with it still up (INF-1275).
-    for (const id of taskIds) this.approvals.clearPendingMerge(id, "task-closed");
+    // An earlier version put a note up after a merge click (INF-1275,
+    // retired by INF-2913). It carries no task, so the card retire leaves
+    // it: one still up from that version ends with its task here.
+    for (const id of taskIds)
+      this.host.cards.withdrawHostCard(mergePendingCardId(id), "task-closed");
     return this.host.inbox.transaction(() => {
       for (const id of taskIds) this.host.inbox.purgeTask(id);
       return close();

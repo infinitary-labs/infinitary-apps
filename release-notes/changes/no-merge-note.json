@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "no-merge-note",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A merge you click no longer leaves a note behind",
+      "body": "When you click merge, the card goes away and no note takes its place while the merge waits for its checks or the batch check. Activity still shows the merge's one line until it merges. A card comes back only when a merge stops and the next step is yours.",
+      "noPicture": "Nothing new appears: the change is a note that no longer shows after a merge click.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -25,7 +25,7 @@ import type { TaskSeed } from "../tasks/seedTask";
 import type { MergeGuard } from "./changeMerge";
 import { CHECK_WATCH_BOUND_MS } from "./checkWatch";
 import { MERGE_CHECKS_HOLD_REASON } from "./mergeAuthorization";
-import { queueNoteFacts, queueWarningWords } from "./projectQueue";
+import { queueNoteFacts, queueWakeWords } from "./projectQueue";
 
 // Integration budget (docs/test-cohorts.md): real git plus the put-in's own
 // 300 + 900 ms retry backoff, the slowest test (a put-in retried after a
@@ -721,7 +721,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
       unattended: true,
       beforeDispatch: () => undefined,
     };
-    const note = () => queueWarningWords(harness.service.queue.noteFacts("ab12cd34"));
+    const note = () => queueWakeWords(harness.service.queue.noteFacts("ab12cd34"));
 
     expect(await harness.service.merges.merge("ab12cd34", guard)).toMatchObject({
       stop: "queue",
@@ -732,13 +732,14 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
       head: "feedbeef",
       id: 41,
     });
+    // What the Firstmate hears beside the click's queue wait (INF-2913),
+    // and the check watch's reading for its two-hour wake: the same fact.
     expect(note()).toBe(
-      "Nothing in this project has answered the batch check yet, and no workflow mentions it. This merge waits until one does.",
+      `Nothing in this project has ever answered ${QUEUE_STATUS}, and no workflow on its default branch mentions it.`,
     );
-    // The check watch's reading carries the same fact for its two-hour wake.
     expect(await harness.service.checks.readWatched("ab12cd34")).toMatchObject({
       kind: "pending",
-      queue: `Nothing in this project has ever answered ${QUEUE_STATUS}, and no workflow on its default branch mentions it.`,
+      queue: note(),
     });
 
     // The kept approval reads it again: still only the app's own mark.
@@ -761,11 +762,11 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(note()).toBeUndefined();
   });
 
-  it("says on the waiting note what the workflow read found, and two quiet hours on a project whose batch answered before (INF-2886)", () => {
+  it("says what the workflow read found, and a version left quiet past the check watch's bound on a project whose batch answered before (INF-2886, INF-2913)", () => {
     const at = 1_800_000_000_000;
     const mark = { head: "feedbeef", id: 41, at };
     expect(
-      queueWarningWords(
+      queueWakeWords(
         queueNoteFacts(
           { queueWorkflows: [{ path: ".github/workflows/batch.yml", active: true }] },
           mark,
@@ -773,10 +774,10 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
         ),
       ),
     ).toBe(
-      "Nothing in this project has answered the batch check yet; .github/workflows/batch.yml mentions it. This merge waits until it answers.",
+      `Nothing in this project has ever answered ${QUEUE_STATUS}, and .github/workflows/batch.yml mentions it.`,
     );
     expect(
-      queueWarningWords(
+      queueWakeWords(
         queueNoteFacts(
           { queueWorkflows: [{ path: ".github/workflows/batch.yml", active: false }] },
           mark,
@@ -784,18 +785,18 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
         ),
       ),
     ).toBe(
-      "Nothing in this project has answered the batch check yet, and the workflow that mentions it is turned off. This merge waits until one answers.",
+      `Nothing in this project has ever answered ${QUEUE_STATUS}, and .github/workflows/batch.yml mentions it but is turned off.`,
     );
-    // Answered before: the plain words hold until the check watch's bound passes untouched.
+    // Answered before: nothing to say until the check watch's bound passes untouched.
     const answered = { queueWorkflows: [], queueAnsweredAt: at - 1 };
-    expect(queueWarningWords(queueNoteFacts(answered, mark, at + CHECK_WATCH_BOUND_MS - 1))).toBe(
+    expect(queueWakeWords(queueNoteFacts(answered, mark, at + CHECK_WATCH_BOUND_MS - 1))).toBe(
       undefined,
     );
-    expect(queueWarningWords(queueNoteFacts(answered, mark, at + CHECK_WATCH_BOUND_MS))).toBe(
-      "Nothing has answered the batch check since you approved this 2 hours ago. Your approval is kept and runs once that check passes.",
+    expect(queueWakeWords(queueNoteFacts(answered, mark, at + CHECK_WATCH_BOUND_MS))).toBe(
+      `Nothing has written ${QUEUE_STATUS} on this version since the app marked it waiting, though the project's batch check has answered before.`,
     );
     expect(
-      queueWarningWords(
+      queueWakeWords(
         queueNoteFacts(answered, { ...mark, answered: true }, at + CHECK_WATCH_BOUND_MS),
       ),
     ).toBe(undefined);

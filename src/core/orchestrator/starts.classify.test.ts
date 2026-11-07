@@ -6,15 +6,12 @@
  * Each case drives a real CrewSupervisor through the crew harness
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
-import type { Card } from "@shared/cards";
 import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it, vi } from "vitest";
 import {
-  completionBody,
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
-  SETTLE_MERGE,
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
@@ -25,7 +22,6 @@ import type { TaskRecord } from "../storage/taskStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { JOB_BOUND_MS } from "./idleLadder";
-import { mergePendingCardId } from "./settleWords";
 
 fakeCrewTimersEachTest();
 
@@ -91,47 +87,6 @@ describe("the task graph (R1)", () => {
     });
     await tick();
     expect(decideCalls.at(-1)?.shape).toMatchObject({ basis: "FM3K-404", basis_verified: false });
-  });
-
-  // INF-1275 (review INF-2549): a clicked merge's pending note carries no task,
-  // so it ends with its task however that closes - here an escalation's
-  // supersede, which closes outside the settle's own close.
-  it("takes a clicked merge's pending note down when an escalation supersedes its task", async () => {
-    const crewmate = fakeCrewmate();
-    const mergePullRequest = vi
-      .fn()
-      .mockResolvedValue({ ok: false, text: "PR merge blocked: CI is not fully green." });
-    const { supervisor, tasks, specs, cards } = setup(crewmate, { mergePullRequest });
-    const { taskId } = await supervisor.intake.commission({
-      title: "Ship the PR",
-      intent: intentOf("done work"),
-      shape: { rigor_ask: "quick" },
-    });
-    await tick();
-    vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
-    specs[0]?.onCard?.({
-      requiredActions: [],
-      title: "The PR is ready",
-      body: completionBody(
-        "<p>The PR is ready to merge.</p><p>CI is green on the head commit.</p>",
-      ),
-      actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
-    });
-    crewmate.finishPrompt();
-    await tick();
-    const settle = cards().find((card) => card.title === "The PR is ready") as Card;
-    supervisor.cardActions.act(settle.id, "merge");
-    await tick();
-    expect(cards().map((card) => card.id)).toContain(mergePendingCardId(taskId));
-
-    await supervisor.intake.commission({
-      title: "Ship the PR",
-      intent: intentOf("that is not it, try again"),
-      shape: { escalate_from: tasks.get(taskId)?.key },
-    });
-    await tick();
-    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "superseded" });
-    expect(cards().map((card) => card.id)).not.toContain(mergePendingCardId(taskId));
   });
 
   it("dispatches a queued row from the shape it was commissioned with (S2)", async () => {

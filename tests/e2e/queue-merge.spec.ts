@@ -2,9 +2,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../../src/core/forge/forge";
-import { queueWarningWords } from "../../src/core/orchestrator/projectQueue";
-import { MERGE_PENDING_TITLE } from "../../src/core/orchestrator/settleWords";
+import { QUEUE_STATUS } from "../../src/core/forge/forge";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
@@ -15,14 +13,13 @@ import { queueSettingsWarning } from "../../src/shared/repos";
 import { PROJECT_DELIVERY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
-import { cardBody } from "./frames";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
-import { heroShot, regionShot } from "./pictures";
+import { heroShot, windowShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { projectRow } from "./projects";
 import { readSavedData } from "./savedData";
-import { cardSurface, shownCard } from "./stack";
+import { shownEntry } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -188,22 +185,18 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
     await expect
       .poll(() => github.statuses(headSha), { timeout: 20_000 })
       .toEqual([expect.objectContaining({ context: QUEUE_STATUS, state: "pending" })]);
-    const pending = shownCard(launched.page, QUEUE_WAITING_WORDS);
-    await expect(pending).toBeVisible({ timeout: 20_000 });
-    // Nothing has answered the batch check and no workflow mentions it: the note warns.
-    await expect(cardBody(launched.page, QUEUE_WAITING_WORDS).locator("body")).toContainText(
-      queueWarningWords({ workflows: [], answeredBefore: false }) ?? "",
-    );
-    await regionShot(cardSurface(launched.page), test.info().outputPath("queue-waiting.png"));
-    await heroShot(launched.app, launched.page, {
-      region: cardSurface(launched.page),
-      name: "merge-pending-note",
-    });
     expect(github.merges()).toEqual([]);
     const saved = () => readSavedData(userDataDir, (savedDb) => new TaskStore(savedDb).get(taskId));
     await expect
       .poll(saved)
       .toMatchObject({ delivery: { prNumber: 82, mergeAuthorization: { approvedHead: headSha } } });
+    // INF-2913, the captain: "only show a card if the merge went wrong and
+    // needs the user's decision". The kept click waits with no card: the
+    // merge card left on the click and nothing took its place.
+    // The version is already marked waiting, which the click's old note came before.
+    expect(await launched.page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
+    await expect(shownEntry(launched.page)).toHaveCount(0);
+    await windowShot(launched.page, test.info().outputPath("queue-waiting.png"));
 
     // The project's queue passes that version; the kept click merges it.
     github.setStatus(headSha, { context: QUEUE_STATUS, state: "success" });
@@ -212,8 +205,6 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
     await expect
       .poll(() => github.merges(), { timeout: 30_000 })
       .toEqual([expect.objectContaining({ number: 82, sha: headSha, method: "squash" })]);
-    await expect(shownCard(launched.page, QUEUE_WAITING_WORDS)).toHaveCount(0);
-    await expect(shownCard(launched.page, MERGE_PENDING_TITLE)).toHaveCount(0);
     await expect.poll(saved).toMatchObject({
       delivery: { mergeAuthorization: { status: "consumed", receipt: { head: headSha } } },
     });

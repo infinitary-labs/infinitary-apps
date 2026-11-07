@@ -29,7 +29,6 @@ import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 import { FIRSTMATE_FAILURE_CARD_ID } from "./hostCards";
-import { mergePendingCardId } from "./settleWords";
 
 fakeCrewTimersEachTest();
 
@@ -311,11 +310,9 @@ describe("CrewSupervisor", () => {
         "already in progress",
       );
       await tick();
-      // Coalesced push is independent of the operation. A merge click stays
-      // in view as one pending note until its outcome (INF-1275).
-      expect(cards().map((card) => card.id)).toEqual(
-        action === "discard" ? [] : [mergePendingCardId("receipt")],
-      );
+      // Coalesced push is independent of the operation. A click raises no
+      // card of the host's own while it runs (INF-2913).
+      expect(cards().map((card) => card.id)).toEqual([]);
       // The second card's attempt settled nothing: the attempt that owns the task says what happened.
       expect(settleLines(tasks, "receipt")).toHaveLength(1);
       expect(events.filter((event) => event.type === "firstmate_note")).toEqual([]);
@@ -342,7 +339,7 @@ describe("CrewSupervisor", () => {
           "in progress",
         ),
       );
-      // The merge went in: its pending note is gone (INF-1275).
+      // The merge went in and left no card behind (INF-2913).
       await vi.waitFor(() => expect(cards()).toEqual([]));
     },
   );

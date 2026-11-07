@@ -117,9 +117,7 @@ It reads "Merge the pull request" when its checks pass, "Merge when checks pass"
 The merge offer itself expresses the crew's judgment that the work is ready; its separate captain click authorizes the merge and can keep that approval while checks hold it.
 While the captain's override passes the checks at the card's version, it reads "Merge the pull request" whatever the checks read, because a click then merges at once (INF-756).
 A card whose click keeps nothing, such as a first mate's, keeps its words.
-The click takes the card away, and a host note takes its place until the merge goes through or says why not (INF-1275).
-That note is an ordinary host note with no buttons, the task's key in its meta line, the click's state as its title (`Merge pending`, `Waiting for the batch check` on a project that merges through its queue, `Merge did not go through`), one sentence saying what it waits for or why it stopped, and the task's title muted below it.
-It is revised in place as the wait changes and leaves once the merge goes through.
+The click takes the card away and nothing takes its place (INF-2913): Activity's one line says what the merge waits for, and a card comes back only when a stopped merge needs the captain's choice.
 
 **The risk chart.**
 A crewmate's merge card carries its risk as a radar the app draws at the card's top right, level with the title's top and flush with its content edge (FI3-1127's plan; the app's `docs/card-authoring.md`, "The risk chart").

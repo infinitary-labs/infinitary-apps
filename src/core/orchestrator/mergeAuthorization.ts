@@ -657,9 +657,17 @@ export function keptFeedLine(wait: MergeWait, place: string, checks?: string): s
 
 /**
  * What the Firstmate is told beside a wait on a kept approval: who moves
- * next, and that the captain is not asked for a second click.
+ * next, and that the captain is not asked for a second click. A queue wait
+ * carries what the app's reads say of the project's queue (`queueWarning`,
+ * INF-2913: no note shows it to the captain).
  */
-export function keptNote(wait: MergeWait, head: string, place: string, checks?: string): string {
+export function keptNote(
+  wait: MergeWait,
+  head: string,
+  place: string,
+  checks?: string,
+  queueWarning?: string,
+): string {
   const kept =
     "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
   const declare = `When the crewmate pushes a new version - brought up to date, or a fix for what stopped the merge - it declares the repair with check_change conflictRepair from ${head}: impact none keeps the approval; changed-work ends it and it puts up a new completion card.`;
@@ -691,7 +699,7 @@ export function keptNote(wait: MergeWait, head: string, place: string, checks?: 
     case "guidance":
       return `${kept} The captain gave the crewmate new guidance after their click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new completion card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
     case "queue":
-      return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting, and merges once the queue sets it to success. A failed batch wakes the crewmate like any failed check. ${declare}`;
+      return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting, and merges once the queue sets it to success.${queueWarning ? ` ${queueWarning}` : ""} A failed batch wakes the crewmate like any failed check. ${declare}`;
   }
 }
 

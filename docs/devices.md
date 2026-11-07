@@ -733,6 +733,7 @@ Linux keeps its current delivery path, and a Mac a command added downloads over 
    Another Mac that joined by pasting its link runs its own installed app, so its first update keeps this Mac's copy the same way and its background starts that copy from then on (`docs/helper.md`, "Updated by its home").
    This Mac counts what it sends that computer as it goes (`onAppSent`), and the row and one feed line rewritten in place say "Sending Infinitary to Mac mini… 42.3 MB sent", as for a Mac reached by its address (above, "How far the copy has gone").
    Nothing there changes if the copy does not arrive whole.
+   That computer reads this Mac's answer to its end even after its tar has the whole app, since tar stops reading at the archive's end, before the padding that fills its last block (`fetchFirstmate`).
 3. It answers, then its run ends, and its background, which keeps it running while it is joined, starts it again from what is kept (`docs/helper.md`, "Updated by its home").
    The feed says "Starting Infinitary on Mac mini.", and the row "Starting Infinitary on Mac mini…" until it is back.
 4. "Mac mini runs this computer's version of Infinitary now." once it is back on this Mac's version.

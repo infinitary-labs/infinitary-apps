@@ -460,7 +460,9 @@ function pairedAs(device: PairingDevice, kind: DeviceKind, again: boolean): bool
  * "Infinitary for another system"). The answer goes into `sink`, or the one
  * `sink` opens for the answer's `Content-Type` (`FETCH_APP_TYPES`), which it
  * ends; resolves once all of it came, and rejects with the home's refusal
- * (`PairRefusedError`) or an answer cut short, leaving `sink` open.
+ * (`PairRefusedError`) or an answer cut short, leaving `sink` open. A sink
+ * that stops taking the answer before its end, as the Mac's tar does once it
+ * has the whole app, still has the answer read to its end.
  * `timeoutMs` bounds each quiet stretch, never the whole copy.
  */
 export async function fetchFirstmate(
@@ -525,11 +527,18 @@ export async function fetchFirstmate(
                 new Error(`Infinitary did not arrive whole from the ${COMPUTER.one} that sent it.`),
               );
           });
-          response.pipe(
+          const into =
             typeof sink === "function"
               ? sink(String(response.headers["content-type"] ?? ""))
-              : sink,
-          );
+              : sink;
+          response.pipe(into);
+          // A sink can close before the answer ends: the Mac's tar exits at
+          // the archive's end marker, before the zero padding that fills its
+          // last block, and its input closes with it, which stops the pipe.
+          // The rest is read and dropped, so the answer still ends and says
+          // whether all of it came; whether the sink kept it whole is its
+          // caller's to judge, by tar's exit or a file's finish.
+          into.once("close", () => response.resume());
         },
       );
       quietFor(asked, options, () =>

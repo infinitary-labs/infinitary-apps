@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "update-reads-answer-to-end",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Updating another computer no longer stalls once Infinitary has arrived there",
+      "body": "When another computer got its update of Infinitary from the computer where your first mate lives, it could keep waiting with no end after the whole app had arrived, so the update never finished. It now reads the rest of what was sent and goes on to start the new version.",
+      "noPicture": "The change is in when another computer stops waiting for an update it already has, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

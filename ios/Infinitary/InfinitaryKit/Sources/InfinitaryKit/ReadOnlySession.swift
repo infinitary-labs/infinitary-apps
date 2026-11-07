@@ -118,6 +118,8 @@ public struct PhoneNotice: Equatable, Sendable {
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var socket: URLSessionWebSocketTask?
     @ObservationIgnored private var transport: PinnedTransport?
+    /// The address the current connection was dialed at: the route it reached once it turns In reach.
+    @ObservationIgnored private var serving: String?
     @ObservationIgnored private var epoch: String?
     @ObservationIgnored private var sequence = 0
     @ObservationIgnored private var nextID = 0
@@ -638,7 +640,7 @@ public struct PhoneNotice: Equatable, Sendable {
         replacement?.transport.close(); replacement = nil
         finishLeave(PhoneError.unavailable)
         failCalls(); notice = nil; access = "read"; firstmateBusy = false; firstmateObserved = false
-        socket?.cancel(with: .goingAway, reason: nil); socket = nil
+        socket?.cancel(with: .goingAway, reason: nil); socket = nil; serving = nil
         transport?.close(); transport = nil
         // A deliberate close has nothing to be patient about: the words follow at once, so a reopen reads Reaching
         // until its dial is in reach rather than an In reach no connection backs.
@@ -777,7 +779,7 @@ public struct PhoneNotice: Equatable, Sendable {
     /// Greets the opened socket and reads it until it ends; true when the computer was in reach on it.
     private func serve(_ dialed: Dialed, generation current: Int) async -> Bool {
         let (address, transport, socket) = (dialed.address, dialed.transport, dialed.socket)
-        self.socket = socket; self.transport = transport; cutting = nil
+        self.socket = socket; self.transport = transport; serving = address; cutting = nil
         var reached = false
         var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
             "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0",
@@ -826,19 +828,7 @@ public struct PhoneNotice: Equatable, Sendable {
                 guard current == generation, !Task.isCancelled else { break }
                 try await receive(frame, on: socket)
                 guard current == generation, !Task.isCancelled else { break }
-                if contact == "in-reach" {
-                    refused = 0
-                    // INF-2773: the preference is worked out when this connection first reaches its address.
-                    if !reached || reachedAddress != address {
-                        reached = true
-                        if reachedAddress != address { reachedAddress = address }
-                        let preferred = Array(PhoneAddresses.preferred(mac.addresses + [address]).prefix(25))
-                        if mac.addresses != preferred {
-                            mac.addresses = preferred
-                            onMacChanged?(mac)
-                        }
-                    }
-                }
+                if contact == "in-reach" { refused = 0; reached = true }
             }
         } catch {
             guard current == generation, !Task.isCancelled else {
@@ -858,7 +848,7 @@ public struct PhoneNotice: Equatable, Sendable {
         failCalls(); firstmateBusy = false; firstmateObserved = false
         transport.close()
         guard current == generation else { return reached }
-        self.socket = nil; self.transport = nil; checking = nil
+        self.socket = nil; self.transport = nil; serving = nil; checking = nil
         if doubted === socket { doubted = nil; replacing?.cancel(); replacing = nil }
         return reached
     }
@@ -1069,9 +1059,22 @@ public struct PhoneNotice: Equatable, Sendable {
         guard initialReads.allSatisfy({ ready.contains($0) }) else { return }
         caughtUp = true
         let reached = contact != "in-reach"
+        if reached { reachRoute() }
         contact = "in-reach"
         if missed { missed = false; returns += 1 }
         if reached { reaches += 1; wakeReachWaiters(); handUsage() }
+    }
+
+    /// INF-2773: the route and its preference are worked out once per connection, in the step that turns it In reach,
+    /// so nothing reads In reach beside the last connection's route while the catch-up's reads are still being sent.
+    private func reachRoute() {
+        guard let address = serving else { return }
+        if reachedAddress != address { reachedAddress = address }
+        let preferred = Array(PhoneAddresses.preferred(mac.addresses + [address]).prefix(25))
+        if mac.addresses != preferred {
+            mac.addresses = preferred
+            onMacChanged?(mac)
+        }
     }
 
     // MARK: INF-2631: the phone's usage events go to its computer, which alone decides whether any leaves.

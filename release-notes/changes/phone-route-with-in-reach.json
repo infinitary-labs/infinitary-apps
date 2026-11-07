@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-route-with-in-reach",
+      "reason": "The phone app records the address it reached in the same step that says In reach, instead of a few milliseconds later; no one can see that gap, but it made a phone check of a replaced connection fail at random."
+    }
+  ]
+}

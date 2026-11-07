@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import XCTest
 @testable import InfinitaryKit
 
@@ -98,6 +99,25 @@ import XCTest
         }
 
         func hold(_ seconds: Double) async throws { try await Task.sleep(for: .milliseconds(Int(seconds * 1000))) }
+    }
+
+    /// The route read beside In reach, looked at on the main actor's first turn after each change of the connection:
+    /// the earliest a screen, such as the computer sheet, can draw the two together.
+    @MainActor final class RouteWatch {
+        private(set) var inReach: [String?] = []
+
+        init(_ session: ReadOnlySession) { follow(session) }
+
+        private func follow(_ session: ReadOnlySession) {
+            withObservationTracking { _ = session.contact } onChange: { [weak self] in
+                Task { @MainActor in self?.look(session) }
+            }
+        }
+
+        private func look(_ session: ReadOnlySession) {
+            if session.contact == "in-reach" { inReach.append(session.reachedAddress) }
+            follow(session)
+        }
     }
 
     private func inReach(_ session: ReadOnlySession, _ watch: Watch, within seconds: Double) async throws {
@@ -320,6 +340,8 @@ import XCTest
     /// A reopen's check keeps a connection that goes on receiving, but an answer already on its way when the ping left
     /// says nothing about the path after it. Phone check run 41980677158 caught the reopen check skipping its doubt for
     /// such an answer, so a dead path waited for the silence cut instead of being replaced once the check ran out.
+    /// Phone check run 42354120938 read In reach on the replacement with the frozen connection's route: the phone said
+    /// In reach, then sent its catch-up's reads before it recorded the route it reached.
     func testAnAnswerAlreadyOnItsWayDoesNotKeepADeadPath() async throws {
         let session = try await joined()
         let relay = try await home("relay-thaw")
@@ -327,6 +349,7 @@ import XCTest
         let watch = Watch(session)
         session.start()
         try await inReach(session, watch, within: 30)
+        let routes = RouteWatch(session)
         session.found(addresses: [direct])
         // A second each way: the read reaches the home after one and its answer is on the way down for the next.
         try await shape(bytesPerSec: 0, delayMs: 1_000)
@@ -340,6 +363,8 @@ import XCTest
         XCTAssertEqual(session.lastCut, .unanswered, "The reopen's check, not the silence, cut the frozen connection")
         try await inReach(session, watch, within: 15)
         XCTAssertEqual(session.reachedAddress, direct)
+        try await watch.until(1, "the route read beside In reach") { !routes.inReach.isEmpty }
+        XCTAssertEqual(Set(routes.inReach), [direct], "In reach shows with the route it reached, never the frozen one")
         asked.cancel()
         try await finish(session)
     }

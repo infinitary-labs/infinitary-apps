@@ -134,6 +134,7 @@ Each reconnect gives the saved and nearby private IPv4 candidates their head sta
 The authenticated welcome may carry `addresses`, which refreshes the saved alternatives without changing the phone identity or home pin, erasing local fallbacks or interrupting the working socket.
 An older home that omits the field leaves the saved alternatives unchanged.
 The computer sheet displays the last authenticated address actually reached, separately from the saved preference; before any successful connection it shows no reached address.
+The session records that address in the same step that turns the connection In reach, so nothing reads In reach beside the previous connection's address while the catch-up's reads are still being sent (`PhoneWeakLinkTests`).
 
 Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the saved Mac.
 Out of reach, **Forget this computer** asks for confirmation and clears the saved Mac and pin locally without claiming the Mac removed the phone.

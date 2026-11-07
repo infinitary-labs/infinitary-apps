@@ -631,7 +631,9 @@ Evidence: `tests/e2e/request-merge.spec.ts` ("a merge that skips the branch rule
 
 A project on GitHub may merge its pull requests through its own queue, a job of the project's that tests approved work together before it merges (INF-2430 piece 2).
 It is off by default, and a project chooses it in Settings → Projects or through the first mate's project settings.
-The app's whole contract with any such queue is one commit status, `infinitary/queue` (`QUEUE_STATUS`, `src/core/forge/forge.ts`), on the pull request's version.
+A person reads it as "batched pull requests" in Settings and "Batched pull request" on a task (`PROJECT_DELIVERY_WORDS`, `POLICY_DELIVERY_WORDS`).
+The app supplies no queue workflow of its own, so while a project has the choice, Settings says the merge waits until the project has one and holds a short how-to behind "How to set one up": the three things the workflow does, that the first mate can write one, and a link to GitHub's guide to commit statuses (`QUEUE_HOW_TO_WORDS`, `src/renderer/src/settings/projectsWords.ts`).
+The app's whole contract with any such queue is one commit status, `infinitary/queue` (`QUEUE_STATUS`, `src/shared/repos.ts`), on the pull request's version.
 Nothing writes it before the captain's merge click: the pull request's own checks still hold the completion card as they do today.
 The click publishes the story and checks the title as any merge does, keeps the captain's approval, and writes `infinitary/queue` as `pending` on the approved version with the words "Waiting for the batch check" (`GitHubForge.markQueued`).
 A repair that carries the click marks its new version the same way, once that version's own checks pass.

@@ -404,13 +404,8 @@ export interface Forge {
   url(change: ForgeChange): string | null;
 }
 
-/**
- * The commit status that is the app's contract with a project's own queue
- * (docs/forge.md, "A project's queue"): the app writes it as waiting on the
- * version the captain approved, and the queue answers success or failure on
- * it. The kept merge reads it like any other check.
- */
-export const QUEUE_STATUS = "infinitary/queue";
+/** The queue's commit status, owned beside the delivery that uses it. */
+export { QUEUE_STATUS } from "@shared/repos";
 
 /** The waiting status's description, in the words a person reads on GitHub. */
 export const QUEUE_WAITING_WORDS = "Waiting for the batch check";

@@ -833,7 +833,7 @@
     const delivery = current.delivery;
     const modeWords = {
       "direct-pr": "As a pull request",
-      "queue-pr": "As a pull request through your project's queue",
+      "queue-pr": "As a batched pull request your project's queue tests",
       "local-only": "Merged locally, no pull request",
       "in-place": "Built in place",
     };
@@ -864,7 +864,7 @@
         policies.delivery.value === "direct-pr"
           ? "Pull request"
           : policies.delivery.value === "queue-pr"
-            ? "Pull request through your queue"
+            ? "Batched pull request"
             : "Local merge",
         policies.delivery.source,
       );

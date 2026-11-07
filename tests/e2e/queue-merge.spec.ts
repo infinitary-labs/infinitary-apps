@@ -9,6 +9,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { QUEUE_HOW_TO_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import { PROJECT_DELIVERY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
@@ -36,6 +37,11 @@ import { pressKey } from "./windowKeys";
  * version after the app starts again (its standing approvals run at start)
  * and the pending note leaves. Requires desktop Electron and local git; no
  * real sign-in or shared pull request.
+ *
+ * INF-2887, the captain's "Explain in Settings what the choice needs and
+ * link to the how-to" with the label "Batched pull request": once chosen,
+ * the row says the merge waits for the project's own queue workflow, its how-to
+ * opens by keys, and its link opens GitHub's guide in the system browser.
  */
 test("a queue-pr merge click marks its version, waits for the queue, then merges on the same click", async () => {
   const userDataDir = scratchDir("infinitary-queue-merge-");
@@ -116,6 +122,14 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
   try {
     // The captain sends the project's pull requests through its queue.
     const { page } = launched;
+    // The system browser, replaced by a recorder: nothing here opens a page.
+    await launched.app.evaluate(({ shell }) => {
+      const opened: string[] = [];
+      (globalThis as { __fmOpened?: string[] }).__fmOpened = opened;
+      shell.openExternal = async (url: string) => {
+        opened.push(url);
+      };
+    });
     await pressKey(page.getByRole("button", { name: "Settings" }), "Enter");
     await pressKey(page.getByRole("tab", { name: "Projects" }), "Enter");
     const row = projectRow(page, "repo-meter");
@@ -131,7 +145,22 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
         ),
       )
       .toMatchObject({ delivery: "queue-pr" });
-    await heroShot(launched.app, page, { region: choices, name: "queue-pr-delivery" });
+    // The row says what the choice needs, and its how-to opens by keys.
+    const howTo = row.locator("[data-queue-how-to]");
+    await expect(howTo.getByText(QUEUE_HOW_TO_WORDS.needs)).toBeVisible();
+    await pressKey(howTo.getByRole("button", { name: QUEUE_HOW_TO_WORDS.label }), "Enter");
+    for (const step of QUEUE_HOW_TO_WORDS.steps) await expect(howTo.getByText(step)).toBeVisible();
+    await heroShot(launched.app, page, {
+      region: howTo,
+      anchors: [choices],
+      name: "batched-pull-request",
+    });
+    await pressKey(howTo.getByRole("button", { name: QUEUE_HOW_TO_WORDS.guide }), "Enter");
+    await expect
+      .poll(() =>
+        launched.app.evaluate(() => (globalThis as { __fmOpened?: string[] }).__fmOpened ?? []),
+      )
+      .toEqual([QUEUE_HOW_TO_WORDS.guideLink]);
     await page.keyboard.press("Escape");
 
     await pressKey(

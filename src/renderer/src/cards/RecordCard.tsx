@@ -82,7 +82,7 @@ const WORDS_SECTION = "words";
 
 const DELIVERY_WORDS: Record<string, string> = {
   "direct-pr": "Pull request",
-  "queue-pr": "Pull request through your queue",
+  "queue-pr": "Batched pull request",
   "local-only": "Local merge",
   "in-place": "Built in place",
 };

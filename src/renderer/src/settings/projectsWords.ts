@@ -1,5 +1,5 @@
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
-import type { RepoView } from "@shared/repos";
+import { QUEUE_STATUS, type RepoView } from "@shared/repos";
 import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
 
 /**
@@ -10,7 +10,29 @@ import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/voca
 export const PROJECT_POLICY_WORDS = {
   /** What "Where changes go" says on every project but the personal workspace. */
   delivery:
-    "Offered as a pull request where the project lives, merged once your project's queue passes it, or merged locally with no pull request.",
+    "Offered as a pull request where the project lives, as a batched pull request your project's own queue tests before it merges, or merged locally with no pull request.",
+} as const;
+
+/**
+ * What the batched choice needs, shown under "Where changes go" while a
+ * project has it (INF-2887, the captain's "Explain in Settings what the
+ * choice needs and link to the how-to"): the app only marks an approved
+ * version waiting, and a workflow of the project's own must pass or fail it
+ * (docs/forge.md, "A project's queue").
+ */
+export const QUEUE_HOW_TO_WORDS = {
+  needs:
+    "A batched pull request merges only once a queue workflow in your project on GitHub passes it. Until your project has one, an approved merge waits.",
+  label: "How to set one up",
+  steps: [
+    `Add a GitHub Actions workflow to your project that finds pull requests whose ${QUEUE_STATUS} status is pending.`,
+    "Have it test those versions, together or one at a time.",
+    `Have it set ${QUEUE_STATUS} to success or failure on each version, with the reason in its description. Infinitary merges a version once it reads success, with no second click.`,
+  ],
+  firstMate:
+    "Your first mate can write this workflow for you: ask it to set up a queue for this project.",
+  guide: "Open GitHub's guide to commit statuses",
+  guideLink: "https://docs.github.com/en/rest/commits/statuses#create-a-commit-status",
 } as const;
 
 /**

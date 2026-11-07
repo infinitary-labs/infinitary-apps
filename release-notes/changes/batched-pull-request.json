@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "batched-pull-request",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "Batched pull requests say what they need",
+      "body": "The delivery choice that sends approved pull requests through your project's own queue is now called batched pull requests. While a project has it, Settings, Projects says an approved merge waits until a queue workflow in your project on GitHub passes it, and How to set one up lists what that workflow does and links to GitHub's guide. Your first mate can write the workflow for you.",
+      "picture": {
+        "dark": "batched-pull-request-dark.webp",
+        "light": "batched-pull-request-light.webp",
+        "alt": "Where changes go in Settings, Projects has batched pull requests chosen, with the sentence about the queue workflow and the open how-to below it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

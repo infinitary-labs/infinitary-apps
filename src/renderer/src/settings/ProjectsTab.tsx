@@ -10,7 +10,7 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
-import { Button, GroupedPills, Input, Switch } from "../design";
+import { Button, Disclosure, GroupedPills, Input, Switch } from "../design";
 import { useCutWords } from "../design/core/overflowTitle";
 import { useInPlaceReveal } from "../design/reveals";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
@@ -18,7 +18,12 @@ import { isView } from "../devices/viewWords";
 import { AddProject } from "./AddProject";
 import { FOLDER_THERE_WORDS } from "./addProjectWords";
 import { ForgeSection } from "./ForgeSection";
-import { PROJECT_POLICY_WORDS, PROJECT_ROW_WORDS, projectRowWords } from "./projectsWords";
+import {
+  PROJECT_POLICY_WORDS,
+  PROJECT_ROW_WORDS,
+  projectRowWords,
+  QUEUE_HOW_TO_WORDS,
+} from "./projectsWords";
 import { RemoveProject } from "./RemoveProject";
 import { RunsOnControl, runsOnDescription, runsOnWhere, useWorkComputers } from "./RunsOn";
 import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
@@ -642,6 +647,7 @@ function ProjectRow({
               )
             }
           />
+          {!personal && repo.delivery === "queue-pr" && <QueueHowTo />}
           <PolicyRow
             title={AUTONOMY_SWITCH_NAME}
             description={
@@ -714,6 +720,74 @@ function ProjectRow({
           {!personal && <RemoveProject repo={repo} onRemoved={onRemoved} />}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * What the batched choice needs, under "Where changes go" while the project
+ * has it: one sentence in the open, and the how-to behind a disclosure with
+ * a link to GitHub's own guide for the status the workflow writes.
+ */
+function QueueHowTo() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      data-queue-how-to
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-1)",
+        paddingBottom: "var(--space-3)",
+        fontSize: "var(--text-xs)",
+        color: "var(--fg-2)",
+      }}
+    >
+      <div>{QUEUE_HOW_TO_WORDS.needs}</div>
+      <Disclosure
+        label={QUEUE_HOW_TO_WORDS.label}
+        open={open}
+        onToggle={setOpen}
+        style={{ margin: "0 -6px" }}
+      >
+        {open ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: "var(--space-2)",
+              padding: "var(--space-1) 6px 0",
+            }}
+          >
+            <ol
+              style={{
+                margin: 0,
+                paddingLeft: "var(--space-4)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--space-1)",
+              }}
+            >
+              {QUEUE_HOW_TO_WORDS.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+            <div>{QUEUE_HOW_TO_WORDS.firstMate}</div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                void window.infinitary.app
+                  .openExternal(QUEUE_HOW_TO_WORDS.guideLink)
+                  .catch(() => {})
+              }
+            >
+              {QUEUE_HOW_TO_WORDS.guide}
+            </Button>
+          </div>
+        ) : null}
+      </Disclosure>
     </div>
   );
 }

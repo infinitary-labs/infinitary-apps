@@ -72,6 +72,15 @@ export type RepoKind = z.infer<typeof repoKindSchema>;
  * this enum - the registry and display render whatever it carries.
  */
 export const repoDeliverySchema = z.enum(["direct-pr", "queue-pr", "local-only"]);
+
+/**
+ * The commit status that is the app's contract with a project's own queue
+ * (docs/forge.md, "A project's queue"): the app writes it as waiting on the
+ * version the captain approved, and the queue answers success or failure on
+ * it. The kept merge reads it like any other check, and Settings names it in
+ * its how-to for the batched choice.
+ */
+export const QUEUE_STATUS = "infinitary/queue";
 export type RepoDelivery = z.infer<typeof repoDeliverySchema>;
 
 /** The postures that ship through a pull request: everything but a local land. */

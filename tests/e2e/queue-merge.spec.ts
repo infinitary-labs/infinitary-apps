@@ -1,25 +1,31 @@
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { QUEUE_STATUS } from "../../src/core/forge/forge";
+import { QUEUE_PLAN_ASKED_OPENING } from "../../src/core/orchestrator/noticeWakes";
+import { QUEUE_SETUP_WORDS } from "../../src/core/orchestrator/queueChoice";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { QUEUE_HOW_TO_WORDS } from "../../src/renderer/src/settings/projectsWords";
+import {
+  QUEUE_HOW_TO_WORDS,
+  queueWaitingWords,
+} from "../../src/renderer/src/settings/projectsWords";
 import { queueSettingsWarning } from "../../src/shared/repos";
 import { PROJECT_DELIVERY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
+import { cardBody } from "./frames";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
 import { heroShot, windowShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { projectRow } from "./projects";
 import { readSavedData } from "./savedData";
-import { shownEntry } from "./stack";
+import { cardSurface, showCard, shownCard, shownEntry } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -33,9 +39,9 @@ import { pressKey } from "./windowKeys";
  * mentions the queue status, and records the one squash. INF-2886's approved
  * plan: the choice and the click read the project's workflows, so Settings
  * warns under Where changes go and the waiting note warns until the queue
- * first answers. The captain chooses the queue under Where changes go in
- * Settings -> Projects by keys while the completion card waits; the merge
- * click then marks the version and merges nothing; once the
+ * first answers. The project chose the queue on an earlier version, before
+ * INF-2885's direction B held such a choice, and its read found no workflow;
+ * the merge click then marks the version and merges nothing; once the
  * project's queue sets the status to success, the kept click merges at that
  * version after the app starts again (its standing approvals run at start)
  * and the pending note leaves. Requires desktop Electron and local git; no
@@ -70,8 +76,11 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
   github.setChecks([{ name: "unit-tests", status: "completed", conclusion: "success" }]);
   seedGitHubSignIn(userDataDir);
   const db = openDatabase(userDataDir);
+  // A project that chose batched pull requests on an earlier version, whose
+  // read then found no workflow that mentions its batch check (INF-2885's
+  // direction B now holds such a choice; see the next test).
   db.prepare(
-    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
+    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor, queue_workflows_json) VALUES (?, ?, ?, ?, 'clone', ?, 'queue-pr', 0, 'quick', '[]')",
   ).run("repo-meter", repoDir, "meter", Date.now(), "https://github.com/o/meter.git");
   seedHostedOrigins(db, userDataDir);
   const tasks = new TaskService({ db, strict: true });
@@ -123,7 +132,7 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
 
   let launched = await launchApp({ userDataDir, env: github.env });
   try {
-    // The captain sends the project's pull requests through its queue.
+    // The project sends its pull requests through its queue.
     const { page } = launched;
     // The system browser, replaced by a recorder: nothing here opens a page.
     await launched.app.evaluate(({ shell }) => {
@@ -139,17 +148,9 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
     await pressKey(row.getByRole("button", { expanded: false }), "Enter");
     const choices = row.getByRole("radiogroup", { name: "Where changes go" });
     const queue = choices.getByRole("radio", { name: PROJECT_DELIVERY_WORDS["queue-pr"] });
-    await pressKey(queue, "Space");
     await expect(queue).toBeChecked();
-    await expect
-      .poll(async () =>
-        (await page.evaluate(() => window.infinitary.repos.list())).find(
-          (repo) => repo.id === "repo-meter",
-        ),
-      )
-      .toMatchObject({ delivery: "queue-pr" });
-    // INF-2886: the choice reads the project's workflows; none mentions its
-    // batch check, so Settings warns under Where changes go.
+    // INF-2886: the last read of the project's workflows found none that
+    // mentions its batch check, so Settings warns under Where changes go.
     const warning = row.getByRole("status").filter({
       hasText: queueSettingsWarning({ delivery: "queue-pr", queueWorkflows: [] }) ?? "",
     });
@@ -216,6 +217,163 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
         ),
       )
       .toMatchObject({ queueAnsweredAt: expect.any(Number) });
+  } finally {
+    await launched.close();
+    await github.close();
+  }
+});
+
+/**
+ * INF-2885, the captain's direction B, "Wake at the choice; switch on only
+ * once the queue merges", and their words: "we should show a card that tells
+ * user their repo is not set up to use that option yet, and give them the
+ * option to ask first mate to plan it".
+ *
+ * A disposable GitHub serves a project with no workflow that mentions its
+ * batch check, and the pull request a crewmate finished. The captain chooses
+ * batched pull requests by keys: the project keeps pull requests, Settings
+ * says the choice waits, and the app's card says the project is not set up
+ * yet. Its Ask the first mate to plan it tells the first mate. The queue
+ * workflow then reaches the project's default branch, and the next merge in
+ * the project, a plain pull request, switches the project to batched pull
+ * requests by itself. Requires desktop Electron and local git; no real
+ * sign-in or shared pull request.
+ */
+test("choosing batched pull requests with no queue workflow waits, asks on a card, then switches on once one merges", async () => {
+  const userDataDir = scratchDir("infinitary-queue-choice-");
+  const taskId = "queueplanned";
+  const repoDir = join(userDataDir, "repo");
+  const worktreeDir = join(userDataDir, "worktree");
+  const branch = `fm/task-${taskId}`;
+  const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" }).toString();
+  git("init", "--initial-branch=main", repoDir);
+  git("-C", repoDir, "config", "user.name", "Test");
+  git("-C", repoDir, "config", "user.email", "test@localhost");
+  git("-C", repoDir, "commit", "--allow-empty", "-m", "init");
+  git("-C", repoDir, "worktree", "add", "-b", branch, worktreeDir);
+  const workflow = `name: Batch\non:\n  status:\n  workflow_dispatch:\njobs:\n  batch:\n    if: github.event.context == '${QUEUE_STATUS}'\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n`;
+  mkdirSync(join(worktreeDir, ".github", "workflows"), { recursive: true });
+  // e2e-fixture: input -- Author the real queue workflow this journey merges.
+  writeFileSync(join(worktreeDir, ".github", "workflows", "batch.yml"), workflow);
+  git("-C", worktreeDir, "add", ".github/workflows/batch.yml");
+  git("-C", worktreeDir, "commit", "-m", "chore(ci): add the batch check");
+  const headSha = git("-C", worktreeDir, "rev-parse", "HEAD").trim();
+
+  const github = await startGitHubStub();
+  github.servePull({
+    number: 91,
+    title: "chore(ci): add the batch check",
+    body: "The batch check answers the project's queue.",
+  });
+  github.headOf(() => headSha);
+  github.setChecks([{ name: "unit-tests", status: "completed", conclusion: "success" }]);
+  seedGitHubSignIn(userDataDir);
+  const db = openDatabase(userDataDir);
+  db.prepare(
+    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
+  ).run("repo-meter", repoDir, "meter", Date.now(), "https://github.com/o/meter.git");
+  seedHostedOrigins(db, userDataDir);
+  const tasks = new TaskService({ db, strict: true });
+  seedTask(tasks, {
+    id: taskId,
+    title: "Add the batch check",
+    status: "idle",
+    repoId: "repo-meter",
+    repoDir,
+    worktreeDir,
+    branch,
+  });
+  new CardStore(db).upsert({
+    id: `card-${taskId}-1`,
+    taskId,
+    author: "crewmate",
+    priority: 30,
+    title: "The batch check is added",
+    meta: "crewmate 1",
+    body: "<p>The workflow answers the batch check.</p><p>It adds one file.</p>",
+    status: "ready",
+    createdAt: Date.now(),
+    actions: [
+      {
+        id: "merge",
+        label: "Merge the pull request",
+        variant: "primary",
+        default: true,
+        effect: { kind: "settle", mode: "merge" },
+      },
+    ],
+  });
+  db.close();
+
+  const launched = await launchApp({ userDataDir, env: github.env, withMockProvider: true });
+  try {
+    const { page } = launched;
+    const meter = async () =>
+      (await page.evaluate(() => window.infinitary.repos.list())).find(
+        (repo) => repo.id === "repo-meter",
+      );
+    await pressKey(page.getByRole("button", { name: "Settings" }), "Enter");
+    await pressKey(page.getByRole("tab", { name: "Projects" }), "Enter");
+    const row = projectRow(page, "repo-meter");
+    await pressKey(row.getByRole("button", { expanded: false }), "Enter");
+    const choices = row.getByRole("radiogroup", { name: "Where changes go" });
+    await pressKey(
+      choices.getByRole("radio", { name: PROJECT_DELIVERY_WORDS["queue-pr"] }),
+      "Space",
+    );
+    // The choice waits: the project keeps pull requests, and Settings says why.
+    const waiting = row.getByRole("status").filter({ hasText: queueWaitingWords("direct-pr") });
+    await expect(waiting).toBeVisible({ timeout: 20_000 });
+    await expect(
+      choices.getByRole("radio", { name: PROJECT_DELIVERY_WORDS["direct-pr"], exact: true }),
+    ).toBeChecked();
+    await expect
+      .poll(meter)
+      .toMatchObject({ delivery: "direct-pr", queuePendingAt: expect.any(Number) });
+    await page.keyboard.press("Escape");
+
+    // The app's card says the project is not set up yet and offers the plan.
+    const title = QUEUE_SETUP_WORDS.title("meter");
+    await showCard(page, title);
+    await expect(cardBody(page, title).locator("body")).toContainText(
+      QUEUE_SETUP_WORDS.missing("meter"),
+    );
+    await heroShot(launched.app, page, {
+      region: cardSurface(page),
+      name: "queue-not-set-up",
+    });
+    await pressKey(
+      page.getByRole("button", { name: QUEUE_SETUP_WORDS.plan, exact: true }),
+      "Enter",
+    );
+    await expect(shownCard(page, title)).toHaveCount(0);
+    // The first mate hears the ask, naming the project.
+    const told = () =>
+      (launched.mockProvider?.requestBodies() ?? []).filter(
+        (body) => body.includes(QUEUE_PLAN_ASKED_OPENING) && body.includes("repo_id repo-meter"),
+      ).length;
+    await expect.poll(told, { timeout: 30_000 }).toBeGreaterThan(0);
+    expect(await meter()).toMatchObject({ delivery: "direct-pr" });
+
+    // The planned workflow merges as a plain pull request; once it is on the
+    // default branch, the merge's read switches the project on.
+    github.serveWorkflows([
+      { path: ".github/workflows/batch.yml", state: "active", text: workflow },
+    ]);
+    await showCard(page, "The batch check is added");
+    await pressKey(
+      page.getByRole("button", { name: "Merge the pull request", exact: true }),
+      "Enter",
+    );
+    await expect
+      .poll(() => github.merges(), { timeout: 30_000 })
+      .toEqual([expect.objectContaining({ number: 91, sha: headSha })]);
+    expect(github.statuses(headSha)).toEqual([]);
+    await expect.poll(meter, { timeout: 30_000 }).toMatchObject({
+      delivery: "queue-pr",
+      queueWorkflows: [{ path: ".github/workflows/batch.yml", active: true }],
+    });
+    expect((await meter())?.queuePendingAt).toBeUndefined();
   } finally {
     await launched.close();
     await github.close();

@@ -168,7 +168,10 @@ export type OpenEffect = z.infer<typeof openEffectSchema>;
  * crewmate to carry on or stop its task (`arg` = task id; idle crew
  * recovery), move a started task off the provider that failed it to the
  * app's pick (`arg` = task id and that provider, joined by a colon; INF-849),
- * start a charted task now (`arg` = task id), and send a message
+ * start a charted task now (`arg` = task id), ask the first mate to plan
+ * a project's queue workflow or keep where its changes go while its batched
+ * choice waits (`arg` = repo id; docs/forge.md, "Choosing batched pull
+ * requests before a queue exists"), and send a message
  * Firstmate never answered once more (`arg` = the message's id). An effect is
  * never declared to a body's frame, so only the captain's click on the
  * card's own controls runs one.
@@ -187,6 +190,8 @@ export const HOST_OPS = [
   "decline-plugin",
   "apply-project-change",
   "decline-project-change",
+  "plan-queue",
+  "keep-delivery",
   "add-project",
   "decline-project",
   "continue-task",

@@ -1,6 +1,6 @@
 /**
  * The first mate's own notices: memory pressure, a recorded freeze, a
- * panel to update, a task's changed policies and overrides, a schedule
+ * panel to update, a queue workflow to plan, a task's changed policies and overrides, a schedule
  * firing, the welcome, and a model seat that moved or was not asked.
  *
  * The wake envelope, `renderWake` and `WAKE_WORDS`, the map of every
@@ -9,6 +9,7 @@
 
 import { HERE } from "@shared/deviceNames";
 import { type HoldOverride, overrideTakenBackWords, standingOverrideWords } from "@shared/holds";
+import { QUEUE_STATUS, type QueueWorkflow, type RepoDelivery } from "@shared/repos";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import type { FreezeLine } from "../freeze/freezeRecorder";
 import type { PressureTaskShare } from "../placed/resourcePressure";
@@ -62,6 +63,20 @@ export type NoticeFacts =
       serves: number[];
       /** The personal workspace's repo id, when it is registered. */
       repoId?: string;
+    }
+  | {
+      /**
+       * The captain pressed Ask the first mate to plan it on the card a
+       * project's waiting batched choice put up (INF-2885 direction B): the
+       * app's read found nothing in the project to answer its queue status,
+       * so the project keeps `delivery` until a workflow that does merges.
+       */
+      kind: "queue-plan-asked";
+      project: { id: string; name: string };
+      /** Where the project's changes go while the choice waits. */
+      delivery: RepoDelivery;
+      /** The workflow files that mention the status, as last read. */
+      workflows?: QueueWorkflow[];
     }
   | {
       kind: "task-policies-changed";
@@ -220,6 +235,19 @@ function renderPanelUpdateAsked(facts: Extract<WakeFacts, { kind: "panel-update-
   return `${PANEL_UPDATE_ASKED_OPENING} "${facts.panel.title}" (id ${facts.panel.id}). The app refuses its server.ts before it runs, because it is written for panel API ${facts.api} and this version serves panel API ${facts.serves.join(" or ")}, so its background work is paused; the panel still draws and its saved data is unchanged. Start one task in ${workspace} now, with no card first: its goal is to update that panel's code to the panel API this app serves, keeping what the panel does and its saved data, and its brief names the panel id and the personal-panel skill's "Updating a panel written for an earlier panel API". If a task is already updating this panel, start nothing. The panel's line clears by itself once its code is updated.`;
 }
 
+/** How the first mate hears the not-set-up card's Ask the first mate to plan it opens. */
+export const QUEUE_PLAN_ASKED_OPENING = "[fm-op] the captain asked you to plan a queue workflow";
+
+/** The captain's Ask the first mate to plan it, as the first mate hears it: start the planner now. */
+function renderQueuePlanAsked(facts: Extract<WakeFacts, { kind: "queue-plan-asked" }>): string {
+  const workflows = facts.workflows ?? [];
+  const read =
+    workflows.length === 0
+      ? `no workflow on its default branch mentions ${QUEUE_STATUS}`
+      : `${workflows.map((workflow) => workflow.path).join(", ")} ${workflows.length === 1 ? "is turned off though it mentions" : "are turned off though they mention"} ${QUEUE_STATUS}`;
+  return `${QUEUE_PLAN_ASKED_OPENING} for project "${facts.project.name}" (repo_id ${facts.project.id}). They chose batched pull requests for it, but ${read}, and nothing has ever answered it, so the choice waits: its changes still go as ${facts.delivery}, and the app switches it to queue-pr by itself once a merge in it finds a workflow that is on and mentions ${QUEUE_STATUS}. Start one read-only planning task in that project now, with no card first. Its goal is a plan for a GitHub Actions workflow on the default branch that finds versions whose ${QUEUE_STATUS} commit status is pending, tests them on the latest default branch together or one at a time, and sets that status to success or failure on each with the reason in its description and a link to the run; the plan reuses the project's existing checks and asks whether GitHub should require the status. The builder of that plan ships it the way the project's changes go now. If a task is already planning this, start nothing.`;
+}
+
 /** How the seat-moved wake opens when the captain moved the seat. */
 export const SEAT_MOVED_OPENING = "Your seat moved on the captain's word";
 
@@ -284,6 +312,7 @@ export const NOTICE_WORDS: KindWords<NoticeFacts> = {
     `[fm-op] ${facts.label} reports ${facts.pressure} memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: ${JSON.stringify(facts)}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.`,
   "freeze-recorded": (facts) => renderFreezeRecorded(facts),
   "panel-update-asked": (facts) => renderPanelUpdateAsked(facts),
+  "queue-plan-asked": (facts) => renderQueuePlanAsked(facts),
   "task-policies-changed": (facts) =>
     `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope. Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.guidance?.length ? `\n\n${POLICY_GUIDANCE_HEADING}\n\n${facts.guidance.join("\n\n")}` : ""}`,
   "task-override-changed": (facts) =>

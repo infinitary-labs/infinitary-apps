@@ -652,7 +652,7 @@ Evidence: `changeMerge.test.ts` ("merges a queue-pr change only once its queue p
 
 Nothing in the app can prove a project has a queue, so it keeps three reads and says only what they found (INF-2886, `src/core/orchestrator/projectQueue.ts`).
 The first is the workflow files on the default branch that mention `infinitary/queue`, each with whether it is on (`GitHubForge.queueWorkflows`): GitHub's list of the project's workflows, then each file read.
-The app reads them when the batched delivery is chosen, whoever chooses it (`RepoRegistry.onQueueChosen`), and again at each merge click that marks a version; a failed read keeps the last one.
+The app reads them when the batched delivery is chosen, whoever chooses it, before the choice applies ("Choosing batched pull requests before a queue exists" below) and again once it is written (`RepoRegistry.onQueueChosen`), and at each merge click that marks a version; a failed read keeps the last one.
 The second is when anything other than the app last wrote the status on one of the project's versions (`queueAnsweredAt`).
 The third is whether a waiting version still holds only the app's own mark: the mark keeps the status id GitHub gave it back (`queueMark` on the task's delivery), and any reading of the version's checks whose status is no longer waiting, or carries another id, is an answer.
 `RepoRegistry.recordQueue` is the one writer of the first two, on the project's row, and every change reaches Settings as a `repo_queue` event.
@@ -660,6 +660,20 @@ Settings → Projects shows a warning under "Where changes go" while the project
 What the first mate is told beside the click's queue wait (`keptNote`) names what the workflow read found while the project's queue has never answered (`queueWakeWords`, INF-2913).
 On a project whose queue answered before, a version nothing has written for the check watch's two hours is said in the watch's two-hour wake to the crewmate; the app adds no timer of its own.
 Evidence: `githubForge.test.ts` ("reads the workflows that mention the queue status ..."), `changeMerge.test.ts` ("says what the workflow read found ..."), `settleService.keptMerge.test.ts` ("tells the Firstmate, not the captain, ...") and the Settings section of `tests/e2e/queue-merge.spec.ts`.
+
+### Choosing batched pull requests before a queue exists
+
+Choosing batched pull requests applies only once something in the project can answer its queue (INF-2885, direction B; `src/core/orchestrator/queueChoice.ts`).
+Every change of where a project's changes go passes the core dispatcher's configure, whoever makes it: Settings, the first mate's project settings, the exact-change card and a new project's setup card.
+A choice of batched pull requests reads the project's workflows first, and when the read finds nothing to answer the queue - no workflow that is on mentions `infinitary/queue` and the status was never answered (`queueMissing`, `src/shared/repos.ts`) - the choice waits.
+The rest of the same change applies, the project keeps where its changes go, and its row keeps when the choice was made (`queuePendingAt`, written only by `RepoRegistry.waitForQueue`; any later choice of where changes go clears it).
+A read that fails or was never made is unknown, never "nothing answers", so the choice applies at once as before.
+While a choice waits, Settings says so under "Where changes go" and the first mate's project rows carry `delivery_waiting`.
+The app's card for the project says it is not set up for batched pull requests yet, with Ask the first mate to plan it and Not now.
+Ask the first mate to plan it sends the first mate one `queue-plan-asked` wake, and the first mate starts one read-only planning task in the project with no card first; Not now ends the wait and keeps the project's delivery.
+Since the project's delivery has not changed, the plan's builder ships as the project's changes ship now, so the workflow's own pull request never waits on a queue that exists only inside it.
+Each merge of a task in a waiting project, and each start of the app, reads its workflows again; once a workflow that is on mentions the status, or the status has answered, the app applies the waiting choice through the same dispatcher and says so in the feed.
+Evidence: `queueChoice.test.ts` and the second test of `tests/e2e/queue-merge.spec.ts`.
 
 ## The check watch
 

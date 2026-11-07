@@ -59,6 +59,7 @@ import { FirstmateAgent, type RunningComputerVersion } from "./orchestrator/firs
 import { Flagship } from "./orchestrator/flagship";
 import { GithubGatewayService } from "./orchestrator/githubGateway";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
+import { QueueChoice } from "./orchestrator/queueChoice";
 import { Scheduler } from "./orchestrator/scheduler";
 import { TICK_PERIOD_MS, Ticker, tickPeriodFor } from "./orchestrator/ticker";
 import type { TypedWake } from "./orchestrator/wakes";
@@ -1141,6 +1142,31 @@ export async function createServices(
     raiseCard: (card) => supervisor.cards.raiseHostCard(card),
     tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
   });
+  // A batched choice before the project's queue exists (INF-2885 direction
+  // B, docs/forge.md "Choosing batched pull requests before a queue
+  // exists"): it waits with its card up, the first mate hears the card's
+  // Ask, and a merge in the project reads its workflows again.
+  const queueChoice = new QueueChoice({
+    repos,
+    queue: changeDelivery.queue,
+    raiseCard: (card) => supervisor.cards.raiseHostCard(card),
+    withdrawCard: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
+    tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
+    note: (text) => broadcastEvent({ type: "firstmate_note", text }),
+    now: ticker.now,
+  });
+  supervisor.hostOps.setQueueChoice({
+    plan: (repoId) => queueChoice.plan(repoId),
+    keep: (repoId) => queueChoice.keep(repoId),
+  });
+  tasks.onChange((change) => {
+    for (const event of change.events) {
+      if (event.kind !== "merged" && event.kind !== "landed") continue;
+      const repoId = tasks.get(event.taskId)?.repoId;
+      if (repoId && repos.get(repoId)?.queuePendingAt !== undefined)
+        void queueChoice.recheck(repoId);
+    }
+  });
   supervisor.hostOps.setProjectChange({
     apply: (arg) => {
       void projectChanges.apply(arg);
@@ -1738,6 +1764,7 @@ export async function createServices(
     repos,
     projectSetups,
     projectChanges,
+    queueChoice,
     workspace,
     forges: forgeSignIns,
     integrations,

@@ -93,10 +93,11 @@ type Row = {
   placement_requirements_json?: string | null;
   queue_workflows_json?: string | null;
   queue_answered_at?: number | null;
+  queue_pending_at?: number | null;
 };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at";
 
 function fromRow(row: Row): RepoView {
   return {
@@ -129,6 +130,7 @@ function fromRow(row: Row): RepoView {
     ...(typeof row.queue_answered_at === "number"
       ? { queueAnsweredAt: row.queue_answered_at }
       : {}),
+    ...(typeof row.queue_pending_at === "number" ? { queuePendingAt: row.queue_pending_at } : {}),
   };
 }
 
@@ -545,6 +547,9 @@ export class RepoRegistry {
             changes.scope === undefined ? (repo.scope ?? null) : changes.scope,
             id,
           );
+        // Any choice of delivery answers a batched choice that waited.
+        if (changes.delivery !== undefined && repo.queuePendingAt !== undefined)
+          this.db.prepare("UPDATE repos SET queue_pending_at = NULL WHERE id = ?").run(id);
         this.projects.renameForRepo(id, name);
       })();
     } catch (error) {
@@ -711,6 +716,22 @@ export class RepoRegistry {
       this.db
         .prepare("UPDATE repos SET queue_answered_at = ? WHERE id = ?")
         .run(facts.answeredAt, id);
+    this.projection?.delete(id);
+    const next = this.get(id) as RepoView;
+    for (const listener of [...this.queueListeners]) listener(next);
+    return next;
+  }
+
+  /**
+   * Keep a project's batched choice waiting from `at`, or end the wait with
+   * null (docs/forge.md, "Choosing batched pull requests before a queue
+   * exists"). The project's delivery is unchanged; the queue listeners hear
+   * the change, so Settings reads the project again.
+   */
+  waitForQueue(id: string, at: number | null): RepoView | undefined {
+    const repo = this.get(id);
+    if (!repo || (repo.queuePendingAt ?? null) === at) return repo;
+    this.db.prepare("UPDATE repos SET queue_pending_at = ? WHERE id = ?").run(at, id);
     this.projection?.delete(id);
     const next = this.get(id) as RepoView;
     for (const listener of [...this.queueListeners]) listener(next);

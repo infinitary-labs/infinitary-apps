@@ -197,6 +197,35 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         '[fm-op] the captain pressed Update panel on their panel "Weather" (id weather). The app refuses its server.ts before it runs, because it is written for panel API 1 and this version serves panel API 3, so its background work is paused; the panel still draws and its saved data is unchanged. Start one task in the personal workspace now, with no card first: its goal is to update that panel\'s code to the panel API this app serves, keeping what the panel does and its saved data, and its brief names the panel id and the personal-panel skill\'s "Updating a panel written for an earlier panel API". If a task is already updating this panel, start nothing. The panel\'s line clears by itself once its code is updated.',
     },
   ],
+  // INF-2885 direction B: the not-set-up card's Ask the first mate to plan it.
+  "queue-plan-asked": [
+    {
+      name: "with no workflow that mentions the status",
+      wake: {
+        facts: {
+          kind: "queue-plan-asked",
+          project: { id: "p-7a21", name: "meter" },
+          delivery: "direct-pr",
+          workflows: [],
+        },
+      },
+      words:
+        "[fm-op] the captain asked you to plan a queue workflow for project \"meter\" (repo_id p-7a21). They chose batched pull requests for it, but no workflow on its default branch mentions infinitary/queue, and nothing has ever answered it, so the choice waits: its changes still go as direct-pr, and the app switches it to queue-pr by itself once a merge in it finds a workflow that is on and mentions infinitary/queue. Start one read-only planning task in that project now, with no card first. Its goal is a plan for a GitHub Actions workflow on the default branch that finds versions whose infinitary/queue commit status is pending, tests them on the latest default branch together or one at a time, and sets that status to success or failure on each with the reason in its description and a link to the run; the plan reuses the project's existing checks and asks whether GitHub should require the status. The builder of that plan ships it the way the project's changes go now. If a task is already planning this, start nothing.",
+    },
+    {
+      name: "with the only workflow that mentions it turned off",
+      wake: {
+        facts: {
+          kind: "queue-plan-asked",
+          project: { id: "p-7a21", name: "meter" },
+          delivery: "direct-pr",
+          workflows: [{ path: ".github/workflows/batch.yml", active: false }],
+        },
+      },
+      words:
+        "[fm-op] the captain asked you to plan a queue workflow for project \"meter\" (repo_id p-7a21). They chose batched pull requests for it, but .github/workflows/batch.yml is turned off though it mentions infinitary/queue, and nothing has ever answered it, so the choice waits: its changes still go as direct-pr, and the app switches it to queue-pr by itself once a merge in it finds a workflow that is on and mentions infinitary/queue. Start one read-only planning task in that project now, with no card first. Its goal is a plan for a GitHub Actions workflow on the default branch that finds versions whose infinitary/queue commit status is pending, tests them on the latest default branch together or one at a time, and sets that status to success or failure on each with the reason in its description and a link to the run; the plan reuses the project's existing checks and asks whether GitHub should require the status. The builder of that plan ships it the way the project's changes go now. If a task is already planning this, start nothing.",
+    },
+  ],
   "validation-question-stale": [
     {
       name: "its one wording",

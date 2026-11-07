@@ -1243,6 +1243,13 @@ export const MIGRATIONS: readonly Migration[] = [
     addColumn(db, "repos", "queue_workflows_json", "TEXT");
     addColumn(db, "repos", "queue_answered_at", "INTEGER");
   },
+  // INF-2885 direction B: a project's batched delivery chosen while nothing
+  // in it answers the queue status waits, and this is when it was chosen
+  // (docs/forge.md, "Choosing batched pull requests before a queue exists").
+  // Null on every existing project, which chose nothing that waits.
+  // `RepoRegistry` is the only writer; no published view reads it. Dropping
+  // the column reverses it.
+  (db) => addColumn(db, "repos", "queue_pending_at", "INTEGER"),
 ];
 
 export function addPluginKind(db: AppDatabase): void {

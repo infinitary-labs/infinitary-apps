@@ -28,6 +28,7 @@ import {
   PROJECT_ROW_WORDS,
   projectRowWords,
   QUEUE_HOW_TO_WORDS,
+  queueWaitingWords,
 } from "./projectsWords";
 import { RemoveProject } from "./RemoveProject";
 import { RunsOnControl, runsOnDescription, runsOnWhere, useWorkComputers } from "./RunsOn";
@@ -652,6 +653,20 @@ function ProjectRow({
               )
             }
           />
+          {!personal && repo.queuePendingAt !== undefined && (
+            <div
+              role="status"
+              data-queue-waiting={repo.id}
+              style={{
+                width: "fit-content",
+                fontSize: "var(--text-xs)",
+                color: "var(--fg-2)",
+                paddingBottom: "var(--space-3)",
+              }}
+            >
+              {queueWaitingWords(repo.delivery)}
+            </div>
+          )}
           {!personal && <QueueWarning repo={repo} />}
           {!personal && repo.delivery === "queue-pr" && <QueueHowTo />}
           <PolicyRow

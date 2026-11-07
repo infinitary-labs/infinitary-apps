@@ -26,6 +26,7 @@ import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
 import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
 import type { Flagship } from "./orchestrator/flagship";
 import type { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
+import type { QueueChoice } from "./orchestrator/queueChoice";
 import type { Scheduler } from "./orchestrator/scheduler";
 import type { Ticker } from "./orchestrator/ticker";
 import type { AppPaths } from "./paths";
@@ -136,6 +137,7 @@ export type CoreServices = {
   /** The setup card: the Firstmate's proposal and the captain's click on it (docs/fleet.md). */
   projectSetups: ProjectSetups;
   projectChanges: ProjectChanges;
+  queueChoice: QueueChoice;
   /** Worktree pool and background trash cleanup (also awaited by core integration tests). */
   workspace: WorkspaceService;
   /**

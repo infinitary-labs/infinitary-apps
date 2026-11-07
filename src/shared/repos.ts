@@ -323,8 +323,28 @@ export const repoViewSchema = z.object({
    * this project's versions (epoch ms); absent while nothing has answered.
    */
   queueAnsweredAt: z.number().optional(),
+  /**
+   * When the batched delivery was chosen while nothing in the project
+   * answered its queue status (epoch ms): the choice waits, the project
+   * keeps `delivery`, and the app switches it once a workflow that is on
+   * mentions the status (docs/forge.md, "Choosing batched pull requests
+   * before a queue exists"); absent when nothing waits.
+   */
+  queuePendingAt: z.number().optional(),
 });
 export type RepoView = z.infer<typeof repoViewSchema>;
+
+/**
+ * Whether the app's reads find nothing to answer a project's queue: the
+ * workflows were read, none that is on mentions its status, and the status
+ * was never answered. A read that never succeeded is unknown, never
+ * "nothing answers", so it is not missing.
+ */
+export function queueMissing(repo: Pick<RepoView, "queueWorkflows" | "queueAnsweredAt">): boolean {
+  if (repo.queueAnsweredAt !== undefined) return false;
+  const workflows = repo.queueWorkflows;
+  return workflows !== undefined && !workflows.some((workflow) => workflow.active);
+}
 
 /**
  * Settings' warning under "Where changes go" for a project on the batched
@@ -336,10 +356,8 @@ export type RepoView = z.infer<typeof repoViewSchema>;
 export function queueSettingsWarning(
   repo: Pick<RepoView, "delivery" | "queueWorkflows" | "queueAnsweredAt">,
 ): string | null {
-  if (repo.delivery !== "queue-pr" || repo.queueAnsweredAt !== undefined) return null;
-  const workflows = repo.queueWorkflows;
-  if (!workflows || workflows.some((workflow) => workflow.active)) return null;
-  return workflows.length > 0
+  if (repo.delivery !== "queue-pr" || !queueMissing(repo)) return null;
+  return (repo.queueWorkflows ?? []).length > 0
     ? "The workflow in this project that mentions its batch check is turned off, so approved merges would wait for one."
     : "No workflow in this project mentions its batch check yet, so approved merges would wait for one.";
 }

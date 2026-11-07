@@ -63,6 +63,10 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   services.projectSetups.bindDispatch(dispatch);
   services.projectChanges.bindDispatch(dispatch);
   await services.projectChanges.inspectAll();
+  services.queueChoice.bindDispatch(dispatch);
+  // A batched choice that waited while the app was closed reads its
+  // project's workflows again, in the background.
+  void services.queueChoice.recheckAll().catch(() => {});
   // Each project's folder is read once against where the project lives, in
   // the background, so the window opens as fast as before (INF-572).
   void services.supervisor.inPlaceWork.checkFoldersAtStart();

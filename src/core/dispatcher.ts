@@ -368,8 +368,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           throw new Error(
             "This project is kept on this computer. Approve where it lives before choosing pull requests.",
           );
-        const repo = services.repos.configure(repoId, changes);
-        return repo;
+        // A batched choice the project cannot answer yet waits (INF-2885 B).
+        return await services.queueChoice.configure(repoId, changes, (patch) =>
+          services.repos.configure(repoId, patch),
+        );
       } catch (caught) {
         const text = caught instanceof Error ? caught.message : String(caught);
         services.broadcastEvent({

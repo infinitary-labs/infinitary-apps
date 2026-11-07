@@ -1619,6 +1619,9 @@
             },
             "queueAnsweredAt": {
               "type": "number"
+            },
+            "queuePendingAt": {
+              "type": "number"
             }
           },
           "required": [
@@ -1911,6 +1914,9 @@
                 }
               },
               "queueAnsweredAt": {
+                "type": "number"
+              },
+              "queuePendingAt": {
                 "type": "number"
               }
             },
@@ -2336,6 +2342,9 @@
             }
           },
           "queueAnsweredAt": {
+            "type": "number"
+          },
+          "queuePendingAt": {
             "type": "number"
           }
         },
@@ -5079,6 +5088,9 @@
             }
           },
           "queueAnsweredAt": {
+            "type": "number"
+          },
+          "queuePendingAt": {
             "type": "number"
           }
         },
@@ -7902,6 +7914,8 @@
                               "decline-plugin",
                               "apply-project-change",
                               "decline-project-change",
+                              "plan-queue",
+                              "keep-delivery",
                               "add-project",
                               "decline-project",
                               "continue-task",
@@ -9101,6 +9115,8 @@
                                 "decline-plugin",
                                 "apply-project-change",
                                 "decline-project-change",
+                                "plan-queue",
+                                "keep-delivery",
                                 "add-project",
                                 "decline-project",
                                 "continue-task",
@@ -45543,6 +45559,8 @@
                                     "decline-plugin",
                                     "apply-project-change",
                                     "decline-project-change",
+                                    "plan-queue",
+                                    "keep-delivery",
                                     "add-project",
                                     "decline-project",
                                     "continue-task",
@@ -56262,6 +56280,8 @@
                               "decline-plugin",
                               "apply-project-change",
                               "decline-project-change",
+                              "plan-queue",
+                              "keep-delivery",
                               "add-project",
                               "decline-project",
                               "continue-task",

@@ -36,6 +36,16 @@ export const QUEUE_HOW_TO_WORDS = {
 } as const;
 
 /**
+ * What "Where changes go" says while a project's batched choice waits for
+ * its queue workflow (INF-2885 direction B, docs/forge.md "Choosing batched
+ * pull requests before a queue exists"): the choice applies by itself once
+ * a workflow that mentions the batch check merges.
+ */
+export function queueWaitingWords(delivery: RepoView["delivery"]): string {
+  return `Batched pull requests turn on once a workflow in this project that mentions its batch check merges. Until then, changes go as ${PROJECT_DELIVERY_WORDS[delivery]}.`;
+}
+
+/**
  * The quiet words after a closed project row's name (INF-1495, the captain's
  * direction A): each names one way the project differs from a new one, which
  * is offered as pull requests where it lives, asks first, takes Default care

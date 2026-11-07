@@ -130,19 +130,26 @@ export function readComposition(output, members) {
 /**
  * The verdict a batch run writes once its sweep ends. Only changes still in
  * this run at the same version are written: one sent back by hand, or
- * pushed again, keeps what it has. A first failed attempt writes nothing and
- * asks for its one rerun of the failed jobs; a second failure sends the
- * batch's last change back with the failed job's link, and the rest wait for
- * the next batch, which this run starts.
+ * pushed again, keeps what it has. A failed sweep that a change was sent
+ * back from by hand takes that send-back as its answer: it asks for no
+ * rerun and fails no other change, and the rest wait for the next batch,
+ * which this run starts without the change sent back. Otherwise a first
+ * failed attempt writes nothing and asks for its one rerun of the failed
+ * jobs; a second failure sends the batch's last change back with the failed
+ * job's link, and the rest wait for the next batch, which this run starts.
  */
 export function verdict({ runId, runUrl, attempt, swept, tree, members, current, failedJob }) {
+  // The member's queue state now, while it still names the version this run swept.
+  const queueOf = (member) => {
+    const now = current.get(member.number);
+    return now?.head === member.head ? now.queue : null;
+  };
   const still = members.filter((member) => {
-    const queue = current.get(member.number);
-    return (
-      queue?.head === member.head && queue.queue?.kind === "in-batch" && queue.queue.run === runId
-    );
+    const queue = queueOf(member);
+    return queue?.kind === "in-batch" && queue.run === runId;
   });
   if (!still.length) return { writes: [], next: "sweep", summary: "No change is still in this batch." };
+  const waitAgain = still.map((member) => ({ ...member, state: "pending", description: WAITING, url: runUrl }));
   if (swept === "success")
     return {
       writes: still.map((member) => ({
@@ -157,6 +164,17 @@ export function verdict({ runId, runUrl, attempt, swept, tree, members, current,
           ? "The batch passed on its rerun. The jobs that failed first still need an owner who fixes their cause."
           : "The batch passed.",
     };
+  // Each member was in this run when it composed, so one that failed at the
+  // same version since was sent back by hand while it swept.
+  const sentBack = members.filter((member) => queueOf(member)?.kind === "failed");
+  if (sentBack.length) {
+    const named = sentBack.map((member) => `#${member.number}`).join(", ");
+    return {
+      writes: waitAgain,
+      next: "sweep",
+      summary: `The sweep failed and ${named} went back by hand, so the rest wait for a new sweep without ${sentBack.length > 1 ? "them" : "it"}, with no rerun.`,
+    };
+  }
   if (attempt === 1)
     return {
       writes: [],
@@ -173,9 +191,7 @@ export function verdict({ runId, runUrl, attempt, swept, tree, members, current,
         description: `${job} in batch run ${runId}, the last change in it.`.slice(0, 140),
         url: failedJob?.html_url || runUrl,
       },
-      ...still
-        .slice(0, -1)
-        .map((member) => ({ ...member, state: "pending", description: WAITING, url: runUrl })),
+      ...waitAgain.slice(0, -1),
     ],
     next: "sweep",
     summary: `The sweep failed twice, so #${last.number}, the batch's last change, goes back to its pull request.`,

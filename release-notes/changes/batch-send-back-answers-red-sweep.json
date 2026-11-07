@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-send-back-answers-red-sweep",
+      "reason": "The project's own batch check takes a change sent back by hand from a failed batch as its answer, so the batch's other changes sweep again instead of one being failed; how this repository's checks run, nothing in the app a person notices."
+    }
+  ]
+}

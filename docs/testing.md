@@ -536,6 +536,8 @@ If the rerun passes, the batch passes too, and the job that failed first still g
 If it fails again, the batch's last change fails with the failed job's link, its crewmate fixes the failure whether or not it is a flake, and the rest wait again for a batch the verdict starts.
 A triage crewmate may instead name another change and send it back by hand.
 A by-hand start with `send_back` and `reason` fails one change's status with that reason.
+A red sweep that a change was sent back from while it ran takes that send-back as its answer: its verdict asks for no rerun and fails no other change, and the rest wait again, in their approval order, for a batch the verdict starts without the change sent back.
+A green sweep still passes the changes left in it.
 A by-hand start with `rehearsal` and pull request numbers sweeps them onto `main` and reports in its summary, marking nothing.
 
 `main.yml`'s `sort` job reads the pushed commit's pull request.

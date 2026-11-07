@@ -376,16 +376,88 @@ describe("the sweep's verdict", () => {
 
   it("leaves alone a change sent back by hand or pushed again during the sweep", () => {
     const current = inThisRun();
-    current.set(932, {
-      head: members[2]!.head,
-      queue: readQueueStatus([status("failure", "Sent back", "2026-11-03T21:30:00Z")]),
-    });
     current.set(931, {
       head: "931".padEnd(40, "1"),
       queue: readQueueStatus([approved("2026-11-03T21:30:00Z")]),
     });
+    const pushedAgain = verdict({ ...base, attempt: 2, swept: "failure", current });
+    expect(pushedAgain.writes.map((write) => [write.number, write.state])).toEqual([
+      [932, "failure"],
+      [930, "pending"],
+    ]);
+    current.set(932, {
+      head: members[2]!.head,
+      queue: readQueueStatus([status("failure", "Sent back", "2026-11-03T21:30:00Z")]),
+    });
     const plan = verdict({ ...base, attempt: 2, swept: "failure", current });
-    expect(plan.writes.map((write) => [write.number, write.state])).toEqual([[930, "failure"]]);
+    expect(plan.next).toBe("sweep");
+    expect(plan.writes.map((write) => [write.number, write.state, write.description])).toEqual([
+      [930, "pending", WAITING],
+    ]);
+  });
+
+  // INF-2921: batch run 42309370568 swept #1166 first and four more changes;
+  // its triage crewmate sent #1166 back by hand while the sweep ran, and the
+  // verdict would have rerun the same files and then failed #1171, the last.
+  it("takes a change sent back by hand as a red sweep's answer: the rest sweep again, with no rerun", () => {
+    const at = { approval: "2026-11-03T20:00:00Z", batch: "2026-11-03T21:00:00Z" };
+    const marked = (number: number, approval: string) => ({
+      number,
+      head: members.find((member) => member.number === number)!.head,
+      statuses: [status("pending", inBatch(runId), at.batch), approved(approval)],
+    });
+    const queue = [
+      marked(930, "2026-11-03T20:00:00Z"),
+      marked(931, "2026-11-03T20:10:00Z"),
+      marked(932, "2026-11-03T20:20:00Z"),
+    ];
+    queue[0]!.statuses.unshift(
+      status("failure", "Fails tests/crewmate-fixed-context.test.ts", "2026-11-03T21:30:00Z"),
+    );
+    const current = new Map(
+      queue.map((entry) => [
+        entry.number,
+        { head: entry.head, queue: readQueueStatus(entry.statuses) },
+      ]),
+    );
+    for (const attempt of [1, 2]) {
+      const failedJob = {
+        name: "Unit tests (Linux; group 3/3)",
+        html_url: `${runUrl(runId)}/job/1`,
+      };
+      const plan = verdict({ ...base, attempt, swept: "failure", current, failedJob });
+      expect(plan.next).toBe("sweep");
+      expect(plan.writes.map((write) => [write.number, write.state, write.description])).toEqual([
+        [931, "pending", WAITING],
+        [932, "pending", WAITING],
+      ]);
+      expect(plan.summary).toContain("#930 went back by hand");
+    }
+
+    // The next batch, which the verdict starts, sweeps the rest in approval order without #930.
+    const plan = verdict({ ...base, attempt: 1, swept: "failure", current });
+    const entries = queue.map((entry) => {
+      const write = plan.writes.find((candidate) => candidate.number === entry.number);
+      const statuses = write
+        ? [status(write.state, write.description, "2026-11-03T22:00:00Z"), ...entry.statuses]
+        : entry.statuses;
+      return { number: entry.number, head: entry.head, queue: readQueueStatus(statuses) };
+    });
+    expect(entries[1]!.queue).toMatchObject({ kind: "waiting", since: "2026-11-03T20:10:00Z" });
+    expect(formBatch(entries, new Map())).toMatchObject({
+      action: "sweep",
+      members: [
+        { number: 931, head: members[1]!.head },
+        { number: 932, head: members[2]!.head },
+      ],
+    });
+
+    // A green sweep still passes the changes left in it.
+    const green = verdict({ ...base, attempt: 1, swept: "success", current });
+    expect(green.writes.map((write) => [write.number, write.state])).toEqual([
+      [931, "success"],
+      [932, "success"],
+    ]);
   });
 });
 

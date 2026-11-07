@@ -319,7 +319,8 @@ describe("the check job's fetch of the Linux packages", () => {
     });
     expect(sums).toBe(list);
     const steps = checkJob?.steps ?? [];
-    const fetch = steps.findIndex((step) => step.uses === "./.github/actions/linux-packages");
+    // The workflow's own copy of the action (tests/release-workflows-linux-actions.test.ts).
+    const fetch = steps.findIndex((step) => step.uses === `./.release-tooling/${ACTION}`);
     const install = steps.findIndex((step) => step.name === "Install, open and run a crew turn");
     expect(fetch).toBeGreaterThan(-1);
     expect(fetch).toBeLessThan(install);

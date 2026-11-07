@@ -78,6 +78,19 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
+      # Every local action here comes from the workflow's own commit and runs
+      # against the source above: a stable builds its alpha's commit, which
+      # may predate an action this workflow uses (docs/linux-packages.md,
+      # "The checks"). It goes after the source, whose checkout would clear it.
+      - name: Check out the workflow's own actions
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/actions/
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -88,8 +101,8 @@ jobs:
       # takes over from them (docs/testing.md, "The runner's automatic updates").
       - run: scripts/apt-install.sh rpm
         timeout-minutes: 10
-      - uses: ./.github/actions/node-headers
-      - uses: ./.github/actions/electron-download
+      - uses: ./.release-tooling/.github/actions/node-headers
+      - uses: ./.release-tooling/.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
@@ -185,21 +198,33 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.ref }}
+      # The workflow's own actions, as in the build job, with the script the
+      # package check runs beside them.
+      - name: Check out the workflow's own actions
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/actions/
+            scripts/linux-package-sums.ts
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
-      - uses: ./.github/actions/node-headers
-      - uses: ./.github/actions/electron-download
+      - uses: ./.release-tooling/.github/actions/node-headers
+      - uses: ./.release-tooling/.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       # The packages, checked against the build's own SHA256SUMS before
       # anything installs them; a damaged copy is fetched once more
-      # (.github/actions/linux-packages).
-      - uses: ./.github/actions/linux-packages
+      # (.github/actions/linux-packages, the workflow's own copy).
+      - uses: ./.release-tooling/.github/actions/linux-packages
         with:
           sums: ${{ needs.build.outputs.sums }}
           path: ${{ runner.temp }}/linux-packages

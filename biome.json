@@ -479,6 +479,7 @@
         "!tests/release-workflows-installers.test.ts",
         "!tests/release-workflows-journey-requests.test.ts",
         "!tests/release-workflows-journey-suites.test.ts",
+        "!tests/release-workflows-linux-actions.test.ts",
         "!tests/release-workflows-main-check.test.ts",
         "!tests/release-workflows-pr-checks.test.ts",
         "!tests/release-workflows-rehearsal.test.ts",

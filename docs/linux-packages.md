@@ -105,6 +105,7 @@ A Mac and a run from source never ask, and the app started by a command says the
 
 `linux-packages.yml` runs on request and inside every release, where `release.yml`'s `linux` job calls it with the release's source commit and version.
 There it builds with the notes job's verified catalog and the release's diagnostics settings, and verifies the packaged catalog, as the Mac build does.
+Each job takes the workflow's local actions, and the script the package check runs, from a sparse checkout of the workflow's own commit in `.release-tooling`, and runs them against the source: a stable's source is its alpha's commit, which may predate an action the workflow uses (`tests/release-workflows-linux-actions.test.ts`).
 No pull request starts it, so the package checks run once for a change rather than on each push (INF-2834).
 A task whose change edits how the packages are made requests it once, at its final version, as it requests its edited journeys (`docs/testing.md`, "What a task branch requests").
 These files make the packages: `electron-builder.yml`, `electron-builder.linux.yml`, `packaging/linux/`, `scripts/check-linux-package.sh`, `scripts/linux-package-sums.ts`, `.github/actions/linux-packages/`, `scripts/linux-recipes.ts`, `src/main/linuxStartup.ts`, `tests/installed/`, `playwright.installed.config.ts` and the workflow itself.

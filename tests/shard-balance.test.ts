@@ -27,6 +27,19 @@ describe("balanceShards", () => {
     expect(balanceShards(files.toReversed(), 3, timings)).toEqual(balanceShards(files, 3, timings));
   });
 
+  // INF-2987: a group whose job has other work takes fewer files.
+  it("gives a group with a head start that much less time", () => {
+    const headStart = Math.max(...Object.values(timings)) * 2;
+    const groups = balanceShards(files, 3, timings, [headStart]);
+    expect(groups.flat().toSorted()).toEqual(files.toSorted());
+    const ends = groups.map((group, index) => total(group) + (index === 0 ? headStart : 0));
+    const slowest = Math.max(...Object.values(timings));
+    expect(Math.max(...ends) - Math.min(...ends)).toBeLessThanOrEqual(slowest);
+    expect(total(groups[0] ?? [])).toBeLessThan(
+      Math.min(total(groups[1] ?? []), total(groups[2] ?? [])),
+    );
+  });
+
   it("weighs a file with no measured time like a typical file", () => {
     const groups = balanceShards([...files, "src/newest.test.ts"], 3, timings);
     expect(groups.flat()).toContain("src/newest.test.ts");

@@ -120,9 +120,19 @@ export function recordedWorkflowCall(
   return readFileSync(log, "utf8").trim().split("\n");
 }
 
-/** verify.yml's full Mac e2e command: its journey lane's projects alone, on half the job's cores (scripts/job-cores.ts). */
-export const VERIFY_E2E_RUN =
-  'cores="$(node scripts/job-cores.ts)"\npnpm exec playwright test --no-deps $PROJECTS --workers=$(( cores > 1 ? cores / 2 : 1 ))\n';
+/** verify.yml's full Mac e2e command, on half the job's cores (scripts/job-cores.ts): the
+ * desktop lane alone, or the job's group of the parallel lanes (scripts/journey-groups.ts, INF-2987). */
+export const VERIFY_E2E_RUN = [
+  'cores="$(node scripts/job-cores.ts)"',
+  'workers="--workers=$(( cores > 1 ? cores / 2 : 1 ))"',
+  'if [ "$LANE" = desktop ]; then',
+  '  pnpm exec playwright test --no-deps --project=desktop "$workers"',
+  "else",
+  "  # shellcheck disable=SC2086 # one word per job name",
+  '  node scripts/journey-groups.ts --platform mac --lane parallel --group "$GROUP" $JOBS -- --no-deps --project=styles --project=renderer --project=application "$workers" --pass-with-no-tests',
+  "fi",
+  "",
+].join("\n");
 
 /** A ci.yml job that calls another workflow and starts no machine of its own. */
 export type CiCall = { if?: string; needs?: unknown; uses: string; with?: Record<string, unknown> };

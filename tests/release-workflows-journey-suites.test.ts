@@ -26,7 +26,7 @@ vi.setConfig({ testTimeout: 10_000 });
 describe("budgeted pull-request journey workflow (INF-658)", () => {
   type Job = {
     name: string;
-    strategy: { matrix: { lane: string; shard: string; include?: string } };
+    strategy: { matrix: { include: string } };
     steps: {
       name?: string;
       run?: string;
@@ -39,36 +39,43 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
     jobs: Record<string, Job>;
   };
   const job = source.jobs["source-desktop"];
-  // INF-1417: preserve the ordinary eight jobs and split fresh-state checks four ways.
+  // INF-1417: split fresh-state checks four ways.
   // INF-2340 (captain's route "alone-at-author"): the full suite on main and
   // in an alpha adds no fresh-state jobs; only a request for them does.
-  it("splits the full suite eight ways, a requested fresh-state pass four and affected files by lane", () => {
-    const lanes = (suite: string, lane = "parallel") =>
-      workflowValue(job?.strategy.matrix.lane ?? "", { inputs: { suite, lane } });
-    const shards = (suite: string) =>
-      workflowValue(job?.strategy.matrix.shard ?? "", { inputs: { suite } });
-    expect(job?.strategy.matrix.include).toBeUndefined();
-    expect(lanes("full")).toEqual(["parallel", "desktop"]);
-    expect(shards("full")).toEqual([1, 2, 3, 4]);
-    expect(lanes("alone")).toEqual(["alone"]);
-    expect(shards("alone")).toEqual([1, 2, 3, 4]);
-    expect(lanes("affected", "desktop")).toEqual(["desktop"]);
-    expect(shards("affected")).toEqual([1]);
+  // INF-2987 (captain: "Group journeys by measured time, add Linux groups"):
+  // the full suite runs the parallel lanes in six groups and the serial lane
+  // in three, nine jobs, so the swept batch stays within GitHub's twenty
+  // hosted jobs at once.
+  it("splits the full suite nine ways, a requested fresh-state pass four and affected files by lane", () => {
+    type Group = { lane: string; shard: number; groups: number };
+    const groups = (suite: string, lane = "parallel") =>
+      workflowValue(job?.strategy.matrix.include ?? "", { inputs: { suite, lane } }) as Group[];
+    const of = (lane: string, count: number) =>
+      Array.from({ length: count }, (_, at) => ({ lane, shard: at + 1, groups: count }));
+    expect(groups("full")).toEqual([...of("parallel", 6), ...of("desktop", 3)]);
+    expect(groups("alone")).toEqual(of("alone", 4));
+    expect(groups("affected", "desktop")).toEqual(of("desktop", 1));
     // A release's stable promotion reads every Linux journeys job by name,
     // as it was named before the trigger-first rename (scripts/ci-job-names.mjs).
-    const name = (suite: string, lane: string, shard: number) =>
-      workflowString(job?.name ?? "", {
-        inputs: { suite, trigger: "Main push" },
-        matrix: { lane, shard },
-      });
-    for (const shard of shards("alone") as number[]) {
-      expect(name("alone", "alone", shard)).toBe(
-        `Main push · Fresh-start app journeys (Linux; group ${shard}/4)`,
+    const name = (suite: string, matrix: Group) =>
+      workflowString(job?.name ?? "", { inputs: { suite, trigger: "Main push" }, matrix });
+    for (const group of groups("alone")) {
+      expect(name("alone", group)).toBe(
+        `Main push · Fresh-start app journeys (Linux; group ${group.shard}/4)`,
       );
-      expect(legacyJobName(name("alone", "alone", shard))).toBe(`journeys (run alone ${shard}/4)`);
+      expect(legacyJobName(name("alone", group))).toBe(`journeys (run alone ${group.shard}/4)`);
     }
-    expect(name("full", "desktop", 2)).toBe("Main push · App journeys (Linux; serial group 2/4)");
-    expect(legacyJobName(name("full", "desktop", 2))).toBe("journeys (desktop 2/4)");
+    const [serial] = groups("full").filter(
+      (group) => group.lane === "desktop" && group.shard === 2,
+    );
+    expect(name("full", serial as Group)).toBe(
+      "Main push · App journeys (Linux; serial group 2/3)",
+    );
+    expect(legacyJobName(name("full", serial as Group))).toBe("journeys (desktop 2/3)");
+    const [sixth] = groups("full").filter(
+      (group) => group.lane === "parallel" && group.shard === 6,
+    );
+    expect(legacyJobName(name("full", sixth as Group))).toBe("journeys (parallel 6/6)");
   });
   it.each(["parallel", "desktop"])(
     "runs the %s affected and full files through their lane",
@@ -92,9 +99,10 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
         step.name?.startsWith("Run the journeys with"),
       )?.run;
       expect(command).toBeDefined();
+      const count = lane === "desktop" ? 3 : 6;
       for (const { suite, shard } of [
         { suite: "affected", shard: 1 },
-        ...[1, 2, 3, 4].map((shard) => ({ suite: "full", shard })),
+        ...Array.from({ length: count }, (_, at) => ({ suite: "full", shard: at + 1 })),
       ]) {
         const log = join(dir, `${suite}-${shard}.log`);
         const files =
@@ -114,6 +122,7 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
             FILES: files,
             SCREEN: "2560x1600x24",
             SHARD: String(shard),
+            GROUP_COUNT: String(suite === "full" ? count : 1),
           },
           encoding: "utf8",
         });
@@ -127,9 +136,10 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
             `node scripts/journey-runs.ts --base origin/main --files ${files} --alone-out playwright-report/alone -- ${lane === "desktop" ? "--project=desktop" : "--project=renderer --project=application"}`,
           );
         // INF-2374: keep the full sweep's styles coverage and lane order.
+        // INF-2987: each job runs its group of measured time.
         else
           expect(call.trim()).toBe(
-            `exec playwright test --no-deps ${lane === "desktop" ? "--project=desktop" : "--project=styles --project=renderer --project=application"} --shard=${shard}/4`,
+            `node scripts/journey-groups.ts --platform linux --lane ${lane} --group ${shard}/${count} -- --no-deps ${lane === "desktop" ? "--project=desktop" : "--project=styles --project=renderer --project=application"}`,
           );
       }
     },

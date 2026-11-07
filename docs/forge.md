@@ -418,7 +418,7 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   `git merge-tree --write-tree --merge-base=<base> <head> <other>` then replays a conflict between two of them with no API call, and a squash merge on the default branch carries its pull request's checked title as its subject.
 - **Verification workflow requests reuse the gateway.**
   A crewmate calls `github_write` with `POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches` and GitHub's normal JSON body, such as `{"ref":"<workflow-branch>","inputs":{"suite":"full","ref":"<exact-source-commit>","task":"<task-key>","reason":"<why the Linux sweep is needed>"}}` for `source-journeys.yml`.
-  This Linux-only route retains all eight full-suite groups without Mac tests, signing or packaging; `suite: alone` remains the separate fresh-state pass.
+  This Linux-only route retains all nine full-suite groups without Mac tests, signing or packaging; `suite: alone` remains the separate fresh-state pass.
   Before requesting work, read existing same-source checks, including running checks, and reuse applicable evidence rather than duplicate it.
   A manual `verify.yml` full-system request uses `{"ref":"<workflow-branch>","inputs":{"full_system":true,"ref":"<exact-source-commit>","task":"<task-key>","reason":"<named exception; why narrower proof cannot suffice>"}}`.
   A Mac-only request, such as a Mac runner's trial, passes `"mac_only":true` in place of `"full_system":true` with the same source, task and reason: the three Mac jobs run and no Linux job does, and the two selections cannot be combined.

@@ -48,8 +48,10 @@ function matrixEntries(job: Job, contexts: Record<string, unknown>): Record<stri
   let matrix = job.strategy?.matrix;
   if (matrix === undefined) return [{}];
   if (typeof matrix === "string") matrix = workflowValue(matrix, contexts);
-  const { include, exclude, ...axes } = matrix as Record<string, unknown>;
+  const { include: listed, exclude, ...axes } = matrix as Record<string, unknown>;
   if (exclude !== undefined) throw new Error("A matrix exclude is not read here");
+  // A list the workflow computes, as source-journeys.yml's groups (INF-2987).
+  const include = typeof listed === "string" ? workflowValue(listed, contexts) : listed;
   let entries: Record<string, unknown>[] = [{}];
   for (const [key, raw] of Object.entries(axes)) {
     const values = typeof raw === "string" ? workflowValue(raw, contexts) : raw;

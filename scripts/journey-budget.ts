@@ -164,7 +164,8 @@ export function readLinuxObservations(directory: string, jobsFile: string): Linu
         const report = parsed.data;
         const suffix =
           report.suite === "full"
-            ? `journeys (${report.lane} ${report.shard}/4)`
+            ? // A full group names its count since INF-2987; one from before was one of four.
+              `journeys (${report.lane} ${report.shard.includes("/") ? report.shard : `${report.shard}/4`})`
             : `source-desktop (${report.lane})`;
         // GitHub timestamps have whole-second precision; the report clock has
         // milliseconds. Join the exporter and first timing step at that precision

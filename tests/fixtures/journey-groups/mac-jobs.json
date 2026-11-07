@@ -1,0 +1,641 @@
+{
+  "about": "Trimmed from a passing swept batch's full check: GitHub's job list for the run, its three Mac jobs, with step names and times. Test inputs, not a claim about current journey times.",
+  "jobs": [
+    {
+      "name": "Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Desktop journeys (Mac)",
+      "started_at": "2026-11-07T18:18:56Z",
+      "completed_at": "2026-11-07T18:34:19Z",
+      "steps": [
+        {
+          "name": "Set up job",
+          "started_at": "2026-11-07T18:18:57Z",
+          "completed_at": "2026-11-07T18:18:59Z"
+        },
+        {
+          "name": "Set up runner",
+          "started_at": "2026-11-07T18:18:59Z",
+          "completed_at": "2026-11-07T18:18:59Z"
+        },
+        {
+          "name": "Checkout the keep-awake action",
+          "started_at": "2026-11-07T18:18:59Z",
+          "completed_at": "2026-11-07T18:19:02Z"
+        },
+        {
+          "name": "Keep the Mac awake",
+          "started_at": "2026-11-07T18:19:02Z",
+          "completed_at": "2026-11-07T18:19:02Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "started_at": "2026-11-07T18:19:02Z",
+          "completed_at": "2026-11-07T18:19:06Z"
+        },
+        {
+          "name": "Compose the swept batch",
+          "started_at": "2026-11-07T18:19:06Z",
+          "completed_at": "2026-11-07T18:19:12Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "started_at": "2026-11-07T18:19:12Z",
+          "completed_at": "2026-11-07T18:19:13Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "started_at": "2026-11-07T18:19:13Z",
+          "completed_at": "2026-11-07T18:19:13Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+          "started_at": "2026-11-07T18:19:13Z",
+          "completed_at": "2026-11-07T18:19:13Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-07T18:19:13Z",
+          "completed_at": "2026-11-07T18:19:18Z"
+        },
+        {
+          "name": "Run pnpm install --frozen-lockfile",
+          "started_at": "2026-11-07T18:19:18Z",
+          "completed_at": "2026-11-07T18:19:28Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/prove-node-headers",
+          "started_at": "2026-11-07T18:19:28Z",
+          "completed_at": "2026-11-07T18:19:28Z"
+        },
+        {
+          "name": "Run pnpm typecheck",
+          "started_at": "2026-11-07T18:19:28Z",
+          "completed_at": "2026-11-07T18:19:28Z"
+        },
+        {
+          "name": "Run pnpm check",
+          "started_at": "2026-11-07T18:19:28Z",
+          "completed_at": "2026-11-07T18:19:28Z"
+        },
+        {
+          "name": "Run pnpm lint:adherence",
+          "started_at": "2026-11-07T18:19:28Z",
+          "completed_at": "2026-11-07T18:19:28Z"
+        },
+        {
+          "name": "Read the temporary volume's filesystem type",
+          "started_at": "2026-11-07T18:19:28Z",
+          "completed_at": "2026-11-07T18:19:28Z"
+        },
+        {
+          "name": "Run mac_tests=\"$(node scripts/mac-unit-tests.ts)\"",
+          "started_at": "2026-11-07T18:19:28Z",
+          "completed_at": "2026-11-07T18:19:28Z"
+        },
+        {
+          "name": "Run pnpm build",
+          "started_at": "2026-11-07T18:19:28Z",
+          "completed_at": "2026-11-07T18:19:35Z"
+        },
+        {
+          "name": "Run pnpm exec playwright install ffmpeg",
+          "started_at": "2026-11-07T18:19:35Z",
+          "completed_at": "2026-11-07T18:19:35Z"
+        },
+        {
+          "name": "Read the dev Electron's signature",
+          "started_at": "2026-11-07T18:19:35Z",
+          "completed_at": "2026-11-07T18:19:35Z"
+        },
+        {
+          "name": "Run cores=\"$(node scripts/job-cores.ts)\"",
+          "started_at": "2026-11-07T18:19:35Z",
+          "completed_at": "2026-11-07T18:34:06Z"
+        },
+        {
+          "name": "Keep the e2e result",
+          "started_at": "2026-11-07T18:34:06Z",
+          "completed_at": "2026-11-07T18:34:08Z"
+        },
+        {
+          "name": "Keep the failed journeys' evidence",
+          "started_at": "2026-11-07T18:34:08Z",
+          "completed_at": "2026-11-07T18:34:08Z"
+        },
+        {
+          "name": "Keep the recorded demos",
+          "started_at": "2026-11-07T18:34:08Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run grep -lE \"tag: .*PERF_TAG\" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run claude_bin=\"$(command -v claude || true)\"",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run pnpm replay:gate",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run pnpm codesign:local",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run pnpm exec electron-builder --mac dir --universal --config electron-builder.dev.yml",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run pnpm codesign:verify",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run scripts/check-user-data-dir.sh \"dist/mac-universal/Infinitary Dev.app\" infinitary-dev",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run scripts/check-bundled-git.sh \"dist/mac-universal/Infinitary Dev.app\"",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Run scripts/check-helper.sh \"dist/mac-universal/Infinitary Dev.app\"",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Summarize",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:11Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "started_at": "2026-11-07T18:34:11Z",
+          "completed_at": "2026-11-07T18:34:12Z"
+        },
+        {
+          "name": "Post Checkout the keep-awake action",
+          "started_at": "2026-11-07T18:34:12Z",
+          "completed_at": "2026-11-07T18:34:12Z"
+        },
+        {
+          "name": "Complete job",
+          "started_at": "2026-11-07T18:34:12Z",
+          "completed_at": "2026-11-07T18:34:13Z"
+        }
+      ]
+    },
+    {
+      "name": "Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Native tests, replay and package (Mac)",
+      "started_at": "2026-11-07T18:19:26Z",
+      "completed_at": "2026-11-07T18:26:14Z",
+      "steps": [
+        {
+          "name": "Set up job",
+          "started_at": "2026-11-07T18:19:27Z",
+          "completed_at": "2026-11-07T18:19:31Z"
+        },
+        {
+          "name": "Set up runner",
+          "started_at": "2026-11-07T18:19:31Z",
+          "completed_at": "2026-11-07T18:19:31Z"
+        },
+        {
+          "name": "Checkout the keep-awake action",
+          "started_at": "2026-11-07T18:19:31Z",
+          "completed_at": "2026-11-07T18:19:33Z"
+        },
+        {
+          "name": "Keep the Mac awake",
+          "started_at": "2026-11-07T18:19:33Z",
+          "completed_at": "2026-11-07T18:19:33Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "started_at": "2026-11-07T18:19:33Z",
+          "completed_at": "2026-11-07T18:19:37Z"
+        },
+        {
+          "name": "Compose the swept batch",
+          "started_at": "2026-11-07T18:19:37Z",
+          "completed_at": "2026-11-07T18:19:41Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "started_at": "2026-11-07T18:19:41Z",
+          "completed_at": "2026-11-07T18:19:42Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "started_at": "2026-11-07T18:19:42Z",
+          "completed_at": "2026-11-07T18:19:42Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+          "started_at": "2026-11-07T18:19:42Z",
+          "completed_at": "2026-11-07T18:19:42Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-07T18:19:42Z",
+          "completed_at": "2026-11-07T18:19:48Z"
+        },
+        {
+          "name": "Run pnpm install --frozen-lockfile",
+          "started_at": "2026-11-07T18:19:48Z",
+          "completed_at": "2026-11-07T18:19:57Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/prove-node-headers",
+          "started_at": "2026-11-07T18:19:57Z",
+          "completed_at": "2026-11-07T18:19:57Z"
+        },
+        {
+          "name": "Run pnpm typecheck",
+          "started_at": "2026-11-07T18:19:57Z",
+          "completed_at": "2026-11-07T18:19:57Z"
+        },
+        {
+          "name": "Run pnpm check",
+          "started_at": "2026-11-07T18:19:57Z",
+          "completed_at": "2026-11-07T18:19:57Z"
+        },
+        {
+          "name": "Run pnpm lint:adherence",
+          "started_at": "2026-11-07T18:19:57Z",
+          "completed_at": "2026-11-07T18:19:57Z"
+        },
+        {
+          "name": "Read the temporary volume's filesystem type",
+          "started_at": "2026-11-07T18:19:57Z",
+          "completed_at": "2026-11-07T18:19:57Z"
+        },
+        {
+          "name": "Run mac_tests=\"$(node scripts/mac-unit-tests.ts)\"",
+          "started_at": "2026-11-07T18:19:57Z",
+          "completed_at": "2026-11-07T18:22:56Z"
+        },
+        {
+          "name": "Run pnpm build",
+          "started_at": "2026-11-07T18:22:56Z",
+          "completed_at": "2026-11-07T18:23:03Z"
+        },
+        {
+          "name": "Run pnpm exec playwright install ffmpeg",
+          "started_at": "2026-11-07T18:23:03Z",
+          "completed_at": "2026-11-07T18:23:03Z"
+        },
+        {
+          "name": "Read the dev Electron's signature",
+          "started_at": "2026-11-07T18:23:03Z",
+          "completed_at": "2026-11-07T18:23:03Z"
+        },
+        {
+          "name": "Run cores=\"$(node scripts/job-cores.ts)\"",
+          "started_at": "2026-11-07T18:23:03Z",
+          "completed_at": "2026-11-07T18:23:03Z"
+        },
+        {
+          "name": "Keep the e2e result",
+          "started_at": "2026-11-07T18:23:03Z",
+          "completed_at": "2026-11-07T18:23:03Z"
+        },
+        {
+          "name": "Keep the failed journeys' evidence",
+          "started_at": "2026-11-07T18:23:03Z",
+          "completed_at": "2026-11-07T18:23:03Z"
+        },
+        {
+          "name": "Keep the recorded demos",
+          "started_at": "2026-11-07T18:23:03Z",
+          "completed_at": "2026-11-07T18:23:03Z"
+        },
+        {
+          "name": "Run grep -lE \"tag: .*PERF_TAG\" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps",
+          "started_at": "2026-11-07T18:23:03Z",
+          "completed_at": "2026-11-07T18:23:03Z"
+        },
+        {
+          "name": "Run claude_bin=\"$(command -v claude || true)\"",
+          "started_at": "2026-11-07T18:23:03Z",
+          "completed_at": "2026-11-07T18:23:09Z"
+        },
+        {
+          "name": "Run pnpm replay:gate",
+          "started_at": "2026-11-07T18:23:09Z",
+          "completed_at": "2026-11-07T18:23:19Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "started_at": "2026-11-07T18:23:19Z",
+          "completed_at": "2026-11-07T18:23:21Z"
+        },
+        {
+          "name": "Run pnpm codesign:local",
+          "started_at": "2026-11-07T18:23:21Z",
+          "completed_at": "2026-11-07T18:23:21Z"
+        },
+        {
+          "name": "Run pnpm exec electron-builder --mac dir --universal --config electron-builder.dev.yml",
+          "started_at": "2026-11-07T18:23:21Z",
+          "completed_at": "2026-11-07T18:25:37Z"
+        },
+        {
+          "name": "Run pnpm codesign:verify",
+          "started_at": "2026-11-07T18:25:37Z",
+          "completed_at": "2026-11-07T18:25:37Z"
+        },
+        {
+          "name": "Run scripts/check-user-data-dir.sh \"dist/mac-universal/Infinitary Dev.app\" infinitary-dev",
+          "started_at": "2026-11-07T18:25:37Z",
+          "completed_at": "2026-11-07T18:25:39Z"
+        },
+        {
+          "name": "Run scripts/check-bundled-git.sh \"dist/mac-universal/Infinitary Dev.app\"",
+          "started_at": "2026-11-07T18:25:39Z",
+          "completed_at": "2026-11-07T18:25:39Z"
+        },
+        {
+          "name": "Run scripts/check-helper.sh \"dist/mac-universal/Infinitary Dev.app\"",
+          "started_at": "2026-11-07T18:25:39Z",
+          "completed_at": "2026-11-07T18:26:03Z"
+        },
+        {
+          "name": "Summarize",
+          "started_at": "2026-11-07T18:26:03Z",
+          "completed_at": "2026-11-07T18:26:03Z"
+        },
+        {
+          "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-07T18:26:03Z",
+          "completed_at": "2026-11-07T18:26:04Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "started_at": "2026-11-07T18:26:04Z",
+          "completed_at": "2026-11-07T18:26:04Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "started_at": "2026-11-07T18:26:04Z",
+          "completed_at": "2026-11-07T18:26:04Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "started_at": "2026-11-07T18:26:04Z",
+          "completed_at": "2026-11-07T18:26:04Z"
+        },
+        {
+          "name": "Post Checkout the keep-awake action",
+          "started_at": "2026-11-07T18:26:04Z",
+          "completed_at": "2026-11-07T18:26:05Z"
+        },
+        {
+          "name": "Complete job",
+          "started_at": "2026-11-07T18:26:05Z",
+          "completed_at": "2026-11-07T18:26:06Z"
+        }
+      ]
+    },
+    {
+      "name": "Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Parallel journeys (Mac)",
+      "started_at": "2026-11-07T18:19:39Z",
+      "completed_at": "2026-11-07T18:46:19Z",
+      "steps": [
+        {
+          "name": "Set up job",
+          "started_at": "2026-11-07T18:19:40Z",
+          "completed_at": "2026-11-07T18:19:42Z"
+        },
+        {
+          "name": "Set up runner",
+          "started_at": "2026-11-07T18:19:42Z",
+          "completed_at": "2026-11-07T18:19:42Z"
+        },
+        {
+          "name": "Checkout the keep-awake action",
+          "started_at": "2026-11-07T18:19:42Z",
+          "completed_at": "2026-11-07T18:19:46Z"
+        },
+        {
+          "name": "Keep the Mac awake",
+          "started_at": "2026-11-07T18:19:46Z",
+          "completed_at": "2026-11-07T18:19:46Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "started_at": "2026-11-07T18:19:46Z",
+          "completed_at": "2026-11-07T18:19:57Z"
+        },
+        {
+          "name": "Compose the swept batch",
+          "started_at": "2026-11-07T18:19:57Z",
+          "completed_at": "2026-11-07T18:20:06Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "started_at": "2026-11-07T18:20:06Z",
+          "completed_at": "2026-11-07T18:20:07Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "started_at": "2026-11-07T18:20:07Z",
+          "completed_at": "2026-11-07T18:20:07Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+          "started_at": "2026-11-07T18:20:07Z",
+          "completed_at": "2026-11-07T18:20:07Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-07T18:20:07Z",
+          "completed_at": "2026-11-07T18:20:39Z"
+        },
+        {
+          "name": "Run pnpm install --frozen-lockfile",
+          "started_at": "2026-11-07T18:20:39Z",
+          "completed_at": "2026-11-07T18:20:49Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/prove-node-headers",
+          "started_at": "2026-11-07T18:20:49Z",
+          "completed_at": "2026-11-07T18:20:49Z"
+        },
+        {
+          "name": "Run pnpm typecheck",
+          "started_at": "2026-11-07T18:20:49Z",
+          "completed_at": "2026-11-07T18:20:49Z"
+        },
+        {
+          "name": "Run pnpm check",
+          "started_at": "2026-11-07T18:20:49Z",
+          "completed_at": "2026-11-07T18:20:49Z"
+        },
+        {
+          "name": "Run pnpm lint:adherence",
+          "started_at": "2026-11-07T18:20:49Z",
+          "completed_at": "2026-11-07T18:20:49Z"
+        },
+        {
+          "name": "Read the temporary volume's filesystem type",
+          "started_at": "2026-11-07T18:20:49Z",
+          "completed_at": "2026-11-07T18:20:49Z"
+        },
+        {
+          "name": "Run mac_tests=\"$(node scripts/mac-unit-tests.ts)\"",
+          "started_at": "2026-11-07T18:20:49Z",
+          "completed_at": "2026-11-07T18:20:49Z"
+        },
+        {
+          "name": "Run pnpm build",
+          "started_at": "2026-11-07T18:20:49Z",
+          "completed_at": "2026-11-07T18:20:56Z"
+        },
+        {
+          "name": "Run pnpm exec playwright install ffmpeg",
+          "started_at": "2026-11-07T18:20:56Z",
+          "completed_at": "2026-11-07T18:20:56Z"
+        },
+        {
+          "name": "Read the dev Electron's signature",
+          "started_at": "2026-11-07T18:20:56Z",
+          "completed_at": "2026-11-07T18:20:56Z"
+        },
+        {
+          "name": "Run cores=\"$(node scripts/job-cores.ts)\"",
+          "started_at": "2026-11-07T18:20:56Z",
+          "completed_at": "2026-11-07T18:46:09Z"
+        },
+        {
+          "name": "Keep the e2e result",
+          "started_at": "2026-11-07T18:46:09Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Keep the failed journeys' evidence",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Keep the recorded demos",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run grep -lE \"tag: .*PERF_TAG\" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run claude_bin=\"$(command -v claude || true)\"",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run pnpm replay:gate",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run pnpm codesign:local",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run pnpm exec electron-builder --mac dir --universal --config electron-builder.dev.yml",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run pnpm codesign:verify",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run scripts/check-user-data-dir.sh \"dist/mac-universal/Infinitary Dev.app\" infinitary-dev",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run scripts/check-bundled-git.sh \"dist/mac-universal/Infinitary Dev.app\"",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Run scripts/check-helper.sh \"dist/mac-universal/Infinitary Dev.app\"",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Summarize",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Post Checkout the keep-awake action",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:12Z"
+        },
+        {
+          "name": "Complete job",
+          "started_at": "2026-11-07T18:46:12Z",
+          "completed_at": "2026-11-07T18:46:14Z"
+        }
+      ]
+    }
+  ]
+}

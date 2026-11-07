@@ -98,13 +98,15 @@ jobs:
       # keep looking until a passing run has every journey's time unexpired.
       # INF-2779: since the Mac journeys run in two jobs, a run keeps each
       # lane's result as e2e-results-<lane>, and needs both; a run from
-      # before it kept one e2e-results.
+      # before it kept one e2e-results. INF-2987: since the mac job runs a
+      # group of the parallel lanes too, a run keeps e2e-results-mac as well,
+      # and needs all three.
       - id: timing-run
         name: Find the newest passing full verification
         uses: actions/github-script@v7
         with:
           script: |
-            const TIMES = [['e2e-results-parallel', 'e2e-results-desktop'], ['e2e-results']];
+            const TIMES = [['e2e-results-parallel', 'e2e-results-desktop', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop'], ['e2e-results']];
             const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
               ...context.repo, workflow_id: 'verify.yml', exclude_pull_requests: true, per_page: 100
             });

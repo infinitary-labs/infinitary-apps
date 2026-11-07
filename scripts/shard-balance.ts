@@ -33,20 +33,26 @@ function median(values: number[]): number {
  * Every file lands in exactly one of `count` groups: the longest first into
  * the group with the least time so far. A file with no measured time (a new
  * one) weighs the median of the measured ones, so a new file spreads like a
- * typical one. The same files and times always give the same groups, since
- * every group's machine computes the split alone.
+ * typical one. A group whose job does other work first starts with that
+ * work's measured seconds (`headStarts`, by group), so it takes fewer files.
+ * The same files and times always give the same groups, since every group's
+ * machine computes the split alone.
  */
 export function balanceShards(
   files: readonly string[],
   count: number,
   timings: ShardTimings,
+  headStarts: readonly number[] = [],
 ): string[][] {
   const measured = new Map(Object.entries(timings));
   const unknownWeight = median(files.flatMap((file) => measured.get(file) ?? []));
   const weighted = files
     .map((file) => ({ file, weight: measured.get(file) ?? unknownWeight }))
     .toSorted((a, b) => b.weight - a.weight || (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
-  const groups = Array.from({ length: count }, () => ({ total: 0, files: [] as string[] }));
+  const groups = Array.from({ length: count }, (_, index) => ({
+    total: headStarts[index] ?? 0,
+    files: [] as string[],
+  }));
   for (const { file, weight } of weighted) {
     const lightest = groups.reduce((least, group) => (group.total < least.total ? group : least));
     lightest.files.push(file);

@@ -19,6 +19,7 @@ import {
   VERIFY_E2E_RUN,
   verifyLinuxTests,
   type ChannelWorkflow as Workflow,
+  workflowString,
   workflowValue,
 } from "./helpers/releaseWorkflows";
 
@@ -172,11 +173,12 @@ describe("the signed channel workflow", () => {
     expect(runsIn("mac")).toEqual(
       expect.arrayContaining([macUnit, "pnpm build", "pnpm replay:gate"]),
     );
-    expect(runsIn("mac")).not.toContain(VERIFY_E2E_RUN);
-    for (const journeys of ["parallel", "desktop"]) {
+    // INF-2987: the mac job runs its group of the parallel lanes' journeys too.
+    for (const journeys of ["mac", "parallel", "desktop"])
       expect(runsIn(journeys), journeys).toEqual(
         expect.arrayContaining(["pnpm build", VERIFY_E2E_RUN]),
       );
+    for (const journeys of ["parallel", "desktop"]) {
       expect(runsIn(journeys), journeys).not.toContain(macUnit);
       expect(runsIn(journeys), journeys).not.toContain("pnpm replay:gate");
     }
@@ -315,7 +317,10 @@ describe("the signed channel workflow", () => {
         "e2e",
         "Summarize",
       ]);
-    expect(whole).not.toContain("e2e");
+    // INF-2987: the mac job runs its group of the parallel lanes' journeys,
+    // finished before it signs the dev Electron.
+    expect(whole.indexOf("e2e")).toBeGreaterThan(-1);
+    expect(whole.indexOf("e2e")).toBeLessThan(whole.indexOf("dev-signing"));
     expect(whole).toEqual(
       expect.arrayContaining([
         "unit",
@@ -335,16 +340,15 @@ describe("the signed channel workflow", () => {
    * project, the one that keeps voice, paint budgets and demo recordings on
    * a quiet machine (tests/e2e/lanes.ts).
    */
-  it("splits the Mac journeys between the parallel and desktop jobs, every project once", () => {
+  // INF-2987: the desktop job runs the one-worker lane, and the parallel and
+  // mac jobs each a group of the other lanes (scripts/journey-groups.ts).
+  it("splits the Mac journeys between the journey jobs, every project once", () => {
     const e2e = (lane.steps ?? []).find((candidate) => candidate.id === "e2e");
-    const projects = (name: string) =>
-      [
-        ...String(
-          workflowValue(e2e?.env?.PROJECTS ?? "", { matrix: { lane: name }, inputs: {} }),
-        ).matchAll(/--project=(\S+)/g),
-      ].map(([, project]) => project);
-    const parallel = projects("parallel");
-    const desktop = projects("desktop");
+    const lines = String(e2e?.run).split("\n");
+    const projects = (line: string | undefined) =>
+      [...String(line).matchAll(/--project=(\S+)/g)].map(([, project]) => project);
+    const desktop = projects(lines.find((line) => line.includes("--project=desktop")));
+    const parallel = projects(lines.find((line) => line.includes("scripts/journey-groups.ts")));
     expect([...parallel, ...desktop].toSorted()).toEqual(
       E2E_PROJECTS.map(({ name }) => name).toSorted(),
     );
@@ -352,8 +356,18 @@ describe("the signed channel workflow", () => {
       E2E_PROJECTS.filter((project) => project.workers === 1).map(({ name }) => name),
     );
     // Each job runs its own projects alone: the desktop project is the parallel
-    // ones' teardown, so without --no-deps the parallel job would run it too.
-    expect(e2e?.run).toContain("--no-deps $PROJECTS");
+    // ones' teardown, so without --no-deps the parallel groups would run it too.
+    for (const line of lines.filter((candidate) => candidate.includes("--project=")))
+      expect(line).toContain("--no-deps");
+    // The parallel job's group first and the mac job's second, each with its
+    // job's own work counted; the journeys part has no mac job and runs them all.
+    const group = (name: string, part: string) =>
+      [e2e?.env?.GROUP, e2e?.env?.JOBS].map((value) =>
+        workflowString(value ?? "", { matrix: { lane: name }, inputs: { part } }),
+      );
+    expect(group("parallel", "all")).toEqual(["1/2", "--jobs parallel,mac"]);
+    expect(group("mac", "all")).toEqual(["2/2", "--jobs parallel,mac"]);
+    expect(group("parallel", "journeys")).toEqual(["1/1", ""]);
   });
 
   // Captain's accepted INF-1258 mac-unit-only option: all files still run

@@ -239,9 +239,13 @@ jobs:
   # place can take one and they run side by side): mac runs the Mac unit
   # files, the Claude client check, the replay gate and the package and
   # signing checks; parallel runs the journeys of the parallel lanes; desktop
-  # runs the one-worker desktop lane, alone, with the recorded demos. Each
-  # step names the lanes it belongs to. The journeys part runs the two
-  # journey lanes alone, and a Mac-only request the three Mac lanes.
+  # runs the one-worker desktop lane, alone, with the recorded demos. The
+  # parallel lanes' journeys are split between the parallel and mac jobs by
+  # measured time, the mac job taking fewer for its own work, so the three
+  # end together (INF-2987, scripts/journey-groups.ts); the journeys part,
+  # with no mac job, runs them all in the parallel job. Each step names the
+  # lanes it belongs to. The journeys part runs the two journey lanes alone,
+  # and a Mac-only request the three Mac lanes.
   lane:
     needs: request
     if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
@@ -355,20 +359,23 @@ jobs:
       # records would otherwise fetch it in the middle of its test, and where
       # the fetch fails the window never reports itself loaded.
       - id: recorder
-        if: ${{ !cancelled() && (matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
         run: pnpm exec playwright install ffmpeg
       # The signature the journeys below run on, read from the binary itself:
       # Electron's own, never this runner's local development identity. A
       # report, never a gate.
       - name: Read the dev Electron's signature
-        if: ${{ !cancelled() && (matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
+        if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
         run: codesign -dvv "$(node -p 'require("electron")')" 2>&1 | grep -E '^(Identifier|Authority|Signature|TeamIdentifier|CDHash)=' || true
       # The desktop suite, on the build above and Electron's supplied
       # signature, one journey lane per job, as the Linux journeys run
-      # (source-journeys.yml): parallel takes the styles, renderer and
-      # application lanes, and desktop the one-worker lane, alone on its
-      # machine; --no-deps keeps desktop, the other lanes' teardown, out of
-      # the parallel job (tests/e2e/lanes.ts). Every journey runs when
+      # (source-journeys.yml): parallel and mac each take a group of the
+      # styles, renderer and application lanes, of measured time balanced
+      # with the mac job's own work (scripts/journey-groups.ts; a group with
+      # no file runs nothing, and one whose files hold no test of the tag
+      # passes), and desktop the one-worker lane, alone on its machine;
+      # --no-deps keeps desktop, the other lanes' teardown, out of the
+      # parallel groups (tests/e2e/lanes.ts). Every journey runs when
       # all_journeys is set: every alpha. A requested check runs only the
       # tests tagged MAC_ONLY_TAG (tests/e2e/tags.ts), since linux-e2e runs
       # every other one (docs/principles.md, 2026-10-28), and so does the run
@@ -382,16 +389,26 @@ jobs:
       # its share. With every processor, launches starved while the other
       # slot ran journeys too (docs/testing.md, "E2E scheduling").
       - id: e2e
-        if: ${{ !cancelled() && (matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.build.outcome == 'success' && steps.recorder.outcome == 'success' }}
+        name: Run this job's journeys
+        if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.build.outcome == 'success' && steps.recorder.outcome == 'success' }}
         # The run ends at 150 minutes and the command at 180 (INF-1083, the
         # captain's check limits); a stuck wait ends sooner, at its own cap.
         timeout-minutes: 180
-        # shellcheck disable=SC2086 # one word per project flag
         run: |
           cores="$(node scripts/job-cores.ts)"
-          pnpm exec playwright test --no-deps $PROJECTS --workers=$(( cores > 1 ? cores / 2 : 1 ))
+          workers="--workers=$(( cores > 1 ? cores / 2 : 1 ))"
+          if [ "$LANE" = desktop ]; then
+            pnpm exec playwright test --no-deps --project=desktop "$workers"
+          else
+            # shellcheck disable=SC2086 # one word per job name
+            node scripts/journey-groups.ts --platform mac --lane parallel --group "$GROUP" $JOBS -- --no-deps --project=styles --project=renderer --project=application "$workers" --pass-with-no-tests
+          fi
         env:
-          PROJECTS: ${{ matrix.lane == 'desktop' && '--project=desktop' || '--project=styles --project=renderer --project=application' }}
+          LANE: ${{ matrix.lane }}
+          # The parallel job's group comes first and the mac job's second;
+          # with no mac job (the journeys part) the parallel job takes all.
+          GROUP: ${{ inputs.part == 'journeys' && '1/1' || matrix.lane == 'mac' && '2/2' || '1/2' }}
+          JOBS: ${{ inputs.part != 'journeys' && '--jobs parallel,mac' || '' }}
           INFINITARY_E2E_TAG: ${{ !inputs.all_journeys && '@mac-only' || '' }}
           INFINITARY_E2E_RUN_MINUTES: 150
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/e2e-results.json
@@ -565,7 +582,7 @@ jobs:
             echo
             echo "First failed stage: **$first_failed**. Stages: \`$STAGES\`."
             echo
-            if [ "$LANE" != mac ]; then
+            if [ "$LANE" != mac ] || [ -f playwright-report/e2e-results.json ]; then
               node - <<'SUMMARY'
           const fs = require("node:fs");
           const file = "playwright-report/e2e-results.json";

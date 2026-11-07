@@ -299,18 +299,24 @@ describe("each Mac job's kind", () => {
   it("gives the full Mac check's journeys half the job's cores, its size when the placement service names one", () => {
     const e2e = jobs("verify.yml").lane?.steps?.find((step) => step.id === "e2e");
     const run = e2e?.run ?? "";
-    // The parallel journeys' job, where the worker count tells (INF-2779).
-    const projects = workflowString(e2e?.env?.PROJECTS ?? "", { matrix: { lane: "parallel" } });
-    const command = `exec playwright test --no-deps ${projects}`;
+    // The desktop lane, and the parallel lanes' group in each of the parallel
+    // and mac jobs, where the worker count tells (INF-2779, INF-2987).
+    const lanes = {
+      desktop: "exec playwright test --no-deps --project=desktop",
+      parallel:
+        "exec playwright test --no-deps --project=styles --project=renderer --project=application",
+      mac: "exec playwright test --no-deps --project=styles --project=renderer --project=application",
+    };
     const dir = scratchDir("infinitary-job-cores-");
     const bin = join(dir, "bin");
     mkdirSync(bin);
     const log = join(dir, "pnpm.log");
     writeFileSync(join(bin, "pnpm"), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$COMMAND_LOG"\n');
     chmodSync(join(bin, "pnpm"), 0o755);
-    const workers = (cores?: string) => {
+    const ran = (lane: keyof typeof lanes, cores?: string) => {
       writeFileSync(log, "");
       const { RUNNER_UP_CORES: _unset, ...env } = process.env;
+      const inputs = { part: "", all_journeys: true };
       const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", run], {
         cwd: root,
         env: {
@@ -318,7 +324,9 @@ describe("each Mac job's kind", () => {
           PATH: `${bin}:${process.env.PATH}`,
           COMMAND_LOG: log,
           INFINITARY_E2E_TAG: "",
-          PROJECTS: projects,
+          LANE: lane,
+          GROUP: workflowString(e2e?.env?.GROUP ?? "", { inputs, matrix: { lane } }),
+          JOBS: workflowString(e2e?.env?.JOBS ?? "", { inputs, matrix: { lane } }),
           ...(cores === undefined ? {} : { RUNNER_UP_CORES: cores }),
         },
         encoding: "utf8",
@@ -326,15 +334,21 @@ describe("each Mac job's kind", () => {
       expect(result.status, result.stderr).toBe(0);
       return readFileSync(log, "utf8").trim();
     };
-    expect(workers("12")).toBe(`${command} --workers=6`);
-    expect(workers("1")).toBe(`${command} --workers=1`);
-    // No size named: half this machine, as `--workers=50%` gave.
-    expect(workers()).toBe(
-      `${command} --workers=${Math.max(1, Math.floor(availableParallelism() / 2))}`,
-    );
-    expect(workers("not a number")).toBe(
-      `${command} --workers=${Math.max(1, Math.floor(availableParallelism() / 2))}`,
-    );
+    for (const [lane, command] of Object.entries(lanes) as [keyof typeof lanes, string][]) {
+      const workers = (cores?: string) =>
+        ran(lane, cores)
+          .replace(command, "")
+          .split(" ")
+          .filter((word) => word.startsWith("--workers="))
+          .join(" ");
+      expect(ran(lane, "12").startsWith(`${command} --workers=6`), lane).toBe(true);
+      expect(workers("12"), lane).toBe("--workers=6");
+      expect(workers("1"), lane).toBe("--workers=1");
+      // No size named: half this machine, as `--workers=50%` gave.
+      const half = `--workers=${Math.max(1, Math.floor(availableParallelism() / 2))}`;
+      expect(workers(), lane).toBe(half);
+      expect(workers("not a number"), lane).toBe(half);
+    }
   });
 });
 

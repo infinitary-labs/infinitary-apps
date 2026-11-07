@@ -384,13 +384,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const ids = steps.flatMap((step) => (step.id ? [step.id] : []));
     const macLanes: Lane[] = ["mac", ...JOURNEY_LANES];
     const native: Lane[] = ["mac"];
-    const journeysOnly: Lane[] = [...JOURNEY_LANES];
     const needs: Record<string, { lanes: Lane[]; inputs: string[] }> = {
       unit: { lanes: native, inputs: ["install"] },
       // Every Mac job builds its own app: the build takes seconds (INF-724).
       build: { lanes: macLanes, inputs: ["install"] },
-      recorder: { lanes: journeysOnly, inputs: ["install"] },
-      e2e: { lanes: journeysOnly, inputs: ["build", "recorder"] },
+      // INF-2987: the mac job runs a group of the parallel lanes' journeys too.
+      recorder: { lanes: macLanes, inputs: ["install"] },
+      e2e: { lanes: macLanes, inputs: ["build", "recorder"] },
       "claude-client": { lanes: native, inputs: ["install"] },
       replay: { lanes: native, inputs: ["install"] },
       "dev-signing": { lanes: native, inputs: ["install"] },
@@ -485,13 +485,16 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const steps = verify.jobs.lane.steps;
     const ids = steps.flatMap((step) => (step.id ? [step.id] : []));
     expect(steps.filter(signs).map((step) => step.id)).toEqual(["dev-signing"]);
-    // No job both signs and launches the dev Electron.
+    // No job launches the dev Electron once it signed it: the mac job's
+    // group of journeys (INF-2987) ends before its signing stage starts.
     const stage = (id: string) => steps.find((step) => step.id === id);
     const green = Object.fromEntries(ids.map((id) => [id, "success"]));
     const lanes: Lane[] = ["linux-checks", "mac", ...JOURNEY_LANES];
     const runsIn = (id: string) => lanes.filter((lane) => stepRuns(stage(id), green, lane));
     expect(runsIn("dev-signing")).toEqual(["mac"]);
-    for (const launches of ["e2e", "perf"]) expect(runsIn(launches), launches).not.toContain("mac");
+    expect(runsIn("perf")).not.toContain("mac");
+    expect(runsIn("e2e")).toContain("mac");
+    expect(ids.indexOf("e2e")).toBeLessThan(ids.indexOf("dev-signing"));
     // A red signing stage stops no journey stage, and skips the signed package's checks.
     const signingRed = { ...green, "dev-signing": "failure" };
     for (const lane of JOURNEY_LANES) expect(stepRuns(stage("e2e"), signingRed, lane)).toBe(true);

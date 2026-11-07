@@ -1,7 +1,8 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, posix } from "node:path";
 import { expect, it } from "vitest";
+import { laneFiles } from "../scripts/journey-groups.ts";
 import { E2E_PROJECTS } from "./e2e/lanes";
 import { MAC_ONLY_TAG } from "./e2e/tags";
 import { scratchDir } from "./helpers/scratchDirs";
@@ -123,6 +124,17 @@ it("collects every spec once, isolates app boundaries and serializes voice, pain
       file,
     ).toBe(true);
   }
+  // INF-2987: the journey groups split each lane's files as Playwright assigns them.
+  const filesIn = (lanes: string[]) =>
+    [
+      ...new Set(
+        collected
+          .filter((test) => lanes.includes(test.lane))
+          .map((test) => posix.join("tests/e2e", test.file)),
+      ),
+    ].toSorted();
+  expect(laneFiles("parallel")).toEqual(filesIn(["styles", "renderer", "application"]));
+  expect(laneFiles("desktop")).toEqual(filesIn(["desktop"]));
   const desktop = E2E_PROJECTS.find((project) => project.name === "desktop");
   expect(desktop?.workers).toBe(1);
   for (const name of ["styles", "renderer", "application"]) {

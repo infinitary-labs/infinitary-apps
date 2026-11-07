@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       suite:
-        description: Full eight-shard Linux suite or four fresh-state shards
+        description: Full nine-group Linux suite or four fresh-state shards
         type: choice
         options: [alone, full]
         default: alone
@@ -73,7 +73,7 @@ on:
         type: string
         default: parallel
       suite:
-        description: affected (files in one lane, with edited files' run-alone pass), full (eight journey shards), or alone (four run-alone shards)
+        description: affected (files in one lane, with edited files' run-alone pass), full (nine journey groups), or alone (four run-alone shards)
         required: true
         type: string
 
@@ -83,19 +83,21 @@ permissions:
 jobs:
   source-desktop:
     # Affected files keep their lane; the full suite is the parallel lanes
-    # and the serial desktop lane, each split four ways, one job a
-    # share, so a failure names its own part of the suite; the desktop lane
-    # still runs alone on its machine (tests/e2e/lanes.ts). A requested
+    # in six groups and the serial desktop lane in three, one job a group,
+    # so a failure names its own part of the suite; the desktop lane still
+    # runs alone on its machine (tests/e2e/lanes.ts). The groups are of
+    # about equal measured time, not equal counts of files
+    # (scripts/journey-groups.ts, INF-2987), and nine of them keep the
+    # swept batch's hosted jobs within the twenty GitHub runs at once. A requested
     # run-alone pass over every spec file splits four ways (docs/testing.md
     # "Each test owns its prerequisites"), each share on a machine of its own.
     # The name leads with the caller's trigger (scripts/ci-job-names.mjs); a
     # desktop lane runs one test at a time, so it reads as a serial group.
-    name: ${{ inputs.suite == 'alone' && format('{0} · Fresh-start app journeys (Linux; group {1}/4)', inputs.trigger || 'Manual request', matrix.shard) || inputs.suite == 'full' && format('{0} · App journeys (Linux; {1} group {2}/4)', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), matrix.shard) || format('{0} · Selected app journeys (Linux; {1}{2})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), inputs.part && format('; part {0}', inputs.part) || '') }}
+    name: ${{ inputs.suite == 'alone' && format('{0} · Fresh-start app journeys (Linux; group {1}/4)', inputs.trigger || 'Manual request', matrix.shard) || inputs.suite == 'full' && format('{0} · App journeys (Linux; {1} group {2}/{3})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), matrix.shard, matrix.groups) || format('{0} · Selected app journeys (Linux; {1}{2})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), inputs.part && format('; part {0}', inputs.part) || '') }}
     strategy:
       fail-fast: false
       matrix:
-        lane: ${{ fromJSON(inputs.suite == 'alone' && '["alone"]' || (inputs.suite != 'affected' && '["parallel", "desktop"]' || format('["{0}"]', inputs.lane))) }}
-        shard: ${{ fromJSON((inputs.suite == 'full' || inputs.suite == 'alone') && '[1, 2, 3, 4]' || '[1]') }}
+        include: ${{ fromJSON(inputs.suite == 'full' && '[{"lane":"parallel","shard":1,"groups":6},{"lane":"parallel","shard":2,"groups":6},{"lane":"parallel","shard":3,"groups":6},{"lane":"parallel","shard":4,"groups":6},{"lane":"parallel","shard":5,"groups":6},{"lane":"parallel","shard":6,"groups":6},{"lane":"desktop","shard":1,"groups":3},{"lane":"desktop","shard":2,"groups":3},{"lane":"desktop","shard":3,"groups":3}]' || inputs.suite == 'alone' && '[{"lane":"alone","shard":1,"groups":4},{"lane":"alone","shard":2,"groups":4},{"lane":"alone","shard":3,"groups":4},{"lane":"alone","shard":4,"groups":4}]' || format('[{{"lane":"{0}","shard":1,"groups":1}}]', inputs.lane)) }}
     runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     defaults:
       run:
@@ -198,9 +200,9 @@ jobs:
           elif [ "$LANE" = alone ]; then
             on_screen node scripts/e2e-alone.ts --shard "$SHARD/4" --out playwright-report/alone
           elif [ "$SUITE" = full ] && [ "$LANE" = parallel ]; then
-            on_screen pnpm exec playwright test --no-deps --project=styles --project=renderer --project=application --shard="$SHARD/4"
+            on_screen node scripts/journey-groups.ts --platform linux --lane parallel --group "$SHARD/$GROUP_COUNT" -- --no-deps --project=styles --project=renderer --project=application
           elif [ "$SUITE" = full ] && [ "$LANE" = desktop ]; then
-            on_screen pnpm exec playwright test --no-deps --project=desktop --shard="$SHARD/4"
+            on_screen node scripts/journey-groups.ts --platform linux --lane desktop --group "$SHARD/$GROUP_COUNT" -- --no-deps --project=desktop
           else
             echo "No journeys for suite $SUITE in lane $LANE" >&2
             exit 1
@@ -214,6 +216,7 @@ jobs:
           INFINITARY_E2E_RUN_MINUTES: ${{ inputs.suite == 'affected' && 75 || '' }}
           LANE: ${{ matrix.lane }}
           SHARD: ${{ matrix.shard }}
+          GROUP_COUNT: ${{ matrix.groups }}
           SCREEN: 2560x1600x24
       # Linux runs every test it can (docs/testing.md, "Tests that need a
       # Mac"): a test that skipped here without MAC_ONLY_TAG runs on no Mac
@@ -246,7 +249,8 @@ jobs:
           SUITE: ${{ inputs.suite }}
           FILES: ${{ inputs.files }}
           LANE: ${{ matrix.lane }}
-          SHARD: ${{ matrix.shard }}
+          # The group and the count of its lane's groups, as its job name says.
+          SHARD: ${{ inputs.suite == 'full' && format('{0}/{1}', matrix.shard, matrix.groups) || matrix.shard }}
           ARTIFACT_SUFFIX: ${{ inputs.artifact-suffix }}
           TEST_OUTCOME: ${{ steps.journeys.outcome }}
       - name: Keep compact Linux timing separately

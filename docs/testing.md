@@ -213,8 +213,10 @@ A piece of a restructure measures the files it moves on untouched main, so its g
 
 The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share two workers locally unless the caller passes `--workers`.
 CI keeps its default of `min(10, cores)` workers, where cores are the job's size when the Mac mini's placement service names one and the whole machine otherwise (`scripts/job-cores.ts`, "Each Mac job's kind and size").
-The full Mac check (`verify.yml`) runs its journeys in two jobs of their own (INF-2779): the parallel journeys job runs the styles, renderer and application lanes, and the desktop journeys job runs the one-worker desktop lane.
-Each passes `--no-deps`, so the parallel job never pulls in desktop, its lanes' teardown.
+The full Mac check (`verify.yml`) runs its journeys in its three jobs (INF-2779, INF-2987): the desktop journeys job runs the one-worker desktop lane, and the styles, renderer and application lanes are split between the parallel journeys job and the native tests, replay and package job.
+The split is by measured time ("Journey groups by measured time", below): the native job takes fewer journeys for the work it does besides, so the three jobs end together.
+The journeys part of an alpha, with no native job, runs the whole parallel lanes in the parallel journeys job.
+Each passes `--no-deps`, so neither parallel group pulls in desktop, its lanes' teardown.
 Each gives Playwright half the job's cores, because a job on the real Mac shares one processor with the jobs beside it: with all of it, app launches starved past `firstWindow`'s 30 s while the other slot ran journeys too.
 Desktop is the one-worker lane, and in a run of every lane it runs last, even after a failure.
 The lanes load only `*.spec.ts` files (`testMatch` in `playwright.config.ts`); a vitest `*.test.ts` beside them, such as a scenario's own test, runs in vitest's cohorts and never in Playwright.
@@ -347,7 +349,7 @@ Three checks hold the tag to what a test needs:
 Where a check runs and whether it proves real signing are two separate declarations: a Mac requirement, `mac_all`, `all_journeys` or a full run never implies custom signing.
 Every journey is an isolated source test on disposable data and Electron's supplied signature, on the Mac as on Linux, Mac keyboard behavior included; no journey route runs `pnpm codesign:local` (`journeys.yml`, `scripts/local-mac-journeys.ts`, `scripts/virtual-mac/job.sh`).
 The genuine signing proof is `verify.yml`'s own stages: `dev-signing` signs the dev Electron, `package` builds its own signed copy of the app, and `codesign` and the package checks read the real signatures.
-The native tests, replay and package job runs that proof, and no stage of that job launches the dev Electron: the journeys (`e2e`, `perf`) run in the two journey jobs (INF-2779), so signing never changes what those journeys ran on, and a failed signing stage stops none of them.
+The native tests, replay and package job runs that proof, and no stage of that job launches the dev Electron after it signs it: its group of the parallel journeys (`e2e`, INF-2987) ends before `dev-signing` starts, and the perf journeys run in the journey jobs alone, so signing never changes what those journeys ran on, and a failed signing stage stops none of them.
 Each journey job logs the dev Electron's signature before the suite, read from the binary, and a red signing stage still ends the full check red.
 Logic-only signing tests use the stand-in `security` and `codesign` commands under `tests/fixtures/local-codesign/`.
 `tests/release-workflows-verify-evidence.test.ts` holds both: no journey route signs, and the signing stages share no job with the journeys and fail their own.
@@ -756,7 +758,7 @@ Neither is a task branch's duty, and no listed-versus-run record is kept for one
 INF-2539 removed the pull request selection from `journeys.yml`, its Linux starter job included; a request names its journeys ("Journeys on request").
 A request runs `journeys.yml`'s Linux `choose-journeys` job, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads the journey results from the newest successful `verify.yml` run that kept every one of them unexpired, and sums each journey file's measured Mac durations.
-Since the Mac journeys run in two jobs (INF-2779), those are `e2e-results-parallel` and `e2e-results-desktop`, and a run needs both; a run from before kept one `e2e-results`.
+Since the Mac journeys run in three jobs (INF-2987), those are `e2e-results-parallel`, `e2e-results-desktop` and `e2e-results-mac`, and a run needs all three; a run from before kept the first two (INF-2779), and an older one a single `e2e-results`.
 Each lands in a folder of its own, and `scripts/journey-budget.ts` reads every `e2e-results.json` under the folder it is given.
 Only a run of every journey keeps those artifacts, so a requested check of the tagged tests alone never becomes the journeys' times.
 It finds that run in the workflow's plain run list, newest first, never through GitHub's search by result, which has answered no run while passing ones were listed.
@@ -1193,7 +1195,7 @@ The affected-journey selector retains that journey for changes to the core Mac c
 ## A red verify's evidence
 
 `verify.yml` keeps what the e2e run left on the run itself, so a red release is read from its page instead of re-run blind (scout `fm3000-e2e-rigidity-s2`, I5; held by `tests/release-workflows-verify-evidence.test.ts`).
-Each Mac journey job keeps its own, named for its lane, `parallel` or `desktop` (INF-2779):
+Each Mac job that ran journeys keeps its own, named for its lane, `parallel`, `desktop` or `mac` (INF-2779, INF-2987):
 
 - **`e2e-results-<lane>`** (`e2e-results-mac-only-<lane>` for a run of only the tagged journeys) is Playwright's JSON result (the `json` reporter in `playwright.config.ts` beside the unchanged console reporter; verify's e2e step names its path, `playwright-report/e2e-results.json`, through `PLAYWRIGHT_JSON_OUTPUT_FILE`), kept whenever the suite ran.
 - **`e2e-failures-<lane>`** is, on a failed run, everything under `test-results/` (the run's own directory under `test-results/runs/`, "Per-run e2e evidence" above): each failed journey's `error-context.md` (the error, its call log and the window's accessibility snapshot), `trace.zip` (the runner's steps, errors and sources) and `test-failed-*.png` (the app window), beside whatever the specs wrote.
@@ -1203,8 +1205,8 @@ Each Mac journey job keeps its own, named for its lane, `parallel` or `desktop` 
 - `e2e-failures-<lane>` is kept 7 days, the others 14 days.
   None can fail the job, and none runs when a stage the suite needs kept it from starting.
 - **Every stage reports**: each stage waits only on the stages it needs, never on every stage before it (INF-663).
-  The unit suite, the client check and the replay gate need the install; the e2e suite needs the build and the recorder, never the signing; the signing stage needs the install, and shares no job with a journey stage; the package smoke needs the build and the signed dev Electron; the four package checks need the package.
-  Each stage runs in exactly one of the three Mac jobs, and every Mac job installs and builds for itself, since both take seconds beside handing a build from one machine to another.
+  The unit suite, the client check and the replay gate need the install; the e2e suite needs the build and the recorder, never the signing; the signing stage needs the install, and runs after the one journey stage its job has; the package smoke needs the build and the signed dev Electron; the four package checks need the package.
+  Each stage but the e2e suite, which every Mac job runs a group of, runs in exactly one of the three Mac jobs, and every Mac job installs and builds for itself, since both take seconds beside handing a build from one machine to another.
   So a red unit test still leaves the e2e suite's and the package's results on the run, the linux-checks lane's checks and build each run whatever another of them did, and each Linux test group runs on its own machine whatever another did.
   The job still ends red on any failure, so `release.yml` still refuses to sign.
 - **The job summary** names the requested ref and the exact commit checked out, the first failed stage, the e2e counts (skipped includes a serial file's tests that did not run), every failure in the order it started and the first one's assertion.
@@ -1409,15 +1411,26 @@ An install inside a container needs none of this: the container's apt is its own
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on Ubuntu 24.04 x64 (`LINUX_RUNNER`, hosted when unset), under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
 `journeys.yml` calls it as `linux-overflow` with `suite: affected` for a request's named journeys, and `infinitary-batch-checks.yml` for the critical path on the composed batch ("The swept batch"); INF-2539 removed the pull request's `linux-source` call and its fixed starter list.
 Linux runs the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys, the device journeys and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
-`verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, in every alpha or the swept batch it reuses and named full-run exceptions, in eight jobs, with no run-alone pass (INF-2340).
-Four take a quarter each of the parallel lanes (`styles`, `renderer` and `application`) and four a quarter each of the serial `desktop` lane, each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its share, such as `Main push · App journeys (Linux; serial group 2/4)`, a serial group being a share of the desktop lane.
+`verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, in every alpha or the swept batch it reuses and named full-run exceptions, in nine jobs, with no run-alone pass (INF-2340).
+Six take a group each of the parallel lanes (`styles`, `renderer` and `application`) and three a group each of the serial `desktop` lane, groups of about equal measured time ("Journey groups by measured time", below), each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its group, such as `Main push · App journeys (Linux; serial group 2/3)`, a serial group being a share of the desktop lane.
+Nine jobs keep the swept batch within the twenty hosted jobs GitHub runs at once for the project: the batch's other hosted jobs are the critical path, `linux-checks` and the eight Linux test groups.
 A request with `suite: alone` runs the run-alone pass over every spec file instead, in four fresh-start jobs, `Manual request · Fresh-start app journeys (Linux; group N/4)`, which divide the run-alone pass’s ordered listing by round-robin position with `--shard N/4`; together they cover every later file:line/lane selection once, without splitting tests that share a line.
 Each share keeps the existing fresh Playwright process and home for each selection, runs the parallel lanes at the existing local width and then its desktop selections serially, and keeps a distinct `e2e-alone-N` artifact and summary.
 The Mac-only tests skip there.
 Request `source-journeys.yml` on a branch with `suite: alone` to check just those four jobs, without the ordinary suite, Mac checks or packaging.
-Its manual `suite: full` route runs the same eight full-suite jobs, including styles, with no Mac tests, signing, packaging or broad unit sweep.
+Its manual `suite: full` route runs the same nine full-suite jobs, including styles, with no Mac tests, signing, packaging or broad unit sweep.
 Pass `ref` as the exact source commit, `task` as the requesting task and `reason` as why the Linux sweep is needed; each job checks its checkout and records these fields before installing or building.
 The dispatch's top-level `ref` selects the workflow definition; `inputs.ref` selects the tested source, and the artifact names, timing identity, test order and failure reporting remain the reusable full route's.
+
+### Journey groups by measured time
+
+Playwright's own `--shard` cuts a lane into equal counts of files in listing order, so the group that drew the slow files held up every run (INF-2987).
+`scripts/journey-groups.ts` instead splits a lane's files by the seconds each took, longest first into the group with the least time so far (`scripts/shard-balance.ts`, as the unit groups are split), and runs Playwright over its group's files alone.
+A group with no file runs nothing, since Playwright given no file runs every one.
+The times are `tests/helpers/journeyTimings.json`: each file's job seconds on Linux and on the Mac (its work over the workers that ran it), and each Mac job's seconds outside its journeys, the head start its group begins with.
+A file with no measured time, a new journey, weighs the median of the measured ones.
+`scripts/journey-group-timings.ts` writes the record from a passing full run's results: the Linux groups' `journey-timing-Linux-*` artifacts, the Mac jobs' `e2e-results-<lane>` artifacts, and that run's job list for the Mac jobs' own work.
+Write it again and commit it when journeys move or the groups' times drift apart.
 A manual `verify.yml` request instead requires `full_system: true`, or `mac_only: true` for its three Mac jobs alone, plus task, source and reason before expensive jobs can start.
 Both `stable` and `alpha` profiles run full-system checks, not Linux-only checks.
 Installer-only and installer-reuse requests retain their separate route and cannot also select `full_system` or `mac_only`; main and release reusable calls need no manual opt-in.

@@ -143,14 +143,15 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(verifyOnly(false)).toBe(MAC_ONLY_TAG);
     expect(verifyOnly(true)).toBe("");
     // Only a run of every journey supplies the chooser's journey times, one
-    // result for each Mac journey job (INF-2779).
+    // result for each Mac journey job (INF-2779), the mac job's share of the
+    // parallel lanes included (INF-2987).
     const kept = steps.find((step) => step.name === "Keep the e2e result");
     const keptAs = (all_journeys: boolean, lane: string) =>
       workflowString(String(kept?.with?.name ?? ""), {
         inputs: { all_journeys },
         matrix: { lane },
       });
-    for (const lane of ["parallel", "desktop"]) {
+    for (const lane of ["parallel", "desktop", "mac"]) {
       expect(keptAs(true, lane)).toBe(`e2e-results-${lane}`);
       expect(keptAs(false, lane)).not.toBe(keptAs(true, lane));
     }
@@ -242,7 +243,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * supplied no e2e-results. The step's own script runs against each day's
    * answers and the artifact metadata, including across run-list pages.
    * INF-2779: a run since the Mac journeys split in two keeps one result per
-   * journey job, and supplies times only with both.
+   * journey job, and supplies times only with both; INF-2987: one with the
+   * mac job's share keeps three, and supplies all three.
    */
   it.each(["2026-10-22", "2026-10-26", "2026-10-27"])(
     "finds the newest passing verify run with journey times in the plain list read on %s",
@@ -387,6 +389,20 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       const both = await choose(readings.runs);
       expect(both.outputs.id).toBe(passing?.id);
       expect(both.outputs.artifacts).toBe(split.map((artifact) => artifact.id).join(","));
+      // INF-2987: since the mac job runs a group of the parallel lanes, a run
+      // keeps three results, and the chooser downloads all three.
+      const three = ["parallel", "desktop", "mac"].map((lane, index) => ({
+        id: Number(results?.id) + index,
+        name: workflowString(String(keep?.with?.name ?? ""), {
+          inputs: { all_journeys: true },
+          matrix: { lane },
+        }),
+        expired: false,
+      }));
+      artifacts.runs[String(passing?.id)] = three;
+      const all = await choose(readings.runs);
+      expect(all.outputs.id).toBe(passing?.id);
+      expect(all.outputs.artifacts).toBe(three.map((artifact) => artifact.id).join(","));
       // One job's result alone holds half the journeys' times: the chooser passes it by.
       artifacts.runs[String(passing?.id)] = split.slice(0, 1);
       const upToPassing = readings.runs.slice(0, readings.runs.indexOf(passing as Run) + 1);

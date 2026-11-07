@@ -14,12 +14,20 @@
 
 import type { FmEvent } from "@shared/events";
 import { describe, expect, it, vi } from "vitest";
-import { fakeCrewmate, type SetupExtras, setup, tick } from "../../../tests/helpers/crewHarness";
+import {
+  fakeCrewmate,
+  fakeCrewTimersEachTest,
+  type SetupExtras,
+  setup,
+  tick,
+} from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
 import { seedProject } from "../workspace/seedProject";
 import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";
+
+fakeCrewTimersEachTest();
 
 const ORIGIN = "https://github.com/octo/shop.git";
 

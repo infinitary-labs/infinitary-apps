@@ -71,6 +71,7 @@ It is a Grit plugin rather than a `noRestrictedImports` override because Biome r
 
 The fence sees a test file's own imports and the helpers it names.
 A unit test that reached a spawn through product code (`WorkspaceService` on a real repository, say) would pass it, and so would a `setTimeout` written inside a test (a few unit tests still yield a macrotask or hold a lock open for a few milliseconds that way, and none of them asserts on elapsed time); the 5 s default is what bounds those, and the answer for a new one is the same: fake the dependency or inject a clock, or list the file as integration.
+The crew and first mate harnesses' `tick()` (`tests/helpers/crewHarness.ts`, `tests/helpers/firstmateHarness.ts`) only moves the fake clock and throws on real timers, so a file that ticks fakes its timers (`fakeCrewTimersEachTest`, `fakeClockEachTest`), and a case on real timers waits on the fact it needs with `vi.waitFor`.
 
 ## The list
 

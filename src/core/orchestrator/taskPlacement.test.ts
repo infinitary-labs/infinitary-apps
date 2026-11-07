@@ -17,11 +17,19 @@ import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD, UNCOMPARED_WAIT } from "@shared/pla
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { RUNS_ON_SOURCE_WORDS } from "@shared/taskPolicies";
 import { describe, expect, it, vi } from "vitest";
-import { fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
+import {
+  fakeCrewmate,
+  fakeCrewTimersEachTest,
+  intentOf,
+  setup,
+  tick,
+} from "../../../tests/helpers/crewHarness";
 import type { CrewMachines } from "../placed/crewMachines";
 import { seedTask } from "../tasks/seedTask";
 import { UNCONFIRMED_START_RETURNED } from "../tasks/taskStarts";
 import { PLACED_WAIT_DAY_MS } from "./taskPlacement";
+
+fakeCrewTimersEachTest();
 
 const MINI = "mini";
 const MINI_NAME = "Mac mini";

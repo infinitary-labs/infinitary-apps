@@ -643,10 +643,21 @@ export async function endStartTurn(session: {
   for (let settle = 0; settle < 4; settle += 1) await tick();
 }
 
-export const tick = () =>
-  vi.isFakeTimers()
-    ? admissionClock.advance(100)
-    : new Promise((resolve) => setTimeout(resolve, 100));
+/**
+ * Lets the first mate's work settle by moving the fake clock 100 ms, with
+ * admission's own promises awaited between its steps (`admissionClock`). It
+ * never waits on the real clock (docs/test-cohorts.md), so it refuses to run
+ * on real timers: a file that ticks calls `fakeClockEachTest`, and a case on
+ * real timers waits on the fact it needs with `vi.waitFor`.
+ */
+export const tick = async (): Promise<void> => {
+  if (!vi.isFakeTimers()) {
+    throw new Error(
+      "tick() moves the fake clock and never waits on the real one: call fakeClockEachTest() in this file, or wait on the fact with vi.waitFor.",
+    );
+  }
+  await admissionClock.advance(100);
+};
 
 /**
  * Waits for the coalescing window to drain into `count` turns. A fixed sleep

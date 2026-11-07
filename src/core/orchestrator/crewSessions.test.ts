@@ -12,6 +12,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
+  fakeCrewTimersEachTest,
   intentOf,
   setup,
   tick,
@@ -20,6 +21,8 @@ import {
 import { deferred } from "../../../tests/helpers/deferred";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
+
+fakeCrewTimersEachTest();
 
 const MINI = "mini-device";
 const AIR = "air-device";

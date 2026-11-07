@@ -11,9 +11,18 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { endTurn, fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
+import {
+  endTurn,
+  fakeCrewmate,
+  fakeCrewTimersEachTest,
+  intentOf,
+  setup,
+  tick,
+} from "../../../tests/helpers/crewHarness";
 import { queryTasks } from "../tasks/taskQuery";
 import { WITHDRAWN_UNCHOSEN } from "./cardService";
+
+fakeCrewTimersEachTest();
 
 const TITLE = "Approve reading the new Mac's password and network key from your vault";
 

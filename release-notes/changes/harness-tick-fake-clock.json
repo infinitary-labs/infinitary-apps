@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "harness-tick-fake-clock",
+      "reason": "Internal: the crew and first mate test harnesses' tick only moves the fake clock and refuses the real one, so the files that slept on it fake their timers or wait on the fact they need; nothing a person sees changes."
+    }
+  ]
+}

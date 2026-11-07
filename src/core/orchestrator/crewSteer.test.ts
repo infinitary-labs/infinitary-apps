@@ -16,6 +16,7 @@ import { fileSizeWords } from "@shared/attachments";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
+  fakeCrewTimersEachTest,
   intentOf,
   setup,
   tick,
@@ -26,6 +27,8 @@ import { crewmateHandoverDir } from "../paths";
 import { handoverFileName, keepHandoverFiles } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
 import { renderWake } from "./wakes";
+
+fakeCrewTimersEachTest();
 
 const MINI = "mini-device";
 

@@ -17,6 +17,7 @@ import { fileSizeWords } from "@shared/attachments";
 import { describe, expect, it } from "vitest";
 import {
   fakeCrewmate,
+  fakeCrewTimersEachTest,
   fakeQueuedSteerCrewmate,
   intentOf,
   reportTurn,
@@ -28,6 +29,8 @@ import { renderDirections } from "../knowledge/directions";
 import { KnowledgeService } from "../knowledge/knowledgeService";
 import { crewmateHandoverDir } from "../paths";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
+
+fakeCrewTimersEachTest();
 
 describe("a crewmate's turn, as CrewTurns runs it", () => {
   it("names a report's handed files by kept name and size once they arrived whole, and refuses one that did not", async () => {

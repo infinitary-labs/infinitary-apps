@@ -11,8 +11,17 @@
 
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { endTurn, fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
+import {
+  endTurn,
+  fakeCrewmate,
+  fakeCrewTimersEachTest,
+  intentOf,
+  setup,
+  tick,
+} from "../../../tests/helpers/crewHarness";
 import type { TaskWorkspace } from "../workspace/workspaceService";
+
+fakeCrewTimersEachTest();
 
 describe("the crew's watch between turns, as CrewWatch keeps it", () => {
   it("resumes a crewmate whose conversation was let go to hand it a background job's result", async () => {

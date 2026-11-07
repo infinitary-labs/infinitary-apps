@@ -242,7 +242,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
       intent: intentOf("fix the dialog in this picture"),
       attachments,
     });
-    await tick();
+    await vi.waitFor(() => expect(crewmate.promptCalls.length).toBeGreaterThan(0));
     const brief = crewmate.promptCalls[0] ?? "";
     expect(brief).toContain(
       "Pictures: the captain attached 1 picture to the messages this task came from.",
@@ -300,7 +300,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
       attachments,
       messageFiles,
     });
-    await tick();
+    await vi.waitFor(() => expect(crewmate.promptCalls.length).toBeGreaterThan(0));
 
     expect(tasks.get(taskId)?.status).toBe("active");
     const brief = crewmate.promptCalls[0] ?? "";
@@ -338,7 +338,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     tasks.capture.openAsk({ id: "text-message", text, messageFiles });
     tasks.capture.attachAsk("text-message", build.id, "tool:create_task");
     await supervisor.starts.startQueuedNow(build.key);
-    await tick();
+    await vi.waitFor(() => expect(crewmate.promptCalls.length).toBeGreaterThan(0));
     const brief = crewmate.promptCalls[0] ?? "";
     const delivered = /Attached file notes.csv: (.+) \(the full copy/.exec(brief)?.[1] ?? "";
     expect(delivered).toContain(`/crewmates/${build.id}/temp/handover/`);
@@ -402,7 +402,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     rmSync(attachmentPath(tasks.capture.getAsk("gone")?.attachments[0] as AttachmentRef));
 
     await supervisor.starts.startQueuedNow(build.key);
-    await tick();
+    await vi.waitFor(() => expect(crewmate.promptCalls.length).toBeGreaterThan(0));
     const brief = crewmate.promptCalls[0] ?? "";
     // Its own messages first, then its plan's; the same picture sent twice rides once.
     expect(brief).toContain(

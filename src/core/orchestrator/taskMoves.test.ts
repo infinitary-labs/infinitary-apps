@@ -17,13 +17,21 @@ import { moveOutOfReach } from "@shared/recordBar";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it, vi } from "vitest";
-import { fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
+import {
+  fakeCrewmate,
+  fakeCrewTimersEachTest,
+  intentOf,
+  setup,
+  tick,
+} from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { CrewMachines } from "../placed/crewMachines";
 import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "../tasks/seedTask";
 import { seedProject } from "../workspace/seedProject";
 import { describeStatus } from "./settleService";
+
+fakeCrewTimersEachTest();
 
 const MINI = "mini-device";
 const AIR = "air-device";

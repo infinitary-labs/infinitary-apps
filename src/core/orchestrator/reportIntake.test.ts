@@ -17,6 +17,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   askedOn,
   fakeCrewmate,
+  fakeCrewTimersEachTest,
   intentOf,
   setup,
   syncCardId,
@@ -26,6 +27,8 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { crewmateCardPicturesDir } from "../paths";
 import { seedProject } from "../workspace/seedProject";
+
+fakeCrewTimersEachTest();
 
 const HEAD = "a".repeat(40);
 

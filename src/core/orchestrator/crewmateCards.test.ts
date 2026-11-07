@@ -23,6 +23,7 @@ import type { ForgeWriteAsk, IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
+  fakeCrewTimersEachTest,
   intentOf,
   METER_RISK,
   setup,
@@ -36,6 +37,8 @@ import { seedTask } from "../tasks/seedTask";
 import type { CrewmateSpec } from "./crewSession";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { writeAskStrip } from "./requestStrips";
+
+fakeCrewTimersEachTest();
 
 type Browsers = NonNullable<CrewSupervisorOptions["browsers"]>;
 

@@ -14,8 +14,16 @@
 import { choiceWords, holdNames, STANDING_WORDS_FROM } from "@shared/holds";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { describe, expect, it, vi } from "vitest";
-import { fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
+import {
+  fakeCrewmate,
+  fakeCrewTimersEachTest,
+  intentOf,
+  setup,
+  tick,
+} from "../../../tests/helpers/crewHarness";
 import { seedTask } from "../tasks/seedTask";
+
+fakeCrewTimersEachTest();
 
 /** A started task with its crewmate between turns, and a second task beside it. */
 async function startedTask() {

@@ -17,6 +17,7 @@ import {
   endTurn,
   type FakeCrewmate,
   fakeCrewmate,
+  fakeCrewTimersEachTest,
   intentOf,
   setup,
   tick,
@@ -25,6 +26,8 @@ import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "../tasks/seedTask";
 import { backlogLeftLine } from "./hostOps";
 import { describeStatus } from "./settleService";
+
+fakeCrewTimersEachTest();
 
 type Harness = ReturnType<typeof setup>;
 

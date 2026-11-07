@@ -54,7 +54,6 @@ fakeCrewTimersEachTest();
 
 describe("CrewSupervisor", () => {
   it("streams a commissioned turn without a task card and leaves the task idle and steerable", async () => {
-    vi.useRealTimers();
     const crewmate = fakeCrewmate();
     const { supervisor, events, cards, ops, tasks } = setup(crewmate);
     const { taskId, crewmate: name } = await supervisor.intake.commission({

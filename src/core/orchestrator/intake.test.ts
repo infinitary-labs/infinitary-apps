@@ -12,10 +12,18 @@
 import { join } from "node:path";
 import type { HostChildSpawner } from "@core/host";
 import { describe, expect, it } from "vitest";
-import { fakeCrewmate, intentOf, setup, tick } from "../../../tests/helpers/crewHarness";
+import {
+  fakeCrewmate,
+  fakeCrewTimersEachTest,
+  intentOf,
+  setup,
+  tick,
+} from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedTask } from "../tasks/seedTask";
 import { seedProject } from "../workspace/seedProject";
+
+fakeCrewTimersEachTest();
 
 /** A program process for a plan that is refused before anything spawns. */
 const NEVER_SPAWNED: HostChildSpawner = {

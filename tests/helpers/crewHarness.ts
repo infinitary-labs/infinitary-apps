@@ -640,8 +640,9 @@ export function served(wake: WakeBody): string {
 /**
  * Run the same deadline assertions without wall-clock sleeps. Date and
  * timeouts are controlled; real I/O, microtasks and intervals are untouched.
- * A test file calls this once at its top level; a journey that needs real
- * scheduling switches back to real timers itself.
+ * A test file calls this once at its top level; a case that needs real
+ * scheduling switches back to real timers itself and then waits on facts
+ * with `vi.waitFor`, since `tick` refuses the real clock.
  */
 export function fakeCrewTimersEachTest(): void {
   beforeEach(() => {
@@ -652,10 +653,22 @@ export function fakeCrewTimersEachTest(): void {
     vi.useRealTimers();
   });
 }
-export const tick = () =>
-  vi.isFakeTimers()
-    ? vi.advanceTimersByTimeAsync(80)
-    : new Promise((resolve) => setTimeout(resolve, 80));
+
+/**
+ * Lets the supervisor's work settle by moving the fake clock 80 ms: its
+ * timers fire and its promise chains run between them. It never waits on
+ * the real clock (docs/test-cohorts.md), so it refuses to run on real
+ * timers: a file that ticks fakes them with `fakeCrewTimersEachTest`, and a
+ * case on real timers waits on the fact it needs with `vi.waitFor`.
+ */
+export const tick = async (): Promise<void> => {
+  if (!vi.isFakeTimers()) {
+    throw new Error(
+      "tick() moves the fake clock and never waits on the real one: call fakeCrewTimersEachTest() in this file, or wait on the fact with vi.waitFor.",
+    );
+  }
+  await vi.advanceTimersByTimeAsync(80);
+};
 
 /** A crewmate's turn that ends with this text as its last answer. */
 export async function reportTurn(crewmate: FakeCrewmate, taskId: string, text: string) {

@@ -1,9 +1,10 @@
 /**
  * The crew harness on the host's one clock (P5, `ticker.ts`), as the idle
  * ladder's tests and the durable inbox's tests drive it: the test moves
- * `clock.now` itself, so nothing here fakes a timer or `Date`.
+ * `clock.now` itself. A file that uses it fakes its timers
+ * (`fakeCrewTimersEachTest`), since a turn's end ticks the fake clock.
  * A describe calls `idleLadderHarness()` once at its top; the clock resets
- * to the real time before each case.
+ * to the faked `Date.now()` before each case.
  */
 
 import type { SpawnIntent } from "@core/orchestrator/intentBrief";
@@ -67,7 +68,6 @@ export function idleLadderHarness() {
   const clock = { now: 0 };
   const hostClock = () => clock.now;
   beforeEach(() => {
-    vi.useRealTimers();
     clock.now = Date.now();
   });
 

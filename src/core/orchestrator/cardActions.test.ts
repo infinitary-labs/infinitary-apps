@@ -15,6 +15,7 @@ import {
   endTurn,
   type FakeCrewmate,
   fakeCrewmate,
+  fakeCrewTimersEachTest,
   intentOf,
   type SetupExtras,
   setup,
@@ -23,6 +24,8 @@ import {
 import { CardChoiceUnavailableError } from "./cardActions";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { writeSentLine } from "./integrationAsks";
+
+fakeCrewTimersEachTest();
 
 type Harness = ReturnType<typeof setup>;
 type WriteAskSent = Awaited<ReturnType<NonNullable<CrewSupervisorOptions["sendWriteAsk"]>>>;

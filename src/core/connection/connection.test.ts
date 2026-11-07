@@ -1575,17 +1575,22 @@ function heavyCard(bytes: number) {
 }
 
 // INF-2669: the home's ping waited behind everything it was sending, so a device on a slow link was cut while it
-// was still receiving. Each home here pings every 250 ms, so a push that takes two seconds to arrive spans eight.
+// was still receiving.
 describe("pacing and liveness", () => {
+  // This home pings every 100 ms and lets nothing go ahead of an answer (`aheadMs: 0`), so it writes one 1 KiB
+  // piece and its ping at a time. The relay passes a little more than that each 20 ms step, so the device answers
+  // every step, and the 20 KiB push takes about half a second: over four heartbeats. Were the ping behind the whole
+  // push, the device would answer nothing for over two heartbeats and be cut. Letting more go ahead spaces the
+  // answers nearly a heartbeat this short apart (INF-2984); the outbox's own tests cover how much goes ahead.
   it("keeps a device that receives a long push slowly, and delivers it whole on one connection", async () => {
-    const at = await home({ heartbeatMs: 250, pieceBytes: 1024, aheadMs: 50 });
+    const at = await home({ heartbeatMs: 100, pieceBytes: 1024, aheadMs: 0 });
     const grant = await at.join();
-    const link = await slowLink(at.at, 48 * 1024);
+    const link = await slowLink(at.at, 64 * 1024);
     try {
       const heard: ViewDeviceContact[] = [];
       at.connection.onViewDevice((contact) => heard.push(contact));
       const device = await connectClient(grant, { dial: link.dial });
-      const card = heavyCard(96 * 1024);
+      const card = heavyCard(20 * 1024);
       at.events.emit("inf:cards", [card]);
       const push = await Promise.race([
         device.push((received) => received.channel === "inf:cards"),

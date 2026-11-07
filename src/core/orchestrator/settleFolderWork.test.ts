@@ -350,3 +350,86 @@ it("retires an operation’s scratch working copy without merging it", async () 
   });
   expect(h.host.mergePullRequest).not.toHaveBeenCalled();
 });
+
+// INF-2971's finding 4: a work task whose own working copy delivered no
+// change - a triage whose fix went to another task's branch - closes as
+// finished, not discarded, and a copy holding work names the mode that would.
+describe("a change task that delivered no change", () => {
+  const ownCopy = {
+    worktreeDir: "/task-copy",
+    branch: "fm/task-triage",
+    shape: { kind: "chore", kind_source: "test", deliverable: "change" },
+  } satisfies Partial<TaskSeed>;
+
+  function withCopy(work: { dirty: boolean; unlandedCommits: number } | Error) {
+    const h = setup(ownCopy);
+    const retire = vi.fn(async () => ({ outcome: "removed", kept: null }));
+    const read = vi.fn(async () => {
+      if (work instanceof Error) throw work;
+      return work;
+    });
+    h.host.workspace = { taskWorkStatus: read, retireTaskWorktree: retire };
+    return { ...h, retire, read };
+  }
+
+  it("closes done/finished after reading a clean copy, retiring it unmerged", async () => {
+    const h = withCopy({ dirty: false, unlandedCommits: 0 });
+    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+      "as finished",
+    );
+    expect(h.read).toHaveBeenCalledWith(expect.objectContaining({ cwd: "/task-copy" }), {
+      strict: true,
+    });
+    expect(h.tasks.get(h.task.id)).toMatchObject({
+      status: "done",
+      closedReason: "finished",
+      workspaceState: "removed",
+    });
+    expect(
+      h.tasks.timeline(h.task.id).find((event) => event.data?.completionEvidence !== undefined)
+        ?.data,
+    ).toMatchObject({ completionEvidence: evidence, noChange: true });
+    expect(h.host.mergePullRequest).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ dirty: true, unlandedCommits: 0 }, "uncommitted edits"],
+    [{ dirty: false, unlandedCommits: 2 }, "2 unmerged commits"],
+  ] as const)("refuses a copy holding work %j and names land", async (work, held) => {
+    const h = withCopy(work);
+    const before = h.tasks.get(h.task.id);
+    const { text } = await h.declared.closeFinishedFolderWork(h.task.id, evidence);
+    expect(text).toContain(held);
+    expect(text).toContain("settle_task land");
+    expect(h.tasks.get(h.task.id)).toEqual(before);
+    expect(h.retire).not.toHaveBeenCalled();
+  });
+
+  it("refuses a copy it cannot read, and leaves the task open", async () => {
+    const h = withCopy(new Error("git status failed"));
+    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+      "try finished again",
+    );
+    expect(h.tasks.get(h.task.id)?.status).toBe("active");
+    expect(h.retire).not.toHaveBeenCalled();
+  });
+
+  it("refuses when its crewmate starts a turn during the read", async () => {
+    const h = withCopy({ dirty: false, unlandedCommits: 0 });
+    h.read.mockImplementation(async () => {
+      h.host.runtimeState.mockReturnValue("streaming");
+      return { dirty: false, unlandedCommits: 0 };
+    });
+    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+      "state changed",
+    );
+    expect(h.tasks.get(h.task.id)?.status).toBe("active");
+  });
+
+  it("answered names finished instead of a discard", async () => {
+    const h = withCopy({ dirty: false, unlandedCommits: 0 });
+    const { text } = await h.declared.closeAnswerUsedAsBasis(h.task.id);
+    expect(text).toContain("settle_task finished");
+    expect(text).not.toContain("discard");
+  });
+});

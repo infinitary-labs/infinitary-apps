@@ -326,7 +326,7 @@ export class SettleService {
     if (!opensPullRequest(this.host.taskDelivery(taskId))) {
       return {
         ok: false,
-        text: `Cannot merge: task ${taskId} does not deliver as a pull request.`,
+        text: `Cannot merge: task ${taskId} does not deliver as a pull request; close it with settle_task land.`,
       };
     }
     // The close gate is settleTaskOnce's single check (WI-12).
@@ -895,7 +895,7 @@ export class SettleService {
       if (!record) throw new Error(`Unknown task "${taskId}".`);
       return {
         ok: false,
-        text: `Task ${taskId} "${record.title}" builds in place on the personal workspace: its changes are already there and committed, so there is nothing to merge, land, or discard. Ask for the change you want instead${
+        text: `Task ${taskId} "${record.title}" builds in place on the personal workspace: its changes are already there and committed, so there is nothing to merge, land, or discard. Close it with settle_task finished and completion_evidence once its report is verified${
           this.host.runtimeState(taskId) ? ", or interrupt it with mode cancel to stop it" : ""
         }. ${fixedHoldWords("nothing-to-merge")}`,
       };
@@ -916,7 +916,7 @@ export class SettleService {
       if (this.host.deliverableOf(record) === "answer") {
         return {
           ok: false,
-          text: `Nothing to ${mode === "merge-pr" ? "merge" : "land"}: task ${taskId} "${record.title}" delivers an answer, not a change - it commits nothing and opens no pull request, and its card is the deliverable. It closes when the captain resolves that card; discard it if its worktree should go now. ${fixedHoldWords("nothing-to-merge")}`,
+          text: `Nothing to ${mode === "merge-pr" ? "merge" : "land"}: task ${taskId} "${record.title}" delivers an answer, not a change - it commits nothing and opens no pull request, and its card is the deliverable. It closes when the captain resolves that card, or with settle_task answered once its answer is handed on. ${fixedHoldWords("nothing-to-merge")}`,
         };
       }
     }

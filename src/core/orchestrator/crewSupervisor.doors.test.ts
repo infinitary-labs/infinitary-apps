@@ -83,10 +83,11 @@ describe("the first mate's settle_task reaches the close each mode names", () =>
       released:
         'Cannot close SCR-1 "Fix the meter" as released: its working copy is unavailable; check the work before closing it.',
       finished:
-        'Cannot close SCR-1 "Fix the meter" as finished: this mode is for an operation or work built in place, not an answer or a change to merge.',
-      "merge-pr": "Cannot merge: task meter-fix does not deliver as a pull request.",
+        'Cannot close SCR-1 "Fix the meter" as finished: it has no working copy to read, so nothing shows it delivered no change; close it carried_on if another task holds its work.',
+      "merge-pr":
+        "Cannot merge: task meter-fix does not deliver as a pull request; close it with settle_task land.",
       answered:
-        'Cannot close SCR-1 "Fix the meter" as answered: it delivers a change, not an answer - merge it, land it, or discard it instead.',
+        'Cannot close SCR-1 "Fix the meter" as answered: it delivers a change, not an answer, and has no working copy; close it carried_on if another task holds its work.',
     };
     for (const [mode, refusal] of Object.entries(refusals)) {
       const { tools, tasks } = await firstmateSeat();

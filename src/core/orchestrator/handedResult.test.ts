@@ -41,6 +41,7 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
     runtimeState: () => "idle",
     resolveTaskRef: (ref: string) => tasks.resolve(ref),
     deliverableOf: () => deliverable,
+    taskDelivery: () => undefined,
     cards: {
       snapshot: () => cards,
       retireTaskCards: (...args: unknown[]) => cardCloses.push(["retire", ...args]),
@@ -204,7 +205,11 @@ describe("handed-on result completion", () => {
     });
     tasks.turns.setActivity("finder", "idle");
     workStatus.mockResolvedValue(work);
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
+    // The refusal names the one mode that would close it (INF-2971).
+    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({
+      ok: false,
+      text: expect.stringContaining("then close it with settle_task land"),
+    });
     expect(tasks.get("finder")?.status).toBe("active");
   });
 

@@ -132,7 +132,10 @@ A pull request of its own closed without merging, or commits only history calls 
 The release evidence is recorded in its close event.
 Ordinary work declared `in_folder` closes `done/finished` through `settle_task finished` after the first mate verifies its reported result and supplies `completion_evidence` (INF-1279).
 `DeclaredCloses.closeFinishedFolderWork` records the declaration through the existing close owner without inspecting or changing the project folder, preserving edits, staged work, stashes and unpushed commits.
-Only an idle, reported change task with no task-owned working copy, branch or proposed change qualifies; outstanding jobs, guidance, check-backs, captain waits, questions, pending settles and the child or dependency holds refuse the close.
+Only an idle, reported change task with no proposed change qualifies; outstanding jobs, guidance, check-backs, captain waits, questions, pending settles and the child or dependency holds refuse the close.
+A change task with a working copy or branch of its own that delivered no change, such as a triage whose fix went to another task's branch, closes `done/finished` the same way (INF-2971): the host reads that copy where it ran, as a discard does, and closes only when it holds no commit or uncommitted edit, recording `noChange` beside the evidence.
+A copy that holds work refuses and names `merge-pr` or `land` by the task's delivery; one that cannot be read refuses until it reads.
+Every settle refusal names the one mode that would close the task, never "its delivery path" or a list of modes, so finished work is never discarded for want of a working mode.
 The host checks these typed facts, never the meaning of the evidence; verification remains the first mate's judgment, not a publication-specific state or a substitute for merging.
 A missing proposed change, a note dismissal or an unverified assertion never closes work; the host does not infer delivery from either.
 Each close refusal is a structured `SettleRefusal` (`{ refused, task, tasks, ways, text }`, cards/tasks/agents P2 WI-12): the tool returns its `.text`, and the ways out ride the settle wake as a fenced JSON block the first mate carries as effect buttons - a merge that keeps a task's open children planned is `settle_task` with `proceed_with_open`.

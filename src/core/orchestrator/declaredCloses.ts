@@ -1,5 +1,6 @@
 import type { Card } from "@shared/cards";
 import { overridePasses, softHoldWords } from "@shared/holds";
+import { opensPullRequest } from "@shared/repos";
 import { isFolderWork } from "@shared/routingPolicy";
 import type { TaskRecord } from "../storage/taskStore";
 import type { SettleRefusal } from "../tasks/taskGraph";
@@ -236,8 +237,15 @@ export class DeclaredCloses {
     const handedOn = this.host.tasks.capture.resultHandoffOf(record.id);
     const change = this.host.deliverableOf(record) !== "answer";
     if (change && !handedOn) {
+      // The one mode that would close it (INF-2971): its own pull request
+      // merges; without one, finished reads its working copy and closes it
+      // when it delivered no change.
       return refuse(
-        "it delivers a change, not an answer - merge it, land it, or discard it instead.",
+        record.delivery?.prUrl || record.delivery?.prNumber || record.delivery?.changeLabel
+          ? "it delivers a change, not an answer; close it with settle_task merge-pr."
+          : record.worktreeDir || record.branch || record.deviceId
+            ? "it delivers a change, not an answer; if it delivered no change, close it with settle_task finished and completion_evidence."
+            : "it delivers a change, not an answer, and has no working copy; close it carried_on if another task holds its work.",
       );
     }
     const finished = record.delivery?.finishedAt !== undefined;
@@ -259,7 +267,7 @@ export class DeclaredCloses {
     if (handedOn) {
       if (!record.outcome?.trim()) return refuse("its crewmate has not reported the result yet.");
       if (record.delivery?.prUrl || record.delivery?.prNumber || record.delivery?.changeLabel)
-        return refuse("it has its own pull request; use its delivery path instead.");
+        return refuse("it has its own pull request; close it with settle_task merge-pr.");
       const gate =
         this.host.tasks.graph.closeRefusal(record.id) ??
         this.host.tasks.graph.blockerRefusal(record.id);
@@ -272,7 +280,7 @@ export class DeclaredCloses {
         if (!work) return refuse("its working copy could not be checked; keep the task open.");
         if (work.dirty || work.unlandedCommits > 0)
           return refuse(
-            "its working copy has uncommitted edits or unmerged commits; use its delivery path instead.",
+            `its working copy has uncommitted edits or unmerged commits; steer its crewmate to deliver them, then close it with settle_task ${opensPullRequest(this.host.taskDelivery(record.id)) ? "merge-pr" : "land"}.`,
           );
         const current = this.host.tasks.get(record.id);
         if (
@@ -375,6 +383,10 @@ export class DeclaredCloses {
    * (INF-1677). Evidence is its judgment, not
    * a host interpretation of prose. Never inspect, commit or merge as proof;
    * the ordinary close owner retires a scratch copy and leaves a folder alone.
+   * A change task that delivered no change closes here too (INF-2971's
+   * finding 4): its working copy is read, as discard reads it, and it closes
+   * finished only when that copy holds no commit or edit to deliver. Every
+   * refusal names the one settle mode that would work instead.
    */
   async closeFinishedFolderWork(
     taskRef: string,
@@ -388,23 +400,18 @@ export class DeclaredCloses {
     // The personal workspace builds in place too (INF-1677): the host
     // commits each turn, so its finished work closes here like folder work.
     const personal = this.host.isPersonalTask(record.id);
-    if (
-      record.kind !== "work" ||
-      !(
-        this.host.deliverableOf(record) === "operation" ||
-        (this.host.deliverableOf(record) === "change" &&
-          (personal || isFolderWork(record.shape?.in_place)))
-      )
-    )
+    const deliverable = this.host.deliverableOf(record);
+    if (record.kind !== "work") return refuse("it is not crew work.");
+    if (deliverable === "answer")
+      return refuse("it delivers an answer; close it with settle_task answered.");
+    // A change built in a working copy of its own closes finished only when
+    // that copy shows it delivered nothing (INF-2971); folder work and the
+    // personal workspace have none, and are their own proof.
+    const copy = Boolean(record.worktreeDir || record.branch || record.deviceId);
+    const ownCopy = deliverable === "change" && copy;
+    if (deliverable === "change" && !copy && !personal && !isFolderWork(record.shape?.in_place))
       return refuse(
-        "this mode is for an operation or work built in place, not an answer or a change to merge.",
-      );
-    if (
-      this.host.deliverableOf(record) !== "operation" &&
-      (record.worktreeDir || record.branch || record.deviceId)
-    )
-      return refuse(
-        "this task has a working copy or branch of its own; use its delivery path instead.",
+        "it has no working copy to read, so nothing shows it delivered no change; close it carried_on if another task holds its work.",
       );
     if (record.status !== "active" || record.activity !== "idle" || this.locks.working(record.id))
       return refuse("wait for its crewmate to finish and report first.");
@@ -412,7 +419,9 @@ export class DeclaredCloses {
     const evidence = completionEvidence.trim();
     if (!evidence) return refuse("name the completed result and the evidence that verifies it.");
     if (record.delivery?.prUrl || record.delivery?.prNumber || record.delivery?.changeLabel)
-      return refuse("this task has its own pull request; use its delivery path instead.");
+      return refuse(
+        "this task has its own pull request; close it with settle_task merge-pr, or released if another change delivered it.",
+      );
     if (
       this.host.hasRunningJobs?.(record.id) ||
       record.delivery?.checkBack ||
@@ -435,8 +444,17 @@ export class DeclaredCloses {
     if (gate) return { text: gate.text, refusal: gate };
     this.locks.settlingTasks.set(record.id, "finished");
     try {
-      // All reads above are synchronous. Commit before stopping can yield,
-      // so newly arriving guidance sees a closed task rather than being lost.
+      if (ownCopy) {
+        const held = await this.noChangeRefusal(record);
+        if (held) return refuse(held);
+        const newGate =
+          this.host.tasks.graph.closeRefusal(record.id) ??
+          this.host.tasks.graph.blockerRefusal(record.id);
+        if (newGate) return { text: newGate.text, refusal: newGate };
+      }
+      // All reads above are synchronous, or rechecked after the one working
+      // copy read. Commit before stopping can yield, so newly arriving
+      // guidance sees a closed task rather than being lost.
       await this.closing.closeTask(
         record.id,
         {
@@ -444,8 +462,12 @@ export class DeclaredCloses {
           reason: "finished",
           actor: "firstmate",
           text: `finished: ${evidence}`,
-          data: { completionEvidence: evidence },
-          ...(personal ? { delivery: { mode: "in-place" as const } } : {}),
+          data: { completionEvidence: evidence, ...(ownCopy ? { noChange: true } : {}) },
+          ...(personal
+            ? { delivery: { mode: "in-place" as const } }
+            : ownCopy
+              ? { delivery: {} }
+              : {}),
         },
         { recordBeforeStop: true },
       );
@@ -453,6 +475,45 @@ export class DeclaredCloses {
     } finally {
       this.locks.settlingTasks.delete(record.id);
     }
+  }
+
+  /**
+   * Why a change task's own working copy does not show that it delivered no
+   * change, naming the mode that would close it; undefined when the copy,
+   * read where the task ran, holds no commit or edit and nothing about the
+   * task moved during the read (INF-2971).
+   */
+  private async noChangeRefusal(record: TaskRecord): Promise<string | undefined> {
+    // A read that throws before it yields is a failed read too.
+    const work = await (async () =>
+      record.deviceId
+        ? ((await this.host.placed?.workStatus(record.id)) ?? null)
+        : await this.host.workspace.taskWorkStatus(workspaceOf(record), { strict: true }))().catch(
+      (caught: unknown) => {
+        const message = caught instanceof Error ? caught.message : String(caught);
+        return { inspectionFailure: message };
+      },
+    );
+    if (!work)
+      return "its working copy could not be read, so nothing shows it delivered no change; try finished again once its computer is reachable.";
+    if ("inspectionFailure" in work)
+      return `its working copy could not be checked (${work.inspectionFailure}); try finished again once it reads.`;
+    if (work.dirty || work.unlandedCommits > 0) {
+      const mode = opensPullRequest(this.host.taskDelivery(record.id)) ? "merge-pr" : "land";
+      const held = work.dirty
+        ? "uncommitted edits"
+        : `${work.unlandedCommits} unmerged commit${work.unlandedCommits === 1 ? "" : "s"}`;
+      return `its working copy holds ${held}, so it delivered a change; steer its crewmate to deliver it, then close it with settle_task ${mode}.`;
+    }
+    const current = this.host.tasks.get(record.id);
+    if (
+      this.locks.working(record.id) ||
+      current?.status !== "active" ||
+      current.activity !== "idle" ||
+      current.updatedAt !== record.updatedAt
+    )
+      return "its state changed while the working copy was checked; read its latest report, then try finished again.";
+    return undefined;
   }
 
   /**
@@ -471,10 +532,17 @@ export class DeclaredCloses {
     const refuse = (why: string) => ({ text: `Cannot close ${handle} as released: ${why}` });
     if (this.locks.settlingTasks.has(record.id) || record.pendingSettle)
       return refuse("another settle is already in progress.");
-    if (record.kind !== "work" || this.host.deliverableOf(record) !== "change")
-      return refuse("this is not a work task delivering a change.");
+    if (record.kind !== "work") return refuse("it is not crew work.");
+    if (this.host.deliverableOf(record) === "answer")
+      return refuse("it delivers an answer, not a change; close it with settle_task answered.");
+    if (this.host.deliverableOf(record) !== "change")
+      return refuse(
+        "it delivers an operation, not a change; close it with settle_task finished and completion_evidence.",
+      );
     if (this.host.isPersonalTask(record.id))
-      return refuse("the personal workspace builds in place and closes from its report.");
+      return refuse(
+        "the personal workspace builds in place; close it with settle_task finished and completion_evidence.",
+      );
     if (record.status !== "active" || record.activity !== "idle" || this.locks.working(record.id))
       return refuse("wait for its crewmate to finish and report first.");
     if (!record.outcome) return refuse("its crewmate has not reported the result yet.");

@@ -17,6 +17,12 @@ export type QueueState = {
 };
 export type Member = { number: number; head: string };
 export type QueueEntry = Member & { queue: QueueState | null };
+/**
+ * A batch run's change as its verdict reads it: the pull request's current
+ * version and its queue state there (null once closed), and `swept`, the
+ * swept version's queue state, read only when the change was pushed again.
+ */
+export type CurrentMember = { head: string; queue: QueueState | null; swept?: QueueState | null };
 export type BatchJob = { name: string; status: string; conclusion: string | null };
 /** A run batch.yml started by dispatch, as GitHub lists them. */
 export type DispatchedRun = {
@@ -62,7 +68,7 @@ export function verdict(input: {
   swept: string;
   tree: string;
   members: readonly Member[];
-  current: ReadonlyMap<number, { head: string; queue: QueueState | null }>;
+  current: ReadonlyMap<number, CurrentMember>;
   failedJob?: { name: string; html_url: string };
   failedFiles?: readonly FailedFile[];
 }): { writes: StatusWrite[]; next: "rerun" | "sweep" | null; summary: string };
@@ -81,6 +87,11 @@ export function sortMainPush(input: {
   open: readonly QueueEntry[];
 }): { kind: "full" | "covered" | "landing"; run?: number };
 /** Octokit instances, as actions/github-script passes them. */
+export function readCurrent(
+  github: unknown,
+  repo: { owner: string; repo: string },
+  members: readonly Member[],
+): Promise<Map<number, CurrentMember>>;
 export function readOpenQueue(github: unknown, repo: { owner: string; repo: string }): Promise<QueueEntry[]>;
 export function readRuns(
   github: unknown,

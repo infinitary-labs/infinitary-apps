@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-send-back-after-push",
+      "reason": "The project's own batch check now keeps a change sent back by hand as a failed batch's answer when that change is pushed again before the verdict; how this repository's checks run, nothing in the app a person notices."
+    }
+  ]
+}

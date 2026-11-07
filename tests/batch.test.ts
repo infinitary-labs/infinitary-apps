@@ -6,6 +6,7 @@ import {
   inBatch,
   passed,
   QUEUE,
+  readCurrent,
   readFailedFiles,
   readMainPush,
   readQueueStatus,
@@ -593,6 +594,169 @@ describe("the sweep's verdict", () => {
     expect(green.writes.map((write) => [write.number, write.state])).toEqual([
       [931, "success"],
       [932, "success"],
+    ]);
+  });
+});
+
+// INF-2940: batch run 42325592413 swept six changes, in this order and at
+// these versions. Its triage crewmate sent #1172 back by hand at 8bda683;
+// #1172's author pushed the fix f307f3e, which the kept approval marked
+// waiting, before the first attempt's verdict ran. That verdict read only
+// f307f3e, so it asked for the rerun, and the second failure sent back
+// #1177, the last change, which the failure never touched. The statuses are
+// GitHub's, newest first.
+describe("a change sent back by hand, then pushed again before the verdict", () => {
+  const runId = 42_325_592_413;
+  const at = (time: string) => `2026-11-07T${time}Z`;
+  const changes = [
+    { number: 1183, head: "4b73f41a6650ba279def68c89c8fed47f9c18f58", approval: "01:13:20" },
+    { number: 1176, head: "571679da4d9eef0a6061c7f20b4612df44715d79", approval: "01:17:36" },
+    { number: 1184, head: "013a8ec93f8bc9dd908ed0cf5baffecf578cd5a3", approval: "01:18:34" },
+    { number: 1172, head: "8bda6832d8485b9ce75f012eca8a061d111e7f15", approval: "01:19:49" },
+    { number: 1185, head: "fd23461ddd603af713866a9efbd967d0f0133155", approval: "01:26:53" },
+    { number: 1177, head: "204cba081ac081a141776190f926a2e722018f06", approval: "01:28:40" },
+  ];
+  const members = changes.map(({ number, head }) => ({ number, head }));
+  const fixed = "f307f3e8436e6d92405f461d2952595c0c05fc55";
+  const sentBack = status(
+    "failure",
+    "Batch run 42325592413: new tests/release-workflows-linux-actions.test.ts ran as unit; add it to biome.json's integration list",
+    at("02:01:54"),
+  );
+  const swept = () =>
+    Object.fromEntries(
+      changes.map((change) => [
+        change.head,
+        [status("pending", inBatch(runId), at("01:43:56")), approved(at(change.approval))],
+      ]),
+    ) as Record<string, ReturnType<typeof status>[]>;
+  /** GitHub as readCurrent reads it: each pull request, and each version's statuses. */
+  const githubOf = (
+    pulls: Record<number, { sha: string; state: string }>,
+    statuses: Record<string, ReturnType<typeof status>[]>,
+  ) => {
+    const reads: string[] = [];
+    const github = {
+      rest: {
+        pulls: {
+          get: async ({ pull_number }: { pull_number: number }) => ({
+            data: {
+              number: pull_number,
+              state: pulls[pull_number]!.state,
+              head: { sha: pulls[pull_number]!.sha },
+            },
+          }),
+        },
+        repos: { listCommitStatusesForRef: "statuses" },
+      },
+      paginate: async (method: string, parameters: { ref: string }) => {
+        expect(method).toBe("statuses");
+        reads.push(parameters.ref);
+        return statuses[parameters.ref] ?? [];
+      },
+    };
+    return { github, reads };
+  };
+  const open = (heads: Record<number, string> = {}) =>
+    Object.fromEntries(
+      changes.map((change) => [
+        change.number,
+        { sha: heads[change.number] ?? change.head, state: "open" },
+      ]),
+    );
+  const failedJob = {
+    name: "Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 2/2)",
+    html_url: `${runUrl(runId)}/job/128268045100`,
+  };
+  const failedFiles = [{ file: "tests/release-workflows-verification.test.ts", touchedBy: [] }];
+  const plan = (current: Awaited<ReturnType<typeof readCurrent>>, attempt: number) =>
+    verdict({
+      runId,
+      runUrl: runUrl(runId),
+      attempt,
+      swept: "failure",
+      tree: "9bc8bb61e86794de03c66d701f70a1978eee5c22",
+      members,
+      current,
+      failedJob,
+      failedFiles: attempt > 1 ? failedFiles : [],
+    });
+
+  it("takes the send-back on the swept version as the sweep's answer: no rerun, and the last change stays", async () => {
+    const statuses = swept();
+    statuses[members[3]!.head]!.unshift(sentBack);
+    statuses[fixed] = [approved(at("02:09:49"))];
+    const { github, reads } = githubOf(open({ 1172: fixed }), statuses);
+    const current = await readCurrent(github, repo, members);
+    expect(current.get(1172)).toMatchObject({
+      head: fixed,
+      queue: { kind: "waiting", since: at("02:09:49") },
+      swept: { kind: "failed", description: sentBack.description },
+    });
+    // Only the change pushed again reads its swept version as well.
+    expect(reads).toEqual([
+      ...members.slice(0, 3).map((m) => m.head),
+      fixed,
+      members[3]!.head,
+      ...members.slice(4).map((m) => m.head),
+    ]);
+
+    for (const attempt of [1, 2]) {
+      const answer = plan(current, attempt);
+      expect(answer.next).toBe("sweep");
+      expect(
+        answer.writes.map((write) => [write.number, write.head, write.state, write.description]),
+      ).toEqual(
+        [1183, 1176, 1184, 1185, 1177].map((number) => [
+          number,
+          members.find((member) => member.number === number)!.head,
+          "pending",
+          WAITING,
+        ]),
+      );
+      expect(answer.summary).toContain("#1172 went back by hand");
+    }
+
+    // The next batch, which the verdict starts, takes the rest in approval
+    // order, and #1172's fixed version after them, from its new approval.
+    const written = plan(current, 1).writes;
+    const entries = changes.map((change) => {
+      const write = written.find((candidate) => candidate.number === change.number);
+      const now = current.get(change.number)!;
+      const queue = write
+        ? readQueueStatus([
+            status(write.state, write.description, at("02:12:49")),
+            ...statuses[change.head]!,
+          ])
+        : now.queue;
+      return { number: change.number, head: now.head, queue };
+    });
+    expect(formBatch(entries, new Map())).toMatchObject({
+      action: "sweep",
+      members: [
+        ...members.filter((member) => member.number !== 1172),
+        { number: 1172, head: fixed },
+      ],
+    });
+  });
+
+  it("keeps the rerun and the last change's send-back for a change pushed again without a send-back", async () => {
+    const statuses = swept();
+    statuses[fixed] = [approved(at("02:09:49"))];
+    const { github } = githubOf(open({ 1172: fixed }), statuses);
+    const current = await readCurrent(github, repo, members);
+    expect(current.get(1172)).toMatchObject({
+      head: fixed,
+      swept: { kind: "in-batch", run: runId },
+    });
+    expect(plan(current, 1)).toMatchObject({ writes: [], next: "rerun" });
+    const second = plan(current, 2);
+    expect(second.writes.map((write) => [write.number, write.state])).toEqual([
+      [1177, "failure"],
+      [1183, "pending"],
+      [1176, "pending"],
+      [1184, "pending"],
+      [1185, "pending"],
     ]);
   });
 });

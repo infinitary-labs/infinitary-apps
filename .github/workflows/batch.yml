@@ -292,14 +292,9 @@ jobs:
             // A second failure names the failed test files and the changes that touch them.
             const failedFiles = process.env.SWEPT !== 'success' && attempt > 1
               ? await batch.readFailedFiles(github, context.repo, failedJobs, members) : [];
-            const current = new Map();
-            for (const member of members) {
-              const {data: pull} = await github.rest.pulls.get({...context.repo, pull_number: member.number});
-              const statuses = await github.paginate(github.rest.repos.listCommitStatusesForRef, {
-                ...context.repo, ref: pull.head.sha, per_page: 100,
-              });
-              current.set(member.number, {head: pull.head.sha, queue: pull.state === 'open' ? batch.readQueueStatus(statuses) : null});
-            }
+            // Each change's version and queue state now, and a send-back on the
+            // version this run swept when its author pushed again since.
+            const current = await batch.readCurrent(github, context.repo, members);
             const plan = batch.verdict({
               runId: context.runId, runUrl, attempt,
               swept: process.env.SWEPT, tree: process.env.TREE, members, current, failedJob, failedFiles,

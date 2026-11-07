@@ -138,9 +138,10 @@ export function readComposition(output, members) {
  * The verdict a batch run writes once its sweep ends. Only changes still in
  * this run at the same version are written: one sent back by hand, or
  * pushed again, keeps what it has. A failed sweep that a change was sent
- * back from by hand takes that send-back as its answer: it asks for no
- * rerun and fails no other change, and the rest wait for the next batch,
- * which this run starts without the change sent back. Otherwise a first
+ * back from by hand takes that send-back as its answer, even when the
+ * change's author pushed a new version after it: it asks for no rerun and
+ * fails no other change, and the rest wait for the next batch, which this
+ * run starts without the change sent back. Otherwise a first
  * failed attempt writes nothing and asks for its one rerun of the failed
  * jobs; a second failure sends the batch's last change back with the failed
  * job's link, and the rest wait for the next batch, which this run starts.
@@ -183,9 +184,13 @@ export function verdict({
           ? "The batch passed on its rerun. The jobs that failed first still need an owner who fixes their cause."
           : "The batch passed.",
     };
-  // Each member was in this run when it composed, so one that failed at the
-  // same version since was sent back by hand while it swept.
-  const sentBack = members.filter((member) => queueOf(member)?.kind === "failed");
+  // Each member was in this run when it composed, so one whose swept version
+  // failed since was sent back by hand while it swept, whether or not its
+  // author pushed a new version after that (readCurrent's `swept`).
+  const sentBack = members.filter((member) => {
+    const now = current.get(member.number);
+    return (now?.head === member.head ? now.queue : now?.swept)?.kind === "failed";
+  });
   if (sentBack.length) {
     const named = sentBack.map((member) => `#${member.number}`).join(", ");
     return {
@@ -320,6 +325,26 @@ export function sortMainPush({ tree, queue, open }) {
 
 const statusesOf = (github, repo, ref) =>
   github.paginate(github.rest.repos.listCommitStatusesForRef, { ...repo, ref, per_page: 100 });
+
+/**
+ * Each change of a batch run as its verdict reads it: its pull request's
+ * current version, and the queue state there while the pull request is
+ * open. A change pushed again since the run swept it also carries `swept`,
+ * the queue state the swept version was left with, so a send-back made
+ * before that push still answers the sweep.
+ */
+export async function readCurrent(github, repo, members) {
+  const queueAt = async (ref) => readQueueStatus(await statusesOf(github, repo, ref));
+  const current = new Map();
+  for (const member of members) {
+    const { data: pull } = await github.rest.pulls.get({ ...repo, pull_number: member.number });
+    const head = pull.head.sha;
+    if (pull.state !== "open") current.set(member.number, { head, queue: null });
+    else if (head === member.head) current.set(member.number, { head, queue: await queueAt(head) });
+    else current.set(member.number, { head, queue: await queueAt(head), swept: await queueAt(member.head) });
+  }
+  return current;
+}
 
 /** Every open pull request with its current version and queue state. */
 export async function readOpenQueue(github, repo) {

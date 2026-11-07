@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-bundle-retention-test-reads-device-jobs",
+      "reason": "The phone check's bundle retention test reads each upload's name as a device's own job reads it, so naming the uploads by device no longer stops it from finding the bundles; test-only, nothing a person sees changes."
+    }
+  ]
+}

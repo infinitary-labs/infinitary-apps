@@ -340,10 +340,14 @@ export function waitMovedWake(
   };
 }
 
-/** Words a host wrote, ended as one sentence. */
-function sentence(words: string | undefined): string {
+/**
+ * The reason a host wrote, as the clause that ends a sentence: a colon and the
+ * reason ended as one sentence, or only the full stop when it gave none.
+ */
+function because(words: string | undefined): string {
   const trimmed = (words ?? "").trim();
-  return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+  if (!trimmed) return ".";
+  return `: ${/[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`}`;
 }
 
 /** How a confirmed `merge-continued` steer opens, after its `[fm-op]` mark. */
@@ -391,8 +395,8 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
     return facts.outcome === "answered"
       ? `[fm-op] ${WRITE_ANSWERED_LEAD} ${facts.ask} (${facts.call}) to ${facts.place}, once. ${facts.place} answered ${facts.status}. It is never sent again; continue from this answer.\n${facts.answer ?? ""}`
       : facts.outcome === "unknown"
-        ? `[fm-op] ${WRITE_ANSWERED_LEAD} ${facts.ask} (${facts.call}) to ${facts.place}, once, and what came of it is unknown: ${sentence(facts.why)} It is never sent again; read ${facts.place} to see what happened before you do anything that depends on it.`
-        : `[fm-op] the captain's click on ask ${facts.ask}${facts.call ? ` (${facts.call})` : ""} sent nothing: ${sentence(facts.why)} ${facts.to === "firstmate" ? "To ask again, call the integration again with a reason." : "To ask again, make a new write with github_write or call the integration again."}`;
+        ? `[fm-op] ${WRITE_ANSWERED_LEAD} ${facts.ask} (${facts.call}) to ${facts.place}, once, and what came of it is unknown${because(facts.why)} It is never sent again; read ${facts.place} to see what happened before you do anything that depends on it.`
+        : `[fm-op] the captain's click on ask ${facts.ask}${facts.call ? ` (${facts.call})` : ""} sent nothing${because(facts.why)} ${facts.to === "firstmate" ? "To ask again, call the integration again with a reason." : "To ask again, make a new write with github_write or call the integration again."}`;
   },
   "run-watch": (facts) => renderRunWatch(facts),
   "checks-settled": (facts) => renderChecksSettled(facts),

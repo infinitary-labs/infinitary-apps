@@ -298,6 +298,8 @@ export const IDLE_WORDS: KindWords<IdleFacts> = {
     );
   },
   "ci-cap": (facts) => retiredCountHold(facts.task),
-  "review-cap": (facts) =>
-    `${retiredCountHold(facts.task)} ${facts.findings ? renderReviewVerdict(facts.findings, false) : (facts.report ?? "")}`,
+  "review-cap": (facts) => {
+    const rode = facts.findings ? renderReviewVerdict(facts.findings, false) : facts.report;
+    return rode ? `${retiredCountHold(facts.task)} ${rode}` : retiredCountHold(facts.task);
+  },
 };

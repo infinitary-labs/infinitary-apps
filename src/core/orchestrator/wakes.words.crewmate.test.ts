@@ -763,6 +763,20 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         "[fm-op] the captain sent ask w-14 (POST /repos/infinitary-labs/infinitary/releases) to GitHub, once, and what came of it is unknown: the connection closed before an answer. It is never sent again; read GitHub to see what happened before you do anything that depends on it.",
     },
     {
+      name: "unknown with no reason",
+      wake: {
+        facts: {
+          kind: "write-answered",
+          ask: "w-17",
+          call: "POST /repos/infinitary-labs/infinitary/releases",
+          place: "GitHub",
+          outcome: "unknown",
+        },
+      },
+      words:
+        "[fm-op] the captain sent ask w-17 (POST /repos/infinitary-labs/infinitary/releases) to GitHub, once, and what came of it is unknown. It is never sent again; read GitHub to see what happened before you do anything that depends on it.",
+    },
+    {
       name: "refused to the first mate",
       wake: {
         facts: {
@@ -790,7 +804,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "[fm-op] the captain's click on ask w-16 sent nothing: . To ask again, make a new write with github_write or call the integration again.",
+        "[fm-op] the captain's click on ask w-16 sent nothing. To ask again, make a new write with github_write or call the integration again.",
     },
   ],
   "checks-settled": [

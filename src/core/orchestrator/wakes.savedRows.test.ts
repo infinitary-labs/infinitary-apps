@@ -83,7 +83,7 @@ describe("saved rows of wakes the host no longer queues", () => {
         v: 1,
         facts: { kind: "review-cap", owner: "firstmate", task: TASK, rounds: 3, cap: 2 },
       }),
-    ).toBe(`${RETIRED_COUNT_HOLD} `);
+    ).toBe(RETIRED_COUNT_HOLD);
   });
 
   it("serves a saved idle reminder about a count hold as a retired count hold", () => {

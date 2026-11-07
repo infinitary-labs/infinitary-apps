@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "wake-reason-clause-words",
+      "reason": "The words the first mate and a crewmate read when a write was refused or its outcome is unknown with no saved reason, and when an older saved review-cap row carried nothing, no longer end in a stray colon or trailing space; nothing a person sees changes."
+    }
+  ]
+}

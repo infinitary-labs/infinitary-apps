@@ -1,5 +1,5 @@
 name: Electron's download
-description: Keep Electron's downloaded binary in the Actions cache, so a dependency install on a GitHub-hosted runner reads it there instead of from Electron's release server.
+description: Keep Electron's downloaded binary in the Actions cache, so a dependency install reads it there instead of from Electron's release server.
 inputs:
   working-directory:
     description: Checkout whose package.json names the Electron version.
@@ -7,15 +7,17 @@ inputs:
 runs:
   using: composite
   steps:
-    # A hosted runner starts with no Electron, so electron's own installer,
-    # which pnpm install runs (scripts/ensure-electron-installed.mjs),
-    # downloads it from GitHub's release server on every job, with no retry;
-    # one 504 there failed main's Linux code checks. Restored here, a job
-    # reaches that server only on a version's first download. A self-hosted
-    # runner keeps Electron's own cache folder, so it skips both steps, as it
-    # skips setup-node's package cache.
+    # A GitHub-hosted runner, and each virtual machine the placement service
+    # makes fresh for one job and deletes after it (a Mac's clone of the one
+    # image, a Linux machine on the PC), starts with no Electron. Electron's
+    # own installer, which pnpm install runs
+    # (scripts/ensure-electron-installed.mjs), then downloads it from GitHub's
+    # release server on every job, with no retry: one 504 there failed main's
+    # Linux code checks, and one download that stalled for five minutes failed
+    # a batch's Mac journeys on a fresh virtual Mac. Restored here, a job
+    # reaches that server only on a version's first download, on every kind of
+    # runner; one that kept Electron's own cache reads the cached copy instead.
     - id: electron
-      if: runner.environment == 'github-hosted'
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
@@ -24,8 +26,7 @@ runs:
         printf 'electron_config_cache=%s\n' "$dir" >> "$GITHUB_ENV"
         printf 'dir=%s\n' "$dir" >> "$GITHUB_OUTPUT"
         printf 'version=%s\n' "$(node -p 'require("./package.json").devDependencies.electron')" >> "$GITHUB_OUTPUT"
-    - if: runner.environment == 'github-hosted'
-      uses: actions/cache@v4
+    - uses: actions/cache@v4
       with:
         path: ${{ steps.electron.outputs.dir }}
         key: electron-${{ runner.os }}-${{ runner.arch }}-${{ steps.electron.outputs.version }}

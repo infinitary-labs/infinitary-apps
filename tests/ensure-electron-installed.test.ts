@@ -141,11 +141,16 @@ describe(".github/actions/electron-download", () => {
     return { env: lines(env), outputs: lines(output) };
   }
 
-  it("runs only on a GitHub-hosted runner, as setup-node's package cache does", () => {
+  // Batch run 42329308093's Mac journeys ran on a fresh virtual Mac, a
+  // self-hosted runner with no Electron of its own; both steps skipped there,
+  // and electron's installer failed when its download from the release server
+  // stalled for five minutes. A self-hosted runner restores it too.
+  it("runs on a self-hosted runner as on a GitHub-hosted one", () => {
     for (const step of [record, cache]) {
-      const hosted = { runner: { environment: "github-hosted" } };
-      expect(workflowValue(step.if ?? "", hosted)).toBe(true);
-      expect(workflowValue(step.if ?? "", { runner: { environment: "self-hosted" } })).toBe(false);
+      for (const environment of ["github-hosted", "self-hosted"]) {
+        const runs = step.if === undefined || workflowValue(step.if, { runner: { environment } });
+        expect(runs, `${step.id ?? "actions/cache"} on ${environment}`).toBe(true);
+      }
     }
   });
 

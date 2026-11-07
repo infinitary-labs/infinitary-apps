@@ -1,3 +1,4 @@
+import type { ClientRequest } from "node:http";
 import { request } from "node:https";
 import { isIP } from "node:net";
 import type { Writable } from "node:stream";
@@ -93,9 +94,23 @@ export class HomeRouteMissingError extends Error {
   }
 }
 
-/** Default limit for one pinned TLS dial, before the WebSocket welcome wait starts. */
+/**
+ * Default limit for one pinned TLS dial, before the WebSocket welcome wait
+ * starts, and for each quiet stretch of a request on it (`quietFor`).
+ */
 export const HOME_DIAL_TIMEOUT_MS = 10_000;
 const ANSWER_MAX_BYTES = 16 * 1024;
+
+/**
+ * Ends `asked` with `quiet` once its socket has gone quiet for the dial's
+ * limit, so a home that took the request and then says nothing does not
+ * leave this computer waiting. The request goes on an already-pinned
+ * socket, and Node arms a request's `timeout` option only on a socket it
+ * makes itself: the request arms it on the pinned socket here instead.
+ */
+function quietFor(asked: ClientRequest, options: DialOptions, quiet: () => void): void {
+  asked.setTimeout(options.timeoutMs ?? HOME_DIAL_TIMEOUT_MS, quiet);
+}
 
 /**
  * Where a link's or grant's dial goes: `target` when given, else its own
@@ -380,7 +395,6 @@ async function pair(
           "content-length": Buffer.byteLength(body),
         },
         createConnection: () => socket,
-        timeout: options.timeoutMs ?? HOME_DIAL_TIMEOUT_MS,
       },
       (response) => {
         const chunks: Buffer[] = [];
@@ -400,7 +414,7 @@ async function pair(
         );
       },
     );
-    asked.once("timeout", () => asked.destroy(new Error(`${HOME.The} did not answer.`)));
+    quietFor(asked, options, () => asked.destroy(new Error(`${HOME.The} did not answer.`)));
     asked.once("error", reject);
     asked.end(body);
   });
@@ -471,7 +485,6 @@ export async function fetchFirstmate(
             "content-length": Buffer.byteLength(body),
           },
           createConnection: () => socket,
-          timeout: options.timeoutMs ?? HOME_DIAL_TIMEOUT_MS,
         },
         (response) => {
           response.once("error", reject);
@@ -519,7 +532,7 @@ export async function fetchFirstmate(
           );
         },
       );
-      asked.once("timeout", () =>
+      quietFor(asked, options, () =>
         asked.destroy(new Error(`${HOME.The} stopped sending Infinitary.`)),
       );
       asked.once("error", reject);

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "quiet-home-dial-ends",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Joining or updating another computer no longer waits forever when your first mate's computer goes quiet",
+      "body": "When another computer joins with a link, or gets its update of Infinitary from the computer where your first mate lives, and that computer stops answering partway, the other computer now stops waiting and says it did not answer, or stopped sending Infinitary. Before, it could wait with no end and say nothing. A join gives up after 10 seconds of silence, and an update after a minute of silence.",
+      "noPicture": "The change is in how long another computer waits for an answer that never comes, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

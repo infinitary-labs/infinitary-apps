@@ -66,6 +66,7 @@ A computer's join dials once only to hear the home's name and `onHomeMac`, and i
 
 A device allows 10 seconds for the pinned TLS dial (`HOME_DIAL_TIMEOUT_MS`), then another 10 seconds for the WebSocket upgrade and welcome (`HOME_WELCOME_TIMEOUT_MS`).
 These waits are sequential, not a single 10-second first-connection limit.
+A pairing's request and a fetch of Infinitary on the pinned socket end once that socket has been quiet for the dial's limit, or for an update's own quiet stretch of a minute, each with its own words (`src/core/devices/dial.ts`): Node arms a request's own limit only on a socket it makes itself, so the request arms it on the pinned socket.
 A journey waiting for first contact allows both phases, rather than failing a still-pending attempt after the default 5-second poll.
 
 Either way the device's cursor is then the welcome's `epoch` with the newest `seq` it holds.
@@ -195,3 +196,4 @@ The names are open strings: a client ignores one it does not know, and a newer h
 - `src/core/devices/homeLink.test.ts`: the device's own side as the app as a view runs it (`docs/view.md`): catching up, refusing while out of reach, Remove and Leave, a long push read whole from its parts; and a home and a device on two sides of the Infinitary rename, read on the wire.
 - `tests/helpers/connectionClient.ts`: a device written against the wire alone (`connectClient`), dialing with a real grant through the device's own side of pairing (`src/core/devices/dial.ts`), at any target, and able to change its upgrade for refusal tests.
 - `src/core/devices/dialTarget.test.ts`: the same join and connection through a private socket, and a grant that reaches its home only through the home's SSH never dialing its address.
+- `src/core/devices/dialQuiet.test.ts`: a pairing whose home takes the request and never answers, and a fetch of Infinitary whose home stops sending part way, each ended after its quiet stretch with its own words, the part that came left unfinished.

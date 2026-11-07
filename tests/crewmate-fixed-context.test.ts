@@ -14,6 +14,12 @@ import { piToolsOf } from "../src/core/pi/toolSpec";
 import { CLAUDE_TOOL_DESCRIPTION_CAP } from "../src/core/prompts/cardContract";
 import { bindTools } from "../src/core/session/tools";
 import { crewmateToolDelegate } from "./helpers/crewmateToolDelegate";
+import {
+  CREWMATE_BUDGET,
+  fixedTokens as countFixed,
+  overLine,
+  roomAtHardLine,
+} from "./helpers/promptBudget";
 
 /**
  * The fixed part of every crewmate request: the served prompt and the tool
@@ -43,9 +49,9 @@ const KINDS: (CrewmateProcedureFacts | undefined)[] = [
 
 const tools = piToolsOf(bindTools(CREWMATE_TOOLS, crewmateToolDelegate()));
 
-/** The app's own count of the fixed part: characters / 4. */
+/** The app's own count of the fixed part (tests/helpers/promptBudget.ts). */
 function fixedTokens(systemPrompt: string): number {
-  return Math.ceil((systemPrompt.length + JSON.stringify(tools).length) / 4);
+  return countFixed({ systemPrompt, tools });
 }
 
 function label(
@@ -93,17 +99,6 @@ function standingText(): string {
     crewmateCardBodiesNote("/tmp/cards"),
   ].join("\n");
 }
-
-/**
- * The boundary for the fixed part, derived rather than kept by hand, the way
- * the first mate's is (INF-416 pieces H and J, INF-462). It is the smallest
- * local window's floor, minus the reserve, minus the conversation that window
- * promises a crewmate: at least as much room as the fixed part takes, so the
- * boundary is half of what the floor leaves after the reserve. A change that
- * would cross it trims first. The boundary is not a second number a revision
- * raises.
- */
-const FIXED_CONTEXT_BOUNDARY = (OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE) / 2;
 
 const SIGNED_IN_RULE = "the captain signs in, never you";
 
@@ -158,17 +153,18 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
 ];
 
 describe("the crewmate's fixed context (INF-416 piece J)", () => {
-  it("stays inside its budget for each runtime and kind of work", () => {
+  it("stays under its hard line for each runtime and kind of work", () => {
     // INF-2286: keep the assembled context readings in the run's evidence,
-    // including the Careful case that outgrew the unchanged boundary.
+    // including the Careful case that outgrew the unchanged budget. INF-2930:
+    // it fails only past the hard line; the prompt-budget check on main holds
+    // the budget and files the trim.
     const rows = RUNTIMES.flatMap((runtime) =>
-      KINDS.map((kind) => {
-        const tokens = fixedTokens(promptFor(runtime, kind));
-        return { label: label(runtime, kind), tokens, room: FIXED_CONTEXT_BOUNDARY - tokens };
-      }),
+      KINDS.map((kind) => ({
+        label: label(runtime, kind),
+        tokens: fixedTokens(promptFor(runtime, kind)),
+      })),
     );
-    console.info("Crewmate fixed context", { boundary: FIXED_CONTEXT_BOUNDARY, rows });
-    expect(rows.filter((row) => row.tokens > FIXED_CONTEXT_BOUNDARY)).toEqual([]);
+    expect(overLine("Crewmate", CREWMATE_BUDGET, rows)).toEqual([]);
   });
 
   it("names each tool's headroom when a description would meet the Claude cap", () => {
@@ -250,7 +246,9 @@ describe("the crewmate's fixed context (INF-416 piece J)", () => {
             },
             OLLAMA_MIN_CONTEXT,
           );
-        expect(fits(FIXED_CONTEXT_BOUNDARY), label(runtime, kind)).toBe(true);
+        // INF-2930: a prompt up to the hard line still leaves the
+        // conversation the room that line leaves, half of what the budget promises.
+        expect(fits(roomAtHardLine(CREWMATE_BUDGET)), label(runtime, kind)).toBe(true);
         // The check is the real one: it refuses what cannot fit.
         const room = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - fixedTokens(systemPrompt);
         expect(fits(room), label(runtime, kind)).toBe(true);

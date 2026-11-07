@@ -95,7 +95,7 @@ The qualitative read the plan asks for - how the local model classifies, dispatc
 - `src/core/pi/ollamaProfile.test.ts`: alias reuse/update identity, trained and hardware bounds, refusal/cleanup, and generic endpoint fallback.
 - `src/core/pi/ollamaSession.test.ts`: real Pi and native HTTP, tool/result/image transport, persisted pre-send compaction, timeout cancellation without late inference, and terminal failures.
 - `src/core/orchestrator/firstmateAgent.turns.test.ts`: a Settings change during slow preparation serves the latest choice.
-- `tests/firstmate-fixed-context.test.ts`: the fixed part stays inside its budget by the same pre-send check, which admits a working conversation on the 64K minimum and refuses one token past the room.
+- `tests/firstmate-fixed-context.test.ts`: the fixed part stays under its hard line, and the same pre-send check admits the conversation that line leaves on the 64K minimum and refuses one token past the room (`docs/testing.md`, "The prompt budget's two lines").
 - `tests/e2e/ollama-context.spec.ts`: the built app renders the answer without exposing the alias; preparation, no-answer, thinking-only, malformed/refused actions, output-limit and overflow failures show Retry; Retry recovers, and a successful operation ends on its answer card.
 
 ## What it is not

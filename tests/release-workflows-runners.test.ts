@@ -385,6 +385,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
       "ci.yml:integration-tests",
       "ci.yml:probe-tests",
       "replay.yml:replay-gate",
+      "prompt-budget.yml:prompt-budget",
     ],
     gate: ["journeys.yml:choose-journeys"],
     checks: ["verify.yml:lane", "verify.yml:linux-tests"],

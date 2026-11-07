@@ -17,6 +17,13 @@ import {
   FIRSTMATE_HANDOFF,
 } from "../src/core/prompts/cardContract";
 import { firstmateTools } from "./helpers/firstmateTools";
+import {
+  FIRSTMATE_BUDGET,
+  FIRSTMATE_PROMISED_CONVERSATION,
+  fixedTokens,
+  overLine,
+  roomAtHardLine,
+} from "./helpers/promptBudget";
 
 /**
  * The fixed part of every Firstmate request: the served prompt, the
@@ -46,33 +53,29 @@ async function fixedContext(includeRunbooks = true) {
   };
 }
 
-/** The app's own count of the fixed part (`localInputFits`): characters / 4. */
-function fixedTokens(context: { systemPrompt: string; tools: unknown }): number {
-  return Math.ceil((context.systemPrompt.length + JSON.stringify(context.tools).length) / 4);
-}
-
 /** A conversation of a given size, in the count the app's check gives a message. */
 function conversation(tokens: number): Parameters<typeof localInputFits>[0]["messages"][number] {
   return { role: "user", content: "x".repeat(tokens * 4), timestamp: 0 };
 }
 
 /**
- * The boundary for the fixed part, derived rather than kept by hand
- * (INF-416 piece H, findings P1 and P2). It is the smallest local window's
- * floor, minus the reserve, minus the conversation that window promises:
- * ten status blocks of the size FI3-539 recorded, plus the recent tokens
- * shortening always keeps. A change that would cross it trims first. The
- * boundary is not a second number a revision raises.
+ * The budget for the fixed part is derived rather than kept by hand
+ * (INF-416 piece H, findings P1 and P2; tests/helpers/promptBudget.ts): the
+ * smallest local window's floor, minus the reserve, minus the conversation
+ * that window promises. It is not a second number a revision raises.
  */
-const PROMISED_CONVERSATION = 10 * 2_938 + 4_096;
-const FIXED_CONTEXT_BOUNDARY = OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - PROMISED_CONVERSATION;
+const PROMISED_CONVERSATION = FIRSTMATE_PROMISED_CONVERSATION;
+const FIXED_CONTEXT_BOUNDARY = FIRSTMATE_BUDGET;
 
 describe("the Firstmate's fixed context (contract v4.59)", () => {
-  it("stays inside its budget by the app's own count", async () => {
+  it("stays under its hard line by the app's own count", async () => {
     // 65,536 - 12,288 - 33,476. The pin is the derivation, not a ceiling kept beside it.
     expect(PROMISED_CONVERSATION).toBe(33_476);
     expect(FIXED_CONTEXT_BOUNDARY).toBe(19_772);
-    expect(fixedTokens(await fixedContext(false))).toBeLessThanOrEqual(FIXED_CONTEXT_BOUNDARY);
+    // INF-2930: it fails only past the hard line; the prompt-budget check on
+    // main holds the budget and files the trim.
+    const tokens = fixedTokens(await fixedContext(false));
+    expect(overLine("First mate", FIXED_CONTEXT_BOUNDARY, [{ label: "core", tokens }])).toEqual([]);
   });
 
   it("names a prototype only where it sends the ask to a plan (FI3-872)", async () => {
@@ -92,10 +95,10 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
     const fits = (tokens: number) =>
       localInputFits({ systemPrompt, tools, messages: [conversation(tokens)] }, OLLAMA_MIN_CONTEXT);
     // The app's own pre-send check on the window it requires of a local
-    // model: the fixed part, then ten status blocks the size of the one
-    // FI3-539 recorded (2,938 tokens) beside the 4,096 recent tokens that
-    // shortening always keeps.
-    expect(fits(PROMISED_CONVERSATION)).toBe(true);
+    // model. INF-2930: a fixed part up to the hard line still leaves the
+    // conversation the room that line leaves, less than the promised one
+    // while an overrun waits for its trim.
+    expect(fits(roomAtHardLine(FIXED_CONTEXT_BOUNDARY))).toBe(true);
     // The boundary leaves exactly that conversation, no separately kept slack.
     expect(OLLAMA_MIN_CONTEXT - LOCAL_CONTEXT_RESERVE - FIXED_CONTEXT_BOUNDARY).toBe(
       PROMISED_CONVERSATION,

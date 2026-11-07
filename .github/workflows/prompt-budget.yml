@@ -1,0 +1,62 @@
+name: prompt-budget
+
+# The prompt budget's second line (docs/testing.md, "The prompt budget's two
+# lines"; INF-2930). The fixed-context tests fail only past the hard line, one
+# and a half times each budget; this check fails past the budget itself, after
+# a change reaches main. Nothing waits on it: no pull request starts it, and
+# the batch, main's release check, the alpha and every release never read it.
+# A red run on main files one trim task through an Automation rule on
+# "A workflow run fails".
+
+on:
+  push:
+    branches: [main]
+    # What the served prompts and tool lists are built from, and the check itself.
+    paths:
+      - src/**
+      - resources/runbooks/**
+      - scripts/prompt-budget.ts
+      - tests/helpers/promptBudget.ts
+      - tests/crewmate-fixed-context.test.ts
+      - tests/firstmate-fixed-context.test.ts
+      - .github/workflows/prompt-budget.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Each push reads main afresh; a newer push replaces an older reading.
+concurrency:
+  group: prompt-budget-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prompt-budget:
+    name: ${{ github.event_name == 'push' && 'Main push' || 'Manual request' }} · Prompt budget
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 20
+    # The path every crewmate works under (journeys.yml says why).
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Application Support/firstmate
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - uses: ./Application Support/firstmate/.github/actions/node-headers
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
+      - run: pnpm install --frozen-lockfile
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      - run: node scripts/prompt-budget.ts

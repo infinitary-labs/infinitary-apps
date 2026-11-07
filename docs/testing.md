@@ -459,6 +459,24 @@ A crewmate that repairs a failing main follows these steps:
 
 Priority never interrupts running work, and capacity, test gates and merge consent are unchanged.
 
+## The prompt budget's two lines
+
+The first mate's and a crewmate's fixed prompts each have a budget derived from the smallest local window (`docs/orchestrator-contract.md`, "The fixed-context budget"), and each budget has two lines (INF-2930).
+`tests/helpers/promptBudget.ts` owns the budgets, the count and both lines; the two fixed-context tests and `scripts/prompt-budget.ts` read it.
+
+- **The hard line, one and a half times the budget.**
+  `tests/firstmate-fixed-context.test.ts` and `tests/crewmate-fixed-context.test.ts` fail only past it, naming each reading, its budget and its hard line.
+  Every check that merges or releases runs them, so only an overrun this large holds a merge or a release.
+  Their room tests hold the conversation the hard line leaves in the 64K window and keep the real pre-send guard's refusal of one token more.
+- **The budget itself.**
+  `node scripts/prompt-budget.ts` runs the same budget tests with `PROMPT_BUDGET_LINE=budget`, prints every reading and fails naming each one over its budget.
+  `prompt-budget.yml` runs it on each push to main that changes the app's source or runbooks, and by hand.
+  No pull request starts it, and the batch, main's release check, the alpha and every release never read it; `tests/prompt-budget-workflow.test.ts` holds that.
+- **The trim task.**
+  An Automation rule on GitHub's "A workflow run fails", filtered to workflow `prompt-budget` on branch `main`, files and starts one trim task unless one is already open.
+  The trim brings every reading back at or under its budget, with no rule lost from the tests' ledgers; how far under is the trimming crewmate's judgment.
+  It changes served text, so it asks before it merges.
+
 ## Main's desktop release check
 
 Main's check is the desktop app's release check (INF-2498, the captain: "the main check should be clarified to be specifically about the desktop app's release").
@@ -1267,7 +1285,7 @@ A Linux job with no kind, such as main's startup fixtures, the Linux packages an
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
 | `light` | `verify.yml`'s `request`, and `phone.yml`'s `request` on a request (the phone release's call names hosted `ubuntu-24.04`) | `LINUX_RUNNER` |
-| `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, and `replay.yml`'s `replay-gate` | `LINUX_RUNNER` |
+| `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, `replay.yml`'s `replay-gate`, and `prompt-budget.yml`'s `prompt-budget` | `LINUX_RUNNER` |
 | `gate` | `journeys.yml`'s `choose-journeys` | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane and its Linux test groups (`linux-tests`) | `LINUX_RUNNER` |
 | `typecheck` | `ci.yml`'s `typecheck-lint-build`, which runs the critical path and so needs a PC queue with the desktop, such as the PC's PR line `shell-pc-linux-pr` | `LINUX_RUNNER` |

@@ -19,6 +19,7 @@ import type { TaskStatusReading } from "@shared/taskPresentation";
 import type { ComputerMoveView, DropEffects, MoveDestination, MoveOptions } from "@shared/tasks";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useCommandKeys } from "../app/keyHints";
 import { Badge, Button } from "../design";
 import { CardCorner } from "../design/cards/CardSize";
 import { useCutWords } from "../design/core/overflowTitle";
@@ -227,6 +228,8 @@ export function RecordPaneFooter({
   const [picking, setPicking] = useState<MoveDestination[] | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
   const [moving, setMoving] = useState<"open" | "move" | "cancel" | null>(null);
+  const moveKeys = useCommandKeys("task.move-computer");
+  const doneKeys = useCommandKeys("cards.done");
   const reviewKey = effects ? JSON.stringify(effects) : "";
 
   // A new reading of the record settles whatever was in flight.
@@ -409,6 +412,7 @@ export function RecordPaneFooter({
         <Button
           variant="secondary"
           data-record-move-open=""
+          {...moveKeys}
           pending={moving === "open"}
           disabled={busy || moving !== null}
           onClick={openPicker}
@@ -441,6 +445,7 @@ export function RecordPaneFooter({
           variant="primary"
           pending={pending === "answer-done"}
           data-answer-done-control=""
+          {...doneKeys}
           note={answerDoneRest(taskKey)}
           onClick={() => run("answer-done")}
         >

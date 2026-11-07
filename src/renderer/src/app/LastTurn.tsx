@@ -1,7 +1,10 @@
+import { KEYBOARD_COMMANDS } from "@shared/keyboard";
 import type { LastRound, LastTurn as Turn } from "@shared/lastTurn";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { prefersReducedMotion } from "../character/reducedMotion";
+import { useRestLabel } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
+import { useCommandKeys } from "./keyHints";
 import {
   fadeKey,
   getFade,
@@ -123,6 +126,9 @@ export function MateMark({ working }: { working: boolean }) {
   );
 }
 
+/** What the reply's label says beside its key when its words fit. */
+const REPLY_COMMAND_WORDS = KEYBOARD_COMMANDS["firstmate.reply"].label;
+
 /** The Firstmate's line, swapping its words with a leave and a rise. */
 function MateLine({
   target,
@@ -169,6 +175,14 @@ function MateLine({
   const openReplyNote = useShellStore((s) => s.openReplyNote);
   // A reply is a button that opens it whole; the working words are not.
   const Bubble = reply ? "button" : "span";
+  // The newest reply's button names the key of Open the first mate's reply
+  // in the app's label on rest, after its words when they are cut short, else
+  // after the command's own words (docs/keyboard.md, "Key hints").
+  const replyKeys = useCommandKeys(reply && !older ? "firstmate.reply" : null);
+  const replyRest = useRestLabel(
+    reply ? (mateFit.title ?? (replyKeys.keys ? REPLY_COMMAND_WORDS : undefined)) : undefined,
+    { keys: replyKeys.keys },
+  );
   return (
     <>
       <div className="row mate">
@@ -179,16 +193,17 @@ function MateLine({
               <Bubble
                 {...(reply
                   ? {
+                      ...replyRest,
                       type: "button" as const,
+                      "aria-keyshortcuts": replyKeys["aria-keyshortcuts"],
                       onClick: () => openReplyNote(older ? "older" : undefined),
                     }
-                  : {})}
+                  : { title: mateFit.title })}
                 data-last-turn-bubble="firstmate"
                 data-state={
                   shown.kind === "working" ? "working" : reply?.problem ? "problem" : "reply"
                 }
                 data-working={busy && reply ? "" : undefined}
-                title={mateFit.title}
               >
                 <span
                   // Newer words enter as new text, so the rise replays for each.

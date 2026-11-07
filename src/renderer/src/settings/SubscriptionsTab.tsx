@@ -30,6 +30,7 @@ import {
   signInFlightSnapshot,
   subscribeSignInFlight,
 } from "../accounts/signInFlight";
+import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import type { RowMenuItem, StatusDotTone } from "../design";
 import { Button, Input, QuotaMicroMeter, RowMenu, StatusDot, Switch } from "../design";
@@ -1072,6 +1073,7 @@ export function SubscriptionsTab() {
     setPrompt(null);
   };
 
+  const recheckKeys = useCommandKeys("allowance.recheck");
   const refreshQuota = () => {
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
@@ -1215,6 +1217,7 @@ export function SubscriptionsTab() {
               variant="ghost"
               size="sm"
               onClick={refreshQuota}
+              {...recheckKeys}
               pending={refreshing}
               pendingLabel="Refreshing..."
             >

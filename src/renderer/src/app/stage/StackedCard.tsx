@@ -500,6 +500,7 @@ export function StackedCard({
 }
 
 function AnswerDone({ done }: { done: NonNullable<Card["answerDone"]> }) {
+  const doneKeys = useCommandKeys("cards.done");
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   return (
@@ -517,6 +518,7 @@ function AnswerDone({ done }: { done: NonNullable<Card["answerDone"]> }) {
         variant="primary"
         pending={busy}
         data-answer-done-control=""
+        {...doneKeys}
         note={done.restWords}
         onClick={() => {
           setBusy(true);

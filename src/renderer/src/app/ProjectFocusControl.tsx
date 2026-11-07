@@ -177,6 +177,7 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
   const state = useProjectFocus();
   const { pills, focus, shown: pillShown, elsewhere } = state;
   const openKeys = useCommandKeys("project-focus.open");
+  const clearKeys = useCommandKeys("project-focus.clear");
   const [phase, setPhase] = useState<Phase>("closed");
   const [placement, setPlacement] = useState<Placement | null>(null);
   const [stop, setStop] = useState<string>("all");
@@ -389,6 +390,7 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
           <IconButton
             label="Show all projects"
             size={22}
+            {...clearKeys}
             data-project-focus-clear=""
             onClick={() => projectFocus.pick(null)}
           >

@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import { CARD_DRAG_MIN } from "../../cards/cardGeometry";
+import { useRestLabel } from "../../design";
+import { useCommandKeys } from "../keyHints";
 
 /**
  * The folded docks' edge tabs (the captain's tweak 2): a 4px accent strip
@@ -17,13 +19,28 @@ export function FoldedRailTabs({
   right: boolean;
   onShow: () => void;
 }) {
-  const tab = (side: "left" | "right") => (
+  return (
+    <>
+      {left && <RailTab side="left" onShow={onShow} />}
+      {right && <RailTab side="right" onShow={onShow} />}
+    </>
+  );
+}
+
+/**
+ * One edge tab. It does what Show or hide the card's thread does, so its
+ * label on rest names that command's key (docs/keyboard.md, "Key hints").
+ */
+function RailTab({ side, onShow }: { side: "left" | "right"; onShow: () => void }) {
+  const { keys, "aria-keyshortcuts": ariaKeys } = useCommandKeys("cards.thread");
+  const rest = useRestLabel(SHOW_PANELS, { keys });
+  return (
     <button
-      key={side}
+      {...rest}
       type="button"
       data-rail-tab={side}
-      aria-label="Show panels"
-      title="Show panels"
+      aria-label={SHOW_PANELS}
+      aria-keyshortcuts={ariaKeys}
       onClick={onShow}
       style={{
         position: "fixed",
@@ -41,13 +58,9 @@ export function FoldedRailTabs({
       }}
     />
   );
-  return (
-    <>
-      {left && tab("left")}
-      {right && tab("right")}
-    </>
-  );
 }
+
+const SHOW_PANELS = "Show panels";
 
 /**
  * One end of a maximized card's Tab round: focus that reaches it goes on to

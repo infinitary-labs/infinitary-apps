@@ -1,4 +1,4 @@
-import { panelCommandId } from "@shared/keyboard";
+import { type CommandId, panelCommandId } from "@shared/keyboard";
 import type { PanelAskVia, PanelHeaderButton, PanelHeaderIcon } from "@shared/personal/contracts";
 import type { ReactNode } from "react";
 import { useCommandKeys } from "../app/keyHints";
@@ -41,6 +41,16 @@ export function PanelHeaderButtons({
   );
 }
 
+/**
+ * A built-in panel's header button that does what a window command does,
+ * keyed `<panel>/<button>`: it names that command's key, since the panel
+ * declares no command of its own for it (Automation's Open Automation opens
+ * Settings → Automation, as Open Automation does).
+ */
+const WINDOW_COMMAND_OF: Readonly<Record<string, CommandId>> = {
+  "automation/open": "settings.automation",
+};
+
 function HeaderButton({ panel, button }: { panel: HeaderButtonsPanel; button: PanelHeaderButton }) {
   // The key of the command that does the same: the one that presses it,
   // else one that puts up the same card - with the same data first, then
@@ -57,7 +67,11 @@ function HeaderButton({ panel, button }: { panel: HeaderButtonsPanel; button: Pa
     (button.emits === undefined
       ? undefined
       : commands.find((candidate) => candidate.emits === button.emits));
-  const keys = useCommandKeys(command ? panelCommandId(panel.id, command.id) : null);
+  const keys = useCommandKeys(
+    command
+      ? panelCommandId(panel.id, command.id)
+      : (WINDOW_COMMAND_OF[`${panel.id}/${button.id}`] ?? null),
+  );
   return (
     <span data-panel-header-button={button.id} style={{ display: "inline-flex", flexShrink: 0 }}>
       <IconButton

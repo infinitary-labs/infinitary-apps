@@ -16,6 +16,7 @@ import {
   usageValue,
 } from "@shared/usage";
 import { type KeyboardEvent, type RefObject, useEffect, useRef, useState } from "react";
+import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { KeyedText } from "../cards/TaskKey";
 import { Button, GroupedPills } from "../design";
@@ -59,6 +60,7 @@ import {
 export function UsageTab() {
   const unit = useShellStore((s) => s.usageUnit);
   const setUnit = useShellStore((s) => s.setUsageUnit);
+  const unitKeys = useCommandKeys("usage.unit");
   const unitError = useShellStore((s) =>
     s.appearanceError?.choice === "usageUnit" ? s.appearanceError.message : null,
   );
@@ -132,6 +134,7 @@ export function UsageTab() {
               label: UNIT_WORDS[value],
             }))}
             onChange={setUnit}
+            {...unitKeys}
           />
         </div>
       </div>

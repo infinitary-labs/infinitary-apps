@@ -2,20 +2,29 @@ import { HERE } from "@shared/deviceNames";
 import { UI_SIZES, type UiSize } from "@shared/preferences";
 import { useEffect } from "react";
 import type { AppearanceChoice } from "../app/appearance";
+import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { GroupedPills, Switch } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { isView } from "../devices/viewWords";
 import { ROW_GAP, SectionLabel, SettingRow } from "./settingRows";
 
-/** What the Size row says changes the size besides it, in this keyboard's words. */
-const SIZE_KEYS = {
-  mac: "⌘+ and ⌘− change the same size.",
-  ctrl: "Ctrl+Plus and Ctrl+Minus change the same size.",
-} as const;
+/**
+ * What the Size row says changes the size besides it: the keys Make
+ * everything larger and Make everything smaller have now, in this
+ * keyboard's words, or nothing when neither has one (docs/keyboard.md,
+ * "Key hints").
+ */
+function sizeKeysWords(larger: string | undefined, smaller: string | undefined): string {
+  if (larger && smaller) return ` ${larger} and ${smaller} change the same size.`;
+  const one = larger ?? smaller;
+  return one ? ` ${one} changes the same size.` : "";
+}
 
 export function AppearanceTab() {
   const desktop = thisDesktop();
+  const largerKeys = useCommandKeys("size.larger");
+  const smallerKeys = useCommandKeys("size.smaller");
   const size = useShellStore((s) => s.size);
   const setSize = useShellStore((s) => s.setSize);
   const defaultCardSize = useShellStore((s) => s.defaultCardSize);
@@ -52,7 +61,7 @@ export function AppearanceTab() {
           id="size"
           error={errorFor("size")}
           title="Size"
-          description={`Make text and everything around it larger. ${SIZE_KEYS[desktop.keys]}`}
+          description={`Make text and everything around it larger.${sizeKeysWords(largerKeys.keys, smallerKeys.keys)}`}
           control={
             <GroupedPills
               name="Size"

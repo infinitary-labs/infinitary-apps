@@ -1,6 +1,8 @@
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { useEffect, useMemo, useRef } from "react";
 import { available } from "../app/focusRecovery";
+import { useCommandKeys } from "../app/keyHints";
+import { useRestLabel } from "../design";
 import { focusWithRing } from "../design/focus";
 import { useStageRole } from "./SurfaceReveal";
 import {
@@ -8,6 +10,7 @@ import {
   lendTaskTabs,
   type ShownTab,
   shownTabIndex,
+  type TabCommand,
   type TaskTab,
   type TaskTabFacts,
   tabFocusAsked,
@@ -128,7 +131,6 @@ export function TaskTabStrip({
   };
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: a tablist is the pattern; the arrows are its keys.
     <div
       ref={list}
       role="tablist"
@@ -151,53 +153,100 @@ export function TaskTabStrip({
         const isSelected = index === selected;
         const disabled = !enabled(tab);
         return (
-          <button
+          <StripTab
             key={tab.kind === "browser" ? `browser-${tab.page}` : tab.kind}
-            type="button"
-            role="tab"
-            aria-selected={isSelected}
-            tabIndex={isSelected ? 0 : -1}
+            tab={tab}
+            command={
+              tab.kind === "browser" && tabs.findIndex((t) => t.kind === "browser") !== index
+                ? null
+                : TAB_SHOW_COMMANDS[tab.kind]
+            }
+            isSelected={isSelected}
             disabled={disabled}
-            title={tab.kind === "cards" ? `${tab.label} ${tab.count}` : tab.label}
-            data-task-tab={tab.kind}
-            data-browser-page-tab={tab.kind === "browser" ? tab.page : undefined}
-            // A click with no pointer (Enter, Space) is a key's.
-            onClick={(event) => go(index, event.detail === 0)}
-            style={{
-              maxWidth: "45%",
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              padding: "var(--space-1) var(--space-2)",
-              marginBottom: -1,
-              border: 0,
-              borderBottom: `2px solid ${isSelected ? "var(--accent)" : "transparent"}`,
-              background: "transparent",
-              fontFamily: "inherit",
-              fontSize: "var(--text-sm)",
-              fontWeight: 400,
-              color: isSelected ? "var(--fg-1)" : "var(--fg-3)",
-              cursor: disabled || isSelected ? "default" : "pointer",
-            }}
-          >
-            {tab.label}
-            {tab.kind === "cards" && (
-              <span
-                data-task-tab-count=""
-                style={{
-                  marginLeft: "var(--space-1)",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "var(--text-xs)",
-                  color: "var(--fg-3)",
-                }}
-              >
-                {tab.count}
-              </span>
-            )}
-          </button>
+            onGo={(byKey) => go(index, byKey)}
+          />
         );
       })}
     </div>
+  );
+}
+
+/** The command that shows each tab, whose key its label names (docs/keyboard.md, "Key hints"). */
+const TAB_SHOW_COMMANDS: Record<TaskTab["kind"], TabCommand> = {
+  info: "cards.show-info",
+  cards: "cards.show-cards",
+  activity: "cards.show-activity",
+  crewmate: "cards.show-crewmate",
+  browser: "cards.show-browser",
+};
+
+/**
+ * One tab: its words, and the key of the command that shows it, in the
+ * app's label on rest (the browser's own title is never a tooltip). Show
+ * Browser goes to the first page's tab, so only that tab names its key.
+ */
+function StripTab({
+  tab,
+  command,
+  isSelected,
+  disabled,
+  onGo,
+}: {
+  tab: TaskTab;
+  command: TabCommand | null;
+  isSelected: boolean;
+  disabled: boolean;
+  onGo: (byKey: boolean) => void;
+}) {
+  const { keys, "aria-keyshortcuts": ariaKeys } = useCommandKeys(command);
+  const rest = useRestLabel(tab.kind === "cards" ? `${tab.label} ${tab.count}` : tab.label, {
+    keys,
+  });
+  return (
+    <button
+      {...rest}
+      type="button"
+      role="tab"
+      aria-selected={isSelected}
+      aria-keyshortcuts={ariaKeys}
+      tabIndex={isSelected ? 0 : -1}
+      disabled={disabled}
+      data-task-tab={tab.kind}
+      data-browser-page-tab={tab.kind === "browser" ? tab.page : undefined}
+      // A click with no pointer (Enter, Space) is a key's.
+      onClick={(event) => onGo(event.detail === 0)}
+      style={{
+        maxWidth: "45%",
+        minWidth: 0,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        padding: "var(--space-1) var(--space-2)",
+        marginBottom: -1,
+        border: 0,
+        borderBottom: `2px solid ${isSelected ? "var(--accent)" : "transparent"}`,
+        background: "transparent",
+        fontFamily: "inherit",
+        fontSize: "var(--text-sm)",
+        fontWeight: 400,
+        color: isSelected ? "var(--fg-1)" : "var(--fg-3)",
+        cursor: disabled || isSelected ? "default" : "pointer",
+      }}
+    >
+      {tab.label}
+      {tab.kind === "cards" && (
+        <span
+          data-task-tab-count=""
+          style={{
+            marginLeft: "var(--space-1)",
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--text-xs)",
+            color: "var(--fg-3)",
+          }}
+        >
+          {tab.count}
+        </span>
+      )}
+    </button>
   );
 }

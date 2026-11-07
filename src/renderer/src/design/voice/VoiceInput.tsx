@@ -29,6 +29,7 @@ import {
   PendingFileChips,
   useFileDrop,
 } from "../core/FileControls";
+import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
 import { KeyCap } from "../core/KeyCap";
 
@@ -375,6 +376,7 @@ export function VoiceInput({
     <IconButton
       label="Submit"
       tone="accent"
+      {...fixedKeys("Enter")}
       aria-disabled={over || undefined}
       onClick={() => {
         if (!over) onSubmit?.();
@@ -558,7 +560,12 @@ export function VoiceInput({
         >
           {recording ? (
             <>
-              <IconButton label="Abandon" tone="danger" onClick={onAbandon}>
+              <IconButton
+                label="Abandon"
+                tone="danger"
+                {...fixedKeys("Escape")}
+                onClick={onAbandon}
+              >
                 {VIco.x}
               </IconButton>
               <div style={{ flex: 1, minWidth: 0 }}>

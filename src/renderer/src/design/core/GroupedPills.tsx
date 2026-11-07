@@ -12,6 +12,13 @@ export type GroupedPillsProps<T extends string = string> = {
   options: readonly GroupedPillsOption<T>[];
   onChange?: (value: T) => void;
   disabled?: boolean;
+  /**
+   * The key of the window command that switches the same choice, drawn
+   * after the pills; pass `aria-keyshortcuts` with it (docs/keyboard.md,
+   * "Key hints").
+   */
+  keys?: string | undefined;
+  "aria-keyshortcuts"?: string | undefined;
 };
 
 export type GroupedChecksOption<T extends string = string> = GroupedPillsOption<T> & {
@@ -96,9 +103,16 @@ export function GroupedPills<T extends string>({
   options,
   onChange,
   disabled,
+  keys,
+  "aria-keyshortcuts": ariaKeys,
 }: GroupedPillsProps<T>) {
   return (
-    <div role="radiogroup" aria-label={name} style={trackStyle(disabled)}>
+    <div
+      role="radiogroup"
+      aria-label={name}
+      aria-keyshortcuts={ariaKeys}
+      style={trackStyle(disabled)}
+    >
       {options.map((option) => {
         const checked = option.value === value;
         return (
@@ -118,9 +132,26 @@ export function GroupedPills<T extends string>({
           </label>
         );
       })}
+      {keys && (
+        // Decoration: the group names its key in aria-keyshortcuts.
+        <span data-grouped-pills-key="" aria-hidden="true" style={KEY_STYLE}>
+          {keys}
+        </span>
+      )}
     </div>
   );
 }
+
+/** A command's key after the pills, as a button draws its own (./Button). */
+const KEY_STYLE: CSSProperties = {
+  alignSelf: "center",
+  padding: "0 var(--space-2)",
+  fontFamily: "var(--font-mono)",
+  fontSize: "var(--text-sm)",
+  fontWeight: 500,
+  color: "var(--fg-3)",
+  whiteSpace: "nowrap",
+};
 
 /**
  * The same track where any number may be chosen: each pill a checkbox,

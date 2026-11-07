@@ -8,6 +8,7 @@ The label is `--bg-3` on a `--line-2` hairline, `--radius-s`, `--text-sm` `--fg-
 The first one waits `--delay-label` (500ms) and fades in over `--dur-fast`; resting on another icon button while one shows, or within 400ms after it went, moves it there at once; leaving, a press or a key takes it away at once.
 It is decoration, hidden from assistive technology, and never takes the pointer.
 A button that does what a window command does (Settings, the card pager's arrows, Search tasks, Open task board) passes the command's first key as `keys`: the label draws it after the words, in mono `--fg-3`, `--space-2` apart (`Settings ⌘,` on a Mac, `Settings Ctrl+,` on Linux), and the button names every key in `aria-keyshortcuts`.
+A key the app holds fixed counts the same: Close the viewer and Back draw `Esc`, Previous picture and Next picture `←` and `→`, Submit `↩` (`Enter` on Linux), and Close window `Ctrl+W` on Linux.
 On Linux the top bar's window controls (Minimize, Maximize or Restore, Close window) are neutral icon buttons too (readme, "Linux desktop conventions").
 Icons: Lucide, 16px, currentColor.
 

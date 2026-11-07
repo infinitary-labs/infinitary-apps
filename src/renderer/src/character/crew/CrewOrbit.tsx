@@ -9,6 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { useCommandKeys } from "../../app/keyHints";
 import { motionToken } from "../../design/motion";
 import { litTask, useLitTaskId } from "../../plugins/point/litTask";
 import { requestCharacterReceive, requestCharacterSendoff } from "../emoteSignal";
@@ -1189,23 +1190,23 @@ export function CrewOrbit({
           aria-label="Work computers"
           style={{ top: extent / 2 + Math.min(248, (viewportHeight - CREW_FIT.reservePx) / 2) }}
         >
-          <button
-            type="button"
+          <ComputerPageButton
+            command="computers.previous"
             disabled={computers.page === 0 || !interactive}
             onClick={() => computers.setPage(computers.page - 1)}
           >
             Previous computers
-          </button>
+          </ComputerPageButton>
           <span>
             {computers.page + 1} / {computers.pages}
           </span>
-          <button
-            type="button"
+          <ComputerPageButton
+            command="computers.next"
             disabled={computers.page + 1 === computers.pages || !interactive}
             onClick={() => computers.setPage(computers.page + 1)}
           >
             Next computers
-          </button>
+          </ComputerPageButton>
         </nav>
       )}
       {/* The lit crewmate's brackets (INF-237): the summary's brackets alone. */}
@@ -1250,5 +1251,34 @@ export function CrewOrbit({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * A page arrow of the crew ring's computers: its words, then the key of the
+ * command that does the same, drawn inside it as a text button's key is
+ * (docs/keyboard.md, "Key hints").
+ */
+function ComputerPageButton({
+  command,
+  disabled,
+  onClick,
+  children,
+}: {
+  command: "computers.previous" | "computers.next";
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const { keys, "aria-keyshortcuts": ariaKeys } = useCommandKeys(command);
+  return (
+    <button type="button" disabled={disabled} onClick={onClick} aria-keyshortcuts={ariaKeys}>
+      {children}
+      {keys && (
+        <span className="fm-computer-pages-key" data-button-key="" aria-hidden="true">
+          {keys}
+        </span>
+      )}
+    </button>
   );
 }

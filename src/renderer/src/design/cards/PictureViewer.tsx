@@ -2,6 +2,7 @@ import type React from "react";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { thisDesktop, WINDOW_CONTROLS_CLEARANCE } from "../core/desktop";
+import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
 import { useRestLabel } from "../core/restLabel";
 import {
@@ -488,7 +489,12 @@ export function PictureViewer({
         >
           {count}
         </span>
-        <IconButton label="Close the viewer" onClick={close} style={noDrag}>
+        <IconButton
+          label="Close the viewer"
+          {...fixedKeys("Escape")}
+          onClick={close}
+          style={noDrag}
+        >
           <svg width="16" height="16" viewBox="0 0 24 24" {...icon} aria-hidden="true">
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
@@ -708,6 +714,7 @@ export function PictureViewer({
           <>
             <IconButton
               label="Previous picture"
+              {...fixedKeys("ArrowLeft")}
               size={NAV_SIZE}
               disabled={index === 0}
               onClick={() => go(index - 1)}
@@ -719,6 +726,7 @@ export function PictureViewer({
             </IconButton>
             <IconButton
               label="Next picture"
+              {...fixedKeys("ArrowRight")}
               size={NAV_SIZE}
               disabled={index === pictures.length - 1}
               onClick={() => go(index + 1)}

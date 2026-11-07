@@ -1,6 +1,7 @@
 import { type CardCornerWords, cardCornerOf } from "@shared/cardLeave";
 import type React from "react";
 import { createContext, useContext } from "react";
+import { fixedKeys } from "../core/fixedKeys";
 import { IconButton } from "../core/IconButton";
 import { MAXIMIZE_LABEL, RESTORE_LABEL } from "./cardSizeWords";
 
@@ -71,8 +72,16 @@ export function CardSizeToggle() {
     <IconButton
       data-card-size-toggle={size.maximized ? "restore" : "maximize"}
       label={size.maximized ? RESTORE_LABEL : MAXIMIZE_LABEL}
-      keys={size.keys}
-      aria-keyshortcuts={size["aria-keyshortcuts"]}
+      // Esc also restores a maximized card (app/App.tsx), so Restore card
+      // names it when Maximize or restore card has no key of its own.
+      keys={size.maximized ? (size.keys ?? fixedKeys("Escape").keys) : size.keys}
+      aria-keyshortcuts={
+        size.maximized
+          ? [size["aria-keyshortcuts"], fixedKeys("Escape")["aria-keyshortcuts"]]
+              .filter(Boolean)
+              .join(" ")
+          : size["aria-keyshortcuts"]
+      }
       onClick={() => size.toggle()}
     >
       {size.maximized ? INWARD : OUTWARD}

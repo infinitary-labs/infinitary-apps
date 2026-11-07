@@ -50,6 +50,11 @@
   white-space: nowrap;
   cursor: pointer;
 }
+.fm-computer-pages-key {
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+}
 .fm-computer-pages button:disabled {
   color: var(--fg-3);
   cursor: default;

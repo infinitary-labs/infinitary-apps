@@ -8,6 +8,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, IconButton, Input, SlotBadge, Switch, useRestLabel } from "../design";
 import { thisDesktop } from "../design/core/desktop";
+import { fixedKeys } from "../design/core/fixedKeys";
 import {
   ALWAYS_USE_LEAD,
   chipDisplayParts,
@@ -565,7 +566,12 @@ export function ModelLevels({
             <span>{model.providerLabel}</span>
             <span>{model.label}</span>
           </div>
-          <IconButton label={`Close ${model.label}`} size={24} onClick={() => setSelectedKey(null)}>
+          <IconButton
+            label={`Close ${model.label}`}
+            {...fixedKeys("Escape")}
+            size={24}
+            onClick={() => setSelectedKey(null)}
+          >
             ×
           </IconButton>
         </div>

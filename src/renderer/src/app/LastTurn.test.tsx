@@ -76,9 +76,11 @@ describe("a round of the last turn above the input", () => {
       { you: "Check the Linux lane", reply: { text: "Noted" } },
       { busy: true },
     );
+    // A reply is a button: its cut words show in the app's own label on
+    // rest, never the browser's title (INF-3019's plan, direction A).
     expect(mate).toEqual({
       state: "reply",
-      title: "Noted",
+      title: null,
       words: "Noted",
       spinning: true,
       working: true,
@@ -89,7 +91,7 @@ describe("a round of the last turn above the input", () => {
     const reply = render({ you: "Remember that I squash", reply: { text: "Noted" } });
     expect(reply.mate).toEqual({
       state: "reply",
-      title: "Noted",
+      title: null,
       words: "Noted",
       spinning: false,
       working: false,

@@ -25,6 +25,7 @@ import type { IntegrationsView } from "@shared/integrations";
 import type { ProjectView } from "@shared/tasks";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { KeyedText } from "../cards/TaskKey";
 import { Button, GroupedChecks, Input, Row, StatusDot } from "../design";
@@ -194,6 +195,7 @@ export function AutomationTab() {
   const current = rules?.find((rule) => rule.id === selected);
   const running = (rules ?? []).some((rule) => rule.state === "enabled");
 
+  const pauseAllKeys = useCommandKeys("automation.pause-all");
   const pauseAll = () => {
     setError(null);
     window.infinitary.automation.pauseAll().catch((caught) => setError(messageOf(caught)));
@@ -215,6 +217,7 @@ export function AutomationTab() {
           variant="secondary"
           disabled={!running}
           onClick={pauseAll}
+          {...pauseAllKeys}
           data-automation-pause-all
         >
           Pause all

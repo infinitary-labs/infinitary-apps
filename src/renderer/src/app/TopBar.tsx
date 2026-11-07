@@ -3,6 +3,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IconButton } from "../design";
 import { thisDesktop, WINDOW_CONTROLS, WINDOW_CONTROLS_CLEARANCE } from "../design/core/desktop";
+import { fixedKeys } from "../design/core/fixedKeys";
 import { RemoteControlLine } from "../devices/RemoteControl";
 import { useCommandKeys } from "./keyHints";
 import { type BarRoom, ProjectFocusControl } from "./ProjectFocusControl";
@@ -122,7 +123,13 @@ function WindowControls() {
       >
         {state.maximized ? Ico.restore : Ico.maximize}
       </IconButton>
-      <IconButton label="Close window" onClick={() => control("close")}>
+      <IconButton
+        label="Close window"
+        // Ctrl+W closes the window where the app draws its own buttons (main/keyboard.ts).
+        keys="Ctrl+W"
+        aria-keyshortcuts="Control+W"
+        onClick={() => control("close")}
+      >
         {Ico.close}
       </IconButton>
     </div>
@@ -170,7 +177,13 @@ export function TopBar({ view, onSettings, onBack, backButtonRef }: TopBarProps)
     >
       <div ref={startRef} style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {view === "settings" && (
-          <IconButton label="Back" onClick={onBack} ref={backButtonRef} style={noDrag}>
+          <IconButton
+            label="Back"
+            {...fixedKeys("Escape")}
+            onClick={onBack}
+            ref={backButtonRef}
+            style={noDrag}
+          >
             {Ico.back}
           </IconButton>
         )}

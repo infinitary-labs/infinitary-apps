@@ -1,6 +1,9 @@
 import type { ThisMac } from "@shared/devices";
+import type { CommandId } from "@shared/keyboard";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
+import { useRestLabel } from "../design";
 import { hasShellPainted } from "../design/reveals";
 import { showsSection } from "../devices/viewWords";
 import type { SettingsSectionContribution } from "../plugins/contributions";
@@ -168,19 +171,15 @@ export function SettingsScreen() {
             style={{ flex: `0 0 ${TAB_COLUMN_PX}px`, width: TAB_COLUMN_PX }}
           >
             {offered.map((section) => (
-              <button
+              <SettingsTab
                 key={section.id}
-                id={tabDomId(section.id)}
-                type="button"
-                role="tab"
-                data-settings-tab={section.id}
-                aria-selected={tab?.id === section.id}
-                aria-controls={panelDomId}
-                tabIndex={tab?.id === section.id ? 0 : -1}
-                onClick={() => setTabId(section.id)}
-              >
-                <span data-settings-tab-label="">{section.label}</span>
-              </button>
+                id={section.id}
+                domId={tabDomId(section.id)}
+                label={section.label}
+                selected={tab?.id === section.id}
+                controls={panelDomId}
+                onPick={() => setTabId(section.id)}
+              />
             ))}
           </div>
           {tab && (
@@ -206,6 +205,56 @@ export function SettingsScreen() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** The command that opens each section of its own, whose key its tab names. */
+const SECTION_COMMANDS: Readonly<Record<string, CommandId>> = {
+  keyboard: "settings.keyboard",
+  panels: "settings.panels",
+  runbooks: "settings.runbooks",
+  usage: "settings.usage",
+  automation: "settings.automation",
+  integrations: "settings.integrations",
+};
+
+/**
+ * One section's tab. A section a command opens names that command's key in
+ * the app's label on rest, once the command has one; its words alone need
+ * no label, since the tab shows them (docs/keyboard.md, "Key hints").
+ */
+function SettingsTab({
+  id,
+  domId,
+  label,
+  selected,
+  controls,
+  onPick,
+}: {
+  id: string;
+  domId: string;
+  label: string;
+  selected: boolean;
+  controls: string;
+  onPick: () => void;
+}) {
+  const { keys, "aria-keyshortcuts": ariaKeys } = useCommandKeys(SECTION_COMMANDS[id] ?? null);
+  const rest = useRestLabel(keys ? label : undefined, { keys });
+  return (
+    <button
+      {...rest}
+      id={domId}
+      type="button"
+      role="tab"
+      data-settings-tab={id}
+      aria-selected={selected}
+      aria-controls={controls}
+      aria-keyshortcuts={ariaKeys}
+      tabIndex={selected ? 0 : -1}
+      onClick={onPick}
+    >
+      <span data-settings-tab-label="">{label}</span>
+    </button>
   );
 }
 

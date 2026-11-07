@@ -47,7 +47,9 @@ Record the version, selection reasons, files or parts, required platforms or dev
   Unedited Vitest files that directly import a changed file or reference its literal path run once locally in the same command (INF-2394 measure 3).
   The selector resolves relative imports and the node and renderer compilers' aliases, literal paths relative to the project or test file, joined literal path segments, and template directory prefixes such as workflow readers use.
   A data file a module imports, such as a runbook's JSON in `src/core/pi/piResources.ts` or a stylesheet read as text, is part of that module's text, so a test that imports that module directly reads the data directly too (INF-2426).
-  It reads each test file and, for a changed data file, the modules that test imports; it never follows imports transitively, and does not execute dynamically computed paths to discover dependencies.
+  Served text, a runbook under `resources/runbooks/` or the generated runbook fallback `src/core/runbooks/fallback.generated.ts`, is carried the same way, so a change to it selects the tests that import `src/core/pi/piResources.ts`, among them the crew prompt's budget test and the prompt contract tests (INF-2925).
+  A test naming a folder that holds a runbook, as the runbook loaders' tests do, reads that runbook too.
+  It reads each test file and, for a changed data file or served text, the modules that test imports; it never follows imports transitively, and does not execute dynamically computed paths to discover dependencies.
   Edited files remain disjoint from that once-only selection; a failed direct-reader round stops the edited-file rounds too.
   Ordinary coverage is included, so do not add a fourth run or duplicate local proof in PR CI.
   Declare the whole batch's processor and memory needs through the local load path, and bound Vitest workers to that declaration.

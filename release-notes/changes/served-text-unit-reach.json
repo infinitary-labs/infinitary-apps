@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "served-text-unit-reach",
+      "reason": "The pull request check now runs the crew prompt's budget and prompt tests when a runbook or the generated runbook fallback changes; this changes only how the project is checked, not the app."
+    }
+  ]
+}

@@ -8,6 +8,18 @@ export const VITEST_FILE = /^(src|tests)\/.+\.test\.tsx?$/;
 /** What the compiler reads as a module; any other imported file is data. */
 const CODE_FILE = /\.[cm]?[jt]sx?$/;
 
+/**
+ * Served text: words the app serves its agents, which a test reads through
+ * the module that builds the prompt (INF-2925's audit: the crew prompt's
+ * budget test imports piResources.ts, which imports the generated runbook
+ * fallback, two edges from the change). A served-text module is carried like
+ * data, one step past the test's own imports, and a test naming a folder
+ * that holds it, as the runbook loaders' tests do, reads it too.
+ */
+export function servedText(path: string): boolean {
+  return path.startsWith("resources/runbooks/") || path === "src/core/runbooks/fallback.generated.ts";
+}
+
 export function unitFiles(root: string): string[] {
   return ["src", "tests"]
     .flatMap((dir) =>
@@ -26,7 +38,8 @@ export function unitFiles(root: string): string[] {
  * is part of that module's own text, so a test importing that module directly
  * reads the data directly too (INF-2426: the crew guidance tests read
  * resources/runbooks through piResources.ts). That is the one step taken
- * past the test's own imports, and only through data: a changed module is
+ * past the test's own imports, and only through data or served text (the
+ * generated runbook fallback, `servedText`): any other changed module is
  * never followed to the importers of its importers.
  */
 export function directUnitReach(
@@ -50,8 +63,11 @@ export function directUnitReach(
   const cache = ts.createModuleResolutionCache(root, (file) => file, options);
   const subjects = new Set(changed.filter((file) => !VITEST_FILE.test(file)));
   if (subjects.size === 0) return [];
-  const data = [...subjects].filter((file) => !CODE_FILE.test(file));
-  const dataNames = [...new Set(data.map((file) => basename(file)))];
+  const data = [...subjects].filter((file) => !CODE_FILE.test(file) || servedText(file));
+  // A module is imported without its extension; data keeps its own.
+  const dataNames = [
+    ...new Set(data.map((file) => basename(file).replace(/\.[cm]?[jt]sx?$/, ""))),
+  ];
   const host: ts.ModuleResolutionHost = {
     ...ts.sys,
     // A deleted module still has direct importers that must run.
@@ -123,7 +139,15 @@ export function directUnitReach(
       const pathMatches = (value: string) => {
         if (!value) return false;
         const candidates = [normalize(value), normalize(join(dirname(file), value))];
-        return [...subjects].some((subject) => candidates.includes(subject));
+        return [...subjects].some(
+          (subject) =>
+            candidates.includes(subject) ||
+            // A test that loads the runbook folder serves every runbook in it.
+            (servedText(subject) &&
+              candidates.some(
+                (folder) => servedText(`${folder}/`) && subject.startsWith(`${folder}/`),
+              )),
+        );
       };
       const visit = (node: ts.Node): void => {
         if (reached) return;

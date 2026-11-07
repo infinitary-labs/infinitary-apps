@@ -11,7 +11,8 @@ import { directUnitReach, unitFiles, VITEST_FILE } from "./unit-reach.ts";
  * gets its ordinary local run plus two more, including Linux-eligible files.
  * INF-2394 measure 3 adds one local round for unedited direct importers and
  * literal path readers; a data file counts as part of the module importing it
- * (INF-2426). No transitive reach or added CI jobs. Native files still require a Mac.
+ * (INF-2426), and so does served text such as the generated runbook fallback
+ * (INF-2925). No other transitive reach or added CI jobs. Native files still require a Mac.
  *
  *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--workers <n>] [--shard <index/count>] [--run]
  *   node scripts/unit-repeats.ts --reach [--base <ref>] [--run]   (the pull request's build check)

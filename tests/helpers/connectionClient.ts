@@ -1,3 +1,4 @@
+import { FramePartsReader } from "@core/connection/frameParts";
 import {
   type DeviceKey,
   type DialOptions,
@@ -47,6 +48,8 @@ export type ConnectionClient = {
   invoke: <C extends InvokeChannel>(channel: C, args: unknown[]) => Promise<InvokeResponse<C>>;
   /** Every request the home asked this device, in order (a computer that runs work's orders). */
   asked: { channel: string; args: unknown }[];
+  /** How many frames came in parts (`frame-parts`), each joined once its last part arrived. */
+  readonly joined: number;
   /** Sends any text as a frame, for refusal tests. */
   sendRaw: (text: string) => void;
   /** Resolves with the close code once the home closes the connection. */
@@ -123,8 +126,11 @@ export async function connectClient(
   });
   let nextId = 0;
   const closed = new Promise<number>((resolve) => socket.once("close", (code) => resolve(code)));
+  const parts = new FramePartsReader();
   socket.on("message", (raw) => {
-    const frame = homeFrameSchema.parse(JSON.parse(String(raw)));
+    const text = parts.read(Buffer.isBuffer(raw) ? raw : String(raw));
+    if (text === undefined) return;
+    const frame = homeFrameSchema.parse(JSON.parse(text));
     if (frame.t === "welcome") {
       welcome = frame;
       welcomed(frame);
@@ -147,7 +153,7 @@ export async function connectClient(
           (error: unknown) =>
             reply({ ok: false, error: error instanceof Error ? error.message : String(error) }),
         );
-    } else if (typeof frame.id === "number") {
+    } else if (frame.t === "result" && typeof frame.id === "number") {
       answers.get(frame.id)?.(frame);
       answers.delete(frame.id);
     }
@@ -223,6 +229,9 @@ export async function connectClient(
         socket.send(JSON.stringify({ t: "invoke", id, channel, args }));
       }),
     asked,
+    get joined() {
+      return parts.joined;
+    },
     sendRaw: (text) => socket.send(text),
     closed,
     close: () => {

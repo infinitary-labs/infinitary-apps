@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { cardSchema } from "@shared/cards";
 import type { Spelling } from "@shared/codeNames";
 import type { DeviceGrant, DeviceView } from "@shared/devices";
 import { HOME_CAPABILITIES, PROTOCOL_VERSION } from "@shared/ipc";
@@ -18,6 +19,7 @@ import {
   listsChange,
   readContractChanges,
 } from "../connection/contractChanges";
+import { FramePartsReader } from "../connection/frameParts";
 import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
 import { PLACED_REQUEST_WAIT_MS, PLACED_TOOL_WAIT_MS } from "../helper/toolWait";
@@ -176,6 +178,8 @@ function follow(
     sent: [],
     heard: [],
   };
+  /** The frames it heard, a long one joined from its parts (`frame-parts`). */
+  const heardParts = new FramePartsReader();
   const link = new HomeLink({
     grant,
     dial: async (dialing) => {
@@ -186,7 +190,10 @@ function follow(
         wire.sent.push(JSON.parse(String(data)));
         return send(data, ...rest);
       }) as typeof socket.send;
-      socket.on("message", (raw) => wire.heard.push(JSON.parse(String(raw))));
+      socket.on("message", (raw) => {
+        const text = heardParts.read(raw as Buffer);
+        if (text !== undefined) wire.heard.push(JSON.parse(text));
+      });
       return socket;
     },
     ...(options.speaks ? { speaks: options.speaks } : {}),
@@ -205,7 +212,18 @@ function follow(
   const until = async (check: () => boolean) => {
     await expect.poll(check, { timeout: 4_000, interval: 10 }).toBe(true);
   };
-  return { link, states, pushes, replays, catchUps, sockets, wire, until };
+  return {
+    link,
+    states,
+    pushes,
+    replays,
+    catchUps,
+    sockets,
+    wire,
+    until,
+    /** How many frames came in parts. */
+    joined: () => heardParts.joined,
+  };
 }
 
 /**
@@ -313,6 +331,42 @@ describe("the device's side of the connection", () => {
     expect(air.pushes[0]).toEqual({ channel: "inf:models:changed", payload: { ok: true } });
     // Its hello said what this computer is, and the home keeps it beside its kind.
     expect(at.pairing.list()[0]).toMatchObject({ kind: "view", ...thisDeviceSystem() });
+  });
+
+  // INF-2832: a long frame comes in parts to a computer whose hello listed `frame-parts`, as this build's does.
+  it("reads a long push the home sends in parts as one push, and one sent whole as before", async () => {
+    const at = await home();
+    const grant = await at.join();
+    const line = "<p>High water at the outer mark, and the pilot boat waiting.</p>";
+    const card = cardSchema.parse({
+      id: "card-tide-table",
+      title: "The season's tide table",
+      author: "firstmate",
+      priority: 15,
+      meta: "First mate",
+      body: line.repeat(1_000),
+      actions: [],
+      status: "ready",
+      createdAt: 1000,
+      seen: true,
+    });
+    const air = follow(grant);
+    air.link.start();
+    await air.until(() => air.link.state().contact === "in-reach");
+    at.events.emit("inf:cards", [card]);
+    await air.until(() => air.pushes.length === 1);
+    expect(air.pushes[0]).toEqual({ channel: "inf:cards", payload: [card] });
+    expect(air.joined()).toBe(1);
+    air.link.close();
+
+    // A computer whose hello listed no changes, as one from before them, gets it as one message.
+    const older = follow(grant, { changes: [] });
+    older.link.start();
+    await older.until(() => older.link.state().contact === "in-reach");
+    at.events.emit("inf:cards", [card]);
+    await older.until(() => older.pushes.length === 1);
+    expect(older.pushes[0]).toEqual({ channel: "inf:cards", payload: [card] });
+    expect(older.joined()).toBe(0);
   });
 
   // INF-1228, the captain's answer control=all: a view of a first mate

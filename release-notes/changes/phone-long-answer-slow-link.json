@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-long-answer-slow-link",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Infinitary on your iPhone and iPad keeps a long answer coming on a slow connection",
+      "body": "On a very slow connection, such as weak mobile data, Infinitary on your iPhone or iPad no longer gives up on a long answer from your computer, such as a long list of cards, when it takes more than about 40 seconds to arrive, which left it out of reach and starting over. Your computer now sends a long answer in parts, so your phone hears each part arrive and stays connected until it has the whole answer. A computer that stops answering is still noticed.",
+      "noPicture": "The change is in a connection staying up while a long answer arrives, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

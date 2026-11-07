@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
 import { WebSocket } from "ws";
+import { FramePartsReader } from "./frameParts";
 import { Outbox } from "./outbox";
 
 /**
@@ -73,6 +74,36 @@ describe("the outbox that paces what the home writes to a device", () => {
     expect(socket.pieces.filter((piece) => piece.done)).toHaveLength(1);
     socket.pieces.at(-1)?.done?.();
     expect(heard).toBe(1);
+  });
+
+  it("sends a device that reads parts each piece of a long frame as a whole message after its length", () => {
+    const { socket, out } = outbox({ pieceBytes: 8, aheadMs: 1_000 });
+    out.parts = true;
+    const text = "harbour € tide 😀 pilot é ".repeat(20);
+    let heard = 0;
+    out.send(text, () => heard++);
+    out.send("short");
+    socket.answerAll();
+
+    const [header, ...rest] = socket.pieces;
+    expect(JSON.parse(header?.data.toString("utf8") ?? "")).toEqual({
+      t: "parts",
+      bytes: Buffer.byteLength(text),
+    });
+    expect(socket.pieces.every((piece) => piece.fin)).toBe(true);
+    const decoder = new TextDecoder("utf-8", { fatal: true });
+    for (const piece of rest) expect(() => decoder.decode(piece.data)).not.toThrow();
+    // A frame no longer than one piece still goes whole, with no header.
+    expect(rest.at(-1)?.data.toString("utf8")).toBe("short");
+    expect(socket.pieces.filter((piece) => piece.done)).toHaveLength(1);
+    for (const piece of socket.pieces) piece.done?.();
+    expect(heard).toBe(1);
+
+    // The device joins the parts into the frame, and reads the short one as it came.
+    const reader = new FramePartsReader();
+    const read = socket.pieces.map((piece) => reader.read(piece.data));
+    expect(read.filter((frame) => frame !== undefined)).toEqual([text, "short"]);
+    expect(reader.joined).toBe(1);
   });
 
   it("sends only one piece ahead of a device that has not answered, and the next once it does", () => {

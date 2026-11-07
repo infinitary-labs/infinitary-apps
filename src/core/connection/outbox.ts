@@ -1,4 +1,5 @@
 import { WebSocket } from "ws";
+import { partsHeader } from "./frameParts";
 
 /**
  * What the home writes to one device, paced by the device's own answers
@@ -9,7 +10,9 @@ import { WebSocket } from "ws";
  * measure - and the rest waits here. So on a slow link the home hears an
  * answer every piece instead of only once the whole catch-up has arrived,
  * and a ping or pong either side sends waits behind about one window rather
- * than behind everything the home had to say.
+ * than behind everything the home had to say. To a device that reads parts
+ * (`frame-parts.md`), each piece of a longer frame goes as a whole message
+ * after a header naming the frame's length, so it hears every piece too.
  */
 export type OutboxOptions = {
   /** The smallest piece, and the least that may go ahead of an answer. */
@@ -36,6 +39,8 @@ export class Outbox {
   /** When the first byte after the newest mark was written. */
   private writingFrom: number | undefined;
   private readonly now: () => number;
+  /** Whether the device reads a frame longer than one piece as parts (`frame-parts.md`), from its hello. */
+  parts = false;
 
   constructor(
     private readonly ws: WebSocket,
@@ -59,8 +64,10 @@ export class Outbox {
   }
 
   /**
-   * Sends one text frame, in pieces if it is longer than one. `done` hears
-   * the last piece written, or why it never will be.
+   * Sends one text frame, in pieces if it is longer than one: the pieces of
+   * one message, or, to a device that reads parts, a header and then each
+   * piece as a whole message. `done` hears the last piece written, or why it
+   * never will be.
    */
   send(text: string, done?: (error?: Error) => void): void {
     if (this.ws.readyState !== WebSocket.OPEN) {
@@ -69,17 +76,27 @@ export class Outbox {
     }
     const data = Buffer.from(text, "utf8");
     const size = this.pieceSize();
+    const parted = this.parts && data.length > size;
+    if (parted) this.queuePiece({ data: partsHeader(data.length), fin: true });
     let at = 0;
     do {
       let end = Math.min(at + size, data.length);
       // A piece ends between characters, so each one is whole UTF-8 text.
       while (end < data.length && end > at + 1 && ((data[end] ?? 0) & 0xc0) === 0x80) end--;
-      const fin = end >= data.length;
-      this.queue.push({ data: data.subarray(at, end), fin, ...(fin && done ? { done } : {}) });
-      this.queuedBytes += end - at;
+      const last = end >= data.length;
+      this.queuePiece({
+        data: data.subarray(at, end),
+        fin: parted || last,
+        ...(last && done ? { done } : {}),
+      });
       at = end;
     } while (at < data.length);
     this.pump();
+  }
+
+  private queuePiece(piece: Piece): void {
+    this.queue.push(piece);
+    this.queuedBytes += piece.data.length;
   }
 
   /** A ping naming everything written so far: the heartbeat's, and each piece's. */

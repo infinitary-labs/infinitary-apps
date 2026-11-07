@@ -414,6 +414,24 @@
           "properties": {
             "t": {
               "type": "string",
+              "const": "parts"
+            },
+            "bytes": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 67108864
+            }
+          },
+          "required": [
+            "t",
+            "bytes"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "t": {
+              "type": "string",
               "const": "result"
             },
             "id": {

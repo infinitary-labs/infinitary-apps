@@ -116,10 +116,10 @@ import XCTest
     }
 
     /// INF-2666 measured a 1 KB/s link with 300 ms delay flipping between Out of reach and Reaching every 8 to 10 s,
-    /// never in reach, since its catch-up could not finish inside a fixed 10 s. The phone cannot see an answer still
-    /// arriving and gives each one `ReadOnlySession.answerWait`, so the link carries this home's whole catch-up in about
-    /// 40 s: 1 KB/s for a small record, faster for a grown one. A catch-up of several answers that outlasts the
-    /// computer's own ping window is `testALargeCatchUpOnASlowLinkArrivesOnOneConnection`.
+    /// never in reach, since its catch-up could not finish inside a fixed 10 s. The link carries this home's whole
+    /// catch-up in about 40 s: 1 KB/s for a small record, faster for a grown one. A catch-up of several answers that
+    /// outlasts the computer's own ping window is `testALargeCatchUpOnASlowLinkArrivesOnOneConnection`, and one answer
+    /// that outlasts the phone's wait for a message is `testALongAnswerOnASlowLinkArrivesOnOneConnection`.
     func testASlowLinkReachesInReachAndStays() async throws {
         let measuring = try await joined()
         let sizing = Watch(measuring)
@@ -148,9 +148,8 @@ import XCTest
     /// started over. It now writes in pieces, each followed by a ping a phone still receiving answers, and lets only a
     /// few seconds' worth go ahead of the answers, so the phone's own pings are answered during the catch-up too. Away
     /// from a computer whose card list grows by about 20 KB, the phone misses four card lists and the task board pushed
-    /// with each, both as large as the home's record has grown. The phone cannot see one still arriving and gives it
-    /// `ReadOnlySession.answerWait`, so the link carries the largest in about 20 s at most and the whole catch-up in 80 to
-    /// 90 s: 1 KB/s for a small record, faster for a grown one.
+    /// with each, both as large as the home's record has grown. The link carries the largest in about 20 s at most and
+    /// the whole catch-up in 80 to 90 s: 1 KB/s for a small record, faster for a grown one.
     func testALargeCatchUpOnASlowLinkArrivesOnOneConnection() async throws {
         let session = try await joined()
         // The heavy cards and this connection leave the home shared with the other checks, even when this one fails.
@@ -185,6 +184,84 @@ import XCTest
         XCTAssertEqual(session.contact, "in-reach")
         XCTAssertEqual(watch.said("lost"), 0, "Out of reach never shows while the catch-up arrives")
         _ = try await home("away-cleanup")
+        try await finish(session)
+    }
+
+    /// INF-2832: the phone hears a message only once it has arrived whole, and gives up on a read when nothing has
+    /// arrived for `ReadOnlySession.answerWait`, so a reload whose card list took longer than that on a slow link was
+    /// cut about 47 s in, every time, and never came in reach. The computer now sends a long frame in parts, each a
+    /// whole message (`frame-parts`), so the phone hears every part. A card list of over 80 KB is read whole here, on
+    /// a link that carries it in about a minute: 1 KB/s and a little more for a list the shared home has grown.
+    func testALongAnswerOnASlowLinkArrivesOnOneConnection() async throws {
+        let session = try await joined()
+        // The heavy card and this connection leave the home shared with the other checks, even when this one fails.
+        addTeardownBlock {
+            await session.stop()
+            guard let control = ProcessInfo.processInfo.environment["PHONE_TEST_HOME"],
+                  let url = URL(string: control + "/away-cleanup") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            _ = try? await URLSession.shared.data(for: request)
+        }
+        let heavy = try await home("heavy-card")
+        let card = try XCTUnwrap(heavy["card"] as? String)
+        let list = try XCTUnwrap(heavy["listBytes"] as? Int)
+        let reload = try XCTUnwrap(heavy["reloadBytes"] as? Int)
+        let rate = max(1_000, list / 60)
+        try await shape(bytesPerSec: rate, delayMs: 300)
+        let before = try await readings().dials.count
+        let watch = Watch(session)
+        session.start()
+        // The cards show once the card list is read; In reach waits for every other first read too.
+        try await watch.until(Double(reload / rate) * 2 + 60, "the long card list, in reach") {
+            session.contact == "in-reach" && session.cards.contains { $0.id == card }
+        }
+        let took = watch.now
+        let dials = try await readings().dials
+        XCTAssertEqual(dials.count, before + 1, "One connection carried the whole reload")
+        XCTAssertGreaterThan(took, 50, "The card list outlasted the phone's wait for one message: \(list) bytes in \(Int(took)) s")
+        XCTAssertNil(session.lastCut, "Nothing cut the connection")
+        XCTAssertEqual(watch.said("lost"), 0, "Out of reach never shows while the card list arrives")
+        _ = try await home("away-cleanup")
+        try await finish(session)
+    }
+
+    /// INF-2832: a computer that answers the phone's pings but never a read, and sends nothing else, is stuck. Hearing
+    /// every part of a long answer changes nothing for it: the phone still cuts it `ReadOnlySession.answerWait` after
+    /// the read, though its pings were answered all along, and dials again.
+    func testAReadNeverAnsweredIsStillCut() async throws {
+        let session = try await joined()
+        addTeardownBlock {
+            await session.stop()
+            guard let control = ProcessInfo.processInfo.environment["PHONE_TEST_HOME"],
+                  let url = URL(string: control + "/release-card-action") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            _ = try? await URLSession.shared.data(for: request)
+        }
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 30)
+        _ = try await home("hold-card-action", ["channel": PhoneCardRequest.past.rawValue])
+        let asked = watch.now
+        let read = Task { try? await session.ask(.past, [.string("no-such-held-card")]) }
+        _ = try await home("card-action-held")
+        var heardBeforeCut: Date?
+        try await watch.until(60, "the stuck read's connection was cut") {
+            if session.lastCut == nil { heardBeforeCut = session.heardAt }
+            return session.lastCut != nil
+        }
+        let (cut, cutAt) = (watch.now, Date())
+        _ = try await home("release-card-action")
+        read.cancel()
+        let wait = Double(ReadOnlySession.answerWait.components.seconds)
+        XCTAssertEqual(session.lastCut, .quiet, "The stuck read, not a failed link, cut the connection")
+        XCTAssertGreaterThanOrEqual(cut - asked, wait, "Not before the read's wait")
+        XCTAssertLessThan(cut - asked, wait + 10, "Soon after it")
+        let quiet = cutAt.timeIntervalSince(try XCTUnwrap(heardBeforeCut))
+        XCTAssertLessThan(quiet, Double(ReadOnlySession.pingEvery.components.seconds) + 5,
+                          "The computer answered the phone's pings until the cut: quiet for \(Int(quiet)) s")
+        try await inReach(session, watch, within: 15)
         try await finish(session)
     }
 

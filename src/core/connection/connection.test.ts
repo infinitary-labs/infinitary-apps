@@ -42,6 +42,7 @@ import {
   type ViewDeviceContact,
   type WorkDeviceContact,
 } from "./connection";
+import { FRAME_PARTS } from "./frameParts";
 
 /**
  * The connection with the real event bus, the real pairing over a scratch
@@ -1600,6 +1601,32 @@ describe("pacing and liveness", () => {
     } finally {
       await link.close();
     }
+  });
+
+  // INF-2832: a phone hears a message only once it has arrived whole, so a long one came to it as one long silence.
+  // A piece's length follows the rate the device's answers measure, so this home lets nothing go ahead of an
+  // answer (`aheadMs: 0`): every piece stays one `pieceBytes` long on any link, and the push spans 96 of them.
+  it("sends a long push in parts to a device that reads them, and as one message to one that does not", async () => {
+    const at = await home({ heartbeatMs: 250, pieceBytes: 1024, aheadMs: 0 });
+    const reads = await connectClient(await at.join(), { changes: [FRAME_PARTS] });
+    const older = await connectClient(await at.join("view", "Older Mac"));
+    const [readsBefore, olderBefore] = [reads.joined, older.joined];
+    const card = heavyCard(96 * 1024);
+    at.events.emit("inf:cards", [card]);
+    for (const device of [reads, older]) {
+      const push = await Promise.race([
+        device.push((received) => received.channel === "inf:cards"),
+        device.closed.then((code) => {
+          throw new Error(`The home cut the device (${code}) before the push arrived`);
+        }),
+      ]);
+      const [received] = push.payload as { id: string; body: string }[];
+      expect(received?.body).toBe(card.body);
+    }
+    expect(reads.joined).toBe(readsBefore + 1);
+    expect(older.joined).toBe(olderBefore);
+    await reads.close();
+    await older.close();
   });
 
   it("still cuts a device that stops reading, though the home has more to send it", async () => {

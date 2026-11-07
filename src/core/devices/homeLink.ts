@@ -20,6 +20,7 @@ import type { DeviceChip, DeviceGrant, DeviceRole, DeviceSystem } from "@shared/
 import { type CoreInvokeChannel, invokeContract, PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import type { WebSocket } from "ws";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
+import { FramePartsReader } from "../connection/frameParts";
 import { thisDeviceSystem } from "../platform";
 import { dialHome } from "./dial";
 
@@ -407,6 +408,8 @@ export class HomeLink {
       let welcomed = false;
       let refusedStatus: number | undefined;
       let answered = true;
+      // A long frame comes as parts when this hello listed `frame-parts`.
+      const parts = new FramePartsReader();
       let heartbeat: NodeJS.Timeout | undefined;
       const timer = setTimeout(() => {
         if (!welcomed) socket.terminate();
@@ -449,7 +452,19 @@ export class HomeLink {
       });
       socket.on("ping", heard);
       socket.on("message", (raw: unknown, isBinary: boolean) => {
-        const frame = isBinary ? undefined : parseFrame(raw);
+        if (isBinary) return;
+        let text: string | undefined;
+        try {
+          text = parts.read(Buffer.isBuffer(raw) ? raw : String(raw));
+        } catch {
+          socket.terminate();
+          return;
+        }
+        if (text === undefined) {
+          heard();
+          return;
+        }
+        const frame = parseFrame(text);
         if (!frame) return;
         heard();
         if (!welcomed) {
@@ -718,9 +733,9 @@ function sameNames(listed: readonly string[], held: readonly string[] | null): r
     : listed;
 }
 
-function parseFrame(raw: unknown): HomeFrame | undefined {
+function parseFrame(text: string): HomeFrame | undefined {
   try {
-    const parsed = homeFrameSchema.safeParse(JSON.parse(String(raw)));
+    const parsed = homeFrameSchema.safeParse(JSON.parse(text));
     return parsed.success ? parsed.data : undefined;
   } catch {
     return undefined;

@@ -144,6 +144,15 @@ The window bounds the other direction too: a ping a device sends, and the home's
 At 1 KB/s that is about 8 seconds.
 A device that stops reading still answers nothing, and is cut within two heartbeats.
 
+A device whose hello lists `frame-parts` (`src/core/connection/frameParts.ts`, `src/shared/contract-changes/frame-parts.md`) gets a frame longer than one piece as parts instead of fragments.
+The outbox first sends `{"t":"parts","bytes":N}`, the frame's length in UTF-8 bytes, then each piece as a whole text message, and nothing else comes between them; a frame no longer than one piece still goes whole.
+The device joins the parts into the frame and reads it as if it had come whole (`FramePartsReader`; on the phone, `PhoneParts` in `PhoneFrame.swift`).
+A phone hears the computer only once a whole message has arrived, since its socket says nothing of a message still arriving, and gives up on a read when nothing has arrived for 40 seconds (`ReadOnlySession.answerWait`, `docs/ios.md`).
+So before parts, an answer that took longer than that to arrive was cut every time: at 1 KB/s, a card list of about 80 KB read on reload was cut about 45 seconds in and read again from the start.
+With parts the phone hears a part every piece, at most about 4 seconds apart at 1 KB/s, and a computer that answers its pings but sends nothing for a read it holds is still cut.
+A device that does not list the change, such as an older phone or computer, gets every frame whole, and an older home sends no parts.
+Every build of the app lists every change of its own (`homeLink.ts`), so it reads parts too; a device never sends parts to the home.
+
 The kernel's send buffer and anything between the home and the device read eagerly, so the socket's own `bufferedAmount` says nothing about what a device has received; only its answers do.
 `behind` counts what waits in the outbox and in the socket together.
 
@@ -180,9 +189,9 @@ The names are open strings: a client ignores one it does not know, and a newer h
 
 - `src/core/connection/connection.test.ts`: each rule above against a stand-in core, the real event bus and the real pairing, the work requests and the home's own requests to a computer that runs work included, a view heard coming and going, and where it listens said only when that changes.
 - `src/core/connection/journal.test.ts` and `addresses.test.ts`: the numbering and the listening rule on their own.
-- `src/core/connection/outbox.test.ts`: the outbox's pieces, window and marks on their own; `connection.test.ts`, "pacing and liveness": a device receiving a long push through a slow link kept on one connection, and one that stops reading still cut.
+- `src/core/connection/outbox.test.ts`: the outbox's pieces, window and marks on their own, and the parts it sends a device that reads them; `frameParts.test.ts`: parts joined back into frames, and parts past their length refused; `connection.test.ts`, "pacing and liveness": a device receiving a long push through a slow link kept on one connection, one that stops reading still cut, and a long push sent in parts only to a device that lists `frame-parts`.
 - `src/core/core.connection.test.ts`, "the connection serves the core to paired devices": the real core, two devices, a dropped one caught up exactly, and every no-argument read a view may ask parsed against its own schema after the wire.
 - `src/core/core.contract.test.ts`, "a client that knows only the published contract": `scripts/contract-client.ts`, which reads only `docs/contract.json`, answers a card and reads the feed over the connection, and the version rule's window from both sides (`docs/contract.md`).
-- `src/core/devices/homeLink.test.ts`: the device's own side as the app as a view runs it (`docs/view.md`): catching up, refusing while out of reach, Remove and Leave; and a home and a device on two sides of the Infinitary rename, read on the wire.
+- `src/core/devices/homeLink.test.ts`: the device's own side as the app as a view runs it (`docs/view.md`): catching up, refusing while out of reach, Remove and Leave, a long push read whole from its parts; and a home and a device on two sides of the Infinitary rename, read on the wire.
 - `tests/helpers/connectionClient.ts`: a device written against the wire alone (`connectClient`), dialing with a real grant through the device's own side of pairing (`src/core/devices/dial.ts`), at any target, and able to change its upgrade for refusal tests.
 - `src/core/devices/dialTarget.test.ts`: the same join and connection through a private socket, and a grant that reaches its home only through the home's SSH never dialing its address.

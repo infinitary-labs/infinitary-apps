@@ -1837,6 +1837,32 @@ export async function startPhoneHome(
           result = { cards, largestBytes, replayBytes };
           break;
         }
+        case "POST heavy-card": {
+          // INF-2832: one card of about 80 KB, so the card list a reload reads whole outlasts the phone's wait for one
+          // message on a slow link; `away-cleanup` closes it. The list and the other first reads grow with what the
+          // checks sharing this home left, so a check sizes its link from `listBytes`, the card list read now, and
+          // `reloadBytes`, every first read a reload makes.
+          const line =
+            "<p>The harbour log kept every tide, mooring and pilot boat of the season.</p>";
+          const card = core.services.supervisor.addFirstmateCard({
+            id: "phone-heavy-card",
+            title: "The whole season's harbour log",
+            body: line.repeat(Math.ceil(80_000 / line.length)),
+            actions: [],
+          });
+          awayCards.push(card);
+          const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value) ?? "null");
+          const listBytes = bytes(await core.dispatch("inf:cards:list", []));
+          const reloadBytes =
+            listBytes +
+            bytes(await core.dispatch("inf:feed:recent", [])) +
+            bytes(await core.dispatch("inf:tasks:board", [])) +
+            bytes(await core.dispatch("inf:conversation:last-turn", [])) +
+            bytes(await core.dispatch("inf:conversation:state", [])) +
+            bytes(await core.dispatch("inf:computers:presence", []));
+          result = { card, listBytes, reloadBytes };
+          break;
+        }
         case "POST emote":
           core.events.emit("inf:event", { type: "firstmate_emote", emote: "ponder" });
           result = { ok: true };

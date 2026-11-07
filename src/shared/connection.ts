@@ -405,6 +405,16 @@ export const homeFrameSchema = z.union([
     channel: z.string(),
     payload: z.unknown(),
   }),
+  /**
+   * To a device whose hello listed `frame-parts`: the next frame, longer
+   * than one piece, comes as whole text messages after this one, each a
+   * piece of its JSON text, whose UTF-8 bytes add up to `bytes`
+   * (docs/connection.md, "Pacing and liveness").
+   */
+  z.object({
+    t: z.literal("parts"),
+    bytes: z.number().int().positive().max(CONNECTION_MAX_FRAME_BYTES),
+  }),
   ...resultFrameSchemas,
   invokeFrameSchema,
 ]);

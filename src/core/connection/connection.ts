@@ -62,7 +62,8 @@ import { copyStream, type FarBuild } from "../devices/farBuilds";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
-import { CONTRACT_CHANGES } from "./contractChanges";
+import { CONTRACT_CHANGES, listsChange } from "./contractChanges";
+import { FRAME_PARTS } from "./frameParts";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -724,6 +725,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes);
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
+      // From the welcome on, a long frame goes as parts to a device that reads them.
+      client.out.parts = listsChange(hello.changes, FRAME_PARTS);
       // A view changes things across majors its floor allows; work only on this home's own.
       // A computer viewing from before the floor (its hello says none) reads closed lists
       // strictly, so like work it changes things only on this home's major (INF-1649 review

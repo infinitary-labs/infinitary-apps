@@ -140,7 +140,7 @@ public struct PhoneNotice: Equatable, Sendable {
     @ObservationIgnored private var reaches = 0
     /// When the computer was last heard, on the clock the deadlines use.
     @ObservationIgnored private var heard: ContinuousClock.Instant?
-    /// When the computer last sent a frame, which a pong is not.
+    /// When the computer last sent a frame or a part of one, which a pong is not.
     @ObservationIgnored private var framed: ContinuousClock.Instant?
     @ObservationIgnored private var reachTimer: Task<Void, Never>?
     /// INF-2668: every first read has answered since the last reload, so a replaying welcome needs none of them.
@@ -780,7 +780,8 @@ public struct PhoneNotice: Equatable, Sendable {
         self.socket = socket; self.transport = transport; cutting = nil
         var reached = false
         var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
-            "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0"]
+            "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0",
+            "changes": [PhoneContract.frameParts]]
         if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
         let opened = ContinuousClock.now
         // INF-2668: the connection is cut for silence alone, never because an answer is slow. Quiet for `patience`
@@ -810,14 +811,18 @@ public struct PhoneNotice: Equatable, Sendable {
             }
         }
         defer { watchdog.cancel() }
+        var parts = PhoneParts()
         do {
             try await send(hello, on: socket)
             while !Task.isCancelled {
                 let message = try await socket.receive()
                 guard current == generation, !Task.isCancelled else { break }
                 guard case .string(let text) = message else { throw PhoneError.invalidReply }
+                // INF-2832: each part of a long frame is the computer sending, heard as it arrives; the frame is read
+                // once whole, so an answer still arriving is never cut as a stuck one.
+                guard let whole = try parts.read(text) else { hear(); framed = .now; continue }
                 // INF-2566: the frame is parsed and its payload decoded off the main thread, then read here in order.
-                let frame = try await PhoneFrame.decode(text, reads: pending)
+                let frame = try await PhoneFrame.decode(whole, reads: pending)
                 guard current == generation, !Task.isCancelled else { break }
                 try await receive(frame, on: socket)
                 guard current == generation, !Task.isCancelled else { break }

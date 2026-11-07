@@ -1,9 +1,10 @@
 name: Linux packages, checked
 description: >-
   Fetch the run's linux-packages artifact and check the copy against the
-  build's own SHA256SUMS before anything installs it; a damaged copy is
-  fetched once more, and a second damaged copy fails here, naming each file
-  (docs/linux-packages.md, "The checks"; scripts/linux-package-sums.ts).
+  build's own SHA256SUMS before anything installs, renders or publishes it; a
+  damaged copy is fetched once more, and a second damaged copy fails here,
+  naming each file (docs/linux-packages.md, "The checks";
+  scripts/linux-package-sums.ts).
 inputs:
   sums:
     description: The build job's SHA256SUMS, as its sums output carries it
@@ -25,6 +26,9 @@ runs:
       with:
         name: linux-packages
         path: ${{ inputs.path }}
+    # The check script is the one beside this action, so a release job that
+    # checks out an older source commit and this action from the workflow's
+    # own commit runs the workflow's script too (release.yml's upload job).
     - id: check
       name: Check them against the build's SHA256SUMS
       shell: bash
@@ -33,7 +37,7 @@ runs:
         SUMS: ${{ inputs.sums }}
         ATTEMPT: first
         FINISHED: ${{ steps.first.outputs.download-path }}
-      run: node scripts/linux-package-sums.ts check
+      run: node "$GITHUB_ACTION_PATH/../../../scripts/linux-package-sums.ts" check
     - id: again
       name: Fetch the Linux packages again
       if: steps.check.outputs.whole != 'true'
@@ -49,4 +53,4 @@ runs:
         SUMS: ${{ inputs.sums }}
         ATTEMPT: again
         FINISHED: ${{ steps.again.outputs.download-path }}
-      run: node scripts/linux-package-sums.ts check
+      run: node "$GITHUB_ACTION_PATH/../../../scripts/linux-package-sums.ts" check

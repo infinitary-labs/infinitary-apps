@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-linux-download-check",
+      "reason": "Internal: a release's upload job and a rehearsal's publication job compare their downloaded copy of the Linux packages with the build's own SHA256SUMS before rendering or publishing, fetch a damaged copy once more and otherwise fail naming each file; the packages people install do not change."
+    }
+  ]
+}

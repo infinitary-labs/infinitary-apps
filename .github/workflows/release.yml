@@ -1225,12 +1225,29 @@ jobs:
           console.log(`Accepted ${listed.length} files from attempt ${manifest.attempt}, manifest sha256 ${env.MANIFEST_SHA256}`);
           JS
 
-      # The Linux packages the linux job built and checked, from this run;
-      # every check passed before this job started.
-      - name: Fetch the Linux packages
-        uses: actions/download-artifact@v4
+      # The package check is the workflow's own, as the launch gate is
+      # (INF-1768): a stable checks out an older alpha's commit, which may
+      # predate it.
+      - name: Check out the workflow's own package check
+        uses: actions/checkout@v4
         with:
-          name: linux-packages
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/actions/linux-packages/
+            scripts/linux-package-sums.ts
+
+      # The Linux packages the linux job built and checked, from this run;
+      # every check passed before this job started. This job's own copy is
+      # checked against the linux job's SHA256SUMS before anything renders or
+      # publishes it; a damaged copy is fetched once more, and a second fails
+      # the job naming each file (.github/actions/linux-packages).
+      - name: Fetch the Linux packages
+        uses: ./.release-tooling/.github/actions/linux-packages
+        with:
+          sums: ${{ needs.linux.outputs.sums }}
           path: ${{ runner.temp }}/linux-packages
 
       # The release's Linux files as they publish (docs/alpha.md "Builds by
@@ -1597,7 +1614,9 @@ jobs:
 
       # The workflow's own launch gate, as in the signing job (INF-1768):
       # every fetch-back launches the app through it. Nothing is packaged here.
-      - name: Check out the workflow's own launch gate
+      # A rehearsal's Linux fetch takes the workflow's own package check too,
+      # as the upload job does.
+      - name: Check out the workflow's own launch gate and package check
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
@@ -1607,6 +1626,8 @@ jobs:
           sparse-checkout: |
             scripts/check-app-launch.sh
             scripts/app-runtime-version.mjs
+            .github/actions/linux-packages/
+            scripts/linux-package-sums.ts
 
       - name: Use the workflow's own launch gate
         id: publish-launch-gate
@@ -1829,7 +1850,8 @@ jobs:
 
       # A rehearsal's copies are the run's own: the signing job's checked
       # files and the linux job's packages, each checked against what the
-      # upload job listed, which uploaded nothing.
+      # upload job listed, which uploaded nothing. The packages are first
+      # checked against the linux job's SHA256SUMS, as the upload job's are.
       - name: Fetch the checked files
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
         uses: actions/download-artifact@v4
@@ -1840,9 +1862,9 @@ jobs:
 
       - name: Fetch the Linux packages
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
-        uses: actions/download-artifact@v4
+        uses: ./.release-tooling/.github/actions/linux-packages
         with:
-          name: linux-packages
+          sums: ${{ needs.linux.outputs.sums }}
           path: ${{ runner.temp }}/linux-packages
 
       - name: Check the files a release would upload

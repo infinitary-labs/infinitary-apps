@@ -43,6 +43,13 @@ on:
         required: false
         type: boolean
         default: false
+    outputs:
+      sums:
+        description: >-
+          The build's SHA256SUMS, which a release's upload job and rehearsal
+          check their own download of the linux-packages artifact against
+          (.github/actions/linux-packages)
+        value: ${{ jobs.build.outputs.sums }}
 
 # Inside a release the packages belong to that run and are never cancelled
 # from outside it; otherwise a newer run of the same ref replaces an older.

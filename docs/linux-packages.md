@@ -112,6 +112,8 @@ It keeps the packages, the two rendered recipes and `SHA256SUMS` as the run's `l
 `SHA256SUMS` lists the packages and both recipes, and the build job also passes that list on as its `sums` output.
 Each check job fetches the artifact through `.github/actions/linux-packages`, which compares its copy with the build's own list before anything is installed (`scripts/linux-package-sums.ts`).
 A copy with a missing or differing file is fetched once more, and a second damaged copy fails the job, naming each file and whether the download step stopped before it finished, rather than leaving apt or dnf to fail on a cut-short package.
+A release's upload job, and a rehearsal's publication job, fetch the artifact through the same action, against the list `linux-packages.yml` hands its caller as its own `sums` output, before they render or publish anything, so a cut-short download never publishes with a `SHA256SUMS` made from it.
+They take the action and its script from the workflow's own commit, as they take the launch gate (`docs/alpha.md`), since a stable checks out an older alpha's commit.
 `scripts/check-linux-package.sh` then installs each one the way a person would, one job a system:
 
 - the Ubuntu package with apt on Ubuntu 24.04 and 26.04 machines themselves, AppArmor's restriction on user namespaces left on;

@@ -3,15 +3,23 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   truncateSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { type CheckEnv, check, damage, parseSums } from "../scripts/linux-package-sums.ts";
-import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows";
+import { writeRelease } from "../scripts/linux-recipes.ts";
+import {
+  loadYamlFile,
+  PUBLISHES,
+  root,
+  workflowString,
+  workflowValue,
+} from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-2878: run 42292187705's Ubuntu 24.04 container job installed a copy of
@@ -168,10 +176,22 @@ type Step = {
   "continue-on-error"?: boolean;
 };
 
-const action = loadYamlFile(".github/actions/linux-packages/action.yml") as {
+const ACTION = ".github/actions/linux-packages";
+const action = loadYamlFile(`${ACTION}/action.yml`) as {
   inputs: Record<string, { required?: boolean }>;
   runs: { using: string; steps: Step[] };
 };
+
+/**
+ * The repository file a check step of the action runs, as the shell finds it
+ * from GITHUB_ACTION_PATH, the folder the job checked the action out in.
+ */
+function scriptOf(step: Step): string | undefined {
+  const [, path, command] =
+    /^node "\$GITHUB_ACTION_PATH\/([^"]+)" (\w+)$/.exec(step.run ?? "") ?? [];
+  if (path === undefined || command !== "check") return undefined;
+  return relative(root, resolve(root, ACTION, path));
+}
 
 /** One download as actions/download-artifact leaves it: whole, cut short, or failed outright. */
 type Download = "whole" | "cut-short" | "failed";
@@ -179,18 +199,25 @@ type Download = "whole" | "cut-short" | "failed";
 /**
  * The action's steps run in order for one job, each download leaving the
  * copy `downloads` names, its conditions read as GitHub Actions reads them
- * and its shell steps run as the check script they call. Answers whether the
- * job goes on to install, and what it printed.
+ * and its shell steps run as the check script they call. `given` is the
+ * build and the inputs the job's step passes, a check job's by default.
+ * Answers whether the job goes on to install, and what it printed.
  */
-function fetchInJob(downloads: Download[]): {
+function fetchInJob(
+  downloads: Download[],
+  given?: { build: ReturnType<typeof built>; inputs: { sums: string; path: string } },
+): {
   passed: boolean;
   fetches: number;
   lines: string[];
   installed: string | undefined;
 } {
-  const build = built();
-  const path = join(scratchDir("linux-package-job-"), "linux-packages");
-  const inputs = { sums: build.sums, path };
+  const build = given?.build ?? built();
+  const inputs = given?.inputs ?? {
+    sums: build.sums,
+    path: join(scratchDir("linux-package-job-"), "linux-packages"),
+  };
+  const { path } = inputs;
   const steps: Record<string, { outcome: string; outputs: Record<string, string> }> = {};
   const lines: string[] = [];
   let failed = false;
@@ -218,7 +245,8 @@ function fetchInJob(downloads: Download[]): {
       if (download === "cut-short") truncateSync(join(into, DEB), 4096);
       ok = download !== "failed";
     } else {
-      expect([step.shell, step.run]).toEqual(["bash", "node scripts/linux-package-sums.ts check"]);
+      // The script beside the action, wherever the job checked the action out.
+      expect([step.shell, scriptOf(step)]).toEqual(["bash", "scripts/linux-package-sums.ts"]);
       const env = Object.fromEntries(
         Object.entries(step.env ?? {}).map(([name, value]) => [
           name,
@@ -307,5 +335,160 @@ describe("the check job's fetch of the Linux packages", () => {
     const read = steps[install]?.run ?? "";
     expect(read).toContain('"$RUNNER_TEMP/linux-packages"');
     expect(given).toEqual({ sums: list, path: "/runner/temp/linux-packages" });
+  });
+});
+
+// INF-2879: release.yml's upload job, and a rehearsal's publication job,
+// fetched the same artifact with no check and rendered SHA256SUMS from
+// whatever arrived, so a copy cut short as run 42292187705's was would have
+// published a damaged Ubuntu package with a list that matched it. Each now
+// fetches through the same action, against the linux job's own list.
+
+type Job = { uses?: string; outputs?: Record<string, string>; steps?: Step[] };
+type Workflow = { jobs?: Record<string, Job> };
+
+const release = loadYamlFile(".github/workflows/release.yml") as Workflow;
+const packagesWorkflow = loadYamlFile(".github/workflows/linux-packages.yml") as Workflow & {
+  on: { workflow_call: { outputs?: Record<string, { value: string }> } };
+};
+
+/**
+ * The list a caller of linux-packages.yml reads as `needs.<job>.outputs.sums`:
+ * the build's files step wrote `list`, the build job passes it on, and the
+ * workflow hands it to its caller.
+ */
+function listOfLinuxJob(list: string): string {
+  const build = workflowString(packagesWorkflow.jobs?.build?.outputs?.sums ?? "", {
+    steps: { files: { outputs: { sums: list } } },
+  });
+  return workflowString(packagesWorkflow.on.workflow_call.outputs?.sums?.value ?? "", {
+    jobs: { build: { outputs: { sums: build } } },
+  });
+}
+
+/** Each release job that fetches the packages, and the step that renders the release's Linux files from them. */
+const RELEASE_FETCHES = [
+  { job: "upload", renders: "linux-files" },
+  { job: "publish", renders: "rehearsal-files" },
+] as const;
+
+function releaseFetch(job: string, renders: string) {
+  const steps = release.jobs?.[job]?.steps ?? [];
+  return {
+    steps,
+    fetch: steps.findIndex((step) => step.name === "Fetch the Linux packages"),
+    render: steps.findIndex((step) => step.id === renders),
+    tooling: steps.findIndex((step) => step.with?.path === ".release-tooling"),
+  };
+}
+
+/** A release step's inputs, as Actions passes them, with the linux job's list made from `list`. */
+function releaseInputs(step: Step | undefined, list: string, temp: string): Record<string, string> {
+  const contexts = {
+    needs: { linux: { outputs: { sums: listOfLinuxJob(list) } } },
+    runner: { temp },
+  };
+  return Object.fromEntries(
+    Object.entries(step?.with ?? {}).map(([name, value]) => [
+      name,
+      workflowString(value, contexts),
+    ]),
+  );
+}
+
+describe("a release's fetch of the Linux packages", () => {
+  it("hands the build's own list to the release that calls linux-packages.yml", () => {
+    expect(release.jobs?.linux?.uses).toBe("./.github/workflows/linux-packages.yml");
+    const list = built().sums;
+    expect(listOfLinuxJob(list)).toBe(list);
+  });
+
+  for (const { job, renders } of RELEASE_FETCHES)
+    it(`checks the ${job} job's copy with the workflow's own action, against the linux job's list, before it renders anything`, () => {
+      const { steps, fetch, render, tooling } = releaseFetch(job, renders);
+      expect(fetch).toBeGreaterThan(-1);
+      expect(steps[fetch]?.uses).toBe(`./.release-tooling/${ACTION}`);
+      // The workflow's own copy of the action and of the script it runs, as
+      // the launch gate is (INF-1768): a stable checks out an older alpha's
+      // commit, which may predate both. It is in place whenever the fetch runs.
+      expect([tooling > -1, tooling < fetch, steps[tooling]?.if]).toEqual([true, true, undefined]);
+      expect(steps[tooling]).toMatchObject({
+        uses: "actions/checkout@v4",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+        with: { ref: "${{ github.sha }}", "sparse-checkout-cone-mode": false },
+      });
+      const sparse = String(steps[tooling]?.with?.["sparse-checkout"]).trim().split("\n");
+      const scripts = new Set(action.runs.steps.map(scriptOf).filter((path) => path !== undefined));
+      expect(scripts).toEqual(new Set(["scripts/linux-package-sums.ts"]));
+      expect(sparse).toEqual(expect.arrayContaining([`${ACTION}/`, ...scripts]));
+      // The linux job's own list, and the folder the render step then reads,
+      // under the same condition.
+      const list = built().sums;
+      expect(releaseInputs(steps[fetch], list, "/runner/temp")).toEqual({
+        sums: list,
+        path: "/runner/temp/linux-packages",
+      });
+      expect(render).toBeGreaterThan(fetch);
+      expect(steps[render]?.run).toContain('--packages "$RUNNER_TEMP/linux-packages"');
+      expect(steps[fetch]?.if).toBe(steps[render]?.if);
+    });
+
+  it("publishes nothing in the upload job before its copy is checked", () => {
+    const { steps, fetch } = releaseFetch("upload", "linux-files");
+    for (const step of steps.slice(0, fetch))
+      expect([step.name, PUBLISHES.test(step.run ?? "")]).toEqual([step.name, false]);
+  });
+
+  it("renders the release's Linux files only from a copy that matches the linux job's list", () => {
+    const { steps, fetch, render } = releaseFetch("upload", "linux-files");
+    // The render step runs only when every step before it succeeded.
+    expect(steps[render]?.if).toBeUndefined();
+    const scenarios: Array<[Download[], boolean]> = [
+      [["whole"], true],
+      [["cut-short", "whole"], true],
+      [["failed", "whole"], true],
+      [["cut-short", "cut-short"], false],
+    ];
+    for (const [downloads, rendered] of scenarios) {
+      const build = built();
+      const temp = scratchDir("linux-release-job-");
+      const inputs = releaseInputs(steps[fetch], build.sums, temp) as {
+        sums: string;
+        path: string;
+      };
+      const job = fetchInJob(downloads, { build, inputs });
+      expect(job.passed, downloads.join(", ")).toBe(rendered);
+      if (!job.passed) continue;
+      // linux-files: node scripts/linux-recipes.ts release --packages "$RUNNER_TEMP/linux-packages" --out "$RUNNER_TEMP/linux-release"
+      const out = join(temp, "linux-release");
+      writeRelease({ version: "0.1.30", packages: inputs.path, out });
+      const published = parseSums(readFileSync(join(out, "SHA256SUMS"), "utf8"));
+      const made = parseSums(build.sums);
+      for (const file of [DEB, RPM, APPIMAGE])
+        expect(published.find((entry) => entry.file === file)?.sha256, file).toBe(
+          made.find((entry) => entry.file === file)?.sha256,
+        );
+    }
+  });
+
+  it("is how every workflow and action but its own fetches the Linux packages", () => {
+    const fetchers: string[] = [];
+    const fetchesPackages = (step: Step) =>
+      step.uses?.startsWith("actions/download-artifact") === true &&
+      step.with?.name === "linux-packages";
+    for (const file of readdirSync(join(root, ".github/workflows")).filter((name) =>
+      /\.ya?ml$/.test(name),
+    ))
+      for (const [name, job] of Object.entries(
+        (loadYamlFile(`.github/workflows/${file}`) as Workflow).jobs ?? {},
+      ))
+        if ((job.steps ?? []).some(fetchesPackages)) fetchers.push(`${file}: ${name}`);
+    for (const folder of readdirSync(join(root, ".github/actions"))) {
+      const path = `.github/actions/${folder}/action.yml`;
+      if (folder === "linux-packages" || !existsSync(join(root, path))) continue;
+      const steps = (loadYamlFile(path) as { runs?: { steps?: Step[] } }).runs?.steps ?? [];
+      if (steps.some(fetchesPackages)) fetchers.push(path);
+    }
+    expect(fetchers).toEqual([]);
   });
 });

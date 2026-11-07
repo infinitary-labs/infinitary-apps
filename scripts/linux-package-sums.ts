@@ -1,9 +1,11 @@
 /**
  * The check each Linux package job makes of its downloaded copy before it
- * installs anything (docs/linux-packages.md, "The checks"). The build job
- * lists every file it hands those jobs in SHA256SUMS and passes the list on
- * as its `sums` output, so a job compares its copy with the build's own list,
- * never with a list that came down in the same download.
+ * installs anything, and a release's upload job and rehearsal before they
+ * render or publish anything (docs/linux-packages.md, "The checks"). The
+ * build job lists every file it hands those jobs in SHA256SUMS and passes the
+ * list on as its `sums` output, which linux-packages.yml hands its caller, so
+ * a job compares its copy with the build's own list, never with a list that
+ * came down in the same download.
  *
  *   node scripts/linux-package-sums.ts check
  *     Environment: PACKAGES, the folder the copy is in; SUMS, the build's
@@ -129,11 +131,11 @@ export function check(env: CheckEnv, log: (line: string) => void = console.log):
   const named = `${problems.join("; ")}. ${cause}.`;
   output(false);
   if (attempt === "first") {
-    log(command("warning", "Damaged download, fetched again", `This job's copy of the Linux packages is not the one the build made: ${named} Nothing was installed from it; the job fetches the packages again.`));
+    log(command("warning", "Damaged download, fetched again", `This job's copy of the Linux packages is not the one the build made: ${named} Nothing was installed, rendered or published from it; the job fetches the packages again.`));
     rmSync(dir, { recursive: true, force: true });
     return 0;
   }
-  log(command("error", "Damaged download, twice", `This job's second copy of the Linux packages is not the one the build made either: ${named} Nothing was installed. The build listed these files as it made them, so the fault lies between the build and this job, not in the packages.`));
+  log(command("error", "Damaged download, twice", `This job's second copy of the Linux packages is not the one the build made either: ${named} Nothing was installed, rendered or published. The build listed these files as it made them, so the fault lies between the build and this job, not in the packages.`));
   return 1;
 }
 

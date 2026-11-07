@@ -195,7 +195,8 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   Every launch runs the workflow's own copy of the gate and its probe: the signing job puts them in place of the source's once the app is packaged, and the publication job and the old-cask check before they launch anything, so a stable promoting an older alpha launches through the current gate while its app stays the alpha's.
 - **Linux in every release.**
   The `linux` job calls `linux-packages.yml` at the release's version on its one source commit, with the notes job's catalog, for both channels, a stable promotion included: it builds the Linux packages and installs and opens each on a clean copy of its system (`docs/linux-packages.md`) while verify runs.
-  The upload job waits for it, lays out the Linux files (`linux-files`) from its artifact and uploads them beside the zip to every place, adopting any package a retry finds already published on one of them.
+  The upload job waits for it and checks its own copy of the artifact against the linux job's `SHA256SUMS` before anything renders or uploads (`docs/linux-packages.md`, "The checks").
+  It then lays out the Linux files (`linux-files`) from that copy and uploads them beside the zip to every place, adopting any package a retry finds already published on one of them.
   The publication job fetches every Linux file back from each place like the zip - the public copies without a credential - and compares it and its sidecar with the upload job's list before the feed commit writes the builds file.
 - **Full alpha checks, inherited stable checks (FI3-482).**
   Every alpha needs every Playwright journey passed on its exact files, on Linux in shards (`docs/testing.md`, "The Linux source desktop") and on the Mac, since main runs none of the old journey set (INF-2480, the captain: "old set at the release check only, from the first piece on").

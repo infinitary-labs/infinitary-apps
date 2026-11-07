@@ -576,9 +576,12 @@ describe("the signed channel workflow", () => {
     const gate = ["scripts/check-app-launch.sh", "scripts/app-runtime-version.mjs"];
     const launches = (candidate: Step) =>
       /(^|\s)scripts\/(check-app-launch|verify-mac-dmg)\.sh /m.test(candidate.run ?? "");
-    for (const [job, jobSteps] of [
-      ["release", signingSteps],
-      ["publish", publishSteps],
+    // A rehearsal's publication job fetches the Linux packages through the
+    // workflow's own package check too (INF-2879; tests/linux-package-sums.test.ts).
+    const packageCheck = [".github/actions/linux-packages/", "scripts/linux-package-sums.ts"];
+    for (const [job, jobSteps, tooling] of [
+      ["release", signingSteps, gate],
+      ["publish", publishSteps, [...gate, ...packageCheck]],
     ] as const) {
       const fetched = jobSteps.findIndex(
         (candidate) => candidate.with?.path === ".release-tooling",
@@ -586,7 +589,7 @@ describe("the signed channel workflow", () => {
       expect(jobSteps[fetched]?.uses, job).toBe("actions/checkout@v4");
       expect(jobSteps[fetched]?.with?.ref, job).toBe("${{ github.sha }}");
       expect(String(jobSteps[fetched]?.with?.["sparse-checkout"]).trim().split("\n"), job).toEqual(
-        gate,
+        tooling,
       );
       const placed = jobSteps.findIndex(
         (candidate) =>

@@ -392,6 +392,26 @@ export function focusedRegion(page: Page): Promise<string | null> {
 }
 
 /**
+ * Starts recording each frame the window's own page puts focus on, the
+ * shell's move or the captain's, and returns a read of their titles in
+ * order since then. One watch per page.
+ */
+export async function watchFramesFocused(page: Page): Promise<() => Promise<string[]>> {
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as { framesFocused?: string[] }).framesFocused = seen;
+    document.addEventListener(
+      "focusin",
+      (event) => {
+        if (event.target instanceof HTMLIFrameElement) seen.push(event.target.title);
+      },
+      true,
+    );
+  });
+  return () => page.evaluate(() => (window as { framesFocused?: string[] }).framesFocused ?? []);
+}
+
+/**
  * Presses a window key and returns the part focus moved to, once it has
  * left `from`: each press of F6 or ⇧F6 lands in another part.
  */

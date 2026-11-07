@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "default-press-keeps-focus-out-of-card-body",
+      "reason": "A card's default pressed with nothing left to answer no longer moves focus into the card's body for the moment before the card changes, which hung the queue-merge journey's merge press when its key's release went into a body the merge replaced. Where focus ends after the press is unchanged, so a person notices nothing."
+    }
+  ]
+}

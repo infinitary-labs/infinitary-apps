@@ -12,8 +12,15 @@ import { resizeWindow } from "./layout";
 
 import { promptInput } from "./prompt";
 import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
-import { pager, showCard, shownCardFrame, shownEntry, stageAtRest } from "./stack";
-import { focusedRegion, pressWindowKey, regionAfter, typeInto } from "./windowKeys";
+import { expectNoCard, pager, showCard, shownCardFrame, shownEntry, stageAtRest } from "./stack";
+import {
+  focusedRegion,
+  pressKey,
+  pressWindowKey,
+  regionAfter,
+  typeInto,
+  watchFramesFocused,
+} from "./windowKeys";
 
 /**
  * A frame's own script cannot take focus (docs/ui-plugins.md, "Focus and
@@ -149,6 +156,23 @@ function askingCard(): Card {
       "<fieldset><legend>Which day should it go out?</legend>" +
       `<label><input type="radio" name="day" value="friday" required> Friday</label>` +
       `<label><input type="radio" name="day" value="monday"> Monday</label></fieldset>`,
+    status: "ready",
+    createdAt: Date.now(),
+    actions: [{ id: "ship", label: "Ship it", variant: "primary", default: true }],
+  };
+}
+
+const SENDING = "A card with nothing left to answer";
+
+/** A card whose default choice waits for nothing: its body asks no question. */
+function sendingCard(): Card {
+  return {
+    id: "card-fm-sending",
+    author: "firstmate",
+    meta: "firstmate",
+    priority: 20,
+    title: SENDING,
+    body: "<p>The release notes are ready.</p><p>They cover one change.</p>",
     status: "ready",
     createdAt: Date.now(),
     actions: [{ id: "ship", label: "Ship it", variant: "primary", default: true }],
@@ -453,6 +477,27 @@ test("the waiting default choice still takes the captain to the card's unanswere
       shownCardFrame(page).getByRole("radio", { name: "Friday", exact: true }),
     ).toBeFocused();
     await expect(shownCardFrame(page).getByRole("radio", { checked: true })).toHaveCount(0);
+  } finally {
+    await launched.close();
+  }
+});
+
+// INF-2927: a default pressed with nothing left to answer put focus in the
+// card's body as it sent, and the send then replaced that body, so the
+// key's release went into a frame that was gone and was never answered.
+test("a default with nothing left to answer sends without putting focus in the card's body", async () => {
+  const userDataDir = scratchDir("infinitary-frame-focus-sending-");
+  seed(userDataDir, sendingCard());
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { page } = launched;
+    await showCard(page, SENDING);
+    await expect(drawnFrameIn(shownEntry(page))).toBeVisible();
+    const framesFocused = await watchFramesFocused(page);
+    await pressKey(shownEntry(page).getByRole("button", { name: "Ship it", exact: true }), "Enter");
+    await expectNoCard(page, SENDING);
+    await expect(promptInput(page)).toBeFocused();
+    expect(await framesFocused()).toEqual([]);
   } finally {
     await launched.close();
   }

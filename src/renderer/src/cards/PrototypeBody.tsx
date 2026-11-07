@@ -217,7 +217,11 @@ type SrcdocProps = Omit<BodyProps, "inset"> & {
   inPlace?: boolean;
 };
 
-/** Asks the body's frame for a fresh reading of its form. */
+/**
+ * Asks the body's frame for a fresh reading of its form; with
+ * `focusUnpicked`, a reading that finds a required question unanswered
+ * also puts focus on that question.
+ */
 export type CollectAnswers = (focusUnpicked?: boolean) => Promise<FrameAnswers | undefined>;
 
 const frameStyle = (height: number): React.CSSProperties => ({
@@ -486,14 +490,22 @@ function useCollect(
 ): void {
   useEffect(() => {
     if (!collectRef) return;
-    const collect: CollectAnswers = (focusUnpicked) => {
+    const collect: CollectAnswers = async (focusUnpicked) => {
       const controller = controllerRef.current;
-      if (!controller) return Promise.resolve(undefined);
-      // A frame's own script cannot take focus (FRAME_ALLOW), so the shell
+      if (!controller) return undefined;
+      const reading = await controller.collect();
+      // Focus goes into the body only for a question it still waits on. A
+      // frame's own script cannot take focus (FRAME_ALLOW), so the shell
       // gives the frame focus first, as a click on it would, and its bridge
-      // then puts focus on the unanswered question.
-      if (focusUnpicked) frameRef.current?.focus({ preventScroll: true });
-      return controller.collect(focusUnpicked);
+      // then puts focus on the unanswered question. A default sent with
+      // every answer given leaves focus in the window's own page: the send
+      // may replace this body, and a key still on its way into a frame that
+      // goes is never answered (INF-2927).
+      if (focusUnpicked && reading && reading.answered < reading.of) {
+        frameRef.current?.focus({ preventScroll: true });
+        void controller.collect(true);
+      }
+      return reading;
     };
     collectRef.current = collect;
     return () => {

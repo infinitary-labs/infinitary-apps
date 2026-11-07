@@ -6,22 +6,32 @@
  * with its own credential, which starts no other workflow:
  *
  *   pending "In batch run N"                 the change is in batch run N
+ *   pending "Paused after batch run N; …"    batch run N failed: the queue waits for a fix
  *   success "Passed batch run N; tree T"     the change may merge
  *   failure "<reason>"                       the change goes back to its pull request
  *
  * Any other pending description is the app's approval mark: the change waits
  * for the next batch. Nothing here reads a person's words; every rule reads
  * these typed states, GitHub's run and job readings, and git trees.
+ *
+ * A red sweep fixes forward (the captain: "whenever we meet a failure, we
+ * pause the sweeps until a fix arrives, then we rerun the sweep with
+ * everything queued + the fix"): it pauses every change in it, blames none
+ * and reruns nothing, and no batch forms until a by-hand resume or send-back
+ * turns the paused changes back to waiting and starts the next sweep.
  */
 
 export const QUEUE = "infinitary/queue";
 export const WAITING = "Waiting for the batch check";
+/** The branch every batch composes onto; a change stacked on another branch waits until it targets this one. */
+export const MAIN = "main";
 const IN_BATCH = /^In batch run (\d+)$/;
+const PAUSED = /^Paused after batch run (\d+)(?:;|$)/;
+// A pass written before the fix-forward queue may still say "after a rerun".
 const PASSED = /^Passed batch run (\d+)(?: after a rerun)?; tree ([0-9a-f]{40})$/;
 
 export const inBatch = (runId) => `In batch run ${runId}`;
-export const passed = (runId, tree, rerun) =>
-  `Passed batch run ${runId}${rerun ? " after a rerun" : ""}; tree ${tree}`;
+export const passed = (runId, tree) => `Passed batch run ${runId}; tree ${tree}`;
 
 /**
  * The change's queue state from its version's statuses, newest first as
@@ -45,53 +55,47 @@ export function readQueueStatus(statuses) {
     since,
   };
   const batch = IN_BATCH.exec(base.description);
+  const pause = PAUSED.exec(base.description);
   const green = PASSED.exec(base.description);
   if (latest.state === "pending" && batch) return { ...base, kind: "in-batch", run: Number(batch[1]) };
+  if (latest.state === "pending" && pause) return { ...base, kind: "paused", run: Number(pause[1]) };
   if (latest.state === "pending") return { ...base, kind: "waiting" };
   if (latest.state === "success" && green)
     return { ...base, kind: "passed", run: Number(green[1]), tree: green[2] };
   return { ...base, kind: "failed" };
 }
 
-/** The name batch.yml gives a merge batch's verdict job, which carries the tree it swept. */
-const VERDICT_JOB = /^Merge batch · Batch verdict \(tree [0-9a-f]{40}\)$/;
-
-/** The name batch.yml gives the run that asks for batch run N's one rerun (its run-name). */
-export const rerunOf = (runId) => `Rerun of batch run ${runId}`;
-
-const firstAttemptFailed = (run) =>
-  run.status === "completed" && run.conclusion === "failure" && run.run_attempt === 1;
-
 /**
- * A batch run still owns its changes while it runs, and after its first
- * attempt failed only while that attempt's verdict job passed and the rerun
- * it asked for may still start: the verdict starts a run named after this
- * one, which reruns the failed jobs. A first attempt whose verdict failed,
- * or never ran because an earlier job failed, asked for no rerun, so it owns
- * nothing; nor does one whose rerun request ended without starting the
- * rerun, such as one that could not reach GitHub. Neither does a run whose
- * last attempt ended without writing its verdict. Changes a run does not own
- * join the next batch.
+ * A batch run owns its changes while it runs. A run that ended without
+ * writing its verdict, such as one whose compose or verdict job failed,
+ * owns nothing, so its changes join the next batch.
  */
 export function ownsChanges(run) {
-  if (!run) return false;
-  if (run.status !== "completed") return true;
-  if (!firstAttemptFailed(run) || run.verdict?.conclusion !== "success") return false;
-  return run.rerun?.status !== "completed" || run.rerun.conclusion === "success";
+  return Boolean(run) && run.status !== "completed";
 }
 
 /**
  * What a batch run does now, from every open pull request's queue state and
  * the readings of the batch runs those states name. A batch forms only after
- * the last green batch has fully merged and no run owns a change.
+ * the last green batch has fully merged, while no failed batch has paused the
+ * queue and no run owns a change. It takes only changes that target main: a
+ * change stacked on another branch waits until its base merges and GitHub
+ * points it at main.
  */
 export function formBatch(entries, runs) {
-  const queued = entries.filter((entry) => entry.queue);
+  const queued = entries.filter((entry) => entry.queue && entry.base === MAIN);
   const merging = queued.filter((entry) => entry.queue.kind === "passed");
   if (merging.length)
     return {
       action: "wait",
       reason: `A green batch is still merging: ${merging.map((entry) => `#${entry.number}`).join(", ")}.`,
+      members: [],
+    };
+  const paused = queued.filter((entry) => entry.queue.kind === "paused");
+  if (paused.length)
+    return {
+      action: "wait",
+      reason: `Batch run ${paused[0].queue.run} failed, so the queue is paused until a resume or a send-back by hand.`,
       members: [],
     };
   const owned = queued.filter(
@@ -100,7 +104,7 @@ export function formBatch(entries, runs) {
   if (owned.length)
     return {
       action: "wait",
-      reason: `Batch run ${owned[0].queue.run} is sweeping or waiting for its rerun.`,
+      reason: `Batch run ${owned[0].queue.run} is sweeping.`,
       members: [],
     };
   const members = queued
@@ -109,6 +113,17 @@ export function formBatch(entries, runs) {
     .map((entry) => ({ number: entry.number, head: entry.head }));
   if (!members.length) return { action: "none", reason: "No approved change is waiting.", members };
   return { action: "sweep", reason: `${members.length} approved changes are waiting.`, members };
+}
+
+/**
+ * The writes that end a pause: every paused change but `except` (the one a
+ * send-back names) waits again, keeping its place in approval order, and the
+ * caller starts the next batch.
+ */
+export function resume(entries, { url, except }) {
+  return entries
+    .filter((entry) => entry.queue?.kind === "paused" && entry.number !== except)
+    .map((entry) => ({ number: entry.number, head: entry.head, state: "pending", description: WAITING, url }));
 }
 
 /** The `<number>:<version>` list batch-compose.sh takes, in batch order. */
@@ -137,28 +152,17 @@ export function readComposition(output, members) {
 /**
  * The verdict a batch run writes once its sweep ends. Only changes still in
  * this run at the same version are written: one sent back by hand, or
- * pushed again, keeps what it has. A failed sweep that a change was sent
- * back from by hand takes that send-back as its answer, even when the
- * change's author pushed a new version after it: it asks for no rerun and
- * fails no other change, and the rest wait for the next batch, which this
- * run starts without the change sent back. Otherwise a first
- * failed attempt writes nothing and asks for its one rerun of the failed
- * jobs; a second failure sends the batch's last change back with the failed
- * job's link, and the rest wait for the next batch, which this run starts.
- * Its reason names the first failed test file and which changes of the
- * batch touch it (readFailedFiles).
+ * pushed again, keeps what it has. A green sweep passes them. A failed sweep
+ * that a change was sent back from by hand takes that send-back as its
+ * answer, even when the change's author pushed a new version after it: the
+ * rest wait for the next batch, which this run starts without the change
+ * sent back. Any other failed sweep pauses every change in it, with the
+ * failed job's link, and starts nothing: it reruns nothing and blames no
+ * change. The pause names the first test file the failed jobs' logs report
+ * and which changes of the batch touch it (readFailedFiles), as evidence for
+ * whoever writes the fix.
  */
-export function verdict({
-  runId,
-  runUrl,
-  attempt,
-  swept,
-  tree,
-  members,
-  current,
-  failedJob,
-  failedFiles = [],
-}) {
+export function verdict({ runId, runUrl, swept, tree, members, current, failedJob, failedFiles = [] }) {
   // The member's queue state now, while it still names the version this run swept.
   const queueOf = (member) => {
     const now = current.get(member.number);
@@ -169,20 +173,16 @@ export function verdict({
     return queue?.kind === "in-batch" && queue.run === runId;
   });
   if (!still.length) return { writes: [], next: "sweep", summary: "No change is still in this batch." };
-  const waitAgain = still.map((member) => ({ ...member, state: "pending", description: WAITING, url: runUrl }));
   if (swept === "success")
     return {
       writes: still.map((member) => ({
         ...member,
         state: "success",
-        description: passed(runId, tree, attempt > 1),
+        description: passed(runId, tree),
         url: runUrl,
       })),
       next: null,
-      summary:
-        attempt > 1
-          ? "The batch passed on its rerun. The jobs that failed first still need an owner who fixes their cause."
-          : "The batch passed.",
+      summary: "The batch passed.",
     };
   // Each member was in this run when it composed, so one whose swept version
   // failed since was sent back by hand while it swept, whether or not its
@@ -194,35 +194,22 @@ export function verdict({
   if (sentBack.length) {
     const named = sentBack.map((member) => `#${member.number}`).join(", ");
     return {
-      writes: waitAgain,
+      writes: still.map((member) => ({ ...member, state: "pending", description: WAITING, url: runUrl })),
       next: "sweep",
-      summary: `The sweep failed and ${named} went back by hand, so the rest wait for a new sweep without ${sentBack.length > 1 ? "them" : "it"}, with no rerun.`,
+      summary: `The sweep failed and ${named} went back by hand, so the rest wait for a new sweep without ${sentBack.length > 1 ? "them" : "it"}.`,
     };
   }
-  if (attempt === 1)
-    return {
-      writes: [],
-      next: "rerun",
-      summary: "The sweep failed, so its failed jobs run once more.",
-    };
-  const last = still.at(-1);
-  const job = failedJob ? `${failedJob.name} failed twice` : "The sweep failed twice";
-  const [first] = failedFiles;
+  const description = pauseReason(runId, failedJob, failedFiles);
   return {
-    writes: [
-      {
-        ...last,
-        state: "failure",
-        description: first
-          ? fileReason(first, failedFiles.length, runId)
-          : `${job} in batch run ${runId}, the last change in it.`.slice(0, 140),
-        url: failedJob?.html_url || runUrl,
-      },
-      ...waitAgain.slice(0, -1),
-    ],
-    next: "sweep",
+    writes: still.map((member) => ({
+      ...member,
+      state: "pending",
+      description,
+      url: failedJob?.html_url || runUrl,
+    })),
+    next: null,
     summary:
-      `The sweep failed twice, so #${last.number}, the batch's last change, goes back to its pull request.` +
+      "The sweep failed, so the queue is paused: these changes and every new approval wait until a fix is approved and a resume or a send-back by hand starts the next sweep." +
       (failedFiles.length
         ? ` Failed test files: ${failedFiles.map((failed) => `${failed.file} (${touchedBy(failed)})`).join(", ")}.`
         : ""),
@@ -234,12 +221,14 @@ const touchedBy = ({ touchedBy: numbers }) =>
     ? `touched by ${numbers.map((number) => `#${number}`).join(", ")}`
     : "no change here touches it";
 
-/** A failed status's reason, at most the 140 characters GitHub keeps. */
-function fileReason(failed, count, runId) {
-  const more = count > 1 ? ` (+${count - 1} more)` : "";
-  const reason = `${failed.file}${more} failed twice in batch run ${runId}; ${touchedBy(failed)}`;
-  const full = `${reason}; sent back as its last change.`;
-  return (full.length <= 140 ? full : `${reason}.`).slice(0, 140);
+/** A paused status's description, at most the 140 characters GitHub keeps. */
+function pauseReason(runId, failedJob, failedFiles) {
+  const [first] = failedFiles;
+  const more = failedFiles.length > 1 ? ` (+${failedFiles.length - 1} more)` : "";
+  const what = first
+    ? `${first.file}${more} failed; ${touchedBy(first)}`
+    : `${failedJob ? failedJob.name : "the sweep"} failed`;
+  return `Paused after batch run ${runId}; ${what}`.slice(0, 140);
 }
 
 // A test file's path as vitest and Playwright print it, from the project's root.
@@ -346,69 +335,24 @@ export async function readCurrent(github, repo, members) {
   return current;
 }
 
-/** Every open pull request with its current version and queue state. */
+/** Every open pull request with its current version, the branch it targets and its queue state. */
 export async function readOpenQueue(github, repo) {
   const pulls = await github.paginate(github.rest.pulls.list, { ...repo, state: "open", per_page: 100 });
   return Promise.all(
     pulls.map(async (pull) => ({
       number: pull.number,
       head: pull.head.sha,
+      base: pull.base.ref,
       queue: readQueueStatus(await statusesOf(github, repo, pull.head.sha)),
     })),
   );
 }
 
-/**
- * The newest run that asks for batch run `run`'s one rerun, or null while
- * GitHub lists none yet: the verdict starts it by dispatch after the run
- * began, and batch.yml names it after the run.
- */
-async function readRerunRequest(github, repo, run) {
-  const requests = await github.paginate(github.rest.actions.listWorkflowRuns, {
-    ...repo,
-    workflow_id: "batch.yml",
-    event: "workflow_dispatch",
-    created: `>=${run.created_at}`,
-    per_page: 100,
-  });
-  return requests
-    .filter((request) => request.display_title === rerunOf(run.id))
-    .reduce((newest, request) => (newest && newest.run_number > request.run_number ? newest : request), null);
-}
-
-/**
- * One batch run as ownsChanges reads it. A run whose first attempt failed
- * also carries that attempt's verdict job, or null when it has none: read
- * from attempt 1 itself, so a rerun that starts meanwhile does not hide it.
- * When that verdict asked for the rerun, the run carries the request too.
- */
-async function readRun(github, repo, id) {
-  const read = async () => (await github.rest.actions.getWorkflowRun({ ...repo, run_id: id })).data;
-  const run = await read();
-  if (!firstAttemptFailed(run)) return run;
-  const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
-    ...repo,
-    run_id: id,
-    attempt_number: 1,
-    per_page: 100,
-  });
-  const verdict = jobs.find((job) => VERDICT_JOB.test(job.name)) ?? null;
-  if (verdict?.conclusion !== "success") return { ...run, verdict };
-  const rerun = await readRerunRequest(github, repo, run);
-  if (rerun?.status === "completed" && rerun.conclusion !== "success") {
-    // A request can fail after GitHub started the rerun, its answer lost and
-    // the retry refused: read the run again, now that the request has ended.
-    const again = await read();
-    if (!firstAttemptFailed(again)) return again;
-  }
-  return { ...run, verdict, rerun };
-}
-
-/** The batch runs the queue states name, one reading each. */
+/** The batch runs that changes in a batch name, one reading each. */
 export async function readRuns(github, repo, entries) {
-  const ids = [...new Set(entries.flatMap((entry) => (entry.queue?.run ? [entry.queue.run] : [])))];
+  const ids = [...new Set(entries.flatMap((entry) => (entry.queue?.kind === "in-batch" ? [entry.queue.run] : [])))];
   const runs = new Map();
-  for (const id of ids) runs.set(id, await readRun(github, repo, id));
+  for (const id of ids) runs.set(id, (await github.rest.actions.getWorkflowRun({ ...repo, run_id: id })).data);
   return runs;
 }
 

@@ -528,6 +528,7 @@ Its whole state is one commit status, `infinitary/queue`, on each approved pull 
 | --- | --- | --- |
 | pending | anything but the batch's own | the captain's merge click approved this version, and it waits for the next batch |
 | pending | `In batch run N` | batch run N is sweeping it |
+| pending | `Paused after batch run N; …` | batch run N failed, and the queue waits for a fix |
 | success | `Passed batch run N; tree T` | its batch passed on files `T`, and the app may merge it |
 | failure | a reason | it goes back to its pull request |
 
@@ -536,11 +537,10 @@ It starts on an approval mark, on a push to `main` and by hand, and only one bat
 Its concurrency group never cancels a batch, and every start reads the queue again, so a start GitHub drops loses nothing.
 Every GitHub call in it retries a dropped connection or a server error three times (github-script's `retries`), so one lost answer fails neither the batch's run nor `main`'s check of it.
 
-A batch forms only when no green batch is still merging and no batch run still owns a change.
-A batch run owns its changes while it runs, and after a failed first attempt only while that attempt's `verdict` job passed, since only a passing verdict asked for the rerun.
-A first attempt whose verdict failed, or never ran because an earlier job such as `compose` failed, starts no rerun, so its changes wait for the next batch.
-So do the changes of a run whose rerun request ended without starting the rerun, such as one that could not reach GitHub: the newest `Rerun of batch run N` run decides, so a rerun started again by hand holds them again.
-It takes every waiting change in approval order, from when its approval mark was first written.
+A batch forms only when no green batch is still merging, no failed batch has paused the queue and no batch run is still sweeping a change.
+A run that ended without writing its verdict, such as one whose `compose` job failed after marking its changes, owns nothing, so its changes join the next batch.
+It takes every waiting change that targets `main` in approval order, from when its approval mark was first written.
+A change stacked on another change's branch waits until its base merges and GitHub points it at `main`, since composing it would sweep its base's commits too.
 The `compose` job merges each change onto `main` with `scripts/batch-compose.sh`, the way a merge on GitHub combines files, with a fixed author and date.
 A change that conflicts with `main` itself fails with "Conflicts with main"; a change that conflicts only with an earlier change in the batch waits for the next one.
 Every sweep job composes the same commit again from `main` and the same versions, and fails if its tree differs from the one `compose` reported.
@@ -551,14 +551,16 @@ A sweep without every journey's complete set still lends its Linux checks and Ma
 Its Linux jobs run on GitHub's hosted machines and its Mac lanes on the `release_split` queue ("Each Mac job's kind and size").
 Beside it, the `critical-path` job runs the critical path on the same composed commit on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
 A green sweep with a green critical path marks every change success with the batch's tree.
-A red sweep reruns only its failed jobs, once (the captain: "can we just only rerun failed jobs? if it failed again, treat it as failed by the last PR in the batch and require it to fix the flake").
-The failed attempt's `verdict` job starts a `rerun` run by dispatch, named `Rerun of batch run N`, which waits for the attempt to end and reruns its failed jobs and the verdict after them.
-If the rerun passes, the batch passes too, and the job that failed first still gets an owner who fixes its cause.
-If it fails again, the batch's last change fails with the failed job's link, its crewmate fixes the failure whether or not it is a flake, and the rest wait again for a batch the verdict starts.
-Its reason names the first test file the failed jobs' logs report as failed and the batch's changes whose diffs touch that file, or that none does; the verdict's summary lists every such file.
-A triage crewmate may instead name another change and send it back by hand.
-A by-hand start with `send_back` and `reason` fails one change's status with that reason.
-A red sweep that a change was sent back from while it ran takes that send-back as its answer: its verdict asks for no rerun and fails no other change, and the rest wait again, in their approval order, for a batch the verdict starts without the change sent back.
+A red sweep fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat").
+Its verdict pauses every change in it with the failed job's link, reruns nothing, blames no change and starts no batch.
+The pause names the first test file the failed jobs' logs report as failed and the batch's changes whose diffs touch that file, or that none does; the verdict's summary lists every such file.
+While any change is paused, no batch forms, and a change approved meanwhile, the fix included, waits.
+A by-hand start ends the pause, once a fix is approved or the failure is judged a flake with an owner who fixes it:
+- `resume` with a reason turns every paused change back to waiting and starts the next batch, which sweeps everything waiting, the fix included;
+- `send_back` with `reason` fails one change's status with that reason, turns the other paused changes back to waiting and starts the next batch without it.
+
+A paused change keeps its place in approval order, and a red sweep after a resume pauses again.
+A send-back by hand while a sweep runs is that sweep's answer: if the sweep fails, its verdict pauses nothing and fails no other change, and the rest wait again, in their approval order, for a batch the verdict starts without the change sent back.
 It still does when the change's author pushes a new version before the verdict runs: the verdict reads the failure on the version it swept, and the new version joins a batch only through its own approval mark, after the changes approved before it (INF-2940).
 A green sweep still passes the changes left in it.
 A by-hand start with `rehearsal` and pull request numbers sweeps them onto `main` and reports in its summary, marking nothing.
@@ -574,7 +576,7 @@ The fleet never cancels a running batch or a running main check unless the capta
 ## CI job names
 
 Every job's name says what started its run and what it checks, in one scheme (INF-2410, the captain: "i want to distinguish what triggered the job and what they check"; scheme "A. Trigger first"): `Trigger · Purpose (platform or device; group or round)`, such as `Main push · App journeys (Linux; serial group 3/4)` or `Pull request · Code, build, affected tests and critical path (Linux)`.
-The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (the approval mark, a merge or the batch's own rerun), `Requested batch rehearsal`, `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
+The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (the approval mark, a merge or the batch's own next start), `Requested batch rehearsal`, `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
 A called workflow takes its caller's trigger through its `trigger` input, so each level of GitHub's full name leads with it: `Main push · Desktop checks / Main push · Linux journeys / Main push · App journeys (Linux; serial group 3/4)`; a runner list that shows only the last level still says what started it.
 A workflow only a caller starts (`alpha-wait.yml`, `linux-startup.yml`, `mac-installer.yml`, `mac-update.yml`) requires that input and keeps no fallback of its own, and a release says its trigger once, in its `resolve` job's `trigger` output, which every later job's name and every workflow it calls read (INF-2539).
 Workflow names and files, job ids, run titles, concurrency groups and artifact names keep their earlier names, so triggers, queues and the readers of `github.workflow` are unchanged.

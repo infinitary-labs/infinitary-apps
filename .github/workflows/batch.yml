@@ -12,27 +12,24 @@ name: batch
 # files are the sweep's (main.yml's sort job) and the alpha starts with no
 # check run again (scripts/main-alpha-proof.mjs).
 #
-# A red sweep reruns only its failed jobs, once (the captain: "can we just
-# only rerun failed jobs? if it failed again, treat it as failed by the last
-# PR in the batch and require it to fix the flake"). A second failure marks
-# the batch's last change failed with the failed job's link, and the rest
-# sweep again without it. A by-hand start can send one change back with a
-# reason, or rehearse a batch of named pull requests and mark nothing.
+# A red sweep fixes forward (the captain: "whenever we meet a failure, we
+# pause the sweeps until a fix arrives, then we rerun the sweep with
+# everything queued + the fix"): it pauses every change in it with the
+# failed job's link, reruns nothing and blames no change, and new approvals
+# wait behind the pause. A by-hand start ends it: `resume` with a reason, or
+# `send_back` naming one change, turns the paused changes back to waiting
+# and starts one sweep of everything waiting, the fix included. A by-hand
+# start can also rehearse a batch of named pull requests and mark nothing.
 #
 # The batch's state lives only in infinitary/queue (scripts/batch.mjs). This
 # workflow writes it with its own credential, which starts no workflow, and
-# starts its own next run and its rerun by dispatch. It pushes nothing: the
-# app merges every change with the captain's sign-in.
+# starts its own next run by dispatch. It pushes nothing: the app merges
+# every change with the captain's sign-in.
 #
 # Every GitHub call here retries a dropped connection or a server error
 # three times (github-script's retries; a dropped connection reaches the
 # script as status 500), so one lost answer fails no run. A repeated write
 # only repeats a status or a start, which the next read takes as it is.
-
-# A rerun's run is named after the batch run it reruns, which the next batch
-# reads to tell whether that rerun can still start (scripts/batch.mjs,
-# rerunOf); every other run keeps the name GitHub gives it.
-run-name: ${{ inputs.rerun != '' && format('Rerun of batch run {0}', inputs.rerun) || '' }}
 
 on:
   # The app's approval mark. Any other status starts a run that does nothing.
@@ -47,28 +44,28 @@ on:
         type: string
         default: ""
       send_back:
-        description: Send this pull request back to its author, with the reason below; nothing sweeps
+        description: Send this pull request back to its author, with the reason below; a paused batch then sweeps again without it
         type: string
         default: ""
       reason:
         description: Why the change goes back (with send_back)
         type: string
         default: ""
-      rerun:
-        description: Set by the batch itself - the batch run whose failed jobs run once more
+      resume:
+        description: Resume a paused batch, saying why it may sweep again (such as the fix that was approved)
         type: string
         default: ""
 
 # One batch at a time, and nothing cancels one: GitHub keeps the running
 # batch and the newest waiting start, and every start reads the queue again,
 # so a dropped start loses nothing. A status that is not the queue's, a
-# rehearsal, a send-back and a rerun each stay out of that line.
+# rehearsal, a send-back and a resume each stay out of that line.
 concurrency:
-  group: ${{ github.event_name == 'status' && github.event.context != 'infinitary/queue' && format('batch-other-{0}', github.run_id) || inputs.rehearsal != '' && format('batch-rehearsal-{0}', github.run_id) || inputs.send_back != '' && format('batch-send-back-{0}', github.run_id) || inputs.rerun != '' && format('batch-rerun-{0}', inputs.rerun) || 'batch' }}
+  group: ${{ github.event_name == 'status' && github.event.context != 'infinitary/queue' && format('batch-other-{0}', github.run_id) || inputs.rehearsal != '' && format('batch-rehearsal-{0}', github.run_id) || inputs.send_back != '' && format('batch-send-back-{0}', github.run_id) || inputs.resume != '' && format('batch-resume-{0}', github.run_id) || 'batch' }}
   cancel-in-progress: false
 
-# statuses for the queue's marks; actions for the next start and the rerun,
-# and the verify check's reads; pull-requests to list the open changes.
+# statuses for the queue's marks; actions for the next start and the verify
+# check's reads; pull-requests to list the open changes.
 permissions:
   contents: read
   statuses: write
@@ -77,9 +74,10 @@ permissions:
 
 jobs:
   # A by-hand send-back: the change's queue status fails with the reason, and
-  # the next batch leaves it out.
+  # the next batch leaves it out. A paused batch's other changes wait again,
+  # and the next batch starts.
   # Each job's name leads with what started it (scripts/ci-job-names.mjs):
-  # the approval mark, a merge or the batch's own rerun is a merge batch.
+  # the approval mark, a merge or the batch's own next start is a merge batch.
   send-back:
     if: github.event_name == 'workflow_dispatch' && inputs.send_back != ''
     name: Manual request · Send a change back
@@ -99,47 +97,48 @@ jobs:
             const {pathToFileURL} = require('node:url');
             const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
             if (!process.env.REASON) throw new Error('A send-back needs a reason.');
-            const {data: pull} = await github.rest.pulls.get({...context.repo, pull_number: Number(process.env.PULL)});
+            const number = Number(process.env.PULL);
+            const url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const {data: pull} = await github.rest.pulls.get({...context.repo, pull_number: number});
             await batch.writeStatus(github, context.repo, {
-              head: pull.head.sha, state: 'failure', description: process.env.REASON.slice(0, 140),
-              url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              head: pull.head.sha, state: 'failure', description: process.env.REASON.slice(0, 140), url,
             });
+            const writes = batch.resume(await batch.readOpenQueue(github, context.repo), {url, except: number});
+            for (const write of writes) await batch.writeStatus(github, context.repo, write);
+            if (writes.length)
+              await github.rest.actions.createWorkflowDispatch({...context.repo, workflow_id: 'batch.yml', ref: 'main', inputs: {}});
 
-  # The batch's one rerun: waits for the failed attempt to end, then reruns
-  # only its failed jobs and the verdict after them. If this job fails before
-  # the rerun starts, the batch run gives up its changes to the next batch.
-  rerun:
-    if: github.event_name == 'workflow_dispatch' && inputs.rerun != ''
-    name: Merge batch · Rerun the failed sweep jobs
+  # A by-hand resume of a paused batch, once its fix is approved or its
+  # failure is judged a flake with an owner: every paused change waits again
+  # and the next batch starts, sweeping everything waiting.
+  resume:
+    if: github.event_name == 'workflow_dispatch' && inputs.resume != ''
+    name: Manual request · Resume the paused batch
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/batch.mjs
+          sparse-checkout-cone-mode: false
       - uses: actions/github-script@v7
         env:
-          RUN: ${{ inputs.rerun }}
+          REASON: ${{ inputs.resume }}
         with:
           retries: 3
           script: |
-            const run_id = Number(process.env.RUN);
-            for (;;) {
-              const {data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id});
-              if (run.path !== '.github/workflows/batch.yml') throw new Error(`Run ${run_id} is not a batch run.`);
-              if (run.status === 'completed') {
-                if (run.run_attempt !== 1 || run.conclusion !== 'failure') {
-                  core.notice(`Batch run ${run_id} needs no rerun: attempt ${run.run_attempt}, ${run.conclusion}.`);
-                  return;
-                }
-                await github.rest.actions.reRunWorkflowFailedJobs({...context.repo, run_id});
-                return;
-              }
-              // The failed attempt's verdict asked for this; its run ends seconds later.
-              await new Promise((done) => setTimeout(done, 10_000));
-            }
+            const {pathToFileURL} = require('node:url');
+            const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
+            const url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const writes = batch.resume(await batch.readOpenQueue(github, context.repo), {url});
+            for (const write of writes) await batch.writeStatus(github, context.repo, write);
+            await github.rest.actions.createWorkflowDispatch({...context.repo, workflow_id: 'batch.yml', ref: 'main', inputs: {}});
+            const listed = writes.map((write) => `#${write.number}`).join(', ') || 'no paused change';
+            await core.summary.addHeading('Batch resumed').addRaw(`${process.env.REASON} Waiting again: ${listed}.`).write();
 
   # Reads the queue, forms the batch, composes it onto main and marks its changes.
   compose:
     name: ${{ format('{0} · Compose the batch', (inputs.rehearsal != '' && 'Requested batch rehearsal' || 'Merge batch')) }}
-    if: (github.event_name == 'status' && github.event.context == 'infinitary/queue' && github.event.state == 'pending') || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.send_back == '' && inputs.rerun == '')
+    if: (github.event_name == 'status' && github.event.context == 'infinitary/queue' && github.event.state == 'pending') || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.send_back == '' && inputs.resume == '')
     runs-on: ubuntu-24.04
     outputs:
       sweep: ${{ steps.mark.outputs.sweep }}
@@ -288,21 +287,19 @@ jobs:
             });
             const failedJobs = jobs.filter((job) => job.conclusion === 'failure');
             const failedJob = failedJobs[0];
-            const attempt = Number(process.env.GITHUB_RUN_ATTEMPT);
-            // A second failure names the failed test files and the changes that touch them.
-            const failedFiles = process.env.SWEPT !== 'success' && attempt > 1
+            // A failure names the failed test files and the changes that touch them.
+            const failedFiles = process.env.SWEPT !== 'success'
               ? await batch.readFailedFiles(github, context.repo, failedJobs, members) : [];
             // Each change's version and queue state now, and a send-back on the
             // version this run swept when its author pushed again since.
             const current = await batch.readCurrent(github, context.repo, members);
             const plan = batch.verdict({
-              runId: context.runId, runUrl, attempt,
+              runId: context.runId, runUrl,
               swept: process.env.SWEPT, tree: process.env.TREE, members, current, failedJob, failedFiles,
             });
             for (const write of plan.writes) await batch.writeStatus(github, context.repo, write);
             if (plan.next)
               await github.rest.actions.createWorkflowDispatch({
-                ...context.repo, workflow_id: 'batch.yml', ref: 'main',
-                inputs: plan.next === 'rerun' ? {rerun: String(context.runId)} : {},
+                ...context.repo, workflow_id: 'batch.yml', ref: 'main', inputs: {},
               });
             await core.summary.addHeading(`Batch of ${listed}`).addRaw(plan.summary).write();

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-fix-forward",
+      "reason": "The project's own batch check now pauses after a failed sweep until a fix arrives instead of rerunning and sending the last change back; how this repository's checks run, nothing in the app a person notices."
+    }
+  ]
+}

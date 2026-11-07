@@ -372,7 +372,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "main.yml:sort",
     "main.yml:covered",
     "batch.yml:send-back",
-    "batch.yml:rerun",
+    "batch.yml:resume",
     "batch.yml:compose",
     "batch.yml:verdict",
   ];

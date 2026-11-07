@@ -11,51 +11,37 @@ export type QueueState = {
   description: string;
   url: string;
   since: string;
-  kind: "waiting" | "in-batch" | "passed" | "failed";
+  kind: "waiting" | "in-batch" | "paused" | "passed" | "failed";
   run?: number;
   tree?: string;
 };
 export type Member = { number: number; head: string };
-export type QueueEntry = Member & { queue: QueueState | null };
+/** An open pull request: its version, the branch it targets and its queue state. */
+export type QueueEntry = Member & { base: string; queue: QueueState | null };
 /**
  * A batch run's change as its verdict reads it: the pull request's current
  * version and its queue state there (null once closed), and `swept`, the
  * swept version's queue state, read only when the change was pushed again.
  */
 export type CurrentMember = { head: string; queue: QueueState | null; swept?: QueueState | null };
-export type BatchJob = { name: string; status: string; conclusion: string | null };
-/** A run batch.yml started by dispatch, as GitHub lists them. */
-export type DispatchedRun = {
-  id: number;
-  run_number: number;
-  display_title: string;
-  status: string;
-  conclusion: string | null;
-};
-export type BatchRun = {
-  id: number;
-  status: string;
-  conclusion: string | null;
-  run_attempt: number;
-  created_at?: string;
-  /** The first attempt's verdict job, read only when that attempt failed. */
-  verdict?: BatchJob | null;
-  /** The newest run asking for this run's rerun, read only when that verdict passed. */
-  rerun?: DispatchedRun | null;
-};
+export type BatchRun = { id: number; status: string; conclusion: string | null };
 export type StatusWrite = Member & { state: string; description: string; url: string };
 
 export const QUEUE: string;
 export const WAITING: string;
+export const MAIN: string;
 export function inBatch(runId: number): string;
-export function passed(runId: number, tree: string, rerun?: boolean): string;
-export function rerunOf(runId: number): string;
+export function passed(runId: number, tree: string): string;
 export function readQueueStatus(statuses: readonly CommitStatus[]): QueueState | null;
 export function ownsChanges(run: BatchRun | undefined): boolean;
 export function formBatch(
   entries: readonly QueueEntry[],
   runs: ReadonlyMap<number, BatchRun>,
 ): { action: "none" | "wait" | "sweep"; reason: string; members: Member[] };
+export function resume(
+  entries: readonly QueueEntry[],
+  options: { url: string; except?: number },
+): StatusWrite[];
 export function headList(members: readonly Member[]): string;
 export function readComposition(
   output: string,
@@ -64,14 +50,13 @@ export function readComposition(
 export function verdict(input: {
   runId: number;
   runUrl: string;
-  attempt: number;
   swept: string;
   tree: string;
   members: readonly Member[];
   current: ReadonlyMap<number, CurrentMember>;
   failedJob?: { name: string; html_url: string };
   failedFiles?: readonly FailedFile[];
-}): { writes: StatusWrite[]; next: "rerun" | "sweep" | null; summary: string };
+}): { writes: StatusWrite[]; next: "sweep" | null; summary: string };
 /** A test file a failed job's log names, and the batch's changes whose diffs touch it. */
 export type FailedFile = { file: string; touchedBy: number[] };
 export function failedTestFiles(log: string): string[];

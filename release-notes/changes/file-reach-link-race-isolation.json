@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "file-reach-link-race-isolation",
+      "reason": "Test-only repair: the file-link race test mocks the filesystem module, so it now runs in its own fresh module cache, where each injected link swap reaches the reader and is refused even after another test file loaded that reader. No app behavior changed and no assertion was weakened."
+    }
+  ]
+}

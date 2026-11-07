@@ -128,6 +128,8 @@ const isolatedUnit = [
   "src/core/session/answerFiles.test.ts",
   // It wraps node:fs's listing to remove an entry the way a running app does.
   "tests/e2e/savedText.test.ts",
+  // Its node:fs/promises mock must reach FileReach, which fileRouter.test.ts loads unmocked.
+  "src/core/files/fileReach.test.ts",
 ];
 
 export default defineConfig({

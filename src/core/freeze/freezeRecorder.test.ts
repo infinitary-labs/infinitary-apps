@@ -6,6 +6,7 @@ import {
   freezeIncidentSchema,
   freezeWake,
   infinitaryProject,
+  StallCounter,
 } from "./freezeRecorder";
 import { isFreezeRecorderEnabled } from "./watchdog";
 
@@ -202,5 +203,75 @@ describe("the first mate's wake about a recorded freeze", () => {
     );
     expect(other.once).toBe(freezeWake(OPEN_MESSAGES, own, "0.6.2-alpha.44").once);
     expect(other.once).not.toBe(freezeWake(OPEN_MESSAGES, own, "0.6.2-alpha.45").once);
+  });
+});
+
+// INF-2971's first finding, which the captain chose to start: the wake came
+// with the first stall of each start, one stall each time, and the first
+// mate judged each too short to look into while the app stopped about
+// three times a minute. The summary now carries this run's stalls.
+describe("the stalls a run has had", () => {
+  const own = { id: "infinitary", name: "infinitary" };
+  const since = "2026-11-07T08:18:00.000Z";
+  const stall = (at: string, wallMs: number): FreezeLine => ({ ...OPEN_MESSAGES, at, wallMs });
+
+  it("counts every completed stall and names the longest as the example", () => {
+    const counter = new StallCounter(since);
+    expect(counter.read("2026-11-07T08:19:00.000Z")).toBeUndefined();
+    counter.add(stall("2026-11-07T08:18:22.000Z", 386));
+    counter.add(stall("2026-11-07T08:20:01.000Z", 159));
+    counter.add(stall("2026-11-07T08:21:40.000Z", 1_020));
+    counter.add(stall("2026-11-07T08:22:13.000Z", 212));
+    const tally = counter.read("2026-11-07T08:23:00.000Z");
+    expect(tally).toMatchObject({
+      since,
+      until: "2026-11-07T08:23:00.000Z",
+      stalls: 4,
+      stallMs: 386 + 159 + 1_020 + 212,
+      interrupted: 0,
+      example: { at: "2026-11-07T08:21:40.000Z", wallMs: 1_020 },
+    });
+  });
+
+  it("tells the first mate the rate since the app started, with the longest stall's facts", () => {
+    const counter = new StallCounter(since);
+    for (let minute = 0; minute < 15; minute += 1)
+      counter.add(stall(new Date(Date.parse(since) + minute * 20_000).toISOString(), 159));
+    counter.add(stall("2026-11-07T08:21:40.000Z", 1_020));
+    const tally = counter.read("2026-11-07T08:23:00.000Z");
+    if (!tally) throw new Error("the counter read no stall");
+    const { example, ...rate } = tally;
+    const wake = freezeWake(example, own, "0.6.3-alpha.280", rate);
+    expect(wake.once).toBe(freezeWake(OPEN_MESSAGES, own, "0.6.3-alpha.280").once);
+    const text = renderWake(wake);
+    expect(text).toContain(
+      "since this app started at 2026-11-07T08:18:00.000Z, the freeze recorder saw its main thread",
+    );
+    expect(text).toContain(
+      `stop answering 16 times in 5 minutes (about 3.2 a minute), ${15 * 159 + 1_020} ms in all`,
+    );
+    expect(text).toContain("The longest stopped it for 1020 ms at 2026-11-07T08:21:40.000Z");
+    expect(text).toContain("986 ms of that was the main thread's own processor time");
+  });
+
+  it("counts a stall that never finished without inventing its duration", () => {
+    const counter = new StallCounter(since);
+    counter.add({
+      incidentId: "previous-run",
+      status: "interrupted",
+      at: "2026-11-07T08:10:00.000Z",
+      interruptedAt: "2026-11-07T08:18:01.000Z",
+    });
+    const tally = counter.read("2026-11-07T08:23:00.000Z");
+    if (!tally) throw new Error("the counter read no stall");
+    expect(tally).toMatchObject({ stalls: 0, stallMs: 0, interrupted: 1 });
+    const { example, ...rate } = tally;
+    const text = renderWake(freezeWake(example, own, "0.6.3-alpha.280", rate));
+    expect(text).toContain("stop answering 0 times in 5 minutes");
+    expect(text).toContain("found 1 that never finished, a previous run's included");
+    expect(text).toContain(
+      "The example is one that never finished, which began at 2026-11-07T08:10:00.000Z",
+    );
+    expect(text).toContain("its processor time is unknown");
   });
 });

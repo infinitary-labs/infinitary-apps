@@ -1,4 +1,5 @@
 import type { AppDatabase } from "./db";
+import { feedGroups } from "./feedProjection";
 import { prepared } from "./statements";
 import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
 import { taskReadTable } from "./taskRecordFields";
@@ -480,23 +481,21 @@ export class TaskEventStore {
    * stays separate. This is a read projection, never a timeline rewrite.
    */
   listFeed(limit: number): TaskEvent[] {
-    const owned = taskReadTable(this.db) === "task_records";
-    const program = owned
-      ? `WHEN json_type(parent_program.value_json, '$.program') = 'object' THEN t.parent_id
-         WHEN json_type(own_program.value_json, '$.program') = 'object' THEN t.id`
-      : `WHEN json_type(p.shape_json, '$.program') = 'object' THEN p.id
-         WHEN json_type(t.shape_json, '$.program') = 'object' THEN t.id`;
-    const programJoins = owned
-      ? `LEFT JOIN task_programs parent_program ON parent_program.task_id = t.parent_id
-         LEFT JOIN task_programs own_program ON own_program.task_id = t.id`
-      : "LEFT JOIN tasks p ON p.id = t.parent_id";
+    // Today's record keeps the grouped view between reads and folds in only
+    // what was written since (feedProjection.ts, INF-2971). An older schema,
+    // read by migration tests and the offline scripts, groups on every read.
+    if (taskReadTable(this.db) === "task_records")
+      return feedGroups(this.db, limit).map((row) => fromRow(row as unknown as Row));
     const rows = this.db
       .prepare(`
         WITH grouped AS (
-          SELECT e.*, CASE ${program} END AS program_id
+          SELECT e.*, CASE
+            WHEN json_type(p.shape_json, '$.program') = 'object' THEN p.id
+            WHEN json_type(t.shape_json, '$.program') = 'object' THEN t.id
+          END AS program_id
           FROM task_events e
           JOIN tasks t ON t.id = e.task_id
-          ${programJoins}
+          LEFT JOIN tasks p ON p.id = t.parent_id
           WHERE e.feed = 1
         ), ranked AS (
           SELECT *, ROW_NUMBER() OVER (

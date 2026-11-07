@@ -127,15 +127,11 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     walks: ["SCAN task_event_concerns USING INDEX sqlite_autoindex_task_event_concerns_1"],
     reason: "every concern row, for the task export (TaskEventStore.listAllConcerns)",
   },
-  "WITH grouped AS ( SELECT e.*, CASE WHEN json_type(parent_program.value_json, '$.program') = 'object' THEN t.parent_id WHEN json_type(own_program.value_json, '$.program') = 'object' THEN t.id END AS program_id FROM task_events e JOIN tasks t ON t.id = e.task_id LEFT JOIN task_programs parent_program ON parent_program.task_id = t.parent_id LEFT JOIN task_programs own_program ON own_program.task_id = t.id WHERE e.feed = 1 ), ranked AS ( SELECT *, ROW_NUMBER() OVER ( PARTITION BY program_id, CASE WHEN program_id IS NULL THEN id ELSE 0 END ORDER BY at DESC, id DESC ) AS position FROM grouped ) SELECT * FROM ranked WHERE position = 1 ORDER BY at DESC, id DESC LIMIT ?":
+  "SELECT e.*, CASE WHEN json_type(parent_program.value_json, '$.program') = 'object' THEN t.parent_id WHEN json_type(own_program.value_json, '$.program') = 'object' THEN t.id END AS program_id FROM task_events e CROSS JOIN tasks t ON t.id = e.task_id LEFT JOIN task_programs parent_program ON parent_program.task_id = t.parent_id LEFT JOIN task_programs own_program ON own_program.task_id = t.id WHERE e.feed = 1 ORDER BY e.at DESC, e.id DESC":
     {
-      walks: [
-        "SCAN e USING INDEX task_events_feed",
-        "USE TEMP B-TREE FOR ORDER BY",
-        "USE TEMP B-TREE FOR ORDER BY",
-      ],
+      walks: ["SCAN e USING INDEX task_events_feed"],
       reason:
-        "walks the feed-worthy events through the partial task_events_feed index to group a program's parts before the limit (INF-1348); the feed grows with history, so the scale check counts it",
+        "walks the feed-worthy events newest first through the partial task_events_feed index and stops once it holds the feed's groups; it runs only when the kept view goes stale, and later reads fold in only the events written since (feedProjection.ts, INF-2971)",
     },
   "SELECT task_id FROM task_execution WHERE json_extract(placement_json, '$.reservation') = 'pending'":
     {
@@ -158,12 +154,6 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     reason:
       "reads a saved database's policies once, for the offline scripts that read a saved record",
   },
-  "SELECT task_id FROM task_references WHERE kind = ? AND task_id != ? AND ( trim(ref) = ? OR (? != '' AND upper(trim(ref)) = ?) )":
-    {
-      walks: ["SCAN task_references"],
-      reason:
-        "compares the trimmed, upper-cased reference text, which no index holds, when a task is resolved by a name; the scale check counts it",
-    },
   "UPDATE tasks SET activity = 'interrupted', updated_at = ? WHERE status = 'active' AND activity IN ('running', 'starting') AND id NOT IN (SELECT task_id FROM task_execution WHERE device_id IS NOT NULL)":
     {
       walks: ["SCAN task_execution"],

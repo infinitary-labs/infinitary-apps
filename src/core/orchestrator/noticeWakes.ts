@@ -34,7 +34,10 @@ export type NoticeFacts =
       /**
        * The freeze recorder saw the app's main thread stall (INF-2066,
        * docs/freeze-recorder.md), and the captain's project list holds
-       * Infinitary's own source, where a fix goes. Once per call path.
+       * Infinitary's own source, where a fix goes. Once per installed
+       * version. `sinceStart` counts this run's stalls (INF-2971); the
+       * incident fields then describe its longest one. A wake queued
+       * before the count has none.
        */
       kind: "freeze-recorded";
       project: { id: string; name: string };
@@ -48,6 +51,13 @@ export type NoticeFacts =
       captureRequestedAt?: string;
       capturedAt?: string;
       uncertain?: NonNullable<FreezeLine["uncertain"]>;
+      sinceStart?: {
+        since: string;
+        until: string;
+        stalls: number;
+        stallMs: number;
+        interrupted: number;
+      };
     }
   | {
       /**
@@ -238,6 +248,19 @@ const FREEZE_UNCERTAIN_WORDS: Record<NonNullable<FreezeLine["uncertain"]>, strin
   late: "These names are uncertain: they were read only after the stall had ended, so they may come from code that ran later.",
 };
 
+/** How often the main thread stopped since this run started, from the recorder's own counts. */
+function freezeRate(
+  rate: NonNullable<Extract<WakeFacts, { kind: "freeze-recorded" }>["sinceStart"]>,
+): string {
+  const minutes = Math.max(0, Date.parse(rate.until) - Date.parse(rate.since)) / 60_000;
+  const perMinute = minutes > 0 ? ` (about ${(rate.stalls / minutes).toFixed(1)} a minute)` : "";
+  const unfinished =
+    rate.interrupted > 0
+      ? `, and found ${rate.interrupted} that never finished, a previous run's included, whose duration is unknown`
+      : "";
+  return `since this app started at ${rate.since}, the freeze recorder saw its main thread, which handles the captain's clicks and keys, stop answering ${rate.stalls} times in ${Math.round(minutes)} minutes${perMinute}, ${rate.stallMs} ms in all, through ${rate.until}${unfinished}.`;
+}
+
 /** A recorded main thread freeze, as the first mate hears it once per installed version. */
 function renderFreezeRecorded(facts: Extract<WakeFacts, { kind: "freeze-recorded" }>): string {
   const path = facts.frames.length
@@ -255,7 +278,10 @@ function renderFreezeRecorded(facts: Extract<WakeFacts, { kind: "freeze-recorded
   const incident = ` Incident: ${facts.incidentId ?? "not recorded"}; status: ${facts.status ?? "not recorded"}.`;
   const build = ` Incident build identity: ${facts.build ? JSON.stringify(facts.build) : "not recorded"}.`;
   const timing = ` Capture requested: ${facts.captureRequestedAt ?? "not recorded"}; captured: ${facts.capturedAt ?? "not recorded"}.`;
-  return `[fm-op] the freeze recorder saw this app's main thread, which handles the captain's clicks and keys, stop answering for ${duration} at ${facts.at}; ${cpu}. ${path}${uncertain}${timing}${build}${incident} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair. Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.`;
+  const opening = facts.sinceStart
+    ? `${freezeRate(facts.sinceStart)} ${facts.wallMs === null ? `The example is one that never finished, which began at ${facts.at}` : `The longest stopped it for ${duration} at ${facts.at}`}`
+    : `the freeze recorder saw this app's main thread, which handles the captain's clicks and keys, stop answering for ${duration} at ${facts.at}`;
+  return `[fm-op] ${opening}; ${cpu}. ${path}${uncertain}${timing}${build}${incident} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair. Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.`;
 }
 
 /** How the first mate hears the captain's Update panel press opens. */

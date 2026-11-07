@@ -26,6 +26,9 @@ import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
  * `latestRestartObservation`), so a database this block has not reached
  * refuses that read rather than walking every note of a running task
  * (INF-2341).
+ * The reference index seeks the tasks whose basis, retry or branch names
+ * a task by its trimmed, upper-cased name, which the answer-delivery sweep
+ * reads for every task a message covers (INF-2971).
  * `migrate` (db.ts) creates them once a database reaches the newest migration.
  */
 export function createQueryIndexes(db: AppDatabase): void {
@@ -38,6 +41,7 @@ export function createQueryIndexes(db: AppDatabase): void {
     CREATE INDEX IF NOT EXISTS tasks_parent_status ON tasks (parent_id, status);
     CREATE INDEX IF NOT EXISTS tasks_closed_at ON tasks (closed_at);
     CREATE INDEX IF NOT EXISTS task_events_ref ON task_events (kind, ref) WHERE ref IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS task_references_name ON task_references (kind, upper(trim(ref)));
     CREATE INDEX IF NOT EXISTS task_events_compaction ON task_events (task_id, at)
       WHERE ${COMPACTION_CANDIDATE};
     CREATE INDEX IF NOT EXISTS task_events_actor_at ON task_events (actor, at DESC, id DESC);

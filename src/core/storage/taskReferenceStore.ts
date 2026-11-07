@@ -115,17 +115,23 @@ export class TaskReferenceStore {
 
   /**
    * The other tasks whose reference of this kind names this one by its id or
-   * its key, as `TaskService.resolve` reads a name.
+   * its key, as `TaskService.resolve` reads a name: an id exactly, a key in
+   * any case. The answer-delivery sweep reads it for every task a message
+   * covers, so it seeks the name through `task_references_name`
+   * (queryIndexes.ts) instead of walking every reference (INF-2971's first
+   * finding); the exact id comparison then runs on the rows it found.
    */
   taskIdsNaming(kind: TaskReferenceKind, id: string, key: string | null): string[] {
     if (!this.exists()) return [];
+    const named = (key ?? "").toUpperCase();
     const rows = prepared(
       this.db,
-      `SELECT task_id FROM task_references WHERE kind = ? AND task_id != ? AND (
-         trim(ref) = ? OR (? != '' AND upper(trim(ref)) = ?)
-       )`,
-    ).all(kind, id, id, key ?? "", (key ?? "").toUpperCase()) as { task_id: string }[];
-    return rows.map((row) => row.task_id);
+      `SELECT task_id, trim(ref) AS trimmed, upper(trim(ref)) AS named FROM task_references
+       WHERE kind = ? AND upper(trim(ref)) IN (upper(?), ?) AND task_id != ?`,
+    ).all(kind, id, named, id) as { task_id: string; trimmed: string; named: string }[];
+    return rows
+      .filter((row) => row.trimmed === id || (named !== "" && row.named === named))
+      .map((row) => row.task_id);
   }
 
   deleteFor(taskId: string): void {

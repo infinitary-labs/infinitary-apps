@@ -3,7 +3,7 @@ import { forgeOf } from "@shared/forge";
 import { type SourceIdentity, sourceIdentitySchema } from "@shared/selfSource";
 import { z } from "zod";
 import type { TypedWake } from "../orchestrator/wakes";
-import { MemoryRecorder } from "./memoryRecorder";
+import { MEMORY_READING_MS, MemoryRecorder } from "./memoryRecorder";
 import { takeWatchdog } from "./watchdog";
 
 /**
@@ -101,13 +101,73 @@ export function infinitaryProject<T extends { id: string; name: string; origin: 
 }
 
 /**
+ * The stalls one recorder has handed over since it started (INF-2971's
+ * first finding): a single stall told the first mate nothing about how
+ * often the app hitched, so its summary carries the rate.
+ */
+export type StallTally = {
+  /** When this recorder started: the start of this app's run. */
+  since: string;
+  /** When the tally was read. */
+  until: string;
+  /** Completed stalls, and their time between heartbeats in all. */
+  stalls: number;
+  stallMs: number;
+  /** Unfinished stalls found, a previous run's included: no duration is known. */
+  interrupted: number;
+  /** The longest completed stall, or the newest unfinished one when none completed. */
+  example: FreezeIncident;
+};
+
+/** The facts a summary carries beside its example stall. */
+export type StallRate = Omit<StallTally, "example">;
+
+/** Counts the stalls a recorder hands over; `read` answers undefined until there is one. */
+export class StallCounter {
+  private stalls = 0;
+  private stallMs = 0;
+  private interrupted = 0;
+  private longest: FreezeLine | undefined;
+  private unfinished: FreezeIncident | undefined;
+
+  constructor(private readonly since: string) {}
+
+  add(line: FreezeIncident): void {
+    if ("wallMs" in line) {
+      this.stalls += 1;
+      this.stallMs += line.wallMs;
+      if (!this.longest || line.wallMs > this.longest.wallMs) this.longest = line;
+    } else if (line.status === "interrupted") {
+      this.interrupted += 1;
+      this.unfinished = line;
+    }
+  }
+
+  read(until: string): StallTally | undefined {
+    const example = this.longest ?? this.unfinished;
+    if (!example) return undefined;
+    return {
+      since: this.since,
+      until,
+      stalls: this.stalls,
+      stallMs: this.stallMs,
+      interrupted: this.interrupted,
+      example,
+    };
+  }
+}
+
+/**
  * The alpha recorder's automatic summary, once per installed version through
- * the durable inbox, independent of call path, restart or dismissal (INF-2205).
+ * the durable inbox, independent of call path, restart or dismissal
+ * (INF-2205). With `rate`, it says how many stalls this run has had and
+ * names `line` as their example (INF-2971).
  */
 export function freezeWake(
   line: FreezeIncident,
   project: { id: string; name: string },
   version: string,
+  rate?: StallRate,
 ): TypedWake {
   const complete = "wallMs" in line ? line : undefined;
   return {
@@ -124,6 +184,17 @@ export function freezeWake(
       cpuMs: complete?.cpuMs ?? null,
       frames: complete?.frames ?? [],
       ...(complete?.uncertain ? { uncertain: complete.uncertain } : {}),
+      ...(rate
+        ? {
+            sinceStart: {
+              since: rate.since,
+              until: rate.until,
+              stalls: rate.stalls,
+              stallMs: rate.stallMs,
+              interrupted: rate.interrupted,
+            },
+          }
+        : {}),
     },
     once: `freeze-recorded:version:${version}`,
   };
@@ -133,13 +204,19 @@ export function freezeWake(
  * The recorder's main-thread half: it takes the watchdog (`./watchdog.ts`),
  * which the app's entry armed before the app's code loaded, hands it the
  * record, beats every `HEARTBEAT_MS` with the main thread's own processor
- * time, and hands each recorded line to `onFreeze`. A watchdog that fails
+ * time, and hands each recorded line to `onFreeze`. With `onSummary`, it
+ * also hands over the stalls counted since it started at each memory
+ * reading's interval (`MEMORY_READING_MS`) once there is one, so a summary
+ * carries a rate over a stretch of use, not the first stall of a start
+ * (INF-2971). A watchdog that fails
  * stops the recorder and never the app. With `memory`, it also keeps the
  * memory reading (`./memoryRecorder.ts`), which needs no watchdog.
  */
 export class FreezeRecorder {
   private worker: Worker | undefined;
   private beat: ReturnType<typeof setInterval> | undefined;
+  private summary: ReturnType<typeof setInterval> | undefined;
+  private counter: StallCounter | undefined;
   private readonly memory: MemoryRecorder | undefined;
 
   constructor(
@@ -147,6 +224,7 @@ export class FreezeRecorder {
       recordPath: string;
       build?: SourceIdentity;
       onFreeze: (line: FreezeIncident) => void;
+      onSummary?: (tally: StallTally) => void;
       thresholdMs?: number;
       memory?: { recordPath: string; footprint?: () => Promise<number | null> };
     },
@@ -166,9 +244,13 @@ export class FreezeRecorder {
     const worker = takeWatchdog();
     if (!worker) return;
     this.worker = worker;
+    const counter = new StallCounter(new Date().toISOString());
+    this.counter = counter;
     worker.on("message", (message: unknown) => {
       const line = freezeIncidentSchema.safeParse(message);
-      if (line.success) this.options.onFreeze(line.data);
+      if (!line.success) return;
+      counter.add(line.data);
+      this.options.onFreeze(line.data);
     });
     worker.on("error", () => this.stop());
     worker.postMessage({
@@ -183,12 +265,27 @@ export class FreezeRecorder {
     beat();
     this.beat = setInterval(beat, HEARTBEAT_MS);
     this.beat.unref();
+    const onSummary = this.options.onSummary;
+    if (onSummary) {
+      this.summary = setInterval(() => {
+        const tally = counter.read(new Date().toISOString());
+        if (tally) onSummary(tally);
+      }, MEMORY_READING_MS);
+      this.summary.unref();
+    }
+  }
+
+  /** The stalls counted since this recorder started, or undefined before the first. */
+  tally(): StallTally | undefined {
+    return this.counter?.read(new Date().toISOString());
   }
 
   stop(): void {
     this.memory?.stop();
     if (this.beat) clearInterval(this.beat);
     this.beat = undefined;
+    if (this.summary) clearInterval(this.summary);
+    this.summary = undefined;
     const worker = this.worker;
     this.worker = undefined;
     void worker?.terminate();

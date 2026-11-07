@@ -153,6 +153,33 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         '[fm-op] the freeze recorder saw this app\'s main thread, which handles the captain\'s clicks and keys, stop answering for 2412 ms at 2026-11-05T17:02:08.000Z; 2380 ms of that was the main thread\'s own processor time. One captured JavaScript location, innermost first (not a cause or per-function timing): renderWake (out/main/index.js:41022:17) <- drainWakes (out/main/index.js:41510:9). These names are uncertain: they were read only after the stall had ended, so they may come from code that ran later. Capture requested: 2026-11-05T17:02:09.000Z; captured: 2026-11-05T17:02:09.400Z. Incident build identity: {"computer":"a Mac","version":"0.6.2-alpha.115","commit":"8421eddf0010a80709febc5ad5d8fbfd661878a1","mutable":false}. Incident: fz-31; status: completed. The app\'s own source is the captain\'s project "infinitary" (repo_id b3483155). Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair. Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.',
     },
     {
+      name: "a run's stalls with its longest",
+      wake: {
+        facts: {
+          kind: "freeze-recorded",
+          project: { id: "b3483155", name: "infinitary" },
+          at: "2026-11-07T08:41:13.000Z",
+          wallMs: 1_204,
+          cpuMs: 1_188,
+          frames: [
+            { name: "listFeed", file: "out/main/index.js", line: 52_310, column: 11 },
+            { name: "recentFeed", file: "out/main/index.js", line: 61_022, column: 7 },
+          ],
+          incidentId: "fz-77",
+          status: "completed",
+          sinceStart: {
+            since: "2026-11-07T08:18:00.000Z",
+            until: "2026-11-07T08:48:00.000Z",
+            stalls: 94,
+            stallMs: 15_870,
+            interrupted: 1,
+          },
+        },
+      },
+      words:
+        "[fm-op] since this app started at 2026-11-07T08:18:00.000Z, the freeze recorder saw its main thread, which handles the captain's clicks and keys, stop answering 94 times in 30 minutes (about 3.1 a minute), 15870 ms in all, through 2026-11-07T08:48:00.000Z, and found 1 that never finished, a previous run's included, whose duration is unknown. The longest stopped it for 1204 ms at 2026-11-07T08:41:13.000Z; 1188 ms of that was the main thread's own processor time. One captured JavaScript location, innermost first (not a cause or per-function timing): listFeed (out/main/index.js:52310:11) <- recentFeed (out/main/index.js:61022:7). Capture requested: not recorded; captured: not recorded. Incident build identity: not recorded. Incident: fz-77; status: completed. The app's own source is the captain's project \"infinitary\" (repo_id b3483155). Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair. Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.",
+    },
+    {
       name: "an interrupted stall with nothing captured",
       wake: {
         facts: {

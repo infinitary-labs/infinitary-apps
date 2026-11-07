@@ -88,11 +88,13 @@ It records no values or text, and nothing sends it anywhere.
 
 ## The first mate's offer
 
-Each completed or recovered interrupted incident is handed to the core.
-When one of the captain's projects lives at Infinitary's own source on GitHub (`INFINITARY_SOURCE`, matched by where the project lives, not its name), the first mate hears a `freeze-recorded` wake, at most once per installed app version through the durable inbox's once-identity.
+Each completed or recovered interrupted incident is handed to the core, and the recorder counts them from its start (`StallCounter`): completed stalls and their time in all, unfinished ones, and the longest completed stall, or the newest unfinished one when none completed.
+At each memory reading's interval (`MEMORY_READING_MS`) after a stall, the recorder hands that count to the core as the run's summary (`onSummary`), so the summary covers a stretch of use, never only the first stall of a start (INF-2971's audit: four wakes with one stall each while the app stopped about three times a minute).
+When one of the captain's projects lives at Infinitary's own source on GitHub (`INFINITARY_SOURCE`, matched by where the project lives, not its name), the first mate hears that summary as a `freeze-recorded` wake, at most once per installed app version through the durable inbox's once-identity.
+The wake says how many times the main thread stopped since the app started, over how many minutes and about how many a minute, their time in all and any that never finished, and names the longest stall's facts as before.
 Different call paths, restart, acknowledgement or dismissal do not reset that identity; another installed version has its own allowance.
 Later incidents remain in the bounded local record without automatic model turns.
-A recovered interrupted incident may supply the summary, with missing measurements explicitly unknown.
+A recovered interrupted incident may supply the summary's example, with missing measurements explicitly unknown.
 Explicit captain questions are independent of this automatic allowance.
 The captain's answer on INF-2061 asked for exactly this: "offer a fix task only if the canonical infinitary github repo is a project in the project list".
 The wake gives the facts and leaves the judgment to the first mate: whether investigation is worthwhile, and if so a decision card offering a fix task whose first work is diagnosis.

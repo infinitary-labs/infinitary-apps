@@ -1478,8 +1478,10 @@ export async function createServices(
   homeDevices.attachPressure((view) => resourcePressure.observe(view));
   resourcePressure.observe(computerResourceFeed.snapshot());
   // The freeze recorder (docs/freeze-recorder.md), in alpha builds only: each
-  // main thread stall goes to its record, and to the first mate only when the
-  // captain's projects hold Infinitary's own source, where a fix goes.
+  // main thread stall goes to its record, and a summary of this run's stalls
+  // to the first mate only when the captain's projects hold Infinitary's own
+  // source, where a fix goes.
+  let freezeSummarized = false;
   const freezeRecorder = isFreezeRecorderEnabled({
     packaged: host.app.packaged,
     version: host.app.version,
@@ -1492,9 +1494,15 @@ export async function createServices(
           recordPath: paths.memoryRecordPath,
           ...(host.processFootprint ? { footprint: host.processFootprint } : {}),
         },
-        onFreeze: (line) => {
+        onFreeze: () => {},
+        // One summary per installed version (the inbox's once-identity), with
+        // the stalls since this run started rather than its first stall.
+        onSummary: ({ example, ...rate }) => {
+          if (freezeSummarized) return;
           const project = infinitaryProject(repos.list());
-          if (project) notifyFirstmate(freezeWake(line, project, host.app.version), "scheduled");
+          if (!project) return;
+          freezeSummarized = true;
+          notifyFirstmate(freezeWake(example, project, host.app.version, rate), "scheduled");
         },
       })
     : null;

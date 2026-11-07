@@ -321,8 +321,8 @@ describe("runbooks over existing prompt and skill doors", () => {
       expect(prompt()).toContain(passage);
       books.set("delivery", false);
       expect(prompt()).not.toContain(passage);
-      expect(prompt()).not.toContain("Never emit a completion decision on anything but green");
-      expect(prompt()).toContain("The completion offer never grants merge permission");
+      expect(prompt()).not.toContain("Never emit a merge card on anything but green");
+      expect(prompt()).toContain("The merge card never grants merge permission by itself");
       expect(prompt()).toContain("Before anything sensitive or costly");
       books.set("delivery", true);
     }

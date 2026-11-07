@@ -779,7 +779,7 @@ function watchWords(
 function mergedWords(forge: Forge, pull: ForgePull, audience: Audience): string {
   const next =
     audience === "crewmate"
-      ? "Nothing is left to merge. Continue any remaining work, or report merge_completes_task with this PR number and head when its merge finishes the task. No second merge decision is needed."
+      ? "Nothing is left to merge. Continue any remaining work; when this merge finished all of it, put up your merge card for this pull request with after close, and the app closes the task as merged without merging again."
       : "Nothing is left to merge. Read the task's remaining work before closing it; a merged PR alone does not mean its work is complete.";
   return [
     "overall: merged",

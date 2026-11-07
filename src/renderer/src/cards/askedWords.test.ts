@@ -30,6 +30,10 @@ describe("askedWords", () => {
       `You said · ${time} · through 1 task`,
     );
     expect(askedLabel({ at, kind: "chose" }, later)).toBe(`You chose · ${time}`);
+    // INF-2744: a click names the card it was on.
+    expect(askedLabel({ at, kind: "chose", card: "Merge the meter fix" }, later)).toBe(
+      `You chose on “Merge the meter fix” · ${time}`,
+    );
     expect(askedLabel({ at, kind: "automation" }, later)).toBe(`Run by an automation · ${time}`);
     expect(askedLabel({ at, kind: "from", key: "INF-2081" }, later)).toBe("From INF-2081");
   });

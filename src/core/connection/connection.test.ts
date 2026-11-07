@@ -775,8 +775,15 @@ describe("the home's connection", () => {
       }) as CoreDispatch,
     });
     const grant = await at.join();
-    const old = await connectClient(grant);
-    const newer = await connectClient(grant, { changes: ["shared-cards"] });
+    // A desktop on major 13 without the change reads lines strictly; one that
+    // named `shared-cards`, and every view from major 14 on, reads who wrote
+    // each line (`SHARED_CARDS_SINCE`).
+    const old = await connectClient(grant, { protocolVersion: "13.0.0" });
+    const named = await connectClient(grant, {
+      protocolVersion: "13.0.0",
+      changes: ["shared-cards"],
+    });
+    const newer = await connectClient(grant);
     const phone = await connectClient(grant, { system: { system: "ios" } });
     // The line an older desktop parses: strict, without who wrote it.
     const legacyLine = cardMessageSchema.omit({
@@ -787,13 +794,16 @@ describe("the home's connection", () => {
     const linesOf = (value: unknown) => (value as { messages: unknown[] }).messages;
     for (const [name, { args, value }] of Object.entries(answers)) {
       const channel = name as CoreInvokeChannel;
+      expect(await newer.invoke(channel, args), channel).toEqual(value);
+      expect(await phone.invoke(channel, args), channel).toEqual(value);
+      // Below the view floor a desktop only reads (major 14): it asks no change.
+      if (contract.requests[channel]?.effect === "change") continue;
       const oldLines = linesOf(await old.invoke(channel, args));
       expect(
         oldLines.map((line) => legacyLine.parse(line).text),
         channel,
       ).toEqual(linesOf(value).map((line) => (line as { text: string }).text));
-      expect(await newer.invoke(channel, args), channel).toEqual(value);
-      expect(await phone.invoke(channel, args), channel).toEqual(value);
+      expect(await named.invoke(channel, args), channel).toEqual(value);
     }
     for (const channel of heard) {
       at.events.emit(channel as "inf:cards:thread", thread);
@@ -802,6 +812,7 @@ describe("the home's connection", () => {
       expect((await newer.push((push) => push.channel === channel)).payload).toEqual(thread);
     }
     await old.close();
+    await named.close();
     await newer.close();
     await phone.close();
   });

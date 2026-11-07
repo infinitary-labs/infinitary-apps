@@ -47,7 +47,7 @@ import { MERGE_CHECKS_HOLD_REASON, standingAuthorization } from "./mergeAuthoriz
  * whether the task closes.
  */
 const SELECTED_CHANGE_WORDS =
-  "It is now this task's current change: check_change reads it until you name another or open_change opens one. A request_merge card merges it and the task continues; your completion card's merge finishes the task with it.";
+  "It is now this task's current change: check_change reads it until you name another or open_change opens one. Your merge card merges it, its review naming this review and its after saying whether the task continues or closes.";
 
 /**
  * The gaps between reads of a pull request the task did not open while
@@ -72,7 +72,7 @@ type Reread =
 /**
  * Merge reviews (`docs/forge.md`, "A requested merge"): a pull request the
  * crew names by its number, kept on the task at the version read, shown on
- * a request_merge card and merged once on the captain's click - an ordinary
+ * a merge card and merged once on the captain's click - an ordinary
  * one, or one past the branch rules.
  */
 export class MergeReviews {
@@ -212,14 +212,14 @@ export class MergeReviews {
     return [
       checks.text,
       `Merge review ${review.id} for #${number} at ${pull.headSha} into ${pull.base} on ${where}, skipping the branch rules.`,
-      "A request_merge card merges it and the task continues.",
+      "Your merge card merges it, its review naming this review.",
       rules.length
         ? `It may skip these rules, each of which ${where} says your sign-in may skip: ${rules.map((rule) => `${rule.rule} (${rule.ruleset})`).join("; ")}.`
         : "No branch rule holds it.",
       failedChecks.length
         ? `It merges with these checks failed: ${failedChecks.join(", ")}.`
         : "No terminal check failures were reported.",
-      "request_merge references this review; the app names each rule and failed check on the card. Only the captain's click on that card sends it, once, at this version; the who-merges setting and every other path never do. A new version needs a new review.",
+      "The merge card names this review; the app names each rule and failed check on the card. Only the captain's click on that card sends it, once, at this version; the who-merges setting and every other path never do. A new version needs a new review.",
     ].join("\n");
   }
 
@@ -836,7 +836,7 @@ export class MergeReviews {
   }
 
   /**
-   * The captain's click on a request_merge review: the pull request it
+   * The captain's click on a merge card that names a review: the pull request it
    * names, read again by its number, sent once at the reviewed version (or
    * the version a declared repair carried the approval to). A story
    * published on that pull request must still be the published one.

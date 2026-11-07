@@ -9,7 +9,6 @@ import {
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import { awayWord, type ComputerReach } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
-import { FILES_THERE } from "@shared/files";
 import type { InvokeRequest, InvokeResponse, WorkInvokeChannel } from "@shared/ipc";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import {
@@ -24,9 +23,6 @@ import {
   workOrders,
 } from "@shared/work";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
-import { contractChange, listsChange } from "../connection/contractChanges";
-import { CONVERSATION_FOLDS } from "../connection/conversationFolds";
-import { SHARED_CARDS } from "../connection/sharedCards";
 import {
   dueIn,
   dueRule,
@@ -230,11 +226,6 @@ type Placed = {
 };
 
 const rosterSchema = workOrders["inf:session:roster"].response;
-/** The quiet watchdog's answer to a stuck read there (`answer-stuck-reads.md`). */
-const ANSWER_STUCK_READS = contractChange("answer-stuck-reads");
-/** The files command and the file orders (`files-there.md`). */
-const FILES_THERE_CHANGE = contractChange(FILES_THERE);
-
 const openAnswerSchema = workOrders["inf:session:open"].response;
 
 export class PlacedSessions implements PlacedWork, CrewMachines {
@@ -332,17 +323,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   }
 
   takesSharedCards(machine: string): boolean {
-    return (
-      this.options.devices.takesCurrentWork(machine) &&
-      listsChange(this.options.devices.version(machine)?.changes, SHARED_CARDS)
-    );
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   reportsFolds(machine: string): boolean {
-    return (
-      this.options.devices.takesCurrentWork(machine) &&
-      listsChange(this.options.devices.version(machine)?.changes, CONVERSATION_FOLDS)
-    );
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   takesKnowledge(machine: string): boolean {
@@ -361,7 +346,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   /**
    * The files command rides the computer's task channel too, and its lists
-   * and copies ride the work requests `files-there` brings (docs/files.md).
+   * and copies ride the work requests of this contract major (docs/files.md).
    */
   takesFiles(machine: string): boolean {
     return this.takesIntegrations(machine) && this.answersFiles(machine);
@@ -369,10 +354,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   /** Whether the computer answers the file orders, so its files can be read from here. */
   answersFiles(machine: string): boolean {
-    return (
-      this.options.devices.takesCurrentWork(machine) &&
-      listsChange(this.options.devices.version(machine)?.changes, FILES_THERE_CHANGE)
-    );
+    return this.options.devices.takesCurrentWork(machine);
   }
 
   prepare(
@@ -1052,8 +1034,6 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   async answerReads(taskId: string): Promise<AnsweredWait[]> {
     const deviceId = this.options.tasks.get(taskId)?.deviceId;
     if (!deviceId || !this.options.devices.inReach(deviceId)) return [];
-    if (!listsChange(this.options.devices.version(deviceId)?.changes, ANSWER_STUCK_READS))
-      return [];
     const through = this.load(taskId, deviceId).through;
     const answer = workOrders["inf:session:answer-reads"].response.parse(
       await this.options.devices.ask(deviceId, "inf:session:answer-reads", [

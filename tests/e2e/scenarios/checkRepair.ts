@@ -95,7 +95,7 @@ function checkRepairMove(
       ),
       // The merge alone, unlabeled, as the crewmate is told: the host
       // attaches the completion buttons and their words (FI3-249).
-      actions: [{ id: "put-in", default: true, effect: { kind: "settle", mode: "merge" } }],
+      actions: [{ id: "put-in", default: true, effect: { kind: "merge", after: "close" } }],
     },
   };
   if (user.includes(`${CI_REPAIR_MARKER} finish`)) {

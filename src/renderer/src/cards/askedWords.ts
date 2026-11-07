@@ -23,17 +23,20 @@ export function throughWords(through: number | undefined): string {
 }
 
 /**
- * The label: "You asked · 9:10 AM", "Run by an automation · 3:00 AM", with
+ * The label: "You asked · 9:10 AM", "Run by an automation · 3:00 AM", a
+ * click's naming the card it was on (INF-2744): "You chose on “Ship the
+ * fix” · 9:10 AM", with
  * "· through N tasks" when the source is on another task, or "From INF-2081"
  * for the nearest task the work came from.
  */
 export function askedLabel(
-  asked: Pick<CardAsked, "at" | "kind" | "key" | "through">,
+  asked: Pick<CardAsked, "at" | "kind" | "key" | "through" | "card">,
   now: number = Date.now(),
 ): string {
   const kind = asked.kind ?? "asked";
   if (kind === "from") return `From ${asked.key ?? ""}`.trim();
-  return `${ASKED_LABELS[kind]} · ${clock(asked.at, now)}${throughWords(asked.through)}`;
+  const on = kind === "chose" && asked.card ? ` on “${asked.card}”` : "";
+  return `${ASKED_LABELS[kind]}${on} · ${clock(asked.at, now)}${throughWords(asked.through)}`;
 }
 
 /**

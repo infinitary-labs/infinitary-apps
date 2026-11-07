@@ -77,8 +77,19 @@ describe("CrewSupervisor", () => {
       // the soft hold his words pass here).
       const failedChecks = async () => {
         const h = await approved();
-        editPolicies(h, { autonomy: true });
         h.forge.states = ["failure"];
+        editPolicies(h, { autonomy: true });
+        await tick();
+        // INF-2744: autonomy on, the app approves the merge from the card
+        // itself. These tests read the first mate's own merge, so that
+        // approval is withdrawn first, as a card taken down withdraws it.
+        expect(h.authorization()).toMatchObject({ issuer: "autonomy", status: "standing" });
+        h.supervisor.settling.approvals.endAuthorization(
+          h.taskId,
+          "superseded",
+          "the test reads the first mate's merge",
+        );
+        expect(h.forge.merges).toEqual([]);
         return h;
       };
 
@@ -196,10 +207,7 @@ describe("CrewSupervisor", () => {
         h
           .cards()
           .find((card) => card.id === h.card.id)
-          ?.actions.find(
-            (action) =>
-              action.effect?.kind === "settle" && action.effect.mode === "merge" && !action.passes,
-          )?.label;
+          ?.actions.find((action) => action.effect?.kind === "merge" && !action.passes)?.label;
 
       it("does not add a verdict wait for passing new-version checks or rewrite the shown offer (INF-1555 F12)", async () => {
         const h = await approved();
@@ -274,7 +282,7 @@ describe("CrewSupervisor", () => {
         expect(anywayOf(h)).toMatchObject({
           id: MERGE_ANYWAY_ACTION,
           label: MERGE_ANYWAY_WORDS,
-          effect: { kind: "settle", mode: "merge" },
+          effect: { kind: "merge", after: "close" },
         });
         // Only the merge itself keeps the merge's words.
         expect(

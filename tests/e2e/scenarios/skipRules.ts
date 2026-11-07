@@ -42,7 +42,7 @@ export const skipRules: Scenario =
                 title: SKIP_RULES_CARD_TITLE,
                 body: "<p>The release pull request waits on a code owner's review, and one check failed.</p><p>Your account may skip both, so I prepared the merge at the version I read.</p>",
                 actions: [
-                  { id: "merge", effect: { kind: "request_merge", review } },
+                  { id: "merge", effect: { kind: "merge", review, after: "continue" } },
                   { id: "not-now", label: "Not now" },
                 ],
               },
@@ -78,7 +78,7 @@ export const skipRules: Scenario =
                 title: SKIP_RULES_CARD_TITLE,
                 body: "<p>Asking again for the same merge.</p><p>I want to be sure the release went in at the version I read.</p>",
                 actions: [
-                  { id: "merge", effect: { kind: "request_merge", review } },
+                  { id: "merge", effect: { kind: "merge", review, after: "continue" } },
                   { id: "not-now", label: "Not now" },
                 ],
               },

@@ -51,7 +51,7 @@ function mergeCard(): Card {
         id: "merge",
         label: "Merge the pull request",
         default: true,
-        effect: { kind: "settle", mode: "merge" },
+        effect: { kind: "merge", after: "close" },
       },
       { id: "discard", label: "Discard", effect: { kind: "settle", mode: "discard" } },
     ],

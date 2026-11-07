@@ -610,7 +610,7 @@ describe("each wire carries a text turn and a tool turn the way its client reads
 
 // A crewmate's completion decision carries its risk, as the real emit_card asks; the first mate's never does.
 describe("a crewmate's merge card goes out with the risk it must declare", () => {
-  const merge = { id: "merge", default: true, effect: { kind: "settle", mode: "merge" } };
+  const merge = { id: "merge", default: true, effect: { kind: "merge", after: "close" } };
   const card = (extra: Record<string, unknown> = {}): ScriptedCall =>
     ({
       name: "emit_card",

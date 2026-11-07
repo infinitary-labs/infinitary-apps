@@ -839,7 +839,7 @@ const actionLines = {
   "ask-first-merge": guidance(
     "projects",
     "yours",
-    "An ask-first project's merge stays yours on its completion card.",
+    "An ask-first project's merge stays yours on its merge card.",
   ),
   "show-card": {
     area: "general",

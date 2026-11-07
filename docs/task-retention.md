@@ -219,7 +219,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 Prepared change-story assets stay beside retained card media, outside its scratch folder and working copy, while their revision is the newest or the last published one (the unresolved opening occupies the latter slot until its outcome is known).
 TaskService keeps only those two immutable revisions (one when they coincide), reusable upload receipts and the last complete publication in the task's delivery record (`docs/forge.md`, "Saved change stories").
-Completion cards get independent copies under fresh names in `cards/`, with both their body URLs and picture/recording metadata pointing to those copies.
+Merge cards get independent copies under fresh names in `cards/`, with both their body URLs and picture/recording metadata pointing to those copies.
 Discarding older revisions removes their unreferenced story copies, never shown-card copies, source files or hosted attachments.
 Refused preparations discard their unretained staging copies, including early validation and busy-operation refusals, without removing files the active operation still needs.
 Closing a task, retiring its working copy, and purging local records never delete hosted attachments.

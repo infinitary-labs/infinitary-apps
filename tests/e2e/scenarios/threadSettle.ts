@@ -1,4 +1,4 @@
-import { MOCK_STANDARD_CARD_BODY } from "../crewCards";
+import { CAPTAIN_DECIDES, MOCK_STANDARD_CARD_BODY } from "../crewCards";
 import {
   MOCK_CLOSING_SENTENCES,
   type Scenario,
@@ -82,7 +82,7 @@ export const threadSettle: Scenario =
                     id: "merge",
                     label: "Merge the branch",
                     default: true,
-                    effect: { kind: "settle", mode: "merge" },
+                    effect: { kind: "merge", after: "close", asks_first: CAPTAIN_DECIDES },
                   },
                 ],
               },

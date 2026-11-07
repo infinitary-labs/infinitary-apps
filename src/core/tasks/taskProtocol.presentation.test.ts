@@ -359,7 +359,7 @@ describe("the task protocol (task-system P3)", () => {
       meta: "",
       body: "",
       actions: [
-        { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+        { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
       ],
       status: "ready",
       createdAt: 1,

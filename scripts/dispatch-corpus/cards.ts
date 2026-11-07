@@ -150,6 +150,11 @@ export function resolutionOf(
  * crewmate is never steered by it, so recording one as a steer invents
  * captain contact that never happened.
  */
+/** A merge (INF-2744's one effect, or a record's older request_merge) or a discard settles the task. */
+function settles(kind: unknown): boolean {
+  return kind === "settle" || kind === "merge" || kind === "request_merge";
+}
+
 export function chosenEffectOf(
   actions: JsonRecord[],
   chosen: string | null | undefined,
@@ -173,7 +178,7 @@ export function chosenEffectOf(
     return {
       chosen_effect: effect,
       effect_source: options.legacy ? "legacy-id" : "declared",
-      captain_contact: effect.kind === "settle" ? "settle" : effect.kind === "open" ? "open" : "none",
+      captain_contact: settles(effect.kind) ? "settle" : effect.kind === "open" ? "open" : "none",
     };
   }
   const legacyShape = action ?? (chosen ? { id: chosen, label: chosen } : undefined);
@@ -184,7 +189,7 @@ export function chosenEffectOf(
     return {
       chosen_effect: legacy,
       effect_source: "legacy-id",
-      captain_contact: legacy.kind === "settle" ? "settle" : legacy.kind === "open" ? "open" : "none",
+      captain_contact: settles(legacy.kind) ? "settle" : legacy.kind === "open" ? "open" : "none",
     };
   }
   const author = options.author ?? (options.cardId?.startsWith("card-fm-") ? "firstmate" : "crewmate");

@@ -9,7 +9,7 @@
  * - its permissions and effects, one `task_permissions` row: the
  *   captain's merge approval with its lineage and the attempt in flight,
  *   the completion offers a click approves, reviewed pull requests a
- *   request_merge card may name, write asks, required actions, the
+ *   merge card may name, write asks, required actions, the
  *   captain's override, a refused card, the validation permissions with
  *   their effect states, and a settle that has not run;
  * - what stays on the delivery column as history: the closed policy
@@ -40,13 +40,7 @@ export type PermissionField = keyof typeof PERMISSION_COLUMNS;
 export const HISTORY_FIELDS = ["closedPolicies", "result"] as const;
 
 /** The fields the turn's declarations hold; the execution record keeps them, not these records. */
-const TURN_FIELDS = new Set([
-  "captainWait",
-  "finishedAt",
-  "mergeCompletion",
-  "needsFirstmate",
-  "checkBack",
-]);
+const TURN_FIELDS = new Set(["captainWait", "finishedAt", "needsFirstmate", "checkBack"]);
 
 /** The format of an evidence row; a later format names its own number. */
 export const EVIDENCE_FORMAT = 1;

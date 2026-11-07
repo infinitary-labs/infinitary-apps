@@ -298,7 +298,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
           id: "merge-credential",
           label: "Merge",
           default: true,
-          effect: { kind: "settle", mode: "merge" },
+          effect: { kind: "merge", after: "close" },
         },
       ],
     };
@@ -314,7 +314,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
       joined_via: "tool-result-id",
       task_id: "t-work",
       revisions: 1,
-      actions: [{ id: "merge-credential", effect: { kind: "settle", mode: "merge" } }],
+      actions: [{ id: "merge-credential", effect: { kind: "merge", after: "close" } }],
       resolution: "acted",
       captain_contact: "settle",
     });
@@ -376,7 +376,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
   it("reads a settle effect as a settle, never as a steer", () => {
     const [card] = turnSaying("Is it ready?").outcome.cards;
     expect(card?.chosen_action).toBe("merge-pr");
-    expect(card?.chosen_effect).toMatchObject({ kind: "settle", mode: "merge" });
+    expect(card?.chosen_effect).toMatchObject({ kind: "merge", after: "close" });
     expect(card?.captain_contact).toBe("settle");
     expect(raw.dispatch).not.toContain('"captain_contact":"steer"');
     // The supervision half reads the same card the same way.
@@ -441,9 +441,9 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
         basis: "revision",
         fallback: null,
       },
-      resolution_actions: [{ id: "merge-revised", effect: { kind: "settle", mode: "merge" } }],
+      resolution_actions: [{ id: "merge-revised", effect: { kind: "merge", after: "close" } }],
       resolution_version: { requested_at: 70, selected_at: 70, basis: "current" },
-      chosen_effect: { kind: "settle", mode: "merge" },
+      chosen_effect: { kind: "merge", after: "close" },
       resolution: "acted",
     });
     expect(revised?.label).toMatchObject({
@@ -547,9 +547,9 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
       joined_via: "tool-result-id",
       actions_version: "current",
       body: "<p>Current choice.</p>",
-      actions: [{ id: "merge-current", effect: { kind: "settle", mode: "merge" } }],
+      actions: [{ id: "merge-current", effect: { kind: "merge", after: "close" } }],
       resolution: "acted",
-      chosen_effect: { kind: "settle", mode: "merge" },
+      chosen_effect: { kind: "merge", after: "close" },
       captain_contact: "settle",
     });
   });
@@ -829,7 +829,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
             id: "landed",
             label: "Land",
             default: true,
-            effect: { kind: "settle", mode: "merge" },
+            effect: { kind: "merge", after: "close" },
           },
         ],
       },
@@ -837,7 +837,7 @@ describe("corpus export - the R1 corrections", { timeout: 30_000 }, () => {
     expect(landed.outcome.cards[0]).toMatchObject({
       chosen_action: "landed",
       resolution: "acted",
-      chosen_effect: { kind: "settle", mode: "merge" },
+      chosen_effect: { kind: "merge", after: "close" },
       captain_contact: "settle",
     });
 

@@ -83,7 +83,7 @@ export function afterMergeStory(): Scenario {
             args: {
               title: AFTER_MERGE_STORY_TITLE,
               presentation: preparedRevision(body),
-              actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+              actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
             },
           },
           { name: "report", args: { text: "The meter fix is committed and ready to merge." } },

@@ -56,7 +56,7 @@ export function savedOriginOf(event: TaskEvent): SavedOrigin | undefined {
  */
 export type TaskOriginLine =
   | { kind: "asked" | "said"; at: number; text: string; through: number }
-  | { kind: "chose"; at: number; choice: string; text: string; through: number }
+  | { kind: "chose"; at: number; choice: string; card: string; text: string; through: number }
   | { kind: "automation"; at: number; name: string; through: number }
   | { kind: "from"; at: number; key: string; title: string };
 
@@ -186,6 +186,7 @@ export function originAbout(reader: OriginReader, id: string): TaskOriginLine | 
         kind: "chose",
         at: found.at,
         choice: origin.choice,
+        card: typeof origin.card === "string" ? origin.card : "",
         text: origin.written ?? "",
         through,
       };

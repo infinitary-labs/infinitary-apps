@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 import { presentationCommitMessage } from "../../src/core/forge/presentation";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
-import { MERGE_WORDS } from "../../src/shared/vocabulary";
+import { MERGE_NOT_NOW_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
@@ -126,6 +126,12 @@ test("a continued pull request shows its checks and merges an unchanged conflict
       .poll(saved)
       .toMatchObject({ delivery: { prNumber: CONTINUED_PULL, ci: "green", headSha: approved } });
     expect(github.merges()).toEqual([]);
+    // INF-2744: a merge that continues the task gets the app's Not now beside
+    // it, never Discard, which would drop the task's own working copy.
+    await expect(
+      card.getByRole("button", { name: MERGE_NOT_NOW_WORDS, exact: true }),
+    ).toBeVisible();
+    await expect(card.getByRole("button", { name: "Discard", exact: true })).toHaveCount(0);
     await regionShot(card, test.info().outputPath("continued-review.png"));
     github.serveNumbered({ ...pull, mergeableState: "dirty" });
     await pressKey(

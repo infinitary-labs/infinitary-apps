@@ -243,7 +243,7 @@ function mainSessionJsonl(): string {
               id: "merge-pr",
               label: "Merge it",
               default: true,
-              effect: { kind: "settle", mode: "merge" },
+              effect: { kind: "merge", after: "close" },
             },
             {
               id: "drop-it",
@@ -363,7 +363,7 @@ const merge = (id: string, label: string): CardAction => ({
   id,
   label,
   default: true,
-  effect: { kind: "settle", mode: "merge" },
+  effect: { kind: "merge", after: "close" },
 });
 
 /**
@@ -1012,7 +1012,7 @@ export function buildFixture(dir: string): void {
         id: "merge-revised",
         label: "Merge revised work",
         default: true,
-        effect: { kind: "settle", mode: "merge" },
+        effect: { kind: "merge", after: "close" },
       },
     ],
     status: "ready",
@@ -1211,7 +1211,7 @@ export function exportRevisionCaseIn(dir: string): RevisionCase {
         id: "merge-current",
         label: "Merge",
         default: true,
-        effect: { kind: "settle" as const, mode: "merge" as const },
+        effect: { kind: "merge" as const, after: "close" as const },
       },
     ],
   };

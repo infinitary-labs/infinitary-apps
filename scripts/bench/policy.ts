@@ -84,9 +84,7 @@ export function captainMove(card: Card): CaptainMove {
   if (card.actions.length === 0 || card.status !== "ready" || card.awaiting)
     return { kind: "none" };
   if (
-    card.actions.some(
-      (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
-    )
+    card.actions.some((action) => action.effect?.kind === "merge")
   ) {
     return { kind: "ready" };
   }

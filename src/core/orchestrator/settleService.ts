@@ -22,9 +22,11 @@ import { candidateHead, keptFeedLine, keptNote, standingAuthorization } from "./
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import {
-  autonomyRefusal,
   closeGateRefusal,
+  type MergeActor,
+  mergeGate,
   notSignedInRefusal,
+  openCurrentMerge,
   unlandedWorkRefusal,
   unreadableWorkRefusal,
 } from "./settleRefusals";
@@ -95,11 +97,30 @@ export class SettleService {
     private readonly closing: TaskClosing,
   ) {}
 
+  /**
+   * The one merge gate (INF-2744): whether the captain's click, the first
+   * mate's merge call or the app may merge this task now. Every reader of
+   * the task's autonomy for a merge asks here - the card emit that lets
+   * the app approve from the merge card, the kept merge run, and each
+   * settle's own boundary - so they cannot disagree. `scope` names the
+   * pull request it merges (`{ review: undefined }` for the task's own
+   * change); without it, the task's current change.
+   */
+  mergeRefusal(
+    record: TaskRecord,
+    mode: "merge-pr" | "land",
+    actor: MergeActor,
+    asksFirst?: string,
+    scope?: { review?: string },
+  ): SettleRefusal | undefined {
+    return mergeGate(this.host, record, mode, actor, asksFirst, scope);
+  }
+
   /** Last synchronous check, after every asynchronous read and before each send. */
   private mergeBoundary(
     taskId: string,
     mode: "merge-pr" | "land",
-    actor: "captain" | "firstmate",
+    actor: MergeActor,
     proceedWithOpen: boolean,
   ) {
     const initial = this.host.tasks.get(taskId);
@@ -121,7 +142,7 @@ export class SettleService {
         return "the requested destination does not match its current delivery policy";
       const gate = closeGateRefusal(this.host, taskId, mode, proceedWithOpen);
       if (gate) return gate.text;
-      const autonomy = autonomyRefusal(this.host, record, mode, actor);
+      const autonomy = this.mergeRefusal(record, mode, actor);
       if (autonomy) return autonomy.text;
       // The version a version-long override is read at: the one being sent.
       const at = head ?? record.delivery?.headSha;
@@ -140,17 +161,17 @@ export class SettleService {
           ready.revision !== initialStory.revision ||
           ready.contentHash !== initialStory.contentHash
         )
-          return `the current story differs from the completion being merged. ${softHoldWords("story", "firstmate")}`;
+          return `the current story differs from the one on the merge card. ${softHoldWords("story", "firstmate")}`;
       }
-      if (actor === "firstmate" && !overridePasses(record.delivery, "decisions", at)) {
+      if (actor !== "captain" && !overridePasses(record.delivery, "decisions", at)) {
         // The first mate's own cards never hold its own merge (INF-242's
         // question 9): a crewmate's question, a write request or a
         // validation question still does.
         const cards = [...this.host.cards.values()].filter((card) => card.taskId === taskId);
         const decisions = cards.filter((card) => card.actions.length);
-        // Nor does the task's story note: the completion of work that merges
+        // Nor does the task's story note: the merge card of work that merges
         // on its own, held off the stack until this merge has a result
-        // (INF-2533). A wait or gate on the captain reading it waits on the
+        // (INF-2533, INF-2744). A wait or gate on the captain reading it waits on the
         // merge itself, like one on a merge offer (INF-2761).
         const passed = new Set(
           cards
@@ -190,14 +211,17 @@ export class SettleService {
         record.pendingSettle.mode,
         undefined,
         record.pendingSettle.proceedWithOpen,
+        record.pendingSettle.continues ? "continue" : undefined,
+        record.pendingSettle.actor === "app" ? "app" : "captain",
       );
     }
   }
 
   private async landTaskOnce(
     taskId: string,
-    actor: "captain" | "firstmate",
+    actor: MergeActor,
     beforeDispatch?: (head?: string) => string | undefined,
+    after?: "close" | "continue",
   ): Promise<SettleOutcome> {
     if (this.locks.working(taskId)) {
       return {
@@ -245,7 +269,7 @@ export class SettleService {
       );
       this.host.broadcastEvent({ type: "task_landed", taskId, title: record.title, mode });
       // A question still open on the task keeps it open past the merge (INF-2525).
-      const stillOpen = await this.stillOpen(record, undefined);
+      const stillOpen = await this.stillOpen(record, undefined, after);
       if (stillOpen) {
         // The receipt says merged, when, and at which version, while the
         // task stays open.
@@ -266,7 +290,7 @@ export class SettleService {
       await this.closing.closeTask(taskId, {
         status: "done",
         reason: "landed",
-        actor,
+        actor: closeActor(actor),
         delivery: { landedMode: mode, ...(storyHead ? { landedHead: storyHead } : {}) },
       });
       // Landing releases any queued row waiting on this task (R1).
@@ -280,9 +304,10 @@ export class SettleService {
 
   private async mergePrTaskOnce(
     taskId: string,
-    actor: "captain" | "firstmate",
+    actor: MergeActor,
     guard?: MergeGuard,
     beforeDispatch?: (head: string) => string | undefined,
+    after?: "close" | "continue",
   ): Promise<SettleOutcome> {
     if (this.locks.working(taskId)) {
       return {
@@ -317,7 +342,7 @@ export class SettleService {
       taskId,
       guard,
       beforeDispatch
-        ? { beforeDispatch, unattended: actor === "firstmate" || guard?.unattended === true }
+        ? { beforeDispatch, unattended: actor !== "captain" || guard?.unattended === true }
         : undefined,
     );
     // The answer came: an attempt token has done its job, whatever it said.
@@ -342,7 +367,7 @@ export class SettleService {
     // Something else on the task is still open (INF-2525): the merge went
     // through and the task stays, for its crewmate to judge what is next.
     const merged = record.delivery?.prNumber;
-    const stillOpen = await this.stillOpen(record, merged);
+    const stillOpen = await this.stillOpen(record, merged, after);
     if (stillOpen) {
       const head = result.receipt?.head ?? record.delivery?.headSha;
       this.host.tasks.delivery.recordChangeEvidence(taskId, {
@@ -355,7 +380,7 @@ export class SettleService {
       this.finishContinued(taskId, undefined, continued);
       return continued;
     }
-    return this.closeMerged(record, actor, result);
+    return this.closeMerged(record, closeActor(actor), result);
   }
 
   /**
@@ -363,13 +388,27 @@ export class SettleService {
    * (INF-2525), in words its crewmate reads: an open question of its
    * crewmate's or the first mate's, or another of its pull requests that
    * is open or could not be read. Undefined when nothing is, and the merge
-   * may close the task.
+   * may close the task. A merge card that declared the task continues
+   * past its merge keeps it open by that declaration alone (INF-2744).
    */
-  async stillOpen(record: TaskRecord, merged: number | undefined): Promise<string | undefined> {
+  async stillOpen(
+    record: TaskRecord,
+    merged: number | undefined,
+    after?: "close" | "continue",
+  ): Promise<string | undefined> {
+    if (after === "continue") return "its merge card said the task continues after this merge";
     const question = [...this.host.cards.values()].find(
       (card) => card.taskId === record.id && keepsTaskOpen(card),
     );
     if (question) return `the card "${question.title}" on this task is still open`;
+    // An approved merge of another of its pull requests waits its turn (INF-2746).
+    const approved = record.delivery?.mergeAuthorization;
+    const waiting = [
+      ...(approved?.status === "standing" ? [approved] : []),
+      ...(approved?.queued ?? []),
+    ].find((item) => item.target.prNumber !== merged);
+    if (waiting)
+      return `the approved merge of ${changeName(record, waiting.target.prNumber)} on this task has not run yet`;
     if (merged === undefined) return undefined;
     const open = await this.otherOpenChange(record, merged);
     if (!open) return undefined;
@@ -411,13 +450,11 @@ export class SettleService {
         ciAt: this.host.now(),
         ciWatch: undefined,
       });
-      const completion = current.delivery?.mergeCompletion;
       // Another of its pull requests still open keeps the task open (INF-2525).
       const other = await this.otherOpenChange(current, pull.number);
       if (
         other !== undefined ||
-        completion?.prNumber !== pull.number ||
-        completion.headSha !== pull.headSha ||
+        !this.declaresClose(current, pull) ||
         this.locks.working(taskId) ||
         current.activity === "starting" ||
         current.activity === "running" ||
@@ -454,6 +491,40 @@ export class SettleService {
     } finally {
       this.locks.settlingTasks.delete(taskId);
     }
+  }
+
+  /**
+   * Whether the task's open merge card for this pull request declared that
+   * its merge closes the task, at the version that merged (INF-2744): the
+   * card's own declaration is the one writer of that fact. A merge card
+   * the app approved on its own reads through its standing approval.
+   */
+  private declaresClose(record: TaskRecord, pull: ForgePull): boolean {
+    // Every open merge card that names this pull request (INF-2746): a
+    // review of it, or the task's own change.
+    const scopes = [
+      ...(record.delivery?.mergeReviews ?? [])
+        .filter((item) => item.number === pull.number)
+        .map((item) => ({ review: item.id })),
+      { review: undefined },
+    ];
+    for (const scope of scopes) {
+      const open = this.host.cards.openMergeAction(record.id, scope);
+      if (open?.after !== "close") continue;
+      if (open.review) {
+        const review = record.delivery?.mergeReviews?.find((item) => item.id === open.review);
+        if (review?.headSha === pull.headSha) return true;
+        continue;
+      }
+      const offer = record.delivery?.completionOffers?.find(
+        (entry) => entry.cardId === open.cardId,
+      );
+      if ((offer?.shownFor ?? offer?.prNumber) === pull.number && offer?.headSha === pull.headSha)
+        return true;
+    }
+    const authorization = standingAuthorization(record.delivery);
+    if (!authorization || authorization.target.prNumber !== pull.number) return false;
+    return (authorization.after ?? (authorization.review ? "continue" : "close")) === "close";
   }
 
   /**
@@ -548,7 +619,7 @@ export class SettleService {
   }
 
   /** A merged task's close: the record, the managed checkout, and the gates it releases. */
-  private async closeMerged(
+  async closeMerged(
     record: TaskRecord,
     actor: TaskClose["actor"],
     result: PrOutcome,
@@ -634,6 +705,62 @@ export class SettleService {
       ...(repair ? { about: [repair.record.id] } : {}),
     });
     return text;
+  }
+
+  /**
+   * A reviewed pull request merged (INF-2744): its merge card declared what
+   * follows. A close closes the task as merged once nothing else on it is
+   * open; otherwise the task continues and its crewmate hears the merge once.
+   */
+  async finishReviewMerge(
+    taskId: string,
+    review: MergeReview | undefined,
+    result: SettleOutcome,
+    after: "close" | "continue",
+    actor: MergeActor,
+  ): Promise<SettleOutcome & { continued?: boolean }> {
+    const record = this.host.tasks.get(taskId);
+    const stillOpen =
+      after === "close" && record
+        ? (this.closeHeld(record, review) ?? (await this.stillOpen(record, review?.number)))
+        : "continue";
+    if (!record || stillOpen) {
+      const continued = {
+        ...result,
+        continued: true,
+        ...(stillOpen && after === "close" ? { stillOpen } : {}),
+      };
+      this.finishContinued(taskId, review, continued);
+      return continued;
+    }
+    const authorization = standingAuthorization(record.delivery);
+    if (review && authorization?.review?.id === review.id)
+      this.approvals.consumeStanding(taskId, result.receipt);
+    return this.closeMerged(record, closeActor(actor), {
+      ok: true,
+      text: result.text,
+      ...(result.receipt ? { receipt: result.receipt } : {}),
+    });
+  }
+
+  /**
+   * What keeps a task open after a review's merge that declared it closes,
+   * by the same rules as the task's own merge (INF-2746): its crewmate
+   * still working, or the close rules - open parts the merge card did not
+   * leave planned, or a task it waits on.
+   */
+  private closeHeld(record: TaskRecord, review: MergeReview | undefined): string | undefined {
+    if (this.locks.working(record.id)) return "its crewmate is still working";
+    const authorization = standingAuthorization(record.delivery);
+    const proceedWithOpen =
+      review !== undefined && authorization?.review?.id === review.id
+        ? authorization.proceedWithOpen
+        : false;
+    const gate = closeGateRefusal(this.host, record.id, "merge-pr", proceedWithOpen);
+    if (!gate) return undefined;
+    return gate.refused === "waits-on"
+      ? "it still waits on another task to finish"
+      : "parts of it are still open";
   }
 
   finishContinued(taskId: string, review: MergeReview | undefined, result: SettleOutcome): void {
@@ -746,9 +873,10 @@ export class SettleService {
     taskId: string,
     mode: "merge-pr" | "land" | "discard",
     confirm: boolean | undefined,
-    actor: "captain" | "firstmate",
+    actor: MergeActor,
     proceedWithOpen = false,
     guard?: MergeGuard,
+    after?: "close" | "continue",
   ): Promise<SettleOutcome> {
     const pending = this.locks.settlingTasks.get(taskId);
     if (pending) {
@@ -813,6 +941,7 @@ export class SettleService {
             actor,
             requestedAt: this.host.now(),
             proceedWithOpen,
+            ...(after === "continue" ? { continues: true as const } : {}),
             ...(story ? { story } : {}),
           },
         );
@@ -825,6 +954,7 @@ export class SettleService {
         proceedWithOpen,
         guard,
         boundary,
+        after ?? this.declaredThen(taskId, actor),
       );
     } finally {
       if (mode === "merge-pr" || mode === "land") {
@@ -840,10 +970,11 @@ export class SettleService {
     taskId: string,
     mode: "merge-pr" | "land" | "discard",
     confirm: boolean | undefined,
-    actor: "captain" | "firstmate",
+    actor: MergeActor,
     proceedWithOpen: boolean,
     guard?: MergeGuard,
     boundary?: (head?: string) => string | undefined,
+    after?: "close" | "continue",
   ): Promise<SettleOutcome> {
     const record = this.host.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
@@ -874,7 +1005,7 @@ export class SettleService {
       const pull = await this.mergedOutside(record);
       // Its question, or another of its pull requests, still open keeps the
       // task open too (INF-2525).
-      const stillOpen = pull ? await this.stillOpen(record, pull.number) : undefined;
+      const stillOpen = pull ? await this.stillOpen(record, pull.number, after) : undefined;
       if (pull && stillOpen !== undefined) {
         return {
           ok: false,
@@ -885,15 +1016,15 @@ export class SettleService {
       if (pull) return this.closeMergedOutside(taskId, actor, pull);
     }
     if (mode === "merge-pr" || mode === "land") {
-      // The autonomy hold, before anything merges or lands.
-      const held = autonomyRefusal(this.host, record, mode, actor);
+      // The one merge gate, before anything merges or lands.
+      const held = this.mergeRefusal(record, mode, actor);
       if (held) return { ok: false, text: held.text, refusal: held };
     }
     if (mode === "merge-pr") {
-      return this.mergePrTaskOnce(taskId, actor, guard, boundary);
+      return this.mergePrTaskOnce(taskId, actor, guard, boundary, after);
     }
     if (mode === "land") {
-      return this.landTaskOnce(taskId, actor, boundary);
+      return this.landTaskOnce(taskId, actor, boundary, after);
     }
 
     if (
@@ -928,13 +1059,31 @@ export class SettleService {
       line: actor === "firstmate",
     });
     const problem = prResult.problem;
-    await this.closing.closeTask(taskId, { status: "dropped", reason: "discarded", actor });
+    await this.closing.closeTask(taskId, {
+      status: "dropped",
+      reason: "discarded",
+      actor: closeActor(actor),
+    });
     return {
       ok: true,
       text: discardedText(prResult.text),
       ...(problem ? { problem } : {}),
       ...(prResult.repair ? { followup: prResult.repair } : {}),
     };
+  }
+
+  /**
+   * What the open merge card declared follows the merge, for a merge whose
+   * caller named none: the first mate's merge call carries the card's own
+   * declaration (INF-2744). Undefined leaves the old rule: the merge closes
+   * the task unless something else on it is still open.
+   */
+  private declaredThen(taskId: string, actor: MergeActor): "close" | "continue" | undefined {
+    // Only the app's own merge from a card follows that card's declaration
+    // (INF-2744); the captain's and the first mate's merges keep theirs.
+    if (actor !== "app") return undefined;
+    const record = this.host.tasks.get(taskId);
+    return record ? openCurrentMerge(this.host, record)?.after : undefined;
   }
 
   /**
@@ -947,13 +1096,15 @@ export class SettleService {
     await this.reportCardSettle(taskId, "discard");
   }
 
-  /** Every detached settle is awaited here; refusal text is an outcome too. */
+  /** Every detached settle is awaited here; refusal text is an outcome too, and it answers the outcome. */
   async reportCardSettle(
     taskId: string,
     mode: "merge-pr" | "land" | "discard",
     confirm?: boolean,
     proceedWithOpen?: boolean,
-  ): Promise<void> {
+    after?: "close" | "continue",
+    actor: "captain" | "app" = "captain",
+  ): Promise<SettleOutcome> {
     const record = this.host.tasks.get(taskId);
     const title = record?.title ?? taskId;
     if (!this.locks.settlingTasks.has(taskId) && record) {
@@ -976,9 +1127,10 @@ export class SettleService {
         taskId,
         mode,
         confirm,
-        "captain",
+        actor,
         proceedWithOpen ?? authorization?.proceedWithOpen ?? false,
         authorization ? this.approvals.guardOf(taskId, authorization, false) : undefined,
+        after ?? authorization?.after,
       );
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -1001,7 +1153,10 @@ export class SettleService {
         text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.queueWarning(taskId, kept.wait))}`,
       };
     }
-    this.reportOutcome(taskId, title, mode, confirm, result, kept?.wait);
+    // Only the captain's own click leaves them with no card to read (INF-2913).
+    const clicked = actor === "captain" && authorization?.issuer !== "autonomy";
+    this.reportOutcome(taskId, title, mode, confirm, result, kept?.wait, clicked);
+    return result;
   }
 
   /**
@@ -1026,6 +1181,7 @@ export class SettleService {
     confirm: boolean | undefined,
     result: SettleOutcome,
     kept: MergeWait | undefined,
+    clicked = true,
   ): void {
     // The persistent feed is always a receipt of the outcome; the wake below
     // is what makes a refusal actionable. The card that triggered this
@@ -1074,6 +1230,7 @@ export class SettleService {
       confirm ? `${mode} (confirmed)` : mode,
       { ...result, text: result.text },
       afterMerge,
+      clicked,
     );
   }
 
@@ -1130,7 +1287,9 @@ export class SettleService {
    * A merge that did not go through raises no card of the host's own
    * (INF-2913): the captain sees only its Activity line, so the wake marks
    * it `unseen` and the Firstmate raises a card only when the next step is
-   * the captain's.
+   * the captain's. `clicked` false is the app's own merge under autonomy
+   * (INF-2744): no click was made and its card is back up, so it is not
+   * marked.
    */
   wakeOnSettle(
     taskId: string,
@@ -1138,6 +1297,7 @@ export class SettleService {
     chose: string,
     result: SettleOutcome,
     afterMerge: FiledAfterMergeStep[] = [],
+    clicked = true,
   ): void {
     if (result.contention) return;
     this.host.notifyOp(
@@ -1149,7 +1309,9 @@ export class SettleService {
           outcome: result.text,
           // A clicked merge that did not go through shows the captain no
           // card of the host's own (INF-2913): the wake says so.
-          ...(!result.ok && !chose.startsWith("discard") ? { unseen: true as const } : {}),
+          ...(clicked && !result.ok && !chose.startsWith("discard")
+            ? { unseen: true as const }
+            : {}),
           ...(result.refusal ? { refusal: result.refusal } : {}),
           ...(afterMerge.length ? { afterMerge } : {}),
         },
@@ -1158,4 +1320,9 @@ export class SettleService {
       taskId,
     );
   }
+}
+
+/** Who a close names: the app's own merge is the host's. */
+function closeActor(actor: MergeActor): TaskClose["actor"] {
+  return actor === "app" ? "host" : actor;
 }

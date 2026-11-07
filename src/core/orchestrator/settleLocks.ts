@@ -15,7 +15,31 @@ export class SettleLocks {
    * A settle's end redraws its task's cards: a story note held for its
    * merge shows after the settle's last write (INF-2678).
    */
-  readonly settlingTasks = new SettlingTasks((taskId) => this.host.cards.releaseMerged([taskId]));
+  readonly settlingTasks = new SettlingTasks((taskId) => {
+    this.host.cards.releaseMerged([taskId]);
+    if (this.afterRelease.delete(taskId)) this.runAfterRelease(taskId);
+  });
+
+  /**
+   * The tasks whose kept merge approval met another settle holding the
+   * task, or waits behind one that settle ends (INF-2746): it runs once as
+   * soon as that settle ends, not at the next minute's look.
+   */
+  private readonly afterRelease = new Set<string>();
+
+  /** What runs a task's kept merge approval; set by the settle owners. */
+  runKept: (taskId: string) => void = () => {};
+
+  /** Run the task's kept merge approval once the settle holding it ends. */
+  retryWhenFree(taskId: string): void {
+    if (this.settlingTasks.has(taskId)) this.afterRelease.add(taskId);
+    else this.runAfterRelease(taskId);
+  }
+
+  /** After the releasing settle's own last synchronous write. */
+  private runAfterRelease(taskId: string): void {
+    queueMicrotask(() => this.runKept(taskId));
+  }
 
   /** Durable settle intents waiting for the current crewmate turn to go idle. */
   private readonly settleBoundaryWaiters = new Map<string, Set<() => void>>();

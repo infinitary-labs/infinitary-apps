@@ -34,7 +34,7 @@ export type FileComputer = {
   /** Its name, as the crewmate's computers paragraph gives it. */
   name: string;
   inReach: boolean;
-  /** It answers the file orders (`files-there`). */
+  /** It answers the file orders. */
   answers: boolean;
   /**
    * It runs as another macOS user on the home's own Mac: a home file its

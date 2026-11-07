@@ -57,7 +57,7 @@ export default async function seed(
         status: "ready",
         createdAt: Date.now(),
         actions: [
-          { id: "merge", label: merge, default: true, effect: { kind: "settle", mode: "merge" } },
+          { id: "merge", label: merge, default: true, effect: { kind: "merge", after: "close" } },
         ],
       },
       [...before, ...after].map(({ picture }, index) => ({

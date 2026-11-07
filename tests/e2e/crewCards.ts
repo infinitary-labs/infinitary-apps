@@ -46,6 +46,13 @@ export function writeChangePicturesCalls(): ScriptedCall[] {
 
 export const DEMO_CARD_TITLE = "Dragging the box moves it";
 
+/**
+ * INF-2746: a task with no repository has autonomy on, so the app merges from
+ * its merge card on its own. A journey whose captain clicks or answers the card
+ * has its crewmate declare that the captain decides this merge.
+ */
+export const CAPTAIN_DECIDES = "The captain decides this merge on the card.";
+
 export function demoCardCall(recording: string, title = DEMO_CARD_TITLE): ScriptedCall {
   const before = CHANGE_BEFORE_PICTURES[0] as PictureFixture;
   return {
@@ -58,7 +65,13 @@ export function demoCardCall(recording: string, title = DEMO_CARD_TITLE): Script
         `<p>The box stayed where it was.</p><figure><img src="${before.path}" alt="${before.alt}"><figcaption>The box</figcaption></figure>`,
         `<p>The box slides to where it is dropped.</p><figure data-inf-demo="${recording}"><img src="${DEMO_POSTER.path}" alt="${DEMO_POSTER.alt}"><figcaption>${DEMO_CAPTION}</figcaption></figure>`,
       ),
-      actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+      actions: [
+        {
+          id: "merge",
+          default: true,
+          effect: { kind: "merge", after: "close", asks_first: CAPTAIN_DECIDES },
+        },
+      ],
     },
   };
 }
@@ -116,7 +129,7 @@ export const MOCK_STANDARD_MERGE_ONLY_ACTIONS: ScriptedCardAction[] = [
     id: "ship",
     label: MOCK_STANDARD_INVENTED_LABEL,
     default: true,
-    effect: { kind: "settle", mode: "merge" },
+    effect: { kind: "merge", after: "close", asks_first: CAPTAIN_DECIDES },
   },
 ];
 

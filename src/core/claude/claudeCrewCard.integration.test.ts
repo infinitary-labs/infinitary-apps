@@ -55,7 +55,7 @@ const RISK = {
 const COMPLETION = {
   title: "The meter reads true",
   body: "<h3>Why</h3><p>The meter read low.</p>",
-  actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+  actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
   risk: RISK,
 };
 
@@ -133,7 +133,7 @@ describe("a Claude crewmate's completion decision, on the real client", () => {
           callback: "onCard",
           input: expect.objectContaining({
             title: COMPLETION.title,
-            actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+            actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
             riskDeclaration: RISK,
           }),
         },

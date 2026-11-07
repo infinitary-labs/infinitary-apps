@@ -115,7 +115,43 @@ describe("CrewSupervisor", () => {
     expect(settleWakes(ops).at(-1)).toContain("linux-checks: completed / failure");
   });
 
-  it("lands from a crewmate settle card without steering", async () => {
+  // INF-2744: with autonomy on, the app merges from the crewmate's merge
+  // card itself as it goes up - no click, no steer and no first mate turn.
+  it("lands from a crewmate merge card on its own with autonomy on, without steering (INF-2744)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace, tasks, specs, ops } = setup(crewmate);
+    (workspace.taskWorkStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      dirty: false,
+      unlandedCommits: 1,
+    });
+    const { taskId } = await supervisor.intake.commission({
+      title: "Ship it",
+      intent: intentOf("done work"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    expect(supervisor.facts.taskAutonomy(taskId)).toBe(true);
+    specs[0]?.onCard?.({
+      requiredActions: [],
+      title: "firstmate-3000 fm/task-ready is done",
+      body: completionBody(
+        "<p>The work is ready to land.</p><p>Keep leaves the worktree; discard drops it.</p>",
+      ),
+      actions: [{ id: "land", label: "Land locally", default: true, effect: SETTLE_MERGE }],
+    });
+    crewmate.finishPrompt();
+    await tick();
+
+    await vi.waitFor(() => expect(workspace.landTaskWork).toHaveBeenCalled());
+    await vi.waitFor(() =>
+      expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" }),
+    );
+    expect(crewmate.steer).not.toHaveBeenCalled();
+    expect(crewmate.promptCalls.some((text) => text.includes("the user chose"))).toBe(false);
+    expect(ops.some((line) => line.includes("the user chose"))).toBe(false);
+  });
+
+  it("lands from a crewmate merge card on the captain's click with autonomy off, without steering (INF-2744)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, workspace, tasks, specs, cards, ops } = setup(crewmate);
     (workspace.taskWorkStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -128,6 +164,7 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "firstmate-3000 fm/task-ready is done",
@@ -143,6 +180,7 @@ describe("CrewSupervisor", () => {
     await tick();
     const settle = cards().find((card) => card.title.includes("is done")) as Card;
     expect(settle.taskId).toBe(taskId);
+    expect(workspace.landTaskWork).not.toHaveBeenCalled();
 
     supervisor.cardActions.act(settle.id, "merge");
     await tick();
@@ -170,6 +208,8 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+    // INF-2744: autonomy off, so the merge card waits for the captain's click.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "The PR is ready",
@@ -225,7 +265,7 @@ describe("CrewSupervisor", () => {
           { id: "leave-pr55", label: "Leave it open" },
         ],
       }),
-    ).toThrow(/reads like a merge but carries no settle effect/);
+    ).toThrow(/reads like a merge but carries no merge effect/);
   });
 
   it("refuses a merge offer that names no task", async () => {
@@ -258,6 +298,8 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+    // INF-2744: autonomy off, so the merge card waits for the captain's click.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "The PR is ready",
@@ -298,6 +340,8 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+    // INF-2744: autonomy off, so the merge card waits for the captain's click.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "The PR is ready",
@@ -407,6 +451,8 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card waits for the captain.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "firstmate-3000 fm/task-ready is done",
@@ -442,6 +488,8 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card waits for the captain.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "firstmate-3000 fm/task-ready is done",

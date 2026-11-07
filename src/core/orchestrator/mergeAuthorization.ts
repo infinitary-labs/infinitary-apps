@@ -1,3 +1,4 @@
+import type { ChangeRecord } from "@shared/change";
 import {
   MERGE_GUIDANCE_IMPACTS,
   type MergeGuidanceDeclaration,
@@ -6,6 +7,7 @@ import {
   repairImpact,
 } from "@shared/checkRepair";
 import { hasChangeRequests } from "@shared/forge";
+import type { MergeReview } from "@shared/mergeReview";
 import { opensPullRequest, type RepoDelivery } from "@shared/repos";
 import { type ForgeRepo, forgeLocationOf, QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../forge";
 import { currentChange } from "../storage/changeProjection";
@@ -46,11 +48,37 @@ import type { WakeBody } from "./wakes";
  */
 
 /**
+ * One of the task's pull requests, by its number (INF-2746): the current
+ * change, the task's own change, or one a stored review names - with its
+ * branch and that review. Undefined when the number names none of them.
+ * A merge approval is kept to its own pull request through this, never to
+ * whichever one is current.
+ */
+export function taskPull(
+  record: TaskRecord,
+  changes: readonly ChangeRecord[],
+  number: number,
+): { branch: string; review?: MergeReview } | undefined {
+  const target = record.delivery?.checkTarget;
+  if (target?.number === number) return { branch: target.branch, review: target };
+  // The task's own pull request: the current change's number while it is
+  // current, else the one its own change record names.
+  const own = target
+    ? changes.find((change) => change.head.branch === record.branch)?.handle?.number
+    : record.delivery?.prNumber;
+  if (own === number) return { branch: record.branch };
+  const review = record.delivery?.mergeReviews?.find((item) => item.number === number);
+  return review ? { branch: review.branch, review } : undefined;
+}
+
+/**
  * The offer a captain's merge click on this card approves (FI3-304): the
  * completion offer the host published after reading its known head, on a
  * pull request task (direct-pr or queue-pr) whose project lives on GitHub
- * or GitLab, for the task's current change, whoever opened it (INF-2490) -
- * with where that project lives.
+ * or GitLab, for the change it was shown for, whoever opened it (INF-2490) -
+ * with where that project lives. With the task's `changes`, that change may
+ * be any of the task's pull requests (INF-2746: a click approves the pull
+ * request its card showed); without them, only the current change.
  * Undefined where the click approves no head and is one attempt: a first
  * mate card, a seeded card, a plain Git host or an ambiguous baseline.
  */
@@ -59,6 +87,7 @@ export function approvableOffer(
   repo: ForgeRepo | undefined,
   delivery: RepoDelivery | undefined,
   card: { cardId: string; offerId?: string | undefined },
+  changes?: readonly ChangeRecord[],
 ):
   | { baseline: CompletionOffer & { prNumber: number }; host: string; owner: string; name: string }
   | undefined {
@@ -73,7 +102,9 @@ export function approvableOffer(
   if (
     !baseline ||
     baseline.prNumber === undefined ||
-    baseline.prNumber !== currentChange(record.delivery, record.branch).number
+    (changes
+      ? !taskPull(record, changes, baseline.prNumber)
+      : baseline.prNumber !== currentChange(record.delivery, record.branch).number)
   )
     return undefined;
   return {
@@ -82,6 +113,49 @@ export function approvableOffer(
     owner: location.owner,
     name: location.name,
   };
+}
+
+/**
+ * The task's approvals with the one at `index` among the others put in
+ * front (INF-2746): each approved pull request goes ahead on its own, and
+ * the one in front is the one a run, a repair declaration or an assessment
+ * acts on. The one that was in front goes back to the end of the others
+ * (`toBack`, its turn passed) or just behind the new one. The captain's
+ * guidance marks stay in front, so his words hold every merge on the task.
+ * Undefined when nothing stands in front, its merge request is out, or no
+ * other is at `index`.
+ */
+export function putInFront(
+  top: MergeAuthorization,
+  index: number,
+  toBack = false,
+): MergeAuthorization | undefined {
+  const others = top.queued ?? [];
+  const next = others[index];
+  if (top.status !== "standing" || top.attempt || !next) return undefined;
+  const rest = others.filter((_, at) => at !== index);
+  const { queued: _others, guidance: _marks, ...stepped } = top;
+  return {
+    ...next,
+    guidance: top.guidance,
+    queued: toBack ? [...rest, stepped] : [stepped, ...rest],
+  };
+}
+
+/**
+ * Put the approval a declaration or an assessment is about in front
+ * (INF-2746), when it is one of the others on the task.
+ */
+export function standInFront(
+  tasks: TaskService,
+  taskId: string,
+  about: (authorization: MergeAuthorization) => boolean,
+): void {
+  const top = tasks.get(taskId)?.delivery?.mergeAuthorization;
+  if (!top || about(top)) return;
+  const index = top.queued?.findIndex(about) ?? -1;
+  const front = index < 0 ? undefined : putInFront(top, index);
+  if (front) tasks.delivery.recordPermissionRecords(taskId, { mergeAuthorization: front });
 }
 
 /** The one head an approval can merge now. */
@@ -223,7 +297,7 @@ export function declareMergeGuidance(
     });
     return {
       read: true,
-      text: "Recorded: the captain's kept merge approval no longer covers this change. Do the work their guidance asks, drive the checks green and put up a new completion card; the captain decides again.",
+      text: "Recorded: the captain's kept merge approval no longer covers this change. Do the work their guidance asks, drive the checks green and put up a new merge card; the captain decides again.",
     };
   }
   if (input.mark > guidance.declared) {
@@ -248,7 +322,7 @@ export function declareMergeGuidance(
     read: true,
     text: still
       ? `Recorded through mark ${input.mark}. The captain's newer guidance, mark ${guidance.latest}, still holds the merge: read it and declare it too.`
-      : `Recorded: the captain's guidance through mark ${input.mark} leaves the approved work as it was, so it no longer holds the merge. End your turn once the checks pass; the host merges by itself, with no new completion card.`,
+      : `Recorded: the captain's guidance through mark ${input.mark} leaves the approved work as it was, so it no longer holds the merge. End your turn once the checks pass; the host merges by itself, with no new merge card.`,
   };
 }
 
@@ -319,7 +393,7 @@ export function declareMergeRepair(
   if (authorization?.status !== "standing") {
     return {
       read: false,
-      text: `Repair declaration refused: no kept merge approval stands on this task${authorization?.reason ? ` (${authorization.reason})` : ""}. Drive the checks green and put up the completion card when the work is ready.`,
+      text: `Repair declaration refused: no kept merge approval stands on this task${authorization?.reason ? ` (${authorization.reason})` : ""}. Drive the checks green and put up the merge card when the work is ready.`,
     };
   }
   const impact = repairImpact(input.impact);
@@ -395,7 +469,7 @@ export function declareMergeRepair(
     );
     return {
       read: true,
-      text: "Recorded: the captain's kept merge approval no longer covers this change. Drive the checks green and put up a new completion card; the captain decides again.",
+      text: "Recorded: the captain's kept merge approval no longer covers this change. Drive the checks green and put up a new merge card; the captain decides again.",
     };
   }
   const tip = candidateHead(authorization);
@@ -474,13 +548,13 @@ export function declareMergeRepair(
   );
   return {
     read: true,
-    text: `Repair accepted: the captain's kept merge approval now covers ${step.toHead}. Drive its checks green and end your turn; the host merges by itself, with no new completion card.`,
+    text: `Repair accepted: the captain's kept merge approval now covers ${step.toHead}. Drive its checks green and end your turn; the host merges by itself, with no new merge card.`,
   };
 }
 
 /** What the crewmate hears once its unknown repair is recorded (FI3-663). */
 function unknownRecorded(toHead: string): string {
-  return `Recorded as unknown, so the kept merge waits. Once your turn ends, the host asks an independent assessment of the repair at ${toHead}, and its verdict decides: none keeps the captain's approval and the host merges with no new card; anything else ends it, and you then put up a new completion card. End your turn now, and do not declare this repair again.`;
+  return `Recorded as unknown, so the kept merge waits. Once your turn ends, the host asks an independent assessment of the repair at ${toHead}, and its verdict decides: none keeps the captain's approval and the host merges with no new card; anything else ends it, and you then put up a new merge card. End your turn now, and do not declare this repair again.`;
 }
 
 /**
@@ -544,6 +618,7 @@ export function decideMergeRepair(
   | { decided: "accepted"; head: string }
   | { decided: "ended"; head: string; reason: string }
   | { decided: "stale" } {
+  standInFront(tasks, builderId, (item) => item.undecided?.assessment?.taskId === assessorId);
   const authorization = standingAuthorization(tasks.get(builderId)?.delivery);
   const undecided = authorization?.undecided;
   if (!authorization || !undecided || undecided.assessment?.taskId !== assessorId) {
@@ -670,14 +745,14 @@ export function keptNote(
 ): string {
   const kept =
     "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
-  const declare = `When the crewmate pushes a new version - brought up to date, or a fix for what stopped the merge - it declares the repair with check_change conflictRepair from ${head}: impact none keeps the approval; changed-work ends it and it puts up a new completion card.`;
+  const declare = `When the crewmate pushes a new version - brought up to date, or a fix for what stopped the merge - it declares the repair with check_change conflictRepair from ${head}: impact none keeps the approval; changed-work ends it and it puts up a new merge card.`;
   switch (wait) {
     case "conflict":
       return `${kept} Steer the crewmate to bring the branch up to date with the default branch, rerun its validation, push, declare the repair, read the current check facts. ${declare}`;
     case "repair":
       return `${kept} The pull request is past the version the approval covers (${head}). Steer the crewmate to declare what changed. ${declare}`;
     case "evidence":
-      return `${kept} The crewmate declared its repair from ${head} unknown, so the host has an independent crewmate assess it once its turn ends: none keeps the approval and the host merges; any other answer ends it, and the host tells the crewmate to put up a new completion card. Nothing is needed from you.`;
+      return `${kept} The crewmate declared its repair from ${head} unknown, so the host has an independent crewmate assess it once its turn ends: none keeps the approval and the host merges; any other answer ends it, and the host tells the crewmate to put up a new merge card. Nothing is needed from you.`;
     case "checks":
       return checks === "red"
         ? `${kept} For ${head}, the checks failed and the merge waits for a fix. The crewmate reads failed logs and fixes the cause; a changed version is declared as a repair. ${declare}`
@@ -697,7 +772,7 @@ export function keptNote(
     case "refused":
       return `${kept} Steer the crewmate to fix the cause without changing the approved work; the host tries again when its turn ends. ${declare}`;
     case "guidance":
-      return `${kept} The captain gave the crewmate new guidance after their click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new completion card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
+      return `${kept} The captain gave the crewmate new guidance after their click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new merge card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
     case "queue":
       return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting, and merges once the queue sets it to success.${queueWarning ? ` ${queueWarning}` : ""} A failed batch wakes the crewmate like any failed check. ${declare}`;
   }

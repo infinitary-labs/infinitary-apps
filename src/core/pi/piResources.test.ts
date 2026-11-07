@@ -115,7 +115,9 @@ describe("continuation instructions served at the seven moments", () => {
       "Work needing your merge first goes in your story's afterMerge instead.",
     );
     expect(buildCrewmateSystemPrompt()).not.toContain("No intermediate card of yours");
-    expect(CREWMATE_EMIT_CARD_DESCRIPTION).toContain("No settle effects on intermediate questions");
+    expect(CREWMATE_EMIT_CARD_DESCRIPTION).toContain(
+      "No merge or settle effects on intermediate questions",
+    );
     // The merge card draws the story's after-merge steps, so the card tool no
     // longer asks the body to name them; the story tool says so instead.
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).not.toContain("name it in the body");
@@ -712,7 +714,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.5 and v1.6, cards/tasks/agents P0 a
     );
     // The crewmate's completion card is the one merge decision (ruling D3).
     expect(core).toContain(
-      "Green with autonomy on: settle_task merge-pr; otherwise the crewmate's completion card decides, never yours.",
+      "Green: the crewmate's merge card decides, never you; the app merges from it with autonomy on.",
     );
     expect(core).not.toContain('labeled "Merge PR"');
     // No reserved id and no kind survive in the contract.
@@ -843,7 +845,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     expect(reviewFindingsNext()).toContain(`prefixed with - ${REVIEW_FIX_RULES}.`);
     expect(renderRigorSection("reviewed")).not.toContain(REVIEW_FIX_RULES);
     expect(core).toContain(
-      "Green with autonomy on: settle_task merge-pr; otherwise the crewmate's completion card decides, never yours.",
+      "Green: the crewmate's merge card decides, never you; the app merges from it with autonomy on.",
     );
   });
 
@@ -1117,14 +1119,14 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
       expect(tool).toContain(
         "For finished change work (not a plan's preview, review or internal step), show the outcome on a card before reporting",
       );
-      expect(tool).toContain("Without one, emit a factual note with no settle action");
+      expect(tool).toContain("Without a merge, emit a factual note with no merge action");
       expect(tool).toContain(
-        "A task that merges on its own or builds in place shows its story on a note with no actions instead, which stays until the captain presses its Got it.",
+        "A task that builds in place shows its story on a note with no actions, which stays until the captain presses its Got it.",
       );
       // The prompt already says when to report waiting_on_captain and finished.
       expect(tool).not.toContain("waiting_on_captain");
       expect(tool).toContain(
-        "With a PR or branch to merge, emit one completion decision with one settle merge action",
+        "Ask every merge on a merge card, one per pull request: one merge action",
       );
     }
     const prompt = buildCrewmateSystemPrompt();
@@ -1138,7 +1140,7 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
 
   it("keeps the crewmate's completion trigger and drops the buttons the host attaches (lock 3)", () => {
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).toContain(
-      "emit one completion decision with one settle merge action",
+      "Ask every merge on a merge card, one per pull request: one merge action",
     );
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).toContain("declare no others or labels");
     // Rows 2 and 3 of the audit's 4.4b table: the labels, the keep-button
@@ -1147,16 +1149,16 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).not.toContain("there is no keep button");
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).not.toContain("what each option does");
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).toContain(
-      "A click on a settle action never comes back to you as a steer",
+      "no other merge or settle click comes back to you as a steer",
     );
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).not.toContain("task_id");
     expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).toContain(
-      "Pass task_id only when the buttons act on that task, as a settle effect needs",
+      "Pass task_id only when the buttons act on that task, as a merge or settle effect needs",
     );
     // Its two refusals say themselves when a card breaks them (INF-490;
     // cardLint.test.ts owns their words and the ledger names their homes).
     expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).not.toContain("This tool refuses");
-    expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).not.toContain("completion decision");
+    expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).not.toContain("merge card");
     for (const description of [CREWMATE_EMIT_CARD_DESCRIPTION, FIRSTMATE_EMIT_CARD_DESCRIPTION]) {
       expect(description).not.toMatch(/explain.more/i);
       expect(description).not.toMatch(/reserved/);
@@ -1542,7 +1544,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       const prompt = buildCrewmateSystemPrompt(backend);
       expect(prompt.split("For finished code work,").length - 1).toBe(1);
       expect(prompt).toContain(
-        "the completion decision or note has its answer in the title alone (no body lead)",
+        "the merge card or note has its answer in the title alone (no body lead)",
       );
       expect(prompt).toContain("opens with four headed sections in order");
       expect(prompt).toContain(
@@ -1584,14 +1586,14 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).not.toContain("Standing CI rule");
   });
 
-  it("makes the crewmate drive a direct-pr task to green itself, before the completion card", () => {
+  it("makes the crewmate drive a direct-pr task to green itself, before the merge card", () => {
     const prompt = buildCrewmateSystemPrompt();
     // Reaching green is its own job, not a report footnote: watch, diagnose,
     // fix, push, recheck, however many rounds it takes.
     expect(prompt).toContain("drive it to green yourself");
-    expect(prompt).toContain("before the final report or the completion decision");
+    expect(prompt).toContain("before the final report or the merge card");
     // The completion decision itself is gated on green, not merely on push.
-    expect(prompt).toContain("Never emit a completion decision on anything but green");
+    expect(prompt).toContain("Never emit a merge card on anything but green");
     // Captain INF-1555 F12 replaces the earlier F2 declaration prerequisite, not diagnosis or consent.
     expect(prompt).toContain("finished checks you diagnosed with check_change still fail");
     expect(prompt).toContain("naming each failed check and your diagnosis");
@@ -1603,7 +1605,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // own checks is the crew's to handle like a failed command, never a merge
     // input, and a card names it plainly when it stays failed.
     expect(prompt).toContain(
-      "A failed run that is not one of the pull request's own checks is yours to handle like a failed command, never a merge input; if it stays failed, your completion card names the run, what failed and why it lies outside this change.",
+      "A failed run that is not one of the pull request's own checks is yours to handle like a failed command, never a merge input; if it stays failed, your merge card names the run, what failed and why it lies outside this change.",
     );
     expect(prompt).toContain(
       "A reading with no check registered is pending, not no checks, until you declare their absence with check_change's absentChecks from positive evidence.",
@@ -1695,7 +1697,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // that cannot run is named, never dropped. No spec or command is named -
     // the repository's own instructions own those.
     expect(prompt).toContain(
-      "Demonstrate the intent end-to-end: list the concrete actions an end user would take and their expected results; gather evidence for each: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, never in the working copy or a commit; the description is written for a stranger, so no local path, private thread or personal detail enters it. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder.",
+      "Demonstrate the intent end-to-end: list the concrete actions an end user would take and their expected results; gather evidence for each: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, never in the working copy or a commit; the description is written for a stranger, so no local path, private thread or personal detail enters it. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the merge card by their path in the evidence folder.",
     );
     expect(prompt.match(/unit tests passing/gi)).toHaveLength(1);
     expect(prompt).toContain(
@@ -1799,13 +1801,15 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-2142's approved plan adds the crewmate's sentence keeping clock times out of a change story.
   // INF-2326's approved plan adds the two rules for a card's words (a project's own term, a change's effect).
   // INF-2715's approved plan asks each question in its section and adds the task words file and start.
+  // INF-2744's approved plan names the one merge card: the fact strip rides a merge or settle effect.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "9c75daeaa441ee04355fd48f4c012a605f9966d0b7decb8237f1ed908f335cee",
+    "ee546c18a4ff81f5f5bcda3dc464d290f6940d2382a840d638a403c631bccb62",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.
-  expect(hash(HANDOFF)).toBe("cae3bf8b4f3a2f5c9d8ebd8bde26894721f1acc3cf9d74095c868b7471b56b6b");
+  // INF-2744 names the captain's separate click by the merge card's name.
+  expect(hash(HANDOFF)).toBe("0d3e4ebb6aec5accb2f816242d63455bf036eae625a0b791227f167e695d85cf");
 });
 
 // INF-880: the submitted words-only rule must survive procedure filtering on every tier.

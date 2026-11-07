@@ -744,9 +744,9 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
       case "card":
         // A pointing gesture: the card's own button merges, never the drop.
         if (await point.showCard(move.cardId).catch(() => false)) {
-          say("Brought its completion card forward. Only the card's own button merges.");
+          say("Brought its merge card forward. Only the card's own button merges.");
         } else {
-          refused(task.id, "Its completion card is no longer up.");
+          refused(task.id, "Its merge card is no longer up.");
         }
         return;
       case "now": {

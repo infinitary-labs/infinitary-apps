@@ -24,7 +24,7 @@ import { shownCard } from "./stack";
  * `gh`, which would record a merge if one were ever asked for.
  */
 
-const SETTLE_MERGE = { kind: "settle", mode: "merge" } as const;
+const SETTLE_MERGE = { kind: "merge", after: "close" } as const;
 /** The completion card whose body tries the settle. */
 const CARD_TITLE = "The work is ready";
 

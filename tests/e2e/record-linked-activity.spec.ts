@@ -109,7 +109,7 @@ function seeded() {
         label: "Merge the pull request",
         variant: "primary",
         default: true,
-        effect: { kind: "settle", mode: "merge" },
+        effect: { kind: "merge", after: "close" },
       },
     ],
   });

@@ -2,10 +2,10 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "13.0.0",
+  "protocolVersion": "14.0.0",
   "versionRule": {
     "majorsBehind": 0,
-    "viewFloor": 13,
+    "viewFloor": 14,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
     "major": "Anything a client written against an older version could not survive: a request, push or field removed or renamed, a field made required, or a meaning changed.",
     "window": "A home answers every request of a computer that runs work only on its own major or one of the majorsBehind before it. A view (hello as view) changes things from the home's viewFloor up to the home's major, and on an older home when the viewFloor its own hello says reaches that home's major. A computer viewing whose hello says no viewFloor is answered as work is; a phone (system ios) that says none is measured against the home's viewFloor. A client outside its window is answered its reads (effect read) and sent every push, and each change (effect change) is refused until the older side is updated. The welcome's access says which the client got.",
@@ -7740,10 +7740,7 @@
                           },
                           "mode": {
                             "type": "string",
-                            "enum": [
-                              "merge",
-                              "discard"
-                            ]
+                            "const": "discard"
                           },
                           "confirm": {
                             "type": "boolean",
@@ -7764,17 +7761,33 @@
                         "properties": {
                           "kind": {
                             "type": "string",
-                            "const": "request_merge"
+                            "const": "merge"
                           },
                           "review": {
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 64
+                          },
+                          "after": {
+                            "type": "string",
+                            "enum": [
+                              "close",
+                              "continue"
+                            ]
+                          },
+                          "asksFirst": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 400
+                          },
+                          "proceedWithOpen": {
+                            "type": "boolean",
+                            "const": true
                           }
                         },
                         "required": [
                           "kind",
-                          "review"
+                          "after"
                         ]
                       },
                       {
@@ -8427,6 +8440,9 @@
                 "choice": {
                   "type": "string"
                 },
+                "card": {
+                  "type": "string"
+                },
                 "key": {
                   "type": "string"
                 },
@@ -8941,10 +8957,7 @@
                             },
                             "mode": {
                               "type": "string",
-                              "enum": [
-                                "merge",
-                                "discard"
-                              ]
+                              "const": "discard"
                             },
                             "confirm": {
                               "type": "boolean",
@@ -8965,17 +8978,33 @@
                           "properties": {
                             "kind": {
                               "type": "string",
-                              "const": "request_merge"
+                              "const": "merge"
                             },
                             "review": {
                               "type": "string",
                               "minLength": 1,
                               "maxLength": 64
+                            },
+                            "after": {
+                              "type": "string",
+                              "enum": [
+                                "close",
+                                "continue"
+                              ]
+                            },
+                            "asksFirst": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 400
+                            },
+                            "proceedWithOpen": {
+                              "type": "boolean",
+                              "const": true
                             }
                           },
                           "required": [
                             "kind",
-                            "review"
+                            "after"
                           ]
                         },
                         {
@@ -9626,6 +9655,9 @@
                     ]
                   },
                   "choice": {
+                    "type": "string"
+                  },
+                  "card": {
                     "type": "string"
                   },
                   "key": {
@@ -45385,10 +45417,7 @@
                                 },
                                 "mode": {
                                   "type": "string",
-                                  "enum": [
-                                    "merge",
-                                    "discard"
-                                  ]
+                                  "const": "discard"
                                 },
                                 "confirm": {
                                   "type": "boolean",
@@ -45409,17 +45438,33 @@
                               "properties": {
                                 "kind": {
                                   "type": "string",
-                                  "const": "request_merge"
+                                  "const": "merge"
                                 },
                                 "review": {
                                   "type": "string",
                                   "minLength": 1,
                                   "maxLength": 64
+                                },
+                                "after": {
+                                  "type": "string",
+                                  "enum": [
+                                    "close",
+                                    "continue"
+                                  ]
+                                },
+                                "asksFirst": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 400
+                                },
+                                "proceedWithOpen": {
+                                  "type": "boolean",
+                                  "const": true
                                 }
                               },
                               "required": [
                                 "kind",
-                                "review"
+                                "after"
                               ]
                             },
                             {
@@ -47466,24 +47511,6 @@
                   },
                   "finished": {
                     "type": "boolean"
-                  },
-                  "mergeCompletesTask": {
-                    "type": "object",
-                    "properties": {
-                      "prNumber": {
-                        "type": "integer",
-                        "exclusiveMinimum": 0,
-                        "maximum": 9007199254740991
-                      },
-                      "headSha": {
-                        "type": "string",
-                        "pattern": "^[a-f0-9]{40,64}$"
-                      }
-                    },
-                    "required": [
-                      "prNumber",
-                      "headSha"
-                    ]
                   },
                   "needsFirstmate": {
                     "type": "string"
@@ -56106,10 +56133,7 @@
                           },
                           "mode": {
                             "type": "string",
-                            "enum": [
-                              "merge",
-                              "discard"
-                            ]
+                            "const": "discard"
                           },
                           "confirm": {
                             "type": "boolean",
@@ -56130,17 +56154,33 @@
                         "properties": {
                           "kind": {
                             "type": "string",
-                            "const": "request_merge"
+                            "const": "merge"
                           },
                           "review": {
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 64
+                          },
+                          "after": {
+                            "type": "string",
+                            "enum": [
+                              "close",
+                              "continue"
+                            ]
+                          },
+                          "asksFirst": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 400
+                          },
+                          "proceedWithOpen": {
+                            "type": "boolean",
+                            "const": true
                           }
                         },
                         "required": [
                           "kind",
-                          "review"
+                          "after"
                         ]
                       },
                       {
@@ -56791,6 +56831,9 @@
                   ]
                 },
                 "choice": {
+                  "type": "string"
+                },
+                "card": {
                   "type": "string"
                 },
                 "key": {
@@ -71822,7 +71865,6 @@
     }
   },
   "fileOrders": {
-    "change": "files-there",
     "requests": {
       "inf:files:list": {
         "effect": "read",

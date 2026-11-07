@@ -190,6 +190,33 @@ export const SCENE_OBSERVATIONS_SINCE = "12.0.0";
  */
 export const CARD_SEEN_UPDATE_SINCE = "13.0.0";
 
+/**
+ * The first contract whose home takes the phone's usage events,
+ * `inf:settings:sharing:phone`, without naming `phone-diagnostics`: major 14
+ * folded that name in. A phone hands them to such a home, or to an older home
+ * whose welcome names the change (docs/sharing.md).
+ */
+export const PHONE_DIAGNOSTICS_SINCE = "14.0.0";
+
+/**
+ * The first contract whose views read a thread line's contributor fields
+ * without naming `shared-cards`: major 14 folded that name in. An older
+ * view that names it reads them too; any other reads the lines without who
+ * wrote them.
+ */
+export const SHARED_CARDS_SINCE = "14.0.0";
+
+/** Whether a view reads a thread line's contributor fields (`SHARED_CARDS_SINCE`, or its older name). */
+export function readsSharedCards(
+  version: string | undefined,
+  changes: readonly string[] | undefined,
+): boolean {
+  return (
+    (version !== undefined && speaksSince(version, SHARED_CARDS_SINCE)) ||
+    (changes?.includes("shared-cards") ?? false)
+  );
+}
+
 /** Whether a home answers current-update sightings (`CARD_SEEN_UPDATE_SINCE`, or its older name). */
 export function readsSeenUpdate(
   homeVersion: string | undefined,

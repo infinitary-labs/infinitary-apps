@@ -207,7 +207,7 @@ describe("shared story delivery boundaries", () => {
         const outcome = await at.service.merges.merge("ab12cd34");
         expect(outcome.ok).toBe(false);
         expect(outcome.text).toContain(
-          "The current story and all evidence must be published and read back before the completion card or merge.",
+          "The current story and all evidence must be published and read back before the merge card or merge.",
         );
         expect(outcome.text).toContain(softHoldWords("story", "firstmate"));
         expect(at.putIn).not.toHaveBeenCalled();
@@ -551,7 +551,7 @@ describe("shared story delivery boundaries", () => {
     const unpushed = "63fd25b591c30c1761c6d6c2d43e5b9585a9884e";
     at.readHead.mockResolvedValue(unpushed);
     const push = (committed: string, pushed: string, revision: number) =>
-      `The current code changed before the completion card: the branch is at ${committed}, and the pushed branch at ${pushed}. Push it; the app republishes the published story at the pushed version. Then show the completion card again with presentation ${revision}.`;
+      `The current code changed before the merge card: the branch is at ${committed}, and the pushed branch at ${pushed}. Push it; the app republishes the published story at the pushed version. Then show the merge card again with presentation ${revision}.`;
     await expect(at.service.publication.completionPresentation("ab12cd34", 1)).rejects.toThrow(
       push(unpushed, repaired, 1),
     );
@@ -580,20 +580,20 @@ describe("shared story delivery boundaries", () => {
       revisions: [...record!.revisions, { ...at.story, revision: 3, head: repaired }],
     }));
     await expect(at.service.publication.completionPresentation("ab12cd34", 3)).rejects.toThrow(
-      "Story revision 3 is prepared at the pushed version but not yet published and read back: publish it with open_change, then show the completion card with presentation 3.",
+      "Story revision 3 is prepared at the pushed version but not yet published and read back: publish it with open_change, then show the merge card with presentation 3.",
     );
     // The merge path's words reach the captain, so they name no tool.
     await expect(
       at.presentations.assertPublished("ab12cd34", at.forge.change as ForgeChange, at.forge),
     ).rejects.toThrow(
-      /^The current story and all evidence must be published and read back before the completion card or merge\.$/,
+      /^The current story and all evidence must be published and read back before the merge card or merge\.$/,
     );
     await at.service.publication.open("ab12cd34", {
       title: "fix: keep the saved story",
       presentation: 3,
     });
     await expect(at.service.publication.completionPresentation("ab12cd34", 1)).rejects.toThrow(
-      "The newest story is revision 3: show the completion card with presentation 3.",
+      "The newest story is revision 3: show the merge card with presentation 3.",
     );
     expect((await at.service.publication.completionPresentation("ab12cd34", 3)).revision).toBe(3);
 
@@ -610,7 +610,7 @@ describe("shared story delivery boundaries", () => {
     }));
     at.forge.change = { ...(at.forge.change as ForgeChange), headSha: unpushed };
     await expect(at.service.publication.completionPresentation("ab12cd34", 4)).rejects.toThrow(
-      `Story revision 4 was prepared at ${repaired} and never published, and the pushed branch is now at ${unpushed}. Prepare a new story revision at the pushed version with prepare_change, keeping its base and title, publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`,
+      `Story revision 4 was prepared at ${repaired} and never published, and the pushed branch is now at ${unpushed}. Prepare a new story revision at the pushed version with prepare_change, keeping its base and title, publish it with open_change, then show the merge card with the revision prepare_change returns as presentation.`,
     );
   });
 

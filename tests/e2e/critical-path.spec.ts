@@ -78,7 +78,7 @@ test("a fresh install signs in, adds a project, asks the first mate and merges i
     // The base runtime serves no model, so the gate shows; the key the gate
     // signs in reads the same file and sends every turn to the stand-in.
     modelsJson: (port) => mockProviderOverrideModelsJson(port, KEY_PROVIDER),
-    scenarios: [destinationStory(true, false)],
+    scenarios: [destinationStory(true)],
     prepareHome: gitIdentityHome("Critical Path", "critical-path@localhost"),
     env: { INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")) },
   });

@@ -143,7 +143,7 @@ The card leaves the stack as read, the message takes it as its answer, and the a
 The crewmate judges the words; the rule's one home is the thread steer's preamble (`THREAD_STEER_PREAMBLE`), which reaches a Claude crewmate with the captain's line, and the tool's top-level `signs_off` parameter says only what the mark does.
 No code, test or instruction keeps a list of phrases.
 The host refuses the mark with its reason and writes nothing on a card with a merge, a write or a browser hand-off for the captain, on one still `asking` or `continues`, on an interim line, and anywhere but the crewmate's own answering card of an active answer task.
-The mark crosses from a computer that runs work in `inf:work:reply`'s `signsOff`, only to a home that lists `thread-sign-off`.
+The mark crosses from a computer that runs work in `inf:work:reply`'s `signsOff`.
 
 ## The waiting line
 
@@ -174,8 +174,8 @@ Every input is persisted (the card's hold, the account's cut-off, the task's che
 A first mate card has none: the paused seat writes its own saved line for every message it keeps (`docs/architecture.md` §16, "A paused seat").
 
 The author's side says the same.
-A revision of the open completion card goes up while its checks run, carrying that answer with it (INF-834 friction 4).
-A new completion card the checks refuse while a captain reply waits on one of the task's cards asks for the thread answer now - one line saying what it did and who goes next - and the card update once they pass (`CrewmateCards.waitingReplyNote`).
+A revision of the open merge card goes up while its checks run, carrying that answer with it (INF-834 friction 4).
+A new merge card the checks refuse while a captain reply waits on one of the task's cards asks for the thread answer now - one line saying what it did and who goes next - and the card update once they pass (`CrewmateCards.waitingReplyNote`).
 `HANDOFF` (contract 4.70) answers a reply that only authorizes a build the same way: one thread line naming who is next, the card unchanged.
 An answer task's author then reports the approval with `needs_firstmate` (contract 4.73), which wakes the first mate to start the builder.
 While the first mate has not acted on that task since, the idle ladder raises the request again, with the card still up (`docs/report-sort.md`, "A request the first mate leaves unanswered is raised again").
@@ -350,7 +350,7 @@ Cancellation and terminal session failure retire the task's open cards through `
 
 - `tests/e2e/task-card-retirement.spec.ts` - a shown decision disappears on running cancellation or actual terminal client exit and stays retired after restart; cancellation of a restored idle task retires its decision without reopening the session.
   `crewSessions.lifecycle.test.ts`, `settleOwners.discard.test.ts` and `cardActions.merge.test.ts` join closure with cards and task detail, covering hidden cards, pending revisions, preserved history/threads, unrelated choices and resumable failure/interruption.
-- `tests/e2e/card-threads.spec.ts` - phase 1's three scenarios (a reply that revises the card in place, a reply answered in the thread, and "merge it" under a completion card landing as the first mate's settle) plus phase 2: a captain reply on a first mate card revises it / lands as prose, and an image rides a thread reply on a transport that supports it.
+- `tests/e2e/card-threads.spec.ts` - phase 1's three scenarios (a reply that revises the card in place, a reply answered in the thread, and "merge it" under a merge card landing as the first mate's settle) plus phase 2: a captain reply on a first mate card revises it / lands as prose, and an image rides a thread reply on a transport that supports it.
   The stage rule's case A: with two cards, a reply keeps the card shown with its thread, an acknowledgement and a reload leave it in its place, and the crewmate's turn end after its report redraws it with the answer in place.
   A lone replied-under card is put aside without a warning and remains open for its author's answer; `cardService.test.ts` covers its release at that author's close-out.
 - `tests/e2e/stage-reveals.spec.ts` - a close brings up the first unread card, a reply keeps its card shown while the unread card waits, and with nothing unread the first card comes up; a reply under a lone card keeps its body as the captain left it.
@@ -479,7 +479,7 @@ The receipt is read from the typed result the host saved (`CardMutation`, `cardM
 
 Desktop and phone show the same words under such a line, from one owner (`contributorWords` in `threadWords.ts`, generated into `PhoneCardWords.contributor`): "Revised by …" under a revision's line, "Written by …" under a reply, and ", after the card closed" on a clarification.
 
-An older computer is refused rather than trusted to drop the new fields (`SHARED_CARDS`, `src/shared/contract-changes/shared-cards.md`).
+A computer takes work only on its home's major, so both sides keep the new fields; a view on an older major gets the thread lines without who wrote them unless it reads them (`SHARED_CARDS_SINCE`, `src/shared/contractFeatures.ts`).
 A computer that runs work refuses these writes and reads to a home without the change.
 A home refuses a write on someone else's card from a work computer without it before writing anything.
 A desktop view without the change gets thread lines without the contributor, the answered message and the clarification flag, in every answer and push that carries them (`THREAD_CHANNELS` in `src/core/connection/connection.ts`); a phone ignores fields it does not know.

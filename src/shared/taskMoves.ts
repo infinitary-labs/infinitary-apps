@@ -1,4 +1,4 @@
-import { type Card, settleEffectOf, TASK_LIFECYCLE_OPS, type TaskLifecycleOp } from "./cards";
+import { type Card, mergeEffectOf, TASK_LIFECYCLE_OPS, type TaskLifecycleOp } from "./cards";
 import { type RecordBarInput, recordBarOf } from "./recordBar";
 import { isUnstartedWork, type TaskView } from "./tasks";
 
@@ -147,5 +147,5 @@ export function taskMovesOf(task: TaskMovesInput): TaskMoves | undefined {
 
 /** Whether a card settles with a merge: only that card's own button merges. */
 export function cardMerges(card: Pick<Card, "actions"> | undefined): boolean {
-  return card?.actions.some((action) => settleEffectOf(action)?.mode === "merge") ?? false;
+  return card?.actions.some((action) => mergeEffectOf(action) !== undefined) ?? false;
 }

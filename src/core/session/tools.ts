@@ -213,7 +213,7 @@ export class OutcomeUnknownError extends Error {
 export function labeledActions(actions: readonly DeclaredAction[]): EmittedAction[] {
   return actions.map(({ label, ...action }) => {
     if (label === undefined || !label.trim()) {
-      const why = `action "${action.id}" has no label. Give each action you declare a short label; only a completion decision's settle actions take theirs from the app.`;
+      const why = `action "${action.id}" has no label. Give each action you declare a short label; only a merge card's actions take theirs from the app.`;
       throw new CardRefusedError(`Card refused: ${why}`, "shape", why);
     }
     return { ...action, label };

@@ -1,4 +1,4 @@
-import type { Card } from "@shared/cards";
+import { type Card, mergeEffectOf } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
 import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh";
 import type { MergeReview } from "@shared/mergeReview";
@@ -62,15 +62,58 @@ export type SettleCards = {
   withdrawHostCard(id: string, reason: string): void;
   addFirstmateCard(input: EmittedCardInput): string;
   closedByCaptain(taskId: string): Card[];
-  openMergeAction(
-    taskId: string,
-  ): { cardId: string; cardTitle: string; actionId: string; label: string } | undefined;
+  openMergeAction(taskId: string, scope?: { review?: string }): OpenMergeAction | undefined;
   releaseNotes(taskId: string): void;
   retireTaskCards(taskId: string, reason: string, options?: { keepNotes?: boolean }): void;
   releaseMerged(taskIds: readonly string[]): void;
   drawsMergedLine(card: Card): boolean;
   scheduleBroadcast(): void;
 };
+
+/**
+ * The open merge card on a task (INF-2744): its button, and what it
+ * declared follows the merge and whether the captain decides it.
+ */
+export type OpenMergeAction = {
+  cardId: string;
+  cardTitle: string;
+  actionId: string;
+  label: string;
+  after: "close" | "continue";
+  /** The reviewed pull request it merges; absent means the task's current change. */
+  review?: string;
+  asksFirst?: string;
+};
+
+/**
+ * The crewmate's open merge card's merge action among a task's cards, found
+ * by its declared EFFECT like every host dispatch, never by an action id.
+ * A scoped read asks only about that pull request: one open merge card per
+ * pull request (INF-2744).
+ */
+export function openMergeActionIn(
+  cards: Iterable<Card>,
+  taskId: string,
+  scope?: { review?: string },
+): OpenMergeAction | undefined {
+  for (const card of cards) {
+    if (card.taskId !== taskId || card.author !== "crewmate") continue;
+    for (const action of card.actions) {
+      const effect = action.passes ? undefined : mergeEffectOf(action);
+      if (!effect || (scope && effect.review !== scope.review)) continue;
+      return {
+        cardId: card.id,
+        cardTitle: card.title,
+        actionId: action.id,
+        label: action.label,
+        after: effect.after,
+        ...(effect.review ? { review: effect.review } : {}),
+        ...(effect.asksFirst ? { asksFirst: effect.asksFirst } : {}),
+      };
+    }
+  }
+  return undefined;
+}
 
 /**
  * What settling needs from the supervisor that composes it, shared by every
@@ -122,8 +165,17 @@ export type SettleServiceHost = {
    * stays open (INF-2490).
    */
   mergeReview?: (taskId: string, reviewId: string, guard?: MergeGuard) => Promise<PrOutcome>;
-  /** The requested merge's outcome reaches its still-open crewmate, including a kept merge. */
-  mergeContinued?: (taskId: string, review: MergeReview | undefined, result: SettleOutcome) => void;
+  /**
+   * The requested merge's outcome reaches its still-open crewmate, including
+   * a kept merge; `change` names the pull requests it is about when the
+   * review alone does not (INF-2746).
+   */
+  mergeContinued?: (
+    taskId: string,
+    review: MergeReview | undefined,
+    result: SettleOutcome,
+    change?: string,
+  ) => void;
   closePullRequest?: (taskId: string) => Promise<PrOutcome>;
   /** The pinned pull request by its number, for a kept approval's reconcile (FI3-304). */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;

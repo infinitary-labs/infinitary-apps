@@ -183,7 +183,7 @@ export const MERGE_SETTING_WORDS = {
 } as const;
 
 /** What the line says while the merge is still to come. */
-export const MERGES_NEXT_WORDS = "your first mate merges it once its checks pass.";
+export const MERGES_NEXT_WORDS = "the app merges it once its checks pass.";
 
 /** The merged line's lead: on its own, or by the captain's own click. */
 export function mergedWords(at: string, onItsOwn: boolean): string {

@@ -56,6 +56,8 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+    // INF-2744: autonomy off, so the merge card waits for the captain's click.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "Ready before the turn ends",

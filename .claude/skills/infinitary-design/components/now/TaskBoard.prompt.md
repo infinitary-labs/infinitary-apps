@@ -80,7 +80,7 @@ When a live change takes the focused tile away, focus goes to the task where the
 A tile on the Board moves by dragging it onto a column or the Drop task tray, and any tile or row from its ⋯ menu; a list's rows are never dragged, so a row of the Backlog list moves by its menu, and nothing is dragged between views.
 Every move is a record's own button (Start, Drop task) or the board's queue and unqueue, and none changes priority, order, project, parent or dependencies.
 Backlog (or Back to backlog) takes never-started work at once; Queued (or Queue it) takes it at once while a blocker or hold stands, and asks once when it could start at once; Working (or Start now) is the record's Start and asks once; the tray is the record's Drop task and asks once in its words; Waiting on you never takes a drop.
-Show the card, on a waiting tile's menu, brings its card forward, a completion card included, and only the card's own button merges.
+Show the card, on a waiting tile's menu, brings its card forward, a merge card included, and only the card's own button merges.
 
 - **Dragging**: a press becomes a drag after 5px; a ghost of the tile (`--bg-2`, an `--accent` border, `--shadow-2`) follows the pointer and the tile itself stays at 40%.
   Every lane that takes it is tinted `--accent-dim` with a `--line-2` hairline; the one under the pointer gets an `--accent` hairline, and one that refuses a `--warn` hairline, its reason on the live line.

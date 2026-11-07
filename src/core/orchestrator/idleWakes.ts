@@ -121,7 +121,7 @@ export type IdleFacts =
     };
 
 export const IDLE_NUDGE_TEXT =
-  "You stopped with nothing running and nothing up for the captain to decide. Either finish - report under the five headings and emit your completion card - or say what blocks you.";
+  "You stopped with nothing running and nothing up for the captain to decide. Either finish - report under the five headings and emit your merge card - or say what blocks you.";
 
 /**
  * What a declared internal step is told it is (FI3-801): its brief makes
@@ -129,7 +129,7 @@ export const IDLE_NUDGE_TEXT =
  * card, so the nudge never asks it for one.
  */
 const STEP_ANSWER_WORDS =
-  "This task is a step whose answer the next step builds on: your report is that answer, and it takes no completion card - a card is only for something the captain must decide or see before the next step can start.";
+  "This task is a step whose answer the next step builds on: your report is that answer, and it takes no merge card - a card is only for something the captain must decide or see before the next step can start.";
 
 /** How the nudge asks a declared internal step to finish: its answer, or what blocks it. */
 const STEP_FINISH_WORDS =
@@ -145,7 +145,7 @@ export const IDLE_STEP_NUDGE_TEXT = `You stopped with nothing running and nothin
  * report flag, not the word "finished" in prose.
  */
 const ANSWER_WORDS =
-  "This task's deliverable is an answer, shown on your card marked answering; it takes no completion card.";
+  "This task's deliverable is an answer, shown on your card marked answering; it takes no merge card.";
 
 /** How the nudge asks an answer task to finish: the typed flag, never the words. */
 const ANSWER_FINISH_WORDS =
@@ -166,7 +166,7 @@ export function idleNoteNudgeText(note: WakeNote, step = false, answer = false):
     "If that note is your outcome and only the captain can act next, report with waiting_on_captain naming it; do not post it again.";
   if (step) return `${noted} ${STEP_ANSWER_WORDS} ${waits} Otherwise either ${STEP_FINISH_WORDS}`;
   if (answer) return `${noted} ${ANSWER_WORDS} ${waits} Otherwise, ${ANSWER_FINISH_WORDS}`;
-  return `${noted} ${waits} Otherwise either finish - report under the five headings and emit your completion card - or say what blocks you.`;
+  return `${noted} ${waits} Otherwise either finish - report under the five headings and emit your merge card - or say what blocks you.`;
 }
 
 /** The nudge when the captain wrote last under one of this crewmate's cards. */

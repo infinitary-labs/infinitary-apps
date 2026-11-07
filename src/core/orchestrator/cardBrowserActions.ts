@@ -79,7 +79,7 @@ export class CardBrowserActions {
     }
     if (actions.some((action) => settleEffectOf(action))) {
       throw new Error(
-        "Card refused: a request for the captain to take over your browser is a decision of its own, never a completion card.",
+        "Card refused: a request for the captain to take over your browser is a decision of its own, never a merge card.",
       );
     }
     return declared.savedFailed ? { ...handoff, savedFailed: true } : handoff;

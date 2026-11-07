@@ -14,6 +14,7 @@ import {
   cardChromeValueSchema,
   cardSubmissionSchema,
   cardTakesReplies,
+  mergeEffectOf,
   onStage,
   replyWithSettings,
   type ShellEffect,
@@ -44,7 +45,7 @@ import { keepImages } from "../attachments";
 import type { BrowserReturned } from "../browser/taskBrowsers";
 import type { IntegrationAskTaken } from "../integrations";
 import { type MessageFile, withPastedFiles } from "../overflow";
-import { currentChange } from "../storage/changeProjection";
+import { currentChange, storyLedgerOf } from "../storage/changeProjection";
 import { StaleValidationDecisionError } from "../tasks/liveValidation";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
@@ -55,7 +56,7 @@ import type { CardService } from "./cardService";
 import type { CrewCore } from "./crewCore";
 import { SUPERVISOR_STEER } from "./crewRuntime";
 import { writeSentLine } from "./integrationAsks";
-import { approvableOffer } from "./mergeAuthorization";
+import { approvableOffer, taskPull } from "./mergeAuthorization";
 import { askedUnderCardLine } from "./threadWords";
 import type { TypedWake } from "./wakes";
 
@@ -292,21 +293,43 @@ export class CardActions {
     // An answer task closes on this very resolution (Task B), so its
     // crewmate is gone: the choice has nowhere to round-trip to.
     const effect = chosen.effect;
+    // The one merge effect (INF-2744), whichever pull request it names.
+    const merge = mergeEffectOf(chosen);
     // A merge click merges the change its card was shown for, with the story
-    // it showed: a card shown for another change than the current one, or
-    // for another story than the current change's, is refused (INF-2490).
-    if (effect?.kind === "settle" && effect.mode === "merge" && associated) {
+    // it showed: a card shown for another story than that change's is
+    // refused (INF-2490). A click whose approval is kept to the pull request
+    // its card showed merges that one even after another of the task's
+    // became current (INF-2746); a click that approves no head merges only
+    // the current change, so it is refused once another is current.
+    if (merge && !merge.review && associated) {
       const delivery = associated.delivery;
       const offered = delivery?.completionOffers?.find(
         (offer) => offer.cardId === card.id && offer.offerId === card.offerId,
       );
       const shownFor = offered?.shownFor ?? offered?.prNumber;
-      const ready = readyPresentation(delivery?.presentation);
-      const story =
-        delivery?.presentation !== undefined || offered?.presentationRevision !== undefined;
+      const current = currentChange(delivery, associated.branch);
+      const changes = this.core.options.tasks.changesFor(associated.id);
+      const elsewhere =
+        shownFor !== undefined &&
+        shownFor !== current.number &&
+        approvableOffer(
+          associated,
+          associated.repoId ? this.core.options.repos.get(associated.repoId) : undefined,
+          this.core.facts.taskDelivery(associated.id),
+          { cardId: card.id, offerId: card.offerId },
+          changes,
+        )
+          ? taskPull(associated, changes, shownFor)
+          : undefined;
+      const ledger = storyLedgerOf(
+        delivery,
+        associated.branch,
+        elsewhere?.branch ?? current.branch,
+      );
+      const ready = readyPresentation(ledger);
+      const story = ledger !== undefined || offered?.presentationRevision !== undefined;
       if (
-        (shownFor !== undefined &&
-          shownFor !== currentChange(delivery, associated.branch).number) ||
+        (shownFor !== undefined && shownFor !== current.number && !elsewhere) ||
         (story &&
           (!offered?.presentationRevision ||
             offered.presentationRevision !== ready?.revision ||
@@ -320,31 +343,33 @@ export class CardActions {
     // The captain's merge click mints his approval of the offer he was
     // reading, in the resolution's own transaction (FI3-304). A frame or
     // agent never reaches here with a settle effect, so nothing else can.
+    // An approval of another pull request than the one whose approval
+    // stands waits its turn, and the host runs it then (INF-2746).
+    let queued = false;
     const approve =
       source === "chrome" &&
       card.taskId &&
-      (effect?.kind === "request_merge" ||
-        (effect?.kind === "settle" &&
-          effect.mode === "merge" &&
-          this.mergeModeFor(card.taskId) === "merge-pr"))
-        ? () =>
-            this.core.settling.approvals.authorizeMerge(
-              card.taskId as string,
-              {
-                cardId: card.id,
-                ...(card.lifecycleId ? { lifecycleId: card.lifecycleId } : {}),
-                ...(card.offerId ? { offerId: card.offerId } : {}),
-                actionId,
-                ...interactionOf(submission),
-              },
-              effect.kind === "settle" ? (effect.proceedWithOpen ?? false) : false,
-              effect.kind === "request_merge" ? effect.review : undefined,
-            )
+      merge &&
+      (merge.review || this.mergeModeFor(card.taskId) === "merge-pr")
+        ? () => {
+            queued =
+              this.core.settling.approvals.authorizeMerge(
+                card.taskId as string,
+                {
+                  cardId: card.id,
+                  ...(card.lifecycleId ? { lifecycleId: card.lifecycleId } : {}),
+                  ...(card.offerId ? { offerId: card.offerId } : {}),
+                  actionId,
+                  ...interactionOf(submission),
+                },
+                merge.proceedWithOpen ?? false,
+                merge.review,
+                { after: merge.after },
+              ) === "queued";
+          }
         : undefined;
     const confirming = effect?.kind === "host" && effect.op === "confirm-required-action";
-    const consequentialMerge =
-      card.requiredActions !== undefined &&
-      ((effect?.kind === "settle" && effect.mode === "merge") || effect?.kind === "request_merge");
+    const consequentialMerge = card.requiredActions !== undefined && merge !== undefined;
     if ((confirming || consequentialMerge) && submission !== undefined) {
       const gesture = cardSubmissionSchema.safeParse(submission);
       if (
@@ -378,22 +403,18 @@ export class CardActions {
       }
     }
     const carryOffer =
-      source === "chrome" &&
-      ((effect?.kind === "settle" && effect.mode === "merge") ||
-        effect?.kind === "request_merge") &&
-      card.taskId
+      source === "chrome" && merge && card.taskId
         ? () => {
             if (card.requiredActions !== undefined && card.offerId)
               this.core.options.tasks.delivery.declareRequiredActions(card.taskId as string, {
                 cardId: card.id,
                 offerId: card.offerId,
                 actions: card.requiredActions,
-                head:
-                  effect?.kind === "request_merge"
-                    ? this.core.crewmateCards.mergeReviewOf(card.taskId as string, effect.review)
-                        ?.headSha
-                    : (readyPresentation(associated?.delivery?.presentation)?.head ??
-                      associated?.delivery?.headSha),
+                head: merge.review
+                  ? this.core.crewmateCards.mergeReviewOf(card.taskId as string, merge.review)
+                      ?.headSha
+                  : (readyPresentation(associated?.delivery?.presentation)?.head ??
+                    associated?.delivery?.headSha),
               });
             else if (associated?.delivery?.requiredActionOffer)
               this.core.options.tasks.delivery.recordPermissionRecords(card.taskId as string, {
@@ -533,6 +554,28 @@ export class CardActions {
     // the card's version before the merge below runs, so it merges now.
     if (chosen.passes === "checks" && source === "chrome" && card.taskId && !closedAnswer)
       this.passChecksFromCard(card, chosen.label, anythingElseOf(answers));
+    // The merge card's click (INF-2744): the one merge effect, whichever
+    // pull request it names and whatever it declared follows. Only this
+    // chrome click runs it; the declaration granted nothing.
+    if (merge) {
+      if (!card.taskId || source !== "chrome" || queued) return {};
+      if (merge.review) {
+        void this.core.settling.kept
+          .requestMerge(card.taskId, merge.review, false, merge.after)
+          .catch((caught: unknown) => {
+            console.warn("[crew] requested merge failed:", caught);
+          });
+        return {};
+      }
+      void this.core.settling.settle.reportCardSettle(
+        card.taskId,
+        this.mergeModeFor(card.taskId),
+        undefined,
+        merge.proceedWithOpen,
+        merge.after,
+      );
+      return {};
+    }
     switch (effect?.kind) {
       case "settle": {
         // Host-owned teardown: the host runs it instead of steering the
@@ -541,23 +584,12 @@ export class CardActions {
         // Every emit boundary refuses a settle without a task; belt and
         // braces here rather than a settle of nothing.
         if (!card.taskId) return {};
-        const mode = effect.mode === "merge" ? this.mergeModeFor(card.taskId) : "discard";
         void this.core.settling.settle.reportCardSettle(
           card.taskId,
-          mode,
+          "discard",
           effect.confirm,
           effect.proceedWithOpen,
         );
-        return {};
-      }
-      case "request_merge": {
-        // The declaration granted nothing. Only this chrome click runs it.
-        if (!card.taskId || source !== "chrome") return {};
-        void this.core.settling.kept
-          .requestMerge(card.taskId, effect.review)
-          .catch((caught: unknown) => {
-            console.warn("[crew] requested merge failed:", caught);
-          });
         return {};
       }
       case "request_write": {

@@ -292,12 +292,7 @@ export function cardReply(page: Page): {
 export async function completionAction(page: Page, title: string): Promise<Locator> {
   const label = await page.evaluate(async (wanted) => {
     const card = (await window.infinitary.cards.list()).find((card) => card.title === wanted);
-    return card?.actions.find(
-      (action) =>
-        !action.passes &&
-        ((action.effect?.kind === "settle" && action.effect.mode === "merge") ||
-          action.effect?.kind === "request_merge"),
-    )?.label;
+    return card?.actions.find((action) => !action.passes && action.effect?.kind === "merge")?.label;
   }, title);
   if (!label) throw new Error(`Card "${title}" has no completion action`);
   return page.locator("[data-card-layer]").getByRole("button", { name: label, exact: true });

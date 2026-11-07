@@ -262,7 +262,7 @@ export class ChangePresentations {
   ): Promise<ForgeChange> {
     const story = this.current(taskId, branch, revision);
     if (story.version === 2 && title !== story.title)
-      throw new Error("Use the saved title for the pull request and completion card.");
+      throw new Error("Use the saved title for the pull request and merge card.");
     if (!hostedPresentation(story.destination)) {
       if (story.destination.kind !== "branch")
         throw new Error("A local story has no remote publication.");
@@ -586,7 +586,7 @@ export class ChangePresentations {
       const committed = await this.options.head(taskId);
       if (committed !== head)
         throw new Error(
-          `${pushFirst(committed, head)} Then show the completion card again with presentation ${revision}.`,
+          `${pushFirst(committed, head)} Then show the merge card again with presentation ${revision}.`,
         );
       await this.checkRetained(story);
       // A displayed card owns independent copies. Story pruning never sees
@@ -787,7 +787,7 @@ export class ChangePresentations {
       const ready = readyPresentation(record);
       if (!ready || ready.head !== head || (revision !== undefined && ready.revision !== revision))
         throw new Error(
-          "The current committed version needs its newest story. Prepare it with prepare_change, and on a pushed branch confirm it with open_change, before showing its completion card or merging.",
+          "The current committed version needs its newest story. Prepare it with prepare_change, and on a pushed branch confirm it with open_change, before showing its merge card or merging.",
         );
       return story;
     }
@@ -802,7 +802,7 @@ export class ChangePresentations {
       story.head !== head
     )
       throw new Error(
-        `The current story and all evidence must be published and read back before the completion card or merge.${revision === undefined ? "" : ` ${completionWayOut(record, story, head)}`}`,
+        `The current story and all evidence must be published and read back before the merge card or merge.${revision === undefined ? "" : ` ${completionWayOut(record, story, head)}`}`,
       );
     return story;
   }
@@ -943,7 +943,7 @@ export class ChangePresentations {
       const committed = await this.options.head(taskId);
       if (committed !== change.headSha)
         throw new Error(
-          `${pushFirst(committed, change.headSha)} Then show the completion card again with presentation ${revision}.`,
+          `${pushFirst(committed, change.headSha)} Then show the merge card again with presentation ${revision}.`,
         );
       return (
         (await this.republishLocked(
@@ -1011,7 +1011,7 @@ export class ChangePresentations {
     ) {
       if (how.fromHead === undefined) return undefined;
       throw new Error(
-        "A newer edited story needs its own completion offer; it is not a repair's refresh.",
+        "A newer edited story needs its own merge card; it is not a repair's refresh.",
       );
     }
     if (latest.revision === published.revision)
@@ -1167,17 +1167,17 @@ function completionWayOut(
   const published = record.published?.revision === newest.revision;
   // INF-2509: a published story follows its pull request's later versions on its own.
   if (published && record.published?.head !== head)
-    return `Story revision ${newest.revision} was published at ${record.published?.head}, and the pushed branch is now at ${head}: show the completion card with presentation ${newest.revision}, and the app republishes it at the pushed version.`;
+    return `Story revision ${newest.revision} was published at ${record.published?.head}, and the pushed branch is now at ${head}: show the merge card with presentation ${newest.revision}, and the app republishes it at the pushed version.`;
   if (newest.head !== head)
-    return `Story revision ${newest.revision} was prepared at ${newest.head} and never published, and the pushed branch is now at ${head}. Prepare a new story revision at the pushed version with prepare_change, keeping its base and title, publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`;
+    return `Story revision ${newest.revision} was prepared at ${newest.head} and never published, and the pushed branch is now at ${head}. Prepare a new story revision at the pushed version with prepare_change, keeping its base and title, publish it with open_change, then show the merge card with the revision prepare_change returns as presentation.`;
   if (!published || record.publication?.state !== "confirmed")
-    return `Story revision ${newest.revision} is prepared at the pushed version but not yet published and read back: publish it with open_change, then show the completion card with presentation ${newest.revision}.`;
-  return `The newest story is revision ${newest.revision}: show the completion card with presentation ${newest.revision}.`;
+    return `Story revision ${newest.revision} is prepared at the pushed version but not yet published and read back: publish it with open_change, then show the merge card with presentation ${newest.revision}.`;
+  return `The newest story is revision ${newest.revision}: show the merge card with presentation ${newest.revision}.`;
 }
 
 /** The refusal when the committed code is ahead of the pushed branch. */
 function pushFirst(committed: string, pushed: string): string {
-  return `The current code changed before the completion card: the branch is at ${committed}, and the pushed branch at ${pushed}. Push it; the app republishes the published story at the pushed version.`;
+  return `The current code changed before the merge card: the branch is at ${committed}, and the pushed branch at ${pushed}. Push it; the app republishes the published story at the pushed version.`;
 }
 
 /**

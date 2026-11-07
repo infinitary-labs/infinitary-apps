@@ -5,8 +5,9 @@ import { preparedRevision, prepareMockStory } from "./changeStory";
 /**
  * INF-1219 direction A: a crewmate on a task that merges on its own. Its
  * brief carries this marker; it commits, sends its branch up, prepares and
- * opens a saved story, reads its checks, and on green shows that story on a
- * note with no actions, as the served rule tells it to, and reports.
+ * opens a saved story, reads its checks, and on green shows that story on
+ * its merge card, as any task does (INF-2744), and reports. The app merges
+ * from that card; nothing asks the first mate to.
  */
 export const SELF_MERGE_NOTE_PROMPT_MARKER = "open the meter fix to merge on its own";
 export const MOCK_SELF_MERGE_CHANGE_TITLE = "fix: the meter reads on time on its own";
@@ -45,14 +46,15 @@ export const selfMergeNote: Scenario =
         calls: [
           {
             name: "emit_card",
-            args: { title: MOCK_SELF_MERGE_CHANGE_TITLE, presentation: preparedRevision(body) },
+            args: {
+              title: MOCK_SELF_MERGE_CHANGE_TITLE,
+              presentation: preparedRevision(body),
+              actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
+            },
           },
           {
             name: "report",
-            args: {
-              text: "The meter fix is open and its checks passed.",
-              needs_firstmate: "merge the pull request",
-            },
+            args: { text: "The meter fix is open and its checks passed." },
           },
         ],
       };

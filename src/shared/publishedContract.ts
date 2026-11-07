@@ -27,7 +27,7 @@ import {
   WORK_DOWNLOAD_SINCE,
   WORK_UPDATE_SINCE,
 } from "./contractFeatures";
-import { FILE_ORDER_CHANNELS, FILES_THERE, fileOrders } from "./files";
+import { FILE_ORDER_CHANNELS, fileOrders } from "./files";
 import {
   CORE_INVOKE_CHANNELS,
   CORE_PUSH_CHANNELS,
@@ -262,9 +262,8 @@ export function publishedContract() {
     },
     // What a home asks a computer that runs work about that computer's own
     // files, for a crewmate on another computer (`src/shared/files.ts`,
-    // docs/files.md), once that computer lists `change`, published the same way.
+    // docs/files.md), published the same way.
     fileOrders: {
-      change: FILES_THERE,
       requests: Object.fromEntries(
         FILE_ORDER_CHANNELS.map((channel) => {
           const declared = fileOrders[channel];

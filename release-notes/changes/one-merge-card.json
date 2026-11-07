@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "one-merge-card",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Every merge is asked on the same merge card",
+      "body": "A crewmate now asks to merge any pull request on one kind of card, the merge card, whether the merge finishes its task or the task continues after it. A task can put up several, one for each pull request, and each one you or the app approves merges as soon as it is ready. The card says whether merging closes the task, and Discard sits beside Merge only when the merge would close the task. When a project merges on its own, the app merges straight from that card once its checks pass, unless the crewmate says you should decide this one. A card your click started now says which card you chose on.",
+      "picture": {
+        "dark": "one-merge-card-dark.webp",
+        "light": "one-merge-card-light.webp",
+        "alt": "A crewmate's card whose line under the title says You chose on Fix the meter reading early?, with the button words Approve and build below it."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -133,7 +133,7 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
   A later attachment, such as the first mate naming the message on other work, never moves it under another chain.
   An answer once recorded never moves: work linked afterwards belongs to the newer message.
 - **A card that can answer it.**
-  A card about its work that its author marked `answering`, a completion card's merge, the app's merge line on a story note, or a card the first mate showed for the message; it counts only when it was shown since the newest message of the chain.
+  A card about its work that its author marked `answering`, a merge card's merge, the app's merge line on a story note, or a card the first mate showed for the message; it counts only when it was shown since the newest message of the chain.
 - **Accepted.**
   The captain's choice on a decision about its work that is not still asking (`asking`, `continues`), or Done on a note that can answer it, with no reply of theirs waiting under it (`CardService` reports each response through `captainResponded`).
   Putting a taskless note or an already-completed task's note away as read also acknowledges the message when the note qualifies as its answer; this ends no work.

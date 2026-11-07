@@ -28,7 +28,6 @@ import {
   keepsTaskOpen,
   onStage,
   type PastCard,
-  settleEffectOf,
 } from "@shared/cards";
 import type { CrewResponse } from "@shared/crewResponses";
 import { deviceForgeSignInCardId } from "@shared/deviceSetup";
@@ -71,6 +70,7 @@ import {
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { settleCardFacts } from "./settleCardFacts";
+import { type OpenMergeAction, openMergeActionIn } from "./settleHost";
 import { withMergeLine } from "./settleWords";
 
 /**
@@ -1822,25 +1822,9 @@ export class CardService {
     return this.cards.has(id);
   }
 
-  /**
-   * The crewmate's open completion card's merge action on a task, when one is up: the
-   * card, the action the host itself attached (`CrewmateCards.withCompletionActions`),
-   * and the label the captain is reading. Found by the declared EFFECT, the
-   * way every other host dispatch is, never by an action id.
-   */
-  openMergeAction(
-    taskId: string,
-  ): { cardId: string; cardTitle: string; actionId: string; label: string } | undefined {
-    for (const card of this.cards.values()) {
-      if (card.taskId !== taskId || card.author !== "crewmate") continue;
-      const merge = card.actions.find(
-        (action) => settleEffectOf(action)?.mode === "merge" && !action.passes,
-      );
-      if (merge) {
-        return { cardId: card.id, cardTitle: card.title, actionId: merge.id, label: merge.label };
-      }
-    }
-    return undefined;
+  /** The crewmate's open merge card's merge action on a task (`openMergeActionIn`). */
+  openMergeAction(taskId: string, scope?: { review?: string }): OpenMergeAction | undefined {
+    return openMergeActionIn(this.cards.values(), taskId, scope);
   }
 
   /**
@@ -1990,7 +1974,14 @@ function cardAskedOf(line: TaskOriginLine | undefined): CardAsked | undefined {
     case "said":
       return { at: line.at, text: line.text, kind: "said", ...through };
     case "chose":
-      return { at: line.at, text: line.text, kind: "chose", choice: line.choice, ...through };
+      return {
+        at: line.at,
+        text: line.text,
+        kind: "chose",
+        choice: line.choice,
+        ...(line.card ? { card: line.card } : {}),
+        ...through,
+      };
     case "automation":
       return { at: line.at, text: line.name, kind: "automation", ...through };
   }

@@ -84,15 +84,15 @@ A third effect kind, `host`, carries the app's own operations (re-run an account
 Completed captain-requested work gets an outcome card before the final report.
 Without a change of the task's own to put in, it is a factual note naming what happened and how it was verified, with no settle action; the first mate can then close or continue the task.
 Answer tasks already deliver their card, and internal reviews and hand-off steps deliver their report; a personal-workspace build ends with the factual note like any other work with nothing to merge (INF-1677).
-With a change to put in, the completion card has two actions: the merge (`default`, `settle merge`) and the discard (`danger`, `settle discard`).
-The host writes that pair (captain lock 3): a crewmate declares one action carrying `settle merge` and the host replaces every settle action with the merge labelled for the task's posture and the discard beside it (`CrewmateCards.withCompletionActions`).
-A `request_merge` action is not that pair: the host labels it Merge the pull request and leaves the crewmate's other actions, including Not now, so a pull request the task did not open is not discarded with the task (`docs/forge.md`, "A requested merge").
-Every merge card's strip ends with the host's line on whether its click closes the task: "Merging closes this task" for a settle merge, "The task continues after this merge" for a `request_merge`, which gets a strip holding only that line (`withMergeClosesLine`, INF-2490).
-A settle merge says the task continues too while a question or another pull request on the task is open, and changes back when that clears (INF-2525; `docs/forge.md`, "A requested merge").
+Every merge of a pull request or branch is asked on one card, the merge card (INF-2744): the crewmate declares one action carrying the `merge` effect, with `after: close` or `after: continue`, and a `review` for any pull request but its current change.
+The host writes that card's buttons (captain lock 3, `CrewmateCards.withCompletionActions`): the merge labelled for the task's posture; the discard (`danger`, `settle discard`) beside it only when the merge closes the task and drops its own working copy; Not now beside any other merge; and Review carefully below Careful.
+With autonomy on, the app authorizes the merge from the card as it goes up and the card shows the merging line instead of buttons, unless the crewmate declared `asksFirst`, a standing direction's reason for the captain to decide (`docs/forge.md`, "A requested merge").
+Every merge card's strip ends with the host's line on whether its click closes the task: "Merging closes this task" for `after: close`, "The task continues after this merge" for `after: continue` (`withMergeClosesLine`, INF-2490).
+A closing merge says the task continues too while a question or another pull request on the task is open, and changes back when that clears (INF-2525; `docs/forge.md`, "A requested merge").
 A crewmate's card rule tells it to settle its open questions before it raises the merge card; nothing refuses the card, and the line above catches a miss (the captain's answer "words" on INF-2525).
 A review that skips the branch rules labels it Merge, skipping the rules, and after the lint the host adds what the click does at the end of the body (`.inf-call`): the version, every rule it may skip and every failed check (`docs/forge.md`, "A merge past the branch rules").
 A `request_write` action is a crewmate's ask to send a write it kept: the host labels it Send it to GitHub, after the host's own name, leaves the crewmate's Not now, and after the lint adds the exact call at the end of the body (`docs/forge.md`, "A write that asks").
-It does this before the lint, so the lint reads the card the captain will actually get: a completion decision that declares only the merge gives the two actions a decision needs, and one more of the crewmate's own still fits.
+It does this before the lint, so the lint reads the card the captain will actually get: a merge card that declares only the merge gives the two actions a decision needs, and one more of the crewmate's own still fits.
 The crewmate is told to declare no labels, so its `emit_card` schema asks for none on either backend; every other action the host keeps needs a label of its own, and one without words refuses the card (`labeledActions`).
 The first mate's schema still asks every action for a label, because no host words its buttons.
 
@@ -100,9 +100,9 @@ Two things the host deliberately does not take over.
 `confirm` on the discard is a claim about what the BODY says, not a fact the host holds, and setting it would destroy unlanded work without the captain choosing; left off, a destructive discard returns the structured `unlanded-work` refusal and its ways out, which is the captain's confirmation.
 And a non-settle action the author declared - its own deferral, a question it wants answered alongside - survives untouched: a card carries exactly the actions its author declares beside the completion pair.
 
-There is still no keep button; putting this completion decision aside starts no author turn and keeps the task, working copy and any PR open.
+There is still no keep button; putting this merge card aside starts no author turn and keeps the task, working copy and any PR open.
 Clicking a settle action never comes back as a steer: the host runs it and reports the outcome to the first mate, which re-settles or raises a decision when the outcome is a refusal.
-Do not put settle effects on intermediate questions, and if a completion card is already open reuse its `emit_card` id so it updates in place.
+Do not put settle effects on intermediate questions, and if a merge card is already open reuse its `emit_card` id so it updates in place.
 
 Cards minted before P1 carried these semantics as reserved action ids (`keep`, `merge-pr`, `land`, `discard`, `open-settings`, ...).
 Migration 29 rewrote every open card's actions into effects (`legacyActionEffect`, logged in `card_effect_backfill`; closed cards are history and untouched), and the replay harness applies the same translation to the cards its recorded sessions emit.
@@ -136,7 +136,7 @@ On any card carrying a `settle` effect, and on the story note of a task that mer
   A failed check whose newest run on the default branch failed too (`TaskDelivery.mainChecks`, INF-1915 fix 1) reads Fails on main too when the crewmate has not diagnosed it, and under its line the host writes, in the open, that main's newest run of this check failed as well, at which version and when it was read, so the captain sees what failed and why it is outside the change without opening anything; a diagnosed check keeps the crewmate's verdict as its summary and gets the same host line under it.
   Each cell names its fact in `data-fact` (one of `SETTLE_FACTS`, `src/shared/cards.ts`), so a test finds a fact by what it is (`factsStrip` in `tests/e2e/stack.ts`), never by its label's words.
   The stage lifts the strip out of the body (`splitSettleFacts`, `src/shared/cards.ts`) and shows it in a sandboxed frame of its own at the start of the card's action row, left of the buttons, so a long body never scrolls it out of view; a past card shows the body whole, strip last.
-  A finished code-work completion decision or note opens at **Why**, then **What changed**, **Before**, **After** (contract v4.37, FI3-253); the title alone carries the answer, with no answer line before Why.
+  A finished code-work merge card or note opens at **Why**, then **What changed**, **Before**, **After** (contract v4.37, FI3-253); the title alone carries the answer, with no answer line before Why.
   This is a loose outline, not a recipe for each section: Why gives the ask or defect, preferring the captain's original intent, wording or framing when available (contract v4.38).
   Paraphrase faithfully and quote only exact words; otherwise use factual motivation.
   What changed gives the change, Before one sentence on how it stood then a picture of each changed view as it stood, and After each result picture beside the sentence it describes, and what was checked (contract v4.69).
@@ -152,7 +152,7 @@ On any card carrying a `settle` effect, and on the story note of a task that mer
   This is agent judgment, not a pixel threshold or a host refusal.
   What is left closes after After when it bears on the decision, otherwise in `<details>`, not a fifth heading.
   Answer cards, previews included, keep their own shape.
-  The report keeps its five evidence headings; every new branch-based change and its completion card share the saved story (`docs/forge.md`, "Saved change stories"), while an existing PR that predates stories keeps its five-heading description.
+  The report keeps its five evidence headings; every new branch-based change and its merge card share the saved story (`docs/forge.md`, "Saved change stories"), while an existing PR that predates stories keeps its five-heading description.
   The card never copies the host's strip.
 
 ## The risk chart
@@ -163,15 +163,15 @@ It has seven dimensions, clockwise from the top, each at three levels in words: 
 There is no overall level anywhere - not on the chart, the strip, the task record or the feed - so nothing sums the seven up: the shape and the dots are the reading.
 
 **The declaration.**
-A crewmate's completion decision passes `risk`, a top-level `emit_card` parameter whose own description carries every rule, so it reaches a Claude crewmate whole (`docs/claude-client.md`).
+A crewmate's merge card passes `risk`, a top-level `emit_card` parameter whose own description carries every rule, so it reaches a Claude crewmate whole (`docs/claude-client.md`).
 It rates every dimension `low`, `medium` or `high`, with `why`, one line of at most 100 characters.
-The card tool refuses a decision with a `settle merge` action and no risk, a risk with a dimension left out or a level off the scale, and a risk on any other card, each in words that name the fix (`RISK_MISSING_REFUSAL`, `src/core/pi/cardTool.ts`), at every care level.
-The refusal is recorded like any other ("A refused completion card").
+The card tool refuses a merge card with no risk, a risk with a dimension left out or a level off the scale, and a risk on any other card, each in words that name the fix (`RISK_MISSING_REFUSAL`, `src/core/pi/cardTool.ts`), at every care level.
+The refusal is recorded like any other ("A refused merge card").
 The first mate's schema has no risk, so its cards carry none.
 
 The app validates the declaration and adds no measurements of the change.
 The assessment rides the card (`Card.risk`, `cards.risk_json`) and the task's delivery facts (`delivery.risk`), and a revision replaces both.
-A self-merging task's story note keeps them the same way; it is the one card with a risk and no actions, which is how the host and the stage know it takes the fact strip (`takesFactStrip`, `src/shared/cards.ts`).
+A self-merging task's story note keeps them the same way; it is the one card with a risk and no actions, which is how the host and the stage know it takes the fact strip (`takesTaskFacts`, `src/shared/cards.ts`).
 
 **The chart.**
 The card's chrome draws it (`RiskChart` in `src/renderer/src/design/cards/`), never the body: 128 px tall, level with the headline's top and flush with the card's content edge, as wide as its labels need (216 px for the seven names), with rings 80 px across (`riskRadarGeometry`).
@@ -210,17 +210,17 @@ A refused card is never shown, and the refusal text names the fix:
 
 - a typed fact: a body that arrived entity-escaped (`&lt;p&gt;` where `<p>` was meant, with no real element in it) is refused as exactly that, asking for raw tags - the Sep 15 Claude crewmates sent such bodies and were told about sentence counts four times running;
 - a product fact (D-9): a card with actions is a decision: it gives 2 or 3 actions (`CARD_MECHANICS`) and has exactly one `default`.
-  The count reads the card the captain gets, so a crewmate's completion decision counts the host's merge and discard pair (never the host's Review carefully beside them, `docs/delivery-rigor.md`), and the host's saved sign-in on a request card is added after the lint (`docs/task-browser.md`, "Saved sign-ins"), because the crewmate never learns that a site is saved.
+  The count reads the card the captain gets, so a crewmate's merge card counts the host's merge and discard pair (never the host's Review carefully beside them, `docs/delivery-rigor.md`), and the host's saved sign-in on a request card is added after the lint (`docs/task-browser.md`, "Saved sign-ins"), because the crewmate never learns that a site is saved.
   The refusal names the rule, the actions it counted and the fix: one action needs the other choice beside it, or a note with no actions when nothing is asked; four or more keep the two or three that matter.
 - consent: a decision that is not a preview asks a `required` radio, checkbox or select question unpicked (contract 4.56): one that arrives `checked` or `selected` is refused, with the question's name and the fix - leave it unpicked and mark the recommendation `data-inf-recommended` ("Questions in the body" below);
 - consent: a decision that is not a preview ends every radio group, select and group of two or more checkboxes with a Something else row (FI3-1002): one without the row and without `data-inf-options-only` is refused, with the question's name and the row to add ("Something else" below);
 - consent: an action whose id or label reads like a merge or a landing carries a `settle` effect - a "Merge the pull request" button with no effect would run nothing when clicked, which is exactly the Sep 4-5 dogfood failure - and no action from an agent carries the host's own effect;
-- consent, at the crewmate boundary only: a declared `settle merge` decision has **Why**, **What changed**, **Before**, **After** headings in order; `COMPLETION_CARD_HEADINGS` in `src/shared/cardHeadings.ts` is their shared home, and `bodyHeadings` reads the markup, not mentions in prose; the refusal names the first missing or misplaced heading and its repair; completion notes follow the standing instruction alone because the host cannot distinguish them from other notes;
+- consent, at the crewmate boundary only: a declared merge card has **Why**, **What changed**, **Before**, **After** headings in order; `COMPLETION_CARD_HEADINGS` in `src/shared/cardHeadings.ts` is their shared home, and `bodyHeadings` reads the markup, not mentions in prose; the refusal names the first missing or misplaced heading and its repair; completion notes follow the standing instruction alone because the host cannot distinguish them from other notes;
 - a product fact (INF-680): a decision, a preview included, that names a control or stages a setting `anything_else` is refused, because that is the answer the words in the app's own field ride with a click ("The card's one field" below);
 - a product fact: measurable figure text that would draw under 11px in the usual 750px column is refused, and the refusal names the repair: a full-width drawing of at most 750 units, or larger type, and a pixel width for a smaller drawing.
   It does not measure the narrow card, and it does not refuse a small drawing stretched to 100 percent.
 
-The five headings are not asked of a completion card's open body.
+The five headings are not asked of a merge card's open body.
 They remain required in the report, which `scoreRigor` reads through `reportEvidenceHeadings`, and in legacy PR bodies or those on hosts without saved stories.
 A saved-story completion names its published revision in `emit_card presentation`, supplies its title field, and omits body, body_file, risk and required_actions.
 After a push the card names the same revision, and the host republishes a pull request's published story at the pushed version; a new revision is prepared only when the story's words change, or after a later local-only or plain-branch commit (`docs/forge.md`, "Saved change stories").
@@ -234,25 +234,25 @@ The host renders its body from the same version as the PR and keeps the risk cha
 The card's table holds recordings too, as their posters; in the pull request picture-only pairs sit side by side and any pair containing a recording stacks to fit GitHub's and GitLab's native players.
 
 The lint asks for shape, never for the absence of words: there is no progress-phrase ban list, and the merge-claim rule is a consistency check on an action, not a ban on what a body may say.
-The first mate's boundary adds typed facts - a note's own answer (`task_id` only on a review relay, `related` tasks that resolve, INF-2714), the closed-task choice refusal (a card with actions cannot name a closed task, whose click would refuse every choice; the refusal names the ways out, each keeping the closed task as the `basis` of the work that follows: a follow-up from `create_task`, or no `task_id`) and the settle-needs-task rule - and two ceilings, marked as such in the code because each compensates for a first mate that did not follow its instruction: the carded-task refusal below, and the merge-card refusal while a task's own crewmate still owes its completion card.
-There is no CI gate and no PR-link rule at either boundary since v2.0: the crewmate's completion card is the one merge decision and the first mate never authors one for a crewmate's task (ruling D3), and a settle card's facts are the host's line above.
+The first mate's boundary adds typed facts - a note's own answer (`task_id` only on a review relay, `related` tasks that resolve, INF-2714), the closed-task choice refusal (a card with actions cannot name a closed task, whose click would refuse every choice; the refusal names the ways out, each keeping the closed task as the `basis` of the work that follows: a follow-up from `create_task`, or no `task_id`) and the settle-needs-task rule - and two ceilings, marked as such in the code because each compensates for a first mate that did not follow its instruction: the carded-task refusal below, and the merge-card refusal while a task's own crewmate still owes its merge card.
+There is no CI gate and no PR-link rule at either boundary since v2.0: the crewmate's merge card is the one merge decision and the first mate never authors one for a crewmate's task (ruling D3), and a settle card's facts are the host's line above.
 
 The task's final report needs no tool: its record shows a sandboxed body with plain reports safely wrapped and links preserved.
 
-## A refused completion card
+## A refused merge card
 
-A crewmate's completion card - any card it emits that declares a settle effect - can be refused on its way up: its checks have not passed (`CrewmateCards.pendingCiGate`), the shape lint above, or the card tool's own checks on its size, id, pictures and risk.
-A revision of the completion card already on the stack is the one exception to the checks: it goes up while they run, and its merge waits for them (`docs/delivery-rigor.md`, "A kept merge approval").
+A crewmate's merge card - any card it emits that declares a settle effect - can be refused on its way up: its checks have not passed (`CrewmateCards.pendingCiGate`), the shape lint above, or the card tool's own checks on its size, id, pictures and risk.
+A revision of the merge card already on the stack is the one exception to the checks: it goes up while they run, and its merge waits for them (`docs/delivery-rigor.md`, "A kept merge approval").
 The crewmate reads the refusal as the tool's error text, and the card never reaches the stage.
-FI3-401 is why that is not enough: on PR #549 the gate refused a card a second after the crewmate asked, the crewmate still reported "Completion card emitted", and the first mate relayed the card and later explained its absence with a mechanism that does not exist.
+FI3-401 is why that is not enough: on PR #549 the gate refused a card a second after the crewmate asked, the crewmate still reported "Merge card emitted", and the first mate relayed the card and later explained its absence with a mechanism that does not exist.
 
 So the host keeps the refusal as a fact.
 The card tool hands every refusal of such a card to `CrewmateToolDelegate.onCardRefused`, whichever step made it, and the supervisor records it on the task (`TaskService.delivery.recordCardRefusal`): `delivery.cardRefusal` holds the card's title, when, a typed `reason` (`checks`, `ci-cap`, `review`, `shape` or `other`) and `why`, the host's own words, and the timeline gets a host note.
-It stands until a completion card goes up, which clears it.
+It stands until a merge card goes up, which clears it.
 While it stands, the crewmate's report wake names it after the report - the card, when, why, that it did not reach the captain, and that none of the crewmate's cards is on the screen when none is - and `crew_status` carries it as `cardRefused`.
 Nothing reads the report's words; the fact sits beside them.
-A task on the personal workspace or an answer task has no completion card, and its settle refusal already says so, so it records nothing.
-A completion card a work computer sent to the home whose answer never came is not a refusal either: the home may already show it, so the card tool records nothing, and the crewmate reads that it may already be up and what to check (INF-370 R1; `docs/helper.md`, "Lost contact").
+A task on the personal workspace or an answer task has no merge card, and its settle refusal already says so, so it records nothing.
+A merge card a work computer sent to the home whose answer never came is not a refusal either: the home may already show it, so the card tool records nothing, and the crewmate reads that it may already be up and what to check (INF-370 R1; `docs/helper.md`, "Lost contact").
 A card whose request never went out is still recorded as refused.
 
 ## A decision its author withdrew
@@ -293,7 +293,7 @@ Card chrome - the derived chip, title, close, pager, and footer actions - remain
 Streaming task results stay plain text until complete so incremental updates do not replace the frame document.
 The hooks a body writes are Infinitary's (`data-inf-*`, the `inf-*` classes, `inf.action` and `inf.stage`); a body written before the rename with Firstmate 3000's `data-fm-*`, `fm-*` and `fm.*` renders and answers the same (`docs/ui-plugins.md`, the bridge's hooks).
 
-For finished code-work completion cards the title carries the answer and the body opens at Why under the outline above; other cards lead with a brief answer.
+For finished code-work merge cards the title carries the answer and the body opens at Why under the outline above; other cards lead with a brief answer.
 Explain visually wherever a picture carries a point better than prose.
 When an explanation has several parts, give each part a figure beside the short sentence it illustrates rather than crowding them into one drawing.
 Keep prose needed to follow the answer in the open.
@@ -339,7 +339,7 @@ The frame does, and only the frame (`docs/live-prototype-security.md` is the sec
   A picture inside a link, a button, a `summary`, a `label` or a `data-inf-action` element is that control's, and a body script that handles the click first (`preventDefault`) keeps it.
   The host shows only its own `images` copies and `data:` raster pictures; any other source opens nothing.
 - **Demo recordings.**
-  A crewmate may attach a demo to any card - an answer, plan, decision or note, not only a completion card - when behavior over time makes the answer clearer; use a still figure when motion adds nothing.
+  A crewmate may attach a demo to any card - an answer, plan, decision or note, not only a merge card - when behavior over time makes the answer clearer; use a still figure when motion adds nothing.
   A demo shows behavior a still cannot - a drag, a keyboard journey, motion, progress, recovery from an error: `<figure data-inf-demo="<path to the recording>">` holding exactly one `<img>`, its poster (a frame of the recording, the same shape), and a `<figcaption>` naming the action and its result.
   Its paths follow the picture rules - relative to the working copy, or absolute inside the task's evidence folder - and are never a URL.
   The recording is a silent H.264 MP4 in one video track, 8-bit 4:2:0 (High, Main or Baseline profile), at most 30 seconds, 16 MB, 1920 x 1080 (either way round) and 30 frames a second; the working target is 5 to 15 seconds at about 1280 x 720 and 24 frames a second, and `+faststart` lets it start before it has loaded.
@@ -763,7 +763,7 @@ No reader of whose turn it is finds a card by its id pattern any more - a card i
 
 The captain's words on INF-547: "the tasks were done but i never got any update."
 Started work that closes without the captain's click leaves them one card about it, and only their close takes it down.
-A crewmate whose task merges on its own shows its completion story before the merge, on a note with no actions: the same saved story a merge offer carries, with its risk chart and the merge card's fact strip, and with no button or required actions (`CrewmateCards.addCrewmateCard` refuses a saved-story note on a task that asks first).
+A crewmate whose task merges on its own shows its merge card like any other task, and once the app authorizes the merge from it (INF-2744) the card keeps no actions and reads as a note: the same saved story, with its risk chart and the merge card's fact strip, and with no button or required actions (`CrewmateCards.addCrewmateCard` refuses a saved-story note on a task that asks first).
 The captain's words on INF-1219: "it misses the radar chart, and also it's not clear that this was a change merged by itself."
 The host opens that note with the merge line, written after the card lint: "Merges on its own", what happens next, and who set it, in the app's words from the setting (`pendingMergeLine`, `src/core/orchestrator/settleWords.ts`).
 The captain's words on INF-2533: "we should probably not show the note card and wait for the final update with "merged on its own" already present".
@@ -779,7 +779,7 @@ A note held for its merge shows once its receipt says merged, at the end of the 
 A close without a merge shows a kept note with its close line, so no note stays hidden after its task closes; the captain's cancel takes it down.
 The first mate's closing sentence on merged work with such a note goes on the note's merged line only, the captain's pick on INF-2678's plan: for every close that counts as merging (merged, landed or released, `mergingClose`), `TaskClosing.placeOutcome` writes nothing else for it.
 A merge a person made where the project lives reads merged on its own, since the receipt does not say who clicked there.
-When only the captain can pass a hold on that merge, the first mate sets the task to ask first, and the crewmate turns the held note into its usual completion card under the same id, which shows at its close-out.
+When only the captain can pass a hold on that merge, the first mate sets the task to ask first, and the crewmate turns the held note into its usual merge card under the same id, which shows at its close-out.
 The note stays up and answers the captain's message, so no closing note goes up beside it.
 A crewmate on the personal workspace shows what it built on a note marked answering, and the first mate's `finished` close keeps it (`docs/personal-panels.md`, "Report, commit, close").
 Every close the first mate makes of started work carries its one sentence: `settle_task` takes a top-level `closing_sentence` for every mode but `answered`, `interrupt_crewmate` takes it for `cancel`, and both refuse such a close without one.
@@ -794,11 +794,11 @@ Where it goes is one rule, at most one closing note for each of the captain's me
 
 A captain's click carries no sentence, an answer task's close takes none, and a task no crewmate started gets no note.
 Work no message of the captain's covers gets a note only when it merges or releases and nothing of the task is on the stack.
-It gets none once the captain closed or chose on the task's story or completion card, which was its one note (INF-2461, the captain's pick on INF-2442: "The card you clicked carries the merge or drop outcome, with no second note").
+It gets none once the captain closed or chose on the task's story or merge card, which was its one note (INF-2461, the captain's pick on INF-2442: "The card you clicked carries the merge or drop outcome, with no second note").
 That card is one shaped as the work's outcome (`answersByShape`) or a crewmate card opening with a completion story's headings (`toldOutcome` in `src/core/orchestrator/taskClose.ts`); a note along the way the captain closed does not count.
 The captain's words on INF-1467: "tasks the fleet decided to start that the captain didn't ask for should not report to the captain."
 The first mate sets that mark when it starts work the captain did not ask for - a step of a sequence it runs, a helper another task needs, a crewmate's request, or work it starts unasked, including a crewmate's filing it starts (`update_task internal_step`, on open work before it starts); work started by the captain's message, card choice or schedule is theirs.
-A drop, cancel or finish of such work stays on the task's record and in Activity, and a merge or release still leaves its one note, because code reached the project without the captain's click, unless the captain already closed its story or completion card.
+A drop, cancel or finish of such work stays on the task's record and in Activity, and a merge or release still leaves its one note, because code reached the project without the captain's click, unless the captain already closed its story or merge card.
 The crewmate on such a change is told to show the captain a card only for what only they can give - a merge click, a consent, a sign-in - or a note for something it found that they should see (`FLEET_STARTED_CHANGE_WORDS`, `src/core/orchestrator/intentBrief.ts`).
 The note has no actions, so it places no gate and nothing in the whose-turn sort reads it.
 Activity's line for a drop the first mate made reads `Dropped:` and the same sentence (`droppedLine`), and an `update_task` drop's reason is that sentence too.
@@ -812,7 +812,7 @@ The design skill's `copy/Vocabulary.prompt.md` ("How a line reads") is their hom
 They are scored by hand on recorded cards (`clear_copy_share`, `docs/replay-harness.md`) and never linted.
 
 Two rules for a card's words (INF-2326): a project's own term, a name its code or people coined, is explained in a few plain words at first use or replaced; a card about a change says near its start whether people using the project will notice it, or whether it changes only how the project is built, checked or documented.
-`CARD_AUTHORING` carries both to every card author, and the completion card's What changed section asks for that effect first.
+`CARD_AUTHORING` carries both to every card author, and the merge card's What changed section asks for that effect first.
 The design skill's `copy/Vocabulary.prompt.md` ("Two rules for a card's words") is their home.
 They are scored by hand on recorded cards (`term_explained_share`, `change_effect_share`, `docs/replay-harness.md`); no word list or term finder looks for a project's terms.
 
@@ -823,7 +823,7 @@ It is this Mac's zone with its offset from UTC at that moment, such as `America/
 Title and body must make sense with no prior conversation.
 The captain is multi-tasking.
 Name the work in plain language (what changed / what they are deciding), not only a PR number or SHA.
-A finished code-work completion card uses Why / What changed / Before / After, with verification inside After and remaining work after it when decision-relevant, otherwise in details.
+A finished code-work merge card uses Why / What changed / Before / After, with verification inside After and remaining work after it when decision-relevant, otherwise in details.
 The project, crewmate model, care, PR link, checks and holds are the host's settle facts strip, so the body does not repeat them.
 SHAs and job timings are optional detail, not the lead.
 Decision options stay 2-3, sentence case; labels can stay short if the body already states the choice.
@@ -887,7 +887,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A card that implies a next step is a decision with that step as its `default`; on any card carrying a settle effect the host appends the project, the crewmate's model, the task's effective care, the proposed change, the checks' state and any hold of its own - the CI and review round counts against their caps, contract v3.6 - as the labeled fact strip (`SettleFacts.strip`, v2.0 ruling D4, restyled at v2.7), so bodies never repeat them and the lint asks for none of them; a revision keeps the replaced version in `card_revisions` (migration 24).
   `keepsOpen` is retired (orchestrator contract v4.65, `src/core/prompts/contract-revisions/README.md`): no prompt or tool description offers it and `emit_card` refuses it; migration 73 removes the old actions from open cards before the click path is removed.
   A card carries exactly the actions its author declares (cards/tasks/agents P0, captain rulings D1-D8): no automatic Later, no park; a deferral is an action the author offers and its reminder is `schedule_prompt`.
-  The ONE exception is the completion pair (contract v3.6, captain lock 3): a crewmate declares a `settle merge` action and the host replaces every settle action on that card with the merge labelled for the posture plus the danger discard, leaving the author's non-settle actions untouched - the labels and the count were facts the host held and an agent was transcribing, and `confirm` is deliberately not host-set, because it is a claim about the body and auto-confirming would destroy unlanded work without the captain choosing.
+  The ONE exception is the merge card (contract v3.6, captain lock 3; INF-2744): a crewmate declares a `merge` action and the host replaces every merge and settle action on that card with the merge labelled for the posture plus the danger discard or Not now, leaving the author's other actions untouched - the labels and the count were facts the host held and an agent was transcribing, and `confirm` is deliberately not host-set, because it is a claim about the body and auto-confirming would destroy unlanded work without the captain choosing.
   The only host-authored cards are the agent-down set (`card-auth-*`, the paused seat's cards - `card-fm-no-headroom` titled per class (a spent allowance's leads with "Recheck allowance", host op `try-again`), `card-fm-refused` "<provider> is not answering your first mate right now" with "Try <provider> again" (host op `try-again`) and "Open settings", the flagship-move card, and `card-fm-move-back` "Move your first mate back to <provider>?"
   (W1 S9, `docs/architecture.md` §16.8; a refused card never says signing in again clears it) - `card-fm-quiet`, the first mate failure card), `card-forge-<host>` (a sign-in where projects live that the host refused), `card-ask-<message>` - the answer-delivery notice (`docs/task-capture.md` "Answer delivery": "Your first mate has not answered your message", the captain's own words escaped, with Ask again and Leave it), `card-project-setup-<project>` - the setup card a first mate proposal puts up (`docs/fleet.md` "Asking the first mate to add a project": "Add <name> as a project?" with Add project, which reads the card's own answers, and Not now; only that button declines, while the minus keeps the offer pending), and `card-stall-<task>` - the idle ladder's rung 3 (captain decision 2026-09-26, `docs/report-sort.md` "The idle ladder"): after two wakes about a stuck crewmate went ignored the work cannot move without the captain, so the host raises one card with Nudge, Keep waiting and Discard, and a reply row the first mate answers (`docs/card-threads.md`, "The stuck alert's reply row"); every other host moment - a refused settle, a dead gate, a reasoning wait, a quiet crewmate, a steer past its budget - is a feed line plus one `[fm-op]` wake.
   One card shape on the wire (cards/tasks/agents P1, ruling D1 a): `cardSchema` is strict with no `kind` and carries `author` (crewmate | firstmate | host); the chip is derived (`cardPresentation`: actions = decision, host author = attention, none = note) and the store's `kind` column is history (new rows write `card`).
@@ -904,9 +904,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `src/core/pi/cardImages.test.ts` binds the copy and the rewrite, and `tests/browser/card-picture-fit.test.tsx` a picture shown whole in its card.
   Phase 3, the viewer: the bridge's `image` message (any `<img>` click, or a group's `+N` tile) carries the clicked index and its group's pictures; `viewablePictures` admits only the host's minted copies and `data:` rasters; `design/cards/PictureViewer.tsx` (design skill `PictureViewer.prompt.md`) is window-wide host chrome whose keys are a window capture listener, so they never reach the stack or the shell's Escape; `tests/e2e/card-pictures.spec.ts` is its binding test.
 
-When a crewmate must put its own change in before the rest can proceed, an intermediate card cannot do that: it lists the rest as after-merge steps on its change's story, and the completion card draws them under "After merging, the crew starts", outside the body ("After-merge steps", `docs/task-graph.md`).
+When a crewmate must put its own change in before the rest can proceed, an intermediate card cannot do that: it lists the rest as after-merge steps on its change's story, and the merge card draws them under "After merging, the crew starts", outside the body ("After-merge steps", `docs/task-graph.md`).
 The list is optional; a card with nothing to continue lists nothing.
-Only the ordinary completion decision puts that change in, and its merge files each step as a task that starts on its own.
+Only the ordinary merge card puts that change in, and its merge files each step as a task that starts on its own.
 If a later landing belongs to no task, the continuation may ask once for that outside change with an effect-free plain-reply button.
 
 ## Editable card body files (contract v4.49)
@@ -981,7 +981,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
   It stops at the first origin:
   1. The captain's message that filed or started the task reads "You asked · time" with their words in the grey bubble.
   2. An automation that filed it reads "Run by an automation · time" with the automation's name and no bubble, never its setup words.
-  3. A card click it was filed from reads "You chose · time" with the button's words and anything the captain wrote with it in the bubble.
+  3. A card click it was filed from reads "You chose on “card title” · time", naming the card the click was on (INF-2744), with the button's words and anything the captain wrote with it in the bubble.
      With no origin anywhere, a message of the captain's aimed at that work alone reads "You said · time"; with nothing of theirs, the line reads "From INF-2081" with that task's title and no bubble.
      A source on another task adds "· through N tasks" to the label.
      A message whose only effect on a task was a merge or other settle, an interruption, or a sweep across several tasks it did not file or start is never quoted.
@@ -1024,7 +1024,7 @@ This is generic card behavior, not a lesson type or a new action effect.
 
 ## Required actions after merging
 
-New completion offers declare `required_actions`, including an empty list when none exist (`docs/required-actions.md`).
+New merge cards declare `required_actions`, including an empty list when none exist (`docs/required-actions.md`).
 The host draws their action, target and consequence outside the scrolling body beside Merge.
 A declaration grants no execution permission; a successful merge creates durable captain confirmation records, not crewmate continuations.
 

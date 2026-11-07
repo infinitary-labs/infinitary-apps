@@ -106,7 +106,7 @@ The table covers git, GitHub and the app's own machinery; these two cover every 
 1. A project's own term, a name its code or people coined, is explained in a few plain words where a card first uses it, or replaced by those words.
    "The critical path, the one journey a pull request runs" reads; "the critical path" alone does not.
 2. A card about a change says near its start whether people using the project will notice it, or whether it changes only how the project is built, checked or documented.
-   The completion card's What changed section says this effect first.
+   The merge card's What changed section says this effect first.
 
 **Brand words.**
 Use: your own, craftsmanship, made with care, a record of every task, and studio in a sentence ("your own AI studio"), never as a name.

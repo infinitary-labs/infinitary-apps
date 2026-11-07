@@ -252,7 +252,7 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
         title: GUIDED_MERGE_CARD,
         presentation: preparedRevision(results.join("\n")),
         actions: [
-          { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+          { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
         ],
       },
     },

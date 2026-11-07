@@ -53,7 +53,7 @@ export const firstmateStoryMerge: Scenario =
                   id: "merge",
                   label: "Merge",
                   default: true,
-                  effect: { kind: "settle", mode: "merge" },
+                  effect: { kind: "merge", after: "close" },
                 },
                 { id: "wait", label: "Wait" },
               ],
@@ -117,7 +117,7 @@ export const firstmateStoryMerge: Scenario =
                 title: STORY_MERGE_TITLE,
                 presentation: preparedRevision(said),
                 actions: [
-                  { id: "merge", default: true, effect: { kind: "settle", mode: "merge" } },
+                  { id: "merge", default: true, effect: { kind: "merge", after: "close" } },
                 ],
               },
             },

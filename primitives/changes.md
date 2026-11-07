@@ -9,7 +9,7 @@ A task carries one change on its own branch and one for every other pull request
 Surfaces show the current pull request; the task record's Info tab and its `pullRequests` list name every one with its own checks, and which merge closes the task.
 Each change keeps its own saved story, so a story on one pull request never blocks another's.
 Give each version pushed its own row in the order the host saw it, holding the checks read, the review verdict declared with its findings and its reading, the story prepared and published, and the consent given there.
-Let the tools, the completion card and a review name the change by its id, and let every surface read what the host knows about it from the record ([the task record](../docs/task-record.md), "A task's change").
+Let the tools, the merge card and a review name the change by its id, and let every surface read what the host knows about it from the record ([the task record](../docs/task-record.md), "A task's change").
 
 ## When to use it, and when not
 
@@ -26,14 +26,14 @@ Work that ships nothing - an answer, a review the host raised, work in the perso
 - The projection from a task's record: `projectChange`, `projectOtherChange`, `otherChangeNumbers`, `carriesChange` and `isHostRaisedShape` in [`../src/core/storage/changeProjection.ts`](../src/core/storage/changeProjection.ts).
 - Reading it: `TaskService.changeFor` over `changes.forTask` for a task's own change, `TaskService.changesFor` over `changes.allForTask` for every change it names, and `CardService` over `changes.get` for the card that offers a version.
 - Naming it: `open_change` (`repository`, `base`, `branch`), `check_change` (`pull`, or one of the task's change ids) and `prepare_change` in the crewmate's tools ([`../src/core/pi/crewTools.ts`](../src/core/pi/crewTools.ts)), and a review commissioned with `spawn_crewmate review_of`.
-- Which change is current: the task's own, or the one `delivery.checkTarget` selects, which `check_change pull`, a named change id, `open_change branch` and the captain's click on a `request_merge` card set.
+- Which change is current: the task's own, or the one `delivery.checkTarget` selects, which `check_change pull`, a named change id, `open_change branch` and the captain's click on a merge card naming a review set.
 
 ## Operations and lifecycle
 
 A change comes into being when its task first carries one - work on a project the app manages, on a branch of its own, not building in place and not raised by the host on another task's change, while the task is open - and `TaskStore` projects it again on every write that can move it.
 Another pull request's change comes into being when the task first names it, by a review, a selection or an approval of it on another branch.
 One the task opened in another project the app manages is that project's change: its review names the project (`MergeReview.repoId`), and the record keeps it under that project's id (INF-2510; [the forge seam](../docs/forge.md), "A change in another project").
-Each head the project's host saw makes one version, in order: a check read, an owned merge review, a published story, a merge click and the repairs it was carried to, a completion offer, or an override given for one version.
+Each head the project's host saw makes one version, in order: a check read, an owned merge review, a published story, a merge click and the repairs it was carried to, a merge card, or an override given for one version.
 A plain branch's confirmed story and a local story's committed-head completion binding also make a version, without inventing a hosted request or upload.
 A review, a reading of the working copy or an unbound prepared story makes no version; they attach once its head is observed.
 A version once recorded stays, dated when the host first saw it; a reading of the checks replaces the last whole, a review replaces the last whole, and the consent's click, carried approval and override each follow their own newest fact.
@@ -44,10 +44,10 @@ A task's hard delete takes its change; a project removed keeps what its changes 
 In this piece the record is still a projection: the delivery fields stay their writers' and readers' slot, and the change record keeps no second source (INF-1868 piece 5); dropping those fields waits for readers that read the change first.
 
 A merge card names one change.
-The completion card's settle merge is the finishing merge: it merges the task's current change and closes the task.
-A `request_merge` card is a continuing merge: the task stays open and its crewmate hears the outcome once.
+Its merge effect's `after` says what follows (INF-2744): `close` is a finishing merge, which closes the task once nothing else on it is open; `continue` keeps the task open and its crewmate hears the outcome once.
+A task may have several merge cards up at once, one per pull request.
 The host writes on each merge card which it is (`mergeClosesLine`, [`../src/shared/cards.ts`](../src/shared/cards.ts)), from the card's own actions.
-A merge made elsewhere closes the task as merged when the crewmate declared it finishing (`merge_completes_task`) and nothing is left, or when the first mate settles it and none of the task's pull requests is still open ([the forge seam](../docs/forge.md), "A requested merge").
+A merge made elsewhere closes the task as merged when the crewmate's open merge card for it declared `after: close` and nothing is left, or when the first mate settles it and none of the task's pull requests is still open ([the forge seam](../docs/forge.md), "A requested merge").
 
 ## Authority
 
@@ -60,7 +60,7 @@ A reading of another branch's pull request writes into the same slot, and an app
 
 - Tasks carry a change and inherit its project; a review is a task the host raises on a change at a version ([tasks.md](tasks.md)).
 - Projects and working copies supply where the change lives and its delivery posture ([projects-and-working-copies.md](projects-and-working-copies.md)).
-- Cards and consent: the completion decision offers one version, and the captain's click is consent at that version ([cards-and-consent.md](cards-and-consent.md)).
+- Cards and consent: the merge card offers one version, and the captain's click is consent at that version ([cards-and-consent.md](cards-and-consent.md)).
 - The forge seam reads the checks and opens, publishes and merges the change ([the forge seam](../docs/forge.md)).
 - The served guidance that judges the change: the delivery judgment and the care sections, selected by the task's typed facts ([runbooks](../docs/runbooks.md)).
 

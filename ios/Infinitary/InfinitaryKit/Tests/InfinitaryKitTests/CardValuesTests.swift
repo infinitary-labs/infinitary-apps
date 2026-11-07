@@ -117,6 +117,12 @@ struct CardValuesTests {
         #expect(click.label(now: at).hasPrefix("You chose · "))
         #expect(click.label(now: at).hasSuffix(" · through 2 tasks"))
         #expect(click.words(open: false) == "File the picked improvements · start them later")
+        // INF-2744: a click names the card it was on, as the Mac writes it.
+        let onCard = try line([
+            "at": millis, "text": .string(""), "kind": .string("chose"),
+            "choice": .string("Merge the pull request"), "card": .string("Merge the meter fix")
+        ])
+        #expect(onCard.label(now: at).hasPrefix("You chose on “Merge the meter fix” · "))
         let from = try line([
             "at": millis, "text": .string("Cut tonight's alpha"), "kind": .string("from"), "key": .string("INF-2081")
         ])

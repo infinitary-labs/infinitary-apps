@@ -364,7 +364,7 @@ export class ChangePublication {
         (!hasChangeRequests(forge.kind) || !existing || ledger) &&
         !storyPassed;
       if (usesStory && (input.presentation === undefined || input.body !== undefined))
-        return `Prepare the current change story with prepare_change, then pass its presentation revision, not body. Native media hosts confirm every selected attachment before publication; other description hosts receive text only. A plain branch keeps its story on the completion card. To change only the words around a published story, pass around. ${softHoldWords("story", "crewmate")}`;
+        return `Prepare the current change story with prepare_change, then pass its presentation revision, not body. Native media hosts confirm every selected attachment before publication; other description hosts receive text only. A plain branch keeps its story on the merge card. To change only the words around a published story, pass around. ${softHoldWords("story", "crewmate")}`;
       if (!usesStory && input.presentation !== undefined)
         return "This host or existing pull request does not use saved change stories. Keep its existing delivery.";
       if (!usesStory && input.around !== undefined)
@@ -488,7 +488,7 @@ export class ChangePublication {
       if (!own) await this.selectOpened(record, forge, change, input.base);
       this.checks.noteChange(record.id, { change, forge });
       const next = [
-        "Read its checks with check_change. If the rest of your work needs this merged first, list it in the story's afterMerge and end this task with the completion decision after the checks pass.",
+        "Read its checks with check_change. If the rest of your work needs this merged first, list it in the story's afterMerge and end this task with the merge card after the checks pass.",
         this.readiness.readinessProblem(taskId, change),
       ]
         .filter(Boolean)
@@ -556,7 +556,7 @@ export class ChangePublication {
       await this.selectOpened(record, forge, change, input.base, repo);
       this.checks.noteChange(record.id, { change, forge });
       const next =
-        "Read its checks with check_change; they are read there, and the merge goes there. Show its outcome on the completion decision after they pass.";
+        "Read its checks with check_change; they are read there, and the merge goes there. Show its outcome on the merge card after they pass.";
       const said = described ? ` ${described}` : "";
       return existing
         ? `A pull request for ${branch} in ${repo.name} is already open: ${changeWords(forge, change)}.${said} ${next}`

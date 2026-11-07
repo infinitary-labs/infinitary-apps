@@ -29,7 +29,7 @@ Tokens, helper classes and on-brand prose are now an authoring PREFERENCE that t
 ### What the removal added, in the same change
 
 - **Effect-bearing actions are host chrome's alone.**
-  The one live vector the sanitizer never touched: a card's own script could call `inf.action(id)` for an action carrying a `settle merge` and merge its own PR at mount, before the captain had read the card.
+  The one live vector the sanitizer never touched: a card's own script could call `inf.action(id)` for an action carrying a merge effect and merge its own PR at mount, before the captain had read the card.
   The host now declares only the card's effect-FREE actions to the frame (`bridgeActionIds` in `src/renderer/src/cards/bridgeActions.ts`), so the bridge refuses the rest with `action_not_declared`.
   The core also checks the current card at dispatch time and refuses an effect-bearing action from a frame, so an in-place revision cannot reopen the path through a stale declaration.
   A settle, an `open`, or a host op happens only when the captain clicks the footer button React renders (`tests/e2e/card-effect-gate.spec.ts`).

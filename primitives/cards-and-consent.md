@@ -62,19 +62,21 @@ A question that needs a structured answer uses the questions in the body ([decis
 - Writing on someone else's card needs no grant and moves no responsibility: it never hands the work to the writer, files the card on the writer's task, withdraws or reopens it, or runs, approves, completes or settles anything.
   Another writer's revision is refused on a choice that carries an effect, a saved change story, a closed card's words, a required action's words and the app's own cards, each of which changes only through its own owner.
 - An action carrying an effect is never declared to the body's frame (`bridgeActionIds` in [`src/renderer/src/cards/bridgeActions.ts`](../src/renderer/src/cards/bridgeActions.ts)), so a body's own script cannot settle a task.
-- Effects an agent may declare: `settle merge`, `settle discard` (always danger; `confirm` only when the body says work is unlanded), `open` a Settings section or the task browser, `request_merge` of a stored review, and `request_write` of a kept forge write.
+- Effects an agent may declare: `merge` (with `after: close` or `after: continue`, a stored `review` for any pull request but the task's current change, and `asksFirst`), `settle discard` (always danger; `confirm` only when the body says work is unlanded), `open` a Settings section or the task browser, and `request_write` of a kept forge write.
+  Cards saved with the older `settle merge` and `request_merge` effects read as `merge` (`mergeEffectOf`, migration `migrateOneMergeEffect`).
 - The `host` effect kind belongs only to cards the app authors; every emit boundary refuses it from an agent.
-- An ordinary `request_merge` click keeps its exact reviewed target through a refused merge and an accepted unchanged repair, using the same merge-authorization owner as `settle merge`; rule-skipping clicks remain one-shot (`docs/forge.md`, "A requested merge").
-- On a completion offer the crewmate declares one `settle merge` and the host writes the merge-and-discard pair for the task's posture (`CrewmateCards.withCompletionActions`, captain lock 3).
-  A first-mate `settle merge` card on a task with a saved story binds that story once it is published, and is refused before display until then (INF-2490).
+- A merge click keeps its exact target through a refused merge and an accepted unchanged repair, through one merge-authorization owner; rule-skipping clicks remain one-shot (`docs/forge.md`, "A requested merge").
+- Every pull request merge is asked on the merge card (INF-2744): the crewmate declares one `merge` and the host writes its buttons for the task's posture - Discard beside a merge that closes the task and drops its own working copy, Not now beside any other (`CrewmateCards.withCompletionActions`, captain lock 3).
+  With autonomy on, the app authorizes the merge from the card itself unless the crewmate declared `asksFirst`; `SettleService.mergeRefusal` is the one reader of autonomy.
+  A first-mate merge card on a task with a saved story binds that story once it is published, and is refused before display until then (INF-2490).
   Every merge offer names the change it was shown for, and its click refuses once another change is current.
   A merge leaves a task open while a question or another of its pull requests is open, and the crewmate judges what comes next (INF-2525; `docs/forge.md`, "A requested merge").
-  First-mate cards, including older restored merge cards, never count as replacement completion offers that end a kept approval.
+  First-mate cards, including older restored merge cards, never count as replacement merge cards that end a kept approval.
 - What a choice authorizes (`HANDOFF`, contract v4.41): Approve and build authorizes implementation, not merging; Save and defer keeps the plan and authorizes no build; Abandon files nothing.
 - Explicit build words in a reply authorize implementation, not merging; settings, selection, praise, dismissal, script-triggered actions and a preview's controls authorize neither.
 - Merge, discard, a stronger model and unrelated work asked for under a crewmate's card are not the crewmate's to run: it closes its card and reports the captain's words verbatim with `needs_firstmate`.
 - Cards are threads (`docs/card-threads.md`): a reply goes to the card's author and resolves nothing but a crewmate's signed-off line, and putting it away resolves nothing; nothing in the host reads the captain’s words.
-- Required actions on a completion offer are display-only: they grant no execution permission, and a confirmation runs nothing (`docs/required-actions.md`).
+- Required actions on a merge card are display-only: they grant no execution permission, and a confirmation runs nothing (`docs/required-actions.md`).
 - A Careful validation question binds its approval to one ordinary action with `emit_card.validation_request` (`docs/delivery-rigor.md`, "Careful live validation"): a check approval is kept on the check by its id while the check declares the same resources and cost per run, and names no sign-in; an effect others can see is approved once and used once; a version's gaps share one host-drawn checklist whose ticked rows the click accepts, on a card with no script or field of its own, and an accepted gap lasts until its check fails or leaves the list.
 - Card bodies render verbatim with no sanitizer; never reintroduce a tag/attribute/CSS allowlist.
 - Containment is the frame's sandbox, its CSP and the host's bridge validation (`docs/live-prototype-security.md`).
@@ -82,7 +84,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 
 ## Compositions
 
-- A finished change's completion decision carries the saved change story and the host's settle facts strip; the merge itself is the delivery path in [projects-and-working-copies.md](projects-and-working-copies.md) and `docs/forge.md`.
+- A finished change's merge card carries the saved change story and the host's settle facts strip; the merge itself is the delivery path in [projects-and-working-copies.md](projects-and-working-copies.md) and `docs/forge.md`.
 - A plan or answer task's card is its deliverable ([tasks.md](tasks.md)); its closing choice and answers are carried into the builder's brief (`docs/sequences.md`).
 - Required captain actions become on-request `operation` tasks with a captain gate, owned by `TaskService`, at the merged close.
 - App-action handover and proposal cards are host-written cards whose one button runs or opens the catalog line ([app-actions.md](app-actions.md)).

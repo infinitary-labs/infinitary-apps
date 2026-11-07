@@ -433,7 +433,7 @@ describe("preparing a merge past the branch rules (FI3-1571 piece 2)", () => {
         `^Merge review mr[0-9a-f]{12} for #23 at ${HEAD} into main on GitHub, skipping the branch rules\\.$`,
       ),
     );
-    expect(lines).toContain("A request_merge card merges it and the task continues.");
+    expect(lines).toContain("Your merge card merges it, its review naming this review.");
     expect(lines).toContain(
       "It may skip these rules, each of which GitHub says your sign-in may skip: required checks (main checks); a review before merging (reviews).",
     );

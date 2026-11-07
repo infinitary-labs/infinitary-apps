@@ -13,5 +13,5 @@ In an ambiguous ask, choose a lesson when the words name something to learn, oth
   naming the project and why it is assumed casual; build plain HTML, CSS and JavaScript
   whose index.html opens with no install or server, not a panel. Plan skipping
   follows the Common workflows skip rule. Play-test and photograph a casual web project in your task
-  browser via a local server; when done, emit a note beside the completion decision
+  browser via a local server; when done, emit a note beside the merge card
   with that picture, browser_button Open and browser_page index.html; never wait on it.

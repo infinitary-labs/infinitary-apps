@@ -56,7 +56,7 @@ export const continueChange: Scenario =
                   id: "put-in",
                   label: "Put it in",
                   default: true,
-                  effect: { kind: "settle", mode: "merge" },
+                  effect: { kind: "merge", after: "close" },
                 },
               ],
             },

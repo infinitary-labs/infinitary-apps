@@ -1066,7 +1066,7 @@ describe("the Claude crewmate's coding session", () => {
       const emitCard = tools.find((tool) => tool.name === "emit_card");
       expect(emitCard?.description).toContain("send tags, never entity-escaped markup");
       expect(emitCard?.description).toContain(
-        "emit one completion decision with one settle merge action",
+        "Ask every merge on a merge card, one per pull request: one merge action",
       );
       const boundCard = bound.find((tool) => tool.name === "emit_card");
       expect(Object.keys(emitCard?.inputSchema.properties ?? {})).toEqual(

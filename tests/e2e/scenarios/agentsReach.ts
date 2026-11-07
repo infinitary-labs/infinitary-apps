@@ -131,7 +131,7 @@ export const REACH_AUDIT_CARD_TITLE = "This week's reach audit found no new verd
 const MERGE_ACTION = {
   id: "merge",
   default: true,
-  effect: { kind: "settle", mode: "merge" },
+  effect: { kind: "merge", after: "close" },
 } as const;
 
 /** The captain's typed words, as the first mate is served them. */

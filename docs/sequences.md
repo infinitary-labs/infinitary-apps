@@ -32,7 +32,7 @@ When the ask does not say, the first mate treats it as casual and writes the rea
 For a casual web project it proposes local-only delivery, automatic merging, quick care and plain HTML, CSS and JavaScript opening from index.html without installation or a server.
 A serious project names a framework, engine or build step, hosting or a store, a sign-in or a database, a team or a customer, or a release or a launch, and gets asks-first, standard care and a plan first.
 Plan skipping stays governed by the existing skip rule, and the full project line reaches the crewmate as a constraint.
-A casual web project's crewmate play-tests and photographs it in its task browser through a local server, then puts up a note beside its completion decision with that picture and `browser_button` Open with `browser_page` index.html, and never waits on that note (`docs/task-browser.md`, "A page from the project").
+A casual web project's crewmate play-tests and photographs it in its task browser through a local server, then puts up a note beside its merge card with that picture and `browser_button` Open with `browser_page` index.html, and never waits on that note (`docs/task-browser.md`, "A page from the project").
 
 Each step is one of the task kinds the classifier already speaks (plan, retrieval, research, reproduce, implement, fix), so the document's line for a step, the kind the host records and the tier it routes to agree.
 The host never reads a kind from a title: it records the declaration, or asks the classifier for undeclared work.
@@ -113,7 +113,7 @@ The host judges nothing: no dispatch rule reads a row's children.
   The choice, the submitted answers and the thread stay words in the brief.
   A discovered-from origin's card goes the same way; a card that cannot be saved rides in the brief whole.
 - The card the basis section carries is the one its own crewmate answered with: the newest of its crewmate's cards the captain chose an action on, else its crewmate's newest card, never a merge decision while another card exists, and never a first mate or host card filed under the task (`CardStore.newestAnswerForTask`).
-  A basis that prototyped and then built hands over its prototype, not its completion card or a note that came after; the thread, the choice and the submitted answers come off that same card.
+  A basis that prototyped and then built hands over its prototype, not its merge card or a note that came after; the thread, the choice and the submitted answers come off that same card.
 - The context index nests live children under their live parent, and a parent with no crewmate says so with its children's counts; a parent and its children count as one row against the caps.
 
 ## The plan's final spec is on the record
@@ -151,7 +151,7 @@ The captain's replies and choice reach the step there, not through the first mat
 
 ## The proof
 
-`tests/e2e/sequences.spec.ts` runs the feature ask end to end (plan step, the captain's thread reply and choice, the grounded implement step, its completion card, the parent's close and feed line), a plan saved for later (Save and defer files one build on request, nothing starts, and the captain's Start grounds it on the plan), an ask for a prototype (one read-only plan step carrying the plan line, its preview's staged setting submitted by Approve and build, and a builder whose brief carries the card file, the choice and the setting), a clear, small ask (one running implement task and nothing else filed, no parent), and both bug outcomes through the real app and the mock provider, whose first mate follows the instructions by script; in the feature case the scripted first mate relays the document's implement line as a `create_task` constraint, and the spec asserts the implement step's served brief carries it word for word under the captain's words.
+`tests/e2e/sequences.spec.ts` runs the feature ask end to end (plan step, the captain's thread reply and choice, the grounded implement step, its merge card, the parent's close and feed line), a plan saved for later (Save and defer files one build on request, nothing starts, and the captain's Start grounds it on the plan), an ask for a prototype (one read-only plan step carrying the plan line, its preview's staged setting submitted by Approve and build, and a builder whose brief carries the card file, the choice and the setting), a clear, small ask (one running implement task and nothing else filed, no parent), and both bug outcomes through the real app and the mock provider, whose first mate follows the instructions by script; in the feature case the scripted first mate relays the document's implement line as a `create_task` constraint, and the spec asserts the implement step's served brief carries it word for word under the captain's words.
 Unit coverage: `taskTools.test.ts` (a planned step's constraint and delivery note reach its brief), `sequencesSkill.test.ts` (seed, ownership, fallbacks), `firstmateSession.instructions.contract.test.ts` (what real Pi sends and records), `firstmateSession.realSession.test.ts` (never mid-turn), `firstmateAgent.context.test.ts` (served at each boundary, the one feed line, the nested index), and `starts.classify.test.ts` and `intake.taskGraph.test.ts` (basis at dispatch, the container rule, the basis section).
 
 ## Notes moved from AGENTS.md
@@ -166,7 +166,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 ### A landing in the middle of work
 
-When the rest of a crewmate's work requires its own change to be put in first, it lists that rest as after-merge steps on its change's story and puts up the ordinary completion decision ("After-merge steps", `docs/task-graph.md`).
+When the rest of a crewmate's work requires its own change to be put in first, it lists that rest as after-merge steps on its change's story and puts up the ordinary merge card ("After-merge steps", `docs/task-graph.md`).
 The card shows the captain what the crew starts once the merge goes through, and no extra turn or triage comes between the report and the card.
 The merge files each step as a `Continue: …` task, and the ready sweep after the close starts it from the freshly fetched main line.
 The continuation's brief carries the origin's report, card and thread as its origin section.

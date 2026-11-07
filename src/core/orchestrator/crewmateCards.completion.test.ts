@@ -39,6 +39,7 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { deferred } from "../../../tests/helpers/deferred";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { type ForgePull, presentationCardBody, presentationMarkdown } from "../forge";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
@@ -52,8 +53,11 @@ import { MERGES_NEXT_WORDS, mergedWords, pendingMergeLine } from "./settleWords"
 
 fakeCrewTimersEachTest();
 
+/** The one merge action a crewmate declares on its merge card (INF-2744). */
+const MERGE_ACTION = { id: "merge", effect: SETTLE_MERGE };
+
 describe("CrewSupervisor", () => {
-  it("attaches the completion buttons itself from the posture (contract v3.6, captain lock 3)", async () => {
+  it("attaches the merge card's buttons itself from the posture (contract v3.6, captain lock 3, INF-2744)", async () => {
     // The audit's 4.4b row 2: every completion card in the window carried
     // the same pair, the host already resolved the merge by posture, and a
     // crewmate was transcribing labels it could not see - the Claude ones,
@@ -67,6 +71,9 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card keeps the host's buttons
+    // instead of the app merging from it as it goes up.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     await specs[0]?.onCard?.({
       requiredActions: [],
       title: "The meter test is steady",
@@ -109,6 +116,9 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card keeps the host's buttons
+    // instead of the app merging from it as it goes up.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     await specs[0]?.onCard?.({
       requiredActions: [],
       title: "The meter reads true",
@@ -180,6 +190,9 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card keeps the host's buttons
+    // instead of the app merging from it as it goes up.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     expect(() =>
       specs[0]?.onCard?.({
         title: "Reduced motion needs an answer",
@@ -254,6 +267,9 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card keeps the host's buttons
+    // instead of the app merging from it as it goes up.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     specs[0]?.onCard?.({
       requiredActions: [],
       title: "firstmate-3000 fm/task-ready is done",
@@ -337,6 +353,8 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     });
     await tick();
     vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+    // INF-2744: autonomy off, so the merge card waits for the captain's click.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     const completion = (after: string) => ({
       requiredActions: [],
       id: "ready",
@@ -547,6 +565,9 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue(
         destination === "local" ? "local-only" : "direct-pr",
       );
+      // INF-2744: the click is the captain's only with autonomy off; with it
+      // on, the app merges from the card as it goes up.
+      vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
       story = {
         version: 1,
         taskId,
@@ -609,12 +630,12 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         }),
       ).toThrow(
         // INF-961: the refusal names the way to a story at the pushed version,
-        // which a pull request's host republishes on its own (INF-2509).
+        // which a pull request's host republishes on its own (INF-2509); INF-2744 calls it the merge card.
         destination === "local"
-          ? "Use presentation on the completion card so it shows the current committed story, not a second account of the change. This task's newest story is revision 1. After another commit, prepare a new story with prepare_change, then show its revision as presentation; local-only work skips open_change."
+          ? "Use presentation on the merge card so it shows the current committed story, not a second account of the change. This task's newest story is revision 1. After another commit, prepare a new story with prepare_change, then show its revision as presentation; local-only work skips open_change."
           : destination === "hosted"
-            ? "Use presentation on the completion card so it shows the current published story, not a second account of the change. This task's newest story is revision 1. After a push since the story was published, show the same revision as presentation: the app republishes it at the pushed version. Prepare and publish a new revision only when what the story says changed."
-            : "Use presentation on the completion card so it shows the current published story, not a second account of the change. This task's newest story is revision 1. After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.",
+            ? "Use presentation on the merge card so it shows the current published story, not a second account of the change. This task's newest story is revision 1. After a push since the story was published, show the same revision as presentation: the app republishes it at the pushed version. Prepare and publish a new revision only when what the story says changed."
+            : "Use presentation on the merge card so it shows the current published story, not a second account of the change. This task's newest story is revision 1. After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the merge card with the revision prepare_change returns as presentation.",
       );
       const id = await specs[0]?.onCard?.({
         title: "Ignored duplicate title",
@@ -667,6 +688,8 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     });
     await tick();
     vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+    // INF-2744: autonomy off, so the merge card waits for the captain's click.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     story = {
       version: 1,
       taskId,
@@ -737,7 +760,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
 
   // INF-547, the captain's direction C: a task that merges on its own shows
   // the crewmate's same story before the merge, on a note with no button.
-  it("shows the published story on a note only when the task merges on its own (INF-547)", async () => {
+  it("shows the published story on a note only when the task merges on its own (INF-547, INF-2744)", async () => {
     const crewmate = fakeCrewmate();
     let story: ChangePresentation;
     const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
@@ -748,14 +771,26 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       requiredActions: story.requiredActions,
       pictures: story.pictures,
     }));
-    const { supervisor, tasks, specs, cards } = setup(crewmate, {
+    const { supervisor, tasks, specs, cards, db } = setup(crewmate, {
       checkCi: async () => "green",
       completionPresentation,
     });
+    // INF-2744: the app keeps its own merge approval from the merge card,
+    // which needs a project where the pull request lives.
+    db.prepare(
+      "INSERT INTO repos (id, path, name, added_at, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, 'direct-pr', 1)",
+    ).run(
+      "meter",
+      scratchDir("story-note-project"),
+      "Meter",
+      1,
+      "https://github.com/octo/meter.git",
+    );
     const { taskId } = await supervisor.intake.commission({
       title: "Share the completed change",
       intent: intentOf("share the same story"),
       shape: { rigor_ask: "quick" },
+      repoId: "meter",
     });
     await tick();
     vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
@@ -868,13 +903,21 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     // INF-968: reach the supervisor through the same tool Pi and Claude bind,
     // not onCard directly, which missed the tool's refusal of every story note.
     const emitCard = bindTool(EMIT_CARD_TOOL, specs[0] as CrewmateSpec);
-    const note = { title: "Ignored", presentation: 1, actions: [] };
-    // A task that asks first gets the story only as its merge offer.
+    // INF-2744: a story with no merge action is refused whatever the
+    // autonomy; a task that merges on its own shows its merge card too.
     const autonomy = vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
-    await expect(emitCard.run(note)).rejects.toThrow(/or its note when the task merges on its own/);
+    await expect(emitCard.run({ title: "Ignored", presentation: 1, actions: [] })).rejects.toThrow(
+      /one merge action/,
+    );
+    autonomy.mockReturnValue(true);
+    await expect(emitCard.run({ title: "Ignored", presentation: 1, actions: [] })).rejects.toThrow(
+      /one merge action/,
+    );
     expect(cards()).toHaveLength(0);
     expect(completionPresentation).not.toHaveBeenCalled();
-    autonomy.mockReturnValue(true);
+    // With autonomy on, the app approves the merge from the merge card as it
+    // goes up and shows it without buttons, as the story note.
+    const note = { title: "Ignored", presentation: 1, actions: [MERGE_ACTION] };
     const result = await emitCard.run(note);
     await tick();
     const card = cards().find((entry) => entry.taskId === taskId);
@@ -890,9 +933,19 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(tasks.get(taskId)?.delivery?.risk).toEqual({ declared: METER_RISK });
     expect(card?.body.startsWith(pendingMergeLine("project"))).toBe(true);
     expect(card && splitSettleFacts(card.body)?.facts).toContain('data-fact="change"');
-    expect(card?.requiredActions).toBeUndefined();
-    // The note records no offer of its own; only the first mate's merge card's stands.
-    expect(tasks.get(taskId)?.delivery?.completionOffers).toEqual([firstmateOffer]);
+    // INF-2744: it is the merge card, so it carries the story's required
+    // actions, none here.
+    expect(card?.requiredActions).toEqual([]);
+    // INF-2744: the crewmate's merge card records its own offer beside the
+    // first mate's, the one the app's approval merges.
+    expect(tasks.get(taskId)?.delivery?.completionOffers?.at(-1)).toMatchObject({
+      cardId: card?.id,
+      presentationRevision: 1,
+    });
+    expect(tasks.get(taskId)?.delivery?.mergeAuthorization).toMatchObject({
+      issuer: "autonomy",
+      status: "standing",
+    });
   });
 
   /**
@@ -915,18 +968,32 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       requiredActions: story.requiredActions,
       pictures: story.pictures,
     }));
+    // INF-2744: a check still runs when the turn ends, so the app's approval
+    // from the merge card waits for it; each case decides how it merges.
+    let checks: "green" | "pending" = "green";
     // The merge takes the settle's last look right before it sends, as the
-    // forge's merge does (`ChangeMerges.merge`).
+    // forge's merge does (`ChangeMerges.merge`), and waits on a running
+    // check as its guard does.
     const mergePullRequest = vi.fn(
       async (_taskId: string, _guard?: MergeGuard, boundary?: MergeBoundary) => {
+        if (checks === "pending")
+          return {
+            ok: false,
+            text: "Cannot merge yet - a check is still running.",
+            notGreen: true,
+            stop: "checks" as const,
+          };
         const withdrawn = boundary?.beforeDispatch(head);
         return withdrawn
           ? { ok: false, text: `Cannot merge: ${withdrawn}` }
-          : { ok: true, text: "Merged #1 on GitHub." };
+          : // A real merge answers with the version it merged, which the
+            // change's receipt keeps (INF-2744: the app's own merge reads
+            // "on its own" from that receipt).
+            { ok: true, text: "Merged #1 on GitHub.", receipt: { head } };
       },
     );
     const harness = setup(crewmate, {
-      checkCi: async () => "green",
+      checkCi: async () => checks,
       completionPresentation,
       mergePullRequest,
       ...extras,
@@ -960,10 +1027,24 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         await tick();
       }
     }
+    // INF-2744: the app keeps its own merge approval from the merge card,
+    // which needs a project where the pull request lives.
+    harness.db
+      .prepare(
+        "INSERT INTO repos (id, path, name, added_at, origin, delivery, autonomy) VALUES (?, ?, ?, ?, ?, 'direct-pr', 1)",
+      )
+      .run(
+        "meter",
+        scratchDir("held-note-project"),
+        "Meter",
+        1,
+        "https://github.com/octo/meter.git",
+      );
     const { taskId } = await supervisor.intake.commission({
       title: "Share the completed change",
       intent: intentOf("share the same story"),
       shape: { rigor_ask: "quick" },
+      repoId: "meter",
     });
     // The first mate names the same message on the work it starts.
     if (askId) tasks.capture.attachAsk(askId, taskId, "tool:spawn_crewmate");
@@ -1014,15 +1095,37 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     }));
     seedDelivery(tasks, taskId, { headSha: head, prNumber: 1, ci: "green" });
     const emitCard = bindTool(EMIT_CARD_TOOL, specs[0] as CrewmateSpec);
-    await emitCard.run({ title: "Ignored", presentation: 1, actions: [] });
+    // INF-2744: the crewmate shows its merge card as any task does; with
+    // autonomy on the app authorizes the merge from it as it goes up, and
+    // the card keeps no buttons, so it reads as the held story note.
+    await emitCard.run({ title: "Ignored", presentation: 1, actions: [MERGE_ACTION] });
+    checks = "pending";
+    seedDelivery(tasks, taskId, { ci: "pending" });
     crewmate.finishPrompt();
     await tick();
+    /** The checks pass again: the app's approval may merge, and so may the first mate. */
+    // The merge attempts that waited on the running check are forgotten, so
+    // each case counts only the merges sent once the checks pass.
+    const checksPass = () => {
+      mergePullRequest.mockClear();
+      checks = "green";
+      seedDelivery(tasks, taskId, { ci: "green" });
+    };
     const note = () =>
       supervisor.cards.snapshot().find((card) => card.taskId === taskId && isStoryNote(card));
     expect(note()?.body).toContain(MERGES_NEXT_WORDS);
     expect(note()?.awaiting).toBe("close-out");
     expect(onStage(note() as Card)).toBe(false);
-    return { ...harness, crewmate, emitCard, mergePullRequest, taskId, note, answerCard };
+    return {
+      ...harness,
+      crewmate,
+      emitCard,
+      mergePullRequest,
+      taskId,
+      note,
+      answerCard,
+      checksPass,
+    };
   }
 
   /** The note's merge line: its first paragraph. */
@@ -1033,9 +1136,17 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
   // card and wait for the final update with "merged on its own" already
   // present". The story note waits off the stack through its crewmate's
   // close-out, and the first mate's merge shows it once, already merged.
-  it("keeps a self-merging task's story note off the stack until the first mate's merge, then shows it once saying it merged (INF-2533)", async () => {
-    const { supervisor, tasks, taskId, note, mergePullRequest } = await heldStoryNote();
-    await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
+  // INF-2744: the merge is the app's own, from the merge card, with no
+  // first mate turn.
+  it("keeps a self-merging task's story note off the stack until the app's merge from its card, then shows it once saying it merged (INF-2533, INF-2744)", async () => {
+    const { supervisor, tasks, taskId, note, mergePullRequest, checksPass } = await heldStoryNote();
+    expect(tasks.get(taskId)?.delivery?.mergeAuthorization).toMatchObject({
+      issuer: "autonomy",
+      status: "standing",
+    });
+    checksPass();
+    await supervisor.settling.kept.runMergeAuthorization(taskId);
+    await tick();
     expect(mergePullRequest).toHaveBeenCalledOnce();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
     const shown = note() as Card;
@@ -1056,8 +1167,8 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
   // decision or hold still needs attention". The note stays off the stack
   // until the merge has a result, so a wait on it can only end after the
   // merge: it holds the merge no more than a wait on a merge offer does.
-  it("merges a self-merging task whose crewmate waits on the captain to read its held story note (INF-2761)", async () => {
-    const { supervisor, tasks, taskId, note, mergePullRequest, specs, crewmate } =
+  it("merges a self-merging task whose crewmate waits on the captain to read its held story note (INF-2761, INF-2744)", async () => {
+    const { supervisor, tasks, taskId, note, mergePullRequest, specs, crewmate, checksPass } =
       await heldStoryNote();
     const held = note() as Card;
     // Its next turn reports the green change, waiting on the captain to read the note.
@@ -1074,9 +1185,11 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     await endTurn(crewmate, taskId);
     const waiting = tasks.get(taskId);
     expect(waiting?.delivery?.captainWait).toMatchObject({ cardId: held.id });
-    expect(waiting?.gate).toMatchObject({ kind: "captain", ref: held.id });
-    const answer = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
-    expect(answer.text).not.toContain(softHoldWords("decisions", "firstmate"));
+    // INF-2744: the app's approval from the merge card merges once the checks
+    // pass; the wait on the held note holds nothing, and no first mate turn runs.
+    checksPass();
+    await supervisor.settling.kept.runMergeAuthorization(taskId);
+    await tick();
     expect(mergePullRequest).toHaveBeenCalledOnce();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" });
     expect(onStage(note() as Card)).toBe(true);
@@ -1097,7 +1210,11 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     async (_label, pick) => {
       const SENTENCE =
         "I merged PR #1, which keeps each confirmed upload, under your rule for main fixes.";
-      const { supervisor, tasks, taskId, note, answerCard } = await heldStoryNote({ pick });
+      const { supervisor, tasks, taskId, note, answerCard, checksPass } = await heldStoryNote({
+        pick,
+      });
+      // The first mate's own merge, for the captain's spoken words.
+      checksPass();
       await supervisor.settling.closing.withClosingSentence(taskId, SENTENCE, () =>
         supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr"),
       );
@@ -1259,9 +1376,12 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       base: "main",
       readiness: "clean",
     };
-    const { supervisor, crewmate, taskId, note, specs, emitCard } = await heldStoryNote(undefined, {
-      readPull: async (_id, number) => (number === 1 ? pull : undefined),
-    });
+    const { supervisor, crewmate, taskId, note, specs, emitCard, checksPass } = await heldStoryNote(
+      undefined,
+      {
+        readPull: async (_id, number) => (number === 1 ? pull : undefined),
+      },
+    );
     await specs[0]?.onCard?.({
       title: "Keep the old receipts?",
       body: "<p>Should old receipts stay?</p>",
@@ -1275,7 +1395,9 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     await tick();
     const first = note() as Card;
     expect(onStage(first)).toBe(true);
-    await emitCard.run({ title: "Ignored", presentation: 1, actions: [] });
+    // INF-2744: the crewmate puts up its next merge card once the checks pass.
+    checksPass();
+    await emitCard.run({ title: "Ignored", presentation: 1, actions: [MERGE_ACTION] });
     crewmate.finishPrompt();
     await tick();
     const later = supervisor.cards
@@ -1362,7 +1484,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     prepare(version(1, head));
     seedDelivery(tasks, taskId, { ci: "green" });
     const emitCard = bindTool(EMIT_CARD_TOOL, specs[0] as CrewmateSpec);
-    await emitCard.run({ id: "meter-story", title: "Ignored", presentation: 1, actions: [] });
     // A question still open keeps the task open past its merge.
     await specs[0]?.onCard?.({
       title: "Keep the old receipts?",
@@ -1372,14 +1493,22 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         { id: "drop", label: "Drop them" },
       ],
     });
+    // INF-2744: the crewmate shows its merge card, which the app keeps
+    // without buttons as the story note.
+    await emitCard.run({
+      id: "meter-story",
+      title: "Ignored",
+      presentation: 1,
+      actions: [MERGE_ACTION],
+    });
     crewmate.finishPrompt();
     await tick();
     const note = () =>
       supervisor.cards
         .snapshot()
         .find((card) => card.taskId === taskId && isStoryNote(card)) as Card;
-    expect(note().awaiting).toBe("close-out");
-    await supervisor.settling.settle.settleTaskDetailed(taskId, "land");
+    // INF-2744: with autonomy on, the app merges from the merge card once
+    // the crewmate's turn ends; the open question keeps the task open.
     expect(tasks.get(taskId)?.status).not.toBe("done");
     expect(tasks.get(taskId)?.delivery?.landedHead).toBe(head);
     await tick();
@@ -1389,7 +1518,12 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     // More work on the same change: a second story at the new commit, shown
     // on the same note.
     prepare(version(2, later));
-    await emitCard.run({ id: first.id, title: "Ignored", presentation: 2, actions: [] });
+    await emitCard.run({
+      id: first.id,
+      title: "Ignored",
+      presentation: 2,
+      actions: [MERGE_ACTION],
+    });
     await tick();
     const revised = supervisor.cards.get(first.id) as Card;
     expect(revised.createdAt).toBe(first.createdAt);
@@ -1594,7 +1728,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     });
   });
 
-  it("publishes the completion card, with a fresh CI reading, once CI is green", async () => {
+  it("publishes the merge card, with a fresh CI reading, once CI is green", async () => {
     const crewmate = fakeCrewmate();
     const checkCi = vi.fn(async () => "green" as const);
     const { supervisor, specs, cards } = setup(crewmate, { checkCi });
@@ -1605,6 +1739,8 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     });
     await tick();
     vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+    // INF-2744: autonomy off, so the merge card waits for the captain's click.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
 
     const result = specs[0]?.onCard?.({
       requiredActions: [],
@@ -1704,7 +1840,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     return { ...harness, crewmate, taskId, emitCard };
   }
 
-  it("records a missing-target refusal, names it beside a report that says the card went up, and clears it once the card goes up", async () => {
+  it("records a missing-target refusal, names it beside a report that says the card went up, and clears it once the card goes up (INF-2744)", async () => {
     const checks: { overall: import("./changeChecks").PrCiOverall } = { overall: "no-pr" };
     const { supervisor, tasks, ops, ledger, ledgerFacts, cards, crewmate, taskId, emitCard } =
       await shipping(checks);
@@ -1736,13 +1872,14 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
     ).toMatchObject({
       kind: "note",
       actor: "host",
-      text: 'completion card "Ready to merge" refused: no open pull request was found for its branch',
+      // INF-2744: the completion card is the merge card.
+      text: 'merge card "Ready to merge" refused: no open pull request was found for its branch',
     });
 
     // The crewmate's report claims the card went up; the wake says it did not.
     await reportTurn(crewmate, taskId, "Completion card emitted.");
     expect(ops).toEqual([
-      `[fm-op] crewmate 1 reported on task ${taskId} "Ship the fix": Completion card emitted. The host refused its completion card "Ready to merge" at ${at}: no open pull request was found for its branch. That card did not reach the captain, and no card of its is on the captain's screen.`,
+      `[fm-op] crewmate 1 reported on task ${taskId} "Ship the fix": Completion card emitted. The host refused its merge card "Ready to merge" at ${at}: no open pull request was found for its branch. That card did not reach the captain, and no card of its is on the captain's screen.`,
     ]);
     expect(ledgerFacts.at(-1)).toMatchObject({
       kind: "report",

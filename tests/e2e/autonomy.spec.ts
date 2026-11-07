@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
+import { MERGE_LINE_MARK, mergedWords } from "../../src/core/orchestrator/settleWords";
 import { openDatabase } from "../../src/core/storage/db";
-import { CARE_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
+import { CARE_WORDS, MERGE_NOT_NOW_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -10,7 +11,12 @@ import { AUTONOMY_ASK_MARKER, MERGE_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from ".
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { feedLine, putInLine, taskKey } from "./rails";
-import { AUTONOMY_PROMPT_MARKER, autonomy, MOCK_AUTONOMY_CARD_TITLE } from "./scenarios/autonomy";
+import {
+  AUTONOMY_ASKS_FIRST_MARKER,
+  AUTONOMY_PROMPT_MARKER,
+  autonomy,
+  MOCK_AUTONOMY_CARD_TITLE,
+} from "./scenarios/autonomy";
 import { factsStrip, shownCard } from "./stack";
 
 /**
@@ -22,9 +28,14 @@ import { factsStrip, shownCard } from "./stack";
  * Firstmate that reached for `settle_task merge-pr` on an ask-first
  * repository merged. What this spec proves end to end is the difference:
  * on the SAME repository, with the same scripted Firstmate turn, a task the
- * captain said nothing about is held - nothing merges, the completion card
+ * captain said nothing about is held - nothing merges, the merge card
  * stays on the stack with its own "Merge the pull request" button - and a task he said
- * "merge it yourself when it's green" about merges. The local GitHub
+ * "merge it yourself when it's green" about merges.
+ * INF-2744 (the captain's plan answer, "autonomy control should all be
+ * consistent"): every merge is asked on the same merge card, and with
+ * autonomy on the app merges from that card itself as it goes up, with no
+ * first mate turn, unless the crewmate declared that a standing direction
+ * leaves this merge to the captain. The local GitHub
  * stand-in (`./githubStub.ts`) records every merge the app asks for through
  * its own sign-in, so "nothing merged" is read off the forge, not off prose.
  * Each test starts from its own fresh app, repository and stand-in.
@@ -33,6 +44,7 @@ import { factsStrip, shownCard } from "./stack";
 const REPO_NAME = "meterlab";
 const HELD_TITLE = `${REPO_NAME} ${AUTONOMY_PROMPT_MARKER}`;
 const ASKED_TITLE = `${REPO_NAME} ${AUTONOMY_PROMPT_MARKER}, ${AUTONOMY_ASK_MARKER}`;
+const ASKS_FIRST_TITLE = `${REPO_NAME} ${AUTONOMY_ASKS_FIRST_MARKER}, ${AUTONOMY_ASK_MARKER}`;
 
 /** The change GitHub holds for the task's branch, as its crewmate opened it. */
 const CHANGE = {
@@ -126,6 +138,11 @@ test("the host holds a Firstmate merge where autonomy is off, and the captain's 
   const frame = cardBody(page, cardTitle);
   await expect(factsStrip(frame).care).toHaveText(CARE_WORDS.quick);
   await expect(page.getByRole("button", { name: MERGE_WORDS["merge-pr"] })).toBeVisible();
+  // INF-2744: the merge closes the task and drops its own working copy, so
+  // Discard sits beside it, and Not now does not.
+  const card = shownCard(page, cardTitle);
+  await expect(card.getByRole("button", { name: "Discard", exact: true })).toBeVisible();
+  await expect(card.getByRole("button", { name: MERGE_NOT_NOW_WORDS, exact: true })).toHaveCount(0);
 
   // The Firstmate reaches for the merge, and the host refuses. The refusal
   // is a tool result, not a feed line - there is nothing to announce, since
@@ -162,38 +179,66 @@ test("the host holds a Firstmate merge where autonomy is off, and the captain's 
     .toBe("done");
 });
 
-test("a task the captain said to merge on green merges itself, on the same ask-first repository", async () => {
+/** The task's record, by its title. */
+async function taskDetail(title: string) {
+  const page = launched.page;
+  const board = await page.evaluate(() => window.infinitary.tasks.board());
+  const task = board.tasks.find((row) => row.title === title);
+  return task ? page.evaluate((id) => window.infinitary.tasks.detail(id), task.id) : null;
+}
+
+// INF-2744: with autonomy on, the app merges from the crewmate's merge card
+// as it goes up - no first mate turn and no click - and the card then shows
+// once, without buttons, saying it merged on its own.
+test("a task the captain said to merge on green merges from its own merge card, on the same ask-first repository (INF-2744)", async () => {
   const { page } = launched;
   await send(`${SPAWN_PROMPT_MARKER} ${ASKED_TITLE}`);
   const cardTitle = MOCK_AUTONOMY_CARD_TITLE(ASKED_TITLE);
-  await expect(shownCard(page, cardTitle)).toBeVisible({ timeout: 30_000 });
-  // The per-task autonomy ask on an ask-first project changes the hold,
-  // not the task's care.
+  // Nothing more is asked of the first mate: the merge goes at the checked
+  // head. The app merges as soon as the checks pass and the close drops the
+  // task's branch, so the head is read from the task's record, which keeps it.
+  await expect.poll(() => github.merges().length, { timeout: 30_000 }).toBe(1);
+  await expect
+    .poll(() => taskDetail(ASKED_TITLE), { timeout: 15_000 })
+    .toMatchObject({ status: "done", closedReason: "merged" });
+  const head = (await taskDetail(ASKED_TITLE))?.delivery?.headSha as string;
+  expect(head).toMatch(/^[0-9a-f]{40}$/);
+  expect(github.merges()).toEqual(squashAt(head));
+  // The merge card shows once, after the merge, with no button left on it.
+  const card = shownCard(page, cardTitle);
+  await expect(card).toBeVisible({ timeout: 15_000 });
   const frame = cardBody(page, cardTitle);
   await expect(factsStrip(frame).care).toHaveText(CARE_WORDS.quick);
-
+  await expect(frame.locator(`[${MERGE_LINE_MARK}]`)).toContainText(mergedWords("", true).trim());
+  await expect(card.getByRole("button", { name: MERGE_WORDS["merge-pr"] })).toHaveCount(0);
+  expect(
+    (await page.evaluate(() => window.infinitary.cards.list())).find(
+      (entry) => entry.title === cardTitle,
+    )?.actions,
+  ).toEqual([]);
   await page.screenshot({ path: test.info().outputPath("autonomy-on-card.png") });
+});
 
-  // The SAME Firstmate move the first test was refused for, on a
-  // repository set up the same way: the per-task ask is the whole difference.
+// INF-2744: a crewmate whose standing direction leaves the merge to the
+// captain declares asks_first, and the merge card keeps its buttons on a
+// task that otherwise merges on its own.
+test("a merge card that asks first waits for the captain's click on a task that merges on its own (INF-2744)", async () => {
+  const { page } = launched;
+  await send(`${SPAWN_PROMPT_MARKER} ${ASKS_FIRST_TITLE}`);
+  const cardTitle = MOCK_AUTONOMY_CARD_TITLE(ASKS_FIRST_TITLE);
+  const card = shownCard(page, cardTitle);
+  await expect(card).toBeVisible({ timeout: 30_000 });
+  const head = await checkedHead(ASKS_FIRST_TITLE);
+  const button = card.getByRole("button", { name: MERGE_WORDS["merge-pr"] });
+  await expect(button).toBeVisible();
+  // The app sent nothing on its own, and the task waits for the captain.
   expect(github.merges()).toEqual([]);
-  const head = await checkedHead(ASKED_TITLE);
-  await send(`${MERGE_PROMPT_MARKER}${ASKED_TITLE}`);
-  // This task's own merge line: the captain's-click receipt is not this
-  // path's, and a feed shared with another test would show that one's.
-  await expect(putInLine(page, await taskKey(page, ASKED_TITLE))).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect.poll(() => github.merges(), { timeout: 15_000 }).toEqual(squashAt(head));
+  expect(await taskDetail(ASKS_FIRST_TITLE)).toMatchObject({ status: "active" });
+  await page.screenshot({ path: test.info().outputPath("autonomy-asks-first-card.png") });
+  await button.click();
+  await expect.poll(() => github.merges(), { timeout: 30_000 }).toEqual(squashAt(head));
   await expect
-    .poll(
-      async () => {
-        const board = await page.evaluate(() => window.infinitary.tasks.board());
-        const task = board.tasks.find((row) => row.title === ASKED_TITLE);
-        return task ? page.evaluate((id) => window.infinitary.tasks.detail(id), task.id) : null;
-      },
-      { timeout: 15_000 },
-    )
+    .poll(() => taskDetail(ASKS_FIRST_TITLE), { timeout: 15_000 })
     .toMatchObject({ status: "done", closedReason: "merged" });
 });
 

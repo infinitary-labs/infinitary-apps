@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { cardLabelKey, parsePlainLabelRows } from "../../scripts/interaction-metrics";
 import { presentationCommitMessage } from "../../src/core/forge";
+import { MERGE_WRITE_REFUSAL } from "../../src/core/forge/apiWriteGuard";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
 import { openDatabase } from "../../src/core/storage/db";
@@ -759,7 +760,8 @@ test("a crewmate cannot merge or move the default branch through raw GitHub writ
   const outcome = detail?.outcome ?? "";
   const calls = mergeWriteCases("github", "/repos/octo/meterlab");
   expect(outcome.split("(refused)").length - 1).toBe(calls.length);
-  expect(outcome).toContain("request_merge");
+  // INF-2744: the refusal points at the merge card, in its owner's words.
+  expect(outcome).toContain(MERGE_WRITE_REFUSAL.split(";")[0]);
   expect(
     github.requests().filter((request) => /^(POST|PUT|PATCH|DELETE) \/repos\//.test(request)),
   ).toEqual(["PATCH /repos/octo/meterlab/git/refs/heads/topic"]);

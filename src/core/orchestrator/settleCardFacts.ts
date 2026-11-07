@@ -1,10 +1,10 @@
 import {
   type Card,
   MERGE_ANYWAY_ACTION,
+  mergeEffectOf,
   SETTLE_FACT_VALUE_CLASS,
   SETTLE_FACTS_OPEN,
   type SettleFact,
-  settleEffectOf,
   splitSettleFacts,
   takesTaskFacts,
   withMergeClosesLine,
@@ -66,8 +66,11 @@ export type SettleFactsReading = {
  */
 export function settleCardFacts(card: Card, read: SettleFactsReading): Card {
   if (!takesTaskFacts(card)) return card;
-  const merges = (action: Card["actions"][number]) =>
-    action.effect?.kind === "settle" && action.effect.mode === "merge" && !action.passes;
+  // The merge of the task's current change, whose words the checks draw.
+  const merges = (action: Card["actions"][number]) => {
+    const merge = mergeEffectOf(action);
+    return merge !== undefined && !merge.review && !action.passes;
+  };
   const relabeled = (card: Card): Card => {
     const label = read.mergeLabel?.(card);
     if (!label || !card.actions.some((action) => merges(action) && action.label !== label))
@@ -86,11 +89,13 @@ export function settleCardFacts(card: Card, read: SettleFactsReading): Card {
     if (!wanted)
       return { ...card, actions: card.actions.filter((action) => action.passes !== "checks") };
     const at = card.actions.findIndex(merges);
+    const beside = card.actions[at];
     const action: Card["actions"][number] = {
       id: MERGE_ANYWAY_ACTION,
       label: MERGE_ANYWAY_WORDS,
       variant: "secondary",
-      effect: { kind: "settle", mode: "merge" },
+      // The same merge as the one it stands beside, with what follows it.
+      effect: (beside && mergeEffectOf(beside)) ?? { kind: "merge", after: "close" },
       passes: "checks",
     };
     return {
@@ -125,7 +130,7 @@ export function emittedSettleFacts(
   const facts = takesTaskFacts(input) ? read.facts() : undefined;
   const strip = withMergeClosesLine(facts, input.actions, read.othersOpen());
   let next = strip ? { ...input, body: `${input.body}${strip}` } : input;
-  if (next.actions.some((action) => settleEffectOf(action)?.mode === "merge")) {
+  if (next.actions.some((action) => mergeEffectOf(action))) {
     const notice = read.followups();
     if (notice) next = { ...next, body: `${next.body}${notice}` };
   }

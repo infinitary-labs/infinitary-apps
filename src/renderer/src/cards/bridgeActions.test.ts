@@ -10,7 +10,7 @@ import { bridgeActionIds } from "./bridgeActions";
  */
 describe("which actions a card body may raise", () => {
   const actions: CardAction[] = [
-    { id: "merge-pr55", label: "Merge PR", effect: { kind: "settle", mode: "merge" } },
+    { id: "merge-pr55", label: "Merge PR", effect: { kind: "merge", after: "close" } },
     { id: "discard", label: "Discard", effect: { kind: "settle", mode: "discard" } },
     { id: "open-subs", label: "Subscriptions", effect: { kind: "open", target: "subscriptions" } },
     { id: "retry", label: "Retry", effect: { kind: "host", op: "retry-firstmate" } },
@@ -25,7 +25,7 @@ describe("which actions a card body may raise", () => {
   it("withholds an id when any action sharing it carries an effect", () => {
     expect(
       bridgeActionIds([
-        { id: "land", label: "Land", effect: { kind: "settle", mode: "merge" } },
+        { id: "land", label: "Land", effect: { kind: "merge", after: "close" } },
         { id: "land", label: "Ask the author" },
       ]),
     ).toEqual([]);

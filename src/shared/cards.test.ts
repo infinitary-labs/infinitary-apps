@@ -15,7 +15,7 @@ import {
   migrateLegacyActions,
   opensSettings,
   splitSettleFacts,
-  takesFactStrip,
+  takesTaskFacts,
   withMergeClosesLine,
 } from "./cards";
 
@@ -40,7 +40,7 @@ const card: Card = {
       label: "Merge PR",
       variant: "primary",
       default: true,
-      effect: { kind: "settle", mode: "merge" },
+      effect: { kind: "merge", after: "close" },
     },
     {
       id: "discard",
@@ -75,9 +75,9 @@ describe("cardSchema", () => {
 
   it("knows exactly the three effect kinds and the host's closed set of ops", () => {
     const effects = [
-      { kind: "settle", mode: "merge" },
+      { kind: "merge", after: "close" },
       { kind: "settle", mode: "discard", confirm: true },
-      { kind: "settle", mode: "merge", proceedWithOpen: true },
+      { kind: "merge", after: "close", proceedWithOpen: true },
       { kind: "open", target: "settings" },
       { kind: "open", target: "subscriptions" },
       { kind: "host", op: "restore-account", arg: "acct_1" },
@@ -121,7 +121,7 @@ describe("opensSettings", () => {
     expect(
       HOST_OPS.filter((op) => opensSettings({ effect: { kind: "host", op, arg: "a1" } })),
     ).toEqual(["restore-account"]);
-    expect(opensSettings({ effect: { kind: "settle", mode: "merge" } })).toBe(false);
+    expect(opensSettings({ effect: { kind: "merge", after: "close" } })).toBe(false);
     expect(opensSettings({})).toBe(false);
   });
 });
@@ -141,8 +141,8 @@ describe("cardPresentation", () => {
 
 describe("legacyActionEffect", () => {
   it("maps the ids the host used to dispatch on to the effects they meant", () => {
-    expect(legacyActionEffect("merge-pr")).toEqual({ kind: "settle", mode: "merge" });
-    expect(legacyActionEffect("land")).toEqual({ kind: "settle", mode: "merge" });
+    expect(legacyActionEffect("merge-pr")).toEqual({ kind: "merge", after: "close" });
+    expect(legacyActionEffect("land")).toEqual({ kind: "merge", after: "close" });
     expect(legacyActionEffect("discard")).toEqual({ kind: "settle", mode: "discard" });
     expect(legacyActionEffect("discard-anyway")).toEqual({
       kind: "settle",
@@ -183,7 +183,7 @@ describe("legacyActionEffect", () => {
         label: "Merge PR",
         variant: "primary",
         default: true,
-        effect: { kind: "settle", mode: "merge" },
+        effect: { kind: "merge", after: "close" },
       },
       {
         id: "discard",
@@ -312,13 +312,13 @@ describe("the merge card's closes line", () => {
         id: "merge",
         label: "Merge the pull request",
         default: true,
-        effect: { kind: "request_merge", review: "mr-94" },
+        effect: { kind: "merge", review: "mr-94", after: "continue" },
       },
       { id: "not-now", label: "Not now" },
     ],
   };
 
-  it("puts the closes line last in a completion card's strip, where the stage lifts it beside the buttons", () => {
+  it("puts the closes line last in a merge card's strip, where the stage lifts it beside the buttons", () => {
     const author = "<h3>Why</h3><p>The meter read early.</p>";
     const lifted = splitSettleFacts(`${author}${withMergeClosesLine(strip, card.actions)}`);
     expect(lifted?.body).toBe(author);
@@ -326,8 +326,8 @@ describe("the merge card's closes line", () => {
     expect(lifted?.facts.endsWith(`${MERGE_CLOSES_WORDS.closes}</p></div>`)).toBe(true);
   });
 
-  it("gives a request_merge card a strip holding only the continues line, drawn beside its buttons", () => {
-    expect(takesFactStrip(requestMerge)).toBe(true);
+  it("gives a merge card that continues the task a strip holding only the continues line, drawn beside its buttons (INF-2744)", () => {
+    expect(takesTaskFacts(requestMerge)).toBe(true);
     const lifted = splitSettleFacts(
       `<p>Merge it.</p>${withMergeClosesLine(undefined, requestMerge.actions)}`,
     );

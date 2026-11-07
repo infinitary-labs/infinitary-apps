@@ -376,15 +376,24 @@ export class TaskClosing {
       this.closeAndPurge([taskId], () => {
         // A standing approval ends with its task: spent by a merge, revoked
         // by any other close (FI3-304), in the close's own transaction.
+        // Approvals of its other pull requests waiting behind it end too (INF-2746).
         const standing = standingAuthorization(record.delivery);
+        const ended = record.delivery?.mergeAuthorization;
         if (standing) {
           this.host.tasks.delivery.recordPermissionRecords(taskId, {
-            mergeAuthorization: endedAuthorization(standing, {
-              status: close.reason === "merged" ? "consumed" : "revoked",
-              reason: `the task closed ${close.reason}`,
-              endedAt: this.host.now(),
-              generation: standing.generation + 1,
-            }),
+            mergeAuthorization: {
+              ...endedAuthorization(standing, {
+                status: close.reason === "merged" ? "consumed" : "revoked",
+                reason: `the task closed ${close.reason}`,
+                endedAt: this.host.now(),
+                generation: standing.generation + 1,
+              }),
+              queued: undefined,
+            },
+          });
+        } else if (ended?.queued?.length) {
+          this.host.tasks.delivery.recordPermissionRecords(taskId, {
+            mergeAuthorization: { ...ended, queued: undefined },
           });
         }
         this.host.tasks.close(taskId, {

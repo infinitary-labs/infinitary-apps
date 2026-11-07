@@ -127,10 +127,11 @@ test("a card shows the message it answers, folding a long one to two lines", asy
   expect(shownEntry()?.querySelector("[data-question-bubble]")).toBeNull();
   await close();
 
-  // Work filed from a click shows the button's words and what was written with it.
+  // Work filed from a click shows the button's words and what was written with
+  // it, and names the card the click was on (INF-2744).
   await shownCard(CLICK.title);
   expect(inShown("[data-card-asked-label]").textContent).toMatch(
-    new RegExp(`^${ASKED_LABELS.chose} · `),
+    new RegExp(`^${ASKED_LABELS.chose} on “${CLICK.card}” · `),
   );
   expect(inShown("[data-question-bubble-words]").textContent).toContain(
     `${CLICK.choice} · ${CLICK.written}`,

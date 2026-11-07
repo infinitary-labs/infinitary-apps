@@ -1,5 +1,6 @@
 import { completionCardBody } from "../../helpers/completionCard";
 import type { ScriptedCardAction } from "../../helpers/scriptedCalls";
+import { CAPTAIN_DECIDES } from "../crewCards";
 import type { Scenario } from "../mockProvider";
 
 /**
@@ -19,7 +20,7 @@ const MOCK_ESCAPED_CARD_ACTIONS: ScriptedCardAction[] = [
     id: "merge",
     label: "Merge the branch",
     default: true,
-    effect: { kind: "settle", mode: "merge" },
+    effect: { kind: "merge", after: "close", asks_first: CAPTAIN_DECIDES },
   },
   { id: "discard", label: "Discard", danger: true, effect: { kind: "settle", mode: "discard" } },
 ];

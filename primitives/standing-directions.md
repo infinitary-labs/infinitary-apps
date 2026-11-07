@@ -42,7 +42,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
   - a later crewmate turn carries them again only when the set changed, the conversation folded its context, its session is a new conversation, the computer holding it reopened it, or the conversation never read the turn that carried them;
   - the conversation holds a set once its backend reports the input read (`request_started`, or an `input_read` of that exact input), so an unread copy goes again;
   - what a crewmate's conversation holds is kept in memory, so a restart of the app sends the set once more;
-  - a crewmate's conversation on a computer that does not report its folds (`conversation-folds`) carries them on every turn;
+  - a crewmate's conversation on a computer that does not report its folds, one not on the home's major, carries them on every turn;
   - a brief holds no copy of its own, so a brief served again carries no stale direction;
   - rendering never truncates directions.
 - The first mate reviews directions against facts arriving on its turns, including reports and updates.
@@ -96,7 +96,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - [`../src/core/orchestrator/firstmateAgent.actions.test.ts`](../src/core/orchestrator/firstmateAgent.actions.test.ts) ("renders authoritative directions and keeps them from a scheduled turn too"): whole delivery to the first mate, background wakes included.
 - [`../src/core/orchestrator/crewBrief.context.test.ts`](../src/core/orchestrator/crewBrief.context.test.ts) ("serves active project directions with their authority once on the first turn") and [`../src/core/orchestrator/crewTurns.workspace.test.ts`](../src/core/orchestrator/crewTurns.workspace.test.ts) ("serves the personal workspace's directions, then again only without a retired one"): project directions on a crewmate turn.
 - [`../src/core/orchestrator/crewTurns.test.ts`](../src/core/orchestrator/crewTurns.test.ts) ("a crewmate's standing directions, as its turns carry them"): once, again on a change, a fold, an unread turn and a new conversation, and nothing on an unchanged turn.
-- [`../src/core/helper/sessionHost.test.ts`](../src/core/helper/sessionHost.test.ts) ("tells a home that reads it when its Claude conversation folds"): a fold reaches a home that lists `conversation-folds`, and nothing reaches an older one.
+- [`../src/core/helper/sessionHost.test.ts`](../src/core/helper/sessionHost.test.ts) ("tells its home when its Claude conversation folds"): a fold reaches the home.
 - [`../src/core/personal/panelInstructions.test.ts`](../src/core/personal/panelInstructions.test.ts): the panel instructions carry, its repeat and its unreadable-Knowledge case.
 - [`../tests/e2e/personalize.spec.ts`](../tests/e2e/personalize.spec.ts) ("a panel instruction is a standing direction for the personal workspace"): the captain's words become a direction listed in the Knowledge browser.
 - [`../tests/e2e/knowledge-directions.spec.ts`](../tests/e2e/knowledge-directions.spec.ts): directions stay distinct from personal facts, forty directions arrive on an unrelated ask, carry-over and restart, forget and purge without a notes fallback.

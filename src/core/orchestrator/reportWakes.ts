@@ -212,7 +212,7 @@ export const REVIEW_PASSED_NEXT =
  * proof read judges it before the push.
  */
 export const REVIEW_PROOF_NEXT =
-  "The code passed; live proof runs once now, after it. When no proof run is recorded at or since this head, steer the builder to run its live proof once and report the run, without pushing. When the builder reports that run, start the proof read with spawn_crewmate review_of naming the builder and the user's words: that reviewer reads only the proof and anything changed since this pass. When this review already read the run and found it failed or short, steer the builder to repair: a repair gets a review of its own difference and reruns only the proof it reaches. When the only proof missing runs on a pushed branch, steer the builder to push, open the PR and finish that proof beside the checks before its completion card.";
+  "The code passed; live proof runs once now, after it. When no proof run is recorded at or since this head, steer the builder to run its live proof once and report the run, without pushing. When the builder reports that run, start the proof read with spawn_crewmate review_of naming the builder and the user's words: that reviewer reads only the proof and anything changed since this pass. When this review already read the run and found it failed or short, steer the builder to repair: a repair gets a review of its own difference and reruns only the proof it reaches. When the only proof missing runs on a pushed branch, steer the builder to push, open the PR and finish that proof beside the checks before its merge card.";
 
 /** A builder's open review whose last verdict asks for a re-review at a new head. */
 export type WakeOpenReview = {
@@ -355,7 +355,7 @@ function refusedText(refused: CardRefusal | undefined, cards: WakeCard[]): strin
   if (!refused) return "";
   const screen = cards.length === 0 ? ", and no card of its is on the captain's screen" : "";
   const why = refused.why.trim().replace(/\.$/, "");
-  return ` The host refused its completion card "${refused.title}" at ${new Date(refused.at).toISOString()}: ${why}. That card did not reach the captain${screen}.`;
+  return ` The host refused its merge card "${refused.title}" at ${new Date(refused.at).toISOString()}: ${why}. That card did not reach the captain${screen}.`;
 }
 
 /**

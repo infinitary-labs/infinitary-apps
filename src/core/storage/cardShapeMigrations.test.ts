@@ -239,7 +239,7 @@ describe("migration 29 (one card shape with effects, cards/tasks/agents P1)", ()
         label: "Merge PR",
         variant: "primary",
         default: true,
-        effect: { kind: "settle", mode: "merge" },
+        effect: { kind: "merge", after: "close" },
       },
       {
         id: "discard",
@@ -350,5 +350,71 @@ describe("migration 72 (revision thread associations)", () => {
     reopened.exec("ALTER TABLE card_messages DROP COLUMN revision_json");
     expect(reopened.prepare("SELECT COUNT(*) AS n FROM card_messages").get()).toEqual({ n: 2 });
     reopened.close();
+  });
+});
+
+// INF-2744, the captain's approved plan: "one merge effect replaces settle
+// merge and request_merge; legacy cards read as it". The last migration
+// rewrites every open card once and keeps what it rewrote; a closed card is
+// history, left as saved and read as the merge it was.
+describe("the one merge effect (INF-2744)", () => {
+  it("rewrites an open card's settle merge and request_merge into the merge, keeps the originals, and reads a closed card's as the merge", () => {
+    const dir = tmpUserData();
+    const before = openDatabase(dir, ALL_VERSIONS.length - 1);
+    const insert = before.prepare(
+      `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, body, actions_json, status, created_at, resolved_at, chosen_action)
+       VALUES (?, 't1', 'decision', 'crewmate', 30, ?, 'crewmate 1', '<p>a</p>', ?, 'ready', 1, ?, ?)`,
+    );
+    const own = JSON.stringify([
+      { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+      {
+        id: "discard",
+        label: "Discard",
+        danger: true,
+        effect: { kind: "settle", mode: "discard" },
+      },
+    ]);
+    const requested = JSON.stringify([
+      {
+        id: "merge",
+        label: "Merge the pull request",
+        default: true,
+        effect: { kind: "request_merge", review: "mr-7" },
+      },
+      { id: "not-now", label: "Not now" },
+    ]);
+    insert.run("card-own", "The meter fix is ready", own, null, null);
+    insert.run("card-release", "Merge the release", requested, null, null);
+    insert.run("card-past", "An earlier merge", own, 2, "merge");
+    before.close();
+
+    const upgraded = openDatabase(dir);
+    expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+    const store = new CardStore(upgraded);
+    expect(store.get("card-own")?.actions.map((action) => action.effect)).toEqual([
+      { kind: "merge", after: "close" },
+      { kind: "settle", mode: "discard" },
+    ]);
+    expect(store.get("card-release")?.actions[0]?.effect).toEqual({
+      kind: "merge",
+      review: "mr-7",
+      after: "continue",
+    });
+    // The closed card stays as saved, and its read is the merge it was.
+    const saved = upgraded
+      .prepare("SELECT actions_json FROM cards WHERE id = 'card-past'")
+      .get() as { actions_json: string };
+    expect(saved.actions_json).toBe(own);
+    expect(store.get("card-past")?.actions[0]?.effect).toEqual({ kind: "merge", after: "close" });
+    const backfill = upgraded
+      .prepare(
+        "SELECT card_id, actions_json FROM card_effect_backfill WHERE card_id IN ('card-own', 'card-release', 'card-past') ORDER BY card_id",
+      )
+      .all();
+    expect(backfill).toEqual([
+      { card_id: "card-own", actions_json: own },
+      { card_id: "card-release", actions_json: requested },
+    ]);
+    upgraded.close();
   });
 });

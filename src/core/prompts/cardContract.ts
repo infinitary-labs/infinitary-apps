@@ -117,7 +117,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   crewOnly(
     "A change story is the exception: it is read where the project lives, so it carries no clock time or time zone.",
   ),
-  "On a card carrying a settle effect the host writes the project, the crewmate's model, the task's care level, the pull request, the checks' state and any hold it has placed on the task - as its own strip, after the body. Those facts are never the body's to repeat or to get wrong.",
+  "On a card carrying a merge or settle effect the host writes the project, the crewmate's model, the task's care level, the pull request, the checks' state and any hold it has placed on the task - as its own strip, after the body. Those facts are never the body's to repeat or to get wrong.",
 ];
 
 /** Full authoring contract, unchanged for both crewmate runtimes. */
@@ -223,7 +223,7 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
     "After an answer authorizes a build, report without a new captain wait: a bare authorization needs no card update.",
   ),
   "A click needs nothing more; answer a reply with one thread line naming who is next, card unchanged. Revise the same card once, naming the started builder as next owner, only when the captain expects information. Closing the planning card never starts, cancels or merges its successor.",
-  "Implementation approval, plan closure, saved answers and passing validation never grant merge permission. Read the task’s current autonomy fact; with autonomy off, merging still requires the captain’s separate completion-card click or explicit merge authorization under the existing rules. Checks are verification, not consent; do not infer or declare merge authorized from them.",
+  "Implementation approval, plan closure, saved answers and passing validation never grant merge permission. Read the task’s current autonomy fact; with autonomy off, merging still requires the captain’s separate merge card click or explicit merge authorization under the existing rules. Checks are verification, not consent; do not infer or declare merge authorized from them.",
 ];
 
 /** One handoff source, with each reader receiving the rules it acts on. */
@@ -240,7 +240,7 @@ export const CREWMATE_HANDOFF = renderInstructions(HANDOFF_PARTS, "crewmate");
 export const CARD_MECHANICS = [
   "Show the user a card: with actions it is a decision, without them a note.",
   "A decision gives 2 or 3 actions and marks exactly one default, the step you would take; every action closes the card, and changes come by reply, never a revise button. A note is one fact the user needs surfaced, never an unasked FYI.",
-  "An action's effect is what the host does on the click; with no effect the click returns to you as a message. settle merge merges a direct-pr task's PR or merges a local-only task's branch and closes the task; settle discard drops the worktree unmerged; confirm true only when the body already says there are unmerged commits or uncommitted edits; open settings/subscriptions navigates; danger true renders a destructive choice.",
+  "An action's effect is what the host does on the click; with no effect the click returns to you as a message. merge merges a PR or local-only branch, and its after closes or continues the task; settle discard drops the worktree unmerged; confirm true only when the body already says there are unmerged commits or uncommitted edits; open settings/subscriptions navigates; danger true renders a destructive choice.",
   "body is a raw HTML fragment: send tags, never entity-escaped markup. A footer button is the one send and carries every named field in the body; a body button may name a declared action with data-inf-action.",
   "Optional id: namespaced kebab-case (fm-feed-scroll). Reuse an open card's id to revise it in place when new information augments or overlaps it; a distinct finding is a new card, and an obsolete one closes with close_card.",
 ].join(" ");
@@ -259,8 +259,8 @@ export const CARD_MECHANICS = [
  * words for fixed buttons the model no longer writes.
  */
 export const CREWMATE_CARD_ADDENDUM = [
-  "For finished change work (not a plan's preview, review or internal step), show the outcome on a card before reporting. With a PR or branch to merge, emit one completion decision with one settle merge action, risk and required_actions ([] when none); the host attaches buttons, so declare no others or labels. Without one, emit a factual note with no settle action. A task that merges on its own or builds in place shows its story on a note with no actions instead, which stays until the captain presses its Got it.",
-  "No settle effects on intermediate questions; reuse an open outcome card's id. Settle questions before a merge card or close unneeded ones. A click on a settle action never comes back to you as a steer; the host reports the outcome to the first mate.",
+  "For finished change work (not a plan's preview, review or internal step), show the outcome on a card before reporting. Ask every merge on a merge card, one per pull request: one merge action, risk and required_actions ([] when none); the host attaches buttons, so declare no others or labels, and with autonomy on merges it at green. Without a merge, emit a factual note with no merge action. A task that builds in place shows its story on a note with no actions, which stays until the captain presses its Got it.",
+  "No merge or settle effects on intermediate questions; reuse an open merge card's id. Settle questions before a merge card or close unneeded ones. A continuing merge wakes you once merged; no other merge or settle click comes back to you as a steer.",
 ].join(" ");
 
 /**
@@ -279,8 +279,8 @@ export const CREWMATE_CARD_ADDENDUM = [
  * task_id stays on a decision whose buttons act on the task.
  */
 export const FIRSTMATE_CARD_ADDENDUM = [
-  "Your cards are headed first mate. Pass task_id only when the buttons act on that task, as a settle effect needs, or with review_task_id; a decision without it becomes its own decision task waiting on the captain.",
-  "A settle effect is run by the host, which reports the outcome; a dismissed card is not a choice and does not wake you - your next context block lists it.",
+  "Your cards are headed first mate. Pass task_id only when the buttons act on that task, as a merge or settle effect needs, or with review_task_id; a decision without it becomes its own decision task waiting on the captain.",
+  "A merge or settle effect is run by the host, which reports the outcome; a dismissed card is not a choice and does not wake you - your next context block lists it.",
 ].join(" ");
 
 /** The crewmate's emit_card description: the mechanics plus the outcome-card rule. */
@@ -305,7 +305,7 @@ export const CLAUDE_TOOL_DESCRIPTION_CAP = 2_048;
  * notes read (`RISK_WORDS`). Only a crewmate's schema carries it.
  */
 const RISK_PARAM = [
-  `Required on a completion decision with a settle merge action, and only there: your assessment of the change's risk, which the app draws as a radar at the card's top right, one dot per dimension, and keeps on the task.`,
+  `Required on the merge card of your task's own change, allowed on a merge card that names a reviewed pull request, and nowhere else: your assessment of the change's risk, which the app draws as a radar at the card's top right, one dot per dimension, and keeps on the task.`,
   `Give each of the seven dimensions a level - low, medium or high, rating the change itself, never how careful you were - and why: one plain line of at most ${RISK_WHY_MAX} characters naming the concrete reason, such as "Two files in the composer".`,
   "All seven levels and notes are yours alone; the app adds no measurements. The body never draws or repeats the assessment, and a revision of the card replaces it.",
   ...RISK_DIMENSIONS.map((dimension) => {
@@ -331,7 +331,7 @@ const RISK_PARAM = [
  */
 /** The effects every role's actions may declare, up to the open effect. */
 const ACTIONS_EFFECTS =
-  "Action buttons: id (stable, kebab-case), label (sentence case), default true on exactly one, optional effect and danger. effect is kind settle with mode merge|discard, confirm, and proceed_with_open true to settle a task that has open children and keep them planned, when a refusal names it; or kind request_merge with review naming the id check_change returned;";
+  "Action buttons: id (stable, kebab-case), label (sentence case), default true on exactly one, optional effect and danger. effect is kind merge with after close (ends the task once nothing else is open) or continue, review (check_change pull's id; omit for your current change) and asks_first (why a standing direction leaves this merge to the captain); or kind settle with mode discard and confirm; proceed_with_open true settles a task with open children, keeping them planned, when a refusal names it;";
 const ACTIONS_OPEN =
   " or kind open with target settings|subscriptions|projects and sign_in naming the host whose sign-in the projects section starts, exactly as a not-signed-in refusal's way names it.";
 

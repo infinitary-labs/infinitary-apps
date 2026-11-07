@@ -1,4 +1,4 @@
-import { type Card, settleEffectOf } from "@shared/cards";
+import { type Card, mergeEffectOf } from "@shared/cards";
 import type { AskRecord } from "../storage/askStore";
 import type { TaskCoverageFields } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
@@ -77,13 +77,13 @@ export type ClosingPlace =
 
 /**
  * A card shaped as the outcome of work: its author's answering mark, a
- * completion card's merge, or the app's merge line on the story note of
+ * merge card's merge, or the app's merge line on the story note of
  * work that merges on its own. All typed; never the card's words.
  */
 export function answersByShape(card: Card): boolean {
   return (
     card.answering === true ||
-    card.actions.some((action) => settleEffectOf(action)?.mode === "merge") ||
+    card.actions.some((action) => mergeEffectOf(action)) ||
     hasMergeLine(card.body)
   );
 }
@@ -263,7 +263,7 @@ export class AskEnding {
         if (seen.at < chain.newestAt || (newest && newest.at >= seen.at)) continue;
         const card = this.host.storedCard(seen.cardId);
         if (card?.author !== "crewmate" || card.answering !== true) continue;
-        if (card.actions.some((action) => settleEffectOf(action)?.mode === "merge")) continue;
+        if (card.actions.some((action) => mergeEffectOf(action) !== undefined)) continue;
         newest = { card, at: seen.at };
       }
     }

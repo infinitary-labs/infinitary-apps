@@ -936,7 +936,7 @@ describe("delivery rigor observability (phase 4)", () => {
 
   it("reads a completion card off its declared settle effect, never an id or a label", () => {
     expect(
-      isCompletionCard(JSON.stringify([{ id: "x", effect: { kind: "settle", mode: "merge" } }])),
+      isCompletionCard(JSON.stringify([{ id: "x", effect: { kind: "merge", after: "close" } }])),
     ).toBe(true);
     expect(
       isCompletionCard(JSON.stringify([{ id: "x", effect: { kind: "settle", mode: "discard" } }])),

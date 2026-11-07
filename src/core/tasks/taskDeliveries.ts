@@ -455,7 +455,7 @@ export class TaskDeliveries {
         at,
         actor: "host",
         kind: "note",
-        text: `completion card "${refusal.title}" refused: ${refusal.why}`,
+        text: `merge card "${refusal.title}" refused: ${refusal.why}`,
         data: { cardRefusal, news: false },
         feed: false,
       });

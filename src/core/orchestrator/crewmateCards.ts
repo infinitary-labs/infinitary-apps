@@ -2,8 +2,11 @@ import { rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { cardPictureFiles } from "@shared/cardPictures";
 import {
+  type Card,
   type CardMutation,
-  requestMergeEffectOf,
+  MERGE_NOT_NOW_ID,
+  type MergeEffect,
+  mergeEffectOf,
   requestWriteEffectOf,
   settleEffectOf,
 } from "@shared/cards";
@@ -20,6 +23,7 @@ import { opensPullRequest, type RepoDelivery } from "@shared/repos";
 import type { RiskAssessment } from "@shared/risk";
 import {
   CHECK_WORDS,
+  MERGE_NOT_NOW_WORDS,
   MERGE_WORDS,
   REVIEW_CAREFULLY_WORDS,
   SKIP_RULES_MERGE_WORDS,
@@ -60,6 +64,31 @@ import { deliverableOf } from "./workShape";
  */
 export const COMPLETION_REVISED_WHILE_RUNNING =
   "The card is shown; its merge waits on the checks. Do not emit it again just for that. Read missing results and fix failures as usual.";
+
+/** The one merge a card's actions declare, if any (INF-2744). */
+function mergeOf(actions: readonly { effect?: unknown }[] | undefined): MergeEffect | undefined {
+  for (const action of actions ?? []) {
+    const merge = mergeEffectOf(action as Parameters<typeof mergeEffectOf>[0]);
+    if (merge) return merge;
+  }
+  return undefined;
+}
+
+/** Whether a card merges the task's own current change. */
+function mergesOwn(actions: readonly { effect?: unknown }[] | undefined): boolean {
+  return (actions ?? []).some((action) => {
+    const merge = mergeEffectOf(action as Parameters<typeof mergeEffectOf>[0]);
+    return merge !== undefined && !merge.review;
+  });
+}
+
+/** Whether a card merges or discards anything. */
+function settles(actions: readonly { effect?: unknown }[] | undefined): boolean {
+  return (actions ?? []).some((action) => {
+    const typed = action as Parameters<typeof mergeEffectOf>[0];
+    return mergeEffectOf(typed) !== undefined || settleEffectOf(typed) !== undefined;
+  });
+}
 
 /** What a crewmate's cards reach of the supervisor beyond its options. */
 export type CrewmateCardsHost = {
@@ -190,19 +219,12 @@ export class CrewmateCards {
   ): string | Promise<string> {
     if (input.presentationRevision !== undefined) {
       const revision = input.presentationRevision;
-      const offer =
-        input.actions.length === 1 &&
-        input.actions[0] !== undefined &&
-        settleEffectOf(input.actions[0])?.mode === "merge";
-      // A task that merges on its own shows the same story as a note before
-      // its first mate merges it (INF-547, the captain's direction C): no
-      // button, since the merge is not theirs to click, and no required
-      // actions, which ride only a merge offer. It keeps the story's risk
-      // chart, as the merge card does (INF-1219, direction A).
-      const note = input.actions.length === 0 && this.host.taskAutonomy(task.id);
-      if (!this.options.completionPresentation || (!offer && !note))
+      // The story is shown on the merge card of the task's own change, with
+      // autonomy on or off: the app decides who clicks it (INF-2744).
+      const offer = input.actions.length === 1 && mergesOwn(input.actions);
+      if (!this.options.completionPresentation || !offer)
         throw new Error(
-          "A saved-story card is only a completion offer for this task, or its note when the task merges on its own.",
+          "A saved-story card is only the merge card of this task's current change: one merge action and the story.",
         );
       return this.options.completionPresentation(task.id, revision).then(async (presented) => {
         const { revision: shownRevision, ...story } = presented;
@@ -214,18 +236,7 @@ export class CrewmateCards {
               "The current story has not been published or completed for this destination.",
             );
           const { presentationRevision: _revision, ...rest } = input;
-          const shown = offer
-            ? story
-            : {
-                title: story.title,
-                body: story.body,
-                pictures: story.pictures,
-                riskDeclaration: story.riskDeclaration,
-                // What the crew starts once the merge goes through shows on
-                // the note too: the first mate's merge files it (INF-2796).
-                ...(story.afterMerge ? { afterMerge: story.afterMerge } : {}),
-              };
-          return await this.addCrewmateCard(task, { ...rest, ...shown }, undefined, {
+          return await this.addCrewmateCard(task, { ...rest, ...story }, undefined, {
             revision: shownRevision ?? revision,
             head,
           });
@@ -242,7 +253,7 @@ export class CrewmateCards {
             [...files.pictures, ...files.recordings].map(async (file) => {
               if (dirname(file) !== dir || retained.has(file)) return;
               await rm(file, { force: true }).catch((error: unknown) => {
-                console.warn("Could not remove refused completion story copy", error);
+                console.warn("Could not remove refused merge card story copy", error);
               });
             }),
           );
@@ -251,11 +262,7 @@ export class CrewmateCards {
       });
     }
     const ownPresentation = this.options.tasks.get(task.id)?.delivery?.presentation;
-    if (
-      ownPresentation &&
-      input.actions.some((action) => settleEffectOf(action)?.mode === "merge") &&
-      !presentationChecked
-    ) {
+    if (ownPresentation && mergesOwn(input.actions) && !presentationChecked) {
       // INF-961: the refusal names the way to a current story, so a crewmate
       // never takes its story as lost; a push after publication needs no new
       // one, since the host republishes it (INF-2509).
@@ -264,13 +271,11 @@ export class CrewmateCards {
       const local = this.host.taskDelivery(task.id) === "local-only";
       const hosted = story !== undefined && hostedPresentation(story.destination);
       throw new Error(
-        `Use presentation on the completion card so it shows the current ${local ? "committed" : "published"} story, not a second account of the change. ${newest === undefined ? "" : `This task's newest story is revision ${newest}. `}${local ? "After another commit, prepare a new story with prepare_change, then show its revision as presentation; local-only work skips open_change." : hosted ? "After a push since the story was published, show the same revision as presentation: the app republishes it at the pushed version. Prepare and publish a new revision only when what the story says changed." : "After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation."}`,
+        `Use presentation on the merge card so it shows the current ${local ? "committed" : "published"} story, not a second account of the change. ${newest === undefined ? "" : `This task's newest story is revision ${newest}. `}${local ? "After another commit, prepare a new story with prepare_change, then show its revision as presentation; local-only work skips open_change." : hosted ? "After a push since the story was published, show the same revision as presentation: the app republishes it at the pushed version. Prepare and publish a new revision only when what the story says changed." : "After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the merge card with the revision prepare_change returns as presentation."}`,
       );
     }
     const before = this.options.tasks.get(task.id);
-    const reviewedMerge =
-      before?.delivery?.reviewVerdict === "pass" &&
-      input.actions.some((action) => settleEffectOf(action)?.mode === "merge");
+    const reviewedMerge = before?.delivery?.reviewVerdict === "pass" && mergesOwn(input.actions);
     if (!checkedHead && (input.validationDecision || reviewedMerge)) {
       // INF-994: a validation question is kept at every care level, and a
       // merge offered after a passed review reads the version it answers.
@@ -281,12 +286,8 @@ export class CrewmateCards {
         const binding = input.validationDecision;
         if (binding) {
           if (
-            input.actions.some(
-              (action) =>
-                settleEffectOf(action) ||
-                requestMergeEffectOf(action) ||
-                requestWriteEffectOf(action),
-            )
+            settles(input.actions) ||
+            input.actions.some((action) => requestWriteEffectOf(action))
           )
             throw new Error(
               "A validation question cannot also merge or send another write; keep those separate.",
@@ -347,57 +348,37 @@ export class CrewmateCards {
     }
     // The task's holds speak before the card's shape: a card the task
     // cannot take at all is refused for that, not for its headings.
-    if (
-      this.host.isPersonalTask(task.id) &&
-      (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
-    ) {
+    if (this.host.isPersonalTask(task.id) && settles(input.actions)) {
       throw new Error(
         "Card refused: this task builds in place on the personal workspace - there is no merge, land, or discard. Show what you built on a note with no actions, then report; a card with actions is only for a genuine decision the captain must make.",
       );
     }
-    if (
-      this.host.worksInPlace(task.id) &&
-      (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
-    ) {
+    if (this.host.worksInPlace(task.id) && settles(input.actions)) {
       throw new Error(
-        "Card refused: this task works in place in the project's folder - there is no merge, land, or discard, and a completion card is never emitted. Report what you did with report; Infinitary closes the task once what it was for is done. A card is only for a question the captain must answer.",
+        "Card refused: this task works in place in the project's folder - there is no merge, land, or discard, and a merge card is never emitted. Report what you did with report; Infinitary closes the task once what it was for is done. A card is only for a question the captain must answer.",
       );
     }
-    if (
-      deliverableOf(this.options.tasks.get(task.id)) === "operation" &&
-      (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
-    )
+    if (deliverableOf(this.options.tasks.get(task.id)) === "operation" && settles(input.actions))
       throw new Error(
         "Card refused: an operation has no change to merge or discard. Show the verified effect on a note, then report its evidence for a finished close.",
       );
-    // An answer task ships nothing (Task B), so it has no completion card
+    // An answer task ships nothing (Task B), so it has no merge card
     // either: the card carrying the answer IS the deliverable, and the task
     // closes when the captain resolves it.
-    if (
-      this.isAnswerTask(task.id) &&
-      (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
-    ) {
+    if (this.isAnswerTask(task.id) && settles(input.actions)) {
       throw new Error(
-        "Card refused: this task's deliverable is an answer, not a change - it commits nothing, pushes nothing, and opens no pull request, so there is nothing to merge or discard. Show the answer on this card without a settle action; the captain's choice on it, or your finished report after they close it, is what closes the task.",
+        "Card refused: this task's deliverable is an answer, not a change - it commits nothing, pushes nothing, and opens no pull request, so there is nothing to merge or discard. Show the answer on this card without a merge or discard action; the captain's choice on it, or your finished report after they close it, is what closes the task.",
       );
     }
-    // A merge card names one change (INF-2490): its line says whether the
-    // click closes the task, so it cannot both finish and continue.
-    if (
-      (input.actions ?? []).some((action) => settleEffectOf(action)?.mode === "merge") &&
-      (input.actions ?? []).some((action) => requestMergeEffectOf(action))
-    )
+    // A merge card names one pull request (INF-2490, INF-2744): its line
+    // says what follows its click. A task may have a merge card up for each
+    // of its pull requests at once.
+    if ((input.actions ?? []).filter((action) => mergeEffectOf(action)).length > 1)
       throw new Error(
-        "Card refused: a merge card offers one merge. settle merge finishes the task with its current change; request_merge merges a reviewed pull request and the task continues. Emit them on separate cards.",
+        "Card refused: a merge card offers one merge. Put each pull request's merge on its own merge card.",
       );
-    // A reviewed task's completion card waits on its review (delivery
-    // rigor phase 2): the merge is held by the review's `blocks` edge, so a
-    // merge decision before the pass could only be refused on the click.
     const record = this.options.tasks.get(task.id);
-    if (
-      (input.actions ?? []).some((action) => settleEffectOf(action)?.mode === "merge") &&
-      input.requiredActions === undefined
-    )
+    if (mergesOwn(input.actions) && input.requiredActions === undefined)
       throw new CardRefusedError(
         "Card refused: declare required_actions, including [] when none. Name every action the captain must take after merging.",
         "shape",
@@ -409,11 +390,11 @@ export class CrewmateCards {
     // instead: only Firstmate can clear the wait, so the card would be a
     // button that cannot work. (Open children stay a click-time decision:
     // the captain can override that one.)
-    if ((input.actions ?? []).some((action) => settleEffectOf(action)?.mode === "merge")) {
+    if (mergeOf(input.actions)?.after === "close") {
       const waiting = this.options.tasks.graph.blockerRefusal(task.id);
       if (waiting) {
         throw new Error(
-          `Card refused: this task still waits on open work, so the merge would be refused. ${waiting.text} Report under the five headings with report instead; the first mate clears the wait and tells you when to emit the completion card. ${softHoldWords("waits", "crewmate")}`,
+          `Card refused: this task still waits on open work, so the merge would be refused. ${waiting.text} Report under the five headings with report instead; the first mate clears the wait and tells you when to emit the merge card. ${softHoldWords("waits", "crewmate")}`,
         );
       }
     }
@@ -422,12 +403,7 @@ export class CrewmateCards {
     // task's and never sent.
     const writes = (input.actions ?? []).flatMap((action) => requestWriteEffectOf(action) ?? []);
     if (writes.length > 0) {
-      if (
-        writes.length > 1 ||
-        (input.actions ?? []).some(
-          (action) => settleEffectOf(action) || requestMergeEffectOf(action),
-        )
-      ) {
+      if (writes.length > 1 || settles(input.actions)) {
         throw new Error(
           "Card refused: a card that asks to send a write asks for exactly one, and carries no merge or discard.",
         );
@@ -448,7 +424,7 @@ export class CrewmateCards {
         );
       }
     }
-    // The completion card's BUTTONS are the host's (contract v3.6, captain
+    // The merge card's BUTTONS are the host's (contract v3.6, captain
     // lock 3; audit 4.4b row 2): a crewmate declares the merge and the host
     // attaches the pair the task's posture calls for, so no agent learns
     // merge-pr from land and no prompt asks one to transcribe a label it
@@ -495,8 +471,7 @@ export class CrewmateCards {
         : "";
     // A saved sign-in is offered after the lint: the crewmate never learns
     // which sites are saved, so it is never counted for an action it could
-    // not declare. A request card is never a completion card, so the pair
-    // above is not in it.
+    // not declare.
     const shown = handoff
       ? {
           ...finished,
@@ -515,14 +490,13 @@ export class CrewmateCards {
               input.validationDecision.action,
           )
         : "");
-    // The story note of a task that merges on its own opens with the line
-    // that says so, in the app's words from the setting (INF-1219); the
-    // merge rewrites it on the same note (`SettleService`).
-    const selfMergeNote = presentationChecked !== undefined && shown.actions.length === 0;
-    const autonomySource = this.options.tasks.policiesOf(this.options.tasks.get(task.id))?.autonomy
-      .source;
-    const lead = selfMergeNote ? pendingMergeLine(autonomySource ?? "project") : "";
-    const card = strip || lead ? { ...shown, body: `${lead}${shown.body}${strip}` } : shown;
+    const card = strip ? { ...shown, body: `${shown.body}${strip}` } : shown;
+    // The merge card of a task that merges on its own is the app's own
+    // merge (INF-2744): the app approves it as it goes up (`mergeFromCard`).
+    // Its crewmate's asks-first declaration, or a hold, leaves it to the
+    // captain's click instead.
+    const declaredMerge = mergeOf(card.actions);
+    const appMerges = declaredMerge !== undefined && this.appMergesFromCard(task.id, declaredMerge);
     // A request for the captain's help pauses the browser before the card
     // goes up (docs/task-browser.md, "Asking for help").
     const paused = handoff ? this.browser.pauseForCaptain(task.id, handoff) : undefined;
@@ -542,7 +516,7 @@ export class CrewmateCards {
             current.delivery?.headSha !== presentationChecked.head)
         )
           throw new Error(
-            "The story or the checked code changed before the completion card could be shown. Publish the current story first.",
+            "The story or the checked code changed before the merge card could be shown. Publish the current story first.",
           );
       }
       // The model rides beside the meta line as its own chip (the
@@ -576,59 +550,59 @@ export class CrewmateCards {
             },
           );
       }
-      // A completion card is up: an earlier refusal no longer stands.
-      if (card.actions.some((action) => settleEffectOf(action))) {
+      if (declaredMerge) {
+        // A merge card is up: an earlier refusal no longer stands.
         this.options.tasks.delivery.clearCardRefusal(task.id);
-      }
-      if (
-        card.actions.some(
-          (action) => settleEffectOf(action)?.mode === "merge" || requestMergeEffectOf(action),
-        )
-      ) {
-        if (card.actions.some((action) => settleEffectOf(action)?.mode === "merge"))
-          this.recordCompletionOffer(task.id, id, checked, presentationChecked);
-        else
-          this.host.settling.approvals.endAuthorization(
+        if (!declaredMerge.review)
+          this.recordCompletionOffer(
             task.id,
-            "superseded",
-            "its crewmate put up a new merge card",
+            id,
+            checked,
+            presentationChecked,
+            declaredMerge.after === "continue",
           );
+        // A new card for the same pull request asks again; one for another
+        // pull request stands beside its approval (INF-2744, INF-2746).
+        else this.host.settling.approvals.askAgain(task.id, declaredMerge.review);
         const offered = this.host.cards.get(id);
         if (card.requiredActions !== undefined && offered?.offerId)
           this.options.tasks.delivery.declareRequiredActions(task.id, {
             cardId: id,
             offerId: offered.offerId,
             head:
-              this.mergeReviewOf(
-                task.id,
-                card.actions.map((action) => requestMergeEffectOf(action)?.review).find(Boolean) ??
-                  "",
-              )?.headSha ??
+              (declaredMerge.review
+                ? this.mergeReviewOf(task.id, declaredMerge.review)?.headSha
+                : undefined) ??
               presentationChecked?.head ??
               current.delivery?.headSha,
             actions: card.requiredActions,
           });
-        // The task keeps the risk of its newest completion card; one
-        // without any leaves none standing.
+        // The task keeps the risk of its newest merge card; one without any
+        // leaves none standing.
         if (risk || current.delivery?.risk)
           this.options.tasks.delivery.recordChangeEvidence(task.id, { risk });
-      } else if (selfMergeNote && risk) {
-        // So does the story note of a task that merges on its own.
-        this.options.tasks.delivery.recordChangeEvidence(task.id, { risk });
+        // The app took the merge: the card loses its buttons, since the
+        // merge is not the captain's to click, and opens with the line that
+        // says so in the app's words from the setting (INF-1219); the merge
+        // rewrites that line on the same card (`SettleService`). When the
+        // app could not take it, the card keeps the captain's buttons, so
+        // the merge is never left with no one.
+        const shownCard = this.host.cards.get(id);
+        if (appMerges && shownCard && this.mergeFromCard(task.id, id, declaredMerge))
+          this.showMerging(task.id, shownCard);
       }
       return `${id}${revisionNotice(this.host.cards.revisionChanges(id))}`;
     };
     const gate = this.pendingCiGate(task.id, card);
     const advisory =
       card.actions?.length &&
-      !card.actions.some(
-        (action) =>
-          settleEffectOf(action) || requestMergeEffectOf(action) || requestWriteEffectOf(action),
-      ) &&
+      !declaredMerge &&
+      !settles(card.actions) &&
+      !card.actions.some((action) => requestWriteEffectOf(action)) &&
       currentCheckStatus(record?.delivery) === "green" &&
       record?.delivery &&
       (record.delivery.changeLabel || record.delivery.prNumber !== undefined)
-        ? ` No button on this card can merge ${record.delivery.changeLabel ?? `#${record.delivery.prNumber}`}. If the rest needs that merged first, list it in the story's afterMerge and emit the completion decision.`
+        ? ` No button on this card can merge ${record.delivery.changeLabel ?? `#${record.delivery.prNumber}`}. If the rest needs that merged first, list it in the story's afterMerge and emit the merge card.`
         : "";
     const pausedWords = handoff
       ? " Your browser is paused for the captain: your browser commands refuse until the captain takes control and returns it, which wakes you once. End your turn when nothing else needs doing; report with waiting_on_captain naming this card."
@@ -653,7 +627,115 @@ export class CrewmateCards {
   }
 
   /**
-   * A completion offer went up (FI3-304). It replaces any standing merge
+   * Whether the app merges from this merge card itself (INF-2744): the one
+   * merge gate lets the app through - autonomy on, no hold on the task, and
+   * no asks-first declaration on the card. A review the app cannot keep -
+   * one that merges past the branch rules - stays the captain's click.
+   */
+  private appMergesFromCard(taskId: string, merge: MergeEffect): boolean {
+    const record = this.options.tasks.get(taskId);
+    if (!record) return false;
+    if (merge.review && this.mergeReviewOf(taskId, merge.review)?.skips) return false;
+    const mode = merge.review ? "merge-pr" : this.host.mergeModeFor(taskId);
+    return (
+      this.host.settling.settle.mergeRefusal(record, mode, "app", merge.asksFirst, {
+        review: merge.review,
+      }) === undefined
+    );
+  }
+
+  /**
+   * The captain set a task to merge on its own while its merge cards are up
+   * (INF-2744): the app merges from each, as it does from a card that goes
+   * up under autonomy, and the first mate is not woken. A card the app
+   * cannot take - asks first, a hold, a merge past the branch rules - stays
+   * the captain's. Returns the cards it took.
+   */
+  mergeOpenCards(taskId: string): string[] {
+    const taken: string[] = [];
+    // Each card's approval stands on its own: one for another pull request
+    // waits beside an approval that already stands (INF-2746).
+    for (const card of this.host.cards.values()) {
+      if (card.taskId !== taskId || card.author !== "crewmate") continue;
+      const merge = mergeOf(card.actions);
+      if (!merge || !this.appMergesFromCard(taskId, merge)) continue;
+      if (!this.mergeFromCard(taskId, card.id, merge)) continue;
+      this.showMerging(taskId, card);
+      taken.push(card.id);
+    }
+    // The crewmate may already be idle, so no turn's end runs the approval.
+    if (taken.length > 0)
+      void this.host.settling.kept.runMergeAuthorization(taskId).catch((caught: unknown) => {
+        console.warn("[crew] kept merge could not run:", caught);
+      });
+    return taken;
+  }
+
+  /** The card the app merges from keeps no buttons, only the merging line. */
+  private showMerging(taskId: string, card: Card): void {
+    const source = this.options.tasks.policiesOf(this.options.tasks.get(taskId))?.autonomy.source;
+    this.host.cards.put({
+      ...card,
+      actions: [],
+      body: `${pendingMergeLine(source ?? "project")}${card.body}`,
+    });
+  }
+
+  /**
+   * The app approves the merge on the card that just went up, as the
+   * captain's click would (INF-2744): a pull request's merge keeps an
+   * approval the host runs once its crewmate is idle and the checks pass;
+   * a local merge waits for the crewmate's turn to end and merges. The
+   * first mate is not woken for it. Returns whether the app took it.
+   */
+  private mergeFromCard(taskId: string, cardId: string, merge: MergeEffect): boolean {
+    const shown = this.host.cards.get(cardId);
+    if (!shown) return false;
+    // A merge the app sends now gives the card back its buttons when it is
+    // refused, so the merge is never left with no one (INF-2746).
+    const mergeNow = (mode: "land" | "merge-pr") => {
+      void this.host.settling.settle
+        .reportCardSettle(taskId, mode, undefined, merge.proceedWithOpen, merge.after, "app")
+        .then((result) => {
+          if (!result.ok) this.restoreButtons(taskId, shown);
+        });
+      return true;
+    };
+    if (!merge.review && this.host.mergeModeFor(taskId) === "land") return mergeNow("land");
+    const kept = this.host.settling.approvals.authorizeMerge(
+      taskId,
+      {
+        cardId,
+        ...(shown.lifecycleId ? { lifecycleId: shown.lifecycleId } : {}),
+        ...(shown.offerId ? { offerId: shown.offerId } : {}),
+        actionId: "merge",
+      },
+      merge.proceedWithOpen ?? false,
+      merge.review,
+      { after: merge.after, issuer: "autonomy" },
+    );
+    if (kept || merge.review) return kept !== undefined;
+    // A change the app keeps no approval for - no project's host with
+    // checks, such as a plain Git host - merges now, through the same
+    // gates as the captain's click (INF-2744).
+    return mergeNow("merge-pr");
+  }
+
+  /**
+   * The app's merge from a card was refused: the card it took is put back
+   * as it went up, with the captain's buttons, while the task is open and
+   * the card still shows only the merging line.
+   */
+  private restoreButtons(taskId: string, shown: Card): void {
+    const record = this.options.tasks.get(taskId);
+    const current = this.host.cards.get(shown.id);
+    if (!record || TaskService.isClosed(record) || !current || current.actions.length > 0) return;
+    if (current.lifecycleId !== shown.lifecycleId) return;
+    this.host.cards.put(shown);
+  }
+
+  /**
+   * A merge card's offer went up (FI3-304). It replaces any standing merge
    * approval - the crewmate is asking again - and, when its checks were
    * just read green, its offer is kept with the head they read: the
    * baseline a click on exactly that offer approves. An offer that shows
@@ -666,13 +748,12 @@ export class CrewmateCards {
     taskId: string,
     cardId: string,
     checked: boolean,
-    presentation?: { revision: number; head: string },
+    presentation: { revision: number; head: string } | undefined,
+    continues: boolean,
   ): void {
-    this.host.settling.approvals.endAuthorization(
-      taskId,
-      "superseded",
-      "its crewmate put up a new completion card",
-    );
+    // A new merge card for the current change asks again; an approval of
+    // another of the task's pull requests stands beside it (INF-2744).
+    this.host.settling.approvals.askAgain(taskId, undefined);
     const record = this.options.tasks.get(taskId);
     const offerId = this.host.cards.get(cardId)?.offerId;
     const head = presentation?.head ?? record?.delivery?.headSha;
@@ -700,6 +781,7 @@ export class CrewmateCards {
       headSha: head,
       ...(prNumber === undefined ? {} : { shownFor: prNumber }),
       ...(baseline && prNumber !== undefined ? { prNumber } : {}),
+      ...(continues ? { continues: true as const } : {}),
       ...(baseline && presentation
         ? {
             presentationRevision: presentation.revision,
@@ -752,8 +834,8 @@ export class CrewmateCards {
       const write = requestWriteEffectOf(action);
       const ask = write ? this.writeAskOf(taskId, write.ask) : undefined;
       if (ask) return writeAskStrip(ask);
-      const merge = requestMergeEffectOf(action);
-      const review = merge ? this.mergeReviewOf(taskId, merge.review) : undefined;
+      const merge = mergeEffectOf(action);
+      const review = merge?.review ? this.mergeReviewOf(taskId, merge.review) : undefined;
       if (review?.skips) {
         return skipRulesStrip(
           review,
@@ -783,50 +865,50 @@ export class CrewmateCards {
       });
       return { ...input, actions: labeledActions(labeled) };
     }
-    if (actions.some((action) => requestMergeEffectOf(action))) {
-      // A request is not a completion pair. The host names the button; it
-      // does not add Discard, which would close a task watching someone else's pull request.
-      const labeled = actions.map((action) => {
-        const effect = requestMergeEffectOf(action);
-        if (!effect) return action;
-        return {
-          ...action,
-          id: action.id || "merge",
-          label: this.mergeReviewOf(taskId, effect.review)?.skips
-            ? SKIP_RULES_MERGE_WORDS
-            : MERGE_WORDS["merge-pr"],
-          default: true,
-          effect,
-        };
-      });
-      return { ...input, actions: labeledActions(labeled) };
-    }
-    if (!actions.some((action) => settleEffectOf(action)?.mode === "merge")) {
-      return { ...input, actions: labeledActions(actions) };
-    }
-    // Only the SETTLE actions are the host's. A card still carries exactly
-    // the other actions its author declared (cards/tasks/agents P0): a
-    // crewmate's own deferral, or a question it wants answered with the
-    // merge, is its offer to make and comes back to it on the click.
-    const declared = labeledActions(actions.filter((action) => !settleEffectOf(action)));
+    const declaredMerge = mergeOf(actions);
+    if (!declaredMerge) return { ...input, actions: labeledActions(actions) };
+    // Only the merge card's own buttons are the host's (INF-2744): the
+    // merge, Discard beside a merge that closes the task and drops its own
+    // working copy, Not now beside any other, and Review carefully below
+    // Careful. A card still carries the other actions its author declared
+    // (cards/tasks/agents P0): a question it wants answered with the merge
+    // is its offer to make and comes back to it on the click.
+    const declared = labeledActions(
+      actions.filter((action) => !mergeEffectOf(action) && !settleEffectOf(action)),
+    );
+    const review = declaredMerge.review
+      ? this.mergeReviewOf(taskId, declaredMerge.review)
+      : undefined;
     const merge: EmittedAction = {
       id: "merge",
-      label: MERGE_WORDS[this.host.mergeModeFor(taskId)],
+      label: review?.skips
+        ? SKIP_RULES_MERGE_WORDS
+        : MERGE_WORDS[declaredMerge.review ? "merge-pr" : this.host.mergeModeFor(taskId)],
       default: true,
-      effect: { kind: "settle", mode: "merge" },
+      effect: declaredMerge,
     };
-    const discard: EmittedAction = {
-      id: "discard",
-      label: "Discard",
-      danger: true,
-      effect: { kind: "settle", mode: "discard" },
-    };
+    const closesOwnCopy =
+      declaredMerge.after === "close" &&
+      !declaredMerge.review &&
+      Boolean(this.options.tasks.get(taskId)?.worktreeDir);
+    const beside: EmittedAction[] = closesOwnCopy
+      ? [
+          {
+            id: "discard",
+            label: "Discard",
+            danger: true,
+            effect: { kind: "settle", mode: "discard" },
+          },
+        ]
+      : declared.some((action) => action.id === MERGE_NOT_NOW_ID)
+        ? []
+        : [{ id: MERGE_NOT_NOW_ID, label: MERGE_NOT_NOW_WORDS }];
     // A Quick or Default pull request can be made Careful from its merge
     // card (INF-562): drawn between Discard and Merge, so it takes ⌘2.
     const careful: EmittedAction[] = this.offersCareful(taskId)
       ? [{ id: "review-carefully", label: REVIEW_CAREFULLY_WORDS, care: "reviewed" }]
       : [];
-    return { ...input, actions: [...declared, merge, discard, ...careful] };
+    return { ...input, actions: [...declared, merge, ...beside, ...careful] };
   }
 
   /**
@@ -869,8 +951,8 @@ export class CrewmateCards {
     taskId: string,
     input: EmittedCardInput,
   ): Promise<"checked" | "running"> | undefined {
-    const requested = input.actions.map((action) => requestMergeEffectOf(action)).find(Boolean);
-    if (requested) {
+    const requested = mergeOf(input.actions);
+    if (requested?.review) {
       if (!this.options.reviewGate) return undefined;
       const reviewId = requested.review;
       return this.options.reviewGate(taskId, reviewId).then((refusal) => {
@@ -878,8 +960,7 @@ export class CrewmateCards {
         return "checked" as const;
       });
     }
-    const carriesMerge = input.actions.some((action) => settleEffectOf(action)?.mode === "merge");
-    if (!carriesMerge || !opensPullRequest(this.host.taskDelivery(taskId))) return undefined;
+    if (!requested || !opensPullRequest(this.host.taskDelivery(taskId))) return undefined;
     if (!this.options.checkCi) return undefined;
     return this.options.checkCi(taskId).then((result) => {
       const read =
@@ -944,7 +1025,7 @@ export class CrewmateCards {
         !reading.absenceDeclared &&
         !reading.problem;
       throw new CardRefusedError(
-        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Read them again with check_change, fix or wait, and emit the completion card again once they pass.${read.overall === "red" ? " If they still fail after you tried, it goes up once every failed check at this version carries your diagnosis (check_change diagnosis), and the app offers Merge anyway on it; when main's newest run of every failed check failed too, the reading says so and the card goes up at once stating that fact, so spend no rerun on it." : ""}${empty ? " No check has registered at this version: if this pull request has no checks at all, declare that with check_change absentChecks (its version, the evidence and the local gate run at it), and the reading then says no checks; an empty reading alone stays pending." : ""}${this.waitingReplyNote(taskId)} ${softHoldWords("checks", "crewmate")}`,
+        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Read them again with check_change, fix or wait, and emit the merge card again once they pass.${read.overall === "red" ? " If they still fail after you tried, it goes up once every failed check at this version carries your diagnosis (check_change diagnosis), and the app offers Merge anyway on it; when main's newest run of every failed check failed too, the reading says so and the card goes up at once stating that fact, so spend no rerun on it." : ""}${empty ? " No check has registered at this version: if this pull request has no checks at all, declare that with check_change absentChecks (its version, the evidence and the local gate run at it), and the reading then says no checks; an empty reading alone stays pending." : ""}${this.waitingReplyNote(taskId)} ${softHoldWords("checks", "crewmate")}`,
         "checks",
         `its checks read ${state}, not passed`,
       );

@@ -1,4 +1,4 @@
-import { anythingElseOf, type Card } from "@shared/cards";
+import { anythingElseOf, type Card, mergeEffectOf } from "@shared/cards";
 import {
   choiceWords,
   type HoldOverride,
@@ -269,18 +269,17 @@ export class CaptainOverrides {
 
   /**
    * Whether the captain's click on this action approved a merge (INF-1966):
-   * the completion card's merge, whose words the app draws from the checks
-   * (`mergeLabel`), or an ordinary request_merge card's - never Merge
+   * a merge card's merge, whose words the app draws from the checks
+   * (`mergeLabel`) for the task's current change - never Merge
    * anyway, which passes the checks itself, nor a merge past the branch
    * rules, whose card names each failed check it skips. Read from the
    * action's declared effect, never from its words.
    */
   private clickApprovesMerge(card: Card, actionId: string | undefined): boolean {
     const action = actionId ? card.actions.find((entry) => entry.id === actionId) : undefined;
-    const effect = action?.effect;
+    const effect = action ? mergeEffectOf(action) : undefined;
     if (!action || !effect || action.passes) return false;
-    if (effect.kind === "settle") return effect.mode === "merge";
-    if (effect.kind !== "request_merge") return false;
+    if (!effect.review) return true;
     const review = card.taskId
       ? this.options.tasks
           .get(card.taskId)

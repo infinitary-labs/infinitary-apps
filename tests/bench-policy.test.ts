@@ -74,7 +74,7 @@ describe("the scripted captain", () => {
       card({
         author: "crewmate",
         actions: [
-          { id: "land", label: "Put it in", effect: { kind: "settle", mode: "merge" } },
+          { id: "land", label: "Put it in", effect: { kind: "merge", after: "close" } },
           { id: "later", label: "Later" },
         ],
       }),

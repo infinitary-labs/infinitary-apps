@@ -59,7 +59,7 @@ export default function seed(userDataDir: string, { title, risk, before, after }
           danger: true,
           effect: { kind: "settle", mode: "discard" },
         },
-        { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+        { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
       ],
     });
   } finally {

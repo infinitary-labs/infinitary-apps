@@ -895,7 +895,7 @@ A change that reaches a journey through such a schema names it in a `Journeys:` 
 
 A core change reaches a journey through the words it serves the model, which the journey's stand-in reads with no hook, sentence or symbol of its own changing, so rule 10 reads them (INF-1255).
 Project scopes (PR #470) added a context note holding "a project or scope", and `programRun.ts` read the project the captain named with `/project (\S+)/`, so the note named the project "or".
-Merge anyway (PR #462) let a completion card up once every failed check carries its `check_change` diagnosis, and its refusal says so; `checkRepair.ts` scripts `check_change` and relied on that refusal.
+Merge anyway (PR #462) let a merge card up once every failed check carries its `check_change` diagnosis, and its refusal says so; `checkRepair.ts` scripts `check_change` and relied on that refusal.
 A sentence of a template literal that spans lines carries no quote on its own line, so rule 10 does not read it; a change that reaches a journey that way names it in a `Journeys:` trailer.
 
 The fallback table beside the existing selector unions these files into its result, deduplicating files and preserving existing reasons:

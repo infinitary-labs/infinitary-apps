@@ -7,7 +7,7 @@ import { preparedRevision, prepareMockStory } from "./changeStory";
 export const DESTINATION_STORY_MARKER = "capture the destination completion";
 export const DESTINATION_STORY_TITLE = "fix: the meter reads on time";
 
-export function destinationStory(local: boolean, note: boolean): Scenario {
+export function destinationStory(local: boolean): Scenario {
   return () =>
     ({ body, isFirstmate, wantsStream }) => {
       if (isFirstmate || !wantsStream || !body.includes(DESTINATION_STORY_MARKER)) return undefined;
@@ -53,13 +53,8 @@ export function destinationStory(local: boolean, note: boolean): Scenario {
             args: {
               title: DESTINATION_STORY_TITLE,
               presentation: preparedRevision(body),
-              ...(note
-                ? {}
-                : {
-                    actions: [
-                      { id: "merge", default: true, effect: { kind: "settle", mode: "merge" } },
-                    ],
-                  }),
+              // INF-2744: one merge card whether or not the task merges on its own.
+              actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
             },
           },
           { name: "report", args: { text: "The meter change is committed and ready." } },

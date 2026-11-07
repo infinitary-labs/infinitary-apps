@@ -10,9 +10,6 @@ import { z } from "zod";
 /** The command in every crewmate's shell (docs/axi-commands.md, "The files command"). */
 export const FILES_COMMAND = "infinitary-files-axi";
 
-/** The contract change that brings it (`src/shared/contract-changes/files-there.md`). */
-export const FILES_THERE = "files-there";
-
 /** One piece of a file the home reads from another computer, as the other copies read theirs. */
 export const FILE_PIECE_BYTES = 4 * 1024 * 1024;
 
@@ -52,8 +49,8 @@ export const fileSnapshotSchema = z.object({
 export type FileSnapshot = z.infer<typeof fileSnapshotSchema>;
 
 /**
- * The orders a home asks a computer that runs work for one of its files,
- * from `files-there` on: list a folder, set a file aside, read it piece by
+ * The orders a home asks a computer that runs work for one of its files:
+ * list a folder, set a file aside, read it piece by
  * piece, and let it go. Each answers live; a computer quitting lets go of
  * everything it set aside.
  */

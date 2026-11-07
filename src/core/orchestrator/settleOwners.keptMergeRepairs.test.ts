@@ -73,6 +73,8 @@ describe("CrewSupervisor", () => {
       ).toBe("autonomy-off");
       expect(h.forge.merges).toEqual([]);
       const other = await approved();
+      // INF-2744: with its merge card up the app merges itself; this reads the first mate's merge.
+      other.supervisor.cards.takeDown(other.card.id, "The first mate merges this one.");
       editPolicies(other, { autonomy: true });
       other.tasks.placement.setGate(other.taskId, { kind: "captain", ref: "unrelated-decision" });
       expect(
@@ -83,6 +85,8 @@ describe("CrewSupervisor", () => {
 
     it("explains a sent merge while accepting the next policy, without pretending the request can be stopped", async () => {
       const h = await approved();
+      // INF-2744: with its merge card up the app merges itself; this reads the first mate's merge.
+      h.supervisor.cards.takeDown(h.card.id, "The first mate merges this one.");
       editPolicies(h, { autonomy: true });
       const sent = deferred<void>();
       const answer = deferred<void>();
@@ -147,7 +151,11 @@ describe("CrewSupervisor", () => {
       async (_label, autonomy) => {
         const harness = await approved({ referenced: true });
         const { supervisor, tasks, taskId, forge } = harness;
-        if (autonomy) editPolicies(harness, { autonomy: true });
+        if (autonomy) {
+          // INF-2744: with its merge card up the app merges itself; this reads the first mate's merge.
+          supervisor.cards.takeDown(harness.card.id, "The first mate merges this one.");
+          editPolicies(harness, { autonomy: true });
+        }
         expect(supervisor.facts.taskAutonomy(taskId)).toBe(autonomy);
         forge.merged = true;
         expect(await harness.declare({})).toContain("overall: merged");
@@ -196,15 +204,17 @@ describe("CrewSupervisor", () => {
       expect(tasks.get(taskId)?.status).not.toBe("done");
       // INF-1879: putting the question away grants no permission and leaves it open.
       // With autonomy on, its author withdraws the now-unnecessary question before the first mate merges.
-      editPolicies(harness, { autonomy: true });
       supervisor.close(harness.card.id);
       await tick();
       expect(harness.cards().find((card) => card.id === harness.card.id)?.minimized).toBe(true);
       expect(forge.merges).toEqual([]);
+      // INF-2744: its author withdraws the question before autonomy turns on,
+      // or the app would merge from the card itself.
       await harness.specs[0]?.onCloseCard?.({
         cardId: harness.card.id,
-        reason: "Autonomy is on; the first mate owns this merge.",
+        reason: "The first mate owns this merge.",
       });
+      editPolicies(harness, { autonomy: true });
       harness.crewmate.finishPrompt();
       await tick();
       const result = await supervisor.settling.settle.settleTaskDetailed(taskId, "merge-pr");
@@ -375,6 +385,8 @@ describe("CrewSupervisor", () => {
       seedDelivery(h.tasks, carrier.id, { prNumber: 65, ci: "merged" });
 
       // The merge close reads its own closed #7, so it cannot close it.
+      // INF-2744: with its merge card up the app merges itself; this reads the first mate's merge.
+      h.supervisor.cards.takeDown(h.card.id, "The first mate merges this one.");
       editPolicies(h, { autonomy: true });
       const merge = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(merge.text).toContain("closed without merging");
@@ -405,7 +417,7 @@ describe("CrewSupervisor", () => {
               {
                 id: "continue",
                 label: "Merge the review",
-                effect: { kind: "request_merge", review: review.id },
+                effect: { kind: "merge", review: review.id, after: "continue" },
               },
             ],
           }),
@@ -416,10 +428,12 @@ describe("CrewSupervisor", () => {
 
     // INF-2546 R1, under the captain's "several changes per task, one per
     // PR": a merge card offers the change it was shown for. Once check_change
-    // makes another pull request current, the click on a card shown for the
-    // earlier one - the crewmate's completion card or the first mate's merge
-    // card, neither carrying a story - merges nothing and keeps the task open.
-    it("refuses the click on a merge card shown for one pull request once another is current, and merges nothing (INF-2546)", async () => {
+    // makes another pull request current, a click that approves no head -
+    // the first mate's merge card, carrying no story - merges nothing; the
+    // crewmate's merge card, whose click approves its pull request's
+    // version, merges that pull request and never the current one (INF-2746:
+    // "every request to merge a PR ... a request is just like calling a tool").
+    it("merges only the pull request a merge card was shown for once another is current, and refuses a click that approves no head (INF-2546, INF-2746)", async () => {
       const h = await approved();
       expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)).toMatchObject({
         cardId: h.card.id,
@@ -456,20 +470,15 @@ describe("CrewSupervisor", () => {
         at: Date.now(),
       };
       seedDelivery(h.tasks, h.taskId, { mergeReviews: [next], checkTarget: next });
-      for (const [card, action] of [
-        [h.card.id, "merge"],
-        [firstmateCard, "merge"],
-      ] as const)
-        expect(() => h.supervisor.cardActions.act(card, action)).toThrow(
-          CardChoiceUnavailableError,
-        );
+      expect(() => h.supervisor.cardActions.act(firstmateCard, "merge")).toThrow(
+        CardChoiceUnavailableError,
+      );
       await tick();
       expect(h.forge.merges).toEqual([]);
       expect(h.forge.sends).toBe(0);
       expect(h.authorization()).toBeUndefined();
       expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
-      // With its own pull request current again, the crewmate's card merges it and closes the task.
-      seedDelivery(h.tasks, h.taskId, { checkTarget: undefined });
+      // The crewmate's card merges the pull request it was shown for, and closes the task.
       h.supervisor.cardActions.act(h.card.id, "merge");
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
       await vi.waitFor(() =>
@@ -479,10 +488,11 @@ describe("CrewSupervisor", () => {
 
     // Re-review INF-2546 R1, under the same words: the change a merge card
     // was shown for is kept apart from the head it approves. An offer the
-    // same card makes again at a moved head approves no head, and four later
-    // first mate cards do not push an open card's offer out; either way, the
-    // click refuses once another pull request is current.
-    it("keeps the change a merge card was shown for when its offer approves no head and after four later cards, and refuses its click once another change is current (INF-2546)", async () => {
+    // same card makes again at a moved head approves no head, so its click
+    // refuses once another pull request is current; four later first mate
+    // cards do not push an open card's offer out, so that card's click still
+    // merges the pull request it was shown for (INF-2746).
+    it("keeps the change a merge card was shown for when its offer approves no head and after four later cards, refusing a click that approves no head once another change is current (INF-2546)", async () => {
       const h = await approved();
       const offerOf = (cardId: string) =>
         h.tasks
@@ -542,11 +552,19 @@ describe("CrewSupervisor", () => {
         at: Date.now(),
       };
       seedDelivery(h.tasks, h.taskId, { mergeReviews: [next], checkTarget: next });
-      for (const card of [again.id, h.card.id])
-        expect(() => h.supervisor.cardActions.act(card, "merge")).toThrow(/This action changed/);
+      expect(() => h.supervisor.cardActions.act(again.id, "merge")).toThrow(/This action changed/);
       await tick();
       expect(h.forge.merges).toEqual([]);
       expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
+      // The first card's offer was kept: its click approves the version it showed of #7.
+      h.supervisor.cardActions.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()).toMatchObject({ target: { prNumber: 7 } }));
+      // Its merge attempt finds #7 moved past the approved version, sends nothing
+      // and waits for its crewmate to declare the repair.
+      await vi.waitFor(() =>
+        expect(h.authorization()).toMatchObject({ status: "standing", waiting: { on: "repair" } }),
+      );
+      expect(h.forge.merges).toEqual([]);
     });
 
     // Re-review INF-2546 R3, under the captain's "several changes per task,
@@ -582,7 +600,11 @@ describe("CrewSupervisor", () => {
           title: "Merge the meter fix and keep going",
           body: "<p>The meter fix is ready.</p><p>Merging it keeps this task open.</p>",
           actions: [
-            { id: "merge", default: true, effect: { kind: "request_merge", review: own.id } },
+            {
+              id: "merge",
+              default: true,
+              effect: { kind: "merge", review: own.id, after: "continue" },
+            },
             { id: "not-now", label: "Not now" },
           ],
         });
@@ -686,7 +708,7 @@ describe("CrewSupervisor", () => {
       );
       expect(harness.forge.merges).toEqual([]);
       const said = await harness.declare(repair("changed-work"));
-      expect(said).toContain("put up a new completion card");
+      expect(said).toContain("put up a new merge card");
       expect(harness.authorization()).toMatchObject({ status: "invalidated", holds: true });
       vi.spyOn(harness.supervisor.facts, "taskAutonomy").mockReturnValue(true);
       expect(
@@ -1110,7 +1132,7 @@ describe("CrewSupervisor", () => {
             evidence: "He asked for a new name.",
           },
         }),
-      ).toContain("put up a new completion card");
+      ).toContain("put up a new merge card");
       h.crewmate.finishPrompt();
       await tick();
       expect(h.authorization()).toMatchObject({ status: "invalidated", holds: true });

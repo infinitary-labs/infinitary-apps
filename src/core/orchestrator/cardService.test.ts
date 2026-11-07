@@ -310,7 +310,7 @@ describe("CardService", () => {
         {
           id: "merge",
           label: "Merge",
-          effect: { kind: "settle" as const, mode: "merge" as const },
+          effect: { kind: "merge" as const, after: "close" as const },
         },
       ],
     };
@@ -367,7 +367,7 @@ describe("CardService", () => {
 
   // INF-1364: older first-mate merge cards survive an upgrade, but only a
   // crewmate's completion offer may replace the captain's kept approval.
-  it("finds only a crewmate completion offer among restored merge cards", () => {
+  it("finds only a crewmate merge card among restored merge cards (INF-2744)", () => {
     const { tasks, cardStore, make } = setup();
     seedTask(tasks, { id: "build", title: "Ship the meter", status: "idle" });
     const mergeCard: Card = {
@@ -380,7 +380,7 @@ describe("CardService", () => {
       priority: 30,
       status: "ready",
       createdAt: 1,
-      actions: [{ id: "merge", label: "Merge", effect: { kind: "settle", mode: "merge" } }],
+      actions: [{ id: "merge", label: "Merge", effect: { kind: "merge", after: "close" } }],
     };
     cardStore.upsert(mergeCard);
     cardStore.upsert({ ...mergeCard, id: "card-host-merge", author: "host" });
@@ -393,6 +393,8 @@ describe("CardService", () => {
       cardTitle: mergeCard.title,
       actionId: "merge",
       label: "Merge",
+      // INF-2744: the open merge action carries what its card declared follows.
+      after: "close",
     });
   });
 
@@ -545,7 +547,7 @@ describe("CardService", () => {
           id: "merge",
           label: "Merge",
           default: true,
-          effect: { kind: "settle" as const, mode: "merge" as const },
+          effect: { kind: "merge" as const, after: "close" as const },
         },
       ],
     };
@@ -789,7 +791,7 @@ describe("CardService", () => {
         title: "Ready to merge",
         body: "<p>The change is ready.</p>",
         actions: [
-          { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+          { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
         ],
       },
       "m",

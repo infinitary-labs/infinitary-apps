@@ -37,7 +37,7 @@ import { shownCard } from "./stack";
  * host card that says so.
  */
 
-const SETTLE_MERGE = { kind: "settle", mode: "merge" } as const;
+const SETTLE_MERGE = { kind: "merge", after: "close" } as const;
 const SETTLE_DISCARD = { kind: "settle", mode: "discard" } as const;
 /** The task the captain discards, and the one whose put-in the host refuses. */
 const DISCARDED_TITLE = "Look into the meter";

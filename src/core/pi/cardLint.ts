@@ -8,13 +8,7 @@ import {
   TIERED_STORY_HEADINGS,
   textOf,
 } from "@shared/cardHeadings";
-import {
-  ANYTHING_ELSE_ANSWER,
-  isPreviewBody,
-  isPullRequestMergeAction,
-  requestMergeEffectOf,
-  settleEffectOf,
-} from "@shared/cards";
+import { ANYTHING_ELSE_ANSWER, isPreviewBody, mergeEffectOf, settleEffectOf } from "@shared/cards";
 import { hasHook } from "@shared/codeNames";
 import type { Rigor } from "@shared/rigor";
 import { ElementType, parseDocument } from "htmlparser2";
@@ -103,12 +97,12 @@ const SETTLE_CLAIM_LABEL = /^(merge|land)\b/i;
 function fakeSettleRefusal(actions: EmittedCard["actions"]): string | undefined {
   const fake = actions.find(
     (action) =>
-      !isPullRequestMergeAction(action) &&
+      !mergeEffectOf(action) &&
       !settleEffectOf(action) &&
       (SETTLE_CLAIM_ID.test(action.id) || SETTLE_CLAIM_LABEL.test(action.label)),
   );
   if (!fake) return undefined;
-  return `action "${fake.id}" ("${fake.label}") reads like a merge but carries no settle effect, so the host would run nothing when it is clicked; declare effect { kind: "settle", mode: "merge" } - the host merges the PR or lands locally by the task's posture - or name the action for what it does.`;
+  return `action "${fake.id}" ("${fake.label}") reads like a merge but carries no merge effect, so the host would run nothing when it is clicked; declare effect { kind: "merge", after: "close" or "continue" } - the host merges the PR or merges locally by the task's posture - or name the action for what it does.`;
 }
 
 /**
@@ -629,11 +623,9 @@ export function closedTaskChoiceRefusal(taskId: string): string {
 export function settleNeedsTaskRefusal(
   card: Pick<EmittedCard, "actions" | "taskId">,
 ): string | undefined {
-  const settle = card.actions.find(
-    (action) => settleEffectOf(action) || requestMergeEffectOf(action),
-  );
+  const settle = card.actions.find((action) => settleEffectOf(action) || mergeEffectOf(action));
   if (settle && !card.taskId) {
-    return `action "${settle.id}" carries a settle effect, so the card must pass task_id; without it the host cannot tell which task to settle and the button does nothing.`;
+    return `action "${settle.id}" carries a merge or discard effect, so the card must pass task_id; without it the host cannot tell which task to merge or discard and the button does nothing.`;
   }
   return undefined;
 }
@@ -652,7 +644,7 @@ export function settleNeedsTaskRefusal(
  * out are a legitimate Firstmate card, and by then the completion card exists.
  */
 export function crewmateOwesCompletionRefusal(taskId: string): string {
-  return `task ${taskId} still has its own crewmate, and a crewmate's completion card is the one merge decision on its task: steer it with steer_crewmate to emit that card (or revise it), instead of carrying a settle merge effect yourself.`;
+  return `task ${taskId} still has its own crewmate, and a crewmate's merge card is the one merge decision for each of its pull requests: steer it with steer_crewmate to emit that card (or revise it), instead of carrying a merge effect yourself.`;
 }
 
 /**
@@ -731,7 +723,7 @@ export function lintFirstmateCard(card: EmittedCard, context: CardLintContext): 
   // The merge decision belongs to the crewmate that did the work (v3.6).
   if (
     card.taskId &&
-    card.actions.some((action) => settleEffectOf(action)?.mode === "merge") &&
+    card.actions.some((action) => mergeEffectOf(action) !== undefined) &&
     context.crewmateOwesCompletion?.(card.taskId) === true
   ) {
     return crewmateOwesCompletionRefusal(card.taskId);
@@ -782,7 +774,7 @@ function readPictureDeclaration(body: string): PictureDeclaration {
 
 /** Consent: the one refusal for a merge card that shows no picture and states no reason. */
 export const COMPLETION_PICTURES_REFUSAL =
-  "the completion decision shows no pictures: put at least one result picture under After and, for each existing view it changed, its picture under Before; mark a figure data-inf-new when the view is new, so it needs no Before picture; or, when a person sees nothing different, state why in one sentence in an element marked data-inf-no-picture.";
+  "the merge card shows no pictures: put at least one result picture under After and, for each existing view it changed, its picture under Before; mark a figure data-inf-new when the view is new, so it needs no Before picture; or, when a person sees nothing different, state why in one sentence in an element marked data-inf-no-picture.";
 
 /**
  * A physical limit: the elements the New tag cannot be drawn on - the card
@@ -837,9 +829,15 @@ export function lintCrewmateCard(
   if (shapeRefusal) return shapeRefusal;
   const untagged = untaggedNewMark(card.body);
   if (untagged) return untaggedNewMarkRefusal(untagged);
-  // The declared effect identifies a completion decision, never its words
-  // or id. Notes cannot be distinguished from other notes at this boundary.
-  if (!card.actions.some((action) => settleEffectOf(action)?.mode === "merge")) {
+  // The declared effect identifies the merge card of the task's own change,
+  // never its words or id. Notes cannot be distinguished from other notes
+  // at this boundary.
+  if (
+    !card.actions.some((action) => {
+      const merge = mergeEffectOf(action);
+      return merge !== undefined && !merge.review;
+    })
+  ) {
     return undefined;
   }
   const headings = bodyHeadings(card.body).map((heading) => heading.toLowerCase());
@@ -848,7 +846,7 @@ export function lintCrewmateCard(
   for (const heading of outline) {
     const at = headings.indexOf(heading.toLowerCase(), cursor);
     if (at === -1) {
-      return `the completion decision is missing the "${heading}" heading in order; give the body headed sections ${outline.join(", ")} in that order, with the answer in the title alone.`;
+      return `the merge card is missing the "${heading}" heading in order; give the body headed sections ${outline.join(", ")} in that order, with the answer in the title alone.`;
     }
     cursor = at + 1;
   }

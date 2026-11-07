@@ -189,7 +189,7 @@ describe("a click on a card, as CardActions takes it", () => {
     ).toEqual({});
     expect(
       h.supervisor.cardActions.act(
-        taskless(h, "c-merge", { kind: "request_merge", review: "r-1" }),
+        taskless(h, "c-merge", { kind: "merge", review: "r-1", after: "continue" }),
         "go",
       ),
     ).toEqual({});

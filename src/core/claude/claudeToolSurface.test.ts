@@ -113,49 +113,51 @@ async function appToolDescriptions(): Promise<Map<string, string>> {
   return descriptions;
 }
 
-// INF-968: the served saved-story rule promises no-action notes to autonomous tasks.
-// Both session backends must reach the home, which alone knows the task's autonomy.
+// INF-968, re-typed by INF-2744: a saved-story merge card reaches the home
+// the same way through both session backends, which alone knows the task's
+// autonomy, and neither accepts content that competes with the saved story.
 it.each(["Pi", "Claude"] as const)(
-  "forwards saved-story notes through %s without accepting competing content",
+  "forwards saved-story merge cards through %s without accepting competing content",
   async (backend) => {
     const onCard = vi.fn(() => "card-task-story");
     const bound = bindTool(EMIT_CARD_TOOL, { onCard });
     const run = (params: Record<string, unknown>) =>
       backend === "Pi"
-        ? piToolOf(bound).execute("note", params, undefined, undefined, {} as never)
+        ? piToolOf(bound).execute("story", params, undefined, undefined, {} as never)
         : claudeToolOf(bound).handler(params, {} as never);
-    for (const actions of [undefined, []]) {
-      const params = {
-        title: "The story is ready",
-        presentation: 2,
-        ...(actions ? { actions } : {}),
-      };
-      const result = await run(params);
-      expect(result.content).toEqual([
-        { type: "text", text: "Card shown from presentation 2 (card-task-story)" },
-      ]);
-      expect(onCard).toHaveBeenLastCalledWith({
-        title: params.title,
-        body: "",
-        presentationRevision: 2,
-        actions: [],
-      });
-      for (const competing of [
-        { body: "A different story" },
-        { body_file: "story.html" },
-        { risk: {} },
-        { required_actions: [] },
-        { browser_button: "View" },
-        { browser_page: "index.html" },
-        { browser_handoff: { site: "example.com", reason: "Sign in", after: "Check" } },
-        { asking: true },
-        { design_only: true },
-        { continues: true },
-      ]) {
-        await expect(run({ ...params, ...competing })).rejects.toThrow(/without body/);
-      }
+    const params = {
+      title: "The story is ready",
+      presentation: 2,
+      actions: [{ id: "merge", effect: { kind: "merge", after: "close" } }],
+    };
+    const result = await run(params);
+    expect(result.content).toEqual([
+      { type: "text", text: "Card shown from presentation 2 (card-task-story)" },
+    ]);
+    expect(onCard).toHaveBeenLastCalledWith({
+      title: params.title,
+      body: "",
+      presentationRevision: 2,
+      actions: [
+        expect.objectContaining({ id: "merge", effect: { kind: "merge", after: "close" } }),
+      ],
+    });
+    for (const competing of [
+      { actions: [] },
+      { body: "A different story" },
+      { body_file: "story.html" },
+      { risk: {} },
+      { required_actions: [] },
+      { browser_button: "View" },
+      { browser_page: "index.html" },
+      { browser_handoff: { site: "example.com", reason: "Sign in", after: "Check" } },
+      { asking: true },
+      { design_only: true },
+      { continues: true },
+    ]) {
+      await expect(run({ ...params, ...competing })).rejects.toThrow(/without body/);
     }
-    expect(onCard).toHaveBeenCalledTimes(2);
+    expect(onCard).toHaveBeenCalledTimes(1);
   },
 );
 
@@ -410,7 +412,7 @@ describe("what the Claude client serves equals the source", () => {
     // these; since v4.59 no nested parameter is described at all.
     const emitCard = ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}emit_card`);
     expect(emitCard?.description).toContain(
-      "No settle effects on intermediate questions; reuse an open outcome card's id.",
+      "No merge or settle effects on intermediate questions; reuse an open merge card's id.",
     );
     expect(
       ours.find((tool) => tool.name === `${CLAUDE_SEAT_TOOL_PREFIX}file_followup`)?.description,
@@ -482,14 +484,19 @@ const EMIT_CARD_NESTED_CARRIERS: Record<string, string> = {
   "actions[].effect":
     "An action's effect is what the host does on the click; with no effect the click returns to you as a message.",
   "actions[].danger": "danger true renders a destructive choice",
-  "actions[].effect<request_merge>.review":
-    "kind request_merge with review naming the id check_change returned",
+  "actions[].effect<merge>.after":
+    "kind merge with after close (ends the task once nothing else is open) or continue",
+  "actions[].effect<merge>.review": "review (check_change pull's id; omit for your current change)",
+  "actions[].effect<merge>.asks_first":
+    "asks_first (why a standing direction leaves this merge to the captain)",
+  "actions[].effect<merge>.proceed_with_open":
+    "proceed_with_open true settles a task with open children, keeping them planned, when a refusal names it",
   "actions[].effect<settle>.mode":
-    "settle merge merges a direct-pr task's PR or merges a local-only task's branch and closes the task; settle discard drops the worktree unmerged",
+    "merge merges a PR or local-only branch, and its after closes or continues the task; settle discard drops the worktree unmerged",
   "actions[].effect<settle>.confirm":
     "confirm true only when the body already says there are unmerged commits or uncommitted edits",
   "actions[].effect<settle>.proceed_with_open":
-    "proceed_with_open true to settle a task that has open children and keep them planned, when a refusal names it",
+    "proceed_with_open true settles a task with open children, keeping them planned, when a refusal names it",
   "actions[].effect<open>.target": "target settings|subscriptions|projects",
   "actions[].effect<open>.sign_in":
     "sign_in naming the host whose sign-in the projects section starts, exactly as a not-signed-in refusal's way names it",

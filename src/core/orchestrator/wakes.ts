@@ -53,7 +53,7 @@ export const GUIDANCE_MARK_WORDS = "check_change captainGuidance with mark";
 
 /** What the crewmate is told beside the captain's guidance that holds his kept merge. */
 function guidanceMarkNote(mark: number): string {
-  return `[kept merge] The captain's merge approval on this task stands, so these words of theirs hold its merge until you declare their impact: ${GUIDANCE_MARK_WORDS} ${mark} - none if they leave the approved work as it was, changed-work if they change it (then put up a new completion card when the work is ready).`;
+  return `[kept merge] The captain's merge approval on this task stands, so these words of theirs hold its merge until you declare their impact: ${GUIDANCE_MARK_WORDS} ${mark} - none if they leave the approved work as it was, changed-work if they change it (then put up a new merge card when the work is ready).`;
 }
 
 /** The task a hold-shaped wake is about, as its ways block names it. */

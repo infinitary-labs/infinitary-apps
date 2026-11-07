@@ -42,7 +42,7 @@ The iPhone and iPad use the same label, unquoted regular-weight words and bubble
 The time has no leading zero (1:03 PM, not 01:03 PM), on this line and the revised line.
 It is the captain's local time of day, with the date in front when it was not today, as the revised line writes it.
 The app draws the line from the saved message the card's task leads to, never from the card's words, and work handed over to another task keeps the first message.
-The line says where the card's work came from, nearest first (INF-2326): "You asked" for the captain's message that filed or started it, "You chose" for their card click with the button's words and anything they wrote, "Run by an automation" for an automation, and "You said" for a message of theirs aimed at that work alone.
+The line says where the card's work came from, nearest first (INF-2326): "You asked" for the captain's message that filed or started it, "You chose on “card title”" for their card click, naming the card it was on, with the button's words and anything they wrote, "Run by an automation" for an automation, and "You said" for a message of theirs aimed at that work alone.
 Only the captain's own words sit in the bubble: an automation's name, and a task's title under "From INF-2081", sit without it in the same `--font-ui` `--text-sm` `--fg-2`.
 A source on another task adds "· through 3 tasks" to the label, in its voice.
 A long message never fills the card: folded, its lines run together and are cut after two lines with an ellipsis.
@@ -89,7 +89,7 @@ Putting a decision away preserves its picks and unsent words without a popover; 
 The frame stylesheet dresses a plain `fieldset` as a hairline `--line-1` box at `--radius-m` with its `legend` in `--fg-1` weight 500, each radio or checkbox label a row with `--space-2` between control and text (`accent-color: --accent`, a checked row's text `--fg-1`), and a `textarea` full width under its label.
 Every ready card body is semantic HTML in a sandboxed iframe.
 The host owns the chip, title, size control, minimize corner, pager, and footer actions.
-Follow the card contract the models read (`CARD_AUTHORING` in `src/core/prompts/cardContract.ts`, mirrored by the readme's Card bodies bullet): a card leads with its answer in one sentence (finished code-work completion cards are the exception: the title alone carries the answer, and the body opens at Why, then What changed, Before and After; `docs/card-authoring.md` owns that loose outline), and an answer that explains how something works, compares options, or shows state, shape or layout is drawn - that sentence, then the figures carrying it.
+Follow the card contract the models read (`CARD_AUTHORING` in `src/core/prompts/cardContract.ts`, mirrored by the readme's Card bodies bullet): a card leads with its answer in one sentence (finished code-work merge cards are the exception: the title alone carries the answer, and the body opens at Why, then What changed, Before and After; `docs/card-authoring.md` owns that loose outline), and an answer that explains how something works, compares options, or shows state, shape or layout is drawn - that sentence, then the figures carrying it.
 An explanation with several parts gets several figures, each beside the short sentence it illustrates, rather than one crowded drawing.
 Keep prose needed to follow the answer in the open; reserve `<details>` for evidence, exact code paths, qualifications, and other material for a reader who digs.
 Figures are free-form and all of SVG renders.
@@ -112,7 +112,7 @@ The row wraps rather than truncating the verdict, preserves the reader's open st
 Unknown or undiagnosed causes say so, and a suspected intermittent failure never reads as proven.
 Its cells are the shape the task's own fact strip takes on its record and its crew summary (`../now/NowPanel.prompt.md`, Shared task facts), with the same state dot and words, and its pull request link is every pull request link's: `--accent`, underlined only while the pointer rests on it (`TaskRecord.prompt.md`, "Pull request links").
 The strip is the first thing in the action row, pushed left of the buttons in a frame of its own, so it stays in view however long the body is; when the row cannot hold both it takes its own row above the buttons, and its hairline shows only where it follows a body, on a past card.
-The completion card's merge says what a click does and follows its actual check hold (captain INF-1555 F12).
+The merge card's merge says what a click does and follows its actual check hold (captain INF-1555 F12).
 It reads "Merge the pull request" when its checks pass, "Merge when checks pass" while its checks are pending or unreadable, and "Merge after fixing errors" when its checks fail (captain INF-1555 F20).
 The merge offer itself expresses the crew's judgment that the work is ready; its separate captain click authorizes the merge and can keep that approval while checks hold it.
 While the captain's override passes the checks at the card's version, it reads "Merge the pull request" whatever the checks read, because a click then merges at once (INF-756).
@@ -301,7 +301,7 @@ Hide only hides; the saved card, its thread and its record keep everything.
   A task record's Cards row (`TaskRecord`), the Tasks filter's results and the first mate all open the same entry through the one shared show-card action.
   Nothing about a past card is a new stored card or a notification; its own opening is not a feed line either, except the first mate's pointing, which leaves one.
 
-A completion card with required captain actions draws a host notice outside the body scroller, immediately above its buttons.
+A merge card with required captain actions draws a host notice outside the body scroller, immediately above its buttons.
 It reads “After merging, you need to…” and names every action, target and consequence in the normal body size.
 Several actions have a visible count and a focusable disclosure with every requirement; the list may scroll but never truncates requirements.
 The notice uses the existing neutral panel border, spacing and focus ring.
@@ -309,7 +309,7 @@ In a short card it uses compact spacing and a focusable list scroller, leaving t
 After successful merging, each independent obligation gets a decision card with inert instructions, a specific confirmation and Not now.
 Deferred obligations remain under Waiting on you in Tasks with Show the card; manual results read Confirmed by you and observed results Checked by your first mate.
 
-A completion card whose story lists after-merge steps draws a second host notice in the same place and the same panel, below the required actions when both appear.
+A merge card whose story lists after-merge steps draws a second host notice in the same place and the same panel, below the required actions when both appear.
 It reads “After merging, the crew starts” and lists each step as its task title, “Continue: ” and the step's title, with the step's goal beneath in `--fg-2`.
 A step that names an existing task leads with its key in mono, then that task's own title and goal.
 A step that waits for other work adds a line beneath in the goal's style, “Starts once INF-2779 merges too”, naming each task it waits for.

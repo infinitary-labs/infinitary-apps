@@ -390,7 +390,7 @@ describe("CardStore", () => {
           id: "merge",
           label: "Merge",
           variant: "primary",
-          effect: { kind: "settle", mode: "merge" },
+          effect: { kind: "merge", after: "close" },
         },
       ],
     });

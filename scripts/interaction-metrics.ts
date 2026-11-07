@@ -1078,7 +1078,7 @@ export function isFakeSettleAction(action: {
   effect?: { kind: string } | null;
 }): boolean {
   const claims = SETTLE_SHAPED_ID.test(action.id) || SETTLE_SHAPED_LABEL.test(action.label ?? "");
-  return claims && action.effect?.kind !== "settle";
+  return claims && action.effect?.kind !== "settle" && action.effect?.kind !== "merge";
 }
 
 const SCRIPTS: RegExp[] = [
@@ -1332,7 +1332,8 @@ export function isCompletionCard(actionsJson: string | null | undefined): boolea
   if (!Array.isArray(actions)) return false;
   return actions.some((action) => {
     const effect = (action as { effect?: { kind?: unknown; mode?: unknown } } | null)?.effect;
-    return effect?.kind === "settle" && effect.mode === "merge";
+    // INF-2744's one merge effect, or a record saved before it.
+    return effect?.kind === "merge" || (effect?.kind === "settle" && effect.mode === "merge");
   });
 }
 

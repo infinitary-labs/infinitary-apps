@@ -61,6 +61,36 @@ export function migrateCardEffects(db: AppDatabase): void {
   }
 }
 
+/**
+ * One merge effect (INF-2744): every open card's settle merge and
+ * `request_merge` become the merge they meant, each recorded in
+ * `card_effect_backfill` first unless an earlier rewrite already kept it.
+ */
+export function migrateOneMergeEffect(db: AppDatabase): void {
+  const open = db
+    .prepare("SELECT id, actions_json FROM cards WHERE resolved_at IS NULL ORDER BY created_at, id")
+    .all() as { id: string; actions_json: string }[];
+  const log = db.prepare(
+    "INSERT OR IGNORE INTO card_effect_backfill (card_id, actions_json, migrated_at) VALUES (?, ?, ?)",
+  );
+  const rewrite = db.prepare("UPDATE cards SET actions_json = ? WHERE id = ?");
+  const now = Date.now();
+  for (const row of open) {
+    let actions: CardAction[];
+    try {
+      const parsed = JSON.parse(row.actions_json) as unknown;
+      if (!Array.isArray(parsed)) continue;
+      actions = parsed as CardAction[];
+    } catch {
+      continue;
+    }
+    const migrated = JSON.stringify(migrateLegacyActions(actions));
+    if (migrated === row.actions_json) continue;
+    log.run(row.id, row.actions_json, now);
+    rewrite.run(migrated, row.id);
+  }
+}
+
 export function addCardAnswerer(db: AppDatabase): void {
   addColumn(db, "cards", "answered_by", "TEXT");
 }

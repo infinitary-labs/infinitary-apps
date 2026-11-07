@@ -22,7 +22,7 @@ const MERGE = {
   id: "merge",
   label: "Merge",
   default: true,
-  effect: { kind: "settle", mode: "merge" },
+  effect: { kind: "merge", after: "close" },
 } as const;
 
 function fixture() {

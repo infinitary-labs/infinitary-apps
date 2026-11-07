@@ -395,9 +395,9 @@ export class ChangeMerge {
    * a continuing one: the published story at this version, or the
    * description's own words under the captain's override on the story
    * (INF-1365). A pull request with no story of this task merges as it is.
-   * On the captain's kept approval of a completion offer the story must be
-   * the one approved; a request_merge approval names a review, which
-   * showed no story. A pull request that moved past the published version
+   * On the captain's kept approval of a merge card's offer the story must be
+   * the one approved; an approval that names a review needs none, since
+   * its card showed no story. A pull request that moved past the published version
    * has the story republished at its version first, words unchanged
    * (INF-2509): on a kept approval only at the version it covers, and a
    * repair the host accepted keeps its own words (FI3-304). The captain's
@@ -443,7 +443,7 @@ export class ChangeMerge {
         offered.presentationContentHash !== ledger.published?.contentHash
       )
         throw new Error(
-          "The published story differs from the approved story. Show a new completion offer before merging.",
+          "The published story differs from the approved story. Show a new merge card before merging.",
         );
     }
     const held = guard?.held?.();

@@ -107,7 +107,7 @@ Local merge bounds Careful to Default; the muted explanation retains that Carefu
 The values update in place, leaving disclosures and keyboard focus alone; accepted changes appear in Activity and the feed.
 These are read-only facts, not switches: the existing message input is the only editing surface, and the action bar does not change.
 Closed tasks keep their policies as history and omit the helper; answers, reviews and the personal workspace keep their existing no-merge presentation.
-A Careful change presents its live-validation result, evidence and limitations primarily in the merge completion card, beside the decision.
+A Careful change presents its live-validation result, evidence and limitations primarily in the merge merge card, beside the decision.
 The task record keeps its retained validation evidence under More, closed by default, rather than as a prominent section above the record's rows.
 Its scenario observations can expand there to show the supporting transcript, picture or recording; these are history, not another merge decision.
 

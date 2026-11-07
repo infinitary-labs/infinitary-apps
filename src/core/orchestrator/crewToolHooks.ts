@@ -416,7 +416,15 @@ export class CrewToolHooks {
               : {}),
             onOpenChange: (input: import("@shared/changePresentation").OpenChangeInput) =>
               openChange(task.id, input),
-            onCheckChange: (input?: CheckChangeInput) => checkChange(task.id, input),
+            onCheckChange: async (input?: CheckChangeInput) => {
+              const read = await checkChange(task.id, input);
+              // A declaration that ended the approval in front with a hold
+              // ends the task's other approvals now, not at the next run
+              // (INF-2746); one that ended it without a hold lets the next go.
+              if (input?.captainGuidance || input?.conflictRepair)
+                this.core.settling.approvals.promoteQueued(task.id);
+              return read;
+            },
           }
         : {}),
       // An operation reads and reruns workflow runs with no pull request: its

@@ -628,7 +628,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     const looks = () => forge.calls.filter((call) => call.startsWith("beforeDispatch"));
 
     // INF-2549: the last look comes before the mark - a refused one writes nothing.
-    refuse = "a new completion card is up";
+    refuse = "a new merge card is up";
     expect(await harness.service.merges.merge("ab12cd34", guard("feedbeef"))).toMatchObject({
       ok: false,
       stop: "withdrawn",
@@ -1161,11 +1161,12 @@ describe("a pull request merged outside the app (FI3-213)", () => {
     return { ...harness, forge };
   }
 
+  // INF-2744: the answer points at the merge card's after close, never a report field.
   it("reads the task's own pull request by its number and records it merged", async () => {
     const { tasks, service, forge } = await mergedOutside();
     const text = await service.checkTool.checkForCrew("ab12cd34");
     expect(text).toBe(
-      "overall: merged\n#23 was merged on GitHub outside the app as squash01.\nhead: feedbeef\nNothing is left to merge. Continue any remaining work, or report merge_completes_task with this PR number and head when its merge finishes the task. No second merge decision is needed.",
+      "overall: merged\n#23 was merged on GitHub outside the app as squash01.\nhead: feedbeef\nNothing is left to merge. Continue any remaining work; when this merge finished all of it, put up your merge card for this pull request with after close, and the app closes the task as merged without merging again.",
     );
     expect(forge.calls).toEqual(["changeFor fm/task-ab12cd34", "pull 23"]);
     expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
@@ -1181,7 +1182,8 @@ describe("a pull request merged outside the app (FI3-213)", () => {
     ).toMatchObject({ ci: "merged" });
     const crew = await service.checkTool.checkForCrew("ab12cd34");
     expect(crew).toContain("overall: merged");
-    expect(crew).toContain("report merge_completes_task");
+    // INF-2744: the merge card's after close is the one declaration that this merge finished the task.
+    expect(crew).toContain("put up your merge card for this pull request with after close");
   });
 
   it("answers a put-in with the merge already made and sends nothing", async () => {

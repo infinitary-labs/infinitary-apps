@@ -488,7 +488,11 @@ function receiptOf(
       ...(closing?.closedReason ? { reason: closing.closedReason } : {}),
       ...(head ? { head } : {}),
       ...(sha ? { sha } : {}),
-      ...(authorization?.receipt || reviewed?.by === "captain" ? { by: "captain" as const } : {}),
+      // The app's own merge under autonomy is not the captain's (INF-2744).
+      ...((authorization?.receipt && authorization.issuer !== "autonomy") ||
+      reviewed?.by === "captain"
+        ? { by: "captain" as const }
+        : {}),
       // A merge that kept its task open has no merging close: the reading
       // that saw it merged keeps its time, even after a later close
       // (INF-2678).

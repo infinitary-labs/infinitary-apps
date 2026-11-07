@@ -102,7 +102,9 @@ function offersSettle(actionsJson: string | null): boolean {
       actions.some((action) => {
         if (action === null || typeof action !== "object") return false;
         const { id, effect } = action as { id?: unknown; effect?: { kind?: unknown } };
-        return SETTLE_ACTION_IDS.has(String(id)) || effect?.kind === "settle";
+        return (
+          SETTLE_ACTION_IDS.has(String(id)) || effect?.kind === "settle" || effect?.kind === "merge"
+        );
       })
     );
   } catch {

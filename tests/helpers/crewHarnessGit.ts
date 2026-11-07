@@ -262,7 +262,11 @@ export async function approved(
       body: completionBody("<p>The PR is ready.</p><p>CI is green on the tested head.</p>"),
       actions: review
         ? [
-            { id: "merge", default: true, effect: { kind: "request_merge", review: review.id } },
+            {
+              id: "merge",
+              default: true,
+              effect: { kind: "merge", review: review.id, after: "continue" },
+            },
             { id: "not-now", label: "Not now" },
           ]
         : [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],

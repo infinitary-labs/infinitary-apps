@@ -6,6 +6,7 @@ import {
   type CardWidth,
   cardAnswerLines,
   FIRSTMATE_CARD_META,
+  mergeEffectOf,
   onStage,
   settleEffectOf,
 } from "@shared/cards";
@@ -96,9 +97,7 @@ export class CardEmits {
     if (!stableId) return undefined;
     const card = this.stack.cards.get(crewmateCardId(taskId, stableId));
     if (card?.taskId !== taskId || card.author !== "crewmate") return undefined;
-    return card.actions.some((action) => settleEffectOf(action)?.mode === "merge")
-      ? card
-      : undefined;
+    return card.actions.some((action) => mergeEffectOf(action)) ? card : undefined;
   }
 
   /**
@@ -209,10 +208,10 @@ export class CardEmits {
         `Action "${write.id}" asks to send a crewmate's write, which only that crewmate's card may.`,
       );
     }
-    const settle = input.actions.find((action) => settleEffectOf(action));
+    const settle = input.actions.find((action) => settleEffectOf(action) || mergeEffectOf(action));
     if (settle && !context.taskId) {
       throw new Error(
-        `Action "${settle.id}" carries a settle effect, so the card must pass task_id; without it the host cannot tell which task to settle and the button does nothing.`,
+        `Action "${settle.id}" carries a merge or discard effect, so the card must pass task_id; without it the host cannot tell which task to merge or discard and the button does nothing.`,
       );
     }
     // The click refuses every choice on a closed task's card
@@ -231,10 +230,13 @@ export class CardEmits {
       context.author === "firstmate" &&
       task?.delivery?.presentation &&
       !readyPresentation(task.delivery.presentation) &&
-      input.actions.some((action) => settleEffectOf(action)?.mode === "merge")
+      input.actions.some((action) => {
+        const merge = mergeEffectOf(action);
+        return merge !== undefined && !merge.review;
+      })
     ) {
       throw new Error(
-        `Task ${task.id}'s saved change story is not published at its newest revision, so a merge button cannot carry it yet. Steer the crewmate to publish its story, or to emit its own completion card. The card is unchanged.`,
+        `Task ${task.id}'s saved change story is not published at its newest revision, so a merge button cannot carry it yet. Steer the crewmate to publish its story, or to emit its own merge card. The card is unchanged.`,
       );
     }
     if (input.reviewTaskId) {
@@ -574,7 +576,7 @@ export function buildEmittedCard(
     .map((action) => {
       // A destructive choice reads as one: declared danger, or a discard
       // (which is always destructive). Danger outranks the default's primary.
-      const danger = action.danger === true || settleEffectOf(action)?.mode === "discard";
+      const danger = action.danger === true || settleEffectOf(action) !== undefined;
       return {
         id: action.id,
         label: action.label,

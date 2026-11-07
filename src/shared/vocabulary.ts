@@ -53,6 +53,9 @@ export const MERGE_WORDS = {
   land: "Merge the branch",
 } as const;
 
+/** The button the app puts beside a merge that keeps the task, in place of Discard (INF-2744). */
+export const MERGE_NOT_NOW_WORDS = "Not now";
+
 /**
  * The button beside Merge on a Quick or Default pull request's merge card
  * (INF-562, the captain's own words for it): the click makes the task

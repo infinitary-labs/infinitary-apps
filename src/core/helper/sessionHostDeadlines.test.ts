@@ -68,7 +68,7 @@ describe("a conversation held on a computer that runs work", () => {
         args: {
           title: "Review this change",
           presentation: 1,
-          actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+          actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
         },
       },
     ],

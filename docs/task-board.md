@@ -116,7 +116,7 @@ A move counts only from the captain's own click or key in the board's page, and 
   Started work in the backlog is the exception: Start asks once and picks it up again.
 - Waiting on you is never a target: only a reachable ready decision puts a task there.
 - Done · 7d is not a column on the Board, so it takes no drop.
-  Show the card, on a waiting tile's menu, brings the task's waiting card forward, its completion card included; the card's own button merges, the board never does.
+  Show the card, on a waiting tile's menu, brings the task's waiting card forward, its merge card included; the card's own button merges, the board never does.
 - The Drop task tray, in the foot only while a tile is in the air, is the record's Drop task: `drop-task` on never-started work with the effects its record lists (`dropAskOf`, from `tasks.detail`), `stop-task` once started, whichever the row's `moves` allow; it asks once in the record's words and refuses open parts.
 - A waiting tile goes nowhere but Drop task; Done and Dropped tiles never move; a drop on a tile's own lane changes nothing.
 

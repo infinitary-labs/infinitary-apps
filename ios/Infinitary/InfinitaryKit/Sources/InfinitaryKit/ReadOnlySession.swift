@@ -897,7 +897,8 @@ public struct PhoneNotice: Equatable, Sendable {
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardCurrentUpdateSeen)
             sceneObservations = homeMajor >= PhoneContract.sceneObservationsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.sceneObservations)
-            homeTakesUsage = (frame["changes"] as? [String] ?? []).contains(PhoneDiagnosticEvent.change)
+            homeTakesUsage = homeMajor >= PhoneContract.phoneDiagnosticsSince
+                || (frame["changes"] as? [String] ?? []).contains(PhoneDiagnosticEvent.change)
             if !sceneObservations { computers = [] }
             sceneGeneration += 1
             contact = "reaching"

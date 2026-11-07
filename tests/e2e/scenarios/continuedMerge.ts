@@ -16,7 +16,7 @@ export function continuedMerge(
       if (isFirstmate || !wantsStream) return undefined;
       const { results } = sinceLastUser(body);
       if (
-        latestUserTail.includes("the captain's merge of") &&
+        latestUserTail.includes("your merge card's merge of") &&
         latestUserTail.includes("Nothing was merged")
       ) {
         if (!results.length) {
@@ -40,10 +40,8 @@ export function continuedMerge(
                 id: "continued-merge",
                 title: CONTINUED_MERGE_TITLE,
                 body: "<p>The crewmate continued an earlier task’s pull request.</p><p>Merge the reviewed work and keep this task open.</p>",
-                actions: [
-                  { id: "merge", effect: { kind: "request_merge", review } },
-                  { id: "not-now", label: "Not now" },
-                ],
+                // INF-2744: the merge alone; the app writes Not now beside it.
+                actions: [{ id: "merge", effect: { kind: "merge", review, after: "continue" } }],
               },
             },
           ],

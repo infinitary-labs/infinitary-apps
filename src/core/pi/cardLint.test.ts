@@ -6,6 +6,7 @@ import {
   type CardLintContext,
   COMPLETION_PICTURES_REFUSAL,
   closedTaskChoiceRefusal,
+  crewmateOwesCompletionRefusal,
   ESCAPED_BODY_REFUSAL,
   lintCardShape,
   lintCrewmateCard,
@@ -19,7 +20,7 @@ import {
 import { type EmittedCard, resolveFirstmateCardId } from "./cardTool";
 
 /** The one settle effect a merge offer carries (cards/tasks/agents P1): the host resolves the posture. */
-const MERGE = { kind: "settle", mode: "merge" } as const;
+const MERGE = { kind: "merge", after: "close" } as const;
 /** A merge offer as an action, for the cases that need one and nothing else. */
 const MERGE_ACTION = { id: "merge", label: "Merge PR", default: true, effect: MERGE } as const;
 /**
@@ -1043,7 +1044,7 @@ describe("lintFirstmateCard", () => {
     ).toBeUndefined();
   });
 
-  it("refuses a merge-looking action that carries no settle effect", () => {
+  it("refuses a merge-looking action that carries no merge effect (INF-2744)", () => {
     // The live regression: every Merge PR card ever emitted used a per-PR
     // id like "merge-pr55" and no task_id, so act() fell through to the
     // steer branch and no PR was ever merged. With effects on the wire the
@@ -1056,7 +1057,7 @@ describe("lintFirstmateCard", () => {
         { ...base, actions: [{ id, label: "Merge PR 55", default: true }] },
         ctx,
       );
-      expect(refusal, id).toMatch(/reads like a merge but carries no settle effect/);
+      expect(refusal, id).toMatch(/reads like a merge but carries no merge effect/);
     }
     // The label alone is a claim too.
     expect(
@@ -1064,7 +1065,7 @@ describe("lintFirstmateCard", () => {
         { ...base, actions: [{ id: "ship", label: "Merge it now", default: true }] },
         ctx,
       ),
-    ).toMatch(/reads like a merge but carries no settle effect/);
+    ).toMatch(/reads like a merge but carries no merge effect/);
     // An action that declares its settle passes under any id, and an
     // unrelated reply is untouched - this is a consistency check, not a ban.
     expect(
@@ -1181,7 +1182,7 @@ describe("lintFirstmateCard", () => {
     );
   });
 
-  it("v3.6: refuses a merge card while the task's own crewmate still owes its completion card", () => {
+  it("v3.6: refuses a merge card while the task's own crewmate still owes its merge card (INF-2744)", () => {
     // The Sep 19 defect this exists for: after each of four reviews passed,
     // the Firstmate steered the crewmate to emit its completion card AND
     // emitted its own merge card in the same turn, so the captain got two
@@ -1189,9 +1190,10 @@ describe("lintFirstmateCard", () => {
     // not on screen yet, because the Firstmate got there first.
     const ctx = context({ crewmateOwesCompletion: (taskId) => taskId === "t91" });
     const merge = decision({ taskId: "t91", actions: [...COMPLETION_PAIR] });
-    expect(lintFirstmateCard(merge, ctx)).toBe(
-      "task t91 still has its own crewmate, and a crewmate's completion card is the one merge decision on its task: steer it with steer_crewmate to emit that card (or revise it), instead of carrying a settle merge effect yourself.",
-    );
+    // INF-2744: the words are the refusal's own owner's; the merge card is
+    // still the crewmate's to emit.
+    expect(lintFirstmateCard(merge, ctx)).toBe(crewmateOwesCompletionRefusal("t91"));
+    expect(crewmateOwesCompletionRefusal("t91")).toContain("steer_crewmate");
     // Once the crewmate has emitted it, a settle refusal's ways out are a
     // legitimate Firstmate card on the same task.
     expect(lintFirstmateCard({ ...merge, taskId: "t92" }, ctx)).toBeUndefined();

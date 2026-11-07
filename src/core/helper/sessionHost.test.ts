@@ -18,7 +18,6 @@ import {
   sessionHostHooks,
   TASK,
 } from "../../../tests/helpers/sessionHostWorld";
-import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
 import { PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
@@ -61,61 +60,48 @@ describe("a conversation held on a computer that runs work", () => {
       },
     });
   });
-  // INF-2225, INF-2214's approved shared cards: an older home would drop the
-  // revision read and write as if the card were this task's own, so the
-  // write is refused before anything is sent.
-  it.each([true, false])(
-    "sends a shared-card correction only to a home that keeps it (INF-2225; supported: %s)",
-    async (supported) => {
-      const at = await placed({ homeChanges: supported ? ["shared-cards"] : [] });
-      at.spec.tools.push("revise_required_action");
-      await at.open();
-      model([
-        {
-          tools: [
-            {
-              name: "revise_required_action",
-              args: {
-                action: "card-fm-required-action-op1",
-                source: "DOP-208",
-                action_id: "remove-job-host",
-                expected_generation: 1,
-                patch: { instructions: ["Run C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd"] },
-                reason: "The remover path was wrong",
-                operation_id: "op-remover-path",
-                same_action: true,
-              },
+  // INF-2225, INF-2214's approved shared cards: the home on this major keeps
+  // the revision read, so the correction goes to it whole.
+  it("sends a shared-card correction to its home (INF-2225)", async () => {
+    const at = await placed();
+    at.spec.tools.push("revise_required_action");
+    await at.open();
+    model([
+      {
+        tools: [
+          {
+            name: "revise_required_action",
+            args: {
+              action: "card-fm-required-action-op1",
+              source: "DOP-208",
+              action_id: "remove-job-host",
+              expected_generation: 1,
+              patch: { instructions: ["Run C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd"] },
+              reason: "The remover path was wrong",
+              operation_id: "op-remover-path",
+              same_action: true,
             },
-          ],
-        },
-        { text: "Corrected." },
-      ]);
-      await at.order("inf:session:prompt", [
-        { orderId: "fix:1", task: TASK, text: "Correct the remover path." },
-      ]);
-      await at.ended(1);
-      const sent = at.home.effects.filter(
-        (effect) => effect.channel === "inf:work:revise-required-action",
-      );
-      const ended = at.home.events.find(
-        (record) =>
-          record.event.type === "tool_end" && record.event.toolName === "revise_required_action",
-      )?.event;
-      if (supported) {
-        expect(sent[0]?.request).toMatchObject({
-          input: {
-            action: "card-fm-required-action-op1",
-            expectedGeneration: 1,
-            operationId: "op-remover-path",
-            sameAction: true,
           },
-        });
-      } else {
-        expect(sent).toEqual([]);
-        expect(ended).toMatchObject({ isError: true });
-      }
-    },
-  );
+        ],
+      },
+      { text: "Corrected." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "fix:1", task: TASK, text: "Correct the remover path." },
+    ]);
+    await at.ended(1);
+    const sent = at.home.effects.filter(
+      (effect) => effect.channel === "inf:work:revise-required-action",
+    );
+    expect(sent[0]?.request).toMatchObject({
+      input: {
+        action: "card-fm-required-action-op1",
+        expectedGeneration: 1,
+        operationId: "op-remover-path",
+        sameAction: true,
+      },
+    });
+  });
   // INF-2589, the captain: "any too big answer gets stored in a file and we
   // return the path to the file instead of the full answer". The file is
   // saved where the crewmate's shell runs, so it can open it.
@@ -166,37 +152,28 @@ describe("a conversation held on a computer that runs work", () => {
 
   // INF-2599 (the captain: "Send a crewmate its directions once, and again
   // only when they change"): the home sends directions again after a fold,
-  // so it must hear one; an older home would refuse the event it does not
-  // know, so it hears nothing.
-  it.each([true, false])(
-    "tells a home that reads it when its Claude conversation folds (INF-2599; supported: %s)",
-    async (supported) => {
-      const claude = await scriptedClaudeWorld();
-      const at = await placed({
-        claude,
-        homeChanges: supported ? ["conversation-folds"] : [],
-      });
-      const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
-      claude.answer({ text: "Counted every press." });
-      await at.order("inf:session:open", [{ orderId: "open:fold", task: TASK, spec }]);
-      await at.order("inf:session:prompt", [
-        { orderId: "rows:fold", task: TASK, text: "Count every press." },
-      ]);
-      await at.ended(1);
-      claude.fold();
-      // The home hears what the conversation did in order: a model it named
-      // after the fold is heard after the fold too, with or without it.
-      claude.answer({ text: "Counted the long presses." });
-      await at.order("inf:session:prompt", [
-        { orderId: "rows:after-fold", task: TASK, text: "Count the long presses." },
-      ]);
-      await at.ended(2);
-      const folds = at.home.events.filter(({ event }) => event.type === "context_compacted");
-      expect(folds.map(({ event }) => event)).toEqual(
-        supported ? [{ type: "context_compacted" }] : [],
-      );
-    },
-  );
+  // so it must hear one.
+  it("tells its home when its Claude conversation folds (INF-2599)", async () => {
+    const claude = await scriptedClaudeWorld();
+    const at = await placed({ claude });
+    const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
+    claude.answer({ text: "Counted every press." });
+    await at.order("inf:session:open", [{ orderId: "open:fold", task: TASK, spec }]);
+    await at.order("inf:session:prompt", [
+      { orderId: "rows:fold", task: TASK, text: "Count every press." },
+    ]);
+    await at.ended(1);
+    claude.fold();
+    // The home hears what the conversation did in order: a model it named
+    // after the fold is heard after the fold too, with or without it.
+    claude.answer({ text: "Counted the long presses." });
+    await at.order("inf:session:prompt", [
+      { orderId: "rows:after-fold", task: TASK, text: "Count the long presses." },
+    ]);
+    await at.ended(2);
+    const folds = at.home.events.filter(({ event }) => event.type === "context_compacted");
+    expect(folds.map(({ event }) => event)).toEqual([{ type: "context_compacted" }]);
+  });
   it("forwards first-release facts and a task list page to the home that records them (INF-1607)", async () => {
     const at = await placed();
     await at.open();
@@ -736,43 +713,32 @@ describe("a conversation held on a computer that runs work", () => {
     );
   });
 
-  // INF-2184 (INF-2490): an older home drops branch and would open the
-  // task's own branch instead of the one the captain asked for.
-  it.each([true, false])(
-    "opens a change from a named branch only through a home that lists the change (has it: %s)",
-    async (supported) => {
-      const at = await placed({
-        homeChanges: CONTRACT_CHANGES.names.filter(
-          (name) => supported || name !== "open-change-branch",
-        ),
-      });
-      await at.order("inf:session:open", [
-        {
-          orderId: `open:${TASK}:1`,
-          task: TASK,
-          spec: { ...at.spec, tools: [...at.spec.tools, "open_change"] },
-        },
-      ]);
-      const input = {
-        title: "chore(main): release 0.1.8",
-        body: "The release the captain asked to open.",
-        branch: "release-please--branches--main",
-      };
-      model([{ tools: [{ name: "open_change", args: input }] }, { text: "Reported." }]);
-      await at.order("inf:session:prompt", [
-        { orderId: "open-branch", task: TASK, text: "Open the release pull request." },
-      ]);
-      await at.ended(1);
-      const asked = at.home.effects
-        .filter((effect) => effect.channel === "inf:work:open-change")
-        .map((effect) => effect.request.input);
-      expect(asked).toEqual(supported ? [input] : []);
-      if (!supported)
-        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
-          "needs an update before it can open a change from another branch; nothing was sent.",
-        );
-    },
-  );
+  // INF-2184 (INF-2490): the home opens the branch the captain asked for,
+  // never the task's own.
+  it("opens a change from a named branch through its home (INF-2184)", async () => {
+    const at = await placed();
+    await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:1`,
+        task: TASK,
+        spec: { ...at.spec, tools: [...at.spec.tools, "open_change"] },
+      },
+    ]);
+    const input = {
+      title: "chore(main): release 0.1.8",
+      body: "The release the captain asked to open.",
+      branch: "release-please--branches--main",
+    };
+    model([{ tools: [{ name: "open_change", args: input }] }, { text: "Reported." }]);
+    await at.order("inf:session:prompt", [
+      { orderId: "open-branch", task: TASK, text: "Open the release pull request." },
+    ]);
+    await at.ended(1);
+    const asked = at.home.effects
+      .filter((effect) => effect.channel === "inf:work:open-change")
+      .map((effect) => effect.request.input);
+    expect(asked).toEqual([input]);
+  });
 
   it("keeps a crewmate's builds and tests below the UI as another user on the home's own Mac", async () => {
     // Captain on INF-255. This world joins by a link for another user here (`work`).

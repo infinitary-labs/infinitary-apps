@@ -12,8 +12,10 @@ import {
   candidateHead,
   endedAuthorization,
   outstandingGuidance,
+  putInFront,
   retryAfter,
   standingAuthorization,
+  taskPull,
 } from "./mergeAuthorization";
 import { queueNoteFacts, queueWakeWords } from "./projectQueue";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
@@ -21,7 +23,7 @@ import type { SettleLocks } from "./settleLocks";
 import { changeName } from "./settleWords";
 
 /**
- * The captain's click on a completion offer, as the click handler read it
+ * The captain's click on a merge card's offer, as the click handler read it
  * off the shown card: the card, its occurrence and version, the action and
  * the gesture's own id (FI3-304).
  */
@@ -59,6 +61,38 @@ function waitOf(result: SettleOutcome, undecided: boolean): MergeWait {
   }
 }
 
+/** Why an approval ends when its pull request is no longer one of the task's (INF-2746). */
+export const PULL_NOT_THE_TASKS =
+  "the approved pull request is no longer one of the task's changes";
+
+/**
+ * Which of a task's other approvals an ended one ends with it (INF-2746):
+ * every one when the end holds the task's merge for the captain; only
+ * those the app took under autonomy when the app's own approval is revoked
+ * because the task no longer merges on its own, so the captain's clicks
+ * still go ahead; none otherwise.
+ */
+function endsWith(ended: MergeAuthorization): ((item: MergeAuthorization) => boolean) | undefined {
+  if (ended.holds) return () => true;
+  if (ended.status === "revoked") return (item) => item.issuer === "autonomy";
+  return undefined;
+}
+
+/** A generation past every approval the task holds, in front or not (INF-2746). */
+function nextGeneration(top: MergeAuthorization | undefined): number {
+  return Math.max(0, ...[top, ...(top?.queued ?? [])].map((item) => item?.generation ?? 0)) + 1;
+}
+
+/** Whether two approvals cover the same pull request where the project lives. */
+function samePull(a: MergeAuthorization, b: MergeAuthorization): boolean {
+  return (
+    a.target.host === b.target.host &&
+    a.target.owner === b.target.owner &&
+    a.target.name === b.target.name &&
+    a.target.prNumber === b.target.prNumber
+  );
+}
+
 /**
  * The captain's kept merge approval (FI3-304, `./mergeAuthorization.ts`):
  * minting it at the click, the guard each attempt runs under, what an
@@ -82,37 +116,241 @@ export class KeptApproval {
    * a plain Git host - approves no head and the click is one attempt, as
    * before. A standing approval the click
    * replaces is superseded either way.
+   *
+   * On a task whose autonomy is on, the app mints the same approval from
+   * the merge card itself as it goes up (INF-2744, `issuer: "autonomy"`),
+   * once the merge gate lets the app through.
+   *
+   * A task may ask for many merges (INF-2746): an approval of another pull
+   * request than the one whose approval stands joins it, and each goes
+   * ahead on its own (`KeptMerge.runMergeAuthorization`). Returns whether
+   * the approval is the one in front now, joined the others (`queued`), or
+   * was not minted (undefined).
    */
   authorizeMerge(
     taskId: string,
     approval: MergeApproval,
     proceedWithOpen: boolean,
     reviewId?: string,
-  ): void {
+    declared: { after?: "close" | "continue"; issuer?: "autonomy" } = {},
+  ): "standing" | "queued" | undefined {
     const record = this.host.tasks.get(taskId);
-    if (!record || TaskService.isClosed(record)) return;
+    if (!record || TaskService.isClosed(record)) return undefined;
     const now = this.host.now();
     const previous = record.delivery?.mergeAuthorization;
-    const generation = (previous?.generation ?? 0) + 1;
-    const minted = this.mint(record, approval, proceedWithOpen, generation, now, reviewId);
-    if (minted) {
-      // The approved review is the task's current change from the click on (INF-2490).
-      const own = minted.review?.branch === record.branch;
+    const standing = standingAuthorization(record.delivery);
+    const generation = nextGeneration(previous);
+    const minted = this.mint(
+      record,
+      approval,
+      proceedWithOpen,
+      generation,
+      now,
+      reviewId,
+      declared,
+    );
+    const approvedBy = (authorization: MergeAuthorization) =>
+      authorization.issuer === "autonomy"
+        ? `The app approved merging ${changeName(record, authorization.target.prNumber)} at ${authorization.approvedHead}, because this task merges on its own.`
+        : `The captain approved merging ${changeName(record, authorization.target.prNumber)} at ${authorization.approvedHead}.`;
+    if (minted && standing && !samePull(standing, minted)) {
+      // A task may ask for many merges (INF-2746): an approval of another
+      // pull request joins the standing one, never in its place, and goes
+      // ahead on its own once its crewmate is idle.
       this.host.tasks.delivery.recordPermissionRecords(taskId, {
-        mergeAuthorization: minted,
-        ...(minted.review && !own ? { checkTarget: minted.review } : {}),
+        mergeAuthorization: {
+          ...standing,
+          queued: [...(standing.queued ?? []).filter((item) => !samePull(item, minted)), minted],
+        },
       });
-      if (minted.review && own) this.host.tasks.delivery.selectOwnChange(taskId, minted.review);
       this.host.tasks.note(
         taskId,
-        `The captain approved merging ${changeName(record, minted.target.prNumber)} at ${minted.approvedHead}.`,
-        { news: true, data: { mergeAuthorization: minted.id, generation } },
+        `${approvedBy(minted)} It goes ahead on its own beside the approval of ${changeName(record, standing.target.prNumber)}.`,
+        {
+          news: true,
+          feed: minted.issuer === "captain",
+          data: { mergeAuthorization: minted.id, queued: true },
+        },
       );
+      this.locks.retryWhenFree(taskId);
+      return "queued";
+    }
+    if (minted) {
+      // Approvals still waiting behind one that just ended wait behind this one.
+      const waiting = (previous?.queued ?? []).filter((item) => !samePull(item, minted));
+      const kept = { ...minted, ...(waiting.length > 0 ? { queued: waiting } : {}) };
+      // The approved pull request is the task's current change from the click on (INF-2490).
+      this.recordStanding(taskId, kept);
+      this.host.tasks.note(taskId, approvedBy(minted), {
+        news: true,
+        data: { mergeAuthorization: minted.id, generation },
+      });
+      return "standing";
+    }
+    // A click that approves no head asks again only for its own pull request.
+    const clicked = reviewId
+      ? record.delivery?.mergeReviews?.find((item) => item.id === reviewId)?.number
+      : (record.delivery?.completionOffers?.find(
+          (offer) => offer.cardId === approval.cardId && offer.offerId === approval.offerId,
+        )?.prNumber ?? currentChange(record.delivery, record.branch).number);
+    if (standing && (clicked === undefined || clicked === standing.target.prNumber)) {
+      this.endAuthorization(
+        taskId,
+        "superseded",
+        declared.issuer === "autonomy"
+          ? "its crewmate put up a new merge card"
+          : "the captain clicked merge on another card",
+      );
+    }
+    return undefined;
+  }
+
+  /**
+   * Write an approval as the one that stands. A click (`select`) makes the
+   * pull request it approves the task's current change (INF-2490); one the
+   * app promotes from the queue leaves the current change alone, and its
+   * run selects its pull request only when it merges (INF-2746).
+   */
+  private recordStanding(taskId: string, authorization: MergeAuthorization, select = true): void {
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
+      mergeAuthorization: authorization,
+    });
+    if (select) this.selectCovered(taskId, authorization);
+  }
+
+  /**
+   * Make the pull request an approval covers the task's current change
+   * (INF-2490): its review, else the task's own change. A merge of the
+   * task's own change reads the current change, so the run of an approval
+   * without a review selects its pull request right before it merges; a
+   * review's merge reads its pull request by number and needs nothing.
+   */
+  selectCovered(taskId: string, authorization: MergeAuthorization): void {
+    const record = this.host.tasks.get(taskId);
+    if (!record) return;
+    const target = authorization.target;
+    const review =
+      authorization.review ??
+      taskPull(record, this.host.tasks.changesFor(taskId), target.prNumber)?.review;
+    const current = currentChange(record.delivery, record.branch);
+    if (
+      !authorization.review &&
+      current.branch === target.branch &&
+      current.number === target.prNumber
+    )
       return;
+    if (target.branch === record.branch)
+      this.host.tasks.delivery.selectOwnChange(
+        taskId,
+        review ?? { number: target.prNumber, headSha: candidateHead(authorization) },
+      );
+    else if (review?.branch === target.branch)
+      this.host.tasks.delivery.recordPermissionRecords(taskId, { checkTarget: review });
+  }
+
+  /**
+   * The approval in front ended and the task has others (INF-2746): the
+   * next one comes to the front, keeping the captain's guidance marks. An
+   * end that ends others too (`endsWith`) drops them first. Returns whether
+   * one stands in front now.
+   */
+  promoteQueued(taskId: string): boolean {
+    const record = this.host.tasks.get(taskId);
+    let ended = record?.delivery?.mergeAuthorization;
+    if (!record || !ended || ended.status === "standing" || !ended.queued?.length) return false;
+    if (TaskService.isClosed(record)) return false;
+    const drop = endsWith(ended);
+    if (drop) {
+      this.dropQueued(taskId, ended, ended.reason ?? "the merge is the captain's again", drop);
+      ended = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization ?? ended;
     }
-    if (previous?.status === "standing") {
-      this.endAuthorization(taskId, "superseded", "the captain clicked merge on another card");
-    }
+    const [next, ...rest] = ended.queued ?? [];
+    if (!next) return false;
+    this.recordStanding(
+      taskId,
+      {
+        ...next,
+        generation: nextGeneration(ended),
+        guidance: ended.guidance,
+        ...(rest.length > 0 ? { queued: rest } : { queued: undefined }),
+      },
+      false,
+    );
+    this.host.tasks.note(
+      taskId,
+      `The kept approval to merge ${changeName(record, next.target.prNumber)} goes on now that the approval of ${changeName(record, ended.target.prNumber)} ended.`,
+      { news: true, data: { mergeAuthorization: next.id } },
+    );
+    return true;
+  }
+
+  /**
+   * The one in front waits (INF-2746): it steps back behind the task's
+   * other approvals, so the next goes ahead without waiting for it to end.
+   * Nothing steps back while a merge request is out. Returns whether
+   * another is in front now.
+   */
+  stepBack(taskId: string, id: string): boolean {
+    const top = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
+    if (top?.id !== id) return false;
+    const front = putInFront(top, 0, true);
+    if (!front) return false;
+    this.host.tasks.delivery.recordPermissionRecords(taskId, { mergeAuthorization: front });
+    return true;
+  }
+
+  /**
+   * The task's other approvals end with the one that ended (INF-2746): the
+   * timeline and the feed say so, and its crewmate hears once which merges
+   * will not run, so it puts their merge cards up again - a card the app
+   * took from shows the merging line and no buttons until then.
+   */
+  dropQueued(
+    taskId: string,
+    ended: MergeAuthorization,
+    why: string,
+    drop: (item: MergeAuthorization) => boolean = () => true,
+  ): void {
+    const record = this.host.tasks.get(taskId);
+    const dropped = ended.queued?.filter(drop) ?? [];
+    if (!record || dropped.length === 0) return;
+    const kept = ended.queued?.filter((item) => !drop(item)) ?? [];
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
+      mergeAuthorization: { ...ended, queued: kept.length > 0 ? kept : undefined },
+    });
+    if (TaskService.isClosed(record)) return;
+    const names = dropped.map((item) => changeName(record, item.target.prNumber)).join(", ");
+    this.host.tasks.note(taskId, `The kept merge approvals of ${names} ended too: ${why}.`, {
+      news: true,
+      feed: true,
+    });
+    this.host.mergeContinued?.(
+      taskId,
+      undefined,
+      {
+        ok: false,
+        text: `The kept merge approvals of ${names} ended with the approval of ${changeName(record, ended.target.prNumber)}: ${why}. Put up the merge card of each pull request that should still merge; the new card is what the captain or the app approves.`,
+      },
+      names,
+    );
+  }
+
+  /**
+   * Its crewmate put up a new merge card for a pull request (INF-2744,
+   * INF-2746): any approval of that pull request, standing or waiting,
+   * ends, since the crewmate is asking again; approvals of the task's other
+   * pull requests stand beside the new card. `review` undefined is the
+   * task's own change.
+   */
+  askAgain(taskId: string, review: string | undefined): void {
+    const top = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
+    const waiting = top?.queued?.filter((item) => item.review?.id !== review);
+    if (top && waiting && waiting.length !== top.queued?.length)
+      this.host.tasks.delivery.recordPermissionRecords(taskId, {
+        mergeAuthorization: { ...top, queued: waiting.length > 0 ? waiting : undefined },
+      });
+    if (top?.status === "standing" && top.review?.id === review)
+      this.endAuthorization(taskId, "superseded", "its crewmate put up a new merge card");
   }
 
   private mint(
@@ -122,6 +360,7 @@ export class KeptApproval {
     generation: number,
     now: number,
     reviewId?: string,
+    declared: { after?: "close" | "continue"; issuer?: "autonomy" } = {},
   ): MergeAuthorization | undefined {
     const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
     const review = reviewId
@@ -142,13 +381,21 @@ export class KeptApproval {
         location.name !== review.name)
     )
       return undefined;
+    // A click approves the pull request its card was shown for, whichever
+    // of the task's is current now (INF-2746).
+    const changes = this.host.tasks.changesFor(record.id);
+    const shown = record.delivery?.completionOffers?.find(
+      (item) => item.cardId === approval.cardId && item.offerId === approval.offerId,
+    )?.prNumber;
+    const pull = shown === undefined ? undefined : taskPull(record, changes, shown);
     const offer = review
       ? { baseline: { headSha: review.headSha, prNumber: review.number }, ...review }
       : approvableOffer(
           record,
-          this.changeRepoOf(record, repo),
+          this.changeRepoOf(record, repo, pull?.review),
           this.host.taskDelivery(record.id),
           approval,
+          changes,
         );
     const offerId = approval.offerId;
     if (!offer || !offerId || !record.repoId || !record.branch) return undefined;
@@ -157,7 +404,7 @@ export class KeptApproval {
       version: 1,
       id: randomUUID(),
       generation,
-      issuer: "captain",
+      issuer: declared.issuer ?? "captain",
       at: now,
       card: {
         id: approval.cardId,
@@ -172,11 +419,13 @@ export class KeptApproval {
         owner: offer.owner,
         name: offer.name,
         prNumber: baseline.prNumber,
-        branch: review?.branch ?? currentChange(record.delivery, record.branch).branch,
+        branch:
+          review?.branch ?? pull?.branch ?? currentChange(record.delivery, record.branch).branch,
         delivery: "direct-pr",
         method: "squash",
       },
       ...(review ? { review } : {}),
+      ...(declared.after ? { after: declared.after } : {}),
       approvedHead: baseline.headSha,
       ...(record.delivery?.versionReadings?.[baseline.headSha]
         ? { changeReading: record.delivery.versionReadings[baseline.headSha] }
@@ -217,15 +466,19 @@ export class KeptApproval {
           : {}),
       }),
     });
+    if (authorization.queued?.length) this.locks.retryWhenFree(taskId);
   }
 
   /**
    * End the standing approval (FI3-304 section 6): `revoked` by an
-   * interruption or the captain's withdrawal, `invalidated` when the
-   * approved work or pull request is no longer the one he approved,
-   * `superseded` by a new completion card or click. The generation
-   * advances, so a run already under way stops before it sends anything.
-   * A revoked or work-changed end holds the task's merge for the captain.
+   * interruption or the captain's withdrawal, both holding the task's merge
+   * for the captain, or by the app when its own approval no longer passes
+   * the merge gate because the task no longer merges on its own (INF-2744),
+   * which holds nothing; `invalidated` when the approved work or pull
+   * request is no longer the one he approved; `superseded` by a new merge
+   * card or click. The generation advances, so a run already under way
+   * stops before it sends anything. Only `options.holds` holds the task's
+   * merge for the captain.
    */
   endAuthorization(
     taskId: string,
@@ -236,17 +489,23 @@ export class KeptApproval {
     const record = this.host.tasks.get(taskId);
     const authorization = standingAuthorization(record?.delivery);
     if (!record || !authorization) return false;
-    this.host.tasks.delivery.recordPermissionRecords(taskId, {
-      mergeAuthorization: endedAuthorization(authorization, {
-        status,
-        reason: why,
-        endedAt: this.host.now(),
-        generation: authorization.generation + 1,
-        ...(options.holds ? { holds: true } : {}),
-      }),
+    const ended = endedAuthorization(authorization, {
+      status,
+      reason: why,
+      endedAt: this.host.now(),
+      generation: authorization.generation + 1,
+      ...(options.holds ? { holds: true } : {}),
     });
+    this.host.tasks.delivery.recordPermissionRecords(taskId, { mergeAuthorization: ended });
+    // An approval of another pull request waiting behind it stands next,
+    // unless this end ends it too (INF-2746, `endsWith`).
+    const drop = endsWith(ended);
+    if (drop) this.dropQueued(taskId, ended, why, drop);
+    if (this.host.tasks.get(taskId)?.delivery?.mergeAuthorization?.queued?.length)
+      this.locks.retryWhenFree(taskId);
     if (!TaskService.isClosed(record)) {
-      this.host.tasks.note(taskId, `The captain's kept merge approval ended: ${why}.`, {
+      const whose = authorization.issuer === "autonomy" ? "The app's" : "The captain's";
+      this.host.tasks.note(taskId, `${whose} kept merge approval ended: ${why}.`, {
         news: true,
         feed: options.feed ?? false,
       });
@@ -296,7 +555,7 @@ export class KeptApproval {
    * The guard a merge under the approval runs with: its candidate head and
    * pinned pull request, and the last look right before the request goes
    * out - the same approval, the same generation and head, the crewmate
-   * idle, no new completion card - which persists the attempt token the
+   * idle, no new merge card - which persists the attempt token the
    * restart reconcile reads (FI3-304 section 5). The same look before a
    * queue mark (`mark`) records nothing: no merge request goes out.
    */
@@ -331,8 +590,8 @@ export class KeptApproval {
           return "the pull request is not at the version the approval covers";
         }
         if (unattended && this.locks.working(taskId)) return "its crewmate started working again";
-        if (unattended && this.host.cards.openMergeAction(taskId)) {
-          return "a new completion card is up";
+        if (unattended && this.supersedingCard(taskId, now)) {
+          return "a new merge card is up";
         }
         if (mark) return undefined;
         this.host.tasks.delivery.recordPermissionRecords(taskId, {
@@ -365,7 +624,10 @@ export class KeptApproval {
     if (result.stop === "withdrawn") return undefined;
     const now = this.host.now();
     if (result.contention) {
+      // Due now for the tick and a restart; run again as soon as the
+      // settle that holds the task ends.
       this.patchStanding(taskId, { retryAt: now });
+      this.locks.retryWhenFree(taskId);
       return undefined;
     }
     if (result.stop === "closed" || result.stop === "identity") {
@@ -399,7 +661,7 @@ export class KeptApproval {
   /**
    * The checks a host-run merge makes before it asks anything of GitHub
    * (FI3-304 section 4): the task and pull request are still the approved
-   * ones, no new completion card replaced the approval, no round cap holds
+   * ones, no new merge card replaced the approval, no round cap holds
    * the task, a declared repair is not still undecided, and a reviewed
    * task's review passed for this change. A failed identity
    * check ends the approval; the others are waits.
@@ -410,7 +672,10 @@ export class KeptApproval {
   ): string | undefined {
     const target = authorization.target;
     const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-    const changeRepo = this.changeRepoOf(record, repo);
+    // The approval is kept to its own pull request, never to whichever of
+    // the task's is current (INF-2746).
+    const pull = taskPull(record, this.host.tasks.changesFor(record.id), target.prNumber);
+    const changeRepo = this.changeRepoOf(record, repo, authorization.review ?? pull?.review);
     const location = changeRepo ? forgeLocationOf(changeRepo) : undefined;
     return !opensPullRequest(this.host.taskDelivery(record.id))
       ? "the project no longer delivers as a pull request"
@@ -421,25 +686,36 @@ export class KeptApproval {
             location.owner !== target.owner ||
             location.name !== target.name
           ? "where the project lives changed"
-          : // The approved change must still be the task's current one (INF-2490).
-            currentChange(record.delivery, record.branch).branch !== target.branch ||
-              currentChange(record.delivery, record.branch).number !== target.prNumber
-            ? "the task's current change is not the one approved"
+          : // The approved pull request must still be one of the task's (INF-2746).
+            pull?.branch !== target.branch
+            ? PULL_NOT_THE_TASKS
             : undefined;
   }
 
   /**
-   * The project the task's current change is in: another managed one when
-   * open_change opened it there (INF-2510), else the task's own.
+   * The project a pull request of the task is in: another managed one when
+   * open_change opened it there (INF-2510), else the task's own. `review`
+   * names it; undefined is the task's own change.
    */
   private changeRepoOf(
     record: TaskRecord,
     own: ReturnType<RepoRegistry["get"]>,
+    review: { repoId?: string } | undefined,
   ): ReturnType<RepoRegistry["get"]> {
-    const target = record.delivery?.checkTarget;
+    const target = review;
     return target?.repoId && target.repoId !== record.repoId
       ? this.host.repos.get(target.repoId)
       : own;
+  }
+
+  /**
+   * Whether an open merge card asks again for the change this approval
+   * covers: a new card for the same change supersedes it, while a card for
+   * another of the task's pull requests stands beside it (INF-2744).
+   */
+  private supersedingCard(taskId: string, authorization: MergeAuthorization): boolean {
+    const open = this.host.cards.openMergeAction(taskId, { review: authorization.review?.id });
+    return open !== undefined;
   }
 
   preflight(
@@ -451,8 +727,8 @@ export class KeptApproval {
       this.endAuthorization(record.id, "invalidated", identity, { feed: true });
       return { ended: true };
     }
-    if (this.host.cards.openMergeAction(record.id)) {
-      this.endAuthorization(record.id, "superseded", "its crewmate put up a new completion card");
+    if (this.supersedingCard(record.id, authorization)) {
+      this.endAuthorization(record.id, "superseded", "its crewmate put up a new merge card");
       return { ended: true };
     }
     if (outstandingGuidance(authorization) !== undefined) return { wait: "guidance" };

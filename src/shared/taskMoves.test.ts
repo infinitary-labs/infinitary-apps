@@ -111,7 +111,7 @@ describe("taskMovesOf", () => {
     expect(
       cardMerges({
         actions: [
-          { id: "merge", label: "Merge", effect: { kind: "settle", mode: "merge" } },
+          { id: "merge", label: "Merge", effect: { kind: "merge", after: "close" } },
         ] as never,
       }),
     ).toBe(true);
@@ -131,7 +131,7 @@ describe("the moves as the stack presents a task (presentTask)", () => {
     id: "card-2",
     taskId: "t1",
     status: "ready",
-    actions: [{ id: "merge", label: "Merge", effect: { kind: "settle", mode: "merge" } }],
+    actions: [{ id: "merge", label: "Merge", effect: { kind: "merge", after: "close" } }],
   } as unknown as Card;
 
   it("drops a merge it cannot show, and takes a sibling's", () => {

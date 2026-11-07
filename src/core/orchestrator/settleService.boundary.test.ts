@@ -134,7 +134,7 @@ describe("a settle's refusals before anything goes out", () => {
     ).toHaveLength(0);
   });
 
-  it("refuses a first mate merge under the autonomy hold, naming the completion card's button", async () => {
+  it("refuses a first mate merge under the autonomy hold, naming the merge card's button", async () => {
     const world = settleWorld();
     world.cards.put({
       id: "card-done",
@@ -145,7 +145,7 @@ describe("a settle's refusals before anything goes out", () => {
       meta: TASK,
       body: "<p>The meter reads on time.</p>",
       actions: [
-        { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+        { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
       ],
       status: "ready",
       createdAt: 1_000,
@@ -156,7 +156,7 @@ describe("a settle's refusals before anything goes out", () => {
       ways: [{ label: "Merge", card: { id: "card-done", action: "merge" } }],
     });
     expect(answer.text).toContain(
-      'The completion card "The meter reads on time" is on the stack with its "Merge" button',
+      'The merge card "The meter reads on time" is on the stack with its "Merge" button',
     );
     expect(world.log.filter((line) => line.startsWith("merge"))).toEqual([]);
     expect(world.tasks.timeline(TASK).at(-1)?.data).toMatchObject({ refused: "merge-pr" });

@@ -92,27 +92,6 @@ describe("what a crewmate reports", () => {
     expect(h.tasks.list()).toHaveLength(2);
   });
 
-  it("refuses a merge that completes the task unless it names the recorded pull request and checked version", async () => {
-    const h = await builder();
-    const completes = { mergeCompletesTask: { prNumber: 7, headSha: HEAD } };
-    const refusal =
-      "Report refused: merge_completes_task must name this task's recorded pull request and checked version.";
-    expect(() => h.report("The meter counts every press.", undefined, completes)).toThrow(refusal);
-    seedDelivery(h.tasks, h.taskId, { prNumber: 7, headSha: "b".repeat(40) });
-    expect(() => h.report("The meter counts every press.", undefined, completes)).toThrow(refusal);
-    seedDelivery(h.tasks, h.taskId, { prNumber: 8, headSha: HEAD });
-    expect(() => h.report("The meter counts every press.", undefined, completes)).toThrow(refusal);
-    seedDelivery(h.tasks, h.taskId, { prNumber: 7, headSha: HEAD });
-    expect(h.report("The meter counts every press.", undefined, completes)).toContain("Reported.");
-
-    // A project that merges nothing has no pull request to name.
-    const local = await builder("local-only");
-    seedDelivery(local.tasks, local.taskId, { prNumber: 7, headSha: HEAD });
-    expect(() => local.report("The meter counts every press.", undefined, completes)).toThrow(
-      refusal,
-    );
-  });
-
   it("refuses a response on a card line for a request that is unknown, cancelled, already answered, about another card or another message", async () => {
     const h = await builder();
     const cardId = syncCardId(

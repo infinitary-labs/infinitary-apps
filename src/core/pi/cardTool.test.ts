@@ -269,7 +269,7 @@ describe("createEmitCardTool", () => {
       title: "fix(cards): keep a replied card in place",
       presentation: 2,
       answering: true,
-      actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+      actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
     });
     expect(onCard).toHaveBeenCalledWith(
       expect.objectContaining({ presentationRevision: 2, answering: true }),
@@ -277,13 +277,13 @@ describe("createEmitCardTool", () => {
   });
 
   // INF-92: a saved story is resolved at the home, never reconstructed by a second tool call.
-  it("hands a saved-story completion to the home without accepting competing body or risk", async () => {
+  it("hands a saved-story merge card to the home without accepting competing body or risk (INF-2744)", async () => {
     const onCard = vi.fn(() => "card-task-story");
     const tool = piToolOf(bindTool(EMIT_CARD_TOOL, { onCard })) as unknown as AnyTool;
     const params = {
       title: "The story is ready",
       presentation: 2,
-      actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+      actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
     };
     await tool.execute("t1", params);
     expect(onCard).toHaveBeenCalledWith({
@@ -302,36 +302,36 @@ describe("createEmitCardTool", () => {
       [...params.actions, { id: "reply", label: "Reply" }],
       [...params.actions, { ...params.actions[0], id: "merge-again" }],
     ]) {
-      await expect(tool.execute("t4", { ...params, actions })).rejects.toThrow(/one settle merge/);
+      await expect(tool.execute("t4", { ...params, actions })).rejects.toThrow(/one merge action/);
     }
     expect(onCard).toHaveBeenCalledTimes(1);
   });
 
   // INF-961: INF-899's crewmate left presentation out and was told only to give a body.
-  it("points a completion card with neither body nor presentation at its saved story", async () => {
+  it("points a merge card with neither body nor presentation at its saved story (INF-2744 words)", async () => {
     const onCard = vi.fn(() => "card-task-story");
     const tool = piToolOf(bindTool(EMIT_CARD_TOOL, { onCard })) as unknown as AnyTool;
     await expect(
       tool.execute("t1", {
         title: "docs(crew): guide referenced pull request merges",
-        actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+        actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
       }),
     ).rejects.toThrow(
-      "Card refused: give exactly one of body or body_file. A saved-story completion gives presentation: the newest revision prepare_change returned at the committed version. Publish it with open_change before the card, except on local-only work, which skips publication. After a push the host republishes the published story; a story whose words changed needs a new revision.",
+      "Card refused: give exactly one of body or body_file. A saved-story merge card gives presentation: the newest revision prepare_change returned at the committed version. Publish it with open_change before the card, except on local-only work, which skips publication. After a push the host republishes the published story; a story whose words changed needs a new revision.",
     );
     expect(onCard).not.toHaveBeenCalled();
   });
 
-  it("takes a completion decision only with its risk, and risk on no other card (FI3-1128)", async () => {
+  it("takes a merge card only with its risk, and risk on no other card (FI3-1128, INF-2744)", async () => {
     const onCard = vi.fn(() => "card-t1-9");
     const tool = piToolOf(createEmitCardTool(onCard)) as unknown as AnyTool;
     const merge = [
-      { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+      { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
     ];
     const card = { title: "The meter fix is ready", body: "<p>Ready.</p>", actions: merge };
     // A merge with no risk is refused, naming every dimension to rate.
     await expect(tool.execute("t1", card)).rejects.toThrow(
-      /Card refused: a completion decision with a settle merge action carries risk: give each of blast, behavior, undo, evidence, sensitivity, novelty, deps a level/,
+      /Card refused: a merge card carries risk: give each of blast, behavior, undo, evidence, sensitivity, novelty, deps a level/,
     );
     // One with a dimension left out, or a level the scale has not, names it.
     const { deps: _deps, ...sixOfSeven } = RISK;
@@ -360,7 +360,7 @@ describe("createEmitCardTool", () => {
     // Risk on a card that merges nothing is refused.
     await expect(
       tool.execute("t6", { title: "Pick a meter", body: "<p>Two meters.</p>", risk: RISK }),
-    ).rejects.toThrow(/Card refused: risk rides only on a completion decision/);
+    ).rejects.toThrow(/Card refused: risk rides only on a merge card/);
   });
 
   it("asks the Firstmate for no risk: its merge cards carry none", async () => {
@@ -373,7 +373,7 @@ describe("createEmitCardTool", () => {
       body: "<p>Ready.</p>",
       task_id: "t1",
       actions: [
-        { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+        { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
       ],
       risk: RISK,
     });

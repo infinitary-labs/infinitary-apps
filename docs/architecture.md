@@ -503,7 +503,7 @@ Two house references compose here (captain-directed): **baby-menu's release mach
 
 - **Card taxonomy (decision D-9)**: a preview and the choice about it belong on one card - a decision's body may be the working preview (`docs/card-authoring.md`).
   A crewmate's report is a wake to the first mate and a feed line, never a card of its own.
-  There is no kind on the wire: `cardSchema` is one strict shape, a card with actions reads as a decision, one without as a note, one the app itself authored as attention (`cardPresentation`), and what an action does is its `effect` (`settle merge|discard`, `request_merge`, a crewmate's `request_write`, `open settings|subscriptions`, the host's own ops) - the host dispatches on the effect, never on an action id, and closing a card is the keep.
+  There is no kind on the wire: `cardSchema` is one strict shape, a card with actions reads as a decision, one without as a note, one the app itself authored as attention (`cardPresentation`), and what an action does is its `effect` (`merge`, `settle discard`, a crewmate's `request_write`, `open settings|subscriptions`, the host's own ops) - the host dispatches on the effect, never on an action id, and closing a card is the keep.
   The store's `kind` column stays as history (new rows write `card`; migration 29 stamped `author` and rewrote open cards' reserved ids into effects).
   Every card has the same structure - **header + body + action buttons** (app-owned chrome) - and the body is **freeform, rendered against a design-system stylesheet we provide** so freeform content stays coherent with the app.
   Interactive bodies are sandboxed per §4.

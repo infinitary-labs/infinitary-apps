@@ -20,6 +20,8 @@ import {
   cardWord,
   type LiveAttachment,
   liveAttachmentSchema,
+  mergeEffectOf,
+  oneMergeEffect,
   type PastCard,
   type PastEnding,
   replyWithSettings,
@@ -164,7 +166,7 @@ function fromRow(row: Row): Card | undefined {
     ...(row.model ? { model: row.model } : {}),
     ...(row.place ? { place: row.place } : {}),
     body: row.body,
-    actions: JSON.parse(row.actions_json),
+    actions: oneMergeEffect(JSON.parse(row.actions_json)),
     status: row.status,
     createdAt: row.created_at,
     ...(row.pictures_json ? { pictures: JSON.parse(row.pictures_json) } : {}),
@@ -191,9 +193,7 @@ function fromRow(row: Row): Card | undefined {
 
 /** Whether a card's actions offer the merge decision of a finished build. */
 function isMergeDecision(actions: Card["actions"]): boolean {
-  return actions.some(
-    (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
-  );
+  return actions.some((action) => mergeEffectOf(action) !== undefined);
 }
 
 type ObservationRow = {
@@ -472,7 +472,7 @@ export class CardStore {
       revision: row.revision,
       title: row.title,
       body: row.body,
-      actions: JSON.parse(row.actions_json),
+      actions: oneMergeEffect(JSON.parse(row.actions_json)),
       createdAt: row.created_at,
       replacedAt: row.replaced_at,
       replacedBy: row.replaced_by,
@@ -558,7 +558,8 @@ export class CardStore {
 
   /**
    * Whether a completion card was ever emitted on a task - any card of its
-   * crewmate's carrying a `settle merge` effect, open or resolved (contract
+   * crewmate's carrying a merge effect, or the story note the app's own
+   * merge left of one, open or resolved (contract
    * v3.6, captain lock 3). It answers one question: does the crewmate still
    * owe the captain the one merge decision on its task, or has it already
    * written it? Read off the DECLARED effect, the way the host dispatches,
@@ -566,8 +567,10 @@ export class CardStore {
    */
   hasCompletionCard(taskId: string): boolean {
     const rows = this.db
-      .prepare("SELECT actions_json FROM cards WHERE task_id = ? AND author = 'crewmate'")
-      .all(taskId) as { actions_json: string }[];
+      .prepare(
+        "SELECT actions_json, risk_json FROM cards WHERE task_id = ? AND author = 'crewmate'",
+      )
+      .all(taskId) as { actions_json: string; risk_json: string | null }[];
     return rows.some((row) => {
       let actions: unknown;
       try {
@@ -575,12 +578,17 @@ export class CardStore {
       } catch {
         return false;
       }
+      // A merge card the app merges from keeps no buttons (INF-2744): its
+      // risk with no actions still says the crewmate wrote it.
+      if (row.risk_json && Array.isArray(actions) && actions.length === 0) return true;
       return (
         Array.isArray(actions) &&
-        actions.some((action) => {
-          const effect = (action as { effect?: { kind?: unknown; mode?: unknown } } | null)?.effect;
-          return effect?.kind === "settle" && effect.mode === "merge";
-        })
+        actions.some(
+          (action) =>
+            typeof action === "object" &&
+            action !== null &&
+            mergeEffectOf(action as Card["actions"][number]) !== undefined,
+        )
       );
     });
   }

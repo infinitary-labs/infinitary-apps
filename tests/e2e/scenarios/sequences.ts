@@ -4,6 +4,7 @@ import { APPROVE_AND_BUILD, SAVE_AND_DEFER } from "../../../src/core/prompts/car
 import { runbookManifestSchema } from "../../../src/shared/runbooks";
 import { completionCardBody } from "../../helpers/completionCard";
 import type { ScriptedArgs, ScriptedCall } from "../../helpers/scriptedCalls";
+import { CAPTAIN_DECIDES } from "../crewCards";
 import { CLAUDE_CREW_MODEL, type Scenario, SEQ_REPRODUCE_GOAL } from "../mockProvider";
 import {
   answering,
@@ -605,7 +606,7 @@ function sequencesCrewmateMove(
                 id: "put-in",
                 label: "Put it in",
                 default: true,
-                effect: { kind: "settle", mode: "merge" },
+                effect: { kind: "merge", after: "close", asks_first: CAPTAIN_DECIDES },
               },
             ],
           },

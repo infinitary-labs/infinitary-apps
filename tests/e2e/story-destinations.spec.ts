@@ -17,13 +17,7 @@ import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { GITLAB_STUB_PROJECT, seedGitLabSignIn, startGitLabStub } from "./gitlabStub";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import {
-  LAND_PROMPT_MARKER,
-  MERGE_PROMPT_MARKER,
-  MOCK_CLOSING_SENTENCES,
-  MOCK_RISK,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { MOCK_RISK, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, readyRegion, regionShot } from "./pictures";
 import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
@@ -40,8 +34,10 @@ import { cardScroller, factsStrip, riskChart, shownCard, stageAtRest } from "./s
  * Each journey owns a disposable git project and host readings, then commissions a real
  * task through the app, publishes its story and merges only through the existing consent.
  * Hosted descriptions must read back the story; branches and local work must merge the
- * committed change without a fabricated request number. A self-merging note stays off the
- * stack until its merge has a result, then shows once with its story and merged line (INF-2533).
+ * committed change without a fabricated request number. With autonomy on, the app merges
+ * from the same merge card on its own (INF-2744); the card stays off the stack as the
+ * story note until its merge has a result, then shows once with its story and merged line
+ * (INF-2533).
  * The hermetic launcher and disposable GitHub/GitLab services are its only prerequisites;
  * no sign-in, account, keychain or resource is shared with another journey.
  */
@@ -99,7 +95,7 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
       if (kind === "gitlab") seedGitLabSignIn(userDataDir, host);
       const launched = await launchApp({
         withMockProvider: true,
-        scenarios: [destinationStory(kind === "local", note)],
+        scenarios: [destinationStory(kind === "local")],
         userDataDir,
         env: stub?.env,
       });
@@ -138,25 +134,27 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
             );
           await expect(factsStrip(frame).project).toHaveText("meterlab");
         };
+        /** The task the saved story belongs to, once its card is saved. */
+        const storyTask = async () =>
+          (await page.evaluate(() => window.infinitary.cards.list())).find(
+            (entry) => entry.title === DESTINATION_STORY_TITLE,
+          )?.taskId;
         if (note) {
-          // INF-2533: a task that merges on its own keeps its story note in its
-          // close-out wait, off the stack, once its crewmate's turn is over.
+          // INF-2744: the crewmate shows its merge card as any task does, and with
+          // autonomy on the app merges from it on its own, with no click or typed
+          // request; the card waits off the stack as the story note until then (INF-2533).
           await expect
             .poll(
               async () => {
-                const board = await page.evaluate(() => window.infinitary.tasks.board());
-                const saved = await page.evaluate(() => window.infinitary.cards.list());
-                return {
-                  activity: board.tasks.find((row) => row.title === title)?.activity,
-                  held: saved
-                    .filter((entry) => entry.title === DESTINATION_STORY_TITLE)
-                    .map((entry) => entry.awaiting),
-                };
+                const id = await storyTask();
+                return id
+                  ? (await page.evaluate((task) => window.infinitary.tasks.detail(task), id))
+                      ?.status
+                  : undefined;
               },
-              { timeout: 45_000 },
+              { timeout: 90_000 },
             )
-            .toEqual({ activity: "idle", held: ["close-out"] });
-          await expect(card).toHaveCount(0);
+            .toBe("done");
         } else {
           await expect(card).toBeVisible({ timeout: 45_000 });
           await showsStory();
@@ -180,8 +178,9 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
           description = ((await response.json()) as { body: string }).body;
         }
         if (stub) expect(description).toContain(presentationMarkdownText(why));
-        // A saved completion grants nothing: the remote main still has only the seed.
-        expect(git("-C", bare, "rev-parse", "main")).toBe(initial);
+        // A saved merge card the captain has not clicked grants nothing: the remote main
+        // still has only the seed.
+        if (!note) expect(git("-C", bare, "rev-parse", "main")).toBe(initial);
         if (!note) await showStoryTop();
         const evidence =
           test.info().repeatEachIndex === 0 ? process.env.INFINITARY_TASK_EVIDENCE_DIR : undefined;
@@ -192,14 +191,7 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
             JSON.stringify({ card: savedCard, description: description ?? null }, null, 2),
           );
         }
-        if (note) {
-          await input.fill(
-            `${kind === "local" ? LAND_PROMPT_MARKER : MERGE_PROMPT_MARKER}${title}`,
-          );
-          await input.press("Enter");
-        } else {
-          await merge.click();
-        }
+        if (!note) await merge.click();
         await expect
           .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), taskId))
           .toMatchObject({ status: "done" });
@@ -218,9 +210,6 @@ for (const kind of ["enterprise", "gitlab", "plain", "local"] as const) {
           await expect(merge).toHaveCount(0);
           const line = frame.locator(`[${MERGE_LINE_MARK}]`);
           await expect(line).toContainText(mergedWords("", true).trim());
-          await expect(line).toContainText(
-            MOCK_CLOSING_SENTENCES[kind === "local" ? "land" : "merge-pr"],
-          );
           await expect(line).not.toContainText(MERGE_SETTING_WORDS.project);
           expect(
             (await page.evaluate(() => window.infinitary.cards.list())).filter(

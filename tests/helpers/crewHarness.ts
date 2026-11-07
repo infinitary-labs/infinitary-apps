@@ -757,7 +757,7 @@ export const METER_RISK: RiskDeclaration = {
 };
 
 /** The settle effects a card action carries (cards/tasks/agents P1): the host resolves merge by posture. */
-export const SETTLE_MERGE = { kind: "settle", mode: "merge" } as const;
+export const SETTLE_MERGE = { kind: "merge", after: "close" } as const;
 export const SETTLE_DISCARD = { kind: "settle", mode: "discard" } as const;
 
 /** The lifecycle fixtures need a valid completion outline, not a content recipe. */

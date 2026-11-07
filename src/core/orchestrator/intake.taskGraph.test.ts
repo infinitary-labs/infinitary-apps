@@ -504,6 +504,9 @@ describe("the task graph (task-system P2)", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card stays up with its buttons
+    // instead of the app merging from it as it goes up.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     (specs[0] as CrewmateSpec).onCard?.({
       requiredActions: [],
       title: "The keychain prompt is fixed",
@@ -582,6 +585,9 @@ describe("the task graph (task-system P2)", () => {
         shape: { rigor_ask: "quick" },
       });
       await tick();
+      // INF-2744: autonomy off, so the merge card stays up with its buttons
+      // instead of the app merging from it as it goes up.
+      vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
       const lines = () =>
         cards()
           .find((card) => card.taskId === taskId && card.actions.length > 0)
@@ -690,6 +696,9 @@ describe("the task graph (task-system P2)", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card stays up with its buttons
+    // instead of the app merging from it as it goes up.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     (specs[0] as CrewmateSpec).onCard?.({
       requiredActions: [],
       title: "The keychain prompt is fixed",
@@ -727,6 +736,9 @@ describe("the task graph (task-system P2)", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card stays up with its buttons
+    // instead of the app merging from it as it goes up.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     const moves = () =>
       tasks.timeline(taskId).filter((event) => event.kind === "note" && event.data?.servedModel);
     expect(tasks.get(taskId)?.model).toBe(served(opus55));
@@ -803,6 +815,9 @@ describe("the task graph (task-system P2)", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
+    // INF-2744: autonomy off, so the merge card stays up with its buttons
+    // instead of the app merging from it as it goes up.
+    vi.spyOn(supervisor.facts, "taskAutonomy").mockReturnValue(false);
     const spec = specs[0] as CrewmateSpec;
     spec.onFollowup?.({ title: "Live checks", goal: "g", why: "w", blocksMe: true });
     const blocker = tasks.graph.blockers(taskId)[0];
@@ -1135,7 +1150,7 @@ describe("parent tasks with planned children", () => {
           id: "merge",
           label: "Merge",
           variant: "primary",
-          effect: { kind: "settle", mode: "merge" },
+          effect: { kind: "merge", after: "close" },
         },
       ],
     });

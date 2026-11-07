@@ -87,7 +87,7 @@ function staleChecksMove(
                 id: "merge-it",
                 label: "Merge it",
                 default: true,
-                effect: { kind: "settle", mode: "merge" },
+                effect: { kind: "merge", after: "close" },
               },
             ],
           },

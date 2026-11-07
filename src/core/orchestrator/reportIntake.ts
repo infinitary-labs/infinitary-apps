@@ -487,19 +487,6 @@ export class ReportIntake {
         "Report refused: needs_firstmate needs a reason - what the first mate must do.",
       );
     }
-    const completion = declared?.mergeCompletesTask;
-    if (completion) {
-      const delivery = this.options.tasks.get(task.id)?.delivery;
-      if (
-        !opensPullRequest(this.host.taskDelivery(task.id)) ||
-        delivery?.prNumber !== completion.prNumber ||
-        delivery?.headSha !== completion.headSha
-      ) {
-        throw new Error(
-          "Report refused: merge_completes_task must name this task's recorded pull request and checked version.",
-        );
-      }
-    }
     const workWait = declared?.workWait ? workWaitSchema.parse(declared.workWait) : undefined;
     const recoveryWays = declared?.recoveryWays?.length
       ? declared.recoveryWays.map((way) => keptRecoveryWaySchema.parse(way))
@@ -520,7 +507,6 @@ export class ReportIntake {
       ...(recoveryWays ? { recoveryWays } : {}),
       ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
       ...(declared?.firstRelease ? { firstRelease: declared.firstRelease } : {}),
-      ...(completion ? { mergeCompletesTask: completion } : {}),
       ...(result ? { result } : {}),
       ...(checkBack ? { checkBack } : {}),
     };

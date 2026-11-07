@@ -11,7 +11,7 @@ import {
   cardMutationSchema,
   cardTakesReplies,
   onStage,
-  takesFactStrip,
+  takesTaskFacts,
 } from "@shared/cards";
 import type { CrewResponse } from "@shared/crewResponses";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
@@ -955,7 +955,7 @@ export class CardThreads {
       return "a contribution keeps the card on its own task; drop task_id.";
     }
     const effect = [...card.actions, ...raw.actions].find((action) => action.effect);
-    if (effect || takesFactStrip(card)) {
+    if (effect || takesTaskFacts(card)) {
       return `choice "${effect?.id ?? "merge"}" carries an effect the app checks against this card's own task, checks and version, so only its author's own path changes it. Write on its thread with reply instead.`;
     }
     if (task?.delivery?.presentation && card.author === "crewmate") {

@@ -68,7 +68,7 @@ export const CLOSE_CARD_TOOL_DESCRIPTION = [
 const STABLE_CARD_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const STABLE_CARD_ID_MAX = 64;
 
-/** The crewmate's emit_card description: the contract plus the completion card. */
+/** The crewmate's emit_card description: the contract plus the merge card. */
 export const EMIT_CARD_TOOL_DESCRIPTION = CREWMATE_EMIT_CARD_DESCRIPTION;
 
 /**
@@ -93,8 +93,14 @@ export type { EmittedAction } from "../session/tools";
  * `AgentEffect` (settle | open; the host kind is not offered).
  */
 export type EffectParam =
-  | { kind: "settle"; mode: "merge" | "discard"; confirm?: boolean; proceed_with_open?: boolean }
-  | { kind: "request_merge"; review: string }
+  | { kind: "settle"; mode: "discard"; confirm?: boolean; proceed_with_open?: boolean }
+  | {
+      kind: "merge";
+      after: "close" | "continue";
+      review?: string;
+      asks_first?: string;
+      proceed_with_open?: boolean;
+    }
   | { kind: "request_write"; ask: string }
   | {
       kind: "open";
@@ -110,8 +116,14 @@ export function agentEffect(effect: EffectParam): AgentEffect {
       ...(effect.sign_in ? { signIn: effect.sign_in } : {}),
     };
   }
-  if (effect.kind === "request_merge") {
-    return { kind: "request_merge", review: effect.review };
+  if (effect.kind === "merge") {
+    return {
+      kind: "merge",
+      after: effect.after,
+      ...(effect.review ? { review: effect.review } : {}),
+      ...(effect.asks_first?.trim() ? { asksFirst: effect.asks_first.trim().slice(0, 400) } : {}),
+      ...(effect.proceed_with_open ? { proceedWithOpen: true } : {}),
+    };
   }
   if (effect.kind === "request_write") {
     return { kind: "request_write", ask: effect.ask };
@@ -204,7 +216,7 @@ export type EmittedCard = {
   validationDecision?: { request: string; action: string; gaps?: string[] };
   /**
    * The crewmate's risk assessment of its change (`risk`, only on its
-   * completion decision; docs/card-authoring.md "The risk chart"): the host
+   * merge card; docs/card-authoring.md "The risk chart"): the host
    * measures the change beside it and draws both as the card's radar.
    */
   riskDeclaration?: RiskDeclaration;
@@ -262,14 +274,21 @@ export function resolveFirstmateCardId(stableId: string): string {
 
 const settleEffectParam = Type.Object({
   kind: Type.Literal("settle"),
-  mode: stringEnum(["merge", "discard"]),
+  mode: stringEnum(["discard"]),
   confirm: Type.Optional(Type.Boolean()),
   proceed_with_open: Type.Optional(Type.Boolean()),
 });
 
-const requestMergeEffectParam = Type.Object({
-  kind: Type.Literal("request_merge"),
-  review: Type.String(),
+/**
+ * The one merge effect (INF-2744): the merge card of any of the task's pull
+ * requests. Its words ride the actions parameter, so a Claude crewmate reads them.
+ */
+const mergeEffectParam = Type.Object({
+  kind: Type.Literal("merge"),
+  after: stringEnum(["close", "continue"]),
+  review: Type.Optional(Type.String()),
+  asks_first: Type.Optional(Type.String()),
+  proceed_with_open: Type.Optional(Type.Boolean()),
 });
 
 /** A crewmate's ask to send a write it kept (FI3-1571 piece 4); no Firstmate schema carries it. */
@@ -314,7 +333,7 @@ function actionParam<Effect extends TSchema>(effect: Effect) {
 
 /**
  * A crewmate's declared action: the same, with its label optional (FI3-249).
- * The crewmate is told the host attaches a completion decision's buttons
+ * The crewmate is told the host attaches a merge card's buttons
  * and to declare no labels, so a schema that asked for one refused that
  * card before the host saw it. The host words its own buttons and refuses
  * any other action without words (`labeledActions`).
@@ -332,7 +351,7 @@ function crewActionParam<Effect extends TSchema>(effect: Effect) {
  * tool's own description (`CARD_PARAMS`).
  */
 const REQUIRED_ACTIONS_DESCRIPTION =
-  "Required on a completion merge offer, including [] when none. Display-only obligations: id (stable kebab-case), optional sharedId (explicitly shared outstanding action), target, title (imperative), consequence, instructions (list), criterion, prerequisites (task IDs), completion (manual with label, or device-version with deviceId and minVersion). Merging never performs them. Captain-only parts. The first mate may declare immediately required actions on a non-merge card.";
+  "Required on a merge card, including [] when none. Display-only obligations: id (stable kebab-case), optional sharedId (explicitly shared outstanding action), target, title (imperative), consequence, instructions (list), criterion, prerequisites (task IDs), completion (manual with label, or device-version with deviceId and minVersion). Merging never performs them. Captain-only parts. The first mate may declare immediately required actions on a non-merge card.";
 
 const sharedCardParams = {
   required_actions: Type.Optional(
@@ -358,12 +377,9 @@ const sharedCardParams = {
   operation_id: Type.Optional(Type.String()),
   answers_message: Type.Optional(Type.Integer({ minimum: 1 })),
   actions: Type.Optional(
-    Type.Array(
-      actionParam(Type.Union([settleEffectParam, requestMergeEffectParam, openEffectParam])),
-      {
-        description: CARD_PARAMS.actions,
-      },
-    ),
+    Type.Array(actionParam(Type.Union([mergeEffectParam, settleEffectParam, openEffectParam])), {
+      description: CARD_PARAMS.actions,
+    }),
   ),
 };
 
@@ -371,7 +387,7 @@ const sharedCardParams = {
 const riskRatingParam = Type.Object({ level: stringEnum(RISK_LEVELS), why: Type.String() });
 
 /**
- * A crewmate's risk assessment, on its completion decision alone: every
+ * A crewmate's risk assessment, on its merge card alone: every
  * dimension, each rated. Only the top-level description is served, so it
  * carries every rule (`CARD_PARAMS.risk`).
  */
@@ -425,7 +441,7 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
  */
 export const SAVED_STORY_RULE = [
   "The saved-story rule, said once: every branch and local-only change uses prepare_change's story.",
-  "Pass the current revision as presentation here and to open_change, using its saved title, one settle merge action and no body, body_file, risk or required_actions. Self-merging tasks use a note without actions.",
+  "Pass the current revision as presentation here and to open_change, using its saved title, one merge action and no body, body_file, risk or required_actions; with autonomy on the app merges from it.",
   "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses the story after checks pass.",
   "Public GitHub and GitLab upload selected inspected media; other description hosts publish text, keeping media on the card. Plain Git keeps the story there. Never downgrade a failed upload.",
   "Keep local paths and private threads out of published text. After a push, show the same presentation: the host republishes a pull request's published story at the pushed version. Changed story words, or a later local-only or plain-branch commit, need a newly prepared revision with the same base and title and updated verification; publish where needed before the card.",
@@ -448,12 +464,7 @@ const crewmateCardParams = Type.Object({
   actions: Type.Optional(
     Type.Array(
       crewActionParam(
-        Type.Union([
-          settleEffectParam,
-          requestMergeEffectParam,
-          requestWriteEffectParam,
-          openEffectParam,
-        ]),
+        Type.Union([mergeEffectParam, settleEffectParam, requestWriteEffectParam, openEffectParam]),
       ),
       {
         description: CARD_PARAMS.crewActions,
@@ -548,8 +559,8 @@ const crewmateBrowserCardParams = Type.Object({
     Type.Array(
       crewActionParam(
         Type.Union([
+          mergeEffectParam,
           settleEffectParam,
-          requestMergeEffectParam,
           requestWriteEffectParam,
           browserOpenEffectParam,
         ]),
@@ -575,12 +586,11 @@ const crewmateBrowserCardParams = Type.Object({
   ),
 });
 
-/** The refusal for a completion decision that declares no risk. */
-export const RISK_MISSING_REFUSAL = `a completion decision with a settle merge action carries risk: give each of ${RISK_DIMENSIONS.join(", ")} a level (low, medium or high) and why, one line of at most ${RISK_WHY_MAX} characters, and emit it again.`;
+/** The refusal for a merge card of the task's own change that declares no risk. */
+export const RISK_MISSING_REFUSAL = `a merge card carries risk: give each of ${RISK_DIMENSIONS.join(", ")} a level (low, medium or high) and why, one line of at most ${RISK_WHY_MAX} characters, and emit it again.`;
 
 /** The refusal for risk on a card that merges nothing. */
-export const RISK_ELSEWHERE_REFUSAL =
-  "risk rides only on a completion decision with a settle merge action: drop it from this card.";
+export const RISK_ELSEWHERE_REFUSAL = "risk rides only on a merge card: drop it from this card.";
 
 /**
  * A crewmate's declared risk, read again whatever its runtime's schema let
@@ -633,13 +643,9 @@ async function emitCard(
   if (!options.firstmate && params.presentation !== undefined) {
     const actions = params.actions ?? [];
     const merges =
-      actions.length === 1 &&
-      actions[0]?.effect?.kind === "settle" &&
-      actions[0].effect.mode === "merge";
-    // The home checks task autonomy before accepting a no-action story note (INF-968).
-    const note = actions.length === 0;
+      actions.length === 1 && actions[0]?.effect?.kind === "merge" && !actions[0].effect.review;
     if (
-      (!merges && !note) ||
+      !merges ||
       params.body !== undefined ||
       params.body_file !== undefined ||
       params.risk !== undefined ||
@@ -652,7 +658,7 @@ async function emitCard(
       params.continues
     )
       throw new Error(
-        "A saved-story completion gives presentation and one settle merge action, or no actions for a note when the task merges on its own, without body, risk, required_actions or browser controls; those facts come from its saved revision.",
+        "A saved-story merge card gives presentation and one merge action for your task's current change, without body, risk, required_actions or browser controls; those facts come from its saved revision.",
       );
     const id = parseStableCardId(params.id);
     const shown = await options.onCard({
@@ -671,15 +677,13 @@ async function emitCard(
     return `Card shown from presentation ${params.presentation}${shown ? ` (${shown})` : ""}`;
   }
   if ((params.body !== undefined) === (params.body_file !== undefined)) {
-    // INF-961: a completion card given neither may have meant its saved story.
+    // INF-961: a merge card given neither may have meant its saved story.
     const story =
       !options.firstmate &&
       params.body === undefined &&
-      (params.actions ?? []).some(
-        (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
-      );
+      (params.actions ?? []).some((action) => action.effect?.kind === "merge");
     throw new Error(
-      `Card refused: give exactly one of body or body_file.${story ? " A saved-story completion gives presentation: the newest revision prepare_change returned at the committed version. Publish it with open_change before the card, except on local-only work, which skips publication. After a push the host republishes the published story; a story whose words changed needs a new revision." : ""}`,
+      `Card refused: give exactly one of body or body_file.${story ? " A saved-story merge card gives presentation: the newest revision prepare_change returned at the committed version. Publish it with open_change before the card, except on local-only work, which skips publication. After a push the host republishes the published story; a story whose words changed needs a new revision." : ""}`,
     );
   }
   if (options.firstmate && params.body_file !== undefined) {
@@ -702,15 +706,17 @@ async function emitCard(
   }
   const id = parseStableCardId(params.id);
   const firstmate = options.firstmate === true;
-  // A crewmate's completion decision carries its risk, and no other card
-  // does (docs/card-authoring.md "The risk chart"); the Firstmate's schema
-  // has no risk to give.
-  const merges = (params.actions ?? []).some(
-    (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+  // A crewmate's merge card carries its risk, and no other card does
+  // (docs/card-authoring.md "The risk chart"): the merge card of its own
+  // change always, and one of another pull request when it chooses. The
+  // Firstmate's schema has no risk to give.
+  const mergeEffects = (params.actions ?? []).flatMap((action) =>
+    action.effect?.kind === "merge" ? [action.effect] : [],
   );
+  const merges = mergeEffects.some((effect) => !effect.review);
   let riskDeclaration: RiskDeclaration | undefined;
   if (!firstmate && params.risk !== undefined) {
-    if (!merges) {
+    if (mergeEffects.length === 0) {
       throw new CardRefusedError(
         `Card refused: ${RISK_ELSEWHERE_REFUSAL}`,
         "shape",
@@ -815,13 +821,15 @@ function crewmateEmitCard(
         }),
       };
     } catch (error) {
-      // A refused completion card is a fact the host keeps, whichever
+      // A refused merge card is a fact the host keeps, whichever
       // step refused it: the crewmate's report may still say it went up.
       // One whose request went out and was never answered may already be
       // up, so it is no refusal: its error tells the crewmate what to check.
       if (
         !(error instanceof OutcomeUnknownError) &&
-        (params.actions ?? []).some((action) => action.effect?.kind === "settle")
+        (params.actions ?? []).some(
+          (action) => action.effect?.kind === "settle" || action.effect?.kind === "merge",
+        )
       ) {
         delegate.onCardRefused?.({ title: params.title, ...cardRefusalOf(error) });
       }
@@ -832,7 +840,7 @@ function crewmateEmitCard(
 
 /**
  * The crewmate's emit_card, one entry of the crewmate tool spec: the
- * contract plus the completion card, and no task_id or related. A
+ * contract plus the merge card, and no task_id or related. A
  * crewmate whose task has its own browser gets `browser_button` beside the
  * rest; every other crewmate's schema stays as it was.
  */
@@ -865,7 +873,7 @@ export const EMIT_CARD_TOOL: CrewmateTool<
 
 /**
  * The emit_card tool for one role: the crewmate's (the default) reads the
- * contract plus the completion card and never sees task_id or related;
+ * contract plus the merge card and never sees task_id or related;
  * the Firstmate's reads the contract plus attach-first and carries both.
  */
 export function createEmitCardTool(

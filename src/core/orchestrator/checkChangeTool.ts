@@ -12,6 +12,7 @@ import {
   type LineageFacts,
   type LineageQuestion,
   outstandingGuidance,
+  standInFront,
   standingAuthorization,
 } from "./mergeAuthorization";
 import type { MergeReviews } from "./mergeReviews";
@@ -134,6 +135,12 @@ export class CheckChangeTool {
           .filter(Boolean)
           .join("\n");
       }
+      // The repair is of the approval whose version it starts from (INF-2746).
+      standInFront(
+        this.options.tasks,
+        taskId.trim(),
+        (item) => candidateHead(item) === conflictRepair.fromHead,
+      );
       const located = this.context.locate(taskId);
       if ("said" in located) return located.said;
       const { record, dir } = located;

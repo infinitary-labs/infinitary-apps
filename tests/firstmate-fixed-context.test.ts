@@ -421,7 +421,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "who merges a reviewed task once it passes and is green",
     home: "core",
-    says: "Green with autonomy on: settle_task merge-pr; otherwise the crewmate's completion card decides, never yours.",
+    says: "Green: the crewmate's merge card decides, never you; the app merges from it with autonomy on.",
   },
   {
     rule: "a note is a durable directive, never an intention or progress",
@@ -575,9 +575,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   // INF-490: an enforced rule is said once, as its refusal; a rule a wake or
   // a tool already says leaves the core.
   {
-    rule: "a merge decision on a crewmate's task is its completion card",
+    rule: "a merge decision on a crewmate's task is its merge card",
     home: { refusal: "a merge card its crewmate owes" },
-    says: "a crewmate's completion card is the one merge decision on its task",
+    says: "a crewmate's merge card is the one merge decision for each of its pull requests",
   },
   {
     rule: "released needs independently verified delivery",

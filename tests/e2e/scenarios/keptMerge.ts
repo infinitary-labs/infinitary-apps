@@ -145,7 +145,7 @@ function keptMergeMove(body: string, firstmate: boolean): ScenarioAnswer | undef
         title: KEPT_MERGE_CARD,
         presentation: preparedRevision(results.join("\n")),
         actions: [
-          { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+          { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
         ],
       },
     },

@@ -4,7 +4,6 @@ import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { Forge, ForgePull } from "../forge";
 import { appPathsFor } from "../paths";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
-import { REPORT_TOOL } from "../pi/crewmateTaskTools";
 import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
 import { InboxStore } from "../storage/inboxStore";
@@ -20,7 +19,11 @@ import { CrewSupervisor } from "./crewSupervisor";
 import type { SettleServiceHost } from "./settleHost";
 import { createSettleOwners } from "./settleOwners";
 
-/** INF-458 and the captain’s safety correction: only an explicitly finished task closes on merge. */
+/**
+ * INF-458 and the captain’s safety correction: only an explicitly finished
+ * task closes on merge. Since INF-2744 the finishing declaration is the
+ * open merge card's own `after: "close"`, never a report field.
+ */
 function fixture() {
   let now = CHECK_REFRESH_MS;
   const db = openInMemoryDatabase();
@@ -44,11 +47,36 @@ function fixture() {
     branch: "fm/task-meter",
   });
   seedDelivery(tasks, "meter", { prNumber: 71, headSha: "a".repeat(40), ci: "green", ciAt: 0 });
-  const declare = () =>
-    tasks.turns.recordReport("meter", {
-      text: "The meter fix is complete; only its merge remains.",
-      declared: { mergeCompletesTask: { prNumber: 71, headSha: "a".repeat(40) } },
+  // The task's open merge card, as the card stack answers for it.
+  let openCard:
+    | { cardId: string; cardTitle: string; actionId: string; label: string; after: "close" }
+    | undefined;
+  // The crewmate's merge card for the current change, declaring that its
+  // merge closes the task, with the offer the host kept for it.
+  const declare = (prNumber = 71, headSha = "a".repeat(40)) => {
+    openCard = {
+      cardId: "card-meter-merge",
+      cardTitle: "The meter counts every press",
+      actionId: "merge",
+      label: "Merge the pull request",
+      after: "close",
+    };
+    seedDelivery(tasks, "meter", {
+      completionOffers: [
+        {
+          cardId: "card-meter-merge",
+          offerId: "offer-1",
+          headSha,
+          prNumber,
+          shownFor: prNumber,
+          at: 1,
+        },
+      ],
     });
+  };
+  const withdraw = () => {
+    openCard = undefined;
+  };
   declare();
   let pull: ForgePull | undefined = {
     number: 71,
@@ -66,6 +94,7 @@ function fixture() {
   const stop = vi.fn(async () => {});
   const merge = vi.fn();
   const cards = {
+    openMergeAction: () => openCard,
     retireTaskCards: vi.fn(),
     releaseNotes: vi.fn(),
     releaseMerged: vi.fn(),
@@ -118,6 +147,7 @@ function fixture() {
     inbox,
     host,
     declare,
+    withdraw,
     retire,
     stop,
     merge,
@@ -213,9 +243,9 @@ describe("external merge reconciliation", () => {
 
   it("records a prerequisite merge without closing, then closes after the remaining work explicitly finishes", async () => {
     const h = fixture();
-    h.tasks.turns.recordReport("meter", {
-      text: "Deployment verification still remains after this merge.",
-    });
+    // Its crewmate took the merge card down: deployment verification still
+    // remains after this merge.
+    h.withdraw();
     h.merged();
     await h.watcher().poll(h.now());
     expect(h.tasks.get("meter")).toMatchObject({
@@ -395,37 +425,23 @@ describe("external merge reconciliation", () => {
     },
   );
 
-  it("binds the declaration to the report's exact PR/version and clears it on the next turn or report", async () => {
+  it("binds the declaration to the merge card's exact PR/version, and declares nothing once that card is gone (INF-2744)", async () => {
     const h = fixture();
-    const tool = REPORT_TOOL.bind({
-      onReport: (text, summary, declared) => {
-        h.tasks.turns.recordReport("meter", { text, summary, declared });
-        return "Reported.";
-      },
-    })!;
-    const report = () =>
-      tool.run({
-        text: "No work remains after the merge.",
-        merge_completes_task: { pr_number: 71, head_sha: h.pull().headSha },
-      });
-    await report();
-    expect(h.tasks.get("meter")?.delivery?.mergeCompletion).toMatchObject({
-      prNumber: 71,
-      headSha: h.pull().headSha,
-    });
-    h.tasks.turns.clearDeclaration("meter");
-    expect(h.tasks.get("meter")?.delivery?.mergeCompletion).toBeUndefined();
-    await report();
-    h.tasks.turns.recordReport("meter", { text: "More work now remains." });
-    expect(h.tasks.get("meter")?.delivery?.mergeCompletion).toBeUndefined();
-    h.declare();
-    h.answer({ ...h.pull(), headSha: "c".repeat(40), merged: true });
+    // The card left the stack: nothing declares the merge closes the task.
+    h.withdraw();
+    h.answer({ ...h.pull(), merged: true, state: "closed" });
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")?.status).toBe("active");
+    h.inbox.ack(h.inbox.allFor("meter").map((row) => row.id));
+    // A card shown at another version declares nothing about this merge.
+    h.declare(71, "c".repeat(40));
+    h.advance();
     await h.watcher().poll(h.now());
     expect(h.tasks.get("meter")?.status).toBe("active");
     expect(h.retire).not.toHaveBeenCalled();
-    expect(h.tasks.get("meter")?.delivery?.headSha).toBe(h.pull().headSha);
     h.inbox.ack(h.inbox.allFor("meter").map((row) => row.id));
-    await report();
+    // The merge card at the merged version closes it.
+    h.declare();
     h.advance();
     await h.watcher().poll(h.now());
     expect(h.tasks.get("meter")?.closedReason).toBe("merged");
@@ -494,10 +510,8 @@ describe("external merge reconciliation", () => {
       headSha: theirs,
       ci: "green",
     });
-    h.tasks.turns.recordReport("meter", {
-      text: "The release is the finishing change; only its merge remains.",
-      declared: { mergeCompletesTask: { prNumber: 94, headSha: theirs } },
-    });
+    // The release is the finishing change: its merge card says it closes the task.
+    h.declare(94, theirs);
     h.answer({
       number: 94,
       state: "closed",

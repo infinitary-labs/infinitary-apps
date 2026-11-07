@@ -3,6 +3,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { presentationCommitMessage, presentationRegionMarkers } from "../../src/core/forge";
+import { MERGE_WRITE_REFUSAL } from "../../src/core/forge/apiWriteGuard";
 import { presentationMarkdownText } from "../../src/core/forge/presentation";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
@@ -154,7 +155,8 @@ for (const host of HOSTS) {
         `/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}`,
       );
       expect(outcome.split("(refused)").length - 1).toBe(calls.length);
-      expect(outcome).toContain("request_merge");
+      // INF-2744: the refusal points at the merge card, in its owner's words.
+      expect(outcome).toContain(MERGE_WRITE_REFUSAL.split(";")[0]);
       expect(
         gitlab
           .requests()
@@ -585,7 +587,7 @@ for (const host of ["gitlab.com"] as const) {
             label: MERGE_WORDS["merge-pr"],
             variant: "primary",
             default: true,
-            effect: { kind: "settle", mode: "merge" },
+            effect: { kind: "merge", after: "close" },
           },
         ],
       });

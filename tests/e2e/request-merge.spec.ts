@@ -27,13 +27,16 @@ import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { expandDock, taskKey, taskLine } from "./rails";
 import { skipRules } from "./scenarios/skipRules";
-import { expectNoCard, shownCard } from "./stack";
+import { expectNoCard, showCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
- * FI3-1543: one request_merge covers the task's own pull request and one
+ * FI3-1543: one merge request covers the task's own pull request and one
  * the task adopted. Autonomy is off. Nothing merges until the captain's key
- * on the button, and either click continues its task (INF-2490).
+ * on the button, and either click continues its task (INF-2490). INF-2744
+ * asks every merge on the one merge card, whose `after: continue` says the
+ * task goes on, and a task may have several merge cards up at once ("a
+ * request is just like calling a tool").
  */
 
 const MERGE = MERGE_WORDS["merge-pr"];
@@ -65,30 +68,29 @@ function seedReviewCard(
   title: string,
   body: string,
   own = false,
+  reviews: MergeReview[] = [review],
 ) {
   seedDelivery(new TaskService({ db, strict: true }), taskId, {
     mode: "direct-pr",
     // A crewmate that opened its own pull request records it on the task.
     ...(own ? { prNumber: review.number } : {}),
-    mergeReviews: [review],
+    mergeReviews: reviews,
     // A saved review records the scripted reviewer's judgment of this exact
     // candidate; the captain's separate key remains the merge authorization.
     ciRepair: {
       failures: [],
       diagnoses: [],
       repairs: [],
-      declarations: [
-        {
-          headSha: review.headSha,
-          verdict: "ready",
-          at: review.at,
-          evidence: "The scripted reviewer read the arranged checks for this candidate.",
-        },
-      ],
+      declarations: reviews.map((each) => ({
+        headSha: each.headSha,
+        verdict: "ready" as const,
+        at: each.at,
+        evidence: "The scripted reviewer read the arranged checks for this candidate.",
+      })),
     },
   });
   new CardStore(db).upsert({
-    id: `card-${taskId}-merge`,
+    id: `card-${taskId}-merge-${review.number}`,
     taskId,
     author: "crewmate",
     priority: 30,
@@ -102,17 +104,17 @@ function seedReviewCard(
         id: "merge",
         label: MERGE,
         default: true,
-        effect: { kind: "request_merge", review: review.id },
+        effect: { kind: "merge", review: review.id, after: "continue" },
       },
       { id: "not-now", label: "Not now" },
     ],
   });
 }
 
-// INF-2490 (the captain's answer to INF-2489's question 3): request_merge is
-// the continuing merge whichever branch its pull request is on; only the
-// completion card's merge finishes the task.
-test("a request_merge of the task's own pull request merges that pull request and the task continues", async () => {
+// INF-2490 (the captain's answer to INF-2489's question 3): a continuing
+// merge whichever branch its pull request is on; INF-2744 makes it a merge
+// card whose `after: continue` keeps the task open.
+test("a merge card that continues the task merges its own pull request and the task continues (INF-2744)", async () => {
   const userDataDir = scratchDir("infinitary-request-own-");
   const taskId = "owntask";
   const repo = seedRepo(userDataDir, taskId);
@@ -201,7 +203,7 @@ test("a request_merge of the task's own pull request merges that pull request an
   }
 });
 
-test("a request_merge of an adopted pull request merges that pull request and leaves the task open", async () => {
+test("a merge card for an adopted pull request merges that pull request and leaves the task open (INF-2744)", async () => {
   const userDataDir = scratchDir("infinitary-request-adopted-");
   const taskId = "adoptask";
   const repo = seedRepo(userDataDir, taskId);
@@ -309,7 +311,7 @@ test("a request_merge of an adopted pull request merges that pull request and le
   }
 });
 
-test("a request_merge of an adopted pull request waits while GitHub works out whether it can merge, then merges it", async () => {
+test("a merge card for an adopted pull request waits while GitHub works out whether it can merge, then merges it (INF-2744)", async () => {
   // INF-457: the captain's two clicks on PR #94 were refused because GitHub,
   // just after main moved, answered mergeable null (state unknown) to the
   // click's one read, and clean to reads seconds later at the same head.
@@ -406,6 +408,118 @@ test("a request_merge of an adopted pull request waits while GitHub works out wh
       body: requests.join("\n"),
       contentType: "text/plain",
     });
+  } finally {
+    await launched.close();
+    await github.close();
+  }
+});
+
+// INF-2744, the captain's words: "a single task can request many merges - a
+// request is just like calling a tool". One task holds two merge cards at
+// once, its own pull request's and an adopted one's; each click merges its
+// own pull request alone, and the task continues after both.
+test("one task holds a merge card for each of two pull requests, and each click merges its own (INF-2744)", async () => {
+  const userDataDir = scratchDir("infinitary-request-two-");
+  const taskId = "twotask";
+  const repo = seedRepo(userDataDir, taskId);
+  const github = await startGitHubStub();
+  const own = { number: 55, title: "feat: the crewmate's work", body: "The crewmate's work." };
+  github.serveNumbered({ ...own, branch: repo.branch, headSha: repo.headSha });
+  github.serveNumbered({
+    number: 151,
+    branch: ADOPTED_BRANCH,
+    title: "feat: start the 0.1.20 upload",
+    headSha: ADOPTED_HEAD,
+  });
+  seedGitHubSignIn(userDataDir);
+  const db = openDatabase(userDataDir);
+  seedProject(db, {
+    id: "repo-pr",
+    path: repo.repoDir,
+    name: "r",
+    setupKind: "clone",
+    origin: "https://github.com/o/r.git",
+    runsOn: null,
+    delivery: "direct-pr",
+  });
+  seedHostedOrigins(db, userDataDir);
+  seedTask(new TaskService({ db, strict: true }), {
+    id: taskId,
+    title: "Ship the work and its release",
+    status: "idle",
+    repoId: "repo-pr",
+    repoDir: repo.repoDir,
+    worktreeDir: repo.worktreeDir,
+    branch: repo.branch,
+  });
+  const at = Date.now();
+  const ownReview: MergeReview = {
+    id: "mrtwoown00001",
+    kind: "github",
+    host: "github.com",
+    owner: "o",
+    name: "r",
+    number: own.number,
+    headSha: repo.headSha,
+    base: "main",
+    branch: repo.branch,
+    method: "squash",
+    title: own.title,
+    at,
+  };
+  const adoptedReview: MergeReview = {
+    ...ownReview,
+    id: "mrtwoadopted1",
+    number: 151,
+    headSha: ADOPTED_HEAD,
+    branch: ADOPTED_BRANCH,
+    title: "feat: start the 0.1.20 upload",
+  };
+  const reviews = [ownReview, adoptedReview];
+  const ownTitle = "Merge the task's pull request";
+  const adoptedTitle = "Merge the release pull request";
+  seedReviewCard(db, taskId, ownReview, ownTitle, "<p>The task's own work.</p>", true, reviews);
+  seedReviewCard(
+    db,
+    taskId,
+    adoptedReview,
+    adoptedTitle,
+    "<p>Someone else opened pull request 151.</p>",
+    false,
+    reviews,
+  );
+  db.close();
+
+  const launched = await launchApp({ userDataDir, env: github.env });
+  try {
+    const { page } = launched;
+    // Both merge cards are up for the one task.
+    await expect
+      .poll(async () =>
+        (await page.evaluate(() => window.infinitary.cards.list()))
+          .filter((card) => card.taskId === taskId)
+          .map((card) => card.title)
+          .sort(),
+      )
+      .toEqual([adoptedTitle, ownTitle].sort());
+    expect(github.merges()).toEqual([]);
+    for (const [title, number] of [
+      [ownTitle, own.number],
+      [adoptedTitle, 151],
+    ] as const) {
+      await showCard(page, title);
+      const card = shownCard(page, title);
+      await pressKey(card.getByRole("button", { name: MERGE, exact: true }), "Enter");
+      await expectNoCard(page, title);
+      await expect
+        .poll(() => github.merges().map((merge) => merge.number), { timeout: 20_000 })
+        .toContain(number);
+    }
+    expect(github.merges().map((merge) => merge.number)).toEqual([own.number, 151]);
+    await expect
+      .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), taskId))
+      .toMatchObject({ status: "active" });
+    expect(existsSync(repo.worktreeDir)).toBe(true);
   } finally {
     await launched.close();
     await github.close();

@@ -93,7 +93,7 @@ import { voiceDownloadProgressSchema } from "./voice";
  * client can refuse or degrade on a mismatch instead of failing one call at
  * a time.
  */
-export const PROTOCOL_VERSION = "13.0.0";
+export const PROTOCOL_VERSION = "14.0.0";
 
 /**
  * The version rule's window for a computer that runs work (docs/contract.md):
@@ -117,7 +117,7 @@ export const PROTOCOL_MAJORS_BEHIND = 0;
  * A view says its own floor in its hello (`viewFloor`), so a newer view
  * keeps changing things on an older home its floor reaches.
  */
-export const VIEW_FLOOR = 13;
+export const VIEW_FLOOR = 14;
 
 /**
  * What this home serves beyond its channel set, by name, so a client hides

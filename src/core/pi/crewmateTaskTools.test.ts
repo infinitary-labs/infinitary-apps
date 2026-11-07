@@ -87,7 +87,7 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
       title: "Ready to merge",
       body: "<p>Green on the head.</p>",
       actions: [
-        { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+        { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
         { id: "hold", label: "Hold" },
       ],
       risk: RISK,
@@ -629,7 +629,7 @@ describe("the crewmate tool spec", () => {
       arguments: {
         title: "The meter reads true",
         body: "<h3>Why</h3><p>The meter read low.</p>",
-        actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+        actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
         risk: RISK,
       },
     };
@@ -661,7 +661,7 @@ describe("the crewmate tool spec", () => {
         {
           callback: "onCard",
           input: expect.objectContaining({
-            actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+            actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
             // Its risk reaches the host whole, through either runtime's schema.
             riskDeclaration: RISK,
           }),

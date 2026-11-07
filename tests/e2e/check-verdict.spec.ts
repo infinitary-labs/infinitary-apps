@@ -85,7 +85,7 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
     status: "ready",
     createdAt: Date.now(),
     actions: [
-      { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+      { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
       { id: "discard", label: "Discard", effect: { kind: "settle", mode: "discard" } },
     ],
   };

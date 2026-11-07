@@ -89,7 +89,9 @@ export type TaskGate = {
 
 export type PendingSettleIntent = {
   mode: "merge-pr" | "land";
-  actor: "captain" | "firstmate";
+  actor: "captain" | "firstmate" | "app";
+  /** The merge card declared the task continues after this merge (INF-2744). */
+  continues?: true;
   requestedAt: number;
   proceedWithOpen: boolean;
   /** One branch/local attempt waiting for a turn, not a kept hosted merge approval. */
@@ -104,7 +106,7 @@ export type PendingSettleIntent = {
 export type MergeOrder = { at: number; proceedWithOpen: boolean };
 
 /**
- * A completion card the host published after its checks passed, and the
+ * A merge card the host published after its checks passed, and the
  * head those checks read: the baseline a click on that exact offer
  * approves. A card without one (seeded, or a Firstmate card) approves no head.
  * An offer that approves no head is still kept for the change it was shown
@@ -122,6 +124,8 @@ export type CompletionOffer = {
    * card's offer, and any offer that approves no head, names it here alone.
    */
   shownFor?: number;
+  /** The merge card declared the task continues after this merge (INF-2744). */
+  continues?: true;
   /** The saved story this offer showed, when it uses one. */
   presentationRevision?: number;
   presentationContentHash?: string;
@@ -204,7 +208,7 @@ export type MergeWait =
  * stands through conflicts, waits and restarts until it is consumed by the
  * merge, revoked (an interruption, his withdrawal), invalidated (the work
  * changed, the pull request or project is no longer the one approved) or
- * superseded (a new completion card or a new click). `generation` advances
+ * superseded (a new merge card or a new click). `generation` advances
  * on every one of those, so a run that started earlier can tell before it
  * sends anything.
  */
@@ -212,7 +216,12 @@ export type MergeAuthorization = {
   version: 1;
   id: string;
   generation: number;
-  issuer: "captain";
+  /**
+   * Who approved it: the captain's click, or the app from the merge card
+   * on a task whose autonomy is on (INF-2744). An app approval passes the
+   * merge gate again on every run, so turning autonomy off ends it.
+   */
+  issuer: "captain" | "autonomy";
   at: number;
   /** The offer the captain clicked: the card, its occurrence and version, the action and the gesture. */
   card: {
@@ -233,10 +242,16 @@ export type MergeAuthorization = {
     delivery: "direct-pr";
     method: "squash";
   };
-  /** The head the captain approved: the one the completion card's checks read. */
+  /** The head the captain approved: the one the merge card's checks read. */
   approvedHead: string;
-  /** Ordinary request_merge approval; its snapshot survives review-list eviction. */
+  /** The reviewed pull request a merge card named; its snapshot survives review-list eviction. */
   review?: MergeReview;
+  /**
+   * What the merge card declared follows the merge (INF-2744). Absent on an
+   * approval from before it: a review's merge continued the task, the
+   * current change's closed it.
+   */
+  after?: "close" | "continue";
   /**
    * The approved head's change reading, stored at the captain's approval
    * (INF-416 G). Absent when that commit could not be read.
@@ -276,6 +291,15 @@ export type MergeAuthorization = {
   attempt?: { token: string; head: string; at: number };
   /** The merge GitHub confirmed. */
   receipt?: { head: string; sha?: string; at: number };
+  /**
+   * Approvals of the task's other pull requests, kept while this one
+   * stands (INF-2746): a task may ask for many merges, and every merge
+   * card's approval stands on its own until its pull request merges. When
+   * this one ends the oldest stands next; an end that holds the task's
+   * merge for the captain, or revokes it, ends them too. Each carries no
+   * queue of its own.
+   */
+  queued?: MergeAuthorization[];
 };
 
 /**
@@ -364,8 +388,8 @@ export type TaskDelivery = {
    * The default branch's newest run of each check the reading at `head` found
    * red (INF-1915 fix 1), read with that reading of the task's own pull
    * request and replaced or cleared by the next. Evidence about a failure's
-   * cause for the crew's diagnosis and the completion card, never a merge
-   * input: the merge boundary does not read it; the completion card's
+   * cause for the crew's diagnosis and the merge card, never a merge
+   * input: the merge boundary does not read it; the merge card's
    * checks hold does, letting the card up at once when that branch fails
    * every failed check too (`CrewmateCards.pendingCiGate`).
    */
@@ -464,7 +488,7 @@ export type TaskDelivery = {
    */
   mergeAuthorization?: MergeAuthorization;
   /**
-   * Reviewed pull requests a `request_merge` card may name (FI3-1543).
+   * Reviewed pull requests a merge card may name (FI3-1543).
    * Selecting a referenced one updates the displayed `prNumber` and checks,
    * but only `checkTarget` selects it; the task's own branch remains its own.
    */
@@ -481,16 +505,15 @@ export type TaskDelivery = {
   /** The newest completion offers the host published, with the head each one's checks read. */
   completionOffers?: CompletionOffer[];
   /**
-   * The risk assessment on the newest completion card the host published
+   * The risk assessment on the newest merge card the host published
    * (docs/card-authoring.md "The risk chart"): its crewmate's levels and
-   * lines alone. A new completion card
-   * replaces it.
+   * lines alone. A new merge card replaces it.
    */
   risk?: RiskAssessment;
   /**
-   * The host's last refusal of this task's completion card, present until
-   * a completion card goes up (docs/card-authoring.md, "A refused
-   * completion card"): what the report wake and `crew_status` say beside
+   * The host's last refusal of this task's merge card, present until
+   * a merge card goes up (docs/card-authoring.md, "A refused
+   * merge card"): what the report wake and `crew_status` say beside
    * a report that claims the card went up.
    */
   cardRefusal?: CardRefusal;
@@ -504,8 +527,6 @@ export type TaskDelivery = {
    */
   captainWait?: CaptainWait;
   finishedAt?: number;
-  /** The crewmate declared this exact merge finishes the task; cleared on its next turn/report. */
-  mergeCompletion?: { prNumber: number; headSha: string; at: number };
   /**
    * Beside either, what that report asked the Firstmate to do (FI3-710,
    * `needs_firstmate`), kept until the crewmate's next turn starts so the
@@ -531,14 +552,14 @@ export type CaptainWait = { at: number; reason: string; cardId?: string };
 export type FirstmateAsk = { at: number; request: string };
 
 /**
- * Why the host refused a completion card: its checks had not passed, the
+ * Why the host refused a merge card: its checks had not passed, the
  * CI cap holds it, its review has not passed, its shape failed the card
  * lint, or anything else the emit refused (its size, id or pictures) -
  * `why` carries the host's own words for each.
  */
 export type CardRefusalReason = "checks" | "ci-cap" | "review" | "shape" | "other";
 
-/** One refused completion card: the title it was emitted with, when, and why. */
+/** One refused merge card: the title it was emitted with, when, and why. */
 export type CardRefusal = {
   at: number;
   title: string;

@@ -368,7 +368,7 @@ Open again starts a fresh browser that is the crewmate's.
 A crewmate that needs a person on the page - a sign-in, a verification code, a payment - asks on an ordinary decision card.
 It declares the request with `emit_card`'s `browser_handoff`: the site its browser is on, why it needs the captain, and what it will do once control comes back, each in its own words; the host reads none of them and never infers a request from the page.
 The card names the site and why in its body, and carries exactly one action whose effect is `{ kind: "open", target: "browser" }`, labeled as the captain's step (`Open browser and sign in`), beside one such as `Leave waiting`.
-The supervisor refuses in words a request whose site is not the one its browser shows, one with no open browser, one while the captain already holds it, one on a completion card, and an open-browser action with no request; the first mate's card lint refuses that action outright.
+The supervisor refuses in words a request whose site is not the one its browser shows, one with no open browser, one while the captain already holds it, one on a merge card, and an open-browser action with no request; the first mate's card lint refuses that action outright.
 
 Before the card goes up, `TaskBrowsers.requestHelp` marks the browser `waiting`, so the crewmate's next commands refuse, lets the running one finish, and writes one timeline line, `asked you to take over its browser at <site>`.
 The card's live attachment carries `handoff`, and its strip is drawn as attention, `<site> · paused for your help`, while the request stands (the design skill's ResponseCard); a request card always has its strip, with no button.

@@ -106,7 +106,7 @@ export function tieredPresentationMarkdown(
     `## ${TIERED_STORY_HEADINGS[2]}`,
     `**Before:** ${story.before.map(md).join(" ")}\n\n**After:** ${story.after.map(md).join(" ")}`,
     !native && story.views.length
-      ? "Pictures and recordings are retained on the completion card; this host receives the story's text only."
+      ? "Pictures and recordings are retained on the merge card; this host receives the story's text only."
       : "",
     views,
     story.noPicture ? md(story.noPicture) : "",

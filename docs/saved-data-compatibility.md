@@ -336,10 +336,10 @@ This is a forward migration, not permission to open the profile with an older ap
 
 Migration 106 makes the change record's two tables, `changes` and `change_versions`, and one change for each open or active task that carries one, read out of its delivery facts exactly as saved, in one transaction before any service starts (`docs/task-record.md`, "A task's change").
 The delivery facts stay where they were and every reader reads them there: the migration moves nothing and makes no consent, because a version's consent is only the click, carried approval or override the profile already held.
-A version is a head the project's host saw - a check read, an owned merge review, a published story, a merge click and its repairs, a completion offer, or an override given for one version - never a review, a lines reading or a story prepared at a head not yet pushed, and never another branch's pull request's head on the task's own change (`docs/task-record.md`, "A task's change").
+A version is a head the project's host saw - a check read, an owned merge review, a published story, a merge click and its repairs, a merge card, or an override given for one version - never a review, a lines reading or a story prepared at a head not yet pushed, and never another branch's pull request's head on the task's own change (`docs/task-record.md`, "A task's change").
 Since INF-2490 each other pull request a task names is a change of its own; no migration makes those rows, because the task's next write projects them, and a saved review's `owned` or `referenced` word is read as its branch says.
 Each change keeps its own saved story: a story saved before then names no branch and is read as the task's own branch's, and the next write places it in `presentation` or `presentations` by which change is current.
-A completion offer saved before then names no change it was shown for (`shownFor`) and is read by its pull request number, as before.
+A merge card saved before then names no change it was shown for (`shownFor`) and is read by its pull request number, as before.
 The record binds a reading and a version override to the pull request they name (INF-1873): a reading saved by a release before this one carries no pull request (`CheckSnapshot.prNumber` is this release's stamp), and the older override writer saved none either.
 Such a reading or override is read as the task's own change's only in a slot that records no other branch's pull request; in a slot that does, the host cannot tell whose it was, so the record leaves it out rather than bind it to the wrong change, and the migration rewrites nothing to recover it.
 The loss is only in the record: the delivery facts keep the reading and the override, and every gate still reads them there; the first reading after the upgrade is stamped and makes the version's checks.
@@ -352,7 +352,7 @@ A record export carries the task's delivery facts as before and no change row, a
 
 Migration 107 removes the `blocks` edge the host recorded from each review it raised onto that review's builder, live or closed, and nothing else: a `blocks_me` filing, a required action's prerequisite and a wait the first mate recorded keep their rows and their marks.
 The host no longer holds a builder's merge on its review (INF-1876): whether a merge waits for the verdict is the care runbook's guidance, and the parent edge stays the one stored review-to-builder join.
-A builder whose review was open at the upgrade is read as waiting on nothing, and its completion card is refused only by what still holds it.
+A builder whose review was open at the upgrade is read as waiting on nothing, and its merge card is refused only by what still holds it.
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
 Nothing reverses it: the edge was the retired hold's own record, and the review's verdicts stay on the builder's timeline.
 

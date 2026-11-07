@@ -46,7 +46,6 @@ export type TaskExecution = {
 export const TURN_DECLARATION_FIELDS = [
   "captainWait",
   "finishedAt",
-  "mergeCompletion",
   "needsFirstmate",
   "checkBack",
 ] as const;

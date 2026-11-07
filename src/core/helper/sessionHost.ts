@@ -36,9 +36,6 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
-import { contractChange, listsChange } from "../connection/contractChanges";
-import { CONVERSATION_FOLDS } from "../connection/conversationFolds";
-import { SHARED_CARDS, THREAD_SIGN_OFF } from "../connection/sharedCards";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { filesAskedOfHome, type TaskFiles } from "../files/taskFiles";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
@@ -223,9 +220,6 @@ const FORWARDED_TOOLS = new Set<string>(Object.keys(APP_TOOL_REQUESTS));
 
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
-
-/** open_change from an existing branch (`open-change-branch.md`). */
-const OPEN_CHANGE_BRANCH = contractChange("open-change-branch");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -952,11 +946,9 @@ export class SessionHost {
       held.unsubscribe = await followCompletions(
         session,
         (event) => {
-          // A fold is all the home hears of it, and only a home that reads
-          // it (`conversation-folds.md`): its crewmate's directions go again.
+          // A fold is all the home hears of it: its crewmate's directions go again.
           if (event.type === "context_compacted") {
-            if (listsChange(this.options.homeChanges?.(), CONVERSATION_FOLDS))
-              this.record(held, { type: "context_compacted" });
+            this.record(held, { type: "context_compacted" });
             return;
           }
           // A cut-off is a fact about the account that served the turn: this
@@ -1315,19 +1307,6 @@ export class SessionHost {
         this.withDeadline(
           "inf:work:card",
           async (signal) => {
-            // A shared-card write goes only to a home that keeps its expected
-            // revision and operation identity; an older one would drop them
-            // and write as if the card were this task's own.
-            if (
-              (card.expectedRevision !== undefined ||
-                card.contributionReason !== undefined ||
-                card.operationId !== undefined ||
-                card.answersMessage !== undefined) &&
-              !listsChange(this.options.homeChanges?.(), SHARED_CARDS)
-            )
-              throw new Error(
-                `Card write refused: ${HOME.the} runs an older Infinitary that cannot keep a shared-card write. Nothing was sent; report the gap to the first mate.`,
-              );
             // A card whose preview names a project font of this task's own goes
             // only to a home that keeps one: an older home is told nothing, not
             // even the card's pictures.
@@ -1460,44 +1439,10 @@ export class SessionHost {
           },
           toolSignal,
         ),
-      onReply: (input, signal) => {
-        if (
-          (input.answersMessage !== undefined ||
-            input.operationId !== undefined ||
-            input.response !== undefined) &&
-          !listsChange(this.options.homeChanges?.(), SHARED_CARDS)
-        )
-          return Promise.reject(
-            new Error(
-              `Reply refused: ${HOME.the} runs an older Infinitary that cannot name the captain message a line answers. Nothing was sent; reply without it or report the gap to the first mate.`,
-            ),
-          );
-        if (input.signsOff === true && !listsChange(this.options.homeChanges?.(), THREAD_SIGN_OFF))
-          return Promise.reject(
-            new Error(
-              `Reply refused: ${HOME.the} runs an older Infinitary that cannot end an answer from its thread. Nothing was sent; reply without signs_off.`,
-            ),
-          );
-        return ask("inf:work:reply", input, signal);
-      },
-      onReviseRequiredAction: (input, signal) => {
-        if (!listsChange(this.options.homeChanges?.(), SHARED_CARDS))
-          return Promise.reject(
-            new Error(
-              `Correction refused: ${HOME.the} runs an older Infinitary that cannot correct a required action's words. Nothing was sent; report the gap to the first mate.`,
-            ),
-          );
-        return ask("inf:work:revise-required-action", { input }, signal);
-      },
-      onReadCard: (cardId, signal) => {
-        if (!listsChange(this.options.homeChanges?.(), SHARED_CARDS))
-          return Promise.reject(
-            new Error(
-              `Card read refused: ${HOME.the} runs an older Infinitary that cannot read one card. Read the task with tasks instead.`,
-            ),
-          );
-        return ask("inf:work:read-card", { cardId }, signal);
-      },
+      onReply: (input, signal) => ask("inf:work:reply", input, signal),
+      onReviseRequiredAction: (input, signal) =>
+        ask("inf:work:revise-required-action", { input }, signal),
+      onReadCard: (cardId, signal) => ask("inf:work:read-card", { cardId }, signal),
       onQueryTasks: (input, toolSignal) =>
         this.withDeadline(
           "inf:work:tasks",
@@ -1548,11 +1493,6 @@ export class SessionHost {
         if (input.around && home !== null && !changesStoryAround(home))
           throw new Error(
             `around refused: ${HOME.the} runs an older Infinitary that cannot change the words around a story; nothing was sent. Report it until ${HOME.the} is updated.`,
-          );
-        // An older home would drop branch and open the task's own branch instead.
-        if (input.branch && !listsChange(this.options.homeChanges?.(), OPEN_CHANGE_BRANCH))
-          throw new Error(
-            `branch refused: ${HOME.the} needs an update before it can open a change from another branch; nothing was sent. Report it until ${HOME.the} is updated.`,
           );
         return ask("inf:work:open-change", { input }, signal);
       },

@@ -56,9 +56,9 @@ Settings writes through the same action-catalog dispatcher as `app_change` ([app
 Fleet management is agent-operated (`docs/fleet.md`): Settings may add and remove projects through `app_change`'s dispatcher (`project-setup`, `project-remove`); removal never deletes repo data.
 The first mate's `project-setup` only proposes: the host's setup card adds a project only on the captain's Add project click, and a proposed settings change that is not the captain's exact words applies only from its own card.
 Removal is refused while tasks are planned or working on the project, naming them by key.
-The host enforces autonomy on merges: `SettleService` refuses a first-mate `merge-pr` or `land` on an autonomy-off task with the `autonomy-off` `SettleRefusal`, whose one way out is the open completion card's merge action, and a captain click is never refused.
+The host enforces autonomy on merges: `SettleService` refuses a first-mate `merge-pr` or `land` on an autonomy-off task with the `autonomy-off` `SettleRefusal`, whose one way out is the open merge card's merge action, and a captain click is never refused.
 Observing a confirmed merge of the task's recorded pull request grants no merge permission and does not declare the task finished.
-The shared check watcher records the merge, then closes only a matching `report.merge_completes_task` declaration with no active work, queued instructions, unfinished required children or dependency holds; otherwise it wakes the crewmate once and leaves its work intact.
+The shared check watcher records the merge, then closes only for a matching open merge card that declared `after: close`, with no active work, queued instructions, unfinished required children or dependency holds; otherwise it wakes the crewmate once and leaves its work intact.
 An unreachable computer delays only its working-copy retirement, never recording the confirmed merge; the existing placed-copy owner saves and removes it on reconnection.
 Forge providers are fenced to `src/core/forge/index.ts`: the provider files under `src/core/forge/providers/` are importable only from `src/core/forge/` itself, the seam and its home wiring (`homeForges.ts`) among it (Biome `noRestrictedImports`).
 The app never runs `gh` or reads another program's sign-in; forge work goes through the forge seam and the app's own sign-in (`docs/forge.md`).

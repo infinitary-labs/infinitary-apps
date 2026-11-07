@@ -150,11 +150,11 @@ export function boardMoveOf(
       ? {
           kind: "card",
           cardId: context.completionCardId,
-          text: "Brings its completion card forward. The card merges; the drop never does.",
+          text: "Brings its merge card forward. The card merges; the drop never does.",
         }
       : {
           kind: "refused",
-          text: "No completion card is up for it, so nothing can finish it from here.",
+          text: "No merge card is up for it, so nothing can finish it from here.",
         };
   }
   if (from === "waiting") {

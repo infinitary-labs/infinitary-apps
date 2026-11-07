@@ -18,6 +18,7 @@ import {
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { MergeAuthorization } from "../storage/taskStore";
 import type { MergeGuard, MergeStop } from "./changeMerge";
+import { PULL_NOT_THE_TASKS } from "./keptApproval";
 import { queueWakeWords } from "./projectQueue";
 
 const OTHER_HEAD = "b".repeat(40);
@@ -44,7 +45,7 @@ function completionCard(): Card {
     meta: TASK,
     body: "<p>The meter reads on time.</p>",
     actions: [
-      { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+      { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
     ],
     status: "ready",
     createdAt: 1_000,
@@ -128,7 +129,7 @@ describe("the guard a kept merge runs with", () => {
       "the task's change is another pull request",
       (world) => seedDelivery(world.tasks, TASK, { prNumber: PR + 1 }),
       undefined,
-      "the task's current change is not the one approved",
+      PULL_NOT_THE_TASKS,
     ],
     [
       "the task closed",
@@ -151,7 +152,7 @@ describe("the guard a kept merge runs with", () => {
     await world.settle.reportCardSettle(TASK, "merge-pr");
     expect(approvalOf(world)).toMatchObject({
       status: "invalidated",
-      reason: "the task's current change is not the one approved",
+      reason: PULL_NOT_THE_TASKS,
       generation: 2,
     });
   });
@@ -165,9 +166,9 @@ describe("the guard a kept merge runs with", () => {
       "its crewmate started working again",
     ],
     [
-      "a new completion card went up",
+      "a new merge card went up",
       (world) => world.cards.put(completionCard()),
-      "a new completion card is up",
+      "a new merge card is up",
     ],
   ])(
     "stops a host-run merge, but not the captain's click, when %s",
@@ -295,27 +296,25 @@ describe("the checks a host-run merge makes before it asks anything", () => {
     expect(world.log.filter((line) => line.startsWith("merge"))).toEqual([]);
     expect(approvalOf(world)).toMatchObject({
       status: "invalidated",
-      reason: "the task's current change is not the one approved",
+      reason: PULL_NOT_THE_TASKS,
     });
     expect(world.wakes).toEqual([
       expect.objectContaining({
         kind: "settled",
         chose: "merge-pr (kept)",
-        outcome: expect.stringContaining(
-          "ended: the task's current change is not the one approved",
-        ),
+        outcome: expect.stringContaining(`ended: ${PULL_NOT_THE_TASKS}`),
       }),
     ]);
   });
 
-  it("gives way to a new completion card without a word to the first mate", async () => {
+  it("gives way to a new merge card without a word to the first mate", async () => {
     const world = approved();
     world.cards.put(completionCard());
     await world.kept.runMergeAuthorization(TASK);
     expect(world.log.filter((line) => line.startsWith("merge"))).toEqual([]);
     expect(approvalOf(world)).toMatchObject({
       status: "superseded",
-      reason: "its crewmate put up a new completion card",
+      reason: "its crewmate put up a new merge card",
     });
     expect(world.wakes).toEqual([]);
   });
@@ -419,6 +418,28 @@ describe("a merge request's refusals", () => {
 // the user's decision". A kept merge's wait raises no card; the Firstmate
 // hears the click's outcome with the words that the captain saw none.
 describe("what a kept merge's wait shows", () => {
+  // INF-2744: under autonomy the app approves from the card, so no one
+  // clicked and the card is back up; the Firstmate is not told the captain
+  // saw none.
+  it.each<[MergeAuthorization["issuer"], boolean]>([
+    ["autonomy", false],
+    ["captain", true],
+  ])(
+    "marks a kept merge's conflict wake unseen only for the captain's click (%s)",
+    async (issuer, unseen) => {
+      const world = approved({ issuer });
+      world.live.autonomy = issuer === "autonomy";
+      world.merge = async () => ({ ok: false, text: "The branch conflicts.", stop: "conflict" });
+      await world.kept.runMergeAuthorization(TASK);
+      expect(approvalOf(world)?.waiting?.on).toBe("conflict");
+      expect(world.wakes).toEqual([
+        expect.objectContaining({ kind: "settled", outcome: expect.stringContaining("conflicts") }),
+      ]);
+      expect(world.wakes[0]).toMatchObject(unseen ? { unseen: true } : {});
+      if (!unseen) expect(world.wakes[0]).not.toHaveProperty("unseen");
+    },
+  );
+
   it("raises no card while the approval waits, and merges when the gates pass", async () => {
     const world = approved();
     world.merge = async () => ({ ok: false, text: "Checks are running.", stop: "checks" });

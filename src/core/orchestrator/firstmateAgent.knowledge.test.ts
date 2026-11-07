@@ -480,7 +480,7 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
             id: "merge-pr",
             label: MERGE_WHEN_CHECKS_PASS_WORDS,
             default: true,
-            effect: { kind: "settle", mode: "merge" },
+            effect: { kind: "merge", after: "close" },
           },
         ],
       },

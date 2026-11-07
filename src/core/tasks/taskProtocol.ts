@@ -1,4 +1,4 @@
-import { type Card, isReadyDecision } from "@shared/cards";
+import { type Card, isReadyDecision, mergeEffectOf } from "@shared/cards";
 import { cardWords } from "@shared/cardWords";
 import {
   type CrewPicture,
@@ -1241,25 +1241,22 @@ export class TaskProtocol {
   }
 
   /**
-   * The change whose merge closes the task (INF-2490): the current change,
-   * when the crewmate declared that its merge completes the task at the
-   * version the slot reads, or when the task's open finishing card - a merge
-   * card that settles it - was shown for it. None otherwise.
+   * The change whose merge closes the task (INF-2490, INF-2744): the current
+   * change, when the task's open merge card for it declared that its merge
+   * closes the task. None otherwise.
    */
   private finishingChange(record: TaskRecord): number | undefined {
     const current = currentChange(record.delivery, record.branch).number;
     if (current === undefined) return undefined;
-    const declared = record.delivery?.mergeCompletion;
-    if (declared?.prNumber === current && declared.headSha === record.delivery?.headSha)
-      return current;
     const card = this.options.cards
       .listOpen()
       .filter(
         (open) =>
           open.taskId === record.id &&
-          open.actions.some(
-            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
-          ),
+          open.actions.some((action) => {
+            const merge = mergeEffectOf(action);
+            return merge?.after === "close" && merge.review === undefined;
+          }),
       )
       .sort((a, b) => b.createdAt - a.createdAt)[0];
     if (!card) return undefined;

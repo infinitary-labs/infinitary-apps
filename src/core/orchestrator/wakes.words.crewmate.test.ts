@@ -135,7 +135,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       name: "plain",
       wake: { facts: { kind: "idle-nudge", thread: false } },
       words:
-        "You stopped with nothing running and nothing up for the captain to decide. Either finish - report under the five headings and emit your completion card - or say what blocks you.",
+        "You stopped with nothing running and nothing up for the captain to decide. Either finish - report under the five headings and emit your merge card - or say what blocks you.",
     },
     {
       name: "a thread naming its cards",
@@ -182,7 +182,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        'You stopped with nothing running, and the note "Coverage measured" (card-n) is up, asking the captain nothing. This task is a step whose answer the next step builds on: your report is that answer, and it takes no completion card - a card is only for something the captain must decide or see before the next step can start. If that note is your outcome and only the captain can act next, report with waiting_on_captain naming it; do not post it again. Otherwise either report the whole answer, if your report does not carry it yet, or say what blocks you. If it already does, nothing is left for you: say so in one line, and the first mate decides the next step.',
+        'You stopped with nothing running, and the note "Coverage measured" (card-n) is up, asking the captain nothing. This task is a step whose answer the next step builds on: your report is that answer, and it takes no merge card - a card is only for something the captain must decide or see before the next step can start. If that note is your outcome and only the captain can act next, report with waiting_on_captain naming it; do not post it again. Otherwise either report the whole answer, if your report does not carry it yet, or say what blocks you. If it already does, nothing is left for you: say so in one line, and the first mate decides the next step.',
     },
     {
       name: "a note up on an answer task",
@@ -195,7 +195,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        'You stopped with nothing running, and the note "Coverage measured" (card-n) is up, asking the captain nothing. This task\'s deliverable is an answer, shown on your card marked answering; it takes no completion card. If that note is your outcome and only the captain can act next, report with waiting_on_captain naming it; do not post it again. Otherwise, when nothing is left for you, report with finished true - saying so in words does not close the task - or say what blocks you.',
+        'You stopped with nothing running, and the note "Coverage measured" (card-n) is up, asking the captain nothing. This task\'s deliverable is an answer, shown on your card marked answering; it takes no merge card. If that note is your outcome and only the captain can act next, report with waiting_on_captain naming it; do not post it again. Otherwise, when nothing is left for you, report with finished true - saying so in words does not close the task - or say what blocks you.',
     },
     {
       name: "a note up on ordinary work",
@@ -207,19 +207,19 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        'You stopped with nothing running, and the note "Coverage measured" (card-n) is up, asking the captain nothing. If that note is your outcome and only the captain can act next, report with waiting_on_captain naming it; do not post it again. Otherwise either finish - report under the five headings and emit your completion card - or say what blocks you.',
+        'You stopped with nothing running, and the note "Coverage measured" (card-n) is up, asking the captain nothing. If that note is your outcome and only the captain can act next, report with waiting_on_captain naming it; do not post it again. Otherwise either finish - report under the five headings and emit your merge card - or say what blocks you.',
     },
     {
       name: "a step",
       wake: { facts: { kind: "idle-nudge", thread: false, step: true } },
       words:
-        "You stopped with nothing running and nothing up for the captain to decide. This task is a step whose answer the next step builds on: your report is that answer, and it takes no completion card - a card is only for something the captain must decide or see before the next step can start. Either report the whole answer, if your report does not carry it yet, or say what blocks you. If it already does, nothing is left for you: say so in one line, and the first mate decides the next step.",
+        "You stopped with nothing running and nothing up for the captain to decide. This task is a step whose answer the next step builds on: your report is that answer, and it takes no merge card - a card is only for something the captain must decide or see before the next step can start. Either report the whole answer, if your report does not carry it yet, or say what blocks you. If it already does, nothing is left for you: say so in one line, and the first mate decides the next step.",
     },
     {
       name: "an answer task",
       wake: { facts: { kind: "idle-nudge", thread: false, answer: true } },
       words:
-        "You stopped with nothing running and nothing up for the captain to decide. This task's deliverable is an answer, shown on your card marked answering; it takes no completion card. Either post that card, or when nothing is left for you, report with finished true - saying so in words does not close the task - or say what blocks you.",
+        "You stopped with nothing running and nothing up for the captain to decide. This task's deliverable is an answer, shown on your card marked answering; it takes no merge card. Either post that card, or when nothing is left for you, report with finished true - saying so in words does not close the task - or say what blocks you.",
     },
   ],
   "card-choice": [
@@ -498,25 +498,25 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "An independent assessment of your repair at 4be7c1d90a2f found that your repair changed the work the captain approved, so the captain's kept merge approval ended and they decide again. Drive the checks green on the change as it is now and put up a new completion card that says what changed from the version they approved; do not declare the repair again.\n\nThe assessment's report:\nThe repair also renamed a served word.",
+        "An independent assessment of your repair at 4be7c1d90a2f found that your repair changed the work the captain approved, so the captain's kept merge approval ended and they decide again. Drive the checks green on the change as it is now and put up a new merge card that says what changed from the version they approved; do not declare the repair again.\n\nThe assessment's report:\nThe repair also renamed a served word.",
     },
     {
       name: "unknown",
       wake: { facts: { kind: "repair-assessed", head: "4be7c1d90a2f", verdict: "unknown" } },
       words:
-        "An independent assessment of your repair at 4be7c1d90a2f could not tell whether your repair kept the work the captain approved, so the captain's kept merge approval ended and they decide again. Drive the checks green on the change as it is now and put up a new completion card; do not declare the repair again.",
+        "An independent assessment of your repair at 4be7c1d90a2f could not tell whether your repair kept the work the captain approved, so the captain's kept merge approval ended and they decide again. Drive the checks green on the change as it is now and put up a new merge card; do not declare the repair again.",
     },
     {
       name: "unstated",
       wake: { facts: { kind: "repair-assessed", head: "4be7c1d90a2f", verdict: "unstated" } },
       words:
-        "An independent assessment of your repair at 4be7c1d90a2f gave no clear verdict on what your repair did, so the captain's kept merge approval ended and they decide again. Drive the checks green on the change as it is now and put up a new completion card; do not declare the repair again.",
+        "An independent assessment of your repair at 4be7c1d90a2f gave no clear verdict on what your repair did, so the captain's kept merge approval ended and they decide again. Drive the checks green on the change as it is now and put up a new merge card; do not declare the repair again.",
     },
     {
       name: "failed",
       wake: { facts: { kind: "repair-assessed", head: "4be7c1d90a2f", verdict: "failed" } },
       words:
-        "An independent assessment of your repair at 4be7c1d90a2f did not finish, so the captain's kept merge approval ended and they decide again. Drive the checks green on the change as it is now and put up a new completion card; do not declare the repair again.",
+        "An independent assessment of your repair at 4be7c1d90a2f did not finish, so the captain's kept merge approval ended and they decide again. Drive the checks green on the change as it is now and put up a new merge card; do not declare the repair again.",
     },
   ],
   "main-check-observed": [
@@ -659,13 +659,13 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "[fm-op] the captain merged PR #1061 at 4be7c1d90a2f. The task stays open because its split is still to come; judge what comes next from it and your remaining work. Continue from that result. Dropping this task does not close that pull request. Carry on with the split.",
+        "[fm-op] your merge card merged PR #1061 at 4be7c1d90a2f. The task stays open because its split is still to come; judge what comes next from it and your remaining work. Continue from that result. Dropping this task does not close that pull request. Carry on with the split.",
     },
     {
       name: "merged bare",
       wake: { facts: { kind: "merge-continued", ok: true, change: "PR #1061", text: "Carry on." } },
       words:
-        "[fm-op] the captain merged PR #1061. The task stays open. Continue from that result. Dropping this task does not close that pull request. Carry on.",
+        "[fm-op] your merge card merged PR #1061. The task stays open. Continue from that result. Dropping this task does not close that pull request. Carry on.",
     },
     {
       name: "unknown",
@@ -679,7 +679,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "[fm-op] the outcome of the captain's merge of PR #1061 is unknown. Do not resend it; the host reads its result before continuing. The host did not answer.",
+        "[fm-op] the outcome of your merge card's merge of PR #1061 is unknown. Do not resend it; the host reads its result before continuing. The host did not answer.",
     },
     {
       name: "refused",
@@ -692,7 +692,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "[fm-op] the captain's merge of PR #1061 did not happen. Nothing was merged. GitHub reports a conflict.",
+        "[fm-op] your merge card's merge of PR #1061 did not happen. Nothing was merged. GitHub reports a conflict.",
     },
   ],
   "external-merge": [
@@ -707,13 +707,13 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "The project's host confirms PR #1061 merged at 4be7c1d90a2f. This task remains open because PR #1065 is still open. Read its remaining work and instructions; continue them, or report merge_completes_task for this PR and version when the merge finishes all your work. Do not ask for another merge or discard.",
+        "The project's host confirms PR #1061 merged at 4be7c1d90a2f. This task remains open because PR #1065 is still open. Read its remaining work and instructions; continue them, or, when this merge finished all your work, put up your merge card for this pull request with after close, and the app closes the task as merged. Do not ask for a discard.",
     },
     {
       name: "bare",
       wake: { facts: { kind: "external-merge", change: "PR #1061", head: "4be7c1d90a2f" } },
       words:
-        "The project's host confirms PR #1061 merged at 4be7c1d90a2f. This task remains open because completion was not declared or work still remains. Read its remaining work and instructions; continue them, or report merge_completes_task for this PR and version when the merge finishes all your work. Do not ask for another merge or discard.",
+        "The project's host confirms PR #1061 merged at 4be7c1d90a2f. This task remains open because no merge card declared that this merge closes it, or work still remains. Read its remaining work and instructions; continue them, or, when this merge finished all your work, put up your merge card for this pull request with after close, and the app closes the task as merged. Do not ask for a discard.",
     },
   ],
   "write-answered": [
@@ -1210,7 +1210,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       name: "over prose",
       wake: { facts: { kind: "kept-merge-guidance", guidance: "Rename the test too.", mark: 3 } },
       words:
-        "Rename the test too.\n\n[kept merge] The captain's merge approval on this task stands, so these words of theirs hold its merge until you declare their impact: check_change captainGuidance with mark 3 - none if they leave the approved work as it was, changed-work if they change it (then put up a new completion card when the work is ready).",
+        "Rename the test too.\n\n[kept merge] The captain's merge approval on this task stands, so these words of theirs hold its merge until you declare their impact: check_change captainGuidance with mark 3 - none if they leave the approved work as it was, changed-work if they change it (then put up a new merge card when the work is ready).",
     },
     {
       name: "over typed guidance",
@@ -1226,7 +1226,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "The captain replied in the thread on your card. Do the work their words need first, then answer at once, before unrelated work: always give one short answer in the thread, one to three sentences, whether or not the card changes, with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call, saying what you changed and under which heading; every revision while you answer needs its own). Your answer names their message in answers_message, by its number below; until a line does, the card keeps showing them the version they replied under. Then report. Their reply keeps your card on their screen beside its thread, and the thread shows what you are doing as you work; never acknowledge their words or announce a plan: they read your answer. When the work will take more than a few minutes, first post one line with reply and interim true saying what you are doing; it keeps their reply waiting for your answer. On your answering card of an answer task, when their words, however put, say they need nothing more from your answer and ask, correct or approve nothing, answer naming answers_message with signs_off true: it closes the card as read and the task as answered, and nothing more is owed. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it. When their words pass one of the app's holds or tell you to go on without asking them, report them verbatim with needs_firstmate naming this card's id, so the first mate records them as their standing override; carry on with what their words already allow.\nCard \"Split the wakes file\" (card-a).\nThe captain's words, verbatim:\nRename the test too.\n\n[kept merge] The captain's merge approval on this task stands, so these words of theirs hold its merge until you declare their impact: check_change captainGuidance with mark 4 - none if they leave the approved work as it was, changed-work if they change it (then put up a new completion card when the work is ready).",
+        "The captain replied in the thread on your card. Do the work their words need first, then answer at once, before unrelated work: always give one short answer in the thread, one to three sentences, whether or not the card changes, with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call, saying what you changed and under which heading; every revision while you answer needs its own). Your answer names their message in answers_message, by its number below; until a line does, the card keeps showing them the version they replied under. Then report. Their reply keeps your card on their screen beside its thread, and the thread shows what you are doing as you work; never acknowledge their words or announce a plan: they read your answer. When the work will take more than a few minutes, first post one line with reply and interim true saying what you are doing; it keeps their reply waiting for your answer. On your answering card of an answer task, when their words, however put, say they need nothing more from your answer and ask, correct or approve nothing, answer naming answers_message with signs_off true: it closes the card as read and the task as answered, and nothing more is owed. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it. When their words pass one of the app's holds or tell you to go on without asking them, report them verbatim with needs_firstmate naming this card's id, so the first mate records them as their standing override; carry on with what their words already allow.\nCard \"Split the wakes file\" (card-a).\nThe captain's words, verbatim:\nRename the test too.\n\n[kept merge] The captain's merge approval on this task stands, so these words of theirs hold its merge until you declare their impact: check_change captainGuidance with mark 4 - none if they leave the approved work as it was, changed-work if they change it (then put up a new merge card when the work is ready).",
     },
   ],
   "conversation-restart": [

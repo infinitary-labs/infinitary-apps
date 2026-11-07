@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { presentationCommitMessage } from "../../src/core/forge/presentation";
+import { MERGE_CONTINUED_LEAD } from "../../src/core/orchestrator/deliveryWakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
@@ -53,13 +54,16 @@ import { pressKey } from "./windowKeys";
 
 /**
  * INF-2490, the declared close (the captain's answers to INF-2489): a task
- * may merge several pull requests, each one of its changes. A request_merge
- * card's merge continues the task; the completion card's merge is the
- * finishing change and closes it as merged, removing its working copy; and
+ * may merge several pull requests, each one of its changes. INF-2744 asks
+ * every merge on one merge card, whose merge says what follows: `after:
+ * continue` keeps the task, `after: close` is the finishing change and closes
+ * it as merged, removing its working copy; with autonomy on the app merges
+ * from that card itself, with no click and no first mate turn; and
  * the first mate's merge of a change already merged closes it as merged with
  * autonomy on too. Each merge card says which, in the app's own line.
  * Review INF-2546 adds the cases around it: a finishing card shown for one
- * pull request merges nothing once another is current, a remaining pull
+ * pull request merges that one even once another is current (INF-2746: each
+ * merge card's approval is kept to its own pull request), a remaining pull
  * request GitHub cannot read keeps the task open, and the first mate
  * finishes a task whose current change is another branch's pull request.
  *
@@ -233,25 +237,31 @@ test("a task merges a continuing pull request, then finishes with its own, and c
   }
 });
 
-test("with autonomy on, a request_merge merges the release and the first mate's merge closes the task as merged (RUU-35)", async () => {
-  const { page, github, repo, close } = await arrange("release", { autonomy: true });
+/** How many crewmate steps answered the wake that a continuing merge went in. */
+const continuedWakes = (bodies: string[]) =>
+  bodies.filter(
+    (body) =>
+      !body.includes(FIRSTMATE_PERSONA) && sinceLastUser(body).user.includes(MERGE_CONTINUED_LEAD),
+  ).length;
+
+// INF-2744: with autonomy on, the app merges the release from its merge card
+// as it goes up; the task continues, its crewmate hears the merge once, and
+// the first mate's merge of the already-merged change closes it.
+test("with autonomy on, the app merges the release from its merge card, the task continues, and the first mate's merge closes it as merged (RUU-35, INF-2744)", async () => {
+  const { launched, page, github, repo, close } = await arrange("release", { autonomy: true });
+  const bodies = () => launched.mockProvider?.requestBodies() ?? [];
   try {
     await send(page, `${SPAWN_PROMPT_MARKER} ${TASK_TITLE}`);
-    const release = shownCard(page, RELEASE_CARD_TITLE);
-    await expect(release).toBeVisible({ timeout: 30_000 });
-    await expect(factsStrip(cardBody(page, RELEASE_CARD_TITLE)).mergeLine).toHaveText(
-      MERGE_CLOSES_WORDS.continues,
-    );
+    // No click: the app sends the release's merge from the card itself.
+    await expect
+      .poll(() => mergedNumbers(github), { timeout: 30_000 })
+      .toEqual([RELEASE_PULL.number]);
     const taskId = await cardTask(page, RELEASE_CARD_TITLE);
     const branch = (await detail(page, taskId))?.repo?.branch;
     if (!branch) throw new Error("The task has no branch");
-
-    await pressKey(release.getByRole("button", { name: MERGE, exact: true }), "Enter");
-    await expectNoCard(page, RELEASE_CARD_TITLE);
-    await expect
-      .poll(() => mergedNumbers(github), { timeout: 20_000 })
-      .toEqual([RELEASE_PULL.number]);
     expect((await detail(page, taskId))?.closedReason ?? null).toBeNull();
+    // The crewmate hears the continuing merge once.
+    await expect.poll(() => continuedWakes(bodies()), { timeout: 30_000 }).toBe(1);
 
     // The first mate's merge of the already-merged release sends nothing and closes the task.
     await send(page, `${MERGE_PROMPT_MARKER}${TASK_TITLE}`);
@@ -259,13 +269,14 @@ test("with autonomy on, a request_merge merges the release and the first mate's 
       .poll(() => detail(page, taskId), { timeout: 30_000 })
       .toMatchObject({ status: "done", closedReason: "merged" });
     expect(mergedNumbers(github)).toEqual([RELEASE_PULL.number]);
+    expect(continuedWakes(bodies())).toBe(1);
     await expect.poll(() => workingCopyBranches(repo.repoDir)).not.toContain(branch);
   } finally {
     await close();
   }
 });
 
-test("a completion card whose finishing change is another branch's pull request merges it and closes the task as merged (INF-1539)", async () => {
+test("a merge card whose finishing change is another branch's pull request merges it and closes the task as merged (INF-1539)", async () => {
   const { page, github, repo, close } = await arrange("taken-over");
   try {
     await send(page, `${SPAWN_PROMPT_MARKER} ${TASK_TITLE}`);
@@ -291,7 +302,7 @@ test("a completion card whose finishing change is another branch's pull request 
   }
 });
 
-test("a finishing card shown for one pull request merges nothing once another is current, an unreadable one keeps the task open, and it closes once every one merged (INF-2546)", async () => {
+test("a finishing card shown for one pull request merges that one once another is current, an unreadable one keeps the task open, and it closes once every one merged (INF-2546, INF-2746)", async () => {
   const { launched, page, github, repo, close } = await arrange("stale");
   const bodies = () => launched.mockProvider?.requestBodies() ?? [];
   try {
@@ -311,19 +322,12 @@ test("a finishing card shown for one pull request merges nothing once another is
       headSha: repo.branchHead(branch),
     });
 
-    // A stale merge target (R1): steered, the crewmate checks the task's own
-    // pull request, the current change from then on, while the card stays up.
+    // Another current change (R1): steered, the crewmate checks the task's
+    // own pull request, the current change from then on, while the card stays up.
     await send(page, `${STEER_PROMPT_MARKER}${TASK_TITLE}: ${STALE_STEER}`);
     await expect
       .poll(async () => (await detail(page, taskId))?.delivery?.prNumber, { timeout: 30_000 })
       .toBe(OWN_PULL);
-    await pressKey(finish.getByRole("button", { name: MERGE, exact: true }), "Enter");
-    // The click is refused on the card it was shown on, and nothing merged.
-    await expect(finish.getByRole("alert")).toBeVisible({ timeout: 20_000 });
-    expect(mergedNumbers(github)).toEqual([]);
-    expect((await detail(page, taskId))?.closedReason ?? null).toBeNull();
-    await regionShot(finish, test.info().outputPath("stale-card-refused.png"));
-
     // The record lists both, and neither closes the task: the open
     // finishing card was shown for a change that is no longer current (R5).
     await pressKey(taskKeyLinks(cardSurface(page)).first(), "Enter");
@@ -338,11 +342,21 @@ test("a finishing card shown for one pull request merges nothing once another is
     await pressKey(hideRecord(page), "Enter");
     await expect(recordDrawings(page, taskId)).toHaveCount(0);
 
+    await pressKey(finish.getByRole("button", { name: MERGE, exact: true }), "Enter");
+    // The click approves the pull request its card was shown for (INF-2746:
+    // "a single task can request many merges"), so the release merges; the
+    // task stays open while its own pull request is open.
+    await expect
+      .poll(() => mergedNumbers(github), { timeout: 20_000 })
+      .toEqual([RELEASE_PULL.number]);
+    await expectNoCard(page, FINISH_CARD_TITLE);
+    expect((await detail(page, taskId))?.closedReason ?? null).toBeNull();
+
     // An unreadable remaining pull request (R8): the own pull request merged
-    // on GitHub's page, the release cannot be read, so the first mate's
-    // merge closes nothing.
+    // on GitHub's page but cannot be read, so the first mate's merge closes
+    // nothing.
     github.mergeByHand(OWN_PULL);
-    github.setPullReadFailure(RELEASE_PULL.number, READ_FAILURE);
+    github.setPullReadFailure(OWN_PULL, READ_FAILURE);
     const before = settleAnswers(bodies());
     await send(page, MERGE_PROMPT);
     await expect.poll(() => settleAnswers(bodies()), { timeout: 30_000 }).toBeGreaterThan(before);
@@ -350,27 +364,28 @@ test("a finishing card shown for one pull request merges nothing once another is
     expect((await detail(page, taskId))?.closedReason ?? null).toBeNull();
     expect(workingCopyBranches(repo.repoDir)).toContain(branch);
 
-    // The outside-merge finishing path: once the release reads merged too,
-    // the first mate's merge sends nothing and closes the task as merged.
-    github.setPullReadFailure(RELEASE_PULL.number, undefined);
-    github.mergeByHand(RELEASE_PULL.number);
+    // The outside-merge finishing path: once the own pull request reads
+    // merged, the first mate's merge sends nothing and closes the task as merged.
+    github.setPullReadFailure(OWN_PULL, undefined);
     await send(page, MERGE_PROMPT);
     await expect
       .poll(() => detail(page, taskId), { timeout: 30_000 })
       .toMatchObject({ status: "done", closedReason: "merged" });
-    expect(mergedNumbers(github)).toEqual([]);
+    expect(mergedNumbers(github)).toEqual([RELEASE_PULL.number]);
     await expect.poll(() => workingCopyBranches(repo.repoDir)).not.toContain(branch);
   } finally {
     await close();
   }
 });
 
-test("with autonomy on, the first mate merges the finishing change on another branch and closes the task as merged (INF-2546)", async () => {
+// INF-2744: with autonomy on, the finishing merge card is the app's own
+// merge; the first mate is asked nothing.
+test("with autonomy on, the app merges the finishing change on another branch from its merge card and closes the task as merged (INF-2546, INF-2744)", async () => {
   const { page, github, repo, close } = await arrange("taken-over", { autonomy: true });
   try {
     await send(page, `${SPAWN_PROMPT_MARKER} ${TASK_TITLE}`);
     // The crewmate names the release as the task's change and offers it as
-    // the finishing one.
+    // the finishing one; the app merges it with no click.
     const task = async () =>
       (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
         (row) => row.title === TASK_TITLE,
@@ -378,18 +393,13 @@ test("with autonomy on, the first mate merges the finishing change on another br
     await expect.poll(task, { timeout: 30_000 }).toBeTruthy();
     const taskId = (await task()) as string;
     await expect
-      .poll(async () => (await detail(page, taskId))?.delivery?.prNumber, { timeout: 30_000 })
-      .toBe(RELEASE_PULL.number);
-    const branch = (await detail(page, taskId))?.repo?.branch;
-    if (!branch) throw new Error("The task has no branch");
-
-    await send(page, MERGE_PROMPT);
-    await expect
       .poll(() => mergedNumbers(github), { timeout: 30_000 })
       .toEqual([RELEASE_PULL.number]);
     await expect
       .poll(() => detail(page, taskId), { timeout: 20_000 })
       .toMatchObject({ status: "done", closedReason: "merged" });
+    const branch = (await detail(page, taskId))?.repo?.branch;
+    if (!branch) throw new Error("The task has no branch");
     await expect.poll(() => workingCopyBranches(repo.repoDir)).not.toContain(branch);
   } finally {
     await close();
@@ -408,7 +418,7 @@ test("the first mate's merge card on a published story merges at the published v
   const title = `${PROJECT} ${STORY_MERGE_MARKER}`;
   try {
     await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
-    // The crewmate published its story and put its completion card up.
+    // The crewmate published its story and put its merge card up.
     await expect(shownCard(page, STORY_MERGE_TITLE)).toBeVisible({ timeout: 60_000 });
     const taskId = await cardTask(page, STORY_MERGE_TITLE);
     const saved = () =>

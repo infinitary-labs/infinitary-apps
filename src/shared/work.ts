@@ -228,8 +228,7 @@ export const placedSpecSchema = z.object({
    * The task's crewmate reads files on the captain's other computers through
    * `infinitary-files-axi` in its shell there, each list and copy asked of
    * the home (`inf:work:files`, `inf:work:copy-file`; docs/files.md). The
-   * home sends it only to a computer that keeps task browsers and lists
-   * `files-there`.
+   * home sends it only to a computer that keeps task browsers.
    */
   files: z.boolean().optional(),
   /** The home grants this computer's load command (docs/heavy-runs.md). */
@@ -636,12 +635,6 @@ export const workRequests = {
           recoveryWays: z.array(keptRecoveryWaySchema).optional(),
           wait: z.object({ reason: z.string(), cardId: z.string().optional() }).optional(),
           finished: z.boolean().optional(),
-          mergeCompletesTask: z
-            .object({
-              prNumber: z.number().int().positive(),
-              headSha: z.string().regex(/^[a-f0-9]{40,64}$/),
-            })
-            .optional(),
           needsFirstmate: z.string().optional(),
           /** When it looks at its running job again (`report-check-back.md`); the home keeps it. */
           checkBack: z.object({ minutes: z.number(), waitingFor: z.string() }).optional(),
@@ -663,7 +656,7 @@ export const workRequests = {
       interim: z.boolean().optional(),
       /** `shared-cards.md`: the captain message it answers, its operation and response. */
       answersMessage: z.number().int().optional(),
-      /** `thread-sign-off.md`: the captain's message says they are done with the answer. */
+      /** The captain's message says they are done with the answer. */
       signsOff: z.boolean().optional(),
       operationId: z.string().optional(),
       response: crewResponseSchema.optional(),

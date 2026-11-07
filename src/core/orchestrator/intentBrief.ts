@@ -239,9 +239,9 @@ export function renderIntentBrief(
  */
 function renderFolderFacts(folder: FolderBriefFacts): string[] {
   return [
-    `${IN_PLACE_OPENING}: your working directory is the folder of ${folder.project} at ${folder.folder} itself, on the computer that keeps it, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
+    `${IN_PLACE_OPENING}: your working directory is the folder of ${folder.project} at ${folder.folder} itself, on the computer that keeps it, not a working copy of your own. This task has no branch, no pull request and no merge card, and it ships nothing.`,
     "Uncommitted edits, unpushed commits and stashes in the folder are the captain's. Never discard or overwrite them, switch the folder's branch, push, or open a pull request without their word on a card; setting edits aside on a backup branch or a stash with a message naming this task is allowed.",
-    "Your completion is a report of what you did, never a completion card.",
+    "Your completion is a report of what you did, never a merge card.",
   ];
 }
 
@@ -473,7 +473,7 @@ export function renderOperationShapeSection(): string {
   return [
     "Operation shape: the effect is the deliverable. Make the effect named in the goal and check that it took. Commit nothing, push nothing, open no pull request, and stop and report if code must change.",
     "The captain's words authorize only the effects the goal names. Keychain and signing access, writes outside this task's own project, payments and browser handoffs still ask under their existing consent rules; anything beyond the named effects asks too.",
-    "Your own project's writes go at once. You have no pull request tools and no completion decision; check_change records the diagnosis of a workflow run you read and reserves its rerun. Show what took effect on a factual note with no settle action, then report the result and its evidence; the first mate closes it done and finished from that evidence. A note stays until the captain presses its Got it, but that press is not proof of success.",
+    "Your own project's writes go at once. You have no pull request tools and no merge card; check_change records the diagnosis of a workflow run you read and reserves its rerun. Show what took effect on a factual note with no settle action, then report the result and its evidence; the first mate closes it done and finished from that evidence. A note stays until the captain presses its Got it, but that press is not proof of success.",
     "Care: none - this task delivers an effect, not code through a gate.",
   ].join("\n");
 }
@@ -644,7 +644,7 @@ export function renderResultShapeSection(schema: Record<string, unknown>): strin
 export function renderProgramPartSection(program: { key: string; title: string }): string {
   return [
     `Program part: this task is one part of the program ${program.key} "${program.title}", which the host runs; your report's result is what the program reads next, and nobody else is woken by it.`,
-    "Commit what you change on your branch - a later part may start from your last commit - but push nothing, open no pull request and show no completion card: this part delivers its branch and its result, and the program closes it once it has read your report, keeping your work.",
+    "Commit what you change on your branch - a later part may start from your last commit - but push nothing, open no pull request and show no merge card: this part delivers its branch and its result, and the program closes it once it has read your report, keeping your work.",
     "Run the checks that prove your part works; while one still runs, a report with check_back is progress the program does not read. Show a card only when the captain must decide something before you can go on, and then report with waiting_on_captain.",
   ].join(" ");
 }
@@ -1062,7 +1062,7 @@ export function renderFolderRepairBrief(
       "",
       ...factLines,
       "",
-      `${IN_PLACE_OPENING}: your working directory is ${workdir}, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
+      `${IN_PLACE_OPENING}: your working directory is ${workdir}, not a working copy of your own. This task has no branch, no pull request and no merge card, and it ships nothing.`,
       "Find out why the folder is missing first: whether it was deleted, moved or renamed elsewhere, sits on a drive that is not connected, or was kept only on this computer.",
       `Only if it was deleted, and the project has an address where it lives, clone it again from there into exactly ${facts.folder}. A fresh clone cannot bring back branches or edits that were only in the deleted folder: say so in your report.`,
       "In every other case change nothing and ask the captain on a card what to do. Never move, rename or delete another folder, and never clone into any other path.",
@@ -1093,7 +1093,7 @@ export function renderFolderRepairBrief(
     "",
     ...factLines,
     "",
-    `${IN_PLACE_OPENING}: your working directory is this folder itself, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
+    `${IN_PLACE_OPENING}: your working directory is this folder itself, not a working copy of your own. This task has no branch, no pull request and no merge card, and it ships nothing.`,
     `Read the folder first: its status, the branch it is on, its stashes, and how ${facts.branch ? `its ${facts.branch}` : "its default branch"} compares with origin's.`,
     ...unnamed,
     `Judge whether it is safe to bring up to date. A clean folder on ${branch} only needs a fetch and a fast-forward.`,
@@ -1151,7 +1151,7 @@ export function renderPullRepairBrief(
     `- The task that opened it: ${facts.after ?? "not known"}`,
     `- What the project's host answered: ${pull.problem ?? "nothing"}`,
     "",
-    `${IN_PLACE_OPENING}: your working directory is the project's folder, ${facts.folder}, not a working copy of your own. Leave the folder exactly as it is; this task needs nothing from it. This task has no branch, no pull request of its own and no completion decision, and it ships nothing.`,
+    `${IN_PLACE_OPENING}: your working directory is the project's folder, ${facts.folder}, not a working copy of your own. Leave the folder exactly as it is; this task needs nothing from it. This task has no branch, no pull request of its own and no merge card, and it ships nothing.`,
     `Read the pull request with github_read first. If it is already closed or merged, there is nothing to do.`,
     `If it is open, close it with github_write: on GitHub PATCH /repos/{owner}/{repo}/pulls/${pull.number} with {"state":"closed"}, on GitLab PUT /projects/{url-encoded path}/merge_requests/${pull.number} with {"state_event":"close"}. Then read it again to see it closed.`,
     "Never merge it, push, delete a branch, or open a pull request. Leave its branch where the project lives as it is.",

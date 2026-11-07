@@ -15,7 +15,6 @@ import {
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import { type AppPaths, crewmatePlacedDir } from "../paths";
 import { TaskService } from "../tasks/taskService";
 import { ARTIFACTS_FOLDER, artifactPath, OLDER_ARTIFACTS_FOLDER } from "../workspace/artifacts";
@@ -36,9 +35,6 @@ import {
 } from "../workspace/workspaceService";
 import { sendSourceFile } from "./sourceFiles";
 import type { WorkDevices } from "./workDevices";
-
-/** The branch a working copy there has checked out, and another branch it sends. */
-const CHECKED_OUT_BRANCH = contractChange("checked-out-branch");
 
 /**
  * The home's side of a task's working copy on a computer that runs work
@@ -361,8 +357,6 @@ export class PlacedCopies {
         // Another branch the crewmate checked out there comes to the task's
         // own ref for it (INF-2490); the task's branch to its own name.
         const other = branch !== undefined && branch !== record.branch;
-        if (other && !this.sendsCheckedOut(deviceId))
-          throw new Error("That computer needs an update to send another branch.");
         const ref = other ? checkedOutRefFor(taskId) : `refs/heads/${record.branch}`;
         const sha = await this.take(
           deviceId,
@@ -390,14 +384,9 @@ export class PlacedCopies {
    */
   async checkoutThere(taskId: string): Promise<{ branch: string | null; head: string } | null> {
     const deviceId = this.options.tasks.get(taskId)?.deviceId;
-    if (!deviceId || !this.options.devices.inReach(deviceId) || !this.sendsCheckedOut(deviceId))
-      return null;
+    if (!deviceId || !this.options.devices.inReach(deviceId)) return null;
     const status = await this.ask(deviceId, "inf:working-copy:status", [{ task: taskId }]);
     return status.present ? (status.checkedOut ?? null) : null;
-  }
-
-  private sendsCheckedOut(deviceId: string): boolean {
-    return listsChange(this.options.devices.version(deviceId)?.changes, CHECKED_OUT_BRANCH);
   }
 
   /**

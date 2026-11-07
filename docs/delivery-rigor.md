@@ -56,7 +56,7 @@ Every crewmate, at every care, delivery and backend, is served one passage on ho
 It names six words a test meets - intent, fixture, failure, layer, owner and gate - so a test is written only for a stated intent: the user's ask, a standing ruling, or a bug being fixed.
 It gives four rules for an existing test: a failure is a bug report first; a test the product outgrew on purpose is re-typed only for a stated intent and otherwise deleted; an intermittent failure is fixed at its owner with no retry or sleep; and a repaired test meets the same six words as a new one.
 It adds the captain's direction on a change's own tests (INF-840): a test whose own code the change adds or edits - a journey file, a device test function, a unit test file, never only a helper, scenario or runner it uses - is never a suspected flake.
-Before its completion card, the crewmate runs only those tests on the computer it works on, ten times in a row for unit tests and end-to-end tests and three times on each device for device tests, with no retries, and reports the passes.
+Before its merge card, the crewmate runs only those tests on the computer it works on, ten times in a row for unit tests and end-to-end tests and three times on each device for device tests, with no retries, and reports the passes.
 The host adds no pull request check that repeats them; a project's own rule may move them to one, as this project's `ci.yml` does for unit test files (`docs/testing.md`, "This project's rulings on tests").
 The passage is the one copy of its words.
 It is a default, not a mandate: its last sentence lets the project's own rule on tests win, read from the instructions the crewmate already treats as its gate ("Why instruction first").
@@ -73,11 +73,11 @@ The brief's `tests-required` constraint asks for tests of the task's stated inte
 |---|---|---|---|
 | **Quick** | `quick` | green checks; the five headings are welcome, nothing more is required (`resources/runbooks/care/quick.json`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `quick` |
 | **Default** | `standard` | the pre-PR procedure, evidence-first validation, the evidence contract and the test-quality rule (`resources/runbooks/care/default.json`) | every project, explicitly set as its standing value |
-| **Careful** | `reviewed` | Default, then the careful-change skill: an independent review of the committed code, then live proof run once and read by a reviewer, before the push, the pull request and the completion card, with the first mate saying when to push and when to emit the card (`resources/runbooks/care/careful.json` and its `skills/careful-change`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `reviewed` |
+| **Careful** | `reviewed` | Default, then the careful-change skill: an independent review of the committed code, then live proof run once and read by a reviewer, before the push, the pull request and the merge card, with the first mate saying when to push and when to emit the card (`resources/runbooks/care/careful.json` and its `skills/careful-change`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `reviewed` |
 
 The middle care is **Default** (stored `standard`), not "checked" (captain's call): it is what a careful engineer does by default, not an extra step layered on.
 The host knows the three names as a typed fact on the record: it selects guidance by them (`Runbooks.crewSections`), shows them on the fact strip, in `crew_status` and in the brief's one care line (`renderRigorSection`), and holds nothing by them - no review hold, no live-proof hold, no refusal of an early card (INF-1876).
-Two host rules still read the name as a fact: a Quick task is exempt from the completion card's picture check, and the delivery judgment is served only to pull request delivery (direct-pr or queue-pr).
+Two host rules still read the name as a fact: a Quick task is exempt from the merge card's picture check, and the delivery judgment is served only to pull request delivery (direct-pr or queue-pr).
 The review and live proof Careful's guidance orders are recorded when they happen, and the host reads those records only to attest a pull request (`docs/forge.md`, "No-mistakes' attestation") and to show them beside the checks.
 
 ### What Default asks
@@ -88,8 +88,8 @@ It never combines its commits itself, since a pull request is squashed when it m
 A picture the repository's own instructions keep with the change - this project's release-note hero pair (`docs/release-notes.md` "Hero pictures") - is part of the change, not evidence, and is committed where they say.
 Bulk working material goes in the task's temporary folder beside the evidence folder, which the app removes when the task closes; evidence keeps its week (`docs/task-retention.md`).
 The section then has the crewmate report under the evidence contract below.
-Every new branch-based change and its completion card use one saved story, including plain Git and local-only delivery; legacy PRs retain the five-heading PR description.
-Public GitHub and GitLab upload selected, inspected, publishable media; other description hosts publish text while keeping media on the completion card and local paths out of the description.
+Every new branch-based change and its merge card use one saved story, including plain Git and local-only delivery; legacy PRs retain the five-heading PR description.
+Public GitHub and GitLab upload selected, inspected, publishable media; other description hosts publish text while keeping media on the merge card and local paths out of the description.
 Version-2 saved stories use Why, What changed, Before and after, and Checked, with commands and unfinished work folded (`docs/forge.md`, "Saved change stories").
 Both surfaces use the same conventional title; code versions stay in typed data, never rendered prose, by author instruction rather than a refusal check.
 Each changed view pairs its Before and After pictures; recordings stack, new views carry the New tag, and empty sections disappear.
@@ -98,7 +98,7 @@ The crewmate is told that once, on `emit_card`'s `presentation` field (`tests/cr
 Failed checks first require reading the failed step and logs and declaring an explicit diagnosis at the head/check via `check_change`.
 Own regressions are repaired on this task: the crewmate declares a stable repair id, source head, new target head/check and fix evidence, and later settles that repair with a `declaration` naming it, its version and its outcome.
 The host records each diagnosis, repair and settlement and counts none of them.
-When a crewmate stops repairing and reports a blocker (no completion card) is the delivery judgment's guidance (`resources/runbooks/delivery`), never a host count.
+When a crewmate stops repairing and reports a blocker (no merge card) is the delivery judgment's guidance (`resources/runbooks/delivery`), never a host count.
 The first mate takes a blocker report through stall recovery, then coordinates the next owner or asks the captain for one decision on its task, carrying the other ways its wake names.
 
 An evidenced suspected flake may reserve a failed-job rerun with `check_change`'s `rerun`, before running it without code changes.
@@ -170,7 +170,7 @@ An operation is not classified: R12 requests medium after a named model, premium
 Its brief says the effect is the deliverable: make it, check it took, commit and push nothing, open no pull request, and stop and report if code must change.
 The captain’s words authorize only the goal’s named effects; keychain, signing, outside writes, payments and browser handoffs retain their existing consent requirements.
 Its own project’s forge writes go at once, while outside-project writes still ask, and it has no prepare/open/check change tools.
-An operation has no delivery, autonomy or care policy, and no completion decision; its factual outcome note stays until the captain closes it.
+An operation has no delivery, autonomy or care policy, and no merge card; its factual outcome note stays until the captain closes it.
 Once its crewmate is idle and has reported, the first mate declares verification with `settle_task finished` and `completion_evidence`.
 The existing settle owner records `done/finished` and the evidence, checks outstanding work and decisions, and retires any scratch working copy through its existing owner; the project folder stays untouched.
 Merge and land are refused; dismissal of a note is never proof of the effect.
@@ -206,13 +206,14 @@ The first mate never judges a rigor, the same way it never judges a reasoning cl
 ## Changing policy on open work
 
 `update_task` is the conversation-first editing surface described in `docs/task-record.md`, “Live task policies”.
-An explicit self-merging request (including a reset to an autonomous project) releases only a routine completion offer and its matching captain wait; unrelated decisions, dependencies, explicit withdrawals and safety holds remain.
-The first mate then uses the existing settle operation, which rereads current checks, destination, review, consent and close requirements; permission is not evidence that they passed.
-A task that merges on its own puts no merge card in front of the captain: at green its crewmate shows its completion story on a note with no actions and reports `needs_firstmate` to merge (the report sort's row 0a wakes the first mate), and the first mate runs `settle_task merge-pr` with its closing sentence; Activity and the record say so.
-That note carries the risk chart and the merge card's fact strip, and the host keeps it off the stack until the merge has a result, then shows it once, already saying it merged, with the first mate's sentence (`docs/card-authoring.md`, "Work that closed without the captain's click").
+An explicit self-merging request (including a reset to an autonomous project) releases only a routine merge card and its matching captain wait; unrelated decisions, dependencies, explicit withdrawals and safety holds remain.
+The app then authorizes the open merge card itself, and the merge rereads current checks, destination, review, consent and close requirements; permission is not evidence that they passed.
+A task that merges on its own shows the same merge card as any other (INF-2744): at green its crewmate emits it, and the app authorizes the merge from the card as it goes up (`CrewmateCards.mergeFromCard`, through `SettleService.mergeRefusal`, the one reader of autonomy), with no first mate turn; Activity and the record say so.
+The card then carries no buttons, only the merging line, so it reads as the task's story note: it carries the risk chart and the merge card's fact strip, and the host keeps it off the stack until the merge has a result, then shows it once, already saying it merged, with the first mate's sentence (`docs/card-authoring.md`, "Work that closed without the captain's click").
 The note stays until the captain closes it, and a merge that leaves nothing of the task on their stack puts up the first mate's sentence instead (`docs/card-authoring.md`, "Work that closed without the captain's click").
-When only the captain can pass a hold on that merge, the first mate sets the task to Asks first, and its crewmate turns the held note into its completion card.
-When a standing direction's exception covers the final change, the crewmate emits the usual completion decision and asks the first mate to set the task to Asks first, citing the direction; a refused merge falls back to that card.
+When a hold stops the app's authorization, the card keeps its buttons and waits for the captain.
+A merge the app sends at once because it keeps no approval for it - a local merge, or a plain Git host - gives the card its buttons back when it is refused, so the merge is never left with no one.
+When a standing direction's exception covers a merge, the crewmate declares `asksFirst` on its merge effect, citing the direction, and the card waits for the captain's click.
 The first mate applies the standing directions that bear on a task, merging included, when the captain starts it (`docs/inbox.md`, "A captain's Start is a wake").
 “Asks first” cancels unsent merges and kept approvals even when the displayed value already says Asks first, while a later explicit self-merging request remains possible.
 A delivery edit also invalidates approval for the previous destination, but changing delivery or care alone grants no merge permission.
@@ -250,13 +251,13 @@ A Default or Careful report, and a legacy PR body, carry five headings, in this 
 |---|---|
 | **Intent** | what the user asked for, in one or two sentences, against the self-brief |
 | **What changed** | the change itself, at the level a reviewer reads first |
-| **Verified** | the exact commands and tests run and the evidence that the intent is met, one or more product-level artifacts for each concrete thing an end user would do - pictures of any visible surface among them (a demo recording where the change is behavior), kept in the task's evidence folder, never committed, and shown as `<img>` (or `figure[data-inf-demo]`) absolute paths in the completion card, which the host verifies and serves - and what each artifact shows, or what stopped you gathering it |
+| **Verified** | the exact commands and tests run and the evidence that the intent is met, one or more product-level artifacts for each concrete thing an end user would do - pictures of any visible surface among them (a demo recording where the change is behavior), kept in the task's evidence folder, never committed, and shown as `<img>` (or `figure[data-inf-demo]`) absolute paths in the merge card, which the host verifies and serves - and what each artifact shows, or what stopped you gathering it |
 | **Risk** | low, medium or high, with one sentence |
 | **Not done** | what the words asked for that this change leaves out, and why |
 
 The report and the PR body are where the contract lives.
-The completion card is not a third copy of it (captain lock 3, 2026-09-19).
-Contract v4.37 gives finished code-work completion decisions and notes a loose outline: **Why**, **What changed**, **Before**, **After**, in order, with no body lead; the title alone carries the answer.
+The merge card is not a third copy of it (captain lock 3, 2026-09-19).
+Contract v4.37 gives finished code-work merge cards and notes a loose outline: **Why**, **What changed**, **Before**, **After**, in order, with no body lead; the title alone carries the answer.
 Before is one sentence on how it stood, then a picture of each changed view as it stood, taken before the first edit; each result picture and the verification sit in After, as many pictures as the change needs (contract v4.69).
 A demo recording stands in for a view's pictures in either section, its poster the picture the check counts.
 The Default section's self-brief lists the views and states a person will see; a Quick task is exempt from the picture check, one of the two host rules that read the care's name.
@@ -266,7 +267,7 @@ Answer cards, previews included, keep their own shape.
 The report's five headings and rigor numbers are unchanged.
 The host appends the project, crewmate model, effective care, PR link, CI state and its own holds itself (`SettleFacts.strip` in `settleCardFacts.ts`, contract v2.0 ruling D4; the labeled fact strip since v2.7), so the body never repeats those either.
 
-`tests/e2e/rigor-standard.spec.ts` is the binding test: a crewmate commissioned through the real app on a real Pi session is served the prompt for its own delivery and care, which names its care, and reports under the five headings, and a completion card with the four-heading outline publishes through the real emit -> lint -> CI gate -> frame path with the host's own buttons on it; a missing heading is refused and the corrected card publishes, with no answer line before Why.
+`tests/e2e/rigor-standard.spec.ts` is the binding test: a crewmate commissioned through the real app on a real Pi session is served the prompt for its own delivery and care, which names its care, and reports under the five headings, and a merge card with the four-heading outline publishes through the real emit -> lint -> CI gate -> frame path with the host's own buttons on it; a missing heading is refused and the corrected card publishes, with no answer line before Why.
 
 PR-8 stands (board decision): a project that runs no checks (a PR that reports zero checks where none are coming) is green when the report's Verified names the local gate that ran on the final commit; checks that have not started yet read pending (`docs/forge.md`).
 
@@ -278,7 +279,7 @@ The host owns the derivation, the reviewer's brief and the typed record; the fir
 Since FI3-566 (cut C) those instructions sit where each step arises: the first mate's core says when to commission a review and to carry the captain's latest decision into every fix and review steer, each review wake names the step it asks for, and the findings wake carries how to fix a finding (`REVIEW_FIX_RULES` in `reviewFindingsNext`, `reportWakes.ts`).
 
 1. **A Careful builder finishes locally and emits no card.**
-   The Careful section has it commit its work on its branch, report under the five headings with `needs_firstmate` asking for the review, and neither push, open a PR nor emit a completion card until the first mate says so; the host refuses none of those by the care's name, so an early card is the first mate's to question, not the host's to refuse (`resources/runbooks/care/guide.md`).
+   The Careful section has it commit its work on its branch, report under the five headings with `needs_firstmate` asking for the review, and neither push, open a PR nor emit a merge card until the first mate says so; the host refuses none of those by the care's name, so an early card is the first mate's to question, not the host's to refuse (`resources/runbooks/care/guide.md`).
    Its report reaches the first mate through the whose-turn sort like any builder's; only a review task's own events skip the sort (`routeCrewEvent`).
 2. **A review is started** - by the first mate's `spawn_crewmate` with `review_of` naming the builder and the user's original words (no new tool, the count stays 24), or by the app itself when the captain presses Review carefully on a merge card ("Raising care from a merge card").
    A review is an operation on a change at a version (INF-1875): any crewmate work with commits on its branch can be reviewed on request, at any care, before or after its pull request; the care names are metadata the record carries, and what each asks for is runbook guidance.
@@ -334,9 +335,9 @@ Since FI3-566 (cut C) those instructions sit where each step arises: the first m
    When that report brings a new head, evidence revision or validation state, the first mate steers the reviewer to re-review those assigned facts without retyping the captain's declined findings, which the review history carries - and it never steers the reviewer otherwise: an idle reviewer needs no stand-by and no status, which the findings wake and a reviewer's verdict-less report also say.
 6. **A pass closes the review task** (done / finished, the host's actor), which releases the builder's close.
    The one feed line is the builder's own event - `review passed at <sha>, risk <level>: <note> - <builder title>` - and the review's close is silent.
-   The wake to the first mate refs the builder, whose move is next, and names it: a steer to push, open the PR and drive CI green; then with autonomy on, `settle_task merge-pr`, otherwise the builder's completion card is the decision.
+   The wake to the first mate refs the builder, whose move is next, and names it: a steer to push, open the PR and drive CI green; then the builder's merge card, which the app merges from with autonomy on and the captain decides otherwise.
    When the builder planned live-validation scenarios, the wake also names whether its proof is accepted at the passed head, its latest run and whether this review read it (`WakeProof`); while the proof is not accepted, its step is `REVIEW_PROOF_NEXT` instead: the builder proves once and reports the run without pushing, the first mate starts the proof read with `review_of`, a repair gets a review of its own difference, and proof that only runs on a pushed branch finishes beside the checks.
-   The completion card carries the review beside CI in the host's facts strip (a Review cell: `passed
+   The merge card carries the review beside CI in the host's facts strip (a Review cell: `passed
    <sha> · risk <level>` with the note on the cell's title; `open` while
    one is live).
 
@@ -355,7 +356,7 @@ It adds no size limit.
 Where the review stands is on every surface the fleet already has: `crew_status` and the context block's crew lines carry `rigor` and the review state (`review open (<key>)`, `review: findings`, `review passed`, and `reviews <key>` on the reviewer's own row), the task detail carries `rigor` and the review facts in `delivery`, and Details shows current Care separately from Delivery, with the verdict and its risk beside CI.
 Nothing new reaches a user surface: no card kind, no setting, no control.
 
-`tests/e2e/rigor-reviewed.spec.ts` is the binding test: through the real app on real Pi sessions with a local GitHub stand-in the app reads through its own sign-in (`tests/e2e/githubStub.ts`), a direct-pr task derived Careful reports green with no card, the first mate checks CI and spawns `review_of`, the findings become one steer and one decision card, a merge asked for while the review is open is refused, the re-review's pass is one feed line that releases the builder's close, and the completion card renders the review beside CI and merges.
+`tests/e2e/rigor-reviewed.spec.ts` is the binding test: through the real app on real Pi sessions with a local GitHub stand-in the app reads through its own sign-in (`tests/e2e/githubStub.ts`), a direct-pr task derived Careful reports green with no card, the first mate checks CI and spawns `review_of`, the findings become one steer and one decision card, a merge asked for while the review is open is refused, the re-review's pass is one feed line that releases the builder's close, and the merge card renders the review beside CI and merges.
 `reviews.test.ts` covers the verdicts, the review record across care edits, the sort and the facts each review wake carries; `wakes.test.ts` the next steps each review wake words; `tests/firstmate-fixed-context.test.ts` that every step the core gave up is still served where it arises; `rigor.test.ts` the derivation order, the typed finding and the blocking rule; `intentBrief.test.ts` the care line and the review brief.
 
 ## The record and its holds (phase 3)
@@ -378,7 +379,7 @@ Its switch changes new crew prompts, not the fixed care procedure, actual check 
 The host does not decide green from check states, automatically settle repairs, or enforce a repair, rerun or review-round count.
 The delivery guidance tells the crew how to judge readiness, diagnose a failure, investigate uncertainty and decide when to stop.
 A merge offer expresses readiness only for its named version and grants no merge permission.
-The checks hold a new completion offer until the pull request's own checks pass (INF-1891, the captain: the app turns the merge card down until the pull request's own checks pass), while a revision of a completion card already up goes up as they run.
+The checks hold a new merge card until the pull request's own checks pass (INF-1891, the captain: the app turns the merge card down until the pull request's own checks pass), while a revision of a merge card already up goes up as they run.
 A pull request with no check registered reads pending, not no checks, until the crew's absence declaration for that version is stored (INF-1955; `docs/forge.md`, "Check facts and crew judgment"): the refusal names `check_change` `absentChecks`, the stored declaration makes the reading say no checks and lets the offer up, and the captain's kept click on an empty reading completes once that declaration arrives at the approved version, with no checks override.
 A failed reading lets the offer up with Merge anyway beside the merge in two cases (`CrewmateCards.pendingCiGate`): every failed check at that version carries the crewmate's diagnosis, or the default branch's newest run of every failed check failed too (`TaskDelivery.mainChecks`, INF-1915 fix 1), which the card states from that fact under its Checks cell.
 In the second case the crewmate spends no rerun and asks for no reopening: the captain decides on that card, merging now with Merge anyway or waiting for main's fix, which the app watches (`docs/forge.md`, "A main failure's wake").
@@ -396,13 +397,13 @@ The ask is read by PRESENCE, so `autonomy_ask: false` - "ask me before merging t
 The mint stamps the effective value on `WorkShape.autonomy` the quiet way rigor is stamped, as provenance; every reader that decides anything derives it live from the record instead, so turning a repository autonomous reaches work already in flight.
 
 It is a host-enforced merge rule, beside v3.8's answer task, and the only one that had been prompt-only: with autonomy off, `settleTaskOnce` refuses a `merge-pr` or `land` whose actor is the first mate and settles nothing, returning the structured `autonomy-off` `SettleRefusal` (WI-12).
-Its one way out is not a tool the first mate can run - it is the button already in front of the captain, so the refusal names the open completion card's own merge action by card and action id (a `SettleWay` variant that carries a `card` rather than a `tool`), and says whose card is owed when none is up.
+Its one way out is not a tool the first mate can run - it is the button already in front of the captain, so the refusal names the open merge card's own merge action by card and action id (a `SettleWay` variant that carries a `card` rather than a `tool`), and says whose card is owed when none is up.
 The captain's click arrives as `actor: "captain"` and this rule never reads it.
 Three rows take no autonomy at all, for the reason they take no care - there is no merge to hold: a task on the personal workspace (it builds in place), an **answer** task (it commits nothing, and v3.8's deliverable hold refuses its merge whoever asks, so that refusal speaks first), and a task with **no repository** - the default workspace - because the hold enforces a REPOSITORY's standing answer and there is none to enforce there.
 `crew_status` and the context crew lines carry it per task; the fact strip has no autonomy cell, and a task that merges on its own says so in its story note's merge line.
 
 **A kept merge approval (FI3-304).**
-The captain's merge click on a completion card or an ordinary `request_merge` card is an approval of that change, and a refusal that is not a verdict on the work does not spend it.
+The captain's merge click on a merge card is an approval of that change, and a refusal that is not a verdict on the work does not spend it.
 `src/core/orchestrator/mergeAuthorization.ts` holds its closed facts; `KeptApproval` (`keptApproval.ts`) keeps its state on the task and `KeptMerge` (`keptMerge.ts`) runs it.
 
 - **The baseline.**
@@ -415,14 +416,15 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
 - **The approval.**
   The captain's chrome click mints `delivery.mergeAuthorization` (version 1) in the card resolution's own transaction (`CardService.resolve`'s `alongside`): a fresh id and a generation, the card, lifecycle, offer, action and gesture ids, the GitHub repository, pull request and branch, squash, the approved head and an empty repair lineage.
   That click also stores the approved head's change reading on the approval, so the story refresh at a repaired version compares it for the attestation without reading the branch.
-  It is minted only on a GitHub direct-pr task for an offer with a baseline on the task's current change, whichever branch it is on.
-  A first mate completion card, a seeded completion card, a plain Git host or an ambiguous baseline mints nothing: that click is one attempt, as before.
-  An ordinary `request_merge` card instead pins the stored review it names: the exact host, project, pull request, source branch, destination and reviewed head (INF-1246).
+  It is minted only on a GitHub direct-pr task for an offer with a baseline on one of the task's pull requests - its own change or a review it holds (`taskPull`) - whichever branch it is on.
+  A first mate merge card, a seeded merge card, a plain Git host or an ambiguous baseline mints nothing: that click is one attempt, as before.
+  A merge card naming a review instead pins the stored review it names: the exact host, project, pull request, source branch, destination and reviewed head (INF-1246).
   Its review snapshot survives review-list eviction, and the click makes that pull request the task's current change (INF-2490).
+  A click on a merge card approves the pull request that card was shown for, even after another one became current.
   A rule-skipping review remains a one-shot click and mints no kept approval.
   Frames and agents cannot mint one - a settle effect runs only from the chrome.
 - **Its words (INF-23).**
-  The completion card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CardActions.mergeLabel`): Merge when checks pass while checks are pending or unreadable, Merge after fixing errors when checks fail (captain INF-1555 F20), and Merge the pull request once the checks pass.
+  The merge card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CardActions.mergeLabel`): Merge when checks pass while checks are pending or unreadable, Merge after fixing errors when checks fail (captain INF-1555 F20), and Merge the pull request once the checks pass.
   While the captain's override passes the checks at the card's version and the pull request is still at it, a click merges at once, so it reads Merge the pull request whatever the checks read (INF-756).
   While the checks fail at the card's version and no checks override passes them, the host draws Merge anyway beside the merge (`CardActions.mergeAnyway`, INF-1137 friction 6).
   Under the Checks cell, a failed check whose newest run on the default branch failed too reads Fails on main too, with the host's sentence naming that run and when it was read, so the captain sees what failed and why it is outside the change before choosing (`checkVerdicts`, INF-1915 fix 1).
@@ -430,7 +432,7 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   It goes once the checks no longer fail, the pull request moves past the card's version, or an override already passes it.
   `CardService.refreshSettleFacts` writes it with the fact strip whenever the task's record changes, so it follows each new reading.
   A click keeps the approval, and its feed line distinguishes a wait for a fix after failed checks from a wait for pending or unreadable checks (`keptFeedLine`, captain F27).
-  A fix brings a new version with fresh checks, so it comes back to the captain on a new completion card when it changed the work (a repair declared `changed-work`, under "Repairs" below); a fix declared to leave the approved work as it was, or the same version passing on a rerun, merges on the kept approval once the checks pass.
+  A fix brings a new version with fresh checks, so it comes back to the captain on a new merge card when it changed the work (a repair declared `changed-work`, under "Repairs" below); a fix declared to leave the approved work as it was, or the same version passing on a rerun, merges on the kept approval once the checks pass.
   A card whose click approves nothing keeps its words, since a click there is refused and nothing waits.
 - **The head it covers.**
   A merge under the approval runs with a `MergeGuard` (`ChangeMerge.merge`): only the candidate head (the approved head, or the newest accepted repair) on the pinned pull request.
@@ -439,24 +441,24 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   Any new version after the approved one is a repair - bringing the change up to date, a reworded commit, a fix for what refused the merge - and the crewmate declares it with `check_change conflictRepair` (`fromHead`, `toHead`, `newBase`, `impact`, `changedPaths`, `evidence`, `validation`).
   The host checks the closed facts with git: the repair starts from the candidate head, `toHead` is a commit here, `newBase` - the default branch commit the repaired change sits on, newer or the one it already had - is in it, and every path that differs between the ORIGINAL approved change and the repaired one is named, so drift across several repairs adds up.
   That same read stores the repaired head's change reading on the repair.
-  The impact is the crewmate's judgment of what the repair did to the approved work, and the host records it rather than sorting the repair into a kind (the captain's guard = builder; INF-484's E6, INF-493): `none` extends the lineage; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new completion card; `unknown` holds the merge for an independent assessment (next).
+  The impact is the crewmate's judgment of what the repair did to the approved work, and the host records it rather than sorting the repair into a kind (the captain's guard = builder; INF-484's E6, INF-493): `none` extends the lineage; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new merge card; `unknown` holds the merge for an independent assessment (next).
   `conflict-only`, `none`'s name before INF-493, still means `none` wherever it arrives: the work request a computer sends its home carries it, so the published contract keeps its shape (`wireRepairImpact`, `repairImpact`).
 - **An undecided repair (FI3-663).**
   The guard = builder choice gives uncertainty "an independent bounded assessment", so a crewmate's `unknown` is its last word on that repair: the host checks the same lineage facts, keeps the paths both changes touch on the repair (`paths`), and refuses the crewmate's own later `none` for it (`changed-work` still ends the approval).
   Once the crewmate's turn is over, the kept merge's preflight asks the supervisor to assess it (`Reviews.assessRepair` in `reviews.ts`), which commissions one assessment of that repair and records it on the repair before it starts, so a second read starts none.
   The assessment is a review-kind child of the builder with `kind_source: host:repair-assessment` (`isRepairAssessment`): delivery machinery like the independent review, retired with its builder, placed on another provider than the builder's when one can serve, and never counted as the task's code review.
   Its brief (`renderRepairAssessmentBrief`) names the approved head, the repair's heads, the newer base, every path either change touches and the crewmate's evidence, and asks for one read-only look answered with a first line, `impact: none|changed-work|unknown` (`parseRepairAssessment`).
-  Its first report is its verdict, and the host closes it (`decideMergeRepair`): `none` adds the repair to the lineage and the kept merge runs again under every gate; anything else - `changed-work`, `unknown`, no impact line - invalidates the approval with a hold, writes one feed line, and steers the crewmate once (`repair-assessed`) to put up a new completion card, so the captain decides again.
+  Its first report is its verdict, and the host closes it (`decideMergeRepair`): `none` adds the repair to the lineage and the kept merge runs again under every gate; anything else - `changed-work`, `unknown`, no impact line - invalidates the approval with a hold, writes one feed line, and steers the crewmate once (`repair-assessed`) to put up a new merge card, so the captain decides again.
   The bound is a fact the tick reads: an `evidence` wait is timed, and an assessment that could not start, stopped without reporting, or is still open an hour after it started (`ASSESSMENT_BOUND_MS`) ends the approval the same way.
   A verdict about a repair the approval no longer waits on - a newer repair, a newer approval, an ended one - records nothing.
 - **The captain's newer words (FI3-662).**
   While the approval stands, every steer of the captain's on the task is guidance that holds its merge: the captain's reply under a crewmate's card, the captain's choice on one or the captain's ask to explain it, a line the captain types in the task's Crewmate tab, and the first mate's steer in a turn that carries the captain's words (`isCaptainGuidance`, read from who sent the steer and its typed kind, never from the captain's words).
   The captain's close of a card is not a choice and Continue is the host's own nudge, so neither holds anything, and neither does the first mate's steer on an operational wake.
   As the steer's row is recorded, `KeptApproval.holdForGuidance` gives it the approval's next mark (`guidance.latest`), with a timeline line and, when the hold begins, one feed line; the mark rides the message itself (`kept-merge-guidance`, `withGuidanceMark`), so the crewmate can declare only guidance it read.
-  The crewmate declares the newest mark it read with `check_change captainGuidance` (`mark`, `impact`, `evidence`): `none` lifts the hold through that mark, and a later mark still holds; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new completion card.
+  The crewmate declares the newest mark it read with `check_change captainGuidance` (`mark`, `impact`, `evidence`): `none` lifts the hold through that mark, and a later mark still holds; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new merge card.
   A mark no message named is refused.
 - **The gates.**
-  A host-run attempt (`runMergeAuthorization`: every idle boundary, the tick's `kept-merges` rider when a timed wait comes due, and boot) first checks the task and pull request are still the approved ones, no new completion card is up, no guidance of the captain's waits for its declaration, no repair is undecided, and a reviewed task's review passed for this change (the candidate head, or a stored change reading that matches the review's).
+  A host-run attempt (`runMergeAuthorization`: every idle boundary, the tick's `kept-merges` rider when a timed wait comes due, the end of another settle that held the task when the approval's run met it, and boot) first checks the task and pull request are still the approved ones, no new merge card is up, no guidance of the captain's waits for its declaration, no repair is undecided, and a reviewed task's review passed for this change (the candidate head, or a stored change reading that matches the review's).
   That attempt does not read the branch to carry the review.
   The kept-merge line on a checks reading asks the crewmate to bring the branch up to date only when the merge waits on a conflict or a moved version.
   Then every page of the checks (`GitHubForge.checks`; a suite past the pages it reads keeps a pending item), and GitHub's own readiness for the pinned pull request (`GitHubForge.pull`): only `clean` merges, so a sign-in that could bypass a required review or another branch rule never does.
@@ -469,7 +471,7 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
 - **A project's queue (INF-2430 piece 2).**
   On a project that merges through its queue, the attempt that passed every gate above and the last look below, which then records no attempt, writes `infinitary/queue` as waiting on its version instead of merging, and waits on `queue`; it merges only once that status reads `success` at that version ([the forge seam](forge.md), "A project's queue").
 - **No card after the click (INF-2913).**
-  A captain's merge click on any project, on a completion card or a `request_merge` review, takes the card away and the host puts up no card of its own while the merge waits, goes through or stops; the captain's words: "only show a card if the merge went wrong and needs the user's decision".
+  A captain's merge click on any project, on any merge card, takes the card away and the host puts up no card of its own while the merge waits, goes through or stops; the captain's words: "only show a card if the merge went wrong and needs the user's decision".
   Activity's one folding line says what became of the click (`settleLine`, `keptFeedLine`), and the host's sign-in card stays the one card for a refused sign-in.
   A merge that did not go through wakes the first mate with the outcome, marked `unseen` (`UNSEEN_STOP_WORDS`): it puts up a card only when the next step is the captain's, and a crewmate whose work changed asks again on a new merge card.
   A note an earlier version put up after a click (`mergePendingCardId`) still leaves when its task closes (`TaskClosing.closeAndPurge`).
@@ -477,12 +479,24 @@ The captain's merge click on a completion card or an ordinary `request_merge` ca
   Right before the merge request goes out the guard's `beforeDispatch` re-reads the approval (same id, generation and head, the crewmate idle, no new card) and persists an `attempt` token.
   Its answer clears it; a 200 merges only when GitHub says `merged`.
   A token that outlived its answer - a quit, a timeout - is read back by the pull request's number before anything is sent again: merged spends the approval, closed ends it, open at the same head runs every gate again.
-  A finishing merge, the completion card's, closes the task once; a continuing merge, a `request_merge` card's, leaves it open and delivers its continuation once.
+  A finishing merge, `after: close`, closes the task once; a continuing merge, `after: continue`, leaves it open and delivers its continuation once.
 - **Ends.**
-  Consumed by the merge; revoked by an interruption (the captain's interrupt = revoke, and the first mate's too: the captain chose in INF-1272 that a stop still ends it) or the captain's own words through `update_task withdraw_merge`; invalidated by changed work, a closed or swapped pull request, or a changed project, host or delivery; superseded by a new completion card or click; ended with its task.
+  Consumed by the merge; revoked by an interruption (the captain's interrupt = revoke, and the first mate's too: the captain chose in INF-1272 that a stop still ends it) or the captain's own words through `update_task withdraw_merge`, or by the app when its own approval no longer passes the merge gate because the task no longer merges on its own (`KeptMerge.runFront`); invalidated by changed work, a closed or swapped pull request, or a changed project, host or delivery; superseded by a new merge card or click; ended with its task.
   A quit, restart or update is no interruption: the approval stands and the next launch runs it again (`KeptMerge.resumeMergeAuthorizations`), as a computer that runs work's update pause does.
-  A revoked or work-changed end `holds` the task's merge for the captain: `autonomyRefusal` refuses a first mate merge whatever the project's autonomy, until the captain's new click.
+  A revoked or work-changed end `holds` the task's merge for the captain, except the app's own autonomy revoke, which holds nothing: `mergeGate` refuses a first mate merge whatever the project's autonomy, until the captain's new click.
   Contract 4.66's unversioned `delivery.mergeOrder` names no approved head, so the boot retires it and says so rather than carrying it forward.
+- **Many merges on one task (INF-2746).**
+  A task may ask for many merges, and every merge card's approval stands on its own until its pull request merges.
+  Each approval is keyed to its own pull request (`taskPull`): the task's own change or a review it holds, never whichever change is current, so asking for another merge leaves the earlier approval standing.
+  An approval of another pull request than the one in front stands beside it (`MergeAuthorization.queued`), never in its place, and each goes ahead on its own as soon as it is ready (captain: "Let each go ahead on its own").
+  `KeptMerge.runMergeAuthorization` runs the approval in front once; one that waits without merging steps to the back (`KeptApproval.stepBack`), and the next runs, until every approval has run once in that pass or a settle, a working crewmate or an outstanding attempt holds the task.
+  On a project that merges through its queue, each approval enters the queue on its own.
+  The captain's guidance marks stay with the approval in front, and a repair declaration or assessment brings the approval it is about to the front (`standInFront`).
+  When the approval in front ends, the next stands in its place (`KeptApproval.promoteQueued`) and leaves the task's current change as it is; a run that merges the task's own change makes it current just before the merge (`selectCovered`).
+  An end that holds the task's merge for the captain ends the other approvals too, as do the task's close and a policy change (`KeptApproval.dropQueued`, `CrewSupervisor.policiesChanged`); each such end wakes the crewmate once, naming the merges that will not run, to put their merge cards up again.
+  When the app's own approval ends because the task no longer merges on its own, only the other approvals the app took under autonomy end with it, and those the captain clicked still go ahead (`endsWith`).
+  A new merge card for a pull request ends that pull request's approval and leaves the others as they are.
+  An approval still standing keeps the task open after another merge that declared it closes the task.
 
 Not built: approvals on local-only and plain Git hosts or from first mate cards.
 A first mate merge on project autonomy reads no guidance mark: the hold is the kept approval's own.
@@ -503,11 +517,11 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 
 | Kind | Level | Rests on | What it holds | What passes it |
 |---|---|---|---|---|
-| `asks-first` | soft | consent | a first mate merge while autonomy is off | the captain's click on the completion card, or the override |
+| `asks-first` | soft | consent | a first mate merge while autonomy is off | the captain's click on the merge card, or the override |
 | `decisions` | soft | record | a first mate merge while another decision on the task is open | the override |
-| `waits` | soft | record | a close or completion card while a wait on other work stands | the override |
+| `waits` | soft | record | a close or merge card while a wait on other work stands | the override |
 | `parts` | soft | record | a close while the task's planned parts are open | `proceed_with_open`, or the override |
-| `checks` | soft | record | a completion card or merge while the checks failed or are running | Merge anyway on the completion card, or the override |
+| `checks` | soft | record | a merge card or merge while the checks failed or are running | Merge anyway on the merge card, or the override |
 | `story` | soft | consent | a GitHub or GitLab pull request opened, or merged, without its current published story | the override |
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
 | `program-bound` | soft | consent | a program's task() call past the bound the first mate proposed | the first mate raises the bound with `update_task program_bound` on the captain's words |
@@ -531,7 +545,7 @@ The first mate declares it with `update_task override` (`holds`, `until`, `from`
 The words are the turn's own: every message of the captain's the turn carries, however it began, words typed while a crewmate's report was being read included (INF-1582 finding 2).
 Or they are the words `from` cites (INF-1216): on a card of the task (`from` is the card's id), the newer of the captain's reply in its thread and the captain's click on one of its buttons, on the first mate's cards and a crewmate's alike; the captain's newest line in its Crewmate tab (`crewmate-tab`); or the words of the override standing on the task (`standing`).
 A click reads as the button's words, the card's title and anything the captain wrote beside it (`choiceWords`), the words Merge anyway records too; a script in a card's body choosing is never the captain's click.
-A click on a merge - the completion card's merge, Merge when checks pass among its words, or an ordinary `request_merge` card's - is the captain's approval of that merge, kept until the checks pass, so its words never pass the checks (INF-1966).
+A click on a merge - the merge card's merge or Merge when checks pass among its words - is the captain's approval of that merge, kept until the checks pass, so its words never pass the checks (INF-1966).
 The host reads that from the clicked action's declared effect, never from its words (`CaptainOverrides.clickApprovesMerge`), refuses an override naming the checks on those words with nothing recorded (`mergeClickRefusal`), and keeps the fact on the record (`HoldOverride.mergeClick`), so naming more holds with `standing` carries it.
 Merge anyway passes the checks itself, and a merge past the branch rules names each failed check it skips, so neither is such a click.
 `standing` lets the first mate name more holds with the one sentence the captain already gave, so a second sentence is never asked for the same go-ahead.
@@ -546,7 +560,7 @@ Empty `holds` takes it back, and a new declaration replaces the old one.
 The row is a `note` event on the timeline with one feed line, quoting the captain's words and naming the holds and how long; a new event kind would be a contract major.
 Each site reads it with `overridePasses(delivery, kind, head)`: a task-long override always passes, and a version-long one passes only at the version it covers, so a new version brings the hold back.
 The captain's merge click reads the same record, since the settle boundary is one function for the captain's click and the first mate's merge.
-The completion card's fact strip shows an Override cell naming the holds the captain's words pass.
+The merge card's fact strip shows an Override cell naming the holds the captain's words pass.
 The first mate's task line in its context and `crew_status` show the standing override: what it passes, for how long, and, in `crew_status`, the captain's words.
 Every crewmate turn on the task is served the standing words: the brief carries them when the work starts with one standing, and each new override, or its withdrawal, is a `task-override-changed` notice on the task's lane that rides the next turn, on this computer or another, and starts none of its own.
 The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.
@@ -563,7 +577,7 @@ A refusal written with no kind at all is beyond the check; the weekly audit read
 
 The rigor system is countable from records the app already writes, in the one home the routing numbers already have: `scoreRigor` in `scripts/interaction-metrics.ts`, beside `scoreRouting`.
 Both the replay gate (`docs/replay-harness.md`) and the offline corpus export (`docs/corpus-export.md`, manifest `rigor`) call it, so the two can never disagree about what a review round or a cap hit is.
-Nothing new is written for it: the numbers come off the work shape, the delivery facts, the `review` and `cap_reset` timeline events, the override rows, and the completion cards themselves.
+Nothing new is written for it: the numbers come off the work shape, the delivery facts, the `review` and `cap_reset` timeline events, the override rows, and the merge cards themselves.
 
 An ANSWER task is out of every denominator here (Task B): a task that ships nothing cannot carry the evidence contract, spend a CI round or hit a cap, so counting it would dilute every share with work the tiers were never about.
 Its own share is reported instead, as an observational row nobody grades.
@@ -577,7 +591,7 @@ A review task is shaped too and carries no rigor at all: it read a change rather
 |---|---|---|
 | `deliverable_share_answer` | either | the share of shaped dispatches whose deliverable is an answer rather than a change |
 | `rigor_share_quick` / `rigor_share_standard` / `rigor_share_reviewed` | either | the tier mix over every shaped dispatch that shipped a change |
-| `evidence_headings_share` | up | standard-or-above changes that settled with a completion card and whose report carried Intent / What changed / Verified / Risk / Not done, in order |
+| `evidence_headings_share` | up | standard-or-above changes that settled with a merge card and whose report carried Intent / What changed / Verified / Risk / Not done, in order |
 | `review_rounds_per_change` | down | verdicts returned, per change a reviewer read |
 | `findings_auto_fix_per_change` / `findings_ask_user_per_change` / `findings_no_op_per_change` | either | findings by the action each asks for, per reviewed change |
 | `findings_ask_user_rate` | either | the share of findings that went to the captain rather than the builder |
@@ -592,15 +606,15 @@ Every denominator is the population that could answer its question: a fleet that
 And **unknown is never zero**: a review whose report the record no longer holds - a review task keeps only its latest, so only the newest verdict can be credited with findings - contributes no findings rather than zero findings.
 
 The evidence share follows the contract to where it is required.
-Until contract v3.6 it read the completion card's body through `bodyHeadings`, because that is what the lint refused on; now the headings are the report's, so it reads them with `reportEvidenceHeadings` (`src/shared/rigor.ts`) - a report is plain text, so a heading is a LINE that is the heading and nothing else, however the crewmate marked it up.
+Until contract v3.6 it read the merge card's body through `bodyHeadings`, because that is what the lint refused on; now the headings are the report's, so it reads them with `reportEvidenceHeadings` (`src/shared/rigor.ts`) - a report is plain text, so a heading is a LINE that is the heading and nothing else, however the crewmate marked it up.
 `missingEvidenceHeading` is still the one order check, so the metric can never grade a change by a rule nothing asked for.
-A change that never settled with a completion card is `null`, not a failure: it did not ship.
+A change that never settled with a merge card is `null`, not a failure: it did not ship.
 
 Observe is the one surface in the app where any of this renders: the crewmate header carries the rigor, the review verdict and its risk, and the reviewers sit in their own **Review** group with each row's verdict on it (`docs/dev-observe.md`).
 
 For a saved story on GitHub or GitLab, a host-accepted repair republishes the same content at its new head after checks pass, before the kept-approval merge.
-Any other push past the published story republishes it the same way, at the completion card or at a merge no kept approval of another version holds (INF-2509).
-It reuses confirmed attachments and the approved content hash; a separate story edit needs a new completion offer.
+Any other push past the published story republishes it the same way, at the merge card or at a merge no kept approval of another version holds (INF-2509).
+It reuses confirmed attachments and the approved content hash; a separate story edit needs a new merge card.
 The merge validates the published and PR heads without waking the work computer or inspecting its uncommitted files.
 
 ## Notes moved from AGENTS.md
@@ -668,7 +682,7 @@ A card that already asks the captain which account, model or option to use carri
 A plan revision that changes the check's declared resources or cost, or removes the check, expires the approval.
 The host refuses a run that executes a check whose declared resources lack a current approval, and a check request that a current approval already covers.
 Asking needs no reviewer clearance; the reviewer treats a run that used more or cost more than its check declares as a finding.
-The completion card says how many runs each approval covered.
+The merge card says how many runs each approval covered.
 An effect someone else can see keeps its single-use request below.
 
 A `run` reports its unique identity, committed version, scenario revision, completion state, verdict and one observation for every scenario, including those that could not run.
@@ -705,7 +719,7 @@ A new commit, including a check repair or an update from the default branch, kee
 The existing code-review carry still covers an unchanged change; an unavoidable update reviews only its code difference, not the whole change again.
 New evidence at the same commit also needs review, without a dummy commit.
 The host counts no findings rounds and keeps no allowance or reset for them: each typed review of a version-and-evidence pair is one more entry in the review history.
-The current accepted pair is what Careful's guidance asks for before the push, the pull request and the completion card; the host reads it only to attest the pull request (`docs/forge.md`, "No-mistakes' attestation").
+The current accepted pair is what Careful's guidance asks for before the push, the pull request and the merge card; the host reads it only to attest the pull request (`docs/forge.md`, "No-mistakes' attestation").
 Raising care on open work serves the Careful section in the policy notice; lowering care removes nothing from the record.
 A reviewer's live-proof judgment stands beside its code verdict in the typed record, and the first mate relays what it says.
 Required checks, autonomy and separate merge consent are unchanged.
@@ -756,10 +770,10 @@ It ends only when that check runs and fails, or leaves the list of checks; the h
 Once the missing access arrives, the builder runs the check without asking; a change that widens what a check must prove is a new check with a new id, and the reviewer judges whether a rewording under the same id still claims the same thing.
 It never covers a known failure, failed checks or a merge.
 
-The merge completion card is the primary presentation of live validation.
+The merge merge card is the primary presentation of live validation.
 A version-2 saved story pairs visual evidence in Before and after; its typed Checked facts name what the builder exercised, what happened, and what the independent reviewer checked without rerunning it.
 A missing proof, stand-in or accepted exception stays in the same visible result, not only under Not done; a check mark never turns missing proof into a pass.
-Other completion cards present those results and evidence in After.
+Other merge cards present those results and evidence in After.
 The captain need not visit the task record to understand what was and was not demonstrated.
 Commands, supporting transcripts and detailed observations sit under How it was checked or equivalent disclosures.
 The existing task record retains Live validation as supporting history under Details, with scenario disclosures and kept evidence reachable by pointer or keyboard.

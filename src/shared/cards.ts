@@ -27,31 +27,46 @@ export function isReadyDecision(card: Card): boolean {
  */
 
 /**
- * A host-run settle. `merge` is resolved by the host from the task's
- * delivery posture (merge the PR on a direct-pr repo, land the branch into
- * the local checkout otherwise), so no agent ever learns the difference.
- * `confirm` discards work the body already says is unlanded (the host's own
- * confirm gate). `proceedWithOpen` is P2's (WI-11) close over open
- * follow-ups, declared now so the schema changes once.
+ * A host-run discard: the task closes unmerged and its working copy goes.
+ * `confirm` discards work the body already says is unlanded (the host's
+ * own confirm gate). `proceedWithOpen` is P2's (WI-11) close over open
+ * follow-ups.
  */
 export const settleEffectSchema = z.object({
   kind: z.literal("settle"),
-  mode: z.enum(["merge", "discard"]),
+  mode: z.literal("discard"),
   confirm: z.literal(true).optional(),
   proceedWithOpen: z.literal(true).optional(),
 });
 export type SettleEffect = z.infer<typeof settleEffectSchema>;
 
 /**
- * A request to merge one reviewed pull request (FI3-1543). Declaring it
- * grants no approval and merges nothing. `review` is the id `check_change`
- * stored; the host resolves the target from that record, never from the card.
+ * The one merge request (INF-2744, the captain's "every request to merge a
+ * PR should be raised through the exact same ... card"): every merge card
+ * carries it, whichever change it merges and whoever asked. Declaring it
+ * grants no approval and merges nothing; the merge gate decides
+ * (`SettleService.mergeGate`).
+ *
+ * - `review` names the change: the id `check_change` stored for a pull
+ *   request. Absent, it is the task's current change - its pull request, or
+ *   its branch on a project that merges locally - which the host resolves
+ *   from the task's delivery, so no agent learns merge-pr from land.
+ * - `after` is what follows for the task, the crewmate's declaration: the
+ *   merge closes it, or it continues. An open question or another open pull
+ *   request on the task keeps it open either way (INF-2525).
+ * - `asksFirst` keeps a task whose autonomy is on from merging on its own:
+ *   the crewmate names the standing direction whose exception this merge
+ *   is, and the card waits for the captain's click.
+ * - `proceedWithOpen` merges past open follow-ups (WI-11).
  */
-export const requestMergeEffectSchema = z.object({
-  kind: z.literal("request_merge"),
-  review: z.string().min(1).max(64),
+export const mergeEffectSchema = z.object({
+  kind: z.literal("merge"),
+  review: z.string().min(1).max(64).optional(),
+  after: z.enum(["close", "continue"]),
+  asksFirst: z.string().min(1).max(400).optional(),
+  proceedWithOpen: z.literal(true).optional(),
 });
-export type RequestMergeEffect = z.infer<typeof requestMergeEffectSchema>;
+export type MergeEffect = z.infer<typeof mergeEffectSchema>;
 
 /**
  * A request to send one write a crewmate asked for where a project lives
@@ -254,7 +269,7 @@ export type HostEffect = z.infer<typeof hostEffectSchema>;
 
 export const cardEffectSchema = z.discriminatedUnion("kind", [
   settleEffectSchema,
-  requestMergeEffectSchema,
+  mergeEffectSchema,
   requestWriteEffectSchema,
   openEffectSchema,
   hostEffectSchema,
@@ -264,7 +279,7 @@ export type CardEffect = z.infer<typeof cardEffectSchema>;
 /** The effects an agent may declare (D2): every kind but the host's own. */
 export const agentEffectSchema = z.discriminatedUnion("kind", [
   settleEffectSchema,
-  requestMergeEffectSchema,
+  mergeEffectSchema,
   requestWriteEffectSchema,
   openEffectSchema,
 ]);
@@ -525,15 +540,16 @@ export const SETTLE_FACT_VALUE_CLASS = "inf-fact-v";
 export const SETTLE_FACTS_OPEN = '<div class="inf-facts" data-facts>';
 
 /**
- * Whether the host writes its task's facts on a card's strip: a settle card,
- * an independent review's card, and the story note of a task that merges on
- * its own (INF-1219), which is the one card with a risk assessment and no
- * actions - the risk rides only a merge offer and that note, both written by
- * the host from the crewmate's story.
+ * Whether the host writes its task's facts on a card's strip, which the
+ * stage draws beside the buttons: every merge card and a discard card, an
+ * independent review's card, and the merge card of a task that merges on
+ * its own (INF-1219), which carries the story's risk and no buttons - the
+ * risk rides only a merge card, written by the host from the crewmate's
+ * story.
  */
 export function takesTaskFacts(card: Pick<Card, "actions" | "reviewTaskId" | "risk">): boolean {
   if (card.reviewTaskId) return true;
-  if (card.actions.some((action) => settleEffectOf(action))) return true;
+  if (card.actions.some((action) => settleEffectOf(action) || mergeEffectOf(action))) return true;
   return card.risk !== undefined && card.actions.length === 0;
 }
 
@@ -553,12 +569,24 @@ export function isStoryNote(
   );
 }
 
-/** A typed merge/discard completion offer (with the host's Review carefully), never an unrelated decision. */
+/** The id of the Not now the host puts beside a merge that keeps the task open. */
+export const MERGE_NOT_NOW_ID = "not-now";
+
+/**
+ * A crewmate's merge card with only the host's buttons - the merge, Discard
+ * or Not now, Review carefully - never an unrelated decision.
+ */
 export function isRoutineMergeCard(card: Pick<Card, "author" | "actions">): boolean {
   return (
     card.author === "crewmate" &&
-    card.actions.some((action) => settleEffectOf(action)?.mode === "merge") &&
-    card.actions.every((action) => settleEffectOf(action) || action.care)
+    card.actions.some((action) => mergeEffectOf(action)) &&
+    card.actions.every(
+      (action) =>
+        mergeEffectOf(action) ||
+        settleEffectOf(action) ||
+        action.care ||
+        (action.id === MERGE_NOT_NOW_ID && !action.effect),
+    )
   );
 }
 
@@ -572,29 +600,17 @@ export function keepsTaskOpen(card: Pick<Card, "author" | "actions">): boolean {
   return (
     card.author !== "host" &&
     card.actions.length > 0 &&
-    !card.actions.some(
-      (action) => settleEffectOf(action)?.mode === "merge" || requestMergeEffectOf(action),
-    )
+    !card.actions.some((action) => mergeEffectOf(action))
   );
 }
 
 /**
- * Whether a card carries the host's strip, which the stage draws beside the
- * buttons: every card with its task's facts, and a `request_merge` card,
- * whose strip holds only the merge line (INF-2490).
- */
-export function takesFactStrip(card: Pick<Card, "actions" | "reviewTaskId" | "risk">): boolean {
-  return takesTaskFacts(card) || card.actions.some((action) => requestMergeEffectOf(action));
-}
-
-/**
- * The app's line on every merge card (INF-2490, the captain's answer to
- * INF-2489's question 4): whether the click closes the task. A settle merge
- * merges the task's finishing change and closes it, unless a question or
- * another pull request on the task is still open (INF-2525); a
- * `request_merge` merges a continuing change and the task stays open. The
- * host reads it from the card's own actions and the task's open cards and
- * pull requests, never from its words.
+ * The app's line on every merge card (INF-2490, INF-2744): whether the
+ * merge closes the task. The crewmate declares it on the merge (`after`),
+ * and a question or another pull request on the task still open keeps the
+ * task open whatever it declared (INF-2525). The host reads it from the
+ * card's own merge and the task's open cards and pull requests, never from
+ * its words.
  */
 export const MERGE_CLOSES_WORDS = {
   closes: "Merging closes this task",
@@ -606,20 +622,20 @@ export const MERGE_CLOSES_MARK = "data-merge-closes";
 
 /**
  * The merge line for a card's actions, or undefined on a card that merges
- * nothing. A settle merge continues the task too while something else on
- * it is open - a question or another pull request (`othersOpen`, INF-2525).
+ * nothing. A merge declared to close continues the task too while something
+ * else on it is open - a question or another pull request (`othersOpen`,
+ * INF-2525).
  */
 export function mergeClosesLine(
   actions: readonly Pick<CardAction, "effect">[],
   othersOpen = false,
 ): string | undefined {
-  const words = actions.some((action) => settleEffectOf(action)?.mode === "merge")
-    ? othersOpen
-      ? MERGE_CLOSES_WORDS.continues
-      : MERGE_CLOSES_WORDS.closes
-    : actions.some((action) => requestMergeEffectOf(action))
-      ? MERGE_CLOSES_WORDS.continues
-      : undefined;
+  const merge = actions.map((action) => mergeEffectOf(action)).find(Boolean);
+  const words = merge
+    ? merge.after === "close" && !othersOpen
+      ? MERGE_CLOSES_WORDS.closes
+      : MERGE_CLOSES_WORDS.continues
+    : undefined;
   return words ? `<p class="inf-merge-closes" ${MERGE_CLOSES_MARK}>${words}</p>` : undefined;
 }
 
@@ -1059,7 +1075,8 @@ export type CardAskedKind = (typeof CARD_ASKED_KINDS)[number];
 /**
  * The line's facts (`Card.asked`): when it happened and the words. `text`
  * is the captain's words, whole, for `asked` and `said`; what they wrote
- * with a click for `chose`, whose button words are `choice`; the
+ * with a click for `chose`, whose button words are `choice` and whose card's
+ * title is `card` (INF-2744: the line names the card the click was on); the
  * automation's name, as it was when it ran, for `automation`; and the task's
  * title for `from`, whose key is `key`. `through` counts the tasks between
  * the card's task and the one the source sits on. The chrome shows the start
@@ -1071,6 +1088,7 @@ export const cardAskedSchema = z.strictObject({
   text: z.string(),
   kind: z.enum(CARD_ASKED_KINDS).optional(),
   choice: z.string().optional(),
+  card: z.string().optional(),
   key: z.string().optional(),
   through: z.number().int().positive().optional(),
 });
@@ -1486,19 +1504,43 @@ export function cardWord(card: { actions: readonly unknown[] }): "decision" | "n
   return card.actions.length > 0 ? "decision" : "note";
 }
 
-/**
- * The settle a card action asks for, if any. A `merge` is the delivery
- * posture's own mode; the host resolves it where it knows the task.
- */
+/** The discard a card action asks for, if any. */
 export function settleEffectOf(action: Pick<CardAction, "effect">): SettleEffect | undefined {
   return action.effect?.kind === "settle" ? action.effect : undefined;
 }
 
-/** The reviewed-pull-request merge a card action requests, if any. */
-export function requestMergeEffectOf(
-  action: Pick<CardAction, "effect">,
-): RequestMergeEffect | undefined {
-  return action.effect?.kind === "request_merge" ? action.effect : undefined;
+/**
+ * The merge a card action asks for, if any (INF-2744). A card saved before
+ * the one merge effect reads as it: its settle merge as a merge of the
+ * task's current change that closes it, its `request_merge` as a merge of
+ * that review that continues it, as each one meant then.
+ */
+export function mergeEffectOf(action: Pick<CardAction, "effect">): MergeEffect | undefined {
+  const effect = action.effect as
+    | { kind?: string; mode?: string; review?: unknown; proceedWithOpen?: true }
+    | undefined;
+  if (effect?.kind === "merge") return effect as MergeEffect;
+  if (effect?.kind === "settle" && effect.mode === "merge")
+    return {
+      kind: "merge",
+      after: "close",
+      ...(effect.proceedWithOpen ? { proceedWithOpen: true as const } : {}),
+    };
+  if (effect?.kind === "request_merge" && typeof effect.review === "string")
+    return { kind: "merge", review: effect.review, after: "continue" };
+  return undefined;
+}
+
+/**
+ * A card's actions with every merge in the one merge effect (INF-2744): a
+ * card saved with the older `settle merge` or `request_merge` reads as the
+ * merge it was, so a past card's history and a view's strict read agree.
+ */
+export function oneMergeEffect<A extends Pick<CardAction, "effect">>(actions: A[]): A[] {
+  return actions.map((action) => {
+    const merge = mergeEffectOf(action);
+    return merge && action.effect?.kind !== "merge" ? { ...action, effect: merge } : action;
+  });
 }
 
 /** The kept write a card action asks to send, if any. */
@@ -1506,15 +1548,6 @@ export function requestWriteEffectOf(
   action: Pick<CardAction, "effect">,
 ): RequestWriteEffect | undefined {
   return action.effect?.kind === "request_write" ? action.effect : undefined;
-}
-
-/**
- * An action whose click asks to merge a pull request: the posture's settle
- * merge, or a `request_merge` of one stored review. Readers use this instead
- * of matching an action id.
- */
-export function isPullRequestMergeAction(action: Pick<CardAction, "effect">): boolean {
-  return settleEffectOf(action)?.mode === "merge" || requestMergeEffectOf(action) !== undefined;
 }
 
 /**
@@ -1599,7 +1632,7 @@ export function legacyActionEffect(id: string): CardEffect | null | undefined {
   switch (id) {
     case "merge-pr":
     case "land":
-      return { kind: "settle", mode: "merge" };
+      return { kind: "merge", after: "close" };
     case "discard":
       return { kind: "settle", mode: "discard" };
     case "discard-anyway":
@@ -1626,11 +1659,13 @@ export function legacyActionEffect(id: string): CardEffect | null | undefined {
 /**
  * A card's actions from before P1 in P1's vocabulary: the reserved ids
  * become effects (a discard is danger), the ids that were the close control
- * go, and every other action is the reply it always was. An action that
- * already carries an effect is left alone, so the mapping is idempotent.
+ * go, and every other action is the reply it always was. A settle merge or
+ * a `request_merge` from before the one merge effect becomes that effect
+ * (INF-2744, `mergeEffectOf`). Any other action that already carries an
+ * effect is left alone, so the mapping is idempotent.
  */
 export function migrateLegacyActions(actions: CardAction[]): CardAction[] {
-  return actions.flatMap((action) => {
+  return oneMergeEffect(actions).flatMap((action) => {
     if (action.effect) return [action];
     const effect = legacyActionEffect(action.id);
     if (effect === null) return [];

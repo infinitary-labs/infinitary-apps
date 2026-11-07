@@ -9,7 +9,7 @@ Every command answers in its task alone, through the app, and every rule its too
 A crewmate gets a command where the tool it replaces would bind: `infinitary-browser-axi` where its task has a browser, which is a task on this Mac when the host has a browser engine and a command process (`HostCapabilities.axiProcess`), or a task on a computer that runs work that keeps task browsers (`docs/task-browser.md`, "On another computer").
 That computer runs its own channel and command process, the same way, for the tasks it holds: its keys live in its work folder's `task-channel/` (`docs/helper.md`), and its commands reach only the browsers there.
 `infinitary-integrations-axi` goes to every task on this Mac when the host has a command process, and to a task on a computer that runs work whose channel there carries it, where each call is asked of this Mac (`docs/integrations.md`, "On a computer that runs work").
-`infinitary-files-axi` goes the same way, to a task on a computer that runs work that also lists the `files-there` contract change (`docs/files.md`, "The command").
+`infinitary-files-axi` goes the same way, to a task on a computer that runs work (`docs/files.md`, "The command").
 The crewmate's instructions carry one line for it, `CREWMATE_BROWSER_LINE` (`src/core/pi/piResources.ts`), the captain's approved words: "This task has its own browser: run `infinitary-browser-axi` to see or use a web page.
 Never press the last step of a purchase or booking; ask the captain on a card."
 Its `emit_card` keeps `browser_button` and `browser_handoff`, which carry the sign-in and payment rules (`docs/task-browser.md`, "Asking for help").

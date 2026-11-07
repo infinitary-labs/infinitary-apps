@@ -1165,7 +1165,7 @@ export async function startPhoneHome(
                 id: "merge",
                 label: "Merge",
                 default: true,
-                effect: { kind: "settle" as const, mode: "merge" as const },
+                effect: { kind: "merge" as const, after: "close" as const },
               },
             ],
           });

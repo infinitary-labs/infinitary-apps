@@ -18,7 +18,7 @@ const merge = {
   id: "merge",
   label: "Merge",
   default: true,
-  effect: { kind: "settle" as const, mode: "merge" as const },
+  effect: { kind: "merge" as const, after: "close" as const },
 };
 
 const completion = {
@@ -60,7 +60,7 @@ describe("a merge card's facts", () => {
         id: MERGE_ANYWAY_ACTION,
         label: MERGE_ANYWAY_WORDS,
         variant: "secondary",
-        effect: { kind: "settle", mode: "merge" },
+        effect: { kind: "merge", after: "close" },
         passes: "checks",
       },
       { ...merge, label: "Merge and close the task", variant: "primary" },

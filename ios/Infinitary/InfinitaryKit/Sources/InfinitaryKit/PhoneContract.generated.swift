@@ -4,8 +4,9 @@ public enum PhoneContract {
     public static let cardCurrentUpdateSeenSince = 13
     public static let sceneObservations = "native-scene-observations"
     public static let sceneObservationsSince = 12
-    public static let version = "13.0.0"
-    public static let viewFloor = 13
+    public static let phoneDiagnosticsSince = 14
+    public static let version = "14.0.0"
+    public static let viewFloor = 14
     public static let pairPath = "/pair"
     public static let connectionPath = "/connection"
     public static let maxFrameBytes = 67108864

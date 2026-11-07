@@ -37,7 +37,7 @@ export function storiedChanges(
       if (isFirstmate || !wantsStream) return undefined;
       const { results } = sinceLastUser(body);
       if (
-        latestUserTail.includes("the captain's merge of") &&
+        latestUserTail.includes("your merge card's merge of") &&
         latestUserTail.includes("Nothing was merged")
       ) {
         const declared = repair();
@@ -116,7 +116,7 @@ export function storiedChanges(
                   title: STORIED_CARD_TITLE,
                   body: "<p>The second pull request carries its own story.</p><p>Merging it keeps this task open.</p>",
                   actions: [
-                    { id: "merge", effect: { kind: "request_merge", review } },
+                    { id: "merge", effect: { kind: "merge", review, after: "continue" } },
                     { id: "not-now", label: "Not now" },
                   ],
                 },

@@ -5,8 +5,7 @@ import {
   type CardMutation,
   isRoutineMergeCard,
   isStoryNote,
-  requestMergeEffectOf,
-  settleEffectOf,
+  mergeEffectOf,
 } from "@shared/cards";
 import type { ChangeReceipt } from "@shared/change";
 import { readyPresentation } from "@shared/changePresentation";
@@ -402,7 +401,7 @@ export class CrewSupervisor {
       ...(options.mergePullRequest ? { mergePullRequest: options.mergePullRequest } : {}),
       ...(options.validateLocalStory ? { validateLocalStory: options.validateLocalStory } : {}),
       ...(options.mergeReview ? { mergeReview: options.mergeReview } : {}),
-      mergeContinued: (taskId, review, outcome) => {
+      mergeContinued: (taskId, review, outcome, named) => {
         if (outcome.ok) void this.watch.sweepGates(this.now());
         const still = this.options.tasks.get(taskId);
         if (!still || TaskService.isClosed(still)) return;
@@ -415,11 +414,13 @@ export class CrewSupervisor {
                 kind: "merge-continued",
                 ok: outcome.ok,
                 ...(outcome.stop === "outcome" ? { unknown: true } : {}),
-                change: review
-                  ? `#${review.number}`
-                  : still?.delivery?.prNumber !== undefined && outcome.stillOpen
-                    ? `#${still.delivery.prNumber}`
-                    : "the reviewed pull request",
+                change: named
+                  ? named
+                  : review
+                    ? `#${review.number}`
+                    : still?.delivery?.prNumber !== undefined && outcome.stillOpen
+                      ? `#${still.delivery.prNumber}`
+                      : "the reviewed pull request",
                 ...(outcome.receipt?.head || review?.headSha
                   ? { head: outcome.receipt?.head ?? review?.headSha }
                   : {}),
@@ -684,12 +685,16 @@ export class CrewSupervisor {
     }
     const id = this.cards.addFirstmateCard(input);
     const offer = this.cards.get(id);
-    if (input.taskId && input.actions.some((action) => settleEffectOf(action)?.mode === "merge"))
+    if (
+      input.taskId &&
+      input.actions.some((action) => {
+        const merge = mergeEffectOf(action);
+        return merge !== undefined && !merge.review;
+      })
+    )
       this.bindFirstmateOffer(input.taskId, id);
     if (input.requiredActions !== undefined && input.taskId && offer?.offerId) {
-      const merges = input.actions.some(
-        (action) => settleEffectOf(action)?.mode === "merge" || requestMergeEffectOf(action),
-      );
+      const merges = input.actions.some((action) => mergeEffectOf(action));
       this.options.tasks.delivery.declareRequiredActions(
         input.taskId,
         {
@@ -1046,17 +1051,25 @@ export class CrewSupervisor {
       ...wake,
       once: `task-policies:${policies.revision}`,
     });
+    // A change that cancels unsent merges ends the task's other kept
+    // approvals too, and its crewmate hears which (INF-2746).
+    const ended = record.delivery?.mergeAuthorization;
+    if (
+      (edits.delivery !== undefined ||
+        (edits.autonomy !== undefined && !policies.autonomy.value)) &&
+      ended &&
+      ended.status !== "standing"
+    )
+      this.settling.approvals.dropQueued(taskId, ended, "the task's policy changed");
     // A native running turn hears the change now. Other sessions keep it on
     // their durable lane until work next continues, including after a quit.
     const runtime = this.tasks.get(taskId);
     if (runtime?.state === "streaming") void this.watch.sweepTaskLane(taskId, this.now());
     if (edits.autonomy !== undefined && policies.autonomy.value && !mergeHold(record.delivery)) {
-      const released: string[] = [];
-      for (const card of this.cards.values()) {
-        if (card.taskId !== taskId || !isRoutineMergeCard(card)) continue;
-        released.push(card.id);
-        this.cards.takeDown(card.id, "The captain asked this task to merge on its own.");
-      }
+      // The app merges from the task's open merge cards itself (INF-2744),
+      // through the same gate as a card that goes up under autonomy; the
+      // first mate is not woken for it.
+      const released = this.crewmateCards.mergeOpenCards(taskId);
       if (
         record.delivery?.captainWait?.cardId &&
         released.includes(record.delivery.captainWait.cardId)
@@ -1064,13 +1077,6 @@ export class CrewSupervisor {
         this.options.tasks.delivery.clearCaptainWait(taskId);
       }
       this.ladder.syncCaptainGate(taskId, this.now());
-      // The existing Firstmate/settle path rechecks ready work; no new runner.
-      if (record.status === "active")
-        this.hooks.notifyOp(
-          { ...wake, once: `task-policies-ready:${policies.revision}` },
-          "agent",
-          taskId,
-        );
     }
     // Care that rises asks for more before a merge, so the merge card
     // offered at the old care comes down rather than leave a Merge that

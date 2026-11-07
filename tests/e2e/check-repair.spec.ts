@@ -217,7 +217,7 @@ test("two baseline failures and one flake request diagnosis without a captain ca
     );
     expect(new Map(completion?.actions.map((action) => [action.id, action.effect]))).toEqual(
       new Map([
-        ["merge", { kind: "settle", mode: "merge" }],
+        ["merge", { kind: "merge", after: "close" }],
         ["discard", { kind: "settle", mode: "discard" }],
         ["review-carefully", undefined],
       ]),

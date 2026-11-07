@@ -66,7 +66,7 @@ export const githubChange: Scenario =
                   id: "put-in",
                   label: "Put it in",
                   default: true,
-                  effect: { kind: "settle", mode: "merge" },
+                  effect: { kind: "merge", after: "close" },
                 },
               ],
             },

@@ -895,7 +895,7 @@ describe("the deliverable axis (Task B)", () => {
           id: "merge",
           label: "Merge the pull request",
           variant: "primary",
-          effect: { kind: "settle", mode: "merge" },
+          effect: { kind: "merge", after: "close" },
         },
       ],
     });

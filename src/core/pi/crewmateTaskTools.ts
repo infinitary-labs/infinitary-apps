@@ -106,7 +106,7 @@ export const REPORT_TOOL_DESCRIPTION = [
   "The first mate hears only an explicit report, or your final message when a turn ends with text; ending silently reports nothing.",
   "For new outcomes, lead with the result in a few plain sentences.",
   "Not progress (note_progress) or repeated reports.",
-  "Autonomy on: at green, show the completion story as a note without actions, which the app shows once the merge has a result; report needs_firstmate to merge. A standing exception needs a completion decision and needs_firstmate to set ask-first, citing the direction.",
+  "Autonomy on: at green, show the merge card as with autonomy off; the app merges from it. A standing exception passes asks_first on its merge effect, citing the direction, and the captain decides.",
 ].join(" ");
 
 /** INF-2796: where work that needs a crewmate's own merge first goes now. */
@@ -283,18 +283,6 @@ export const REPORT_TOOL = crewmateTool({
           "Keys of open tasks your work cannot go on without, such as one whose merge you need first: each is recorded as a link your task waits on. While that work is underway nothing nudges you, and its close steers you; work nobody has started goes to the first mate. A replaced task's wait goes to its carrier; unknown, closed or circular keys refuse the report. Never with finished.",
       }),
     ),
-    merge_completes_task: Type.Optional(
-      Type.Object(
-        {
-          pr_number: Type.Integer({ minimum: 1 }),
-          head_sha: Type.String({ pattern: "^[a-f0-9]{40,64}$" }),
-        },
-        {
-          description:
-            "Name your task's current change's PR and checked head only when that merge completes all work. Clears on new turns/reports; restate after manual-merge choices if complete. Authorizes no merge.",
-        },
-      ),
-    ),
     finished: Type.Optional(
       Type.Boolean({
         description: `True after the captain acknowledges your outcome and nothing remains; the first mate is woken to close it. ${ORDINARY_NOTE_READ_ACK} Aside is not acknowledgement. Saved answers await Done; use waiting_on_captain. Never with waiting_on_captain.`,
@@ -385,14 +373,6 @@ export const REPORT_TOOL = crewmateTool({
               : {}),
             ...(params.finished ? { finished: true } : {}),
             ...(params.waits_on && params.waits_on.length > 0 ? { waitsOn: params.waits_on } : {}),
-            ...(params.merge_completes_task
-              ? {
-                  mergeCompletesTask: {
-                    prNumber: params.merge_completes_task.pr_number,
-                    headSha: params.merge_completes_task.head_sha,
-                  },
-                }
-              : {}),
             ...(params.needs_firstmate !== undefined
               ? { needsFirstmate: params.needs_firstmate }
               : {}),

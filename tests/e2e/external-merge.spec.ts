@@ -71,9 +71,20 @@ for (const complete of [true, false]) {
       ciWatch: { head, since: 0, nextAt: 0, tries: 0 },
     });
     if (complete) {
-      tasks.turns.recordReport(taskId, {
-        text: "The meter fix is complete; merging finishes this task.",
-        declared: { mergeCompletesTask: { prNumber: 71, headSha: head } },
+      // The crewmate's merge card declares that merging finishes this task
+      // (INF-2744): the offer the host kept for it names the pull request
+      // and version it was shown for.
+      seedDelivery(tasks, taskId, {
+        completionOffers: [
+          {
+            cardId: `card-${taskId}-ready`,
+            offerId: "offer-ready",
+            headSha: head,
+            prNumber: 71,
+            shownFor: 71,
+            at: 0,
+          },
+        ],
       });
     } else {
       seedTask(tasks, {
@@ -106,7 +117,8 @@ for (const complete of [true, false]) {
           label: "Merge",
           default: true,
           variant: "primary",
-          effect: { kind: "settle", mode: "merge" },
+          // INF-2744: the merge card's own declaration of what follows.
+          effect: { kind: "merge", after: complete ? "close" : "continue" },
         },
       ],
     });

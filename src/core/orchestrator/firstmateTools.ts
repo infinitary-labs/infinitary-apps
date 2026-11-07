@@ -324,7 +324,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         },
         // The merge decision is the crewmate's (contract v3.6, captain
         // lock 3): a settle merge card is refused while its task's own
-        // crewmate has yet to emit the completion card.
+        // crewmate has yet to emit its merge card.
         crewmateOwesCompletion: (taskId) => supervisor.crewmateCards.crewmateOwesCompletion(taskId),
       });
       cardOwner =

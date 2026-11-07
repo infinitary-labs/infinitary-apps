@@ -16,9 +16,9 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { LIVE_ATTACHMENT_LABEL_MAX } from "@shared/cards";
+import { LIVE_ATTACHMENT_LABEL_MAX, MERGE_NOT_NOW_ID } from "@shared/cards";
 import { PROJECT_PAGE_RULE } from "@shared/projectPage";
-import { sendWriteWords } from "@shared/vocabulary";
+import { MERGE_NOT_NOW_WORDS, sendWriteWords } from "@shared/vocabulary";
 import type { ForgeWriteAsk, IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -414,13 +414,18 @@ describe("a crewmate's merge cards and refusals", () => {
   const MERGE_REQUEST = {
     title: "Merge the level editor's pull request",
     body: "<p>The level editor's pull request is reviewed.</p>",
+    // INF-2744: the crewmate declares only the merge; the host writes the
+    // Not now beside a merge that keeps the task open.
     actions: [
-      { id: "later", label: "Not now" },
-      { id: "", label: "", effect: { kind: "request_merge" as const, review: "mr-1" } },
+      {
+        id: "",
+        label: "",
+        effect: { kind: "merge" as const, review: "mr-1", after: "continue" as const },
+      },
     ],
   };
 
-  it("holds a merge request card on the review gate's refusal, and puts it up with the host's button when the gate passes it", async () => {
+  it("holds a merge card naming a review on the review gate's refusal, and puts it up with the host's buttons when the gate passes it (INF-2744)", async () => {
     let refusal: string | undefined = "Card refused: pull request #7 moved after its review.";
     const reviewGate = vi.fn(async () => refusal);
     const h = await crewmateOn({ reviewGate });
@@ -432,11 +437,11 @@ describe("a crewmate's merge cards and refusals", () => {
     refusal = undefined;
     await h.emitCard.run(MERGE_REQUEST);
     expect(h.own()[0]?.actions).toEqual([
-      expect.objectContaining({ id: "later", label: "Not now" }),
+      expect.objectContaining({ id: MERGE_NOT_NOW_ID, label: MERGE_NOT_NOW_WORDS }),
       expect.objectContaining({
         id: "merge",
         default: true,
-        effect: { kind: "request_merge", review: "mr-1" },
+        effect: { kind: "merge", review: "mr-1", after: "continue" },
       }),
     ]);
   });
@@ -448,7 +453,7 @@ describe("a crewmate's merge cards and refusals", () => {
       body: "<p>The game works.</p>",
       risk: METER_RISK,
       actions: [
-        { id: "merge", label: "", effect: { kind: "settle" as const, mode: "merge" as const } },
+        { id: "merge", label: "", effect: { kind: "merge" as const, after: "close" as const } },
       ],
     };
     await expect(h.emitCard.run(merge)).rejects.toThrow("Card refused: declare required_actions");

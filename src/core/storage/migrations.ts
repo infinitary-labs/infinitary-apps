@@ -6,6 +6,7 @@ import {
   addCardContributions,
   clearInterimAnswers,
   migrateCardEffects,
+  migrateOneMergeEffect,
 } from "./cardMigrations";
 import type { AppDatabase } from "./db";
 import {
@@ -1250,6 +1251,14 @@ export const MIGRATIONS: readonly Migration[] = [
   // `RepoRegistry` is the only writer; no published view reads it. Dropping
   // the column reverses it.
   (db) => addColumn(db, "repos", "queue_pending_at", "INTEGER"),
+  // INF-2744: one merge effect. Every OPEN card's settle merge becomes a
+  // merge of the task's current change that closes it, and its
+  // `request_merge` a merge of that review that continues it
+  // (`migrateLegacyActions`). Closed cards are history and untouched; a
+  // reader still reads their older effects as the merge (`mergeEffectOf`).
+  // Reversible: each rewritten card is recorded in `card_effect_backfill`
+  // with its actions as they were.
+  migrateOneMergeEffect,
 ];
 
 export function addPluginKind(db: AppDatabase): void {

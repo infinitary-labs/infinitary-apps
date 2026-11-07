@@ -144,7 +144,7 @@ Where a feature waits for the other side, its number is in the tables above.
 Cards, captured offers and placed card requests carry an optional `holdsPlace`, which declares forward arrival and leaves unmarked cards unchanged.
 They also carry an optional `continues`, a crewmate's declaration that the captain's choice on the card is not its task's answer (`card-continues.md`); a home without it reads the card as before, so the choice closes a task that only answers.
 They also carry an optional `answering`, the author's declaration that the card answers the captain's message it is about, and a card in the snapshot carries an optional `asked`, when that message was sent and its words, which the home reads from the saved message and a view draws as the "You asked" line; an older view ignores both.
-Its optional `kind`, `choice`, `key` and `through` say when the work came from a click, an automation or another task instead (`card-origin-line`).
+Its optional `kind`, `choice`, `key` and `through` say when the work came from a click, an automation or another task instead (added before major 14 as `card-origin-line`).
 A card in the snapshot may carry an optional `answeredBy`, "firstmate" on the host's stuck alert, which a view reads as taking a reply that the first mate answers; an older view draws no reply row on it, as before.
 A card action's effect may be `request_write`: a crewmate's ask to send a write it kept where its project lives, which only the captain's click sends (`docs/forge.md`, "A write that asks").
 The setup card's Add project and Not now carry the host ops `add-project` and `decline-project` (`docs/fleet.md`, "Asking the first mate to add a project"), and the project-change card's Apply change and Not now carry `apply-project-change` and `decline-project-change`.
@@ -169,14 +169,21 @@ Every replied-under card stays, and the home keeps the hold in the existing awai
 A preview's project fonts (`docs/card-authoring.md`, "Fonts by reference") travel by the `inf:cards:typeface` view read, which answers the home's own copy of a font by its minted name, and by the `inf:work:typeface` work request, which carries a kept font home before the card that names it.
 
 A saved story's `version` is 1 or 2: version 2 carries up to six typed `checked` facts beside folded `verification`, and a version-1 story stays readable and keeps its rendering (`docs/forge.md`, "Saved change stories").
-`inf:work:prepare-change` stages a saved change story, and change publication and completion cards may carry its revision.
+`inf:work:prepare-change` stages a saved change story, and change publication and merge cards may carry its revision.
 `open_change`'s input (`inf:work:open-change`) takes an optional `around`: one exact passage of the words around a published story and what replaces it.
 A home before `STORY_AROUND_SINCE` would strip `around` and answer as if nothing was asked, so a computer that runs work refuses such a call to it and sends nothing.
 
+### One merge effect
+
+A card action's effect may be `merge`, the one way to merge a pull request or branch, with `after` (`close` or `continue`) and an optional `review`, `asksFirst` and `proceedWithOpen` (major 14, INF-2744).
+`settle` keeps only `discard`, `request_merge` is gone, and a report's declared fields no longer carry `mergeCompletesTask`.
+A computer on another major takes no work, and a view on major 13 reads only, since it reads card actions strictly; the view floor is 14.
+The named waits before it retire: every computer taking work on this major has each earlier change, a view still gets thread lines with their contributor fields through `SHARED_CARDS_SINCE`, and the phone hands its usage events to a home from `PHONE_DIAGNOSTICS_SINCE` on.
+
 ### Tasks, projects and routing
 
-A project's delivery, a task's delivery and a task's asked delivery may be `queue-pr`, a pull request whose kept merge click waits for the project's own queue (`major-13.md`; `docs/forge.md`, "A project's queue").
-A computer on another major takes no work, and a view on major 12 reads only, since it reads a delivery strictly; the view floor is 13.
+A project's delivery, a task's delivery and a task's asked delivery may be `queue-pr`, a pull request whose kept merge click waits for the project's own queue (major 13; `docs/forge.md`, "A project's queue").
+A computer on another major takes no work, and a view on major 12 reads only, since it reads a delivery strictly; that major set the view floor to 13.
 The named waits before it retire: every computer taking work on this major has each earlier change, and a view meets an older home's current-update sightings through `CARD_SEEN_UPDATE_SINCE`.
 
 Tasks may deliver `operation`, constraints may declare it, model reasons carry R12, and Usage’s closed grouping set includes operation (`major-12.md`).
@@ -287,7 +294,7 @@ The published reading keeps every raw count, and a panel is handed installed mem
 ### Files
 
 The `fileOrders` list a folder on a computer that runs work, set one file aside there, read it in pieces of at most 4 MB, and let it go, for the files command (`docs/files.md`).
-They come with the named change `files-there`, with the work requests `inf:work:files` and `inf:work:copy-file` and the placed spec's optional `files`; a home asks them only of a computer that lists the change, and a computer asks the requests only of a home that sent it `files`.
+They come with the work requests `inf:work:files` and `inf:work:copy-file` and the placed spec's optional `files`; a computer asks the requests only of a home that sent it `files`.
 
 ## The scripted client
 

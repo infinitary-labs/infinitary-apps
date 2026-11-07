@@ -68,7 +68,7 @@ It stays running until its end is recorded, so a part's close during that end ne
 
 ## Parts
 
-A part is a child task of the program, filed when-ready as an internal step that delivers its branch and its result: `delivery_ask` local-only, never a pull request or a completion card.
+A part is a child task of the program, filed when-ready as an internal step that delivers its branch and its result: `delivery_ask` local-only, never a pull request or a merge card.
 It carries the captain's words and constraints the program was filed with, the script's prompt as its goal, `schema` as its result shape and `from` as its `branch_from`, and its brief says how a part ships (`renderProgramPartSection`, `src/core/orchestrator/intentBrief.ts`).
 Its record names the call that filed it (`shape.program_part`: the call's number, digest, label and optional intelligence).
 `tierFor` reads the selected level before kind-based rules, but after a captain-named model, premium ask or escalation.

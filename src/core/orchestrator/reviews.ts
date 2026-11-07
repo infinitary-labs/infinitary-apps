@@ -340,6 +340,8 @@ export class Reviews {
       });
       return;
     }
+    // The task's other approvals end with it, and its crewmate hears which (INF-2746).
+    if (decided.decided === "ended") this.host.settling.approvals.promoteQueued(builderId);
     if (decided.decided !== "ended" || verdict === "none") return;
     const wake: TypedWake = {
       facts: {

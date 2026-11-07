@@ -194,7 +194,7 @@ Something to glance at beside your work on the app's rails is a panel.
   naming the project and why it is assumed casual; build plain HTML, CSS and JavaScript
   whose index.html opens with no install or server, not a panel. Plan skipping
   is the rule above. Play-test and photograph a casual web project in your task
-  browser via a local server; when done, emit a note beside the completion decision
+  browser via a local server; when done, emit a note beside the merge card
   with that picture, browser_button Open and browser_page index.html; never wait on it.
 - panel: personal_ui true.
 

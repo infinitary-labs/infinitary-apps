@@ -10,7 +10,7 @@ import {
   firstmateOwnCard,
   isPreviewBody,
   splitSettleFacts,
-  takesFactStrip,
+  takesTaskFacts,
 } from "@shared/cards";
 import { CARD_CHOICE_COMMANDS } from "@shared/keyboard";
 import type { FrameAnswers } from "@shared/plugins/bridge";
@@ -195,7 +195,7 @@ export function StackedCard({
   // long the body is, and the body shows the rest (`splitSettleFacts`); so
   // does the strip on the note of a task that merges on its own.
   const split = useMemo(
-    () => (takesFactStrip(card) ? splitSettleFacts(card.body) : undefined),
+    () => (takesTaskFacts(card) ? splitSettleFacts(card.body) : undefined),
     [card],
   );
   const body = split?.body ?? card.body;

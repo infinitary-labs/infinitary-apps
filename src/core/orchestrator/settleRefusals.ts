@@ -6,7 +6,7 @@ import { signInRefusal } from "../forge";
 import type { TaskRecord } from "../storage/taskStore";
 import type { SettleRefusal, SettleWay } from "../tasks/taskGraph";
 import { mergeHold } from "./mergeAuthorization";
-import type { SettleServiceHost } from "./settleHost";
+import type { OpenMergeAction, SettleServiceHost } from "./settleHost";
 import { unlandedWorkText } from "./settleWords";
 
 /**
@@ -131,55 +131,70 @@ export function notSignedInRefusal(
   };
 }
 
+/** Who asks for a merge: the captain's click, the first mate's merge call, or the app on autonomy. */
+export type MergeActor = "captain" | "firstmate" | "app";
+
 /**
- * The autonomy hold, as a structured refusal (captain ruling 2026-09-20:
- * "this should actually be the same - repo default, per-task ask
- * allowed"). Autonomy off means a green result is the captain's call, and
- * until now only the Firstmate's own prompt said so - a rule an
- * instruction can lose, on the one move that cannot be taken back. So the
- * HOST refuses it: a Firstmate merge or land on a task whose effective
- * autonomy is off settles nothing.
+ * The merge gate (INF-2744: "autonomy control should all be consistent"),
+ * the one reader of autonomy for a merge, whoever asks and whichever pull
+ * request it merges. Undefined lets the merge through; otherwise it is a
+ * structured refusal (captain ruling 2026-09-20: "this should actually be
+ * the same - repo default, per-task ask allowed").
  *
- * The captain is never refused: his click arrives as `actor: "captain"`,
- * from the card's settle effect or the shell, and this rule does not read
- * it. Autonomy off means the merge is his to make, so his click IS the
- * way out - not a relay of it through the Firstmate, which is the move
- * the hold exists to stop.
+ * - The captain's click passes by itself: autonomy off means the merge is
+ *   his to make, so his click IS the way out.
+ * - The first mate's merge call passes with autonomy on, or with his own
+ *   words passing the asks-first hold as a recorded override.
+ * - The app passes with autonomy on, unless the crewmate declared on the
+ *   merge card that the captain decides this one (`asksFirst`, citing the
+ *   standing direction whose exception it is). It authorizes the merge
+ *   when the card goes up and merges once the checks pass.
  *
- * The one way out is that click, so the refusal names the button it is
- * already sitting on rather than a tool: the completion card's merge
- * action, by card id and action id. With no such card open there is
- * nothing to point at, and the text says whose card is owed instead.
+ * A withdrawn or outgrown merge approval holds the task for the captain
+ * whatever autonomy says (FI3-304): only his new click merges it. The one
+ * way out the refusal names is the button it is already sitting on: the
+ * merge card's merge action, by card id and action id. With no such card
+ * open, the text says whose card is owed instead.
  */
-export function autonomyRefusal(
+export function mergeGate(
   host: RefusalHost,
   record: TaskRecord,
   mode: "merge-pr" | "land",
-  actor: "captain" | "firstmate",
+  actor: MergeActor,
+  asksFirst?: string,
+  scope?: { review?: string },
 ): SettleRefusal | undefined {
   if (actor === "captain") return undefined;
   // His own words to the first mate are his consent too: an override on
   // asking first lets the first mate's merge through.
-  if (overridePasses(record.delivery, "asks-first", record.delivery?.headSha)) return undefined;
-  // A withdrawn or outgrown merge approval holds the task for the captain
-  // whatever the project's autonomy says (FI3-304): only his new click
-  // merges it.
+  if (
+    actor === "firstmate" &&
+    overridePasses(record.delivery, "asks-first", record.delivery?.headSha)
+  )
+    return undefined;
   const hold = mergeHold(record.delivery);
-  if (!hold && host.taskAutonomy(record.id)) return undefined;
+  // The merge card for the pull request this merge sends (INF-2746).
+  const open = scope
+    ? host.cards.openMergeAction(record.id, scope)
+    : openCurrentMerge(host, record);
+  // The merge card's own declaration that the captain decides this one.
+  const asks = asksFirst ?? open?.asksFirst;
+  if (!hold && !asks && host.taskAutonomy(record.id)) return undefined;
   const task = { id: record.id, key: record.key || record.id, title: record.title };
   const verb = mode === "merge-pr" ? "Merging the pull request for" : "Merging";
   const repo = record.repoId ? host.repos.get(record.repoId) : undefined;
   const standing = repo ? `${repo.name} asks before merging` : "this task has no repository";
-  const open = host.cards.openMergeAction(record.id);
   const ways: SettleWay[] = open
     ? [{ label: open.label, card: { id: open.cardId, action: open.actionId } }]
     : [];
   const pointer = open
-    ? `The completion card "${open.cardTitle}" is on the stack with its "${open.label}" button: that click is the merge, and it is the captain's to make. Nothing further is needed from you.`
-    : "The captain merges it from the crewmate's completion card; steer the crewmate to emit one if it has not.";
+    ? `The merge card "${open.cardTitle}" is on the stack with its "${open.label}" button: that click is the merge, and it is the captain's to make. Nothing further is needed from you.`
+    : "The captain merges it from the crewmate's merge card; steer the crewmate to emit one if it has not.";
   const why = hold
     ? `the captain's merge approval ended because ${hold}, so the merge is theirs again`
-    : `autonomy is off for this task (${standing})`;
+    : asks
+      ? `its crewmate asked the captain to decide this merge: ${asks}`
+      : `autonomy is off for this task (${standing})`;
   return {
     refused: "autonomy-off",
     task,
@@ -187,4 +202,25 @@ export function autonomyRefusal(
     ways,
     text: `${verb} ${task.key} "${record.title}" is not yours to do: ${why}. ${pointer} ${softHoldWords("asks-first", "firstmate")}`,
   };
+}
+
+/**
+ * The open merge card for the task's current change (INF-2490, INF-2746):
+ * the card that names its review, when another branch's pull request is
+ * current, else the card for the task's own change.
+ */
+export function openCurrentMerge(
+  host: Pick<SettleServiceHost, "cards">,
+  record: TaskRecord,
+): OpenMergeAction | undefined {
+  const target = record.delivery?.checkTarget;
+  const review = target
+    ? record.delivery?.mergeReviews?.find(
+        (item) => item.number === target.number && item.branch === target.branch,
+      )
+    : undefined;
+  return (
+    (review ? host.cards.openMergeAction(record.id, { review: review.id }) : undefined) ??
+    host.cards.openMergeAction(record.id, { review: undefined })
+  );
 }

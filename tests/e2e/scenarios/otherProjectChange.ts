@@ -26,7 +26,7 @@ const finishCard: ScriptedArgs<"emit_card"> = {
     "<p>The shell started without the aliases.</p>",
     "<p>The shell starts with the aliases.</p>",
   ),
-  actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+  actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
 };
 
 export const otherProjectChange: Scenario =

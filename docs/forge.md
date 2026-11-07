@@ -219,7 +219,7 @@ A GitLab project's direct-pr task delivers the way a GitHub one does: the crewma
 `GitLabForge` (`providers/gitlab/gitlabForge.ts`) reaches the project at `/projects/<encoded group/subgroup/name>`, so nested groups keep their whole path, through the same `GitLabClient` and per-host sign-in.
 
 - **Its change** is a merge request from the project's own branch onto the default branch (`POST /merge_requests`, `source_branch`, `target_branch`, `title`, `description`); a fork's merge request from a branch of the same name is never taken for it.
-  A new merge request's description is its saved story: gitlab.com confirms every selected upload first, while a self-hosted server publishes the text and retains media on the completion card ("Saved change stories" below).
+  A new merge request's description is its saved story: gitlab.com confirms every selected upload first, while a self-hosted server publishes the text and retains media on the merge card ("Saved change stories" below).
   It is named `!N` with GitLab's page, and recorded on the task as `changeLabel`, `prNumber` and `prUrl` like a pull request; surfaces keep the app's word, pull request.
   Its head is the merge request's `sha`.
 - **Its checks** are read for the head and nothing older (`checks()`):
@@ -369,7 +369,7 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   The captain chose this on FI3-1309 for repositories and on FI3-1571 for everything else the sign-in may read.
   Traversal, encoded separators or dots, empty segments, fragments, repeated query keys and `per_page` over 100 are refused.
 - **Merges and the default branch use the merge card.**
-  Raw writes that merge a pull request or branch are refused before send, including GitHub's asynchronous merge and merge-upstream calls, with a pointer to `check_change pull` and `request_merge`.
+  Raw writes that merge a pull request or branch are refused before send, including GitHub's asynchronous merge and merge-upstream calls, with a pointer to `check_change pull` and the merge card.
   A ref update, creation or deletion, branch rename, or file/commit write that moves the default branch is refused too, as is changing which branch is the default.
   The gateway reads the current default branch where the project lives when a write can touch it; an unreadable default branch never grants permission.
   Other branches remain available, including their ref updates and deletion; git pushes remain governed by the task's brief, outside this gateway rule.
@@ -516,8 +516,8 @@ The owner's verdict: git is bundled with the app, the GitHub Desktop model, beca
 It takes the change's id (`change`) and refuses another task's; a task reads only its own change (INF-1868 piece 2, INF-1873).
 A pull request's checks are the runs the host started for it (INF-1891, the captain: "for merge we only care about the PR checks"): on GitHub a check whose run carries an event stays only when that event is `pull_request` or `pull_request_target`, so a run a person or a tool started on the branch by hand, such as a dispatched heavy check, is read through `read_workflow` and never holds or passes the merge (`ownChecksOf` in `src/core/forge/forge.ts`); a check with no event, such as a commit status, stays as read, and a branch's own checks, read with no number, keep every run at their version.
 When a reading of the task's own pull request finds a check red, the same reading asks the host for the default branch's own checks (`Forge.branchChecks`) and records that branch's newest run of each failed check beside the reading - its version, when, and each check's state there (`TaskDelivery.mainChecks`, `facts.main`, `ChangeChecks.main`; INF-1915 fix 1).
-That is evidence about the failure's cause for the crewmate's diagnosis and the completion card, never a merge input: the merge boundary does not read it, a default branch that fails the same check passes nothing, and a selected pull request gets none.
-The completion card's checks hold does read it (`docs/delivery-rigor.md`, "Check facts and declarations"): when that branch's newest run of every failed check at the offered version failed too, the card goes up at once, says so under its Checks cell and offers Merge anyway, so the crewmate spends no rerun and asks for no reopening; the merge is still the captain's click.
+That is evidence about the failure's cause for the crewmate's diagnosis and the merge card, never a merge input: the merge boundary does not read it, a default branch that fails the same check passes nothing, and a selected pull request gets none.
+The merge card's checks hold does read it (`docs/delivery-rigor.md`, "Check facts and declarations"): when that branch's newest run of every failed check at the offered version failed too, the card goes up at once, says so under its Checks cell and offers Merge anyway, so the crewmate spends no rerun and asks for no reopening; the merge is still the captain's click.
 The evidence is kept while the same checks fail at the same version, read again when the failures change, and cleared by a reading with no failure; a host that cannot read a branch's checks, or a read that fails, records none.
 GitHub check runs retain their reported status, conclusion and available run identity.
 The captain’s F26 choice restores the existing exception for a cancelled duplicate: a later run of the same workflow and event decides that check of the same name; unrelated and latest cancellations still count.
@@ -525,7 +525,7 @@ No observed checks or workflow runs yields an empty list.
 The restored cancellation filter keeps a replacement pending while its known later workflow run has not created that check; it does not invent a successful check.
 The reading identifies incomplete lists rather than inventing a check for a physical read limit.
 An empty hosted reading stays pending and watched until checks register or the crew records positive, exact-version absence evidence through `absentChecks`, with `pull` or, for the task's own pull request, alone (INF-1955: `CheckChangeTool.declareOwnAbsence` matches it to the pull request the task's branch holds, by number, branch and version, and stores it on an owned merge review).
-A declaration the record cannot match - no open pull request yet, another version, a host that runs no checks - is refused in words, never dropped; the completion card's checks hold names the declaration when an empty reading holds the card.
+A declaration the record cannot match - no open pull request yet, another version, a host that runs no checks - is refused in words, never dropped; the merge card's checks hold names the declaration when an empty reading holds the card.
 That evidence names an explicit no-CI policy from the trusted default branch and the applicable local gate; elapsed time, history and missing workflow files are not evidence of that policy.
 A host that runs no checks, such as a plain Git host, needs no invented hosted check.
 An absence declaration never removes registered checks from the reading or marks them passed.
@@ -549,7 +549,8 @@ The sign-in, consent and unknown-outcome boundaries are unchanged.
 
 ## A requested merge
 
-`request_merge` is the agent-facing request to merge one reviewed pull request (FI3-1543).
+The merge card is the one way to ask to merge a pull request (FI3-1543, INF-2744; the captain: "a request is just like calling a tool").
+Its `merge` effect says what follows the merge, `after: close` or `after: continue`, and names a stored review with `review` for any pull request but the task's current change.
 `check_change` with `pull` stores a review of that number in the task's project and returns its id.
 Any open pull request there may be named, whoever opened it: naming it makes it one of the task's changes (INF-2490, [changes](../primitives/changes.md)).
 Preparing the review grants no approval and merges nothing.
@@ -567,23 +568,24 @@ The crewmate pushes a branch to where that project lives and names it with `bran
 The home reads that branch from the project's host into the project's folder under a private ref (`refs/infinitary/opened/<task>`), beside its default branch, and checks the branch's own commit names there, so a placed task's crewmate needs nothing brought home.
 The change opens through that project's host with `body` as its description: it carries no saved story, since `prepare_change` prepares the task's own project's.
 The project must be on a host with pull requests (GitHub or GitLab); a plain Git host is refused in words, and so is a name the app does not manage, with the names it does.
-The opened pull request becomes the task's current change through a review that names its project (`MergeReview.repoId`), so `check_change`, the check watch, `check_change pull` of that number, the kept approval, the completion card's merge and the reads by number after a merge all go to that project, and the change record keeps it under that project's id.
+The opened pull request becomes the task's current change through a review that names its project (`MergeReview.repoId`), so `check_change`, the check watch, `check_change pull` of that number, the kept approval, the merge card's merge and the reads by number after a merge all go to that project, and the change record keeps it under that project's id.
 Its merge follows that project's delivery: a `queue-pr` project's queue holds it as it holds the project's own changes.
 Discarding the task closes only the task's own change; the change in the other project stays open.
 Evidence: `changePublication.test.ts` (INF-2510) opens, reads and merges a change in a second project through that project's host, and refuses a project the app does not manage.
-The card effect `request_merge` names that id.
-With autonomy off, only the captain's button authorizes the merge.
-A merge card names one change, and the host writes on it whether its click closes the task (`mergeClosesLine`, `src/shared/cards.ts`): "Merging closes this task" on the completion card's settle merge, "The task continues after this merge" on a `request_merge` card, and on a settle merge too while a question or another pull request on the task is open.
-A card that carries both is refused.
-A `request_merge` merge is a continuing merge, on the task's own branch or any other: it keeps the task and its working copy and wakes the crewmate once.
-The completion card's settle merge is the finishing merge: it merges the task's current change, whichever branch it is on, through the same gates, and closes the task as merged.
+The merge card's `review` names that id.
+With autonomy off, only the captain's button authorizes the merge; with it on, the app authorizes it from the card itself once its checks pass, unless the crewmate declared `asksFirst`, a standing direction's reason for the captain to decide this one (`SettleService.mergeRefusal` is the one reader of autonomy).
+A task may have several merge cards up at once, one per pull request.
+A merge card names one change, and the host writes on it whether its click closes the task (`mergeClosesLine`, `src/shared/cards.ts`): "Merging closes this task" for `after: close`, "The task continues after this merge" for `after: continue`, and for `after: close` too while a question or another pull request on the task is open.
+A continuing merge, on the task's own branch or any other, keeps the task and its working copy and wakes the crewmate once.
+A closing merge goes through the same gates and closes the task as merged.
 The captain's words on INF-2525: "if they both got raised, then we should make sure the merge card doesn't close the task directly".
-So every merged close shares one rule: a task closes as merged once its finishing change merged and nothing else on it is open - an open question of its crewmate's or the first mate's (`keepsTaskOpen`, `src/shared/cards.ts`), or another of its pull requests that is open or could not be read (`SettleService.stillOpen`).
+So every merged close shares one rule: a task closes as merged once its finishing change merged and nothing else on it is open - an open question of its crewmate's or the first mate's (`keepsTaskOpen`, `src/shared/cards.ts`), another of its pull requests that is open or could not be read, or a kept approval of another of its pull requests that has not run yet (`SettleService.stillOpen`).
+A reviewed pull request's merge that declared it closes the task passes the task's own close rules too: its crewmate still working, a part it did not leave planned, or a task it waits on keeps it open (`SettleService.closeHeld`).
 With one open, the captain's Merge click, the first mate's merge and a kept approval merge without closing the task: the change is recorded as merged, the task, its working copy and its cards stay, and its crewmate hears the merge once with what is still open.
 The first mate's close of a change already merged refuses while one is open, and the watch on outside merges wakes the crewmate instead of closing.
 What comes next is the crewmate's judgment, never a close the host schedules: the captain's words were "it should become the agent's judgment for what's the appropriate next steps".
 A changed head, a failed or unreadable check, or a draft or protected branch sends no merge.
-An ordinary requested-merge click keeps the same head-bound approval as a completion click, including for another branch's pull request (INF-1246).
+Every merge card click keeps the same head-bound approval, including for another branch's pull request (INF-1246), and an approval the app issued under autonomy is kept the same way.
 Its immutable review snapshot lives on `delivery.mergeAuthorization`, independently of the capped review list, and the existing repair declarations, guidance hold, revocation and restart reconciliation apply.
 A behavior-preserving repair merges only at the accepted head after checks pass; changed work needs a new offer and click.
 Both merges read the change's saved story through one owner (`withPublishedStory`), so a kept approval on a story whose repair the host accepted refreshes the story to the repaired version before either merge goes.
@@ -601,9 +603,9 @@ It waives only the host's own "checks have not started yet" marker, never a fail
 A confirmed continuing merge wakes the crew once.
 Dropping the task does not close another branch's pull request, because the task's own change is still what discard closes.
 
-The first mate's `settle_task merge-pr` merges the task's current change with autonomy on, and is held for the captain with it off.
+The first mate's `settle_task merge-pr` merges the task's current change with autonomy on, and is held for the captain with it off; it is for the captain's spoken words, since the merge card already merges under autonomy.
 When that change is already merged where the project lives, it closes the task as merged and sends nothing, with autonomy on or off, once none of the task's other pull requests reads open (`SettleService.otherOpenChange`, over every change the record keeps); one still open, or one that cannot be read, refuses the close in words and the task stays open.
-A first mate settle merge card on a task with a saved story is bound to the published story (`CrewSupervisor.bindFirstmateOffer`), so its click passes the same story gate as the crewmate's completion card; before the story is published it is refused.
+A first mate merge card on a task with a saved story is bound to the published story (`CrewSupervisor.bindFirstmateOffer`), so its click passes the same story gate as the crewmate's merge card; before the story is published it is refused.
 Evidence: `tests/e2e/request-merge.spec.ts` and `tests/e2e/declared-close.spec.ts`.
 
 ### A merge past the branch rules
@@ -621,7 +623,7 @@ Only the captain's click sends it; who merges, `settle_task` and a kept merge ap
 The review is marked sent first, then GitHub's asynchronous merge goes once (`PUT .../merge-async` with `sha`, `squash`, `direct_merge` and `bypass_rules: true`, at API version 2026-03-10), and its result is read by its id up to five times, two seconds apart.
 A result the app could not read, or a transport failure, is unknown, and the pull request is read once to see whether it merged.
 Nothing is ever sent again for that review: a second click, a restart or a revised card naming it answers from the record.
-Like every `request_merge`, it continues the task.
+Its merge card's `after` says whether the task continues or closes.
 Not established: whether GitHub honours `bypass_rules` for the app's sign-in, an OAuth App, or on GitHub Enterprise Server.
 No real merge past the rules has been attempted; the check is the captain's, on a throwaway repository.
 Evidence: `tests/e2e/request-merge.spec.ts` ("a merge that skips the branch rules ...") has a scripted crewmate prepare an adopted release pull request held by a review rule and a failed check, reads the rules and the check off the card, finds nothing sent before the captain's key and one asynchronous merge with `bypass_rules` after it, and refuses the same review on a revised card.
@@ -634,12 +636,12 @@ It is off by default, and a project chooses it in Settings → Projects or throu
 A person reads it as "batched pull requests" in Settings and "Batched pull request" on a task (`PROJECT_DELIVERY_WORDS`, `POLICY_DELIVERY_WORDS`).
 The app supplies no queue workflow of its own, so while a project has the choice, Settings says the merge waits until the project has one and holds a short how-to behind "How to set one up": the three things the workflow does, that the first mate can write one, and a link to GitHub's guide to commit statuses (`QUEUE_HOW_TO_WORDS`, `src/renderer/src/settings/projectsWords.ts`).
 The app's whole contract with any such queue is one commit status, `infinitary/queue` (`QUEUE_STATUS`, `src/shared/repos.ts`), on the pull request's version.
-Nothing writes it before the captain's merge click: the pull request's own checks still hold the completion card as they do today.
+Nothing writes it before the captain's merge click: the pull request's own checks still hold the merge card as they do today.
 The click publishes the story and checks the title as any merge does, keeps the captain's approval, and writes `infinitary/queue` as `pending` on the approved version with the words "Waiting for the batch check" (`GitHubForge.markQueued`).
 A repair that carries the click marks its new version the same way, once that version's own checks pass.
-The mark comes after the same last look a merge request takes - the same approval and head, the crewmate idle, no newer completion card - which records no attempt, since nothing is sent to merge.
+The mark comes after the same last look a merge request takes - the same approval and head, the crewmate idle, no newer merge card - which records no attempt, since nothing is sent to merge.
 Until the queue passes a version, GitHub's rules reading the pull request as held are not a stop: a required `infinitary/queue` status is what holds it, and the mark answers it.
-Every route to a merge waits on the queue the same way: the completion card's click, a `request_merge` review the task owns or references, and a merge past the branch rules, whose click marks the version and sends nothing, so the same review merges on a new click once the queue passes.
+Every route to a merge waits on the queue the same way: the merge card's click, for the task's own change or a review the task owns or references, and a merge past the branch rules, whose click marks the version and sends nothing, so the same review merges on a new click once the queue passes.
 The project's queue finds the versions marked `pending`, tests them, and sets the status to `success` or `failure` on each, with its reason in the description and a link to the run in `target_url`.
 A queue may also keep a version `pending` with words of its own, such as this project's batch while a failed sweep pauses it for a fix (`docs/testing.md`, "The swept batch"); the app reads any `pending` as still waiting and changes nothing for it.
 The status is read as one more check (`GitHubForge.checks`), so the check watch follows it, and the kept approval merges only once it reads `success` at that exact version, through the same version guard and with no new click (`ChangeMerge.mergeOnce`).
@@ -683,7 +685,7 @@ It wakes the crewmate once when the first check fails and others are still runni
 Before it, a crewmate re-read `check_change` until its checks settled - up to 40 full-context model turns on one task.
 The design follows the firstmate repo's PR poll: a watcher that is not a model, bound to the change and its head, never doubled.
 
-- **Armed** by a reading that finds a check still queued or running (`ChangeChecks.record`), on a forge whose `hasChecks` is true: the crewmate's `check_change` or the completion card's CI gate.
+- **Armed** by a reading that finds a check still queued or running (`ChangeChecks.record`), on a forge whose `hasChecks` is true: the crewmate's `check_change` or the merge card's CI gate.
   A reading that is only held back by a neutral check arms nothing: nothing is left to finish.
   A plain Git host or a project kept on this Mac has no checks, so nothing is watched and `check_change` says no wake will come; a new forge kind with checks implements `checks()`, sets `hasChecks`, and is watched with no change here.
 - **Durable**: the watch is a delivery fact on the task, `ciWatch { head, since, nextAt, tries, failureSeen }`, so it outlives a restart and ends with the task.
@@ -701,7 +703,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   Unchanged readings start no model turn.
   The same tick reads each live task's recorded pull request by number, independently of check completion, dependencies or a captain gate.
   A confirmed external merge immediately records `ci: merged`, but PR ownership alone never closes its task.
-  The crewmate declares `report.merge_completes_task` with that task's recorded PR number and checked head only when that merge finishes all its work; `TaskService` keeps the declaration until its next turn or report.
+  The crewmate's open merge card for that pull request declares with `after: close` that its merge finishes all the task's work, at the version the card was shown for (INF-2744); the card is the one writer of that declaration.
   Only that matching declaration, an idle task with no running jobs or pending/in-flight instructions, and the existing child and dependency close checks allow `SettleService` to close the task as merged without a discard or another approval.
   Otherwise the task, instructions, cards and working copy stay intact, and one durable wake per merged version tells the crewmate the merge happened so it can continue or declare completion without asking again.
   An automatic close records the closed state synchronously before awaiting idle runtime shutdown, so new guidance cannot be accepted and then purged during that wait.
@@ -712,7 +714,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   It skips a task idle behind another task, the work posture the Tasks dot shows as blocked by another task (`CheckWatcherHost.idleBehindOtherWork`): the host does not read that task's checks while it waits, and its crewmate reads them itself on resuming.
   A settled result or same-head rerun updates displays without a diagnosis wake; a new head whose checks are running arms the ordinary bounded watch.
 - **Bound to the head**: a new head where the project lives re-arms the watch for it, and only the head it last saw is woken about.
-  A reading the crewmate takes itself that finds the checks finished ends the watch (it already knows); the completion card gate's does not, so the crewmate still hears.
+  A reading the crewmate takes itself that finds the checks finished ends the watch (it already knows); the merge card gate's does not, so the crewmate still hears.
 - **Two wakes at most** for one head, each a `checks-settled` steer on the crewmate's own lane, the supervisor's, through the ordinary steer path (it resumes an idle task).
   The first is `first-failure`, naming each red check, while others are still running.
   A read that first sees a failure and also sees the checks finished sends only the end wake.
@@ -728,7 +730,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
 ## A main failure's wake
 
 A pull request held because a check also fails on the default branch hears that branch's own finished checks, without waiting for the named task to close (INF-833 Fix 4), and its crewmate judges whether they clear the wait.
-The standing baseline diagnoses name the checks, and so does the recorded default-branch run of each check that fails at the change's current version while a completion offer stands at that version (`TaskDelivery.mainChecks` and `completionOffers`; `standingBaselineChecks` in `src/core/tasks/dependencyWaits.ts`), so a merge card that says a check fails on main too is watched without a diagnosis, and a crewmate still driving its checks hears no wake about main.
+The standing baseline diagnoses name the checks, and so does the recorded default-branch run of each check that fails at the change's current version while a merge card stands at that version (`TaskDelivery.mainChecks` and `completionOffers`; `standingBaselineChecks` in `src/core/tasks/dependencyWaits.ts`), so a merge card that says a check fails on main too is watched without a diagnosis, and a crewmate still driving its checks hears no wake about main.
 On the check watch's tick, one read per project asks the forge for the default branch's checks (`Forge.branchChecks`, `ChangeChecks.readDefaultBranchChecks`).
 A reading wakes nobody until it is final: an incomplete reading, a read problem, no checks or any pending check sends nothing (`MainCheckWatcher`, `src/core/orchestrator/mainCheckWake.ts`).
 Each waiting task then hears one `main-check-observed` steer per commit, through the ordinary steer path, naming the commit and each check's state; the host declares no readiness, and the crewmate judges whether the reading clears its wait.
@@ -877,16 +879,16 @@ The app cannot intercept a raw push from a terminal; this is not a hosted requir
 
 ## Saved change stories
 
-Every new branch-based change and its completion card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`), including GitHub Enterprise, self-hosted GitLab, plain Git and local-only delivery.
+Every new branch-based change and its merge card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`), including GitHub Enterprise, self-hosted GitLab, plain Git and local-only delivery.
 `prepare_change` validates the crewmate's publishable prose and selected inspected files without displaying a card, uploading bytes or opening a PR.
 A hosted story is read by everyone who can see the project, and by anyone when the project is public, so the crewmate writes it for a stranger (INF-2142).
 `PUBLIC_WRITING` (`src/core/prompts/publicWriting.ts`) is that rule's one home in the crewmate core, served once on Pi and on Claude, and covers everything sent where the project lives: stories, descriptions, commit messages, comments and releases.
-It keeps out the captain's own setup by name, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys and the captain's words; a local-only project's story, shown only on its completion card, is exempt.
+It keeps out the captain's own setup by name, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys and the captain's words; a local-only project's story, shown only on its merge card, is exempt.
 `publishable: true` is the author's declaration that it read the story once as that stranger, and the prepare answer names the destination's visibility it read (`storyAudience`, `src/core/orchestrator/changePublication.ts`).
 The saved story is a soft hold (`story`): when the captain's recorded override passes it, a new pull request takes `body` instead.
 The same override passes the story at the merge, ordinary or past the branch rules, at the version it covers (INF-1365): the merge goes without a current published story, while its checks, review, approval, version and the host's rules still hold.
 It marks no story published, uploads, refreshes and rewrites nothing, and is read after the merge's last wait, so an override taken back before the send holds the merge.
-A completion card that names a story revision still needs its destination's current readiness: a hosted description published and read back, a pushed plain branch confirmed, or local committed work checked.
+A merge card that names a story revision still needs its destination's current readiness: a hosted description published and read back, a pushed plain branch confirmed, or local committed work checked.
 New stories use version 2: the same conventional title on the card and pull request, up to two short Why sentences, five change bullets, one Before and After sentence, and six typed `checked` facts (`check`, `result`).
 Aim for 150 open words on the card and 250 on the pull request.
 The zod schema carries the captain’s selected item counts and refuses past them; the author owns sentence length and word targets, with no invented per-sentence character refusal.
@@ -935,8 +937,8 @@ A computer that restarts on a contract that speaks it is given the tool on the c
 The home opens the PR using its own sign-in; no sign-in moves to the work computer.
 The work computer discards its staging copies after transfer; the home retains the newest and last published story copies.
 A refused preparation discards unretained staging copies even before host or legacy-PR validation, or when another story operation is running; it never removes that active operation's files.
-Completion cards receive independently named copies of the validated media in the task's `cards/` folder, so later story pruning leaves shown cards and their history intact.
-A staging refusal removes every newly minted picture and recording, and a refused completion card removes its new copies unless the card was already persisted.
+Merge cards receive independently named copies of the validated media in the task's `cards/` folder, so later story pruning leaves shown cards and their history intact.
+A staging refusal removes every newly minted picture and recording, and a refused merge card removes its new copies unless the card was already persisted.
 
 `open_change` takes the prepared `presentation` revision instead of `body` for a new pull request, merge request or plain branch; local-only work skips that call.
 The native GitHub attachment capability checks destination identity, public/private/internal visibility and write/maintain/admin permission before each upload.
@@ -972,12 +974,12 @@ Hosted files can outlive a failed or abandoned opening, and local cleanup never 
 New stories print no publication-time checks status; the host's live checks strip remains authoritative.
 If checked facts change after publication, the author updates them and verification in a new story revision and deliberately republishes it before offering completion.
 A push alone is not such a change: when a pull request moves past its published story, the host republishes that story at the pushed version itself (INF-2509, the captain's answer 5 on INF-1868: "The host republishes the declared story at the new head itself and refuses nothing; the merge still carries the story you saw").
-The republication is a new revision with the same words, the same confirmed attachments and the content hash the completion offer binds; it records the revision its author published as `refreshOf`, and After media without an applicability declaration gets one saying it was captured on an earlier version.
-A completion card names the author's revision or the republished one; the card offers, and the merge click checks, the republished one (`ChangePresentations.atPushedVersion`).
-The author vouches for the story at the code they committed, so the completion card first needs the committed code to be the pushed version; the refusal says to push and show the card again.
+The republication is a new revision with the same words, the same confirmed attachments and the content hash the merge card binds; it records the revision its author published as `refreshOf`, and After media without an applicability declaration gets one saying it was captured on an earlier version.
+A merge card names the author's revision or the republished one; the card offers, and the merge click checks, the republished one (`ChangePresentations.atPushedVersion`).
+The author vouches for the story at the code they committed, so the merge card first needs the committed code to be the pushed version; the refusal says to push and show the card again.
 A merge reads the pushed branch alone and republishes a story a push left behind before it sends (`republishMoved`), except where a kept approval covers another version.
-Only the newest story is republished: a newer revision its author prepared and never published is theirs to publish, and the completion card and the merge are refused until they do.
-Those refusals, the refusal of an ordinary body on a saved-story task's completion card, the refusal of a completion card with neither body nor `presentation`, and the `presentation` rule itself each name the way out (INF-961).
+Only the newest story is republished: a newer revision its author prepared and never published is theirs to publish, and the merge card and the merge are refused until they do.
+Those refusals, the refusal of an ordinary body on a saved-story task's merge card, the refusal of a merge card with neither body nor `presentation`, and the `presentation` rule itself each name the way out (INF-961).
 The completion refusal names the revision and the versions from the ledger; the merge path's refusal reaches the captain, so it keeps its own words and names no tool.
 A local-only story and a plain branch's story keep no description to republish, so a later commit there still needs a newly prepared revision.
 Evidence: `changePublication.stories.test.ts` ("republishes the published story when a push follows its publication", "republishes a story a push left behind before a merge with no kept approval"), `changePresentations.test.ts` ("republishes the published story at a pushed version with its words unchanged"), `cardTool.test.ts` and `crewmateCards.completion.test.ts` (the two card refusals and the republished offer).
@@ -1011,21 +1013,21 @@ Before the first publication there is no description to change, so the words go 
 A home before `STORY_AROUND_SINCE` (10.1.0) would drop `around` and answer as if nothing was asked, so a work computer refuses the call to it and sends nothing.
 Evidence: `presentation.test.ts` and `changePresentations.test.ts` ("the words around a published story"), `changePublication.stories.test.ts` (open_change's answers) and `sessionHost.test.ts` (the older home).
 
-Missing or mismatched evidence holds the completion offer and the final own-task merge boundary independently of checks and merge authority.
+Missing or mismatched evidence holds the merge card and the final own-task merge boundary independently of checks and merge authority.
 The completion call gives `emit_card presentation` and one merge action, or omits actions for a note when the task merges on its own, without a second body, risk declaration or required-action list.
 The shared Pi and Claude tool forwards either shape; the supervisor checks the task's autonomy before accepting a note (INF-968).
 CardService still owns cards, the risk chart, requirements and merge controls; checks, independent review, autonomy and the captain's merge click retain their existing owners.
-A first-mate `settle merge` card on a task with a saved story carries that story once it is published at its newest revision (INF-2490): `CrewSupervisor.bindFirstmateOffer` records the card's offer with the published revision and content hash, so its click passes the same story gate as a crewmate's completion card and the merge reads the same story.
-Before that publication CardService refuses the card before creating or revising it, and the refusal points the first mate to steer the crewmate to publish its story or emit its own completion card.
+A first-mate merge card on a task with a saved story carries that story once it is published at its newest revision (INF-2490): `CrewSupervisor.bindFirstmateOffer` records the card's offer with the published revision and content hash, so its click passes the same story gate as a crewmate's merge card and the merge reads the same story.
+Before that publication CardService refuses the card before creating or revising it, and the refusal points the first mate to steer the crewmate to publish its story or emit its own merge card.
 Every merge offer, the crewmate's or the first mate's, names the change it was shown for (`shownFor`); once another change is current its click refuses, so an offer shown for one pull request never merges another.
 The first mate's offer names no head, so its click approves nothing kept and is one attempt.
-Only a crewmate-authored completion card counts as a replacement for a kept merge approval, including at the final merge boundary; a first-mate card restored from an older run does not end that approval.
+Only a crewmate-authored merge card counts as a replacement for a kept merge approval, including at the final merge boundary; a first-mate card restored from an older run does not end that approval.
 
 ### Description hosts, plain branches and local work
 
 `Forge.storyDestination` reads description identity independently of `Forge.attachments`; destination comparison preserves older public-host records without the optional explicit format.
 GitHub Enterprise and self-hosted GitLab publish the same prose, risk assessment, checks and view descriptions, using their own description dialect and size limit.
-Pictures and recordings remain on the completion card; the hosted text says so and includes their captions and alt text, never local file paths or invented remote media URLs.
+Pictures and recordings remain on the merge card; the hosted text says so and includes their captions and alt text, never local file paths or invented remote media URLs.
 Native-media support is still only github.com and gitlab.com: a missing capability, failed upload or uncertain upload on either host never becomes a text-only fallback.
 Text publication uses the same serial writer, committed and pushed heads, audience checks, owned-region protection, human-edit recovery, read-back and squash summary as native publication.
 Raw description writes cannot bypass it on Enterprise or self-hosted GitLab either.
@@ -1073,10 +1075,10 @@ A plain Git host keeps no description for a pushed branch, and its answer says t
 Answer cards, in-place personal work and release-note hero pictures keep their existing delivery.
 
 Preparation and ordinary publication reject tracked uncommitted changes, not untracked downloads such as `.infinitary-artifacts` archives.
-The completion card reads its committed version and retained files; a hosted merge compares the remote request head with the published head, not a work computer's dirty copy or availability.
+The merge card reads its committed version and retained files; a hosted merge compares the remote request head with the published head, not a work computer's dirty copy or availability.
 A local-only merge checks its committed branch and retained story again, without a forge read.
-An accepted repair, one its crewmate declared to leave the approved work as it was, republishes the unchanged story automatically at the repaired version after checks pass, without another upload or completion card.
-The completion offer binds a content hash; only the host's exact clone at a later version, for an accepted repair or any other push, inherits that hash, so a separately edited story requires a new completion offer rather than borrowing the kept approval.
+An accepted repair, one its crewmate declared to leave the approved work as it was, republishes the unchanged story automatically at the repaired version after checks pass, without another upload or merge card.
+The merge card binds a content hash; only the host's exact clone at a later version, for an accepted repair or any other push, inherits that hash, so a separately edited story requires a new merge card rather than borrowing the kept approval.
 The story's saved title, risk and required actions win on `emit_card presentation`; its title field is supplied, and body, body_file, risk and required_actions are omitted.
 
 ### Declared validation writes

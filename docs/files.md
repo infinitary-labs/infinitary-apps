@@ -23,7 +23,7 @@ A file on the computer the task runs on is refused with words that say to read i
 
 A crewmate whose shell has the command reads one sentence about it in its computers paragraph (`crewmateComputersNote`, `src/core/pi/piResources.ts`), which also says that a file the command refuses, and a program or action on another computer, stays out of its reach.
 Every task on this Mac has it when the host has a command process.
-A task on a computer that runs work has it when that computer keeps task browsers, takes current work and lists the `files-there` contract change (`PlacedSessions.takesFiles`).
+A task on a computer that runs work has it when that computer keeps task browsers and takes current work (`PlacedSessions.takesFiles`).
 
 ## How a copy travels
 
@@ -84,8 +84,8 @@ A copied file may hold secrets: nothing reads its content into words or a log, a
 
 ## The contract
 
-The `files-there` change (`src/shared/contract-changes/files-there.md`) brings the file orders, published in the contract's `fileOrders` section, the two work requests, and the placed spec's optional `files`.
-A home never sends the orders or `files` to a computer that does not list it, and a computer never asks the requests of a home that sent it no `files`.
+Contract major 14 carries the file orders, published in the contract's `fileOrders` section, the two work requests, and the placed spec's optional `files`.
+A computer never asks the requests of a home that sent it no `files`.
 A copy past the shell's limit is kept as every task command's answer is (`docs/axi-commands.md`, "A shell's limit").
 A copy cut off by a lost connection answers that the copy may already be in the hand-over folder, and to look there before copying again (`CHANGE_RECOVERY`, `src/core/session/workRecovery.ts`).
 

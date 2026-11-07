@@ -471,9 +471,7 @@ describe("a local story at the final dispatch boundary", () => {
       const outcome = await service.settleTask(story.taskId, "land", undefined, "captain");
       expect(validateLocalStory).toHaveBeenCalledOnce();
       expect(landTaskWork).toHaveBeenCalledOnce();
-      expect(dispatchRefusal).toContain(
-        "the current story differs from the completion being merged",
-      );
+      expect(dispatchRefusal).toContain("the current story differs from the one on the merge card");
       expect(outcome).toContain(dispatchRefusal);
       expect(tasks.get(story.taskId)?.status).toBe(statusBefore);
       expect(run("rev-parse", "HEAD")).toBe(head);

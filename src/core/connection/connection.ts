@@ -35,6 +35,7 @@ import {
   type ContractAccess,
   contractAccess,
   readsSeenUpdate,
+  readsSharedCards,
   takesWork,
 } from "@shared/contractFeatures";
 import { COMPUTER, HOME } from "@shared/deviceNames";
@@ -69,7 +70,6 @@ import {
   type JournalLimits,
 } from "./journal";
 import { Outbox } from "./outbox";
-import { SHARED_CARDS } from "./sharedCards";
 
 /**
  * A device the pairing seam vouches for (docs/devices.md): a `mac` both
@@ -366,7 +366,7 @@ type Client = {
   appVersion: string | undefined;
   /** Older desktop card decoders are strict; only capable desktops receive the added fields. */
   cardUpdates: boolean;
-  /** Whether it reads a thread line's contributor fields (`shared-cards.md`). */
+  /** Whether it reads a thread line's contributor fields (`SHARED_CARDS_SINCE`). */
   sharedCards: boolean;
   access: ContractAccess;
   closing: boolean;
@@ -723,7 +723,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.cardUpdates =
         hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes);
       client.sharedCards =
-        hello.system === "ios" || (hello.changes?.includes(SHARED_CARDS) ?? false);
+        hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
       // A view changes things across majors its floor allows; work only on this home's own.
       // A computer viewing from before the floor (its hello says none) reads closed lists
       // strictly, so like work it changes things only on this home's major (INF-1649 review

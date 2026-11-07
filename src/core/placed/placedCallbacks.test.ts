@@ -23,7 +23,6 @@ import {
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { attachmentPath, keepImages } from "../attachments";
-import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { initOverflowDir, type MessageFile, withPastedFiles } from "../overflow";
 import {
@@ -363,69 +362,20 @@ describe("a task that runs on a computer that runs work", () => {
     );
   });
 
-  // INF-2225, INF-2214's approved shared cards: a computer from before shared
-  // cards would read a write on someone else's card as its own card shown,
-  // so the home refuses it before anything is saved.
-  it("refuses a write on someone else's card from a computer before shared cards, saving nothing", async () => {
-    const at = await world(undefined, {
-      changes: CONTRACT_CHANGES.names.filter((change) => change !== "shared-cards"),
-    });
-    const home = at.home();
-    // Its hello has arrived; a list with no names is sent as none at all.
-    await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
-    expect(home.devices.version(at.deviceId)?.changes ?? []).not.toContain("shared-cards");
-    expect(home.placed.takesSharedCards(at.deviceId)).toBe(false);
-    model([{ text: "Looking for the remover." }]);
-    await at.start("t-old-cards", "Find the job host remover's path.");
-    await expect.poll(() => home.tasks.get("t-old-cards")?.activity).toBe("idle");
-    const id = home.supervisor.addFirstmateCard({
-      title: "Remove the job host",
-      body: "<p>Run the remover on the shell PC.</p>",
-      actions: [],
-    });
-    const answer = await home.placed.answer(at.deviceId, "inf:work:card", {
-      task: "t-old-cards",
-      callId: "old-shared-write",
-      card: {
-        id,
-        title: "Remove the job host",
-        body: "<p>Run C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd on the shell PC.</p>",
-        actions: [],
-        reply: "It is at C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd.",
-      },
-    });
-    expect(answer).toMatchObject({
-      refused: { reason: "other", why: expect.stringContaining("runs an older Infinitary") },
-    });
-    expect(home.supervisor.cards.thread(id).messages).toEqual([]);
-    const cards = home.supervisor.cards.snapshot();
-    expect(cards.find((card) => card.id === id)?.body).toBe(
-      "<p>Run the remover on the shell PC.</p>",
-    );
-    expect(cards.filter((card) => card.taskId === "t-old-cards")).toEqual([]);
-  });
-
   // INF-2599 (the captain: "Send a crewmate its directions once, and again
-  // only when they change"): the home holds a crewmate's directions as read
-  // only where its computer tells it of each fold, and serves them on every
-  // turn to one that does not.
-  it.each([true, false])(
-    "reads whether a computer tells it of its conversations' folds (lists the change: %s)",
-    async (lists) => {
-      const at = await world(undefined, {
-        changes: CONTRACT_CHANGES.names.filter(
-          (change) => lists || change !== "conversation-folds",
-        ),
-      });
-      const home = at.home();
-      await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
-      expect(home.placed.reportsFolds(at.deviceId)).toBe(lists);
-    },
-  );
+  // only when they change"): every computer on this home's major tells it of
+  // each fold, so the home holds a crewmate's directions there as read
+  // (major 14 folded `conversation-folds` in).
+  it("reads that a computer on this major tells it of its conversations' folds", async () => {
+    const at = await world();
+    const home = at.home();
+    await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
+    expect(home.placed.reportsFolds(at.deviceId)).toBe(true);
+  });
 
   // INF-1555 F12: both declaration and offer semantics are required before remote work begins.
   it("keeps a direct-pr change queued until its computer runs this contract major", async () => {
-    // The check tool's declarations and merge offers are part of this major (major-13.md).
+    // The check tool's declarations and merge offers are part of every major since 13.
     const previous = `${Number(PROTOCOL_VERSION.split(".")[0]) - 1}.0.0`;
     const at = await world(undefined, { protocolVersion: previous });
     const home = at.home();
@@ -798,7 +748,7 @@ describe("a task that runs on a computer that runs work", () => {
         title: "The website footer is ready",
         body: "<h2>Why</h2><p>Describe the website footer.</p><h2>What changed</h2><p>I described the footer.</p><h2>Before</h2><p>The description named only the website.</p><h2>After</h2><p>The description includes the footer.</p>",
         requiredActions: [],
-        actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+        actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
       },
     });
     await expect

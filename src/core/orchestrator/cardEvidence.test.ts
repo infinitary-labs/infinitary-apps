@@ -846,7 +846,7 @@ describe("CardService past cards", () => {
         id: "build",
         label: "Approve and build",
         default: true,
-        effect: { kind: "settle" as const, mode: "merge" as const },
+        effect: { kind: "merge" as const, after: "close" as const },
       },
     ],
   };

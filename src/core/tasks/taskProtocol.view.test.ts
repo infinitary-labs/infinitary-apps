@@ -195,7 +195,7 @@ describe("the task protocol (task-system P3)", () => {
           id: "merge",
           label: "Merge",
           default: true,
-          effect: { kind: "request_merge", review: release.id },
+          effect: { kind: "merge", review: release.id, after: "continue" },
         },
       ],
       status: "ready",
@@ -217,7 +217,7 @@ describe("the task protocol (task-system P3)", () => {
           id: "merge",
           label: "Merge",
           default: true,
-          effect: { kind: "settle", mode: "merge" },
+          effect: { kind: "merge", after: "close" },
         },
       ],
       status: "ready",
@@ -291,24 +291,6 @@ describe("the task protocol (task-system P3)", () => {
         .delivery?.pullRequests?.find((item) => item.number === number);
     return { ...harness, line };
   };
-
-  // Re-review INF-2546 R5, under the captain's "close the task when its
-  // finishing change merges": the crewmate's declaration that merging its
-  // pull request completes the task is a finishing claim too, at the version
-  // it declared, with no card up; a later push leaves it behind.
-  it("says merging closes the task for the change its crewmate declared completes it, at the declared version (INF-2546)", () => {
-    const declared = "1".repeat(40);
-    const { tasks, line } = ownPullRequest(declared);
-    expect(line(7)?.closes).toBeUndefined();
-    tasks.turns.recordReport("work", {
-      text: "Intent\nShip the API.\n\nVerified\nThe checks passed at the declared version.",
-      declared: { mergeCompletesTask: { prNumber: 7, headSha: declared } },
-    });
-    expect(line(7)?.closes).toBe(true);
-    // The crewmate pushes again: the declared version is no longer the one the record reads.
-    seedDelivery(tasks, "work", { headSha: "2".repeat(40), ci: "pending", ciAt: 2_000 });
-    expect(line(7)?.closes).toBeUndefined();
-  });
 
   // Re-review INF-2546 R6, under the captain's "every PR with its checks":
   // each pull request shows the checks read last, whichever of its versions
@@ -696,7 +678,7 @@ describe("the task protocol (task-system P3)", () => {
       meta: "",
       body: "",
       actions: [
-        { id: "land", label: "Land", default: true, effect: { kind: "settle", mode: "merge" } },
+        { id: "land", label: "Land", default: true, effect: { kind: "merge", after: "close" } },
       ],
       status: "ready",
       createdAt: 1,

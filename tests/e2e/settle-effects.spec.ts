@@ -60,7 +60,7 @@ import { cardLeave, cardReply, completionAction, expectNoCard, showCard, shownCa
  * the way GitHub's API would, and records the merge it is asked for.
  */
 
-const SETTLE_MERGE = { kind: "settle", mode: "merge" } as const;
+const SETTLE_MERGE = { kind: "merge", after: "close" } as const;
 const SETTLE_DISCARD = { kind: "settle", mode: "discard" } as const;
 
 function seedRepo(userDataDir: string, taskId: string) {

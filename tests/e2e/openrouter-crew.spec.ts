@@ -50,7 +50,7 @@ test("a crewmate on an install signed in only to OpenRouter runs on an OpenRoute
     // The base runtime serves no model, so the gate shows; the key the gate
     // signs in reads the same file and sends every turn to the stand-in.
     modelsJson: (port) => mockProviderOverrideModelsJson(port, "openrouter"),
-    scenarios: [destinationStory(true, false)],
+    scenarios: [destinationStory(true)],
     prepareHome: gitIdentityHome("OpenRouter Crew", "openrouter-crew@localhost"),
     env: { INFINITARY_CLAUDE_CLI: writeMockClaudeClient(scratchDir("infinitary-claude-stub-")) },
   });

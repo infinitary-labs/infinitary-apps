@@ -1,5 +1,6 @@
 import type { ScriptedCardAction } from "../../helpers/scriptedCalls";
 import {
+  CAPTAIN_DECIDES,
   MOCK_STANDARD_CARD_BODY,
   MOCK_STANDARD_DRAWN_BODY,
   MOCK_STANDARD_MERGE_ONLY_ACTIONS,
@@ -21,7 +22,7 @@ const MOCK_STANDARD_CARD_ACTIONS: ScriptedCardAction[] = [
     id: "merge",
     label: "Merge the branch",
     default: true,
-    effect: { kind: "settle", mode: "merge" },
+    effect: { kind: "merge", after: "close", asks_first: CAPTAIN_DECIDES },
   },
   { id: "discard", label: "Discard", danger: true, effect: { kind: "settle", mode: "discard" } },
 ];

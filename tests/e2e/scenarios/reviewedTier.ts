@@ -135,7 +135,7 @@ const MOCK_REVIEWED_CARD_ACTIONS: ScriptedCardAction[] = [
     id: "merge",
     label: "Merge the pull request",
     default: true,
-    effect: { kind: "settle", mode: "merge" },
+    effect: { kind: "merge", after: "close" },
   },
   { id: "discard", label: "Discard", danger: true, effect: { kind: "settle", mode: "discard" } },
 ];

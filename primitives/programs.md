@@ -36,7 +36,7 @@ The dialect, in Infinitary's own names (a Claude workflow script is not promised
 
 A program is open on the graph like any task and starts by its start policy; the ready sweep runs it (`dispatchQueuedTask`), and running a program that already runs does nothing.
 It counts as started when the runner first runs it (`TaskService.starts.markProgramStarted`), never by `startedAt`.
-A part is a child task filed when-ready as an internal step, local-only, with no pull request or completion card; its report that carries the awaited answer closes it done with no wake (report-sort row 2b, `program-part`).
+A part is a child task filed when-ready as an internal step, local-only, with no pull request or merge card; its report that carries the awaited answer closes it done with no wake (report-sort row 2b, `program-part`).
 The task record is the journal: each part's `program_part` (call number, digest, label), each ask's answer and each log line's number.
 After a quit the script replays from the top, and a call whose digest matches an unconsumed recorded one takes the recorded answer instead of running again.
 The script's realm has no require, files, network or timers, and `Date.now()`, argument-less `new Date()` and `Math.random()` throw, so a replay makes the same calls.

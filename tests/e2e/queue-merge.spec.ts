@@ -124,7 +124,7 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
         label: "Merge the pull request",
         variant: "primary",
         default: true,
-        effect: { kind: "settle", mode: "merge" },
+        effect: { kind: "merge", after: "close" },
       },
     ],
   });
@@ -299,7 +299,7 @@ test("choosing batched pull requests with no queue workflow waits, asks on a car
         label: "Merge the pull request",
         variant: "primary",
         default: true,
-        effect: { kind: "settle", mode: "merge" },
+        effect: { kind: "merge", after: "close" },
       },
     ],
   });

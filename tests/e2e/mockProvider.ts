@@ -85,9 +85,7 @@ function withDeclaredRisk(call: ScriptedCall): ScriptedCall {
   // Named, not narrowed: the live tool set is a union too wide for the
   // compiler to narrow by name alone.
   const args = call.args as ScriptedArgs<"emit_card">;
-  const merges = args.actions?.some(
-    (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
-  );
+  const merges = args.actions?.some((action) => action.effect?.kind === "merge");
   return merges && (!("presentation" in args) || args.presentation === undefined)
     ? ({
         ...call,

@@ -6,9 +6,10 @@ import { sinceLastUser } from "../providerRequest";
 
 /**
  * INF-2490, the declared close: a crewmate names pull requests as its task's
- * changes with check_change, offers a continuing merge with request_merge and
- * the finishing merge on its completion card. One crewmate, three shapes, each
- * from a case the plan named.
+ * changes with check_change, and offers each merge on a merge card (INF-2744):
+ * a continuing merge (`after: continue`, naming its review) and the finishing
+ * merge (`after: close`). One crewmate, four shapes, each from a case the plan
+ * named.
  */
 export const DECLARED_CLOSE_MARKER = "merge the release then finish";
 /** release-please's pull request, on a branch the task did not open (RUU-35). */
@@ -29,7 +30,7 @@ export const STALE_STEER = "check the meter fix as well";
  * - `release` (RUU-35): merge the release as a continuing change, and
  *   nothing more; the first mate closes the task.
  * - `taken-over` (INF-1539): the release is the task's only change, offered
- *   as the finishing change on the completion card.
+ *   as the finishing change on its merge card.
  * - `stale` (INF-2546 R1): offer the release as the finishing change, then,
  *   once steered (`STALE_STEER`), check the task's own pull request, which
  *   makes it the current change while that card stays up.
@@ -44,7 +45,7 @@ const finishCard: ScriptedArgs<"emit_card"> = {
     "<p>The meter showed zero until the next refresh.</p>",
     "<p>The meter shows its reading on the first paint.</p>",
   ),
-  actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+  actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
 };
 
 export function declaredClose(shape: DeclaredCloseShape): Scenario {
@@ -95,7 +96,7 @@ export function declaredClose(shape: DeclaredCloseShape): Scenario {
                       title: RELEASE_CARD_TITLE,
                       body: "<p>release-please opened the release pull request.</p><p>Merging it publishes the release.</p>",
                       actions: [
-                        { id: "merge", effect: { kind: "request_merge", review } },
+                        { id: "merge", effect: { kind: "merge", review, after: "continue" } },
                         { id: "not-now", label: "Not now" },
                       ],
                     },

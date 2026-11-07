@@ -1,4 +1,4 @@
-import { type Card, settleEffectOf } from "@shared/cards";
+import { type Card, mergeEffectOf, settleEffectOf } from "@shared/cards";
 import type { TaskRecord } from "../storage/taskStore";
 import { cardEmitter } from "./cardEmit";
 
@@ -49,7 +49,7 @@ export function signOffRefusal(facts: SignOffFacts): string | undefined {
   const sends = card.actions.some(
     (action) =>
       settleEffectOf(action) !== undefined ||
-      action.effect?.kind === "request_merge" ||
+      mergeEffectOf(action) !== undefined ||
       action.effect?.kind === "request_write",
   );
   if (sends || (card.attachment?.kind === "browser" && card.attachment.handoff)) {

@@ -139,9 +139,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "Work needing your merge first goes in your story's afterMerge instead.",
   },
   {
-    rule: "no intermediate card of the crewmate's merges the pull request; only the completion decision can",
+    rule: "no intermediate card of the crewmate's merges the pull request; only a merge card can",
     home: { tool: "emit_card" },
-    says: "No settle effects on intermediate questions; reuse an open outcome card's id.",
+    says: "No merge or settle effects on intermediate questions; reuse an open merge card's id.",
   },
   // INF-2424 trimmed the testing guidance's repair and edited-test rules to
   // fit this budget: the pin rule both repeated is said once, by the owner word.

@@ -1220,6 +1220,9 @@ export class TaskService {
                 attempt: undefined,
                 retryAt: undefined,
                 waiting: undefined,
+                // Approvals of its other pull requests end with it once the
+                // supervisor hears the change, which tells its crewmate
+                // (INF-2746, `CrewSupervisor.policiesChanged`).
               },
             });
           }

@@ -59,16 +59,19 @@ public struct PhoneAsked: Equatable, Sendable {
     public var kind: PhoneAskedKind = .asked
     /// A click's button words.
     public var choice: String? = nil
+    /// The title of the card a click was on (INF-2744).
+    public var card: String? = nil
     /// The nearest task's key, for a line from a task.
     public var key: String? = nil
     /// How many tasks the source sits behind; nil on the card's own task.
     public var through: Int? = nil
 
-    public init(at: Date, text: String, kind: PhoneAskedKind = .asked, choice: String? = nil, key: String? = nil, through: Int? = nil) {
+    public init(at: Date, text: String, kind: PhoneAskedKind = .asked, choice: String? = nil, card: String? = nil, key: String? = nil, through: Int? = nil) {
         self.at = at
         self.text = text
         self.kind = kind
         self.choice = choice
+        self.card = card
         self.key = key
         self.through = through
     }
@@ -90,7 +93,7 @@ public struct PhoneAsked: Equatable, Sendable {
         let name: String
         switch kind {
         case .said: name = "You said"
-        case .chose: name = "You chose"
+        case .chose: name = card.map { "You chose on “\($0)”" } ?? "You chose"
         case .automation: name = "Run by an automation"
         default: name = "You asked"
         }
@@ -128,7 +131,7 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
         return PhoneAsked(
             at: Date(timeIntervalSince1970: at / 1000), text: text,
             kind: line["kind"].text.flatMap(PhoneAskedKind.init(rawValue:)) ?? .asked,
-            choice: line["choice"].text, key: line["key"].text,
+            choice: line["choice"].text, card: line["card"].text, key: line["key"].text,
             through: line["through"].numeric.map { Int($0) })
     }
     /// INF-1670: the Mac's stuck alert is the host's, and names the first mate as the one who answers it.

@@ -39,5 +39,10 @@ export function createSettleOwners(host: SettleServiceHost): SettleOwners {
   const settle = new SettleService(host, locks, approvals, closing);
   const kept = new KeptMerge(host, locks, approvals, closing, settle);
   const declared = new DeclaredCloses(host, locks, closing, settle);
+  locks.runKept = (taskId) => {
+    void kept.runMergeAuthorization(taskId).catch((caught: unknown) => {
+      console.warn("[settle] a kept merge approval could not run:", caught);
+    });
+  };
   return { locks, approvals, closing, settle, kept, declared };
 }

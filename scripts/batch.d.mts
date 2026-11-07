@@ -18,13 +18,24 @@ export type QueueState = {
 export type Member = { number: number; head: string };
 export type QueueEntry = Member & { queue: QueueState | null };
 export type BatchJob = { name: string; status: string; conclusion: string | null };
+/** A run batch.yml started by dispatch, as GitHub lists them. */
+export type DispatchedRun = {
+  id: number;
+  run_number: number;
+  display_title: string;
+  status: string;
+  conclusion: string | null;
+};
 export type BatchRun = {
   id: number;
   status: string;
   conclusion: string | null;
   run_attempt: number;
+  created_at?: string;
   /** The first attempt's verdict job, read only when that attempt failed. */
   verdict?: BatchJob | null;
+  /** The newest run asking for this run's rerun, read only when that verdict passed. */
+  rerun?: DispatchedRun | null;
 };
 export type StatusWrite = Member & { state: string; description: string; url: string };
 
@@ -32,6 +43,7 @@ export const QUEUE: string;
 export const WAITING: string;
 export function inBatch(runId: number): string;
 export function passed(runId: number, tree: string, rerun?: boolean): string;
+export function rerunOf(runId: number): string;
 export function readQueueStatus(statuses: readonly CommitStatus[]): QueueState | null;
 export function ownsChanges(run: BatchRun | undefined): boolean;
 export function formBatch(

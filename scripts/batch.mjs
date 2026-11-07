@@ -56,21 +56,28 @@ export function readQueueStatus(statuses) {
 /** The name batch.yml gives a merge batch's verdict job, which carries the tree it swept. */
 const VERDICT_JOB = /^Merge batch · Batch verdict \(tree [0-9a-f]{40}\)$/;
 
+/** The name batch.yml gives the run that asks for batch run N's one rerun (its run-name). */
+export const rerunOf = (runId) => `Rerun of batch run ${runId}`;
+
 const firstAttemptFailed = (run) =>
   run.status === "completed" && run.conclusion === "failure" && run.run_attempt === 1;
 
 /**
  * A batch run still owns its changes while it runs, and after its first
- * attempt failed only while that attempt's verdict job passed: the verdict
- * asked for the one rerun, which has not yet started. A first attempt whose
- * verdict failed, or never ran because an earlier job failed, asked for no
- * rerun, so it owns nothing. Neither does a run whose last attempt ended
- * without writing its verdict. Changes a run does not own join the next batch.
+ * attempt failed only while that attempt's verdict job passed and the rerun
+ * it asked for may still start: the verdict starts a run named after this
+ * one, which reruns the failed jobs. A first attempt whose verdict failed,
+ * or never ran because an earlier job failed, asked for no rerun, so it owns
+ * nothing; nor does one whose rerun request ended without starting the
+ * rerun, such as one that could not reach GitHub. Neither does a run whose
+ * last attempt ended without writing its verdict. Changes a run does not own
+ * join the next batch.
  */
 export function ownsChanges(run) {
   if (!run) return false;
   if (run.status !== "completed") return true;
-  return firstAttemptFailed(run) && run.verdict?.conclusion === "success";
+  if (!firstAttemptFailed(run) || run.verdict?.conclusion !== "success") return false;
+  return run.rerun?.status !== "completed" || run.rerun.conclusion === "success";
 }
 
 /**
@@ -228,28 +235,56 @@ export async function readOpenQueue(github, repo) {
 }
 
 /**
- * The batch runs the queue states name, read once each. A run whose first
- * attempt failed also carries that attempt's verdict job, or null when it
- * has none: read from attempt 1 itself, so a rerun that starts meanwhile
- * does not hide it.
+ * The newest run that asks for batch run `run`'s one rerun, or null while
+ * GitHub lists none yet: the verdict starts it by dispatch after the run
+ * began, and batch.yml names it after the run.
  */
+async function readRerunRequest(github, repo, run) {
+  const requests = await github.paginate(github.rest.actions.listWorkflowRuns, {
+    ...repo,
+    workflow_id: "batch.yml",
+    event: "workflow_dispatch",
+    created: `>=${run.created_at}`,
+    per_page: 100,
+  });
+  return requests
+    .filter((request) => request.display_title === rerunOf(run.id))
+    .reduce((newest, request) => (newest && newest.run_number > request.run_number ? newest : request), null);
+}
+
+/**
+ * One batch run as ownsChanges reads it. A run whose first attempt failed
+ * also carries that attempt's verdict job, or null when it has none: read
+ * from attempt 1 itself, so a rerun that starts meanwhile does not hide it.
+ * When that verdict asked for the rerun, the run carries the request too.
+ */
+async function readRun(github, repo, id) {
+  const read = async () => (await github.rest.actions.getWorkflowRun({ ...repo, run_id: id })).data;
+  const run = await read();
+  if (!firstAttemptFailed(run)) return run;
+  const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
+    ...repo,
+    run_id: id,
+    attempt_number: 1,
+    per_page: 100,
+  });
+  const verdict = jobs.find((job) => VERDICT_JOB.test(job.name)) ?? null;
+  if (verdict?.conclusion !== "success") return { ...run, verdict };
+  const rerun = await readRerunRequest(github, repo, run);
+  if (rerun?.status === "completed" && rerun.conclusion !== "success") {
+    // A request can fail after GitHub started the rerun, its answer lost and
+    // the retry refused: read the run again, now that the request has ended.
+    const again = await read();
+    if (!firstAttemptFailed(again)) return again;
+  }
+  return { ...run, verdict, rerun };
+}
+
+/** The batch runs the queue states name, one reading each. */
 export async function readRuns(github, repo, entries) {
   const ids = [...new Set(entries.flatMap((entry) => (entry.queue?.run ? [entry.queue.run] : [])))];
   const runs = new Map();
-  for (const id of ids) {
-    const { data } = await github.rest.actions.getWorkflowRun({ ...repo, run_id: id });
-    if (!firstAttemptFailed(data)) {
-      runs.set(id, data);
-      continue;
-    }
-    const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
-      ...repo,
-      run_id: id,
-      attempt_number: 1,
-      per_page: 100,
-    });
-    runs.set(id, { ...data, verdict: jobs.find((job) => VERDICT_JOB.test(job.name)) ?? null });
-  }
+  for (const id of ids) runs.set(id, await readRun(github, repo, id));
   return runs;
 }
 

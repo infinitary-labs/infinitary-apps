@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BatchJob, BatchRun } from "../scripts/batch.mjs";
+import type { BatchJob, BatchRun, DispatchedRun } from "../scripts/batch.mjs";
 import {
   formBatch,
   inBatch,
@@ -8,6 +8,7 @@ import {
   readMainPush,
   readQueueStatus,
   readRuns,
+  rerunOf,
   sortMainPush,
   verdict,
   WAITING,
@@ -191,6 +192,54 @@ describe("forming a batch", () => {
     }
   });
 
+  // The verdict's rerun request is a run of its own, and it can fail before
+  // the rerun starts: GitHub unreachable past its retries, or its time limit.
+  // Nothing then starts the rerun, so a run that kept its changes would hold
+  // every batch back until someone started the rerun by hand.
+  it("frees a run whose rerun request ended without starting the rerun", () => {
+    const entries = [
+      entry(
+        930,
+        readQueueStatus([status("pending", inBatch(41_600_000_001), "2026-11-03T21:00:00Z")]),
+      ),
+      entry(931, readQueueStatus([approved("2026-11-03T20:31:00Z")])),
+    ];
+    const asked = (rerun: DispatchedRun | null) =>
+      new Map<number, BatchRun>([
+        [
+          41_600_000_001,
+          {
+            id: 41_600_000_001,
+            status: "completed",
+            run_attempt: 1,
+            conclusion: "failure",
+            verdict: { name: verdictName(), status: "completed", conclusion: "success" },
+            rerun,
+          },
+        ],
+      ]);
+    const request = (status: string, conclusion: string | null): DispatchedRun => ({
+      id: 41_600_000_101,
+      run_number: 12,
+      display_title: rerunOf(41_600_000_001),
+      status,
+      conclusion,
+    });
+    // Not listed yet, waiting for the attempt to end, or the rerun started.
+    for (const rerun of [
+      null,
+      request("queued", null),
+      request("in_progress", null),
+      request("completed", "success"),
+    ])
+      expect(formBatch(entries, asked(rerun)).action, rerun?.status ?? "not listed").toBe("wait");
+    for (const conclusion of ["failure", "timed_out", "cancelled"]) {
+      const plan = formBatch(entries, asked(request("completed", conclusion)));
+      expect(plan.action, conclusion).toBe("sweep");
+      expect(plan.members.map((member) => member.number)).toEqual([931, 930]);
+    }
+  });
+
   it("does nothing when no change waits", () => {
     expect(formBatch([entry(932, null)], new Map()).action).toBe("none");
   });
@@ -216,27 +265,54 @@ const job = (name: string, conclusion: string) => ({
 
 describe("reading the batch runs the queue names", () => {
   const runId = (n: number) => 41_600_000_000 + n;
+  const began = "2026-11-03T21:00:00Z";
+  /**
+   * GitHub as readRuns reads it: each run's readings in turn (the last one
+   * repeats), each first attempt's jobs, and batch.yml's runs started by
+   * dispatch, newest first.
+   */
   const githubOf = (
-    runs: Record<number, Omit<BatchRun, "id">>,
+    runs: Record<number, Omit<BatchRun, "id"> | Omit<BatchRun, "id">[]>,
     attemptJobs: Record<number, ReturnType<typeof job>[]>,
+    dispatched: DispatchedRun[] = [],
   ) => {
     const jobReads: { run_id: number; attempt_number: number }[] = [];
+    const runReads: number[] = [];
+    const listReads: Record<string, unknown>[] = [];
     const github = {
       rest: {
         actions: {
-          getWorkflowRun: async ({ run_id }: { run_id: number }) => ({
-            data: { id: run_id, path: ".github/workflows/batch.yml", ...runs[run_id] },
-          }),
+          getWorkflowRun: async ({ run_id }: { run_id: number }) => {
+            const readings = [runs[run_id]].flat();
+            const read = runReads.filter((id) => id === run_id).length;
+            runReads.push(run_id);
+            return {
+              data: {
+                id: run_id,
+                path: ".github/workflows/batch.yml",
+                created_at: began,
+                ...readings[Math.min(read, readings.length - 1)],
+              },
+            };
+          },
           listJobsForWorkflowRunAttempt: "attempt jobs",
+          listWorkflowRuns: "workflow runs",
         },
       },
-      paginate: async (method: string, parameters: { run_id: number; attempt_number: number }) => {
+      paginate: async (
+        method: string,
+        parameters: { run_id: number; attempt_number: number } & Record<string, unknown>,
+      ) => {
+        if (method === "workflow runs") {
+          listReads.push(parameters);
+          return dispatched;
+        }
         expect(method).toBe("attempt jobs");
         jobReads.push({ run_id: parameters.run_id, attempt_number: parameters.attempt_number });
         return attemptJobs[parameters.run_id] ?? [];
       },
     };
-    return { github, jobReads };
+    return { github, jobReads, runReads, listReads };
   };
   const inRun = (number: number, run: number) =>
     entry(number, readQueueStatus([status("pending", inBatch(run), "2026-11-03T21:00:00Z")]));
@@ -295,6 +371,64 @@ describe("reading the batch runs the queue names", () => {
     expect(formBatch(entries, runs)).toMatchObject({ action: "wait" });
     expect(formBatch([inRun(931, runId(5)), waiting], runs).action).toBe("sweep");
     expect(jobReads).toEqual([]);
+  });
+
+  // batch.yml names each rerun request after its batch run, so the newest
+  // run so named tells whether the rerun its verdict asked for can still start.
+  it("frees a run once the newest request for its rerun ended without starting it", async () => {
+    const failed = { status: "completed", run_attempt: 1, conclusion: "failure" };
+    const asked = [
+      job("Merge batch · Compose the batch", "success"),
+      job(verdictName(), "success"),
+    ];
+    const dispatched = (
+      run: number,
+      run_number: number,
+      status: string,
+      conclusion: string | null,
+    ) => ({
+      id: 41_700_000_000 + run_number,
+      run_number,
+      display_title: rerunOf(run),
+      status,
+      conclusion,
+    });
+    const { github, runReads, listReads } = githubOf(
+      {
+        [runId(7)]: failed,
+        [runId(8)]: failed,
+        // The request failed after GitHub had started the rerun.
+        [runId(9)]: [failed, { status: "in_progress", run_attempt: 2, conclusion: null }],
+      },
+      { [runId(7)]: asked, [runId(8)]: asked, [runId(9)]: asked },
+      [
+        { ...dispatched(runId(8), 34, "completed", "success"), display_title: "batch" },
+        // A request for run 8 started again by hand after the first one failed.
+        dispatched(runId(8), 33, "in_progress", null),
+        dispatched(runId(9), 32, "completed", "failure"),
+        dispatched(runId(8), 31, "completed", "failure"),
+        dispatched(runId(7), 30, "completed", "failure"),
+      ],
+    );
+    const read = async (run: number) => {
+      const entries = [inRun(930, run), waiting];
+      return formBatch(entries, await readRuns(github, repo, entries));
+    };
+    expect((await read(runId(7))).members.map((member) => member.number)).toEqual([940, 930]);
+    expect(await read(runId(8))).toMatchObject({ action: "wait" });
+    expect(await read(runId(9))).toMatchObject({ action: "wait" });
+    // Only the runs batch.yml started by dispatch since the batch run began.
+    for (const parameters of listReads)
+      expect(parameters).toEqual({
+        ...repo,
+        workflow_id: "batch.yml",
+        event: "workflow_dispatch",
+        created: `>=${began}`,
+        per_page: 100,
+      });
+    expect(listReads).toHaveLength(3);
+    // A failed request's run is read again; one still running needs no second read.
+    expect(runReads).toEqual([runId(7), runId(7), runId(8), runId(9), runId(9)]);
   });
 });
 
@@ -531,6 +665,7 @@ type Job = {
 };
 const workflow = (path: string) =>
   loadYamlFile(path) as {
+    "run-name"?: string;
     concurrency: { group: string; "cancel-in-progress": boolean };
     jobs: Record<string, Job>;
   };
@@ -561,6 +696,26 @@ describe("batch.yml", () => {
       "batch-rerun-41600000001",
     );
     expect(batch.concurrency["cancel-in-progress"]).toBe(false);
+  });
+
+  // The verdict asks for the rerun by starting batch.yml with `rerun` set to
+  // its own run; the next batch finds that request by the name it carries.
+  it("names a rerun's run after the batch run it reruns, and leaves every other run GitHub's name", () => {
+    const runName = (context: Record<string, unknown>) =>
+      workflowString(String(batch["run-name"]), context);
+    expect(
+      runName(
+        contexts("workflow_dispatch", {}, { rehearsal: "", send_back: "", rerun: "41600000001" }),
+      ),
+    ).toBe(rerunOf(41_600_000_001));
+    // An empty name is GitHub's cue to name the run itself.
+    for (const context of [
+      contexts("status", { context: QUEUE, state: "pending" }),
+      contexts("push"),
+      contexts("workflow_dispatch", {}, { rehearsal: "", send_back: "", rerun: "" }),
+      contexts("workflow_dispatch", {}, { rehearsal: "930 931", send_back: "", rerun: "" }),
+    ])
+      expect(runName(context)).toBe("");
   });
 
   it("forms a batch on an approval mark, a merge or a by-hand start, never on another status", () => {

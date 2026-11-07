@@ -29,6 +29,11 @@ name: batch
 # script as status 500), so one lost answer fails no run. A repeated write
 # only repeats a status or a start, which the next read takes as it is.
 
+# A rerun's run is named after the batch run it reruns, which the next batch
+# reads to tell whether that rerun can still start (scripts/batch.mjs,
+# rerunOf); every other run keeps the name GitHub gives it.
+run-name: ${{ inputs.rerun != '' && format('Rerun of batch run {0}', inputs.rerun) || '' }}
+
 on:
   # The app's approval mark. Any other status starts a run that does nothing.
   status:
@@ -101,7 +106,8 @@ jobs:
             });
 
   # The batch's one rerun: waits for the failed attempt to end, then reruns
-  # only its failed jobs and the verdict after them.
+  # only its failed jobs and the verdict after them. If this job fails before
+  # the rerun starts, the batch run gives up its changes to the next batch.
   rerun:
     if: github.event_name == 'workflow_dispatch' && inputs.rerun != ''
     name: Merge batch · Rerun the failed sweep jobs

@@ -519,6 +519,7 @@ Every GitHub call in it retries a dropped connection or a server error three tim
 A batch forms only when no green batch is still merging and no batch run still owns a change.
 A batch run owns its changes while it runs, and after a failed first attempt only while that attempt's `verdict` job passed, since only a passing verdict asked for the rerun.
 A first attempt whose verdict failed, or never ran because an earlier job such as `compose` failed, starts no rerun, so its changes wait for the next batch.
+So do the changes of a run whose rerun request ended without starting the rerun, such as one that could not reach GitHub: the newest `Rerun of batch run N` run decides, so a rerun started again by hand holds them again.
 It takes every waiting change in approval order, from when its approval mark was first written.
 The `compose` job merges each change onto `main` with `scripts/batch-compose.sh`, the way a merge on GitHub combines files, with a fixed author and date.
 A change that conflicts with `main` itself fails with "Conflicts with main"; a change that conflicts only with an earlier change in the batch waits for the next one.
@@ -531,7 +532,7 @@ Its Linux jobs run on GitHub's hosted machines and its Mac lanes on the `release
 Beside it, the `critical-path` job runs the critical path on the same composed commit on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
 A green sweep with a green critical path marks every change success with the batch's tree.
 A red sweep reruns only its failed jobs, once (the captain: "can we just only rerun failed jobs? if it failed again, treat it as failed by the last PR in the batch and require it to fix the flake").
-The failed attempt's `verdict` job starts a `rerun` run by dispatch, which waits for the attempt to end and reruns its failed jobs and the verdict after them.
+The failed attempt's `verdict` job starts a `rerun` run by dispatch, named `Rerun of batch run N`, which waits for the attempt to end and reruns its failed jobs and the verdict after them.
 If the rerun passes, the batch passes too, and the job that failed first still gets an owner who fixes its cause.
 If it fails again, the batch's last change fails with the failed job's link, its crewmate fixes the failure whether or not it is a flake, and the rest wait again for a batch the verdict starts.
 A triage crewmate may instead name another change and send it back by hand.

@@ -302,6 +302,7 @@ describe("runbooks over existing prompt and skill doors", () => {
   });
   it("removes delivery judgments from actual crew prompts on both backends without removing consent", () => {
     const { books } = fixture();
+    const passage = readFileSync(join(root, "delivery/crew.md"), "utf8").trim();
     const cwd = scratchDir("inf-delivery-prompt-");
     for (const backend of ["pi", "claude"] as const) {
       const binding = backend === "pi" ? fakeBinding("test") : { backend, accountId: "test" };
@@ -317,9 +318,9 @@ describe("runbooks over existing prompt and skill doors", () => {
           },
           binding,
         ).instructions.base;
-      expect(prompt()).toContain("Up to three unsuccessful own repairs");
+      expect(prompt()).toContain(passage);
       books.set("delivery", false);
-      expect(prompt()).not.toContain("Up to three unsuccessful own repairs");
+      expect(prompt()).not.toContain(passage);
       expect(prompt()).not.toContain("Never emit a completion decision on anything but green");
       expect(prompt()).toContain("The completion offer never grants merge permission");
       expect(prompt()).toContain("Before anything sensitive or costly");

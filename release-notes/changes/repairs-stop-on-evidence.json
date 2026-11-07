@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "repairs-stop-on-evidence",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate fixing failed checks stops when a try shows nothing new, not after three",
+      "body": "When a pull request's checks fail because of its own change, the crewmate keeps fixing them while each try shows something new, instead of always stopping after three tries. Once a try shows nothing new, it stops and tells you what blocks it, naming every try. A limit you set yourself still applies.",
+      "noPicture": "This changes when a crewmate stops fixing failed checks and what its report names, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -134,7 +134,7 @@ Runbook guidance may decide author choices on the cards it describes, such as vo
 The fixed card shape, merge authorization, consent, delivery and care facts remain core.
 Delivery judgment supplies only crewmates on pull request delivery (direct-pr or queue-pr) with the checks, repair, readiness and stopping guidance.
 Its switch removes those judgments from new crew prompts without changing check facts, merge authorization, consent or the care names on the record.
-The host tools carry check facts and record declarations; the runbook holds the judgments, including the default repair and rerun counts.
+The host tools carry check facts and record declarations; the runbook holds the judgments, including when repairs stop: once an attempt shows nothing new, with no fixed count.
 The panel-building runbook was not selected, so those skills and the design skill stay workspace-owned.
 
 ## Checks

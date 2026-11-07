@@ -1598,7 +1598,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).not.toContain("record an evidence-backed red verdict");
     expect(prompt).not.toContain("Diagnosis alone does not permit that offer");
     // Genuinely blocked is a report, never a card of its own.
-    expect(prompt).toContain("report the blocker instead; that is the escalation, not a card");
+    expect(prompt).toContain("a blocker report is the escalation, not a card");
     // INF-1891, the captain's choice: a failed run outside the pull request's
     // own checks is the crew's to handle like a failed command, never a merge
     // input, and a card names it plainly when it stays failed.
@@ -1664,7 +1664,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     }
   });
 
-  it("ships at Default care by default: the procedure, evidence-first validation, five headings, three CI rounds, from the care runbook's section", () => {
+  it("ships at Default care by default: the procedure, evidence-first validation, five headings, the repair stopping rule, from the care runbook's section", () => {
     const prompt = buildCrewmateSystemPrompt("pi");
     // The default is Default everywhere (captain ruling 2026-09-19), served
     // from the care runbook's section (INF-1876: the host knows the name,
@@ -1734,9 +1734,11 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain(
       "A test whose only evidence is that source text contains or omits a string proves nothing; exercise an interface and assert behavior.",
     );
-    // Three red rounds, then a blocker report and no card.
+    // Repairs stop once they show nothing new, then a blocker report naming
+    // every attempt and no card; no made-up count (INF-2310), unless the
+    // captain recorded one as their own rule.
     expect(prompt).toContain(
-      "Up to three unsuccessful own repairs are allowed; after the third still fails, report the failing check and all three attempts as a blocker, with no completion card.",
+      "once one shows nothing new, report the failing check and each attempt as a blocker, unless the captain set a count.",
     );
     // The rounds are the crew's judgment (the delivery runbook), never a
     // host allowance or a rigor's number.

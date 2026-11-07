@@ -467,14 +467,32 @@ describe("the one-time move of a data folder", () => {
   it("copies each spare working copy of the warm pool as a unit of its own", async () => {
     const world = olderFolder();
     const project = join(world.from, "worktree-pool", "0123abcd");
-    for (const slot of ["1700000000000-a", "1700000000001-b"]) {
+    const slots = ["1700000000000-a", "1700000000001-b"];
+    for (const slot of slots) {
       mkdirSync(join(project, slot, "node_modules", "left-pad"), { recursive: true });
       writeFileSync(join(project, slot, "node_modules", "left-pad", "index.js"), slot);
     }
     chmodSync(project, 0o750);
+    // A spare working copy's share of the bar: its own folder and every entry in it.
+    const ownShares = new Map(
+      slots.map((slot) => [
+        join("worktree-pool", "0123abcd", slot),
+        readdirSync(join(project, slot), { recursive: true }).length + 1,
+      ]),
+    );
     const copying: { done: number; total: number }[] = [];
     const units: string[] = [];
-    const afterPool: number[] = [];
+    const shares = new Map<string, number>();
+    // The bar's rise inside one unit's own report is that unit's credit alone,
+    // however many units the copy runs side by side: on a Mac the copier names
+    // each entry as it goes, so a unit can be credited in full before another's
+    // done is called, and the bar's reading at each done can repeat.
+    const report = (unit: string, say: () => void) => {
+      const before = copying.at(-1)?.done ?? 0;
+      say();
+      if (unit.startsWith("worktree-pool"))
+        shares.set(unit, (shares.get(unit) ?? 0) + (copying.at(-1)?.done ?? 0) - before);
+    };
     const items: MoveItem[] = [];
     const outcome = await runMove(world.move, {
       ...world.deps,
@@ -485,20 +503,19 @@ describe("the one-time move of a data folder", () => {
       copy: (root, staged, options) =>
         copyTree(root, staged, {
           ...options,
+          copied: (unit, entries) => report(unit, () => options.copied?.(unit, entries)),
           done: (unit, cloned) => {
             units.push(unit);
-            options.done?.(unit, cloned);
-            if (unit.startsWith("worktree-pool")) afterPool.push(copying.at(-1)?.done ?? 0);
+            report(unit, () => options.done?.(unit, cloned));
           },
         }),
     });
     expect(outcome).toMatchObject({ kind: "moved" });
     expect(units.filter((unit) => unit.startsWith("worktree-pool")).sort()).toEqual([
-      join("worktree-pool", "0123abcd", "1700000000000-a"),
-      join("worktree-pool", "0123abcd", "1700000000001-b"),
+      ...ownShares.keys(),
     ]);
     // Each spare working copy moved the bar by its own share, and the copy ended full.
-    expect(new Set(afterPool).size).toBe(2);
+    expect(shares).toEqual(ownShares);
     expect(copying.at(-1)?.done).toBe(copying.at(-1)?.total);
     // The window names each by its kind and its place among them, and a task's working copy by its short name.
     expect(items.filter((item) => item.kind === "spare-working-copy")).toEqual([

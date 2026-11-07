@@ -2,7 +2,6 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { describe, expect, it, vi } from "vitest";
-import { legacyJobName } from "../scripts/ci-job-names.mjs";
 import { laneOf } from "../scripts/journey-budget.ts";
 import vitestConfig from "../vitest.config";
 import {
@@ -57,38 +56,45 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       { key: "base_ref", value: new data.StringData(eventName === "pull_request" ? "main" : "") },
       { key: "ref", value: new data.StringData(ref) },
     );
+    const gate = ci.jobs["typecheck-lint-build"]?.steps ?? [];
     // INF-2414 (captain: "why can't we catch release note problems before
     // merge?"): the pull request's notes step (docs/release-notes.md, "The
-    // release check"), one of the gate's two steps with a condition.
-    const notes = ci.jobs["typecheck-lint-build"]?.steps.find((step) =>
+    // release check").
+    const notes = gate.find((step) =>
       step.run?.startsWith("node scripts/release-notes.ts change "),
     );
     expect(notes).toBeDefined();
+    // INF-2915's plan: the paths step decides the build, the browser tests
+    // and the critical path (scripts/pr-paths.ts).
+    const paths = gate.find((step) => step.id === "paths");
+    expect(paths?.run).toBe("node scripts/pr-paths.ts --base HEAD^1");
     // INF-2441 (captain's choice: "Run the tests that read each changed file
-    // inside the pull request's build check"): the other, the pull request's
-    // round of the unit tests that read a changed file (docs/testing.md).
-    const reach = ci.jobs["typecheck-lint-build"]?.steps.find((step) =>
+    // inside the pull request's build check"): the pull request's round of
+    // the unit tests that read a changed file (docs/testing.md).
+    const reach = gate.find((step) =>
       step.run?.startsWith("node scripts/unit-repeats.ts --reach "),
     );
     expect(reach).toBeDefined();
-    // INF-2505 (INF-2480's plan, captain: "Approve and build"): a pull
-    // request runs the browser project in its build check, after installing
-    // the Chromium it draws in (docs/testing.md, "The browser layer").
-    const chromium = ci.jobs["typecheck-lint-build"]?.steps.find(
-      (step) => step.uses === "./.github/actions/browser-chromium",
-    );
-    const browser = ci.jobs["typecheck-lint-build"]?.steps.find(
-      (step) => step.run === "pnpm test --project browser",
-    );
+    // INF-2505, gated by INF-2915's plan: the browser project in the build
+    // check, after installing the Chromium it draws in.
+    const chromium = gate.find((step) => step.uses === "./.github/actions/browser-chromium");
+    const browser = gate.find((step) => step.run === "pnpm test --project browser");
     expect(chromium).toBeDefined();
     expect(browser).toBeDefined();
-    // INF-2486 cut F (captain-approved): the startup fixtures' step runs on
-    // its job's changed-path verdict, the one step-level skip outside the gate.
-    const paths = ci.jobs["linux-startup"]?.steps.find((step) => step.id === "paths");
-    const fixtures = ci.jobs["linux-startup"]?.steps.find(
-      (step) => step.uses === "./.github/actions/linux-startup",
-    );
-    expect(paths?.run).toBe("node scripts/startup-paths.ts --base HEAD^1");
+    // INF-2915's plan: the build skips on a light version, and the critical
+    // path runs inside the build check on the app it built.
+    // The adherence lint runs on a request, as in main's check, never on a
+    // pull request (INF-2915's plan).
+    const adherence = gate.find((step) => step.run === "pnpm lint:adherence");
+    expect(adherence).toBeDefined();
+    const build = gate.find((step) => step.run === "pnpm build");
+    const desktop = gate.find((step) => step.uses === "./.github/actions/linux-desktop");
+    const criticalPath = gate.find((step) => step.id === "critical-path");
+    const skips = gate.find((step) => step.run?.startsWith("node scripts/untagged-skips.ts "));
+    const evidence = gate.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    for (const step of [build, desktop, criticalPath, skips, evidence]) expect(step).toBeDefined();
+    const gated = [notes, paths, reach, chromium, browser, adherence, build, desktop];
+    gated.push(criticalPath, skips);
     for (const [id, job] of Object.entries(ci.jobs)) {
       expect(job.needs, id).toBeUndefined();
       const expression = (job.if ?? "true").replace(/^\$\{\{\s*|\s*\}\}$/g, "");
@@ -107,16 +113,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         ),
       );
       const fullSweep = id === "unit-tests" || id === "integration-tests" || id === "probe-tests";
-      // DOP-251's plan: the startup fixtures are a pull request's own job.
-      const pullOnly = id === "linux-startup";
       expect(eligible.evaluate().coerceString(), id).toBe(
-        (fullSweep && eventName === "pull_request") || (pullOnly && eventName !== "pull_request")
-          ? "false"
-          : "true",
+        fullSweep && eventName === "pull_request" ? "false" : "true",
       );
       // A no-op success would not solve the problem: keep the real gate and
       // fail on any gate step's failure, without step-level skips beyond the
-      // gate's pull request steps and cut F's startup fixtures.
+      // gate's pull request and changed-path steps and the critical path's
+      // failure evidence.
       // INI-9's plan: every job runs where LINUX_RUNNER sends it, the
       // placement service's shell-pc-linux places, and back on GitHub's
       // hosted Linux when the variable is unset.
@@ -128,59 +131,41 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       expect(
         job.steps.every(
           (step) =>
-            !step["continue-on-error"] &&
-            (step === notes ||
-              step === reach ||
-              step === chromium ||
-              step === browser ||
-              step === fixtures ||
-              !step.if),
+            !step["continue-on-error"] && (gated.includes(step) || step === evidence || !step.if),
         ),
         id,
       ).toBe(true);
     }
-    // INF-2507: the critical path is a pull request's own call of another
-    // workflow, whose machine runs that workflow's steps (tested below).
-    for (const [id, call] of Object.entries(ci.calls)) {
-      expect(call.needs, id).toBeUndefined();
-      expect(workflowValue(call.if ?? "true", { github: { event_name: eventName } }), id).toBe(
-        eventName === "pull_request",
-      );
-    }
+    // INF-2915's plan: the critical path is a step of the build check, so
+    // ci.yml calls no other workflow.
+    expect(Object.keys(ci.calls)).toEqual([]);
     // Every machine installs from the lockfile before it runs anything but a
-    // pull request's notes step, plain Node that needs no install and reads
-    // the base parent its checkout fetched; a requested full sweep has no
-    // pull request to compare, and release.yml's notes job covers each change
-    // on main. The jobs together run each check once: a pull request runs the
-    // unit tests that read its changed files in the gate, where no unit sweep
-    // runs, and a requested sweep runs none there; the sweeps are the next
-    // case's.
+    // pull request's notes and paths steps, plain Node that needs no install
+    // and reads the base parent its checkout fetched; a requested full sweep
+    // has no pull request to compare, and release.yml's notes job covers each
+    // change on main. The jobs together run each check once: a pull request
+    // runs the unit tests that read its changed files in the gate, where no
+    // unit sweep runs, and a requested sweep runs none there; the sweeps are
+    // the next case's.
     const install = "pnpm install --frozen-lockfile";
     const machines = ciJobs(eventName);
-    // The startup fixtures' job runs only its plain Node paths step and its
-    // action, and installs nothing.
     for (const { id, name, runs } of machines)
-      expect(
-        id === "linux-startup" ? runs : runs.slice(0, runs.indexOf(install) + 1),
-        name,
-      ).toEqual(
-        id === "linux-startup"
-          ? [paths?.run]
-          : eventName === "pull_request" && id === "typecheck-lint-build"
-            ? [notes?.run, install]
-            : [install],
+      expect(runs.slice(0, runs.indexOf(install) + 1), name).toEqual(
+        eventName === "pull_request" && id === "typecheck-lint-build"
+          ? [notes?.run, paths?.run, install]
+          : [install],
       );
     const checks = machines
-      .filter(({ id }) => id !== "linux-startup")
       .flatMap(({ runs }) => runs.slice(runs.indexOf(install) + 1))
       .filter((run) => !run.startsWith("pnpm test"));
     expect(checks.toSorted()).toEqual(
       [
         "pnpm build",
         "pnpm check",
-        "pnpm lint:adherence",
         "pnpm typecheck",
-        ...(eventName === "pull_request" ? [reach?.run] : []),
+        ...(eventName === "pull_request"
+          ? [reach?.run, criticalPath?.run, skips?.run]
+          : ["pnpm lint:adherence"]),
       ].toSorted(),
     );
     // The browser project runs once: in a pull request's gate, and in a
@@ -193,151 +178,99 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     ]);
   });
 
-  // Captain's small consolidation trial: startup still runs after an unrelated
-  // failure, and its two fixture results remain visible without hiding failures.
-  // DOP-251's plan moves it out of typecheck-lint-build into a pull request
-  // job of its own, so a failed build cannot stop it. DOP-268's plan lets its
-  // startup kind send it to the PC's PR line; no other kind moves it, and
-  // without the kind it stays where LINUX_RUNNER sends it.
-  it("keeps PR startup fixtures and reporting eligible after earlier failures", () => {
+  // INF-2915's plan, the captain's direction B with the light profile: the
+  // paths step's two verdicts decide what the pull request's gate runs past
+  // its code checks and the unit tests that read a changed file, which every
+  // version runs.
+  it.each([
+    [{ build: true, browser: true }, ["build", "browser", "critical path"]],
+    [{ build: true, browser: false }, ["build", "critical path"]],
+    [{ build: false, browser: true }, ["browser"]],
+    [{ build: false, browser: false }, []],
+  ])("runs only what the paths step decided for %j", (paths, expected) => {
+    const [gate] = ciJobs("pull_request", false, paths);
+    const runs = gate?.runs ?? [];
+    const ran = [
+      runs.includes("pnpm build") && "build",
+      runs.includes("pnpm test --project browser") && "browser",
+      runs.some((run) => run.includes("--files tests/e2e/critical-path.spec.ts")) &&
+        "critical path",
+    ].filter(Boolean);
+    expect(ran).toEqual(expected);
+    for (const always of ["pnpm typecheck", "pnpm check"]) expect(runs).toContain(always);
+    expect(runs.some((run) => run.startsWith("node scripts/unit-repeats.ts --reach "))).toBe(true);
+  });
+
+  // INF-2915's plan: the startup fixtures, which caught nothing on 504 pull
+  // request runs, leave the pull request; main's check runs them once per
+  // push on hosted Ubuntu (linux-startup.yml, docs/testing.md "Linux
+  // automatic startup fixtures").
+  it("runs the Linux startup fixtures in main's check, not on a pull request", () => {
     const ci = loadCi();
-    const uses = (id: string) =>
-      ci.jobs[id]?.steps.some((step) => step.uses === "./.github/actions/linux-startup");
-    expect(Object.keys(ci.jobs).filter(uses)).toEqual(["linux-startup"]);
-    const job = ci.jobs["linux-startup"];
-    for (const event of ["pull_request", "push", "workflow_dispatch"])
-      expect(workflowValue(job?.if ?? "true", { github: { event_name: event } }), event).toBe(
-        event === "pull_request",
-      );
-    const queues = JSON.stringify({ typecheck: "q", ci: "q", light: "q", checks: "q" });
-    expect(workflowString(job?.["runs-on"] ?? "", { vars: { LINUX_QUEUES: queues } })).toBe(
-      "ubuntu-24.04",
-    );
-    expect(
-      workflowString(job?.["runs-on"] ?? "", {
-        vars: { LINUX_RUNNER: "shell-pc-linux", LINUX_QUEUES: queues },
-      }),
-    ).toBe("shell-pc-linux");
-    expect(
-      workflowString(job?.["runs-on"] ?? "", {
-        vars: {
-          LINUX_RUNNER: "shell-pc-linux",
-          LINUX_QUEUES: JSON.stringify({ startup: "shell-pc-linux-pr" }),
-        },
-      }),
-    ).toBe("shell-pc-linux-pr");
-    const startup = job?.steps.find((step) => step.uses === "./.github/actions/linux-startup");
-    expect(startup).toBeDefined();
-    // Every earlier step of its job is a checkout or setup, never a build,
-    // apart from INF-2486 cut F's plain Node paths step, which reads the
-    // change through the checkout's base parent and decides the fixture step.
-    const paths = job?.steps.find((step) => step.id === "paths");
-    expect(paths?.run).toBe("node scripts/startup-paths.ts --base HEAD^1");
-    expect(paths?.if).toBeUndefined();
-    expect(job?.steps.filter((step) => step.run !== undefined)).toEqual([paths]);
-    const checkout = job?.steps.find((step) => step.uses === "actions/checkout@v4");
-    expect(checkout?.with?.["fetch-depth"]).toBe(2);
-    for (const run of ["true", "false"])
-      expect(
-        workflowValue(startup?.if ?? "true", { steps: { paths: { outputs: { run } } } }),
-        run,
-      ).toBe(run === "true");
-    const action = loadYamlFile(".github/actions/linux-startup/action.yml") as {
-      runs: { steps: CiJob["steps"] };
+    const fixtures = (job: CiJob) =>
+      job.steps.some((step) => step.uses === "./.github/actions/linux-startup");
+    expect(Object.values(ci.jobs).filter(fixtures)).toEqual([]);
+    const main = loadYamlFile(".github/workflows/main.yml") as {
+      jobs: Record<string, { uses?: string }>;
     };
-    const fixtures = action.runs.steps;
-    expect(fixtures).toHaveLength(3);
-    for (const failed of [false, true]) {
-      for (const cancelled of [false, true]) {
-        const status = { success: !failed && !cancelled, failure: failed, always: true, cancelled };
-        for (const fixture of fixtures) {
-          expect(workflowValue(fixture.if ?? "false", {}, status)).toBe(!cancelled);
-          expect(fixture["continue-on-error"]).toBeFalsy();
-        }
-      }
-    }
+    expect(Object.values(main.jobs).map((job) => job.uses)).toContain(
+      "./.github/workflows/linux-startup.yml",
+    );
   });
 
   /**
    * INF-2480's plan (captain: "path six-steps (launch, sign in, project,
    * first mate, crewmate card, merge)", done when "One desktop journey walks
-   * the chosen path on Linux on every pull request") and INF-2507: every pull
-   * request, and no other start of ci.yml, runs the critical-path journey in
-   * the desktop lane of the source desktop workflow. The called workflow's
-   * own matrix, runner, name, checkout and journeys step are evaluated with
-   * the inputs the call passes; the INF-658 case below runs that step's
-   * command for an affected desktop file.
+   * the chosen path on Linux on every pull request"), INF-2507, and
+   * INF-2915's plan (the captain's direction B: "the critical path inside
+   * the build job"): every pull request that builds the app runs the
+   * critical-path journey in the desktop lane, in the build check after the
+   * build, on the Linux desktop the source desktop workflow prepares the
+   * same way.
    */
-  it("runs the critical-path journey on the Linux desktop for every pull request", () => {
-    const ci = loadCi();
-    expect(Object.keys(ci.calls)).toEqual(["critical-path"]);
-    const call = ci.calls["critical-path"];
-    for (const event of ["pull_request", "push", "workflow_dispatch"])
-      expect(workflowValue(call?.if ?? "true", { github: { event_name: event } }), event).toBe(
-        event === "pull_request",
-      );
-    expect(call?.uses).toBe("./.github/workflows/source-journeys.yml");
-    const files = String(call?.with?.files ?? "").split(" ");
-    expect(files).toEqual(["tests/e2e/critical-path.spec.ts"]);
-    for (const file of files) {
-      expect(existsSync(join(root, file)), file).toBe(true);
-      expect(laneOf(file), file).toBe(call?.with?.lane);
-    }
-    const source = loadYamlFile(".github/workflows/source-journeys.yml") as {
-      on: { workflow_call: { inputs: Record<string, { default?: unknown }> } };
-      jobs: {
-        "source-desktop": {
-          name: string;
-          "runs-on": string;
-          strategy: { matrix: { lane: string; shard: string } };
-          steps: Step[];
-        };
+  it("runs the critical-path journey inside the build check after the build", () => {
+    const job = loadCi().jobs["typecheck-lint-build"];
+    const steps = job?.steps ?? [];
+    const at = (find: (step: Step) => boolean) => steps.findIndex(find);
+    const build = at((step) => step.run === "pnpm build");
+    const desktop = at((step) => step.uses === "./.github/actions/linux-desktop");
+    const journey = at((step) => step.id === "critical-path");
+    expect(build).toBeGreaterThan(-1);
+    expect(desktop).toBeGreaterThan(build);
+    expect(journey).toBeGreaterThan(desktop);
+    const step = steps[journey];
+    const file = "tests/e2e/critical-path.spec.ts";
+    expect(existsSync(join(root, file))).toBe(true);
+    expect(laneOf(file)).toBe("desktop");
+    // The pull request's merge commit against its base parent: an edit to
+    // the journey runs it three rounds and alone (scripts/journey-runs.ts).
+    expect(step?.run).toBe(
+      `scripts/on-screen.sh node scripts/journey-runs.ts --base HEAD^1 --files ${file} --alone-out playwright-report/alone -- --project=desktop`,
+    );
+    const checkout = steps.find((candidate) => candidate.uses === "actions/checkout@v4");
+    expect(checkout?.with?.["fetch-depth"]).toBe(2);
+    // Every pull request version that builds the app, and no request.
+    for (const [event, built, runs] of [
+      ["pull_request", "true", true],
+      ["pull_request", "false", false],
+      ["workflow_dispatch", "", false],
+    ] as const) {
+      const contexts = {
+        github: { event_name: event },
+        steps: { paths: { outputs: { build: built } } },
       };
+      expect(workflowValue(steps[desktop]?.if ?? "true", contexts), `${event} ${built}`).toBe(runs);
+      expect(workflowValue(step?.if ?? "true", contexts), `${event} ${built}`).toBe(runs);
+    }
+    // The source desktop workflow prepares its desktop through the same action.
+    const source = loadYamlFile(".github/workflows/source-journeys.yml") as {
+      jobs: { "source-desktop": { steps: Step[] } };
     };
-    const declared = source.on.workflow_call.inputs;
-    // Every input the call passes is one the workflow declares, over its defaults.
-    for (const input of Object.keys(call?.with ?? {}))
-      expect(declared, input).toHaveProperty(input);
-    const inputs = {
-      ...Object.fromEntries(
-        Object.entries(declared).map(([key, { default: value }]) => [key, value]),
-      ),
-      ...call?.with,
-    };
-    const job = source.jobs["source-desktop"];
-    expect(workflowValue(job.strategy.matrix.lane, { inputs })).toEqual(["desktop"]);
-    expect(workflowValue(job.strategy.matrix.shard, { inputs })).toEqual([1]);
-    const matrix = { lane: "desktop", shard: 1 };
-    // INF-2410's scheme A: the pull request's trigger leads the name, read
-    // as the job's name before the rename.
-    const name = workflowString(job.name, { inputs, matrix });
-    expect(name).toBe("Pull request · Selected app journeys (Linux; serial)");
-    expect(legacyJobName(name)).toBe("source-desktop (desktop)");
-    // Linux, where LINUX_RUNNER sends a pull request's journeys.
-    expect(workflowString(job["runs-on"], { inputs, vars: {} })).toBe("ubuntu-24.04");
     expect(
-      workflowString(job["runs-on"], { inputs, vars: { LINUX_RUNNER: "shell-pc-linux" } }),
-    ).toBe("shell-pc-linux");
-    // The app is built from the pull request's merge commit.
-    const checkout = job.steps.find((step) => step.uses === "actions/checkout@v4");
-    const merge = "refs/pull/42/merge";
-    expect(workflowString(String(checkout?.with?.ref), { inputs, github: { ref: merge } })).toBe(
-      merge,
-    );
-    // The journeys step's own environment selects the affected desktop files.
-    const step = job.steps.find((candidate) => candidate.id === "journeys");
-    const env = Object.fromEntries(
-      ["SUITE", "LANE", "FILES", "REPEAT_BASE"].map((name) => [
-        name,
-        workflowString(step?.env?.[name] ?? "", { inputs, matrix }),
-      ]),
-    );
-    expect(env).toEqual({
-      SUITE: "affected",
-      LANE: "desktop",
-      FILES: files.join(" "),
-      REPEAT_BASE: "origin/main",
-    });
+      source.jobs["source-desktop"].steps.filter((candidate) =>
+        candidate.uses?.endsWith("/.github/actions/linux-desktop"),
+      ),
+    ).toHaveLength(1);
   });
 
   // DOP-66 fix 1: the rebuilt shell PC image owns the pnpm store;

@@ -661,7 +661,13 @@ type Job = {
   uses?: string;
   needs?: unknown;
   with?: Record<string, unknown>;
-  steps?: { uses?: string; with?: Record<string, unknown>; env?: Record<string, string> }[];
+  steps?: {
+    id?: string;
+    uses?: string;
+    run?: string;
+    with?: Record<string, unknown>;
+    env?: Record<string, string>;
+  }[];
 };
 const workflow = (path: string) =>
   loadYamlFile(path) as {
@@ -782,11 +788,14 @@ describe("batch.yml", () => {
   // should all run during the sweep batch". The critical path runs on the
   // composed batch in a job of its own, so it stays in the batch's check
   // whatever part of the full check the sweep runs; it is the same journey
-  // every pull request runs (ci.yml's call), on the commit the sweep composes.
+  // every pull request that builds the app runs (ci.yml's critical-path step,
+  // INF-2915), on the commit the sweep composes.
   it("runs the critical path on the composed batch, on hosted Linux, in a job of its own", () => {
     const job = batch.jobs["critical-path"];
     const sweep = batch.jobs.sweep;
-    const pullRequest = workflow(".github/workflows/ci.yml").jobs["critical-path"];
+    const pullRequest = workflow(".github/workflows/ci.yml").jobs[
+      "typecheck-lint-build"
+    ]?.steps?.find((step) => step.id === "critical-path");
     expect(job?.uses).toBe("./.github/workflows/source-journeys.yml");
     expect(job?.needs).toBe("compose");
     expect(job?.if).toBe(sweep?.if);
@@ -795,10 +804,12 @@ describe("batch.yml", () => {
       batch: sweep?.with?.batch,
       batch_tree: sweep?.with?.batch_tree,
       hosted: true,
-      suite: pullRequest?.with?.suite,
-      lane: pullRequest?.with?.lane,
-      files: pullRequest?.with?.files,
+      suite: "affected",
+      lane: "desktop",
+      files: "tests/e2e/critical-path.spec.ts",
     });
+    expect(pullRequest?.run).toContain(`--files ${job?.with?.files} `);
+    expect(pullRequest?.run).toContain("-- --project=desktop");
     const journeys = workflow(".github/workflows/source-journeys.yml").jobs["source-desktop"] as {
       "runs-on": string;
     };

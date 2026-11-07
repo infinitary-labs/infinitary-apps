@@ -843,7 +843,7 @@
   "tests/runner-link-readings.test.ts": 0.1,
   "tests/score-kind-classifier.test.ts": 0.1,
   "tests/served-boundary.test.ts": 0.1,
-  "tests/startup-paths.test.ts": 0.1,
+  "tests/pr-paths.test.ts": 0.1,
   "tests/statement-check.test.ts": 0.1,
   "tests/unit-reach.test.ts": 0.1,
   "tests/unit-repeats-workflow.test.ts": 0.1,

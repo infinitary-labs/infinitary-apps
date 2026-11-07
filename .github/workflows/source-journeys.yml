@@ -137,11 +137,6 @@ jobs:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
-      # The machine's own automatic updates may hold apt's locks; the helper
-      # takes over from them (docs/testing.md, "The runner's automatic updates").
-      - name: Install virtual display and desktop libraries
-        timeout-minutes: 10
-        run: scripts/apt-install.sh xvfb xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1
       - uses: ./Application Support/firstmate/.github/actions/node-headers
       - uses: ./Application Support/firstmate/.github/actions/electron-download
         with:
@@ -150,25 +145,11 @@ jobs:
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
-      # An unpacked Electron download has no installer to configure its
-      # sandbox helper. Do that only in this disposable Linux job: a hosted
-      # machine, or the PC's fresh virtual machine deleted after the job.
-      - name: Configure Electron's sandbox helper
-        run: |
-          sandbox="$(node -p 'require("node:path").join(require("node:path").dirname(require("electron")), "chrome-sandbox")')"
-          test -f "$sandbox"
-          # Chromium parses the helper as a command prefix and splits a
-          # helper path containing spaces. The app/checkout stay under
-          # Application Support; only this pinned helper gets a plain path.
-          helper="$RUNNER_TEMP/firstmate-chrome-sandbox"
-          case "$helper" in *' '*) echo 'Sandbox helper path must have no spaces'; exit 1;; esac
-          sudo install -o root -g root -m 4755 "$sandbox" "$helper"
-          # An adjacent helper wins over CHROME_DEVEL_SANDBOX even when
-          # unconfigured. Use Chromium's development fallback instead.
-          rm "$sandbox"
-          test ! -e "$sandbox"
-          echo "CHROME_DEVEL_SANDBOX=$helper" >> "$GITHUB_ENV"
-      - run: pnpm exec playwright install ffmpeg
+      # The virtual display, desktop libraries, Electron's sandbox helper and
+      # Playwright's FFmpeg, as ci.yml's critical path prepares them.
+      - uses: ./Application Support/firstmate/.github/actions/linux-desktop
+        with:
+          working-directory: Application Support/firstmate
       - run: pnpm build
       # Linux runs every journey it can (docs/testing.md, "Tests that need a
       # Mac"): the keyboard journeys press Ctrl where a Mac presses Command
@@ -200,17 +181,7 @@ jobs:
         timeout-minutes: ${{ inputs.suite == 'affected' && 90 || 360 }}
         run: |
           echo "TIMING_TEST_START=$(date +%s)" >> "$GITHUB_ENV"
-          on_screen() {
-            xvfb-run -a -s "-screen 0 $SCREEN -noreset" sh -c '
-              width=${SCREEN%%x*}; height=${SCREEN#*x}; height=${height%%x*}
-              x=$((width - 1)); y=$((height - 1))
-              xdotool mousemove "$x" "$y"
-              at=$(xdotool getmouselocation)
-              case "$at" in
-                "x:$x y:$y "*) exec "$@" ;;
-                *) echo "The pointer is not on the last pixel at $x,$y: $at" >&2; exit 1 ;;
-              esac' on-screen "$@"
-          }
+          on_screen() { scripts/on-screen.sh "$@"; }
           if [ "$SUITE" = affected ]; then
             test -n "$FILES"
             if [ "$LANE" = desktop ]; then

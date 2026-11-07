@@ -478,6 +478,7 @@ describe("explicit manual verification scope (INF-2374)", () => {
         SUITE: "full",
         LANE: "parallel",
         SHARD: "1",
+        SCREEN: "2560x1600x24",
       },
       encoding: "utf8",
     });

@@ -131,7 +131,7 @@ Browser commands (`tests/helpers/browserCommands.ts`) reach the page itself, suc
 A frame program served as text, such as Observe's, draws in a same-origin frame the test builds from the program and the design tokens (`tests/browser/observe-frame.test.ts`).
 The project's Chromium runs with Web Share on, as the window's does, and draws scrollbars as the window does: over the content on a Mac by default, beside it on Linux, and beside it wherever a page styles them.
 Install it once with `pnpm exec playwright install --only-shell chromium`, then run `pnpm exec vitest run --project browser`.
-Every pull request runs the whole browser project in `ci.yml`'s `typecheck-lint-build` check; it takes under a minute.
+A pull request version that touches the renderer or its browser tests runs the whole browser project in `ci.yml`'s `typecheck-lint-build` check, about three minutes with its Chromium install; any other version skips it ("What a pull request runs").
 `verify.yml`'s browser test group, a job of every swept batch's check and of main's, runs every browser file, and `ci.yml`'s requested `unit-tests` sweep runs them beside the in-memory cohorts; all three install Chromium through `.github/actions/browser-chromium`.
 A journey that only draws the window and reads it moves here, and its original is deleted as its twin lands, so the swept batch checks the window through its twin.
 A journey stays when it needs what the browser layer cannot give the page: main or the core at work, a frame served over the app's own scheme, whose body a page cannot load, or a change of display density, which Chromium tells only a top-level page and the test page is a frame.
@@ -261,16 +261,16 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The full unit, integration and probe suites run in the full check's Linux test groups on main and across `ci.yml`'s jobs on request, not on PRs; the full e2e suite (`pnpm build && pnpm exec playwright test`) is the release verify's job (next bullet); the full unit suite is not a per-push obligation.
   The full e2e suite runs only in CI, never locally during development or release preparation.
   The adherence lint runs the design skill's `_adherence.oxlintrc.json` through ESLint FlatCompat (current oxlint cannot execute its selector rules); its raw-px/hex rules are warn-level by the skill's own design.
-- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck/lint/build, with the Linux startup fixtures in a job beside it and the critical-path journey in another ("The critical path").
+- Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck, the lint, the build and the critical-path journey ("What a pull request runs", "The critical path").
   The captain's INF-2273 ruling removes both unit-repeat shards; every edited unit file instead gets three total local runs, including portable files.
   Requested runs also run the full unit and probe sweeps and both integration shards, five jobs in total; there is no unit/integration selector.
   A push to `main` starts no `ci.yml` job (INF-2340, the captain's route "drop-ci-main"): the full check's `linux-checks` lane and its Linux test groups run the same commands, every probe included ("Main's desktop release check").
-  `typecheck-lint-build` runs typecheck, biome, eslint adherence and build on pull requests, `linux-startup` runs the Linux automatic startup fixtures beside it, and `critical-path` runs the critical-path journey; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests`, shown as integration test groups 1/2 and 2/2, runs the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
+  `typecheck-lint-build` runs typecheck, biome, the build and the critical-path journey on pull requests, and the eslint adherence lint on a request; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests`, shown as integration test groups 1/2 and 2/2, runs the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
   The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run what `verify.yml`'s `linux-checks` lane and its Linux test groups run, every probe included, and `tests/release-workflows-pr-checks.test.ts` holds every vitest project, in each layout, to one job or to shards that cover it, including the full probe project.
   Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-24.04` when the variable is unset, the one hosted image every workflow falls back to (INF-2539); `tests/release-workflows-runners.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so setup-node restores its pnpm cache only on a GitHub-hosted runner (`runner.environment`); every self-hosted job, wherever a variable sent it, skips it.
   The repository variable `LINUX_QUEUES` can send a job's kind to another queue before `LINUX_RUNNER` ("Each Linux job's kind").
-  Every other workflow's requested Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser and overflow, `verify.yml`'s Linux lanes, the replay gate, Linux startup and the Linux packages; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
+  Every other workflow's requested Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser and overflow, `verify.yml`'s Linux lanes, the replay gate and the Linux packages; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
   The gate job a request starts takes the variable's label with `-gate` (DOP-157's plan): `journeys.yml`'s `choose-journeys`.
   The placement service's runners on that label take only this job and go first in the PC's line, so the Mac job waiting on it starts within minutes; hosted, it runs on `ubuntu-24.04`.
   Every Linux job that `main.yml` or a release starts runs on GitHub's hosted Ubuntu instead ("A release's hosted machines").
@@ -400,7 +400,7 @@ In CI mode these checks refuse to start outside CI and name their route on reque
 | The phone check | `pnpm test:phone` and `scripts/test-phone.ts` | `phone.yml` on request ("The phone check on request") |
 | The replay gate | `pnpm replay:gate` | `replay.yml` on request (`docs/replay-harness.md`, "The gate") |
 | The typecheck | `pnpm typecheck` | the pull request's `typecheck-lint-build` check; before a pull request, `ci.yml` on request |
-| The lint | `pnpm check`, `pnpm lint` and `pnpm lint:adherence` | the pull request's `typecheck-lint-build` check; before a pull request, `ci.yml` on request |
+| The lint | `pnpm check`, `pnpm lint` and `pnpm lint:adherence` | the pull request's `typecheck-lint-build` check runs `pnpm check`; the adherence lint runs in `pnpm check:changed` and in `ci.yml` on request |
 
 A crewmate runs `pnpm check:changed` (`scripts/check-changed.ts`, INF-2588 fix 1) before every push, on a CI-mode computer or not: Biome on the files its branch changed, the design adherence lint on the changed renderer files, the five generated-file `--check` scripts, and the whole-project typecheck.
 It is not gated by CI mode, takes seconds, and prints every error; the full lint and the typecheck stay in the pull request's `typecheck-lint-build` check as INF-2074 set it, so this narrows INF-2074's choice that the typecheck runs only in CI.
@@ -551,7 +551,7 @@ The fleet never cancels a running batch or a running main check unless the capta
 
 ## CI job names
 
-Every job's name says what started its run and what it checks, in one scheme (INF-2410, the captain: "i want to distinguish what triggered the job and what they check"; scheme "A. Trigger first"): `Trigger · Purpose (platform or device; group or round)`, such as `Main push · App journeys (Linux; serial group 3/4)` or `Pull request · Startup checks (Linux)`.
+Every job's name says what started its run and what it checks, in one scheme (INF-2410, the captain: "i want to distinguish what triggered the job and what they check"; scheme "A. Trigger first"): `Trigger · Purpose (platform or device; group or round)`, such as `Main push · App journeys (Linux; serial group 3/4)` or `Pull request · Code, build, affected tests and critical path (Linux)`.
 The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (the approval mark, a merge or the batch's own rerun), `Requested batch rehearsal`, `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
 A called workflow takes its caller's trigger through its `trigger` input, so each level of GitHub's full name leads with it: `Main push · Desktop checks / Main push · Linux journeys / Main push · App journeys (Linux; serial group 3/4)`; a runner list that shows only the last level still says what started it.
 A workflow only a caller starts (`alpha-wait.yml`, `linux-startup.yml`, `mac-installer.yml`, `mac-update.yml`) requires that input and keeps no fallback of its own, and a release says its trigger once, in its `resolve` job's `trigger` output, which every later job's name and every workflow it calls read (INF-2539).
@@ -665,14 +665,51 @@ Each call names its device in its job name and in each artifact (`phone-logs-ipa
 The two calls share the one computer both phone Macs run on, which reported memory pressure warnings in 5 of 29 readings while both guests ran (INF-2409).
 Status-only TestFlight requests start no phone or signing job.
 
+## What a pull request runs
+
+A pull request version runs one check, `ci.yml`'s `typecheck-lint-build`, on the PC's PR line (INF-2915's plan, the captain's direction B with the light profile).
+Its steps keep what caught problems on pull requests and leave the rest to the swept batch, which runs everything on each approved change before it reaches `main` ("The swept batch").
+Every version runs the release notes check, the typecheck, `pnpm check` and the unit tests that read a changed file.
+Its paths step, `scripts/pr-paths.ts`, reads the change against the merge commit's base parent and decides two things.
+The build and the critical path run unless every changed path is a test (under `tests/`, or a `.test` or `.spec` file), docs (`docs/`, `primitives/` or any Markdown file), a release note or the phone app (`ios/`).
+The browser tests run only when a path is under `src/renderer/` or `tests/browser/`, or is a browser test helper (`tests/helpers/browser*`).
+An empty change or an unreadable diff runs everything.
+No pull request runs the Linux startup fixtures, the node-headers proof or the adherence lint: none caught a problem on a pull request, main's check runs all three, and `pnpm check:changed` runs the adherence lint before each push.
+`tests/pr-paths.test.ts` holds the two decisions to real changes on main, and `tests/release-workflows-pr-checks.test.ts` holds the check's steps to them.
+
+### The weekly audit of the pull request check
+
+An Automation rule (`docs/automation.md`) asks the first mate every week to start a task in the Infinitary project that repeats INF-2915's audit, at the captain's request.
+The first mate saves the rule as a draft, and the captain turns it on in Settings → Automation:
+
+- Name: Weekly pull request check audit.
+- Schedule: every Monday at 9:00 AM, America/Los_Angeles.
+- Project: Infinitary.
+- Prompt: "Start a task in Infinitary that runs the weekly audit of the pull request check in docs/testing.md ("The weekly audit of the pull request check") for the week up to {{scheduled time}}.
+  It answers on a card and changes no code."
+
+The audit is an answer: its crewmate ships nothing, and its card is the deliverable.
+It runs four steps.
+
+1. **The runs.**
+   It lists `ci.yml`'s pull request runs of the week and their jobs and steps, from where the last audit task ended or seven days back, and the swept batch's and main's runs of the same week.
+2. **The catches.**
+   For each failed step it reads the failure and counts a catch when a later version of the same pull request passed it or failed it the same way; anything else is the runner's own failure, counted apart.
+   It counts, per step, its runs, its catches and its median and slow-tail minutes, and the wall time from a push to its last finished check.
+3. **The escapes.**
+   It names each failure the swept batch or main found that a pull request step skipped by its paths would have caught, from the failed tests' paths and the change they came in.
+4. **The answer.**
+   Its card compares the counts with the last audit's report, names each step that caught nothing in the week and each escape, and offers any trim, or any step to restore, as a choice for the captain.
+
 ## The critical path
 
 Every pull request runs one journey, the critical path (INF-2480's plan, the captain: "path six-steps (launch, sign in, project, first mate, crewmate card, merge)"; INF-2507): `tests/e2e/critical-path.spec.ts`.
 It walks a fresh install from the gate to a merged change in the real app, one test with a named section per step.
 Those sections are the gate at launch, a key signed in through the gate's own chip, a project started in Settings, a message that starts a crewmate, the crewmate's card, and the merge click that puts its commit on the project's main.
-`ci.yml`'s `critical-path` job runs it through `source-journeys.yml` with `suite: affected` in the desktop lane, on the app built from the pull request's merge commit on the Linux desktop ("The Linux source desktop").
-Its check is `critical-path / source-desktop (desktop)`.
+`ci.yml`'s `typecheck-lint-build` check runs it as its last step (INF-2915's plan, the captain's direction B), on the app that check just built from the pull request's merge commit, on the Linux desktop `.github/actions/linux-desktop` prepares, as `source-journeys.yml` prepares its own ("The Linux source desktop").
+A version that skips the build skips it too ("What a pull request runs").
 A pull request that edits the journey runs it three rounds and then alone, as any edited journey (`scripts/journey-runs.ts`); any other pull request runs it once.
+A failed run keeps the window and the journey's results as the `source-desktop-critical-path` artifact.
 The swept batch runs it again on the composed batch, in `batch.yml`'s own `critical-path` job, and passes only when it passed ("The swept batch").
 Every other journey runs on request ("Journeys on request") and in main's desktop release check, never on a pull request of its own accord.
 A step that breaks fails the pull request, and is repaired at its owner; weakening or deleting the journey is ask-first ("This project's rulings on tests").
@@ -1230,8 +1267,7 @@ A Linux job with no kind, such as main's startup fixtures, the Linux packages an
 | `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, and `replay.yml`'s `replay-gate` | `LINUX_RUNNER` |
 | `gate` | `journeys.yml`'s `choose-journeys` | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane and its Linux test groups (`linux-tests`) | `LINUX_RUNNER` |
-| `typecheck` | `ci.yml`'s `typecheck-lint-build` | `LINUX_RUNNER` |
-| `startup` | `ci.yml`'s `linux-startup` | `LINUX_RUNNER` |
+| `typecheck` | `ci.yml`'s `typecheck-lint-build`, which runs the critical path and so needs a PC queue with the desktop, such as the PC's PR line `shell-pc-linux-pr` | `LINUX_RUNNER` |
 
 ### Each Mac job's kind and size
 
@@ -1365,7 +1401,7 @@ An install inside a container needs none of this: the container's apt is its own
 ## The Linux source desktop
 
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on Ubuntu 24.04 x64 (`LINUX_RUNNER`, hosted when unset), under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
-`journeys.yml` calls it as `linux-overflow` with `suite: affected` for a request's named journeys, and `ci.yml` for the critical path ("Journeys on the pull request"); INF-2539 removed the pull request's `linux-source` call and its fixed starter list.
+`journeys.yml` calls it as `linux-overflow` with `suite: affected` for a request's named journeys, and `batch.yml` for the critical path on the composed batch ("The swept batch"); INF-2539 removed the pull request's `linux-source` call and its fixed starter list.
 Linux runs the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys, the device journeys and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
 `verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, in every alpha or the swept batch it reuses and named full-run exceptions, in eight jobs, with no run-alone pass (INF-2340).
 Four take a quarter each of the parallel lanes (`styles`, `renderer` and `application`) and four a quarter each of the serial `desktop` lane, each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its share, such as `Main push · App journeys (Linux; serial group 2/4)`, a serial group being a share of the desktop lane.
@@ -1425,14 +1461,11 @@ The launcher gives each app a throwaway HOME, userData, TMPDIR and XDG configura
 
 ## Linux automatic startup fixtures
 
-The PR's `linux-startup` job in `ci.yml` runs the production runtime/session classifier through `.github/actions/linux-startup`, a job of its own beside `typecheck-lint-build`, so a failed build never stops it.
+`linux-startup.yml` runs the production runtime/session classifier through `.github/actions/linux-startup`; `main.yml` calls it once per main check, so a burst of pushes to main is checked once.
+No pull request runs it: it caught nothing on 504 pull request runs (INF-2915's plan), and the swept batch does not run it either.
 Both startup fixtures and their result summary run even when the other fixture fails, unless the job was cancelled.
-The job's paths step, `scripts/startup-paths.ts`, reads the change against the merge commit's base parent and skips the fixture step when every changed path is under `docs/`, `primitives/` or `release-notes/`, ends in `.md`, or is a workflow other than `ci.yml` (INF-2486 cut F); the job still reports, and any other path, an empty change or an unreadable diff runs the fixtures.
-The fixtures need systemd and Docker, so the job's `startup` kind ("Each Linux job's kind") may name only a PC queue, such as the PC's PR line `shell-pc-linux-pr` (DOP-268's plan), and never a Mac mini guest's queue.
-Without the kind, the job runs where `LINUX_RUNNER` sends it; main's called `linux-startup.yml` job has no kind and always does.
-A newer push cancels the PR job, including startup, through `ci.yml`'s existing concurrency rule; startup no longer finishes independently on a superseded PR version.
-`linux-startup.yml` is a called workflow that runs the same action; `main.yml` calls it once per main check, so a burst of pushes to main is checked once.
-Both use a disposable Ubuntu machine: the PR job the PC's fresh virtual machine through `LINUX_RUNNER`, or GitHub-hosted Ubuntu when it is unset, and main's job GitHub-hosted `ubuntu-24.04` ("A release's hosted machines").
+The fixtures need systemd and Docker.
+It uses a disposable GitHub-hosted `ubuntu-24.04` machine ("A release's hosted machines").
 It checks a disposable logged-out user under running systemd, then starts that user's manager for the available case.
 It also checks a plain Ubuntu container with installed systemctl but no running systemd, then an unavailable systemctl.
 The job logs the runtime, commands, statuses and classification, never the user manager's environment values.

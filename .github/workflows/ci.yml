@@ -1,9 +1,15 @@
 name: ci
 
-# Pull requests retain typecheck, lint and build, and run the one
-# critical-path journey (INF-2507). Edited unit files run
-# three total rounds locally, never in extra PR repeat jobs. Full unit,
-# integration and probe sweeps run here only on request, never on PRs.
+# Pull requests run one Linux job (INF-2915's plan, the captain's direction
+# B): the release notes, typecheck, the lint, the unit tests that read a
+# changed file, the build and the one critical-path journey (INF-2507), and
+# the browser tests when a version touches the renderer or its browser tests.
+# A version whose every path is a test, docs, a release note or the phone app
+# skips the build and the critical path (scripts/pr-paths.ts). The swept
+# batch runs everything before a change reaches main (docs/testing.md, "What
+# a pull request runs"). Edited unit files run three total rounds locally,
+# never in extra PR repeat jobs. Full unit, integration and probe sweeps run
+# here only on request, never on PRs.
 # A push to main starts none of these jobs (INF-2340): main.yml's full check
 # runs the same commands in verify.yml's linux-checks lane and its Linux test
 # groups, every probe included.
@@ -36,7 +42,7 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# The retained PR jobs run on every pull request, including release notes.
+# The retained PR job runs on every pull request, including release notes.
 # Full sweeps are explicitly excluded from pull requests at the job boundary.
 # Each test step ends at 30 minutes (INF-1083, the captain's choice for unit
 # tests): a stuck test or wait ends sooner, by its own cap of at most 10
@@ -44,12 +50,13 @@ concurrency:
 jobs:
   # Each job's name leads with what started it (scripts/ci-job-names.mjs).
   typecheck-lint-build:
-    name: ${{ github.event_name == 'pull_request' && 'Pull request · Code, build and affected unit tests (Linux)' || 'Manual request · Code and build (Linux)' }}
+    name: ${{ github.event_name == 'pull_request' && 'Pull request · Code, build, affected tests and critical path (Linux)' || 'Manual request · Code and build (Linux)' }}
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').typecheck || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     steps:
       - uses: actions/checkout@v4
         with:
-          # The pull request's merge commit and its base parent, for the notes step.
+          # The pull request's merge commit and its base parent, for the notes
+          # and paths steps.
           fetch-depth: 2
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -62,20 +69,27 @@ jobs:
       - name: Release notes
         if: ${{ github.event_name == 'pull_request' }}
         run: node scripts/release-notes.ts change --base HEAD^1
+      # What this version runs beyond its code checks (INF-2915's plan):
+      # build=false when every changed path is a test, docs, a release note
+      # or the phone app; browser=true when one is the renderer or its
+      # browser tests. Plain Node, no install.
+      - name: Changed paths
+        id: paths
+        if: ${{ github.event_name == 'pull_request' }}
+        run: node scripts/pr-paths.ts --base HEAD^1
       - uses: ./.github/actions/node-headers
       - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
-          # Prove the actual pnpm lifecycle cannot download Node headers.
-          NPM_PACKAGE_CONFIG_NODE_GYP_DISTURL: http://127.0.0.1:9
-          NPM_PACKAGE_CONFIG_NODE_GYP_DEVDIR: ${{ runner.temp }}/install-header-cache
-      - uses: ./.github/actions/prove-node-headers
       - run: pnpm typecheck
       - run: pnpm check
+      # The adherence lint caught nothing on 372 pull request runs (INF-2915's
+      # plan), so it runs on a request, as main's check does, and before each
+      # push in pnpm check:changed, never on a pull request.
       - run: pnpm lint:adherence
-      - run: pnpm build
+        if: ${{ github.event_name != 'pull_request' }}
       # The unit tests that import or read each changed file run once here
       # (scripts/unit-reach.ts directUnitReach), so a break in a reader the
       # crewmate skipped fails the pull request, not main's full check.
@@ -84,58 +98,53 @@ jobs:
         run: node scripts/unit-repeats.ts --reach --base HEAD^1 --run
         timeout-minutes: 30
       # The browser layer (docs/testing.md, "The browser layer"): every
-      # browser file, about a minute, so a pull request that breaks what the
-      # window draws fails here. A requested sweep runs them in unit-tests.
+      # browser file, about three minutes, when the version touches the
+      # renderer or its browser tests. A requested sweep runs them in
+      # unit-tests, and the swept batch on every approved change.
       - uses: ./.github/actions/browser-chromium
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && steps.paths.outputs.browser == 'true' }}
       - name: Browser tests
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && steps.paths.outputs.browser == 'true' }}
         run: pnpm test --project browser
         timeout-minutes: 30
-
-  # The Linux automatic startup fixtures (docs/testing.md), a job of their own
-  # so they report even when the build fails. They need systemd and Docker,
-  # so their startup kind (DOP-268's plan) may name only a PC queue, such as
-  # the PC's PR line; without it they go where LINUX_RUNNER sends them.
-  # INF-2486 cut F: a change whose every path is docs, primitives, Markdown,
-  # release notes or a workflow other than this one skips the fixture step,
-  # and the job still reports (scripts/startup-paths.ts).
-  linux-startup:
-    if: github.event_name == 'pull_request'
-    name: Pull request · Startup checks (Linux)
-    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').startup || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
-    steps:
-      - uses: actions/checkout@v4
+      - run: pnpm build
+        if: ${{ github.event_name != 'pull_request' || steps.paths.outputs.build == 'true' }}
+      # The critical path (INF-2480's plan, captain: "path six-steps (launch,
+      # sign in, project, first mate, crewmate card, merge)"; INF-2507): the
+      # one journey every pull request that builds the app runs, on the app
+      # just built from the pull request's merge commit, on the Linux desktop
+      # (docs/testing.md, "The critical path"). A change that edits it runs
+      # it three rounds and alone, as any edited journey.
+      - uses: ./.github/actions/linux-desktop
+        if: ${{ github.event_name == 'pull_request' && steps.paths.outputs.build == 'true' }}
+      - name: Critical-path journey
+        id: critical-path
+        if: ${{ github.event_name == 'pull_request' && steps.paths.outputs.build == 'true' }}
+        # The journey ends at 75 minutes and its command at 90 (INF-1083,
+        # the captain's check limits, as journeys.yml).
+        timeout-minutes: 90
+        run: scripts/on-screen.sh node scripts/journey-runs.ts --base HEAD^1 --files tests/e2e/critical-path.spec.ts --alone-out playwright-report/alone -- --project=desktop
+        env:
+          INFINITARY_SOURCE_EVIDENCE: ${{ runner.temp }}/source-desktop-evidence
+          PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/source-results.json
+          INFINITARY_E2E_RUN_MINUTES: 75
+          SCREEN: 2560x1600x24
+      # Linux runs every test it can (docs/testing.md, "Tests that need a
+      # Mac"): a test that skipped here without MAC_ONLY_TAG fails the job.
+      - name: Refuse a test that skipped on Linux without the Mac tag
+        if: ${{ !cancelled() && (steps.critical-path.outcome == 'success' || steps.critical-path.outcome == 'failure') }}
+        run: node scripts/untagged-skips.ts playwright-report/source-results.json
+      - name: Keep the Linux window and the journey's results
+        if: ${{ always() && steps.critical-path.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
         with:
-          # The pull request's merge commit and its base parent, for the paths step.
-          fetch-depth: 2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - name: Startup paths
-        id: paths
-        run: node scripts/startup-paths.ts --base HEAD^1
-      - name: Linux automatic startup
-        if: ${{ steps.paths.outputs.run == 'true' }}
-        uses: ./.github/actions/linux-startup
-
-  # The critical path (INF-2480's plan, captain: "path six-steps (launch, sign
-  # in, project, first mate, crewmate card, merge)"; INF-2507): the one
-  # journey every pull request runs, the app built from the pull request's
-  # merge commit on the Linux desktop (docs/testing.md, "The critical path").
-  # A change that edits it runs it three rounds and alone, as any edited
-  # journey; every other journey runs on request and in main's desktop
-  # release check.
-  critical-path:
-    if: github.event_name == 'pull_request'
-    name: Pull request · Critical-path journey
-    uses: ./.github/workflows/source-journeys.yml
-    with:
-      trigger: Pull request
-      suite: affected
-      lane: desktop
-      files: tests/e2e/critical-path.spec.ts
-      artifact-suffix: critical-path
+          name: source-desktop-critical-path
+          path: |
+            ${{ runner.temp }}/source-desktop-evidence/
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 3
 
   # The in-memory cohorts and the browser layer (docs/test-cohorts.md).
   unit-tests:

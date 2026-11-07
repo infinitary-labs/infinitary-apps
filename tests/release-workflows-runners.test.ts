@@ -388,10 +388,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     ],
     gate: ["journeys.yml:choose-journeys"],
     checks: ["verify.yml:lane", "verify.yml:linux-tests"],
+    // INF-2915's plan: the pull request's one job runs the critical path,
+    // which needs a desktop, so this kind names only a PC queue.
     typecheck: ["ci.yml:typecheck-lint-build"],
-    // DOP-268's plan: the startup fixtures need systemd and Docker, so this
-    // kind names only a PC queue (docs/testing.md, "Linux automatic startup fixtures").
-    startup: ["ci.yml:linux-startup"],
   };
   const queued = new Set<string>();
   type Job = { "runs-on"?: string; strategy?: { matrix?: Record<string, unknown> } };

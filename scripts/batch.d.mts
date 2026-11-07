@@ -16,20 +16,24 @@ export type QueueState = {
   tree?: string;
 };
 export type Member = { number: number; head: string };
-/** An open pull request: its version, the branch it targets and its queue state. */
-export type QueueEntry = Member & { base: string; queue: QueueState | null };
+/**
+ * An open pull request: its version, the branch it targets, whether it is a
+ * paused batch's fix (labeled FIX_LABEL) and its queue state.
+ */
+export type QueueEntry = Member & { base: string; fix?: boolean; queue: QueueState | null };
 /**
  * A batch run's change as its verdict reads it: the pull request's current
  * version and its queue state there (null once closed), and `swept`, the
  * swept version's queue state, read only when the change was pushed again.
  */
 export type CurrentMember = { head: string; queue: QueueState | null; swept?: QueueState | null };
-export type BatchRun = { id: number; status: string; conclusion: string | null };
+export type BatchRun = { id: number; status: string; conclusion: string | null; created_at?: string };
 export type StatusWrite = Member & { state: string; description: string; url: string };
 
 export const QUEUE: string;
 export const WAITING: string;
 export const MAIN: string;
+export const FIX_LABEL: string;
 export function inBatch(runId: number): string;
 export function passed(runId: number, tree: string): string;
 export function readQueueStatus(statuses: readonly CommitStatus[]): QueueState | null;
@@ -37,12 +41,13 @@ export function ownsChanges(run: BatchRun | undefined): boolean;
 export function formBatch(
   entries: readonly QueueEntry[],
   runs: ReadonlyMap<number, BatchRun>,
-): { action: "none" | "wait" | "sweep"; reason: string; members: Member[] };
+): { action: "none" | "wait" | "sweep"; resume?: true; reason: string; members: Member[] };
 export function resume(
   entries: readonly QueueEntry[],
   options: { url: string; except?: number },
 ): StatusWrite[];
 export function headList(members: readonly Member[]): string;
+export function composeLocally(batch: { base: string; tree: string; members: readonly Member[] }): string;
 export function readComposition(
   output: string,
   members: readonly Member[],

@@ -16,10 +16,12 @@ name: batch
 # pause the sweeps until a fix arrives, then we rerun the sweep with
 # everything queued + the fix"): it pauses every change in it with the
 # failed job's link, reruns nothing and blames no change, and new approvals
-# wait behind the pause. A by-hand start ends it: `resume` with a reason, or
-# `send_back` naming one change, turns the paused changes back to waiting
-# and starts one sweep of everything waiting, the fix included. A by-hand
-# start can also rehearse a batch of named pull requests and mark nothing.
+# wait behind the pause. The fix ends it: once a pull request its repair
+# labeled fixes-batch is approved, the next start turns the paused changes
+# back to waiting and sweeps everything waiting, the fix included (docs/
+# testing.md, "A paused batch's repair"). A by-hand start ends it too:
+# `resume` with a reason, or `send_back` naming one change. A by-hand start
+# can also rehearse a batch of named pull requests and mark nothing.
 #
 # The batch's state lives only in infinitary/queue (scripts/batch.mjs). This
 # workflow writes it with its own credential, which starts no workflow, and
@@ -108,9 +110,10 @@ jobs:
             if (writes.length)
               await github.rest.actions.createWorkflowDispatch({...context.repo, workflow_id: 'batch.yml', ref: 'main', inputs: {}});
 
-  # A by-hand resume of a paused batch, once its fix is approved or its
-  # failure is judged a flake with an owner: every paused change waits again
-  # and the next batch starts, sweeping everything waiting.
+  # A by-hand resume of a paused batch, once its failure is judged a flake
+  # with an owner, or a fix without the fixes-batch label is approved: every
+  # paused change waits again and the next batch starts, sweeping everything
+  # waiting.
   resume:
     if: github.event_name == 'workflow_dispatch' && inputs.resume != ''
     name: Manual request · Resume the paused batch
@@ -171,6 +174,11 @@ jobs:
               const entries = await batch.readOpenQueue(github, context.repo);
               const plan = batch.formBatch(entries, await batch.readRuns(github, context.repo, entries));
               core.notice(plan.reason);
+              // A paused batch's fix arrived: the paused changes wait again before they compose.
+              if (plan.resume) {
+                const url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+                for (const write of batch.resume(entries, {url})) await batch.writeStatus(github, context.repo, write);
+              }
               members = plan.members;
             }
             core.setOutput('members', JSON.stringify(members));
@@ -188,6 +196,7 @@ jobs:
         if: steps.form.outputs.heads != ''
         uses: actions/github-script@v7
         env:
+          BASE: ${{ steps.compose.outputs.base }}
           MEMBERS: ${{ steps.form.outputs.members }}
           REHEARSAL: ${{ inputs.rehearsal }}
         with:
@@ -207,6 +216,9 @@ jobs:
             }
             for (const member of composed.conflictsBatch)
               core.notice(`#${member.number} conflicts only with an earlier change here, so it waits for the next batch.`);
+            // A repair reads this line to compose the swept batch on its own clone.
+            if (composed.merged.length)
+              core.notice(`Compose this batch locally: ${batch.composeLocally({base: process.env.BASE, tree: composed.tree, members: composed.merged})}`);
             core.setOutput('sweep', composed.merged.length ? 'true' : 'false');
             core.setOutput('members', JSON.stringify(composed.merged));
             core.setOutput('heads', batch.headList(composed.merged));
@@ -251,7 +263,9 @@ jobs:
 
   # Writes the sweep's verdict on its changes. Its name carries the batch's
   # tree, which the alpha's proof reads (scripts/main-alpha-proof.mjs); a
-  # rehearsal's never reads as a verdict.
+  # rehearsal's never reads as a verdict. A red verdict pauses its changes
+  # and starts one more run, which only reads the queue, so a fix approved
+  # while the sweep ran ends the pause at once.
   verdict:
     needs: [compose, sweep, critical-path]
     if: ${{ !cancelled() && needs.compose.outputs.sweep == 'true' }}

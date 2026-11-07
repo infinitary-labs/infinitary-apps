@@ -1,6 +1,12 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { BatchRun } from "../scripts/batch.mjs";
 import {
+  composeLocally,
+  FIX_LABEL,
   failedTestFiles,
   formBatch,
   inBatch,
@@ -18,7 +24,14 @@ import {
   WAITING,
 } from "../scripts/batch.mjs";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
-import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows.ts";
+import {
+  githubScript,
+  loadYamlFile,
+  root,
+  workflowString,
+  workflowValue,
+} from "./helpers/releaseWorkflows.ts";
+import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-2430 piece 3, the captain's approved plan for the swept batch, and the
 // captain's fix-forward rule for red batches (INF-2948, direction 2):
@@ -28,6 +41,7 @@ import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWo
 // list, newest first, and pull request 917 as /commits/{sha}/pulls returned it
 // for main's commit c44de17a0 (head, merge commit and tree from git).
 const repo = { owner: "infinitary-labs", repo: "infinitary" };
+const nodeRequire = createRequire(import.meta.url);
 const runUrl = (id: number) => `https://github.com/infinitary-labs/infinitary/actions/runs/${id}`;
 const status = (state: string, description: string, created_at: string, context = QUEUE) => ({
   state,
@@ -182,6 +196,69 @@ describe("forming a batch", () => {
     expect(plan.reason).toContain("Batch run 42305850996 failed");
   });
 
+  // A paused batch's repair labels its fix (docs/testing.md, "A paused
+  // batch's repair"), the captain's "until a fix arrives": once the fix is
+  // approved the pause ends, and the next batch sweeps the paused changes
+  // with it and everything else waiting, in approval order.
+  it("ends a pause once a fix labeled fixes-batch is approved, sweeping the paused changes with it", () => {
+    const paused = (number: number, approvedAt: string) =>
+      entry(
+        number,
+        readQueueStatus([
+          status(
+            "pending",
+            "Paused after batch run 42305850996; tests/e2e/card-leave.spec.ts failed; touched by #1154",
+            "2026-11-06T22:47:30Z",
+          ),
+          status("pending", inBatch(42_305_850_996), "2026-11-06T22:35:30Z"),
+          approved(approvedAt),
+        ]),
+      );
+    const waiting = entry(1190, readQueueStatus([approved("2026-11-06T23:05:00Z")]));
+    const fix = {
+      ...entry(1200, readQueueStatus([approved("2026-11-06T23:20:00Z")])),
+      fix: true,
+    };
+    const pausedBatch = [
+      paused(1166, "2026-11-06T22:20:00Z"),
+      paused(1154, "2026-11-06T22:10:00Z"),
+    ];
+    // The paused run as readRuns reads it: when it started.
+    const runs = new Map([
+      [
+        42_305_850_996,
+        {
+          id: 42_305_850_996,
+          status: "completed",
+          conclusion: "failure",
+          created_at: "2026-11-06T22:35:17Z",
+        },
+      ],
+    ]);
+    // Labeled but not yet approved, the fix ends nothing.
+    expect(formBatch([{ ...fix, queue: null }, waiting, ...pausedBatch], runs)).toMatchObject({
+      action: "wait",
+    });
+    // A labeled fix approved before the paused run started was in that batch
+    // or could not compose there, so it does not start the same sweep again.
+    const tried = { ...fix, queue: readQueueStatus([approved("2026-11-06T22:30:00Z")]) };
+    expect(formBatch([tried, waiting, ...pausedBatch], runs)).toMatchObject({ action: "wait" });
+    const plan = formBatch([fix, waiting, ...pausedBatch], runs);
+    expect(plan).toMatchObject({ action: "sweep", resume: true });
+    expect(plan.members.map((member) => member.number)).toEqual([1154, 1166, 1190, 1200]);
+    expect(plan.reason).toContain("Fix #1200 is approved");
+    // The caller first writes each paused change waiting again.
+    expect(
+      resume([fix, waiting, ...pausedBatch], { url: runUrl(42_330_000_000) }).map(
+        (write) => write.number,
+      ),
+    ).toEqual([1166, 1154]);
+    // A fix stacked on another branch waits for its base, so it ends no pause.
+    expect(
+      formBatch([{ ...fix, base: "fm/task-6f0e1c2a" }, waiting, ...pausedBatch], runs),
+    ).toMatchObject({ action: "wait" });
+  });
+
   // INF-2948: a change stacked on another change's branch would sweep its
   // base's commits too, so it waits until its base merges and GitHub points
   // it at main.
@@ -210,11 +287,13 @@ describe("reading the queue and the batch runs it names", () => {
       number: 1176,
       head: { sha: "571679da4d9eef0a6061c7f20b4612df44715d79" },
       base: { ref: "main" },
+      labels: [{ name: "fixes-main" }],
     },
     {
       number: 1177,
       head: { sha: "204cba081ac081a141776190f926a2e722018f06" },
       base: { ref: "fm/task-6f0e1c2a" },
+      labels: [{ name: FIX_LABEL }],
     },
   ];
   const statuses: Record<string, ReturnType<typeof status>[]> = {
@@ -237,15 +316,40 @@ describe("reading the queue and the batch runs it names", () => {
       method === "pulls" ? pulls : (statuses[parameters.ref!] ?? []),
   };
 
-  it("reads each change's target branch, and only the runs that changes are in", async () => {
+  it("reads each change's target branch and fix label, and only the runs that changes are in", async () => {
     const entries = await readOpenQueue(github, repo);
-    expect(entries.map(({ number, base, queue }) => [number, base, queue?.kind])).toEqual([
-      [1176, "main", "in-batch"],
-      [1177, "fm/task-6f0e1c2a", "waiting"],
-    ]);
+    expect(entries.map(({ number, base, fix, queue }) => [number, base, fix, queue?.kind])).toEqual(
+      [
+        [1176, "main", false, "in-batch"],
+        [1177, "fm/task-6f0e1c2a", true, "waiting"],
+      ],
+    );
     const runs = await readRuns(github, repo, entries);
     expect(runReads).toEqual([42_325_592_413]);
     expect(formBatch(entries, runs)).toMatchObject({ action: "wait" });
+  });
+
+  it("reads the run a pause names, once for all the changes it paused", async () => {
+    const reads: number[] = [];
+    const reader = {
+      rest: {
+        actions: {
+          getWorkflowRun: async ({ run_id }: { run_id: number }) => {
+            reads.push(run_id);
+            return { data: { id: run_id, status: "completed", conclusion: "failure" } };
+          },
+        },
+      },
+    };
+    const paused = readQueueStatus([
+      status(
+        "pending",
+        "Paused after batch run 42305850996; tests/e2e/card-leave.spec.ts failed",
+        "2026-11-06T22:47:30Z",
+      ),
+    ]);
+    await readRuns(reader, repo, [entry(1166, paused), entry(1154, paused), entry(1190, null)]);
+    expect(reads).toEqual([42_305_850_996]);
   });
 });
 
@@ -286,13 +390,26 @@ describe("the sweep's verdict", () => {
   });
 
   // INF-2948, direction 2: a red sweep reruns nothing and blames no change.
-  it("pauses every change in a red sweep with the failed job's link, and starts nothing", () => {
+  // It starts one more run, which forms no batch while the pause holds
+  // (formBatch), so a fix approved during the sweep ends the pause at once.
+  it("pauses every change in a red sweep with the failed job's link, and starts only a read of the queue", () => {
     const failedJob = {
       name: "Merge batch · Desktop checks / Merge batch · App journeys (Linux; parallel group 2/4)",
       html_url: `${runUrl(runId)}/job/120000000001`,
     };
     const plan = verdict({ ...base, swept: "failure", current: inThisRun(), failedJob });
-    expect(plan.next).toBeNull();
+    expect(plan.next).toBe("sweep");
+    expect(
+      formBatch(
+        plan.writes.map((write) =>
+          entry(
+            write.number,
+            readQueueStatus([status("pending", write.description, "2026-11-03T22:00:00Z")]),
+          ),
+        ),
+        new Map(),
+      ),
+    ).toMatchObject({ action: "wait" });
     expect(plan.writes.map((write) => [write.number, write.state, write.url])).toEqual(
       members.map((member) => [member.number, "pending", failedJob.html_url]),
     );
@@ -365,7 +482,9 @@ describe("the sweep's verdict", () => {
     });
     const pushedAgain = verdict({ ...base, swept: "failure", current });
     expect(pushedAgain.writes.map((write) => write.number)).toEqual([930, 932]);
-    expect(pushedAgain.next).toBeNull();
+    // A pause starts one run that only reads the queue (a fix approved
+    // during the sweep ends the pause there).
+    expect(pushedAgain.next).toBe("sweep");
     current.set(932, {
       head: members[2]!.head,
       queue: readQueueStatus([status("failure", "Sent back", "2026-11-03T21:30:00Z")]),
@@ -600,7 +719,7 @@ describe("a change sent back by hand, then pushed again before the verdict", () 
       swept: { kind: "in-batch", run: runId },
     });
     const answer = plan(current);
-    expect(answer.next).toBeNull();
+    expect(answer.next).toBe("sweep");
     expect(answer.writes.map((write) => [write.number, write.state, write.url])).toEqual(
       [1183, 1176, 1184, 1185, 1177].map((number) => [number, "pending", failedJob.html_url]),
     );
@@ -973,6 +1092,153 @@ describe("batch.yml", () => {
     expect(swept("success", "failure")).toBe("failure");
     expect(swept("failure", "success")).toBe("failure");
     expect(swept("failure", "failure")).toBe("failure");
+  });
+
+  // The compose job's two scripted steps, run as actions/github-script runs
+  // them against GitHub-shaped answers: open pull requests with their labels,
+  // each version's statuses, and the statuses the steps write.
+  const composeStep = (id: string) => {
+    const step = batch.jobs.compose!.steps!.find((candidate) => candidate.id === id);
+    return String(step?.with?.script ?? "");
+  };
+  const fakeGitHub = (
+    pulls: {
+      number: number;
+      head: { sha: string };
+      base: { ref: string };
+      labels: { name: string }[];
+    }[],
+    statuses: Record<string, ReturnType<typeof status>[]>,
+  ) => {
+    const written: { sha: string; state: string; description: string; target_url: string }[] = [];
+    const github = {
+      paginate: async (method: string, parameters: { ref?: string }) =>
+        method === "pulls" ? pulls : (statuses[parameters.ref!] ?? []),
+      rest: {
+        pulls: { list: "pulls" },
+        repos: {
+          listCommitStatusesForRef: "statuses",
+          createCommitStatus: async (write: (typeof written)[number]) => {
+            written.push(write);
+            return { data: {} };
+          },
+        },
+        actions: {
+          // Batch run 42305850996 as GitHub reads it, the run the pause names.
+          getWorkflowRun: async ({ run_id }: { run_id: number }) => ({
+            data: {
+              id: run_id,
+              status: "completed",
+              conclusion: "failure",
+              created_at: "2026-11-06T22:35:17Z",
+            },
+          }),
+        },
+      },
+    };
+    return { github, written };
+  };
+  const runStep = async (script: string, github: unknown, env: Record<string, string>) => {
+    const outputs: Record<string, string> = {};
+    const notices: string[] = [];
+    await githubScript(script, ["core", "github", "context", "process", "require"])(
+      {
+        notice: (text: string) => notices.push(text),
+        setOutput: (key: string, value: string) => {
+          outputs[key] = value;
+        },
+      },
+      github,
+      { repo, serverUrl: "https://github.com", runId: 42_330_000_000 },
+      { env: { GITHUB_WORKSPACE: root, REHEARSAL: "", ...env } },
+      (name: string) => (name === "node:url" ? { pathToFileURL } : nodeRequire(name)),
+    );
+    return { outputs, notices };
+  };
+
+  // The captain's "until a fix arrives": the fix's approval mark starts this
+  // run, and its form step writes every paused change waiting again, with
+  // this run's link, before the batch composes them with the fix.
+  it("turns the paused changes back to waiting when their fix's approval starts the run", async () => {
+    const sha = (number: number) => String(number).padEnd(40, "0");
+    const pull = (number: number, labels: string[] = []) => ({
+      number,
+      head: { sha: sha(number) },
+      base: { ref: "main" },
+      labels: labels.map((name) => ({ name })),
+    });
+    const pause = (approvedAt: string) => [
+      status(
+        "pending",
+        "Paused after batch run 42305850996; the sweep failed",
+        "2026-11-06T22:47:30Z",
+      ),
+      status("pending", inBatch(42_305_850_996), "2026-11-06T22:35:30Z"),
+      approved(approvedAt),
+    ];
+    const statuses = {
+      [sha(1154)]: pause("2026-11-06T22:10:00Z"),
+      [sha(1166)]: pause("2026-11-06T22:20:00Z"),
+      [sha(1200)]: [approved("2026-11-06T23:20:00Z")],
+    };
+    const labeled = fakeGitHub([pull(1200, [FIX_LABEL]), pull(1166), pull(1154)], statuses);
+    const { outputs, notices } = await runStep(composeStep("form"), labeled.github, {});
+    expect(
+      labeled.written.map((write) => [write.sha, write.state, write.description, write.target_url]),
+    ).toEqual([
+      [sha(1166), "pending", WAITING, runUrl(42_330_000_000)],
+      [sha(1154), "pending", WAITING, runUrl(42_330_000_000)],
+    ]);
+    expect(JSON.parse(outputs.members!).map((member: { number: number }) => member.number)).toEqual(
+      [1154, 1166, 1200],
+    );
+    expect(outputs.heads).toBe(`1154:${sha(1154)} 1166:${sha(1166)} 1200:${sha(1200)}`);
+    expect(notices[0]).toContain("Fix #1200 is approved");
+
+    // Without the label the same approval waits behind the pause and writes nothing.
+    const unlabeled = fakeGitHub([pull(1200), pull(1166), pull(1154)], statuses);
+    const waits = await runStep(composeStep("form"), unlabeled.github, {});
+    expect(unlabeled.written).toEqual([]);
+    expect(waits.outputs.heads).toBe("");
+  });
+
+  // A repair composes the swept batch on its own clone from one line of the
+  // compose job's log (tests/batch-compose.test.ts runs that line on git).
+  it("prints how to compose the swept batch locally, with main's version, the tree and each version", async () => {
+    const members = [
+      { number: 1193, head: "0d144bb1313db80170ab5ffdb2aa1f635340bd0f" },
+      { number: 1194, head: "d828722b1cdf7afcd6112d1a9f9880508cf27faf" },
+    ];
+    const temp = scratchDir("infinitary-batch-mark-");
+    mkdirSync(temp, { recursive: true });
+    // Batch run 42344197013's composition: #1193 conflicted with main.
+    writeFileSync(
+      join(temp, "composition"),
+      "conflict-main 1193\nmerged 1194\ntree 7a07342c26e44ee6680cae7b25fb811c15c8cc7d\n",
+    );
+    const { github, written } = fakeGitHub([], {});
+    const base = "0be4f0518aa3acfd9bd1788db2be4881b656eb3b";
+    const { notices } = await runStep(composeStep("mark"), github, {
+      BASE: base,
+      MEMBERS: JSON.stringify(members),
+      RUNNER_TEMP: temp,
+    });
+    const line = composeLocally({
+      base,
+      tree: "7a07342c26e44ee6680cae7b25fb811c15c8cc7d",
+      members: [members[1]!],
+    });
+    expect(line).toBe(
+      `git checkout --detach ${base} && scripts/batch-compose.sh apply 7a07342c26e44ee6680cae7b25fb811c15c8cc7d 1194:${members[1]!.head}`,
+    );
+    expect(notices).toContain(`Compose this batch locally: ${line}`);
+    expect(written.map((write) => write.description)).toEqual([
+      "Conflicts with main: bring the branch up to date",
+      inBatch(42_330_000_000),
+    ]);
+    // The step reads main's version from the compose step.
+    const mark = batch.jobs.compose!.steps!.find((step) => step.id === "mark");
+    expect(mark?.env?.BASE).toBe("${{ steps.compose.outputs.base }}");
   });
 
   it("names its verdict by the swept tree, and a rehearsal never as a verdict", () => {

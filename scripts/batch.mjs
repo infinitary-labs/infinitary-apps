@@ -17,14 +17,22 @@
  * A red sweep fixes forward (the captain: "whenever we meet a failure, we
  * pause the sweeps until a fix arrives, then we rerun the sweep with
  * everything queued + the fix"): it pauses every change in it, blames none
- * and reruns nothing, and no batch forms until a by-hand resume or send-back
- * turns the paused changes back to waiting and starts the next sweep.
+ * and reruns nothing, and no batch forms until the fix arrives - an approved
+ * pull request its repair labeled FIX_LABEL - or a by-hand resume or
+ * send-back turns the paused changes back to waiting and starts the next
+ * sweep.
  */
 
 export const QUEUE = "infinitary/queue";
 export const WAITING = "Waiting for the batch check";
 /** The branch every batch composes onto; a change stacked on another branch waits until it targets this one. */
 export const MAIN = "main";
+/**
+ * The label a paused batch's repair puts on its fix's pull request
+ * (docs/testing.md, "A paused batch's repair"): once the fix is approved, it
+ * ends the pause, and the next batch sweeps the paused changes with it.
+ */
+export const FIX_LABEL = "fixes-batch";
 const IN_BATCH = /^In batch run (\d+)$/;
 const PAUSED = /^Paused after batch run (\d+)(?:;|$)/;
 // A pass written before the fix-forward queue may still say "after a rerun".
@@ -78,9 +86,12 @@ export function ownsChanges(run) {
  * What a batch run does now, from every open pull request's queue state and
  * the readings of the batch runs those states name. A batch forms only after
  * the last green batch has fully merged, while no failed batch has paused the
- * queue and no run owns a change. It takes only changes that target main: a
- * change stacked on another branch waits until its base merges and GitHub
- * points it at main.
+ * queue and no run owns a change. A pause ends once a fix arrives: a change
+ * its repair labeled FIX_LABEL, approved after the paused run started. The
+ * batch then takes the paused changes back with `resume`, which tells the
+ * caller to write them waiting again first. It takes only changes that
+ * target main: a change stacked on another branch waits until its base
+ * merges and GitHub points it at main.
  */
 export function formBatch(entries, runs) {
   const queued = entries.filter((entry) => entry.queue && entry.base === MAIN);
@@ -92,10 +103,19 @@ export function formBatch(entries, runs) {
       members: [],
     };
   const paused = queued.filter((entry) => entry.queue.kind === "paused");
-  if (paused.length)
+  // A fix ends the pause only when approved after the paused run started: one
+  // approved before it was in that batch or could not compose there, so it
+  // would only start the same sweep again.
+  const started = Math.max(
+    ...paused.map((entry) => Date.parse(runs.get(entry.queue.run)?.created_at ?? "") || 0),
+  );
+  const fixes = queued.filter(
+    (entry) => entry.queue.kind === "waiting" && entry.fix && Date.parse(entry.queue.since) > started,
+  );
+  if (paused.length && !fixes.length)
     return {
       action: "wait",
-      reason: `Batch run ${paused[0].queue.run} failed, so the queue is paused until a resume or a send-back by hand.`,
+      reason: `Batch run ${paused[0].queue.run} failed, so the queue is paused until a fix labeled ${FIX_LABEL} is approved, or a resume or a send-back by hand.`,
       members: [],
     };
   const owned = queued.filter(
@@ -108,10 +128,17 @@ export function formBatch(entries, runs) {
       members: [],
     };
   const members = queued
-    .filter((entry) => entry.queue.kind === "waiting" || entry.queue.kind === "in-batch")
+    .filter((entry) => ["waiting", "in-batch", "paused"].includes(entry.queue.kind))
     .sort((a, b) => a.queue.since.localeCompare(b.queue.since) || a.number - b.number)
     .map((entry) => ({ number: entry.number, head: entry.head }));
   if (!members.length) return { action: "none", reason: "No approved change is waiting.", members };
+  if (paused.length)
+    return {
+      action: "sweep",
+      resume: true,
+      reason: `Fix ${fixes.map((entry) => `#${entry.number}`).join(", ")} is approved, so the changes batch run ${paused[0].queue.run} paused sweep again with it: ${members.length} approved changes.`,
+      members,
+    };
   return { action: "sweep", reason: `${members.length} approved changes are waiting.`, members };
 }
 
@@ -128,6 +155,13 @@ export function resume(entries, { url, except }) {
 
 /** The `<number>:<version>` list batch-compose.sh takes, in batch order. */
 export const headList = (members) => members.map((member) => `${member.number}:${member.head}`).join(" ");
+
+/**
+ * The compose job's line for a repair: the commands that compose this batch
+ * on any clone, as every sweep job does, from main's version it composed onto.
+ */
+export const composeLocally = ({ base, tree, members }) =>
+  `git checkout --detach ${base} && scripts/batch-compose.sh apply ${tree} ${headList(members)}`;
 
 /**
  * Parses batch-compose.sh's compose output: the tree, and which changes
@@ -157,10 +191,11 @@ export function readComposition(output, members) {
  * answer, even when the change's author pushed a new version after it: the
  * rest wait for the next batch, which this run starts without the change
  * sent back. Any other failed sweep pauses every change in it, with the
- * failed job's link, and starts nothing: it reruns nothing and blames no
- * change. The pause names the first test file the failed jobs' logs report
- * and which changes of the batch touch it (readFailedFiles), as evidence for
- * whoever writes the fix.
+ * failed job's link: it reruns nothing and blames no change. The pause names
+ * the first test file the failed jobs' logs report and which changes of the
+ * batch touch it (readFailedFiles), as evidence for whoever writes the fix.
+ * It starts one more run, which only reads the queue: a fix approved while
+ * this sweep ran ends the pause there at once, and otherwise nothing forms.
  */
 export function verdict({ runId, runUrl, swept, tree, members, current, failedJob, failedFiles = [] }) {
   // The member's queue state now, while it still names the version this run swept.
@@ -207,9 +242,9 @@ export function verdict({ runId, runUrl, swept, tree, members, current, failedJo
       description,
       url: failedJob?.html_url || runUrl,
     })),
-    next: null,
+    next: "sweep",
     summary:
-      "The sweep failed, so the queue is paused: these changes and every new approval wait until a fix is approved and a resume or a send-back by hand starts the next sweep." +
+      `The sweep failed, so the queue is paused: these changes and every new approval wait until a fix labeled ${FIX_LABEL} is approved, or a resume or a send-back by hand starts the next sweep.` +
       (failedFiles.length
         ? ` Failed test files: ${failedFiles.map((failed) => `${failed.file} (${touchedBy(failed)})`).join(", ")}.`
         : ""),
@@ -335,7 +370,10 @@ export async function readCurrent(github, repo, members) {
   return current;
 }
 
-/** Every open pull request with its current version, the branch it targets and its queue state. */
+/**
+ * Every open pull request with its current version, the branch it targets,
+ * whether it is a paused batch's fix (FIX_LABEL) and its queue state.
+ */
 export async function readOpenQueue(github, repo) {
   const pulls = await github.paginate(github.rest.pulls.list, { ...repo, state: "open", per_page: 100 });
   return Promise.all(
@@ -343,14 +381,16 @@ export async function readOpenQueue(github, repo) {
       number: pull.number,
       head: pull.head.sha,
       base: pull.base.ref,
+      fix: (pull.labels ?? []).some((label) => label.name === FIX_LABEL),
       queue: readQueueStatus(await statusesOf(github, repo, pull.head.sha)),
     })),
   );
 }
 
-/** The batch runs that changes in a batch name, one reading each. */
+/** The batch runs that changes in or paused after a batch name, one reading each. */
 export async function readRuns(github, repo, entries) {
-  const ids = [...new Set(entries.flatMap((entry) => (entry.queue?.kind === "in-batch" ? [entry.queue.run] : [])))];
+  const named = (entry) => (["in-batch", "paused"].includes(entry.queue?.kind) ? [entry.queue.run] : []);
+  const ids = [...new Set(entries.flatMap(named))];
   const runs = new Map();
   for (const id of ids) runs.set(id, (await github.rest.actions.getWorkflowRun({ ...repo, run_id: id })).data);
   return runs;

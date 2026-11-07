@@ -544,6 +544,7 @@ A change stacked on another change's branch waits until its base merges and GitH
 The `compose` job merges each change onto `main` with `scripts/batch-compose.sh`, the way a merge on GitHub combines files, with a fixed author and date.
 A change that conflicts with `main` itself fails with "Conflicts with main"; a change that conflicts only with an earlier change in the batch waits for the next one.
 Every sweep job composes the same commit again from `main` and the same versions, and fails if its tree differs from the one `compose` reported.
+The `compose` job's log prints the line that composes the same commit on any clone: "Compose this batch locally: git checkout --detach <main's version> && scripts/batch-compose.sh apply <tree> <number:version>...".
 Nothing is pushed: GitHub may refuse a workflow's own credential a push that changes workflow files, and the app merges every change with the captain's sign-in.
 
 The sweep is `verify.yml` with every journey and without the phone check, the whole check an alpha reuses: an alpha from a merge it checked runs no lane itself (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them").
@@ -552,10 +553,15 @@ Its Linux jobs run on GitHub's hosted machines and its Mac lanes on the `release
 Beside it, the `critical-path` job runs the critical path on the same composed commit on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
 A green sweep with a green critical path marks every change success with the batch's tree.
 A red sweep fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat").
-Its verdict pauses every change in it with the failed job's link, reruns nothing, blames no change and starts no batch.
+Its verdict pauses every change in it with the failed job's link, reruns nothing and blames no change.
 The pause names the first test file the failed jobs' logs report as failed and the batch's changes whose diffs touch that file, or that none does; the verdict's summary lists every such file.
-While any change is paused, no batch forms, and a change approved meanwhile, the fix included, waits.
-A by-hand start ends the pause, once a fix is approved or the failure is judged a flake with an owner who fixes it:
+While any change is paused, no batch forms, and a change approved meanwhile waits.
+A fix ends the pause: a pull request labeled `fixes-batch` (`FIX_LABEL`), approved after the paused run started.
+The start its approval mark makes turns every paused change back to waiting and sweeps everything waiting, the fix included, in approval order.
+The verdict starts one more run, which only reads the queue, so a fix approved while the sweep ran ends the pause as soon as the verdict writes it.
+A fix approved before the paused run started was in that batch or could not compose there, so it ends nothing, and a fix that could not compose ends the next pause only with a new version approved again.
+The label must be on the pull request when its approval mark is written, since a label alone starts no batch run.
+A by-hand start ends the pause too, once the failure is judged a flake with an owner who fixes it, or a fix without the label is approved:
 - `resume` with a reason turns every paused change back to waiting and starts the next batch, which sweeps everything waiting, the fix included;
 - `send_back` with `reason` fails one change's status with that reason, turns the other paused changes back to waiting and starts the next batch without it.
 
@@ -571,7 +577,37 @@ While another change of batch N is still open and green, the push is landing: th
 Anything else gets the full check, a merge outside the queue and a batch merged in an order that changed its files included.
 The alpha's proof follows a covered run to its batch run and reads its full check and its verdict's tree (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
 The fleet never cancels a running batch or a running main check unless the captain asks.
-`tests/batch.test.ts` holds the queue's rules and the workflows' triggers, and `tests/batch-compose.test.ts` the composition on real git.
+`tests/batch.test.ts` holds the queue's rules and the workflows' triggers, and `tests/batch-compose.test.ts` the composition, the local compose line and the bisect on real git.
+
+## A paused batch's repair
+
+A red sweep reaches the crew through the captain's own Automation rule on GitHub's event "A workflow run fails", for the workflow `batch` on the branch `main` (`docs/integrations.md`, "GitHub's events").
+Its words start one repair crewmate under the main repair direction, which covers a paused batch's fix, or steer the repair already open, and the app's code names no repair, as main's repair works ("Main's desktop release check").
+The rule tells a run at its first failed job, so the repair starts while the rest of the sweep still runs.
+A requested rehearsal pauses nothing, so its failure needs no repair.
+The rule's words, saved as a draft that the captain turns on:
+
+> A merge batch run failed: {{events}}
+> Unless only a requested batch rehearsal's jobs failed, start one repair crewmate in the infinitary project, or steer the repair already open, to repair the paused batch as docs/testing.md "A paused batch's repair" says: read the failure, compose the batch locally, bisect on the failed file, then fix forward with a fixes-batch pull request, send one change back, or declare a flake with an owner, so the batch sweeps again.
+
+The repair takes these steps:
+
+1. It reads the failure: the failed jobs' logs and, once the run ends, the verdict's summary, which names every failed test file and the batch's changes whose diffs touch it.
+   It reads the queue first, since a fix approved during the sweep may already have ended the pause.
+2. It composes the batch on its own working copy with the line the `compose` job's log prints ("The swept batch"), from a working copy with no uncommitted change.
+   That line checks out the very commit every sweep job built, whatever `main` merged since.
+3. It bisects the changes on the failed file: `scripts/batch-compose.sh bisect <tree> <number:version>... -- <the command that runs the failed file>`, from `main`'s version that line names.
+   The command runs on `main` alone and with every change, then git's own bisect walks the changes in batch order, and the script says "fails-main", "passes-batch" or "first-fails N", leaving `main`'s version checked out.
+   A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at a composed commit.
+4. It ends the pause one of three ways:
+   - It fixes forward when the fix is sure and is not the failing change's own work, such as a test that change left stale, or `main` itself failing the file: a pull request to `main`, labeled `fixes-batch` before its approval and approved under the main repair direction without waiting for the captain's click.
+     Its approval mark ends the pause, and the fix composes after the paused changes.
+   - It sends one change back when that change is wrong and its fix belongs on its own branch: `batch.yml` started by hand with `send_back` and `reason` fails that change's status, turns the rest back to waiting and starts the next batch without it.
+   - It declares a flake when the file passes on the composed batch and the log shows a failure no change caused: it files the flake with an owner who fixes its root cause, then starts `batch.yml` by hand with `resume` and a reason naming that task.
+5. A `resume` acts only on paused changes, so the repair starts it after the verdict wrote the pause, at the run's end; a send-back is that sweep's answer whenever it comes.
+   A by-hand `resume` also ends a pause for a fix approved without the label.
+
+A later red sweep pauses again, and the rule steers the same repair until a batch passes.
 
 ## CI job names
 

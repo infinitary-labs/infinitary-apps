@@ -1,9 +1,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { readComposition } from "../scripts/batch.mjs";
+import { composeLocally, readComposition } from "../scripts/batch.mjs";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-2430 piece 3, the captain's approved plan: "Each sweep job applies them
@@ -115,5 +115,132 @@ describe("composing a swept batch onto main", () => {
     expect(short.status).toBe(1);
     expect(short.stdout).toContain("Batch composed differently");
     expect(script(job(), "apply", tree, ...heads, `903:${changes.third}`).status).toBe(1);
+  });
+});
+
+// INF-2961, the captain's plan: "a repair crewmate on a failed batch run that
+// reads the failure, composes the batch locally, bisects on the failed file".
+// The compose job's log names main's version, the tree and each version; the
+// repair runs that line on its own clone, then bisects the composed changes.
+describe("a paused batch's repair, on its own clone", () => {
+  // A change that breaks what the failed file checks: here, that no
+  // broken.md exists.
+  const breaking = (origin: string) => {
+    run(origin, "checkout", "-q", "-b", "breaking", "main");
+    writeFileSync(join(origin, "broken.md"), "broken\n");
+    run(origin, "add", ".");
+    run(origin, "commit", "-q", "-m", "breaking");
+    run(origin, "checkout", "-q", "main");
+    return run(origin, "rev-parse", "breaking");
+  };
+  const failedFile = ["test", "!", "-e", "broken.md"];
+  // The repair's clone: the whole history, where scripts/batch-compose.sh is
+  // the project's own.
+  const repairClone = (origin: string) => {
+    const dir = scratchDir("infinitary-batch-repair-");
+    const clone = join(dir, "checkout");
+    run(dir, "clone", "-q", `file://${origin}`, clone);
+    return clone;
+  };
+  const batchOf = (job: () => string, members: { number: number; head: string }[]) => {
+    const clone = job();
+    const heads = members.map((m) => `${m.number}:${m.head}`);
+    const composed = readComposition(script(clone, "compose", ...heads).stdout, members);
+    return { base: run(clone, "rev-parse", "HEAD"), composed, heads };
+  };
+  const settled = (clone: string, base: string) => {
+    expect(run(clone, "rev-parse", "HEAD")).toBe(base);
+    expect(run(clone, "status", "--porcelain", "--untracked-files=no")).toBe("");
+    expect(existsSync(join(clone, ".git", "BISECT_LOG"))).toBe(false);
+  };
+
+  it("composes the swept batch from the line the compose job prints, after main moved on", () => {
+    const { origin, changes, job } = project();
+    const members = [
+      { number: 901, head: changes.first },
+      { number: 902, head: changes.second },
+    ];
+    const { base, composed } = batchOf(job, members);
+    const swept = job();
+    expect(
+      script(swept, "apply", composed.tree, ...members.map((m) => `${m.number}:${m.head}`)).status,
+    ).toBe(0);
+    // main moves on while the batch is paused; the repair's clone has it.
+    writeFileSync(join(origin, "later.md"), "later\n");
+    run(origin, "add", ".");
+    run(origin, "commit", "-q", "-m", "later");
+    const clone = repairClone(origin);
+    mkdirSync(join(clone, "scripts"));
+    copyFileSync(compose, join(clone, "scripts", "batch-compose.sh"));
+    const line = composeLocally({ base, tree: composed.tree, members: composed.merged });
+    const local = spawnSync("bash", ["--noprofile", "--norc", "-c", line], {
+      cwd: clone,
+      env: git,
+      encoding: "utf8",
+    });
+    expect(local.status, local.stderr).toBe(0);
+    // The very commit every sweep job built.
+    expect(run(clone, "rev-parse", "HEAD")).toBe(run(swept, "rev-parse", "HEAD"));
+    expect(run(clone, "rev-parse", "HEAD^{tree}")).toBe(composed.tree);
+  });
+
+  it("bisects the composed changes on the failed file and names the first that fails it", () => {
+    const { origin, changes, job } = project();
+    const members = [
+      { number: 901, head: changes.first },
+      { number: 905, head: breaking(origin) },
+      { number: 902, head: changes.second },
+    ];
+    const { base, composed, heads } = batchOf(job, members);
+    const clone = repairClone(origin);
+    run(clone, "checkout", "-q", "--detach", base);
+    const result = script(clone, "bisect", composed.tree, ...heads, "--", ...failedFile);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout.trim()).toBe("first-fails 905");
+    settled(clone, base);
+  });
+
+  it("says when the failed file fails on main alone or passes with every change", () => {
+    const { origin, changes, job } = project();
+    const members = [
+      { number: 901, head: changes.first },
+      { number: 902, head: changes.second },
+    ];
+    const { base, composed, heads } = batchOf(job, members);
+    const clone = repairClone(origin);
+    run(clone, "checkout", "-q", "--detach", base);
+    const passes = script(clone, "bisect", composed.tree, ...heads, "--", ...failedFile);
+    expect(passes.stdout.trim(), passes.stderr).toBe("passes-batch");
+    settled(clone, base);
+    const failsMain = script(
+      clone,
+      "bisect",
+      composed.tree,
+      ...heads,
+      "--",
+      "test",
+      "-e",
+      "absent.md",
+    );
+    expect(failsMain.stdout.trim(), failsMain.stderr).toBe("fails-main");
+    settled(clone, base);
+  });
+
+  it("refuses a checkout with uncommitted changes, a missing command or a different tree", () => {
+    const { origin, changes, job } = project();
+    const members = [{ number: 901, head: changes.first }];
+    const { base, composed, heads } = batchOf(job, members);
+    const clone = repairClone(origin);
+    run(clone, "checkout", "-q", "--detach", base);
+    expect(script(clone, "bisect", composed.tree, ...heads).status).toBe(2);
+    const otherTree = run(clone, "rev-parse", "HEAD^{tree}");
+    const other = script(clone, "bisect", otherTree, ...heads, "--", ...failedFile);
+    expect(other.status).toBe(1);
+    expect(other.stdout).toContain("Batch composed differently");
+    writeFileSync(join(clone, "notes.md"), "edited\n");
+    const dirty = script(clone, "bisect", composed.tree, ...heads, "--", ...failedFile);
+    expect(dirty.status).toBe(2);
+    expect(dirty.stderr).toContain("no uncommitted change");
+    expect(run(clone, "show", "HEAD:notes.md")).toBe("one\ntwo\nTHREE");
   });
 });

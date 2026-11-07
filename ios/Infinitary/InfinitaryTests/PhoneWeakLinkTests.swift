@@ -142,6 +142,9 @@ import XCTest
     /// that outlasts the phone's wait for a message is `testALongAnswerOnASlowLinkArrivesOnOneConnection`.
     func testASlowLinkReachesInReachAndStays() async throws {
         let measuring = try await joined()
+        // INF-2975: a wait that fails throws before `finish`, and a session left running redials into the next check's
+        // dial count, so each connection this check opens stops even when it fails.
+        addTeardownBlock { await measuring.stop() }
         let sizing = Watch(measuring)
         measuring.start()
         try await inReach(measuring, sizing, within: 30)
@@ -151,6 +154,7 @@ import XCTest
         _ = try await home("relay-thaw")
         // A phone with nothing read yet, so its catch-up is the whole record again.
         let session = ReadOnlySession(mac: measuring.mac, phone: try PhoneIdentity.loadOrCreate())
+        addTeardownBlock { await session.stop() }
         try await shape(bytesPerSec: max(1_000, size / 40), delayMs: 300)
         let watch = Watch(session)
         session.start()

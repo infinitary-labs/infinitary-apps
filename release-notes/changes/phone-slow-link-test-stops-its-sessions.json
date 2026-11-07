@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-slow-link-test-stops-its-sessions",
+      "reason": "The phone's slow-link check now stops its connections in a teardown when its wait fails, so a failure no longer leaves a connection redialing into the next check's dial count; test-only, nothing a person sees changes."
+    }
+  ]
+}

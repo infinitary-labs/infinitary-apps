@@ -1,9 +1,12 @@
+import { existsSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import {
   REPEATS,
   reachArgs,
   repetitionArgs,
+  runLinuxReach,
   runLocalUnits,
   runRepetitions,
   selectLinuxReach,
@@ -174,26 +177,70 @@ it("identifies native direct readers in the once-only local selection", () => {
   expect(selection.repeat).toEqual([]);
 });
 
-// INF-2441, the captain's choice: the pull request's build check runs the unit
+// INF-2441, the captain's choice: the pull request's build check runs the
 // tests that read each changed file. actions.ts is imported by actions.test.ts.
+// INF-2478: the round once listed integration readers and never ran them.
 describe("the pull request's direct-reader round", () => {
-  it("selects the unedited direct readers of a changed file, never a Mac-only one", () => {
-    const files = selectLinuxReach([
+  const root = resolve(import.meta.dirname, "..");
+  const ran = (files: readonly string[]) => ({
+    testResults: files.map((file) => ({ name: join(root, file) })),
+  });
+
+  it("runs the unedited direct readers of a changed file and leaves a Mac-only one to the local round", () => {
+    const { run, elsewhere } = selectLinuxReach([
       "src/shared/actions.ts",
       "src/main/host/darwinFreshAuthentication.ts",
     ]);
-    expect(files).toContain("src/shared/actions.test.ts");
-    expect(files).not.toContain("src/main/host/darwinFreshAuthentication.test.ts");
-    for (const file of files) expect(MAC_UNIT_FILES).not.toContain(file);
+    expect(run).toContain("src/shared/actions.test.ts");
+    expect(run).not.toContain("src/main/host/darwinFreshAuthentication.test.ts");
+    expect(elsewhere).toContainEqual({
+      file: "src/main/host/darwinFreshAuthentication.test.ts",
+      where: "needs a Mac: the crewmate's local round",
+    });
+    for (const file of run) expect(MAC_UNIT_FILES).not.toContain(file);
+  });
+
+  // INF-2473's break: a ci.yml change broke the Linux gate's workflow test, an
+  // integration file the round listed and never ran.
+  it("runs an integration reader of a changed workflow", () => {
+    const { run } = selectLinuxReach([".github/workflows/ci.yml"]);
+    expect(run).toContain("tests/release-workflows-pr-checks.test.ts");
+  });
+
+  // A probe can fail with no code change, so main's full check runs every one
+  // (docs/test-cohorts.md, "Probes"); the browser step runs the browser tests.
+  // The paths are joined so this file does not read them itself.
+  it("lists a probe reader and a browser reader apart, with where each runs", () => {
+    const { run, elsewhere } = selectLinuxReach([
+      ["scripts", "release-notes.ts"].join("/"),
+      ["src", "shared", "cards.ts"].join("/"),
+    ]);
+    expect(elsewhere).toContainEqual({
+      file: "tests/release-notes.test.ts",
+      where: "a probe: main's full check runs every probe",
+    });
+    const browser = elsewhere.filter(({ file }) => file.startsWith("tests/browser/"));
+    expect(browser.length).toBeGreaterThan(0);
+    for (const { where } of browser)
+      expect(where).toBe(
+        "a browser test: the browser step, when the renderer or its browser tests change",
+      );
+    for (const file of run) {
+      expect(file.startsWith("tests/browser/")).toBe(false);
+      expect(file).not.toBe("tests/release-notes.test.ts");
+    }
   });
 
   it("selects nothing for a change no test reads", () => {
-    expect(selectLinuxReach([["docs", "unread-page.md"].join("/")])).toEqual([]);
+    expect(selectLinuxReach([["docs", "unread-page.md"].join("/")])).toEqual({
+      run: [],
+      elsewhere: [],
+    });
   });
 
-  it("runs once, in the in-memory cohorts only, with no retry", () => {
-    const args = reachArgs(["src/shared/actions.test.ts"]);
-    expect(args).toContain("--passWithNoTests");
+  it("runs once in the in-memory and integration cohorts, with no retry and a report of what ran", () => {
+    const args = reachArgs(["src/shared/actions.test.ts"], "report.json");
+    expect(args).not.toContain("--passWithNoTests");
     expect(args.slice(args.indexOf("--retry"), args.indexOf("--retry") + 2)).toEqual([
       "--retry",
       "0",
@@ -202,7 +249,64 @@ describe("the pull request's direct-reader round", () => {
       "pure",
       "unit",
       "unit-isolated",
+      "integration",
     ]);
+    expect(args).toContain("--reporter=json");
+    expect(args).toContain("--outputFile.json=report.json");
     expect(args.at(-1)).toBe("src/shared/actions.test.ts");
+  });
+
+  it("passes when Vitest's report shows every selected reader ran", () => {
+    const files = ["src/shared/actions.test.ts", "tests/release-workflows-pr-checks.test.ts"];
+    let reportFile = "";
+    const run = vi.fn((args: string[], file: string) => {
+      reportFile = file;
+      expect(args).toEqual(reachArgs(files, file));
+      writeFileSync(file, JSON.stringify(ran(files)));
+      return 0;
+    });
+    const report = vi.fn();
+    expect(runLinuxReach(files, run, report, root)).toBe(0);
+    expect(run).toHaveBeenCalledOnce();
+    expect(report).not.toHaveBeenCalled();
+    // The report's folder goes with the round.
+    expect(existsSync(dirname(reportFile))).toBe(false);
+  });
+
+  it("fails, naming each selected reader Vitest's report does not show", () => {
+    const files = ["src/shared/actions.test.ts", "tests/release-workflows-pr-checks.test.ts"];
+    const run = vi.fn((_args: string[], file: string) => {
+      writeFileSync(file, JSON.stringify(ran(["src/shared/actions.test.ts"])));
+      return 0;
+    });
+    const report = vi.fn();
+    expect(runLinuxReach(files, run, report, root)).toBe(1);
+    expect(report).toHaveBeenCalledExactlyOnceWith([
+      "These selected readers did not run in pure, unit, unit-isolated, integration:",
+      "- `tests/release-workflows-pr-checks.test.ts`",
+    ]);
+  });
+
+  it("fails when the round wrote no report", () => {
+    const report = vi.fn();
+    expect(runLinuxReach(["src/shared/actions.test.ts"], () => 0, report, root)).toBe(1);
+    expect(report).toHaveBeenCalledExactlyOnceWith([
+      "These selected readers did not run in pure, unit, unit-isolated, integration:",
+      "- `src/shared/actions.test.ts`",
+    ]);
+  });
+
+  it.each([1, null])("returns a failed or interrupted round's status (%s)", (status) => {
+    const report = vi.fn();
+    expect(runLinuxReach(["src/shared/actions.test.ts"], () => status, report, root)).toBe(
+      status ?? 1,
+    );
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("runs nothing for an empty selection", () => {
+    const run = vi.fn((_args: string[], _file: string) => 0);
+    expect(runLinuxReach([], run, () => {}, root)).toBe(0);
+    expect(run).not.toHaveBeenCalled();
   });
 });

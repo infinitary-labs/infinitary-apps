@@ -255,7 +255,9 @@ A run that fails or stalls under load is diagnosed from its own logs and fixed i
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - The PR's Linux `typecheck-lint-build` check owns typecheck, lint/adherence and build; do not duplicate it as a complete local pre-push gate.
-  It also runs, once, the unedited unit tests that import or read a changed file (`node scripts/unit-repeats.ts --reach`, from `directUnitReach`), in the `pure`, `unit` and `unit-isolated` cohorts, and never a Mac-listed file (INF-2441).
+  It also runs, once, the unedited unit and integration tests that import or read a changed file (`node scripts/unit-repeats.ts --reach`, from `directUnitReach`), in the `pure`, `unit`, `unit-isolated` and `integration` cohorts (INF-2441, INF-2478).
+  It lists apart, with the run that owns each, a Mac-listed reader (the crewmate's local round), a probe (main's full check, `docs/test-cohorts.md` "Probes") and a browser test (the browser step).
+  It reads Vitest's JSON report afterwards and fails when a reader it selected did not run, so a reader none of those cohorts takes cannot pass unseen.
   Required focused proof may run before or alongside the PR and must finish for its current version before merge.
   A selected local `renderer` or `application` spec needs `--no-deps`, since its teardown otherwise runs the whole `desktop` lane.
   Run the existing unit and integration tests a change can break by path, `pnpm test <path>...` (a bare file path finds its cohort, `docs/test-cohorts.md`), and the probes it reaches with `pnpm test:probes`.
@@ -671,7 +673,7 @@ Status-only TestFlight requests start no phone or signing job.
 
 A pull request version runs one check, `ci.yml`'s `typecheck-lint-build`, on the PC's PR line (INF-2915's plan, the captain's direction B with the light profile).
 Its steps keep what caught problems on pull requests and leave the rest to the swept batch, which runs everything on each approved change before it reaches `main` ("The swept batch").
-Every version runs the release notes check, the typecheck, `pnpm check` and the unit tests that read a changed file.
+Every version runs the release notes check, the typecheck, `pnpm check` and the unit and integration tests that read a changed file.
 Its paths step, `scripts/pr-paths.ts`, reads the change against the merge commit's base parent and decides two things.
 The build and the critical path run unless every changed path is a test (under `tests/`, or a `.test` or `.spec` file), docs (`docs/`, `primitives/` or any Markdown file), a release note or the phone app (`ios/`).
 The browser tests run only when a path is under `src/renderer/` or `tests/browser/`, or is a browser test helper (`tests/helpers/browser*`).

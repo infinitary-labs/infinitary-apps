@@ -1,9 +1,10 @@
 name: ci
 
 # Pull requests run one Linux job (INF-2915's plan, the captain's direction
-# B): the release notes, typecheck, the lint, the unit tests that read a
-# changed file, the build and the one critical-path journey (INF-2507), and
-# the browser tests when a version touches the renderer or its browser tests.
+# B): the release notes, typecheck, the lint, the unit and integration tests
+# that read a changed file, the build and the one critical-path journey
+# (INF-2507), and the browser tests when a version touches the renderer or
+# its browser tests.
 # A version whose every path is a test, docs, a release note or the phone app
 # skips the build and the critical path (scripts/pr-paths.ts). The swept
 # batch runs everything before a change reaches main (docs/testing.md, "What
@@ -55,8 +56,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The pull request's merge commit and its base parent, for the notes
-          # and paths steps.
+          # The pull request's merge commit and its base parent, for the notes,
+          # paths and reader steps.
           fetch-depth: 2
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -90,10 +91,12 @@ jobs:
       # push in pnpm check:changed, never on a pull request.
       - run: pnpm lint:adherence
         if: ${{ github.event_name != 'pull_request' }}
-      # The unit tests that import or read each changed file run once here
-      # (scripts/unit-reach.ts directUnitReach), so a break in a reader the
-      # crewmate skipped fails the pull request, not main's full check.
-      - name: Unit tests that read a changed file
+      # The unit and integration tests that import or read each changed file
+      # run once here (scripts/unit-reach.ts directUnitReach), so a break in a
+      # reader the crewmate skipped fails the pull request, not main's full
+      # check (INF-2478). A Mac-listed, probe or browser reader is listed with
+      # the run that owns it, and a selected reader that did not run fails it.
+      - name: Unit and integration tests that read a changed file
         if: ${{ github.event_name == 'pull_request' }}
         run: node scripts/unit-repeats.ts --reach --base HEAD^1 --run
         timeout-minutes: 30

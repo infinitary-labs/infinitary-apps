@@ -15,7 +15,6 @@ import {
 import { join } from "node:path";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { seedProject } from "../../../tests/e2e/projectSeed";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
 import { openInMemoryDatabase } from "../storage/db";
@@ -23,6 +22,7 @@ import { ProjectStore } from "../storage/projectStore";
 import { SettingsStore } from "../storage/settingsStore";
 import { APP_GIT_IDENTITY, git } from "./git";
 import { RepoRegistry } from "./repoRegistry";
+import { seedProject } from "./seedProject";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -576,10 +576,11 @@ describe("RepoRegistry chosen task key", () => {
 
 /**
  * INF-2417's "project row by raw SQL" repair: a journey whose tasks name a
- * fixed project id seeds its project through `seedProject`, which must save
- * the row and the task project the registry saves when a person adds the
- * same project. A column the registry starts stamping fails here until the
- * journeys' seed stamps it too.
+ * fixed project id seeds its project through `seedProject` (journeys reach
+ * it through `tests/e2e/projectSeed.ts`), which must save the row and the
+ * task project the registry saves when a person adds the same project. Both
+ * write through `saveNewRepo`; a default the seed fills in differently from
+ * the registry's own fails here.
  */
 describe("seedProject, the journeys' project seed", () => {
   beforeEach(() => {

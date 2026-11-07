@@ -250,6 +250,12 @@ describe("the freeze recorder", () => {
   it("retains start before a native wait replies, then interruption after process death (INF-2205)", async () => {
     // Real recorder in a disposable Node process: no personal app or data.
     // Reuses the synchronous-wait fixture above, but never releases the wait.
+    // The process enters the wait as soon as its recorder starts, so the
+    // watchdog gets one heartbeat and records one stall, which never ends.
+    // Given time to beat first, the process could stall before the wait, as
+    // a busy runner makes it, and that stall could be the started line the
+    // case reads, end before the kill and leave nothing to interrupt
+    // (INF-2974).
     const dir = scratchDir("infinitary-freeze-interrupted-");
     const recordPath = join(dir, "freezes.jsonl");
     const root = resolve(__dirname, "../../..");
@@ -274,10 +280,8 @@ describe("the freeze recorder", () => {
       `import { FreezeRecorder } from "./recorder.mjs";
       const recorder = new FreezeRecorder({ recordPath: process.argv[2], onFreeze() {} });
       recorder.start();
-      setTimeout(() => {
-        console.log("waiting");
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
-      }, 300);`,
+      console.log("waiting");
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);`,
     );
     const child = spawn(process.execPath, [entry, recordPath], {
       env: hostEnv(),

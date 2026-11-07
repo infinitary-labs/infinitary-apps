@@ -2,6 +2,7 @@ Settings' tabs: one vertical column on the left of the Settings page, the shown 
 
 **The page.**
 The page is one centred column the width of the widest section plus the tab column, and it stays the same width whichever tab is shown, so the tabs never move when the section changes.
+The page keeps a scroll bar's room whether or not the shown section scrolls, so a scroll bar that takes room neither moves the column nor narrows the section when it comes and goes.
 The tab column is 168 px wide at the column's left gutter, then 32 px of room, then the section, left-aligned and no wider than its own width (760 px standard, 1080 px wide).
 A narrow window shrinks the section, never the tab column; at the smallest window the section still has 700 px.
 The sharing ask, when it shows, spans both above them.

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "settings-tabs-stay-still",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Settings stays still as you switch tabs",
+      "body": "When your Mac shows scroll bars that take room, the list of Settings tabs no longer slides sideways and the section no longer changes width as you move between tabs or open and close a project.",
+      "noPicture": "Each Settings tab looks as it did; what changed is that the tabs and the section no longer move when a scroll bar comes and goes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

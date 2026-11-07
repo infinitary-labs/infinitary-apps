@@ -147,6 +147,10 @@ export function SettingsScreen() {
         // window, so a long section still ends on the column's bottom padding.
         alignItems: "flex-start",
         overflowY: "auto",
+        // A scroll bar that takes room keeps its room whether or not this
+        // section scrolls, so the column, the tabs and the section never move
+        // or narrow when it comes and goes (docs/renderer.md, "Card body sizing").
+        scrollbarGutter: "stable",
       }}
     >
       <div data-settings-column style={settingsColumnStyle()}>

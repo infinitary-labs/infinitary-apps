@@ -52,6 +52,22 @@ try {
   const { clipPlanLine, foldPlan, planCounts } = await runner.import<typeof import("../src/shared/taskPlan.ts")>(join(REPO_ROOT, "src/shared/taskPlan.ts"));
   const { earlierRowsOf, failedStartCount, newFilingCount, NOW_GROUPS, OPEN_BY_DEFAULT, rowsOf, trailingOf, wordOf } = await runner.import<NowRows>(join(REPO_ROOT, "src/panels/now/rows.ts"));
   const { failedCountWords, newCountWords } = await runner.import<typeof import("../src/panels/now/words.ts")>(join(REPO_ROOT, "src/panels/now/words.ts"));
+  const { recordBarOf } = await runner.import<typeof import("../src/shared/recordBar.ts")>(join(REPO_ROOT, "src/shared/recordBar.ts"));
+  const { recordAttentionOf, recordClosedLineOf } = await runner.import<typeof import("../src/shared/recordAttention.ts")>(join(REPO_ROOT, "src/shared/recordAttention.ts"));
+  const { taskWaitStatus } = await runner.import<typeof import("../src/shared/taskWaits.ts")>(join(REPO_ROOT, "src/shared/taskWaits.ts"));
+  const { DROP_REVIEW_STALE, dropConfirmLead, dropPartsRefusal, dropUnderwayLine, dropWaitingLine } = await runner.import<typeof import("../src/shared/recordDrop.ts")>(join(REPO_ROOT, "src/shared/recordDrop.ts"));
+  const { recordPillToneOf } = await runner.import<typeof import("../src/renderer/src/cards/recordFooter.ts")>(join(REPO_ROOT, "src/renderer/src/cards/recordFooter.ts"));
+  // The record's tabs and head are renderer modules the scripts' project does not compile (a store behind the tabs,
+  // JSX in the head), so these name only the shapes this reading takes from them.
+  const { taskTabFactsOf, taskTabsOf } = await runner.import<{
+    taskTabFactsOf: (task: TaskDetail) => unknown;
+    taskTabsOf: (browser: null, facts: unknown) => Array<{ kind: string; label: string; count?: number }>;
+  }>(join(REPO_ROOT, "src/renderer/src/cards/taskTabs.ts"));
+  const { crewStateOf } = await runner.import<typeof import("../src/renderer/src/cards/crewmateState.ts")>(join(REPO_ROOT, "src/renderer/src/cards/crewmateState.ts"));
+  const { recordAsksOf, recordWordsFoldName } = await runner.import<{
+    recordAsksOf: (task: TaskDetail) => Array<{ id: string }>;
+    recordWordsFoldName: (task: TaskDetail) => string | null;
+  }>(join(REPO_ROOT, "src/renderer/src/cards/RecordHead.tsx"));
   const { SCENE_REACH_PX, satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
   const outputs = {
     "ios/Infinitary/InfinitaryApp/PhoneSceneData.generated.json": {
@@ -70,6 +86,7 @@ try {
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskFacts.generated.json": taskFactReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskList.generated.json": taskListReadings(),
+    "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskRecord.generated.json": taskRecordReadings(),
   };
   /** INF-1755: the warps' settings, schedule, travel and the very stars the desktop draws, only the ones it reads. */
   function warpData() {
@@ -278,6 +295,117 @@ try {
     };
     return { readings: [read("several projects", several, "", []), read("one project", single, "", []),
       read("a search", several, "HARBOUR", earlier)] };
+  }
+  /**
+   * INF-2935 (INF-2928 piece 2): the desktop task record's own reading of one task in each state it draws - its bar, its
+   * pill's tone and reason, its tabs, the attention sentence, the closed line, the fold under the goal, Drop task's
+   * question and the Crewmate tab's state - for the phone's record to replay. A wait carries no time here: the clock's
+   * words are each platform's own formatter.
+   */
+  function taskRecordReadings() {
+    const now = Date.UTC(2026, 10, 6, 18, 0);
+    const min = 60_000;
+    const base = {
+      id: "t-3001", key: "INF-3001", projectId: "p-har", parentId: null, kind: "work", title: "Chart the outer harbour",
+      goal: "Chart the outer harbour before the storm.", priority: 2, status: "active", activity: "running",
+      workPosture: { state: "active", reason: "turn" }, closedReason: null, startPolicy: "when-ready",
+      flags: { blocked: false, held: false, needsYou: false, ready: false }, blockedBy: [], blocks: [], children: { total: 0, closed: 0 },
+      assignee: "crewmate", model: null, tier: null, repo: { name: "harbour", branch: "fm/task-3001" }, delivery: null,
+      outcomeSummary: null, waitingCardId: null, createdAt: now - 90 * min, updatedAt: now - min, startedAt: now - 80 * min, closedAt: null,
+      intent: { goal: "Chart the outer harbour before the storm.", userWords: "chart the outer harbour before the storm" },
+      rigor: "standard", deliverable: "change", basis: null, skippedPlanBecause: null, brief: "", outcome: null, modelLabel: null,
+      cards: [], events: [], activityLog: [], plan: null, closing: null, problem: null, asks: [],
+    };
+    const unstarted = { status: "open", activity: null, workPosture: undefined, startedAt: null };
+    const ask = (id: string, minutes: number, text: string) => ({ id, at: now - minutes * min, text, images: 0, attachedVia: null, turnState: "closed" });
+    const wait = (id: string, kind: string, label: string) => ({ id, kind, label });
+    const cards = [
+      { id: "card-3001-b", kind: "decision", title: "Which channel first?", state: "open", at: now - 5 * min },
+      { id: "card-3001-a", kind: "note", title: "The chart so far", state: "closed", ending: "You pressed Got it", at: now - 3 * 60 * min },
+    ];
+    const log = [{ id: 1, at: now - 80 * min, kind: "dispatched", text: "The crewmate started." }];
+    const effects = (parts: { key: string; title: string; started: boolean }[], waiting: string[], underway: string[]) => ({ parts,
+      waiting: waiting.map((key) => ({ key, title: `Wait for ${key}` })), underway: underway.map((key) => ({ key, title: `Work on ${key}` })) });
+    const cases: Array<[string, Record<string, unknown>, { since: number } | null]> = [
+      ["working with its cards and activity", { cards, activityLog: log }, null],
+      ["working between turns, its live words still coming", { activity: "idle", workPosture: { state: "idle", reason: "inactive" } }, { since: now - 2 * min }],
+      ["backlog, never started", { ...unstarted, startPolicy: "on-request", dropEffects: effects([], ["INF-3002"], ["INF-3003", "INF-3004"]) }, null],
+      ["queued behind other work, held by a gate", { ...unstarted, queueWait: { line: "Waiting for a free crewmate · since 9:40 AM", since: now - 20 * min },
+        hold: { title: "Held until the allowance resets", text: "It starts once your plan's allowance resets." } }, null],
+      ["queued, waiting on two tasks", { ...unstarted, startPolicy: "on-request", blockedBy: ["INF-3010", "INF-3011"], flags: { blocked: true, held: false, needsYou: false, ready: false },
+        dropEffects: effects([], ["INF-3002", "INF-3005"], ["INF-3003"]) }, null],
+      ["starting", { ...unstarted, startAttempt: { phase: "preparing", since: now - 5_000 } }, null],
+      ["still starting", { ...unstarted, startAttempt: { phase: "preparing", since: now - 20_000 } }, null],
+      ["checking whether it started", { ...unstarted, startAttempt: { phase: "checking", since: now - 40_000 } }, null],
+      ["could not start", { ...unstarted, startPolicy: "on-request", startNotice: { reason: "No crewmate could start." }, dropEffects: effects([], [], []) }, null],
+      ["what it waited on was dropped", { ...unstarted, flags: { blocked: true, held: false, needsYou: false, ready: false } }, null],
+      ["a parent whose part started", { ...unstarted, children: { total: 3, closed: 1 },
+        dropEffects: effects([{ key: "INF-3012", title: "Sound the channel", started: true }, { key: "INF-3013", title: "Mark the reef", started: false }], [], []) }, null],
+      ["a parent with two open parts", { ...unstarted, children: { total: 2, closed: 0 },
+        dropEffects: effects([{ key: "INF-3012", title: "Sound the channel", started: false }, { key: "INF-3013", title: "Mark the reef", started: false }], [], []) }, null],
+      ["interrupted", { activity: "interrupted", workPosture: undefined, problem: "The model stopped answering.", activityLog: log }, null],
+      ["interrupted with no problem said", { activity: "interrupted", workPosture: undefined }, null],
+      ["waiting on its decision", { activity: "idle", workPosture: { state: "idle", reason: "captain" }, waitingCardId: "card-3001-b", cards }, null],
+      ["the first mate's question", { kind: "decision", startedAt: null, activity: null, workPosture: undefined, waitingCardId: "card-q" }, null],
+      ["an answer ready for Done", { activity: "idle", workPosture: { state: "idle", reason: "inactive" }, answerNoteId: "note-3001", answerSince: now - 95 * min }, null],
+      ["a required step ready", { ...unstarted, requiredAction: { cardId: "card-r", state: "ready" } }, null],
+      ["paused by its report", { activity: "idle", workPosture: { state: "idle", reason: "captain" }, captainWait: true, outcomeSummary: "It needs the old harbour chart." }, null],
+      ["paused with no report", { activity: "idle", workPosture: { state: "idle", reason: "captain" }, flags: { blocked: false, held: false, needsYou: true, ready: false } }, null],
+      ["held by a gate after starting", { activity: "idle", workPosture: { state: "idle", reason: "inactive" }, hold: { title: "Held for the tide", text: "It goes on at high tide." } }, null],
+      ["standing waits with no times", { activity: "idle", workPosture: { state: "idle", reason: "timed-wait" },
+        waits: [wait("w-1", "job", "Sounding job"), wait("w-2", "start", "Start at the tide")] }, null],
+      ["a lone job wait", { activity: "idle", workPosture: { state: "active", reason: "job" }, waits: [wait("w-3", "job", "Sounding job")] }, null],
+      ["a decision wait beside its card", { activity: "idle", workPosture: { state: "idle", reason: "captain" }, waitingCardId: "card-3001-b",
+        waits: [wait("w-4", "decision", "Your answer")] }, null],
+      ["a checks wait", { activity: "idle", workPosture: { state: "active", reason: "checks" }, waits: [wait("w-5", "checks", "Checks on #812")] }, null],
+      ["back in the backlog, waiting on a task", { activity: "idle", workPosture: { state: "idle", reason: "dependency" }, backlogSince: now - 15 * min,
+        startPolicy: "on-request", blockedBy: ["INF-3010"] }, null],
+      ["its browser in your hands", { activity: "idle", workPosture: { state: "idle", reason: "inactive" },
+        browser: { state: "open", site: "localhost:5173", url: "http://localhost:5173/", title: "Chart", control: "captain" } }, null],
+      ["merged as a pull request", { status: "done", activity: null, workPosture: undefined, closedReason: "landed", closedAt: now - 31 * min,
+        closing: { at: now - 30 * min, note: null }, cards, activityLog: log,
+        delivery: { mode: "direct-pr", prNumber: 812, prUrl: "https://github.com/harbour/harbour/pull/812", ci: "green" } }, null],
+      ["merged as a branch", { status: "done", activity: null, workPosture: undefined, closedReason: "merged", closedAt: now - 3 * 60 * min,
+        delivery: { mode: "local-only", changeLabel: "fm/task-3001", ci: "no-pr" } }, null],
+      ["carried on by another task", { status: "done", activity: null, workPosture: undefined, closedReason: "superseded",
+        closing: { at: now - 26 * 60 * min, note: "INF-3020 carries the rest" } }, null],
+      ["dropped with a reason", { status: "dropped", activity: null, workPosture: undefined, closedReason: "cancelled",
+        closing: { at: now - 2 * 60 * min, note: "No longer wanted" } }, null],
+      ["dropped and replaced", { status: "dropped", activity: null, workPosture: undefined, closedReason: "cancelled", replacedBy: "INF-3030", closedAt: now - min }, null],
+      ["failed", { status: "dropped", activity: null, workPosture: undefined, closedReason: "failed", problem: "The checks never passed.", closedAt: now - 5 * min }, null],
+      ["done with no reason", { status: "done", activity: null, workPosture: undefined, closedAt: now - 10 * min }, null],
+      ["a filing not yet started", { ...unstarted, startPolicy: "on-request", filing: { why: "The reef moved in the last storm.", originKey: "INF-2990", verdict: null },
+        asks: [ask("a-1", 100, "chart the outer harbour before the storm"), ask("a-2", 30, "and the reef too")] }, null],
+      ["a filing under way, built without a plan", { filing: { why: "", originKey: "INF-2990", verdict: "Worth doing now" },
+        skippedPlanBecause: "A one-line fix.", intent: null, asks: [ask("a-3", 50, "go ahead")] }, null],
+      ["a first mate's own operation", { kind: "operation", intent: null }, null],
+    ];
+    return { now, cases: cases.map(([name, patch, live]) => {
+      const row = { ...base, ...patch } as unknown as TaskDetail;
+      const read = taskWaitStatus(row, taskStatusOf(row, now), now);
+      // The record's own reading of a start in flight and a failed start, as RecordCard's facts say it.
+      const since = row.startAttempt?.since ?? (row.activity === "starting" ? row.startedAt : null);
+      const reason = row.startAttempt?.phase === "checking" ? "Checking whether it started"
+        : since != null && now - since >= 15_000 && (row.startAttempt?.phase === "preparing" || row.activity === "starting")
+          ? "Still starting. You can keep working."
+          : row.startNotice ? `Could not start. ${row.startNotice.reason}` : read.reason;
+      const bar = recordBarOf(row);
+      const closed = recordClosedLineOf(row);
+      // Drop task's first press, as RecordPaneFooter's `beginDrop` and its confirm line read the record.
+      const end = bar?.end === "drop-task" || bar?.end === "stop-task" ? bar.end : null;
+      const effects = row.dropEffects ?? null;
+      const refusal = end === "drop-task" ? (!effects ? DROP_REVIEW_STALE : effects.parts.length > 0 ? dropPartsRefusal(row.key, effects.parts) : null) : null;
+      const question = end && !refusal ? [dropConfirmLead(row.key, end === "stop-task"), end === "drop-task" && effects ? dropWaitingLine(effects.waiting) : null,
+        end === "drop-task" && effects ? dropUnderwayLine(effects.underway) : null].filter(Boolean).join(" ") : null;
+      return { name, row, live: live ? { text: "", since: live.since } : null, bar, pillTone: recordPillToneOf(row),
+        status: { mark: read.mark, word: read.word, reason },
+        tabs: taskTabsOf(null, taskTabFactsOf(row)).map((tab) => ({ kind: tab.kind, label: tab.label, count: tab.count })),
+        crew: crewStateOf(row, live ? { taskId: row.id, text: "", since: live.since } : null),
+        attention: recordAttentionOf(row, now),
+        closed: closed ? `${closed.lead}${closed.at !== null ? checksFinishedAgo(closed.at, now) : ""}${closed.change ? ` as ${closed.change.noun} ${closed.change.label}` : ""}${closed.tail}` : null,
+        fold: recordWordsFoldName(row), asks: recordAsksOf(row).map((entry) => entry.id),
+        drop: end ? { refusal, question } : null };
+    }) };
   }
   /** INF-1325: the desktop's own seat choices through arrivals and departures, for the phone to replay. */
   function orbitSeats() {

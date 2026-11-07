@@ -9,9 +9,9 @@ extension PhoneJourney {
         try await tasksAndSteer(fixture)
     }
 
-    /// The record's state line (key · state · computer) reading this state.
-    private func recordReads(_ state: String) -> XCUIElement {
-        app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", " · \(state) · ")).firstMatch
+    /// INF-2935: the record's status pill, which reads the Mac's word for the task.
+    private func recordReads(_ word: String) -> XCUIElement {
+        app.staticTexts.matching(NSPredicate(format: "identifier == %@ AND label == %@", "task-record-status", word)).firstMatch
     }
 
     private func tasksAndSteer(_ fixture: [String: Any]) async throws {
@@ -55,15 +55,20 @@ extension PhoneJourney {
         let started = try await home("talk-started")
         XCTAssertNotNil(started["startedAt"] as? Double)
         XCTAssertTrue(started["executionDeviceId"] is NSNull, "The phone starts work on its Mac, never on the phone")
-        XCTAssertTrue(app.buttons["Crewmate"].waitForPresence(timeout: 10)); tapOnPhone(app.buttons["Crewmate"])
-        XCTAssertTrue(app.buttons["interrupt-task"].waitForPresence(timeout: 10))
+        // INF-2935: the Mac's tabs; the Crewmate tab's status line carries Stop, the Mac's word for Interrupt.
+        let crewmateTab = app.buttons["record-tab-crewmate"]
+        XCTAssertTrue(crewmateTab.waitForPresence(timeout: 10)); tapOnPhone(crewmateTab)
+        let stop = app.buttons["crew-stop"]
+        XCTAssertTrue(stop.waitForPresence(timeout: 10))
+        XCTAssertEqual(stop.label, "Stop")
         picture("crewmate-working")
         _ = try await home("capture-stop")
-        // INF-2553: an interrupt the computer still holds already reads Stopping on the record.
+        // INF-2553: a Stop the computer still holds already reads Stopping on the record.
         _ = try await home("hold-card-action", body: #"{"channel":"inf:task:interrupt"}"#)
-        tapOnPhone(app.buttons["interrupt-task"])
+        tapOnPhone(stop)
         _ = try await home("card-action-held")
-        XCTAssertTrue(recordReads("Stopping").waitForPresence(timeout: 10), "An interrupt shows at the tap, before the computer answers")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "crew-stop", "Stopping…")).firstMatch
+            .waitForPresence(timeout: 10), "A Stop shows at the tap, before the computer answers")
         picture("task-interrupt-at-tap")
         _ = try await home("release-card-action")
         let interrupted = try await home("talk-interrupted")
@@ -71,10 +76,14 @@ extension PhoneJourney {
         XCTAssertTrue(events.contains { $0["kind"] as? String == "interrupted" && $0["actor"] as? String == "captain" })
         XCTAssertEqual(interrupted["activity"] as? String, "idle", "Interrupt stops the turn and keeps it steerable")
         _ = try await home("talk-resumable")
+        // The record bar, with Continue, ends Info; the Crewmate tab ends with its status line and the message box.
+        tapOnPhone(app.buttons["record-tab-info"])
+        XCTAssertTrue(recordReads("Interrupted").waitForPresence(timeout: 10))
         XCTAssertTrue(app.buttons["continue-task"].waitForPresence(timeout: 10))
         picture("task-interrupted")
         tapOnPhone(app.buttons["continue-task"])
-        XCTAssertTrue(app.buttons["interrupt-task"].waitForPresence(timeout: 20))
+        tapOnPhone(crewmateTab)
+        XCTAssertTrue(stop.waitForPresence(timeout: 20))
         let steer = try XCTUnwrap(fixture["steer"] as? String)
         let steerField = app.textFields["steer-box"]
         focusForPhoneTyping(steerField, in: app); steerField.typeText(steer)

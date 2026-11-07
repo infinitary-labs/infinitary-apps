@@ -104,7 +104,7 @@ struct PhoneCrewScene: View {
                     .tint(PhoneTheme.accent)
             case .record(let task):
                 NavigationStack {
-                    PhoneTaskRecord(session: session, initial: task)
+                    PhoneTaskRecord(session: session, initial: task, leave: { record = nil })
                         .toolbar { ToolbarItem(placement: .cancellationAction) { PhoneRecordLeaveButton(record: $record) } }
                 }.font(PhoneFont.body).tint(PhoneTheme.accent)
             }

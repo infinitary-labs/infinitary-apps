@@ -266,7 +266,6 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
             record: {
               checks: facts.delivery?.checks?.words ?? null,
               reasoning: facts.reasoning ? reasoningWord(facts.reasoning) : null,
-              recorded: Object.keys(row.blockedSince ?? {}),
             },
             blocked: row.blockedBy,
           };

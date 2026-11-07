@@ -282,14 +282,14 @@ struct PhoneCrewSummary: View {
 }
 
 /// An uppercase micro label in the desktop's tracking.
-private struct PhoneFactLabel: View {
+struct PhoneFactLabel: View {
     let text: String
     var body: some View {
         Text(text).textCase(.uppercase).font(PhoneFont.label).tracking(1).foregroundStyle(PhoneTheme.muted)
     }
 }
 
-private struct PhoneFactAge: View {
+struct PhoneFactAge: View {
     let words: String
     var body: some View { Text(words).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize() }
 }
@@ -343,7 +343,7 @@ struct PhoneTaskMark: View {
 }
 
 /// FactDot: a fact cell's state at 10 points - a disc with a tick, cross or bang, or a ring.
-private struct PhoneFactDot: View {
+struct PhoneFactDot: View {
     let state: String
 
     var body: some View {
@@ -376,7 +376,7 @@ private struct PhoneFactDot: View {
 }
 
 /// SlotBadge: the intelligence level as four rising bars and its word, in the level's own color.
-private struct PhoneSlotBadge: View {
+struct PhoneSlotBadge: View {
     let slot: String
 
     var body: some View {
@@ -435,7 +435,7 @@ private struct PhonePlanDots: View {
 }
 
 /// PlanMark as a dot: filled when done, lit when current, hollow when next, a dash when skipped.
-private struct PhonePlanMark: View {
+struct PhonePlanMark: View {
     let state: String
 
     var body: some View {

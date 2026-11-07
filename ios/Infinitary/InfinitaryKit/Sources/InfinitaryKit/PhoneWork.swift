@@ -39,7 +39,9 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let createdAt: Double
     public let startPolicy: String?
     /// The home’s dated start-wait line, shared with its first mate and desktop views.
-    public let queueWait: QueueWait?
+    /// Absent while a start attempt stands, as the host leaves it out then (`taskProtocol.ts`); the start intent's fold
+    /// clears it the same way.
+    public internal(set) var queueWait: QueueWait?
     public struct QueueWait: Decodable, Sendable { public let line: String; public let since: Double? }
     public internal(set) var startAttempt: StartAttempt?
     public let requiredAction: RequiredAction?
@@ -49,7 +51,13 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let reviewOf: String?
     public let program: Bool?
     public let workPosture: WorkPosture?
-    public struct WorkPosture: Decodable, Sendable { public let state: String; public let reason: String }
+    public struct WorkPosture: Decodable, Sendable {
+        public let state: String
+        public let reason: String
+        /// The account's typed cut-off while `access` stands on it; the record reads only its class.
+        public let hold: Hold?
+        public struct Hold: Decodable, Sendable { public let `class`: String? }
+    }
     public let goal: String?
     public let startedAt: Double?
     public internal(set) var moves: [String: PhoneMove]?
@@ -71,7 +79,7 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     /// Mac's rows still decode: the board row's lifecycle facts, then the record's own reading (`.detail`).
     public internal(set) var closedReason: String?
     public let flags: Flags?
-    public struct Flags: Decodable, Sendable { public let blocked: Bool; public let held: Bool }
+    public struct Flags: Decodable, Sendable { public let blocked: Bool; public let held: Bool; public let needsYou: Bool? }
     public let children: Children?
     public struct Children: Decodable, Sendable { public let total: Int; public let closed: Int }
     public let startNotice: StartNotice?
@@ -94,6 +102,67 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let foundOn: String?
     public let filingNew: Bool?
     public let backlogSince: Double?
+    /// INF-2935, piece 2: what the Mac's task record reads beyond the facts above (src/shared/tasks.ts
+    /// `taskDetailSchema`), each optional so an older Mac's record still decodes. The board row carries the first four.
+    public let blocks: [String]?
+    public let replacedBy: String?
+    public let captainWait: Bool?
+    public let waits: [Wait]?
+    public let repo: Repo?
+    public let cards: [CardRow]?
+    public let runsOn: RunsOn?
+    public let policies: Policies?
+    public let rigor: String?
+    public let dropEffects: DropEffects?
+    public let closing: Closing?
+    public let hold: Hold?
+    public let filing: Filing?
+    public let asks: [Ask]?
+    public let skippedPlanBecause: String?
+    public let browser: Browser?
+    public let deliverable: String?
+    /// A standing wait's owner fact (`taskWaitSchema`, src/shared/taskWaits.ts).
+    public struct Wait: Decodable, Sendable {
+        public let id: String
+        public let kind: String
+        public let label: String
+        public let since: Double?
+        public let next: Next?
+        public struct Next: Decodable, Sendable { public let kind: String; public let at: Double }
+    }
+    public struct Repo: Decodable, Sendable { public let name: String; public let branch: String? }
+    /// One card the task showed, newest first: open on the stage or put aside, or closed with how it ended.
+    public struct CardRow: Decodable, Identifiable, Sendable {
+        public let id: String
+        public let kind: String
+        public let title: String
+        public let state: String
+        public let minimized: Bool?
+        public let ending: String?
+        public let at: Double
+    }
+    public struct RunsOn: Decodable, Sendable { public let label: String; public let source: String; public let reason: String? }
+    public struct Policies: Decodable, Sendable {
+        public let delivery: Choice<String>
+        public let autonomy: Choice<Bool>
+        public let rigor: Care
+        public struct Choice<Value: Decodable & Sendable>: Decodable, Sendable { public let value: Value; public let source: String }
+        public struct Care: Decodable, Sendable { public let value: String; public let source: String; public let requested: String? }
+    }
+    /// What Drop task would affect; present only while Drop task applies.
+    public struct DropEffects: Decodable, Sendable {
+        public let parts: [Part]
+        public let waiting: [Named]
+        public let underway: [Named]
+        public struct Part: Decodable, Sendable { public let key: String; public let title: String; public let started: Bool? }
+        public struct Named: Decodable, Sendable { public let key: String; public let title: String }
+    }
+    public struct Closing: Decodable, Sendable { public let at: Double; public let note: String? }
+    public struct Hold: Decodable, Sendable { public let title: String; public let text: String }
+    public struct Filing: Decodable, Sendable { public let why: String; public let originKey: String; public let verdict: String? }
+    public struct Ask: Decodable, Identifiable, Sendable { public let id: String; public let at: Double; public let text: String }
+    /// The task's own browser on its Mac; the record reads only whether the captain holds it.
+    public struct Browser: Decodable, Sendable { public let state: String; public let control: String? }
     public var canSteer: Bool { status == "active" && startedAt != nil }
     /// The Mac's `nowGroupOf` (src/shared/nowPanel.ts) through its generated table. A note's answer, like a card put
     /// aside, lists under Waiting on you whatever the task's state, as the table's minimized input does.
@@ -104,7 +173,11 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
                  onRequest: startPolicy == "on-request", minimized: minimizedCardId != nil || answerNoteId != nil,
                  backlog: backlogSince != nil)
     }
-    public struct StartAttempt: Decodable, Sendable { public let phase: String }
+    public struct StartAttempt: Decodable, Sendable {
+        public let phase: String
+        /// When the attempt was accepted, for the record's slow-start line; absent from an older Mac.
+        public let since: Double?
+    }
     public struct RequiredAction: Decodable, Sendable { public let state: String?; public let result: String? }
     public var state: String {
         if status == "done" { return "Done" }
@@ -154,6 +227,9 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
         public let runChecks: RunChecks?
         public let reviewVerdict: String?
         public let reviewRisk: String?
+        /// How the work reaches its project (`direct-pr`, `queue-pr`, `local-only`, `in-place`).
+        public let mode: String?
+        public let landedMode: String?
         public struct CheckSnapshot: Decodable, Sendable {
             public let headSha: String
             public let items: [Item]
@@ -171,11 +247,15 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     }
     /// One row of the record's Activity; `from` is set on a row another task wrote.
     public struct ActivityRow: Decodable, Sendable {
+        public let id: Int?
         public let at: Double
         public let kind: String
         public let text: String
         public let from: From?
         public let actions: [ActionLine]?
+        /// The minor events folded under the row, oldest first.
+        public let folded: [Folded]?
+        public struct Folded: Decodable, Sendable { public let at: Double; public let kind: String; public let text: String }
         public struct From: Decodable, Sendable { public let id: String; public let key: String }
     }
     public struct ActionLine: Decodable, Sendable { public let at: Double; public let text: String }

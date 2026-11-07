@@ -329,8 +329,8 @@ extension PhoneJourney {
     }
 
     /// INF-2528, the captain's "more details should be shown in the task card, not in the preview": Open task shows
-    /// what the summary leaves out - the check counts, the reasoning level and when each wait was recorded - in the
-    /// desktop's words for the same task (`record` in tests/helpers/phoneScene.ts), then the record closes.
+    /// what the summary leaves out - the check counts, the reasoning level and each task it waits on - in the desktop's
+    /// words for the same task (`record` and `blocked` in tests/helpers/phoneScene.ts), then the record closes.
     private func verifyRecordDetails(_ want: [String: Any], picture name: String) throws {
         let record = try XCTUnwrap(want["record"] as? [String: Any])
         tapOnPhone(app.buttons["open-crew-task"])
@@ -348,10 +348,13 @@ extension PhoneJourney {
         } else {
             XCTAssertFalse(reasoning.exists, "\(name): the desktop's record shows no reasoning")
         }
-        for key in record["recorded"] as? [String] ?? [] {
-            let waiting = app.staticTexts["task-record-waiting"]
-            XCTAssertTrue(waiting.waitForPresence(timeout: 10), "\(name): the record shows what it waits for")
-            XCTAssertTrue(waiting.label.contains("\(key) recorded "), "\(name): Waiting for reads \(waiting.label)")
+        // INF-2935, the captain's direction A: the record lists each task it waits on by its key under Waits on, as the
+        // Mac's record does.
+        for key in want["blocked"] as? [String] ?? [] {
+            let waitsOn = app.descendants(matching: .any).matching(identifier: "task-record-waits-on").firstMatch
+            XCTAssertTrue(waitsOn.waitForPresence(timeout: 10), "\(name): the record shows what it waits on")
+            XCTAssertTrue(waitsOn.descendants(matching: .any).matching(NSPredicate(format: "label == %@", key)).firstMatch.exists,
+                          "\(name): Waits on lists \(key)")
         }
         picture(name)
         tapOnPhone(app.buttons["close-record"])

@@ -504,6 +504,16 @@ It is the release's only update check: the rehearsal that ran before signing rep
 - A real streaming turn through a local custom connection is running when the installed app takes the update; the release's own signed zip must replace it natively, the app must restart on its own as the new version on Alpha, with a valid signature and its direct receipt.
   The live reply must stop before the replacement, and the captain's message and a personal draft must survive.
 
+ShipIt restarts the app with no inspector, so the check stops that copy and launches the app again with one (`scripts/installer-app.ts`).
+It stops the restarted copy only once its main process has started a renderer, the process that draws its page, so it never stops that copy early in its start.
+After the app's main process ends, the check waits until every process from the app's bundle but ShipIt has ended before it launches again.
+A process still running after 30 s is recorded as `Processes left after the app stopped`, with its kind, parent, age and state, and then ended.
+Every launch the check makes writes Chromium's own warnings and errors to `application.log` beside the app's lines.
+A launch that shows no page, or a restarted copy that starts none, keeps what the app was doing before cleanup removes the scratch home, in files named for the launch.
+They hold the inspector's targets of every kind, the app's processes, a three-second sample of each main process and renderer, the app's stall and memory records and five minutes of the system log for its processes.
+The failure's own record names the facts read from them in one line, such as the deepest frame each sampled main thread stayed in.
+A failed check also keeps the app's stall and memory records at cleanup; the app's database never leaves the disposable Mac.
+
 The check builds nothing, signs nothing and sends nothing to Apple; its observations are kept as `update-evidence-*` artifacts.
 GitHub ends a job as lost when the runner's lease renewals stop reaching its job service, even after every step passed, and the virtual Mac's runner log is deleted with it.
 So the job's next step, `scripts/runner-link-readings.ts`, reads the runner's own renewals from its diagnostics folder and waits out one more renewal when the last is overdue.

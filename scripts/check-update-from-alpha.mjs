@@ -13,6 +13,7 @@ import { installStageRecorder, keepShipItLogs } from "./installer-update-trace.t
 import { answeredHere, resolverAnswers, restoreHosts, routeHostsHere } from "./installer-hosts.ts";
 import { virtualMacSwitches } from "../tests/e2e/virtualMac.ts";
 import { assertInstallerEnvironment, installerAppEnvironment, installerServerEnvironment } from "./installer-environment.ts";
+import { CHROMIUM_LOG_SWITCHES, describeProcesses, keepAppRecords, keepNoPageEvidence, lingering, readAppProcesses, startedPage } from "./installer-app.ts";
 
 // INF-1900 direction D: the release's update check. A disposable Mac installs the
 // version alpha subscribers have now, from its public disk image, and updates it
@@ -93,19 +94,41 @@ async function stopApp() {
   await expect.poll(() => spawnSync("/usr/bin/pgrep", ["-f", processPattern]).status, { timeout: 30_000 }).not.toBe(0);
   if (appChild && appChild.exitCode === null && appChild.signalCode === null) await bounded("Waiting for the launched app to exit", () => once(appChild, "exit"), 30_000);
   appChild = undefined;
+  // Every process the app started ends before it launches again (scripts/installer-app.ts):
+  // one still running from a stopped copy is named, then ended.
+  try { await expect.poll(() => lingering(readAppProcesses(installed)).length, { timeout: 30_000 }).toBe(0); }
+  catch {
+    const left = lingering(readAppProcesses(installed));
+    if (left.length) record("Processes left after the app stopped", describeProcesses(left));
+    for (const { pid } of left) { try { process.kill(pid, "SIGKILL"); } catch { /* It ended meanwhile. */ } }
+    await expect.poll(() => describeProcesses(lingering(readAppProcesses(installed))), { timeout: 10_000, message: "Every process from the stopped app must end before it launches again" }).toBe("none");
+  }
 }
+let launches = 0;
 async function launch() {
+  launches += 1;
   rmSync(join(data, "DevToolsActivePort"), { force: true });
   const log = openSync(join(evidence, "application.log"), "a");
-  appChild = spawn(executable, ["--remote-debugging-port=0", ...virtualMacSwitches()], { env: appEnv, stdio: ["ignore", log, log] });
+  appChild = spawn(executable, ["--remote-debugging-port=0", ...CHROMIUM_LOG_SWITCHES, ...virtualMacSwitches()], { env: appEnv, stdio: ["ignore", log, log] });
   closeSync(log);
-  await expect.poll(() => existsSync(join(data, "DevToolsActivePort")), { timeout: 60_000 }).toBe(true);
-  const port = readFileSync(join(data, "DevToolsActivePort"), "utf8").split("\n")[0];
-  browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
-  await expect.poll(() => browser.contexts()[0]?.pages().length ?? 0, { timeout: 30_000 }).toBeGreaterThan(0);
-  const page = browser.contexts()[0].pages()[0];
-  await page.waitForFunction(() => typeof window.infinitary?.update?.status === "function");
-  return page;
+  let port;
+  try {
+    await expect.poll(() => existsSync(join(data, "DevToolsActivePort")), { timeout: 60_000 }).toBe(true);
+    port = readFileSync(join(data, "DevToolsActivePort"), "utf8").split("\n")[0];
+    browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`);
+    await expect.poll(() => browser.contexts()[0]?.pages().length ?? 0, { timeout: 30_000 }).toBeGreaterThan(0);
+    const page = browser.contexts()[0].pages()[0];
+    await page.waitForFunction(() => typeof window.infinitary?.update?.status === "function");
+    return page;
+  } catch (error) {
+    // What the app was doing, kept before cleanup stops it and removes its scratch home.
+    await noPage("Launch with no page", { label: `launch-${launches}`, port });
+    throw error;
+  }
+}
+async function noPage(check, { label, port }) {
+  try { record(check, await keepNoPageEvidence({ bundle: installed, data, evidence, label, port })); }
+  catch (error) { record(check, `Its evidence could not be kept: ${error.stack ?? String(error)}`); }
 }
 const status = page => bounded("Reading the installed app's update offer", async () => {
   const value = await page.evaluate(() => window.infinitary.update.status());
@@ -211,6 +234,10 @@ try {
   } finally { sampling = false; await sampler; }
   await expect.poll(() => spawnSync("/usr/bin/pgrep", ["-f", processPattern]).status, { timeout: 60_000 }).toBe(0);
   record("Native signed replacement", `The installed bundle now contains ${target} and the app restarted on its own.`);
+  // A restarted copy stopped early in its start once left the next launch with no page (INF-2949).
+  try { await expect.poll(() => startedPage(readAppProcesses(installed)), { timeout: 60_000, message: "The restarted app must start its page" }).toBe(true); }
+  catch (error) { await noPage("Restarted app with no page", { label: "restarted" }); throw error; }
+  record("Restarted page", `The restarted ${target} started its page before the check stopped it.`);
   await stopApp();
   page = await launch(); // Reattach the inspection port, which macOS need not preserve on restart.
   const updated = await status(page);
@@ -266,6 +293,7 @@ try {
   await cleanup("Removing the installed app", () => rmSync(installed, { recursive: true, force: true }));
   await cleanup("Closing the fixture module reader", () => bounded("Closing the fixture module reader", () => runner.close(), 30_000));
   await cleanup("Keeping ShipIt's logs", () => { if (bundleId) keepShipItLogs(home, bundleId, evidence, "final"); });
+  await cleanup("Keeping the app's own records", () => { if (verificationFailed) keepAppRecords(data, evidence, "final"); });
   // No copy of the saved database leaves this disposable proof.
   await cleanup("Removing the scratch home", () => rmSync(home, { recursive: true, force: true }));
   if (!verificationFailed && cleanupErrors.length) throw new AggregateError(cleanupErrors, "Disposable proof cleanup failed");

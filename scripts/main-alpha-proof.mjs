@@ -133,10 +133,18 @@ function checkMainRun(run, jobs, repository, source) {
 
 // The swept batch (INF-2430 piece 3, docs/testing.md "The swept batch"): a
 // main push whose files are exactly a green batch's skips main's full check,
-// and main.yml names the batch run in a job of its own. The batch run's
-// verdict job names the tree it swept, and its sweep job is verify.yml, read
-// as `verify` like main's own.
+// and main.yml names the batch run in a job of its own. The batch run is the
+// shipped queue's (infinitary-queue.yml), whose batch checks job calls this
+// repository's infinitary-batch-checks.yml: its last job names the tree its
+// sweep and critical path built, and its sweep is verify.yml, read as
+// `verify` like main's own. A batch run from before the shipped queue
+// (batch.yml) named the tree in its verdict job and called verify.yml as
+// `sweep`.
 const COVERED = /^covered by batch (\d+)$/;
+const QUEUE_RUN = ".github/workflows/infinitary-queue.yml";
+const OLD_BATCH_RUN = ".github/workflows/batch.yml";
+// The shipped queue names its own jobs; this repository's batch checks run under its `Batch checks` job.
+const BATCH_CHECKS = "Batch checks / ";
 
 /** The batch run a covered main run names, or null for a full check. */
 export function coveringBatch(named) {
@@ -157,15 +165,20 @@ export function verifyCoveredMain(run, named, repository, source) {
 
 /** The batch run's full check passed on exactly `tree`, the alpha source's files. */
 export function verifyBatchEvidence(run, named, repository, tree) {
-  const jobs = legacy(named);
-  if (run.path !== ".github/workflows/batch.yml" || run.head_branch !== "main" ||
+  if (![QUEUE_RUN, OLD_BATCH_RUN].includes(run.path) || run.head_branch !== "main" ||
       run.head_repository?.full_name !== repository || run.repository?.full_name !== repository ||
       run.status !== "completed" || run.conclusion !== "success")
     throw new Error("A covered main push needs a successful batch run.");
-  if (jobs.some((job) => job.run_id !== run.id || !Number.isSafeInteger(job.run_attempt) ||
+  if (named.some((job) => job.run_id !== run.id || !Number.isSafeInteger(job.run_attempt) ||
       job.run_attempt < 1 || job.run_attempt > run.run_attempt))
     throw new Error("Batch jobs must belong to a completed attempt of this run.");
-  if (!jobs.some((job) => job.name === `verdict (tree ${tree})` && green(job)))
+  const shipped = run.path === QUEUE_RUN;
+  const jobs = legacy(shipped
+    ? named.filter((job) => job.name.startsWith(BATCH_CHECKS))
+      .map((job) => ({ ...job, name: job.name.slice(BATCH_CHECKS.length) }))
+    : named);
+  const treeJob = shipped ? `Batch passed (tree ${tree})` : `verdict (tree ${tree})`;
+  if (!jobs.some((job) => job.name === treeJob && green(job)))
     throw new Error("The batch run swept other files than the alpha source.");
   if (!checksPassed(jobs, "verify / "))
     throw new Error("The batch run did not complete every full-check owner successfully.");

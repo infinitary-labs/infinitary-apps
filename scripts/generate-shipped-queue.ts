@@ -1,5 +1,5 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import {
@@ -13,10 +13,27 @@ import {
 // The shipped queue's files as the queue-setup skill hands them to a
 // crewmate (docs/forge.md, "The shipped queue"): each stamped file as plain
 // text, since a runbook holds no executable source, and files.md naming
-// where each one goes. `--check` refuses drift, and a source change that
-// keeps the old version.
+// where each one goes. It also writes this repository's own queue, the same
+// stamped files at their paths with this repository's grants (docs/testing.md,
+// "The swept batch"). `--check` refuses drift in either, and a source change
+// that keeps the old version.
 const source = fileURLToPath(new URL("../src/core/queue/shipped/", import.meta.url));
 const out = fileURLToPath(new URL("../resources/runbooks/queue/skills/queue-setup/github/", import.meta.url));
+const repoRoot = fileURLToPath(new URL("../", import.meta.url));
+
+// This repository's grants, the one edit a project makes to a stamped file
+// (the queue file's `checks` job): verify.yml, which the batch checks call,
+// asks for a read of the project's runs (its Mac installer lane reads its
+// caller's run), and a called workflow can ask for no more than its caller
+// grants. It names no secret and no write.
+const GRANTS_AT = "      contents: read\n      # The team's grants";
+const OWN_GRANTS = "      contents: read\n      actions: read\n      # The team's grants";
+const withOwnGrants = (path: string, text: string) => {
+  if (path !== GITHUB_QUEUE_PART.queueFile) return text;
+  if (text.split(GRANTS_AT).length !== 2)
+    throw new Error(`The shipped queue file no longer marks its grants as "${GRANTS_AT}".`);
+  return text.replace(GRANTS_AT, OWN_GRANTS);
+};
 
 const hash = shippedSourceHash(source);
 if (hash !== QUEUE_SOURCES.at(-1))
@@ -64,6 +81,8 @@ wanted.set(
   ].join("\n"),
 );
 
+const own = files.map((file) => ({ path: join(repoRoot, file.path), text: withOwnGrants(file.path, file.text) }));
+
 if (process.argv.includes("--check")) {
   const present = (() => {
     try {
@@ -72,12 +91,24 @@ if (process.argv.includes("--check")) {
       return [];
     }
   })();
+  const read = (path: string) => {
+    try {
+      return readFileSync(path, "utf8");
+    } catch {
+      return undefined;
+    }
+  };
   const drift =
     present.join("\n") !== [...wanted.keys()].sort().join("\n") ||
-    [...wanted].some(([name, text]) => readFileSync(join(out, name), "utf8") !== text);
+    [...wanted].some(([name, text]) => readFileSync(join(out, name), "utf8") !== text) ||
+    own.some((file) => read(file.path) !== file.text);
   if (drift) throw new Error("Run node scripts/generate-shipped-queue.ts to refresh the shipped queue's files.");
 } else {
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
   for (const [name, text] of wanted) writeFileSync(join(out, name), text);
+  for (const file of own) {
+    mkdirSync(dirname(file.path), { recursive: true });
+    writeFileSync(file.path, file.text);
+  }
 }

@@ -60,29 +60,14 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
       needs: { find: waitedForAlpha, sort: { outputs: { kind: "full" } } },
     },
   },
+  // The batch checks the shipped queue calls on a composed batch
+  // (infinitary-batch-checks.yml); the queue names its own jobs.
   {
-    file: "batch.yml",
+    file: "infinitary-batch-checks.yml",
     trigger: "Merge batch",
     scenario: {
       github: { event_name: "status", event: { context: "infinitary/queue", state: "pending" } },
-      needs: { compose: { ...pass, outputs: { sweep: "true", tree: "b".repeat(40) } } },
-    },
-  },
-  {
-    file: "batch.yml",
-    trigger: "Requested batch rehearsal",
-    scenario: {
-      github: { event_name: "workflow_dispatch" },
-      inputs: { rehearsal: "901 902" },
-      needs: { compose: { ...pass, outputs: { sweep: "true", tree: "b".repeat(40) } } },
-    },
-  },
-  {
-    file: "batch.yml",
-    trigger: "Manual request",
-    scenario: {
-      github: { event_name: "workflow_dispatch" },
-      inputs: { send_back: "901", reason: "r" },
+      inputs: { batch: `917:${"a".repeat(40)}`, base: "c".repeat(40), tree: "b".repeat(40) },
     },
   },
   {
@@ -230,9 +215,12 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
 ];
 
 describe("CI job names (INF-2410 scheme A, trigger first)", () => {
+  // The shipped queue (docs/forge.md, "The shipped queue") is generated for
+  // every project and names its own jobs, so this project's scheme starts at
+  // the batch checks it calls.
   const workflows = readdirSync(
     fileURLToPath(new URL("../.github/workflows/", import.meta.url)),
-  ).filter((file) => file.endsWith(".yml"));
+  ).filter((file) => file.endsWith(".yml") && file !== "infinitary-queue.yml");
   type Workflow = {
     on: Record<string, { inputs?: Record<string, { required?: boolean; default?: unknown }> }>;
     jobs: Record<
@@ -444,12 +432,19 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
     }));
     expect(coveringBatch(covered)).toBe(41700000001);
     const tree = "b".repeat(40);
-    const names = runJobNames("batch.yml", SCENARIOS[5]!.scenario);
-    expect(names).toContain(`Merge batch · Batch verdict (tree ${tree})`);
+    // The queue's own jobs, then this project's batch checks under its checks job.
+    const names = [
+      "Form the batch",
+      ...runJobNames("infinitary-batch-checks.yml", SCENARIOS[5]!.scenario).map(
+        (name) => `Batch checks / ${name}`,
+      ),
+      "Batch verdict",
+    ];
+    expect(names).toContain(`Batch checks / Merge batch · Batch passed (tree ${tree})`);
     const run = {
       id: 2,
       run_attempt: 1,
-      path: ".github/workflows/batch.yml",
+      path: ".github/workflows/infinitary-queue.yml",
       event: "status",
       head_branch: "main",
       head_sha: "c".repeat(40),
@@ -467,18 +462,18 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
       status: "completed",
       conclusion: "success",
     }));
-    expect(verifyBatchEvidence(run, jobs, "infinitary-labs/infinitary", tree).runId).toBe(2);
-    // A rehearsal's report never reads as the batch's verdict.
-    const rehearsal = runJobNames("batch.yml", SCENARIOS[6]!.scenario).map((name) => ({
-      name,
-      run_id: 2,
-      run_attempt: 1,
-      head_sha: run.head_sha,
-      status: "completed",
-      conclusion: "success",
-    }));
-    expect(() => verifyBatchEvidence(run, rehearsal, "infinitary-labs/infinitary", tree)).toThrow(
-      "other files",
+    expect(verifyBatchEvidence(run, jobs, "infinitary-labs/infinitary", tree)).toMatchObject({
+      runId: 2,
+      journeys: true,
+    });
+    // A batch of other files never proves this source.
+    expect(() =>
+      verifyBatchEvidence(run, jobs, "infinitary-labs/infinitary", "d".repeat(40)),
+    ).toThrow("other files");
+    // Nor does a batch whose checks did not all run.
+    const short = jobs.filter((job) => !job.name.endsWith("(Mac)"));
+    expect(() => verifyBatchEvidence(run, short, "infinitary-labs/infinitary", tree)).toThrow(
+      "every full-check owner",
     );
   });
 

@@ -23,7 +23,6 @@ export const TRIGGERS = Object.freeze([
   "Main push",
   "Manual request",
   "Merge batch",
-  "Requested batch rehearsal",
   "Automatic alpha",
   "Requested alpha",
   "Requested stable",

@@ -323,7 +323,7 @@ Where each journey runs:
 | A request for journeys (`journeys.yml`) | every named journey when `platforms=linux` or `both` | tagged tests when `platforms=mac` or `both`, or every test with `mac_all` |
 | A requested full check (`verify.yml`) | every journey | every tagged test, or every journey with `all_journeys` |
 | The run on `main` (`main.yml`) | none | every tagged test |
-| The swept batch (`batch.yml`), which an alpha from its merges reuses | every journey | every journey |
+| The swept batch (`infinitary-batch-checks.yml`), which an alpha from its merges reuses | every journey | every journey |
 | An alpha that reuses main's checks (`release.yml`, `part: journeys`) | every journey | every journey |
 | A manual alpha without reusable proof (`verify.yml`) | every journey | every journey |
 
@@ -521,98 +521,39 @@ Beside the wait, its `sort` job reads each push against the swept batch ("The sw
 
 ## The swept batch
 
-`batch.yml` checks approved changes together before they reach `main` (INF-2430's plan, piece 3), so a change merges only when it passed the alpha's whole check and the alpha needs no second run of it.
-Its whole state is one commit status, `infinitary/queue`, on each approved pull request's current version (`scripts/batch.mjs`):
+This project merges through the queue Infinitary ships (`docs/forge.md`, "The shipped queue"), so a change merges only when it passed the alpha's whole check together with every change approved beside it, and the alpha needs no second run of it (INF-2430's plan, piece 3; INF-2952's plan, piece 3).
+Its queue is the generated one: `node scripts/generate-shipped-queue.ts` writes the stamped files from `src/core/queue/shipped/` into `.github/workflows/infinitary-queue.yml`, `.github/actions/infinitary-batch/` and `.github/infinitary/`, and `pnpm check` refuses a copy that differs.
+Its one grant, made by that script, gives the batch checks a read of the project's runs, which `verify.yml` asks for; they get no secret and no write.
+How the queue forms, composes, pauses, resumes and sends back a batch, and the words of its `infinitary/queue` status, are `docs/forge.md`'s.
 
-| Status | Description | Meaning |
-| --- | --- | --- |
-| pending | anything but the batch's own | the captain's merge click approved this version, and it waits for the next batch |
-| pending | `In batch run N` | batch run N is sweeping it |
-| pending | `Paused after batch run N; …` | batch run N failed, and the queue waits for a fix |
-| success | `Passed batch run N; tree T` | its batch passed on files `T`, and the app may merge it |
-| failure | a reason | it goes back to its pull request |
-
-The app writes the approval mark; `batch.yml` writes the rest with its own credential, which starts no other workflow.
-It starts on an approval mark, on a push to `main` and by hand, and only one batch runs at a time.
-Its concurrency group never cancels a batch, and every start reads the queue again, so a start GitHub drops loses nothing.
-Every GitHub call in it retries a dropped connection or a server error three times (github-script's `retries`), so one lost answer fails neither the batch's run nor `main`'s check of it.
-
-A batch forms only when no green batch is still merging, no failed batch has paused the queue and no batch run is still sweeping a change.
-A run that ended without writing its verdict, such as one whose `compose` job failed after marking its changes, owns nothing, so its changes join the next batch.
-It takes every waiting change that targets `main` in approval order, from when its approval mark was first written.
-A change stacked on another change's branch waits until its base merges and GitHub points it at `main`, since composing it would sweep its base's commits too.
-The `compose` job merges each change onto `main` with `scripts/batch-compose.sh`, the way a merge on GitHub combines files, with a fixed author and date.
-A change that conflicts with `main` itself fails with "Conflicts with main"; a change that conflicts only with an earlier change in the batch waits for the next one.
-Every sweep job composes the same commit again from `main` and the same versions, and fails if its tree differs from the one `compose` reported.
-The `compose` job's log prints the line that composes the same commit on any clone: "Compose this batch locally: git checkout --detach <main's version> && scripts/batch-compose.sh apply <tree> <number:version>...".
-Nothing is pushed: GitHub may refuse a workflow's own credential a push that changes workflow files, and the app merges every change with the captain's sign-in.
-
+What this project adds is its batch checks, `.github/workflows/infinitary-batch-checks.yml`, which the queue calls on each composed batch.
 The sweep is `verify.yml` with every journey and without the phone check, the whole check an alpha reuses: an alpha from a merge it checked runs no lane itself (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them").
 A sweep without every journey's complete set still lends its Linux checks and Mac lanes, and the alpha then runs every journey itself (INF-2480; `scripts/main-alpha-proof.mjs`).
 Its Linux jobs run on GitHub's hosted machines and its Mac lanes on the `release_split` queue ("Each Mac job's kind and size").
 Beside it, the `critical-path` job runs the critical path on the same composed commit on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
-A green sweep with a green critical path marks every change success with the batch's tree.
-A red sweep fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat").
-Its verdict pauses every change in it with the failed job's link, reruns nothing and blames no change.
-The pause names the first test file the failed jobs' logs report as failed and the batch's changes whose diffs touch that file, or that none does; the verdict's summary lists every such file.
-While any change is paused, no batch forms, and a change approved meanwhile waits.
-A fix ends the pause: a pull request labeled `fixes-batch` (`FIX_LABEL`), approved after the paused run started.
-The start its approval mark makes turns every paused change back to waiting and sweeps everything waiting, the fix included, in approval order.
-The verdict starts one more run, which only reads the queue, so a fix approved while the sweep ran ends the pause as soon as the verdict writes it.
-A fix approved before the paused run started was in that batch or could not compose there, so it ends nothing, and a fix that could not compose ends the next pause only with a new version approved again.
-The label must be on the pull request when its approval mark is written, since a label alone starts no batch run.
-A by-hand start ends the pause too, once the failure is judged a flake with an owner who fixes it, or a fix without the label is approved:
-- `resume` with a reason turns every paused change back to waiting and starts the next batch, which sweeps everything waiting, the fix included;
-- `send_back` with `reason` fails one change's status with that reason, turns the other paused changes back to waiting and starts the next batch without it.
+Every job composes the batch with the shipped compose script, `.github/actions/infinitary-batch/compose.sh apply`, in its own checkout, and fails if its tree differs from the one the queue composed.
+The last job, `Merge batch · Batch passed (tree T)`, passes only once both did and names the tree they built.
+A red batch fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat"): the queue pauses its changes behind one issue, and the app starts the repair ("A paused batch's repair").
 
-A paused change keeps its place in approval order, and a red sweep after a resume pauses again.
-A send-back by hand while a sweep runs is that sweep's answer: if the sweep fails, its verdict pauses nothing and fails no other change, and the rest wait again, in their approval order, for a batch the verdict starts without the change sent back.
-It still does when the change's author pushes a new version before the verdict runs: the verdict reads the failure on the version it swept, and the new version joins a batch only through its own approval mark, after the changes approved before it (INF-2940).
-A green sweep still passes the changes left in it.
-A by-hand start with `rehearsal` and pull request numbers sweeps them onto `main` and reports in its summary, marking nothing.
-
-`main.yml`'s `sort` job reads the pushed commit's pull request.
+`main.yml`'s `sort` job reads the pushed commit's pull request with the queue's own rules (`scripts/batch.mjs`).
 When that change passed batch run N on exactly the pushed files, the push is covered: a job named `Main push · Covered by batch run N` replaces the full check.
 While another change of batch N is still open and green, the push is landing: the run cancels itself, cuts no alpha and leaves no failed run, and the batch's last merge is read in full.
 Anything else gets the full check, a merge outside the queue and a batch merged in an order that changed its files included.
-The alpha's proof follows a covered run to its batch run and reads its full check and its verdict's tree (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
+The alpha's proof follows a covered run to its queue run and reads its batch checks and the tree their last job names (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
 The fleet never cancels a running batch or a running main check unless the captain asks.
-`tests/batch.test.ts` holds the queue's rules and the workflows' triggers, and `tests/batch-compose.test.ts` the composition, the local compose line and the bisect on real git.
+`tests/batch.test.ts` holds the batch checks, their compose step and main's sort.
 
 ## A paused batch's repair
 
-A red sweep reaches the crew through the captain's own Automation rule on GitHub's event "A workflow run fails", for the workflow `batch` on the branch `main` (`docs/integrations.md`, "GitHub's events").
-Its words start one repair crewmate under the main repair direction, which covers a paused batch's fix, or steer the repair already open, and the app's code names no repair, as main's repair works ("Main's desktop release check").
-The rule tells a run at its first failed job, so the repair starts while the rest of the sweep still runs.
-A requested rehearsal pauses nothing, so its failure needs no repair.
-The rule's words, saved as a draft that the captain turns on:
-
-> A merge batch run failed: {{events}}
-> Unless only a requested batch rehearsal's jobs failed, start one repair crewmate in the infinitary project, or steer the repair already open, to repair the paused batch as docs/testing.md "A paused batch's repair" says: read the failure, compose the batch locally, bisect on the failed file, then fix forward with a fixes-batch pull request, send one change back, or declare a flake with an owner, so the batch sweeps again.
-
-The repair takes these steps:
-
-1. It reads the failure: the failed jobs' logs and, once the run ends, the verdict's summary, which names every failed test file and the batch's changes whose diffs touch it.
-   It reads the queue first, since a fix approved during the sweep may already have ended the pause.
-2. It composes the batch on its own working copy with the line the `compose` job's log prints ("The swept batch"), from a working copy with no uncommitted change.
-   That line checks out the very commit every sweep job built, whatever `main` merged since.
-3. It bisects the changes on the failed file: `scripts/batch-compose.sh bisect <tree> <number:version>... -- <the command that runs the failed file>`, from `main`'s version that line names.
-   The command runs on `main` alone and with every change, then git's own bisect walks the changes in batch order, and the script says "fails-main", "passes-batch" or "first-fails N", leaving `main`'s version checked out.
-   A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at a composed commit.
-4. It ends the pause one of three ways:
-   - It fixes forward when the fix is sure and is not the failing change's own work, such as a test that change left stale, or `main` itself failing the file: a pull request to `main`, labeled `fixes-batch` before its approval and approved under the main repair direction without waiting for the captain's click.
-     Its approval mark ends the pause, and the fix composes after the paused changes.
-   - It sends one change back when that change is wrong and its fix belongs on its own branch: `batch.yml` started by hand with `send_back` and `reason` fails that change's status, turns the rest back to waiting and starts the next batch without it.
-   - It declares a flake when the file passes on the composed batch and the log shows a failure no change caused: it files the flake with an owner who fixes its root cause, then starts `batch.yml` by hand with `resume` and a reason naming that task.
-5. A `resume` acts only on paused changes, so the repair starts it after the verdict wrote the pause, at the run's end; a send-back is that sweep's answer whenever it comes.
-   A by-hand `resume` also ends a pause for a fix approved without the label.
-
-A later red sweep pauses again, and the rule steers the same repair until a batch passes.
+A paused batch reaches the first mate as the app's `queue-paused` wake, and its repair follows the `queue-repair` skill (`docs/forge.md`, "One queue for every host"): it claims the pause's issue, reads the failed jobs' logs and the files the issue names, then fixes forward with a pull request labelled `infinitary-queue-fix`, sends one change back, or files a flake's owner and resumes.
+A send-back or a resume is the queue's own by-hand start, from Settings → Projects or `infinitary-queue.yml`'s Run workflow with `action`, `number` and `reason`.
+A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at the composed commit.
+The composed commit is `main`'s version the batch run names with each change's version merged in order: `bash .github/actions/infinitary-batch/compose.sh apply <base> <tree> <number:version>...` rebuilds it on any clone.
 
 ## CI job names
 
 Every job's name says what started its run and what it checks, in one scheme (INF-2410, the captain: "i want to distinguish what triggered the job and what they check"; scheme "A. Trigger first"): `Trigger · Purpose (platform or device; group or round)`, such as `Main push · App journeys (Linux; serial group 3/4)` or `Pull request · Code, build, affected tests and critical path (Linux)`.
-The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (the approval mark, a merge or the batch's own next start), `Requested batch rehearsal`, `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
+The trigger is one of `TRIGGERS` in `scripts/ci-job-names.mjs`: `Pull request`, `Main push`, `Manual request` (a check started by hand, main's included, is never a main push), `Merge batch` (the batch checks the shipped queue calls; the queue's own jobs name no trigger), `Automatic alpha`, `Requested alpha` or `Requested stable` with ` rehearsal` for a dry run, and `Requested TestFlight` or `Requested TestFlight status`.
 A called workflow takes its caller's trigger through its `trigger` input, so each level of GitHub's full name leads with it: `Main push · Desktop checks / Main push · Linux journeys / Main push · App journeys (Linux; serial group 3/4)`; a runner list that shows only the last level still says what started it.
 A workflow only a caller starts (`alpha-wait.yml`, `linux-startup.yml`, `mac-installer.yml`, `mac-update.yml`) requires that input and keeps no fallback of its own, and a release says its trigger once, in its `resolve` job's `trigger` output, which every later job's name and every workflow it calls read (INF-2539).
 Workflow names and files, job ids, run titles, concurrency groups and artifact names keep their earlier names, so triggers, queues and the readers of `github.workflow` are unchanged.
@@ -635,7 +576,7 @@ The cost is GitHub's per-minute bill for those jobs.
 - `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`.
 
 `linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` is their only caller; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
-`batch.yml` passes `hosted: true` to its sweep, and its own jobs and `main.yml`'s `sort` and `covered` jobs name `ubuntu-24.04` ("The swept batch").
+`infinitary-batch-checks.yml` passes `hosted: true` to its sweep and its critical path, and its own job and `main.yml`'s `sort` and `covered` jobs name `ubuntu-24.04`; the shipped queue's own jobs run where it names ("The swept batch").
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.
@@ -771,7 +712,7 @@ Those sections are the gate at launch, a key signed in through the gate's own ch
 A version that skips the build skips it too ("What a pull request runs").
 A pull request that edits the journey runs it three rounds and then alone, as any edited journey (`scripts/journey-runs.ts`); any other pull request runs it once.
 A failed run keeps the window and the journey's results as the `source-desktop-critical-path` artifact.
-The swept batch runs it again on the composed batch, in `batch.yml`'s own `critical-path` job, and passes only when it passed ("The swept batch").
+The swept batch runs it again on the composed batch, in `infinitary-batch-checks.yml`'s own `critical-path` job, and passes only when it passed ("The swept batch").
 Every other journey runs on request ("Journeys on request") and in main's desktop release check, never on a pull request of its own accord.
 A step that breaks fails the pull request, and is repaired at its owner; weakening or deleting the journey is ask-first ("This project's rulings on tests").
 
@@ -1356,7 +1297,7 @@ Those queues share the same places and add no capacity; they keep a release from
 The TestFlight job runs only for a release, so its `testflight` kind has no release twin, and the placement service ranks its queue the same way.
 A dry run asks for the ordinary kinds, so a rehearsal never takes a release's place in line.
 `release.yml` hands `release_split` to `verify.yml` as its `mac_runner` input and `release_light` to `mac-update.yml` as its `runner` input, and `verify.yml`'s Mac lanes read their kind only when that input is empty.
-`batch.yml`'s sweep, the alpha's full check, hands `release_split` the same way.
+The batch checks' sweep, the alpha's full check, hands `release_split` the same way.
 The full Mac check's lanes ask for `split`, then the `journeys` kind, whose queue already takes journeys-sized jobs, then `check`, then the old label, so until `MAC_QUEUES` names `split` they run where journeys run.
 The signed installer's Intel check stays on `macos-15-intel` and takes no kind.
 `tests/release-workflows-runners.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
@@ -1462,7 +1403,7 @@ An install inside a container needs none of this: the container's apt is its own
 ## The Linux source desktop
 
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on Ubuntu 24.04 x64 (`LINUX_RUNNER`, hosted when unset), under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
-`journeys.yml` calls it as `linux-overflow` with `suite: affected` for a request's named journeys, and `batch.yml` for the critical path on the composed batch ("The swept batch"); INF-2539 removed the pull request's `linux-source` call and its fixed starter list.
+`journeys.yml` calls it as `linux-overflow` with `suite: affected` for a request's named journeys, and `infinitary-batch-checks.yml` for the critical path on the composed batch ("The swept batch"); INF-2539 removed the pull request's `linux-source` call and its fixed starter list.
 Linux runs the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys, the device journeys and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
 `verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, in every alpha or the swept batch it reuses and named full-run exceptions, in eight jobs, with no run-alone pass (INF-2340).
 Four take a quarter each of the parallel lanes (`styles`, `renderer` and `application`) and four a quarter each of the serial `desktop` lane, each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its share, such as `Main push · App journeys (Linux; serial group 2/4)`, a serial group being a share of the desktop lane.

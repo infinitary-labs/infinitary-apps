@@ -15,80 +15,16 @@ export type QueueState = {
   run?: number;
   tree?: string;
 };
-export type Member = { number: number; head: string };
-/**
- * An open pull request: its version, the branch it targets, whether it is a
- * paused batch's fix (labeled FIX_LABEL) and its queue state.
- */
-export type QueueEntry = Member & { base: string; fix?: boolean; queue: QueueState | null };
-/**
- * A batch run's change as its verdict reads it: the pull request's current
- * version and its queue state there (null once closed), and `swept`, the
- * swept version's queue state, read only when the change was pushed again.
- */
-export type CurrentMember = { head: string; queue: QueueState | null; swept?: QueueState | null };
-export type BatchRun = { id: number; status: string; conclusion: string | null; created_at?: string };
-export type StatusWrite = Member & { state: string; description: string; url: string };
+/** An open pull request: its version and its queue state. */
+export type QueueEntry = { number: number; head: string; queue: QueueState | null };
 
-export const QUEUE: string;
-export const WAITING: string;
-export const MAIN: string;
-export const FIX_LABEL: string;
-export function inBatch(runId: number): string;
-export function passed(runId: number, tree: string): string;
 export function readQueueStatus(statuses: readonly CommitStatus[]): QueueState | null;
-export function ownsChanges(run: BatchRun | undefined): boolean;
-export function formBatch(
-  entries: readonly QueueEntry[],
-  runs: ReadonlyMap<number, BatchRun>,
-): { action: "none" | "wait" | "sweep"; resume?: true; reason: string; members: Member[] };
-export function resume(
-  entries: readonly QueueEntry[],
-  options: { url: string; except?: number },
-): StatusWrite[];
-export function headList(members: readonly Member[]): string;
-export function composeLocally(batch: { base: string; tree: string; members: readonly Member[] }): string;
-export function readComposition(
-  output: string,
-  members: readonly Member[],
-): { tree: string; merged: Member[]; conflictsMain: Member[]; conflictsBatch: Member[] };
-export function verdict(input: {
-  runId: number;
-  runUrl: string;
-  swept: string;
-  tree: string;
-  members: readonly Member[];
-  current: ReadonlyMap<number, CurrentMember>;
-  failedJob?: { name: string; html_url: string };
-  failedFiles?: readonly FailedFile[];
-}): { writes: StatusWrite[]; next: "sweep" | null; summary: string };
-/** A test file a failed job's log names, and the batch's changes whose diffs touch it. */
-export type FailedFile = { file: string; touchedBy: number[] };
-export function failedTestFiles(log: string): string[];
-export function readFailedFiles(
-  github: unknown,
-  repo: { owner: string; repo: string },
-  failedJobs: readonly { id: number }[],
-  members: readonly Member[],
-): Promise<FailedFile[]>;
 export function sortMainPush(input: {
   tree: string;
   queue: QueueState | null;
   open: readonly QueueEntry[];
 }): { kind: "full" | "covered" | "landing"; run?: number };
 /** Octokit instances, as actions/github-script passes them. */
-export function readCurrent(
-  github: unknown,
-  repo: { owner: string; repo: string },
-  members: readonly Member[],
-): Promise<Map<number, CurrentMember>>;
-export function readOpenQueue(github: unknown, repo: { owner: string; repo: string }): Promise<QueueEntry[]>;
-export function readRuns(
-  github: unknown,
-  repo: { owner: string; repo: string },
-  entries: readonly QueueEntry[],
-): Promise<Map<number, BatchRun>>;
-export function writeStatus(github: unknown, repo: { owner: string; repo: string }, write: StatusWrite): Promise<unknown>;
 export function readMainPush(
   github: unknown,
   repo: { owner: string; repo: string },

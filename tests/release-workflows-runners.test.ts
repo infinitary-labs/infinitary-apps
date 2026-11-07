@@ -371,10 +371,7 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The swept batch and main's sort of each push (INF-2430's plan, piece 3).
     "main.yml:sort",
     "main.yml:covered",
-    "batch.yml:send-back",
-    "batch.yml:resume",
-    "batch.yml:compose",
-    "batch.yml:verdict",
+    "infinitary-batch-checks.yml:passed",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").
@@ -398,8 +395,11 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
   const evaluate = (value: string, contexts: Record<string, unknown>) =>
     value.includes("${{") ? workflowValue(value, contexts) : value;
   const linux: string[] = [];
-  for (const file of readdirSync(join(root, ".github/workflows")).filter((name) =>
-    name.endsWith(".yml"),
+  // The shipped queue (docs/forge.md, "The shipped queue") is generated from
+  // src/core/queue/shipped/ for every project and names its own runners;
+  // this project's batch checks, which it calls, run where this check says.
+  for (const file of readdirSync(join(root, ".github/workflows")).filter(
+    (name) => name.endsWith(".yml") && name !== "infinitary-queue.yml",
   )) {
     const { jobs } = loadYamlFile(`.github/workflows/${file}`) as { jobs: Record<string, Job> };
     for (const [id, job] of Object.entries(jobs)) {
@@ -651,8 +651,8 @@ describe("a release's hosted machines", () => {
     expect(passing.sort()).toEqual([
       // The swept batch's critical path (INF-2507) and its sweep, the alpha's
       // full check (INF-2430's plan, piece 3).
-      "batch.yml:critical-path",
-      "batch.yml:sweep",
+      "infinitary-batch-checks.yml:critical-path",
+      "infinitary-batch-checks.yml:sweep",
       "main.yml:verify",
       "release.yml:linux",
       "release.yml:verify",

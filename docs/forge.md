@@ -644,7 +644,7 @@ The mark comes after the same last look a merge request takes - the same approva
 Until the queue passes a version, GitHub's rules reading the pull request as held are not a stop: a required `infinitary/queue` status is what holds it, and the mark answers it.
 Every route to a merge waits on the queue the same way: the merge card's click, for the task's own change or a review the task owns or references, and a merge past the branch rules, whose click marks the version and sends nothing, so the same review merges on a new click once the queue passes.
 The project's queue finds the versions marked `pending`, tests them, and sets the status to `success` or `failure` on each, with its reason in the description and a link to the run in `target_url`.
-A queue may also keep a version `pending` with words of its own, such as this project's batch while a failed sweep pauses it for a fix (`docs/testing.md`, "The swept batch"); the app reads any `pending` as still waiting and changes nothing for it.
+A queue may also keep a version `pending` with words of its own, such as the shipped queue's pause ("The shipped queue"); the app reads any `pending` as still waiting and changes nothing for it.
 The status is read as one more check (`GitHubForge.checks`), so the check watch follows it, and the kept approval merges only once it reads `success` at that exact version, through the same version guard and with no new click (`ChangeMerge.mergeOnce`).
 A failed status wakes the crewmate through the failed-check wake like any failed check; the crewmate reads the batch's reason and link off the status with `github_read`, and its repair declarations decide whether the click carries to the fixed version.
 No checks override passes the queue.

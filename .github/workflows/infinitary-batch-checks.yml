@@ -1,0 +1,80 @@
+name: Infinitary batch checks
+
+# This repository's batch checks (docs/testing.md, "The swept batch"): the
+# shipped queue (infinitary-queue.yml, generated from src/core/queue/shipped/;
+# docs/forge.md, "The shipped queue") composes the approved changes onto main
+# and calls this file on the result. It runs the alpha's full check - every
+# Linux journey on GitHub's hosted machines and every journey on the mini's
+# release check line, without the phone check - and the critical path in a
+# job of its own (INF-2507). Every job composes the same batch with the
+# shipped compose step. The last job names the batch's tree, which main's
+# check and the alpha's proof follow (scripts/main-alpha-proof.mjs).
+#
+# Its jobs lead with the Merge batch trigger (scripts/ci-job-names.mjs); the
+# queue names its own jobs.
+
+on:
+  workflow_call:
+    inputs:
+      batch:
+        description: The batch's changes as <number>:<version>, in order (the queue passes it)
+        required: true
+        type: string
+      base:
+        description: The main version the batch composes onto (the queue passes it)
+        required: true
+        type: string
+      tree:
+        description: The tree the queue composed, which every job must build (the queue passes it)
+        required: true
+        type: string
+
+# verify.yml reads its caller's run; the queue file's checks job grants it.
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  # The alpha's full check on the composed batch, without the phone check:
+  # hosted Linux, and the Mac lanes on the release split line.
+  sweep:
+    name: Merge batch · Desktop checks
+    uses: ./.github/workflows/verify.yml
+    with:
+      trigger: Merge batch
+      ref: ${{ inputs.base }}
+      batch: ${{ inputs.batch }}
+      batch_tree: ${{ inputs.tree }}
+      profile: stable
+      all_journeys: true
+      hosted: true
+      mac_runner: ${{ fromJSON(vars.MAC_QUEUES || '{}').release_split || '' }}
+
+  # The critical path (INF-2507; docs/testing.md, "The critical path") on the
+  # composed batch, in a job of its own, so the batch's check runs it
+  # whatever part of the full check the sweep runs (the captain, on INF-2508:
+  # "the e2e journey + browser tests should all run during the sweep batch").
+  critical-path:
+    name: Merge batch · Critical-path journey
+    uses: ./.github/workflows/source-journeys.yml
+    with:
+      trigger: Merge batch
+      ref: ${{ inputs.base }}
+      batch: ${{ inputs.batch }}
+      batch_tree: ${{ inputs.tree }}
+      hosted: true
+      suite: affected
+      lane: desktop
+      files: tests/e2e/critical-path.spec.ts
+      artifact-suffix: critical-path
+
+  # Passes only once the sweep and the critical path both passed, and names
+  # the tree they built, which the alpha's proof reads.
+  passed:
+    needs: [sweep, critical-path]
+    name: ${{ format('Merge batch · Batch passed (tree {0})', inputs.tree) }}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          TREE: ${{ inputs.tree }}
+        run: echo "The sweep and the critical path passed on tree $TREE."

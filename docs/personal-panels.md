@@ -282,7 +282,7 @@ Nothing transforms saved data and nothing runs older code in the app's process: 
 ## A paused panel
 
 A `server.ts` written for a panel API this version no longer serves (`SERVED_PANEL_APIS`) is paused, not stopped (INF-2470).
-The app log gets one line the first time each version of the file's text is refused.
+The panel log ("The panel log" below) gets one line the first time each version of the file's text is refused.
 The snapshot carries `paused`: the API the manifest names (1 when it names none), the APIs served, and whether the captain already asked for the update.
 The window draws the host's own line and an Update panel button above the panel's body (`BackgroundPaused`, `[data-panel-background-paused]`), outside the panel's code and reached with Tab.
 It draws them only on a live panel, never on a draft, and not while a crewmate is building that panel.
@@ -315,6 +315,17 @@ The snapshot carries `stopped` (why, when, and which version).
 The window draws the host's own line and a Retry above the panel's body (`BackgroundStopped`, `[data-panel-background-stopped]`), outside the panel's code and reached with Tab.
 `lint_panel` says the panel is stopped, and its actions are refused.
 Stopping is targeted: the panel's data, its drawing and every other panel stay; the `panels` switch and safe mode above remain the broad fallback.
+
+## The panel log
+
+Every panel's lines go to one file in the app's data folder, `logs/panels.log` (`AppPaths.panelLogPath`), with a window or without one (INF-2817).
+An app opened from the Dock keeps none of its console, so a panel line sent there was lost: a panel whose saves were refused looked as if GitHub had stopped answering.
+The file holds what a panel's code hands `context.log`, a throw its process logs, every line its process prints on either stream, and the host's own lines about panels: a stop, a paused `server.ts`, a workspace the app could not seed or watch.
+A line starts with its ISO time, then `personal <id>:` for a captain's panel; a printed line says `stdout:` or `stderr:` after that, and a message of several lines keeps its later lines indented.
+The panel process's spawner reads both of its streams line by line (`HostChildProcess.onOutput`, `src/main/host/panelProcess.ts`), always, so a panel that prints a lot never waits on a full pipe, and the last lines of a process that ended on its own still reach the file after its stop.
+`PanelLog` (`src/core/panels/panelLog.ts`) is the one writer: it appends each line at once, makes only its own folder, and drops a line it cannot write, so the log never stops a panel or the app.
+Past `PANEL_LOG_MAX_BYTES` (1 MiB) the file moves aside to `panels.old.log`, replacing the one before.
+The personal-panel skill tells a crewmate building a panel where to read it.
 
 ## Panels for others (the plugin author's guide)
 

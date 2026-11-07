@@ -268,6 +268,9 @@ class Runtime implements PanelRuntime {
     this.lastBeat = clock.now();
     this.lastCheck = this.lastBeat;
     child.onMessage((message) => this.receive(message as PanelChildMessage));
+    // What the process prints reaches the same log as `context.log`, after a
+    // stop too: the last lines of a process that ended on its own say why.
+    child.onOutput?.((stream, line) => services.log(`${stream}: ${line}`));
     child.onExit(() => this.exitedOnItsOwn());
     // The watch starts at spawn: the process's start and the import count.
     this.watch = clock.setInterval(() => this.check(), settings.beatMs);

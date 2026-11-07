@@ -529,6 +529,12 @@ export type HostChildProcess = {
   onMessage: (listener: (message: unknown) => void) => void;
   /** Fires once, however the process ended (its own exit, a crash, `kill`). */
   onExit: (listener: (code: number | null) => void) => void;
+  /**
+   * Hears each line the process prints, on either stream, until its streams
+   * close - after it ended too. Absent: what it prints is not read, as for
+   * a process whose output goes to the terminal or nowhere.
+   */
+  onOutput?: (listener: (stream: "stdout" | "stderr", line: string) => void) => void;
   kill: () => void;
   readonly pid: number | undefined;
 };

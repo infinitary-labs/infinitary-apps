@@ -49,6 +49,13 @@ export type AppPaths = {
    */
   memoryRecordPath: string;
   /**
+   * The panels' log (docs/personal-panels.md, "The panel log"): every line a
+   * panel's code logs or prints and the host's own lines about panels,
+   * appended only by `PanelLog`, moved aside to `panels.old.log` past its
+   * bound.
+   */
+  panelLogPath: string;
+  /**
    * The task channel's keys (docs/axi-commands.md, "The channel"): 0700,
    * one 0600 file per task granted a command, emptied each time the app
    * opens and closes the channel, written only by `AxiChannel`.
@@ -145,6 +152,7 @@ export function appPathsFor(userData: string): AppPaths {
     webSignInsDir: join(userData, "web-sign-ins"),
     freezeRecordPath: join(userData, "freezes.jsonl"),
     memoryRecordPath: join(userData, "memory.jsonl"),
+    panelLogPath: join(userData, "logs", "panels.log"),
     taskChannelDir: join(userData, "task-channel"),
     phoneDoorDir: join(userData, PHONE_DOOR_FOLDER),
     piAgentDir: join(userData, "pi-agent"),

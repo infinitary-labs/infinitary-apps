@@ -9,6 +9,7 @@ import type { KnowledgeService } from "../knowledge/knowledgeService";
 import type { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import type { PersonalLiveDelegate } from "../orchestrator/crewSupervisorOptions";
 import type { TypedWake } from "../orchestrator/wakes";
+import { PanelLog } from "../panels/panelLog";
 import { PanelRuntimes } from "../panels/panelRuntimes";
 import { PanelStops } from "../panels/panelStops";
 import type { AppPaths } from "../paths";
@@ -48,6 +49,7 @@ export async function startHomePersonal(options: {
     AppPaths,
     | "personalWorkspaceDir"
     | "personalCacheDir"
+    | "panelLogPath"
     | "crewmatesDir"
     | "pluginsDir"
     | "installedCacheDir"
@@ -74,6 +76,11 @@ export async function startHomePersonal(options: {
 }): Promise<HomePersonal> {
   const { host, paths, repos, tasks, preferences, panelAsks, pluginRecords } = options;
   const panelMounts = new PanelMountsHolder();
+  // Every panel's lines and the host's own about panels go to one file in
+  // the data folder, with a window or without one (docs/personal-panels.md,
+  // "The panel log"): an app opened from the Dock keeps none of its console.
+  const panelLog = new PanelLog(paths.panelLogPath);
+  const log = (message: string) => panelLog.write(message);
   // The personal workspace is a project from the first start, so a panel
   // instruction can be a direction scoped to it before any panel exists;
   // what an older build kept in the workspace's captain skill is carried
@@ -82,7 +89,7 @@ export async function startHomePersonal(options: {
     workspaceDir: paths.personalWorkspaceDir,
     scope: repos.ensurePersonal(paths.personalWorkspaceDir).id,
     knowledge: options.knowledge,
-    log: (message) => console.warn(`[infinitary] ${message}`),
+    log,
   });
   // The captain's Update panel press reaches the first mate (INF-2470);
   // late-bound because the first mate is built below.
@@ -106,7 +113,7 @@ export async function startHomePersonal(options: {
         preferences.reconcile(knownPanels(payload as PersonalSnapshot));
       options.emit(channel, payload);
     },
-    log: (message) => console.warn(`[infinitary] ${message}`),
+    log,
     ...(host.capture ? { capture: host.capture } : {}),
     captureDirFor: (taskId) => join(paths.crewmatesDir, taskId, "captures"),
     mounts: panelMounts,

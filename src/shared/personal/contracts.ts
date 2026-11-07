@@ -1337,7 +1337,10 @@ export type ServerContext = {
   id: string;
   /** The extension's slice of the shared store, bound to `id`. */
   db: ServerStore;
-  /** A line for the app's own log; never a user surface. */
+  /**
+   * A line for the panel log, `logs/panels.log` in the app's data folder, where
+   * what the code prints goes too; never a user surface.
+   */
   log: (message: string) => void;
   /**
    * The same read-only query a panel runs, over the views `manifest.json`

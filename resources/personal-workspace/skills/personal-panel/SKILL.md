@@ -69,6 +69,13 @@ or not the panel is open; the host clamps anything under 60 seconds up to 60 sec
 overlaps a run with itself, and logs a throw without stopping the timer. The usual pattern:
 the task writes to the store, the panel subscribes to the store.
 
+What `server.ts` says goes to the panel log, `logs/panels.log` in the app's data folder,
+two folders above this workspace (`../../logs/panels.log`): every `context.log(message)`,
+every line it prints with `console.log` or `console.error`, a throw the host logs, and the
+app's own lines about the panel, such as why it stopped. Each line starts with its time and
+names the panel. Read it when a panel misbehaves, before guessing; once it grows large the
+file moves aside to `panels.old.log`.
+
 The app watches `server.ts` from outside. Code that never gives its loop back - a loop that
 cannot end, a blocking wait - for ten seconds, or a process that ends on its own, is
 stopped: its actions are refused, its panel shows that its background work stopped with a

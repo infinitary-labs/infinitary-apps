@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-log-file",
+      "reason": "Internal: every panel's log lines, what its background process prints and the app's own lines about panels go to logs/panels.log in the app's data folder instead of a console the app does not keep, so a crewmate can read why a panel misbehaves; nothing on screen changes."
+    }
+  ]
+}

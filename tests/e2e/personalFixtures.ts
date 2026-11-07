@@ -137,3 +137,52 @@ export function updateOlderApiPanel(workspace: string): void {
     JSON.stringify({ api: 2, title: "Counter", placement: { x: "left", y: "top" } }),
   );
 }
+
+/**
+ * INF-2817: a panel whose code writes a line each way a panel can - through
+ * `context.log` and on both of its process's streams - and whose process
+ * ends on its own once asked, printing a last line as it goes. Each line is
+ * named once here, where it goes in and where a journey looks for it.
+ */
+export const CHATTY_LINES = {
+  logged: "chatty handed a line to context.log",
+  printed: "chatty printed a line on its output",
+  warned: "chatty printed a line on its errors",
+  last: "chatty printed its last line before ending",
+} as const;
+
+export function seedChattyPanel(workspace: string): void {
+  const chatty = join(workspace, "chatty");
+  mkdirSync(chatty);
+  writeFileSync(
+    join(chatty, "manifest.json"),
+    JSON.stringify({ title: "Chatty", api: 2, placement: { x: "left", y: "top" } }),
+  );
+  writeFileSync(
+    join(chatty, "panel.tsx"),
+    [
+      'import type { PanelProps } from "@infinitary/contracts";',
+      "export default function Panel({ id }: PanelProps) {",
+      "  return <p data-fixture={id} style={{ margin: 0 }}>Chatty</p>;",
+      "}",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(chatty, "server.ts"),
+    [
+      'import type { ServerContext } from "@infinitary/contracts";',
+      "export const actions = {",
+      "  talk: (_input: unknown, context: ServerContext) => {",
+      `    context.log(${JSON.stringify(CHATTY_LINES.logged)});`,
+      `    console.log(${JSON.stringify(CHATTY_LINES.printed)});`,
+      `    console.error(${JSON.stringify(CHATTY_LINES.warned)});`,
+      '    return "said";',
+      "  },",
+      "  end: () => {",
+      `    process.stderr.write(${JSON.stringify(`${CHATTY_LINES.last}\n`)}, () => process.exit(3));`,
+      '    return "ending";',
+      "  },",
+      "};",
+    ].join("\n"),
+  );
+}

@@ -171,7 +171,7 @@ describe("createEmitCardTool", () => {
     });
   });
 
-  it("carries task_id and standalone only in the Firstmate's schema (v2.0), and risk only in a crewmate's", async () => {
+  it("carries task_id and related only in the Firstmate's schema (v2.0), and risk only in a crewmate's", async () => {
     const crewTool = piToolOf(createEmitCardTool(vi.fn(() => "card-t1-1"))) as unknown as AnyTool;
     const fmTool = piToolOf(
       createEmitCardTool(
@@ -191,7 +191,7 @@ describe("createEmitCardTool", () => {
     );
     expect(crewTool.parameters.properties).toHaveProperty("risk");
     expect(crewTool.parameters.properties).not.toHaveProperty("task_id");
-    expect(crewTool.parameters.properties).not.toHaveProperty("standalone");
+    expect(crewTool.parameters.properties).not.toHaveProperty("related");
     expect(crewTool.parameters.properties).toHaveProperty(
       "validation_request",
       EMIT_CARD_TOOL.parameters.properties.validation_request,
@@ -212,7 +212,7 @@ describe("createEmitCardTool", () => {
       "actions",
       "task_id",
       "review_task_id",
-      "standalone",
+      "related",
     ]);
     expect(crewTool.description).toBe(EMIT_CARD_TOOL_DESCRIPTION);
     expect(fmTool.description).toBe(FIRSTMATE_EMIT_CARD_TOOL_DESCRIPTION);
@@ -220,7 +220,7 @@ describe("createEmitCardTool", () => {
     // are about its own task by construction.
     const onCard = vi.fn(() => "card-t1-2");
     const tool = piToolOf(createEmitCardTool(onCard)) as unknown as AnyTool;
-    await tool.execute("t1", { title: "Note", body: "x", task_id: "t9", standalone: true });
+    await tool.execute("t1", { title: "Note", body: "x", task_id: "t9", related: ["t8"] });
     expect(onCard).toHaveBeenCalledWith({ title: "Note", body: "x", actions: [] });
 
     // INF-125: the approval names the recorded request and its exact action;
@@ -393,7 +393,7 @@ describe("createEmitCardTool", () => {
     });
   });
 
-  it("forwards task_id and standalone from the Firstmate's schema", async () => {
+  it("forwards task_id and related from the Firstmate's schema", async () => {
     const onCard = vi.fn(() => "card-fm-2");
     const tool = piToolOf(
       createEmitCardTool(onCard, undefined, { role: "firstmate" }),
@@ -411,12 +411,17 @@ describe("createEmitCardTool", () => {
       taskId: "t9",
       reviewTaskId: "review-1",
     });
-    await tool.execute("t2", { title: "Note", body: "x", standalone: true });
+    // INF-2714: the tasks a note mentions, trimmed and named once.
+    await tool.execute("t2", {
+      title: "Note",
+      body: "x",
+      related: [" INF-2711 ", "t9", "INF-2711"],
+    });
     expect(onCard).toHaveBeenLastCalledWith({
       title: "Note",
       body: "x",
       actions: [],
-      standalone: true,
+      relatedTaskIds: ["INF-2711", "t9"],
     });
   });
 

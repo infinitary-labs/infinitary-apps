@@ -10,6 +10,7 @@ import { createKeyIdentity } from "@core/devices/identity";
 import { absentKeychain } from "@core/host";
 import { startCore } from "@core/index";
 import { appPathsFor } from "@core/paths";
+import { resolveFirstmateCardId } from "@core/pi/cardTool";
 import { seedTask } from "@core/tasks/seedTask";
 import { CARD_LEAVE } from "@shared/cardLeave";
 import { ANYTHING_ELSE_ANSWER, PAST_CARD_WORDS_LEAD } from "@shared/cards";
@@ -1039,18 +1040,19 @@ export async function startPhoneHome(
             id: "phone-ask",
             text: PHONE_ASKED_MESSAGE,
           });
-          const asked = seedTask(core.services.tasks, {
-            id: "phone-asked",
-            title: "Check how the stack orders cards",
-            status: "completed",
-            outcome: "The stack keeps a card you replied under in its place.",
-          });
-          core.services.tasks.capture.attachAsk(ask.id, asked.id, "tool:spawn_crewmate");
-          core.services.tasks.capture.closeAsk(ask.id, "closed");
           const title = "The stack keeps a card you replied under in its place";
+          // The first mate's answer is its own question record, which the
+          // message attached to (INF-2714); the card reads its line there.
+          const asked = core.services.tasks.capture.fileQuestion({
+            id: "phone-asked",
+            title,
+            outcome: "The stack keeps a card you replied under in its place.",
+            cardId: resolveFirstmateCardId("phone-asked-card"),
+          });
+          core.services.tasks.capture.attachAsk(ask.id, asked.id, "tool:emit_card", true);
+          core.services.tasks.capture.closeAsk(ask.id, "closed");
           core.services.supervisor.addFirstmateCard({
             id: "phone-asked-card",
-            taskId: asked.id,
             title,
             body: "<p>Nothing else about the order changed.</p>",
             actions: [],

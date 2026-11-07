@@ -170,7 +170,9 @@ test("each registered corner puts away without ending work; only Done receipts t
         expect(status("firstmate-question")).toBe("open");
         await pressRow(page, keys.question!);
         await expect(shownCard(page, "Choose when to review")).toBeVisible();
-        await shownEntry(page).locator("[data-task-key]").first().click();
+        // A first mate card's head names no task (INF-2714), so its own
+        // record opens through the shown card's Show Info.
+        await runFromSearch(app.app, page, "cards.show-info");
         await recordAppeared();
         await expect(
           shownEntry(page).getByRole("button", { name: "Show the card", exact: true }),

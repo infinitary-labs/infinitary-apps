@@ -52,7 +52,8 @@ describe("CardService", () => {
     }
     expect([...cards.values()]).toHaveLength(0);
     const id = cards.addFirstmateCard({ ...decision, taskId: "builder", reviewTaskId: "review" });
-    expect(cardStore.get(id)).toMatchObject({ reviewTaskId: "review", meta: "Fix the footer" });
+    // INF-2714: the first mate's card heads itself first mate, on a task too.
+    expect(cardStore.get(id)).toMatchObject({ reviewTaskId: "review", meta: "firstmate" });
     expect(cards.get(id)?.body).toContain(verdict);
     verdict = "findings def5678 · risk medium";
     cards.refreshSettleFacts();
@@ -61,10 +62,10 @@ describe("CardService", () => {
     const restored = make();
     expect(restored.get(id)?.reviewTaskId).toBe("review");
     const ordinary = cards.addFirstmateCard({ ...decision, taskId: "builder" });
-    expect(cards.get(ordinary)).toMatchObject({ meta: "Fix the footer" });
+    expect(cards.get(ordinary)).toMatchObject({ meta: "firstmate", taskId: "builder" });
     expect(cards.get(ordinary)?.reviewTaskId).toBeUndefined();
-    const standalone = cards.addFirstmateCard(decision);
-    expect(cards.get(standalone)?.meta).toBe("firstmate");
+    const alone = cards.addFirstmateCard(decision);
+    expect(cards.get(alone)?.meta).toBe("firstmate");
   });
 
   it("puts a crewmate's card up once and revises it in place under its id", () => {

@@ -49,7 +49,6 @@ export const forgeSignin: Scenario =
               args: {
                 title: MOCK_PROJECT_LIVES_CARD_TITLE,
                 body: `<p>Where each project lives.</p><ul>${lives.join("")}</ul>`,
-                standalone: true,
               },
             },
           ],
@@ -81,7 +80,6 @@ export const forgeSignin: Scenario =
                   listed.length > 0
                     ? `<p>These are your projects where they live.</p><ul>${listed.map((name) => `<li>${name}</li>`).join("")}</ul>`
                     : "<p>No projects were listed where they live.</p>",
-                standalone: true,
               },
             },
           ],

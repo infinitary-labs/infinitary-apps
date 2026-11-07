@@ -308,7 +308,8 @@ private struct PhoneCardPane: View {
     private static func bodyHost(_ card: PhoneCard, _ session: ReadOnlySession, _ fill: PhoneJSON,
                                  heightLag: TimeInterval = 0) -> CardWebHost {
         // The body links the keys of the tasks the phone holds, besides the card's own, as the Mac's does.
-        let own = card.value["taskId"].text
+        // A first mate card is its own (INF-2714), so every key in its words links.
+        let own = card.isFirstmateOwn ? nil : card.value["taskId"].text
         let keys = (session.board?.tasks ?? []).filter { $0.id != own }.map(\.key)
         return CardWebHost(card: card, session: session, fill: fill, keys: keys, heightLag: heightLag)
     }
@@ -327,8 +328,9 @@ private struct PhoneCardPane: View {
     private var replyFits: Bool { reply.utf16.count <= PhoneLimits.reply && (!replyWords.isEmpty || !photos.isEmpty) }
     private var takesReply: Bool { card.takesReplies && !card.isPast }
     /// The task the card is about, which leads its head as its door to the task's record.
+    /// A first mate card is its own (INF-2714) and leads with no task's key.
     private var task: PhoneTask? {
-        guard let id = card.value["taskId"].text ?? card.reviewTaskId else { return nil }
+        guard !card.isFirstmateOwn, let id = card.value["taskId"].text ?? card.reviewTaskId else { return nil }
         return session.board?.tasks.first { $0.id == id }
     }
     /// Its author is at work on it: the first mate's turn, or its crewmate's task running.
@@ -669,7 +671,7 @@ private struct PhoneCardPane: View {
                     }
                     if card.value["risk"]["declared"] != .null { PhoneRiskDots(declared: card.value["risk"]["declared"]) }
                 }
-                // The first mate's card names the task it speaks about; a crewmate's own name stays off the head.
+                // A core from before INF-2714 names the task a first mate card speaks about; a crewmate's own name stays off the head.
                 if card.author == "firstmate", let meta = card.meta, meta != "firstmate" {
                     Text(meta).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                 }

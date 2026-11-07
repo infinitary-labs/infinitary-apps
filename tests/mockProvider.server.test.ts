@@ -844,7 +844,7 @@ describe("the first mate holding its turn open for a steer", () => {
     expect(card.calls).toEqual([
       {
         name: `${CLAUDE_SEAT_TOOL_PREFIX}emit_card`,
-        args: { title: FM_SEAT_STEERED_TITLE, body: expect.any(String), standalone: true },
+        args: { title: FM_SEAT_STEERED_TITLE, body: expect.any(String) },
       },
     ]);
     const done = await ask(
@@ -889,7 +889,7 @@ describe("the first mate's answer-delivery retry", () => {
     if (calls[0] === "create_task")
       expect(answer.calls[0]?.args).toMatchObject({ user_words: RETRY_ACTS_MARKER });
     if (calls[0] === "emit_card")
-      expect(answer.calls[0]?.args).toMatchObject({ title: RETRY_ANSWER_TITLE, standalone: true });
+      expect(answer.calls[0]?.args).toMatchObject({ title: RETRY_ANSWER_TITLE });
     if (calls[0] === "emote") expect(answer.calls[0]?.args).toEqual({ emote: "nod" });
   });
 
@@ -1028,7 +1028,7 @@ describe("the first mate's shared commands", () => {
     expect(answer.calls).toEqual([
       {
         name: "emit_card",
-        args: { title: expect.any(String), body: expect.stringContaining("<p>"), standalone: true },
+        args: { title: expect.any(String), body: expect.stringContaining("<p>") },
       },
     ]);
   });
@@ -1038,7 +1038,7 @@ describe("the first mate's shared commands", () => {
     expect((await firstmate(ANSWER_PROMPT_MARKER)).calls).toEqual([
       {
         name: "emit_card",
-        args: { title: MOCK_ANSWER_TITLE, body: MOCK_ANSWER_TEXT, standalone: true },
+        args: { title: MOCK_ANSWER_TITLE, body: MOCK_ANSWER_TEXT },
       },
     ]);
     expect((await firstmate(TALL_ANSWER_PROMPT_MARKER)).calls[0]?.args).toMatchObject({

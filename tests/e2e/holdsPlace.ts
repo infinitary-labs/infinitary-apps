@@ -34,7 +34,6 @@ export async function emitContinuityCard(
                 { id: "caption-first", label: "Lead with the caption", default: true },
               ]
             : [],
-          standalone: true,
         },
       },
     ],

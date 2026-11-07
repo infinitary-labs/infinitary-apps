@@ -264,8 +264,8 @@ export const CREWMATE_CARD_ADDENDUM = [
 ].join(" ");
 
 /**
- * What the Firstmate's descriptor adds (task-system P1, attach first): a
- * card about existing work names its task, and what reaches the Firstmate
+ * What the Firstmate's descriptor adds (task-system P1, attach first): whose
+ * card it is and which task it names, and what reaches the Firstmate
  * from a settle effect or a dismissal. At v3.6 the never-author-a-merge-card
  * rule is the HOST's refusal rather than prose alone (captain lock 3, audit
  * 4.4b row 9: on 2026-09-19 the Firstmate steered four crewmates to emit
@@ -273,12 +273,13 @@ export const CREWMATE_CARD_ADDENDUM = [
  * them). Since v4.59 it repeats neither the persona (where the task id comes
  * from) nor `CARD_MECHANICS` (what an effect-free click does). Since INF-490
  * the two refusals a carded task earns (`steerNotAnswerRefusal`,
- * `crewmateOwesCompletionRefusal`) and the note that names no task
- * (`NOTE_NEEDS_TASK_REFUSAL`, beside the `standalone` parameter) are said by
- * the refusals alone.
+ * `crewmateOwesCompletionRefusal`) are said by the refusals alone. Since
+ * INF-2714 every first mate card is its own, headed first mate: a note names
+ * its tasks only in its words and `related` (`NOTE_NAMES_TASK_REFUSAL`), and
+ * task_id stays on a decision whose buttons act on the task.
  */
 export const FIRSTMATE_CARD_ADDENDUM = [
-  "Pass task_id when the card concerns existing work; a settle effect needs it, and a decision without it becomes its own decision task waiting on the captain.",
+  "Your cards are headed first mate. Pass task_id only when the buttons act on that task, as a settle effect needs, or with review_task_id; a decision without it becomes its own decision task waiting on the captain.",
   "A settle effect is run by the host, which reports the outcome; a dismissed card is not a choice and does not wake you - your next context block lists it.",
 ].join(" ");
 
@@ -316,7 +317,7 @@ const RISK_PARAM = [
 /**
  * The one parameter table both runtimes' schemas are built from, so the
  * typebox (Pi) and zod (Claude) shapes cannot drift: same fields, same
- * words. `task_id` and `standalone` exist only in the Firstmate's schema,
+ * words. `task_id` and `related` exist only in the Firstmate's schema,
  * and `risk` only in a crewmate's.
  *
  * Only TOP-LEVEL parameters are described (contract v4.59). The Claude
@@ -354,8 +355,7 @@ export const CARD_PARAMS = {
   answering:
     "True when the card delivers the requested result, even if it offers further work. Not for a prerequisite question or consent. Repeat on each revision.",
   review_task_id: "Review task relayed here; must review task_id. The app labels its findings.",
-  standalone:
-    "true for a note about no existing work: a one-off with no connection or consequence to any task",
+  related: "Tasks it mentions, by id or key; each one's record links to it",
 } as const;
 
 function pinnableSentences(text: string): string[] {

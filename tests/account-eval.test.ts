@@ -1104,9 +1104,12 @@ describe("answer ownership evaluation", () => {
             message: "Show your findings and the captain's choice on your own card.",
           });
         } else if (test.ownership === "firstmate") {
+          // A note is the first mate's own card and names its task in
+          // related (INF-2714); the reviewer's decision acts on the build.
           await call("emit_card", {
-            task_id:
-              test.id === "ownership-reviewer-question" ? "BUILD" : Object.keys(test.tasks)[0],
+            ...(test.id === "ownership-reviewer-question"
+              ? { task_id: "BUILD" }
+              : { related: [Object.keys(test.tasks)[0]] }),
             title: "The recorded answer",
             body: "<p>The record supplies this answer.</p><p>No other evidence is needed.</p>",
             ...(test.id === "ownership-reviewer-question"

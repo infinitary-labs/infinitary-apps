@@ -1151,7 +1151,7 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
     );
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).not.toContain("task_id");
     expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).toContain(
-      "Pass task_id when the card concerns existing work; a settle effect needs it",
+      "Pass task_id only when the buttons act on that task, as a settle effect needs",
     );
     // Its two refusals say themselves when a card breaks them (INF-490;
     // cardLint.test.ts owns their words and the ledger names their homes).

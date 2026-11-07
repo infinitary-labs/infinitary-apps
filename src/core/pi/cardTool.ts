@@ -162,11 +162,11 @@ export type EmittedCard = {
   /** The independent review whose findings the first mate relays; host validates reviewOf. */
   reviewTaskId?: string;
   /**
-   * The explicit assertion that a note is a one-off with no connection to
-   * any work (D1): only then does the host file it as its own question
-   * task. A note with neither task_id nor standalone is refused.
+   * The tasks the card mentions, by id or key (INF-2714): the host links
+   * each one's record to the card's own record as related. The card stays
+   * the first mate's own. Only the Firstmate's schema carries it.
    */
-  standalone?: boolean;
+  relatedTaskIds?: string[];
   /**
    * The pictures the host verified in the body and copied under the task
    * (card pictures, phase 2): written on the card row, never the bytes.
@@ -399,7 +399,7 @@ const firstmateCardParams = {
   id: Type.Optional(Type.String()),
   task_id: Type.Optional(Type.String()),
   review_task_id: Type.Optional(Type.String({ description: CARD_PARAMS.review_task_id })),
-  standalone: Type.Optional(Type.Boolean({ description: CARD_PARAMS.standalone })),
+  related: Type.Optional(Type.Array(Type.String(), { description: CARD_PARAMS.related })),
 };
 
 export type EmitCardRole = "crewmate" | "firstmate";
@@ -411,7 +411,7 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
   risk?: unknown;
   task_id?: string;
   review_task_id?: string;
-  standalone?: boolean;
+  related?: string[];
   browser_button?: string;
   validation_request?: { request: string; action: string; gaps?: string[] };
   browser_handoff?: { site: string; reason: string; after: string; saved_failed?: boolean };
@@ -771,7 +771,9 @@ async function emitCard(
     ...(firstmate && params.review_task_id?.trim()
       ? { reviewTaskId: params.review_task_id.trim() }
       : {}),
-    ...(firstmate && params.standalone ? { standalone: true } : {}),
+    ...(firstmate && relatedOf(params.related).length > 0
+      ? { relatedTaskIds: relatedOf(params.related) }
+      : {}),
     // On someone else's card (docs/card-threads.md, "Shared cards").
     ...(params.expected_revision?.trim()
       ? { expectedRevision: params.expected_revision.trim() }
@@ -788,6 +790,11 @@ async function emitCard(
   return typeof shown === "string" && shown
     ? `Card shown: ${params.title} (${shown})`
     : `Card shown: ${params.title}`;
+}
+
+/** The related refs as passed: trimmed, each named once. */
+function relatedOf(refs: string[] | undefined): string[] {
+  return [...new Set((refs ?? []).map((ref) => ref.trim()).filter(Boolean))];
 }
 
 /** One crewmate's emit_card run, bound to its callbacks. */
@@ -825,7 +832,7 @@ function crewmateEmitCard(
 
 /**
  * The crewmate's emit_card, one entry of the crewmate tool spec: the
- * contract plus the completion card, and no task_id or standalone. A
+ * contract plus the completion card, and no task_id or related. A
  * crewmate whose task has its own browser gets `browser_button` beside the
  * rest; every other crewmate's schema stays as it was.
  */
@@ -858,7 +865,7 @@ export const EMIT_CARD_TOOL: CrewmateTool<
 
 /**
  * The emit_card tool for one role: the crewmate's (the default) reads the
- * contract plus the completion card and never sees task_id or standalone;
+ * contract plus the completion card and never sees task_id or related;
  * the Firstmate's reads the contract plus attach-first and carries both.
  */
 export function createEmitCardTool(

@@ -28,7 +28,7 @@ export const pictureRetry: Scenario = () => {
       return { text: "No answer shown." };
     }
     captainTurns += 1;
-    // A card missing its task or standalone declaration is refused. The
+    // A note naming a task that does not exist is refused. The
     // shared retry's later reaction cannot cover that failed answer, so the
     // real delivery check raises the notice without changing shared scripts.
     if (captainTurns === 1) {
@@ -36,7 +36,11 @@ export const pictureRetry: Scenario = () => {
         calls: [
           {
             name: "emit_card",
-            args: { title: "The picture", body: "<p>I tried to show the answer.</p>" },
+            args: {
+              title: "The picture",
+              body: "<p>I tried to show the answer.</p>",
+              related: ["no-such-task"],
+            },
           },
         ],
       };
@@ -51,7 +55,6 @@ export const pictureRetry: Scenario = () => {
             body: arrived
               ? "<p>The retried message includes the original picture.</p>"
               : "<p>The retried message includes words but no picture.</p>",
-            standalone: true,
           },
         },
       ],

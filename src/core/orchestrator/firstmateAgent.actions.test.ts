@@ -575,7 +575,7 @@ describe("FirstmateAgent", () => {
       emit?.execute("c1", {
         title: "PR 58 is merged",
         body: "<p>Restating what the crewmate already carded.</p>",
-        task_id: "t58",
+        related: ["t58"],
       }),
     ).rejects.toThrow(
       // Shared cards (INF-2214): the first mate writes on the crewmate's card itself.
@@ -606,11 +606,13 @@ describe("FirstmateAgent", () => {
     await drained(session, 1);
     expect(decodeContext(session.prompts[0] as string).about).toContain("card-t58-1");
     // The crewmate is gone, so the refusal that sends the Firstmate to steer it does not apply.
-    const shown = await toolsOf(specs).get("emit_card")?.execute("c1", {
-      title: "Release 0.2 is out",
-      body: "<p>The release shipped as 0.2.</p>",
-      task_id: "t58",
-    });
+    const shown = await toolsOf(specs)
+      .get("emit_card")
+      ?.execute("c1", {
+        title: "Release 0.2 is out",
+        body: "<p>The release shipped as 0.2.</p>",
+        related: ["t58"],
+      });
     expect(shown?.content[0]?.text).toContain("Card shown");
     const asked = supervisor.cards.thread("card-t58-1").messages[0]?.id;
     await toolsOf(specs).get("emit_card")?.execute("c2", {
@@ -653,11 +655,11 @@ describe("FirstmateAgent", () => {
       /task 36410f14 is closed.*basis 36410f14/,
     );
     expect(supervisor.cards.snapshot()).toHaveLength(0);
-    // ...and a note may still name the closed task.
+    // ...and a note may still name the closed task as related.
     const noted = await emit?.execute("c2", {
       title: "The thread settings task closed",
       body: "<p>It closed after the prototype.</p>",
-      task_id: "36410f14",
+      related: ["36410f14"],
     });
     expect(noted?.content[0]?.text).toContain("Card shown");
     // The first way out: the same decision as its own decision task takes its choice.
@@ -1584,7 +1586,7 @@ describe("FirstmateAgent", () => {
     const shown = await emit?.execute("c1", {
       title: "The silent task finished",
       body: "Nothing was on screen, so this answer is Firstmate's to give.",
-      task_id: "t77",
+      related: ["t77"],
     });
     expect(shown?.content[0]?.text).toContain("Card shown");
     expect(supervisor.cards.snapshot()).toHaveLength(1);

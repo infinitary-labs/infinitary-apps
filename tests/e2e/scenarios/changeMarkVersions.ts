@@ -100,7 +100,6 @@ export const changeMarkVersions: Scenario =
                 { id: "clock", label: "Mock the clock" },
                 { id: "queue", label: "Await the queue", default: true },
               ],
-              standalone: true,
             },
           },
         ],

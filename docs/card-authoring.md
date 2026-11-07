@@ -234,7 +234,7 @@ The host renders its body from the same version as the PR and keeps the risk cha
 The card's table holds recordings too, as their posters; in the pull request picture-only pairs sit side by side and any pair containing a recording stacks to fit GitHub's and GitLab's native players.
 
 The lint asks for shape, never for the absence of words: there is no progress-phrase ban list, and the merge-claim rule is a consistency check on an action, not a ban on what a body may say.
-The first mate's boundary adds typed facts - attach-first (`task_id` or `standalone`), the closed-task choice refusal (a card with actions cannot name a closed task, whose click would refuse every choice; the refusal names the ways out, each keeping the closed task as the `basis` of the work that follows: a follow-up from `create_task`, or no `task_id`) and the settle-needs-task rule - and two ceilings, marked as such in the code because each compensates for a first mate that did not follow its instruction: the carded-task refusal below, and the merge-card refusal while a task's own crewmate still owes its completion card.
+The first mate's boundary adds typed facts - a note's own answer (`task_id` only on a review relay, `related` tasks that resolve, INF-2714), the closed-task choice refusal (a card with actions cannot name a closed task, whose click would refuse every choice; the refusal names the ways out, each keeping the closed task as the `basis` of the work that follows: a follow-up from `create_task`, or no `task_id`) and the settle-needs-task rule - and two ceilings, marked as such in the code because each compensates for a first mate that did not follow its instruction: the carded-task refusal below, and the merge-card refusal while a task's own crewmate still owes its completion card.
 There is no CI gate and no PR-link rule at either boundary since v2.0: the crewmate's completion card is the one merge decision and the first mate never authors one for a crewmate's task (ruling D3), and a settle card's facts are the host's line above.
 
 The task's final report needs no tool: its record shows a sandboxed body with plain reports safely wrapped and links preserved.
@@ -280,6 +280,7 @@ There is no one-card-per-topic cap - several open decisions on one task are legi
 
 Every emitter sees what is on screen: the first mate's context lists every open card, and a crewmate's report wake names its cards.
 On a task whose crewmate already has a card open, the first mate's new `emit_card` is refused with "write on that card instead of a second one beside it": it reads that card with `tasks card` and writes on it under its id, never beside it (`docs/card-threads.md`, "Shared cards").
+The refusal reads every task the card names, its `task_id` and each task in its `related` list, so a first mate note or decision that only names that task is turned away the same way.
 
 When the captain says a card repeats an earlier one, the first mate's `flag_duplicate` stamps `duplicate_of`, `duplicate_note`, and `duplicate_at` on the card, closes it, and writes one feed line.
 It has no user surface; the label feeds the duplicate metric.
@@ -550,13 +551,14 @@ A card cannot merge its own PR.
 A task key a body writes as text (`FI3-572`, in prose or in `inf-mono`) becomes a link to that task with no markup from the author (FI3-594; the design skill's core rule "Task keys" and ResponseCard, "Task keys in a body").
 Resting on it opens the task's summary beside the card, and a click opens the task the way a click on its Tasks row does.
 Only a key that is exactly a recorded task's key links: a key-shaped word that names no task stays text, and so does a lowercase key or one inside a link, a button, a toggle's summary, a label, a form control, a drawing, a `role=button` element, a draft button or a `data-inf-action` element.
-The card's own task's key stays text too, since opening it would only bring the same card forward (FI3-1271).
+The card's own task's key stays text too, since opening it would only bring the same card forward (FI3-1271); the first mate's own card has no task of its own in its head, so every key in its words links (INF-2714).
 The host finds the keys: `taskKeysIn` (`src/shared/taskKeys.ts`) reads the body's candidates, the window's one store (`taskKeyIndex`, `useTaskLinks` in `src/renderer/src/cards/taskLinks.ts`) keeps those the board or the search of earlier work answers with that exact key, and the bridge wraps them where text writes them (`tasks` and `task` messages, `docs/ui-plugins.md`).
-The same store links the keys in the card's title, its action error line and its thread's lines (`KeyedText`, `src/renderer/src/cards/TaskKey.tsx`), the card's own task's key aside.
+The same store links the keys in the card's title, its action error line and its thread's lines (`KeyedText`, `src/renderer/src/cards/TaskKey.tsx`), the card's own task's key aside on any card but the first mate's own.
 A key gesture is navigation, never an action: it runs no effect, so it works on a past card too.
 
 The card's own task has one door on the card: its key leads the head's meta line (INF-358; the captain's "on all the decision cards we should figure out how we give the user a way to go to the task from there", and "let's make sure the task key is added to all decision cards about a task, so it's not inconsistent").
-`useCardTask` (`src/renderer/src/cards/cardTask.ts`) reads which task a card is about from the board the window holds: the card's `taskId`, which every crewmate card and every host card about a task carries, or for a first mate decision that named no task the decision row the app filed for it, the row whose waiting decision is the card; a card about no task draws none.
+`useCardTask` (`src/renderer/src/cards/cardTask.ts`) reads which task a card is about from the board the window holds: the card's `taskId`, which every crewmate card and every host card about a task carries; a card about no task draws none.
+The first mate's own card (`firstmateOwnCard` in `src/shared/cards.ts`: written by the first mate, its head first mate) draws no key in its head, even a decision whose buttons act on a task, and links every key in its words instead (INF-2714).
 `CardTaskKey` draws it in the quiet look: resting opens the task's summary, and the captain's click or Enter opens the task's record in front of the card (`openRecord` with `from`), never `openTask`, which would only bring the same card forward.
 Hide or Esc on that record, or on the task's other tabs opened from the card, returns to the card while it is still shown (`docs/task-card-tabs.md`, "From a card").
 
@@ -972,6 +974,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
 
 - **From the saved message, never the card's words.**
   The snapshot carries `Card.asked`, which `CardService.snapshot` reads through the card's task (the task it names, or the one it was raised on) with `TaskService.capture.originAbout` (`src/core/tasks/taskOrigin.ts`).
+  A first mate card reads it from its own record, the question or decision task it filed, never from the task its buttons act on (INF-2714), so a decision on a task's own work shows no line.
   It is never saved on the card, and a crewmate's Why, however it is written, changes nothing about the line.
 - **Where the work came from, nearest first (INF-2326).**
   The walk goes out from the card's task, each task before any task one step further away: the work it took over (the task it replaced, retried at a stronger model or branched from, tried ahead of the task itself), its parent, its plan (basis), and the task it follows up (discovered from, or whose report it was filed after).
@@ -1029,9 +1032,9 @@ A declaration grants no execution permission; a successful merge creates durable
 
 The first mate passes `review_task_id` when relaying an independent review's findings on its builder's `task_id` (INF-63, accepted direction B).
 The host refuses a missing or unrelated review, stores the resolved review task id and draws Review finding beside the card's kind.
-Every first mate card about a task names the task after its key; a card about no task retains first mate.
+The card is the first mate's own, so its head says first mate with no task key, as every card the first mate writes does (INF-2714); it names the builder's task in its words.
 Review-finding cards show the host's task facts beside the buttons, including the verdict, reviewed version and risk, even while the review stays open.
-The native phone reader shows the same label and task name without running the body or offering buttons.
+The native phone reader shows the same label and the same first mate head without running the body or offering buttons.
 
 ## Put a card aside
 

@@ -70,7 +70,6 @@ export const firstmateThread: Scenario =
               id: aboutId(latestUserTail),
               reply: FM_THREAD_REVISE_ANSWER,
               ...answering(latestUserTail),
-              standalone: true,
             },
           },
         ],
@@ -109,9 +108,7 @@ export const firstmateThread: Scenario =
     }
     if (latestUserTail.includes(FM_THREAD_PROMPT_MARKER)) {
       return {
-        calls: [
-          { name: "emit_card", args: { ...ORIGINAL_CARD, id: "fm-thread-card", standalone: true } },
-        ],
+        calls: [{ name: "emit_card", args: { ...ORIGINAL_CARD, id: "fm-thread-card" } }],
       };
     }
     return undefined;

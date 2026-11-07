@@ -57,7 +57,6 @@ describe("FirstmateAgent answer delivery", () => {
     id,
     title,
     body: "<p>Here is the answer.</p>",
-    standalone: true,
   });
   const noticeOf = (f: Fixture) =>
     f.supervisor.cards.snapshot().find((card) => card.id.startsWith("card-ask-"));
@@ -172,8 +171,7 @@ describe("FirstmateAgent answer delivery", () => {
 
     await tools.get("emit_card")?.execute("c1", {
       ...note("pagination-on-track", "Pagination is on track"),
-      standalone: undefined,
-      task_id: "t1",
+      related: ["t1"],
     });
     await finish(f);
     expect(states(f)).toEqual(["covered"]);
@@ -196,7 +194,7 @@ describe("FirstmateAgent answer delivery", () => {
       tools.get("emit_card")?.execute("c1", {
         title: "PR 58 is merged",
         body: "<p>Restating.</p>",
-        task_id: "t58",
+        related: ["t58"],
       }),
     ).rejects.toThrow(/emit_card with id card-t58-1/);
     await tools.get("emote")?.execute("e1", { emote: "nod" });

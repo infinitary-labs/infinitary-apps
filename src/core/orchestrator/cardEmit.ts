@@ -110,8 +110,10 @@ export class CardEmits {
     return this.upsertEmitted(input, {
       ...(input.taskId ? { taskId: input.taskId } : {}),
       author: "firstmate",
+      // The first mate's card is its own (INF-2714): its head names no
+      // task. The app's own note about a task heads with that task.
       meta:
-        (input.taskId ? this.host.tasks.get(input.taskId)?.title : undefined) ??
+        (input.aboutTask && input.taskId ? this.host.tasks.get(input.taskId)?.title : undefined) ??
         FIRSTMATE_CARD_META,
       mintId: () => {
         this.cardSeq += 1;

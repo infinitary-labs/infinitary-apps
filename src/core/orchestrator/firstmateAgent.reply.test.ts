@@ -219,7 +219,6 @@ describe("FirstmateAgent reply line", () => {
     id,
     title,
     body: "<p>Here is the answer.</p>",
-    standalone: true,
   });
 
   it.each(["none", "closing"])(

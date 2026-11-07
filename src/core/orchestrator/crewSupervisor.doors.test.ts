@@ -119,7 +119,6 @@ describe("the first mate reads and changes cards through its tools", () => {
         id: "meter-plan",
         title: "The meter reads kWh",
         body: "<p>The meter reads kilowatt-hours.</p>",
-        standalone: true,
       }),
     ).toBe("Card shown: The meter reads kWh (card-fm-meter-plan)");
     const open = JSON.parse(await said(openWork, { card: "card-fm-meter-plan" }));

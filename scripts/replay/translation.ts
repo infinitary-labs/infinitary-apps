@@ -171,6 +171,24 @@ export function recordedActions(raw: unknown): CardAction[] {
   return migrateLegacyActions(actions);
 }
 
+/**
+ * A recorded first mate card's attribution in INF-2714's vocabulary. The
+ * sessions were recorded when a note named the task it was about as its own
+ * (`task_id`) or asserted it was about none (`standalone`); today a note is
+ * the first mate's own card and names its tasks in `related`, so a recorded
+ * note's task becomes its related task and the retired assertion drops. A
+ * decision keeps its task, which its buttons act on, and so does a review
+ * relay. Edits `args` in place.
+ */
+export function recordedAttribution(args: JsonRecord): void {
+  delete args.standalone;
+  const actions = Array.isArray(args.actions) ? args.actions : [];
+  if (actions.length > 0 || typeof args.task_id !== "string" || args.review_task_id) return;
+  const related = Array.isArray(args.related) ? args.related : [];
+  args.related = [...related, args.task_id];
+  delete args.task_id;
+}
+
 export function legacyStateOf(row: TableRow): { status: LegacyTaskStatus; worktree: boolean } | null {
   const status = stringColumn(row, "status");
   const activity = stringColumn(row, "activity");

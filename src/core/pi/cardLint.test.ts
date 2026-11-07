@@ -10,7 +10,9 @@ import {
   lintCardShape,
   lintCrewmateCard,
   lintFirstmateCard,
+  NOTE_NAMES_TASK_REFUSAL,
   steerNotAnswerRefusal,
+  unknownRelatedRefusal,
   untaggedNewMarkRefusal,
   writeInGaps,
 } from "./cardLint";
@@ -51,10 +53,6 @@ function note(overrides: Partial<EmittedCard> = {}): EmittedCard {
     title: "Quota headroom",
     body: "Codex has 62% of the weekly window left.",
     actions: [],
-    // Attach first (task-system P1): a card names its task or, as a note,
-    // asserts it is a one-off; the rules below are tested on a standalone
-    // note unless the case names a task.
-    ...(overrides.taskId ? {} : { standalone: true }),
     ...overrides,
   };
 }
@@ -328,9 +326,9 @@ describe("lintCardShape (both boundaries)", () => {
     });
 
     it("applies at both boundaries, and a crewmate completion decision passes with the host's pair", () => {
-      expect(
-        lintFirstmateCard({ ...decision({ actions: actions(1) }), standalone: true }, context()),
-      ).toContain("a decision gives 2 or 3 actions");
+      expect(lintFirstmateCard(decision({ actions: actions(1) }), context())).toContain(
+        "a decision gives 2 or 3 actions",
+      );
       expect(lintCrewmateCard(decision({ actions: actions(4) }))).toContain(
         "a decision gives 2 or 3 actions",
       );
@@ -929,19 +927,36 @@ describe("lintCrewmateCard", () => {
 });
 
 describe("lintFirstmateCard", () => {
-  it("attach first: a note must name its task or assert standalone, never neither or both", () => {
-    expect(lintFirstmateCard(note({ standalone: undefined }), context())).toMatch(
-      /task_id.*standalone/,
+  it("INF-2714: a note is the first mate's own card, naming its tasks only in related, apart from a review relay", () => {
+    // The captain's direction A: an answer that names a task as its own
+    // took that task's head, origin line and question life (card-fm-12).
+    const known = context({ taskExists: (id) => id === "ab12cd34", taskResolves: () => true });
+    expect(lintFirstmateCard(note(), known)).toBeUndefined();
+    expect(lintFirstmateCard(note({ relatedTaskIds: ["ab12cd34", "INF-2711"] }), known)).toBe(
+      undefined,
     );
+    expect(lintFirstmateCard(note({ taskId: "ab12cd34" }), known)).toBe(NOTE_NAMES_TASK_REFUSAL);
+    // Revising a card already on the task, such as the app's required-action
+    // card, keeps its task; adding a task to another card does not.
+    const onTask = context({
+      taskExists: () => true,
+      openCardOnTask: (cardId, taskId) => cardId === "card-fm-required" && taskId === "ab12cd34",
+    });
+    expect(lintFirstmateCard(note({ id: "required", taskId: "ab12cd34" }), onTask)).toBe(undefined);
+    expect(lintFirstmateCard(note({ id: "other", taskId: "ab12cd34" }), onTask)).toBe(
+      NOTE_NAMES_TASK_REFUSAL,
+    );
+    // A review's findings stay on the builder's task.
+    expect(lintFirstmateCard(note({ taskId: "ab12cd34", reviewTaskId: "rv01" }), known)).toBe(
+      undefined,
+    );
+    // A related task must name a record.
     expect(
       lintFirstmateCard(
-        note({ standalone: undefined, taskId: "ab12cd34" }),
-        context({ taskExists: (id) => id === "ab12cd34" }),
+        note({ relatedTaskIds: ["INF-9999"] }),
+        context({ taskResolves: (ref) => ref !== "INF-9999" }),
       ),
-    ).toBeUndefined();
-    expect(lintFirstmateCard(note({ standalone: true, taskId: "ab12cd34" }), context())).toMatch(
-      /not both/,
-    );
+    ).toBe(unknownRelatedRefusal("INF-9999"));
     // A decision without a task_id becomes its own decision task, so only a
     // note is held to attach-first; the retired prototype kind was too.
     const prototype: EmittedCard = {
@@ -956,7 +971,7 @@ describe("lintFirstmateCard", () => {
   });
 
   it("attach first: a task_id must name a record when the boundary can check", () => {
-    const card = note({ standalone: undefined, taskId: "nope" });
+    const card = decision({ taskId: "nope" });
     expect(lintFirstmateCard(card, context({ taskExists: () => false }))).toMatch(
       /unknown task_id "nope"/,
     );
@@ -977,9 +992,9 @@ describe("lintFirstmateCard", () => {
     expect(closedTaskChoiceRefusal("36410f14")).toMatch(
       /create_task, with basis 36410f14.*without task_id.*basis 36410f14/,
     );
-    expect(lintFirstmateCard(note({ standalone: undefined, taskId: "36410f14" }), closed)).toBe(
-      undefined,
-    );
+    expect(
+      lintFirstmateCard(note({ taskId: "36410f14", reviewTaskId: "rv01" }), closed),
+    ).toBeUndefined();
     // An open task still takes the same decision.
     expect(lintFirstmateCard({ ...build, taskId: "ab12cd34" }, closed)).toBeUndefined();
   });
@@ -1114,15 +1129,56 @@ describe("lintFirstmateCard", () => {
       openCrewmateCard: (taskId) => (taskId === "t58" ? crew : undefined),
       isOpenFirstmateCard: (cardId) => cardId === "card-fm-7-abc123",
     });
-    const answer = note({ taskId: "t58", title: "PR 58 merged", body: "<p>It merged.</p>" });
+    // A note names the task it answers about in related (INF-2714).
+    const answer = note({
+      relatedTaskIds: ["t58"],
+      title: "PR 58 merged",
+      body: "<p>It merged.</p>",
+    });
     const refusal = lintFirstmateCard(answer, ctx);
     expect(refusal).toBe(steerNotAnswerRefusal("t58", crew));
     expect(refusal).toContain("emit_card with id card-t58-3");
     expect(refusal).toContain("expected_revision");
+    // A decision acting on that task is held the same way.
+    expect(lintFirstmateCard(decision({ taskId: "t58" }), ctx)).toBe(
+      steerNotAnswerRefusal("t58", crew),
+    );
+    // A decision naming that task is turned away too, by its related list or
+    // beside its own task (the captain on INF-2738: "The first mate's card is
+    // turned away when it names that task").
+    const choice = [
+      { id: "retry", label: "Retry", default: true },
+      { id: "drop", label: "Drop" },
+    ];
+    expect(lintFirstmateCard(decision({ relatedTaskIds: ["t58"], actions: choice }), ctx)).toBe(
+      steerNotAnswerRefusal("t58", crew),
+    );
+    expect(
+      lintFirstmateCard(decision({ taskId: "t77", relatedTaskIds: ["t58"], actions: choice }), ctx),
+    ).toBe(steerNotAnswerRefusal("t58", crew));
     // A task without a crewmate card on screen is the Firstmate's to answer.
-    expect(lintFirstmateCard({ ...answer, taskId: "t77" }, ctx)).toBeUndefined();
+    expect(lintFirstmateCard({ ...answer, relatedTaskIds: ["t77"] }, ctx)).toBeUndefined();
+    expect(
+      lintFirstmateCard(decision({ relatedTaskIds: ["t77"], actions: choice }), ctx),
+    ).toBeUndefined();
     // Revising the Firstmate's own open card on that task is not a second answer.
     expect(lintFirstmateCard({ ...answer, id: "card-fm-7-abc123" }, ctx)).toBeUndefined();
+    // A revision of its own card on another task that names the carded task
+    // is read against the card's own task (review INF-2881).
+    const onTask = context({
+      openCrewmateCard: (taskId) => (taskId === "t58" ? crew : undefined),
+      isOpenFirstmateCard: (cardId, taskId) => cardId === "card-fm-8-def456" && taskId === "t77",
+    });
+    const revisedChoice = decision({
+      id: "card-fm-8-def456",
+      taskId: "t77",
+      relatedTaskIds: ["t58"],
+      actions: choice,
+    });
+    expect(lintFirstmateCard(revisedChoice, onTask)).toBeUndefined();
+    expect(lintFirstmateCard({ ...revisedChoice, id: "card-fm-9-aaa111" }, onTask)).toBe(
+      steerNotAnswerRefusal("t58", crew),
+    );
   });
 
   it("v3.6: refuses a merge card while the task's own crewmate still owes its completion card", () => {
@@ -1142,7 +1198,15 @@ describe("lintFirstmateCard", () => {
     // An answer that carries no settle effect is never the merge decision.
     expect(
       lintFirstmateCard(
-        note({ taskId: "t91", title: "Where t91 stands", body: "<p>Its review passed.</p>" }),
+        decision({
+          taskId: "t91",
+          title: "Where t91 stands",
+          body: "<p>Its review passed.</p>",
+          actions: [
+            { id: "wait", label: "Wait for it", default: true },
+            { id: "drop", label: "Drop it" },
+          ],
+        }),
         ctx,
       ),
     ).toBeUndefined();

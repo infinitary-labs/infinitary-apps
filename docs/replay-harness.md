@@ -39,6 +39,8 @@ Since contract v4.12 (primitives P7) the translated facts and any recorded wait 
 A recorded `reply`, or a recorded revision's reply, is from before a line named the captain message it answers, when its author's line answered the newest one on the card it waited on: the engine names that message (`recordedAnswer`), since today's host ends a question only on a line naming it; an explicitly recorded `answers_message` passes through, and a recorded interim line names none.
 A recorded `steer_crewmate` without `response_mode` replays as `guidance-only`: the archived model was never asked to submit a correlated response, so a new default expectation would manufacture missing-answer wakes the recording cannot answer.
 An explicitly recorded response mode passes through unchanged; the replay never guesses a response from an ordinary recorded report.
+A recorded `emit_card` note is from before INF-2714, when a note named its task with `task_id` or asserted `standalone`: the engine drops `standalone` and moves a note's `task_id` into `related` (`recordedAttribution`), unless the note relayed a review, so the note files as the first mate's own answer and links to the task it was about.
+Duplicate pairs still pair such an answer with the task it restates: a first mate card with no task counts on its record's one `related` task (`pairedOn`).
 
 Task rows that existed before the recording starts are seeded through the one writer.
 The tables hold each row as it stood at export, so a row keeps its recorded start policy and work shape - an on-request row does not start on the replay's first sweep, and a builder planned behind a plan keeps its `basis` - and a row whose own `started_at` falls after the replay begins is seeded as the open work it still was then.

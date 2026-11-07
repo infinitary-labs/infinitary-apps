@@ -338,7 +338,7 @@ A failure with no usable reason gets a short choice/reply-specific fallback.
 This does not change acceptance receipts, the wire contract, or the shell's refusal recovery: choices stay open and replies return with their unsent words and pictures kept.
 
 A hidden or associated closed-task card refuses an action before resolution, author guidance or an effect.
-The emit boundary agrees, so no choice shows that this would refuse: a card with actions whose `task_id` names a closed task is refused at emit (the first mate's lint names its ways out, `CardService` holds it for every author), while a note may still name a closed task.
+The emit boundary agrees, so no choice shows that this would refuse: a card with actions whose `task_id` names a closed task is refused at emit (the first mate's lint names its ways out, `CardService` holds it for every author), while a review relay may still name a closed task and a note may name one in `related`.
 A choice naming no action declared by the shown offer also refuses before bookkeeping, leaving both the card and its task open; an unseen action from a pending revision is not yet offered.
 Refusal is typed internally and transported as `refusal` text, not the empty acceptance receipt: the shell retains an open card and shows the refusal without a transport wrapper, rather than removing it optimistically.
 Valid choices still use the shown offer, including when a newer stored revision changes its actions.

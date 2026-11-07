@@ -45,6 +45,7 @@ import {
 import type { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { withAskAttribution } from "./askAttribution";
 import type { AskCapture } from "./askCapture";
+import { FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { escapeCardText } from "./cardText";
 import type { DecisionCapture } from "./decisionCapture";
 import { premiumCanServe } from "./firstmateModelPick";
@@ -283,31 +284,40 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       // Someone else's card keeps its own rules: the contribution refuses
       // what its writer may not change, so this card's lint is not its.
       if (supervisor.writesOnOthersCard(card.id)) return undefined;
-      let crewCard: { id: string; title: string } | undefined;
+      let crewCard: { id: string; title: string; taskId: string } | undefined;
       const refusal = lintFirstmateCard(card, {
         resolveCardId: resolveFirstmateCardId,
         taskExists: (taskId) => Boolean(host.options.tasks.get(taskId)),
+        taskResolves: (ref) => Boolean(host.options.tasks.resolve(ref)),
         taskClosed: (taskId) => {
           const record = host.options.tasks.get(taskId);
           return Boolean(record && TaskService.isClosed(record));
         },
         // Steer, not answer (WI-12): the stack decides, not a turn flag.
-        openCrewmateCard: (taskId) => {
+        openCrewmateCard: (ref) => {
           // A task closed done keeps its crewmate's notes, but the crewmate
           // is gone: there is nobody to steer, so its note is no refusal.
-          const record = host.options.tasks.get(taskId);
-          if (record && TaskService.isClosed(record)) return undefined;
+          // A note's related task may be named by its key.
+          const record = host.options.tasks.resolve(ref);
+          if (!record || TaskService.isClosed(record)) return undefined;
           const crew = supervisor.cards
-            .openCardDigests(taskId)
+            .openCardDigests(record.id)
             .filter((open) => open.emitter === "crewmate")
             .at(-1);
-          crewCard = crew ? { id: crew.id, title: crew.title } : undefined;
+          crewCard = crew ? { id: crew.id, title: crew.title, taskId: ref } : undefined;
           return crewCard;
         },
-        isOpenFirstmateCard: (cardId, taskId) =>
-          supervisor.cards
-            .openCardDigests(taskId)
-            .some((open) => open.id === cardId && open.emitter === "firstmate"),
+        // A revision of the first mate's own open card is not a second
+        // answer: one on the task, or one of its own that names no task.
+        isOpenFirstmateCard: (cardId, ref) => {
+          const open = supervisor.cards.get(cardId);
+          if (!open || !cardId.startsWith(FIRSTMATE_CARD_PREFIX)) return false;
+          return open.taskId === undefined || open.taskId === host.options.tasks.resolve(ref)?.id;
+        },
+        openCardOnTask: (cardId, ref) => {
+          const task = host.options.tasks.resolve(ref);
+          return Boolean(task && supervisor.cards.get(cardId)?.taskId === task.id);
+        },
         // The merge decision is the crewmate's (contract v3.6, captain
         // lock 3): a settle merge card is refused while its task's own
         // crewmate has yet to emit the completion card.
@@ -315,9 +325,8 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       });
       cardOwner =
         refusal !== undefined &&
-        card.taskId &&
         crewCard &&
-        refusal === steerNotAnswerRefusal(card.taskId, crewCard)
+        refusal === steerNotAnswerRefusal(crewCard.taskId, crewCard)
           ? { id: crewCard.id }
           : undefined;
       return refusal;
@@ -350,7 +359,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // shape rules (WI-11). A refused card returns corrective text and is
     // never shown. The description is the card contract plus the
     // Firstmate's addendum, and only this role's schema carries task_id
-    // and standalone (contract v2.0).
+    // and related (contract v2.0, INF-2714).
     emitCardTool,
     createCloseCardTool((input) => {
       // The messages a step has read that wait on this card, before the close (INF-2664).
@@ -725,14 +734,22 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
 
 /**
  * The emit_card boundary's task side (attach first, D1). A card with
- * task_id lands on that task: a note is an `answered` event carrying the
- * body, a decision a `card_raised` event whose resolution act() records.
- * A decision without a task becomes its own decision task waiting on the
- * captain (its card id is the gate ref); a standalone note becomes its
- * own question task, born closed with the body as its outcome. Either way
- * the turn's ask attaches to the task the card is about.
+ * task_id - a decision whose buttons act on that task, or a review relay -
+ * lands on that task: a note is an `answered` event carrying the body, a
+ * decision a `card_raised` event whose resolution act() records. A
+ * decision without a task becomes its own decision task waiting on the
+ * captain (its card id is the gate ref); a note, the first mate's own
+ * answer (INF-2714), becomes its own question task, born closed with the
+ * body as its outcome. Either way the turn's ask attaches to that record,
+ * and each task the card names in `related` links to it.
  */
 function recordCardFiling(host: FirstmateToolHost, card: EmittedCard, cardId: string): void {
+  const recordId = fileCard(host, card, cardId);
+  linkRelated(host, recordId, card.relatedTaskIds ?? []);
+}
+
+/** Files the card's record and attaches the turn's ask to it; returns the record's id. */
+function fileCard(host: FirstmateToolHost, card: EmittedCard, cardId: string): string {
   const tasks = host.options.tasks;
   const decision = card.actions.length > 0;
   if (card.taskId) {
@@ -746,7 +763,7 @@ function recordCardFiling(host: FirstmateToolHost, card: EmittedCard, cardId: st
       tasks.capture.recordAnswer(card.taskId, { cardId, title: card.title, body: card.body });
     }
     host.asks.attach(card.taskId, "emit_card", false);
-    return;
+    return card.taskId;
   }
   if (decision) {
     // A revision in place keeps its row; a fresh decision files one in the
@@ -754,7 +771,7 @@ function recordCardFiling(host: FirstmateToolHost, card: EmittedCard, cardId: st
     const existing = tasks.capture.openDecisionFor(cardId);
     if (existing) {
       host.asks.attach(existing.id, "emit_card", false);
-      return;
+      return existing.id;
     }
     const hinted = host.asks.hintedTask();
     const row = tasks.capture.fileDecision({
@@ -765,10 +782,16 @@ function recordCardFiling(host: FirstmateToolHost, card: EmittedCard, cardId: st
       ...(hinted ? { projectId: hinted.projectId } : {}),
     });
     host.asks.attach(row.id, "emit_card", true);
-    return;
+    return row.id;
   }
-  // A standalone note: the model asserted the ask is about no other work.
-  const revised = tasks.capture.taskForCard(cardId);
+  // The first mate's own note: its own row - its answer, or the decision
+  // filed for the card - revised in place. A card that was a decision on a
+  // task files its own row instead, so that task's outcome is never the note's.
+  const filed = tasks.capture.taskForCard(cardId);
+  const revised =
+    filed?.kind === "question" || (filed && filed.gate?.ref === cardId && filed.kind === "decision")
+      ? filed
+      : undefined;
   if (revised) {
     tasks.capture.recordAnswer(revised.id, {
       cardId,
@@ -777,7 +800,7 @@ function recordCardFiling(host: FirstmateToolHost, card: EmittedCard, cardId: st
       asOutcome: true,
     });
     host.asks.attach(revised.id, "emit_card", false);
-    return;
+    return revised.id;
   }
   const row = tasks.capture.fileQuestion({
     id: randomUUID().slice(0, 8),
@@ -786,6 +809,27 @@ function recordCardFiling(host: FirstmateToolHost, card: EmittedCard, cardId: st
     cardId,
   });
   host.asks.attach(row.id, "emit_card", true);
+  return row.id;
+}
+
+/**
+ * The related links a card declares (INF-2714, the captain's "each record
+ * shows a related link to my answer"): from the card's record to each task
+ * it names, which the line under a card's title and a question's work never
+ * read. A repeat is a no-op; a ref that no longer resolves, or the record
+ * itself, is skipped.
+ */
+function linkRelated(host: FirstmateToolHost, recordId: string, refs: readonly string[]): void {
+  const tasks = host.options.tasks;
+  for (const ref of refs) {
+    const related = tasks.resolve(ref);
+    if (!related || related.id === recordId) continue;
+    try {
+      tasks.graph.link(recordId, related.id, "related", "firstmate");
+    } catch (caught) {
+      console.warn(`[firstmate] could not link ${ref} as related:`, caught);
+    }
+  }
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { Card } from "@shared/cards";
+import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { TaskEventStore } from "../storage/taskEventStore";
@@ -309,6 +309,33 @@ describe("how a captain's message ends", () => {
     });
     f.message("m2", "merge the meter fix", "meter", "tool:merge_pr");
     expect(f.ending.closingPlace("meter")).toEqual({ kind: "revise", card: story, open: true });
+  });
+
+  // INF-2714: the first mate's answer to a crewmate's report is its own
+  // note naming no task; its record saved the report as its origin, so the
+  // message still ends on that note when the work closes, with no second
+  // closing note beside it.
+  it("ends a message on the first mate's own answer to its work's report, which names no task (INF-2714)", () => {
+    const f = fixture();
+    f.work("rent", "Compare owning and renting Mac CI runners");
+    f.message("m1", "should we own or rent the Mac CI runners?", "rent");
+    f.later();
+    const record = f.tasks.capture.fileQuestion({
+      id: "q-rent",
+      title: "Renting the Mac runners costs less",
+      outcome: "<p>Renting costs less until the third runner.</p>",
+      cardId: "card-fm-4-a1b2c3",
+    });
+    f.tasks.capture.saveOrigin(record.id, { kind: "report", taskId: "rent" });
+    const answer = f.show({
+      id: "card-fm-4-a1b2c3",
+      meta: FIRSTMATE_CARD_META,
+      title: "Renting the Mac runners costs less",
+      answering: true,
+    });
+    f.finish("rent");
+    expect(f.state("m1")).toEqual({ kind: "waiting", cardId: answer.id });
+    expect(f.ending.closingPlace("rent")).toEqual({ kind: "revise", card: answer, open: true });
   });
 
   it("stays quiet while a handover carries the work on, and answers once when the last work closes (INF-1437)", () => {

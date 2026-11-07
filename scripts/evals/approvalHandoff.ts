@@ -372,7 +372,11 @@ export function scoreApprovalTrace(test: ApprovalCase, calls: EvalCall[]): strin
     if (
       !calls.some(
         (call) =>
-          call.name === "emit_card" && (call.args.task_id === "P" || call.args.task_id === "BUILD"),
+          call.name === "emit_card" &&
+          // A question note names its task in related (INF-2714).
+          [call.args.task_id, ...(Array.isArray(call.args.related) ? call.args.related : [])].some(
+            (ref) => ref === "P" || ref === "BUILD",
+          ),
       )
     )
       failures.push("Ask on the reachable open parent or successor");

@@ -83,6 +83,12 @@ export type EmittedCardInput = {
   id?: string;
   /** Task named by a Firstmate settle/merge decision. */
   taskId?: string;
+  /**
+   * The host's own note about its task, which heads with that task (a
+   * closing note); a first mate card the tool emits is its own and names
+   * none (INF-2714). The host's own, never a tool parameter.
+   */
+  aboutTask?: true;
   /** The independent review whose findings the first mate relays; host validates reviewOf. */
   reviewTaskId?: string;
   /** The pictures the tool verified in the body, for the card row (card pictures, phase 2). */
@@ -161,7 +167,7 @@ export type PlacedToolFieldCoverage = CarriedFields<
   | Exclude<
       keyof Omit<
         DeclaredCardInput,
-        "taskId" | "reviewTaskId" | "attachment" | "risk" | "afterMerge"
+        "taskId" | "reviewTaskId" | "attachment" | "risk" | "afterMerge" | "aboutTask"
       >,
       keyof InvokeRequest<"inf:work:card">[0]["card"]
     >

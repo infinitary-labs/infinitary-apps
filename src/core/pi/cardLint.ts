@@ -574,6 +574,8 @@ export type CardLintContext = {
    * = the boundary has no task record to check against.
    */
   taskExists?: (taskId: string) => boolean;
+  /** Whether a task id or key names a record, for `related`. Absent = unchecked. */
+  taskResolves?: (ref: string) => boolean;
   /**
    * Whether a task id names a closed record (done or dropped). A choice on
    * a closed task's card is refused on the click, so the emit refuses it
@@ -588,6 +590,11 @@ export type CardLintContext = {
   /** Whether a resolved card id is an open Firstmate card on the task (a revision). */
   isOpenFirstmateCard?: (cardId: string, taskId: string) => boolean;
   /**
+   * Whether a resolved card id is an open card already on the task, such as
+   * the app's required-action card: revising it keeps its task (INF-2714).
+   */
+  openCardOnTask?: (cardId: string, taskId: string) => boolean;
+  /**
    * Whether the task's own crewmate is still the one that emits its
    * completion card (contract v3.6, captain lock 3; audit 4.4b row 9).
    * Absent = the boundary cannot see the crew, so the rule does not apply.
@@ -595,9 +602,19 @@ export type CardLintContext = {
   crewmateOwesCompletion?: (taskId: string) => boolean;
 };
 
-/** A typed fact: the P1 attach-first refusal for a note that names no task and asserts nothing. */
-export const NOTE_NEEDS_TASK_REFUSAL =
-  "every card is about a task: pass task_id when this answers a question about existing work (the about line, the context's crew or open cards, crew_status or the tasks tool name it), or standalone true only when the ask is a one-off with no connection or consequence to any work.";
+/**
+ * A typed fact: a note of the first mate's is its own card (INF-2714, the
+ * captain's direction A): it names the tasks it is about in its words and
+ * `related`, never as its task, so its head, its asked line and the
+ * question's life stay the first mate's. A review relay keeps its task.
+ */
+export const NOTE_NAMES_TASK_REFUSAL =
+  "a note is your own card: drop task_id, name the tasks it is about in its words and pass their ids or keys in related. task_id is for a decision whose buttons act on that task, or with review_task_id when relaying a review's findings.";
+
+/** A typed fact: a related task must name a record. */
+export function unknownRelatedRefusal(ref: string): string {
+  return `unknown related task "${ref}"; use a task id or key from the about line, the context's crew or open cards, crew_status, or the tasks tool.`;
+}
 
 /**
  * A typed fact: the closed-task choice refusal - the click refuses every
@@ -656,20 +673,26 @@ export function steerNotAnswerRefusal(taskId: string, card: { id: string; title:
  * shape rules.
  */
 export function lintFirstmateCard(card: EmittedCard, context: CardLintContext): string | undefined {
-  // Attach first (task-system P1, D1): a task_id must name a record; a note
-  // must either name its task or assert it is standalone - never neither,
-  // and not both.
+  // Attach first (task-system P1): a task_id must name a record. A note is
+  // the first mate's own card and names no task, apart from a review relay
+  // (INF-2714); its tasks ride `related`, each of which must name a record.
   if (card.taskId && context.taskExists && !context.taskExists(card.taskId)) {
     return `unknown task_id "${card.taskId}"; use a task id from the about line, the context's crew or open cards, crew_status, or the tasks tool.`;
   }
-  if (card.taskId && card.standalone) {
-    return "pass either task_id (the card is about that task) or standalone true (it is about no task), not both.";
+  if (
+    card.actions.length === 0 &&
+    card.taskId &&
+    !card.reviewTaskId &&
+    !(card.id && context.openCardOnTask?.(context.resolveCardId(card.id), card.taskId))
+  ) {
+    return NOTE_NAMES_TASK_REFUSAL;
   }
+  const unknownRelated = context.taskResolves
+    ? card.relatedTaskIds?.find((ref) => !context.taskResolves?.(ref))
+    : undefined;
+  if (unknownRelated) return unknownRelatedRefusal(unknownRelated);
   if (card.taskId && card.actions.length > 0 && context.taskClosed?.(card.taskId)) {
     return closedTaskChoiceRefusal(card.taskId);
-  }
-  if (card.actions.length === 0 && !card.taskId && !card.standalone) {
-    return NOTE_NEEDS_TASK_REFUSAL;
   }
   // Consent: opening a task's browser with the captain in control is its
   // crewmate's request alone (docs/task-browser.md, "Asking for help").
@@ -685,12 +708,19 @@ export function lintFirstmateCard(card: EmittedCard, context: CardLintContext): 
   // Firstmate's own open card on the task is not an answer, and a write on
   // the crewmate's own card never reaches this lint (docs/card-threads.md,
   // "Shared cards").
-  if (card.taskId && context.openCrewmateCard) {
-    const crewCard = context.openCrewmateCard(card.taskId);
+  // A card names its tasks in `related` too (INF-2714), so each of those is
+  // read the same way as its own task.
+  const spokenOf = [...new Set([card.taskId, ...(card.relatedTaskIds ?? [])])].filter(
+    (taskId): taskId is string => Boolean(taskId),
+  );
+  for (const taskId of context.openCrewmateCard ? spokenOf : []) {
+    const crewCard = context.openCrewmateCard?.(taskId);
+    // A revision is read against the card's own task when it has one, so a
+    // card on A that names B stays revisable once B's crewmate carded it.
     const revising =
       card.id !== undefined &&
-      context.isOpenFirstmateCard?.(context.resolveCardId(card.id), card.taskId) === true;
-    if (crewCard && !revising) return steerNotAnswerRefusal(card.taskId, crewCard);
+      context.isOpenFirstmateCard?.(context.resolveCardId(card.id), card.taskId ?? taskId) === true;
+    if (crewCard && !revising) return steerNotAnswerRefusal(taskId, crewCard);
   }
 
   // A settle effect is dispatched by the host against the card's task_id:

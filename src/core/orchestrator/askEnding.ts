@@ -200,8 +200,17 @@ export class AskEnding {
     return chains;
   }
 
+  /**
+   * The task a card is about: the one it names, else the record filed for
+   * it. The first mate's own answer to a crewmate's report names no task
+   * (INF-2714), so its answer record leads to the reporting task it saved
+   * as its origin.
+   */
   private cardTask(card: Card): string | undefined {
-    return card.taskId ?? this.host.tasks.capture.taskForCard(card.id)?.id;
+    if (card.taskId) return card.taskId;
+    const capture = this.host.tasks.capture;
+    const filed = capture.taskForCard(card.id);
+    return (filed?.kind === "question" ? capture.reportOrigin(filed.id) : undefined) ?? filed?.id;
   }
 
   /** The cards the first mate showed for the chain's messages, by its own facts. */

@@ -7,6 +7,7 @@ import {
   type CardWidth,
   cardMetaWords,
   cardTakesReplies,
+  firstmateOwnCard,
   isPreviewBody,
   splitSettleFacts,
   takesFactStrip,
@@ -211,8 +212,13 @@ export function StackedCard({
   const unanswered = asking && answers.answered < answers.of;
   const closeRef = useRef<HTMLButtonElement>(null);
   // The task the card is about leads its head as the card's door to the
-  // task's record (INF-358); a card about no task draws no key.
-  const task = useCardTask(card);
+  // task's record (INF-358); a card about no task draws no key. A first mate
+  // card is its own (INF-2714): its head says first mate, and every task key
+  // in its words is a link, the one its buttons act on included.
+  const firstmate = firstmateOwnCard(card);
+  const found = useCardTask(card);
+  const task = firstmate ? null : found;
+  const ownTaskId = firstmate ? undefined : card.taskId;
   const groups = footerGroups(card.actions);
   // Every live note's one button sits where a decision's default does, on ⌘1
   // (INF-2794); a core from before it still sends only an answer's Done.
@@ -385,9 +391,9 @@ export function StackedCard({
         kind={chrome}
         bodyRef={bodyRef}
         title={card.title}
-        titleWords={<KeyedText text={card.title} own={card.taskId} />}
+        titleWords={<KeyedText text={card.title} own={ownTaskId} />}
         taskKey={task && !bare ? <CardTaskKey task={task} cardId={card.id} /> : undefined}
-        meta={card.author === "firstmate" && task ? task.title : cardMetaWords(card.meta)}
+        meta={cardMetaWords(card.meta)}
         reviewFinding={Boolean(card.reviewTaskId)}
         place={card.place}
         model={card.model}
@@ -435,7 +441,7 @@ export function StackedCard({
       >
         {error && (
           <p role="alert" style={{ color: "var(--danger)", fontSize: "var(--text-sm)" }}>
-            <KeyedText text={error} own={card.taskId} />
+            <KeyedText text={error} own={ownTaskId} />
           </p>
         )}
         {bodyPending ? (
@@ -445,7 +451,7 @@ export function StackedCard({
         ) : (
           <HtmlCardBody
             body={body}
-            ownTaskId={card.taskId}
+            ownTaskId={ownTaskId}
             reveal={bodyEntrance.reveal}
             onDrawn={() => {
               bodyEntrance.onDrawn();

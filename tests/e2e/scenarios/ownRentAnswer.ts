@@ -29,7 +29,7 @@ export const ownRentAnswer: Scenario =
             {
               name: "emit_card",
               args: {
-                task_id: taskId,
+                related: [taskId],
                 title: OWN_RENT_CARD_TITLE,
                 body:
                   "<p>Owning Macs costs far less than renting for steady Mac CI use.</p>" +

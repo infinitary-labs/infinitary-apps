@@ -4,7 +4,7 @@ import { renderWake, type WakeFacts } from "../src/core/orchestrator/wakes";
 import { SEQUENCES_SEED } from "../src/core/personal/sequencesSkill";
 import {
   crewmateOwesCompletionRefusal,
-  NOTE_NEEDS_TASK_REFUSAL,
+  NOTE_NAMES_TASK_REFUSAL,
   steerNotAnswerRefusal,
 } from "../src/core/pi/cardLint";
 import { OLLAMA_MIN_CONTEXT } from "../src/core/pi/ollamaProfile";
@@ -183,7 +183,7 @@ const WAKES = {
  * (INF-490: a rule the host enforces is said once, as its refusal's text).
  */
 const REFUSALS = {
-  "a note with no task": NOTE_NEEDS_TASK_REFUSAL,
+  "a note naming a task": NOTE_NAMES_TASK_REFUSAL,
   "a second card beside a crewmate's": steerNotAnswerRefusal(BUILDER.id, {
     id: "card-t1",
     title: "Fixed the pin",
@@ -329,15 +329,16 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: { tool: "link_tasks" },
     says: "a cycle is refused as text",
   },
+  // INF-2714, the captain's direction A: an answer is the first mate's own card.
   {
-    rule: "an answer about existing work names its task",
+    rule: "an answer names its tasks in its words and related, never as its task",
     home: "core",
-    says: "an answer about existing work carries that task_id",
+    says: "An answer names it only in words and related.",
   },
   {
-    rule: "a one-off note asserts standalone",
-    home: { refusal: "a note with no task" },
-    says: "or standalone true only when the ask is a one-off with no connection or consequence to any work",
+    rule: "a note naming a task as its own is refused, apart from a review relay",
+    home: { refusal: "a note naming a task" },
+    says: "a note is your own card: drop task_id, name the tasks it is about in its words and pass their ids or keys in related",
   },
   {
     rule: "an overlapping card is revised in place, a distinct finding is a new card",
@@ -509,9 +510,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   // Taken out of a tool's text at 19,710 (FI3-1268), where the core or the
   // tool's own parameter already says it.
   {
-    rule: "a note about no existing work asserts standalone",
-    home: { tool: "emit_card", parameter: "standalone" },
-    says: "true for a note about no existing work: a one-off with no connection or consequence to any task",
+    rule: "the tasks a card mentions link to it",
+    home: { tool: "emit_card", parameter: "related" },
+    says: "Tasks it mentions, by id or key; each one's record links to it",
   },
   {
     rule: "an escalation never follows a crewmate's own report or an operational wake",
@@ -711,9 +712,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "body is a raw HTML fragment",
   },
   {
-    rule: "a card about existing work names its task",
+    rule: "a card names a task as its own only when its buttons act on it",
     home: { tool: "emit_card" },
-    says: "Pass task_id when the card concerns existing work",
+    says: "Pass task_id only when the buttons act on that task",
   },
   {
     rule: "a filing answering one of several read wakes names it",

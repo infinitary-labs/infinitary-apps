@@ -40,7 +40,7 @@ describe("FirstmateAgent capture", () => {
   // Recorded calls: spawn the replacement, file prototype work, interrupt its
   // predecessor, then link the replacement. The read message is only about
   // prototypes; operational calls must carry their own attribution decision.
-  it("keeps a mixed-turn measurement card on its own request through the served tools", async () => {
+  it("keeps a mixed-turn measurement card off the other work's request through the served tools", async () => {
     const panelWords =
       "a few problems with the tasks panel in my current build: 1) it sometimes scrolls itself up. this is very disruptive when i'm trying to use the \"start\" button on hovering each row. what i want is i can click start on one row, then move to another row and click start there too. but because the panel scrolls it self, it makes that difficult; 2) scrolling through the task panel is still very laggy. we recently did a performance optimization for it, but not sure if it solves this or is it just not in my build yet; 3) when i started SSHH-50 and SSHH-51, for a brief moment they went back into the backlog section, and then went into working again by themselves. somethings' wrong with the lifecycle there.";
     const prototypeWords =
@@ -87,14 +87,18 @@ describe("FirstmateAgent capture", () => {
     });
     await tools.get("emit_card")?.execute("findings", {
       title: "Visible-app latency findings",
-      task_id: measurement?.id,
+      related: [measurement?.id],
       body: "<p>The hidden test does not establish the visible lag’s cause.</p>",
       ask_id: "",
     });
     const card = supervisor.cards
       .snapshot()
       .find((card) => card.title === "Visible-app latency findings");
-    expect(card?.asked?.text).toBe(panelWords);
+    // INF-2714: the findings are the first mate's own card, so it takes
+    // neither the measurement's request nor the prototype's message, which
+    // started other work.
+    expect(card?.taskId).toBeUndefined();
+    expect(card?.asked).toBeUndefined();
     const quoted = (id: string) => {
       const line = tasks.capture.originAbout(id);
       return line && "text" in line ? line.text : undefined;
@@ -206,12 +210,14 @@ describe("FirstmateAgent capture", () => {
     await tick();
   });
 
-  it("opens an ask per captain turn and lands a task_id note on that task as an answer", async () => {
-    const { agent, session, specs, tasks } = setup({
+  it("INF-2714: answers a question about running work on its own card, naming the task as related", async () => {
+    // The captain's direction A (card-fm-12-ff4ccc): an answer about INF-2711
+    // took INF-2711's head, its automation origin line and its run.
+    const { agent, session, specs, tasks, supervisor } = setup({
       seedTasks: [{ id: "t1", title: "Add pagination", status: "running" }],
     });
     await agent.converse("how is pagination going?");
-    // The roster names the task and its id, so the model can pass task_id.
+    // The roster names the task, its id and its key, so the model can name it.
     const context = decodeContext(session.prompts[0] as string);
     expect(context.crew).toContainEqual(
       expect.objectContaining({
@@ -221,39 +227,115 @@ describe("FirstmateAgent capture", () => {
         title: "Add pagination",
       }),
     );
+    const key = tasks.get("t1")?.key ?? "";
+    const status = tasks.get("t1")?.status;
     const [ask] = tasks.capture.listOpenAsks();
     expect(ask?.text).toBe("how is pagination going?");
-    expect(ask?.taskId).toBeNull();
 
     const emit = toolsOf(specs).get("emit_card");
+    // Naming the running task as its own is refused...
+    await expect(
+      emit?.execute("c0", { title: "Pagination", body: "<p>Under way.</p>", task_id: "t1" }),
+    ).rejects.toThrow(/a note is your own card: drop task_id/);
+    // ...and an answer naming it as related is the first mate's own.
     await emit?.execute("c1", {
       title: "Pagination is under way",
-      body: "<p>The crewmate is on the second endpoint.</p>",
-      task_id: "t1",
+      body: `<p>${key} is on the second endpoint.</p>`,
+      related: [key],
     });
-    const answered = tasks.timeline("t1").find((event) => event.kind === "answered");
-    expect(answered?.text).toBe("Pagination is under way");
-    expect(answered?.data?.body).toBe("<p>The crewmate is on the second endpoint.</p>");
-    expect(tasks.capture.getAsk(ask?.id ?? "")?.taskId).toBe("t1");
-    expect(tasks.capture.getAsk(ask?.id ?? "")?.attachedVia).toBe("tool:emit_card");
+    expect(tasks.timeline("t1").some((event) => event.kind === "answered")).toBe(false);
+    const question = tasks.list().find((record) => record.kind === "question");
+    expect(question?.status).toBe("done");
+    expect(tasks.capture.getAsk(ask?.id ?? "")?.taskId).toBe(question?.id);
+    // Each record shows the related link; the running task's own wait is untouched.
+    const linked = tasks.timeline("t1").find((event) => event.kind === "linked");
+    expect(linked?.text).toBe(`related to "Pagination is under way" (${question?.key})`);
+    expect(tasks.get("t1")?.status).toBe(status);
+    // The head is the first mate's: its meta, no task, and the captain's words.
+    const [card] = supervisor.cards.snapshot();
+    expect(card?.taskId).toBeUndefined();
+    expect(card?.meta).toBe("firstmate");
+    expect(card?.asked).toEqual({ at: expect.any(Number), text: "how is pagination going?" });
 
     session.emitTurnEnd("Answered.");
     session.resolveNextPrompt();
     await tick();
     expect(tasks.capture.getAsk(ask?.id ?? "")?.turnState).toBe("closed");
     expect(tasks.capture.listOpenAsks()).toEqual([]);
-    // Attached to existing work: no question task of its own (D1).
-    expect(tasks.list().filter((record) => record.kind === "question")).toHaveLength(0);
   });
 
-  it("files a standalone note as its own closed question task", async () => {
+  it("INF-2714: heads a decision acting on a task first mate, never with that task's title or start", async () => {
+    // The captain's scope: "even 'Retry or drop INF-2711?' shows 'first
+    // mate' in its head, while its buttons still act on INF-2711".
+    const { agent, specs, tasks, supervisor } = setup({
+      seedTasks: [{ id: "t2", title: "Split the docs line", status: "idle" }],
+    });
+    tasks.capture.openAsk({ id: "auto-ask", text: "Release path failures on main" });
+    tasks.capture.attachAsk("auto-ask", "t2", "tool:create_task");
+    tasks.capture.closeAsk("auto-ask", "closed");
+    expect(tasks.capture.originAbout("t2")).toMatchObject({
+      text: "Release path failures on main",
+    });
+    await agent.converse("should we retry it?");
+    const shown = await toolsOf(specs)
+      .get("emit_card")
+      ?.execute("c1", {
+        title: "Retry or drop the docs split?",
+        body: "<p>Its last run stopped.</p>",
+        task_id: "t2",
+        actions: [
+          { id: "retry", label: "Retry it", default: true },
+          { id: "drop", label: "Drop it" },
+        ],
+      });
+    const cardId = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
+    const card = supervisor.cards.snapshot().find((open) => open.id === cardId);
+    // Its buttons still act on the task...
+    expect(card?.taskId).toBe("t2");
+    expect(tasks.timeline("t2").some((event) => event.kind === "card_raised")).toBe(true);
+    // ...while its head is the first mate's.
+    expect(card?.meta).toBe("firstmate");
+    expect(card?.asked).toBeUndefined();
+  });
+
+  // INF-2714 review: a decision acting on a task, revised into the first
+  // mate's own note, files the note's own row; the task's outcome stays its own.
+  it("INF-2714: revises a decision on a task into a note without writing the task's outcome", async () => {
+    const { agent, specs, tasks, supervisor } = setup({
+      seedTasks: [{ id: "t2", title: "Split the docs line", status: "idle" }],
+    });
+    await agent.converse("should we retry the docs split?");
+    const emit = toolsOf(specs).get("emit_card");
+    const shown = await emit?.execute("c1", {
+      title: "Retry or drop the docs split?",
+      body: "<p>Its last run stopped.</p>",
+      task_id: "t2",
+      actions: [
+        { id: "retry", label: "Retry it", default: true },
+        { id: "drop", label: "Drop it" },
+      ],
+    });
+    const cardId = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
+    const before = tasks.get("t2")?.outcome;
+    await emit?.execute("c2", {
+      id: cardId,
+      title: "The docs split needs no retry",
+      body: "<p>Its branch already holds the split.</p>",
+    });
+    expect(tasks.get("t2")?.outcome).toBe(before);
+    const question = tasks.list().find((record) => record.kind === "question");
+    expect(question?.outcome).toBe("<p>Its branch already holds the split.</p>");
+    expect(tasks.capture.taskForCard(cardId)?.id).toBe(question?.id);
+    expect(supervisor.cards.get(cardId)?.taskId).toBeUndefined();
+  });
+
+  it("files a note as its own closed question task", async () => {
     const { agent, session, specs, tasks, supervisor } = setup();
     await agent.converse("what does the port flag do?");
     const emit = toolsOf(specs).get("emit_card");
     const shown = await emit?.execute("c1", {
       title: "The port flag",
       body: "<p>It picks the listening port.</p>",
-      standalone: true,
     });
     const cardId = shown?.content[0]?.text?.match(/\((card-fm-[^)]+)\)/)?.[1] ?? "";
     const question = tasks.list().find((record) => record.kind === "question");
@@ -275,7 +357,6 @@ describe("FirstmateAgent capture", () => {
       id: cardId,
       title: "The port flag",
       body: "<p>It picks the listening port; default 3000.</p>",
-      standalone: true,
     });
     expect(tasks.list().filter((record) => record.kind === "question")).toHaveLength(1);
     expect(tasks.get(question?.id ?? "")?.outcome).toContain("default 3000");
@@ -284,13 +365,13 @@ describe("FirstmateAgent capture", () => {
     await tick();
   });
 
-  it("refuses a note that names no task and asserts nothing, and an unknown task_id", async () => {
+  it("refuses an unknown task_id or related task", async () => {
     const { agent, specs, supervisor, tasks } = setup();
     await agent.converse("tell me something");
     const emit = toolsOf(specs).get("emit_card");
-    await expect(emit?.execute("c1", { title: "A fact", body: "Something." })).rejects.toThrow(
-      /every card is about a task/,
-    );
+    await expect(
+      emit?.execute("c1", { title: "A fact", body: "Something.", related: ["INF-404"] }),
+    ).rejects.toThrow(/unknown related task "INF-404"/);
     await expect(
       emit?.execute("c2", { title: "A fact", body: "Something.", task_id: "nope" }),
     ).rejects.toThrow(/unknown task_id "nope"/);
@@ -594,7 +675,6 @@ describe("FirstmateAgent capture", () => {
     await toolsOf(specs).get("emit_card")?.execute("c1", {
       title: "Twelve fenders",
       body: "<p>Six a side.</p>",
-      standalone: true,
     });
     session.emitTurnEnd("Answered.");
     session.resolveNextPrompt();
@@ -693,7 +773,6 @@ describe("FirstmateAgent capture", () => {
     await toolsOf(specs).get("emit_card")?.execute("c1", {
       title: "The login test is fixed",
       body: "<p>It passed ten runs in a row.</p>",
-      standalone: true,
     });
     session.emitTurnEnd("Answered.");
     session.resolveNextPrompt();
@@ -738,7 +817,6 @@ describe("FirstmateAgent capture", () => {
     await toolsOf(specs).get("emit_card")?.execute("c1", {
       title: "The login test is fixed",
       body: "<p>It passed ten runs in a row.</p>",
-      standalone: true,
     });
     session.emitTurnEnd("Answered.");
     session.resolveNextPrompt();

@@ -4,6 +4,7 @@ import { basename, join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { hostEnv } from "../../src/core/hostEnv";
 import { PROJECT_ROW_WORDS } from "../../src/renderer/src/settings/projectsWords";
+import { cardMetaWords, FIRSTMATE_CARD_META } from "../../src/shared/cards";
 import {
   AUTONOMY_SWITCH_NAME,
   AUTONOMY_WORDS,
@@ -91,9 +92,12 @@ test("an ambiguous request yields one clarifying card whose answer reaches First
   await input.fill(`${AMBIGUOUS_PROMPT_MARKER}: bump the deps`);
   await input.press("Enter");
 
-  // Exactly one concise decision card, from Firstmate itself.
+  // Exactly one concise decision card, from Firstmate itself: its head names
+  // the first mate, never the question it filed (INF-2714).
   await expect(shownCard(page, MOCK_WHICH_PROJECT_TITLE)).toBeVisible({ timeout: 30_000 });
-  await expect(cardMeta(page, MOCK_WHICH_PROJECT_TITLE)).toHaveText(MOCK_WHICH_PROJECT_TITLE);
+  await expect(cardMeta(page, MOCK_WHICH_PROJECT_TITLE)).toHaveText(
+    cardMetaWords(FIRSTMATE_CARD_META),
+  );
 
   const alphaName = repoAlpha.split("/").at(-1) as string;
   const betaName = repoBeta.split("/").at(-1) as string;

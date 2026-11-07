@@ -1,5 +1,6 @@
 import {
   type Card,
+  firstmateOwnCard,
   isStoryNote,
   MERGE_CLOSES_WORDS,
   onStage,
@@ -254,7 +255,21 @@ describe("CardService", () => {
       body: "<p>It failed.</p>",
       actions: [],
     });
+    // The app's own note about the task - its closing note - heads with
+    // that task and carries its message, unlike the first mate's own answer
+    // (INF-2714 review).
+    const closing = cards.addFirstmateCard({
+      title: "Fix the footer is done",
+      body: "<p>The footer clears the composer.</p>",
+      actions: [],
+      taskId: "footer",
+      aboutTask: true,
+    });
     const shown = new Map(cards.snapshot().map((card) => [card.id, card]));
+    expect(shown.get(closing)?.meta).toBe("Fix the footer");
+    expect(firstmateOwnCard(shown.get(closing) as Card)).toBe(false);
+    expect(firstmateOwnCard(shown.get(answer) as Card)).toBe(true);
+    expect(shown.get(closing)?.asked).toEqual(shown.get(crewCard)?.asked);
     expect(shown.get(crewCard)?.asked).toEqual({
       at: tasks.capture.getAsk("ask-footer")?.at,
       text: "the footer overlaps the composer\n\non small windows",

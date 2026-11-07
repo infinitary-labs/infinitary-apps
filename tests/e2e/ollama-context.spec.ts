@@ -26,7 +26,6 @@ test("selecting a base Ollama model creates a hidden alias and serves a visible 
                 id: "arithmetic",
                 title: "Four",
                 body: "<p>2 + 2 is 4.</p>",
-                standalone: true,
               },
             }),
           ],
@@ -84,7 +83,7 @@ test("Retry replays the ask, and a successful operation ends on its answer card"
           ? [
               nativeCall(`call-${phase}`, {
                 name: "emit_card",
-                args: { title: "Four", body: "<p>4</p>", standalone: true },
+                args: { title: "Four", body: "<p>4</p>" },
               }),
             ]
           : [
@@ -101,7 +100,6 @@ test("Retry replays the ask, and a successful operation ends on its answer card"
                 args: {
                   title: "The light theme is on",
                   body: "<p>The app now uses the light theme.</p>",
-                  standalone: true,
                   answering: true,
                 },
               }),
@@ -161,9 +159,11 @@ for (const mode of [
       if (mode === "refused-card" && request.messages.at(-1)?.role !== "tool")
         return {
           tool_calls: [
+            // A card naming a task that does not exist is refused; a bare note
+            // is now the first mate's own answer and passes (INF-2714).
             nativeCall("bad-card", {
               name: "emit_card",
-              args: { title: "Four", body: "<p>4</p>" },
+              args: { title: "Four", body: "<p>4</p>", task_id: "missing" },
             }),
           ],
         };

@@ -11,6 +11,11 @@ So: attach first.
 An ask about existing work lands on that work.
 A task of its own exists only for a genuinely standalone one-off, and only when the model asserts it.
 
+The first mate's answer is its own card (INF-2714; captain: "you should answer such questions with a neutral card that belongs to first mate, and simply mention the related tasks in the card is enough").
+The ask attaches to the answer's own record, which is headed first mate and names the tasks it is about in its words and in `related`; each named task's record gains a `related` link to it.
+Only a decision whose buttons act on a task, and a review relay, carry `task_id`.
+An answer given while the first mate handles a crewmate's report saves that report as its record's origin, and the message that report's work covers ends on it as it would on a card about that work.
+
 ## Mechanics
 
 1. `inf:converse` opens a `captain_asks` row before the first mate turn runs (`TaskService.capture.openAsk`, policy in `src/core/orchestrator/askCapture.ts`).
@@ -21,11 +26,13 @@ A task of its own exists only for a genuinely standalone one-off, and only when 
    Omission uses the latest read message for ordinary direct-request calls.
    The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask with `attached_via = tool:<name>`:
    - `spawn_crewmate` -> the new task; `steer_crewmate`, `interrupt_crewmate`, `settle_task`, `update_task` (including `start_now`) -> the named task.
-   - `emit_card` with `task_id` -> that task: a note is an `answered` event carrying the body, a decision a `card_raised` event whose resolution `act()`/`close()` record as `card_resolved`.
+   - `emit_card` with `task_id` -> that task: a decision a `card_raised` event whose resolution `act()`/`close()` record as `card_resolved`, and a review relay (with `review_task_id`) an `answered` event carrying the body.
+     A note with `task_id` and no `review_task_id` is refused (`NOTE_NAMES_TASK_REFUSAL` in `src/core/pi/cardLint.ts`).
    - `emit_card` decision without `task_id` -> a new `decision` task, open, captain gate `ref = card id`, living as long as its choice remains open, including while put away: the captain’s choice closes it `done/answered`, explicit Dismiss in its record closes it `dropped/cancelled`, `close_card` closes it `dropped/superseded`, and the sweep closes one whose card is gone anyway `dropped/superseded`.
      Putting it away retains the open card and its Tasks row; Show the card brings it back (cards/tasks/agents P0; migration 28 closed every park row and logged it in `park_row_backfill`).
-   - `emit_card` note without `task_id` requires `standalone: true` (lint refusal otherwise, `NOTE_NEEDS_TASK_REFUSAL` in `src/core/pi/cardLint.ts`); it files a `question` task born `done/answered` with the body as outcome.
+   - `emit_card` note without `task_id` files a `question` task born `done/answered` with the body as outcome; the captain's message attaches to it.
      Revising the card in place revises the same row.
+   - `related` on either card names the tasks it mentions, by id or key; the host links the card's record to each with a `related` edge (`linkRelated` in `firstmateTools.ts`), so each task's record shows the answer, and refuses an unknown one.
    - The operate tools that still file through `filingOperations` in `firstmateTools.ts` are `schedule_prompt`, `record_knowledge` (`docs/knowledge.md`), `flag_missed_escalation`, `flag_duplicate`, `personalize` and `install_plugin` (`setup_repo` and `unregister_repo` are retired); each files an `operation` task `done/settled` with the tool result as outcome, in the repo's project or Scratch.
 3. At turn end (`AskCapture.endTurn`) every open ask the backend read closes, apart from one whose words wait on the lane for a retry.
    One nothing attached goes to the hinted task, else becomes a standalone `question` task in Scratch titled by the ask's first sentence with the turn's closing text as outcome; either way `attached_via = host:fallback`.
@@ -48,7 +55,7 @@ Only a turn end that names an ask closes it (`AskCapture.endTurn` takes the asks
 
 The `[fm-op]` context carries the started work in `crew`, the unstarted work as a `backlog` count per project, and an `about` line when a hint exists (`docs/orchestrator-contract.md`, "What a context carries").
 Unstarted and closed work are not listed here and stay reachable on demand through the `tasks` tool.
-`FIRSTMATE_PROMPT_CORE` gained one rule before the six classes: every turn is about a task, find it first, pass its `task_id`, standalone only for a genuine one-off.
+`FIRSTMATE_PROMPT_CORE` gained one rule before the six classes: every turn is about a task, find it first, pass its `task_id` to a tool that acts on it, and name it only in words and `related` on an answer.
 The C5 dispatch extractor parses the new lines as noise (`tests/extract-dispatch-corpus.test.ts` pins that the fleet parses identically).
 
 ## Attribution quality
@@ -208,7 +215,7 @@ An open first mate decision card does not light the rail: the strip counts worki
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - Capture (task-system P1, design section 6, captain decision D1 - "attach first"; `docs/task-capture.md`): every `inf:converse` opens a `captain_asks` row BEFORE the turn runs (`src/core/orchestrator/askCapture.ts` over `TaskService.capture.openAsk`); the first mate's tools select the read message they address through `ask_id` (empty for unrelated operational work) and attach it to the task they act on (`attached_via = tool:<name>`), and `AskCapture.endTurn` files whatever is still loose - on the hinted task (the open card's task, or the turn's `taskId`), else as a standalone `question` task in Scratch (`host:fallback`; the share of these is the attribution metric).
-  `emit_card` needs `task_id` or `standalone: true` for a note (lint refusal), a task-less decision files an open `decision` task keyed by its card id (a choice, explicit Dismiss or close_card closes it; putting it away does not), and the operate tools file `operation` tasks through one helper.
+  `emit_card` refuses `task_id` on a note unless it relays a review (INF-2714: an answer is the first mate's own and names its tasks in `related`), a task-less decision files an open `decision` task keyed by its card id (a choice, explicit Dismiss or close_card closes it; putting it away does not), and the operate tools file `operation` tasks through one helper.
   `[fm-op]` wakes open no ask.
   Never add a second ask writer, and never let a first mate card with `task_id` count as the crewmate's card (`cardEmitter` in `crewSupervisor.ts` reads the emitter off the id: `card-fm-` vs `card-<taskId>-`).
 

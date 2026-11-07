@@ -10,7 +10,12 @@ import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
-import { MERGE_CLOSES_WORDS, REVIEW_FINDING_LABEL } from "../../src/shared/cards";
+import {
+  cardMetaWords,
+  FIRSTMATE_CARD_META,
+  MERGE_CLOSES_WORDS,
+  REVIEW_FINDING_LABEL,
+} from "../../src/shared/cards";
 import { reportSummary } from "../../src/shared/feed";
 import { validationStateRevision } from "../../src/shared/liveValidation";
 import type { TaskView } from "../../src/shared/tasks";
@@ -269,7 +274,11 @@ test("a reviewed task's review passes before its completion card, which merges w
   await expect(shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
   const findingCard = shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
   await expect(findingCard.getByText(REVIEW_FINDING_LABEL, { exact: true })).toBeVisible();
-  await expect(findingCard.locator("[data-card-meta]")).toHaveText(builder.title);
+  // INF-2714: the first mate's card is its own, so its head reads first mate,
+  // never the builder's title; its buttons still act on the builder's task.
+  await expect(findingCard.locator("[data-card-meta]")).toHaveText(
+    cardMetaWords(FIRSTMATE_CARD_META),
+  );
   const findingFacts = factsStrip(cardBody(page, MOCK_REVIEW_ASK_CARD_TITLE));
   await expect(findingFacts.project).toContainText(REPO_NAME);
   await expect(findingFacts.review).toContainText(HEAD_SHA.slice(0, 7));

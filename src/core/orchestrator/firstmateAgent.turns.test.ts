@@ -958,7 +958,6 @@ describe("FirstmateAgent", () => {
       id: cardId,
       title: "What Default means for Care",
       body: "<p>A crewmate is checking the exact rules that choose Default.</p><p>This card changes when it answers.</p>",
-      standalone: true,
     };
     // An update alone does not answer him: refused, thread unchanged.
     await expect(emit?.execute("c0", revision)).rejects.toThrow(/waits on your answer/);
@@ -990,7 +989,6 @@ describe("FirstmateAgent", () => {
       id: cardId,
       title: "How Default Care is chosen",
       body: "<p>Default is standard care unless the project sets its own.</p><p>A task's own words can ask for more.</p>",
-      standalone: true,
       reply: "Default is standard care unless the project sets its own.",
       answers_message: asked,
     });

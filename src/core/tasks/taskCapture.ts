@@ -147,6 +147,15 @@ export class TaskCapture {
     );
   }
 
+  /** The task whose crewmate's report this task's work came from, when it saved one (INF-2326). */
+  reportOrigin(id: string): string | undefined {
+    for (const event of this.writer.events.listFor(id)) {
+      const saved = savedOriginOf(event);
+      if (saved) return saved.kind === "report" ? saved.taskId : undefined;
+    }
+    return undefined;
+  }
+
   /**
    * Save where a task's work came from when it was not a message of the
    * captain's (INF-2326): an automation run, a card click or a crewmate's

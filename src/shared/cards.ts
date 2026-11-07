@@ -1021,6 +1021,16 @@ export const FIRSTMATE_CARD_META = "firstmate";
 /** INF-63: the app-owned label for a validated independent review. */
 export const REVIEW_FINDING_LABEL = "Review finding";
 
+/**
+ * Whether a card is the first mate's own answer (INF-2714): a first mate
+ * card whose head says first mate. It leads with no task's key and reads
+ * its asked line from its own record, while a card the app writes about a
+ * task - a required action, a closing note - heads with that task.
+ */
+export function firstmateOwnCard(card: Pick<Card, "author" | "meta">): boolean {
+  return card.author === "firstmate" && card.meta === FIRSTMATE_CARD_META;
+}
+
 /** How a card's meta line reads: the first mate's own cards say who wrote them in words, never the stored name. */
 export function cardMetaWords(meta: string): string {
   return meta === FIRSTMATE_CARD_META ? "first mate" : meta;

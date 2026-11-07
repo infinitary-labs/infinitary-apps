@@ -67,6 +67,7 @@ import {
   wakeIdentity,
 } from "../../src/core/storage/inboxStore.ts";
 import { SettingsStore } from "../../src/core/storage/settingsStore.ts";
+import { TaskLinkStore } from "../../src/core/storage/taskLinkStore.ts";
 import { DecisionStore } from "../../src/core/storage/decisionStore.ts";
 import { seedTask } from "../../src/core/tasks/seedTask.ts";
 import { TaskService } from "../../src/core/tasks/taskService.ts";
@@ -138,6 +139,7 @@ import {
 import {
   legacyStateOf,
   recordedActions,
+  recordedAttribution,
   recordedQuestions,
   recordedShape,
   seededShape,
@@ -1032,6 +1034,8 @@ class Replay {
       if (call.name === "emit_card") {
         if (typeof args.body === "string") args.body = recordedQuestions(args.body, args.actions);
         args.actions = recordedActions(args.actions);
+        // A recorded note named its task as its own; today it is related.
+        recordedAttribution(args);
         // Its reply names the captain message it answered, as the host read it then.
         const id = typeof args.id === "string" ? args.id : "";
         const answers =
@@ -1434,10 +1438,23 @@ class Replay {
     );
   }
 
+  /**
+   * The task a card is counted on, which only the repeat count reads: its
+   * own, or for a first mate note, which names its tasks as related
+   * (INF-2714), the one task its record names, so a restatement of a
+   * crewmate's card still counts as one.
+   */
+  private pairedOn(card: ObservedCard): ObservedCard {
+    if (card.taskId || card.author !== "firstmate") return card;
+    const record = this.tasks.capture.taskForCard(card.id);
+    const related = record ? new TaskLinkStore(this.db).listFrom(record.id, "related") : [];
+    return related.length === 1 ? { ...card, taskId: related[0]?.toId ?? null } : card;
+  }
+
   private report(): SessionReport {
     const rows = this.db.prepare("SELECT * FROM cards").all() as TableRow[];
     const observer = new CardObserver(this.sources.plainLabels ?? null, this.crewPlayback.cardIds);
-    const cards: ObservedCard[] = rows.map((row) => observer.observe(row));
+    const cards: ObservedCard[] = rows.map((row) => this.pairedOn(observer.observe(row)));
     const questions: ObservedQuestion[] = this.captainTurns
       .filter((turn) => isQuestion(turn.user))
       .map((turn) => {

@@ -230,6 +230,7 @@ export class TaskClosing {
       body: `<p>${escapeCardText(sentence)}</p>${pullRequest}`,
       actions: [],
       taskId: record.id,
+      aboutTask: true,
       ...(unasked ? {} : { answering: true }),
     });
   }

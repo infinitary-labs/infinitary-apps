@@ -117,6 +117,9 @@ describe("CrewSupervisor", () => {
         { author: "firstmate", title: closingNoteTitle(h.key, "dropped"), actions: [] },
       ]);
       expect(h.cards().find((card) => card.taskId === h.taskId)?.body).toContain(SENTENCE);
+      // The app's closing note heads with its task, never as the first
+      // mate's own answer (INF-2714 review).
+      expect(h.cards().find((card) => card.taskId === h.taskId)?.meta).toBe("Rename the notice");
       const record = h.tasks.get(h.taskId);
       const close = h.tasks.timeline(h.taskId).find((event) => event.kind === "status");
       if (!record || !close) throw new Error("The discard left no close");

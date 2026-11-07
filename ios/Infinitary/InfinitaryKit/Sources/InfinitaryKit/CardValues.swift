@@ -108,6 +108,8 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
     public var title: String { value["title"].text! }
     public var author: String { value["author"].text! }
     public var meta: String? { value["meta"].text }
+    /// INF-2714: the first mate's own answer, whose head says first mate and names no task, as the Mac's `firstmateOwnCard`.
+    public var isFirstmateOwn: Bool { author == "firstmate" && meta == "firstmate" }
     public var reviewTaskId: String? { value["reviewTaskId"].text }
     public var taskID: String? { value["taskId"].text }
     public var awaiting: String? { value["awaiting"].text }

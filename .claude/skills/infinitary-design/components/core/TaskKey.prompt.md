@@ -11,8 +11,9 @@ One rule, one summary and one way of opening serve every place; a card body's ke
   The one exception is the card's head (next), whose key is the card's door to the task's record.
 - **The card's own key (INF-358).**
   A card about a task leads its head's meta line with that task's key, in the quiet look, then a middle dot and the meta words: `INF-358 · Open the waiting decision from the Tasks panel`.
-  Every card about a task has it the same way - a crewmate's card, the first mate's card (the task it named, or the decision row the app filed for a decision that named none) and the app's own cards about a task, the stuck-task card, a required action and a sign-in asked for a task; a note about a task reads like its decision.
-  A card about no task - a provider's or a forge's sign-in, a first mate note that named none - draws no key.
+  Every card about a task has it the same way - a crewmate's card and the app's own cards about a task, the stuck-task card, a required action, a closing note and a sign-in asked for a task.
+  A card the first mate writes is its own and draws no key in its head, even a decision whose buttons act on a task: it names its tasks in its words, where each key is a link.
+  A card about no task - a provider's or a forge's sign-in - draws no key either.
   The meta words never repeat the key: the stuck-task card, whose title already names its task, has none, so its head reads the key alone (INF-418).
   The key keeps its whole width; the meta words beside it give way.
   Resting on it or focusing it opens the task's summary as any key does.

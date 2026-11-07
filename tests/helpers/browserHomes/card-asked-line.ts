@@ -31,7 +31,10 @@ export const asked: HomeRead[] = [
 
 /**
  * Two messages of the captain's, each answered on the first mate's own note
- * through the task it attached to (INF-1610), the short one on top.
+ * through the question record filed for it, which the message attached to
+ * (INF-1610, INF-2714), the short one on top. The other three notes are
+ * each raised on the work whose origin they show: a first mate card reads
+ * its line from its own record, never from a task it only names.
  */
 export default function seed(
   userDataDir: string,
@@ -45,17 +48,17 @@ export default function seed(
       ["short", short, 60],
       ["long", long, 50],
     ] as const) {
-      const task = seedTask(tasks, {
+      const task = tasks.capture.fileQuestion({
         id: `asked-${name}-task`,
         title: answered.title,
-        status: "completed",
+        outcome: null,
+        cardId: `asked-${name}`,
       });
       tasks.capture.openAsk({ id: `ask-${name}`, text: answered.ask });
       tasks.capture.attachAsk(`ask-${name}`, task.id, "tool:emit_card", true);
       tasks.capture.closeAsk(`ask-${name}`, "closed");
       cards.upsert({
         id: `asked-${name}`,
-        taskId: task.id,
         author: "firstmate",
         meta: "firstmate",
         priority,
@@ -92,9 +95,13 @@ export default function seed(
       ["click", click.title, 30],
       ["from", from.title, 20],
     ] as const) {
+      tasks.capture.recordCardRaised(`asked-${name}-task`, {
+        cardId: `asked-${name}`,
+        kind: "note",
+        title,
+      });
       cards.upsert({
         id: `asked-${name}`,
-        taskId: `asked-${name}-task`,
         author: "firstmate",
         meta: "firstmate",
         priority,

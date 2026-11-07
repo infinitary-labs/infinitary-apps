@@ -32,7 +32,6 @@ export const replyingNote: Scenario =
             actions: [],
             reply: REPLYING_ANSWER,
             ...answering(latestUserTail),
-            standalone: true,
           },
         },
       ],

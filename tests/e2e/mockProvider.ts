@@ -807,7 +807,6 @@ export async function startMockProvider(
                 args: {
                   title: FM_SEAT_STEERED_TITLE,
                   body: "<p>The anchor chain is sound, and the crew is idle.</p>",
-                  standalone: true,
                 },
               },
             ]);
@@ -881,7 +880,7 @@ export async function startMockProvider(
               streamToolCalls([
                 {
                   name: "emit_card",
-                  args: { title: RETRY_ANSWER_TITLE, body: RETRY_ANSWER_BODY, standalone: true },
+                  args: { title: RETRY_ANSWER_TITLE, body: RETRY_ANSWER_BODY },
                 },
               ]);
             } else {
@@ -1096,18 +1095,18 @@ export async function startMockProvider(
             return;
           }
           if (!hasToolResults && latestUserTail.includes(WELCOME_WAKE_WORDS)) {
-            // The welcome: one standalone note in the Firstmate's own voice.
+            // The welcome: one note in the Firstmate's own voice.
             streamToolCalls([
               {
                 name: "emit_card",
-                args: { title: MOCK_WELCOME_TITLE, body: MOCK_WELCOME_TEXT, standalone: true },
+                args: { title: MOCK_WELCOME_TITLE, body: MOCK_WELCOME_TEXT },
               },
             ]);
             return;
           }
           if (!hasToolResults && latestUserTail.includes(ANSWER_PROMPT_MARKER)) {
-            // Attach first (task-system P1): an answer about no existing work
-            // asserts standalone, and the host files it as its own question.
+            // An answer is the first mate's own note (INF-2714): the host
+            // files it as its own question.
             streamToolCalls([
               {
                 name: "emit_card",
@@ -1116,7 +1115,6 @@ export async function startMockProvider(
                   body: latestUserTail.includes(TALL_ANSWER_PROMPT_MARKER)
                     ? MOCK_ANSWER_TEXT.repeat(100)
                     : MOCK_ANSWER_TEXT,
-                  standalone: true,
                 },
               },
             ]);

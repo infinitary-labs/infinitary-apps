@@ -46,7 +46,6 @@ export const projectSetup: Scenario =
               args: {
                 title: "Sign in before cloning your project",
                 body: "<p>The app needs your sign-in before it can clone this project.</p><p>The clone failed without your GitHub sign-in. Sign in opens Projects with a code, then you can try again.</p>",
-                standalone: true,
                 // A clone has no project to keep on this Mac, so its one
                 // way out stands beside a choice to leave it for now: a
                 // decision gives 2 or 3 actions.

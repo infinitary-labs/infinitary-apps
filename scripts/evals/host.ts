@@ -461,6 +461,7 @@ export async function approvalHost(
     "branch_from",
     "files_from",
     "repo_id",
+    "related",
   ]);
   const actualArgs = (raw: unknown): Record<string, unknown> =>
     Object.fromEntries(

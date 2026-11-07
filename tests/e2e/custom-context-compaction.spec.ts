@@ -173,7 +173,6 @@ test("Firstmate compacts and keeps answering on a 48k custom model", async () =>
       const args = JSON.stringify({
         title: `Noted part ${calls}`,
         body: "I read the log part you pasted.",
-        standalone: true,
       });
       res.end(
         chatFrame({

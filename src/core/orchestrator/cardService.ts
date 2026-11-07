@@ -23,6 +23,7 @@ import {
   cardPresentation,
   cardWord,
   compareStack,
+  firstmateOwnCard,
   isPreviewBody,
   keepsTaskOpen,
   onStage,
@@ -717,13 +718,8 @@ export class CardService {
           ? this.host.cardStore.lastSeenOffer(staged.id, staged.lifecycleId) !== undefined
           : false,
       };
-      const task = shown.taskId ? this.host.tasks.get(shown.taskId) : undefined;
       const about = this.askedAbout(shown, asked);
-      return {
-        ...shown,
-        ...(shown.author === "firstmate" && task ? { meta: task.title } : {}),
-        ...(about ? { asked: about } : {}),
-      };
+      return { ...shown, ...(about ? { asked: about } : {}) };
     });
   }
 
@@ -747,10 +743,15 @@ export class CardService {
    * Where a card's work came from, for its line under the title (INF-1610,
    * INF-2326): the origin its task's graph leads to
    * (`TaskService.capture.originAbout`), through the task it names or the task it
-   * was raised on. `known` holds each task's answer for one snapshot.
+   * was raised on. A first mate card is its own (INF-2714): only the record
+   * filed for it speaks, never the task its buttons act on. `known` holds
+   * each task's answer for one snapshot.
    */
   private askedAbout(card: Card, known: Map<string, CardAsked | undefined>): CardAsked | undefined {
-    const taskId = card.taskId ?? this.host.tasks.capture.taskForCard(card.id)?.id;
+    const filed = (): string | undefined => this.host.tasks.capture.taskForCard(card.id)?.id;
+    const answer = firstmateOwnCard(card);
+    const own = answer ? filed() : undefined;
+    const taskId = answer ? (own !== card.taskId ? own : undefined) : (card.taskId ?? filed());
     if (!taskId) return undefined;
     if (!known.has(taskId))
       known.set(taskId, cardAskedOf(this.host.tasks.capture.originAbout(taskId)));

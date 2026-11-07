@@ -2,6 +2,9 @@ import { settingFrom } from "@shared/envSettings";
 import { forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import type { NamingRule } from "../../../../shared/runbooks";
+import { GITHUB_QUEUE_PART, readQueueStamp } from "../../../queue/shipped";
+import { WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
+import { PAUSE_LABEL, readPauseMarker } from "../../../queue/shipped/rules.mjs";
 import { requireConventional } from "../../../workspace/conventional";
 import {
   type ApiProject,
@@ -27,6 +30,8 @@ import {
   type ForgeProject,
   type ForgePull,
   type ForgeQueueMark,
+  type ForgeQueuePause,
+  type ForgeQueueStart,
   type ForgeReadiness,
   type ForgeRuleset,
   type ForgeSkipMerge,
@@ -184,10 +189,18 @@ type StatusJson = {
   id?: number;
   context: string;
   state: string;
+  description?: string | null;
+  target_url?: string | null;
   created_at?: string;
   updated_at?: string;
 };
 type WorkflowJson = { path?: string; state?: string };
+type PauseIssueJson = {
+  body?: string | null;
+  html_url?: string;
+  assignee?: { login?: string } | null;
+  assignees?: { login?: string }[] | null;
+};
 
 /** The workflow run a check suite belongs to, as far as superseding needs it. */
 type SuiteRunJson = {
@@ -495,6 +508,8 @@ export class GitHubForge implements Forge {
           state,
           ...checkTimes(status.created_at, state === "pending" ? null : status.updated_at),
           ...(typeof status.id === "number" ? { statusId: status.id } : {}),
+          ...(status.description ? { detail: status.description } : {}),
+          ...(status.target_url ? { link: status.target_url } : {}),
         };
       }),
     ];
@@ -854,15 +869,24 @@ export class GitHubForge implements Forge {
    * at the default branch. A listed file the default branch no longer has
    * is left out; any other refusal is the read's failure.
    */
-  async queueWorkflows(): Promise<QueueWorkflow[]> {
+  async queueWorkflows(options: { all?: boolean } = {}): Promise<QueueWorkflow[]> {
     const listed = await this.pages<WorkflowJson>(
       `${this.repoPath()}/actions/workflows`,
       (page) => (page as { workflows?: WorkflowJson[] }).workflows ?? [],
     );
+    // The shipped queue's file first: its stamp is all a teammate's app
+    // needs, and a project running it needs no other file read.
+    const live = listed.items
+      .filter((workflow) => workflow.path && workflow.state !== "deleted")
+      .sort(
+        (a, b) =>
+          Number(b.path === GITHUB_QUEUE_PART.queueFile) -
+          Number(a.path === GITHUB_QUEUE_PART.queueFile),
+      );
     const found: QueueWorkflow[] = [];
-    for (const workflow of listed.items) {
-      const path = workflow.path;
-      if (!path || workflow.state === "deleted") continue;
+    for (const workflow of live) {
+      const path = workflow.path as string;
+      if (path !== GITHUB_QUEUE_PART.queueFile && options.all === false) break;
       let file: { content?: string; encoding?: string } | null;
       try {
         file = (await this.request(
@@ -877,9 +901,49 @@ export class GitHubForge implements Forge {
         file?.encoding === "base64" && file.content
           ? Buffer.from(file.content, "base64").toString("utf8")
           : (file?.content ?? "");
-      if (text.includes(QUEUE_STATUS)) found.push({ path, active: workflow.state === "active" });
+      if (!text.includes(QUEUE_STATUS)) continue;
+      const shipped = readQueueStamp(text);
+      found.push({
+        path,
+        active: workflow.state === "active",
+        ...(shipped !== undefined ? { shipped } : {}),
+      });
+      if (shipped !== undefined && workflow.state === "active") break;
     }
     return found;
+  }
+
+  /**
+   * The shipped queue's open pause issue, read by its label: the run and
+   * paused changes its marker names, and its assignee as who repairs it.
+   * The earliest assignment holds the claim, and a later claimant removes
+   * its own (the queue-repair skill), so the one assignee left is the claim.
+   * An issue with no readable marker is not the queue's.
+   */
+  async queuePause(): Promise<ForgeQueuePause | null> {
+    const issues = (await this.request(
+      "GET",
+      `${this.repoPath()}/issues?state=open&labels=${encodeURIComponent(PAUSE_LABEL)}&per_page=10`,
+    )) as PauseIssueJson[] | null;
+    for (const issue of issues ?? []) {
+      const marker = readPauseMarker(issue.body);
+      if (!marker || !issue.html_url) continue;
+      const claimedBy = issue.assignees?.[0]?.login ?? issue.assignee?.login;
+      return { ...marker, url: issue.html_url, ...(claimedBy ? { claimedBy } : {}) };
+    }
+    return null;
+  }
+
+  /** Start the shipped queue's workflow by hand on the default branch, with its inputs. */
+  async startQueue(start: ForgeQueueStart): Promise<void> {
+    const inputs: Record<string, string> = { action: start.action };
+    if (start.action !== "form") inputs.reason = start.reason;
+    if (start.action === "send-back") inputs.number = String(start.number);
+    await this.request(
+      "POST",
+      `${this.repoPath()}/actions/workflows/${encodeURIComponent(QUEUE_WORKFLOW)}/dispatches`,
+      { ref: await this.defaultBranch(), inputs },
+    );
   }
 
   async close(change: ForgeChange): Promise<void> {

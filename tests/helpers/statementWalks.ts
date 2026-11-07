@@ -206,7 +206,7 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
       walks: ["SCAN usage_events USING INDEX usage_events_task", "USE TEMP B-TREE FOR GROUP BY"],
       reason: "the usage ledger's per-model rows, read when the captain opens Settings, Usage",
     },
-  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at FROM repos ORDER BY added_at":
+  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json FROM repos ORDER BY added_at":
     {
       walks: ["SCAN repos", "USE TEMP B-TREE FOR ORDER BY"],
       reason: "one row per project the captain adds",
@@ -215,17 +215,17 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     walks: ["SCAN repos"],
     reason: "one row per project the captain adds",
   },
-  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at FROM repos WHERE origin = ? AND kind = 'project'":
+  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json FROM repos WHERE origin = ? AND kind = 'project'":
     {
       walks: ["SCAN repos"],
       reason: "one row per project the captain adds",
     },
-  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at FROM repos WHERE name = ?":
+  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json FROM repos WHERE name = ?":
     {
       walks: ["SCAN repos"],
       reason: "one row per project the captain adds",
     },
-  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at FROM repos WHERE origin = ? AND setup_kind = 'clone'":
+  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json FROM repos WHERE origin = ? AND setup_kind = 'clone'":
     {
       walks: ["SCAN repos"],
       reason: "one row per project the captain adds",

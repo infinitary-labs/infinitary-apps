@@ -108,6 +108,8 @@ export type GitHubStub = {
   merges: () => StubMerge[];
   /** Verification requests accepted for an existing pushed branch. */
   dispatches: () => StubDispatch[];
+  /** Every by-hand start of the project's shipped queue, `POST .../infinitary-queue.yml/dispatches`, in order. */
+  queueStarts: () => { ref: string; inputs: Record<string, string> }[];
   /** Every asynchronous merge GitHub accepted, in order. */
   asyncMerges: () => StubAsyncMerge[];
   /** The rule sets holding the default branch; none by default. */
@@ -179,6 +181,12 @@ export type GitHubStub = {
    * workflows and its contents read answer them; none until set.
    */
   serveWorkflows: (files: StubWorkflowFile[]) => void;
+  /**
+   * The shipped queue's one open pause issue, as GitHub lists the project's
+   * open issues with its pause label (`GitHubForge.queuePause`), with its
+   * body and assignees; null once the queue closed it. None until set.
+   */
+  servePauseIssue: (issue: { number: number; body: string; assignees?: string[] } | null) => void;
   /** INF-1555 F14: refuse the version's workflow metadata list, not its sign-in or registered checks. */
   setWorkflowReadFailure: (failure: { status: number; message: string } | undefined) => void;
   /**
@@ -270,10 +278,12 @@ export async function startGitHubStub(
     return statusIds;
   };
   let workflowFiles: StubWorkflowFile[] = [];
+  let pauseIssue: { number: number; body: string; assignees?: string[] } | null = null;
   const asyncMerges: StubAsyncMerge[] = [];
   const asyncResults = new Map<string, { status: string; details: Record<string, unknown> }>();
   let rulesets: StubRuleset[] = [];
   const dispatches: StubDispatch[] = [];
+  const queueStarts: { ref: string; inputs: Record<string, string> }[] = [];
   const cancelledRuns = new Set<number>();
   let anyPull: StubPull | null = null;
   const opened = new Map<string, StubPull>();
@@ -587,6 +597,13 @@ export async function startGitHubStub(
           res.end();
           return;
         }
+        if (method === "POST" && rest === "/actions/workflows/infinitary-queue.yml/dispatches") {
+          const body = JSON.parse(raw || "{}") as { ref?: string; inputs?: Record<string, string> };
+          queueStarts.push({ ref: body.ref ?? "", inputs: body.inputs ?? {} });
+          res.writeHead(204);
+          res.end();
+          return;
+        }
         const cancel = /^\/actions\/runs\/(\d+)\/cancel$/.exec(rest);
         if (method === "POST" && cancel) {
           const runId = Number(cancel[1]);
@@ -693,6 +710,23 @@ export async function startGitHubStub(
             res.end();
             return;
           }
+        }
+        if (method === "GET" && rest === "/issues" && url.searchParams.get("labels")) {
+          const label = url.searchParams.get("labels");
+          send(
+            200,
+            pauseIssue && label === "infinitary-queue-paused"
+              ? [
+                  {
+                    number: pauseIssue.number,
+                    body: pauseIssue.body,
+                    html_url: `https://${webHost}/${owner}/${name}/issues/${pauseIssue.number}`,
+                    assignees: (pauseIssue.assignees ?? []).map((login) => ({ login })),
+                  },
+                ]
+              : [],
+          );
+          return;
         }
         if (method === "POST" && rest === "/issues") {
           const body = JSON.parse(raw || "{}") as { title?: string };
@@ -1078,6 +1112,7 @@ export async function startGitHubStub(
     requests: () => [...log],
     merges: () => [...merges],
     dispatches: () => [...dispatches],
+    queueStarts: () => [...queueStarts],
     asyncMerges: () => [...asyncMerges],
     setRulesets: (sets) => {
       rulesets = sets;
@@ -1121,6 +1156,9 @@ export async function startGitHubStub(
     },
     serveWorkflows: (files) => {
       workflowFiles = files;
+    },
+    servePauseIssue: (issue) => {
+      pauseIssue = issue;
     },
     setWorkflowReadFailure: (failure) => {
       workflowReadFailure = failure;

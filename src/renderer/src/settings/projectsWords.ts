@@ -15,25 +15,64 @@ export const PROJECT_POLICY_WORDS = {
 
 /**
  * What the batched choice needs, shown under "Where changes go" while a
- * project has it (INF-2887, the captain's "Explain in Settings what the
- * choice needs and link to the how-to"): the app only marks an approved
- * version waiting, and a workflow of the project's own must pass or fail it
- * (docs/forge.md, "A project's queue").
+ * project has it and runs no queue Infinitary ships (INF-2887, the
+ * captain's "Explain in Settings what the choice needs and link to the
+ * how-to"): the app only marks an approved version waiting, and the
+ * project's queue must pass or fail it (docs/forge.md, "A project's queue").
+ * The first way is the queue Infinitary ships, planned with the first mate.
  */
 export const QUEUE_HOW_TO_WORDS = {
   needs:
-    "A batched pull request merges only once a queue workflow in your project on GitHub passes it. Until your project has one, an approved merge waits.",
+    "A batched pull request merges only once your project's queue passes it. Until your project has one, an approved merge waits.",
   label: "How to set one up",
   steps: [
-    `Add a GitHub Actions workflow to your project that finds pull requests whose ${QUEUE_STATUS} status is pending.`,
-    "Have it test those versions, together or one at a time.",
+    "Ask your first mate to set up the queue Infinitary ships. It plans with you which of your project's checks each batch runs, and a batch that fails pauses until a fix is approved.",
+    `Or write your own workflow that finds pull requests whose ${QUEUE_STATUS} status is pending and tests them, together or one at a time.`,
     `Have it set ${QUEUE_STATUS} to success or failure on each version, with the reason in its description. Infinitary merges a version once it reads success, with no second click.`,
   ],
   firstMate:
-    "Your first mate can write this workflow for you: ask it to set up a queue for this project.",
+    "Your first mate can plan the queue with you: ask it to set up a queue for this project.",
   guide: "Open GitHub's guide to commit statuses",
   guideLink: "https://docs.github.com/en/rest/commits/statuses#create-a-commit-status",
 } as const;
+
+/**
+ * What "Where changes go" says on a project that runs the queue Infinitary
+ * ships (docs/forge.md, "The shipped queue"): the project decides for
+ * everyone working on it, so the choice is fixed here.
+ */
+export const QUEUE_SHIPPED_WORDS = {
+  set: (version: number) =>
+    `Set by your project: it runs Infinitary's queue (version ${version}), so its changes go as batched pull requests for everyone working on it.`,
+} as const;
+
+/**
+ * A project's paused batch in Settings (docs/forge.md, "A paused batch";
+ * the captain's quiet choice: no card, Settings shows the pause with its
+ * Resume).
+ */
+export const QUEUE_PAUSE_WORDS = {
+  title: "Batch paused",
+  summary: (run: number, changes: readonly number[], since: string) =>
+    `Paused since ${since}: batch run ${run} failed its checks, so ${changes.length === 1 ? "one approved change waits" : `${changes.length} approved changes wait`} for a fix: ${changes.map((number) => `#${number}`).join(", ")}.`,
+  claimed: (who: string) => `${who} is repairing it.`,
+  unclaimed:
+    "Nobody has taken the repair yet. A crewmate starts it when one of your changes is paused.",
+  unread:
+    "This project's issues could not be read, so who repairs it is not known, and only the paused changes this app saw are listed.",
+  issue: "Open the issue",
+  run: "Open the batch run",
+  reason: "Why the queue may go on",
+  resume: "Resume",
+  sendBack: "Send back",
+  sendBackWhich: "Change to send back",
+  needsReason: "Say why the queue may go on first.",
+  sent: "Asked the queue to go on. The pause ends once its next batch starts.",
+} as const;
+
+/** What "Where changes go" says on a project whose host runs no queue Infinitary can use. */
+export const QUEUE_NO_HOST_WORDS =
+  "Batched pull requests are not offered here: this project's host has no CI that can run Infinitary's queue.";
 
 /**
  * What "Where changes go" says while a project's batched choice waits for

@@ -1,0 +1,6 @@
+{
+  "id": "queue",
+  "name": "Batched pull requests",
+  "description": "Setting up the fix-forward queue Infinitary ships for batched pull requests, and repairing a paused batch.",
+  "skills": "skills"
+}

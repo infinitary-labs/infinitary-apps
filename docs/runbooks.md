@@ -127,6 +127,8 @@ Care levels holds what each of the three care names asks (`resources/runbooks/ca
 Its Default section, served at Default and Careful, carries the procedure before a pull request, the evidence-first validation and the five report headings; its Quick section says nothing beyond the project's gate and green checks is required; its Careful section points at the `careful-change` skill, which holds the independent review's order - commit, report, no push or card until the review passed - the care notice for work already built and the live validation contract; and its first-mate guide says when to commission the review, how to relay findings and when to steer the push and the card.
 With no runbook reader present, the crewmate prompt serves the same bundled sections itself (`careGuideFor`, `src/core/pi/piResources.ts`), so a crewmate on a work computer or in a test is told the same.
 Turning it off leaves the names on the record and serves no procedure for them.
+Batched pull requests holds the shipped queue's two skills: `queue-setup`, which plans the queue on a card where the captain chooses the batch's checks and then copies the stamped files the generator writes beside it (`node scripts/generate-shipped-queue.ts`, `docs/forge.md` "The shipped queue"), and `queue-repair`, which claims a paused batch's issue and fixes forward, sends one change back or resumes.
+Its stamped files are `.txt` because a runbook carries no executable file; they are generated, never edited by hand.
 Commit and PR naming supplies guidance and the data convention read by the existing commit-range, story-title and forge title checks.
 Turning naming off drops that check's convention, but a project's own instructions and release tooling are unchanged.
 

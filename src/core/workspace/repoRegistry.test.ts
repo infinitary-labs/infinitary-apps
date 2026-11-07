@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
+import { QUEUE_HOST_REFUSAL } from "@shared/repos";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
@@ -261,7 +262,7 @@ describe("RepoRegistry delivery through a project's queue", () => {
     const { repo } = await registry.setup({ kind: "init", name: "meter" });
     const github = "https://github.com/o/meter.git";
     const gitlab = "https://gitlab.com/o/meter.git";
-    const refusal = "Only a project on GitHub can merge through its queue.";
+    const refusal = QUEUE_HOST_REFUSAL;
     expect(() => registry.configure(repo.id, { delivery: "queue-pr", origin: gitlab })).toThrow(
       refusal,
     );

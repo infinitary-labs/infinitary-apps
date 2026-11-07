@@ -103,6 +103,7 @@ import type {
 } from "./remoteLogin";
 import type {
   ProjectsFolderView,
+  QueueAnswer,
   RepoPolicyPatch,
   RepoRemoval,
   RepoSetupResult,
@@ -229,6 +230,8 @@ export type FirstmateApi = {
     list: () => Promise<RepoView[]>;
     /** Delivery, autonomy, and standing rigor. */
     configure: (repoId: string, changes: RepoPolicyPatch) => Promise<RepoView>;
+    /** Resume a paused batch, or send one change back, with a reason (docs/forge.md, "A paused batch"). */
+    queueAnswer: (repoId: string, answer: QueueAnswer) => Promise<{ ok: true }>;
     /** Where new projects go. */
     folder: () => Promise<ProjectsFolderView>;
     /** A folder the person chose, or null for the default; refused with a readable reason. */

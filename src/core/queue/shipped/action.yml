@@ -1,0 +1,22 @@
+name: Infinitary batch
+description: Check out this batch, the default branch with each approved change merged in order, in place of the job's own checkout.
+inputs:
+  batch:
+    description: The batch's changes as <number>:<version>, in order (the queue passes it)
+    required: true
+  base:
+    description: The default branch version the batch composes onto (the queue passes it)
+    required: true
+  tree:
+    description: The tree the queue composed, which this job must build (the queue passes it)
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        BATCH: ${{ inputs.batch }}
+        BASE: ${{ inputs.base }}
+        TREE: ${{ inputs.tree }}
+      # BATCH is a space-separated list of <number>:<version> words.
+      run: bash "$GITHUB_ACTION_PATH/compose.sh" apply "$BASE" "$TREE" $BATCH

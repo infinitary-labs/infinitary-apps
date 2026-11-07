@@ -1,7 +1,7 @@
 import { hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { isMergeConflict } from "@shared/plainProblem";
-import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
+import { deliveryForRecord, opensPullRequest, queueShipped, type RepoView } from "@shared/repos";
 import {
   type Forge,
   type ForgeChange,
@@ -366,6 +366,7 @@ export class ChangeMerge {
       }
       dispatched = true;
       const receipt = await forge.putIn(publishedChange, publishedChange.headSha);
+      this.startNextBatch(taskId);
       return {
         ok: true,
         ...this.putInText(taskId, forge, change),
@@ -490,6 +491,24 @@ export class ChangeMerge {
         .assertPublished(taskId, current, forge)
         .catch(storyHeld),
     };
+  }
+
+  /**
+   * After a batched change merges, through the merge card or a
+   * merge review, start the shipped queue again where the project lives, so
+   * the next batch forms on the new default branch: the merge's own push
+   * starts no workflow there (docs/forge.md, "The shipped queue"). A start
+   * that fails waits for the next approval's start.
+   */
+  startNextBatch(taskId: string): void {
+    if (!this.queued(taskId)) return;
+    const record = this.options.tasks.get(taskId);
+    const repoId = record?.delivery?.checkTarget?.repoId ?? record?.repoId;
+    const repo = repoId ? this.options.repos.get(repoId) : undefined;
+    if (!repo || queueShipped(repo) === undefined) return;
+    const forge = this.options.forgeFor(repo);
+    if (!forge.startQueue) return;
+    void forge.startQueue({ action: "form" }).catch(() => {});
   }
 
   /** Whether the task merges through its project's queue (`queue-pr`). */

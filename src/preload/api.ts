@@ -201,6 +201,10 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         readableRequest("inf:repos:configure", () =>
           invoke("inf:repos:configure", repoId, changes),
         ),
+      queueAnswer: (repoId, answer) =>
+        readableRequest("inf:repos:queue-answer", () =>
+          invoke("inf:repos:queue-answer", repoId, answer),
+        ),
       folder: () => invoke("inf:repos:folder"),
       setFolder: (path) =>
         readableRequest("inf:repos:folder:set", () => invoke("inf:repos:folder:set", path)),

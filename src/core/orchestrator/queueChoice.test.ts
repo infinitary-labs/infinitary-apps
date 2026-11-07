@@ -2,6 +2,7 @@ import type { Card } from "@shared/cards";
 import type { QueueWorkflow, RepoPolicyPatch } from "@shared/repos";
 import { describe, expect, it } from "vitest";
 import type { CoreDispatch } from "../dispatcher";
+import { GITHUB_QUEUE_PART, QUEUE_VERSION } from "../queue/shipped";
 import { openInMemoryDatabase } from "../storage/db";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { seedProject } from "../workspace/seedProject";
@@ -21,7 +22,7 @@ import type { WakeFacts } from "./wakes";
  */
 const BATCH: QueueWorkflow = { path: ".github/workflows/batch.yml", active: true };
 
-function setup(onBranch: QueueWorkflow[] | "unreadable" = []) {
+function setup(onBranch: QueueWorkflow[] | "unreadable" = [], version?: number) {
   const db = openInMemoryDatabase();
   const repos = new RepoRegistry(db, "/fleet");
   seedProject(db, {
@@ -34,7 +35,7 @@ function setup(onBranch: QueueWorkflow[] | "unreadable" = []) {
   const github = { workflows: onBranch, reads: 0 };
   const cards = new Map<string, Omit<Card, "author" | "priority" | "status" | "createdAt">>();
   const withdrawn: string[] = [];
-  const told: Extract<WakeFacts, { kind: "queue-plan-asked" }>[] = [];
+  const told: Extract<WakeFacts, { kind: "queue-plan-asked" | "queue-offered" }>[] = [];
   const notes: string[] = [];
   let clock = 1_000;
   const choice = new QueueChoice({
@@ -52,6 +53,11 @@ function setup(onBranch: QueueWorkflow[] | "unreadable" = []) {
     },
     tell: (facts) => told.push(facts),
     note: (text) => notes.push(text),
+    offers: {
+      offered: (repoId) => repos.queueOffered(repoId),
+      record: (repoId, offered) => repos.recordQueueOffered(repoId, offered),
+    },
+    ...(version !== undefined ? { version } : {}),
     now: () => (clock += 1),
   });
   const configure = (changes: RepoPolicyPatch) =>
@@ -174,5 +180,77 @@ describe("choosing batched pull requests before the project's queue exists", () 
     const reads = github.reads;
     await choice.recheck("repo-meter");
     expect(github.reads).toBe(reads);
+  });
+});
+
+/**
+ * The shipped queue, every teammate's view (the captain's plan answers
+ * shipped-queue and keep-and-offer: "make the fix forward behavior the
+ * default for everyone using this mode"). The stand-in answers what
+ * `GitHubForge.queueWorkflows` reads from a stamped file on the default branch.
+ */
+/** The seeded project as the registry holds it now. */
+function project(repos: RepoRegistry) {
+  const repo = repos.get("repo-meter");
+  if (!repo) throw new Error("The seeded project is missing.");
+  return repo;
+}
+
+describe("a project that runs Infinitary's shipped queue", () => {
+  const shipped = (version: number): QueueWorkflow => ({
+    path: GITHUB_QUEUE_PART.queueFile,
+    active: true,
+    shipped: version,
+  });
+
+  it("goes as batched pull requests for a teammate who never chose it, and refuses another way", async () => {
+    const { repos, github, notes, choice, configure } = setup([]);
+    github.workflows = [shipped(QUEUE_VERSION)];
+    await choice.recheckAll();
+    expect(repos.get("repo-meter")?.delivery).toBe("queue-pr");
+    expect(notes).toEqual([QUEUE_SETUP_WORDS.adopted("meter")]);
+    await expect(configure({ delivery: "direct-pr" })).rejects.toThrow(
+      QUEUE_SETUP_WORDS.shippedRefusal("meter"),
+    );
+    expect(repos.get("repo-meter")?.delivery).toBe("queue-pr");
+  });
+
+  it("offers an older stamp's update to the first mate once, and nothing at the current stamp", async () => {
+    const later = QUEUE_VERSION + 1;
+    const { repos, told, choice } = setup([], later);
+    repos.configure("repo-meter", { delivery: "queue-pr" });
+    repos.recordQueue("repo-meter", { workflows: [shipped(later)] });
+    await choice.follow(project(repos));
+    expect(told).toEqual([]);
+    repos.recordQueue("repo-meter", { workflows: [shipped(QUEUE_VERSION)] });
+    await choice.follow(project(repos));
+    await choice.follow(project(repos));
+    expect(told).toEqual([
+      {
+        kind: "queue-offered",
+        project: { id: "repo-meter", name: "meter" },
+        offer: "update",
+        from: QUEUE_VERSION,
+        to: later,
+      },
+    ]);
+  });
+
+  it("keeps a project's own answering queue and offers to replace it once", async () => {
+    const { repos, told, choice } = setup([]);
+    repos.configure("repo-meter", { delivery: "queue-pr" });
+    repos.recordQueue("repo-meter", { workflows: [BATCH], answeredAt: 500 });
+    await choice.follow(project(repos));
+    await choice.follow(project(repos));
+    expect(repos.get("repo-meter")?.delivery).toBe("queue-pr");
+    expect(told).toEqual([
+      {
+        kind: "queue-offered",
+        project: { id: "repo-meter", name: "meter" },
+        offer: "replace",
+        to: QUEUE_VERSION,
+        workflows: [BATCH],
+      },
+    ]);
   });
 });

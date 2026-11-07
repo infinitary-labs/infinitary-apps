@@ -774,7 +774,7 @@ export function keptNote(
     case "guidance":
       return `${kept} The captain gave the crewmate new guidance after their click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new merge card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
     case "queue":
-      return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting, and merges once the queue sets it to success.${queueWarning ? ` ${queueWarning}` : ""} A failed batch wakes the crewmate like any failed check. ${declare}`;
+      return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting, and merges once the queue sets it to success.${queueWarning ? ` ${queueWarning}` : ""} A batch that fails in the queue Infinitary ships keeps the version waiting and pauses, and you hear the pause once; a change the queue fails or sends back wakes the crewmate like any failed check. ${declare}`;
   }
 }
 

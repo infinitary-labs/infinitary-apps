@@ -141,7 +141,7 @@ describe("runbooks over existing prompt and skill doors", () => {
   });
   it("starts every bundled runbook on and persists an individual switch without taking programs away", () => {
     const { db, books } = fixture();
-    expect(books.list()).toHaveLength(8);
+    expect(books.list()).toHaveLength(BUILTIN_RUNBOOK_ORDER.length);
     expect(books.list().every((book) => book.enabled)).toBe(true);
     const before = books.firstmate();
     books.set("sequences", false);
@@ -371,8 +371,12 @@ describe("runbooks over existing prompt and skill doors", () => {
       readFileSync(join(root, "lessons/skills/lessons/parts/quiz.html"), "utf8"),
     );
     books.set("lessons", false);
-    // A skill rides its runbook, not a care: the care runbook's stays.
-    expect(books.crew(code).skills.map((skill) => skill.name)).toEqual(["careful-change"]);
+    // A skill rides its runbook, not a care: the care runbook's and the queue's stay.
+    expect(books.crew(code).skills.map((skill) => skill.name)).toEqual([
+      "careful-change",
+      "queue-repair",
+      "queue-setup",
+    ]);
   });
   it("puts only the matched section in the actual crew preset on both backends", () => {
     const { books } = fixture();

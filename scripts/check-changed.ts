@@ -38,6 +38,7 @@ const GENERATORS = [
   "generate-phone-scene.ts",
   "generate-phone-cards.ts",
   "generate-runbook-fallback.ts",
+  "generate-shipped-queue.ts",
 ];
 
 function run(label: string, command: string, args: string[]): boolean {

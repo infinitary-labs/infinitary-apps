@@ -134,6 +134,7 @@ describe("the core, driven with no Electron in the process", () => {
       "forge-sign-out",
       "account-disconnect",
       "projects-folder",
+      "project-queue-answer",
     ]);
   });
 

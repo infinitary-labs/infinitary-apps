@@ -114,7 +114,26 @@ export type ForgeCheck = {
   ref?: string;
   /** A commit status's own id, which tells the app's queue mark from a later write. */
   statusId?: number;
+  /** A commit status's description, as the host keeps it: the shipped queue's state words. */
+  detail?: string;
+  /** A commit status's link: a run, or a paused batch's issue. */
+  link?: string;
 };
+
+/** A project's paused batch as the host shows it: the open issue that holds the pause. */
+export type ForgeQueuePause = {
+  run: number;
+  url: string;
+  changes: number[];
+  /** Who took the issue to repair it, in the host's own name for them; absent while nobody has. */
+  claimedBy?: string;
+};
+
+/** A start of the shipped queue by hand: the next batch, a resume or a send-back. */
+export type ForgeQueueStart =
+  | { action: "form" }
+  | { action: "resume"; reason: string }
+  | { action: "send-back"; number: number; reason: string };
 
 /** The app's own queue mark on a version: the status id the host gave it back. */
 export type ForgeQueueMark = { id?: number };
@@ -399,20 +418,32 @@ export interface Forge {
    * never retried; only the captain's click on its card calls it.
    */
   putInSkippingRules?(change: ForgeChange, headSha: string): Promise<ForgeSkipMerge>;
+  /*
+   * The host's part of the shipped queue (docs/forge.md, "One queue for
+   * every host"): each forge whose host has one supplies all four below,
+   * and a forge with none supplies none, so nothing outside reads a host's
+   * name to find the queue. `hostRunsQueue` in `@shared/repos` names the
+   * same hosts for Settings.
+   */
   /**
    * Mark `sha` with the app's queue status as waiting (docs/forge.md, "A
    * project's queue"): the captain's kept merge approval at that version,
-   * which a project's own queue reads and answers on the same status. GitHub
-   * only; absent where the host has no commit statuses.
+   * which the project's queue reads and answers on the same status.
    */
   markQueued?(sha: string): Promise<ForgeQueueMark>;
   /**
-   * The workflow files on the default branch that mention the app's queue
-   * status (`QUEUE_STATUS`), each with whether it is turned on (docs/forge.md,
-   * "A project's queue"). A mention is what was read, not proof the file
-   * answers the status. GitHub only.
+   * The CI files on the default branch that mention the app's queue status
+   * (`QUEUE_STATUS`), each with whether it is turned on and the shipped
+   * queue's version its stamp names (docs/forge.md, "A project's queue"). A
+   * mention is what was read, not proof the file answers the status. The
+   * shipped queue's own file is read first, and once its stamp is found no
+   * other file is read; with `all` false, nothing else is read either.
    */
-  queueWorkflows?(): Promise<QueueWorkflow[]>;
+  queueWorkflows?(options?: { all?: boolean }): Promise<QueueWorkflow[]>;
+  /** The project's paused batch, read from its one open pause issue; null while nothing is paused. */
+  queuePause?(): Promise<ForgeQueuePause | null>;
+  /** Start the shipped queue by hand where the project lives, with the captain's sign-in. */
+  startQueue?(start: ForgeQueueStart): Promise<void>;
   /** Close the change without putting it in. */
   close(change: ForgeChange): Promise<void>;
   /** How the change is named on a surface: `#N`, `!N`, or the branch where it has no number. */
@@ -423,8 +454,8 @@ export interface Forge {
 /** The queue's commit status, owned beside the delivery that uses it. */
 export { QUEUE_STATUS } from "@shared/repos";
 
-/** The waiting status's description, in the words a person reads on GitHub. */
-export const QUEUE_WAITING_WORDS = "Waiting for the batch check";
+/** The waiting status's description, in the words a person reads on GitHub; the queue's rules own them. */
+export { WAITING as QUEUE_WAITING_WORDS } from "../queue/shipped/rules.mjs";
 
 /** A full commit id: 40 hexadecimal characters, or 64 in a SHA-256 repository. */
 export function isFullCommitId(sha: string): boolean {

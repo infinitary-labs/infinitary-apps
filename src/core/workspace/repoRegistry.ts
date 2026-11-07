@@ -17,7 +17,10 @@ import { AUTOMATIC_COMPUTER, placementRequirementsSchema } from "@shared/placeme
 import {
   deliveryChoices,
   type ProjectsFolderView,
+  QUEUE_HOST_REFUSAL,
+  type QueuePause,
   type QueueWorkflow,
+  queuePauseSchema,
   queueWorkflowSchema,
   type RepoDelivery,
   type RepoKind,
@@ -94,10 +97,11 @@ type Row = {
   queue_workflows_json?: string | null;
   queue_answered_at?: number | null;
   queue_pending_at?: number | null;
+  queue_pause_json?: string | null;
 };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json";
 
 function fromRow(row: Row): RepoView {
   return {
@@ -131,7 +135,18 @@ function fromRow(row: Row): RepoView {
       ? { queueAnsweredAt: row.queue_answered_at }
       : {}),
     ...(typeof row.queue_pending_at === "number" ? { queuePendingAt: row.queue_pending_at } : {}),
+    ...(row.queue_pause_json ? queuePauseOf(row.queue_pause_json) : {}),
   };
+}
+
+/** The saved pause; a garbled value reads as no pause. */
+function queuePauseOf(json: string): { queuePause?: QueuePause } {
+  try {
+    const parsed = queuePauseSchema.safeParse(JSON.parse(json));
+    return parsed.success ? { queuePause: parsed.data } : {};
+  } catch {
+    return {};
+  }
 }
 
 /** The saved queue workflows; a garbled value reads as never read. */
@@ -627,9 +642,7 @@ export class RepoRegistry {
       (changes.delivery ?? repo.delivery) === "queue-pr" &&
       !deliveryChoices(host).includes("queue-pr")
     )
-      throw new Error(
-        "Only a project on GitHub can merge through its queue. Choose pull requests or a local merge.",
-      );
+      throw new Error(QUEUE_HOST_REFUSAL);
     if (
       name !== repo.name &&
       (!/^[\w][\w.-]*$/.test(name) || this.nameTaken(name, undefined, ownFolder))
@@ -695,10 +708,17 @@ export class RepoRegistry {
    */
   recordQueue(
     id: string,
-    facts: { workflows?: QueueWorkflow[]; answeredAt?: number },
+    facts: { workflows?: QueueWorkflow[]; answeredAt?: number; pause?: QueuePause | null },
   ): RepoView | undefined {
     const repo = this.get(id);
     if (!repo) return undefined;
+    const pauseChanged =
+      facts.pause !== undefined &&
+      JSON.stringify(facts.pause ?? undefined) !== JSON.stringify(repo.queuePause);
+    if (pauseChanged)
+      this.db
+        .prepare("UPDATE repos SET queue_pause_json = ? WHERE id = ?")
+        .run(facts.pause ? JSON.stringify(facts.pause) : null, id);
     const workflows =
       facts.workflows === undefined
         ? undefined
@@ -707,7 +727,7 @@ export class RepoRegistry {
       workflows !== undefined && JSON.stringify(workflows) !== JSON.stringify(repo.queueWorkflows);
     const answeredChanged =
       facts.answeredAt !== undefined && facts.answeredAt > (repo.queueAnsweredAt ?? -1);
-    if (!workflowsChanged && !answeredChanged) return repo;
+    if (!workflowsChanged && !answeredChanged && !pauseChanged) return repo;
     if (workflowsChanged)
       this.db
         .prepare("UPDATE repos SET queue_workflows_json = ? WHERE id = ?")
@@ -736,6 +756,23 @@ export class RepoRegistry {
     const next = this.get(id) as RepoView;
     for (const listener of [...this.queueListeners]) listener(next);
     return next;
+  }
+
+  /**
+   * The shipped queue's version the first mate was last told to offer for
+   * this project (an update, or replacing the project's own queue), so each
+   * offer is made once; undefined when none was.
+   */
+  queueOffered(id: string): number | undefined {
+    const row = this.db.prepare("SELECT queue_offered FROM repos WHERE id = ?").get(id) as
+      | { queue_offered: number | null }
+      | undefined;
+    return typeof row?.queue_offered === "number" ? row.queue_offered : undefined;
+  }
+
+  /** Keep that the first mate was told to offer the shipped queue's `version` for this project. */
+  recordQueueOffered(id: string, version: number): void {
+    this.db.prepare("UPDATE repos SET queue_offered = ? WHERE id = ?").run(version, id);
   }
 
   /** Hears each change of a project's queue facts, after it is written; answers its own unsubscribe. */

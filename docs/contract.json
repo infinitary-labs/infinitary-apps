@@ -1609,6 +1609,11 @@
                   },
                   "active": {
                     "type": "boolean"
+                  },
+                  "shipped": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
                   }
                 },
                 "required": [
@@ -1622,6 +1627,39 @@
             },
             "queuePendingAt": {
               "type": "number"
+            },
+            "queuePause": {
+              "type": "object",
+              "properties": {
+                "run": {
+                  "type": "number"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "since": {
+                  "type": "number"
+                },
+                "changes": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "claimedBy": {
+                  "type": "string"
+                },
+                "unread": {
+                  "type": "boolean",
+                  "const": true
+                }
+              },
+              "required": [
+                "run",
+                "url",
+                "since",
+                "changes"
+              ]
             }
           },
           "required": [
@@ -1905,6 +1943,11 @@
                     },
                     "active": {
                       "type": "boolean"
+                    },
+                    "shipped": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
@@ -1918,6 +1961,39 @@
               },
               "queuePendingAt": {
                 "type": "number"
+              },
+              "queuePause": {
+                "type": "object",
+                "properties": {
+                  "run": {
+                    "type": "number"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "since": {
+                    "type": "number"
+                  },
+                  "changes": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "claimedBy": {
+                    "type": "string"
+                  },
+                  "unread": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "run",
+                  "url",
+                  "since",
+                  "changes"
+                ]
               }
             },
             "required": [
@@ -2333,6 +2409,11 @@
                 },
                 "active": {
                   "type": "boolean"
+                },
+                "shipped": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -2346,6 +2427,39 @@
           },
           "queuePendingAt": {
             "type": "number"
+          },
+          "queuePause": {
+            "type": "object",
+            "properties": {
+              "run": {
+                "type": "number"
+              },
+              "url": {
+                "type": "string"
+              },
+              "since": {
+                "type": "number"
+              },
+              "changes": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "claimedBy": {
+                "type": "string"
+              },
+              "unread": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "run",
+              "url",
+              "since",
+              "changes"
+            ]
           }
         },
         "required": [
@@ -2360,6 +2474,91 @@
           "autonomy",
           "rigor",
           "runsOn"
+        ]
+      }
+    },
+    "inf:repos:queue-answer": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "resume"
+                  },
+                  "run": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "action",
+                  "run",
+                  "reason"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "const": "send-back"
+                  },
+                  "run": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "number": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  }
+                },
+                "required": [
+                  "action",
+                  "run",
+                  "number",
+                  "reason"
+                ]
+              }
+            ]
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
         ]
       }
     },
@@ -5079,6 +5278,11 @@
                 },
                 "active": {
                   "type": "boolean"
+                },
+                "shipped": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -5092,6 +5296,39 @@
           },
           "queuePendingAt": {
             "type": "number"
+          },
+          "queuePause": {
+            "type": "object",
+            "properties": {
+              "run": {
+                "type": "number"
+              },
+              "url": {
+                "type": "string"
+              },
+              "since": {
+                "type": "number"
+              },
+              "changes": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "claimedBy": {
+                "type": "string"
+              },
+              "unread": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "run",
+              "url",
+              "since",
+              "changes"
+            ]
           }
         },
         "required": [

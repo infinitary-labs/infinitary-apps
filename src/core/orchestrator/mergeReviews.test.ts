@@ -12,6 +12,7 @@ import {
   type ForgeChange,
   ForgeError,
   type ForgePull,
+  type ForgeQueueStart,
   type ForgeReadiness,
   type ForgeRuleset,
   type ForgeSkipMerge,
@@ -946,6 +947,49 @@ describe("a review's click on a queue-pr project (docs/forge.md, \"A project's q
     });
     expect(marked).toEqual([]);
     expect(putIns()).toEqual([]);
+  });
+
+  // The re-review's finding (next-batch-rarer-merge-routes): every route a
+  // review merges by starts the next batch, since a merge's own push starts
+  // no workflow on GitHub (docs/forge.md, "The shipped queue").
+  it("starts the shipped queue's next batch after the merge, and after a merge GitHub made though its answer was lost", async () => {
+    const { service, forge, repos, tasks, host, task, review } = await queuedReview();
+    if (!task.repoId) throw new Error("the task has no project");
+    repos.recordQueue(task.repoId, {
+      workflows: [{ path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 1 }],
+    });
+    const starts: string[] = [];
+    Object.assign(forge, {
+      startQueue: async (start: ForgeQueueStart) => {
+        starts.push(start.action);
+      },
+    });
+    forge.markQueued = async () => ({});
+    forge.atHead[HEAD] = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "success" },
+    ];
+    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toMatchObject({ ok: true });
+    expect(starts).toEqual(["form"]);
+
+    // A second batched review whose merge GitHub made though its answer was lost.
+    const lost = { ...review, id: "mrqueued00002" };
+    seedDelivery(tasks, "ab12cd34", { mergeReviews: [lost] });
+    forge.fail.putIn = new ForgeError("transient", "could not reach GitHub: socket hang up");
+    host.pull = openPull();
+    const putIn = forge.putIn.bind(forge);
+    forge.putIn = async (change, head) => {
+      try {
+        return await putIn(change, head);
+      } finally {
+        host.pull = openPull({ state: "closed", merged: true, mergedSha: MERGED });
+      }
+    };
+    expect(await service.reviews.mergeReview("ab12cd34", lost.id)).toMatchObject({
+      ok: true,
+      receipt: { head: HEAD, sha: MERGED },
+    });
+    expect(starts).toEqual(["form", "form"]);
   });
 
   it("refuses in words when the host cannot mark a version for the queue", async () => {

@@ -2,8 +2,12 @@ import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkSnapshotSummary } from "../../../../shared/checkSnapshot";
+import { GITHUB_QUEUE_PART, QUEUE_VERSION, shippedFiles } from "../../../queue/shipped";
+import { WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
+import { PAUSE_LABEL, pauseIssue } from "../../../queue/shipped/rules.mjs";
 import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../../forge";
 import { presentationCommitMessage } from "../../presentation";
 import { readOpenChanges } from "./changes";
@@ -32,6 +36,9 @@ afterEach(async () => {
   await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
   server = undefined;
 });
+
+/** The shipped queue's one source, which a project's files are generated from. */
+const SHIPPED_SOURCE_DIR = fileURLToPath(new URL("../../../queue/shipped/", import.meta.url));
 
 async function stub(routes: Record<string, Route>) {
   const seen: Seen[] = [];
@@ -420,6 +427,112 @@ describe("GitHubForge", () => {
     batchState = "disabled_manually";
     expect(await forge.queueWorkflows()).toEqual([
       { path: ".github/workflows/batch.yml", active: false },
+    ]);
+  });
+
+  // The shipped queue (the captain's shipped-queue and claim-issue answers):
+  // its stamp names the version every teammate's Infinitary reads, its pause
+  // issue holds the pause, and Settings starts it by hand.
+  // The review's reads-every-workflow finding: every start and merge reads a
+  // project's queue, so the stamped file is read first and alone.
+  it("reads the shipped queue's version from its stamp, reading no other workflow", async () => {
+    const queueFile = shippedFiles(SHIPPED_SOURCE_DIR, GITHUB_QUEUE_PART).find(
+      (file) => file.path === GITHUB_QUEUE_PART.queueFile,
+    );
+    let stamped = true;
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/actions/workflows": () => ({
+        json: {
+          total_count: 2,
+          workflows: [
+            { id: 1, name: "ci", path: ".github/workflows/ci.yml", state: "active" },
+            { id: 2, name: "queue", path: GITHUB_QUEUE_PART.queueFile, state: "active" },
+          ],
+        },
+      }),
+      [`GET /repos/octo/meter/contents/${GITHUB_QUEUE_PART.queueFile}`]: () =>
+        stamped
+          ? {
+              json: {
+                encoding: "base64",
+                content: Buffer.from(queueFile?.text ?? "").toString("base64"),
+              },
+            }
+          : { status: 404, json: { message: "Not Found" } },
+      "GET /repos/octo/meter/contents/.github/workflows/ci.yml": () => ({
+        json: { encoding: "base64", content: Buffer.from("name: ci").toString("base64") },
+      }),
+    });
+    const reads = () =>
+      seen
+        .map((request) => request.url.split("?")[0] ?? "")
+        .filter((url) => url.includes("/contents/"));
+    expect(await forge.queueWorkflows()).toEqual([
+      { path: GITHUB_QUEUE_PART.queueFile, active: true, shipped: QUEUE_VERSION },
+    ]);
+    expect(reads()).toEqual([`/repos/octo/meter/contents/${GITHUB_QUEUE_PART.queueFile}`]);
+
+    // A project that is not batched reads only the queue's own file, and
+    // the other files only when its own queue matters.
+    stamped = false;
+    seen.length = 0;
+    expect(await forge.queueWorkflows({ all: false })).toEqual([]);
+    expect(reads()).toEqual([`/repos/octo/meter/contents/${GITHUB_QUEUE_PART.queueFile}`]);
+    seen.length = 0;
+    await forge.queueWorkflows();
+    expect(reads()).toContain("/repos/octo/meter/contents/.github/workflows/ci.yml");
+  });
+
+  it("reads the pause from the queue's open issue, with its first assignee as the claim", async () => {
+    const pause = {
+      run: 4410,
+      description: "",
+      members: [
+        { number: 12, head: "a".repeat(40) },
+        { number: 14, head: "b".repeat(40) },
+      ],
+      failed: [
+        {
+          name: "batch checks / unit",
+          url: "https://github.com/octo/meter/actions/runs/4410/job/1",
+        },
+      ],
+      failedFiles: [],
+    };
+    const issue = pauseIssue(pause, "https://github.com/octo/meter/actions/runs/4410");
+    let assignees: { login: string }[] = [];
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/issues": () => ({
+        json: [
+          { html_url: "https://github.com/octo/meter/issues/3", body: "Someone else's issue" },
+          { html_url: "https://github.com/octo/meter/issues/88", body: issue.body, assignees },
+        ],
+      }),
+    });
+    expect(await forge.queuePause()).toEqual({
+      run: 4410,
+      changes: [12, 14],
+      url: "https://github.com/octo/meter/issues/88",
+    });
+    expect(seen[0]?.url).toContain(`labels=${PAUSE_LABEL}`);
+    assignees = [{ login: "rosa" }, { login: "kim" }];
+    expect((await forge.queuePause())?.claimedBy).toBe("rosa");
+  });
+
+  it("starts the shipped queue by hand on the default branch with its answer", async () => {
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter": () => ({ json: { default_branch: "trunk" } }),
+      [`POST /repos/octo/meter/actions/workflows/${QUEUE_WORKFLOW}/dispatches`]: () => ({
+        status: 204,
+      }),
+    });
+    await forge.startQueue({ action: "send-back", number: 14, reason: "It breaks alone" });
+    await forge.startQueue({ action: "form" });
+    expect(
+      seen.filter((request) => request.method === "POST").map((request) => request.body),
+    ).toEqual([
+      { ref: "trunk", inputs: { action: "send-back", reason: "It breaks alone", number: "14" } },
+      { ref: "trunk", inputs: { action: "form" } },
     ]);
   });
 

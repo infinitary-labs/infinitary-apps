@@ -147,6 +147,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/replay-captain-session.test.ts` | the replay CLI, git | 60 to 240 s |
 | `tests/release-contract.test.ts` | node, brew, and on a Mac the Electron binary running the release gates' stand-in app (`tests/fixtures/launch-gate-app`) | 10 s default, 50 s on each gate's run of the stand-in (Mac fastest: launch gate 9.5 s, data-folder check 4.7 s), 180 s on brew style |
 | `tests/batch-compose.test.ts` | real git: the swept batch composed onto a scratch main in shallow job clones (`scripts/batch-compose.sh`) | 5 s default |
+| `src/core/queue/shipped/compose.test.ts` | real git: the shipped queue's batch composed in a form job and applied in shallow check-job clones after the default branch moves (`src/core/queue/shipped/compose.sh`) | 5 s default |
 | `tests/release-workflows-*.test.ts` (one file per workflow owner) | node, git, shell stand-ins, and real Vitest file discovery; portable workflow contracts, isolated in the integration cohort and absent from the Mac-only file list | 10 s default, 15 s on file discovery |
 | `tests/release-publication.test.ts` | the release workflow's tap and release-asset scripts: real git on a stand-in tap, the publication CLI, a stand-in `gh`, `brew` and `curl` | 50 s |
 | `tests/release-notes.test.ts` | the release-notes gate: real git on scratch repositories with commits and tags, the `scripts/release-notes.ts` CLI | 10 s |

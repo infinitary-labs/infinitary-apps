@@ -60,6 +60,8 @@ export type {
   ForgeProject,
   ForgePull,
   ForgeQueueMark,
+  ForgeQueuePause,
+  ForgeQueueStart,
   ForgeReadiness,
   ForgeRuleset,
   ForgeSkipMerge,

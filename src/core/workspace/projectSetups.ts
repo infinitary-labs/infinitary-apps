@@ -17,6 +17,7 @@ import {
 import {
   deliveryChoices,
   opensPullRequest,
+  QUEUE_HOST_REFUSAL,
   type RepoPolicyPatch,
   type RepoSetupCheck,
   type RepoSetupSpec,
@@ -111,9 +112,7 @@ export class ProjectSetups {
         "This project is kept on this computer. Use Local merge until it lives somewhere else.",
       );
     if (delivery && !deliveryChoices(checked.host).includes(delivery))
-      throw new Error(
-        "Only a project on GitHub can merge through its queue. Choose pull requests or a local merge.",
-      );
+      throw new Error(QUEUE_HOST_REFUSAL);
     const computers = runsHereOnly({ kind: "project", origin: checked.origin })
       ? []
       : this.options.devices().filter((device) => deviceRunsWork(device.kind));

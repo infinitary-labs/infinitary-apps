@@ -80,7 +80,7 @@ export const repoDeliverySchema = z.enum(["direct-pr", "queue-pr", "local-only"]
  * it. The kept merge reads it like any other check, and Settings names it in
  * its how-to for the batched choice.
  */
-export const QUEUE_STATUS = "infinitary/queue";
+export const QUEUE_STATUS = "infinitary/queue"; // the shipped queue's rules own it (`QUEUE`, rules.mjs); github.test.ts holds the two equal
 export type RepoDelivery = z.infer<typeof repoDeliverySchema>;
 
 /** The postures that ship through a pull request: everything but a local land. */
@@ -231,15 +231,32 @@ export const repoHostSchema = z
 export type RepoHost = z.infer<typeof repoHostSchema>;
 
 /**
+ * The hosts with a part of the shipped queue (docs/forge.md, "One queue for
+ * every host"): where the queue runs in the project's own CI, marks each
+ * change with a status, holds a pause in an issue and starts again by hand.
+ * A host with no part, such as a plain Git host with no CI, cannot hold a
+ * shared queue, so batched pull requests is not offered there.
+ */
+const QUEUE_PART_HOSTS: ReadonlySet<NonNullable<RepoHost>["kind"]> = new Set(["github"]);
+
+/** Why a project whose host has no part of the shipped queue cannot choose batched pull requests. */
+export const QUEUE_HOST_REFUSAL =
+  "Batched pull requests need a host whose CI runs Infinitary's queue, and this project's host has none it can use yet. Choose pull requests or a local merge.";
+
+/** Whether a project's host has a part of the shipped queue, so it may choose batched pull requests. */
+export function hostRunsQueue(host: RepoHost | undefined): boolean {
+  return host ? QUEUE_PART_HOSTS.has(host.kind) : false;
+}
+
+/**
  * The deliveries a project may choose where it lives: a project kept only on
- * this Mac lands locally; one with a host also opens pull requests; and only
- * one on GitHub can merge through its own queue, since the app marks the
- * approved version with a GitHub commit status (`infinitary/queue`). Settings
+ * this Mac lands locally; one with a host also opens pull requests; and one
+ * whose host has a part of the shipped queue can merge through it. Settings
  * lists them in this order, from the lightest choice to the most involved.
  */
 export function deliveryChoices(host: RepoHost | undefined): RepoDelivery[] {
   if (!host) return ["local-only"];
-  return host.kind === "github"
+  return hostRunsQueue(host)
     ? ["local-only", "direct-pr", "queue-pr"]
     : ["local-only", "direct-pr"];
 }
@@ -274,8 +291,49 @@ export type RepoPolicyPatch = z.infer<typeof repoPolicyPatchSchema>;
 export const queueWorkflowSchema = z.object({
   path: z.string(),
   active: z.boolean(),
+  /** The shipped queue's version this file's stamp names; absent for a queue the project wrote itself. */
+  shipped: z.number().int().positive().optional(),
 });
 export type QueueWorkflow = z.infer<typeof queueWorkflowSchema>;
+
+/**
+ * A project's paused batch as this app last read it where the project
+ * lives (docs/forge.md, "A paused batch"): the failed batch run, the one
+ * issue that holds the pause, when the app first saw it, the paused
+ * changes' numbers, and who took the issue to repair it. `unread` marks a
+ * pause kept from a task's paused status alone, because the issue could not
+ * be read (Issues turned off): `url` is then that status's link and
+ * `changes` only the changes this app saw paused.
+ */
+export const queuePauseSchema = z.object({
+  run: z.number(),
+  url: z.string(),
+  since: z.number(),
+  changes: z.array(z.number()),
+  claimedBy: z.string().optional(),
+  unread: z.literal(true).optional(),
+});
+export type QueuePause = z.infer<typeof queuePauseSchema>;
+
+/**
+ * A by-hand answer to a paused batch, from Settings or the first mate:
+ * resume, or send one change back. `run` names the paused batch run it
+ * answers, so an answer to a pause that already ended is refused.
+ */
+export const queueAnswerSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("resume"),
+    run: z.number().int().positive(),
+    reason: z.string().trim().min(1).max(120),
+  }),
+  z.object({
+    action: z.literal("send-back"),
+    run: z.number().int().positive(),
+    number: z.number().int().positive(),
+    reason: z.string().trim().min(1).max(120),
+  }),
+]);
+export type QueueAnswer = z.infer<typeof queueAnswerSchema>;
 
 export const repoViewSchema = z.object({
   id: z.string(),
@@ -331,8 +389,23 @@ export const repoViewSchema = z.object({
    * before a queue exists"); absent when nothing waits.
    */
   queuePendingAt: z.number().optional(),
+  /** The project's paused batch, while this app reads one (docs/forge.md, "A paused batch"). */
+  queuePause: queuePauseSchema.optional(),
 });
 export type RepoView = z.infer<typeof repoViewSchema>;
+
+/**
+ * The shipped queue's version the project runs on its default branch, read
+ * from the stamp of a workflow that is on; undefined when it runs none.
+ * Every teammate's Infinitary treats such a project as batched, whatever
+ * that person chose (docs/forge.md, "The shipped queue").
+ */
+export function queueShipped(repo: Pick<RepoView, "queueWorkflows">): number | undefined {
+  const versions = (repo.queueWorkflows ?? [])
+    .filter((workflow) => workflow.active && workflow.shipped !== undefined)
+    .map((workflow) => workflow.shipped as number);
+  return versions.length ? Math.max(...versions) : undefined;
+}
 
 /**
  * Whether the app's reads find nothing to answer a project's queue: the

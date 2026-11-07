@@ -9,6 +9,7 @@ import { modelNames } from "@shared/modelDisplayName";
 import { offeringKey, parseOfferingKey, providerLabel } from "@shared/modelSlots";
 import { desktopConventions } from "@shared/platform";
 import { catalogEntry } from "@shared/providers";
+import { hostRunsQueue } from "@shared/repos";
 import { runsForAnotherFirstmate } from "@shared/sshConnection";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
@@ -60,6 +61,7 @@ import { Flagship } from "./orchestrator/flagship";
 import { GithubGatewayService } from "./orchestrator/githubGateway";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
 import { QueueChoice } from "./orchestrator/queueChoice";
+import { QueuePauses } from "./orchestrator/queuePauses";
 import { Scheduler } from "./orchestrator/scheduler";
 import { TICK_PERIOD_MS, Ticker, tickPeriodFor } from "./orchestrator/ticker";
 import type { TypedWake } from "./orchestrator/wakes";
@@ -1153,8 +1155,29 @@ export async function createServices(
     withdrawCard: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
     tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
     note: (text) => broadcastEvent({ type: "firstmate_note", text }),
+    offers: {
+      offered: (repoId) => repos.queueOffered(repoId),
+      record: (repoId, version) => repos.recordQueueOffered(repoId, version),
+    },
     now: ticker.now,
   });
+  // Each new read of a project's queue is followed for every teammate: a
+  // project that runs the shipped queue is batched here too, and an older
+  // or a project's own queue is offered once (docs/forge.md, "The shipped queue").
+  repos.onQueue((repo) => void queueChoice.follow(repo).catch(() => {}));
+  // A paused batch of the shipped queue (docs/forge.md, "A paused batch"):
+  // each task's queue reading may show it, Settings shows it with its
+  // Resume, and the first mate hears it once to start the repair.
+  const queuePauses = new QueuePauses({
+    repos,
+    forgeFor,
+    tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
+    note: (text) => broadcastEvent({ type: "firstmate_note", text }),
+    taskNote: (taskId, text) => tasks.note(taskId, text, { news: true }),
+    now: ticker.now,
+  });
+  changeDelivery.queue.onState((reading) => queuePauses.observed(reading));
+  ticker.register("queue-pauses", TICK_PERIOD_MS, () => void queuePauses.sweep());
   supervisor.hostOps.setQueueChoice({
     plan: (repoId) => queueChoice.plan(repoId),
     keep: (repoId) => queueChoice.keep(repoId),
@@ -1163,8 +1186,12 @@ export async function createServices(
     for (const event of change.events) {
       if (event.kind !== "merged" && event.kind !== "landed") continue;
       const repoId = tasks.get(event.taskId)?.repoId;
-      if (repoId && repos.get(repoId)?.queuePendingAt !== undefined)
-        void queueChoice.recheck(repoId);
+      const repo = repoId ? repos.get(repoId) : undefined;
+      if (!repo) continue;
+      if (repo.queuePendingAt !== undefined) void queueChoice.recheck(repo.id);
+      // A merge may bring in the shipped queue, or a newer one: read again.
+      else if (hostRunsQueue(repo.host))
+        void changeDelivery.queue.readWorkflows(repo.id).catch(() => {});
     }
   });
   supervisor.hostOps.setProjectChange({
@@ -1765,6 +1792,7 @@ export async function createServices(
     projectSetups,
     projectChanges,
     queueChoice,
+    queuePauses,
     workspace,
     forges: forgeSignIns,
     integrations,

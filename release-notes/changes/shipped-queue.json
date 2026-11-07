@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "shipped-queue",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Batched pull requests come with a queue that pauses for a fix",
+      "body": "Your first mate can plan the queue Infinitary ships for batched pull requests: you choose which of your project's checks each batch runs and give feedback before anything is built. Once the queue is in your project, everyone working on it sends changes through it. A batch that fails pauses until a fix is approved, and a crewmate starts the repair. Settings shows the pause, who is repairing it, and a Resume for when the failure was not a change's fault.",
+      "picture": {
+        "dark": "shipped-queue-dark.webp",
+        "light": "shipped-queue-light.webp",
+        "alt": "Settings for a project whose batched pull requests are set by the project, with a paused batch, who is repairing it, and its Resume and Send back controls"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

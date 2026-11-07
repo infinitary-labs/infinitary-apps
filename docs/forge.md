@@ -631,10 +631,11 @@ Evidence: `tests/e2e/request-merge.spec.ts` ("a merge that skips the branch rule
 
 ## A project's queue
 
-A project on GitHub may merge its pull requests through its own queue, a job of the project's that tests approved work together before it merges (INF-2430 piece 2).
+A project whose host has a part of the shipped queue (GitHub today) may merge its pull requests through a queue, a job in the project that tests approved work together before it merges (INF-2430 piece 2).
 It is off by default, and a project chooses it in Settings → Projects or through the first mate's project settings.
 A person reads it as "batched pull requests" in Settings and "Batched pull request" on a task (`PROJECT_DELIVERY_WORDS`, `POLICY_DELIVERY_WORDS`).
-The app supplies no queue workflow of its own, so while a project has the choice, Settings says the merge waits until the project has one and holds a short how-to behind "How to set one up": the three things the workflow does, that the first mate can write one, and a link to GitHub's guide to commit statuses (`QUEUE_HOW_TO_WORDS`, `src/renderer/src/settings/projectsWords.ts`).
+The queue is either the one Infinitary ships ("The shipped queue" below) or one the project wrote itself.
+While a project has the choice and runs no shipped queue, Settings says the merge waits until the project has a queue and holds a short how-to behind "How to set one up": asking the first mate to set up the shipped queue, or the things a queue of the project's own does, and a link to GitHub's guide to commit statuses (`QUEUE_HOW_TO_WORDS`, `src/renderer/src/settings/projectsWords.ts`).
 The app's whole contract with any such queue is one commit status, `infinitary/queue` (`QUEUE_STATUS`, `src/shared/repos.ts`), on the pull request's version.
 Nothing writes it before the captain's merge click: the pull request's own checks still hold the merge card as they do today.
 The click publishes the story and checks the title as any merge does, keeps the captain's approval, and writes `infinitary/queue` as `pending` on the approved version with the words "Waiting for the batch check" (`GitHubForge.markQueued`).
@@ -654,7 +655,7 @@ Evidence: `changeMerge.test.ts` ("merges a queue-pr change only once its queue p
 ### What the app reads about a project's queue
 
 Nothing in the app can prove a project has a queue, so it keeps three reads and says only what they found (INF-2886, `src/core/orchestrator/projectQueue.ts`).
-The first is the workflow files on the default branch that mention `infinitary/queue`, each with whether it is on (`GitHubForge.queueWorkflows`): GitHub's list of the project's workflows, then each file read.
+The first is the workflow files on the default branch that mention `infinitary/queue`, each with whether it is on (`GitHubForge.queueWorkflows`): GitHub's list of the project's workflows, then the shipped queue's own file, and then each other file only while none carries the shipped queue's stamp and the project is batched, its choice waits, or the choice is being made; a project with neither needs only the stamp.
 The app reads them when the batched delivery is chosen, whoever chooses it, before the choice applies ("Choosing batched pull requests before a queue exists" below) and again once it is written (`RepoRegistry.onQueueChosen`), and at each merge click that marks a version; a failed read keeps the last one.
 The second is when anything other than the app last wrote the status on one of the project's versions (`queueAnsweredAt`).
 The third is whether a waiting version still holds only the app's own mark: the mark keeps the status id GitHub gave it back (`queueMark` on the task's delivery), and any reading of the version's checks whose status is no longer waiting, or carries another id, is an answer.
@@ -673,10 +674,55 @@ The rest of the same change applies, the project keeps where its changes go, and
 A read that fails or was never made is unknown, never "nothing answers", so the choice applies at once as before.
 While a choice waits, Settings says so under "Where changes go" and the first mate's project rows carry `delivery_waiting`.
 The app's card for the project says it is not set up for batched pull requests yet, with Ask the first mate to plan it and Not now.
-Ask the first mate to plan it sends the first mate one `queue-plan-asked` wake, and the first mate starts one read-only planning task in the project with no card first; Not now ends the wait and keeps the project's delivery.
+Ask the first mate to plan it sends the first mate one `queue-plan-asked` wake, and the first mate starts one read-only planning task in the project with no card first, whose brief names the `queue-setup` skill; Not now ends the wait and keeps the project's delivery.
+The planner shows the shipped queue's plan on one decision card where the captain chooses which of the project's checks each batch runs, says what those checks need changed, and revises the plan by reply before anything is built.
 Since the project's delivery has not changed, the plan's builder ships as the project's changes ship now, so the workflow's own pull request never waits on a queue that exists only inside it.
 Each merge of a task in a waiting project, and each start of the app, reads its workflows again; once a workflow that is on mentions the status, or the status has answered, the app applies the waiting choice through the same dispatcher and says so in the feed.
 Evidence: `queueChoice.test.ts` and the second test of `tests/e2e/queue-merge.spec.ts`.
+
+### The shipped queue
+
+Infinitary ships one fix-forward queue that a project carries in its own CI, so batched pull requests work the same for everyone on the project (`src/core/queue/`).
+Its rules are written once and name no host (`shipped/rules.mjs`): which waiting changes form the next batch, in approval order; what a composed batch's result writes on each change; when a red batch pauses; and what ends a pause.
+A host part runs those rules where the project lives; GitHub's is an Actions workflow, a composite step that composes the batch and a script that reads and writes through GitHub's API (`shipped/workflow.yml`, `shipped/action.yml`, `shipped/compose.sh`, `shipped/github.mjs`).
+The project writes one file of its own, `.github/workflows/infinitary-batch-checks.yml`, which runs the checks the captain chose on the composed batch.
+As shipped, the queue calls it with only a read of the project and hands down no secret, so the batch's own code cannot write the queue's statuses or issues.
+A secret or a write a check needs is named in the queue's plan, and the team grants it in the queue file's `checks` job: the one edit a project makes to a stamped file, which an update carries over and the stamp, read from the first line, still names.
+GitHub hands a called workflow only the secrets its caller passes, so each named secret is passed there by name and declared in the batch checks file; an environment's secret alone reaches no batch check, and the queue never passes `secrets: inherit`, which would hand down every secret.
+The queue's states are words on the `infinitary/queue` status: waiting, in batch run N, paused after batch run N, passed batch run N with the batch's tree, or failed with its reason (`queueKind`).
+A green batch passes every change still in it, and each approver's Infinitary merges its own; after the merge, whether through the merge card or a merge review, the app starts the queue again by hand (`ChangeMerge.startNextBatch`), because a merge's own push starts no workflow there.
+A red batch reruns nothing and blames no change: every change in it pauses behind one issue labelled `infinitary-queue-paused`, which names the failed checks, the failed test files and the changes whose diffs touch each one.
+An approved change labelled `infinitary-queue-fix` ends the pause, and the next batch takes the paused changes, the waiting ones and the fix; a resume or a send-back by hand, each with a reason, also ends it.
+The files a project gets are generated from that source with a stamp line naming the queue's version (`QUEUE_VERSION`, `src/core/queue/shipped.ts`), and `node scripts/generate-shipped-queue.ts` writes them into the `queue` runbook's `queue-setup` skill; the version is how many source hashes `QUEUE_SOURCES` lists, and `pnpm check` refuses a source whose hash is not the last one listed, or a list that rewrites a hash the default branch already has, so every change to the queue ships as a new version.
+A project carries a copy, not a reference: a newer Infinitary offers the update as a pull request.
+Evidence: `src/core/queue/shipped/github.test.ts` and `src/core/queue/shipped/compose.test.ts`.
+
+### Every teammate's view
+
+The app reads the stamp of each workflow that mentions the queue status (`GitHubForge.queueWorkflows`, `queueShipped`).
+A project whose default branch runs the shipped queue goes as batched pull requests in every teammate's Infinitary: the app applies it at start and after each merge in the project, says so in Activity, and refuses another choice of where its changes go (`QueueChoice.follow`).
+Settings shows the choice fixed and says the project set it.
+A project whose stamp is older than this Infinitary's queue, or whose own workflow answers the status, is offered the update or the shipped queue once, through the `queue-offered` wake; a project's own queue keeps working until the captain chooses to replace it.
+Only an Infinitary merge click puts a change in a batch.
+
+### One queue for every host
+
+Batched pull requests are offered only where a host has a part of the shipped queue (`hostRunsQueue`, `src/shared/repos.ts`); Settings says why on a host with none.
+A forge with a part supplies all of `markQueued`, `queueWorkflows`, `queuePause` and `startQueue`, and a forge with none supplies none, so nothing outside the forge reads a host's name to find the queue.
+A new host's part reuses the rules unchanged and adds its own script, CI file and the four forge methods.
+
+### A paused batch
+
+Each reading of a task's checks hears the queue status's state (`ProjectQueue.onState`), and a paused one whose run the app does not keep yet reads the project's open pause issue (`QueuePauses`, `src/core/orchestrator/queuePauses.ts`).
+While the app keeps a pause, the shared tick reads that issue again on every pass, so a claim, a resume, a send-back or a new push shows however long the pause outlasts the check watch.
+The app keeps the pause on the project's row (`queuePause`), puts one Activity line up when it starts and when it ends, notes on each paused task who is repairing it, and tells the first mate once per paused run through the `queue-paused` wake.
+The first mate starts one repair task with the `queue-repair` skill and no card, unless a teammate already took the issue; the issue's earliest `assigned` event holds the claim, and a crewmate that finds an earlier claim removes its own assignment and stops, so the assignee the app shows as repairing is that claim.
+No card goes up for a pause: Settings → Projects shows it with who is repairing it, its issue, and Resume and Send back, each with a reason, which start the queue where the project lives (`inf:repos:queue-answer`).
+An answer names the paused batch run it answers; the app reads the pause again first and refuses an answer to a run that no longer holds it.
+When the issue cannot be read, as on a project with Issues turned off, the app keeps the pause from the paused statuses alone, marked `unread`: the paused changes it saw, the status's link to the run, no claim, and the same Resume and Send back.
+It ends when one of those changes reads anything but paused, and the first mate is told only once the issue reads, because the issue is where a repair is claimed and without it every teammate's first mate would start its own repair.
+The shipped queue's by-hand answer and a fix's start skip closing an issue they cannot list, so the pause still ends.
+Evidence: `queuePauses.test.ts` and the third test of `tests/e2e/queue-merge.spec.ts`.
 
 ## The check watch
 

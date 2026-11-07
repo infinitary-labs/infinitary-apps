@@ -353,6 +353,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.repos.unregister(repo.id);
       return { id: repo.id, name: repo.name };
     },
+    "inf:repos:queue-answer": async (repoId, answer) => {
+      await services.queuePauses.answer(repoId, answer);
+      return { ok: true as const };
+    },
     "inf:repos:configure": async (repoId, changes) => {
       if (changes.path !== undefined && services.supervisor.facts.activeTasksOnRepo(repoId).length)
         throw new Error(

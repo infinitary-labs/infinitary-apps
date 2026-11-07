@@ -11,6 +11,7 @@ import { crewSendResultSchema } from "../crewTranscript";
 import { lastTurnSchema } from "../lastTurn";
 import {
   projectsFolderViewSchema,
+  queueAnswerSchema,
   repoPolicyPatchSchema,
   repoRemovalSchema,
   repoSetupResultSchema,
@@ -197,6 +198,16 @@ export const talkChannels = {
     reach: "home",
     request: z.tuple([z.string().min(1), repoPolicyPatchSchema]),
     response: repoViewSchema,
+  },
+  // A by-hand answer to a project's paused batch (Settings -> Projects,
+  // docs/forge.md "A paused batch"): the shipped queue starts where the
+  // project lives with the reason, and ends the pause itself.
+  "inf:repos:queue-answer": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string().min(1), queueAnswerSchema]),
+    response: okSchema,
   },
   // Where new projects go (Settings -> Projects): the folder clone and init
   // create their directories in. Null puts it back to the app's own fleet

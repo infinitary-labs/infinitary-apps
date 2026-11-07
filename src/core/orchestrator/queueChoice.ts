@@ -1,7 +1,14 @@
 import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
-import { queueMissing, type RepoPolicyPatch, type RepoView } from "@shared/repos";
+import {
+  hostRunsQueue,
+  queueMissing,
+  queueShipped,
+  type RepoPolicyPatch,
+  type RepoView,
+} from "@shared/repos";
 import { PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
 import type { CoreDispatch } from "../dispatcher";
+import { QUEUE_VERSION } from "../queue/shipped";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { escapeCardText } from "./cardText";
 import type { ProjectQueue } from "./projectQueue";
@@ -25,6 +32,12 @@ export const QUEUE_SETUP_WORDS = {
   /** The feed's line once a waiting choice switches on. */
   switched: (name: string) =>
     `${name} now uses batched pull requests: a workflow in it mentions its batch check.`,
+  /** The feed's line when the project's own shipped queue makes it batched here too. */
+  adopted: (name: string) =>
+    `${name} now uses batched pull requests: your project runs Infinitary's queue, so its changes go through it for everyone.`,
+  /** Why a project that runs the shipped queue cannot choose another way for its changes. */
+  shippedRefusal: (name: string) =>
+    `${name} runs Infinitary's queue on its default branch, so its changes go as batched pull requests for everyone working on it. Remove the queue from the project to choose another way.`,
 } as const;
 
 /** What the app's read of the project's workflows found, in the card's words. */
@@ -50,9 +63,9 @@ export function queueSetupCard(
     title: QUEUE_SETUP_WORDS.title(repo.name),
     meta: FIRSTMATE_CARD_META,
     body: [
-      `<p>A batched pull request merges only once a queue workflow in your project on GitHub passes it. ${escapeCardText(foundWords(repo))}</p>`,
-      `<p>Until one merges, ${name}'s changes still go as ${now}. Once a workflow that mentions its batch check merges, the app switches ${name} to batched pull requests by itself.</p>`,
-      `<p>Your first mate can plan that workflow with you, from the checks your project already runs. ${escapeCardText(QUEUE_SETUP_WORDS.notNow)} keeps ${now}.</p>`,
+      `<p>A batched pull request merges only once your project's queue passes it, in a batch with the other approved changes. ${escapeCardText(foundWords(repo))}</p>`,
+      `<p>Until a queue merges, ${name}'s changes still go as ${now}. Once one does, the app switches ${name} to batched pull requests by itself, for everyone working on it.</p>`,
+      `<p>Your first mate can plan the queue Infinitary ships with you: you choose which of your project's checks each batch runs, and change the plan before anything is built. A batch that fails pauses until a fix is approved, instead of failing every change in it. ${escapeCardText(QUEUE_SETUP_WORDS.notNow)} keeps ${now}.</p>`,
     ].join(""),
     actions: [
       {
@@ -84,14 +97,23 @@ export function queueSetupCard(
  */
 export class QueueChoice {
   private dispatch: CoreDispatch | undefined;
+  /** Projects `follow` is acting on now, so two reads of one project act once. */
+  private readonly following = new Set<string>();
 
   constructor(
     private readonly options: {
       repos: RepoRegistry;
       queue: Pick<ProjectQueue, "readWorkflows">;
       raiseCard: (card: Omit<Card, "author" | "priority" | "status" | "createdAt">) => void;
+      /** Answers whether the first mate was told to offer a queue version for a project, and keeps that it was. */
+      offers?: {
+        offered: (repoId: string) => number | undefined;
+        record: (repoId: string, version: number) => void;
+      };
+      /** The shipped queue's version this Infinitary carries; `QUEUE_VERSION` unless a test names a later one. */
+      version?: number;
       withdrawCard: (id: string, reason: string) => void;
-      tell: (facts: Extract<WakeFacts, { kind: "queue-plan-asked" }>) => void;
+      tell: (facts: Extract<WakeFacts, { kind: "queue-plan-asked" | "queue-offered" }>) => void;
       note: (text: string) => void;
       now: () => number;
     },
@@ -114,13 +136,24 @@ export class QueueChoice {
     apply: (changes: RepoPolicyPatch) => RepoView,
   ): Promise<RepoView> {
     const repo = this.options.repos.get(repoId);
+    // A project that runs the shipped queue is batched for everyone on it
+    // (the captain's shipped-queue choice): its own queue decides, not one
+    // teammate's Settings.
+    if (
+      repo &&
+      changes.delivery !== undefined &&
+      changes.delivery !== "queue-pr" &&
+      changes.origin === undefined &&
+      queueShipped(repo) !== undefined
+    )
+      throw new Error(QUEUE_SETUP_WORDS.shippedRefusal(repo.name));
     if (
       repo &&
       changes.delivery === "queue-pr" &&
       repo.delivery !== "queue-pr" &&
       changes.origin === undefined
     ) {
-      const read = await this.read(repoId);
+      const read = await this.read(repoId, true);
       if (read && queueMissing(read)) {
         const { delivery: _held, ...rest } = changes;
         const kept = Object.keys(rest).length > 0 ? apply(rest) : read;
@@ -170,15 +203,83 @@ export class QueueChoice {
     if (next.delivery === "queue-pr") this.options.note(QUEUE_SETUP_WORDS.switched(next.name));
   }
 
-  /** Every waiting project, read again (at start). */
+  /**
+   * Every project whose host runs the shipped queue, read again (at start):
+   * a waiting choice applies once its queue is there, and a queue the
+   * project set up itself is followed (`follow`).
+   */
   async recheckAll(): Promise<void> {
-    for (const repo of this.options.repos.list())
+    for (const repo of this.options.repos.list()) {
       if (repo.queuePendingAt !== undefined) await this.recheck(repo.id);
+      else if (hostRunsQueue(repo.host)) {
+        const read = await this.read(repo.id);
+        if (read) await this.follow(read);
+      }
+    }
   }
 
-  private async read(repoId: string): Promise<RepoView | undefined> {
+  /**
+   * A project's queue as its latest read found it, for every teammate (the
+   * captain's shipped-queue and keep-and-offer choices, docs/forge.md "The
+   * shipped queue"): a project that runs the shipped queue goes as batched
+   * pull requests here too; one whose stamp is older than this Infinitary's
+   * queue is offered the update once; and a batched project whose own
+   * workflow answers the queue status keeps it and is offered the shipped
+   * queue once. A waiting choice is `recheck`'s.
+   */
+  async follow(repo: RepoView): Promise<void> {
+    if (repo.queuePendingAt !== undefined || this.following.has(repo.id)) return;
+    this.following.add(repo.id);
     try {
-      return await this.options.queue.readWorkflows(repoId);
+      await this.followOnce(repo);
+    } finally {
+      this.following.delete(repo.id);
+    }
+  }
+
+  private async followOnce(repo: RepoView): Promise<void> {
+    const shipped = queueShipped(repo);
+    if (shipped !== undefined && repo.delivery !== "queue-pr" && this.dispatch) {
+      const next = await this.dispatch("inf:repos:configure", [repo.id, { delivery: "queue-pr" }]);
+      if (next.delivery === "queue-pr") this.options.note(QUEUE_SETUP_WORDS.adopted(next.name));
+      return;
+    }
+    const offers = this.options.offers;
+    const version = this.options.version ?? QUEUE_VERSION;
+    if (!offers || offers.offered(repo.id) === version) return;
+    const project = { id: repo.id, name: repo.name };
+    if (shipped !== undefined && shipped < version) {
+      offers.record(repo.id, version);
+      this.options.tell({
+        kind: "queue-offered",
+        project,
+        offer: "update",
+        from: shipped,
+        to: version,
+      });
+      return;
+    }
+    const own = (repo.queueWorkflows ?? []).filter((workflow) => workflow.active);
+    if (
+      shipped === undefined &&
+      repo.delivery === "queue-pr" &&
+      own.length > 0 &&
+      repo.queueAnsweredAt !== undefined
+    ) {
+      offers.record(repo.id, version);
+      this.options.tell({
+        kind: "queue-offered",
+        project,
+        offer: "replace",
+        to: version,
+        workflows: own,
+      });
+    }
+  }
+
+  private async read(repoId: string, all?: boolean): Promise<RepoView | undefined> {
+    try {
+      return await this.options.queue.readWorkflows(repoId, all);
     } catch {
       return this.options.repos.get(repoId);
     }

@@ -13,8 +13,10 @@ import {
   REVERSE_MIGRATION_71,
   tmpUserData,
 } from "../../../tests/helpers/migrations";
+import { migrateOneMergeEffect } from "./cardMigrations";
 import { CardStore } from "./cardStore";
 import { openDatabase } from "./db";
+import { MIGRATIONS } from "./migrations";
 
 // The card record's shape migrations (cardMigrations.ts): card lineage, one card shape with
 // effects, and revision threads.
@@ -354,13 +356,15 @@ describe("migration 72 (revision thread associations)", () => {
 });
 
 // INF-2744, the captain's approved plan: "one merge effect replaces settle
-// merge and request_merge; legacy cards read as it". The last migration
+// merge and request_merge; legacy cards read as it". Its migration
 // rewrites every open card once and keeps what it rewrote; a closed card is
 // history, left as saved and read as the merge it was.
 describe("the one merge effect (INF-2744)", () => {
   it("rewrites an open card's settle merge and request_merge into the merge, keeps the originals, and reads a closed card's as the merge", () => {
     const dir = tmpUserData();
-    const before = openDatabase(dir, ALL_VERSIONS.length - 1);
+    // The database as it stood just before the one merge effect's migration,
+    // read from the migration list so a later migration does not move it.
+    const before = openDatabase(dir, MIGRATIONS.indexOf(migrateOneMergeEffect));
     const insert = before.prepare(
       `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, body, actions_json, status, created_at, resolved_at, chosen_action)
        VALUES (?, 't1', 'decision', 'crewmate', 30, ?, 'crewmate 1', '<p>a</p>', ?, 'ready', 1, ?, ?)`,

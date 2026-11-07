@@ -325,7 +325,11 @@ export class MergeReviews {
     return this.mergeNamed(taskId, review, guard);
   }
 
-  /** The merge a review made, stored on it at the head it merged; answers the receipt. */
+  /**
+   * The merge a review made, stored on it at the head it merged; answers the
+   * receipt. Every route a review merges by ends here, so a queued change's
+   * merge starts the next batch here once.
+   */
   private storeReviewReceipt(
     taskId: string,
     reviewId: string,
@@ -334,6 +338,7 @@ export class MergeReviews {
     by?: "captain",
   ): { head: string; sha?: string } {
     const receipt = { head, ...(sha ? { sha } : {}) };
+    this.merges.startNextBatch(taskId);
     const record = this.options.tasks.get(taskId);
     const reviews = record?.delivery?.mergeReviews;
     if (!reviews) return receipt;

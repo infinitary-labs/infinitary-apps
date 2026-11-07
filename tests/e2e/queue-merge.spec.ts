@@ -1,10 +1,17 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { QUEUE_STATUS } from "../../src/core/forge/forge";
-import { QUEUE_PLAN_ASKED_OPENING } from "../../src/core/orchestrator/noticeWakes";
+import { CHECK_WATCH_FAST_MS } from "../../src/core/orchestrator/checkWatch";
+import {
+  QUEUE_PAUSED_OPENING,
+  QUEUE_PLAN_ASKED_OPENING,
+} from "../../src/core/orchestrator/noticeWakes";
 import { QUEUE_SETUP_WORDS } from "../../src/core/orchestrator/queueChoice";
+import { GITHUB_QUEUE_PART, QUEUE_VERSION, shippedFiles } from "../../src/core/queue/shipped";
+import { pauseIssue, pauseWrites, verdict, WAITING } from "../../src/core/queue/shipped/rules.mjs";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
@@ -12,6 +19,8 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {
   QUEUE_HOW_TO_WORDS,
+  QUEUE_PAUSE_WORDS,
+  QUEUE_SHIPPED_WORDS,
   queueWaitingWords,
 } from "../../src/renderer/src/settings/projectsWords";
 import { queueSettingsWarning } from "../../src/shared/repos";
@@ -20,13 +29,13 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
-import { launchApp } from "./launch";
+import { launchApp, SHORT_TICK } from "./launch";
 import { heroShot, windowShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { projectRow } from "./projects";
 import { readSavedData } from "./savedData";
 import { cardSurface, showCard, shownCard, shownEntry } from "./stack";
-import { pressKey } from "./windowKeys";
+import { focusOn, pressKey, typeInto } from "./windowKeys";
 
 /**
  * INF-2435, piece 2 of the captain's approved swept-batch plan (INF-2430):
@@ -374,6 +383,242 @@ test("choosing batched pull requests with no queue workflow waits, asks on a car
       queueWorkflows: [{ path: ".github/workflows/batch.yml", active: true }],
     });
     expect((await meter())?.queuePendingAt).toBeUndefined();
+  } finally {
+    await launched.close();
+    await github.close();
+  }
+});
+
+/**
+ * The shipped queue, every teammate's view and its quiet pause (the
+ * captain's plan answers shipped-queue, claim-issue and quiet, with their
+ * words "make the fix forward behavior the default for everyone using this
+ * mode"; the plan's done criterion puts a second teammate's change in the
+ * batch).
+ *
+ * A disposable GitHub serves a project whose default branch runs the queue
+ * Infinitary ships, read from its one source, to a teammate whose Infinitary
+ * still sends the project's changes as pull requests, and the pull request a
+ * crewmate finished there. The app reads the stamp at start and batches the
+ * project, fixed in Settings. The captain's merge click marks the version
+ * waiting. The queue then pauses the batch it formed from that change and a
+ * teammate's change it never saw, behind one issue: the app's own reading of
+ * the change's checks finds the pause, keeps it, tells the first mate once
+ * and puts up no card. A teammate takes the issue, and Settings names them.
+ * The captain resumes by keys with a reason; the queue starts with that
+ * answer, closes the issue, and Settings shows the pause ended. Requires
+ * desktop Electron and local git; no real sign-in or shared pull request.
+ */
+/** The shipped queue's one source, which a project's files are generated from. */
+const SHIPPED_SOURCE_DIR = fileURLToPath(new URL("../../src/core/queue/shipped/", import.meta.url));
+
+test("a project running the shipped queue is batched for every teammate, and its paused batch with a teammate's change resumes from Settings by keys", async () => {
+  // The app first reads the change again when its check watch does, one
+  // watch interval after the merge click, so the journey outlasts it.
+  test.setTimeout(3 * 60_000);
+  const userDataDir = scratchDir("infinitary-queue-shipped-");
+  const taskId = "shippedpause";
+  const repoDir = join(userDataDir, "repo");
+  const worktreeDir = join(userDataDir, "worktree");
+  const branch = `fm/task-${taskId}`;
+  const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" }).toString();
+  git("init", "--initial-branch=main", repoDir);
+  git("-C", repoDir, "config", "user.name", "Test");
+  git("-C", repoDir, "config", "user.email", "test@localhost");
+  git("-C", repoDir, "commit", "--allow-empty", "-m", "init");
+  git("-C", repoDir, "worktree", "add", "-b", branch, worktreeDir);
+  // e2e-fixture: input -- Author the real project file this journey batches.
+  writeFileSync(join(worktreeDir, "meter.txt"), "The meter reads on time.\n");
+  git("-C", worktreeDir, "add", "meter.txt");
+  git("-C", worktreeDir, "commit", "-m", "fix: read the meter on time");
+  const headSha = git("-C", worktreeDir, "rev-parse", "HEAD").trim();
+  const queueFile = shippedFiles(SHIPPED_SOURCE_DIR, GITHUB_QUEUE_PART).find(
+    (file) => file.path === GITHUB_QUEUE_PART.queueFile,
+  );
+
+  const github = await startGitHubStub();
+  github.serveWorkflows([
+    { path: GITHUB_QUEUE_PART.queueFile, state: "active", text: queueFile?.text ?? "" },
+  ]);
+  github.servePull({ number: 82, title: "fix: read the meter on time" });
+  github.headOf(() => headSha);
+  github.setChecks([{ name: "unit-tests", status: "completed", conclusion: "success" }]);
+  seedGitHubSignIn(userDataDir);
+  const db = openDatabase(userDataDir);
+  db.prepare(
+    "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy, rigor) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0, 'quick')",
+  ).run("repo-meter", repoDir, "meter", Date.now(), "https://github.com/o/meter.git");
+  seedHostedOrigins(db, userDataDir);
+  const tasks = new TaskService({ db, strict: true });
+  seedTask(tasks, {
+    id: taskId,
+    title: "Read the meter on time",
+    status: "idle",
+    repoId: "repo-meter",
+    repoDir,
+    worktreeDir,
+    branch,
+  });
+  const cardId = `card-${taskId}-1`;
+  const offerId = "offer-shipped";
+  seedDelivery(tasks, taskId, {
+    mode: "direct-pr",
+    prNumber: 82,
+    prUrl: "https://github.com/o/meter/pull/82",
+    changeLabel: "#82",
+    headSha,
+    ci: "green",
+    ciAt: Date.now(),
+    completionOffers: [{ cardId, offerId, headSha, prNumber: 82, at: Date.now() }],
+  });
+  new CardStore(db).upsert({
+    id: cardId,
+    lifecycleId: "lifecycle-shipped",
+    offerId,
+    taskId,
+    author: "crewmate",
+    priority: 30,
+    title: "The meter reads on time",
+    meta: "crewmate 1",
+    body: "<p>The fix is ready.</p><p>It changes one file.</p>",
+    status: "ready",
+    createdAt: Date.now(),
+    actions: [
+      {
+        id: "merge",
+        label: "Merge the pull request",
+        variant: "primary",
+        default: true,
+        effect: { kind: "merge", after: "close" },
+      },
+    ],
+  });
+  db.close();
+
+  const launched = await launchApp({
+    userDataDir,
+    env: { ...github.env, ...SHORT_TICK },
+    withMockProvider: true,
+  });
+  try {
+    const { page } = launched;
+    const meter = async () =>
+      (await page.evaluate(() => window.infinitary.repos.list())).find(
+        (repo) => repo.id === "repo-meter",
+      );
+    // The app read the project's queue at start: it is batched here too.
+    await expect.poll(meter, { timeout: 20_000 }).toMatchObject({ delivery: "queue-pr" });
+
+    // The captain's merge click marks the version waiting for the batch.
+    await showCard(page, "The meter reads on time");
+    await pressKey(
+      page.getByRole("button", { name: "Merge the pull request", exact: true }),
+      "Enter",
+    );
+    await expect
+      .poll(() => github.statuses(headSha), { timeout: 20_000 })
+      .toEqual([expect.objectContaining({ context: QUEUE_STATUS, state: "pending" })]);
+
+    // The queue batches it with a teammate's change, #14, and the batch
+    // fails: the queue's own verdict names the pause, its issue and the
+    // paused status it writes on each change.
+    const runUrl = "https://github.com/o/meter/actions/runs/4410";
+    const members = [
+      { number: 82, head: headSha },
+      { number: 14, head: "e".repeat(40) },
+    ];
+    const { pause } = verdict({
+      run: 4410,
+      runUrl,
+      result: "failure",
+      tree: "",
+      members,
+      current: new Map(
+        members.map((member) => [
+          member.number,
+          {
+            head: member.head,
+            queue: {
+              kind: "in-batch",
+              run: 4410,
+              state: "pending",
+              description: "",
+              url: runUrl,
+              since: "",
+            },
+          },
+        ]),
+      ),
+      failed: [{ name: "Batch checks / unit", url: runUrl }],
+    });
+    if (!pause) throw new Error("A red batch pauses.");
+    const issue = pauseIssue(pause, runUrl);
+    github.servePauseIssue({ number: 88, body: issue.body });
+    const [paused] = pauseWrites(pause, "https://github.com/o/meter/issues/88");
+    github.setStatus(headSha, {
+      context: QUEUE_STATUS,
+      state: "pending",
+      description: paused?.description ?? "",
+    });
+
+    // The app's own reading of the change finds the pause and keeps it:
+    // the check watch reads it at its first interval after the click.
+    await expect.poll(meter, { timeout: CHECK_WATCH_FAST_MS * 2 }).toMatchObject({
+      queuePause: { run: 4410, changes: [82, 14], url: "https://github.com/o/meter/issues/88" },
+    });
+    // The first mate hears it once, and no card goes up for it. Each turn
+    // sends the whole conversation, so the most the wake shows up in any
+    // one request is how many times the first mate was told.
+    // The wake's opening comes from its owner, and this project's one pause
+    // is the only queue-paused wake the app sends.
+    const told = () =>
+      Math.max(
+        0,
+        ...(launched.mockProvider?.requestBodies() ?? []).map(
+          (body) => body.split(QUEUE_PAUSED_OPENING).length - 1,
+        ),
+      );
+    await expect.poll(told, { timeout: 30_000 }).toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
+
+    await pressKey(page.getByRole("button", { name: "Settings" }), "Enter");
+    await pressKey(page.getByRole("tab", { name: "Projects" }), "Enter");
+    const row = projectRow(page, "repo-meter");
+    await pressKey(row.getByRole("button", { expanded: false }), "Enter");
+    const choices = row.getByRole("radiogroup", { name: "Where changes go" });
+    const queue = choices.getByRole("radio", { name: PROJECT_DELIVERY_WORDS["queue-pr"] });
+    await expect(queue).toBeChecked();
+    await expect(queue).toBeDisabled();
+    await expect(row.getByText(QUEUE_SHIPPED_WORDS.set(QUEUE_VERSION))).toBeVisible();
+    await expect(row.locator("[data-queue-how-to]")).toHaveCount(0);
+    const panel = row.getByRole("region", { name: QUEUE_PAUSE_WORDS.title });
+    await expect(panel.getByText(QUEUE_PAUSE_WORDS.unclaimed)).toBeVisible();
+
+    // The teammate takes the issue: every pass reads it, and Settings names them.
+    github.servePauseIssue({ number: 88, body: issue.body, assignees: ["rosa"] });
+    await expect(panel.getByText(QUEUE_PAUSE_WORDS.claimed("rosa"))).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Resume needs a reason, and goes out once with it.
+    const resume = panel.getByRole("button", { name: QUEUE_PAUSE_WORDS.resume });
+    await pressKey(resume, "Enter");
+    await expect(panel.getByRole("alert")).toHaveText(QUEUE_PAUSE_WORDS.needsReason);
+    const reason = "The failed test is flaky and its owner has a task";
+    const field = panel.getByRole("textbox", { name: QUEUE_PAUSE_WORDS.reason });
+    await focusOn(field);
+    await typeInto(field, reason);
+    await pressKey(resume, "Enter");
+    await expect(panel.getByText(QUEUE_PAUSE_WORDS.sent)).toBeVisible();
+    expect(github.queueStarts()).toEqual([{ ref: "main", inputs: { action: "resume", reason } }]);
+
+    // The queue answers: the issue closes and the change waits again. The
+    // next pass ends the pause here, though the change is no longer paused.
+    github.servePauseIssue(null);
+    github.setStatus(headSha, { context: QUEUE_STATUS, state: "pending", description: WAITING });
+    await expect(panel).toHaveCount(0, { timeout: 30_000 });
+    expect((await meter())?.queuePause).toBeUndefined();
+    expect(told()).toBe(1);
   } finally {
     await launched.close();
     await github.close();

@@ -1,5 +1,6 @@
 import type { RepoView } from "@shared/repos";
 import { type ForgeCheck, QUEUE_STATUS } from "../forge";
+import { type QueueKind, queueKind } from "../queue/shipped/rules.mjs";
 import type { QueueMark } from "../storage/taskStore";
 import type { ChangeDeliveryOptions } from "./changeContext";
 import { CHECK_WATCH_BOUND_MS } from "./checkWatch";
@@ -24,8 +25,35 @@ export type QueueNoteFacts = {
  * when the batched delivery is chosen and at each merge click that marks a
  * version, and when anything but the app last wrote that status.
  */
+/**
+ * One reading of a task's queue status: its project, the task, what the
+ * status says, its link (a run, or a paused batch's issue) and the task's
+ * pull request number when it has one.
+ */
+export type QueueReading = {
+  repoId: string;
+  taskId: string;
+  state: QueueKind;
+  link?: string;
+  number?: number;
+};
+
 export class ProjectQueue {
+  private readonly stateListeners = new Set<(reading: QueueReading) => void>();
+
   constructor(private readonly options: ChangeDeliveryOptions) {}
+
+  /**
+   * Hears each reading of a task's queue status in the shipped queue's
+   * grammar, with the task and its project: a paused batch, or one that
+   * moved on (docs/forge.md, "A paused batch"). Answers its own unsubscribe.
+   */
+  onState(listener: (reading: QueueReading) => void): () => void {
+    this.stateListeners.add(listener);
+    return () => {
+      this.stateListeners.delete(listener);
+    };
+  }
 
   private now(): number {
     return this.options.now?.() ?? Date.now();
@@ -34,15 +62,20 @@ export class ProjectQueue {
   /**
    * Read the workflow files that mention the queue status on the project's
    * default branch and keep them on its row. A refused or failed read keeps
-   * what was read before: nothing read is never "none mention it".
+   * what was read before: nothing read is never "none mention it". Every
+   * file is read only where a queue of the project's own matters - a
+   * batched project, a waiting choice, or `all` - and otherwise only the
+   * shipped queue's file, whose stamp every teammate follows.
    */
-  async readWorkflows(repoId: string): Promise<RepoView | undefined> {
+  async readWorkflows(repoId: string, all?: boolean): Promise<RepoView | undefined> {
     const repo = this.options.repos.get(repoId);
-    if (!repo?.host || repo.host.kind !== "github") return repo;
+    if (!repo?.host) return repo;
     const forge = this.options.forgeFor(repo);
     if (!forge.queueWorkflows) return repo;
     try {
-      const workflows = await forge.queueWorkflows();
+      const workflows = await forge.queueWorkflows({
+        all: all ?? (repo.delivery === "queue-pr" || repo.queuePendingAt !== undefined),
+      });
       return this.options.repos.recordQueue(repoId, { workflows });
     } catch {
       return this.options.repos.get(repoId);
@@ -66,6 +99,15 @@ export class ProjectQueue {
     if (!queue) return;
     const record = this.options.tasks.get(taskId);
     if (!record?.repoId) return;
+    const state = queueKind(queue.state, queue.detail);
+    const reading: QueueReading = {
+      repoId: record.repoId,
+      taskId,
+      state,
+      ...(queue.link ? { link: queue.link } : {}),
+      ...(record.delivery?.prNumber !== undefined ? { number: record.delivery.prNumber } : {}),
+    };
+    for (const listener of [...this.stateListeners]) listener(reading);
     const mark = record.delivery?.queueMark;
     const ownMark = mark?.head === head ? mark : undefined;
     const answered =

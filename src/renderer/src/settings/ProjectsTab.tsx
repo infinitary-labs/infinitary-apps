@@ -1,6 +1,8 @@
 import {
   deliveryChoices,
+  hostRunsQueue,
   queueSettingsWarning,
+  queueShipped,
   type RepoPolicyPatch,
   type RepoView,
 } from "@shared/repos";
@@ -28,8 +30,11 @@ import {
   PROJECT_ROW_WORDS,
   projectRowWords,
   QUEUE_HOW_TO_WORDS,
+  QUEUE_NO_HOST_WORDS,
+  QUEUE_SHIPPED_WORDS,
   queueWaitingWords,
 } from "./projectsWords";
+import { QueuePausePanel } from "./QueuePausePanel";
 import { RemoveProject } from "./RemoveProject";
 import { RunsOnControl, runsOnDescription, runsOnWhere, useWorkComputers } from "./RunsOn";
 import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
@@ -530,6 +535,7 @@ function ProjectRow({
   runsOnError: string | null;
 }) {
   const personal = repo.kind === "personal";
+  const shipped = personal ? undefined : queueShipped(repo);
   const runsWhere = computers ? runsOnWhere(repo, computers) : null;
   const words = projectRowWords(repo, folder, runsWhere);
   const showPath = !personal && folder !== null && words.includes(PROJECT_ROW_WORDS.linked);
@@ -644,6 +650,8 @@ function ProjectRow({
                   name="Where changes go"
                   htmlName={`delivery-${repo.id}`}
                   value={repo.delivery}
+                  // A project that runs the shipped queue decides for everyone on it.
+                  disabled={shipped !== undefined}
                   options={deliveryChoices(repo.origin ? repo.host : null).map((value) => ({
                     value,
                     label: PROJECT_DELIVERY_WORDS[value],
@@ -667,8 +675,15 @@ function ProjectRow({
               {queueWaitingWords(repo.delivery)}
             </div>
           )}
+          {!personal && shipped !== undefined && (
+            <QueueNote words={QUEUE_SHIPPED_WORDS.set(shipped)} data="shipped" id={repo.id} />
+          )}
+          {!personal && repo.origin && repo.host && !hostRunsQueue(repo.host) && (
+            <QueueNote words={QUEUE_NO_HOST_WORDS} data="no-host" id={repo.id} />
+          )}
+          {!personal && repo.queuePause && <QueuePausePanel repo={repo} pause={repo.queuePause} />}
           {!personal && <QueueWarning repo={repo} />}
-          {!personal && repo.delivery === "queue-pr" && <QueueHowTo />}
+          {!personal && repo.delivery === "queue-pr" && shipped === undefined && <QueueHowTo />}
           <PolicyRow
             title={AUTONOMY_SWITCH_NAME}
             description={
@@ -741,6 +756,24 @@ function ProjectRow({
           {!personal && <RemoveProject repo={repo} onRemoved={onRemoved} />}
         </div>
       )}
+    </div>
+  );
+}
+
+/** One quiet line under "Where changes go" about the project's queue: set by the project, or not offered on its host. */
+function QueueNote({ words, data, id }: { words: string; data: string; id: string }) {
+  return (
+    <div
+      data-queue-note={data}
+      data-repo={id}
+      style={{
+        width: "fit-content",
+        fontSize: "var(--text-xs)",
+        color: "var(--fg-2)",
+        paddingBottom: "var(--space-3)",
+      }}
+    >
+      {words}
     </div>
   );
 }

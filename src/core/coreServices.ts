@@ -27,6 +27,7 @@ import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
 import type { Flagship } from "./orchestrator/flagship";
 import type { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
 import type { QueueChoice } from "./orchestrator/queueChoice";
+import type { QueuePauses } from "./orchestrator/queuePauses";
 import type { Scheduler } from "./orchestrator/scheduler";
 import type { Ticker } from "./orchestrator/ticker";
 import type { AppPaths } from "./paths";
@@ -138,6 +139,8 @@ export type CoreServices = {
   projectSetups: ProjectSetups;
   projectChanges: ProjectChanges;
   queueChoice: QueueChoice;
+  /** A project's paused batch of the shipped queue: followed, and answered by hand from Settings. */
+  queuePauses: QueuePauses;
   /** Worktree pool and background trash cleanup (also awaited by core integration tests). */
   workspace: WorkspaceService;
   /**

@@ -1259,6 +1259,16 @@ export const MIGRATIONS: readonly Migration[] = [
   // Reversible: each rewritten card is recorded in `card_effect_backfill`
   // with its actions as they were.
   migrateOneMergeEffect,
+  // INF-2952 piece 1: the shipped queue (docs/forge.md, "The shipped
+  // queue"). A project's paused batch as this app last read it, and the
+  // shipped queue's version the first mate was last told to offer, so each
+  // offer is made once. Null on every existing project, which has read no
+  // pause and been offered nothing. `RepoRegistry` is the only writer; no
+  // published view reads them. Dropping the columns reverses it.
+  (db) => {
+    addColumn(db, "repos", "queue_pause_json", "TEXT");
+    addColumn(db, "repos", "queue_offered", "INTEGER");
+  },
 ];
 
 export function addPluginKind(db: AppDatabase): void {

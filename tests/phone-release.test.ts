@@ -468,6 +468,8 @@ describe("the dispatched workflow's gate", () => {
       github: { sha: source, event_name: "workflow_dispatch", ref: "refs/heads/main" },
       env: {},
       steps: {},
+      // The called workflow's one device job for this call (INF-2970's fix 1).
+      matrix: { device: inputs.device },
     };
     for (const id of ["native-phone"])
       for (const step of phone.jobs[id].steps.filter(

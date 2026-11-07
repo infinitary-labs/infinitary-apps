@@ -63,6 +63,11 @@ const LEGACY = new Map([
   ["Check release notes", "Check the release notes"],
   ["Phone checks (iPhone and iPad)", "native-phone"],
   ["Wait-clock tests (iPhone and iPad)", "native-phone"],
+  // INF-2970's fix 1: a request's iPad and iPhone run as two jobs of native-phone.
+  ["Phone checks (iPad)", "native-phone"],
+  ["Phone checks (iPhone)", "native-phone"],
+  ["Wait-clock tests (iPad)", "native-phone"],
+  ["Wait-clock tests (iPhone)", "native-phone"],
   ["Confirm TestFlight availability", "availability"],
 ]);
 

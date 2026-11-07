@@ -502,6 +502,12 @@ export function iphoneOnlyParts(parts: readonly string[], reach: readonly PartRe
   return parts.filter((part) => !reach.some((each) => each.part === part && each.distance === 0));
 }
 
+/** INF-2970's fix 1: the kept parts the iPad's own job runs, every one the iPhone does not run alone; with
+ * none, phone.yml's iPad job ends before its gate. */
+export function ipadParts(parts: readonly string[], iphoneOnly: readonly string[]): string[] {
+  return parts.filter((part) => !iphoneOnly.includes(part));
+}
+
 function main(): void {
   const { values } = parseArgs({ options: {
     base: { type: "string", default: "origin/main" },
@@ -560,6 +566,7 @@ function main(): void {
   console.log(`full=${repeats.full}`);
   console.log(`repeat_parts=${repeats.repeatParts.join(" ")}`);
   console.log(`iphone_parts=${iphoneOnly.join(" ")}`);
+  console.log(`ipad_parts=${ipadParts(kept, iphoneOnly).join(" ")}`);
   const run = values.coverage === undefined ? decision.run : kept.length > 0;
   console.log(`run=${run}`);
   console.log(`parts=${kept.join(" ")}`);

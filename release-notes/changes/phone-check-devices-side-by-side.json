@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-devices-side-by-side",
+      "reason": "CI only: a phone check request runs its iPad and iPhone parts as two jobs on two phone Macs at once instead of one after the other."
+    }
+  ]
+}

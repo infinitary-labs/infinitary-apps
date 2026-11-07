@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  ipadParts,
   iphoneOnlyParts,
   type PartTable,
   PHONE_BUDGET_MS,
@@ -241,6 +242,9 @@ describe("phone selection repeat accounting", () => {
       expect([shared(part, "iphone"), shared(part, "ipad")]).toEqual([1, 0]);
       expect([unreadable(part, "iphone"), unreadable(part, "ipad")]).toEqual([3, 1]);
     }
+    // INF-2970's fix 1: phone.yml's iPad job reads these parts and ends before its gate with none.
+    expect(ipadParts(all, iphoneOnlyParts(all, reached("e3be41f53")))).toEqual([]);
+    expect(ipadParts(all, iphoneOnlyParts(all, reached("2dbbedc52", true)))).toEqual(all);
   });
 });
 

@@ -175,9 +175,10 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const source = "6073f484509752eb55ee1b1c85c38b82b4909cc3";
     const released = {
       github: { event_name: "workflow_dispatch", ref: "refs/heads/main" },
-      inputs: { source_commit: source },
+      inputs: { source_commit: source, device: "ipad" },
       vars: {},
       env: {},
+      matrix: { device: "ipad" },
     };
     const native = phone.jobs["native-phone"];
     expect(workflowValue(native?.if ?? "", released)).toBe(true);

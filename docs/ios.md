@@ -842,7 +842,7 @@ The runner waits for simulator boot completion before launching tests and uses o
 
 For interactive local development, `node scripts/phone-test-home.ts <output-json-outside-the-project>` keeps the same disposable real-core home open until interrupted.
 The output names its control address and scratch root, and is private to that run.
-`phone.yml` runs this same gate with `--both` for changes touching `ios/` or the phone-card or phone-contract generator and the contract shape guard.
+`phone.yml` runs this same gate once per device, each in its own job, for changes touching `ios/` or the phone-card or phone-contract generator and the contract shape guard.
 A pull request no longer starts it (INF-2139): a crewmate whose change selects it requests it on its branch with `affected: "true"`.
 INF-2539 removed its pull request selection; the phone release (`ios-release.yml`) runs every part, and main runs no phone check (INF-2492).
 The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, its activity writer `scripts/phone-activity.ts`, its leftover sweep `scripts/phone-leftovers.ts`, its check runner `scripts/phone-checks.ts` and its test plan helper `scripts/phone-test-plan.ts`.
@@ -897,7 +897,8 @@ The fleet must serve that label only from the two vBoxx virtual places, never th
 The one native job, `native-phone`, requires that mapping with no per-run override, fixed-clone switch or generic-Mac fallback.
 An absent, empty or malformed mapping supplies no runnable destination instead of redirecting to the mini.
 The other nine queue mappings and the generic Mac labels remain unchanged for non-phone jobs.
-Each guest runs `scripts/test-phone.ts --both --simulators 1` directly for a request, completing one device's lane and deleting its simulator before starting the other (INF-2101); each of the unsigned TestFlight call's two device calls runs one device with `--simulators 1`.
+Each guest runs `scripts/test-phone.ts --simulators 1` directly for one device, the iPad (`--ipad`) or the iPhone (INF-2101).
+A request runs each device in its own job (INF-2970's fix 1), and the unsigned TestFlight call runs each in its own call (INF-2582).
 The ordinary request and the unsigned TestFlight call use the same gate and failure behavior.
 The rented places serve only this phone queue, not journeys, signing, publishing, installer checks or borrows.
 `tests/phone-pool-isolation.test.ts` evaluates the workflows with configured queues and both release modes, allowing only the native phone job there and refusing secret reads.

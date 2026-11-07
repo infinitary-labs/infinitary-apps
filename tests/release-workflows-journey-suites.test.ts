@@ -225,59 +225,68 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
 // edited parts' two further passes ride the same gate. The selections are real chooser outputs'
 // shapes: a complete selection, one with edited tests, one that leaves reached parts to the iPhone,
 // a proper subset, and a proper subset whose one edited part repeats (INF-2811).
-it.each([
-  { mode: "in-turn", parts: "cards-form", full: "true", iphone: "", repeat: "", selected: [] },
-  {
-    mode: "together",
-    parts: "cards-form talk-tasks",
-    full: "true",
-    iphone: "",
-    repeat: "cards-form",
-    selected: ["--repeat-part", "cards-form"],
-  },
-  {
-    mode: "",
-    parts: "join-read talk-tasks rest",
-    full: "true",
-    iphone: "join-read rest",
-    repeat: "talk-tasks",
-    selected: [
-      "--iphone-part",
-      "join-read",
-      "--part",
-      "talk-tasks",
-      "--iphone-part",
-      "rest",
-      "--repeat-part",
-      "talk-tasks",
-    ],
-  },
-  {
-    mode: "",
-    parts: "join-read talk-tasks",
-    full: "false",
-    iphone: "",
-    repeat: "",
-    selected: ["--part", "join-read", "--part", "talk-tasks"],
-  },
-  {
-    mode: "",
-    parts: "talk-drafts",
-    full: "false",
-    iphone: "",
-    repeat: "talk-drafts",
-    selected: ["--part", "talk-drafts", "--repeat-part", "talk-drafts"],
-  },
-])(
-  "runs both devices directly for $mode/$full/$iphone/$repeat without a local clone",
-  ({ mode, parts, full, iphone, repeat, selected }) => {
+// INF-2970's fix 1: each device's job runs the same selection on its own device; the gate itself
+// leaves the iPhone-only parts and the further passes off the iPad (scripts/phone-test-plan.ts).
+it.each(
+  [
+    { mode: "in-turn", parts: "cards-form", full: "true", iphone: "", repeat: "", selected: [] },
+    {
+      mode: "together",
+      parts: "cards-form talk-tasks",
+      full: "true",
+      iphone: "",
+      repeat: "cards-form",
+      selected: ["--repeat-part", "cards-form"],
+    },
+    {
+      mode: "",
+      parts: "join-read talk-tasks rest",
+      full: "true",
+      iphone: "join-read rest",
+      repeat: "talk-tasks",
+      selected: [
+        "--iphone-part",
+        "join-read",
+        "--part",
+        "talk-tasks",
+        "--iphone-part",
+        "rest",
+        "--repeat-part",
+        "talk-tasks",
+      ],
+    },
+    {
+      mode: "",
+      parts: "join-read talk-tasks",
+      full: "false",
+      iphone: "",
+      repeat: "",
+      selected: ["--part", "join-read", "--part", "talk-tasks"],
+    },
+    {
+      mode: "",
+      parts: "talk-drafts",
+      full: "false",
+      iphone: "",
+      repeat: "talk-drafts",
+      selected: ["--part", "talk-drafts", "--repeat-part", "talk-drafts"],
+    },
+  ].flatMap((selection) =>
+    [
+      { device: "ipad", args: ["--ipad"] },
+      { device: "iphone", args: [] },
+    ].map((each) => ({ ...selection, ...each })),
+  ),
+)(
+  "runs the $device directly for $mode/$full/$iphone/$repeat without a local clone",
+  ({ mode, parts, full, iphone, repeat, selected, device, args }) => {
     const phone = loadYamlFile(".github/workflows/phone.yml") as {
       jobs: Record<string, { steps: { id?: string; run?: string }[] }>;
     };
     const command = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!.run!;
     const call = recordedWorkflowCall(command, {
       PHONE_VIRTUAL_MAC: mode,
-      PHONE_DEVICE: "",
+      PHONE_DEVICE: device,
       PHONE_PARTS: parts,
       PHONE_FULL: full,
       PHONE_IPHONE_PARTS: iphone,
@@ -286,13 +295,13 @@ it.each([
     expect(call.slice(0, -1)).toEqual([
       "node",
       "scripts/test-phone.ts",
-      "--both",
+      ...args,
       ...selected,
       "--simulators",
       "1",
       "--evidence",
     ]);
-    expect(call.at(-1)).toMatch(/\/phone$/);
+    expect(call.at(-1)).toMatch(new RegExp(`/phone/${device}$`));
   },
 );
 

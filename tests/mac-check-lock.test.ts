@@ -81,6 +81,8 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
         CHECK_VMM: kind === "placed-phone" ? "1" : "0",
         PHONE_VIRTUAL_MAC: kind === "virtual-phone" ? "together" : "",
         PHONE_PARTS: parts,
+        // INF-2970's fix 1: each device runs in its own job; the lock facts hold for either.
+        PHONE_DEVICE: "iphone",
       },
       detached: true,
       stdio: ["pipe", "pipe", "pipe"],
@@ -172,9 +174,9 @@ describe.skipIf(process.platform === "win32")("Mac check commands without admiss
         expect(f.events.some((line) => line.includes("exited"))).toBe(false);
         if (kind !== "package") {
           const args = JSON.parse((await phone.wait(/^args:/)).slice(5));
-          expect(args).toContain("--both");
-          // INF-2202: ordinary and release calls both check both devices in the guest,
-          // even with a stale clone switch or a host-looking sysctl reading.
+          // INF-2202: ordinary and release calls check their device in the guest, even with a
+          // stale clone switch or a host-looking sysctl reading (one job per device, INF-2970's fix 1).
+          expect(args.at(-1)).toMatch(/\/phone\/iphone$/);
           expect(
             args.slice(args.indexOf("--simulators"), args.indexOf("--simulators") + 2),
           ).toEqual(["--simulators", "1"]);
@@ -203,7 +205,7 @@ describe.skipIf(process.platform === "win32")("Mac check commands without admiss
         "cards",
         "rest",
       ]);
-      expect(args).toContain("--both");
+      expect(args.at(-1)).toMatch(/\/phone\/iphone$/);
       phone.release();
       expect(await phone.result).toBe(0);
     } finally {

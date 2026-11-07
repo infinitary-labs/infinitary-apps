@@ -64,7 +64,17 @@ export function verdict(input: {
   members: readonly Member[];
   current: ReadonlyMap<number, { head: string; queue: QueueState | null }>;
   failedJob?: { name: string; html_url: string };
+  failedFiles?: readonly FailedFile[];
 }): { writes: StatusWrite[]; next: "rerun" | "sweep" | null; summary: string };
+/** A test file a failed job's log names, and the batch's changes whose diffs touch it. */
+export type FailedFile = { file: string; touchedBy: number[] };
+export function failedTestFiles(log: string): string[];
+export function readFailedFiles(
+  github: unknown,
+  repo: { owner: string; repo: string },
+  failedJobs: readonly { id: number }[],
+  members: readonly Member[],
+): Promise<FailedFile[]>;
 export function sortMainPush(input: {
   tree: string;
   queue: QueueState | null;

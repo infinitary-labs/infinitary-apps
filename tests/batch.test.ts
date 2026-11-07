@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { BatchJob, BatchRun, DispatchedRun } from "../scripts/batch.mjs";
 import {
+  failedTestFiles,
   formBatch,
   inBatch,
   passed,
   QUEUE,
+  readFailedFiles,
   readMainPush,
   readQueueStatus,
   readRuns,
@@ -592,6 +594,134 @@ describe("the sweep's verdict", () => {
       [931, "success"],
       [932, "success"],
     ]);
+  });
+});
+
+// INF-2925's audit, the captain's chosen fix: "Make the verdict write the
+// failing test file and the members whose diffs touch it into the status
+// reason, so triage reads a fact instead of guessing." The logs are lines of
+// two failed sweep jobs as GitHub served them: batch run 42315366976's unit
+// group 1/3, and batch run 42305850996's Linux serial journey group 1/4.
+const UNIT_LOG = [
+  "2026-11-07T00:09:09.3881222Z  \u001b[32m✓\u001b[39m \u001b[30m\u001b[43m unit-isolated \u001b[49m\u001b[39m src/renderer/src/app/stack.test.ts \u001b[2m(\u001b[22m\u001b[2m1 test\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 12\u001b[2mms\u001b[22m\u001b[39m",
+  "2026-11-07T00:09:25.6305587Z \u001b[31m⎯⎯⎯⎯⎯⎯⎯\u001b[39m\u001b[1m\u001b[41m Failed Tests 2 \u001b[49m\u001b[22m\u001b[31m⎯⎯⎯⎯⎯⎯⎯\u001b[39m",
+  "2026-11-07T00:09:25.6328778Z \u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m \u001b[30m\u001b[42m unit \u001b[49m\u001b[39m tests/crewmate-fixed-context.test.ts\u001b[2m > \u001b[22mthe crewmate's fixed context (INF-416 piece J)\u001b[2m > \u001b[22mstays inside its budget for each runtime and kind of work",
+  "2026-11-07T00:09:25.6362939Z \u001b[31m\u001b[1mAssertionError\u001b[22m: expected [ { …(3) } ] to deeply equal []\u001b[39m",
+  "2026-11-07T00:09:25.6430122Z \u001b[2m Test Files \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[1m\u001b[32m288 passed\u001b[39m\u001b[22m\u001b[90m (289)\u001b[39m",
+  "2026-11-07T00:09:25.6473836Z \u001b[36m \u001b[2m❯\u001b[22m tests/crewmate-fixed-context.test.ts:\u001b[2m171:71\u001b[22m\u001b[39m",
+  "2026-11-07T00:09:25.6542025Z \u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m \u001b[30m\u001b[42m unit \u001b[49m\u001b[39m tests/crewmate-fixed-context.test.ts\u001b[2m > \u001b[22mthe crewmate's fixed context (INF-416 piece J)\u001b[2m > \u001b[22mleaves the smallest local window room for the conversation it promises",
+  "2026-11-07T00:09:25.8766430Z [ELIFECYCLE] Test failed. See above for more details.",
+].join("\n");
+const JOURNEY_LOG = [
+  "2026-11-06T22:47:04.2937735Z     test-results/runs/20261106T223722Z-3000/card-leave-each-registered-e8953-ly-Done-receipts-the-answer-desktop/trace.zip",
+  "2026-11-06T22:47:04.2942679Z     ────────────────────────────────────────────────────────────────────────────────────────────────",
+  "2026-11-06T22:47:04.2943352Z ",
+  "2026-11-06T22:47:04.2943632Z   1 failed",
+  "2026-11-06T22:47:04.2944978Z     [desktop] › tests/e2e/card-leave.spec.ts:34:1 › each registered corner puts away without ending work; only Done receipts the answer ",
+  "2026-11-06T22:47:04.2946175Z   42 passed (9.7m)",
+  "2026-11-06T22:47:04.3659619Z ##[error]Process completed with exit code 1.",
+].join("\n");
+
+describe("the failed test files a second failure names", () => {
+  it("reads vitest's FAIL lines and Playwright's failed list, and no passing file", () => {
+    expect(failedTestFiles(UNIT_LOG)).toEqual(["tests/crewmate-fixed-context.test.ts"]);
+    expect(failedTestFiles(JOURNEY_LOG)).toEqual(["tests/e2e/card-leave.spec.ts"]);
+  });
+
+  // Files from git: #1154 edits the card-leave journey; #1166 and #1175,
+  // whose served text overran the budget together, touch neither file.
+  const diffs: Record<number, { filename: string; previous_filename?: string }[]> = {
+    1154: [
+      "src/core/pi/cardTool.ts",
+      "tests/e2e/card-leave.spec.ts",
+      "tests/firstmate-fixed-context.test.ts",
+    ].map((filename) => ({ filename })),
+    1166: ["resources/runbooks/delivery/crew.md", "src/core/runbooks/fallback.generated.ts"].map(
+      (filename) => ({
+        filename,
+      }),
+    ),
+    1175: ["src/core/prompts/cardContract.ts", "src/core/session/tools.ts"].map((filename) => ({
+      filename,
+    })),
+  };
+  const logs: Record<number, string> = { 128226737826: UNIT_LOG, 128195053165: JOURNEY_LOG };
+  const github = {
+    rest: {
+      actions: {
+        downloadJobLogsForWorkflowRun: async ({ job_id }: { job_id: number }) => {
+          if (!logs[job_id]) throw Object.assign(new Error("Not Found"), { status: 404 });
+          return { data: logs[job_id] };
+        },
+      },
+      pulls: { listFiles: "files" },
+    },
+    paginate: async (method: string, { pull_number }: { pull_number: number }) => {
+      expect(method).toBe("files");
+      return diffs[pull_number] ?? [];
+    },
+  };
+  const members = [1154, 1166, 1175].map((number) => ({
+    number,
+    head: String(number).padEnd(40, "0"),
+  }));
+  const runId = 42_315_366_976;
+
+  it("writes the first failed file and the changes that touch it into the last change's reason", async () => {
+    // The Mac runner that lost its connection has no log to read.
+    const failedJobs = [{ id: 128195053165 }, { id: 128226737826 }, { id: 128226737999 }];
+    const failedFiles = await readFailedFiles(github, repo, failedJobs, members);
+    expect(failedFiles).toEqual([
+      { file: "tests/e2e/card-leave.spec.ts", touchedBy: [1154] },
+      { file: "tests/crewmate-fixed-context.test.ts", touchedBy: [] },
+    ]);
+    const current = new Map(
+      members.map((member) => [
+        member.number,
+        {
+          head: member.head,
+          queue: readQueueStatus([status("pending", inBatch(runId), "2026-11-06T23:59:30Z")]),
+        },
+      ]),
+    );
+    const plan = verdict({
+      runId,
+      runUrl: runUrl(runId),
+      attempt: 2,
+      swept: "failure",
+      tree: pr917.tree,
+      members,
+      current,
+      failedJob: {
+        name: "Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 1/3)",
+        html_url: "",
+      },
+      failedFiles,
+    });
+    expect(plan.writes[0]).toMatchObject({ number: 1175, state: "failure" });
+    const reason = plan.writes[0]!.description;
+    expect(reason).toBe(
+      "tests/e2e/card-leave.spec.ts (+1 more) failed twice in batch run 42315366976; touched by #1154; sent back as its last change.",
+    );
+    expect(reason.length).toBeLessThanOrEqual(140);
+    expect(plan.summary).toContain(
+      "tests/crewmate-fixed-context.test.ts (no change here touches it)",
+    );
+
+    // With only the budget test failing, the reason says no change touches it.
+    const budget = verdict({
+      runId,
+      runUrl: runUrl(runId),
+      attempt: 2,
+      swept: "failure",
+      tree: pr917.tree,
+      members,
+      current,
+      failedFiles: failedFiles.slice(1),
+    });
+    expect(budget.writes[0]!.description).toBe(
+      "tests/crewmate-fixed-context.test.ts failed twice in batch run 42315366976; no change here touches it; sent back as its last change.",
+    );
   });
 });
 

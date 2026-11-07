@@ -535,6 +535,7 @@ A red sweep reruns only its failed jobs, once (the captain: "can we just only re
 The failed attempt's `verdict` job starts a `rerun` run by dispatch, named `Rerun of batch run N`, which waits for the attempt to end and reruns its failed jobs and the verdict after them.
 If the rerun passes, the batch passes too, and the job that failed first still gets an owner who fixes its cause.
 If it fails again, the batch's last change fails with the failed job's link, its crewmate fixes the failure whether or not it is a flake, and the rest wait again for a batch the verdict starts.
+Its reason names the first test file the failed jobs' logs report as failed and the batch's changes whose diffs touch that file, or that none does; the verdict's summary lists every such file.
 A triage crewmate may instead name another change and send it back by hand.
 A by-hand start with `send_back` and `reason` fails one change's status with that reason.
 A red sweep that a change was sent back from while it ran takes that send-back as its answer: its verdict asks for no rerun and fails no other change, and the rest wait again, in their approval order, for a batch the verdict starts without the change sent back.

@@ -286,7 +286,12 @@ jobs:
             const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
               ...context.repo, run_id: context.runId, filter: 'latest', per_page: 100,
             });
-            const failedJob = jobs.find((job) => job.conclusion === 'failure');
+            const failedJobs = jobs.filter((job) => job.conclusion === 'failure');
+            const failedJob = failedJobs[0];
+            const attempt = Number(process.env.GITHUB_RUN_ATTEMPT);
+            // A second failure names the failed test files and the changes that touch them.
+            const failedFiles = process.env.SWEPT !== 'success' && attempt > 1
+              ? await batch.readFailedFiles(github, context.repo, failedJobs, members) : [];
             const current = new Map();
             for (const member of members) {
               const {data: pull} = await github.rest.pulls.get({...context.repo, pull_number: member.number});
@@ -296,8 +301,8 @@ jobs:
               current.set(member.number, {head: pull.head.sha, queue: pull.state === 'open' ? batch.readQueueStatus(statuses) : null});
             }
             const plan = batch.verdict({
-              runId: context.runId, runUrl, attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
-              swept: process.env.SWEPT, tree: process.env.TREE, members, current, failedJob,
+              runId: context.runId, runUrl, attempt,
+              swept: process.env.SWEPT, tree: process.env.TREE, members, current, failedJob, failedFiles,
             });
             for (const write of plan.writes) await batch.writeStatus(github, context.repo, write);
             if (plan.next)

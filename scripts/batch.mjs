@@ -144,8 +144,20 @@ export function readComposition(output, members) {
  * failed attempt writes nothing and asks for its one rerun of the failed
  * jobs; a second failure sends the batch's last change back with the failed
  * job's link, and the rest wait for the next batch, which this run starts.
+ * Its reason names the first failed test file and which changes of the
+ * batch touch it (readFailedFiles).
  */
-export function verdict({ runId, runUrl, attempt, swept, tree, members, current, failedJob }) {
+export function verdict({
+  runId,
+  runUrl,
+  attempt,
+  swept,
+  tree,
+  members,
+  current,
+  failedJob,
+  failedFiles = [],
+}) {
   // The member's queue state now, while it still names the version this run swept.
   const queueOf = (member) => {
     const now = current.get(member.number);
@@ -190,19 +202,106 @@ export function verdict({ runId, runUrl, attempt, swept, tree, members, current,
     };
   const last = still.at(-1);
   const job = failedJob ? `${failedJob.name} failed twice` : "The sweep failed twice";
+  const [first] = failedFiles;
   return {
     writes: [
       {
         ...last,
         state: "failure",
-        description: `${job} in batch run ${runId}, the last change in it.`.slice(0, 140),
+        description: first
+          ? fileReason(first, failedFiles.length, runId)
+          : `${job} in batch run ${runId}, the last change in it.`.slice(0, 140),
         url: failedJob?.html_url || runUrl,
       },
       ...waitAgain.slice(0, -1),
     ],
     next: "sweep",
-    summary: `The sweep failed twice, so #${last.number}, the batch's last change, goes back to its pull request.`,
+    summary:
+      `The sweep failed twice, so #${last.number}, the batch's last change, goes back to its pull request.` +
+      (failedFiles.length
+        ? ` Failed test files: ${failedFiles.map((failed) => `${failed.file} (${touchedBy(failed)})`).join(", ")}.`
+        : ""),
   };
+}
+
+const touchedBy = ({ touchedBy: numbers }) =>
+  numbers.length
+    ? `touched by ${numbers.map((number) => `#${number}`).join(", ")}`
+    : "no change here touches it";
+
+/** A failed status's reason, at most the 140 characters GitHub keeps. */
+function fileReason(failed, count, runId) {
+  const more = count > 1 ? ` (+${count - 1} more)` : "";
+  const reason = `${failed.file}${more} failed twice in batch run ${runId}; ${touchedBy(failed)}`;
+  const full = `${reason}; sent back as its last change.`;
+  return (full.length <= 140 ? full : `${reason}.`).slice(0, 140);
+}
+
+// A test file's path as vitest and Playwright print it, from the project's root.
+const TEST_FILE = /(?:^|\s)((?:[\w.@-]+\/)*[\w.@-]+\.(?:test|spec)\.[cm]?[jt]sx?)(?=[\s:\[]|$)/;
+// GitHub's timestamp before each log line, and a terminal's colors.
+const LOG_PREFIX = /^\d{4}-\d\d-\d\dT[\d:.]+Z /;
+const COLORS = /\u001b\[[0-9;]*m/g;
+
+/**
+ * The test files a job's log names as failed, in the order it names them:
+ * vitest's FAIL lines, and the tests listed under Playwright's closing
+ * "N failed" line (its numbered failure list also holds flaky tests, so it
+ * is not read).
+ */
+export function failedTestFiles(log) {
+  const files = [];
+  let inFailedList = false;
+  for (const raw of log.split("\n")) {
+    const line = raw.replace(LOG_PREFIX, "").replace(COLORS, "").trimEnd();
+    if (/^\s*\d+ failed$/.test(line)) {
+      inFailedList = true;
+      continue;
+    }
+    const listed = inFailedList && /^\s{4}\S/.test(line);
+    inFailedList = listed;
+    if (!listed && !/^\s*FAIL\s/.test(line)) continue;
+    const file = TEST_FILE.exec(line)?.[1];
+    if (file && !files.includes(file)) files.push(file);
+  }
+  return files;
+}
+
+/**
+ * Each test file the failed jobs' logs name as failed, with the batch's
+ * changes whose diffs touch it, in batch order. A log GitHub cannot give
+ * adds nothing, so the verdict still writes its statuses.
+ */
+export async function readFailedFiles(github, repo, failedJobs, members) {
+  const files = [];
+  for (const job of failedJobs) {
+    let log;
+    try {
+      ({ data: log } = await github.rest.actions.downloadJobLogsForWorkflowRun({ ...repo, job_id: job.id }));
+    } catch {
+      continue;
+    }
+    // GitHub serves the log as text; a client that reads it as bytes gets a buffer.
+    const text = typeof log === "string" ? log : Buffer.from(log).toString("utf8");
+    for (const file of failedTestFiles(text)) if (!files.includes(file)) files.push(file);
+  }
+  if (!files.length) return [];
+  const changed = new Map();
+  for (const member of members) {
+    const diff = await github.paginate(github.rest.pulls.listFiles, {
+      ...repo,
+      pull_number: member.number,
+      per_page: 100,
+    });
+    changed.set(
+      member.number,
+      new Set(diff.flatMap((entry) => [entry.filename, entry.previous_filename].filter(Boolean))),
+    );
+  }
+  return files.map((file) => ({
+    file,
+    touchedBy: members.filter((member) => changed.get(member.number).has(file)).map((member) => member.number),
+  }));
 }
 
 /**

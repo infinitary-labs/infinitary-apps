@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-names-failed-test-file",
+      "reason": "The project's own batch check now names the failed test file and the batch's changes that touch it in the reason it sends a change back with; how this repository's checks run, nothing in the app a person notices."
+    }
+  ]
+}

@@ -73,6 +73,7 @@ What the first mate did is recorded where the call succeeds (a typed result, nev
 
 - a card shown or revised (`emit_card`, the Settings hand-over card, the app's approval card for a held `use_integration` call), with the card's id;
 - the closing words written into the card's replies, for a reply under a first mate card or a done task's kept note (`CardService.recordFirstmateThreadAnswer` returns whether it wrote), with the card's id;
+- a line the first mate writes alone in the thread of someone else's open card, such as the crewmate's card the steer-not-answer refusal sends it to (`emit_card` with that card's id and `reply`, a `reply-only` write that is no closed card's clarification), as a reply with the card's id;
 - work started, steered, stopped or settled (`spawn_crewmate`, `steer_crewmate` - including a steer the app only saved because the crewmate's account is held, which FI3-592 owns the status of - `interrupt_crewmate`, `settle_task`, a task dropped or started, a link changed);
 - a setting or operation recorded (`create_task`, `update_task`, `schedule_prompt`, `remember`, `forget`, a `record_knowledge` write that changed the collection, `personalize`, `install_plugin`, a flag, an applied `app_change`, which `cancel_schedule` is, a `use_integration` change or send that ran);
 - a card closed (`close_card`), and a reaction (`emote`).
@@ -152,7 +153,8 @@ What piece 2's migration adds to `captain_asks`: `followed` (every message saved
   Work the choice started keeps the message working until it ends; then the accepted card still answers it.
   The step that handles the click joins that work to the message only when the first mate names the message on it (`ask_id`).
   Closing the first mate's own card is never an acceptance; when `close_card` closes the card a message a step has read was waiting on, and leaves it with no answering card up and no work running, its answer says so, as a fact and never a refusal.
-  The first mate's answer in the thread of the card the message was typed under is accepted; so is a reaction to a message that asks nothing, the first mate's own judgment.
+  The first mate's answer in a card's thread is accepted: its closing words under the card the message was typed under, or its line alone on someone else's open card, even one shown before the message.
+  So is a reaction to a message that asks nothing, the first mate's own judgment.
 - **Seen.**
   Once all of a message's work has ended, an answering crewmate card the captain saw since its newest message is its answer (`AskEnding.seenAnswer`), from the card's `seen` observations (`CardStore.seenCards`).
   Only a sighting of the card's current version counts - its current offer, and its current released update once there is one - so a revision the captain never saw is still asked for.

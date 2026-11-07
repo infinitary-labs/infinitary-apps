@@ -26,8 +26,9 @@ export type AskDelivery = "pending" | "held" | "covered" | "retrying" | "unresol
 export const JUDGEABLE_DELIVERY: readonly AskDelivery[] = ["pending", "held", "retrying"];
 
 /**
- * What kind of action took effect: a card shown or revised, closing words
- * written into a card's replies, work started, steered, stopped or settled,
+ * What kind of action took effect: a card shown or revised, the first
+ * mate's words written into a card's replies (its closing words, or a line
+ * alone on someone else's card), work started, steered, stopped or settled,
  * a setting or operation recorded, a card closed, a reaction.
  */
 export type DeliveryActionKind = "card" | "reply" | "work" | "record" | "close" | "reaction";

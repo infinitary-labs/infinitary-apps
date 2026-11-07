@@ -521,7 +521,8 @@ export class FirstmateAgent {
     // The same typed facts choose the reply line (./replyLine).
     if (!this.running || entry.outcome !== "action") return;
     this.turn.replyFacts.acted = true;
-    if (entry.kind === "card" && entry.ref) {
+    // A line in a card's thread names that card, as showing it does.
+    if ((entry.kind === "card" || entry.kind === "reply") && entry.ref) {
       const shown = this.options.supervisor.cards.snapshot().find((card) => card.id === entry.ref);
       if (shown?.title) this.turn.replyFacts.latest = shown.title;
     }

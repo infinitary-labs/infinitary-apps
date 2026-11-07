@@ -259,13 +259,17 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       const contribution = supervisor.contributeAsFirstmate(card);
       if (contribution) {
         // Only a write that changed the record is an action; an unchanged
-        // card took no effect and a refusal changed nothing.
+        // card took no effect and a refusal changed nothing. A line alone in
+        // an open card's thread is the first mate's words in its replies,
+        // which answer the messages it read; a revision shows the card
+        // again. A closed card's dated clarification keeps the card's kind.
         if (contribution.effect === "refused") {
           host.noteDelivery({ outcome: "refused", tool: "emit_card", reason: "card-refused" });
         } else if (contribution.effect !== "unchanged") {
+          const inThread = contribution.effect === "reply-only" && !contribution.clarification;
           host.noteDelivery({
             outcome: "action",
-            kind: "card",
+            kind: inThread ? "reply" : "card",
             tool: "emit_card",
             ref: contribution.cardId,
           });

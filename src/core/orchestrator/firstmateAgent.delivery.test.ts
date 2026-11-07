@@ -227,6 +227,44 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.session.prompts).toHaveLength(2);
   });
 
+  // The refusal above sends the first mate to the crewmate's card,
+  // shown before the message; its line in that card's thread is its answer.
+  it("ends a message the first mate answered in the thread of a crewmate's card already up, with no retry and no notice", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [{ id: "t58", title: "Check if PR 58 merged", status: "idle" }],
+      seedCards: [crewCard("card-t58-1", "t58", "PR 58 is merged", "Already shown.")],
+    });
+    vi.advanceTimersByTime(1_000);
+    await f.agent.converse("is PR 58 merged?");
+    const tools = toolsOf(f.specs);
+    await expect(
+      tools.get("emit_card")?.execute("c1", {
+        title: "PR 58 is merged",
+        body: "<p>Restating.</p>",
+        related: ["t58"],
+      }),
+    ).rejects.toThrow(/emit_card with id card-t58-1/);
+    const written = await tools.get("emit_card")?.execute("c2", {
+      id: "card-t58-1",
+      title: "PR 58 is merged",
+      body: "<p>Already shown.</p>",
+      reply: "Yes, PR 58 merged this morning.",
+    });
+    expect(written?.content[0]?.text).toContain('Wrote on the thread of card "PR 58 is merged"');
+    await finish(f, "Answered on its card.");
+    await tick();
+
+    const ask = f.tasks.capture.listAsks()[0];
+    expect(ask).toMatchObject({ delivery: "covered", answerCardId: "card-t58-1" });
+    expect(ask?.answeredAt).not.toBeNull();
+    expect(retries(f)).toEqual([]);
+    expect(noticeOf(f)).toBeUndefined();
+    expect(f.supervisor.cards.thread("card-t58-1").messages.map((line) => line.who)).toContain(
+      "firstmate",
+    );
+  });
+
   it("sends the message again on Ask again as a fresh linked turn with the same hint, and Leave it runs nothing", async () => {
     const f = setup({
       silent: true,

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "answer-in-crewmate-thread",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "An answer on a crewmate's card counts as your first mate's answer",
+      "body": "When your first mate answers your message by writing under a crewmate's card that was already on screen, your message now ends as answered. The \"Your first mate has not answered your message\" notice no longer appears beside that answer, and your first mate is not asked to answer again.",
+      "noPicture": "This removes a notice that went up by mistake; no card or view changes how it looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

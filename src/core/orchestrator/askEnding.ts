@@ -312,7 +312,8 @@ export class AskEnding {
     const seen = this.seenAnswer(chain);
     if (seen) return { kind: "accepted", cardId: seen.id };
     const entries = chain.members.flatMap((member) => member.deliveryFacts.entries);
-    // The first mate's answer in the thread of the card the message replied under.
+    // The first mate's answer in a card's thread: its closing words under the
+    // card the message replied under, or its line alone on someone else's card.
     const reply = entries.findLast(
       (entry) => entry.outcome === "action" && entry.kind === "reply" && entry.ref,
     );

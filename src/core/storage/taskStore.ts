@@ -22,6 +22,7 @@ import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
 import {
   composeDelivery,
+  deliverySaveMoves,
   type EvidenceRow,
   type PermissionRow,
   splitDelivery,
@@ -1367,22 +1368,26 @@ export class TaskStore {
     }
     if ("delivery" in patch) {
       // A delivery names the current turn's declarations it is read with, so its write replaces them.
+      // Each record is written again only when its saved value moves (INF-2220).
       const split = executing
         ? splitTurn(patch.delivery)
         : { delivery: patch.delivery ?? null, turn: undefined };
-      if (split.turn !== undefined) running.turn = split.turn;
+      if (split.turn !== undefined && this.turnMoves(id, split.turn)) running.turn = split.turn;
       // Its change evidence and permissions go to their own rows (INF-1296 piece 4).
       const history = this.delivery.exists()
         ? this.delivery.setDelivery(id, split.delivery)
         : split.delivery;
-      if (this.specifications.exists())
-        this.db
-          .prepare(`INSERT INTO task_record_history (task_id, delivery_json) VALUES (?, ?)
-        ON CONFLICT(task_id) DO UPDATE SET delivery_json = excluded.delivery_json`)
-          .run(id, history ? JSON.stringify(history) : null);
-      else {
+      const historyJson = history ? JSON.stringify(history) : null;
+      if (this.specifications.exists()) {
+        if (this.savedHistory(id) !== historyJson)
+          prepared(
+            this.db,
+            `INSERT INTO task_record_history (task_id, delivery_json) VALUES (?, ?)
+             ON CONFLICT(task_id) DO UPDATE SET delivery_json = excluded.delivery_json`,
+          ).run(id, historyJson);
+      } else {
         sets.push("delivery_json = ?");
-        values.push(history ? JSON.stringify(history) : null);
+        values.push(historyJson);
       }
     }
     if ("placement" in patch) {
@@ -1405,6 +1410,40 @@ export class TaskStore {
     }
     // The change a task carries follows the facts that can move it (INF-1868 piece 1).
     if (CHANGE_PATCH_FIELDS.some((field) => field in patch)) this.projectChange(id);
+  }
+
+  /**
+   * Whether saving this delivery would change any row it is saved in
+   * (INF-2220): the turn's declarations, the history its column keeps, its
+   * change evidence or its permissions. A write that moves none of them is
+   * an exact no-op. A database from before those records is written whole,
+   * as before.
+   */
+  deliveryMoves(id: string, delivery: TaskDelivery | null): boolean {
+    if (!this.execution.exists() || !this.delivery.exists() || !this.specifications.exists())
+      return true;
+    const split = splitTurn(delivery);
+    if (this.turnMoves(id, split.turn)) return true;
+    const save = this.delivery.planDelivery(id, split.delivery);
+    return (
+      deliverySaveMoves(save) ||
+      this.savedHistory(id) !== (save.history ? JSON.stringify(save.history) : null)
+    );
+  }
+
+  /** Whether these declarations differ from the turn's saved ones, or the task has no execution row. */
+  private turnMoves(id: string, turn: Record<string, unknown> | null): boolean {
+    const saved = this.execution.turnJson(id);
+    return saved === undefined || saved !== (turn ? JSON.stringify(turn) : null);
+  }
+
+  /** The history the delivery column keeps, exactly as saved; undefined with no history row. */
+  private savedHistory(id: string): string | null | undefined {
+    const row = prepared(
+      this.db,
+      "SELECT delivery_json FROM task_record_history WHERE task_id = ?",
+    ).get(id) as { delivery_json: string | null } | undefined;
+    return row ? row.delivery_json : undefined;
   }
 
   pendingPlacements(): TaskRecord[] {

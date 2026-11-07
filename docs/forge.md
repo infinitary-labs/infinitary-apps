@@ -723,7 +723,7 @@ The first mate's own facts keep the reading's age (`ciFact.ts`), because it judg
 
 A task with no change yet shows the run it started by hand instead, when the app watches one (INF-594, "The run watch" below).
 The run reader keeps the host's times (`WorkflowRun.startedAt`, `finishedAt`): a GitHub run's `run_started_at`, the latest attempt's start, and once completed its `updated_at`, because a run has no `completed_at`; a GitLab pipeline's `started_at` and `finished_at`.
-Every reading of a watched run - the crewmate's short read and the minute reader's - writes `runChecks` on the delivery facts (`recordRunChecks` in `src/core/orchestrator/runWatch.ts`): the run, its state (running, passed, failed or cancelled), its times and the reading's time.
+Every reading of a watched run - the crewmate's short read and the minute reader's - writes `runChecks` on the delivery facts (`runChecksOf` in `src/core/orchestrator/runWatch.ts`): the run, its state (running, passed, failed or cancelled), its times and the reading's time.
 It stays after the watch ends, so a finished run says `passed in 3h 26m · 5m ago`.
 A reading of another run replaces it only when that run started at or after it, so the newest run shows.
 The run is read by its number, never by its commit, which may carry other checks; a task with a change shows the change's checks.
@@ -753,6 +753,7 @@ A crewmate's own short read of failures suppresses the early wake it already kno
 Starting and ending a watch each writes one task timeline line.
 While a watch stands, `checksWatched` keeps the idle ladder from nudging or reporting the task stuck, and its existing posture reads Waiting for checks.
 Each reading also keeps the run's state and host times for the checks cell ("The checks cell's time").
+An ordinary reading saves that checks cell with its own time, any newly failed jobs and the watch's next read in one write; a reading that wakes the crewmate saves its checks cell and failed jobs before the wake goes out (INF-2220).
 
 The run watch never writes pull request check readings, diagnoses, repair counts or merge permission; like the short read, it keeps the run's failed jobs on the repair ledger ("A workflow run's failures" below).
 `check_change` remains the pull request fact reader and declaration seam; `github_read`, job log reads and downloads keep their existing contracts.

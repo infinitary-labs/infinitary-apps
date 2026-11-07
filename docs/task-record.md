@@ -176,6 +176,8 @@ The row carries `format` 1, and a later format names its own number.
 The delivery column keeps only history: the closed policy snapshot and an older release's copy of the latest result.
 `TaskStore` is the one writer, beneath `TaskService`, and a record still reads every one of these facts under the field it read before (`delivery`, and the settle under `pendingSettle`), so no reader changed; `splitDelivery` in `src/core/storage/taskDeliveryFields.ts` names which field goes where, and a field it does not name is evidence.
 A write of a task's whole delivery facts replaces its evidence and its delivery permissions with the ones it carries, as the column did before them, and a settle that has not run is its own field.
+It writes again only what moves (INF-2220): the evidence row when any of its columns would change, each permission column whose value would change, the history row and the turn's declarations when theirs would.
+A write that would move none of them, carrying no timeline line, is an exact no-op: the task keeps its updated time and the board does not move.
 A row left with nothing in it is removed, so a task with no delivery facts has no records.
 `v_tasks_v1` and `v_feed_v1` read the delivery mode from the evidence row.
 A record export carries the delivery facts it carried before, which hold no permission, so an import grants nothing.

@@ -196,6 +196,10 @@ export class TaskWriter {
     const run = this.write(() => {
       const record = this.mustGet(id);
       const delivery = this.mergeDelivery(record, patch);
+      // A write that would save every record as it stands is an exact no-op:
+      // the task keeps its updated time and the board does not move
+      // (INF-2220). An observation's timeline line is always written.
+      if (!event && !this.store.deliveryMoves(id, delivery)) return;
       this.patch(id, { delivery, updatedAt: at });
       if (event) {
         const { liveValidation: _validationState, ...eventPatch } = patch;

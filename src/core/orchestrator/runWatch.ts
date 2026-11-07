@@ -1,3 +1,4 @@
+import type { CheckRepairLedger } from "@shared/checkRepair";
 import type { RunChecks } from "@shared/tasks";
 import {
   allowanceResetOf,
@@ -7,7 +8,8 @@ import {
   type WorkflowRun,
 } from "../forge";
 import type { InboxStore } from "../storage/inboxStore";
-import type { RunWatch } from "../storage/taskStore";
+import type { RunWatch, TaskDelivery } from "../storage/taskStore";
+import type { ChangeEvidenceUpdate } from "../tasks/taskDeliveries";
 import { TaskService } from "../tasks/taskService";
 import { observeRunFailures } from "./checkRepair";
 import type { TypedWake } from "./wakes";
@@ -43,10 +45,33 @@ function runChecksState(run: WorkflowRun): RunChecks["state"] {
 }
 
 /**
- * Keeps a watched run's reading on the task for the checks cell (INF-594):
- * the same run's newer reading replaces it, and so does a run the host
- * started at or after it; an older run leaves the newer one shown.
+ * A watched run's reading for the checks cell (INF-594): the same run's
+ * newer reading replaces the one shown, and so does a run the host started
+ * at or after it; an older run leaves the newer one shown, and gives none.
  */
+export function runChecksOf(
+  delivery: TaskDelivery | null | undefined,
+  run: WorkflowRun,
+  at: number,
+): RunChecks | undefined {
+  const shown = delivery?.runChecks;
+  if (
+    shown &&
+    shown.runId !== run.id &&
+    (run.startedAt === undefined || (shown.startedAt ?? 0) > run.startedAt)
+  )
+    return undefined;
+  return {
+    runId: run.id,
+    name: run.name,
+    state: runChecksState(run),
+    ...(run.startedAt !== undefined ? { startedAt: run.startedAt } : {}),
+    ...(run.finishedAt !== undefined ? { finishedAt: run.finishedAt } : {}),
+    at,
+  };
+}
+
+/** Keeps a watched run's reading on the task for the checks cell (`runChecksOf`). */
 export function recordRunChecks(
   tasks: Pick<TaskService, "get"> & {
     delivery: Pick<TaskService["delivery"], "recordChangeEvidence">;
@@ -55,23 +80,8 @@ export function recordRunChecks(
   run: WorkflowRun,
   at: number,
 ): void {
-  const shown = tasks.get(taskId)?.delivery?.runChecks;
-  if (
-    shown &&
-    shown.runId !== run.id &&
-    (run.startedAt === undefined || (shown.startedAt ?? 0) > run.startedAt)
-  )
-    return;
-  tasks.delivery.recordChangeEvidence(taskId, {
-    runChecks: {
-      runId: run.id,
-      name: run.name,
-      state: runChecksState(run),
-      ...(run.startedAt !== undefined ? { startedAt: run.startedAt } : {}),
-      ...(run.finishedAt !== undefined ? { finishedAt: run.finishedAt } : {}),
-      at,
-    },
-  });
+  const runChecks = runChecksOf(tasks.get(taskId)?.delivery, run, at);
+  if (runChecks) tasks.delivery.recordChangeEvidence(taskId, { runChecks });
 }
 
 /**
@@ -84,13 +94,21 @@ export function recordRunFailures(
     delivery: Pick<TaskService["delivery"], "recordChangeEvidence">;
   },
   taskId: string,
-  { run, list }: RunReading,
+  reading: RunReading,
 ): void {
-  const ledger = observeRunFailures(tasks.get(taskId)?.delivery, run, {
+  const ledger = runFailuresOf(tasks.get(taskId)?.delivery, reading);
+  if (ledger) tasks.delivery.recordChangeEvidence(taskId, { ciRepair: ledger });
+}
+
+/** The repair ledger with a reading's failed jobs on it, or none when it already holds them. */
+function runFailuresOf(
+  delivery: TaskDelivery | null | undefined,
+  { run, list }: RunReading,
+): CheckRepairLedger | undefined {
+  return observeRunFailures(delivery, run, {
     failed: failedRunJobs(list).map((job) => job.name),
     complete: list.complete,
   });
-  if (ledger) tasks.delivery.recordChangeEvidence(taskId, { ciRepair: ledger });
 }
 
 export function runWatchOnce(watch: RunWatch, event: "failure" | "end"): string {
@@ -164,8 +182,17 @@ export class RunWatcher {
       }
       // A close or a crewmate read during this request owns the newer facts.
       if (!this.current(taskId, watch)) return;
-      recordRunChecks(this.host.tasks, taskId, read.run, now);
-      recordRunFailures(this.host.tasks, taskId, read);
+      // What this read observed: the checks cell at the read's own time and
+      // any failed jobs for the repair ledger. An ordinary read saves them
+      // with its next read in one write (INF-2220); a read that wakes the
+      // crewmate saves them before the wake goes out.
+      const delivery = this.host.tasks.get(taskId)?.delivery;
+      const runChecks = runChecksOf(delivery, read.run, now);
+      const ciRepair = runFailuresOf(delivery, read);
+      const observed: ChangeEvidenceUpdate = {
+        ...(runChecks ? { runChecks } : {}),
+        ...(ciRepair ? { ciRepair } : {}),
+      };
       const current = { ...watch, attempt: read.run.attempt, name: read.run.name };
       const failed = failedRunJobs(read.list);
       const facts = {
@@ -176,7 +203,11 @@ export class RunWatcher {
         jobs: failed,
         complete: read.list.complete,
       };
-      if (runFinished(read.run)) {
+      const finished = runFinished(read.run);
+      const timedOut = now - watch.since >= RUN_WATCH_BOUND_MS;
+      const firstFailure = !watch.failureSeen && failed.length > 0;
+      if (finished || timedOut || firstFailure) this.record(taskId, observed);
+      if (finished) {
         const conclusion = read.run.conclusion;
         await this.end(taskId, current, {
           ...facts,
@@ -190,11 +221,11 @@ export class RunWatcher {
         });
         return;
       }
-      if (now - watch.since >= RUN_WATCH_BOUND_MS) {
+      if (timedOut) {
         await this.end(taskId, current, { ...facts, outcome: "timed-out" });
         return;
       }
-      if (!watch.failureSeen && failed.length > 0) {
+      if (firstFailure) {
         const once = runWatchOnce(watch, "failure");
         if (!this.host.inbox.woken(taskId, once)) {
           await this.host.steer(taskId, { facts: { ...facts, outcome: "first-failure" }, once });
@@ -203,7 +234,12 @@ export class RunWatcher {
         if (!this.current(taskId, watch)) return;
         current.failureSeen = true;
       }
-      this.update(taskId, watch, { ...current, nextAt: now + RUN_WATCH_TICK_MS });
+      this.update(
+        taskId,
+        watch,
+        { ...current, nextAt: now + RUN_WATCH_TICK_MS },
+        firstFailure ? {} : observed,
+      );
     } finally {
       this.reading.delete(key);
     }
@@ -220,10 +256,23 @@ export class RunWatcher {
     );
   }
 
-  private update(taskId: string, watch: RunWatch, next: RunWatch): void {
+  /** Saves what a read observed, when it observed anything new. */
+  private record(taskId: string, observed: ChangeEvidenceUpdate): void {
+    if (Object.keys(observed).length > 0)
+      this.host.tasks.delivery.recordChangeEvidence(taskId, observed);
+  }
+
+  /** Schedules the watch's next read, with what this read observed in the same write. */
+  private update(
+    taskId: string,
+    watch: RunWatch,
+    next: RunWatch,
+    observed: ChangeEvidenceUpdate = {},
+  ): void {
     if (!this.current(taskId, watch)) return;
     const watches = this.host.tasks.get(taskId)?.delivery?.runWatches ?? [];
     this.host.tasks.delivery.recordChangeEvidence(taskId, {
+      ...observed,
       runWatches: watches.map((w) => (w.runId === watch.runId ? next : w)),
     });
   }

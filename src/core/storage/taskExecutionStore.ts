@@ -170,6 +170,19 @@ export class TaskExecutionStore {
     return row ? fromRow(row) : NO_EXECUTION;
   }
 
+  /**
+   * The turn's declarations exactly as saved, or undefined when the task
+   * has no execution row yet: what a delivery write compares its own with
+   * before writing them again (INF-2220).
+   */
+  turnJson(taskId: string): string | null | undefined {
+    if (!this.exists()) return undefined;
+    const row = prepared(this.db, "SELECT turn_json FROM task_execution WHERE task_id = ?").get(
+      taskId,
+    ) as { turn_json: string | null } | undefined;
+    return row ? row.turn_json : undefined;
+  }
+
   /** The execution of each of these tasks that has one, by task id. */
   listFor(taskIds: readonly string[]): Map<string, TaskExecution> {
     const byTask = new Map<string, TaskExecution>();

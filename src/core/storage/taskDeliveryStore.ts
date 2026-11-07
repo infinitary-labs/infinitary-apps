@@ -21,6 +21,23 @@ const PERMISSION_ROW_COLUMNS = [
   "pending_settle_json",
 ] as const;
 
+/**
+ * What saving a delivery writes (`TaskDeliveryStore.planDelivery`): the
+ * history its column keeps; the evidence row to save, null to remove it,
+ * or undefined when it already holds this; and only the delivery
+ * permission columns whose saved value moves.
+ */
+export type DeliverySave = {
+  history: Record<string, unknown> | null;
+  evidence: Omit<EvidenceRow, "task_id"> | null | undefined;
+  permissions: Record<string, string | null>;
+};
+
+/** Whether a save writes the evidence or the permission record. */
+export function deliverySaveMoves(save: DeliverySave): boolean {
+  return save.evidence !== undefined || Object.keys(save.permissions).length > 0;
+}
+
 /** The columns a delivery write replaces: all but a settle that has not run, a field of the record. */
 const DELIVERY_PERMISSION_COLUMNS = PERMISSION_ROW_COLUMNS.filter(
   (column) => column !== "pending_settle_json",
@@ -88,14 +105,48 @@ export class TaskDeliveryStore {
   }
 
   /**
+   * What saving a task's whole delivery facts moves, read against the rows
+   * it is saved in (INF-2220): the evidence row when any of its columns
+   * would hold another value, and each delivery permission column whose
+   * value would change. A record already holding what it would be given is
+   * not written again, so a CI read that moved only its evidence leaves the
+   * permissions as they stand.
+   */
+  planDelivery(taskId: string, delivery: object | null): DeliverySave {
+    const split = delivery ? splitDelivery(delivery) : null;
+    const next = split?.evidence ?? null;
+    const stored = this.evidence(taskId);
+    const evidence =
+      next === null
+        ? stored
+          ? null
+          : undefined
+        : stored &&
+            stored.format === next.format &&
+            stored.mode === next.mode &&
+            stored.head_sha === next.head_sha &&
+            stored.evidence_json === next.evidence_json
+          ? undefined
+          : next;
+    const saved = this.permissions(taskId);
+    const permissions: Record<string, string | null> = {};
+    for (const column of DELIVERY_PERMISSION_COLUMNS) {
+      const value = split?.permissions?.[column] ?? null;
+      if ((saved?.[column] ?? null) !== value) permissions[column] = value;
+    }
+    return { history: split?.history ?? null, evidence, permissions };
+  }
+
+  /**
    * Writes a task's whole delivery facts, as the delivery column took them
    * before: its evidence and its delivery permissions are replaced, and
    * what is history is returned for the column. A settle that has not run
-   * is the record's own field and stays.
+   * is the record's own field and stays. Only what moves is written
+   * (`planDelivery`).
    */
   setDelivery(taskId: string, delivery: object | null): Record<string, unknown> | null {
-    const split = delivery ? splitDelivery(delivery) : null;
-    if (split?.evidence) {
+    const save = this.planDelivery(taskId, delivery);
+    if (save.evidence) {
       prepared(
         this.db,
         `INSERT INTO task_delivery_evidence (task_id, format, mode, head_sha, evidence_json)
@@ -104,21 +155,16 @@ export class TaskDeliveryStore {
            head_sha = excluded.head_sha, evidence_json = excluded.evidence_json`,
       ).run(
         taskId,
-        split.evidence.format,
-        split.evidence.mode,
-        split.evidence.head_sha,
-        split.evidence.evidence_json,
+        save.evidence.format,
+        save.evidence.mode,
+        save.evidence.head_sha,
+        save.evidence.evidence_json,
       );
-    } else {
+    } else if (save.evidence === null) {
       prepared(this.db, "DELETE FROM task_delivery_evidence WHERE task_id = ?").run(taskId);
     }
-    this.writePermissions(
-      taskId,
-      Object.fromEntries(
-        DELIVERY_PERMISSION_COLUMNS.map((column) => [column, split?.permissions?.[column] ?? null]),
-      ),
-    );
-    return split?.history ?? null;
+    if (Object.keys(save.permissions).length > 0) this.writePermissions(taskId, save.permissions);
+    return save.history;
   }
 
   /** Records or clears a settle that has not run. */

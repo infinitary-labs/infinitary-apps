@@ -47,7 +47,7 @@ const CLAUDE_TOOL_NAMES = {
   outputs: ["report", "emit_card", "note_progress", "file_followup", "tasks"]
     .map((name) => `${CLAUDE_SEAT_TOOL_PREFIX}${name}`)
     .join(", "),
-  rule: `Your client serves each of the app's tools under its full name: wherever these instructions name one by its short name, such as report, tasks or emit_card, call it as ${CLAUDE_SEAT_TOOL_PREFIX}<name>, such as ${CLAUDE_SEAT_TOOL_PREFIX}report.`,
+  rule: `Wherever these instructions name an app tool by a short name, call it as ${CLAUDE_SEAT_TOOL_PREFIX}<name>.`,
 };
 
 /** The backends a crewmate runs on; each placement renders its own note. */
@@ -64,7 +64,7 @@ export function crewmateBackendNote(backend: CrewmateBackend): string {
     case "pi":
       return "Your bash never blocks a turn: a command that finishes within 3 seconds returns now; anything longer continues as a background job and its result arrives as your next message, so keep working or end your turn instead of waiting. Pass background true for known-long commands like builds and full test suites; a blocking waiter is a fine way to be woken by an outside event.";
     case "claude":
-      return `You run inside Infinitary, not a terminal, and nothing you write is shown to a person: the guidance above about output to the user, markdown summaries, clarifying questions, and todo tracking does not apply. Your outputs are the app's tools - ${CLAUDE_TOOL_NAMES.outputs} - and a turn's final text is read as a report only when you made none. Your bash blocks until the command returns, so never sleep waiting on the checks on your pull request: the app wakes you once when the first check fails and once when they finish, so end your turn and wait for that message. ${CLAUDE_TOOL_NAMES.rule}`;
+      return `You run inside Infinitary, not a terminal, and nothing you write is shown to a person: the guidance above about output to the user, markdown summaries, clarifying questions and todo tracking does not apply. Your outputs are the app's tools - ${CLAUDE_TOOL_NAMES.outputs} - and a turn's final text is read as a report only when you made none. Your bash blocks until a command returns, so never sleep waiting on the checks on your pull request: the app wakes you when one fails and when they finish: end your turn. ${CLAUDE_TOOL_NAMES.rule}`;
   }
 }
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-claude-crew-note",
+      "reason": "Shortens a few words of the note served to crewmates on Claude so the served prompt stays within its size budget; nothing a person sees changes."
+    }
+  ]
+}

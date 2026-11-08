@@ -3,7 +3,11 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { cardLabelKey, parsePlainLabelRows } from "../../scripts/interaction-metrics";
-import { presentationCommitMessage, presentationMarkdown } from "../../src/core/forge";
+import {
+  parseApiRequest,
+  presentationCommitMessage,
+  presentationMarkdown,
+} from "../../src/core/forge";
 import { MERGE_WRITE_REFUSAL } from "../../src/core/forge/apiWriteGuard";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
@@ -785,6 +789,16 @@ test("a crewmate cannot merge or move the default branch through raw GitHub writ
     );
 });
 
+/** The gateway's own refusal of a GraphQL read, as its request parser words it. */
+function graphqlRefusal(): string {
+  try {
+    parseApiRequest("GET", "/graphql", null);
+  } catch (caught) {
+    return (caught as Error).message;
+  }
+  throw new Error("The gateway's request parser took a GraphQL read");
+}
+
 test("a crewmate on a project kept on this computer reads past the old list through the github.com sign-in, page by page, and never GraphQL", async () => {
   await arrange({ signedIn: true, keptHere: true });
   const title = `notebook ${READS_ANYWHERE_MARKER}`;
@@ -811,7 +825,7 @@ test("a crewmate on a project kept on this computer reads past the old list thro
   const next = `/repositories/${PAGED_REPOSITORY.id}/pulls?per_page=1&page=2`;
   expect(outcome).toContain(`"nextPath": "${next}"`);
   expect(outcome).toContain("Second page");
-  expect(outcome).toContain("GraphQL is not available");
+  expect(outcome).toContain(graphqlRefusal());
   // Every read went to GitHub with the app's sign-in; GraphQL never left the app.
   expect(github.requests()).toEqual(
     expect.arrayContaining([

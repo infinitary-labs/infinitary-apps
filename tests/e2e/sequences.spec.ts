@@ -425,9 +425,7 @@ test("an ask for a prototype is a plan whose card is a playable preview, and App
     { kind: "free", text: SEQ_PLAN_LINE },
   ]);
   const planBrief = await servedBrief(SEQ_PROTOTYPE_PLAN_GOAL);
-  expect(planBrief).toContain(
-    "When I ask for a prototype, a mock-up or to try something, it is this plan with a playable preview as the card",
-  );
+  expect(planBrief).toContain(SEQ_PLAN_LINE);
   writeFileSync(testInfo.outputPath("prototype-plan-brief.json"), planBrief);
 
   // Its card is the preview.

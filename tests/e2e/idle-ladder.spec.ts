@@ -113,7 +113,7 @@ test("a crewmate stuck past every nudge and wake is the app's own card, which ta
     const cards = await page.evaluate(() => window.infinitary.cards.list());
     expect(
       cards.filter((card) => card.taskId === "stuck-task").map((card) => [card.id, card.author]),
-    ).toEqual([["card-stall-stuck-task", "host"]]);
+    ).toEqual([[stallCardId("stuck-task"), "host"]]);
     await expect(body.getByText(/ladder|wake|steer|supervis|harness|inbox|rung/i)).toHaveCount(0);
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: test.info().outputPath("idle-ladder-stall-card.png") });
@@ -203,7 +203,7 @@ test("a crewmate's declared wait on the captain with no card up is put to him on
     await expect(cardBody(page, title).getByText(reason)).toBeVisible();
     const cards = await page.evaluate(() => window.infinitary.cards.list());
     expect(cards.map((card) => [card.id, card.author])).toEqual([
-      ["card-stall-waiting-task", "host"],
+      [stallCardId("waiting-task"), "host"],
     ]);
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: test.info().outputPath("idle-ladder-declared-wait.png") });

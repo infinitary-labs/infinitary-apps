@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, type FrameLocator, type Page, test } from "@playwright/test";
+import { CAPTAIN_WORDS } from "../../src/core/orchestrator/captainWakes";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { answersLine as answersWords } from "../../src/renderer/src/cards/answersLine";
@@ -9,8 +10,10 @@ import {
   CARD_CHAT_LABEL,
   CARD_FILES_FIRST,
   CARD_REPLY_HINT,
+  type CardAnswer,
   cardAnswerLines,
   PAST_CARD_WORDS_LEAD,
+  REPLY_SETTINGS_HEAD,
 } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, cardBodyElement } from "./frames";
@@ -83,6 +86,40 @@ const pickedLine = (answered: number, of: number, changed = 0) =>
 const answeredLine = (answered: number, of: number, changed = 0) =>
   answersWords({ answered, of, changed }, true);
 
+/** A footer choice on a crewmate's card, as its author reads it (`CAPTAIN_WORDS`). */
+const choiceWords = (
+  title: string,
+  choice: { id: string; label: string },
+  answers?: CardAnswer[],
+): string =>
+  CAPTAIN_WORDS["card-choice"](
+    {
+      kind: "card-choice",
+      to: "crewmate",
+      card: { title },
+      source: "chrome",
+      choice: { ...choice, ...(answers ? { answers } : {}) },
+    },
+    {},
+  );
+
+/** The answers a footer click carried, as the card's author reads them under its choice. */
+function answersWordsBlock(answers: CardAnswer[]): string {
+  const wake = choiceWords("", { id: "", label: "" }, answers);
+  const at = wake.indexOf("\n");
+  if (at < 0) throw new Error("A choice's wake no longer carries its answers on their own lines");
+  return wake.slice(at + 1);
+}
+
+/** How an answer line says the captain kept what the card proposed (`cardAnswerLines`). */
+function asProposedWords(): string {
+  const words = cardAnswerLines([{ name: "kept", values: [], changed: false }])[0]
+    ?.split(", ")
+    .at(-1);
+  if (!words) throw new Error("An answer line no longer says whether it was proposed");
+  return words;
+}
+
 /** The question the mock's write-in card opts out of Something else, as its legend reads. */
 const OPTIONS_ONLY_QUESTION = (() => {
   const legend = /<fieldset data-inf-options-only><legend>([^<]+)<\/legend>/.exec(
@@ -143,10 +180,17 @@ test("picks inside a card queue until a footer button sends them, and survive a 
     expect(replied[0]?.text).toContain(INLINE_QUESTIONS_REVISE_REPLY);
     expect(replied[0]?.text).toContain(
       [
-        "Current settings (context, not permission):",
-        '- read-scope: "Every project your sign-in can see" (all-visible), changed',
-        "- writes: no answer, as proposed",
-        '- notes: "Keep it short", changed',
+        REPLY_SETTINGS_HEAD,
+        ...cardAnswerLines([
+          {
+            name: "read-scope",
+            values: ["all-visible"],
+            labels: ["Every project your sign-in can see"],
+            changed: true,
+          },
+          { name: "writes", values: [], changed: false },
+          { name: "notes", values: ["Keep it short"], changed: true },
+        ]),
       ].join("\n"),
     );
 
@@ -188,13 +232,25 @@ test("picks inside a card queue until a footer button sends them, and survive a 
     await expect.poll(async () => (await steers()).slice(steersBefore).length).toBe(2);
     const chosen = (await steers()).at(-1)?.text ?? "";
     expect(chosen).toContain(
-      [
-        `Card "${INLINE_QUESTIONS_REVISED_TITLE}": the user chose "${INLINE_QUESTIONS_LOCK_LABEL}" (lock-plan).`,
-        "The user's answers to the card's questions:",
-        '- read-scope: "Every project your sign-in can see" (all-visible), changed',
-        '- write-scope: "Tasks that ship a change" (shipping), changed',
-        '- notes: "Keep it short", changed',
-      ].join("\n"),
+      choiceWords(
+        INLINE_QUESTIONS_REVISED_TITLE,
+        { id: "lock-plan", label: INLINE_QUESTIONS_LOCK_LABEL },
+        [
+          {
+            name: "read-scope",
+            values: ["all-visible"],
+            labels: ["Every project your sign-in can see"],
+            changed: true,
+          },
+          {
+            name: "write-scope",
+            values: ["shipping"],
+            labels: ["Tasks that ship a change"],
+            changed: true,
+          },
+          { name: "notes", values: ["Keep it short"], changed: true },
+        ],
+      ),
     );
     // The record keeps them on the resolution.
     const resolved = (
@@ -231,7 +287,7 @@ test("a required question written already answered is refused, and the card arri
       .map((body) => JSON.stringify(JSON.parse(body)))
       .find((body) => body.includes(UNPICKED_REFUSAL));
     expect(refusal).toContain(
-      JSON.stringify('the required question "audience" arrives already answered').slice(1, -1),
+      JSON.stringify(`the required question "audience" ${UNPICKED_REFUSAL}`).slice(1, -1),
     );
     expect(refusal).toContain("data-inf-recommended");
 
@@ -282,15 +338,12 @@ test("a required question written already answered is refused, and the card arri
       (await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId)).events
         .filter((event) => event.kind === "steered")
         .at(-1)?.text ?? "";
-    await expect
-      .poll(chosen, { timeout: 30_000 })
-      .toContain(
-        [
-          "The user's answers to the card's questions:",
-          '- audience: "The whole project" (project), as proposed',
-          '- ship-day: "Friday" (friday), as proposed',
-        ].join("\n"),
-      );
+    await expect.poll(chosen, { timeout: 30_000 }).toContain(
+      answersWordsBlock([
+        { name: "audience", values: ["project"], labels: ["The whole project"], changed: false },
+        { name: "ship-day", values: ["friday"], labels: ["Friday"], changed: false },
+      ]),
+    );
   } finally {
     await launched.close();
   }
@@ -317,10 +370,7 @@ test("a question's Something else row takes the captain's own words to the autho
       .map((body) => JSON.stringify(JSON.parse(body)))
       .find((body) => body.includes(WRITE_IN_REFUSAL));
     expect(refusal).toContain(
-      JSON.stringify('the question "key_app" offers options with no Something else row').slice(
-        1,
-        -1,
-      ),
+      JSON.stringify(`the question "key_app" ${WRITE_IN_REFUSAL}`).slice(1, -1),
     );
     const cards = (await page.evaluate(() => window.infinitary.cards.list())).filter(
       (card) => card.title === WRITE_IN_TITLE,
@@ -411,16 +461,23 @@ test("a question's Something else row takes the captain's own words to the autho
       (await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId)).events
         .filter((event) => event.kind === "steered")
         .at(-1)?.text ?? "";
-    await expect
-      .poll(chosen, { timeout: 30_000 })
-      .toContain(
-        [
-          "The user's answers to the card's questions:",
-          '- key_app: written in: "Try once after a minute, then tell me", changed',
-          '- retry_every: written in: "Every minute for the first ten", changed',
-          "- account: no answer, as proposed",
-        ].join("\n"),
-      );
+    await expect.poll(chosen, { timeout: 30_000 }).toContain(
+      answersWordsBlock([
+        {
+          name: "key_app",
+          values: [],
+          changed: true,
+          written: "Try once after a minute, then tell me",
+        },
+        {
+          name: "retry_every",
+          values: [],
+          changed: true,
+          written: "Every minute for the first ten",
+        },
+        { name: "account", values: [], changed: false },
+      ]),
+    );
     const resolved = (
       await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId)
     ).events.findLast((event) => event.kind === "card_resolved");
@@ -551,9 +608,10 @@ test("a scripted body stages a snapshot beside its form, and the close confirms 
         const request = JSON.stringify(JSON.parse(body));
         return [
           `[user]\nUse this look\nChoice on card "${LOOK_TITLE}"`,
-          "The user's answers to the card's questions:",
-          '- trail: "Leave a trail" (on), as proposed',
-          '- look: {"tiltDeg":42} (JSON), changed',
+          ...answersWordsBlock([
+            { name: "trail", values: ["on"], labels: ["Leave a trail"], changed: false },
+            { name: "look", values: ['{"tiltDeg":42}'], json: true, changed: true },
+          ]).split("\n"),
         ].every((line) => request.includes(JSON.stringify(line).slice(1, -1)));
       });
     await expect.poll(served, { timeout: 30_000 }).toBe(true);
@@ -672,7 +730,7 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
     await page.getByRole("button", { name: "Not now", exact: true }).click();
     await expectNoCard(page, DEFER_TITLE);
     const requests = () => JSON.stringify(launched.mockProvider?.requestBodies() ?? []);
-    await expect.poll(requests).toContain("as proposed");
+    await expect.poll(requests).toContain(asProposedWords());
   } finally {
     await launched.close();
   }
@@ -932,7 +990,7 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
     await expect.poll(async () => (await steers()).slice(steersBefore).length).toBe(2);
     const chosen = (await steers()).at(-1)?.text ?? "";
     expect(chosen).toContain(
-      `Card "${INLINE_QUESTIONS_REVISED_TITLE}": the user chose "Not now" (later).`,
+      choiceWords(INLINE_QUESTIONS_REVISED_TITLE, { id: "later", label: "Not now" }),
     );
     expect(chosen).toContain(commentLine);
     const resolved = (

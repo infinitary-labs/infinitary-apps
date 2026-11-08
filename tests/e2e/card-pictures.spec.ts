@@ -1,7 +1,7 @@
 import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { PICTURE_GROUP_CLASS } from "../../src/core/pi/cardImages";
 import { pictureHint, pictureSize } from "../../src/renderer/src/design/cards/pictureViewerWords";
-import { cardBody, cardBodyElement } from "./frames";
+import { cardBody, cardBodyElement, cardBodySelector } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { pseudoBox, within } from "./layout";
 import {
@@ -306,8 +306,11 @@ test("a click, Z, Enter or Space toggles 1:1, and a drag or the wheel moves the 
 test("the close control and the backdrop leave too, and focus returns to the card", async () => {
   const { page } = launched;
   const title = PICTURE_CARD_TITLES.tall;
-  const focusedFrame = () =>
-    page.evaluate(() => document.activeElement?.getAttribute("title") ?? null);
+  const bodyFocused = () =>
+    page.evaluate(
+      (selector) => document.activeElement?.matches(selector) ?? false,
+      cardBodySelector(title),
+    );
 
   await clickPicture(page, title, 0);
   await expect(viewer(page)).toBeVisible();
@@ -315,19 +318,19 @@ test("the close control and the backdrop leave too, and focus returns to the car
     .poll(() => page.evaluate(() => document.activeElement?.getAttribute("role")))
     .toBe("dialog");
   await closeWithEscape(page);
-  expect(await focusedFrame()).toBe(`${title} body`);
+  expect(await bodyFocused()).toBe(true);
 
   await clickPicture(page, title, 0);
   await viewer(page).getByRole("button", { name: "Close the viewer" }).click();
   await expect(viewer(page)).toHaveCount(0);
-  expect(await focusedFrame()).toBe(`${title} body`);
+  expect(await bodyFocused()).toBe(true);
 
   await clickPicture(page, title, 0);
   const row = viewer(page).locator("[data-picture-row]");
   // The row's corner: the backdrop, beside the letterboxed tall picture.
   await row.click({ position: { x: 8, y: 8 } });
   await expect(viewer(page)).toHaveCount(0);
-  expect(await focusedFrame()).toBe(`${title} body`);
+  expect(await bodyFocused()).toBe(true);
   // The card stayed: leaving the viewer is not leaving the card.
   await expect(shownCard(page, title)).toBeVisible();
 });

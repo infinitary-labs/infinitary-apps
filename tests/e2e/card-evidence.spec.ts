@@ -5,6 +5,7 @@ import { expect, type FrameLocator, test } from "@playwright/test";
 import type { Episode, HumanSupervisionManifest } from "../../scripts/human-supervision";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { answersLine } from "../../src/renderer/src/cards/answersLine";
 import type { CardObservation, CardQuestion } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -168,6 +169,13 @@ async function enter(frame: FrameLocator, selector: string, value: string) {
     field.value = text;
     field.dispatchEvent(new Event("input", { bubbles: true }));
   }, value);
+}
+
+/** The footer line's changed count, in `answersLine`'s own words. */
+function changedWords(changed: number): string {
+  const [, words] = answersLine({ answered: 0, of: 0, changed }, false).split(" · ");
+  if (!words) throw new Error("the footer line no longer names a changed count");
+  return words;
 }
 
 const ROLLOUT = "Settle the rollout";
@@ -372,7 +380,7 @@ test("a footer click records what each question asked; a draft the captain never
     });
     await enter(rollout, 'textarea[name="notes"]', "Keep it short");
     await enter(rollout, "#tilt", "42");
-    await expect(page.locator("[data-card-answers]")).toContainText("5 changed");
+    await expect(page.locator("[data-card-answers]")).toContainText(changedWords(5));
     await page.getByRole("button", { name: "Roll it out", exact: true }).click();
     await expectNoCard(page, ROLLOUT);
 
@@ -386,7 +394,7 @@ test("a footer click records what each question asked; a draft the captain never
     // A changed field the app quits on.
     await showCard(page, PICK_WASH);
     await enter(cardBody(page, PICK_WASH), "textarea", RESTART_DRAFT);
-    await expect(cardAnswersLine(page)).toContainText("1 changed");
+    await expect(cardAnswersLine(page)).toContainText(changedWords(1));
   } finally {
     await launched.close();
   }

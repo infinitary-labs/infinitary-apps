@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
 import { joinHome } from "../../src/core/helper/join";
 import { renderWake } from "../../src/core/orchestrator/wakes";
 import { catalogRefreshesSettled } from "../../src/core/pi/modelRuntime";
+import { PROJECT_ROW_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import {
   SETUP_CARD_FIELDS,
   SETUP_CARD_WORDS,
@@ -181,7 +182,7 @@ test("Firstmate proposes a project after a crewmate's report, and Add project se
     await page.getByRole("tab", { name: "Projects", exact: true }).click();
     const row = projectRow(page, repo.id);
     const where = devicePlace([{ id: deviceId, name: MINI.name }], deviceId).where;
-    await expect(row.getByText(`runs ${where}`, { exact: true })).toBeVisible();
+    await expect(row.getByText(PROJECT_ROW_WORDS.runs(where), { exact: true })).toBeVisible();
     await page.screenshot({ path: test.info().outputPath("project-setup-row.png") });
     await page.keyboard.press("Escape");
   });

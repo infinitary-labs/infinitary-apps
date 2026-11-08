@@ -2,8 +2,11 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { DICTATION_KEY_PICKING } from "../../src/shared/dictation";
-import { STANDARD_PLACEHOLDER_NO_VOICE } from "../../src/shared/firstRun";
-import { DICTATION_KEY, dictationCap, dictationWords } from "./dictation";
+import {
+  STANDARD_PLACEHOLDER_NO_VOICE,
+  STANDARD_PLACEHOLDER_SHORT,
+} from "../../src/shared/firstRun";
+import { DICTATION_KEY, dictationCap, hintOnThisComputer } from "./dictation";
 import { type LaunchedApp, launchApp } from "./launch";
 
 /**
@@ -88,7 +91,9 @@ test("the one-row off switch releases the key and mic, and saves the chosen key 
   };
   try {
     let page = app.page;
-    await expect(page.getByPlaceholder(`press/hold ${dictationWords()}`)).toBeVisible();
+    await expect(
+      page.getByPlaceholder(hintOnThisComputer(STANDARD_PLACEHOLDER_SHORT)),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     const row = page.locator('[data-setting="dictation"]');
     const sw = row.getByRole("switch", { name: "Dictation", exact: true });
@@ -112,7 +117,9 @@ test("the one-row off switch releases the key and mic, and saves the chosen key 
       .poll(() => page.evaluate(() => window.infinitary.settings.getDictation()))
       .toEqual({ enabled: true, key: "MetaRight" });
     await page.keyboard.press("Escape");
-    await expect(page.getByPlaceholder(`press/hold ${dictationWords("MetaRight")}`)).toBeVisible();
+    await expect(
+      page.getByPlaceholder(hintOnThisComputer(STANDARD_PLACEHOLDER_SHORT, "MetaRight")),
+    ).toBeVisible();
     await page.keyboard.press(DICTATION_KEY);
     await expect(downloadOffer(page)).toHaveCount(0);
     await page.keyboard.press("MetaRight");
@@ -167,7 +174,9 @@ test("the one-row off switch releases the key and mic, and saves the chosen key 
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("switch", { name: "Dictation", exact: true }).click();
     await page.keyboard.press("Escape");
-    await expect(page.getByPlaceholder(`press/hold ${dictationWords("MetaRight")}`)).toBeVisible();
+    await expect(
+      page.getByPlaceholder(hintOnThisComputer(STANDARD_PLACEHOLDER_SHORT, "MetaRight")),
+    ).toBeVisible();
     await page.keyboard.press("MetaRight");
     await expect(downloadOffer(page)).toBeVisible();
     if (process.env.INFINITARY_TASK_EVIDENCE_DIR) {
@@ -195,7 +204,7 @@ test("turning dictation off drops an active recording without losing typed text"
   });
   try {
     const { page } = app;
-    const input = page.getByPlaceholder(`press/hold ${dictationWords()}`);
+    const input = page.getByPlaceholder(hintOnThisComputer(STANDARD_PLACEHOLDER_SHORT));
     await expect(input).toBeVisible();
     await input.fill(TYPED_DRAFT);
     await input.evaluate((element, text) => {

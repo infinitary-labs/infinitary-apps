@@ -1,6 +1,7 @@
 import { userInfo } from "node:os";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { joinHome } from "@core/helper/join";
+import { startupGuidance } from "@core/helper/words";
 import { expect, test } from "@playwright/test";
 import { automaticStartupWords } from "@shared/devices";
 import { sshConnectionWords } from "@shared/sshConnection";
@@ -56,7 +57,7 @@ test("unsupported startup keeps the join while explicit work starts and stops in
           )?.inReach,
       )
       .toBe(false);
-    expect(said.join(" ")).toContain("The join remains.");
+    for (const line of startupGuidance("unavailable")) expect(said.join(" ")).toContain(line);
     const started = startHelper({ dataDir, say: () => {} });
     expect(started.ok).toBe(true);
     if (!started.ok) throw new Error("Explicit worker did not start");

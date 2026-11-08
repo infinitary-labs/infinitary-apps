@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 import { INBOX_WORDS, INTEGRATION_KIND_NAMES } from "@shared/integrations";
 import { decode } from "@toon-format/toon";
 import { INBOX_COMMAND, INBOX_EVENT, INBOX_FENCE } from "../../src/core/integrations";
+import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { type AutomationEventsSeen, automationEvents } from "./scenarios/automationEvents";
@@ -125,8 +126,26 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(1);
   expect(seen.turns[0]).toContain(`from ci: ${words}`);
   expect(seen.turns[0]).toContain(INBOX_FENCE);
+  // The wake the first mate's notices word for the inbox rule's one event,
+  // up to the rule's prompt, which carries the event fenced (above).
+  const [told] = await page.evaluate(async () => (await window.infinitary.automation.list()).rules);
+  if (!told) throw new Error("turning the inbox on added no rule");
   expect(seen.turns[0]).toContain(
-    `on 1 new event - ${INBOX_EVENT.label} in ${INTEGRATION_KIND_NAMES.inbox}`,
+    NOTICE_WORDS.scheduled(
+      {
+        kind: "scheduled",
+        prompt: "",
+        catchUp: false,
+        captainRequested: told.captainRequested,
+        events: {
+          integration: INTEGRATION_KIND_NAMES.inbox,
+          label: INBOX_EVENT.label,
+          count: 1,
+        },
+        rule: { id: told.id, ...(told.name ? { name: told.name } : {}) },
+      },
+      { ways: [], text: "" },
+    ),
   );
 
   // Once the turn handled it, the receipts read it handled, by the short name.

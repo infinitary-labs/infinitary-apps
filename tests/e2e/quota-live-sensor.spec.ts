@@ -843,7 +843,13 @@ test.describe("the real quota sensor, end to end", () => {
     const titles = await app.page.evaluate(async () =>
       (await window.infinitary.cards.list()).map((card) => card.title),
     );
-    expect(titles.some((title) => /needs you to sign in again/i.test(title))).toBe(false);
+    // The re-auth words after the composer's provider and account holes, so
+    // a sign-out claim for any account or provider is caught.
+    const signOutWords = needsReauthCopy("", "")
+      .replace(/^ \(\) /, "")
+      .replace(/\.$/, "")
+      .toLowerCase();
+    expect(titles.some((title) => title.toLowerCase().includes(signOutWords))).toBe(false);
   });
 
   test("a Grok sign-in reads its consumer meter with its own token and renders real meters", async () => {

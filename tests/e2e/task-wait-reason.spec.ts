@@ -199,7 +199,12 @@ test("a cardless wait opens its record with the reported reason, while a real ch
     const checksMark = nowRow(page, key("checks")).locator("[data-task-mark]");
     await expect(checksMark).toHaveAttribute("data-task-mark", "working");
     await expect(checksMark).toHaveAttribute("data-task-wait", "checks");
-    await expect(checksMark).toHaveAttribute("aria-label", "Working · Waiting for checks");
+    const checksRow = board.tasks.find((task) => task.id === "checks");
+    if (!checksRow) throw new Error("Missing fixture task checks");
+    await expect(checksMark).toHaveAttribute(
+      "aria-label",
+      taskStatusLabel(taskStatusOf(checksRow)),
+    );
     await expect(nowRow(page, key("checks")).locator("[data-now-word]")).toHaveText(" · checks");
     await expect(nowRow(page, key("choice")).locator("[data-task-mark]")).not.toHaveAttribute(
       "data-task-wait",

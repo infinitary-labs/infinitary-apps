@@ -3,7 +3,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { keptFeedLine } from "../../src/core/orchestrator/mergeAuthorization";
-import { settlingText } from "../../src/core/orchestrator/settleWords";
+import { cannotMergeText, settlingText } from "../../src/core/orchestrator/settleWords";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -346,6 +346,16 @@ const REFUSALS: {
   },
 ];
 
+/**
+ * How a refused settle's one line opens, in its owners' words: a refusal
+ * (`cannotMergeText`) or a merge kept for its checks (`keptFeedLine`).
+ */
+const REFUSAL_LEADS = new RegExp(
+  [cannotMergeText(""), keptFeedLine("checks", "GitHub")]
+    .map((line) => (line.split(":")[0] ?? line).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|"),
+);
+
 for (const refusal of REFUSALS) {
   test(`a settle merge on a change with ${refusal.change} puts nothing in and leaves the task open`, async () => {
     const userDataDir = scratchDir("infinitary-settle-refused-");
@@ -406,7 +416,7 @@ for (const refusal of REFUSALS) {
       expect(repo.mainLog()).not.toContain("the crewmate's work");
       // The feed says so: the task's one settle line is the refusal now, and no put-in line.
       await expect(noteLines(page, key)).toHaveCount(1);
-      await expect(noteLines(page, key)).toContainText(/Cannot merge|Your merge/);
+      await expect(noteLines(page, key)).toContainText(REFUSAL_LEADS);
       await expect(putInLine(page, key)).toHaveCount(0);
       expect(await detail()).toMatchObject({ status: "active", closedReason: null });
       expect((await detail())?.delivery?.landedMode).toBeUndefined();

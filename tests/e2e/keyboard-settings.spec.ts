@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { KEYBOARD_COMMANDS } from "../../src/shared/keyboard";
+import { chordAccelerator, KEYBOARD_COMMANDS, menuAccelerator } from "../../src/shared/keyboard";
 import { ariaKeysOf, HAS_APP_MENU, keyWords } from "./desktop";
 import { type LaunchedApp, launchApp } from "./launch";
 import { promptInput } from "./prompt";
@@ -16,6 +16,9 @@ import {
 /** The keys this journey records and reads, as this computer draws them. */
 const COMMAND_P = keyWords({ key: "p", meta: true });
 const COMMAND_L = keyWords({ key: "l", meta: true });
+/** The app menu's accelerator for the recorded ⌘P, and for Open Settings' own key. */
+const COMMAND_P_ACCELERATOR = chordAccelerator({ key: "p", meta: true });
+const SETTINGS_OPEN_ACCELERATOR = menuAccelerator("settings.open");
 
 /**
  * Changing keys (docs/keyboard.md, "Changing keys"): a person opens
@@ -59,7 +62,8 @@ test("a person changes keys, moves one on purpose, and keeps them across a resta
       await expect(keyboard.row("settings.open")).toHaveAttribute("data-keyboard-changed", "true");
       await expect(keyboard.keys("settings.open").locator("kbd")).toHaveText([COMMAND_P]);
       // A desktop whose window draws its own controls has no app menu.
-      if (HAS_APP_MENU) expect(await menuItemAccelerator(app, "settings-open")).toBe("Command+P");
+      if (HAS_APP_MENU)
+        expect(await menuItemAccelerator(app, "settings-open")).toBe(COMMAND_P_ACCELERATOR);
 
       await page.getByRole("button", { name: "Back", exact: true }).click();
       await expect(promptInput(page)).toBeVisible();
@@ -137,7 +141,8 @@ test("a person changes keys, moves one on purpose, and keeps them across a resta
     const keyboard = keyboardSettings(page);
 
     await test.step("after a restart the changed keys are installed, shown and in the menu", async () => {
-      if (HAS_APP_MENU) expect(await menuItemAccelerator(app, "settings-open")).toBe("Command+P");
+      if (HAS_APP_MENU)
+        expect(await menuItemAccelerator(app, "settings-open")).toBe(COMMAND_P_ACCELERATOR);
       await pressWindowKey(app, "p", ["meta"]);
       await expect(page.locator("[data-screen-label]")).toHaveAttribute(
         "data-screen-label",
@@ -153,7 +158,8 @@ test("a person changes keys, moves one on purpose, and keeps them across a resta
       await keyboard.resetAll.click();
       await expect(keyboard.section.locator("[data-keyboard-changed]")).toHaveCount(0);
       await expect(keyboard.keys("focus.main-message").locator("kbd")).toHaveText([COMMAND_L]);
-      if (HAS_APP_MENU) expect(await menuItemAccelerator(app, "settings-open")).toBe("Command+,");
+      if (HAS_APP_MENU)
+        expect(await menuItemAccelerator(app, "settings-open")).toBe(SETTINGS_OPEN_ACCELERATOR);
       // Command search reads the same installed keys.
       await pressWindowKey(app, "k", ["meta"]);
       await expect(commandSearch(page).row("focus.main-message").locator("kbd")).toHaveText(

@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { APPROVE_AND_BUILD } from "../../src/core/prompts/cardContract";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -11,7 +12,7 @@ const evidence = process.env.FM_CARD_DEPARTURE_EVIDENCE;
 /** The two seeded cards: the one a choice closes and the successor the stage prepares. */
 const CHOSEN_PLAN = "The chosen plan";
 const NEXT_PREVIEW = "The next preview";
-for (const action of ["Approve and build", "Put aside", "Put aside with a draft"]) {
+for (const action of [APPROVE_AND_BUILD, "Put aside", "Put aside with a draft"]) {
   test(`${action} leaves without waiting for the next body`, async () => {
     const userDataDir = scratchDir("infinitary-card-departure-");
     const db = openDatabase(userDataDir);
@@ -43,7 +44,7 @@ for (const action of ["Approve and build", "Put aside", "Put aside with a draft"
         priority: 50,
         status: "ready",
         actions: [
-          { id: "approve", label: "Approve and build", default: true },
+          { id: "approve", label: APPROVE_AND_BUILD, default: true },
           { id: "leave", label: "Leave it" },
         ],
       });

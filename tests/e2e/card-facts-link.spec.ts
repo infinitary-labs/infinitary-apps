@@ -120,7 +120,7 @@ test("a press on the fact strip's pull request link opens it though the strip re
       checksSpanWords(CHECK_WORDS.green, span, Date.now()),
     );
     const title = await facts.cell("checks").getAttribute("title");
-    expect(title).toMatch(/^Started .+ · read .+$/);
+    expect(title).toBe(checksRestWords(span, delivery.ciAt));
     // The host's next reading, a minute later.
     const later = checksRestWords(span, delivery.ciAt + 60_000);
     expect(later).not.toBe(title);

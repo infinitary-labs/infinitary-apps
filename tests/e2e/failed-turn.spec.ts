@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { FIRSTMATE_FAILURE_TITLE } from "../../src/core/orchestrator/hostCards";
+import {
+  FIRSTMATE_FAILURE_TITLE,
+  PROVIDER_SIGN_IN_TITLE,
+} from "../../src/core/orchestrator/hostCards";
+import { feedLineFrom } from "../../src/shared/feed";
+import { FIRSTMATE_SESSION_ID } from "../../src/shared/observe";
+import { PLAIN_PROBLEM_FALLBACK } from "../../src/shared/plainProblem";
 import { type LaunchedApp, launchApp } from "./launch";
 import { FAIL_AUTH_PROMPT_MARKER, FAIL_PROVIDER_PROMPT_MARKER } from "./mockProvider";
 
@@ -11,6 +17,20 @@ import { FAIL_AUTH_PROMPT_MARKER, FAIL_PROVIDER_PROMPT_MARKER } from "./mockProv
  * an answer. These runs drive the real dev binary against a provider that
  * rejects the HTTP request, exactly like the reproduction harness.
  */
+
+/**
+ * The words the feed's own line for a failed first-mate turn leads with,
+ * before its plain problem: `feedLineFrom`'s line with the fallback problem
+ * taken off its end.
+ */
+const failedTurnLine = feedLineFrom({
+  type: "turn_failed",
+  taskId: FIRSTMATE_SESSION_ID,
+  error: "",
+})?.text;
+if (!failedTurnLine?.endsWith(PLAIN_PROBLEM_FALLBACK))
+  throw new Error("A failed first-mate turn writes no feed line with its fallback problem");
+const FAILED_TURN_LEAD = failedTurnLine.slice(0, -PLAIN_PROBLEM_FALLBACK.length);
 
 let launched: LaunchedApp;
 
@@ -39,7 +59,7 @@ test("a provider 401 raises the sign-in decision card and a feed line, not silen
         return cards.map((card) => card.title);
       }),
     )
-    .toContain("A provider needs sign in");
+    .toContain(PROVIDER_SIGN_IN_TITLE);
 
   // The feed carries the failure durably; the receipt is no longer the
   // last anyone hears of the message.
@@ -50,7 +70,7 @@ test("a provider 401 raises the sign-in decision card and a feed line, not silen
         return feed.map((line) => line.text);
       }),
     )
-    .toContainEqual(expect.stringContaining("First mate · problem:"));
+    .toContainEqual(expect.stringContaining(FAILED_TURN_LEAD));
 });
 
 test("a non-auth provider failure raises the retryable error card, never the sign-in card", async () => {

@@ -5,6 +5,7 @@ import { eventsWords } from "@shared/automation";
 import { automationEventWords } from "@shared/automationWords";
 import { INTEGRATION_KIND_NAMES } from "@shared/integrations";
 import { STAND_IN_EVENT } from "../../src/core/integrations";
+import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { readSavedData } from "./savedData";
@@ -108,8 +109,24 @@ test("a rule saved by keys fires once for three items that arrive together", asy
 
   appendFileSync(items, ITEMS.map((item) => `${JSON.stringify(item)}\n`).join(""));
   await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(1);
-  expect(seen.turns[0]).toContain(`Sort these by urgency: ${eventsWords(ITEMS)}`);
-  expect(seen.turns[0]).toContain(`on 3 new events - ${STAND_IN_EVENT.label} in Stand-in`);
+  const asked = `Sort these by urgency: ${eventsWords(ITEMS)}`;
+  expect(seen.turns[0]).toContain(asked);
+  const wake = NOTICE_WORDS.scheduled(
+    {
+      kind: "scheduled",
+      prompt: asked,
+      catchUp: false,
+      captainRequested: rule.captainRequested,
+      events: {
+        integration: INTEGRATION_KIND_NAMES["stand-in"],
+        label: STAND_IN_EVENT.label,
+        count: ITEMS.length,
+      },
+      rule: { id: rule.id, ...(rule.name ? { name: rule.name } : {}) },
+    },
+    { ways: [], text: "" },
+  );
+  expect(seen.turns[0]).toContain(wake);
 
   // One run, carrying the three by their ids.
   const runs = () =>

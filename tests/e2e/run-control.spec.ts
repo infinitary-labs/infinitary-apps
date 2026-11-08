@@ -9,6 +9,7 @@ import { HOST_CARD_PRIORITY, PROVIDER_SIGN_IN_TITLE } from "../../src/core/orche
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { RUN_WORDS } from "../../src/main/runCommand";
+import { builtinManifest } from "../../src/renderer/src/plugins/builtin/manifest";
 import { FOLDER_THERE_WORDS } from "../../src/renderer/src/settings/addProjectWords";
 import { claimedPort } from "../helpers/claimedPort";
 import {
@@ -60,6 +61,16 @@ import { pressKey, runFromSearch } from "./windowKeys";
 /** The joined computer's name, and the name the run's computer goes by. */
 const VIEW_NAME = "MacBook Air";
 const RUN_NAME = "Mac mini";
+
+/** The seeded sign-in card's one button, named once where it goes in and where it is pressed. */
+const OPEN_SETTINGS_LABEL = "Open settings";
+
+/** A built-in Settings tab's name, read from the manifest that declares it. */
+function tabLabel(id: string): string {
+  const section = builtinManifest.contributes.settingsSections.find((entry) => entry.id === id);
+  if (!section) throw new Error(`No Settings section ${id}`);
+  return section.label;
+}
 
 const children: { child: ChildProcessWithoutNullStreams; exited: Promise<number | null> }[] = [];
 let view: LaunchedApp | undefined;
@@ -118,7 +129,7 @@ function signInCard(data: string): void {
       actions: [
         {
           id: "open-settings",
-          label: "Open settings",
+          label: OPEN_SETTINGS_LABEL,
           variant: "primary",
           effect: { kind: "open", target: "subscriptions" },
         },
@@ -195,34 +206,33 @@ test("another computer controls a first mate started by a command: its Settings,
   await test.step("a card's Open settings button opens Intelligence here", async () => {
     await showCard(page, PROVIDER_SIGN_IN_TITLE);
     const card = shownCard(page, PROVIDER_SIGN_IN_TITLE);
-    await pressKey(card.getByRole("button", { name: "Open settings", exact: true }), "Enter");
+    await pressKey(card.getByRole("button", { name: OPEN_SETTINGS_LABEL, exact: true }), "Enter");
     await expect(settingsSection(page, "subscriptions")).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Intelligence", exact: true })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await expect(
+      page.getByRole("tab", { name: tabLabel("subscriptions"), exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
   });
 
   await test.step("its Settings sections open by keys, beside this computer's own look and keys", async () => {
     await runFromSearch(app, page, "settings.usage");
     await expect(settingsSection(page, "usage")).toBeVisible();
     const tabs = page.getByRole("tab");
-    for (const name of [
-      "General",
-      "Appearance",
-      "Keyboard",
-      "Projects",
-      "Intelligence",
-      "Usage",
-      "Automation",
-      "Integrations",
-      "Devices",
+    for (const id of [
+      "general",
+      "appearance",
+      "keyboard",
+      "projects",
+      "subscriptions",
+      "usage",
+      "automation",
+      "integrations",
+      "devices",
     ])
-      await expect(tabs.filter({ hasText: name })).toHaveCount(1);
+      await expect(tabs.filter({ hasText: tabLabel(id) })).toHaveCount(1);
   });
 
   await test.step("a projects folder typed here is checked and saved where the first mate lives", async () => {
-    await pressKey(page.getByRole("tab", { name: "Projects", exact: true }), "Enter");
+    await pressKey(page.getByRole("tab", { name: tabLabel("projects"), exact: true }), "Enter");
     const row = settingRow(page, "projects-folder");
     const choose = row.getByRole("button", { name: "Choose folder", exact: true });
     // The button waits for the first mate's answer of where the folder is now.

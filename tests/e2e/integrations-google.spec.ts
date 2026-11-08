@@ -20,6 +20,7 @@ import {
   GOOGLE_DATA_FENCE,
   GOOGLE_OAUTH_CLIENT,
 } from "../../src/core/integrations";
+import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../helpers/calendarStandIn";
 import {
   type GoogleStandIn,
@@ -296,7 +297,22 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
       at: span?.at ?? 0,
     });
     expect(seen.turns[0]).toContain(`Sort these by urgency: ${eventsWords([{ id, summary }])}`);
-    expect(seen.turns[0]).toContain(`on 1 new event - ${GMAIL_MESSAGE_EVENT.label} in Google`);
+    const wake = NOTICE_WORDS.scheduled(
+      {
+        kind: "scheduled",
+        prompt: `Sort these by urgency: ${eventsWords([{ id, summary }])}`,
+        catchUp: false,
+        captainRequested: rule.captainRequested,
+        events: {
+          integration: INTEGRATION_KIND_NAMES.google,
+          label: GMAIL_MESSAGE_EVENT.label,
+          count: 1,
+        },
+        rule: { id: rule.id, ...(rule.name ? { name: rule.name } : {}) },
+      },
+      { ways: [], text: "" },
+    );
+    expect(seen.turns[0]).toContain(wake);
   });
 
   await test.step("Integrations' Data section deletes what the first mate read, by keys, and keeps its conversation", async () => {

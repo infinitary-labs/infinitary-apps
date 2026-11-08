@@ -21,6 +21,16 @@ const books = readdirSync(root).map((id) =>
 );
 const workflows = books.find((book) => book.id === "sequences");
 if (!workflows) throw new Error("The built-in workflows runbook is missing.");
+const programs = books.find((book) => book.id === "programs");
+if (!programs) throw new Error("The built-in programs runbook is missing.");
+
+/** The heading a runbook's first mate guide opens with, as the bundle serves it. */
+function guideHeading(book: (typeof books)[number]): string {
+  if (!book.firstmate) throw new Error(`The ${book.id} runbook has no first mate guide.`);
+  const [heading] = readFileSync(join(root, book.id, book.firstmate), "utf8").split("\n", 1);
+  if (!heading) throw new Error(`The ${book.id} runbook's first mate guide is empty.`);
+  return heading;
+}
 
 test("runbook switches persist and the first mate uses the same named switch", async () => {
   let at = await launchApp({ withMockProvider: true });
@@ -63,13 +73,13 @@ test("runbook switches persist and the first mate uses the same named switch", a
     ).toBeVisible();
     const offPrompt = (at.mockProvider?.requestBodies() ?? [])
       .map(servedInstructions)
-      .find((text) => text.includes("# Programs"));
+      .find((text) => text.includes(guideHeading(programs)));
     expect(offPrompt).toBeDefined();
-    expect(offPrompt).not.toContain("# Common workflows");
+    expect(offPrompt).not.toContain(guideHeading(workflows));
     await ask();
     expect(
       (at.mockProvider?.requestBodies() ?? []).some((body) =>
-        servedInstructions(body).includes("# Common workflows"),
+        servedInstructions(body).includes(guideHeading(workflows)),
       ),
     ).toBe(true);
 

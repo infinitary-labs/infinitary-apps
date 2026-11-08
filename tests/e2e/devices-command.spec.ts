@@ -17,6 +17,8 @@ import {
 import { deviceUpdateBody, deviceUpdateCardId, deviceUpdateTitle } from "@shared/deviceUpdateNudge";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import {
+  deviceState,
+  deviceSummary,
   NO_NEW_WORK,
   PANEL_WORDS,
   RUNS_NO_PROJECT,
@@ -123,7 +125,7 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     await expect(row).toContainText(deviceLabel(builder));
     await expect(row).toContainText(SEEN_WORDS.now);
     await expect(row).toContainText(RUNS_NO_PROJECT);
-    await expect(row).toContainText("idle");
+    await expect(row).toContainText(deviceState({ ...builder, inReach: true }).text);
     const { repo } = await page.evaluate(
       (path) => window.infinitary.repos.setup({ kind: "adopt", path }),
       projectWithOrigin(),
@@ -132,7 +134,9 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
       repo.id,
       deviceId,
     ] as const);
-    await expect(row).toContainText("Runs website");
+    /** What the row says it runs once the project runs there, from the row's own words. */
+    const runsWebsite = deviceSummary({ ...builder, runs: [repo.name] }, undefined);
+    await expect(row).toContainText(runsWebsite);
 
     // Out of reach, Remove asks whether to wait for it; waiting can be taken back.
     await helper.stop();
@@ -170,7 +174,7 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     expect(
       (await page.evaluate(() => window.infinitary.devices.list())).map(({ id }) => id),
     ).toEqual([deviceId]);
-    await expect(row).toContainText("Runs website");
+    await expect(row).toContainText(runsWebsite);
 
     // Back in reach, Remove brings its work here, then takes it off the list.
     const again = run();

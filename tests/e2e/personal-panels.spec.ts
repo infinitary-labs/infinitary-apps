@@ -11,6 +11,7 @@ import { personalPanelRemovedLine } from "../../src/core/personal/panelLines";
 import { mountLine } from "../../src/core/personal/panelMounts";
 import { MANAGED_FILES } from "../../src/core/personal/workspace";
 import { PANEL_STOPPED_LINE } from "../../src/renderer/src/personal/panelBoundaryWords";
+import { PROJECT_ROW_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import { DEFAULT_PERSONAL_PLACEMENT } from "../../src/shared/personal/manifest";
 import { AUTONOMY_SWITCH_NAME, AUTONOMY_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -635,7 +636,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       await page.getByRole("tab", { name: "Projects" }).click();
       const row = projectRow(page, repoId(userDataDir));
       await expect(row).toBeVisible();
-      await expect(row.getByText("builds in place").first()).toBeVisible();
+      await expect(row.getByText(PROJECT_ROW_WORDS.personal).first()).toBeVisible();
       await row.getByRole("button").first().click();
       await expect(row.getByText(AUTONOMY_WORDS.putsInItself)).toBeVisible();
       await expect(row.getByRole("switch", { name: AUTONOMY_SWITCH_NAME })).toHaveCount(0);

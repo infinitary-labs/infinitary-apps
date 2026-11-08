@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { renderBriefKnowledge } from "../../src/core/knowledge/context";
+import { renderDirections } from "../../src/core/knowledge/directions";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -52,6 +54,13 @@ const SOURCE = [
   "export const attempts = 3;",
   "",
 ].join("\n");
+
+/** The standing directions' header line, as every turn that carries them opens. */
+const DIRECTIONS_HEADER = (() => {
+  const header = renderDirections([])?.split("\n")[0];
+  if (!header) throw new Error("renderDirections gave no header line");
+  return header;
+})();
 
 /** A project folder named harbor: one commit with the file the finding cites. */
 function harborRepo(): string {
@@ -195,7 +204,7 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
   await askFirstmate(first.page, continueWords);
   const currentCrewTurn = () =>
     crewmateMessages(mockProvider.requestBodies().slice(start), steering).find(
-      (text) => text.includes(steering) && text.includes("Standing directions."),
+      (text) => text.includes(steering) && text.includes(DIRECTIONS_HEADER),
     );
   await expect.poll(currentCrewTurn).toContain(revisedText);
   expect(currentCrewTurn()).not.toContain(privateText);
@@ -267,7 +276,12 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
     await second.close();
   }
   const seen = crewmateMessages(mockProvider.requestBodies(), KNOWLEDGE_REUSE_PROMPT_MARKER);
-  const brief = seen.find((text) => text.includes("knowledge for harbor (candidates"));
+  // The brief's knowledge header for harbor when candidates matched (no candidate lines).
+  const candidatesHeader = renderBriefKnowledge(
+    { state: "found", searched: "", lines: [] },
+    repo.name,
+  );
+  const brief = seen.find((text) => text.includes(candidatesHeader));
   expect(brief).toBeDefined();
   expect(brief).toContain(revisedText);
   expect(brief).not.toContain(privateText);

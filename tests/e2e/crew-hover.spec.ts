@@ -4,6 +4,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { CREW_HOVER } from "../../src/renderer/src/character/crew/hoverMeasures";
+import { checksSpanWords } from "../../src/shared/checksSpan";
 import { MODEL_WHY_WORDS } from "../../src/shared/modelChoice";
 import { modelDisplayName } from "../../src/shared/modelDisplayName";
 import { modelReasonLine } from "../../src/shared/modelReason";
@@ -17,6 +18,7 @@ import {
   taskStatusOf,
 } from "../../src/shared/taskPresentation";
 import { BOARD_RECENT_MS } from "../../src/shared/tasks";
+import { CHECK_WORDS } from "../../src/shared/vocabulary";
 import {
   crewFormation,
   crewInspecting,
@@ -197,7 +199,15 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
       // Its pull request with its checks as one state and how long they have
       // run by the host's own start (INF-587), on the model's row (INF-2528).
       expect(summary.change).toBe("#612");
-      expect(summary.checks).toMatch(/^running for 1[56]m$/);
+      // The seeded start, read a minute either side of its quarter hour.
+      const running = [15, 16].map((minutes) =>
+        checksSpanWords(
+          CHECK_WORDS.pending,
+          { startedAt: 0, finishedAt: null, joint: "for" },
+          minutes * 60_000,
+        ).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+      );
+      expect(summary.checks).toMatch(new RegExp(`^(?:${running.join("|")})$`));
       expect(summary.checksDot).toBe("running");
       // One footer row: the change sits beside the model, not under it.
       const top = async (fact: TaskFactId) =>

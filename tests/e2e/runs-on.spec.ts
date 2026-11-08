@@ -7,6 +7,7 @@ import { joinHome } from "../../src/core/helper/join";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { NOTHING_SPAWNED } from "../../src/core/pi/crewTools";
 import { catalogRefreshesSettled } from "../../src/core/pi/modelRuntime";
+import { PROJECT_ROW_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import { HERE } from "../../src/shared/deviceNames";
 import { runsHereOnly, runsOnLine } from "../../src/shared/repos";
 import { signInPlace } from "../../src/shared/signIns";
@@ -176,7 +177,7 @@ test("a project runs on a computer chosen in Settings or by asking, and one kept
       .toBe(deviceId);
     // Collapsed, the row says where its tasks run.
     await row.getByRole("button", { name: /^website, / }).click();
-    await expect(row.getByText(`runs ${PLACE.where}`, { exact: true })).toBeVisible();
+    await expect(row.getByText(PROJECT_ROW_WORDS.runs(PLACE.where), { exact: true })).toBeVisible();
 
     // A project kept on this Mac only has nothing to choose.
     const notes = page.locator("[data-project]").filter({ hasText: "notes" });

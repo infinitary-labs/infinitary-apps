@@ -1,5 +1,4 @@
 import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
@@ -24,6 +23,7 @@ import { MOCK_KEY_PROVIDER_ID, mockProviderOverrideModelsJson } from "./mockMode
 import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE, startMockProvider } from "./mockProvider";
 import { movePanelTo } from "./panelLayout";
 import { promptInput } from "./prompt";
+import { seedQuotaFixture } from "./quotaFixtures";
 import { cardLeave, cardReply, cardScroller, showCard, shownCard, shownCardFrame } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -542,11 +542,11 @@ test("a Mac with only Claude: connecting it on the stage closes the gate, and th
   // person's own (tests/e2e/claudeSeat.ts).
   const mockProvider = await startMockProvider();
   mockProvider.failFirstmate(true);
-  const quotaDir = scratchDir("infinitary-quota-fixture-");
-  writeFileSync(
-    join(quotaDir, "snapshot.json"),
-    JSON.stringify({ generatedAt: new Date().toISOString(), fetchedAt: Date.now(), providers: [] }),
-  );
+  const quotaDir = seedQuotaFixture(scratchDir("infinitary-quota-fixture-"), {
+    generatedAt: new Date().toISOString(),
+    fetchedAt: Date.now(),
+    providers: [],
+  });
   const app = await launchApp({
     reuseMockProvider: mockProvider,
     modelsJson: mockProviderOverrideModelsJson,

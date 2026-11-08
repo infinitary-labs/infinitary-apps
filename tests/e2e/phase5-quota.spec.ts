@@ -1,7 +1,8 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { type ModelSlotsView, offeringKey } from "../../src/shared/modelSlots";
+import type { ModelsCatalogView } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
@@ -16,6 +17,7 @@ import {
   removeFromAllLevels,
   setLevelInPanel,
 } from "./modelsBoard";
+import { type QuotaFixtureSnapshot, seedQuotaFixture } from "./quotaFixtures";
 import { seedRetiredCursorStore } from "./savedDataFixtures";
 import { settingsSection } from "./settings";
 import { starterFor } from "./starters";
@@ -50,7 +52,7 @@ const LEFTOVER_CURSOR_LABEL = "Personal Pro";
  * parity path - effective headline, runway verdict, clock markers - is
  * exercised live rather than degrading to text-only meters.
  */
-function buildQuotaFixture(now: number) {
+function buildQuotaFixture(now: number): QuotaFixtureSnapshot {
   const HOUR = 3600 * 1000;
   return {
     generatedAt: new Date(now).toISOString(),
@@ -164,7 +166,7 @@ function buildQuotaFixture(now: number) {
 }
 
 /** The quota reader's model catalog: models Codex really serves, from the starter map. */
-const MODELS_FIXTURE = {
+const MODELS_FIXTURE: ModelsCatalogView = {
   generatedAt: "2026-08-13T20:00:00Z",
   models: [
     {
@@ -286,9 +288,11 @@ function seedAccounts(userDataDir: string): void {
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  const fixtureDir = scratchDir("infinitary-quota-fixture-");
-  writeFileSync(join(fixtureDir, "snapshot.json"), JSON.stringify(buildQuotaFixture(Date.now())));
-  writeFileSync(join(fixtureDir, "models.json"), JSON.stringify(MODELS_FIXTURE));
+  const fixtureDir = seedQuotaFixture(
+    scratchDir("infinitary-quota-fixture-"),
+    buildQuotaFixture(Date.now()),
+    MODELS_FIXTURE,
+  );
   const userDataDir = scratchDir("infinitary-e2e-");
   seedAccounts(userDataDir);
   const claudeClient = writeMockClaudeClient(scratchDir("infinitary-claude-stub-"));

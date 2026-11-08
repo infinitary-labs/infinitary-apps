@@ -1,5 +1,4 @@
 import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { DECISION_MODEL_CATALOG } from "../../src/shared/decisions";
 import { offeringKey, STARTER_SLOTS } from "../../src/shared/modelSlots";
@@ -8,6 +7,7 @@ import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accoun
 import { THIS_DESKTOP } from "./desktop";
 import { launchApp } from "./launch";
 import { alwaysUseSwitch, modelsSection, openModelPanel, setLevelInPanel } from "./modelsBoard";
+import { seedQuotaFixture } from "./quotaFixtures";
 import {
   assertReadableSettingsFeedback,
   boxLoginItems,
@@ -167,9 +167,9 @@ function seedIntelligence() {
     {},
     {},
   );
-  writeFileSync(
-    join(fixtureDir, "snapshot.json"),
-    JSON.stringify({
+  seedQuotaFixture(
+    fixtureDir,
+    {
       generatedAt: new Date().toISOString(),
       fetchedAt: Date.now(),
       providers: [
@@ -183,18 +183,15 @@ function seedIntelligence() {
           windows: [],
         },
       ],
-    }),
-  );
-  writeFileSync(
-    join(fixtureDir, "models.json"),
-    JSON.stringify({
+    },
+    {
       generatedAt: new Date().toISOString(),
       models: Object.keys(starterMap).map((id) => ({
         provider: "codex",
         id,
         label: id,
       })),
-    }),
+    },
   );
   return { userDataDir, fixtureDir };
 }

@@ -1,11 +1,10 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { NO_READER_TEXT, noReaderText } from "../../src/renderer/src/settings/subscriptionsWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountRoot } from "./accountFixtures";
 import { type LaunchedApp, launchApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
+import { seedQuotaFixture } from "./quotaFixtures";
 import { setThemeViaSettings } from "./theme";
 
 /**
@@ -24,16 +23,11 @@ const clients = () => ({
 });
 
 function emptyQuotaFixture(): string {
-  const dir = scratchDir("infinitary-quota-empty-");
-  writeFileSync(
-    join(dir, "snapshot.json"),
-    JSON.stringify({
-      generatedAt: new Date().toISOString(),
-      fetchedAt: Date.now(),
-      providers: [],
-    }),
-  );
-  return dir;
+  return seedQuotaFixture(scratchDir("infinitary-quota-empty-"), {
+    generatedAt: new Date().toISOString(),
+    fetchedAt: Date.now(),
+    providers: [],
+  });
 }
 
 async function openIntelligence(app: LaunchedApp) {

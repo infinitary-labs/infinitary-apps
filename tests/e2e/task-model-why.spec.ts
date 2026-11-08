@@ -1,4 +1,3 @@
-import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
 import { CLAUDE_MODELS } from "../../src/core/claude/claudeModels";
@@ -18,6 +17,7 @@ import { launchSignedInClaude } from "./claudeAccount";
 import type { LaunchedApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
 import { heroShot, regionShot } from "./pictures";
+import { seedQuotaFixture } from "./quotaFixtures";
 import {
   expandDock,
   nowRow,
@@ -43,51 +43,48 @@ const CODEX_ACCOUNT = "acct_cx_work";
 const TITLE = "Audit the alpha release notes";
 
 function seedAccounts(userDataDir: string, fixtureDir: string, now: number): void {
-  writeFileSync(
-    join(fixtureDir, "snapshot.json"),
-    JSON.stringify({
-      generatedAt: new Date(now).toISOString(),
-      fetchedAt: now,
-      providers: [
-        {
-          provider: "claude",
-          label: "Claude",
-          accountId: CLAUDE_ACCOUNT,
-          accountLabel: "Personal",
-          status: "ok",
-          stale: false,
-          measuredAt: now - 4 * 60_000,
-          windows: [
-            {
-              id: "seven_day",
-              label: "weekly",
-              percentRemaining: 20,
-              resetsAtMs: now + 40 * HOUR,
-              windowSeconds: 604_800,
-            },
-          ],
-        },
-        {
-          provider: "codex",
-          label: "Codex",
-          accountId: CODEX_ACCOUNT,
-          accountLabel: "Work",
-          status: "ok",
-          stale: false,
-          measuredAt: now - 3 * 60_000,
-          windows: [
-            {
-              id: "weekly",
-              label: "weekly",
-              percentRemaining: 4,
-              resetsAtMs: now + 30 * HOUR,
-              windowSeconds: 604_800,
-            },
-          ],
-        },
-      ],
-    }),
-  );
+  seedQuotaFixture(fixtureDir, {
+    generatedAt: new Date(now).toISOString(),
+    fetchedAt: now,
+    providers: [
+      {
+        provider: "claude",
+        label: "Claude",
+        accountId: CLAUDE_ACCOUNT,
+        accountLabel: "Personal",
+        status: "ok",
+        stale: false,
+        measuredAt: now - 4 * 60_000,
+        windows: [
+          {
+            id: "seven_day",
+            label: "weekly",
+            percentRemaining: 20,
+            resetsAtMs: now + 40 * HOUR,
+            windowSeconds: 604_800,
+          },
+        ],
+      },
+      {
+        provider: "codex",
+        label: "Codex",
+        accountId: CODEX_ACCOUNT,
+        accountLabel: "Work",
+        status: "ok",
+        stale: false,
+        measuredAt: now - 3 * 60_000,
+        windows: [
+          {
+            id: "weekly",
+            label: "weekly",
+            percentRemaining: 4,
+            resetsAtMs: now + 30 * HOUR,
+            windowSeconds: 604_800,
+          },
+        ],
+      },
+    ],
+  });
 
   seedAccountStore(userDataDir, "openai-codex", CODEX_ACCOUNT, { recursive: true });
   seedAccountAuth(

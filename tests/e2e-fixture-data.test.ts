@@ -1,4 +1,4 @@
-import { readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { appPathsFor, crewmateSessionsDir } from "../src/core/paths";
@@ -81,6 +81,41 @@ describe("owned journey fixture data", () => {
         join(process.env.INFINITARY_FIXTURE_EVIDENCE, "quota-fixture-reading.json"),
         JSON.stringify(reading, null, 2),
       );
+  });
+
+  // INF-2455: the journeys that wrote a snapshot alone into their own scratch folder, with
+  // no catalog, now seed through the owner; the reading is first-launch's empty Claude Mac
+  // and needs-reauth's locked store.
+  it("seeds a snapshot alone into an existing folder, and refuses a reading the reader would refuse", async () => {
+    const dir = scratchDir("infinitary-quota-fixture-");
+    const generatedAt = "2026-09-10T00:00:00.000Z";
+    const snapshot = {
+      generatedAt,
+      providers: [
+        {
+          provider: "claude",
+          label: "Claude",
+          accountId: "acct_claude_personal",
+          accountLabel: "Personal",
+          status: "unavailable" as const,
+          reason: "keychain_locked",
+          stale: false,
+          windows: [],
+        },
+      ],
+    };
+    expect(seedQuotaFixture(dir, snapshot)).toBe(dir);
+    const reading = await createFixtureRefresh(dir, () => Date.parse(generatedAt))();
+    expect(reading.snapshot).toEqual({ ...snapshot, fetchedAt: Date.parse(generatedAt) });
+    expect(reading.catalog).toEqual({ generatedAt, models: [] });
+
+    const refused = scratchDir("infinitary-quota-fixture-");
+    const unread = { ...snapshot.providers[0], status: "signed_out" };
+    // The cast stands for a journey whose reading drifted from the format the reader parses.
+    expect(() =>
+      seedQuotaFixture(refused, { generatedAt, providers: [unread] } as unknown as typeof snapshot),
+    ).toThrow();
+    expect(existsSync(join(refused, "snapshot.json"))).toBe(false);
   });
 
   it("places the crew transcript where the shared path owner and session reader expect it", () => {

@@ -1,11 +1,11 @@
-import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "../../src/shared/quota";
+import { KEYCHAIN_VALUE_FAILURE_DETAIL, type QuotaProviderView } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { expectClaudeConnected, launchSignedInClaude } from "./claudeAccount";
 import { writeMockClaudeClient } from "./mockClaudeClient";
+import { seedQuotaFixture } from "./quotaFixtures";
 
 /**
  * CD-3=A: the terminal needs_reauth state is a card plus the Subscriptions
@@ -40,29 +40,22 @@ function seedClaudeAccount(userDataDir: string) {
 
 function writeQuotaFixture(
   dir: string,
-  provider: {
-    status: string;
-    reason?: string;
-    detail?: string;
-  },
+  provider: Pick<QuotaProviderView, "status" | "reason" | "detail">,
 ) {
-  writeFileSync(
-    join(dir, "snapshot.json"),
-    JSON.stringify({
-      generatedAt: "2026-09-10T00:00:00.000Z",
-      providers: [
-        {
-          provider: "claude",
-          label: "Claude",
-          accountId: CLAUDE_PERSONAL,
-          accountLabel: "Personal",
-          stale: false,
-          windows: [],
-          ...provider,
-        },
-      ],
-    }),
-  );
+  seedQuotaFixture(dir, {
+    generatedAt: "2026-09-10T00:00:00.000Z",
+    providers: [
+      {
+        provider: "claude",
+        label: "Claude",
+        accountId: CLAUDE_PERSONAL,
+        accountLabel: "Personal",
+        stale: false,
+        windows: [],
+        ...provider,
+      },
+    ],
+  });
 }
 
 async function cardTitles(page: { evaluate: (fn: () => Promise<string[]>) => Promise<string[]> }) {

@@ -1,4 +1,3 @@
-import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -8,6 +7,7 @@ import { type GitLabStub, seedGitLabSignIn, startGitLabStub } from "./gitlabStub
 import { type LaunchedApp, launchApp } from "./launch";
 import { seedPersonalWorkspace } from "./personalFixtures";
 import { heroShot, regionShot } from "./pictures";
+import { seedQuotaFixture } from "./quotaFixtures";
 
 /**
  * Coherence by construction (the talk-to-personalize plan, Step 3): a
@@ -42,56 +42,52 @@ test.describe("the fixture extensions the data skills teach", () => {
     // `quota.snapshot` read (Step 4), so the app's sensor is pointed at a
     // fixture carrying the three states the honesty rules are about: a real
     // reading, a carried-forward one, and one the sensor could not measure.
-    const quotaFixtureDir = scratchDir("infinitary-quota-fixture-");
-    writeFileSync(
-      join(quotaFixtureDir, "snapshot.json"),
-      JSON.stringify({
-        generatedAt: "2026-09-18T00:00:00.000Z",
-        providers: [
-          {
-            provider: "claude",
-            label: "Claude",
-            accountLabel: "Personal",
-            status: "ok",
-            stale: false,
-            windows: [
-              {
-                id: "session",
-                label: "session",
-                percentRemaining: 62,
-                pace: "behind",
-                resetText: "resets 18:00",
-              },
-              {
-                id: "weekly",
-                label: "weekly",
-                percentRemaining: 34,
-                pace: "ahead",
-                resetText: "resets Fri",
-              },
-            ],
-          },
-          {
-            provider: "grok",
-            label: "Grok",
-            accountLabel: "Work",
-            status: "ok",
-            stale: true,
-            measuredAt: Date.now() - 3 * 60 * 60 * 1000,
-            windows: [{ id: "premium", label: "premium", pace: "unknown" }],
-          },
-          {
-            provider: "codex",
-            label: "Codex",
-            accountLabel: "Team",
-            status: "not_measured",
-            stale: false,
-            detail: "Signed in; this account exposed no usage window on that read.",
-            windows: [],
-          },
-        ],
-      }),
-    );
+    const quotaFixtureDir = seedQuotaFixture(scratchDir("infinitary-quota-fixture-"), {
+      generatedAt: "2026-09-18T00:00:00.000Z",
+      providers: [
+        {
+          provider: "claude",
+          label: "Claude",
+          accountLabel: "Personal",
+          status: "ok",
+          stale: false,
+          windows: [
+            {
+              id: "session",
+              label: "session",
+              percentRemaining: 62,
+              pace: "behind",
+              resetText: "resets 18:00",
+            },
+            {
+              id: "weekly",
+              label: "weekly",
+              percentRemaining: 34,
+              pace: "ahead",
+              resetText: "resets Fri",
+            },
+          ],
+        },
+        {
+          provider: "grok",
+          label: "Grok",
+          accountLabel: "Work",
+          status: "ok",
+          stale: true,
+          measuredAt: Date.now() - 3 * 60 * 60 * 1000,
+          windows: [{ id: "premium", label: "premium", pace: "unknown" }],
+        },
+        {
+          provider: "codex",
+          label: "Codex",
+          accountLabel: "Team",
+          status: "not_measured",
+          stale: false,
+          detail: "Signed in; this account exposed no usage window on that read.",
+          windows: [],
+        },
+      ],
+    });
     // The proposed-changes fixture reads the app's OWN `forge.changes` read,
     // which the app answers from GitHub with its in-app sign-in (git
     // integration PR 1.2): a local stand-in for GitHub and a sign-in made.

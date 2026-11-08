@@ -111,6 +111,24 @@ export function lintFixtureOwners(files: string[]): FixtureOwnerDiagnostic[] {
         return false;
       return ts.forEachChild(node, (child) => homePath(child, seen)) ?? false;
     };
+    // The quota fixture reader's snapshot file, named in the destination or in a variable holding it.
+    const quotaEnvelope = (node: ts.Node, seen = new Set<ts.Symbol>()): boolean => {
+      if (ts.isStringLiteralLike(node)) return node.text === "snapshot.json";
+      if (ts.isIdentifier(node)) {
+        const symbol = checker.getSymbolAtLocation(node);
+        if (!symbol || seen.has(symbol)) return false;
+        const declaration = symbol.valueDeclaration;
+        return !!(
+          declaration &&
+          ts.isVariableDeclaration(declaration) &&
+          declaration.initializer &&
+          quotaEnvelope(declaration.initializer, new Set([...seen, symbol]))
+        );
+      }
+      if (ts.isCallExpression(node) && !/^(?:join|resolve)$/.test(calleeName(node.expression)))
+        return false;
+      return ts.forEachChild(node, (child) => quotaEnvelope(child, seen)) ?? false;
+    };
     const visit = (node: ts.Node) => {
       if (
         !declared &&
@@ -147,6 +165,11 @@ export function lintFixtureOwners(files: string[]): FixtureOwnerDiagnostic[] {
             report(
               node,
               "Move home/userData fixture writes to an imported owner declaring @journey-area. A journey proving a mutation or authoring project input names it adjacently with e2e-fixture: mutation|input -- <reason> (INF-2394).",
+            );
+          else if (destinations.some((destination) => quotaEnvelope(destination)))
+            report(
+              node,
+              "Seed the quota reading through seedQuotaFixture (tests/e2e/quotaFixtures.ts), which owns snapshot.json and models.json and checks them against the reader's schemas (INF-2455).",
             );
         }
       }

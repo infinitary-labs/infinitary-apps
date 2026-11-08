@@ -1,5 +1,3 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { NOT_IN_USE, STARTING_LEVELS_SUMMARY } from "../../src/renderer/src/settings/modelsWords";
 import {
@@ -15,6 +13,7 @@ import { launchSignedInClaude } from "./claudeAccount";
 import type { LaunchedApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
 import { modelsSection } from "./modelsBoard";
+import { seedQuotaFixture } from "./quotaFixtures";
 import { pressKey, pressWindowKey } from "./windowKeys";
 
 /**
@@ -355,8 +354,10 @@ function anyOf(words: readonly string[]): RegExp {
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  const fixtureDir = scratchDir("infinitary-quota-fixture-");
-  writeFileSync(join(fixtureDir, "snapshot.json"), JSON.stringify(buildQuotaFixture(Date.now())));
+  const fixtureDir = seedQuotaFixture(
+    scratchDir("infinitary-quota-fixture-"),
+    buildQuotaFixture(Date.now()),
+  );
   const userDataDir = scratchDir("infinitary-e2e-");
   seedAccounts(userDataDir);
   launched = await launchSignedInClaude(ID.claudeMax, {
@@ -633,8 +634,7 @@ test("Subscriptions renders model-only and incomplete allowance scope projection
   ]);
   // This scope really does run out before reset, so its warning must survive.
   setWindows(ID.claudeMax, [{ ...model, percentRemaining: 10 }]);
-  const fixtureDir = scratchDir("infinitary-forecast-fixture-");
-  writeFileSync(join(fixtureDir, "snapshot.json"), JSON.stringify(fixture));
+  const fixtureDir = seedQuotaFixture(scratchDir("infinitary-forecast-fixture-"), fixture);
   const userDataDir = scratchDir("infinitary-forecast-");
   seedAccounts(userDataDir);
   const app = await launchSignedInClaude(ID.claudeMax, {

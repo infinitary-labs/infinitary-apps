@@ -29,6 +29,7 @@ import {
 } from "./mockProvider";
 import { modelsSection } from "./modelsBoard";
 import { promptInput } from "./prompt";
+import { seedQuotaFixture } from "./quotaFixtures";
 import { feedLine, startedLine, taskKey } from "./rails";
 
 /**
@@ -257,10 +258,9 @@ test.describe("the surface", () => {
   }
 
   test.beforeAll(async () => {
-    const fixtureDir = scratchDir("infinitary-decisions-quota-");
-    writeFileSync(
-      join(fixtureDir, "snapshot.json"),
-      JSON.stringify({
+    const fixtureDir = seedQuotaFixture(
+      scratchDir("infinitary-decisions-quota-"),
+      {
         generatedAt: new Date().toISOString(),
         fetchedAt: Date.now(),
         providers: [
@@ -274,14 +274,11 @@ test.describe("the surface", () => {
             windows: [{ id: "weekly", label: "weekly", percentRemaining: 62 }],
           },
         ],
-      }),
-    );
-    writeFileSync(
-      join(fixtureDir, "models.json"),
-      JSON.stringify({
+      },
+      {
         generatedAt: new Date().toISOString(),
         models: [{ provider: "codex", id: "gpt-5.5", label: "gpt-5.5" }],
-      }),
+      },
     );
     const userDataDir = scratchDir("infinitary-e2e-decisions-ui-");
     seedCodexAccount(userDataDir);
@@ -509,11 +506,10 @@ test.describe("the calls", () => {
  * cheapest first.
  */
 function claudeQuotaFixture(withCatalog: boolean): string {
-  const dir = scratchDir("infinitary-decisions-claude-quota-");
   const now = Date.now();
-  writeFileSync(
-    join(dir, "snapshot.json"),
-    JSON.stringify({
+  return seedQuotaFixture(
+    scratchDir("infinitary-decisions-claude-quota-"),
+    {
       generatedAt: new Date(now).toISOString(),
       fetchedAt: now,
       providers: [
@@ -527,22 +523,18 @@ function claudeQuotaFixture(withCatalog: boolean): string {
           windows: [{ id: "five_hour", label: "session", percentRemaining: 80 }],
         },
       ],
-    }),
+    },
+    withCatalog
+      ? {
+          generatedAt: new Date(now).toISOString(),
+          models: ["claude-haiku-5-5", "claude-sonnet-5", "claude-opus-5-5"].map((id) => ({
+            provider: "claude",
+            id,
+            label: id,
+          })),
+        }
+      : undefined,
   );
-  if (withCatalog) {
-    writeFileSync(
-      join(dir, "models.json"),
-      JSON.stringify({
-        generatedAt: new Date(now).toISOString(),
-        models: ["claude-haiku-5-5", "claude-sonnet-5", "claude-opus-5-5"].map((id) => ({
-          provider: "claude",
-          id,
-          label: id,
-        })),
-      }),
-    );
-  }
-  return dir;
 }
 
 for (const world of [
@@ -726,10 +718,9 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     { openrouter: accountId },
     { mode: 0o600 },
   );
-  const fixtureDir = scratchDir("infinitary-openrouter-decisions-quota-");
-  writeFileSync(
-    join(fixtureDir, "snapshot.json"),
-    JSON.stringify({
+  const fixtureDir = seedQuotaFixture(
+    scratchDir("infinitary-openrouter-decisions-quota-"),
+    {
       generatedAt: new Date().toISOString(),
       fetchedAt: Date.now(),
       providers: [
@@ -743,14 +734,11 @@ test("OpenRouter selection uses its account, records what served it, remembers c
           windows: [],
         },
       ],
-    }),
-  );
-  writeFileSync(
-    join(fixtureDir, "models.json"),
-    JSON.stringify({
+    },
+    {
       generatedAt: new Date().toISOString(),
       models: [{ provider: "openrouter", id: "openai/gpt-4o-mini", label: "GPT-4o mini" }],
-    }),
+    },
   );
   const env = {
     INFINITARY_QUOTA_FIXTURE_DIR: fixtureDir,

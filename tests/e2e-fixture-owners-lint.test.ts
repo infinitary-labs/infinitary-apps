@@ -84,6 +84,21 @@ launchApp({ prepareHome(home) { seed(home); } });
     expect(lintFixtureOwners([declared])).toEqual([]);
   });
 
+  // INF-2455: the raw forms come from the subscriptions-instruments, task-model-why and
+  // allowance-pending-on-connect journeys before they moved to seedQuotaFixture.
+  it("refuses a quota snapshot written by hand in a scratch folder, not other scratch files", () => {
+    const { file } = fixture(`
+const fixtureDir = scratchDir("infinitary-quota-fixture-");
+writeFileSync(join(fixtureDir, "snapshot.json"), JSON.stringify(buildQuotaFixture(Date.now())));
+const snapshot = join(fixtureDir, "snapshot.json");
+writeFileSync(snapshot, JSON.stringify({ generatedAt, providers: [] }));
+writeFileSync(test.info().outputPath("snapshot.json.txt"), log);
+writeFileSync(join(fixtureDir, "notes.md"), "snapshot.json");
+seedQuotaFixture(fixtureDir, { generatedAt, providers: [] });
+`);
+    expect(lintFixtureOwners([file]).map(({ line }) => line)).toEqual([3, 5]);
+  });
+
   it("permits only adjacent reasoned mutation/input declarations, not empty or file-wide waivers", () => {
     const { file } = fixture(`
 // e2e-fixture: mutation -- reproduce another writer replacing the saved format

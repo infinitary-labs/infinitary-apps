@@ -36,6 +36,19 @@ const WINDOW = { width: 1280, height: 800 };
 
 let launched: LaunchedApp;
 
+/**
+ * A length as the viewer's player shows it, `m:ss`, from a recording's own
+ * duration: the format is `clock` in `PictureViewer.tsx`, which exports nothing
+ * a spec can load, so only the seconds come from their owner here.
+ */
+function clock(ms: number): string {
+  const whole = Math.floor(ms / 1000);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+}
+
+/** The recording's length on the player's clock. */
+const LENGTH = clock(DEMO_RECORDING.durationMs);
+
 function body(page: Page): FrameLocator {
   return cardBody(page, DEMO_CARD_TITLE);
 }
@@ -116,7 +129,7 @@ test("the Play button plays the demo once in the viewer, Replay plays it again, 
   await pressKey(play, "Enter");
   await expect(viewer(page)).toBeVisible();
   await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(DEMO_CAPTION);
-  await expect(viewer(page).locator("[data-picture-count]")).toHaveText("0:03");
+  await expect(viewer(page).locator("[data-picture-count]")).toHaveText(LENGTH);
 
   // It plays from the start, one pass, and stops on its last picture.
   await expect.poll(async () => (await playerState(page)).paused).toBe(false);
@@ -164,7 +177,7 @@ test("the poster opens the viewer paused on it, and the slider seeks by keys", a
   await expect.poll(async () => Math.round((await playerState(page)).time)).toBe(1);
   await page.keyboard.press("ArrowLeft");
   await expect.poll(async () => Math.round((await playerState(page)).time)).toBe(0);
-  await expect(viewer(page).locator("[data-demo-time]")).toHaveText("0:00 / 0:03");
+  await expect(viewer(page).locator("[data-demo-time]")).toHaveText(`${clock(0)} / ${LENGTH}`);
   // Seeking plays nothing.
   expect((await playerState(page)).paused).toBe(true);
   await page.keyboard.press("Escape");

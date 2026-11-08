@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
-import { WELCOME_STARTERS, WELCOME_TITLE, WELCOME_WORDS } from "@shared/welcome";
+import { WELCOME_CHAPTERS, WELCOME_STARTERS, WELCOME_TITLE, WELCOME_WORDS } from "@shared/welcome";
 import { GATE_HOME_TITLE, gateIntro } from "../../src/renderer/src/app/firstRunGateWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { expectClaudeConnected } from "./claudeAccount";
@@ -385,7 +385,7 @@ test("the welcome shows one part per press by keys in both themes at the minimum
   };
   const atRest = {
     chapter: 1,
-    count: "1 / 5",
+    count: `1 / ${WELCOME_CHAPTERS}`,
     parts: ["firstmate", "box"],
     words: WELCOME_WORDS.box,
     lit: ["box"],
@@ -404,7 +404,7 @@ test("the welcome shows one part per press by keys in both themes at the minimum
       await press(next);
       await expect.poll(reading).toEqual({
         chapter: 2,
-        count: "2 / 5",
+        count: `2 / ${WELCOME_CHAPTERS}`,
         parts: ["box", "card"],
         words: WELCOME_WORDS.box,
         lit: ["card"],
@@ -429,7 +429,7 @@ test("the welcome shows one part per press by keys in both themes at the minimum
       await press(next);
       await expect.poll(reading).toEqual({
         chapter: 5,
-        count: "5 / 5",
+        count: `${WELCOME_CHAPTERS} / ${WELCOME_CHAPTERS}`,
         parts: ["box", "card", "activity", "tasks"],
         words: WELCOME_WORDS.end,
         lit: ["box"],

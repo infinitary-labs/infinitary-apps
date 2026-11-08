@@ -2,12 +2,18 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { askedUnderCardLine } from "../../src/core/orchestrator/threadWords";
+import { initOverflowDir, type MessageFile, withPastedFiles } from "../../src/core/overflow";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { CARD_REPLY_MAX_CHARS, type Card } from "../../src/shared/cards";
-import { COMPOSER_NOTICE_WORDS } from "../../src/shared/composer";
+import {
+  COMPOSER_NOTICE_WORDS,
+  lineCount,
+  normalizeLineEndings,
+  PASTED_TEXT_WORDS,
+} from "../../src/shared/composer";
 import { reportSummary } from "../../src/shared/feed";
 import { applyTaskBoardDelta, type TaskBoard, type TaskBoardDelta } from "../../src/shared/tasks";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
@@ -918,6 +924,24 @@ test("ready waiting follows reachable choices through a reply, reload and return
   }
 });
 
+/**
+ * The pointer line a reply's pasted file carries, and the words after its
+ * path: `withPastedFiles`, the composer a card reply goes through
+ * (`src/core/overflow.ts`), run on the spec's own paste. The copy it writes
+ * here is removed.
+ */
+function pastePointer(paste: string): { before: string; after: string } {
+  initOverflowDir(scratchDir("infinitary-paste-pointer-"));
+  const kept: MessageFile[] = [];
+  const sent = withPastedFiles("", [{ text: paste }], kept);
+  const path = kept[0]?.path;
+  if (!path) throw new Error("withPastedFiles kept no file for the paste");
+  const at = sent.indexOf(path);
+  const head = sent.slice(0, at);
+  // The pointer is the line after the preview.
+  return { before: head.slice(head.lastIndexOf("\n") + 1), after: sent.slice(at + path.length) };
+}
+
 test("a large paste in a card reply becomes a file and reaches the author with its pointer", async () => {
   const { page } = launched;
   await sendPrompt(page, `${FM_THREAD_PROMPT_MARKER}`);
@@ -932,25 +956,29 @@ test("a large paste in a card reply becomes a file and reaches the author with i
     );
   }, text);
   await expect(box).toHaveValue("");
-  await expect(cardReply(page).row.locator("[data-voice-input-paste]")).toContainText("file ·");
+  await expect(cardReply(page).row.locator("[data-voice-input-paste]")).toContainText(
+    PASTED_TEXT_WORDS.meta(lineCount(normalizeLineEndings(text)), Buffer.byteLength(text)),
+  );
   const evidence = process.env.FM_PASTE_EVIDENCE;
   if (evidence) await page.screenshot({ path: join(evidence, "reply-file.png") });
   const cardId = (await cardReply(page).row.getAttribute("data-card-reply")) ?? "";
   await box.press("Enter");
+  const pointer = pastePointer(text);
   await expect
     .poll(async () => {
       const thread = await page.evaluate((id) => window.infinitary.cards.thread(id), cardId);
       return thread.messages.some(
-        (message) => message.who === "captain" && message.text.includes("full text:"),
+        (message) => message.who === "captain" && message.text.includes(pointer.before),
       );
     })
     .toBe(true);
   const thread = await page.evaluate((id) => window.infinitary.cards.thread(id), cardId);
   const words =
     thread.messages.find(
-      (message) => message.who === "captain" && message.text.includes("full text:"),
+      (message) => message.who === "captain" && message.text.includes(pointer.before),
     )?.text ?? "";
-  const file = /full text: (.+)\]/.exec(words)?.[1] ?? "";
+  const from = words.indexOf(pointer.before) + pointer.before.length;
+  const file = words.slice(from, words.indexOf(pointer.after, from));
   expect(readFileSync(file, "utf8")).toBe(text);
   if (evidence) writeFileSync(join(evidence, "reply-sent.txt"), words);
 });

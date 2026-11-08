@@ -6,6 +6,7 @@ import { hostEnv } from "../../src/core/hostEnv";
 import { armWatch } from "../../src/core/orchestrator/checkWatch";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { SCRATCH_PROJECT_NAME } from "../../src/core/storage/projectStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { taskHoldWords } from "../../src/shared/taskHold";
@@ -383,7 +384,7 @@ test("grouped waits reconcile into kanban and task card, the hover stays short, 
     await expect(list).toHaveText(`${owner.key} ${owner.title}`);
     await expect(list).toHaveAttribute(
       "aria-label",
-      `${owner.key} · ${owner.title} · Scratch · ${taskStatusLabel(taskStatusOf(owner))}`,
+      `${owner.key} · ${owner.title} · ${SCRATCH_PROJECT_NAME} · ${taskStatusLabel(taskStatusOf(owner))}`,
     );
     await expect(list.locator("[data-board-wait]")).toHaveCount(0);
     await expect(nowRow(page, waiter.key)).toHaveText(`${waiter.key} ${waiter.title}`);

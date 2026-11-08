@@ -2,7 +2,9 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask, type TaskSeed } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { KEYBOARD_COMMANDS } from "../../src/shared/keyboard";
 import { scratchDir } from "../helpers/scratchDirs";
+import { hintOf } from "./desktop";
 import { launchApp } from "./launch";
 import { within } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
@@ -317,10 +319,13 @@ test("a person gives Go to the next part of the window a key of their own", asyn
   const launched = await launchApp();
   try {
     const { app, page } = launched;
+    // The command's own key before anyone changes it, and how this computer draws it.
+    const defaultKey = KEYBOARD_COMMANDS["regions.next"].keys[0].key;
+    const defaultHint = hintOf("regions.next");
     const keyboard = keyboardSettings(page);
     await pressWindowKey(app, "k", ["meta"]);
     const search = commandSearch(page);
-    await expect(search.row("regions.next").locator("kbd")).toHaveText("F6");
+    await expect(search.row("regions.next").locator("kbd")).toHaveText(defaultHint);
     await search.field.fill("keyboard");
     await pressWindowKey(app, "Enter");
     await expect(keyboard.search).toBeFocused();
@@ -353,7 +358,7 @@ test("a person gives Go to the next part of the window a key of their own", asyn
     const to = await regionAfter(app, page, from, "F7");
     expect(new Set([from, to])).toEqual(new Set(["settings-tabs", "settings-section"]));
     expect(await movesSoFar()).toEqual([from, to]);
-    await pressWindowKey(app, "F6");
+    await pressWindowKey(app, defaultKey);
     // A later window key: once it has opened search, F6 has been heard too.
     await pressWindowKey(app, "k", ["meta"]);
     await expect(search.dialog).toBeVisible();
@@ -363,7 +368,7 @@ test("a person gives Go to the next part of the window a key of their own", asyn
 
     await keyboard.resetAll.click();
     await keyboard.resetAll.click();
-    await expect(keyboard.keys("regions.next").locator("kbd")).toHaveText(["F6"]);
+    await expect(keyboard.keys("regions.next").locator("kbd")).toHaveText([defaultHint]);
   } finally {
     await launched.close();
   }

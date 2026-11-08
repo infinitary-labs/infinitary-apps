@@ -69,6 +69,8 @@ const COMPUTER_GITHUB = "gho_e2e_computer_7731";
 const ASKPASS = join(process.cwd(), "resources", "git-askpass");
 /** Another macOS user on this Mac, as the computer says it runs as. */
 const BUILDER = { name: "builder", uid: (process.getuid?.() ?? userInfo().uid) + 1000 };
+/** How the home names that computer in its sign-ins ("Builder"). */
+const PLACE = signInPlace({ name: "Mac mini", user: BUILDER.name, onThisMac: true });
 
 function token(claims: Record<string, unknown>): string {
   const part = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
@@ -120,10 +122,12 @@ function standInProviders(): () => void {
 /** The access in the Claude login Claude Code keeps on the computer. */
 const COMPUTER_CLAUDE = "e2e-claude-access-7731";
 
-/**
- * The allowance's stand-in readings: Codex, 12% used of its session, and
- * Claude, 27% used of its session for the computer's own login alone.
- */
+/** The share of Codex's session the stand-in reads as used; its row shows the rest left. */
+const CODEX_USED = 12;
+/** The share of Claude's session used, for the computer's own login alone. */
+const CLAUDE_USED = 27;
+
+/** The allowance's stand-in readings, `CODEX_USED` and `CLAUDE_USED`. */
 const allowance: QuotaHttp = async (url, init) => {
   if (url === "https://chatgpt.com/backend-api/wham/usage")
     return {
@@ -132,7 +136,7 @@ const allowance: QuotaHttp = async (url, init) => {
         plan_type: "plus",
         rate_limit: {
           primary_window: {
-            used_percent: 12,
+            used_percent: CODEX_USED,
             limit_window_seconds: 18_000,
             reset_after_seconds: 3_600,
           },
@@ -145,7 +149,7 @@ const allowance: QuotaHttp = async (url, init) => {
           status: 200,
           json: {
             five_hour: {
-              utilization: 27,
+              utilization: CLAUDE_USED,
               resets_at: new Date(Date.now() + 2 * 3_600_000).toISOString(),
             },
           },
@@ -373,9 +377,9 @@ test("a computer signs in to its own subscriptions from Settings here, and nothi
   await group.locator('[data-connect-provider="openrouter"]').click();
   await group.getByRole("button", { name: "API key", exact: true }).click();
   const aside = group.locator('[data-device-sign-in-provider="openrouter"]');
-  const send = aside.getByRole("button", { name: "Send to Builder", exact: true });
+  const send = aside.getByRole("button", { name: `Send to ${PLACE.who}`, exact: true });
   await expect(send).toBeDisabled();
-  await aside.getByLabel("The key for Builder").fill(KEY);
+  await aside.getByLabel(`The key for ${PLACE.who}`).fill(KEY);
   await send.click();
   await expect(group.locator("[data-account-row]")).toHaveCount(1);
   await expect(group.locator('[data-account-row]:has-text("OpenRouter")')).toHaveCount(1);
@@ -384,7 +388,7 @@ test("a computer signs in to its own subscriptions from Settings here, and nothi
     feedLineOf(page, {
       type: "device_signed_in",
       deviceId,
-      who: "Builder",
+      who: PLACE.who,
       provider: "OpenRouter",
     }),
   ).toBeVisible();
@@ -417,11 +421,11 @@ test("a computer signs in to its own subscriptions from Settings here, and nothi
   const [link = ""] = await opened(app);
   const endsOn = browserEndsOn(link, PASTED);
   expect(new URL(endsOn).hostname).toBe("localhost");
-  await codex.getByLabel("The address for Builder").fill(endsOn);
-  await codex.getByRole("button", { name: "Send to Builder", exact: true }).click();
+  await codex.getByLabel(`The address for ${PLACE.who}`).fill(endsOn);
+  await codex.getByRole("button", { name: `Send to ${PLACE.who}`, exact: true }).click();
   await expect(group.locator("[data-account-row]")).toHaveCount(3);
   const codexRow = group.locator('[data-account-row]:has-text("Codex")');
-  await expect(codexRow).toContainText("88%");
+  await expect(codexRow).toContainText(`${100 - CODEX_USED}%`);
 
   // Nothing the home keeps holds what was typed; the computer's own store does.
   const readable = JSON.stringify([
@@ -448,12 +452,12 @@ test("a computer signs in to Claude with the link opened here and the code it sh
   await group.locator('[data-connect-provider="anthropic-claude"]').click();
   const aside = group.locator('[data-device-sign-in-provider="anthropic-claude"]');
   await expect(aside.getByRole("button", { name: "Open the link", exact: true })).toBeVisible();
-  await aside.getByLabel("The code for Builder").fill(CLAUDE_CODE);
-  await aside.getByRole("button", { name: "Send to Builder", exact: true }).click();
+  await aside.getByLabel(`The code for ${PLACE.who}`).fill(CLAUDE_CODE);
+  await aside.getByRole("button", { name: `Send to ${PLACE.who}`, exact: true }).click();
   await expect(group.locator('[data-account-row]:has-text("Claude")')).toHaveCount(1);
   await page.keyboard.press("Escape");
   await expect(
-    feedLineOf(page, { type: "device_signed_in", deviceId, who: "Builder", provider: "Claude" }),
+    feedLineOf(page, { type: "device_signed_in", deviceId, who: PLACE.who, provider: "Claude" }),
   ).toBeVisible();
 
   // Its client there took the code once, and opened no browser there.
@@ -467,7 +471,7 @@ test("a computer signs in to Claude with the link opened here and the code it sh
   await openIntelligence(page);
   const claudeRow = group.locator('[data-account-row]:has-text("Claude")');
   await expect(claudeRow).toHaveAttribute("data-row-kind", "ok");
-  await expect(claudeRow).toContainText("73%");
+  await expect(claudeRow).toContainText(`${100 - CLAUDE_USED}%`);
   expect(saved.queries.filter((query) => query.interactive === true)).toEqual([]);
 
   // Disconnect signs that computer out of the Claude login Firstmate made
@@ -480,7 +484,7 @@ test("a computer signs in to Claude with the link opened here and the code it sh
     feedLineOf(page, {
       type: "device_signed_out",
       deviceId,
-      who: "Builder",
+      who: PLACE.who,
       provider: "Claude",
       login: "signed-out",
     }),

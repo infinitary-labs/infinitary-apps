@@ -64,6 +64,8 @@ export type HarborKnowledge = {
   website: string;
   /** The task the harbor crewmate worked on, which declared the use. */
   taskKey: string;
+  /** Every concept the seed recorded, in both projects, by id: what the panel counts. */
+  concepts: readonly string[];
 };
 
 function gitRepo(dir: string, files: Record<string, string>): string {
@@ -174,11 +176,14 @@ export async function seedKnowledge(userDataDir: string): Promise<HarborKnowledg
   };
   const checker: KnowledgeActor = { ...crew, taskId: "harbor-check" };
   let request = 0;
+  const concepts: string[] = [];
   const record = async (actor: KnowledgeActor, input: Omit<RecordInput, "requestId">) => {
     request += 1;
     const outcome = await service.record(actor, { requestId: `seed-${request}`, ...input });
     if (!outcome.committed) throw new Error(`seed refused: ${outcome.text}`);
-    return outcome.ids[0] as string;
+    const id = outcome.ids[0] as string;
+    if (input.action === "publish" && input.kind === "concept") concepts.push(id);
+    return id;
   };
   const concept = (title: string, explanation: string, extra: Partial<RecordInput> = {}) =>
     record(crew, { action: "publish", kind: "concept", title, explanation, ...extra });
@@ -402,5 +407,6 @@ export async function seedKnowledge(userDataDir: string): Promise<HarborKnowledg
     retains,
     website,
     taskKey,
+    concepts,
   };
 }

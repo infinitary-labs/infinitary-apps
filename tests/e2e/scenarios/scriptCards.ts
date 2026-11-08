@@ -4,6 +4,9 @@ import { CARD_FETCH_PROBE_PATH, SCRIPT_CARD_TITLES, type Scenario } from "../moc
 /** Marker prompt: the mock crewmate emits three cards whose bodies carry scripts (WI-16). */
 export const SCRIPT_CARDS_PROMPT_MARKER = "show scripted cards";
 
+/** The canvas card's canvas, which its script paints edge to edge. */
+export const SCRIPT_CANVAS = { width: 120, height: 40 } as const;
+
 function scriptCardToolCalls(port: number): ScriptedCall[] {
   const note = (title: string, body: string): ScriptedCall => ({
     name: "emit_card",
@@ -12,10 +15,12 @@ function scriptCardToolCalls(port: number): ScriptedCall[] {
   return [
     note(
       SCRIPT_CARD_TITLES.canvas,
-      '<p>Drawn by the card.</p><canvas width="120" height="40"></canvas>' +
+      "<p>Drawn by the card.</p>" +
+        `<canvas width="${SCRIPT_CANVAS.width}" height="${SCRIPT_CANVAS.height}"></canvas>` +
         '<script>const sample = "</body>"; const canvas = document.querySelector("canvas");' +
         'const ink = getComputedStyle(document.body).getPropertyValue("--accent").trim() || "cyan";' +
-        'const pen = canvas.getContext("2d"); pen.fillStyle = ink; pen.fillRect(0, 0, 120, 40);</script>',
+        'const pen = canvas.getContext("2d"); pen.fillStyle = ink; ' +
+        `pen.fillRect(0, 0, ${SCRIPT_CANVAS.width}, ${SCRIPT_CANVAS.height});</script>`,
     ),
     note(
       SCRIPT_CARD_TITLES.fetch,

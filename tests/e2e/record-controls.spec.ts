@@ -6,6 +6,10 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import {
+  FRAME_WATCHDOG_INTERVAL_MS,
+  FRAME_WATCHDOG_MISSES,
+} from "../../src/renderer/src/plugins/frames/frameController";
 import type { Card } from "../../src/shared/cards";
 import { RECORD_NEXT_LABELS } from "../../src/shared/recordBar";
 import {
@@ -473,9 +477,10 @@ async function openRecordFromPanel(page: Page, taskId: string): Promise<void> {
  * How long a card or a record whose body frame has not drawn stays unseen
  * before it appears as it is: the stage's hold, the frame watchdog's budget
  * (`HOLD_LIMIT_MS`, FRAME_WATCHDOG_INTERVAL_MS x FRAME_WATCHDOG_MISSES),
- * plus slack.
+ * plus slack. `HOLD_LIMIT_MS` is not exported (`CardLayer.tsx`), so its
+ * product is taken from the watchdog constants it is made of.
  */
-const HOLD_WINDOW_MS = 1_000 * 4 + 3_000;
+const HOLD_WINDOW_MS = FRAME_WATCHDOG_INTERVAL_MS * FRAME_WATCHDOG_MISSES + 3_000;
 
 test("while a decision card waits the bar keeps Drop task, and Show the card brings it forward", async () => {
   const { page } = launched;

@@ -17,6 +17,9 @@ import { heroShot, regionShot } from "./pictures";
 import { setThemeViaSettings } from "./theme";
 import { focusOn, pressKey, runFromSearch, untilFocused } from "./windowKeys";
 
+/** The stable release the stand-in serves in these channel tests, named once and passed to it. */
+const STABLE_TARGET = "0.5.0";
+
 // INF-640: keyboard channel selection, persisted membership and consent/progress/error UI.
 // Fixture: real source app/controller, isolated HOME/userData and native effects stood in.
 // Completion: persisted channel after restart, cancellation before replacement, and visible failure recovery.
@@ -25,7 +28,7 @@ test("a saved channel survives restart and stable never downgrades an ahead alph
   let launched = await launchApp({ withMockProvider: true });
   const root = launched.userDataDir;
   try {
-    await arrangeMacUpdates(launched, "0.5.1-alpha.9");
+    await arrangeMacUpdates(launched, "0.5.1-alpha.9", { stable: STABLE_TARGET });
     const { page } = launched;
     await resizeWindow(launched.app, page, { width: 1280, height: 800 });
     await page.getByRole("button", { name: "Settings", exact: true }).click();
@@ -35,7 +38,7 @@ test("a saved channel survives restart and stable never downgrades an ahead alph
     await expect(choice.getByRole("radio", { name: "Stable", exact: true })).toBeChecked();
     await expect
       .poll(() => page.evaluate(() => window.infinitary.update.status()))
-      .toMatchObject({ channel: "stable", updateAvailable: false, latestVersion: "0.5.0" });
+      .toMatchObject({ channel: "stable", updateAvailable: false, latestVersion: STABLE_TARGET });
     for (const theme of ["dark", "light"] as const) {
       await setThemeViaSettings(page, theme, { close: false });
       await regionShot(
@@ -45,7 +48,7 @@ test("a saved channel survives restart and stable never downgrades an ahead alph
     }
     await launched.close();
     launched = await launchApp({ withMockProvider: true, userDataDir: root });
-    await arrangeMacUpdates(launched, "0.5.1-alpha.9");
+    await arrangeMacUpdates(launched, "0.5.1-alpha.9", { stable: STABLE_TARGET });
     expect(await launched.page.evaluate(() => window.infinitary.update.status())).toMatchObject({
       channel: "stable",
       updateAvailable: false,
@@ -127,7 +130,7 @@ test("update consent exposes progress, and an installation error offers the rele
 test("switching channels cancels a pending download without installing it", async () => {
   const launched = await launchApp({ withMockProvider: true });
   try {
-    await arrangeMacUpdates(launched, "0.5.0-alpha.9");
+    await arrangeMacUpdates(launched, "0.5.0-alpha.9", { stable: STABLE_TARGET });
     const { page, app } = launched;
     await pressKey(page.getByRole("button", { name: /Update available/ }), "Enter");
     await pressKey(page.getByRole("button", { name: UPDATE_WORDS.restart }), "Enter");
@@ -138,7 +141,7 @@ test("switching channels cancels a pending download without installing it", asyn
     await pressKey(group.getByRole("radio", { name: "Alpha", exact: true }), "ArrowLeft");
     await expect
       .poll(() => page.evaluate(() => window.infinitary.update.status()))
-      .toMatchObject({ channel: "stable", latestVersion: "0.5.0", phase: "idle" });
+      .toMatchObject({ channel: "stable", latestVersion: STABLE_TARGET, phase: "idle" });
     expect(await app.evaluate(() => globalThis.__macUpdateFixture.installations)).toBe(0);
     await page.keyboard.press("Escape");
     await pressKey(page.getByRole("button", { name: /Update available/ }), "Enter");

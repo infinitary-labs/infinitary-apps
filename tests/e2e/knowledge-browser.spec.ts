@@ -1,5 +1,11 @@
 import { expect, type Page, test } from "@playwright/test";
-import { connectionSentence } from "../../src/panels/knowledge/words";
+import {
+  HOME_CAMERA,
+  ORBIT_BUTTON_STEP,
+  ORBIT_KEY_STEP,
+  zoomStep,
+} from "../../src/panels/knowledge/graph";
+import { connectionSentence, counted } from "../../src/panels/knowledge/words";
 import { scratchDir } from "../helpers/scratchDirs";
 import { frameIn } from "./frames";
 import {
@@ -56,7 +62,11 @@ import {
  * tests/e2e/knowledge-gate.spec.ts.
  */
 
-const HOME = { yaw: 0.18, pitch: -0.12, zoom: 1 };
+const HOME = HOME_CAMERA;
+
+/** The camera one zoom step in from home, and two steps out from there. */
+const ZOOMED_IN = zoomStep(HOME, "in");
+const ZOOMED_BACK_OUT = zoomStep(zoomStep(ZOOMED_IN, "out"), "out");
 
 /** Every row the collection holds, by table: what a write would change. */
 function knowledgeRows(userDataDir: string): Record<string, number> {
@@ -99,7 +109,9 @@ test("Open Knowledge by name, then the keys walk the graph, orbit and zoom it, o
     await test.step("the Knowledge panel docks under Tasks, collapsed, and says how many concepts are kept beside its title", async () => {
       await expect(knowledgePanel(page)).toBeAttached({ timeout: 30_000 });
       await expect(knowledgePanel(page)).toHaveAttribute("data-side-panel-collapsed", "");
-      await expect(knowledgeSummary(page)).toContainText("9 concepts");
+      await expect(knowledgeSummary(page)).toContainText(
+        counted(k.concepts.length, "concept", "concepts"),
+      );
       await expect(knowledgeHeader(page)).toContainText(KNOWLEDGE_TITLE);
       const search = commandSearch(page);
       await pressWindowKey(app, "k", ["meta"]);
@@ -116,7 +128,7 @@ test("Open Knowledge by name, then the keys walk the graph, orbit and zoom it, o
       await expect(browser(page)).toHaveAttribute("data-knowledge-scope", "captain");
       await expect.poll(() => focusInBrowser(page)).toBe("graph");
       // Concepts only: both projects' saved references now belong to the captain.
-      await expect(browser(page).locator("[data-knowledge-node]")).toHaveCount(9);
+      await expect(browser(page).locator("[data-knowledge-node]")).toHaveCount(k.concepts.length);
       await expect(concept(page, k.website)).toBeVisible();
       await expect(browser(page).locator("[data-knowledge-connection]")).toHaveCount(6);
       expect(await camera(page)).toEqual(HOME);
@@ -162,7 +174,9 @@ test("Open Knowledge by name, then the keys walk the graph, orbit and zoom it, o
       const [farthest] = depths[0] ?? [];
       const [nearest] = depths.at(-1) ?? [];
       await page.keyboard.press("Shift+ArrowRight");
-      await expect.poll(async () => (await camera(page)).yaw).toBeCloseTo(HOME.yaw - 0.16, 5);
+      await expect
+        .poll(async () => (await camera(page)).yaw)
+        .toBeCloseTo(HOME.yaw - ORBIT_KEY_STEP, 5);
       // The camera turns right: the far side sweeps left, the near side right.
       // The seed pins its ids, so the graph lays out the same on every run,
       // its nearest concept in front of the center: perspective draws a near
@@ -175,10 +189,10 @@ test("Open Knowledge by name, then the keys walk the graph, orbit and zoom it, o
       await page.keyboard.press("Shift+ArrowDown");
       await expect.poll(async () => (await camera(page)).pitch).toBeGreaterThan(HOME.pitch);
       await page.keyboard.press("+");
-      await expect.poll(async () => (await camera(page)).zoom).toBe(1.1);
+      await expect.poll(async () => (await camera(page)).zoom).toBe(ZOOMED_IN.zoom);
       await page.keyboard.press("-");
       await page.keyboard.press("-");
-      await expect.poll(async () => (await camera(page)).zoom).toBe(0.9);
+      await expect.poll(async () => (await camera(page)).zoom).toBe(ZOOMED_BACK_OUT.zoom);
       await page.keyboard.press("Home");
       await expect.poll(() => camera(page)).toEqual(HOME);
       // The camera never moved the selection.
@@ -187,7 +201,9 @@ test("Open Knowledge by name, then the keys walk the graph, orbit and zoom it, o
 
     await test.step("Orbit right, pressed from the keyboard, turns the camera the way the pointer and Shift → do", async () => {
       await browser(page).getByRole("button", { name: "Orbit right", exact: true }).press("Enter");
-      await expect.poll(async () => (await camera(page)).yaw).toBeCloseTo(HOME.yaw - 0.22, 5);
+      await expect
+        .poll(async () => (await camera(page)).yaw)
+        .toBeCloseTo(HOME.yaw - ORBIT_BUTTON_STEP, 5);
       await browser(page).getByRole("button", { name: "Reset view", exact: true }).press("Enter");
       await expect.poll(() => camera(page)).toEqual(HOME);
     });
@@ -233,7 +249,7 @@ test("Open Knowledge by name, then the keys walk the graph, orbit and zoom it, o
       await expect.poll(() => focusInBrowser(page)).toBe("tab:concepts");
       await expect(tab(page, "concepts")).toHaveAttribute("aria-selected", "true");
       const rows = browser(page).locator('[data-knowledge-list="concepts"] [data-knowledge-row]');
-      await expect(rows).toHaveCount(9);
+      await expect(rows).toHaveCount(k.concepts.length);
       await expect(inspector(page)).toHaveAttribute("data-knowledge-inspector", `claim:${k.pins}`);
       await focusOn(browser(page).locator("[data-knowledge-find]"));
       await typeInto(browser(page).locator("[data-knowledge-find]"), "retries");
@@ -241,7 +257,7 @@ test("Open Knowledge by name, then the keys walk the graph, orbit and zoom it, o
       await expect(row(page, k.retry)).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(browser(page).locator("[data-knowledge-find]")).toHaveValue("");
-      await expect(rows).toHaveCount(9);
+      await expect(rows).toHaveCount(k.concepts.length);
     });
 
     await test.step("the arrow moves to Findings, and a frame that comes late leaves focus on the finding row it has moved to since", async () => {
@@ -399,14 +415,14 @@ test("the graph orbits like a game camera with either button, a drag never selec
     // own zoom, and before the graph has focus it scrolls the card as ever.
     await graph(page).press("Home");
     expect(await wheelOnGraph(page, -100)).toEqual({ taken: true });
-    await expect.poll(async () => (await camera(page)).zoom).toBe(1.1);
+    await expect.poll(async () => (await camera(page)).zoom).toBe(ZOOMED_IN.zoom);
     expect(await wheelOnGraph(page, 100)).toEqual({ taken: true });
-    await expect.poll(async () => (await camera(page)).zoom).toBe(1);
+    await expect.poll(async () => (await camera(page)).zoom).toBe(HOME.zoom);
     expect(await wheelOnGraph(page, -100, { ctrlKey: true })).toEqual({ taken: false });
     expect(await wheelOnGraph(page, -100, { metaKey: true })).toEqual({ taken: false });
     await focusOn(browser(page).locator("[data-knowledge-find]"));
     expect(await wheelOnGraph(page, -100)).toEqual({ taken: false });
-    expect((await camera(page)).zoom).toBe(1);
+    expect((await camera(page)).zoom).toBe(HOME.zoom);
     // Outside the graph the context menu is the page's own.
     const elsewhere = await browser(page).evaluate((root) => {
       const menu = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });

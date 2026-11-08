@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { namedModelWords } from "../../src/core/orchestrator/namedModel";
+import { ruleIdSchema } from "../../src/shared/routingPolicy";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { type LaunchedApp, launchApp } from "./launch";
 import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
@@ -121,7 +122,7 @@ async function spawnOnNamedModel(
   const { model, status } = await detail(page, taskId);
   expect(status).not.toBe("open");
   // It routed by the captain's named model (R0), whether or not it could serve.
-  expect(routingRules(launched.userDataDir, taskId)).toEqual(["R0"]);
+  expect(routingRules(launched.userDataDir, taskId)).toEqual([ruleIdSchema.enum.R0]);
   await expect.poll(() => spawnExchange(title, taskId) ?? null, { timeout: 30_000 }).not.toBeNull();
   const exchange = spawnExchange(title, taskId);
   if (!exchange || !model) throw new Error(`${title} has no spawn answer or model`);

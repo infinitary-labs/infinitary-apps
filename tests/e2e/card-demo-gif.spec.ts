@@ -28,6 +28,19 @@ const SERVED = /^app-frame:\/\/media\/[A-Za-z0-9_-]+-[0-9a-f]{32}\.gif$/;
 
 let launched: LaunchedApp;
 
+/**
+ * A length as the viewer's player shows it, `m:ss`, from a recording's own
+ * duration: the format is `clock` in `PictureViewer.tsx`, which exports nothing
+ * a spec can load, so only the seconds come from their owner here.
+ */
+function clock(ms: number): string {
+  const whole = Math.floor(ms / 1000);
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+}
+
+/** The recording's length on the player's clock. */
+const LENGTH = clock(GIF_DEMO_RECORDING.durationMs);
+
 function body(page: Page): FrameLocator {
   return cardBody(page, GIF_DEMO_CARD_TITLE);
 }
@@ -107,7 +120,7 @@ test("Play draws the GIF once in the viewer, Stop takes it away, its end returns
   await pressKey(body(page).getByRole("button", { name: "Play the demo, 3 seconds" }), "Enter");
   await expect(viewer(page)).toBeVisible();
   await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(DEMO_CAPTION);
-  await expect(viewer(page).locator("[data-picture-count]")).toHaveText("0:03");
+  await expect(viewer(page).locator("[data-picture-count]")).toHaveText(LENGTH);
   // A GIF cannot seek: Play, Stop and Replay are its only control.
   await expect(viewer(page).getByRole("slider")).toHaveCount(0);
 
@@ -124,14 +137,14 @@ test("Play draws the GIF once in the viewer, Stop takes it away, its end returns
   await page.keyboard.press("Space");
   await expect(animation(page)).toHaveCount(0);
   await expect(control(page)).toHaveAccessibleName("Play");
-  await expect(viewer(page).locator("[data-demo-time]")).toHaveText("0:00 / 0:03");
+  await expect(viewer(page).locator("[data-demo-time]")).toHaveText(`${clock(0)} / ${LENGTH}`);
 
   // Play draws it again from its first frame; at its end the poster returns with Replay.
   await page.keyboard.press("Enter");
   await expect(animation(page)).toHaveAttribute("src", /\.gif\?play=2$/);
   await expect(control(page)).toHaveAccessibleName("Replay", { timeout: 15_000 });
   await expect(animation(page)).toHaveCount(0);
-  await expect(viewer(page).locator("[data-demo-time]")).toHaveText("0:03 / 0:03");
+  await expect(viewer(page).locator("[data-demo-time]")).toHaveText(`${LENGTH} / ${LENGTH}`);
 
   // Replay plays it once more.
   await page.keyboard.press("Enter");

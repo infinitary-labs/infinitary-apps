@@ -1,6 +1,7 @@
 import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { PICTURE_GROUP_CLASS } from "../../src/core/pi/cardImages";
 import { pictureHint, pictureSize } from "../../src/renderer/src/design/cards/pictureViewerWords";
+import { PICTURE_STRIP_SHOWN } from "../../src/shared/plugins/bridge";
 import { cardBody, cardBodyElement, cardBodySelector } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { pseudoBox, within } from "./layout";
@@ -163,8 +164,9 @@ test("the +N tile opens its group at the first picture the strip does not show",
     { x: tile.x + tile.width / 2, y: tile.y + tile.height / 2 },
   );
   const opened = await readViewer(page);
-  expect(opened.count).toBe(`7 / ${SECOND_GROUP.length}`);
-  expect(opened.caption).toBe(SECOND_GROUP[6]?.alt);
+  // The strip shows PICTURE_STRIP_SHOWN pictures; the tile opens the next one.
+  expect(opened.count).toBe(`${PICTURE_STRIP_SHOWN + 1} / ${SECOND_GROUP.length}`);
+  expect(opened.caption).toBe(SECOND_GROUP[PICTURE_STRIP_SHOWN]?.alt);
   await closeWithEscape(page);
 });
 

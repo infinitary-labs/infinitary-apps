@@ -1,12 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { CARD_BODY_WORDS } from "../../src/renderer/src/cards/cardBodyWords";
+import {
+  FRAME_WATCHDOG_INTERVAL_MS,
+  FRAME_WATCHDOG_MISSES,
+} from "../../src/renderer/src/plugins/frames/frameController";
 import { FRAME_BRIDGE_SHA256 } from "../../src/shared/plugins/frameScript";
 import { cardBody, cardBodyElement, cardBodySelector } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { SCRIPT_CARD_TITLES } from "./mockProvider";
 import { measured, PERF_TAG } from "./perf";
 import { promptInput } from "./prompt";
-import { SCRIPT_CARDS_PROMPT_MARKER, scriptCards } from "./scenarios/scriptCards";
+import { SCRIPT_CANVAS, SCRIPT_CARDS_PROMPT_MARKER, scriptCards } from "./scenarios/scriptCards";
 import { pager, showCard, shownEntry } from "./stack";
 
 /**
@@ -21,7 +25,7 @@ import { pager, showCard, shownEntry } from "./stack";
  * FRAME_WATCHDOG_INTERVAL_MS x (FRAME_WATCHDOG_MISSES + 1), plus slack: the
  * budget a perf run holds the teardown to (./perf.ts). Every run measures it.
  */
-const WATCHDOG_WINDOW_MS = 1_000 * 5 + 3_000;
+const WATCHDOG_WINDOW_MS = FRAME_WATCHDOG_INTERVAL_MS * (FRAME_WATCHDOG_MISSES + 1) + 3_000;
 
 let launched: LaunchedApp;
 
@@ -58,7 +62,7 @@ test("a card's own script paints a canvas inside the unchanged sandbox", async (
         return painted;
       }),
     )
-    .toBe(120 * 40);
+    .toBe(SCRIPT_CANVAS.width * SCRIPT_CANVAS.height);
 
   // The document's own policy pins the bridge and the card's own script,
   // which the host hashed where its author put it. An injected script still

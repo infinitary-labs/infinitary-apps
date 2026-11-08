@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { CrewmateBrowser, TaskBrowsers } from "../../src/core/browser/taskBrowsers";
+import { TASK_BROWSER_PAGE } from "../../src/shared/taskBrowser";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { closeSite, pageSays } from "./taskBrowser";
@@ -110,7 +111,7 @@ test("guarded browser actions use real input and photograph one element", async 
     const png = readFileSync(join(evidence, "element-after.png"));
     // PNG dimensions demonstrate a crop, not the page-sized photograph.
     expect(png.readUInt32BE(16)).toBeGreaterThan(0);
-    expect(png.readUInt32BE(16)).toBeLessThan(1280);
+    expect(png.readUInt32BE(16)).toBeLessThan(TASK_BROWSER_PAGE.width);
     const bottom = (await call("act", { action: "scroll", direction: "bottom" })).text;
     expect(bottom).toContain("End of page");
     expect(bottom).not.toContain('button "Show menu"');

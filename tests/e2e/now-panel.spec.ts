@@ -135,6 +135,8 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
   tag: PERF_TAG,
 }, async () => {
   test.setTimeout(180_000);
+  // The status-note crewmate's key, as the board allocated it when its row came up.
+  let statusKey = "";
   await test.step("an empty board docks nothing, and a plain turn's record docks the panel collapsed with no row", async () => {
     const { page } = launched;
     // Its page runs, off its rail until its own code says it holds something.
@@ -179,7 +181,8 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     await expect(frame.locator("[data-now-filters]")).toBeHidden();
 
     // The crewmate reports and goes idle.
-    await expect(reportLine(page, await taskKey(page, STATUS_NOTE))).toBeVisible({
+    statusKey = await taskKey(page, STATUS_NOTE);
+    await expect(reportLine(page, statusKey)).toBeVisible({
       timeout: 30_000,
     });
     const { render } = await measures(page);
@@ -188,21 +191,21 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
 
     // Underway is open by default, so the row is already on screen with its
     // title and project.
-    const row = nowRow(page, "SCR-2");
+    const row = nowRow(page, statusKey);
     await expect(row.locator("[data-now-title-text]")).toHaveText(STATUS_NOTE);
     await expect(row).toHaveAttribute("aria-label", /Scratch/);
-    await expectTaskMark(page, "SCR-2");
+    await expectTaskMark(page, statusKey);
   });
 
   await test.step("a row opens the record in the normal card stack and stays selected", async () => {
     const { page } = launched;
-    const row = nowRow(page, "SCR-2");
-    await pressRow(page, "SCR-2");
+    const row = nowRow(page, statusKey);
+    await pressRow(page, statusKey);
     await expectRecordTaskStatus(page);
     // The title line; the goal and your words under it quote it too (INF-2261).
     await expect(recordCard(page).getByText(STATUS_NOTE, { exact: true })).toBeVisible();
-    await expect(recordCard(page).getByText("SCR-2", { exact: true })).toBeVisible();
-    const task = (await board(page)).tasks.find((task) => task.key === "SCR-2");
+    await expect(recordCard(page).getByText(statusKey, { exact: true })).toBeVisible();
+    const task = (await board(page)).tasks.find((task) => task.key === statusKey);
 
     const pane = recordCard(page);
     await expect(pane).toHaveCount(1);
@@ -259,13 +262,13 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     await hideRecord(page).click();
     await expect(recordCard(page)).toHaveCount(0);
     await expect(nowFrame(page).locator("[data-now-row][data-now-selected]")).toHaveCount(0);
-    await pressRow(page, "SCR-2");
+    await pressRow(page, statusKey);
     await expect(recordCard(page)).toHaveCount(1);
   });
 
   await test.step("the open record is the turn's hint: a plain turn attaches to its task, and closing reveals the character", async () => {
     const { page } = launched;
-    const taskId = (await board(page)).tasks.find((task) => task.key === "SCR-2")?.id as string;
+    const taskId = (await board(page)).tasks.find((task) => task.key === statusKey)?.id as string;
     // Keyboard entry keeps the open record as the turn hint; a pointer click
     // outside the pane dismisses it.
     const record = recordFrame(page);
@@ -309,7 +312,7 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     await expect(recordCard(page)).toHaveCount(0);
     await expect(page.locator("[data-character-frame]")).toBeVisible();
     // The panel is untouched by the pane: still one working row.
-    await expect(nowRow(page, "SCR-2")).toBeVisible();
+    await expect(nowRow(page, statusKey)).toBeVisible();
   });
 
   await test.step("with the panel open, the next crewmate's row reaches the frame, its lag from the core's write measured", async () => {
@@ -320,7 +323,9 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     // accepted on, and the frame counts only measures newer than what it had.
     const seen = (await measures(page)).lag.length;
     await send(page, `${SPAWN_PROMPT_MARKER} ${EMIT_CARDS_PROMPT_MARKER}`);
-    await expect(nowRow(page, "SCR-3")).toBeVisible({ timeout: 30_000 });
+    await expect(nowRow(page, await taskKey(page, EMIT_CARDS_PROMPT_MARKER))).toBeVisible({
+      timeout: 30_000,
+    });
     const { lag, render } = await measures(page);
     const fresh = lag.slice(seen);
     expect(fresh.length).toBeGreaterThanOrEqual(1);
@@ -389,7 +394,7 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     const { page, app } = launched;
     // Layout needs a non-immersive card, not a previous navigation's choice.
     await showCard(page, MOCK_QUOTA_NOTE_TITLE);
-    await pressRow(page, "SCR-2");
+    await pressRow(page, statusKey);
     const themeOf = (frame: ReturnType<typeof nowFrame>) =>
       frame.locator("html").evaluate((el) => el.getAttribute("data-theme"));
     await setThemeViaSettings(page, "light");
@@ -455,7 +460,7 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     await page.screenshot({ path: test.info().outputPath("now-panel-narrow-stage.png") });
 
     // Restore the record pane for the next check's starting state.
-    await pressRow(page, "SCR-2");
+    await pressRow(page, statusKey);
     await expect(recordCard(page)).toBeVisible();
 
     await resizeWindow(app, page, restore);

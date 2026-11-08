@@ -44,6 +44,15 @@ import {
 const TITLE = "Pick the launch window";
 const HOSTILE = "A card that forges its own gestures";
 const PICTURES = ["The launch board before", "The launch board after"];
+
+/**
+ * The viewer's count over the card's own pictures, "1 / 2": the format is typed
+ * inline in `PictureViewer.tsx`, which exports nothing a spec can load, so the
+ * places and the total come from `PICTURES`.
+ */
+function pictureCount(position: number): string {
+  return `${position} / ${PICTURES.length}`;
+}
 const DRAFT = "ship the login fix today";
 /** The caret after "ship". */
 const CARET = 4;
@@ -380,16 +389,16 @@ test("focus that leaves a card's field or picture comes back to it, caret and al
       await expect.poll(() => focusedInFrame(frame)).toEqual({ tag: "IMG", name: PICTURES[0] });
       await page.keyboard.press("Enter");
       await expect(viewer(page)).toBeVisible();
-      await expect(viewer(page).locator("[data-picture-count]")).toHaveText("1 / 2");
+      await expect(viewer(page).locator("[data-picture-count]")).toHaveText(pictureCount(1));
       await page.keyboard.press("ArrowRight");
-      await expect(viewer(page).locator("[data-picture-count]")).toHaveText("2 / 2");
+      await expect(viewer(page).locator("[data-picture-count]")).toHaveText(pictureCount(2));
       await page.keyboard.press("Escape");
       await expect(viewer(page)).toHaveCount(0);
       await expect.poll(() => focusedInFrame(frame)).toEqual({ tag: "IMG", name: PICTURES[0] });
       // Space opens the next one.
       await page.keyboard.press("Tab");
       await page.keyboard.press(" ");
-      await expect(viewer(page).locator("[data-picture-count]")).toHaveText("2 / 2");
+      await expect(viewer(page).locator("[data-picture-count]")).toHaveText(pictureCount(2));
       await page.keyboard.press("Escape");
       await expect.poll(() => focusedInFrame(frame)).toEqual({ tag: "IMG", name: PICTURES[1] });
     });

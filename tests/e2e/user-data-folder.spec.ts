@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
+import { DEV_USER_DATA_FOLDER, RELEASE_USER_DATA_FOLDER } from "../../src/shared/userDataFolders";
 import { scratchDir } from "../helpers/scratchDirs";
 import { builtAppDir, closeApp, launchApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
@@ -47,9 +48,9 @@ test("an unpackaged run opens <appData>/infinitary-dev, never the release's fold
 
     const appSupport = join(home, "Library", "Application Support");
     const userData = await app.evaluate(({ app }) => app.getPath("userData"));
-    expect(realpathSync(userData)).toBe(join(appSupport, "infinitary-dev"));
-    expect(existsSync(join(appSupport, "infinitary-dev", "firstmate.db"))).toBe(true);
-    expect(readdirSync(appSupport)).not.toContain("infinitary");
+    expect(realpathSync(userData)).toBe(join(appSupport, DEV_USER_DATA_FOLDER));
+    expect(existsSync(join(appSupport, DEV_USER_DATA_FOLDER, "firstmate.db"))).toBe(true);
+    expect(readdirSync(appSupport)).not.toContain(RELEASE_USER_DATA_FOLDER);
     expect(
       await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible()),
     ).toBe(false);

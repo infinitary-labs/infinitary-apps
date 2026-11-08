@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { CLAUDE_MODELS } from "../../src/core/claude/claudeModels";
 import {
   modelAddedLead,
   modelAddedNote,
@@ -18,6 +19,7 @@ import {
 } from "./mockClaudeClient";
 import { modelsSection } from "./modelsBoard";
 import { feedLine } from "./rails";
+import { claudeStarter } from "./starters";
 
 /**
  * Lean model lists (captain, 2026-09-23; docs/model-lists.md), end to end
@@ -39,6 +41,15 @@ const CLAUDE = catalogEntry(CLAUDE_PROVIDER_ID)?.name ?? CLAUDE_PROVIDER_ID;
 
 /** A feed line holding the product's own words, wherever they fall in it. */
 const holding = (words: string) => new RegExp(words.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+
+/** A Claude row's offering key on the board. */
+const rowKey = (id: string) => `${CLAUDE_PROVIDER_ID}/${id}`;
+
+/** The shipped catalog's rows, by offering key: what serves until a read lands, and after one fails. */
+const SHIPPED_ROWS = CLAUDE_MODELS.map((model) => rowKey(model.id)).sort();
+
+/** The shipped medium starter, which the shipped list serves in medium. */
+const MEDIUM_STARTER = claudeStarter("medium");
 
 type Row = { value: string; displayName: string };
 
@@ -134,22 +145,17 @@ test("a catalog read that never answers holds nothing up: the shipped list serve
     // read hangs for ten minutes, far past this test's own time, so an
     // answer at all is an answer that did not wait for it.
     const available = await app.page.evaluate(() => window.infinitary.models.available());
-    expect(available).toContainEqual({ provider: "anthropic-claude", id: "claude-sonnet-5-5" });
-    expect(available).not.toContainEqual({ provider: "anthropic-claude", id: "claude-sonnet-5" });
+    expect(available).toContainEqual({ provider: CLAUDE_PROVIDER_ID, id: MEDIUM_STARTER.id });
+    expect(available).not.toContainEqual({ provider: CLAUDE_PROVIDER_ID, id: "claude-sonnet-5" });
 
     const models = await openModels(app.page);
     await expect(
       models
         .locator('[data-slot-group="medium"]')
-        .getByRole("button", { name: "Claude Sonnet 5.5", exact: true }),
+        .getByRole("button", { name: MEDIUM_STARTER.name, exact: true }),
     ).toBeVisible();
     // The shipped list names only the current generations.
-    expect(await claudeRows(app.page)).toEqual([
-      "anthropic-claude/claude-fable-5-1",
-      "anthropic-claude/claude-haiku-5-5",
-      "anthropic-claude/claude-opus-5-5",
-      "anthropic-claude/claude-sonnet-5-5",
-    ]);
+    expect(await claudeRows(app.page)).toEqual(SHIPPED_ROWS);
   } finally {
     await app.close();
   }
@@ -185,13 +191,9 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
       ).toBeVisible({ timeout: 25_000 });
       // Five rows for thirteen served ids: each family's newest, plus the
       // Sonnet 5.5 starter it has not replaced yet.
-      expect(await claudeRows(app.page)).toEqual([
-        "anthropic-claude/claude-fable-5-1",
-        "anthropic-claude/claude-haiku-5-5",
-        "anthropic-claude/claude-opus-5-5",
-        "anthropic-claude/claude-sonnet-5-5",
-        "anthropic-claude/claude-sonnet-5-6",
-      ]);
+      expect(await claudeRows(app.page)).toEqual(
+        [...SHIPPED_ROWS, rowKey("claude-sonnet-5-6")].sort(),
+      );
 
       // An older generation is reachable by name from a slot's picker, and
       // choosing it keeps it listed.
@@ -201,7 +203,7 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
       await picker.getByRole("textbox", { name: "Find a model to add to low" }).fill("opus 4.8");
       await picker.getByRole("button", { name: "Add Claude Opus 4.8 to low" }).click();
       await expect(low.getByRole("button", { name: "Claude Opus 4.8", exact: true })).toBeVisible();
-      expect(await claudeRows(app.page)).toContain("anthropic-claude/claude-opus-4-8");
+      expect(await claudeRows(app.page)).toContain(rowKey("claude-opus-4-8"));
 
       await app.page.screenshot({ path: test.info().outputPath("dark-models-lean-claude.png") });
     } finally {
@@ -265,7 +267,7 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
       await expect(
         models
           .locator('[data-slot-group="medium"]')
-          .getByRole("button", { name: "Claude Sonnet 5.5", exact: true }),
+          .getByRole("button", { name: MEDIUM_STARTER.name, exact: true }),
       ).toBeVisible();
     } finally {
       await app.close();

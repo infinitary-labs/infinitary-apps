@@ -206,29 +206,31 @@ test("an off catalog model can be added directly to a routing bucket", async () 
 
 test("a connected provider's models are pinnable from the section", async () => {
   const { page } = launched;
+  const opus = claudeStarter("high").name;
   const models = await openModels(page);
   // Always use is the model's own setting, so it lives in the panel its name opens.
-  const panel = await openModelPanel(page, models, "Claude Opus 5.5");
+  const panel = await openModelPanel(page, models, opus);
   const banner = models.locator("[data-models-banner]");
   await expect(banner).toHaveCount(0);
-  await alwaysUseSwitch(panel, "Claude Opus 5.5").click();
-  await expect(modelName(models, "Claude Opus 5.5", true).first()).toBeVisible();
+  await alwaysUseSwitch(panel, opus).click();
+  await expect(modelName(models, opus, true).first()).toBeVisible();
   // The board says out loud what that does to every level.
-  await expect(banner).toContainText(`${ALWAYS_USE_LEAD} Claude Opus 5.5`);
-  await alwaysUseSwitch(panel, "Claude Opus 5.5").click();
-  await expect(modelName(models, "Claude Opus 5.5", true)).toHaveCount(0);
+  await expect(banner).toContainText(`${ALWAYS_USE_LEAD} ${opus}`);
+  await alwaysUseSwitch(panel, opus).click();
+  await expect(modelName(models, opus, true)).toHaveCount(0);
   await expect(banner).toHaveCount(0);
   await closeModelPanel(models);
 });
 
 test("a model already in a bucket can be added to another from the catalog, and stays in both", async () => {
   const { page } = launched;
+  const opus = claudeStarter("high").name;
   const models = await openModels(page);
   const premium = models.locator('[data-slot-group="premium"]');
   const high = models.locator('[data-slot-group="high"]');
-  const opusIn = (group: typeof premium) => modelName(group, "Claude Opus 5.5");
+  const opusIn = (group: typeof premium) => modelName(group, opus);
 
-  // The starter map puts Claude Opus 5.5 in high the first time the account is
+  // The starter map puts Claude's high model in high the first time the account is
   // seen, so a picker that listed only OFF models could offer it to no
   // bucket at all - premium least of all. Every Claude model on a signed-in
   // account is placed that way, which is what made the board look like it
@@ -239,7 +241,7 @@ test("a model already in a bucket can be added to another from the catalog, and 
   await premium.getByRole("button", { name: "Add model" }).click();
   const picker = premium.getByRole("group", { name: "Add a model to premium" });
   await expect(picker).toBeVisible();
-  const offer = picker.getByRole("button", { name: "Add Claude Opus 5.5 to premium" });
+  const offer = picker.getByRole("button", { name: `Add ${opus} to premium` });
   await expect(offer).toContainText("in high");
   await offer.click();
 
@@ -250,14 +252,12 @@ test("a model already in a bucket can be added to another from the catalog, and 
   await expect(picker).toHaveCount(0);
   await premium.getByRole("button", { name: "Add model" }).click();
   await expect(picker).toBeVisible();
-  await expect(picker.getByRole("button", { name: "Add Claude Opus 5.5 to premium" })).toHaveCount(
-    0,
-  );
+  await expect(picker.getByRole("button", { name: `Add ${opus} to premium` })).toHaveCount(0);
   await premium.getByRole("button", { name: "Add model" }).click();
   await expect(picker).toHaveCount(0);
 
   // Leaving one bucket leaves the other alone.
-  await removeFromLevel(premium, "Claude Opus 5.5", "premium");
+  await removeFromLevel(premium, opus, "premium");
   await expect(opusIn(premium)).toHaveCount(0);
   await expect(opusIn(high)).toBeVisible();
 });

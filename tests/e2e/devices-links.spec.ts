@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import { dirname, join } from "node:path";
+import { ANNOUNCE_SERVICE } from "@core/devices/announce";
 import { claimLink } from "@core/devices/dial";
 import { expect, type Page, test } from "@playwright/test";
 import { CONNECTION_CLOSE } from "@shared/connection";
@@ -232,7 +233,7 @@ test("a phone joins as a view whichever link it used, and this Mac announces whi
     expect(listed).toMatchObject({ kind: "view", system: "ios" });
     await expect.poll(() => asked().filter((line) => line.startsWith("-R"))).toHaveLength(1);
     expect(asked().find((line) => line.startsWith("-R"))).toMatch(
-      / _infinitary\._tcp local\. \d+$/,
+      new RegExp(` ${ANNOUNCE_SERVICE.replaceAll(".", "\\.")} local\\. \\d+$`),
     );
 
     await openDevices(page);

@@ -1,4 +1,9 @@
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
+import { counted } from "../../src/panels/knowledge/words";
+import {
+  FRAME_WATCHDOG_INTERVAL_MS,
+  FRAME_WATCHDOG_MISSES,
+} from "../../src/renderer/src/plugins/frames/frameController";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { frameIn, panelBody, panelElement } from "./frames";
@@ -18,8 +23,11 @@ import { KNOWLEDGE_RETIRE_PROMPT_MARKER, knowledgeRetire } from "./scenarios/kno
  * knowledge: the header must say the new totals, with no Retry.
  */
 
-/** Longer than the watchdog's four one-second pings. */
-const PAUSE_MS = 6_000;
+/** Longer than the watchdog's unanswered pings take to stop a page, with two seconds to spare. */
+const PAUSE_MS = FRAME_WATCHDOG_INTERVAL_MS * FRAME_WATCHDOG_MISSES + 2_000;
+
+/** The panel's collapsed count of `n` concepts. */
+const conceptsLine = (n: number) => counted(n, "concept", "concepts");
 
 const RETIRED = [
   "lifecycle",
@@ -103,7 +111,7 @@ test("a collapsed panel paused past the watchdog still shows new knowledge, and 
     await expect(knowledge).toHaveAttribute("data-side-panel-collapsed", "");
     await expect(activity).toHaveAttribute("data-side-panel-collapsed", "");
     const summary = knowledgeSummary(page);
-    await expect(summary).toContainText("9 concepts");
+    await expect(summary).toContainText(conceptsLine(seeded.concepts.length));
     const activityWords = dockSummaryLine(page, "activity").locator("[data-panel-summary-words]");
     await expect(activityWords).toBeVisible();
     const activityBefore = await activityWords.innerText();
@@ -130,7 +138,9 @@ test("a collapsed panel paused past the watchdog still shows new knowledge, and 
       .toEqual(targets.map(() => "retired"));
     await waitForFirstmateIdle(page);
 
-    await expect(summary).toContainText("3 concepts");
+    await expect(summary).toContainText(
+      conceptsLine(seeded.concepts.filter((id) => !targets.includes(id)).length),
+    );
     await expect(page.locator("[data-frame-mount-unresponsive]")).toHaveCount(0);
     await expect(activityWords).not.toHaveText(activityBefore);
     await expect(dockSummary(page, "activity")).not.toContainText("stopped responding");
@@ -145,11 +155,13 @@ test("a collapsed panel paused past the watchdog still shows new knowledge, and 
 test("an open panel keeps its page through a pause of the app's main process", async () => {
   test.setTimeout(90_000);
   const userDataDir = scratchDir("infinitary-knowledge-main-pause-");
-  await seedKnowledge(userDataDir);
+  const seeded = await seedKnowledge(userDataDir);
   const { app, page } = await launchApp({ userDataDir, withMockProvider: true });
   try {
     const knowledge = knowledgePanel(page);
-    await expect(knowledgeSummary(page)).toContainText("9 concepts", { timeout: 30_000 });
+    await expect(knowledgeSummary(page)).toContainText(conceptsLine(seeded.concepts.length), {
+      timeout: 30_000,
+    });
     await knowledge.getByRole("button", { name: "Expand Knowledge" }).click();
     await expect(knowledge).not.toHaveAttribute("data-side-panel-collapsed", "");
     const frame = frameIn(knowledge);
@@ -175,7 +187,7 @@ test("an open panel keeps its page through a pause of the app's main process", a
 test("a panel the watchdog stops mounts again once, and a second stop does not keep its old counts in the header", async () => {
   test.setTimeout(120_000);
   const userDataDir = scratchDir("infinitary-knowledge-stopped-");
-  await seedKnowledge(userDataDir);
+  const seeded = await seedKnowledge(userDataDir);
   const { app, page } = await launchApp({
     userDataDir,
     withMockProvider: true,
@@ -184,7 +196,8 @@ test("a panel the watchdog stops mounts again once, and a second stop does not k
   try {
     const knowledge = knowledgePanel(page);
     const summary = knowledgeSummary(page);
-    await expect(summary).toContainText("9 concepts", { timeout: 30_000 });
+    const seededLine = conceptsLine(seeded.concepts.length);
+    await expect(summary).toContainText(seededLine, { timeout: 30_000 });
     await knowledge.getByRole("button", { name: "Expand Knowledge" }).click();
     await expect(knowledge).not.toHaveAttribute("data-side-panel-collapsed", "");
     await expect(frameIn(knowledge)).toBeVisible();
@@ -204,7 +217,7 @@ test("a panel the watchdog stops mounts again once, and a second stop does not k
     });
     await knowledge.getByRole("button", { name: "Collapse Knowledge" }).click();
     await expect(summary).toContainText("stopped responding");
-    await expect(summary).not.toContainText("9 concepts");
+    await expect(summary).not.toContainText(seededLine);
   } finally {
     await app.close();
   }

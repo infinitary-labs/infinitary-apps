@@ -9,6 +9,7 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { elsewhereWords } from "../../src/shared/projectFocus";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { activityFrame, expandDock, nowFrame } from "./rails";
 import { pager, showCard } from "./stack";
@@ -85,7 +86,7 @@ function seed(
       ...work,
       status: "completed",
       worktreeDir,
-      model: { provider: "fm-mock", id: "mock-1" },
+      model: { provider: MOCK_PROVIDER_ID, id: MOCK_MODEL_ID },
     });
   }
   // A step only the captain can take, set aside: its row waits on the captain.

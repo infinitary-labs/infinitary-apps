@@ -123,7 +123,12 @@
     "src/renderer/src/personal/panelBoundaryWords.ts",
     "src/renderer/src/plugins/panelTasks.ts",
     "src/panels/knowledge/words.ts",
-    "src/panels/now/words.ts"
+    "src/panels/now/words.ts",
+    // Numbers the e2e specs read from their owner: the frame watchdog's pace
+    // and misses, and the knowledge graph's camera steps.
+    "src/renderer/src/plugins/frames/frameController.ts",
+    "src/renderer/src/plugins/frames/frameLink.ts",
+    "src/panels/knowledge/graph.ts"
   ],
   // Extension code, not app code. The e2e fixtures are renderer-shaped
   // modules type-checked by tsconfig.web.json against the real contracts and

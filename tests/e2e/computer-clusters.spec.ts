@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { seedTask } from "../../src/core/tasks/seedTask";
+import { COMPUTERS_PER_PAGE } from "../../src/renderer/src/character/crew/computers";
 import type { DeviceGrant } from "../../src/shared/devices";
 import { connectClient } from "../helpers/connectionClient";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -116,17 +117,24 @@ test("actual task placement groups work computers, and keyboard inspection opens
   }
 });
 
+/** Eight computers with work: this Mac and seven others, past one page. */
+const ROSTER = [2, 1, 1, 1, 1, 1, 1, 1];
+
 test("computer paging keeps every task reachable by keyboard without limiting the roster", async () => {
   const app = await launchApp({
-    userDataDir: clusterFixture([2, 1, 1, 1, 1, 1, 1, 1]),
+    userDataDir: clusterFixture(ROSTER),
     withMockProvider: true,
   });
+  // Each page shows this Mac and the next others, up to the stage's own page size.
+  const others = ROSTER.length - 1;
+  const shownOn = (pageIndex: number) =>
+    1 + Math.min(COMPUTERS_PER_PAGE - 1, others - pageIndex * (COMPUTERS_PER_PAGE - 1));
   try {
     const { page } = app;
     const board = await page.evaluate(() => window.infinitary.tasks.board());
     const seen = new Set<string>();
     for (let pageIndex = 0; pageIndex < 2; pageIndex++) {
-      await expect(page.locator("[data-computer-cluster]")).toHaveCount(pageIndex === 0 ? 6 : 3);
+      await expect(page.locator("[data-computer-cluster]")).toHaveCount(shownOn(pageIndex));
       const computerIds = await page
         .locator("[data-computer-cluster]")
         .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-computer-cluster")));

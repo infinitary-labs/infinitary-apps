@@ -8,7 +8,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { KINDS_BY_DELIVERABLE } from "../../src/shared/routingPolicy";
+import { KINDS_BY_DELIVERABLE, ruleIdSchema } from "../../src/shared/routingPolicy";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { seedRepo } from "./githubStub";
@@ -131,7 +131,7 @@ test("a bounded explanation requests low, reads its source and stays an answer a
     expect(row()?.intent?.userWords).toBe(RETRIEVAL_TASK_ASK);
     expect(row()?.difficulty).toBe("low");
     expect(decisions.routing({ taskIds: [task.id], chosen: true }).at(-1)).toMatchObject({
-      rule: "R10",
+      rule: ruleIdSchema.enum.R10,
       bucket: "low",
       served: "low",
     });
@@ -142,7 +142,7 @@ test("a bounded explanation requests low, reads its source and stays an answer a
     expect(detail).toMatchObject({
       deliverable: "answer",
       rigor: null,
-      modelReason: { rule: "R10", asked: "low", served: "low" },
+      modelReason: { rule: ruleIdSchema.enum.R10, asked: "low", served: "low" },
     });
     expect(git("rev-parse", "HEAD")).toBe(originalHead);
     expect(git("status", "--porcelain")).toBe("");

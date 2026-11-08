@@ -37,6 +37,12 @@ function seatLine(url: string): string {
  * unpackaged.
  */
 
+/** Whether a request body names the mock's model, the one the seat was given. */
+function namesMockModel(body: string): boolean {
+  const id = MOCK_MODEL_ID.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`"model":\\s*"${id}"`).test(body);
+}
+
 let mock: MockProviderServer;
 let launched: LaunchedApp;
 let seatUrl: string;
@@ -82,7 +88,7 @@ test("a captain turn is served by the local endpoint as the named model", async 
             (body) =>
               body.includes(FIRSTMATE_PERSONA) &&
               body.includes("hello from the local seat") &&
-              /"model":\s*"mock-1"/.test(body),
+              namesMockModel(body),
           ),
       { timeout: 30_000 },
     )
@@ -157,7 +163,7 @@ test.describe
                   (body) =>
                     body.includes(FIRSTMATE_PERSONA) &&
                     body.includes("hello from the settings seat") &&
-                    /"model":\s*"mock-1"/.test(body),
+                    namesMockModel(body),
                 ),
             { timeout: 30_000 },
           )

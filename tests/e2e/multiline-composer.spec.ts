@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
-
+import { initOverflowDir, type MessageFile, withPastedFiles } from "../../src/core/overflow";
+import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { pastePictures, promptInput } from "./prompt";
 import { MAC_ONLY_TAG } from "./tags";
@@ -61,6 +62,32 @@ async function typeLines(input: Locator, lines: string[], newline = "Shift+Enter
   }
 }
 
+/**
+ * What the core sends for `typed` with `paste` riding as a file, either side
+ * of the file's path: `withPastedFiles`, the composer every turn goes
+ * through, run on the spec's own words, so the preview's cut and the
+ * pointer's words are the owner's (`src/core/overflow.ts`). The copy it
+ * writes goes to a scratch folder of its own.
+ */
+function spillAround(typed: string, paste: string): { before: string; after: string } {
+  initOverflowDir(scratchDir("infinitary-paste-pointer-"));
+  const kept: MessageFile[] = [];
+  const sent = withPastedFiles(typed, [{ text: paste }], kept);
+  const path = kept[0]?.path;
+  if (!path) throw new Error("withPastedFiles kept no file for the paste");
+  const at = sent.indexOf(path);
+  return { before: sent.slice(0, at), after: sent.slice(at + path.length) };
+}
+
+/** The file path a sent text points at, between the owner's words around it. */
+function spilledPath(sent: string, spill: { before: string; after: string }): string {
+  const start = sent.indexOf(spill.before);
+  if (start < 0) return "";
+  const from = start + spill.before.length;
+  const end = sent.indexOf(spill.after, from);
+  return end < 0 ? "" : sent.slice(from, end);
+}
+
 /** Pastes text into the prompt the way the clipboard hands it over. */
 async function pasteText(page: Page, text: string) {
   await promptInput(page).evaluate((field, text) => {
@@ -84,10 +111,10 @@ test("a long paste sends as a removable file with exact full text and recalls it
   if (evidence) await page.screenshot({ path: join(evidence, "composer-file.png") });
   await input.press("Enter");
   await expect(chip).toHaveCount(0);
-  await expectSent(`multiline paste: summarize this transcript\n\n${log.slice(0, 2000)}`);
-  const sent =
-    sentTexts().find((text) => text.includes("[truncated 76438 more characters; full text:")) ?? "";
-  const path = /full text: (.+)\]/.exec(sent)?.[1] ?? "";
+  const spill = spillAround("multiline paste: summarize this transcript", log);
+  await expectSent(spill.before);
+  const sent = sentTexts().find((text) => text.includes(spill.before)) ?? "";
+  const path = spilledPath(sent, spill);
   expect(readFileSync(path, "utf8")).toBe(log);
   if (evidence) writeFileSync(join(evidence, "sent-file.txt"), sent);
   await input.press("ArrowUp");
@@ -109,7 +136,7 @@ test("a long paste sends as a removable file with exact full text and recalls it
   await pasteText(page, short);
   await expect(chip).toHaveCount(1);
   await input.press("Enter");
-  await expectSent(`${short.trimEnd()}\n[truncated 0 more characters; full text:`);
+  await expectSent(spillAround("", short).before);
 });
 
 test("shell keys edit the draft, undo like typing, and send the words as edited", {

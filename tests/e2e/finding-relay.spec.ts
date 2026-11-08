@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
+import type { ReportSortRule } from "../../src/core/orchestrator/reportSort";
 import { openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { TaskService } from "../../src/core/tasks/taskService";
@@ -17,6 +18,9 @@ import {
   READER_TITLE,
   RESUMED,
 } from "./scenarios/findingRelay";
+
+/** The report sort's branch for a report a recorded wait is held on, stamped `rule:<id>`. */
+const WAITED_ON: ReportSortRule = "waited-on";
 
 /**
  * A hold on a task's finding ends when that task reports it (INF-735, from
@@ -89,7 +93,9 @@ test("a task held on another's finding carries on when that task reports it with
         () =>
           sorts().find(
             (row) =>
-              row.taskId === reader && row.model === "rule:waited-on" && row.wake.includes(FINDING),
+              row.taskId === reader &&
+              row.model === `rule:${WAITED_ON}` &&
+              row.wake.includes(FINDING),
           )?.facts,
         { timeout: 30_000 },
       )

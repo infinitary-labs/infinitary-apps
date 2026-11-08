@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { DELIVERY_CHANGES, DELIVERY_COMPLETE } from "../../src/core/orchestrator/contextDelivery";
+import { FIRSTMATE_FAILURE_CARD_ID } from "../../src/core/orchestrator/hostCards";
 import { chatFrame, customChatText } from "../helpers/customApiDialect";
 import { fillCustomApi, saveCustomApi } from "./customApi";
 import { askFirstmate } from "./lastTurn";
@@ -216,7 +217,7 @@ test("Firstmate compacts and keeps answering on a 48k custom model", async () =>
         `Here is log part ${turn}, just acknowledge it:\n${filler(turn, 12000)}`,
       );
       const cards = await page.evaluate(() => window.infinitary.cards.list());
-      const failure = cards.find((card) => card.id === "card-fm-turn-failure");
+      const failure = cards.find((card) => card.id === FIRSTMATE_FAILURE_CARD_ID);
       if (failure) {
         await expect(pager(page, cards.length)).toBeVisible();
         await showCard(page, failure.title);
@@ -234,7 +235,7 @@ test("Firstmate compacts and keeps answering on a 48k custom model", async () =>
       await askFirstmate(page, text);
       const after = await page.evaluate(() => window.infinitary.cards.list());
       expect(
-        after.find((card) => card.id === "card-fm-turn-failure"),
+        after.find((card) => card.id === FIRSTMATE_FAILURE_CARD_ID),
         `"${text}" after compaction recovers instead of showing a context failure`,
       ).toBeUndefined();
     }

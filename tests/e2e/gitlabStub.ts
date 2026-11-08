@@ -313,6 +313,7 @@ export async function startGitLabStub(host: string) {
       updated_at: new Date(Date.UTC(2026, 9, 9, 12, request.iid)).toISOString(),
       project_id: project.id,
       source_project_id: project.id,
+      target_project_id: project.id,
       source_branch: request.branch,
       target_branch: "main",
       title: request.title,

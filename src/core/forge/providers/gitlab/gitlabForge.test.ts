@@ -455,6 +455,24 @@ describe("GitLabForge", () => {
     expect(await forge.changeFor("fm/task-1")).toMatchObject({ number: 4 });
   });
 
+  // A user's report: check_change refused a no-checks declaration on a merge
+  // request from a branch in the same GitLab project as a fork. Expected:
+  // accept a verified same-project merge request, "while continuing to
+  // reject forks and unknown identity". The merge review reads that
+  // identity as the pull request's head repository.
+  it("names the project as a merge request's head repository only when GitLab says its source is the target", async () => {
+    const pulled = async (fields: Record<string, unknown>) => {
+      const { forge } = forgeAnswering(() =>
+        Response.json(request({ target_project_id: 7, ...fields })),
+      );
+      return (await forge.pull(4)).headRepo;
+    };
+    expect(await pulled({})).toBe("group/subgroup/app");
+    expect(await pulled({ source_project_id: 99 })).toBeUndefined();
+    expect(await pulled({ source_project_id: undefined })).toBeUndefined();
+    expect(await pulled({ target_project_id: undefined })).toBeUndefined();
+  });
+
   // INF-2952 piece 2, the captain's approved plan: "a crewmate's merge
   // request adds its pipeline" on GitLab. The queue writes its waiting as a
   // finished `skipped` status (GitLab refuses a waiting status set waiting

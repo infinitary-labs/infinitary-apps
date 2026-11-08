@@ -222,6 +222,7 @@ A GitLab project's direct-pr task delivers the way a GitHub one does: the crewma
   A new merge request's description is its saved story: gitlab.com confirms every selected upload first, while a self-hosted server publishes the text and retains media on the merge card ("Saved change stories" below).
   It is named `!N` with GitLab's page, and recorded on the task as `changeLabel`, `prNumber` and `prUrl` like a pull request; surfaces keep the app's word, pull request.
   Its head is the merge request's `sha`.
+  Its head repository, which a merge review requires, is the project's own path only when GitLab names the same `source_project_id` and `target_project_id`; a fork's, or one naming neither, has none, and the review refuses it.
 - **Its checks** are read for the head and nothing older (`checks()`):
   - every pipeline on the head counts - a branch pipeline, a merge request pipeline (`refs/merge-requests/<N>/head`) - and so does a merged-results or merge-train pipeline (`.../merge`, `.../train`), whose own commit is a merge of the head into the target branch: the app reads that commit's parents and counts it only when the head is one of them;
   - a later pipeline on the same ref for the same head stands for that ref, the way a rerun does on GitHub; pipelines on different refs all count;

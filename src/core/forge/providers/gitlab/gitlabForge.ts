@@ -60,6 +60,8 @@ type MergeRequestJson = {
   iid: number;
   project_id?: number;
   source_project_id?: number;
+  /** The project the merge request merges into; a fork's source differs from it. */
+  target_project_id?: number;
   source_branch: string;
   target_branch: string;
   title: string;
@@ -467,6 +469,7 @@ export class GitLabForge implements Forge {
       base: request.target_branch,
       ...(request.source_branch ? { branch: request.source_branch } : {}),
       ...(request.title ? { title: request.title } : {}),
+      ...(sameProject(request) ? { headRepo: `${this.location.owner}/${this.location.name}` } : {}),
       readiness: readinessOf(request),
       mergeable: null,
       mergeableState: request.detailed_merge_status ?? request.merge_status,
@@ -617,6 +620,18 @@ export class GitLabForge implements Forge {
   private mergeRequestPath(iid: number): string {
     return `${this.projectPath()}/merge_requests/${iid}`;
   }
+}
+
+/**
+ * Whether GitLab says a merge request's branch is in the project it merges
+ * into, the one this forge read it from: a fork's source project differs,
+ * and a merge request missing either id is not proven the project's.
+ */
+function sameProject(request: MergeRequestJson): boolean {
+  return (
+    request.source_project_id !== undefined &&
+    request.source_project_id === request.target_project_id
+  );
 }
 
 /** A pipeline job that is the queue status, as GitLab may list it, alone or named with its pipeline. */

@@ -167,6 +167,12 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     walks: ["SCAN tasks"],
     reason: "the whole task list (TaskService.list), whose many readers the scale check counts",
   },
+  "SELECT t.id, t.status, t.closed_at, (SELECT e.device_id FROM task_execution e WHERE e.task_id = t.id) AS device_id FROM tasks t WHERE t.closed_at IS NOT NULL":
+    {
+      walks: ["SCAN t"],
+      reason:
+        "the temporary-folder pass's first read of every closed task, once at start; each later pass seeks only the closes since (TaskTempFiles.pass)",
+    },
   "SELECT id, key, kind, status, title, goal, closed_at FROM task_records WHERE status NOT IN ('open', 'active') ORDER BY created_at, seq":
     {
       walks: ["SCAN t", "USE TEMP B-TREE FOR ORDER BY"],

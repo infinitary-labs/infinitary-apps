@@ -44,7 +44,7 @@ import type {
   SessionSpec,
 } from "../session/session";
 import { sameNames } from "../session/workRecovery";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord, TaskRetentionFields } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
 import type { AnsweredWait, CrewMachines, PlacedBrowserSink, PlacedHost } from "./crewMachines";
@@ -1164,7 +1164,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
 
   /** Called only for a closed task whose home-authoritative retention period is over. */
   async removeClosedTaskFiles(
-    record: TaskRecord,
+    record: TaskRetentionFields,
   ): Promise<WorkOrderResponse<"inf:session:clean-files">> {
     if (!record.deviceId || !TaskService.isClosed(record))
       throw new Error("This task is not closed on another computer.");
@@ -1184,7 +1184,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    * as cleaned; the caller retries.
    */
   async removeClosedTaskTemp(
-    record: TaskRecord,
+    record: TaskRetentionFields,
   ): Promise<WorkOrderResponse<"inf:session:clean-temp">> {
     if (!record.deviceId || !TaskService.isClosed(record))
       throw new Error("This task is not closed on another computer.");

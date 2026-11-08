@@ -109,7 +109,8 @@ describe("a closed task's leftover files", () => {
           fullLists: list.mock.calls.length,
         }),
       );
-      expect(list).toHaveBeenCalledTimes(1);
+      // Neither the whole list (INF-3032) nor a resolve per builder (INF-2255).
+      expect(list).not.toHaveBeenCalled();
       expect(resolve).not.toHaveBeenCalled();
       for (const builder of builders)
         tasks.close(builder.id, { status: "dropped", reason: "cancelled", actor: "captain" });
@@ -320,6 +321,38 @@ describe("a closed task's leftover files", () => {
     expect(entries(paths, "linked")).toEqual(KEPT);
     expect(readdirSync(outside).sort()).toEqual(["evidence", "precious.txt"]);
     expect(removalNotes(tasks, "aliased")).toEqual([]);
+  });
+
+  // A pass reads only the closes since the last one (INF-3032), so what it could
+  // not remove must come back at the next pass with no close to start it.
+  it("tries a computer's removal again at the next pass, with no new close", async () => {
+    const { paths, tasks, pass } = setup();
+    seedTask(tasks, { id: "away", title: "away", status: "cancelled", deviceId: "mini" });
+    pass(8 * DAY);
+    const asked: (string | null | undefined)[] = [];
+    let inReach = false;
+    const files = new ClosedTaskFiles({
+      paths,
+      tasks,
+      deleteInBackground: () => {},
+      now: () => 108 * DAY,
+      removePlaced: async (record) => {
+        asked.push(record.deviceId);
+        if (!inReach) throw new Error("This task's computer is out of reach.");
+        return { removedFiles: ["evidence"], bytes: 10 };
+      },
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await files.sweep();
+      expect(removalNotes(tasks, "away")).toEqual([]);
+      inReach = true;
+      await files.sweep();
+    } finally {
+      warn.mockRestore();
+    }
+    expect(asked).toEqual(["mini", "mini"]);
+    expect(removalNotes(tasks, "away").map((event) => event.data?.deviceId)).toEqual(["mini"]);
   });
 
   it("finishes at the next start what a quit cut short", async () => {

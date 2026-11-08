@@ -4,8 +4,7 @@ import { APP_KEPT_PARTS, removedWords, removeTaskLeftovers } from "./taskLeftove
 export { APP_KEPT_PARTS } from "./taskLeftovers";
 
 import type { AppPaths } from "../paths";
-import type { TaskLink } from "../storage/taskLinkStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord, TaskRetentionFields } from "../storage/taskStore";
 import { TaskService } from "./taskService";
 
 /**
@@ -20,8 +19,18 @@ import { TaskService } from "./taskService";
 /** How long a closed task's leftover files stay after its close. */
 export const CLOSED_TASK_FILES_KEPT_MS = 7 * 24 * 60 * 60 * 1000;
 
-type TasksReader = Pick<TaskService, "get" | "list" | "note" | "onChange" | "timeline"> & {
-  graph: Pick<TaskService["graph"], "allLinks">;
+type TasksReader = Pick<
+  TaskService,
+  | "get"
+  | "byKey"
+  | "listLive"
+  | "listClosedRetentionFields"
+  | "retentionFields"
+  | "note"
+  | "onChange"
+  | "timeline"
+> & {
+  graph: Pick<TaskService["graph"], "linksFrom" | "linksTo">;
 };
 
 export type ClosedTaskFilesOptions = {
@@ -31,40 +40,42 @@ export type ClosedTaskFilesOptions = {
   deleteInBackground: (dir: string) => void;
   now: () => number;
   /** Only acknowledged cleanup clears a placed task; out-of-reach computers retry. */
-  removePlaced?: (record: TaskRecord) => Promise<{ removedFiles: string[]; bytes: number }>;
+  removePlaced?: (
+    record: TaskRetentionFields,
+  ) => Promise<{ removedFiles: string[]; bytes: number }>;
 };
 
-/** Every upstream task live work builds on, including through closed intermediates. */
-function heldByLiveWork(records: readonly TaskRecord[], links: readonly TaskLink[]) {
-  // The pass already needs every row to decide which files are due. Share
-  // that snapshot instead of composing each upstream reference again.
-  const byId = new Map(records.map((record) => [record.id, record]));
-  const byKey = new Map(records.map((record) => [record.key, record]));
-  const upstream = new Map<string, string[]>();
-  for (const link of links) {
-    const [from, to] =
-      link.type === "discovered-from"
-        ? [link.fromId, link.toId]
-        : link.type === "blocks"
-          ? [link.toId, link.fromId]
-          : [];
-    if (!from || !to) continue;
-    const refs = upstream.get(from) ?? [];
-    refs.push(to);
-    upstream.set(from, refs);
-  }
-  const pending = records.filter((record) => !TaskService.isClosed(record));
+/**
+ * Every task live work builds on, including through closed intermediates:
+ * read outward from the live set, one task's links and basis at a time,
+ * so it costs the live work's ancestry, never the whole record (INF-3032).
+ */
+function heldByLiveWork(tasks: TasksReader): Set<string> {
   const held = new Set<string>();
-  for (const record of pending) {
+  // Many builders name one plan: each name is looked up once a pass (INF-2255).
+  const looked = new Map<string, TaskRecord | undefined>();
+  const named = (ref: string): TaskRecord | undefined => {
+    if (!ref) return undefined;
+    if (!looked.has(ref)) looked.set(ref, tasks.get(ref) ?? tasks.byKey(ref));
+    return looked.get(ref);
+  };
+  const pending: TaskRecord[] = tasks.listLive();
+  for (let record = pending.pop(); record; record = pending.pop()) {
     if (held.has(record.id)) continue;
     held.add(record.id);
-    const refs = [...(upstream.get(record.id) ?? [])];
+    const refs = [
+      ...tasks.graph
+        .linksFrom(record.id)
+        .filter((link) => link.type === "discovered-from")
+        .map((link) => link.toId),
+      ...tasks.graph
+        .linksTo(record.id)
+        .filter((link) => link.type === "blocks")
+        .map((link) => link.fromId),
+    ];
     if (record.shape?.basis) refs.push(record.shape.basis);
     for (const ref of refs) {
-      const trimmed = ref.trim();
-      const ancestor = trimmed
-        ? (byId.get(trimmed) ?? byKey.get(trimmed.toUpperCase()))
-        : undefined;
+      const ancestor = named(ref.trim());
       if (ancestor && !held.has(ancestor.id)) pending.push(ancestor);
     }
   }
@@ -72,7 +83,7 @@ function heldByLiveWork(records: readonly TaskRecord[], links: readonly TaskLink
 }
 
 /** Whether a closed task's leftover files are due to go now. */
-function closedTaskFilesDue(record: TaskRecord, held: Set<string>, now: number): boolean {
+function closedTaskFilesDue(record: TaskRetentionFields, held: Set<string>, now: number): boolean {
   return (
     TaskService.isClosed(record) &&
     record.closedAt !== null &&
@@ -87,6 +98,10 @@ export class ClosedTaskFiles {
   private running: Promise<void> | undefined;
   private again = false;
   private lastPassAt = Number.NEGATIVE_INFINITY;
+  /** What the last pass found held by live work: due now if that work let go. */
+  private held = new Set<string>();
+  /** Tasks a pass found due but could not clear yet, tried again at the next. */
+  private retry = new Set<string>();
 
   constructor(private readonly options: ClosedTaskFilesOptions) {}
 
@@ -140,15 +155,35 @@ export class ClosedTaskFiles {
     await this.running;
   }
 
+  /**
+   * The first pass reads every close a week old. A later one reads only
+   * the closes that turned a week old since the last pass, and the tasks
+   * that pass left: held by live work then, or not cleared yet. A task
+   * comes due only by its close aging or its holder letting go, so that is
+   * every task that can have come due, read without the whole record.
+   */
   private async pass(): Promise<void> {
     const now = this.options.now();
+    const since = this.lastPassAt;
+    const tasks = this.options.tasks;
+    const held = heldByLiveWork(tasks);
+    const aged = tasks.listClosedRetentionFields(
+      since === Number.NEGATIVE_INFINITY ? null : since - CLOSED_TASK_FILES_KEPT_MS,
+      now - CLOSED_TASK_FILES_KEPT_MS,
+    );
+    const left = tasks.retentionFields([...new Set([...this.held, ...this.retry])]);
+    // Only once read: a pass that failed before reads its window again.
     this.lastPassAt = now;
-    const records = this.options.tasks.list();
-    const held = heldByLiveWork(records, this.options.tasks.graph.allLinks());
-    for (const record of records) {
+    this.held = held;
+    this.retry = new Set();
+    const read = new Set<string>();
+    for (const record of [...aged, ...left]) {
+      if (read.has(record.id)) continue;
+      read.add(record.id);
       if (!closedTaskFilesDue(record, held, now)) continue;
       const key = `${record.id}@${record.closedAt}`;
       if (this.cleared.has(key)) continue;
+      this.retry.add(record.id);
       try {
         if (record.deviceId) {
           if (!this.options.removePlaced) continue;
@@ -160,6 +195,7 @@ export class ClosedTaskFiles {
         }
         await this.remove(record.id);
         this.cleared.add(key);
+        this.retry.delete(record.id);
       } catch (caught) {
         console.warn(`[tasks] could not remove the leftover files of task ${record.id}:`, caught);
       }

@@ -62,7 +62,8 @@ Open and active tasks are never touched, and neither is anything outside the fol
 
 `ClosedTaskFiles` runs one pass at start-up, once an hour on the shared ticker, each time a task closes, and when a work computer comes back into reach.
 A close can free the tasks it held, and the hourly pass lets a continuously running app cross the week without another close.
-Each pass derives upstream holds and cleanup candidates from one task snapshot, resolving basis ids and case-insensitive keys from that snapshot rather than composing each referenced task again.
+Each pass derives upstream holds outward from the live set, reading each held task's links and basis once and each basis id or case-insensitive key once a pass.
+The first pass reads every close a week old; a later one reads only the closes that turned a week old since the last pass, the tasks that pass found held, and those it could not clear, so a close never reads the whole record (INF-3032).
 A pass moves each leftover part, in one rename apiece, into one folder under `worktree-trash/`, writes one quiet timeline note saying what went and how many bytes (`removedFiles` and `bytes` in its data), and deletes that folder in the background below the UI (`WorkspaceService.deleteInBackground`).
 A delete a quit cut short finishes in the next start's trash sweep, and a part a quit left unmoved goes in the next pass.
 A link is moved or removed as a link and never followed, and a task folder that is itself a link is left alone.
@@ -111,6 +112,7 @@ A pending answer is asked again; the computer does not treat a pending answer as
 An out-of-reach computer, or one that needs an update, is not reported as cleaned, and the next contact or hourly pass tries again.
 
 `TaskTempFiles` runs a pass at start-up, once an hour, each time a task closes, and when a work computer comes back into reach.
+Its first pass reads every closed task; a later one reads only the closes since the last pass and the tasks it could not clear.
 The Settings purge still removes the whole folder with the record.
 The same purge removes the first mate's own transcripts: `firstmate/sessions/`, `firstmate/claude/` (the Claude seat's copies and sidecars) and a retired `supervision/sessions/` directory if one remains.
 The Claude client's own copies under `~/.claude/projects/` stay; the client sweeps those after 30 days (`docs/claude-client.md`).

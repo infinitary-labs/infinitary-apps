@@ -49,6 +49,7 @@ import type {
   TaskGate,
   TaskKind,
   TaskRecord,
+  TaskRetentionFields,
   TaskSearchFields,
   TaskStartPolicy,
   TaskStatus,
@@ -581,6 +582,16 @@ export class TaskService {
   /** Each closed row's search fields, oldest first, without reading the rest of it. */
   listClosedSearchFields(): TaskSearchFields[] {
     return this.writer.store.listClosedSearchFields();
+  }
+
+  /** Each closed row's retention fields with its close in `[from, upTo]`, without composing it. */
+  listClosedRetentionFields(from: number | null, upTo: number | null): TaskRetentionFields[] {
+    return this.writer.store.listClosedRetentionFields(from, upTo);
+  }
+
+  /** These tasks' retention fields, those that still exist, without composing them. */
+  retentionFields(ids: readonly string[]): TaskRetentionFields[] {
+    return this.writer.store.retentionFields(ids);
   }
 
   /** Whether any row holds this status, answered without reading or composing one. */

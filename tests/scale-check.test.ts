@@ -11,9 +11,11 @@ import { CardStore } from "@core/storage/cardStore";
 import { InboxStore } from "@core/storage/inboxStore";
 import { SettingsStore } from "@core/storage/settingsStore";
 import { TaskEventStore } from "@core/storage/taskEventStore";
+import { ClosedTaskFiles } from "@core/tasks/closedTaskFiles";
 import { seedTask } from "@core/tasks/seedTask";
 import { TaskProtocol } from "@core/tasks/taskProtocol";
 import { TaskService } from "@core/tasks/taskService";
+import { TaskTempFiles } from "@core/tasks/taskTemp";
 import { WorkPresentation } from "@core/tasks/workPresentation";
 import { RepoRegistry } from "@core/workspace/repoRegistry";
 import type { WorkspaceService } from "@core/workspace/workspaceService";
@@ -27,8 +29,9 @@ import { outsideCensus } from "./helpers/statementCheck";
 
 // The scale check (INF-2061, direction B, built as INF-2069): the reads the
 // app repeats on its main thread - a first mate turn's context build, the
-// answer-delivery sweep, one minute pass, a task board update and the first
-// launch's crew facts - must not grow with closed history. Five main thread freezes (INF-703, INF-940,
+// answer-delivery sweep, one minute pass, a task board update, the first
+// launch's crew facts and a task's close with the closed-task file passes
+// watching - must not grow with closed history. Five main thread freezes (INF-703, INF-940,
 // INF-1348, INF-1956, INF-2059) were synchronous SQLite whose cost grew
 // with the saved record while the tests used a few rows. This seeds a
 // record sized from the captain's real readings, counts each read's
@@ -371,6 +374,18 @@ async function buildRecord() {
   });
   supervisor.watch.startWatchdog(ticker);
   ticker.register("work-presentation", TICK_PERIOD_MS, () => presentation.schedule());
+  // The closed-task file passes as services.ts wires them: a pass at boot,
+  // then one at each close. Each close's two passes read every task record
+  // on the main thread, about 450 ms on the captain's record (INF-3032).
+  const fileSweeps = [
+    new ClosedTaskFiles({ paths, tasks, deleteInBackground: () => {}, now }),
+    new TaskTempFiles({ paths, tasks, deleteInBackground: () => {}, now }),
+  ];
+  for (const sweeps of fileSweeps) {
+    sweeps.watch();
+    await sweeps.sweep();
+  }
+  let closes = 0;
   // The first launch's crew facts as firstLaunch.ts wires them (INF-2338). A
   // record that lacks them, as every launch of the freeze journey's freshly
   // seeded record does, decides them at boot in the startup stretch, and a
@@ -407,6 +422,13 @@ async function buildRecord() {
           protocol.board();
         }),
       };
+      // A running task's close, and the passes over closed tasks' files it starts.
+      const closing = `closing-${closes++}`;
+      seedTask(tasks, { id: closing, title: `Closing work ${closing}`, status: "idle" });
+      counts["task close"] = await counted("task close", async () => {
+        tasks.close(closing, { status: "done", reason: "merged", actor: "host" });
+        for (const sweeps of fileSweeps) await sweeps.settled();
+      });
       // A record without the crew facts, read as each such launch reads it.
       settings.setFirstRun({ welcomedAt: null, firstTurnAt: NOW, welcomeState: "skipped" });
       counts["first-run crew facts"] = await counted("first-run crew facts", () => {

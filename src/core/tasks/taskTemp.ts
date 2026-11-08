@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import type { AppPaths } from "../paths";
 import { lstat, mkdir, readdir, readFile, rename, rm } from "../plainFs";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRetentionFields } from "../storage/taskStore";
 import { HANDOVER_OUT_DIR_NAME, removeHandoverFiles } from "./handoverFiles";
 import { TaskService } from "./taskService";
 
@@ -198,7 +198,10 @@ export async function removeOwnedTempFolder(
   return { status: "removed", bytes };
 }
 
-type TasksReader = Pick<TaskService, "get" | "list" | "note" | "onChange" | "timeline">;
+type TasksReader = Pick<
+  TaskService,
+  "get" | "listClosedRetentionFields" | "retentionFields" | "note" | "onChange" | "timeline"
+>;
 
 export type TaskTempFilesOptions = {
   paths: Pick<AppPaths, "crewmatesDir" | "worktreeTrashDir">;
@@ -206,7 +209,7 @@ export type TaskTempFilesOptions = {
   deleteInBackground: (dir: string) => void;
   now: () => number;
   /** Only an acknowledged answer clears a task on another computer. */
-  removePlaced?: (record: TaskRecord) => Promise<TempRemoval>;
+  removePlaced?: (record: TaskRetentionFields) => Promise<TempRemoval>;
 };
 
 /**
@@ -221,6 +224,8 @@ export class TaskTempFiles {
   private running: Promise<void> | undefined;
   private again = false;
   private lastPassAt = Number.NEGATIVE_INFINITY;
+  /** Closed tasks a pass could not clear yet, tried again at the next. */
+  private retry = new Set<string>();
 
   constructor(private readonly options: TaskTempFilesOptions) {}
 
@@ -263,13 +268,31 @@ export class TaskTempFiles {
     await this.running;
   }
 
+  /**
+   * The first pass reads every closed task; a later one only the closes
+   * since the last pass and the tasks it could not clear, never the whole
+   * record (INF-3032).
+   */
   private async pass(): Promise<void> {
     const now = this.options.now();
+    const since = this.lastPassAt;
+    const tasks = this.options.tasks;
+    const closed = tasks.listClosedRetentionFields(
+      since === Number.NEGATIVE_INFINITY ? null : since,
+      null,
+    );
+    const left = tasks.retentionFields([...this.retry]);
+    // Only once read: a pass that failed before reads its closes again.
     this.lastPassAt = now;
-    for (const record of this.options.tasks.list()) {
+    this.retry = new Set();
+    const read = new Set<string>();
+    for (const record of [...closed, ...left]) {
+      if (read.has(record.id)) continue;
+      read.add(record.id);
       if (!TaskService.isClosed(record) || record.closedAt === null) continue;
       const key = `${record.id}@${record.closedAt}`;
       if (this.cleared.has(key)) continue;
+      this.retry.add(record.id);
       try {
         const result = await this.remove(record);
         if (result.status === "pending") {
@@ -278,13 +301,14 @@ export class TaskTempFiles {
         }
         if (result.status === "removed" && result.bytes > 0) this.noteRemoved(record, result.bytes);
         this.cleared.add(key);
+        this.retry.delete(record.id);
       } catch (caught) {
         this.notePending(record.id, pendingReason(caught));
       }
     }
   }
 
-  private async remove(record: TaskRecord): Promise<TempRemoval> {
+  private async remove(record: TaskRetentionFields): Promise<TempRemoval> {
     // The files its reports handed on go at the close too, wherever it ran (INF-992).
     await removeHandoverFiles(
       join(this.options.paths.crewmatesDir, record.id, HANDOVER_OUT_DIR_NAME),
@@ -302,7 +326,7 @@ export class TaskTempFiles {
     );
   }
 
-  private noteRemoved(record: TaskRecord, bytes: number): void {
+  private noteRemoved(record: TaskRetentionFields, bytes: number): void {
     const already = this.options.tasks
       .timeline(record.id)
       .some((event) => event.data?.tempRemoved === record.closedAt);

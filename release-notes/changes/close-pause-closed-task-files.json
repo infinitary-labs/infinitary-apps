@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "close-pause-closed-task-files",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Closing a task no longer makes the app pause on a long record",
+      "body": "Each time a task closed, the app reread every task you have ever had to tidy closed tasks' files, which held the window still for about half a second on a long record. It now reads only the tasks that closed since it last looked.",
+      "noPicture": "This removes a pause after a task closes; no view or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

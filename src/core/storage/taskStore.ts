@@ -707,6 +707,13 @@ export type TaskSearchFields = Pick<
   "id" | "key" | "kind" | "status" | "title" | "goal" | "closedAt"
 >;
 
+/**
+ * What the passes over closed tasks' files read of each row
+ * (`ClosedTaskFiles`, `TaskTempFiles`): which task, whether and when it
+ * closed, and the computer that holds its files.
+ */
+export type TaskRetentionFields = Pick<TaskRecord, "id" | "status" | "closedAt" | "deviceId">;
+
 /** The work facts ask coverage and its summaries need, without composed payloads. */
 export type TaskCoverageFields = Pick<
   TaskRecord,
@@ -1607,6 +1614,44 @@ export class TaskStore {
       title: row.title,
       goal: row.goal,
       closedAt: row.closed_at,
+    }));
+  }
+
+  /**
+   * Each closed row's retention fields whose close falls in `[from, upTo]`
+   * (either bound left out reaches the end), sought through
+   * `tasks_closed_at` without composing a record: a close's pass reads
+   * only the closes since the last pass, never the whole record (INF-3032).
+   */
+  listClosedRetentionFields(from: number | null, upTo: number | null): TaskRetentionFields[] {
+    const bounds = [
+      ...(from === null ? [] : [["t.closed_at >= ?", from] as const]),
+      ...(upTo === null ? [] : [["t.closed_at <= ?", upTo] as const]),
+    ];
+    const where = bounds.map(([clause]) => clause).join(" AND ") || "t.closed_at IS NOT NULL";
+    return this.retentionRows(where, ...bounds.map(([, value]) => value));
+  }
+
+  /** These tasks' retention fields, those that still exist, without composing a record. */
+  retentionFields(ids: readonly string[]): TaskRetentionFields[] {
+    if (ids.length === 0) return [];
+    return this.retentionRows("t.id IN (SELECT value FROM json_each(?))", JSON.stringify(ids));
+  }
+
+  private retentionRows(where: string, ...params: unknown[]): TaskRetentionFields[] {
+    // The computer lives on the execution row once that table exists.
+    const device = this.execution.exists()
+      ? "(SELECT e.device_id FROM task_execution e WHERE e.task_id = t.id)"
+      : "t.device_id";
+    const rows = prepared(
+      this.db,
+      `SELECT t.id, t.status, t.closed_at, ${device} AS device_id FROM tasks t WHERE ${where}`,
+    ).all(...params) as Pick<Row, "id" | "status" | "closed_at" | "device_id">[];
+    return rows.map((row) => ({
+      id: row.id,
+      status: row.status,
+      closedAt: row.closed_at,
+      deviceId: row.device_id ?? null,
     }));
   }
 

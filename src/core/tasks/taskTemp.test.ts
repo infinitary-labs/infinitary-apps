@@ -2,10 +2,15 @@ import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { appPathsFor } from "../paths";
+import { openInMemoryDatabase } from "../storage/db";
+import { seedTask } from "./seedTask";
+import { TaskService } from "./taskService";
 import {
   OLDER_TEMP_MARKER_NAME,
   provisionTaskTemp,
   removeOwnedTempFolder,
+  TaskTempFiles,
   TEMP_DIR_NAME,
   TEMP_MARKER_NAME,
 } from "./taskTemp";
@@ -46,5 +51,41 @@ describe("a task's temporary folder across the rename", () => {
     const fresh = join(root, "fresh");
     provisionTaskTemp(fresh);
     expect(readdirSync(fresh).sort()).toEqual([TEMP_MARKER_NAME, TEMP_DIR_NAME].sort());
+  });
+});
+
+/**
+ * A pass reads only the closes since the last one (INF-3032), so a removal
+ * its computer could not make yet comes back at the next pass with no close.
+ */
+describe("closed tasks' temporary folders", () => {
+  it("tries a computer's removal again at the next pass, with no new close", async () => {
+    const paths = appPathsFor(scratchDir("infinitary-task-temp-retry-"));
+    const tasks = new TaskService({ db: openInMemoryDatabase(), now: () => 1_000, strict: true });
+    seedTask(tasks, { id: "away", title: "away", status: "cancelled", deviceId: "mini" });
+    const asked: (string | null | undefined)[] = [];
+    let inReach = false;
+    const temp = new TaskTempFiles({
+      paths,
+      tasks,
+      deleteInBackground: () => {},
+      now: () => 2_000,
+      removePlaced: async (record) => {
+        asked.push(record.deviceId);
+        return inReach
+          ? { status: "removed", bytes: 5 }
+          : { status: "pending", bytes: 0, reason: "its computer is out of reach" };
+      },
+    });
+    await temp.sweep();
+    inReach = true;
+    await temp.sweep();
+    expect(asked).toEqual(["mini", "mini"]);
+    expect(tasks.timeline("away").map((event) => event.text)).toEqual(
+      expect.arrayContaining([
+        "temporary files kept: its computer is out of reach",
+        "temporary files removed, 5 B",
+      ]),
+    );
   });
 });

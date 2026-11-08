@@ -10,7 +10,11 @@ import { REPO_ROOT } from "../scripts/moduleRunner.ts";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // Two real CLI launches: fastest measured case ~3 s, fivefold rounded
-// budget 15 s (docs/test-cohorts.md). The child deadline also bounds leaks.
+// budget 15 s (docs/test-cohorts.md). Each child ends with that limit, through
+// the test's signal, so a runner that leaks a handle and never exits still
+// fails and is killed. The limit counts only the time the run got to run
+// ("Budgets" there); a wall-clock deadline of the child's own killed healthy
+// children on a loaded Linux check machine.
 vi.setConfig({ testTimeout: 15_000 });
 const run = promisify(execFile);
 
@@ -39,7 +43,9 @@ async function occupyWebSocketPort(): Promise<() => Promise<void>> {
 }
 
 describe("offline core module loading", () => {
-  it("imports aliases and lazy core dependencies in concurrent runners without any listener", async () => {
+  it("imports aliases and lazy core dependencies in concurrent runners without any listener", async ({
+    signal,
+  }) => {
     const home = scratchDir("infinitary-module-runner-");
     const fixture = join(home, "lazy-core.ts");
     writeFileSync(
@@ -82,13 +88,15 @@ console.log(JSON.stringify({ runners: runners.length, tasks: 0, listeners: 0, cl
 `;
     const result = await run(process.execPath, ["--input-type=module", "--eval", probe], {
       env: offlineEnv(home),
-      timeout: 12_000,
+      signal,
     });
     expect(JSON.parse(result.stdout)).toEqual({ runners: 2, tasks: 0, listeners: 0, closed: true });
     expect(result.stderr).toBe("");
   });
 
-  it("exports and imports task records through the real command while the shared port is occupied", async () => {
+  it("exports and imports task records through the real command while the shared port is occupied", async ({
+    signal,
+  }) => {
     const home = scratchDir("infinitary-module-command-");
     const releasePort = await occupyWebSocketPort();
     const script = join(REPO_ROOT, "scripts/export-tasks.ts");
@@ -97,7 +105,7 @@ console.log(JSON.stringify({ runners: runners.length, tasks: 0, listeners: 0, cl
       const exported = await run(
         process.execPath,
         [script, "--user-data", join(home, "source"), "--out", out],
-        { env: offlineEnv(home), timeout: 12_000 },
+        { env: offlineEnv(home), signal },
       );
       expect(exported.stdout).toMatch(/^wrote \d+ lines to /);
       expect(exported.stderr).toBe("");
@@ -106,7 +114,7 @@ console.log(JSON.stringify({ runners: runners.length, tasks: 0, listeners: 0, cl
       const imported = await run(
         process.execPath,
         [script, "--user-data", join(home, "target"), "--import", out],
-        { env: offlineEnv(home), timeout: 12_000 },
+        { env: offlineEnv(home), signal },
       );
       expect(imported.stdout).toMatch(/^imported 0 tasks/);
       expect(imported.stderr).toBe("");

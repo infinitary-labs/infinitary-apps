@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "module-runner-child-deadline",
+      "reason": "The offline module runner test now ends each command it starts with the test's own limit, which counts only the time the run got to run, instead of a wall-clock deadline that killed healthy commands on a loaded check machine; test-only, nothing a person sees changes."
+    }
+  ]
+}

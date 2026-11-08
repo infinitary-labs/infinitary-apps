@@ -83,7 +83,8 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 Before a Claude value read, the child checks that the store is unlocked and reads that one item's access rules (`SecKeychainItemCopyAccess`, `src/main/host/darwinKeychain.ts`).
 It does not list the other saved passwords, and it does not check each trusted app's signature.
-It tries `/usr/bin/security` before a direct value read only when that item trusts the tool for decrypt without a password and its partition is `apple-tool:` or absent.
+It tries `/usr/bin/security` before a direct value read only when that item's decrypt entry lists the tool and its partition is `apple-tool:` or absent.
+The decrypt entry's require-password bit is not judged: a listed app satisfies that entry without its password window, and each of Claude Code's own saves (`security -i` running `add-generic-password -U`) swaps the bytes of the entry's prompt selector, so the bit comes and goes while the listed apps stay.
 The partition description from `SecACLCopyContents` is a hex-encoded XML plist; the host decodes that known shape and accepts exactly one `apple-tool:` entry, refusing malformed data and any additional team.
 Unknown layouts, other items, locked stores and missing grants never authorize the tool; the native fallback still enforces the caller's interaction flag.
 The captain retained this guard because Apple's reader has no universal no-prompt switch; tool-first by itself is not proof that an arbitrary item cannot ask.
@@ -92,7 +93,7 @@ External rotation is observed on the next uncached read.
 The value read is `find-generic-password -w` of that one item (`src/main/host/claudeKeychainTool.ts`), with Apple's hexadecimal output decoded for values containing non-printable bytes such as multiline JSON.
 
 The regular macOS integration test (`src/main/host/claudeKeychainAccess.integration.test.ts`) creates its store under a scratch home’s `Library/Keychains/`, so macOS gives the item real partition entries.
-It covers a Claude Code-style item, Apple-first success without direct value access, exact-account resolution through a real child, multiline credentials, and refusal of `apple-tool:` plus another team without invoking the tool.
+It covers a Claude Code-style item, Apple-first success without direct value access, a granted item read through the tool after each of several Claude Code-style saves whatever they leave in the password bit, exact-account resolution through a real child, multiline credentials, and refusal of `apple-tool:` plus another team without invoking the tool.
 It compares the real search list before and after; no real credential or real-item access rule is read or changed.
 The unit fixture uses the hex-encoded plist returned by macOS and rejects malformed layouts and other partitions.
 

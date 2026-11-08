@@ -3,6 +3,7 @@ import { chmodSync, copyFileSync, mkdirSync, truncateSync, writeFileSync } from 
 import { join } from "node:path";
 import { clearClaudeCredentialCache, readClaudeStore } from "@core/claude/claudeQuota";
 import { hostEnv } from "@core/hostEnv";
+import koffi from "koffi";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   bundleKeychainProcess,
@@ -36,6 +37,7 @@ const SERVICE = "Claude Code-credentials";
 const ACCOUNT = "scratch";
 const TOKEN = "not-a-real-credential";
 const PASSWORD = "throwaway-scratch-password";
+const TOOL_PATH = "/usr/bin/security";
 
 let helperPath = "";
 let searchListBefore = "";
@@ -260,6 +262,179 @@ describe.runIf(process.platform === "darwin")(
           state: "present",
           auth: { accessToken: TOKEN, expiresAt: expect.any(Number) },
         });
+      } finally {
+        try {
+          run("delete-keychain", store);
+        } catch {
+          /* the throwaway file is removed with the scratch directory */
+        }
+      }
+    });
+  },
+);
+
+/** kSecKeychainPromptRequirePassphase in an ACL's 16-bit prompt selector. */
+const REQUIRE_PASSWORD = 0x0001;
+
+/**
+ * A generic password whose decrypt entry lists `apps` ("self" is this
+ * process's program) with the password bit set: what the app never does,
+ * through the same framework. Creating an item with its own access asks for
+ * no keychain password, so no window can open; the store is the scratch file.
+ */
+function createItemRequiringPassword(
+  store: string,
+  service: string,
+  account: string,
+  value: string,
+  apps: string[],
+): void {
+  const security = koffi.load("/System/Library/Frameworks/Security.framework/Security");
+  const cf = koffi.load("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation");
+  const ptr = koffi.pointer("void");
+  const out = koffi.out(koffi.pointer(ptr));
+  const attribute = koffi.struct({ tag: "uint32", length: "uint32", data: ptr });
+  const attributeList = koffi.struct({ count: "uint32", attr: koffi.pointer(attribute) });
+  const trustedApp = security.func("SecTrustedApplicationCreateFromPath", "int32", ["str", out]);
+  const createAccess = security.func("SecAccessCreate", "int32", [ptr, ptr, out]);
+  const copyAclList = security.func("SecAccessCopyACLList", "int32", [ptr, out]);
+  const copyAuthorizations = security.func("SecACLCopyAuthorizations", ptr, [ptr]);
+  const copyContents = security.func("SecACLCopyContents", "int32", [
+    ptr,
+    out,
+    out,
+    koffi.out(koffi.pointer("uint16")),
+  ]);
+  const setContents = security.func("SecACLSetContents", "int32", [ptr, ptr, ptr, "uint16"]);
+  const openKeychain = security.func("SecKeychainOpen", "int32", ["str", out]);
+  const createItem = security.func("SecKeychainItemCreateFromContent", "int32", [
+    "uint32",
+    koffi.pointer(attributeList),
+    "uint32",
+    ptr,
+    ptr,
+    ptr,
+    ptr,
+  ]);
+  const cfString = cf.func("CFStringCreateWithCString", ptr, [ptr, "str", "uint32"]);
+  const cfStringGet = cf.func("CFStringGetCString", "uint8", [ptr, ptr, "long", "uint32"]);
+  const cfArray = cf.func("CFArrayCreate", ptr, [ptr, koffi.pointer(ptr), "long", ptr]);
+  const cfCount = cf.func("CFArrayGetCount", "long", [ptr]);
+  const cfGet = cf.func("CFArrayGetValueAtIndex", ptr, [ptr, "long"]);
+  const UTF8 = 0x08000100;
+  const text = (value: unknown): string => {
+    const buffer = Buffer.alloc(256);
+    return cfStringGet(value, buffer, buffer.length, UTF8)
+      ? (buffer.toString("utf8").split("\0")[0] ?? "")
+      : "";
+  };
+
+  const refs = apps.map((path) => {
+    const app: [unknown] = [null];
+    expect(trustedApp(path === "self" ? null : path, app)).toBe(0);
+    return app[0];
+  });
+  const access: [unknown] = [null];
+  expect(
+    createAccess(cfString(null, service, UTF8), cfArray(null, refs, refs.length, null), access),
+  ).toBe(0);
+  const acls: [unknown] = [null];
+  expect(copyAclList(access[0], acls)).toBe(0);
+  let decrypts = 0;
+  for (let index = 0; index < Number(cfCount(acls[0])); index += 1) {
+    const acl = cfGet(acls[0], index);
+    const tags = copyAuthorizations(acl);
+    const names = Array.from({ length: Number(cfCount(tags)) }, (_, tag) => text(cfGet(tags, tag)));
+    if (!names.includes("ACLAuthorizationDecrypt")) continue;
+    const listed: [unknown] = [null];
+    const description: [unknown] = [null];
+    const selector = [0];
+    expect(copyContents(acl, listed, description, selector)).toBe(0);
+    expect(
+      setContents(acl, listed[0], description[0], Number(selector[0]) | REQUIRE_PASSWORD),
+    ).toBe(0);
+    decrypts += 1;
+  }
+  expect(decrypts).toBe(1);
+  const field = (tag: string, bytes: Buffer) => ({
+    tag: Buffer.from(tag).readUInt32BE(),
+    length: bytes.length,
+    data: bytes,
+  });
+  const fields = [
+    field("svce", Buffer.from(service)),
+    field("acct", Buffer.from(account)),
+    field("labl", Buffer.from(service)),
+  ];
+  const keychain: [unknown] = [null];
+  expect(openKeychain(store, keychain)).toBe(0);
+  const secret = Buffer.from(value);
+  expect(
+    createItem(
+      Buffer.from("genp").readUInt32BE(),
+      { count: fields.length, attr: fields },
+      secret.length,
+      secret,
+      keychain[0],
+      access[0],
+      null,
+    ),
+  ).toBe(0);
+}
+
+describe.runIf(process.platform === "darwin")(
+  "Claude's item stays readable after the client saves it again",
+  () => {
+    // INF-3081: after Always Allow, the item's decrypt entry listed the app's
+    // helper and Apple's tool. Each of Claude Code's own saves (`security -i`
+    // running add-generic-password -U) cut the partition list to apple-tool:
+    // and swapped the bytes of the decrypt entry's prompt selector, so its
+    // require-password bit came and went. Every save that left it set made
+    // the background read fail -25293 until the person clicked Retry.
+    it("reads through Apple's tool whatever the save left in the password bit", async () => {
+      const { store, env, run } = throwawayKeychain("infinitary-claude-resave-");
+      // The granted item: the decrypt entry lists the helper's program (this
+      // one, which the child below runs) and Apple's tool, with the bit set.
+      createItemRequiringPassword(store, SERVICE, ACCOUNT, "granted", ["self", TOOL_PATH]);
+      try {
+        // A fresh child for each read, as in the app: a process that read the
+        // store before another program rewrote it can hold a stale record.
+        const keychain = createProcessKeychain({
+          helperPath,
+          fork: (path: string, args: string[]) =>
+            fork(path, args, {
+              execArgv: [],
+              stdio: ["ignore", "ignore", "ignore", "ipc"],
+              env: { ...env, TEST_KEYCHAIN_PATH: store },
+            }),
+        });
+        const passwordBit: string[] = [];
+        for (let save = 1; save <= 3; save += 1) {
+          const login = JSON.stringify({ claudeAiOauth: { accessToken: `${TOKEN}-${save}` } });
+          // Claude Code's own save: one command on the tool's standard input.
+          execFileSync("/usr/bin/security", ["-i"], {
+            env,
+            input: `add-generic-password -U -a "${ACCOUNT}" -s "${SERVICE}" -X "${Buffer.from(login).toString("hex")}" "${store}"\n`,
+            stdio: ["pipe", "ignore", "pipe"],
+            timeout: 20_000,
+          });
+          // The decrypt entry's bit as the tool prints it, read in its own process.
+          const decrypt = run("dump-keychain", "-a", store)
+            .split(/^ {4}entry \d+:/m)
+            .find((entry) => entry.includes(" decrypt derive export_clear "));
+          passwordBit.push(
+            /^ {8}(don't-require-password|require-password)$/m.exec(decrypt ?? "")?.[1] ?? "",
+          );
+          expect(
+            await keychain.readGenericPassword({ service: SERVICE, account: ACCOUNT }),
+            `save ${save}`,
+          ).toEqual({ kind: "value", value: login });
+        }
+        // The failing case was covered: at least one save left the bit set.
+        expect(passwordBit).toContain("require-password");
+        console.info(
+          `Decrypt entry after each save: ${passwordBit.join(", ")}; the background read returned every one.`,
+        );
       } finally {
         try {
           run("delete-keychain", store);

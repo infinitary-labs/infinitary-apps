@@ -348,7 +348,6 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
   const cfDataLength = coreFoundation.func("CFDataGetLength", "long", ["void *"]);
   const cfDataBytes = coreFoundation.func("CFDataGetBytePtr", voidPtr, ["void *"]);
   const UTF8 = 0x08000100;
-  const REQUIRE_PASSWORD = 0x0001;
   /** Names SecACLCopyAuthorizations returns, in the dump's words. */
   const AUTHORIZATION: Record<string, string> = {
     ACLAuthorizationAny: "any",
@@ -413,6 +412,7 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
         const acl = cfArrayGet(acls[0], index);
         const apps: [unknown] = [null];
         const description: [unknown] = [null];
+        // The prompt selector is not judged (appleToolMayRead).
         const prompt = [0];
         const authorizations = copyAuthorizations(acl);
         try {
@@ -438,7 +438,6 @@ function bindSecurityFramework(keychainPath?: string): DarwinKeychainApi {
           }
           entries.push({
             authorizations: tags,
-            requirePassword: (Number(prompt[0]) & REQUIRE_PASSWORD) !== 0,
             description: text,
             applicationPaths: paths,
           });

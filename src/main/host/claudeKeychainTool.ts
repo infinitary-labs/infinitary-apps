@@ -13,7 +13,7 @@ import { KEYCHAIN_READ_TIMEOUT_MS } from "./keychainProcess";
  * (`darwinKeychain.ts`). It does not list the other saved passwords and does
  * not check each trusted app's signature: that walk is what ran out of time
  * on a Mac whose passwords trust large apps. Fail closed on an unfamiliar
- * layout, a locked store, an ambiguous item, or a missing no-password grant.
+ * layout, a locked store, an ambiguous item, or a missing grant to the tool.
  * A background tick must not produce a macOS dialog. No credential is
  * persisted by this adapter. The value read's output is captured, never logged.
  */
@@ -32,7 +32,6 @@ async function runSecurity(args: string[]): Promise<string> {
 /** One access-list entry of Claude's item, with no signature verdicts. */
 export type ClaudeAclEntry = {
   authorizations: readonly string[];
-  requirePassword: boolean;
   description: string;
   applicationPaths: readonly string[];
 };
@@ -100,11 +99,15 @@ function hasOnlyAppleToolPartition(description: string): boolean {
  * item's entries. An absent partition is the older shape and is allowed;
  * any other partition is not. Unfamiliar entries are the caller's to refuse
  * before this is asked.
+ *
+ * The decrypt entry's require-password bit is not read: a listed app
+ * satisfies that entry without its password window, and each of Claude
+ * Code's own saves swaps the bytes of the entry's prompt selector, so the
+ * bit comes and goes while the listed apps stay (INF-3081).
  */
 export function appleToolMayRead(entries: readonly ClaudeAclEntry[]): boolean {
   const trusted = entries.some(
     (entry) =>
-      !entry.requirePassword &&
       sameAuthorizations(entry.authorizations, DECRYPT_AUTHORIZATIONS) &&
       entry.applicationPaths.includes(TOOL),
   );
@@ -134,9 +137,7 @@ export function toolMayReadClaudeItem(dump: string, account: string): boolean {
     (entry) =>
       /^ {8}authorizations \(6\): decrypt derive export_clear export_wrapped mac sign$/m.test(
         entry,
-      ) &&
-      entry.includes("        don't-require-password") &&
-      /^\s+\d+: \/usr\/bin\/security \(OK\)$/m.test(entry),
+      ) && /^\s+\d+: \/usr\/bin\/security \(OK\)$/m.test(entry),
   );
   const partitionEntries = entries.filter((entry) =>
     /^ {8}authorizations \(1\): partition_id$/m.test(entry),

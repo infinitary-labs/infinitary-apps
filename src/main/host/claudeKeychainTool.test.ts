@@ -49,21 +49,20 @@ describe("Claude's trusted Apple-tool read", () => {
     expect(toolMayReadClaudeItem(ITEM.replace("apple-tool:", "teamid:OTHER"), "someone")).toBe(
       false,
     );
+    // INF-3081: Claude Code's own saves flip the bit; the listed tool still reads.
     expect(
       toolMayReadClaudeItem(ITEM.replace("don't-require-password", "require-password"), "someone"),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("judges the grant from the one item, and refuses any other partition", () => {
     const decrypt: ClaudeAclEntry = {
       authorizations: ["sign", "mac", "export_wrapped", "export_clear", "derive", "decrypt"],
-      requirePassword: false,
       description: "Claude Code-credentials",
       applicationPaths: ["/usr/bin/security"],
     };
     const partition = (description: string): ClaudeAclEntry => ({
       authorizations: ["partition_id"],
-      requirePassword: false,
       description,
       applicationPaths: [],
     });
@@ -97,7 +96,6 @@ describe("Claude's trusted Apple-tool read", () => {
     ]) {
       expect(appleToolMayRead([decrypt, partition(description)]), description).toBe(false);
     }
-    expect(appleToolMayRead([{ ...decrypt, requirePassword: true }])).toBe(false);
     expect(appleToolMayRead([{ ...decrypt, applicationPaths: ["/Applications/Other.app"] }])).toBe(
       false,
     );

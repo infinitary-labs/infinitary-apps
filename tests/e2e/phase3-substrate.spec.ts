@@ -2,7 +2,6 @@ import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, readdirSync, readlinkSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { expect, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { PROJECT_ROW_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
@@ -12,6 +11,7 @@ import { DISCARD_PROMPT_MARKER, LAND_PROMPT_MARKER } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, startedLine, taskKey } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   ADOPT_REPO_PROMPT_MARKER,
   CLONE_REPO_PROMPT_MARKER,
@@ -43,16 +43,15 @@ type TaskRow = {
 
 /** The record as the app's own database holds it, read read-only. */
 function taskRow(userDataDir: string, taskId: string): TaskRow | undefined {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return db
-      .prepare(
-        "SELECT id, key, project_id, status, closed_reason, workspace_state, closed_at FROM tasks WHERE id = ?",
-      )
-      .get(taskId) as TaskRow | undefined;
-  } finally {
-    db.close();
-  }
+  return readSavedData(
+    userDataDir,
+    (db) =>
+      db
+        .prepare(
+          "SELECT id, key, project_id, status, closed_reason, workspace_state, closed_at FROM tasks WHERE id = ?",
+        )
+        .get(taskId) as TaskRow | undefined,
+  );
 }
 
 let launched: LaunchedApp;

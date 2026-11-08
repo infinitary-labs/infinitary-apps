@@ -1,6 +1,4 @@
-import { join } from "node:path";
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { frameIn, panelBody, panelElement } from "./frames";
@@ -9,6 +7,7 @@ import { seedKnowledge } from "./knowledgeSeed";
 import { launchApp } from "./launch";
 import { promptInput } from "./prompt";
 import { dockSummary, dockSummaryLine } from "./rails";
+import { readKnowledgeData } from "./savedData";
 import { KNOWLEDGE_RETIRE_PROMPT_MARKER, knowledgeRetire } from "./scenarios/knowledgeRetire";
 
 /**
@@ -36,8 +35,7 @@ const RETIRED = [
 ] as const;
 
 function revisions(userDataDir: string, ids: readonly string[]): Map<string, number> {
-  const db = new Database(join(userDataDir, "knowledge", "knowledge.db"), { readonly: true });
-  try {
+  return readKnowledgeData(userDataDir, (db) => {
     const read = db.prepare("SELECT revision FROM entries WHERE id = ?");
     return new Map(
       ids.map((id) => {
@@ -46,19 +44,14 @@ function revisions(userDataDir: string, ids: readonly string[]): Map<string, num
         return [id, row.revision];
       }),
     );
-  } finally {
-    db.close();
-  }
+  });
 }
 
 function lifecycles(userDataDir: string, ids: readonly string[]): string[] {
-  const db = new Database(join(userDataDir, "knowledge", "knowledge.db"), { readonly: true });
-  try {
+  return readKnowledgeData(userDataDir, (db) => {
     const read = db.prepare("SELECT lifecycle FROM entries WHERE id = ?");
     return ids.map((id) => (read.get(id) as { lifecycle: string }).lifecycle);
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /** The panel page's process, matched by the iframe the window is showing. */

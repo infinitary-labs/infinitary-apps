@@ -1,12 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { namedModelWords } from "../../src/core/orchestrator/namedModel";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { type LaunchedApp, launchApp } from "./launch";
 import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import { promptInput } from "./prompt";
+import { readSavedData } from "./savedData";
 import {
   NAMED_SPAWN_ASK,
   NAMED_SPAWN_MISSING_ASK,
@@ -87,16 +86,13 @@ function spawnExchange(
 
 /** The rule of every routing decision recorded for a task, from the app's own ledger. */
 function routingRules(userDataDir: string, taskId: string): string[] {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return (
+  return readSavedData(userDataDir, (db) =>
+    (
       db
         .prepare("SELECT rule FROM routing_decisions WHERE task_id = ? ORDER BY id")
         .all(taskId) as { rule: string }[]
-    ).map((row) => row.rule);
-  } finally {
-    db.close();
-  }
+    ).map((row) => row.rule),
+  );
 }
 
 /**

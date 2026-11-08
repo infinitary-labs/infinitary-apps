@@ -198,11 +198,12 @@ A spec's own raw `click()` is not on the queue; it overlaps a background expand 
 The core is the one writer of the saved data once the app has launched.
 A spec seeds before the first launch, or between two launches while the app is stopped, with the stores it shares with the core (`seedTask`, `TaskService`, `CardStore`).
 A second `TaskService` built against the live database runs boot recovery (it marks running turns interrupted) and locks the file: the dependency-wait journey lost a release run to "database is locked" that way, and the same journey passed once its observer only read.
-After a launch a spec reads saved data through `readSavedData(userDataDir, read)` (`tests/e2e/savedData.ts`: read-only, `query_only`), or through a store it built before the launch and only reads from.
+After a launch a spec reads saved data through `readSavedData(userDataDir, read)` (`tests/e2e/savedData.ts`: read-only, `query_only`), and the knowledge collection through `readKnowledgeData(userDataDir, read)` beside it, or through a store it built before the launch and only reads from.
 A search of every file the app keeps, such as a check that nothing saved holds what was typed, goes through `savedText(dir)` (`tests/e2e/savedText.ts`).
 The app moves files while it writes them (Chromium renames its atomic-write file into place), so `savedText` leaves out an entry gone since its folder was listed and throws on any other failure, including a missing `dir`.
 The `e2e-no-writer-after-launch` rule (`tests/lint/e2eWriters.ts`, run by `scripts/lint-e2e-frames.ts` in `pnpm check`) refuses `openDatabase`, `new TaskService`, `new CardService` and `new CardStore` in a spec after a launch call and before the app is closed, in a closure kept for later (`const read = () => new TaskService(...)`) or handed to a poll, and in a same-file helper called after a launch.
 It is lexical; a store built in another file, or a write through a store built before the launch, is not seen.
+The same rule refuses a spec's own `new Database(path, { readonly: true })` wherever it sits: a read-only open is only ever a read, and a read goes through `savedData.ts`; a writable `new Database` that seeds the stopped app stays.
 A journey whose subject is someone else's write says so with `// e2e-writer-ok: <why>` on the line or the one above.
 Such a write takes the write lock before it reads, as `seedDelivery` (`tests/helpers/taskDelivery.ts`) does with `BEGIN IMMEDIATE`.
 A transaction that reads first and then writes is refused at once, with no busy wait, whenever the running app holds the write lock at that moment.

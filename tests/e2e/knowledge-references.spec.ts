@@ -1,6 +1,4 @@
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -26,6 +24,7 @@ import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { promptInput } from "./prompt";
 import { openRecordMore, pressRow, recordCard, recordFrame } from "./rails";
+import { readKnowledgeData } from "./savedData";
 import {
   clickInBody,
   SHOWN_ENTRY,
@@ -52,19 +51,16 @@ const ANSWER = "Retries keep the same message";
 
 /** Every row the collection holds, by table: what a write would change. */
 function knowledgeRows(userDataDir: string): Record<string, number> {
-  const db = new Database(join(userDataDir, "knowledge", "knowledge.db"), { readonly: true });
-  try {
-    return Object.fromEntries(
+  return readKnowledgeData(userDataDir, (db) =>
+    Object.fromEntries(
       ["entries", "revisions", "sources", "assessments", "relations", "uses", "requests"].map(
         (table) => [
           table,
           (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n,
         ],
       ),
-    );
-  } finally {
-    db.close();
-  }
+    ),
+  );
 }
 
 /** How many tasks the record holds: reading never files one. */

@@ -1,11 +1,10 @@
-import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { NOTHING_SPAWNED } from "../../src/core/pi/crewTools";
 import { type LaunchedApp, launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { feedLine, reportLine, startedLine, taskKey, taskLine } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   BLOCKED_REPORT_PROMPT_MARKER,
   ESCALATE_PROMPT_MARKER,
@@ -36,17 +35,8 @@ type TaskRow = {
   prompt: string;
 };
 
-function withDb<T>(userDataDir: string, read: (db: Database.Database) => T): T {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return read(db);
-  } finally {
-    db.close();
-  }
-}
-
 function readTasks(userDataDir: string): TaskRow[] {
-  return withDb(
+  return readSavedData(
     userDataDir,
     (db) =>
       db
@@ -59,7 +49,7 @@ function readTasks(userDataDir: string): TaskRow[] {
 
 /** The earlier attempt each task retries, as its relationship row records it. */
 function readRetries(userDataDir: string) {
-  return withDb(
+  return readSavedData(
     userDataDir,
     (db) =>
       db
@@ -71,7 +61,7 @@ function readRetries(userDataDir: string) {
 }
 
 function readEvents(userDataDir: string, taskId: string) {
-  return withDb(
+  return readSavedData(
     userDataDir,
     (db) =>
       db
@@ -143,7 +133,7 @@ test("the captain's rejection escalates a task one tier up as a fresh crewmate",
   expect(readTasks(userDataDir)[0]?.status).toBe("dropped");
 
   // The lineage edge the captain chose.
-  const links = withDb(
+  const links = readSavedData(
     userDataDir,
     (db) =>
       db.prepare("SELECT from_id, to_id, type, actor FROM task_links").all() as {

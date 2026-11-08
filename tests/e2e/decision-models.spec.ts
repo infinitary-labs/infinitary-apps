@@ -3,7 +3,6 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { CLASSIFIER_MAX_OUTPUT_TOKENS } from "../../src/core/orchestrator/seat";
 import { KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
 import { USE_OPENROUTER_DECISION_MODEL } from "../../src/renderer/src/settings/modelsWords";
@@ -31,6 +30,7 @@ import { modelsSection } from "./modelsBoard";
 import { promptInput } from "./prompt";
 import { seedQuotaFixture } from "./quotaFixtures";
 import { feedLine, startedLine, taskKey } from "./rails";
+import { readSavedData } from "./savedData";
 
 /**
  * Decision models (S7b, captain-approved design
@@ -142,17 +142,8 @@ async function startStubJev(): Promise<StubJev> {
 
 type TaskRow = { id: string; key: string; title: string; shape_json: string | null };
 
-function withDb<T>(userDataDir: string, read: (db: Database.Database) => T): T {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return read(db);
-  } finally {
-    db.close();
-  }
-}
-
 function readTasks(userDataDir: string): TaskRow[] {
-  return withDb(
+  return readSavedData(
     userDataDir,
     (db) =>
       db
@@ -162,7 +153,7 @@ function readTasks(userDataDir: string): TaskRow[] {
 }
 
 function readReasons(userDataDir: string, taskId: string): string[] {
-  return withDb(userDataDir, (db) =>
+  return readSavedData(userDataDir, (db) =>
     (
       db
         .prepare("SELECT reasons_json FROM routing_decisions WHERE task_id = ? ORDER BY id")
@@ -172,7 +163,7 @@ function readReasons(userDataDir: string, taskId: string): string[] {
 }
 
 function readUsage(userDataDir: string): { provider: string | null; model: string | null }[] {
-  return withDb(
+  return readSavedData(
     userDataDir,
     (db) =>
       db.prepare("SELECT provider, model FROM usage_events ORDER BY id").all() as {
@@ -323,7 +314,7 @@ test.describe("the surface", () => {
       await expect.poll(() => existsSync(keyFile), { timeout: 10_000 }).toBe(true);
       expect(statSync(keyFile).mode & 0o777).toBe(0o600);
       expect(statSync(join(userDataDir, "decisions", "jev")).mode & 0o777).toBe(0o700);
-      const row = withDb(
+      const row = readSavedData(
         userDataDir,
         (db) =>
           db.prepare("SELECT value FROM settings WHERE key = 'decisions'").get() as
@@ -809,7 +800,7 @@ test("OpenRouter selection uses its account, records what served it, remembers c
       provider: "openrouter",
       model: "typesafe/jev-1.13-20260917",
     });
-    const billed = withDb(userDataDir, (db) =>
+    const billed = readSavedData(userDataDir, (db) =>
       db
         .prepare(
           "SELECT task_id, account_id, model, model_source, input, cost, cost_source FROM usage_events WHERE provider = 'openrouter'",

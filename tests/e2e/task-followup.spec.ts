@@ -1,6 +1,4 @@
-import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import {
   FOLLOWUP_PROVENANCE_OPENING,
   renderAnswerShapeSection,
@@ -23,6 +21,7 @@ import {
   reportLine,
   taskKey,
 } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   FILE_FOLLOWUP_PROMPT_MARKER,
   fileFollowup,
@@ -58,17 +57,8 @@ type TaskRow = {
   project_id: string;
 };
 
-function withDb<T>(userDataDir: string, read: (db: Database.Database) => T): T {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return read(db);
-  } finally {
-    db.close();
-  }
-}
-
 function readTasks(userDataDir: string): TaskRow[] {
-  return withDb(
+  return readSavedData(
     userDataDir,
     (db) =>
       db
@@ -128,7 +118,7 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
   // The edge and the timelines: discovered-from points at the origin, the
   // progress line sits on the origin's timeline off the feed, and the
   // origin still carries its report.
-  const links = withDb(
+  const links = readSavedData(
     userDataDir,
     (db) =>
       db.prepare("SELECT from_id, to_id, type, actor FROM task_links").all() as {
@@ -141,7 +131,7 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
   expect(links).toEqual([
     { from_id: followup?.id, to_id: origin?.id, type: "discovered-from", actor: "crewmate" },
   ]);
-  const originEvents = withDb(
+  const originEvents = readSavedData(
     userDataDir,
     (db) =>
       db
@@ -168,7 +158,7 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
     feed: 0,
   });
   expect(workEvents.at(-1)?.text).toBe(MOCK_COMPLETION_TEXT);
-  const followupEvents = withDb(
+  const followupEvents = readSavedData(
     userDataDir,
     (db) =>
       db

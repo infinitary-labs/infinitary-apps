@@ -1,12 +1,12 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { clock, revisedLine as revisedWords } from "../../src/renderer/src/cards/revisedLine";
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { pseudoBox } from "./layout";
 import { promptInput } from "./prompt";
+import { readSavedData } from "./savedData";
 import {
   CHANGE_MARKS_PROMPT_MARKER,
   CHANGE_MARKS_TITLE,
@@ -17,16 +17,13 @@ import { focusOn } from "./windowKeys";
 
 /** The offers the window reported seen, oldest first, read from the record itself. */
 function seenOffers(userDataDir: string): string[] {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return (
+  return readSavedData(userDataDir, (db) =>
+    (
       db
         .prepare("SELECT offer_id FROM card_observations WHERE kind = 'seen' ORDER BY seq")
         .all() as { offer_id: string }[]
-    ).map((row) => row.offer_id);
-  } finally {
-    db.close();
-  }
+    ).map((row) => row.offer_id),
+  );
 }
 
 /** A time of day as the revised line writes it today, and anything after it. */

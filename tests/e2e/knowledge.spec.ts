@@ -2,7 +2,6 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -13,6 +12,7 @@ import { type MockProviderServer, SPAWN_PROMPT_MARKER, startMockProvider } from 
 import { promptInput } from "./prompt";
 import { providerMessages, served } from "./providerRequest";
 import { reportLine, taskKey } from "./rails";
+import { readKnowledgeData, readSavedData } from "./savedData";
 import { KNOWLEDGE_FACT_PROMPT_MARKER, knowledgeFact } from "./scenarios/knowledgeFact";
 import {
   KNOWLEDGE_RECORD_PROMPT_MARKER,
@@ -66,19 +66,6 @@ function harborRepo(): string {
   git("add", ".");
   git("commit", "-m", "init");
   return dir;
-}
-
-function readDb<T>(path: string, read: (db: Database.Database) => T): T {
-  const db = new Database(path, { readonly: true });
-  try {
-    return read(db);
-  } finally {
-    db.close();
-  }
-}
-
-function readKnowledge<T>(userDataDir: string, read: (db: Database.Database) => T): T {
-  return readDb(join(userDataDir, "knowledge", "knowledge.db"), read);
 }
 
 /** Every message the scripted crewmates were sent whose words carry `marker`. */
@@ -151,8 +138,8 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
   await waitForFirstmateIdle(first.page);
 
   // Its task closes - discarded, its working copy gone - and the app restarts.
-  const recorderId = readDb(
-    join(userDataDir, "firstmate.db"),
+  const recorderId = readSavedData(
+    userDataDir,
     (db) => db.prepare("SELECT id FROM tasks WHERE key = ?").pluck().get(recorder) as string,
   );
   const initialCrew = crewmateMessages(
@@ -222,7 +209,7 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
   });
   await first.page.evaluate((id) => window.infinitary.task.delete(id), recorderId);
   await first.close();
-  const kept = readKnowledge(userDataDir, (db) => ({
+  const kept = readKnowledgeData(userDataDir, (db) => ({
     entries: db
       .prepare("SELECT kind, scope, author, lifecycle, lane FROM entries ORDER BY kind")
       .all(),
@@ -295,7 +282,7 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
   expect(sourceRead).toBeDefined();
   // Its declared use records the revision it relied on and that its
   // source still read the same in the closed task's absence.
-  const uses = readKnowledge(userDataDir, (db) =>
+  const uses = readKnowledgeData(userDataDir, (db) =>
     db.prepare("SELECT actor, revision, observed FROM uses").all(),
   ) as { actor: string; revision: number; observed: string }[];
   expect(uses).toHaveLength(1);
@@ -314,8 +301,8 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
   keep("knowledge-journey-rows.json", {
     entries: kept.entries,
     sources: kept.sources,
-    uses: readKnowledge(userDataDir, (db) => db.prepare("SELECT * FROM uses").all()),
-    revisions: readKnowledge(userDataDir, (db) =>
+    uses: readKnowledgeData(userDataDir, (db) => db.prepare("SELECT * FROM uses").all()),
+    revisions: readKnowledgeData(userDataDir, (db) =>
       db.prepare("SELECT entry_id, revision, op, actor, origin, body FROM revisions").all(),
     ),
   });
@@ -351,12 +338,12 @@ test("a fact the captain states goes to knowledge, not notes, where knowledge is
   } finally {
     await launched.close();
   }
-  const notes = readDb(join(launched.userDataDir, "firstmate.db"), (db) =>
+  const notes = readSavedData(launched.userDataDir, (db) =>
     db.prepare("SELECT name FROM sqlite_master WHERE name = 'memories'").all(),
   );
   expect(notes).toEqual([]);
   expect(
-    readKnowledge(launched.userDataDir, (db) =>
+    readKnowledgeData(launched.userDataDir, (db) =>
       db.prepare("SELECT kind, scope, author FROM entries").all(),
     ),
   ).toEqual([{ kind: "concept", scope: "captain", author: "firstmate" }]);

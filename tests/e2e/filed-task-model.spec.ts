@@ -1,13 +1,12 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { crewSummary, pointAtCrewmate } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
 import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import { promptInput } from "./prompt";
 import { expandDock, pressRow, recordCard, taskFact } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   FILED_MODEL_FILE_ASK,
   FILED_MODEL_PARENT,
@@ -62,18 +61,15 @@ type ChatMessage = {
 
 /** The rule of every routing decision recorded for a task, from the app's own ledger. */
 function routingRules(userDataDir: string, taskId: string): string[] {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return (
+  return readSavedData(userDataDir, (db) =>
+    (
       db
         .prepare("SELECT rule FROM routing_decisions WHERE task_id = ? ORDER BY id")
         .all(taskId) as {
         rule: string;
       }[]
-    ).map((row) => row.rule);
-  } finally {
-    db.close();
-  }
+    ).map((row) => row.rule),
+  );
 }
 
 test("a filed task starts on the model the captain names, keeping its key and parent", async () => {

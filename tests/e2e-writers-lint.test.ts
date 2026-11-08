@@ -95,4 +95,41 @@ test("aged ledger", async () => {
 `;
     expect(lint(waived)).toEqual([7]);
   });
+
+  // INF-2453: the journey ledger found 29 tests in 16 files reading the saved
+  // data by opening it themselves while the app ran; each now reads through
+  // tests/e2e/savedData.ts, and this keeps the next one from opening it raw.
+  it("refuses a spec's own read-only open of the saved data, in a helper or a test", () => {
+    const raw = `
+function seenOffers(userDataDir: string): string[] {
+  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
+  try {
+    return db.prepare("SELECT offer_id FROM card_observations").all();
+  } finally {
+    db.close();
+  }
+}
+test("knowledge rows", async () => {
+  const app = await launchApp({ userDataDir });
+  const saved = new Database(join(userDataDir, "knowledge", "knowledge.db"), {
+    readonly: true,
+  });
+});
+`;
+    expect(lint(raw)).toEqual([3, 12]);
+  });
+
+  it("keeps a writable open that seeds the stopped app, and a read through the owner", () => {
+    const seeded = `
+test("retired schema", async () => {
+  const prior = new Database(join(userDataDir, "knowledge", "knowledge.db"));
+  prior.exec("DROP TABLE directions;");
+  prior.close();
+  const app = await launchApp({ userDataDir });
+  readSavedData(userDataDir, (db) => db.prepare("SELECT id FROM tasks").all());
+  readKnowledgeData(userDataDir, (db) => db.prepare("SELECT id FROM entries").all());
+});
+`;
+    expect(lint(seeded)).toEqual([]);
+  });
 });

@@ -999,11 +999,11 @@ test("a crewmate reads a failed job and downloads measurement evidence with the 
   expect(detail?.outcome).toContain(headSha);
   expect(detail?.outcome).toContain('"controlSeconds":88.41,"candidateSeconds":86.41,"pairs":5');
   expect(detail?.outcome).not.toMatch(/gho_|signed=disposable/);
-  const db = openDatabase(userDataDir);
-  const row = db.prepare("SELECT worktree_dir AS cwd FROM tasks WHERE id = ?").get(id) as {
-    cwd: string;
-  };
-  db.close();
+  const row = readSavedData(
+    userDataDir,
+    (db) =>
+      db.prepare("SELECT worktree_dir AS cwd FROM tasks WHERE id = ?").get(id) as { cwd: string },
+  );
   const archive = join(row.cwd, ".infinitary-artifacts/run-10/artifact-30.zip");
   expect(readFileSync(archive)).toEqual(readFileSync("tests/fixtures/forge/measurement.zip"));
   expect(statSync(archive).mode & 0o777).toBe(0o600);
@@ -1089,15 +1089,16 @@ test("the first change goes in and its continuation starts from the landed proje
     startPolicy: "when-ready",
   });
   const next = await continuation();
-  const db = openDatabase(userDataDir);
-  try {
-    const edges = db
-      .prepare("SELECT from_id, to_id, type FROM task_links WHERE type = 'blocks'")
-      .all() as { from_id: string; to_id: string; type: string }[];
-    expect(edges).toContainEqual({ from_id: origin?.id, to_id: next?.id, type: "blocks" });
-  } finally {
-    db.close();
-  }
+  const edges = readSavedData(
+    userDataDir,
+    (db) =>
+      db.prepare("SELECT from_id, to_id, type FROM task_links WHERE type = 'blocks'").all() as {
+        from_id: string;
+        to_id: string;
+        type: string;
+      }[],
+  );
+  expect(edges).toContainEqual({ from_id: origin?.id, to_id: next?.id, type: "blocks" });
   await page.screenshot({ path: testInfo.outputPath("continuation-before-put-in.png") });
   await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
   await expect

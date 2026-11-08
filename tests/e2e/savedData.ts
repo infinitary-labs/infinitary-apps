@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import Database from "better-sqlite3";
+import { KNOWLEDGE_DB_FILE } from "../../src/core/storage/knowledgeStore";
 
 /**
  * Reads the app's saved data while the app runs (docs/e2e-contracts.md,
@@ -25,4 +26,13 @@ export function readSavedData<T>(
   } finally {
     db.close();
   }
+}
+
+/**
+ * Reads the knowledge collection while the app runs, as `readSavedData` reads
+ * `firstmate.db`: the core is its one writer once it has launched, and the
+ * file sits in the folder the core keeps it in (`paths.knowledgeDir`).
+ */
+export function readKnowledgeData<T>(userDataDir: string, read: (db: Database.Database) => T): T {
+  return readSavedData(userDataDir, read, join("knowledge", KNOWLEDGE_DB_FILE));
 }

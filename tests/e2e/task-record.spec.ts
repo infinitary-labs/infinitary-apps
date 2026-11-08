@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
@@ -13,6 +12,7 @@ import {
 import { promptInput } from "./prompt";
 import { latestContext } from "./providerRequest";
 import { putInLine, reportLine, statusLine, taskKey } from "./rails";
+import { readSavedData } from "./savedData";
 import { SPAWNED_TASK_START } from "./taskTimeline";
 
 /**
@@ -39,16 +39,15 @@ type TaskRow = {
 };
 
 function readTasks(userDataDir: string): TaskRow[] {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return db
-      .prepare(
-        "SELECT id, key, status, activity, closed_reason, outcome, outcome_summary, assignee, workspace_state, closed_at FROM tasks ORDER BY created_at",
-      )
-      .all() as TaskRow[];
-  } finally {
-    db.close();
-  }
+  return readSavedData(
+    userDataDir,
+    (db) =>
+      db
+        .prepare(
+          "SELECT id, key, status, activity, closed_reason, outcome, outcome_summary, assignee, workspace_state, closed_at FROM tasks ORDER BY created_at",
+        )
+        .all() as TaskRow[],
+  );
 }
 
 /** The work's own timeline; decision records (R2 provenance) are asserted apart. */
@@ -57,16 +56,13 @@ function timelineKinds(userDataDir: string, taskId: string): string[] {
 }
 
 function allTimelineKinds(userDataDir: string, taskId: string): string[] {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return (
+  return readSavedData(userDataDir, (db) =>
+    (
       db.prepare("SELECT kind FROM task_events WHERE task_id = ? ORDER BY at, id").all(taskId) as {
         kind: string;
       }[]
-    ).map((row) => row.kind);
-  } finally {
-    db.close();
-  }
+    ).map((row) => row.kind),
+  );
 }
 
 // Share only the app launch; every named case commissions its own task.

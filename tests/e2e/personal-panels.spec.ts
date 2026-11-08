@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { inflateSync } from "node:zlib";
 import { expect, type Page, test } from "@playwright/test";
 import { reportSummary } from "@shared/feed";
-import Database from "better-sqlite3";
 import {
   ANSWER_MISSING_ENDED_OPENING,
   ANSWER_MISSING_OPENING,
@@ -28,6 +27,7 @@ import { type MockProviderServer, startMockProvider } from "./mockProvider";
 import { projectRow } from "./projects";
 import { promptInput } from "./prompt";
 import { expandDock, feedLine, reportLine, statusLine, taskKey } from "./rails";
+import { readSavedData } from "./savedData";
 import { oneNewSavePoint, savePointCount } from "./savePoints";
 import {
   PERSONAL_CHANGE_PROMPT_MARKER,
@@ -181,17 +181,8 @@ type TaskRow = {
   outcome: string | null;
 };
 
-function withDb<T>(userDataDir: string, read: (db: Database.Database) => T): T {
-  const db = new Database(join(userDataDir, "firstmate.db"), { readonly: true });
-  try {
-    return read(db);
-  } finally {
-    db.close();
-  }
-}
-
 function readTasks(userDataDir: string): TaskRow[] {
-  return withDb(
+  return readSavedData(
     userDataDir,
     (db) =>
       db
@@ -212,7 +203,7 @@ function turnCommit(
   userDataDir: string,
   taskId: string,
 ): { commit: string } | { commitFailed: string } | null {
-  const notes = withDb(
+  const notes = readSavedData(
     userDataDir,
     (db) =>
       db
@@ -472,7 +463,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
   let mockProvider: MockProviderServer;
   /** The personal workspace's repo id, for the Projects row locator. */
   const repoId = (dir: string): string =>
-    withDb(dir, (db) => (db.prepare("SELECT id FROM repos").get() as { id: string }).id);
+    readSavedData(dir, (db) => (db.prepare("SELECT id FROM repos").get() as { id: string }).id);
   let live: LaunchedApp;
   let userDataDir: string;
   let workspace: string;

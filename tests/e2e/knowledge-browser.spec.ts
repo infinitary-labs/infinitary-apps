@@ -1,6 +1,4 @@
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import Database from "better-sqlite3";
 import { connectionSentence } from "../../src/panels/knowledge/words";
 import { scratchDir } from "../helpers/scratchDirs";
 import { frameIn } from "./frames";
@@ -35,6 +33,7 @@ import { PINS_CLAIM, seedKnowledge, WEBSITE } from "./knowledgeSeed";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { restOnTaskKey, rowSummary, taskKeyLinks } from "./rails";
+import { readKnowledgeData } from "./savedData";
 import { dragCardTo, SHOWN_ENTRY } from "./stack";
 import {
   commandSearch,
@@ -61,19 +60,16 @@ const HOME = { yaw: 0.18, pitch: -0.12, zoom: 1 };
 
 /** Every row the collection holds, by table: what a write would change. */
 function knowledgeRows(userDataDir: string): Record<string, number> {
-  const db = new Database(join(userDataDir, "knowledge", "knowledge.db"), { readonly: true });
-  try {
-    return Object.fromEntries(
+  return readKnowledgeData(userDataDir, (db) =>
+    Object.fromEntries(
       ["entries", "revisions", "sources", "assessments", "relations", "uses", "requests"].map(
         (table) => [
           table,
           (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n,
         ],
       ),
-    );
-  } finally {
-    db.close();
-  }
+    ),
+  );
 }
 
 /** How many tasks the record holds: browsing never files one. */

@@ -32,7 +32,7 @@ import {
   providerMessages,
   served,
 } from "./providerRequest";
-import { readSavedData } from "./savedData";
+import { readKnowledgeData, readSavedData } from "./savedData";
 import {
   RELAYED_DIRECTION,
   RELAYED_DIRECTION_CARD,
@@ -384,10 +384,7 @@ test("eight active directions survive carryover, stable restart, forget and purg
         seeded.website,
       );
       expect(ownEntry.state).toBe("ready");
-      const saved = new Database(join(userDataDir, "knowledge", "knowledge.db"), {
-        readonly: true,
-      });
-      try {
+      readKnowledgeData(userDataDir, (saved) => {
         expect(saved.prepare("SELECT * FROM entries").all()).toEqual([kept]);
         for (const table of ["sources", "assessments", "relations", "uses", "edges"]) {
           expect(saved.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get(), table).toEqual({
@@ -397,9 +394,7 @@ test("eight active directions survive carryover, stable restart, forget and purg
         expect(saved.prepare("SELECT DISTINCT entry_id FROM revisions").all()).toEqual([
           { entry_id: seeded.website },
         ]);
-      } finally {
-        saved.close();
-      }
+      });
     });
     const project = await read(app, HARBOR.id);
     expect(project.state === "ready" && project.rows[4]?.authority).toBe("advice");

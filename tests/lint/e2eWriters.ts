@@ -21,8 +21,14 @@ export type WriterDiagnostic = { file: string; line: number; column: number; mes
  * a closure kept or handed to a poll inside a test (`const read = () => ...`),
  * which runs whenever it is called, or (c) sits in a same-file helper that a test calls
  * after a launch. Seeding before the launch, in the test's own body or in a
- * helper called before it, stays. `new Database(path, { readonly: true })` is
- * not a writer.
+ * helper called before it, stays.
+ *
+ * A read of the saved data goes through its owner, `tests/e2e/savedData.ts`
+ * (`readSavedData`, `readKnowledgeData`), which opens the file read-only with
+ * `query_only` on and closes it. So a spec's own `new Database(path,
+ * { readonly: true })` is refused wherever it sits: a read-only open is only
+ * ever a read, and a read has its one owner. A writable `new Database` is a
+ * seed, which the stopped app allows; the writer rule above does not name it.
  */
 const WRITER_CALLS = new Set(["openDatabase"]);
 const WRITER_CLASSES = new Set(["TaskService", "CardService", "CardStore"]);
@@ -81,6 +87,25 @@ function isAppClose(node: ts.Node): boolean {
     !/(?:db|database|store|service)$/i.test(node.expression.expression.getText())
   );
 }
+
+/** `new Database(path, { readonly: true })`: a spec opening the saved data itself to read it. */
+function isRawRead(node: ts.Node): boolean {
+  if (!ts.isNewExpression(node) || calleeName(node) !== "Database") return false;
+  const options = node.arguments?.[1];
+  return (
+    options !== undefined &&
+    ts.isObjectLiteralExpression(options) &&
+    options.properties.some(
+      (property) =>
+        ts.isPropertyAssignment(property) &&
+        property.name.getText() === "readonly" &&
+        property.initializer.kind === ts.SyntaxKind.TrueKeyword,
+    )
+  );
+}
+
+const RAW_READ =
+  "A spec that opens the saved data itself to read it skips its owner. Read through readSavedData or readKnowledgeData in tests/e2e/savedData.ts (read-only, query_only; docs/e2e-contracts.md, One writer once the app runs).";
 
 function isLaunch(node: ts.Node): boolean {
   return ts.isCallExpression(node) && LAUNCH_NAME.test(calleeName(node) ?? "");
@@ -194,6 +219,11 @@ function lintSource(source: ts.SourceFile, file: string): WriterDiagnostic[] {
     visit(unit.body, false);
   };
 
+  const findRawReads = (node: ts.Node) => {
+    if (isRawRead(node)) report(node, RAW_READ);
+    ts.forEachChild(node, findRawReads);
+  };
+  findRawReads(source);
   const find = (node: ts.Node) => {
     if (isFunctionLike(node) && isTestBody(node)) checkUnit(node);
     ts.forEachChild(node, find);

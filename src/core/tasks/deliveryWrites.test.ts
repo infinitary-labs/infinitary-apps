@@ -1,3 +1,4 @@
+import { WRITE_ASK_CAP, type WriteAsk } from "@shared/writeAsk";
 import { describe, expect, it } from "vitest";
 import { rowWrites } from "../../../tests/helpers/rowWrites";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
@@ -157,5 +158,48 @@ describe("a task's Allow for the rest of this task (INF-2993)", () => {
     expect(tasks.delivery.integrationAllowances("t1")).toEqual([]);
     expect(tasks.get("t1")?.delivery?.integrationAllowances).toBeUndefined();
     expect(() => tasks.delivery.allowIntegration("t1", allowance)).toThrow("is closed");
+  });
+});
+
+// INF-2993 piece 2: at 1:05:49 AM eight asks waited at once on the run that
+// prompted it, exactly the cap, so a ninth dropped a waiting ask while
+// answered ones stayed. Answered asks drop first now, and the waiting ask
+// the cap still drops comes back for its owner to refuse.
+describe("a task's kept write asks past the cap (INF-2993 piece 2)", () => {
+  const ask = (id: string, at: number, sentAt?: number): WriteAsk => ({
+    id,
+    kind: "integration",
+    integration: "github",
+    connection: "c-github",
+    place: "GitHub",
+    action: "write",
+    input: '{"method":"POST","path":"/repos/octo/queue-proof-4ca5/pulls"}',
+    at,
+    ...(sentAt !== undefined ? { sentAt } : {}),
+  });
+
+  it("drops the oldest answered ask before any waiting one, and answers the waiting ones it dropped", () => {
+    const { tasks } = setup();
+    // Two answered, then six waiting: eight kept.
+    const kept = [
+      ask("answered-1", 1, 2),
+      ask("answered-2", 3, 4),
+      ...[5, 6, 7, 8, 9, 10].map((at) => ask(`waiting-${at}`, at)),
+    ];
+    for (const one of kept) expect(tasks.delivery.keepWriteAsk("t1", one)).toEqual([]);
+
+    expect(tasks.delivery.keepWriteAsk("t1", ask("new-11", 11))).toEqual([]);
+    expect(tasks.delivery.keepWriteAsk("t1", ask("new-12", 12))).toEqual([]);
+    const ids = () => (tasks.get("t1")?.delivery?.writeAsks ?? []).map((one) => one.id);
+    expect(ids()).not.toContain("answered-1");
+    expect(ids()).not.toContain("answered-2");
+    expect(ids()).toHaveLength(WRITE_ASK_CAP);
+
+    // Only waiting asks are left: the oldest of them drops and comes back.
+    expect(tasks.delivery.keepWriteAsk("t1", ask("new-13", 13)).map((one) => one.id)).toEqual([
+      "waiting-5",
+    ]);
+    expect(ids()[0]).toBe("new-13");
+    expect(ids()).toHaveLength(WRITE_ASK_CAP);
   });
 });

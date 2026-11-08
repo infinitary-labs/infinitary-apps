@@ -494,6 +494,7 @@ export class CrewSupervisor {
     this.integrationAsks = new IntegrationAsks(options, {
       cards: this.cards,
       notifyOp: (wake, origin, ref) => this.hooks.notifyOp(wake, origin, ref),
+      steer: (taskId, wake) => this.steer.steerInternal(taskId, wake, SUPERVISOR_STEER),
     });
     this.reportIntake = new ReportIntake(options, {
       cards: this.cards,

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "integration-fold-asks",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "One approval card for a crewmate's integration asks",
+      "body": "When a crewmate asks to use the same integration several times while its approval card waits, the asks now join that card instead of each raising its own. The card lists every ask with its exact input and the crewmate's reason, marks the ones that just joined, with an Allow box. Every box starts ticked; untick any you want to refuse, and one click answers them all. The crewmate hears every outcome together.",
+      "picture": {
+        "dark": "integration-fold-asks-dark.webp",
+        "light": "integration-fold-asks-light.webp",
+        "alt": "An integration approval card listing three asks to add notes, each with its input, its reason and an Allow box; the second is unticked and struck through, above a tally of the ticked rows and what each button does."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

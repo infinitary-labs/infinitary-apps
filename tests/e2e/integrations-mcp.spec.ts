@@ -9,8 +9,10 @@ import {
   INTEGRATION_RULE_WORDS,
   INTEGRATIONS_MCP_WORDS,
   INTEGRATIONS_WORDS,
+  integrationApprovalsTitle,
   integrationApprovalTitle,
   integrationTaskAllowLine,
+  NOT_ALLOWED_WHY,
 } from "../../src/shared/integrations";
 import { SAMPLE_NOTES } from "../helpers/mcpStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -33,10 +35,13 @@ import {
   MCP_NOTES_REMINDER,
   MCP_NOTES_REPORT_PREFIX,
   MCP_NOTES_SECOND_REMINDER,
+  MCP_NOTES_THREE,
+  MCP_NOTES_THREE_MARKER,
   MCP_NOTES_TWICE_MARKER,
   type McpNotesFirstmateSeen,
   mcpNotes,
   mcpNotesFirstmate,
+  mcpNotesThree,
   mcpNotesTwice,
 } from "./scenarios/mcpNotes";
 import { settingsSection } from "./settings";
@@ -61,13 +66,17 @@ import { pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
  *   In the third, a crewmate's change card offers Allow for the rest of this
  *   task; that choice by keys runs its call, and the crewmate's next call of
  *   the same action runs with no card while the rule stays Ask (INF-2993).
+ *   In the fourth, a crewmate's three calls in one command fold into one
+ *   card that lists them; one unticked by keys is refused and two run, and
+ *   the crewmate hears all three outcomes in one message (INF-2993 piece 2).
  * - Data: the stand-in notes server (`tests/helpers/mcpStandIn.ts`) in the
  *   2026-07-28 protocol era, run as a program on this computer over stdio,
  *   reading a notes file in this test's folder.
  * - Completion signal: the task's report carries the notes the server
  *   listed, and `window.infinitary.integrations.list()` holds the row; the
  *   first mate's `write-answered` wake reaches its scripted model; the third
- *   task's report carries the server's answer to its second call.
+ *   task's report carries the server's answer to its second call; the
+ *   fourth's report carries the one message naming all three outcomes.
  * - Platform prerequisites: Node running the stand-in from its TypeScript
  *   source, as the unit test does; nothing leaves this computer.
  * - Shared resources: none; the app, its folder and the server are this
@@ -398,4 +407,92 @@ test("a crewmate's change allowed for the rest of its task runs its next call wi
   expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
     "ask",
   );
+});
+
+// INF-2993 piece 2, the captain's pick "Every ask that arrives while the
+// card waits": a crewmate's three calls to one connection raise one card
+// listing them, a row unticked by keys is refused with the app's words, the
+// other two run once, and one message tells the crewmate every outcome. Same
+// data as above; the completion signal is the notes file holding the two
+// reminders and the task's report carrying that one message.
+test("a crewmate's asks to one connection fold into one card, and a row unticked by keys is refused", async () => {
+  const { notes, runs } = notesServer("infinitary-mcp-fold-");
+  launched = await launchApp({ withMockProvider: true, scenarios: [mcpNotesThree] });
+  const { app, page } = launched;
+  await page.evaluate((server) => window.infinitary.integrations.addMcp(server), {
+    name: MCP_NOTES_NAME,
+    runs,
+  });
+
+  const input = promptInput(page);
+  await input.click();
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${MCP_NOTES_THREE_MARKER}`);
+  await input.press("Enter");
+  const title = integrationApprovalsTitle(MCP_NOTES_THREE.length, MCP_NOTES_NAME);
+  const card = await approval(page, title);
+  const frame = cardBody(page, title);
+  const rows = frame.locator("[data-inf-ask-row]");
+  await expect(rows).toHaveCount(MCP_NOTES_THREE.length);
+  for (const [index, note] of MCP_NOTES_THREE.entries()) {
+    await expect(rows.nth(index)).toContainText(note.text);
+    await expect(rows.nth(index)).toContainText(note.reason);
+  }
+  // The other two raised no card of their own.
+  expect(
+    (await page.evaluate(() => window.infinitary.cards.list())).filter(
+      (shown) => shown.meta === "Integration approval",
+    ),
+  ).toHaveLength(1);
+  const held = (await page.evaluate(() => window.infinitary.cards.list())).find(
+    (shown) => shown.title === title,
+  );
+  expect(held?.actions.find((action) => action.default)?.label).toBe(
+    INTEGRATION_APPROVAL_WORDS.once,
+  );
+  const [first, left, third] = MCP_NOTES_THREE;
+  await pressKey(rows.filter({ hasText: left.text }).getByRole("checkbox"), " ");
+  await expect(rows.filter({ hasText: left.text }).getByRole("checkbox")).not.toBeChecked();
+  const evidenceDir = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+  if (evidenceDir) {
+    await resizeWindow(app, page, { width: 1280, height: 1240 });
+    const maximize = card.locator('[data-card-size-toggle="maximize"]');
+    if (await maximize.count()) await pressKey(maximize, "Enter");
+    // Ticking the box scrolled the card to it; the picture starts at its top.
+    await card.evaluate((root) => {
+      for (const node of [root, ...root.querySelectorAll("*")]) node.scrollTop = 0;
+    });
+    await frame.locator("html").evaluate(() => window.scrollTo(0, 0));
+    await regionShot(card, join(evidenceDir, "fold-approval-after.png"));
+    await heroShot(app, page, { region: card, name: "integration-fold-asks" });
+  }
+  await pressKey(
+    card.getByRole("button", {
+      name: INTEGRATION_APPROVAL_WORDS.once,
+      exact: true,
+    }),
+    "Enter",
+  );
+
+  await expect
+    .poll(async () => JSON.parse(readFileSync(notes, "utf8")).notes, { timeout: 60_000 })
+    .toEqual([...SAMPLE_NOTES, first.text, third.text]);
+  const outcome = async (): Promise<string> =>
+    page.evaluate(async (wanted) => {
+      const row = (await window.infinitary.tasks.board()).tasks.find(
+        (task) => task.title === wanted,
+      );
+      return row ? ((await window.infinitary.tasks.detail(row.id))?.outcome ?? "") : "";
+    }, MCP_NOTES_THREE_MARKER);
+  await expect.poll(outcome, { timeout: 60_000 }).toContain(MCP_NOTES_REPORT_PREFIX);
+  // One message carries the refusal of the unticked row and both answers.
+  const report = await outcome();
+  expect(report).toContain(NOT_ALLOWED_WHY);
+  expect(report).toContain(`Added note ${SAMPLE_NOTES.length + 1}.`);
+  expect(report).toContain(`Added note ${SAMPLE_NOTES.length + 2}.`);
+  if (evidenceDir) writeFileSync(join(evidenceDir, "fold-report.txt"), `${report}\n`);
+  expect(
+    (await page.evaluate(() => window.infinitary.cards.list())).filter(
+      (shown) => shown.meta === "Integration approval",
+    ),
+  ).toEqual([]);
 });

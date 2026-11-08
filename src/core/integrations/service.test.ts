@@ -567,6 +567,7 @@ describe("per-action approval (INF-950)", () => {
     expect(f.present).toHaveBeenCalledWith(
       "task-1",
       expect.objectContaining({ reason, input: "{}", effect: "reads" }),
+      [],
     );
     expect((await service.sendAsk("task-1", f.latest().id, "once")).answer).toContain("dentist");
     expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");

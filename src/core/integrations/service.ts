@@ -131,8 +131,15 @@ export type TaskIntegrations = {
 
 /** Where asks are kept: a task's own write asks. */
 export type IntegrationAskStore = {
-  keep: (taskId: string, ask: IntegrationAsk) => void;
-  present?: (taskId: string, ask: IntegrationAsk) => void;
+  /** Keep the ask, answering the task's waiting asks the cap dropped for it (`WRITE_ASK_CAP`). */
+  keep: (taskId: string, ask: IntegrationAsk) => readonly WriteAsk[] | void;
+  /**
+   * Put the ask on its task's approval card: the card already waiting for
+   * the same connection, or a new one (INF-2993 piece 2), refusing the
+   * waiting asks the cap dropped. It answers whether the ask joined a card
+   * that was already up.
+   */
+  present?: (taskId: string, ask: IntegrationAsk, dropped: readonly WriteAsk[]) => boolean | void;
   /**
    * The first mate has no task (INF-1108): the host files the row its card
    * gates (`TaskService.capture.fileHostCardTask`), keeps the ask there and
@@ -764,10 +771,11 @@ Do not repeat this call; read ${name} to check what happened first.`
       at: (this.options.now ?? Date.now)(),
     };
     let card: string | undefined;
+    let joined = false;
     try {
       if (caller.kind === "task") {
-        asks.keep(caller.taskId, ask);
-        asks.present?.(caller.taskId, ask);
+        const dropped = asks.keep(caller.taskId, ask) ?? [];
+        joined = asks.present?.(caller.taskId, ask, dropped) === true;
       } else if (caller.kind === "panel") {
         const kept = asks.keepForPanel?.(ask);
         if (kept && "held" in kept)
@@ -792,7 +800,7 @@ Do not repeat this call; read ${name} to check what happened first.`
       };
     }
     return {
-      text: `Not run: ${name}'s ${spec.name} asks the captain. The app raised its approval card for ask ${ask.id}. Do not emit another card or repeat the call. You will hear the outcome once through write-answered.`,
+      text: `Not run: ${name}'s ${spec.name} asks the captain. ${joined ? `The app added ask ${ask.id} to the approval card already waiting for your asks to ${name}.` : `The app raised its approval card for ask ${ask.id}.`} Do not emit another card or repeat the call. You will hear the outcome once through write-answered.`,
       refused: "refused",
       ...(card ? { card } : {}),
     };

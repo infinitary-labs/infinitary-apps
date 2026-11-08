@@ -25,7 +25,11 @@ import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus } from "@shared/checkSnapshot";
 import { HERE } from "@shared/deviceNames";
 import { choiceWords, type HoldOverride, overridePasses, overrideWords } from "@shared/holds";
-import type { IntegrationApprovalChoice } from "@shared/integrations";
+import {
+  type IntegrationApprovalChoice,
+  NOT_ALLOWED_WHY,
+  notAllowedAsks,
+} from "@shared/integrations";
 import { VALIDATION_GAPS_FIELD } from "@shared/liveValidation";
 import { opensPullRequest } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
@@ -40,7 +44,7 @@ import {
   MERGE_WORDS,
   REVIEW_CAREFULLY_WORDS,
 } from "@shared/vocabulary";
-import { allowanceCovers, type IntegrationAllowance, type IntegrationAsk } from "@shared/writeAsk";
+import { allowanceCovers, type IntegrationAllowance } from "@shared/writeAsk";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { keepImages } from "../attachments";
 import type { BrowserReturned } from "../browser/taskBrowsers";
@@ -56,7 +60,13 @@ import type { CardInteractionEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
 import type { CrewCore } from "./crewCore";
 import { SUPERVISOR_STEER } from "./crewRuntime";
-import { writeSentLine } from "./integrationAsks";
+import type { WriteAskSent } from "./githubGateway";
+import {
+  listedOn,
+  waitingIntegrationAsks,
+  writeAnsweredFacts,
+  writeSentLine,
+} from "./integrationAsks";
 import { approvableOffer, taskPull } from "./mergeAuthorization";
 import { askedUnderCardLine } from "./threadWords";
 import type { TypedWake } from "./wakes";
@@ -453,6 +463,23 @@ export class CardActions {
         throw new CardChoiceUnavailableError("action-changed");
       }
     }
+    // A crewmate's approval card lists the asks that joined it while it
+    // waited (INF-2993 piece 2): a click answers exactly the asks of the
+    // offer it showed, so a click on an older offer is refused and the card
+    // shows its current list.
+    if (
+      card.taskId &&
+      card.author === "host" &&
+      effect?.kind === "request_write" &&
+      effect.integration &&
+      submission !== undefined
+    ) {
+      const gesture = cardSubmissionSchema.safeParse(submission);
+      if (!gesture.success || gesture.data.remounted || gesture.data.offerId !== card.offerId) {
+        this.core.cards.showOpenCard(card.id);
+        throw new CardChoiceUnavailableError("action-changed");
+      }
+    }
     // INF-1108: the first mate's held call waits on its card's own row, which
     // this resolution closes, so the click takes it in the same transaction.
     const firstmateAsk =
@@ -605,12 +632,19 @@ export class CardActions {
           );
           return {};
         }
-        if (!card.taskId || source !== "chrome" || !this.core.options.sendWriteAsk) return {};
+        if (!card.taskId || source !== "chrome") return {};
         const taskId = card.taskId;
         const askId = effect.ask;
-        // Integration asks can only be answered on the app's own card.
-        if (effect.integration && card.author !== "host") return {};
-        this.answerWriteAsk(card.id, taskId, askId, effect.integration);
+        if (effect.integration) {
+          // Integration asks can only be answered on the app's own card.
+          if (card.author !== "host") return {};
+          // The rows the captain unticked; a row the click carries no
+          // reading of (an older card, a key with no frame) stays allowed.
+          const refused = notAllowedAsks(answers);
+          void this.answerIntegrationCard(card.id, taskId, askId, effect.integration, refused);
+          return {};
+        }
+        this.answerWriteAsk(card.id, taskId, askId);
         return {};
       }
       case "open":
@@ -1031,75 +1065,150 @@ export class CardActions {
     return !overridePasses(record.delivery, "checks", head);
   }
 
-  private answerWriteAsk(
-    cardId: string,
-    taskId: string,
-    askId: string,
-    choice?: IntegrationApprovalChoice,
-  ): void {
-    void this.core.options.sendWriteAsk?.(taskId, askId, choice).then((sent) => {
+  /** The captain's click on a kept write where a project lives: sent once, its crewmate told once. */
+  private answerWriteAsk(cardId: string, taskId: string, askId: string): void {
+    void this.core.options.sendWriteAsk?.(taskId, askId).then((sent) => {
       const still = this.core.options.tasks.get(taskId);
       if (!still || TaskService.isClosed(still)) return;
-      if (sent.ask) {
+      if (sent.ask)
         this.core.options.tasks.note(taskId, writeSentLine(sent), {
           news: false,
           feed: true,
           actor: "host",
         });
-      }
-      if (sent.allowance && sent.ask?.kind === "integration")
+      this.tellWriteAnswered(taskId, cardId, [{ id: askId, sent }]);
+    });
+  }
+
+  /**
+   * The captain's click on a crewmate's integration approval card answers
+   * every ask it listed (INF-2993 piece 2), oldest first: one the captain
+   * unticked is refused in the app's words, the others run once each with the choice.
+   * An Allow for the rest of this task also runs the task's other waiting
+   * asks inside it. Every ask is taken before the first runs, so none can
+   * drop or run twice, and the crewmate hears every outcome in one steer.
+   */
+  private async answerIntegrationCard(
+    cardId: string,
+    taskId: string,
+    askId: string,
+    choice: IntegrationApprovalChoice,
+    notAllowed: readonly string[],
+  ): Promise<void> {
+    const delivery = this.core.options.tasks.delivery;
+    const send = this.core.options.sendTakenIntegrationAsk;
+    if (!send) return;
+    const listed = listedOn(this.core.options.tasks.get(taskId)?.delivery?.writeAsks, cardId);
+    const ids = listed.length > 0 ? listed.map((ask) => ask.id) : [askId];
+    const outcomes: { id: string; sent: WriteAskSent }[] = [];
+    const taken: { id: string; taken: IntegrationAskTaken }[] = [];
+    for (const id of ids) {
+      const took = delivery.takeWriteAsk(taskId, id);
+      if (notAllowed.includes(id) && "ask" in took) {
+        const outcome = { kind: "refused" as const, why: NOT_ALLOWED_WHY };
+        delivery.recordWriteAskOutcome(taskId, id, outcome);
+        const ask = took.ask;
+        outcomes.push({
+          id,
+          sent: {
+            ok: false,
+            ask,
+            call: ask.kind === "integration" ? ask.action : "",
+            place: ask.place,
+            outcome,
+          },
+        });
+      } else taken.push({ id, taken: took });
+    }
+    const allowances: IntegrationAllowance[] = [];
+    const run = async (id: string, took: IntegrationAskTaken, as: IntegrationApprovalChoice) => {
+      const sent: WriteAskSent = await send(taskId, took, as).catch((caught: unknown) => {
+        const why = caught instanceof Error ? caught.message : String(caught);
+        const ask = "ask" in took ? took.ask : undefined;
+        if (ask) delivery.recordWriteAskOutcome(taskId, id, { kind: "unknown", why });
+        return {
+          ok: false,
+          ...(ask ? { ask } : {}),
+          call: ask?.kind === "integration" ? ask.action : "",
+          place: ask?.place ?? "",
+          outcome: ask ? { kind: "unknown" as const, why } : { kind: "refused" as const, why },
+        };
+      });
+      if (sent.allowance) allowances.push(sent.allowance);
+      outcomes.push({ id, sent });
+    };
+    for (const one of taken) await run(one.id, one.taken, choice);
+    // The waiting asks of the same task inside a new allowance run on the
+    // same click (INF-2993), their cards revised or taken down.
+    const covered = waitingIntegrationAsks(
+      this.core.options.tasks.get(taskId)?.delivery?.writeAsks,
+    ).filter((ask) => allowances.some((allowance) => allowanceCovers(allowance, ask)));
+    const more = covered.map((ask) => ({
+      id: ask.id,
+      taken: delivery.takeWriteAsk(taskId, ask.id),
+    }));
+    for (const card of new Set(covered.map((ask) => ask.card ?? `integration-ask-${ask.id}`)))
+      this.core.integrationAsks.showAsks(taskId, card);
+    for (const one of more) await run(one.id, one.taken, "once");
+    const still = this.core.options.tasks.get(taskId);
+    if (!still || TaskService.isClosed(still)) return;
+    // One line per allowance, however many of the card's asks it covered.
+    const named = new Set<string>();
+    for (const { sent } of outcomes) {
+      if (!sent.ask) continue;
+      this.core.options.tasks.note(taskId, writeSentLine(sent), {
+        news: false,
+        feed: true,
+        actor: "host",
+      });
+      const allowed = sent.allowance && `${sent.allowance.action}\n${sent.allowance.scope}`;
+      if (allowed && !named.has(allowed) && sent.allowance && sent.ask.kind === "integration") {
+        named.add(allowed);
         this.core.options.tasks.note(
           taskId,
           `The captain allowed ${sent.ask.action} on ${sent.place} for the rest of this task, for ${sent.allowance.words}.`,
           { news: false, feed: true, actor: "host" },
         );
-      void this.core.steer
-        .steerCrewmate(
-          taskId,
-          {
-            facts: {
-              kind: "write-answered",
-              ask: askId,
-              call: sent.call,
-              place: sent.place,
-              outcome: sent.outcome.kind,
-              ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
-              ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
-                ? { why: sent.outcome.why }
-                : {}),
-              ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
-              ...(sent.allowance ? { allowed: sent.allowance.words } : {}),
-            },
-            once: `write-answered:${askId}`,
-          },
-          "captain",
-          { via: "card", cardId },
-        )
-        .catch((caught: unknown) => {
-          console.warn("[crew] write outcome not delivered:", caught);
-        });
-      if (sent.allowance) this.runAllowedAsks(taskId, askId, sent.allowance);
-    });
+      }
+    }
+    const order = new Map(
+      [...ids, ...covered.map((ask) => ask.id)].map((id, index) => [id, index]),
+    );
+    outcomes.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    this.tellWriteAnswered(taskId, cardId, outcomes);
   }
 
-  /**
-   * The asks of the same task already waiting inside a new allowance run on
-   * the same click (INF-2993): each card comes down and each ask runs once,
-   * its crewmate hearing each outcome as it would from that card.
-   */
-  private runAllowedAsks(taskId: string, chosen: string, allowance: IntegrationAllowance): void {
-    const waiting = (this.core.options.tasks.get(taskId)?.delivery?.writeAsks ?? []).filter(
-      (ask): ask is IntegrationAsk =>
-        ask.kind === "integration" &&
-        ask.id !== chosen &&
-        ask.sentAt === undefined &&
-        allowanceCovers(allowance, ask),
-    );
-    for (const ask of waiting) {
-      const cardId = `integration-ask-${ask.id}`;
-      this.core.cards.takeDown(cardId, "allowed-for-task");
-      this.answerWriteAsk(cardId, taskId, ask.id, "once");
-    }
+  /** One `write-answered` steer naming every outcome of one click, in its card's order. */
+  private tellWriteAnswered(
+    taskId: string,
+    cardId: string,
+    outcomes: readonly { id: string; sent: WriteAskSent }[],
+  ): void {
+    const [first, ...rest] = outcomes;
+    if (!first) return;
+    void this.core.steer
+      .steerCrewmate(
+        taskId,
+        {
+          facts: {
+            ...writeAnsweredFacts(first.id, first.sent),
+            ...(rest.length > 0
+              ? {
+                  also: rest.map((one) => {
+                    const { kind: _kind, ...facts } = writeAnsweredFacts(one.id, one.sent);
+                    return facts;
+                  }),
+                }
+              : {}),
+          },
+          once: `write-answered:${first.id}`,
+        },
+        "captain",
+        { via: "card", cardId },
+      )
+      .catch((caught: unknown) => {
+        console.warn("[crew] write outcome not delivered:", caught);
+      });
   }
 
   /**

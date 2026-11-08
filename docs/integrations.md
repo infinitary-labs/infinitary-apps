@@ -78,11 +78,20 @@ GitHub and GitHub Enterprise use the method and the repository (`/repos/{owner}/
 Calendar's `create_event` and `update_event` use the calendar, primary when omitted, and whom `send_updates` notifies; Gmail's `send_message` uses its recipients, to and cc together in any order.
 Every other action, and every MCP server's, is covered whole on its connection.
 The choice runs the call and keeps an `IntegrationAllowance` on the task (`delivery.integrationAllowances`), bound to the connection reference, the action's signature and the action's rule mark (`rule-marks.json`, renewed by every change of the action's rule or switch, Always allow's click included).
-The crewmate's later call that one covers runs at once, after the Off, input and key checks, and every ask of that task already waiting inside it runs on the same click, its card taken down.
+The crewmate's later call that one covers runs at once, after the Off, input and key checks, and every ask of that task already waiting inside it runs on the same click, leaving its card.
 The task's timeline keeps one line naming the allowance, and `write-answered` tells the crewmate what it covers.
 A close drops the task's allowances; turning the action off, changing its rule, replacing the connection or changing the action ends them too.
 The first mate's and a panel's asks belong to no task and keep three buttons.
 A view that does not list the `integration-task-allow` contract change reads the choices strictly, so the home leaves this button out of the cards it sends that view.
+A crewmate's ask that arrives while an unanswered approval card of its task waits for the same connection joins that card instead of raising its own (INF-2993 piece 2): the ask names the card (`IntegrationAsk.card`), and the card is revised in place to list every waiting ask on it, oldest first, marking the rows that joined in that revision.
+Each row leads with the ask's action and its exact input, then the crewmate's reason, and carries an Allow box, ticked as the card comes (`allowFieldOf`, one question per row so a row that joins comes ticked): the captain asked that a selection read positive.
+A ticked row has a bar on its left; an unticked one loses it and is struck through, and a tally under the rows counts the ticked ones (`.inf-asks` in the frame stylesheet).
+The buttons keep the one-ask card's words, and a legend under the tally says what each does to the rows (`integrationApprovalsButtonLines`).
+A click answers exactly the asks the offer it showed listed: a click on an older offer of the card is refused as `action-changed` and the card shows its current list.
+The click takes every listed ask before the first runs; a row unticked is refused with `NOT_ALLOWED_WHY`, and the others run once each, oldest first, with the choice; a row the click carries no reading of stays allowed.
+One `write-answered` steer names every outcome of that click, the waiting asks an allowance ran included (`also`).
+A task keeps at most `WRITE_ASK_CAP` asks: past it the oldest answered ask drops first, and a waiting ask drops only when none answered is left; that ask leaves its card and its crewmate hears at once that it never ran (`DROPPED_ASK_WHY`).
+Asks from different tasks or to different connections never share a card.
 The minus only puts the card aside: the ask and its row remain pending, with no grant, refusal or outcome notification.
 The click takes the ask before running it, and the existing `write-answered` steer delivers the outcome once, including refusals.
 The first mate's explicit button choice closes the card's row and takes its ask in the same transaction; its outcome is a `write-answered` wake on the durable inbox, named once by the ask, and an approved call runs as the first mate's own.

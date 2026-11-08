@@ -547,6 +547,71 @@ export function integrationTaskAllowLine(covers: string): string {
 }
 
 /**
+ * One approval card listing several asks of one task to one connection
+ * (INF-2993 piece 2): its title. Its buttons keep the one-ask card's words;
+ * the rows say which of them run.
+ */
+export function integrationApprovalsTitle(count: number, place: string): string {
+  return `Allow ${count} actions on ${place}?`;
+}
+
+/**
+ * The Allow box on each row of a card listing several asks, ticked as the
+ * card comes (the captain's ruling: a selection reads positive), and what
+ * the crewmate hears of one the captain unticked. Each row is a question of
+ * its own, so a row that joins when the card is revised comes ticked rather
+ * than taking the earlier reading of the boxes.
+ */
+export const ALLOW_FIELD = "inf-allow-";
+export function allowFieldOf(askId: string): string {
+  return `${ALLOW_FIELD}${askId}`;
+}
+/** The asks a click's reading of the boxes did not allow: rows read unticked. */
+export function notAllowedAsks(
+  answers: readonly { name: string; values: readonly string[] }[] | undefined,
+): string[] {
+  return (answers ?? [])
+    .filter((answer) => answer.name.startsWith(ALLOW_FIELD) && answer.values.length === 0)
+    .map((answer) => answer.name.slice(ALLOW_FIELD.length));
+}
+export const NOT_ALLOWED_WHY = "The captain did not allow this one.";
+/** The words on a row of that card: its box, and its state either way. */
+export const ASK_ROW_WORDS = {
+  allow: "Allow",
+  /** The tally under the rows: "2 of 3 ticked to run on your click". */
+  of: " of ",
+  ticked: " ticked to run on your click",
+  joined: "Joined while this card waited",
+} as const;
+
+/**
+ * What each button does on a card listing several asks (INF-2993 piece 2),
+ * given what the rest of the task would cover, already escaped for HTML.
+ */
+export function integrationApprovalsButtonLines(covers: string | undefined): readonly {
+  choice: IntegrationApprovalChoice;
+  words: string;
+}[] {
+  return [
+    { choice: "once", words: "The ticked rows run once. Unticked rows never run." },
+    ...(covers === undefined
+      ? []
+      : [
+          {
+            choice: "task" as const,
+            words: `The same, and later calls for ${covers} run without asking until the task closes.`,
+          },
+        ]),
+    {
+      choice: "always",
+      words:
+        "The same, and these actions run without asking until you change it in Settings, replace the connection, or the action changes.",
+    },
+    { choice: "deny", words: "Nothing runs." },
+  ];
+}
+
+/**
  * The host's title and journeys name the same approval card. A label that
  * already ends with its place ("Change something on GitHub") names it once.
  */

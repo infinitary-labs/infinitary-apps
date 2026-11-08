@@ -4,12 +4,14 @@
  * Each case drives a real CrewSupervisor through the crew harness
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
-import { INTEGRATION_APPROVAL_WORDS } from "@shared/integrations";
-import type { IntegrationAsk } from "@shared/writeAsk";
+import { INTEGRATION_APPROVAL_WORDS, integrationApprovalsTitle } from "@shared/integrations";
+import { DROPPED_ASK_WHY, type IntegrationAsk, WRITE_ASK_CAP } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import {
+  endTurn,
   fakeCrewmate,
   fakeCrewTimersEachTest,
+  intentOf,
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
@@ -199,5 +201,63 @@ describe("the approval card's Allow for the rest of this task (INF-2993)", () =>
       expect(labels(card)).toHaveLength(3);
       expect(card.body).not.toContain(INTEGRATION_APPROVAL_WORDS.task);
     }
+  });
+});
+
+// INF-2993 piece 2, the captain's pick "Every ask that arrives while the card
+// waits": a crewmate's asks to one connection share its waiting card. On the
+// run that prompted it eight asks waited at once, exactly the cap; a ninth
+// drops the oldest waiting ask, which leaves the card and is refused at once.
+describe("a crewmate's asks folded into one waiting card (INF-2993 piece 2)", () => {
+  const ask = (n: number): IntegrationAsk => ({
+    id: `pr-${n}`,
+    kind: "integration",
+    integration: "github",
+    connection: "c-github",
+    place: "GitHub",
+    action: "write",
+    label: "Change something on GitHub",
+    description: "POST, PATCH, PUT or DELETE one path through the captain's GitHub sign-in.",
+    effect: "changes",
+    reason: `Open throwaway pull request ${n} for the approved live run of the queue.`,
+    signature: '["POST, PATCH, PUT or DELETE one path","changes"]',
+    input: JSON.stringify({ method: "POST", path: "/repos/octo/queue-proof-4ca5/pulls" }),
+    scope: {
+      key: "POST /repos/octo/queue-proof-4ca5",
+      words: "POST requests to octo/queue-proof-4ca5",
+    },
+    at: n,
+  });
+
+  it("drops the oldest waiting ask from the card past the cap and tells the crewmate it never ran", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Ship the queue's GitHub part",
+      intent: intentOf("ship the queue's GitHub part"),
+    });
+    await tick();
+    for (let n = 1; n <= WRITE_ASK_CAP; n++) {
+      const kept = ask(n);
+      expect(h.tasks.delivery.keepWriteAsk(taskId, kept)).toEqual([]);
+      h.supervisor.integrationAsks.askIntegration(taskId, kept);
+    }
+    await endTurn(crewmate, taskId, "The pull requests wait on the captain's click.");
+    const prompts = crewmate.promptCalls.length;
+    const card = () => h.supervisor.cards.get("integration-ask-pr-1");
+    expect(card()?.body).toContain('data-inf-ask-row="pr-1"');
+
+    const ninth = ask(WRITE_ASK_CAP + 1);
+    const dropped = h.tasks.delivery.keepWriteAsk(taskId, ninth);
+    expect(dropped.map((one) => one.id)).toEqual(["pr-1"]);
+    expect(h.supervisor.integrationAsks.askIntegration(taskId, ninth, dropped)).toBe(true);
+    await tick();
+
+    expect(card()?.title).toBe(integrationApprovalsTitle(WRITE_ASK_CAP, "GitHub"));
+    expect(card()?.body).not.toContain('data-inf-ask-row="pr-1"');
+    expect(card()?.body).toContain(`data-inf-ask-row="pr-${WRITE_ASK_CAP + 1}"`);
+    const heard = crewmate.promptCalls.slice(prompts).join("\n");
+    expect(heard).toContain("ask pr-1");
+    expect(heard).toContain(DROPPED_ASK_WHY);
   });
 });

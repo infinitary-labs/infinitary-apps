@@ -501,7 +501,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     RECORDING_MAX_BYTES: physical("the card tool refuses first, naming 16MB: shorten or lower quality"),
   },
   "src/shared/writeAsk.ts": {
-    WRITE_ASK_CAP: physical("the oldest drops; a card naming it is refused; ask github_write again"),
+    WRITE_ASK_CAP: physical(
+      "answered asks drop first; a waiting one that drops is refused at once; ask again",
+    ),
   },
 };
 

@@ -1,11 +1,13 @@
 import type { IntegrationApprovalChoice } from "@shared/integrations";
-import type { IntegrationAsk } from "@shared/writeAsk";
+import { DROPPED_ASK_WHY, type IntegrationAsk, type WriteAsk } from "@shared/writeAsk";
 import type { IntegrationAskTaken } from "../integrations";
 import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";
 import type { CrewSupervisorOptions, FirstmateHooks } from "./crewSupervisorOptions";
+import type { WriteAnswered } from "./deliveryWakes";
 import type { WriteAskSent } from "./githubGateway";
 import { integrationApprovalCard } from "./integrationApprovalCard";
+import type { TypedWake } from "./wakes";
 
 /** What the integration asks reach of the supervisor beyond its options. */
 export type IntegrationAsksHost = {
@@ -13,6 +15,8 @@ export type IntegrationAsksHost = {
   readonly cards: CardService;
   /** Queue an operational message for the first mate (`FirstmateHooks.notifyOp`). */
   notifyOp: FirstmateHooks["notifyOp"];
+  /** Steer a task's crewmate with the host's own notice (`SUPERVISOR_STEER`). */
+  steer: (taskId: string, wake: TypedWake) => Promise<unknown>;
 };
 
 /**
@@ -28,11 +32,78 @@ export class IntegrationAsks {
     private readonly host: IntegrationAsksHost,
   ) {}
 
-  /** The held integration call is presented immediately by its owner, not the agent. */
-  askIntegration(taskId: string, ask: IntegrationAsk): void {
+  /**
+   * The held integration call is presented immediately by its owner, not
+   * the agent. A crewmate's ask joins the card of its task already waiting
+   * for the same connection, revised in place to list it, or raises its own
+   * (INF-2993 piece 2); it answers whether it joined one. The waiting asks
+   * the cap dropped to keep it are refused first.
+   */
+  askIntegration(taskId: string, ask: IntegrationAsk, dropped: readonly WriteAsk[] = []): boolean {
     const task = this.options.tasks.get(taskId);
-    if (!task || TaskService.isClosed(task)) return;
-    this.host.cards.put(integrationApprovalCard(ask, { id: taskId, title: task.title }));
+    if (!task || TaskService.isClosed(task)) return false;
+    this.refuseDropped(taskId, dropped);
+    const open = waitingIntegrationAsks(task.delivery?.writeAsks).find(
+      (kept) =>
+        kept.id !== ask.id &&
+        kept.connection === ask.connection &&
+        kept.card !== undefined &&
+        this.host.cards.get(kept.card) !== undefined,
+    )?.card;
+    const card = open ?? `integration-ask-${ask.id}`;
+    this.options.tasks.delivery.listWriteAsk(taskId, ask.id, card);
+    this.showAsks(taskId, card, open ? new Set([ask.id]) : undefined);
+    return open !== undefined;
+  }
+
+  /**
+   * Draw a crewmate's approval card from the asks of its task still waiting
+   * on it: revised in place while one is left, taken down once none is.
+   * `joined` names the asks that joined in this revision.
+   */
+  showAsks(taskId: string, cardId: string, joined?: ReadonlySet<string>): void {
+    const task = this.options.tasks.get(taskId);
+    const listed = task ? listedOn(task.delivery?.writeAsks, cardId) : [];
+    if (!task || TaskService.isClosed(task) || listed.length === 0) {
+      this.host.cards.takeDown(cardId, "no-asks-left");
+      return;
+    }
+    const revise = this.host.cards.get(cardId) !== undefined;
+    this.host.cards.put(
+      integrationApprovalCard(
+        listed,
+        { id: taskId, title: task.title },
+        { id: cardId, ...(joined ? { joined } : {}) },
+      ),
+      revise ? { revise: true } : {},
+    );
+  }
+
+  /**
+   * A waiting ask the cap dropped leaves its card and is refused at once
+   * (INF-2993 piece 2): its crewmate hears it never ran.
+   */
+  private refuseDropped(taskId: string, dropped: readonly WriteAsk[]): void {
+    const cards = new Set<string>();
+    for (const ask of dropped) {
+      if (ask.kind !== "integration" || ask.by !== undefined) continue;
+      cards.add(ask.card ?? `integration-ask-${ask.id}`);
+      void this.host
+        .steer(taskId, {
+          facts: writeAnsweredFacts(ask.id, {
+            ok: false,
+            ask,
+            call: ask.action,
+            place: ask.place,
+            outcome: { kind: "refused", why: DROPPED_ASK_WHY },
+          }),
+          once: `write-answered:${ask.id}`,
+        })
+        .catch((caught: unknown) => {
+          console.warn("[crew] dropped ask's refusal not delivered:", caught);
+        });
+    }
+    for (const card of cards) this.showAsks(taskId, card);
   }
 
   /**
@@ -140,4 +211,41 @@ export function writeSentLine(sent: WriteAskSent): string {
     default:
       return `The captain's click on ${sent.call} sent nothing: ${sent.outcome.why}`;
   }
+}
+
+/** A crewmate's integration asks of a task the captain has not answered, oldest first. */
+export function waitingIntegrationAsks(asks: readonly WriteAsk[] | undefined): IntegrationAsk[] {
+  return (asks ?? [])
+    .filter(
+      (ask): ask is IntegrationAsk =>
+        ask.kind === "integration" && ask.by === undefined && ask.sentAt === undefined,
+    )
+    .sort((a, b) => a.at - b.at);
+}
+
+/**
+ * The waiting asks a crewmate's approval card lists, oldest first: those
+ * naming it, or, on a card raised before cards listed several, its one ask.
+ */
+export function listedOn(asks: readonly WriteAsk[] | undefined, cardId: string): IntegrationAsk[] {
+  return waitingIntegrationAsks(asks).filter(
+    (ask) => (ask.card ?? `integration-ask-${ask.id}`) === cardId,
+  );
+}
+
+/** The facts of one `write-answered` steer for a click's outcome on one ask. */
+export function writeAnsweredFacts(askId: string, sent: WriteAskSent): WriteAnswered {
+  return {
+    kind: "write-answered",
+    ask: askId,
+    call: sent.call,
+    place: sent.place,
+    outcome: sent.outcome.kind,
+    ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
+    ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
+      ? { why: sent.outcome.why }
+      : {}),
+    ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
+    ...(sent.allowance ? { allowed: sent.allowance.words } : {}),
+  };
 }

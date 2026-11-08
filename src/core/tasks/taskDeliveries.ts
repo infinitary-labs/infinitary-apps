@@ -359,11 +359,14 @@ export class TaskDeliveries {
 
   /**
    * Keep a write the crewmate asked to send (FI3-1571 piece 4), newest
-   * first, at most `WRITE_ASK_CAP`: an older one drops, sent or not. A
-   * closed task keeps none.
+   * first, at most `WRITE_ASK_CAP`. Past it the oldest answered ask drops
+   * first, and a waiting one only when no answered one is left (INF-2993
+   * piece 2); it answers the waiting asks it dropped, which their owner
+   * refuses at once. A closed task keeps none.
    */
-  keepWriteAsk(id: string, ask: WriteAsk): void {
+  keepWriteAsk(id: string, ask: WriteAsk): WriteAsk[] {
     const at = this.writer.now();
+    let dropped: WriteAsk[] = [];
     const run = this.writer.write(() => {
       const record = this.writer.mustGet(id);
       if (TaskService.isClosed(record)) {
@@ -372,10 +375,43 @@ export class TaskDeliveries {
       const writeAsks = [
         ask,
         ...(record.delivery?.writeAsks ?? []).filter((kept) => kept.id !== ask.id),
-      ].slice(0, WRITE_ASK_CAP);
+      ];
+      dropped = [];
+      for (const answered of [true, false]) {
+        for (let index = writeAsks.length - 1; index >= 0; index--) {
+          if (writeAsks.length <= WRITE_ASK_CAP) break;
+          const kept = writeAsks[index] as WriteAsk;
+          if ((kept.sentAt !== undefined) !== answered) continue;
+          writeAsks.splice(index, 1);
+          if (!answered) dropped.push(kept);
+        }
+      }
       this.writer.patch(id, {
         delivery: this.writer.mergeDelivery(record, { writeAsks }),
         updatedAt: at,
+      });
+    });
+    run();
+    return dropped;
+  }
+
+  /**
+   * Name the approval card that lists a crewmate's waiting integration ask
+   * (INF-2993 piece 2). An ask already taken, or no longer kept, changes
+   * nothing.
+   */
+  listWriteAsk(id: string, askId: string, card: string): void {
+    const run = this.writer.write(() => {
+      const record = this.writer.store.get(id);
+      const asks = record?.delivery?.writeAsks;
+      const ask = asks?.find((kept) => kept.id === askId);
+      if (!record || !asks || ask?.kind !== "integration" || ask.sentAt !== undefined) return;
+      if (ask.card === card) return;
+      this.writer.patch(id, {
+        delivery: this.writer.mergeDelivery(record, {
+          writeAsks: asks.map((kept) => (kept.id === askId ? { ...ask, card } : kept)),
+        }),
+        updatedAt: this.writer.now(),
       });
     });
     run();

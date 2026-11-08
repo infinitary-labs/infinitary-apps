@@ -9,7 +9,14 @@
  */
 
 import type { HostEffect } from "@shared/cards";
-import { INTEGRATION_APPROVAL_WORDS } from "@shared/integrations";
+import {
+  ASK_ROW_WORDS,
+  allowFieldOf,
+  INTEGRATION_APPROVAL_WORDS,
+  type IntegrationApprovalChoice,
+  integrationApprovalsTitle,
+  NOT_ALLOWED_WHY,
+} from "@shared/integrations";
 import type { IntegrationAllowance, IntegrationAsk, WriteAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -22,8 +29,10 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
+import type { IntegrationAskTaken } from "../integrations";
 import { CardChoiceUnavailableError } from "./cardActions";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
+import { integrationApprovalCard } from "./integrationApprovalCard";
 import { writeSentLine } from "./integrationAsks";
 
 fakeCrewTimersEachTest();
@@ -110,7 +119,7 @@ describe("a click on a card, as CardActions takes it", () => {
     await tick();
 
     expect(sendWriteAsk).toHaveBeenCalledTimes(1);
-    expect(sendWriteAsk).toHaveBeenCalledWith(h.taskId, "ask-1", undefined);
+    expect(sendWriteAsk).toHaveBeenCalledWith(h.taskId, "ask-1");
     expect(
       h.tasks
         .timeline(h.taskId)
@@ -207,13 +216,14 @@ describe("a click on a card, as CardActions takes it", () => {
 
 // INF-2993, the captain's picks: Allow for the rest of this task covers "The
 // same action, kind of request and place", and "Every ask that arrives while
-// the card waits" inside that place runs on the same click.
-describe("Allow for the rest of this task on a crewmate's integration card (INF-2993)", () => {
+// the card waits" joins that card (piece 2), so one click answers them all.
+describe("a crewmate's integration approval card (INF-2993)", () => {
   const SCOPE = {
     key: "POST /repos/octo/queue-proof-4ca5",
     words: "POST requests to octo/queue-proof-4ca5",
   };
-  function integrationAsk(id: string, path: string, scope = SCOPE): IntegrationAsk {
+  const SIGNATURE = '["POST, PATCH, PUT or DELETE one path","changes"]';
+  function integrationAsk(id: string, path: string, scope = SCOPE, at = 1): IntegrationAsk {
     return {
       id,
       kind: "integration",
@@ -224,57 +234,77 @@ describe("Allow for the rest of this task on a crewmate's integration card (INF-
       label: "Change something on GitHub",
       description: "POST, PATCH, PUT or DELETE one path through the captain's GitHub sign-in.",
       effect: "changes",
-      reason: "Open the proof pull request the task asks for.",
-      signature: '["POST, PATCH, PUT or DELETE one path","changes"]',
+      reason: `Open ${id} for the proof the task asks for.`,
+      signature: SIGNATURE,
       input: JSON.stringify({ method: "POST", path, body: "{}" }),
       scope,
-      at: 1,
+      at,
     };
   }
-
-  it("runs the chosen call, then the task's waiting calls in the same place, and leaves any other waiting", async () => {
-    const allowance: IntegrationAllowance = {
-      connection: "c-github",
-      action: "write",
-      signature: '["POST, PATCH, PUT or DELETE one path","changes"]',
-      scope: SCOPE.key,
-      words: SCOPE.words,
-      mark: "",
-      at: 2,
-      card: "integration-ask-pulls",
-    };
-    const sendWriteAsk = vi.fn(
-      async (taskId: string, askId: string, choice?: string): Promise<WriteAskSent> => {
-        const ask = h.tasks.get(taskId)?.delivery?.writeAsks?.find((entry) => entry.id === askId);
+  /** The service's run of a taken ask, as the integration answers it, with the allowance a task choice keeps. */
+  function sendTaken() {
+    return vi.fn(
+      async (
+        _taskId: string,
+        taken: IntegrationAskTaken,
+        choice: IntegrationApprovalChoice,
+      ): Promise<WriteAskSent> => {
+        if (!("ask" in taken) || taken.ask.kind !== "integration")
+          return { ok: false, call: "", place: "", outcome: { kind: "refused", why: "taken" } };
+        const ask = taken.ask;
         return {
           ok: true,
-          ...(ask ? { ask: { ...ask, sentAt: 3 } } : {}),
-          call: "write",
-          place: "GitHub",
+          ask,
+          call: ask.action,
+          place: ask.place,
           outcome: { kind: "ran" },
-          answer: '{"number":7}',
-          ...(choice === "task" ? { allowance } : {}),
+          answer: `{"opened":"${ask.id}"}`,
+          ...(choice === "task" && ask.scope
+            ? {
+                allowance: {
+                  connection: "c-github",
+                  action: ask.action,
+                  signature: SIGNATURE,
+                  scope: ask.scope.key,
+                  words: ask.scope.words,
+                  mark: "",
+                  at: 2,
+                  card: `integration-ask-${ask.id}`,
+                } satisfies IntegrationAllowance,
+              }
+            : {}),
         };
       },
     );
+  }
+  async function started(sendTakenIntegrationAsk: ReturnType<typeof sendTaken>) {
     const crewmate = fakeCrewmate();
-    const h = setup(crewmate, { sendWriteAsk });
+    const h = setup(crewmate, { sendTakenIntegrationAsk });
     const { taskId } = await h.supervisor.intake.commission({
       title: "Open the proof pull request",
       intent: intentOf("open the proof pull request"),
     });
     await tick();
-    const asks = [
+    return { h, crewmate, taskId };
+  }
+  const ran = (send: ReturnType<typeof sendTaken>) =>
+    send.mock.calls.map(([, taken, choice]) => `${"ask" in taken ? taken.ask.id : "-"} ${choice}`);
+
+  it("runs a waiting call kept on its own card before cards listed several, when an allowance covers it, and leaves any other waiting", async () => {
+    const send = sendTaken();
+    const { h, crewmate, taskId } = await started(send);
+    const task = { id: taskId, title: "Open the proof pull request" };
+    // Asks kept before cards listed several each have a card of their own.
+    for (const ask of [
       integrationAsk("pulls", "/repos/octo/queue-proof-4ca5/pulls"),
       integrationAsk("statuses", "/repos/octo/queue-proof-4ca5/statuses/0be4f05"),
       integrationAsk("meter", "/repos/octo/meter/pulls", {
         key: "POST /repos/octo/meter",
         words: "POST requests to octo/meter",
       }),
-    ];
-    for (const ask of asks) {
+    ]) {
       h.tasks.delivery.keepWriteAsk(taskId, ask);
-      h.supervisor.integrationAsks.askIntegration(taskId, ask);
+      h.supervisor.cards.put(integrationApprovalCard(ask, task));
     }
     await endTurn(crewmate, taskId, "The proof pull request waits on the captain's click.");
     const prompts = crewmate.promptCalls.length;
@@ -283,10 +313,7 @@ describe("Allow for the rest of this task on a crewmate's integration card (INF-
     await tick();
     await tick();
 
-    expect(sendWriteAsk.mock.calls.map(([, id, choice]) => `${id} ${choice}`)).toEqual([
-      "pulls task",
-      "statuses once",
-    ]);
+    expect(ran(send)).toEqual(["pulls task", "statuses once"]);
     const up = h.supervisor.cards
       .snapshot()
       .filter((card) => card.taskId === taskId)
@@ -301,9 +328,108 @@ describe("Allow for the rest of this task on a crewmate's integration card (INF-
     ).toContain(
       "The captain allowed write on GitHub for the rest of this task, for POST requests to octo/queue-proof-4ca5.",
     );
-    const heard = crewmate.promptCalls.slice(prompts).join("\n");
-    expect(heard).toContain(
+    // One click, one message naming both outcomes.
+    const heard = crewmate.promptCalls.slice(prompts);
+    expect(heard).toHaveLength(1);
+    expect(heard[0]).toContain(
       `${INTEGRATION_APPROVAL_WORDS.task}: your later calls of write on GitHub for POST requests to octo/queue-proof-4ca5 run at once`,
+    );
+    expect(heard[0]).toContain('{"opened":"statuses"}');
+  });
+
+  it("folds the asks that arrive while the card waits into it, and a row the captain unticks is refused while the allowed ones run", async () => {
+    const send = sendTaken();
+    const { h, crewmate, taskId } = await started(send);
+    const asks = [
+      integrationAsk("pr-a", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 1),
+      integrationAsk("pr-b", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 2),
+      integrationAsk("pr-c", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 3),
+    ];
+    const joined = asks.map((ask) => {
+      h.tasks.delivery.keepWriteAsk(taskId, ask);
+      return h.supervisor.integrationAsks.askIntegration(taskId, ask);
+    });
+    expect(joined).toEqual([false, true, true]);
+    // Another connection's ask raises its own card.
+    const other = { ...integrationAsk("notes", "/x", SCOPE, 4), connection: "c-notes" };
+    h.tasks.delivery.keepWriteAsk(taskId, other);
+    expect(h.supervisor.integrationAsks.askIntegration(taskId, other)).toBe(false);
+    await endTurn(crewmate, taskId, "The proof pull requests wait on the captain's click.");
+    const cards = h.supervisor.cards.snapshot().filter((card) => card.taskId === taskId);
+    expect(cards.map((card) => card.id).sort()).toEqual([
+      "integration-ask-notes",
+      "integration-ask-pr-a",
+    ]);
+    const folded = cards.find((card) => card.id === "integration-ask-pr-a");
+    expect(folded?.title).toBe(integrationApprovalsTitle(3, "GitHub"));
+    expect(folded?.actions.map((action) => action.label)).toEqual([
+      INTEGRATION_APPROVAL_WORDS.deny,
+      INTEGRATION_APPROVAL_WORDS.once,
+      INTEGRATION_APPROVAL_WORDS.always,
+      INTEGRATION_APPROVAL_WORDS.task,
+    ]);
+    for (const ask of asks) expect(folded?.body).toContain(`data-inf-ask-row="${ask.id}"`);
+    // The last revision marks the row that joined in it.
+    expect(folded?.body.split(ASK_ROW_WORDS.joined)).toHaveLength(2);
+    const prompts = crewmate.promptCalls.length;
+
+    expect(
+      h.supervisor.cardActions.act(
+        "integration-ask-pr-a",
+        "once",
+        "chrome",
+        {
+          answers: [
+            { name: allowFieldOf("pr-a"), values: ["allow"], changed: false },
+            { name: allowFieldOf("pr-b"), values: [], changed: true },
+          ],
+        },
+        { id: "gesture-0001", lifecycleId: folded?.lifecycleId, offerId: folded?.offerId },
+      ),
+    ).toEqual({});
+    await tick();
+    await tick();
+
+    expect(ran(send)).toEqual(["pr-a once", "pr-c once"]);
+    const left = h.tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === "pr-b");
+    expect(left?.sentAt).toBeDefined();
+    expect(left?.outcome).toEqual({ kind: "refused", why: NOT_ALLOWED_WHY });
+    const heard = crewmate.promptCalls.slice(prompts);
+    expect(heard).toHaveLength(1);
+    const order = ["pr-a", "pr-b", "pr-c"].map((id) => heard[0]?.indexOf(`ask ${id}`) ?? -1);
+    expect(
+      order.every((at, index) => at >= 0 && (index === 0 || at > (order[index - 1] ?? 0))),
+    ).toBe(true);
+    expect(heard[0]).toContain(NOT_ALLOWED_WHY);
+    // The other connection's card still waits.
+    expect(h.supervisor.cards.get("integration-ask-notes")).toBeDefined();
+  });
+
+  it("refuses a click on an offer the card showed before an ask joined, and shows the current list", async () => {
+    const send = sendTaken();
+    const { h, crewmate, taskId } = await started(send);
+    const first = integrationAsk("pr-a", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 1);
+    h.tasks.delivery.keepWriteAsk(taskId, first);
+    h.supervisor.integrationAsks.askIntegration(taskId, first);
+    await endTurn(crewmate, taskId, "The proof pull request waits on the captain's click.");
+    const shown = h.supervisor.cards.get("integration-ask-pr-a");
+    const second = integrationAsk("pr-b", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 2);
+    h.tasks.delivery.keepWriteAsk(taskId, second);
+    h.supervisor.integrationAsks.askIntegration(taskId, second);
+    const revised = h.supervisor.cards.get("integration-ask-pr-a");
+    expect(revised?.offerId).not.toBe(shown?.offerId);
+
+    expect(() =>
+      h.supervisor.cardActions.act("integration-ask-pr-a", "once", "chrome", undefined, {
+        id: "gesture-0002",
+        lifecycleId: shown?.lifecycleId,
+        offerId: shown?.offerId,
+      }),
+    ).toThrow(CardChoiceUnavailableError);
+    await tick();
+    expect(send).not.toHaveBeenCalled();
+    expect(h.supervisor.cards.get("integration-ask-pr-a")?.title).toBe(
+      integrationApprovalsTitle(2, "GitHub"),
     );
   });
 });

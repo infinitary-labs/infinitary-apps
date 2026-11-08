@@ -434,7 +434,8 @@ export function startPlacedHome(options: {
           secrets,
           asks: {
             keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
-            present: (taskId, ask) => supervisor.integrationAsks.askIntegration(taskId, ask),
+            present: (taskId, ask, dropped): boolean =>
+              supervisor.integrationAsks.askIntegration(taskId, ask, dropped),
             take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
             record: (taskId, askId, outcome) =>
               tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
@@ -482,6 +483,8 @@ export function startPlacedHome(options: {
       ? {
           integrations: composed,
           sendWriteAsk: (taskId, askId, choice) => composed.sendAsk(taskId, askId, choice),
+          sendTakenIntegrationAsk: (rowId, taken, choice) =>
+            composed.sendTaken(rowId, taken, choice),
         }
       : {}),
     bind: async () => options.binding,

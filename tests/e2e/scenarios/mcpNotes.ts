@@ -174,3 +174,64 @@ export const mcpNotesTwice: Scenario =
       };
     return { calls: [{ name: "report", args: { text: `${MCP_NOTES_REPORT_PREFIX}${answer}` } }] };
   };
+
+/**
+ * A crewmate adds three reminders through the Notes server in one shell
+ * command (INF-2993 piece 2): a brief carrying this marker calls `add_note`
+ * three times, each kept for the captain, reports that it waits on the card
+ * its first ask raised, and once it hears the captain's answer reports what
+ * it heard after the usual prefix.
+ */
+export const MCP_NOTES_THREE_MARKER = "add three reminders through the Notes server";
+export const MCP_NOTES_THREE = [
+  { text: "Water the ferns on Sunday", reason: "Add the first reminder you asked for." },
+  { text: "Call the dentist about Tuesday", reason: "Add the second reminder you asked for." },
+  { text: "Pack the tent for the trip", reason: "Add the third reminder you asked for." },
+] as const;
+
+export const mcpNotesThree: Scenario =
+  () =>
+  ({ body, isFirstmate, wantsStream }) => {
+    if (isFirstmate || !wantsStream || !body.includes(MCP_NOTES_THREE_MARKER)) return undefined;
+    const current = sinceLastUser(body);
+    if (calledTool(current.tail, "report")) return { text: "Waiting for the captain." };
+    if (current.user.includes(WRITE_ANSWERED_LEAD))
+      return {
+        calls: [{ name: "report", args: { text: `${MCP_NOTES_REPORT_PREFIX}${current.user}` } }],
+      };
+    if (!calledTool(body, "bash"))
+      return {
+        calls: [
+          {
+            name: "bash",
+            args: {
+              command: MCP_NOTES_THREE.map(
+                (note) =>
+                  `${INTEGRATIONS_COMMAND} call ${MCP_NOTES_NAME} add_note '${JSON.stringify({ text: note.text })}' --reason '${note.reason}'`,
+              ).join("; "),
+            },
+          },
+        ],
+      };
+    // The same reading of the shell as the change above.
+    const shell = browserShellMessages(providerMessages(body));
+    if (shell.pending) return { text: "The integrations command is still running." };
+    const answer = shell.readings.findLast((message) => message.role === "tool")?.text ?? "";
+    const ask = /approval card for ask (ia[a-f0-9]+)/.exec(answer)?.[1];
+    if (!ask) return { calls: [{ name: "bash", args: { command: INTEGRATIONS_COMMAND } }] };
+    return {
+      calls: [
+        {
+          name: "report",
+          args: {
+            text: "The app is asking for these actions.",
+            summary: "The app is asking for these actions.",
+            waiting_on_captain: {
+              reason: "Choose whether the actions may run",
+              card_id: `integration-ask-${ask}`,
+            },
+          },
+        },
+      ],
+    };
+  };

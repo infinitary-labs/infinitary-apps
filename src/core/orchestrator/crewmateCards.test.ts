@@ -502,7 +502,10 @@ describe("a crewmate's merge cards and refusals", () => {
 describe("integration calls held for the captain", () => {
   it("puts a task's held call on its own card, and none for a task that has closed", async () => {
     const h = await crewmateOn();
-    h.supervisor.integrationAsks.askIntegration(h.taskId, heldCall("ia000000000010"));
+    // The service keeps a task's ask on its record before presenting it.
+    const held = heldCall("ia000000000010");
+    h.tasks.delivery.keepWriteAsk(h.taskId, held);
+    h.supervisor.integrationAsks.askIntegration(h.taskId, held);
     expect(h.own()).toEqual([
       expect.objectContaining({ author: "host", title: "Allow Add a note on Notes?" }),
     ]);

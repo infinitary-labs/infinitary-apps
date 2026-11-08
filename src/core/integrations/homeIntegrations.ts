@@ -155,7 +155,8 @@ export function startHomeIntegrations(options: {
     secrets: integrationSecrets,
     asks: {
       keep: (taskId, ask) => tasks.delivery.keepWriteAsk(taskId, ask),
-      present: (taskId, ask) => options.crew().integrationAsks.askIntegration(taskId, ask),
+      present: (taskId, ask, dropped) =>
+        options.crew().integrationAsks.askIntegration(taskId, ask, dropped),
       keepForFirstmate: (ask) => options.crew().integrationAsks.askIntegrationForFirstmate(ask),
       // One ask per panel and action at a time (docs/integrations.md, "Panels").
       keepForPanel: (ask) => {

@@ -77,6 +77,13 @@ export type IntegrationAsk = {
    * mate's, a panel's and older kept asks, whose cards offer no such choice.
    */
   scope?: IntegrationScope;
+  /**
+   * The approval card that lists it (INF-2993 piece 2): a crewmate's ask
+   * that arrives while an unanswered card of its task waits for the same
+   * connection joins that card. Absent on asks kept before cards listed
+   * several, whose card is `integration-ask-<id>`.
+   */
+  card?: string;
   at: number;
   sentAt?: number;
   outcome?: WriteAskOutcome;
@@ -132,8 +139,15 @@ export type WriteAskOutcome =
   | { kind: "unknown"; why: string }
   | { kind: "refused"; why: string };
 
-/** How many asks a task keeps, newest first; an older one drops, sent or not. */
+/**
+ * How many asks a task keeps, newest first. Past it the oldest answered ask
+ * drops first, and a waiting one only when none answered is left; a waiting
+ * ask that drops is refused at once (INF-2993 piece 2).
+ */
 export const WRITE_ASK_CAP = 8;
+
+/** What the crewmate hears of a waiting ask the cap dropped. */
+export const DROPPED_ASK_WHY = `more than ${WRITE_ASK_CAP} asks waited on this task, so the app dropped this one, the oldest, before the captain answered it. Nothing ran; ask again if it is still needed.`;
 
 /** What a refusal says about a send the captain's click already took: it is never sent again. */
 export const NEVER_SENT_AGAIN = "never sent again";

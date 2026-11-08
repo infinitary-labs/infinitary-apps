@@ -200,8 +200,12 @@ test("an answer's finding opens the inspector, a task's Knowledge used opens the
       // The captain can change it before he sends it; until then nothing leaves.
       await typeInto(promptInput(page), "Is it still true?");
       await expect(promptInput(page)).toHaveValue(`${words}Is it still true?`);
-      // Held, not sent: no request ever carried the question, and it is still in the field.
-      await page.waitForTimeout(500);
+      // Held, not sent: the core's newest captain message is not the
+      // question, read over the window's channel after anything the press or
+      // the typing could have sent along it; no request ever carried the
+      // question, and it is still in the field.
+      const newest = await page.evaluate(() => window.infinitary.conversation.lastTurn());
+      expect(newest?.you ?? "").not.toContain("Is it still true?");
       const sent = (mockProvider?.requestBodies() ?? []).filter((body) =>
         body.includes("Is it still true?"),
       );

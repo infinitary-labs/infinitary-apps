@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
 import { scratchDir } from "../helpers/scratchDirs";
-import { DICTATION_KEY, hintOnThisComputer } from "./dictation";
+import { DICTATION_KEY, hintOnThisComputer, voiceSettled } from "./dictation";
 import { launchApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
 
@@ -14,7 +14,7 @@ test("dictation key taps toggle talking while a hold stops on release", async ()
   const abandon = page.getByRole("button", { name: "Abandon" });
   try {
     await expect(page.getByPlaceholder(hintOnThisComputer(STANDARD_PLACEHOLDER))).toBeVisible();
-    await page.waitForTimeout(1000); // Let the asynchronous voice capability check settle.
+    await voiceSettled(page);
     // A hold remains live until release, then ends without latching.
     await page.keyboard.down(DICTATION_KEY);
     await expect(abandon).toBeVisible();

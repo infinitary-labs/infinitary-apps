@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { reportSummary } from "../../src/shared/feed";
 import { scratchDir } from "../helpers/scratchDirs";
-import { waitForFirstmateIdle } from "./crew";
+import { firstmateClipDrawn, waitForFirstmateIdle } from "./crew";
 import { DICTATION_KEY } from "./dictation";
 import { type LaunchedApp, launchApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
@@ -55,8 +55,8 @@ for (const theme of themes) {
       );
       await expect(page.getByRole("img", { name: "First mate - listening" })).toBeVisible();
       await expect(page.getByRole("img", { name: "Live voice level" })).toBeVisible();
-      // Let the tesseract morph into the listening rings before the shot.
-      await page.waitForTimeout(1200);
+      // The tesseract has morphed into the listening rings before the shot.
+      await firstmateClipDrawn(page, "attend");
       await page.screenshot({ path: test.info().outputPath(`${theme.name}-listening.png`) });
       await page.keyboard.up(DICTATION_KEY);
       await expect(page.locator("[data-screen-label]")).toHaveAttribute(
@@ -113,7 +113,7 @@ for (const theme of themes) {
       await expect(page.getByRole("img", { name: "First mate - idle" })).toBeVisible({
         timeout: 20_000,
       });
-      await page.waitForTimeout(400);
+      await firstmateClipDrawn(page, "settle");
       await page.screenshot({ path: test.info().outputPath(`${theme.name}-idle.png`) });
     });
 

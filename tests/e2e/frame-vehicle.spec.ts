@@ -75,17 +75,12 @@ test("serves the template over app-frame: with its own hash-pinned CSP, containe
     } catch {
       fetchBlocked = true;
     }
+    // An image ends in load or error, and the frame CSP's refusal is an
+    // error, so the answer waits for the image itself, never a timer.
     const imgBlocked = await new Promise<boolean>((resolve) => {
       const img = document.createElement("img");
-      const timer = setTimeout(() => resolve(true), 2000);
-      img.onload = () => {
-        clearTimeout(timer);
-        resolve(false);
-      };
-      img.onerror = () => {
-        clearTimeout(timer);
-        resolve(true);
-      };
+      img.onload = () => resolve(false);
+      img.onerror = () => resolve(true);
       img.src = "https://example.com/pixel.png";
       document.body.appendChild(img);
     });

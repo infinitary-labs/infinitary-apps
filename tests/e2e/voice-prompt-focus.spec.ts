@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { STANDARD_PLACEHOLDER } from "@shared/firstRun";
-import { DICTATION_KEY, hintOnThisComputer } from "./dictation";
+import { DICTATION_KEY, hintOnThisComputer, holdPastTheHold } from "./dictation";
 import { launchApp } from "./launch";
 import { latestServedTurn } from "./providerRequest";
 
@@ -41,7 +41,8 @@ async function provideSpeech(page: import("@playwright/test").Page) {
   });
 }
 
-// Optimistic controls do not prove the mic is open. Own the supplied-audio prerequisite.
+// Optimistic controls do not prove the mic is open. Own the supplied-audio prerequisite:
+// half a second of PCM since the recording opened, past the shortest clip the window keeps.
 async function waitForSpeechCapture(page: import("@playwright/test").Page) {
   await expect
     .poll(() =>
@@ -65,7 +66,8 @@ test("a transcribed hold and a toggled recording both return focus to the end of
     await page.keyboard.down(DICTATION_KEY);
     await expect(page.getByRole("button", { name: "Abandon" })).toBeVisible();
     await waitForSpeechCapture(page);
-    await page.waitForTimeout(600); // Give the synthetic mic enough audio for a held clip.
+    // The key is held past its hold, so its release ends a held clip.
+    await holdPastTheHold(page);
     await page.keyboard.up(DICTATION_KEY);
     await expect(input).toHaveValue("Please describe an ocean of stars ");
     await expect(input).toBeFocused();
@@ -79,7 +81,6 @@ test("a transcribed hold and a toggled recording both return focus to the end of
     await page.keyboard.up(DICTATION_KEY);
     await expect(page.getByRole("button", { name: "Abandon" })).toBeVisible();
     await waitForSpeechCapture(page);
-    await page.waitForTimeout(600);
     await page.keyboard.down(DICTATION_KEY);
     await page.keyboard.up(DICTATION_KEY);
     await expect(input).toHaveValue("Please describe an ocean of stars an ocean of stars ");
@@ -95,7 +96,7 @@ test("a transcribed hold and a toggled recording both return focus to the end of
     await page.keyboard.down(DICTATION_KEY);
     await expect(page.getByRole("button", { name: "Abandon" })).toBeVisible();
     await waitForSpeechCapture(page);
-    await page.waitForTimeout(600);
+    await holdPastTheHold(page);
     await page.getByRole("button", { name: "Submit" }).click();
     await page.keyboard.up(DICTATION_KEY);
     await expect(page.getByRole("button", { name: "Abandon" })).toHaveCount(0);
@@ -140,7 +141,8 @@ test("a transcript lands at the caret mid-draft, and the draft stays on screen w
     await expect(input).toHaveValue(draft);
     await expect(input).not.toBeEditable();
     await page.screenshot({ path: test.info().outputPath("voice-recording-with-draft.png") });
-    await page.waitForTimeout(600); // Give the synthetic mic enough audio for a held clip.
+    // The key is held past its hold, so its release ends a held clip.
+    await holdPastTheHold(page);
     await page.keyboard.up(DICTATION_KEY);
 
     const landed = "Fix the an ocean of stars test\nthen ship it";

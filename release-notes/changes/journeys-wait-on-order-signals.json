@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journeys-wait-on-order-signals",
+      "reason": "Journeys that waited a fixed time now wait for the app's own signal that the work is done, such as a document's load, a scroll's end, a failed read's log line or the window's own clock; only this repository's tests change, nothing in the app a person notices."
+    }
+  ]
+}

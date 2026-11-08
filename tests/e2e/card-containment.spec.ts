@@ -40,8 +40,14 @@ let launched: LaunchedApp;
 async function probe(page: Page, title: string) {
   await showCard(page, title);
   const frame = cardBody(page, title);
-  // Let the loads, the meta refresh and the media elements have their turn.
-  await page.waitForTimeout(1_500);
+  // Every vector has had its turn once the document has loaded: its load
+  // waits for each image, frame, object, embed, stylesheet, import and media
+  // element to load or fail, and a request any of them made reached the
+  // server before its answer could end that wait (the HTML standard's "the
+  // end", step "delay the load event").
+  await expect
+    .poll(() => frame.locator("body").evaluate(() => document.readyState))
+    .toBe("complete");
   return frame.locator("body").evaluate(async (body, marker) => {
     const win = window as unknown as Record<string, unknown>;
     // An on* handler and a `javascript:` URL fire only on the event, so

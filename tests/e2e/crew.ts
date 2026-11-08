@@ -5,6 +5,7 @@ import {
   planeRadius,
   projectPlane,
 } from "../../src/renderer/src/character/crew/orbitalPlanes";
+import { CLIP_BLEND_MS } from "../../src/renderer/src/character/machine";
 
 /** Model text is a DOM layer following the actual orbit, not canvas text. */
 export function crewModelNames(page: Page) {
@@ -65,6 +66,30 @@ export async function crewPlaneCounts(page: Page): Promise<number[]> {
   if (values.length !== CROWDED_PLANES.length || values.some(Number.isNaN))
     throw new Error("Crew placement is incomplete");
   return values;
+}
+
+/**
+ * Returns once the window has drawn the first mate at the end of the
+ * transition `clip` into the state its label names now: the label changes as
+ * its machine enters that state, and the clip blends over `CLIP_BLEND_MS`
+ * of frame time from there, so a frame that time after this call, and the
+ * one after it, show the clip played out.
+ */
+export async function firstmateClipDrawn(page: Page, clip: string): Promise<void> {
+  const blend = CLIP_BLEND_MS[clip];
+  if (blend === undefined) throw new Error(`The first mate has no clip named ${clip}`);
+  await page.evaluate(
+    (ms) =>
+      new Promise<void>((resolve) => {
+        const from = performance.now();
+        const frame = (time: number) => {
+          if (time - from >= ms) requestAnimationFrame(() => resolve());
+          else requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
+      }),
+    blend,
+  );
 }
 
 /** Busy-state wait, not a visibility promise: cards hide the still-running frame. */

@@ -444,6 +444,10 @@ for (const held of ["record", "past"] as const) {
 // page loads while the captain reads, and nothing of its own runs until it
 // is shown - no timer, animation, timeline or sound - then it all starts on
 // the same page.
+/** The held probe's clock: it ticks this often, this many times, once its script runs. */
+const PROBE_TICK_MS = 50;
+const PROBE_TICKS = 4;
+
 const HELD_PROBE = `<p>The next harbour plan, drawn by its own script.</p>
 <output id="ticks">0</output>
 <style>@keyframes harbour-in { from { opacity: 0 } to { opacity: 1 } } #fade { animation: harbour-in 1s linear forwards }</style>
@@ -453,7 +457,7 @@ const HELD_PROBE = `<p>The next harbour plan, drawn by its own script.</p>
 <script>
 document.documentElement.dataset.started = "yes";
 let n = 0;
-const clock = setInterval(() => { document.getElementById("ticks").textContent = String(++n); if (n === 4) clearInterval(clock); }, 50);
+const clock = setInterval(() => { document.getElementById("ticks").textContent = String(++n); if (n === ${PROBE_TICKS}) clearInterval(clock); }, ${PROBE_TICK_MS});
 try { document.documentElement.dataset.audio = new AudioContext().state; } catch (error) { document.documentElement.dataset.audio = "unavailable"; }
 document.addEventListener("DOMContentLoaded", () => { document.documentElement.dataset.ready = "yes"; });
 window.onload = () => { document.documentElement.dataset.loaded = "yes"; };
@@ -493,8 +497,15 @@ test("a scripted next card is prepared while you read and starts only once shown
     await expect(prepared).toHaveAttribute("title", `${NEXT_PLAN} body`);
     await expect(prepared).toHaveAttribute("data-frame-held", "", { timeout: 15_000 });
     const warm = warmBody(page);
-    // Long enough for anything that ran ahead to show it.
-    await page.waitForTimeout(300);
+    // A timer on the prepared page's own clock as long as the probe's ticks:
+    // had its script run ahead, its clock, started first, would have ticked
+    // every time before this timer ends.
+    await warm
+      .locator("html")
+      .evaluate(
+        (_html, ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        PROBE_TICK_MS * PROBE_TICKS,
+      );
     const before = await pageState(warm);
     expect(before.started).toBeUndefined();
     expect(before.audio).toBeUndefined();
@@ -509,7 +520,7 @@ test("a scripted next card is prepared while you read and starts only once shown
     await expect(shownCard(page, NEXT_PLAN)).toBeVisible();
     await expect(shownEntry(page)).toHaveCSS("opacity", "1");
     const shown = shownCardFrame(page);
-    await expect(shown.locator("#ticks")).toHaveText("4");
+    await expect(shown.locator("#ticks")).toHaveText(String(PROBE_TICKS));
     const after = await pageState(shown);
     // The same page the stage prepared, its own behavior started once shown.
     expect(after).toMatchObject({

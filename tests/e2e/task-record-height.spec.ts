@@ -5,6 +5,7 @@ import { cardBodySelector } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { expandDock, hideRecord, pressRow, recordCard, recordFrame } from "./rails";
+import { stageAtRest } from "./stack";
 
 /**
  * A task card opens tall enough to show what it holds (FI3-948). A crewmate
@@ -152,7 +153,9 @@ test("a task record opened on an empty stage keeps one height from its first vis
     await expect(
       recordFrame(page).locator('[data-record-section="details"] > summary'),
     ).toBeVisible();
-    await page.waitForTimeout(1000);
+    // The sampling runs until the record's arrival has played out and the
+    // stage has drawn it at rest, with its facts and its body frame in.
+    await stageAtRest(page);
     const samples = await page.evaluate(
       () =>
         (window as unknown as { __shell: { visible: boolean; height: number; title: string }[] })

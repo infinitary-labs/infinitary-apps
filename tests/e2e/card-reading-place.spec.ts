@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -24,6 +24,40 @@ const checks = [
 ];
 const long = (heading: string) =>
   `<h2>${heading}</h2>${checks.map((c) => `<p>${c}</p>`).join("")}<h2>After</h2>${checks.map((c) => `<p>${c}</p>`).join("")}`;
+
+/**
+ * Scrolls like a person, a wheel turn over the body rather than a scrollTop
+ * write, and returns the reading place once that scroll has ended: the body
+ * says so with its own scrollend, however long a busy computer takes to play
+ * the scroll out.
+ */
+async function wheelToRest(page: Page, scroller: Locator): Promise<number> {
+  const box = await scroller.boundingBox();
+  if (!box) throw new Error("no body box");
+  // Wrapped in an object: a handle to a bare promise would wait for it to
+  // settle, before the wheel has turned.
+  const ended = await scroller.evaluateHandle((el) => ({
+    top: new Promise<number>((resolve) =>
+      el.addEventListener("scrollend", () => resolve(el.scrollTop), { once: true }),
+    ),
+  }));
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, 400);
+  const top = await page.evaluate((scrolled) => scrolled.top, ended);
+  expect(top).toBeGreaterThan(0);
+  return top;
+}
+
+/**
+ * Paging back restores the place once the card's body can hold it; it is the
+ * reading place still once the stage has finished every move the paging
+ * started and drawn the card at rest, where the captain reads on.
+ */
+async function expectPlaceKept(page: Page, scroller: () => Locator, top: number): Promise<void> {
+  await expect.poll(() => scroller().evaluate((el) => el.scrollTop)).toBe(top);
+  await stageAtRest(page);
+  expect(await scroller().evaluate((el) => el.scrollTop)).toBe(top);
+}
 
 // INF-513: the captain lost a card's scroll offset by paging away and back.
 test("paging away from a live card and back keeps its reading place", async () => {
@@ -61,26 +95,13 @@ test("paging away from a live card and back keeps its reading place", async () =
     await showCard(page, "Read review A");
     const body = () => cardScroller(page);
     await expect.poll(() => body().evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
-    // Scroll like a person: wheel over the body, not a scrollTop write.
-    const box = await body().boundingBox();
-    if (!box) throw new Error("no body box");
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.wheel(0, 400);
-    await expect.poll(() => body().evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-    // Let it settle.
-    await page.waitForTimeout(500);
-    const top = await body().evaluate((el) => el.scrollTop);
+    const top = await wheelToRest(page, body());
     await page.getByRole("button", { name: "Next card" }).click();
     await expect(shownCard(page, "Read review B")).toBeVisible();
-    await page.waitForTimeout(1000);
+    await stageAtRest(page);
     await page.getByRole("button", { name: "Previous card" }).click();
     await expect(shownCard(page, "Read review A")).toBeVisible();
-    const samples: number[] = [];
-    for (let i = 0; i < 10; i++) {
-      samples.push(await body().evaluate((el) => el.scrollTop));
-      await page.waitForTimeout(150);
-    }
-    expect(samples.at(-1)).toBe(top);
+    await expectPlaceKept(page, body, top);
   } finally {
     await launched.close();
   }
@@ -136,27 +157,16 @@ test("paging away from a task record and back keeps its reading place", async ()
     // The open words grow the card: the captain scrolls it once it has come
     // to rest (docs/e2e-contracts.md).
     await stageAtRest(page);
-    const box = await scroller().boundingBox();
-    if (!box) throw new Error("no box");
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.wheel(0, 400);
-    await expect.poll(() => scroller().evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-    await page.waitForTimeout(500);
-    const top = await scroller().evaluate((el) => el.scrollTop);
+    const top = await wheelToRest(page, scroller());
     await pressRow(page, b.key);
     await expect(recordCard(page)).toHaveAttribute("data-task-record", b.id);
-    await page.waitForTimeout(800);
+    await stageAtRest(page);
     const toA = (await page.getByRole("button", { name: "Next card" }).isEnabled())
       ? "Next card"
       : "Previous card";
     await page.getByRole("button", { name: toA }).click();
     await expect(recordCard(page)).toHaveAttribute("data-task-record", a.id);
-    const samples: number[] = [];
-    for (let i = 0; i < 12; i++) {
-      samples.push(await scroller().evaluate((el) => el.scrollTop));
-      await page.waitForTimeout(150);
-    }
-    expect(samples.at(-1)).toBe(top);
+    await expectPlaceKept(page, scroller, top);
   } finally {
     await launched.close();
   }
@@ -208,28 +218,17 @@ test("paging away from a past card and back keeps its reading place", async () =
     await expect
       .poll(() => scroller().evaluate((el) => el.scrollHeight - el.clientHeight > 400))
       .toBe(true);
-    const box = await scroller().boundingBox();
-    if (!box) throw new Error("no box");
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.wheel(0, 400);
-    await expect.poll(() => scroller().evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-    await page.waitForTimeout(500);
-    const top = await scroller().evaluate((el) => el.scrollTop);
+    const top = await wheelToRest(page, scroller());
     const away = (await page.getByRole("button", { name: "Next card" }).isEnabled())
       ? "Next card"
       : "Previous card";
     const back = away === "Next card" ? "Previous card" : "Next card";
     await page.getByRole("button", { name: away }).click();
     await expect(past).toHaveCount(0);
-    await page.waitForTimeout(800);
+    await stageAtRest(page);
     await page.getByRole("button", { name: back }).click();
     await expect(past).toBeVisible();
-    const samples: number[] = [];
-    for (let i = 0; i < 12; i++) {
-      samples.push(await scroller().evaluate((el) => el.scrollTop));
-      await page.waitForTimeout(150);
-    }
-    expect(samples.at(-1)).toBe(top);
+    await expectPlaceKept(page, scroller, top);
   } finally {
     await launched.close();
   }

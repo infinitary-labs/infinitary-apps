@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { expect, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
+import { voiceSettled } from "./dictation";
 import { launchApp } from "./launch";
 import { GRADES_BUDGETS, measured, PERF_TAG } from "./perf";
 import { promptInput } from "./prompt";
@@ -118,7 +119,7 @@ test("starting and ending voice input leaves the window thread free", {
   const { app, page } = launched;
   try {
     await expect(promptInput(page)).toBeEnabled();
-    await page.waitForTimeout(1000); // Voice support is discovered asynchronously.
+    await voiceSettled(page);
     // The window's own renderer, and the GPU process that draws every window.
     const pids = await app.evaluate(({ app: a, BrowserWindow }) => ({
       Tab: BrowserWindow.getAllWindows()[0]?.webContents.getOSProcessId() ?? 0,

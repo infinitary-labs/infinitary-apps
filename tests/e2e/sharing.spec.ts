@@ -15,6 +15,7 @@ import {
 } from "../../src/shared/sharing";
 import { WELCOME_TITLE } from "../../src/shared/welcome";
 import { scratchDir } from "../helpers/scratchDirs";
+import { waitForFirstmateIdle } from "./crew";
 import { firstRunHintOnThisComputer } from "./dictation";
 import { committedWelcome } from "./firstLaunch";
 import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
@@ -212,8 +213,15 @@ async function send(page: Page, text: string): Promise<void> {
   await page.evaluate((turn) => window.infinitary.conversation.send(turn), text);
 }
 
-/** A quiet interval long enough for a request the app would have made to land. */
-const QUIET_MS = 1_500;
+/**
+ * What the core holds of the events this run recorded: the ones still waiting
+ * to go, then the ones the endpoint accepted (`sharingPreviewSchema`). An event
+ * is in one of the two from the moment it is recorded until the run ends, so a
+ * read here comes after every event the app recorded before it.
+ */
+async function sharingPreview(page: Page) {
+  return page.evaluate(() => window.infinitary.settings.sharingPreview());
+}
 const TURN_MS = 45_000;
 
 /** The first install's first turn: a greeting the stand-in answers with a card. */
@@ -423,7 +431,12 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
         expect(view.diagnostics).toMatchObject({ enabled: true, viewedAt: null, sentAt: null });
         expect(view.diagnostics.installId).toMatch(DIAGNOSTIC_INSTALL_ID_PATTERN);
         installId = view.diagnostics.installId as string;
-        await page.waitForTimeout(QUIET_MS);
+        // The launch's events are recorded, and every one still waits: none
+        // has gone, and the endpoint has heard nothing.
+        await expect
+          .poll(async () => (await sharingPreview(page)).diagnostics.pending.map((e) => e.name))
+          .toEqual(["ftue_first_launch", "app_launch", "ftue_gate_shown"]);
+        expect((await sharingPreview(page)).diagnostics.sent).toEqual([]);
         expect(stub.received).toEqual([]);
       });
 
@@ -509,6 +522,7 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
 
       await test.step("the viewer shows the install ID, what went, and every event and field that can leave", async () => {
         const { page } = first;
+        const settledHeard = stub.received.length;
         await openSettings(page);
         await expect(diagnosticsSwitch(page)).toHaveAttribute("aria-checked", "true");
         const row = page.locator('[data-setting="diagnostics"]');
@@ -542,10 +556,15 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
         await expect(page.locator("[data-sharing-terms]")).toHaveCount(0);
         expect(text).not.toContain("sends us nothing");
         expect(text).not.toContain("no diagnostic leaves");
-        // Opening Settings is not an event.
-        const before = stub.received.length;
-        await page.waitForTimeout(QUIET_MS);
-        expect(stub.received).toHaveLength(before);
+        // Opening Settings is not an event. The core holds nothing waiting,
+        // what it sent is exactly what the endpoint heard, and since Settings
+        // opened only a turn (the failed turn's retry may still run) went.
+        const held = await sharingPreview(page);
+        expect(held.diagnostics.pending).toEqual([]);
+        expect(held.diagnostics.sent.map((record) => record.name)).toEqual(names(stub));
+        expect(
+          names(stub, settledHeard).filter((name) => !name.startsWith("main_agent_turn_")),
+        ).toEqual([]);
         await closeSettings(page);
       });
 
@@ -561,7 +580,11 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
         const launchNames = () =>
           names(stub, before).filter((name) => !name.startsWith("main_agent_turn_"));
         await expect.poll(launchNames, { timeout: 15_000 }).toEqual(["app_launch"]);
-        await first.page.waitForTimeout(QUIET_MS);
+        // Every event this run recorded has gone, so the endpoint has heard
+        // each one: still only the launch.
+        await expect
+          .poll(async () => (await sharingPreview(first.page)).diagnostics.pending)
+          .toEqual([]);
         expect(launchNames()).toEqual(["app_launch"]);
         expect(new Set(payloads(stub, before).map((payload) => payload.id))).toEqual(
           new Set([installId]),
@@ -626,7 +649,10 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
       await openSettings(third.page);
       await expect(diagnosticsSwitch(third.page)).toHaveAttribute("aria-checked", "false");
       await closeSettings(third.page);
-      await third.page.waitForTimeout(QUIET_MS);
+      // Off, the core records nothing: once the turn that message started has
+      // ended, no event waits and none went.
+      await waitForFirstmateIdle(third.page);
+      expect((await sharingPreview(third.page)).diagnostics).toEqual({ pending: [], sent: [] });
       expect(stub.received).toEqual([]);
       const off = await sharingView(third.page);
       expect(off.diagnostics).toMatchObject({ enabled: false, installId: null, pending: [] });
@@ -636,7 +662,7 @@ test.describe("diagnostics: allowlisted events with an anonymous install ID, on 
       third = await launchWithStub(stub, { userDataDir });
       await homeShown(third.page);
       await expect(notice(third.page)).toHaveCount(0);
-      await third.page.waitForTimeout(QUIET_MS);
+      expect((await sharingPreview(third.page)).diagnostics).toEqual({ pending: [], sent: [] });
       expect(stub.received).toEqual([]);
       expect((await sharingView(third.page)).diagnostics.installId).toBeNull();
 

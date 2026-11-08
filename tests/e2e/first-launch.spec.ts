@@ -7,7 +7,12 @@ import { GATE_HOME_TITLE, gateIntro } from "../../src/renderer/src/app/firstRunG
 import { scratchDir } from "../helpers/scratchDirs";
 import { expectClaudeConnected } from "./claudeAccount";
 import { claudeSeatRequests, NO_CLAUDE_LOGIN_USER, otherSeatRequests } from "./claudeSeat";
-import { DICTATION_KEY, firstRunHintOnThisComputer, hintOnThisComputer } from "./dictation";
+import {
+  DICTATION_KEY,
+  firstRunHintOnThisComputer,
+  hintOnThisComputer,
+  holdPastTheHold,
+} from "./dictation";
 import { committedWelcome, observeWelcomeReadiness, reloadTypingEarly } from "./firstLaunch";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
@@ -186,7 +191,7 @@ test("fresh key setup commits the welcome before ready without inference, restor
   await expect(gate).toHaveAttribute("data-first-run-gate", "open", { timeout: 20_000 });
   await expect(promptInput(page)).toBeDisabled();
   await page.keyboard.down(DICTATION_KEY);
-  await page.waitForTimeout(300);
+  await holdPastTheHold(page);
   await expect(page.locator("[data-screen-label]")).toHaveAttribute(
     "data-screen-label",
     "Null state",

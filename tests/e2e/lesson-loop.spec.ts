@@ -257,7 +257,9 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
       expect(titles).toEqual([LESSON_WELCOME_TITLE, OTHER].sort());
       const chess = tasksOf(userDataDir).find((task) => task.title === "Teach chess");
       expect(chess?.status).toBe("active");
-      await page.waitForTimeout(2_000);
+      // A nudge the restart owed the teacher would reach it before anything
+      // the captain sends it later; the review's request below is that later
+      // turn, and it is the teacher's first since the restart.
       expect(teacherRequests()).toHaveLength(0);
     });
 
@@ -280,6 +282,9 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
       await showCard(page, LESSON_WELCOME_TITLE);
       await choose(page, "Start today's lesson");
       await expect(shownCard(page, LESSON_ROUND_REVIEW_TITLE)).toBeVisible({ timeout: 60_000 });
+      // No nudge came first: the teacher's first request since the restart
+      // carries this choice, which reached it after anything the restart owed.
+      expect(teacherRequests()[0]).toMatch(/chose \\"Start today's lesson\\"/);
       await choose(page, "Stop for today");
       await expect(shownCard(page, LESSON_WELCOME_TITLE)).toBeVisible({ timeout: 60_000 });
       await choose(page, "Stop these lessons");

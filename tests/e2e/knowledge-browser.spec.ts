@@ -451,8 +451,14 @@ test("the panel’s Graph link opens the graph, the browser keeps its place whil
     await runFromSearch(app, page, "panel:now/board");
     await expect(browserCard(page)).toHaveCount(0);
     for (let i = 0; i < 6 && (await browserCard(page).count()) === 0; i++) {
+      const from = await page.locator(SHOWN_ENTRY).getAttribute("data-stage-entry-id");
       await pressWindowKey(app, "]", ["meta", "shift"]);
-      await page.waitForTimeout(150);
+      // The press has paged once another entry is the shown one.
+      await expect(
+        page.locator(
+          `${SHOWN_ENTRY}[data-stage-entry-id]:not([data-stage-entry-id=${JSON.stringify(from)}])`,
+        ),
+      ).toHaveCount(1);
     }
     await expect(browserCard(page)).toBeVisible();
     await expect(browser(page)).toHaveAttribute("data-knowledge-scope", "captain");

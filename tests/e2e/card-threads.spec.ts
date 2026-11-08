@@ -181,20 +181,6 @@ async function sendPrompt(page: LaunchedApp["page"], text: string): Promise<void
   await page.getByRole("button", { name: "Submit" }).click();
 }
 
-/** Wait until the mock's request log stops growing so the next turn is a fresh prompt. */
-async function waitForProviderQuiet(
-  page: LaunchedApp["page"],
-  mock: LaunchedApp["mockProvider"],
-): Promise<void> {
-  let last = mock?.requestBodies().length ?? 0;
-  for (let i = 0; i < 20; i++) {
-    await page.waitForTimeout(150);
-    const next = mock?.requestBodies().length ?? 0;
-    if (next === last) return;
-    last = next;
-  }
-}
-
 test("a captain reply revises the card in place, or is answered in the thread", async () => {
   const { page } = launched;
   const input = promptInput(page);
@@ -555,7 +541,9 @@ test("an image rides a thread reply on a transport that supports it", async () =
   await closeOpenCards(page);
   await sendPrompt(page, FM_THREAD_PROMPT_MARKER);
   await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
-  await waitForProviderQuiet(page, mockProvider);
+  // The turn that wrote the card has ended, so every request after this one
+  // is the reply's own.
+  await waitForFirstmateIdle(page);
 
   const cardId = await cardReply(page).row.getAttribute("data-card-reply");
   expect(cardId).toBeTruthy();

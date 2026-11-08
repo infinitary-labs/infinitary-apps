@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import {
@@ -234,8 +235,20 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
     try {
       await expectClaudeConnected(app.page, CLAUDE_ACCOUNT);
       // A failure is not evidence a model left: no line about Sonnet 5.6,
-      // once the read has had time to fail.
-      await app.page.waitForTimeout(5_000);
+      // once the read has failed. The app logs the failed read before the
+      // models and their news follow it (`ServedModels`, as
+      // quota-live-sensor.spec.ts waits); a line the core sent then reached
+      // the window before the answer to a later read, and two frames after
+      // that answer the feed has drawn it.
+      await expect
+        .poll(() => readFileSync(join(app.diagnosticsDir, "main.stderr.log"), "utf8"), {
+          timeout: 25_000,
+        })
+        .toContain(`[models] ${CLAUDE_PROVIDER_ID} model list unavailable`);
+      await app.page.evaluate(async () => {
+        await window.infinitary.models.available();
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      });
       await expect(
         feedLine(app.page, modelGoneNote(CLAUDE, "claude-opus-4-8", ["low"])),
       ).toBeVisible();

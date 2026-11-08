@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { readPicture } from "../../src/core/pictureFormat";
 import { scratchDir } from "../helpers/scratchDirs";
 import { startDemo } from "./demo";
 import { demoEncoder, runEncoder } from "./demoEncoder";
@@ -69,7 +70,8 @@ for (const format of ["mp4", "gif"] as const) {
   // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
   test(`a fresh-launch ${format} demo keeps the drawn start view and paced keyboard states`, async ({}, testInfo) => {
     test.setTimeout(180_000);
-    const demo = await startDemo({ withMockProvider: true, size: { width: 1280, height: 800 } });
+    const size = { width: 1280, height: 800 };
+    const demo = await startDemo({ withMockProvider: true, size });
     const { page } = demo.launched;
     try {
       // A recorder fixture, not a product layout assertion: distinctive corners,
@@ -111,7 +113,18 @@ for (const format of ["mp4", "gif"] as const) {
         format,
       });
       const image = await pixels(files.poster);
-      const baseline = await pixels(reference, "crop=640:320:40:40");
+      // The window picture is at the window's own resolution, two device pixels
+      // to a page pixel on a screen that draws at 2x (as one Mac runner does),
+      // while the poster is the scene's box in page pixels: crop the scene at
+      // the picture's own scale and bring it to the poster's size.
+      const shot = readPicture(await readFile(reference))?.size;
+      if (!shot) throw new Error("The start reference is not a picture");
+      const device = (pagePixels: number) => Math.round((pagePixels * shot.width) / size.width);
+      const baseline = await pixels(
+        reference,
+        `crop=${device(files.width)}:${device(files.height)}:${device(40)}:${device(40)},` +
+          `scale=${files.width}:${files.height}:flags=neighbor`,
+      );
       const sample = (x: number, y: number) => [
         ...image.subarray((y * files.width + x) * 3, (y * files.width + x) * 3 + 3),
       ];

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "demo-recorder-retina-crop",
+      "reason": "Test-only fix: the demo recorder journey now crops its window picture at that picture's own pixel scale, so it passes on a Mac that draws at 2x; no app behavior changes."
+    }
+  ]
+}

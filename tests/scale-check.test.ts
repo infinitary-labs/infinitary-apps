@@ -6,7 +6,10 @@ import { CrewSupervisor } from "@core/orchestrator/crewSupervisor";
 import { FirstmateAgent } from "@core/orchestrator/firstmateAgent";
 import { TICK_PERIOD_MS, Ticker } from "@core/orchestrator/ticker";
 import { appPathsFor } from "@core/paths";
+import { PI_CONTROL_PROFILE } from "@core/pi/controlProfile";
 import type { ModelRuntime } from "@core/pi/types";
+import { PlacedSessions } from "@core/placed/placedSessions";
+import { WorkDevices } from "@core/placed/workDevices";
 import { CardStore } from "@core/storage/cardStore";
 import { InboxStore } from "@core/storage/inboxStore";
 import { SettingsStore } from "@core/storage/settingsStore";
@@ -30,8 +33,8 @@ import { outsideCensus } from "./helpers/statementCheck";
 // The scale check (INF-2061, direction B, built as INF-2069): the reads the
 // app repeats on its main thread - a first mate turn's context build, the
 // answer-delivery sweep, one minute pass, a task board update, the first
-// launch's crew facts and a task's close with the closed-task file passes
-// watching - must not grow with closed history. Five main thread freezes (INF-703, INF-940,
+// launch's crew facts, a task's close with the closed-task file passes
+// watching and a work computer's contact - must not grow with closed history. Five main thread freezes (INF-703, INF-940,
 // INF-1348, INF-1956, INF-2059) were synchronous SQLite whose cost grew
 // with the saved record while the tests used a few rows. This seeds a
 // record sized from the captain's real readings, counts each read's
@@ -55,6 +58,12 @@ const OPEN_MESSAGES = 33;
 const RUNNING = OPEN_CHAINS;
 const QUEUED = 20;
 const RECENTLY_CLOSED = 40;
+/**
+ * Closed tasks that ran on a computer that runs work, whose folders are
+ * still there: what its roster lists at each contact (INF-3040's reach turn).
+ */
+const PLACED_CLOSED = 40;
+const WORK_COMPUTER = "work-computer";
 
 /** Closed tasks seeded per transaction; see addClosedHistory. */
 const SEED_BATCH = 200;
@@ -275,6 +284,11 @@ async function buildRecord() {
     seedTask(tasks, { id, title: `Recent work ${index}`, status: "idle", outcome: "Done." });
     tasks.close(id, { status: "done", reason: "merged", actor: "host" });
   }
+  for (let index = 0; index < PLACED_CLOSED; index += 1) {
+    const id = `placed-${index}`;
+    seedTask(tasks, { id, title: `Placed work ${index}`, status: "idle", deviceId: WORK_COMPUTER });
+    tasks.close(id, { status: "done", reason: "merged", actor: "host" });
+  }
   vi.setSystemTime(NOW - DAY);
   for (let index = 0; index < QUEUED; index += 1)
     seedTask(tasks, {
@@ -400,6 +414,43 @@ async function buildRecord() {
     now,
   });
 
+  // A computer that runs work, as services.ts composes it, over a
+  // connection that answers its roster: every contact reads what it holds
+  // against the record (PlacedSessions.reach, INF-3040).
+  const devices = new WorkDevices();
+  let contact: (heard: { deviceId: string; contact: "in-reach" | "gone" }) => void = () => {};
+  devices.attach({
+    ask: async (_deviceId, channel) => {
+      if (channel !== "inf:session:roster") throw new Error(`${channel} is not asked here`);
+      return {
+        tasksDir: join(paths.userData, "there", "tasks"),
+        worktreesDir: join(paths.userData, "there", "worktrees"),
+        tasks: Array.from({ length: PLACED_CLOSED }, (_, index) => ({
+          task: `placed-${index}`,
+          open: false,
+          closed: true,
+          seq: 0,
+        })),
+      };
+    },
+    onWorkDevice: (listener) => {
+      contact = listener;
+      return () => {};
+    },
+    onViewDevice: () => () => {},
+  });
+  new PlacedSessions({
+    tasks,
+    paths,
+    devices,
+    profiles: { pi: PI_CONTROL_PROFILE },
+    deviceName: () => "Work computer",
+    projectName: (repoId) => repos.get(repoId)?.name,
+    broadcastEvent: (event) => events.push(event),
+    now,
+    log: () => {},
+  });
+
   return {
     addClosedHistory: async (count: number) => {
       const at = Date.now();
@@ -428,6 +479,12 @@ async function buildRecord() {
       counts["task close"] = await counted("task close", async () => {
         tasks.close(closing, { status: "done", reason: "merged", actor: "host" });
         for (const sweeps of fileSweeps) await sweeps.settled();
+      });
+      // A work computer coming back in reach: its roster read against the record.
+      counts["work computer contact"] = await counted("work computer contact", async () => {
+        contact({ deviceId: WORK_COMPUTER, contact: "gone" });
+        contact({ deviceId: WORK_COMPUTER, contact: "in-reach" });
+        await settle();
       });
       // A record without the crew facts, read as each such launch reads it.
       settings.setFirstRun({ welcomedAt: null, firstTurnAt: NOW, welcomeState: "skipped" });

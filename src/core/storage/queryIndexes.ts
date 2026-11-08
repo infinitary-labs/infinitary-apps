@@ -29,6 +29,9 @@ import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
  * The reference index seeks the tasks whose basis, retry or branch names
  * a task by its trimmed, upper-cased name, which the answer-delivery sweep
  * reads for every task a message covers (INF-2971).
+ * The present-workspace index seeks the closed tasks whose working copy
+ * a work computer's roster may no longer hold, read at each of its
+ * contacts instead of composing every task (INF-3040).
  * `migrate` (db.ts) creates them once a database reaches the newest migration.
  */
 export function createQueryIndexes(db: AppDatabase): void {
@@ -40,6 +43,8 @@ export function createQueryIndexes(db: AppDatabase): void {
       ON task_permissions (override_json) WHERE override_json IS NOT NULL;
     CREATE INDEX IF NOT EXISTS tasks_parent_status ON tasks (parent_id, status);
     CREATE INDEX IF NOT EXISTS tasks_closed_at ON tasks (closed_at);
+    CREATE INDEX IF NOT EXISTS tasks_workspace_present ON tasks (closed_at)
+      WHERE workspace_state = 'present';
     CREATE INDEX IF NOT EXISTS task_events_ref ON task_events (kind, ref) WHERE ref IS NOT NULL;
     CREATE INDEX IF NOT EXISTS task_references_name ON task_references (kind, upper(trim(ref)));
     CREATE INDEX IF NOT EXISTS task_events_compaction ON task_events (task_id, at)

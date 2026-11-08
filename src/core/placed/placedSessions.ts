@@ -815,8 +815,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     };
     device.rosterRead();
     const adopting: Promise<unknown>[] = [];
+    // Each entry's computer and close, in one read: a computer keeps every
+    // task's folder for a while, thousands of them, and composing each
+    // held the main thread a third of a second at every contact (INF-3040).
+    const records = this.recordedOn(roster.tasks);
     for (const entry of roster.tasks) {
-      const record = this.options.tasks.get(entry.task);
+      const record = records.get(entry.task);
       if (record?.deviceId !== device.id) {
         // No task of this Mac's there: its working copy and folder go once
         // any work in them is here.
@@ -853,9 +857,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     }
     // A closed task whose working copy it no longer holds has nothing left there to bring home.
     if (roster.worktreesDir)
-      for (const record of this.options.tasks.list())
-        if (record.deviceId === device.id && !device.roster.tasks.has(record.id))
-          this.copies.forget(record.id);
+      for (const taskId of this.options.tasks.closedPresentOn(device.id))
+        if (!device.roster.tasks.has(taskId)) this.copies.forget(taskId);
     await Promise.all(adopting);
     if (device.contact === contact) this.release(device.id);
   }
@@ -1136,8 +1139,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       if (!device.roster || !this.options.devices.inReach(device.id)) continue;
       void this.readRoster(device.id)
         .then((roster) => {
+          const records = this.recordedOn(roster.tasks);
           for (const entry of roster.tasks)
-            if (this.options.tasks.get(entry.task)?.deviceId !== device.id)
+            if (records.get(entry.task)?.deviceId !== device.id)
               void this.copies.retireLeftover(device.id, entry.task);
         })
         .catch((caught: unknown) =>
@@ -1323,6 +1327,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.options.devices.ask(deviceId, "inf:session:close", [
       { orderId: `close:${task}`, task },
     ]);
+  }
+
+  /** Each roster entry's record, by task, read for its computer and close alone. */
+  private recordedOn(entries: readonly { task: string }[]): Map<string, TaskRetentionFields> {
+    const ids = entries.map((entry) => entry.task);
+    return new Map(this.options.tasks.retentionFields(ids).map((record) => [record.id, record]));
   }
 
   /** What the computer holds now, read whole. */

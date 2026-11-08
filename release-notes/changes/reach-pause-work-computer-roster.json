@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "reach-pause-work-computer-roster",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A computer that runs work coming back in reach no longer makes the app pause",
+      "body": "Each time a computer that runs work for you came back in reach, the app read every task it holds and every task you have ever had in full, which held the window still for about a third of a second on a long record. It now reads only what it needs to know about each.",
+      "noPicture": "This removes a pause when a computer that runs work comes back in reach; no view or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

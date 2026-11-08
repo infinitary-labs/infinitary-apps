@@ -594,6 +594,11 @@ export class TaskService {
     return this.writer.store.retentionFields(ids);
   }
 
+  /** The closed tasks on this computer whose working copy the record still counts as present. */
+  closedPresentOn(deviceId: string): string[] {
+    return this.writer.store.closedPresentOn(deviceId);
+  }
+
   /** Whether any row holds this status, answered without reading or composing one. */
   hasStatus(status: TaskStatus): boolean {
     return this.writer.store.hasStatus(status);

@@ -1638,6 +1638,25 @@ export class TaskStore {
     return this.retentionRows("t.id IN (SELECT value FROM json_each(?))", JSON.stringify(ids));
   }
 
+  /**
+   * The closed tasks on this computer whose working copy the record still
+   * counts as present, sought through `tasks_workspace_present` without
+   * composing a record or reading the rest of its history: a work
+   * computer's contact asks at each roster read (INF-3040).
+   */
+  closedPresentOn(deviceId: string): string[] {
+    const device = this.execution.exists()
+      ? "(SELECT e.device_id FROM task_execution e WHERE e.task_id = t.id)"
+      : "t.device_id";
+    return prepared(
+      this.db,
+      `SELECT t.id FROM tasks t WHERE t.workspace_state = 'present'
+         AND t.closed_at IS NOT NULL AND ${device} = ?`,
+    )
+      .pluck()
+      .all(deviceId) as string[];
+  }
+
   private retentionRows(where: string, ...params: unknown[]): TaskRetentionFields[] {
     // The computer lives on the execution row once that table exists.
     const device = this.execution.exists()
